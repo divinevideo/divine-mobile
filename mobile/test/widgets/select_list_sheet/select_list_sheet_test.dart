@@ -813,6 +813,27 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets(
+        'permission proposals offer the editor instead of membership sync',
+        (tester) async {
+          final baseline = list('Permission draft', isPublic: false);
+          final proposal = baseline.copyWith(
+            localEditDraft: CuratedListEditDraft(
+              baseline: baseline,
+              desired: baseline.copyWith(isPublic: true),
+            ),
+          );
+          when(() => service.pickerListsForOwner(any())).thenReturn([proposal]);
+          await openSheet(tester);
+          expect(find.text(l10n.listEditTitle), findsOneWidget);
+          expect(find.text(l10n.listRetrySync), findsNothing);
+          await tester.tap(find.text('Permission draft'));
+          await tester.pump();
+          expect(rowChecks(), findsNothing);
+          verifyNever(() => service.retryListSync(any()));
+        },
+      );
+
       testWidgets('tapping rows picks and unpicks them without writing', (
         tester,
       ) async {

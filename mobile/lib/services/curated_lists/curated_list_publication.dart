@@ -4,6 +4,78 @@
 part of '../curated_list_service.dart';
 
 extension CuratedListPublication on CuratedListService {
+  /// Reads inside the mutation queue, before the operation builds its delta.
+  /// Background sync alone cannot protect edits made from another device.
+  Future<bool> _reconcileListBeforeMutation(
+    String listId,
+    String? owner, {
+    required bool recovering,
+    required bool allowOfflineDraft,
+  }) async {
+    final list = getListById(listId);
+    // Creating a new coordinate has no cached replacement to reconcile.
+    // Signed-out drafts stay local and never publish over relay data.
+    if (list == null) return true;
+    if (owner == null) {
+      if (allowOfflineDraft && _canStageOfflineDraft(list)) {
+        _offlineListOperations.add(listId);
+      }
+      return true;
+    }
+    if (list.pubkey != null && list.pubkey != owner) return false;
+    if (!recovering && !_defaultAuthority.canMutate(list)) {
+      return false;
+    }
+
+    final cancel = Completer<void>();
+    _relaySyncCancels.add(cancel);
+    try {
+      final snapshot = await _relayGateway.readOwnedListForMutation(
+        owner,
+        list.id,
+        timeout: _relaySyncTimeout,
+        cancelled: cancel.future,
+      );
+      if (cancel.isCompleted || !_isCurrent(owner)) return false;
+      if (!snapshot.completedNormally) {
+        if (allowOfflineDraft && _canStageOfflineDraft(list)) {
+          _offlineListOperations.add(listId);
+          return true;
+        }
+        return false;
+      }
+      final events = snapshot.events;
+      if (events.isNotEmpty &&
+          !await _processReceivedListEvents(
+            events,
+            isCurrentRead: () => !cancel.isCompleted && _isCurrent(owner),
+          )) {
+        return false;
+      }
+      final current = getListById(listId);
+      return !cancel.isCompleted &&
+          _isCurrent(owner) &&
+          current != null &&
+          _relayEvidence.allows(current);
+    } on Object catch (error) {
+      Log.warning(
+        'Not changing list $listId: relay read failed (${error.runtimeType})',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
+      if (allowOfflineDraft &&
+          !cancel.isCompleted &&
+          _isCurrent(owner) &&
+          _canStageOfflineDraft(list)) {
+        _offlineListOperations.add(listId);
+        return true;
+      }
+      return false;
+    } finally {
+      _relaySyncCancels.remove(cancel);
+    }
+  }
+
   Future<bool> _publishListToNostr(
     CuratedList sourceList, {
     Event? signedRetry,
@@ -13,6 +85,8 @@ extension CuratedListPublication on CuratedListService {
     void Function()? onPublicationUnconfirmed,
   }) async {
     if (!isCurrentSession ||
+        sourceList.hasRelayConflict ||
+        sourceList.localEditDraft?.canReplay == false ||
         recoveryNeedsRepair ||
         (!isReadyForMutations && !duringInitialization)) {
       return false;
@@ -24,16 +98,24 @@ extension CuratedListPublication on CuratedListService {
     )) {
       return false;
     }
-    final published = await _publisher.publish(
-      sourceList,
-      signedRetry: signedRetry,
-      confirmed: confirmed,
-      onPublicationUnconfirmed: onPublicationUnconfirmed,
-    );
-    if (!published && isCurrentSession) {
-      _cacheStore.refreshUnchangedLists(_lists);
+    _inFlightListPublications.add(sourceList.authorScopedId);
+    _inFlightListTargets[sourceList.authorScopedId] =
+        sourceList.publicationTarget;
+    try {
+      final published = await _publisher.publish(
+        sourceList,
+        signedRetry: signedRetry,
+        confirmed: confirmed,
+        onPublicationUnconfirmed: onPublicationUnconfirmed,
+      );
+      if (!published && isCurrentSession) {
+        _cacheStore.refreshUnchangedLists(_lists);
+      }
+      return published;
+    } finally {
+      _inFlightListPublications.remove(sourceList.authorScopedId);
+      _inFlightListTargets.remove(sourceList.authorScopedId);
     }
-    return published;
   }
 
   Future<bool> _persistPublication(
@@ -77,9 +159,12 @@ extension CuratedListPublication on CuratedListService {
     final stranded = _lists
         .where(
           (list) =>
+              !list.hasRelayConflict &&
+              !_inFlightListPublications.contains(list.authorScopedId) &&
               _relayEvidence.allows(list) &&
               (list.nostrEventId == null ||
                   list.pendingRepublish ||
+                  list.localEditDraft != null ||
                   list.pendingPlaintextEventIds.isNotEmpty) &&
               (list.pubkey == owner || _isUnpublishedLocalList(list)),
         )
@@ -93,108 +178,154 @@ extension CuratedListPublication on CuratedListService {
     );
 
     for (final list in stranded) {
-      final saved = await _serializeListOperation<bool>(list.id, () async {
-        final currentOwner = _relayGateway.currentAuthenticatedPubkey();
-        if (currentOwner == null ||
-            currentOwner != owner ||
-            !_isCurrent(owner)) {
-          return false;
-        }
-        var current = getListById(list.authorScopedId);
-        if (current == null) return false;
-        if (!_cacheStore.hasUnambiguousOwnerEvidence(current)) return false;
-        if (!_relayEvidence.allows(current)) return true;
-        // An ACKed permission target is completed by the visible Sync now
-        // action, never silently through a new edit or startup publication.
-        if (current.hasPendingPermissionRecovery) return true;
-        if (current.id == defaultListId &&
-            !_defaultAuthority.authorizeCreation(
-              current.copyWith(pubkey: currentOwner),
-            )) {
-          return true;
-        }
-        if (current.nostrEventId != null && !current.pendingRepublish) {
-          await _publisher.retryPlaintextRedactions(current.authorScopedId);
-          return _isCurrent(owner);
-        }
-        if (_isUnpublishedLocalList(current)) {
-          final currentId = current.id;
-          final currentIndex = _listIndex(currentId);
-          if (currentIndex == -1) return false;
-          final source = current;
-          current = current.copyWith(pubkey: currentOwner);
-          _lists[currentIndex] = current;
-          if (!await _saveLists(
-                ownershipClaims: {current.authorScopedId: source},
-              ) ||
+      final saved = await _serializeListOperation<bool>(
+        list.id,
+        () async {
+          final currentOwner = _relayGateway.currentAuthenticatedPubkey();
+          if (currentOwner == null ||
+              currentOwner != owner ||
               !_isCurrent(owner)) {
             return false;
           }
-        }
-        if (current.pubkey != currentOwner) return false;
-        await _publishListToNostr(current, confirmed: true);
-        return _isCurrent(owner);
-      }, cancelled: false);
+          var current = getListById(list.authorScopedId);
+          if (current == null) return false;
+          if (!_cacheStore.hasUnambiguousOwnerEvidence(current)) return false;
+          if (!_relayEvidence.allows(current)) return true;
+          // An ACKed permission target is completed by the visible Sync now
+          // action, never silently through a new edit or startup publication.
+          if (current.hasPendingPermissionRecovery ||
+              (current.localEditDraft != null &&
+                  CuratedListVisibility.fromList(current) !=
+                      CuratedListVisibility.fromList(
+                        current.localEditDraft!.desired,
+                      ))) {
+            return true;
+          }
+          if (current.id == defaultListId &&
+              !_defaultAuthority.authorizeCreation(
+                current.copyWith(pubkey: currentOwner),
+              )) {
+            return true;
+          }
+          if (current.nostrEventId != null &&
+              !current.pendingRepublish &&
+              current.localEditDraft == null) {
+            await _publisher.retryPlaintextRedactions(current.authorScopedId);
+            return _isCurrent(owner);
+          }
+          if (_isUnpublishedLocalList(current)) {
+            final currentId = current.id;
+            final currentIndex = _listIndex(currentId);
+            if (currentIndex == -1) return false;
+            final source = current;
+            current = current.copyWith(pubkey: currentOwner);
+            _lists[currentIndex] = current;
+            if (!await _saveLists(
+                  ownershipClaims: {current.authorScopedId: source},
+                ) ||
+                !_isCurrent(owner)) {
+              return false;
+            }
+          }
+          if (current.pubkey != currentOwner) return false;
+          await _publishListToNostr(current, confirmed: true);
+          return _isCurrent(owner);
+        },
+        cancelled: false,
+        recovering: true,
+      );
       if (!saved) return false;
     }
     return true;
   }
 
   /// Retries this list's pending publication without changing its members.
-  Future<bool> _retryListSync(String listId) => _serializeListOperation(
-    listId,
-    () async {
-      final operationOwner = _relayGateway.currentAuthenticatedPubkey();
-      if (operationOwner == null || !_isCurrent(operationOwner)) return false;
-      final retainedList = getListById(listId);
-      if (retainedList != null && !_relayEvidence.allows(retainedList)) {
-        final event = _relayEvidence.retainedFor(retainedList);
-        if (event == null ||
-            !await _processReceivedListEvents(
-              [event],
-              isCurrentRead: () => _isCurrent(operationOwner),
-            ) ||
-            !_relayEvidence.allows(retainedList)) {
-          return false;
-        }
-      }
-      final list = getListById(listId);
-      if (!isCurrentSession) return false;
-      if (list == null) {
-        final owner = _relayGateway.currentAuthenticatedPubkey();
-        if (owner == null || !listId.startsWith('$owner:')) return false;
-        final id = listId.substring(owner.length + 1);
-        if (_recovery.record(owner, id) == null) return false;
-        return _publisher.retryPlaintextRedactions(listId);
-      }
-      if (!isOwnedList(listId)) return false;
-      Event? signedRetry;
-      if (list.id == defaultListId) {
-        final signed = await _defaultSignedIntentStore?.read(list.pubkey!);
-        if (signed != null) {
-          final items = await _relayGateway.unsealItemTags(signed);
-          if (!isCurrentSession || getListById(listId) != list) return false;
-          if (_defaultAuthority.restoreSignedRetry(signed, items, list)) {
-            signedRetry = signed;
+  Future<bool> _retryListSync(String listId) {
+    Object? permissionIntent(CuratedList? row) {
+      if (row?.hasPendingPermissionDraft != true) return null;
+      final draft = row!.localEditDraft!;
+      final before = draft.baseline.allowedCollaborators.toSet();
+      final after = draft.desired.allowedCollaborators.toSet();
+      final added = after.difference(before).toList()..sort();
+      final removed = before.difference(after).toList()..sort();
+      return (
+        draft.desired.isPublic,
+        draft.desired.isCollaborative,
+        added.join(','),
+        removed.join(','),
+      );
+    }
+
+    final requestedPermissions = permissionIntent(getListById(listId));
+    return _serializeListOperation(
+      listId,
+      () async {
+        final operationOwner = _relayGateway.currentAuthenticatedPubkey();
+        if (operationOwner == null || !_isCurrent(operationOwner)) return false;
+        final retainedList = getListById(listId);
+        if (retainedList != null && !_relayEvidence.allows(retainedList)) {
+          final event = _relayEvidence.retainedFor(retainedList);
+          if (event == null ||
+              !await _processReceivedListEvents(
+                [event],
+                isCurrentRead: () => _isCurrent(operationOwner),
+              ) ||
+              !_relayEvidence.allows(retainedList)) {
+            return false;
           }
         }
-      }
-      if (!_defaultAuthority.canRetrySavedPublication(list)) {
-        return false;
-      }
-      if (list.nostrEventId != null &&
-          !list.pendingRepublish &&
-          list.pendingVisibility == null &&
-          list.pendingPlaintextEventIds.isNotEmpty) {
-        return _publisher.retryPlaintextRedactions(list.authorScopedId);
-      }
-      return _publishListToNostr(
-        list,
-        signedRetry: signedRetry,
-        confirmed: true,
-        explicitDefaultIntent: true,
-      );
-    },
-    cancelled: false,
-  );
+        final list = getListById(listId);
+        if (!isCurrentSession) return false;
+        if (list == null) {
+          final owner = _relayGateway.currentAuthenticatedPubkey();
+          if (owner == null || !listId.startsWith('$owner:')) return false;
+          final id = listId.substring(owner.length + 1);
+          if (_recovery.record(owner, id) == null) return false;
+          return _publisher.retryPlaintextRedactions(listId);
+        }
+        if (!isOwnedList(listId)) return false;
+        Event? signedRetry;
+        if (list.id == defaultListId) {
+          final signed = await _defaultSignedIntentStore?.read(list.pubkey!);
+          if (signed != null) {
+            final items = await _relayGateway.unsealItemTags(signed);
+            if (!isCurrentSession || getListById(listId) != list) return false;
+            if (_defaultAuthority.restoreSignedRetry(signed, items, list)) {
+              signedRetry = signed;
+            }
+          }
+        }
+        if (list.nostrEventId != null &&
+            !list.pendingRepublish &&
+            list.localEditDraft == null &&
+            list.pendingVisibility == null &&
+            list.pendingPlaintextEventIds.isNotEmpty) {
+          return _publisher.retryPlaintextRedactions(list.authorScopedId);
+        }
+        final desired = list.localEditDraft?.desired;
+        // A queued membership retry cannot consent to a permission proposal
+        // introduced or changed while it waited for the fresh relay read.
+        if (list.hasPendingPermissionDraft &&
+            permissionIntent(list) != requestedPermissions) {
+          return false;
+        }
+        final retry = desired == null
+            ? list
+            : list.copyWith(
+                isPublic: desired.isPublic,
+                isCollaborative: desired.isCollaborative,
+                allowedCollaborators: desired.allowedCollaborators,
+              );
+        if (!_defaultAuthority.canRetrySavedPublication(retry)) return false;
+        return _publishListToNostr(
+          retry,
+          signedRetry: signedRetry,
+          confirmed: true,
+          explicitDefaultIntent: true,
+        );
+      },
+      cancelled: false,
+      recovering: true,
+    );
+  }
 }

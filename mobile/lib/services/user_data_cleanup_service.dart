@@ -9,6 +9,7 @@ import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:creator_sync/creator_sync.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/constants/terms_acceptance_keys.dart';
@@ -29,6 +30,7 @@ import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_draft_archive.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
 import 'package:openvine/services/curated_lists/curated_list_relay_evidence.dart';
@@ -60,10 +62,15 @@ import 'package:unified_logger/unified_logger.dart';
 /// detects identity changes and clears user-specific data to prevent
 /// data leakage between accounts.
 class UserDataCleanupService {
-  UserDataCleanupService(this._prefs, {this.onAccountStateWritesStop})
-    : _listSessions = CuratedListSessionCoordinator.forPreferences(_prefs);
+  UserDataCleanupService(
+    this._prefs, {
+    this.onAccountStateWritesStop,
+    CuratedListDraftArchive? listDraftArchive,
+  }) : _listDraftArchive = listDraftArchive,
+       _listSessions = CuratedListSessionCoordinator.forPreferences(_prefs);
 
   final SharedPreferences _prefs;
+  final CuratedListDraftArchive? _listDraftArchive;
   final CuratedListSessionCoordinator _listSessions;
 
   /// Drains account-local journal writers before removing their durable data.
@@ -433,6 +440,7 @@ class UserDataCleanupService {
       clearedCount++;
     }
 
+    await _listDraftArchive?.removeOwner(userPubkey);
     if (!preserveActiveSession) {
       await CuratedListRecoveryJournal.migrateEmbeddedRecords(
         _prefs,
@@ -647,6 +655,43 @@ class UserDataCleanupService {
     }
   }
 
+  Future<void> _archivePendingCuratedLists({String? deletingOwner}) async {
+    final archive = _listDraftArchive;
+    final owner = _prefs.getString('current_user_pubkey_hex');
+    final raw = _prefs.getString(CuratedListService.listsStorageKey);
+    if (archive == null ||
+        owner == null ||
+        owner == deletingOwner ||
+        raw == null) {
+      return;
+    }
+    if (!NostrHexUtils.isValidPubkey(owner)) {
+      throw const CuratedListDraftArchiveException();
+    }
+    final values = jsonDecode(raw) as List;
+    final pending = <CuratedList>[];
+    for (final value in values) {
+      if (value is! Map<String, dynamic> || value['pubkey'] != owner) continue;
+      for (final label in ['ownerPubkey', 'authorPubkey']) {
+        if (value.containsKey(label) && value[label] != owner) {
+          throw const CuratedListDraftArchiveException();
+        }
+      }
+      final row = CuratedList.fromJson(value);
+      if (row.needsSync || row.nostrEventId == null) pending.add(row);
+    }
+    // An empty or partial live cache cannot cancel an unconsumed archive:
+    // restoration may have been retired before its verified projection.
+    if (pending.isEmpty) return;
+    final previous = await archive.readOwner(owner);
+    final retained = {
+      for (final list in previous?.lists ?? <CuratedList>[])
+        list.authorScopedId: list,
+      for (final list in pending) list.authorScopedId: list,
+    };
+    await archive.replaceOwner(owner, retained.values.toList());
+  }
+
   Future<int> _clearUserSpecificData({
     String? reason,
     bool isIdentityChange = false,
@@ -721,6 +766,15 @@ class UserDataCleanupService {
           (key) => key.startsWith(CuratedListRelayEvidence.storagePrefix),
         )) {
       throw const CuratedListRecoveryException();
+    }
+
+    // The outgoing marker, not an identity-change caller's incoming pubkey,
+    // owns these bytes. Archive before the first removal; failure keeps cache.
+    await _archivePendingCuratedLists(
+      deletingOwner: deleteUserData || forgetAccount ? userPubkey : null,
+    );
+    if ((deleteUserData || forgetAccount) && userPubkey != null) {
+      await _listDraftArchive?.removeOwner(userPubkey);
     }
 
     // Clear unscoped account keys, including typed account projections.

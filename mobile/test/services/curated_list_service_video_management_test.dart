@@ -49,6 +49,7 @@ void main() {
 
     // Helper to stub common mocks - call after reset(mockNostr)
     void stubMocks() {
+      stubListSigner(mockNostr, signedListFixtureOwner);
       when(() => mockNostr.signer).thenReturn(signer);
       when(() => mockNostr.publishEvent(any())).thenAnswer((invocation) async {
         return PublishSuccess(

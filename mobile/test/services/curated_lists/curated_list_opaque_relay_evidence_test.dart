@@ -20,6 +20,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/committed_list_account.dart';
 import '../../helpers/completed_owned_list_snapshot.dart';
+import '../../helpers/curated_list_publish_stubs.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 const _localVideo =
@@ -155,6 +156,7 @@ Future<_Harness> _makeHarness({bool pendingRepublish = false}) async {
   await stubCommittedListAccount(auth: auth, preferences: prefs);
   final client = _Client();
   final h = _Harness(signer, owner, prefs, client, auth);
+  stubAuthoritativeListRead(client, events: () => h.remote.values);
   when(() => client.signer).thenReturn(signer);
   when(
     () => client.subscribe(

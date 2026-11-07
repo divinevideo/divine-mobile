@@ -88,6 +88,8 @@ class CuratedList extends Equatable {
     this.isPublic = true,
     this.nostrEventId,
     this.pendingRepublish = false,
+    this.localEditDraft,
+    this.hasRelayConflict = false,
     this.pendingVisibility,
     this.pendingPlaintextEventIds = const [],
     this.tags = const [],
@@ -112,6 +114,12 @@ class CuratedList extends Equatable {
     isPublic: json['isPublic'] as bool? ?? true,
     nostrEventId: json['nostrEventId'] as String?,
     pendingRepublish: json['pendingRepublish'] as bool? ?? false,
+    hasRelayConflict: json['hasRelayConflict'] as bool? ?? false,
+    localEditDraft: json['localEditDraft'] == null
+        ? null
+        : CuratedListEditDraft.fromJson(
+            json['localEditDraft'] as Map<String, dynamic>,
+          ),
     pendingVisibility: json['pendingVisibility'] == null
         ? null
         : CuratedListVisibility.fromJson(
@@ -182,6 +190,12 @@ class CuratedList extends Equatable {
   /// Whether a local edit failed to publish and should be retried.
   final bool pendingRepublish;
 
+  /// Durable local intent, never permission to publish a cached snapshot.
+  final CuratedListEditDraft? localEditDraft;
+
+  /// A retained relay revision needs an explicit owner recovery choice.
+  final bool hasRelayConflict;
+
   /// Privacy and permissions accepted remotely but not yet committed locally.
   /// Legacy proposals without [CuratedListVisibility.relayAccepted] are ignored
   /// by [publicationTarget]; an unconfirmed target needs a new explicit
@@ -198,8 +212,17 @@ class CuratedList extends Equatable {
   bool get hasPendingPermissionRecovery =>
       pendingVisibility?.relayAccepted == true;
 
+  /// Saved offline permissions await explicit Sync before unrelated edits.
+  /// It is separate from an acknowledged permission recovery.
+  bool get hasPendingPermissionDraft =>
+      localEditDraft != null &&
+      CuratedListVisibility.fromList(this) !=
+          CuratedListVisibility.fromList(localEditDraft!.desired);
+
   /// Includes deletion delivery, which does not require republishing the list.
   bool get needsSync =>
+      hasRelayConflict ||
+      localEditDraft != null ||
       pendingRepublish ||
       hasPendingPermissionRecovery ||
       pendingPlaintextEventIds.isNotEmpty;
@@ -243,6 +266,9 @@ class CuratedList extends Equatable {
     String? nostrEventId,
     bool clearNostrEventId = false,
     bool? pendingRepublish,
+    CuratedListEditDraft? localEditDraft,
+    bool? hasRelayConflict,
+    bool clearLocalEditDraft = false,
     CuratedListVisibility? pendingVisibility,
     bool clearPendingVisibility = false,
     List<String>? pendingPlaintextEventIds,
@@ -264,6 +290,10 @@ class CuratedList extends Equatable {
     isPublic: isPublic ?? this.isPublic,
     nostrEventId: clearNostrEventId ? null : nostrEventId ?? this.nostrEventId,
     pendingRepublish: pendingRepublish ?? this.pendingRepublish,
+    hasRelayConflict: hasRelayConflict ?? this.hasRelayConflict,
+    localEditDraft: clearLocalEditDraft
+        ? null
+        : localEditDraft ?? this.localEditDraft,
     pendingVisibility: clearPendingVisibility
         ? null
         : pendingVisibility ?? this.pendingVisibility,
@@ -325,6 +355,8 @@ class CuratedList extends Equatable {
     'isPublic': isPublic,
     'nostrEventId': nostrEventId,
     'pendingRepublish': pendingRepublish,
+    if (localEditDraft != null) 'localEditDraft': localEditDraft!.toJson(),
+    if (hasRelayConflict) 'hasRelayConflict': true,
     if (pendingVisibility != null)
       'pendingVisibility': pendingVisibility!.toJson(),
     if (pendingPlaintextEventIds.isNotEmpty)
@@ -350,6 +382,8 @@ class CuratedList extends Equatable {
     isPublic,
     nostrEventId,
     pendingRepublish,
+    localEditDraft,
+    hasRelayConflict,
     pendingVisibility,
     pendingPlaintextEventIds,
     tags,
@@ -421,4 +455,67 @@ class CuratedListVisibility extends Equatable {
     allowedCollaborators,
     relayAccepted,
   ];
+}
+
+/// The accepted baseline and explicit desired value of an unpublished edit.
+/// Neither snapshot contains another draft; account identity must agree.
+class CuratedListEditDraft extends Equatable {
+  /// Captures bounded snapshots without nesting previous attempts.
+  CuratedListEditDraft({
+    required CuratedList baseline,
+    required CuratedList desired,
+    this.canReplay = true,
+  }) : baseline = _snapshot(baseline),
+       desired = _snapshot(desired) {
+    if (baseline.authorScopedId != desired.authorScopedId) {
+      throw const FormatException('List draft coordinate mismatch');
+    }
+  }
+
+  /// Restores intent without treating missing or nested data as an empty list.
+  factory CuratedListEditDraft.fromJson(Map<String, dynamic> json) {
+    final baseline = json['baseline'] as Map<String, dynamic>;
+    final desired = json['desired'] as Map<String, dynamic>;
+    if (json['version'] != 1 ||
+        baseline['localEditDraft'] != null ||
+        desired['localEditDraft'] != null) {
+      throw const FormatException('Invalid list edit draft');
+    }
+    return CuratedListEditDraft(
+      baseline: CuratedList.fromJson(baseline),
+      desired: CuratedList.fromJson(desired),
+      canReplay: json['canReplay'] as bool? ?? true,
+    );
+  }
+
+  static CuratedList _snapshot(CuratedList list) => list.copyWith(
+    clearLocalEditDraft: true,
+    hasRelayConflict: false,
+    videoEventIds: List.unmodifiable(list.videoEventIds),
+    allowedCollaborators: List.unmodifiable(list.allowedCollaborators),
+    tags: List.unmodifiable(list.tags),
+    thumbnailUrls: List.unmodifiable(list.thumbnailUrls),
+    pendingPlaintextEventIds: List.unmodifiable(list.pendingPlaintextEventIds),
+  );
+
+  /// False for older pending copies whose original delta cannot be proven.
+  /// They require explicit discard/adopt rather than replaying a full snapshot.
+  final bool canReplay;
+
+  /// Snapshot against which the owner's edit was made.
+  final CuratedList baseline;
+
+  /// Explicit owner intent, including permissions awaiting publication.
+  final CuratedList desired;
+
+  /// Persists both sides atomically with the existing account-scoped cache row.
+  Map<String, dynamic> toJson() => {
+    'version': 1,
+    'baseline': baseline.toJson(),
+    'desired': desired.toJson(),
+    if (!canReplay) 'canReplay': false,
+  };
+
+  @override
+  List<Object?> get props => [baseline, desired, canReplay];
 }

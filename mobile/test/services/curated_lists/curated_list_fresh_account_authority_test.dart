@@ -19,6 +19,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/completed_owned_list_snapshot.dart';
+import '../../helpers/curated_list_publish_stubs.dart';
 import '../../test_setup.dart';
 
 class _Keys extends Mock implements SecureKeyStorage {}
@@ -96,6 +97,7 @@ void main() {
         profileCheckIndexerUrl: 'unsupported://profile.invalid',
       );
       client = _Client();
+      stubAuthoritativeListRead(client);
       // Encryption is genuine NIP-44 for the same actually generated key.
       final signer = keys.withPrivateKey(LocalNostrSigner.new);
       when(() => client.signer).thenReturn(signer);

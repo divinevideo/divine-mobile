@@ -131,6 +131,9 @@ void main() {
           allowedCollaborators: any(named: 'allowedCollaborators'),
           onLocalSaved: any(named: 'onLocalSaved'),
           onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+          previousAllowedCollaborators: any(
+            named: 'previousAllowedCollaborators',
+          ),
         ),
       ).thenAnswer((invocation) {
         (invocation.namedArguments[#onLocalSaved] as void Function()?)?.call();
@@ -278,6 +281,71 @@ void main() {
       expect(find.text(l10n.listRecoveryReadOnly), findsNothing);
       expect(visibilityTile(tester).onChanged, isNotNull);
       expect(find.text('Puppets'), findsOneWidget);
+    });
+
+    testWidgets(
+      'conflict recovery requires explicit confirmation and refreshes the form',
+      (tester) async {
+        final pending = list(name: 'Local draft')
+            .copyWith(pendingRepublish: true, hasRelayConflict: true);
+        var current = pending;
+        when(() => service.getListById(any())).thenAnswer((_) => current);
+        when(() => service.discardLocalEditsAndAdoptRelay(_listIdentity))
+            .thenAnswer((_) async {
+              current = list(name: 'Synced title');
+              return true;
+            });
+        await openSheet(tester, existingList: pending);
+        expect(find.text(l10n.listConflictNotice), findsOneWidget);
+        expect(visibilityTile(tester).onChanged, isNull);
+        await tester.tap(find.text(l10n.listUseLatestVersion));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listDiscardDraftConfirmation), findsOneWidget);
+        verifyNever(() => service.discardLocalEditsAndAdoptRelay(any()));
+        await tester.tap(find.text(l10n.commonCancel));
+        await tester.pumpAndSettle();
+        expect(find.text('Local draft'), findsOneWidget);
+        verifyNever(() => service.discardLocalEditsAndAdoptRelay(any()));
+        await tester.tap(find.text(l10n.listUseLatestVersion));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listDiscardLocalEdits));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listConflictNotice), findsNothing);
+        expect(find.text('Synced title'), findsOneWidget);
+        expect(find.text('Local draft'), findsNothing);
+        expect(visibilityTile(tester).onChanged, isNotNull);
+        verify(() => service.discardLocalEditsAndAdoptRelay(_listIdentity))
+            .called(1);
+        verifyNever(() => service.retryListSync(any()));
+      },
+    );
+
+    testWidgets('offline permissions can be withdrawn without publishing', (
+      tester,
+    ) async {
+      final baseline = list(isPublic: false);
+      var current = baseline.copyWith(
+        localEditDraft: CuratedListEditDraft(
+          baseline: baseline,
+          desired: baseline.copyWith(isPublic: true),
+        ),
+      );
+      when(() => service.getListById(any())).thenAnswer((_) => current);
+      when(() => service.discardLocalEditsAndAdoptRelay(_listIdentity))
+          .thenAnswer((_) async {
+            current = baseline;
+            return true;
+          });
+      await openSheet(tester, existingList: current);
+      expect(find.text(l10n.listUseLatestVersion), findsOneWidget);
+      expect(visibilityTile(tester).onChanged, isNull);
+      await tester.tap(find.text(l10n.listUseLatestVersion));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.listDiscardDraftConfirmation), findsOneWidget);
+      await tester.tap(find.text(l10n.listDiscardLocalEdits));
+      await tester.pumpAndSettle();
+      expect(visibilityTile(tester).onChanged, isNotNull);
+      verifyNever(() => service.retryListSync(any()));
     });
 
     testWidgets(
@@ -966,6 +1034,9 @@ void main() {
                 onPublicationUnconfirmed: any(
                   named: 'onPublicationUnconfirmed',
                 ),
+                previousAllowedCollaborators: any(
+                  named: 'previousAllowedCollaborators',
+                ),
               ),
             ).thenAnswer(
               (_) async => const CuratedListUpdateResult.privateListFull(),
@@ -1020,6 +1091,9 @@ void main() {
               allowedCollaborators: any(named: 'allowedCollaborators'),
               onLocalSaved: any(named: 'onLocalSaved'),
               onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+              previousAllowedCollaborators: any(
+                named: 'previousAllowedCollaborators',
+              ),
             ),
           ).thenAnswer((_) => answer.future);
           final outcomes = <ListInfoSheetOutcome>[];
@@ -1059,6 +1133,9 @@ void main() {
               allowedCollaborators: any(named: 'allowedCollaborators'),
               onLocalSaved: any(named: 'onLocalSaved'),
               onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+              previousAllowedCollaborators: any(
+                named: 'previousAllowedCollaborators',
+              ),
             ),
           ).thenAnswer((invocation) async {
             (invocation.namedArguments[#onPublicationUnconfirmed]
@@ -1101,6 +1178,9 @@ void main() {
               allowedCollaborators: any(named: 'allowedCollaborators'),
               onLocalSaved: any(named: 'onLocalSaved'),
               onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+              previousAllowedCollaborators: any(
+                named: 'previousAllowedCollaborators',
+              ),
             ),
           ).thenAnswer((invocation) {
             unconfirmed =
@@ -1460,6 +1540,9 @@ void main() {
               allowedCollaborators: const [],
               onLocalSaved: any(named: 'onLocalSaved'),
               onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+              previousAllowedCollaborators: any(
+                named: 'previousAllowedCollaborators',
+              ),
             ),
           ).called(1);
         },
@@ -1634,6 +1717,9 @@ void main() {
             allowedCollaborators: const [],
             onLocalSaved: any(named: 'onLocalSaved'),
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         ).called(1);
       });

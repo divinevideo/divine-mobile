@@ -39,19 +39,44 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
        _videoEventId = videoEventId,
        super(
          CuratedListInfoState(
-           name: existingList?.name ?? '',
-           description: existingList?.description ?? '',
-           isPublic: existingList?.publicationTarget.isPublic ?? true,
+           name: _initialName(existingList),
+           description: _initialDescription(existingList),
+           isPublic:
+               (existingList?.localEditDraft?.desired ??
+                       existingList?.publicationTarget)
+                   ?.isPublic ??
+               true,
            collaboratorPubkeys:
-               existingList?.publicationTarget.allowedCollaborators ?? const [],
+               (existingList?.localEditDraft?.desired ??
+                       existingList?.publicationTarget)
+                   ?.allowedCollaborators ??
+               const [],
            storedCollaborators: existingList?.allowedCollaborators ?? const [],
            wasPublic: existingList?.isPublic,
            needsSync: existingList?.needsSync ?? false,
+           hasRelayConflict: existingList?.hasRelayConflict ?? false,
            permissionRecoveryPending:
                existingList?.hasPendingPermissionRecovery ?? false,
+           permissionDraftPending:
+               existingList?.hasPendingPermissionDraft ?? false,
            recoveryReadOnly: resolveService()?.recoveryNeedsRepair ?? false,
          ),
        );
+
+  static String _initialName(CuratedList? list) {
+    final draft = list?.localEditDraft;
+    return draft != null && draft.desired.name != draft.baseline.name
+        ? draft.desired.name
+        : list?.name ?? '';
+  }
+
+  static String _initialDescription(CuratedList? list) {
+    final draft = list?.localEditDraft;
+    return draft != null &&
+            draft.desired.description != draft.baseline.description
+        ? draft.desired.description ?? ''
+        : list?.description ?? '';
+  }
 
   final CuratedListService? Function() _resolveService;
   final String? Function() _currentOwnerPubkey;
@@ -116,7 +141,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         recoveryReadOnly: recoveryReadOnly,
       );
     }
-    final target = list.publicationTarget;
+    final target = list.localEditDraft?.desired ?? list.publicationTarget;
     return state.copyWith(
       // Later background delivery settles a failed retry, but cannot settle an
       // unrelated failed Save or claim that its unsaved values were stored.
@@ -134,7 +159,9 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
       storedCollaborators: list.allowedCollaborators,
       wasPublic: list.isPublic,
       needsSync: list.needsSync,
+      hasRelayConflict: list.hasRelayConflict,
       permissionRecoveryPending: list.hasPendingPermissionRecovery,
+      permissionDraftPending: list.hasPendingPermissionDraft,
       recoveryReadOnly: recoveryReadOnly,
     );
   }
@@ -188,6 +215,9 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   }) {
     _refreshRecoveryHold();
     if (!state.canEdit || isClosed || !isSessionCurrent) return;
+    final baseline = state.collaboratorsEdited
+        ? state.collaboratorEditBaseline
+        : List<String>.unmodifiable(state.storedCollaborators);
     final neverOffered = state.collaboratorPubkeys.where(
       (pubkey) => !offered.contains(pubkey),
     );
@@ -200,8 +230,75 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
     emitIfOpen(
       state.copyWith(
         collaboratorPubkeys: next,
+        collaboratorEditBaseline: baseline,
         collaboratorsEdited: true,
         status: CuratedListInfoStatus.editing,
+      ),
+    );
+  }
+
+  /// Opens the inline explanation before any saved local edit is discarded.
+  void requestDiscardDraft() {
+    refreshRecoveryReadOnly();
+    if (!isSessionCurrent ||
+        state.isSaving ||
+        (!state.hasRelayConflict && !state.permissionDraftPending) ||
+        state.recoveryReadOnly ||
+        state.permissionRecoveryPending) {
+      return;
+    }
+    emitIfOpen(state.copyWith(confirmDiscardDraft: true));
+  }
+
+  /// Keeps the retained local edit unchanged.
+  void cancelDiscardDraft() {
+    if (!state.isSaving) emitIfOpen(state.copyWith(confirmDiscardDraft: false));
+  }
+
+  /// Adopts a fresh relay copy only after the owner confirms the data-loss choice.
+  Future<void> discardDraftAndAdoptRelay() async {
+    final listId = _listId;
+    final service = _resolveService();
+    if (!isSessionCurrent ||
+        isClosed ||
+        listId == null ||
+        service == null ||
+        !state.confirmDiscardDraft ||
+        (!state.hasRelayConflict && !state.permissionDraftPending) ||
+        state.isSaving ||
+        state.recoveryReadOnly ||
+        state.permissionRecoveryPending ||
+        _currentList(service) == null) {
+      return;
+    }
+    emitIfOpen(state.copyWith(status: CuratedListInfoStatus.saving));
+    var adopted = false;
+    try {
+      adopted = await service.discardLocalEditsAndAdoptRelay(listId);
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+    }
+    if (isClosed || !isSessionCurrent) return;
+    final list = identical(service, _resolveService())
+        ? _currentList(service)
+        : null;
+    if (!adopted || list == null) {
+      emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
+      return;
+    }
+    emitIfOpen(
+      _withSavedState(
+        list,
+        recoveryReadOnly: service.recoveryNeedsRepair,
+        status: CuratedListInfoStatus.editing,
+      ).copyWith(
+        name: list.name,
+        description: list.description ?? '',
+        isPublic: list.publicationTarget.isPublic,
+        collaboratorPubkeys: list.publicationTarget.allowedCollaborators,
+        visibilityEdited: false,
+        collaboratorsEdited: false,
+        confirmDiscardDraft: false,
       ),
     );
   }
@@ -349,12 +446,15 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         return;
       }
 
+      // Keep the draft's baseline even if background sync refreshed storage.
+      final collaboratorBaseline =
+          state.collaboratorEditBaseline ?? state.storedCollaborators;
       // Only an explicit permissions edit or privacy flip changes collaborators.
       final writesCollaborators =
           (visibilityWillChange && !isPublic) ||
           !const SetEquality<String>().equals(
             collaborators.toSet(),
-            state.storedCollaborators.toSet(),
+            collaboratorBaseline.toSet(),
           );
       // Only a flip sends visibility: the list may have changed since the
       // sheet opened, and resending the opening value would undo that.
@@ -367,6 +467,9 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         isPublic: visibilityWillChange ? isPublic : null,
         isCollaborative: writesCollaborators ? collaborators.isNotEmpty : null,
         allowedCollaborators: writesCollaborators ? collaborators : null,
+        previousAllowedCollaborators: writesCollaborators
+            ? collaboratorBaseline
+            : null,
         onPublicationUnconfirmed: permissionsWillChange
             ? () => publicationUnconfirmed = true
             : null,
@@ -402,12 +505,14 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
             needsSync: pending?.needsSync ?? false,
             permissionRecoveryPending:
                 pending?.hasPendingPermissionRecovery ?? false,
+            permissionDraftPending: pending?.hasPendingPermissionDraft ?? false,
             status: updated.succeeded
                 ? CuratedListInfoStatus.saved
                 : updated.rejection ==
                       CuratedListUpdateRejection.privateListFull
                 ? CuratedListInfoStatus.privateListFull
-                : publicationUnconfirmed
+                : publicationUnconfirmed ||
+                      pending?.hasPendingPermissionDraft == true
                 ? CuratedListInfoStatus.permissionsUnconfirmed
                 : CuratedListInfoStatus.failure,
           ),

@@ -47,6 +47,7 @@ import 'package:openvine/services/collaborator_invite_state_store.dart';
 import 'package:openvine/services/collaborator_response_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_draft_archive.dart';
 import 'package:openvine/services/dm_reaction_retry_service.dart';
 import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/draft_storage_service.dart';
@@ -742,6 +743,9 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
   final accountWrites = ref.watch(accountStateWriteBarrierProvider);
   final service = UserDataCleanupService(
     prefs,
+    listDraftArchive: SecureCuratedListDraftArchive(
+      ref.watch(flutterSecureStorageProvider),
+    ),
     onAccountStateWritesStop: accountWrites.stop,
   );
 

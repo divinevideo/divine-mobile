@@ -1,6 +1,8 @@
 // ABOUTME: Reconciles decoded relay lists with the device's curated-list cache.
 // ABOUTME: Preserves unpublished items, privacy constraints and deletion records.
 
+import 'dart:convert';
+
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
@@ -28,6 +30,52 @@ class CuratedListRelayMerger {
   final String defaultListId;
   final void Function(CuratedList)? onParsedList;
   final DateTime Function() now;
+
+  /// Unsent edits and redactions do not establish a relay revision timestamp.
+  /// Keep differing signed copies until their original delta can be recovered.
+  static bool hasConflictingPendingRevision(
+    CuratedList local,
+    CuratedList incoming, {
+    required bool publicationInFlight,
+  }) {
+    final localSecond = local.updatedAt.millisecondsSinceEpoch ~/ 1000;
+    final incomingSecond = incoming.updatedAt.millisecondsSinceEpoch ~/ 1000;
+    return local.nostrEventId != incoming.nostrEventId &&
+        ((local.pendingRepublish && !publicationInFlight) ||
+            (local.nostrEventId != null &&
+                (localSecond > incomingSecond ||
+                    (local.pendingRepublish &&
+                        localSecond == incomingSecond)))) &&
+        !samePublicationValue(local, incoming);
+  }
+
+  /// Applies an editor's membership delta to the freshly reconciled permissions.
+  static List<String> mergeCollaboratorEdit({
+    required List<String> current,
+    required List<String> baseline,
+    required List<String> desired,
+  }) =>
+      (<String>{...current}
+            ..addAll(desired.where((key) => !baseline.contains(key)))
+            ..removeAll(baseline.where((key) => !desired.contains(key))))
+          .toList();
+
+  /// Compare the intended payload, independently of local/retry timestamps.
+  /// A relay echo can confirm an earlier send whose acknowledgement was lost.
+  static bool samePublicationValue(CuratedList left, CuratedList right) {
+    String value(CuratedList list) {
+      final target = list.publicationTarget;
+      final normalized = target.isPublic && target.description == null
+          ? target.copyWith(description: 'Curated video list: ${target.name}')
+          : target;
+      return jsonEncode([
+        normalized.isPublic,
+        CuratedListConverter.toEventTags(normalized),
+      ]);
+    }
+
+    return value(left) == value(right);
+  }
 
   /// A failed unseal never replaces a cached list with an empty public copy.
   void merge(
@@ -112,8 +160,13 @@ class CuratedListRelayMerger {
         return;
       }
 
-      if (event.createdAt >
-          existingList.updatedAt.millisecondsSinceEpoch ~/ 1000) {
+      final existingSecond =
+          existingList.updatedAt.millisecondsSinceEpoch ~/ 1000;
+      if (event.createdAt > existingSecond ||
+          (event.createdAt == existingSecond &&
+              !existingList.pendingRepublish &&
+              existingList.nostrEventId != null &&
+              event.id.compareTo(existingList.nostrEventId!) < 0)) {
         Log.debug(
           'Updating existing list from relay: ${curatedList.name}',
           name: 'CuratedListService',

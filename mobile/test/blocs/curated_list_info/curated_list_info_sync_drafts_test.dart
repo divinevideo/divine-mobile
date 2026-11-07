@@ -44,6 +44,265 @@ void main() {
         existingList: existing,
       );
 
+  group('explicit conflict recovery', () {
+    test(
+      'an unconfirmed permission draft can be explicitly discarded',
+      () async {
+        final service = _Service();
+        final baseline = list(isPublic: false, pending: false);
+        var current = baseline.copyWith(
+          localEditDraft: CuratedListEditDraft(
+            baseline: baseline,
+            desired: baseline.copyWith(isPublic: true),
+          ),
+        );
+        when(() => service.getListById(any())).thenAnswer((_) => current);
+        when(
+          () => service.discardLocalEditsAndAdoptRelay(baseline.authorScopedId),
+        ).thenAnswer((_) async {
+          current = baseline;
+          return true;
+        });
+        final cubit = editor(service, current);
+        addTearDown(cubit.close);
+        expect(cubit.state.permissionDraftPending, isTrue);
+        expect(cubit.state.hasRelayConflict, isFalse);
+        cubit.requestDiscardDraft();
+        expect(cubit.state.confirmDiscardDraft, isTrue);
+        await cubit.discardDraftAndAdoptRelay();
+        expect(cubit.state.permissionDraftPending, isFalse);
+        expect(cubit.state.isPublic, isFalse);
+        expect(cubit.state.canEdit, isTrue);
+        verifyNever(() => service.retryListSync(any()));
+      },
+    );
+
+    test(
+      'adoption clears collaborator intent before a metadata-only save',
+      () async {
+        final service = _Service();
+        final opening = list(collaborators: [bob], pending: false);
+        var current = opening;
+        when(() => service.getListById(any())).thenAnswer((_) => current);
+        when(
+          () => service.discardLocalEditsAndAdoptRelay(opening.authorScopedId),
+        ).thenAnswer((_) async {
+          current = list(collaborators: [carol], pending: false);
+          return true;
+        });
+        final writes = <Invocation>[];
+        when(
+          () => service.updateListWithResult(
+            listId: any(named: 'listId'),
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            isPublic: any(named: 'isPublic'),
+            isCollaborative: any(named: 'isCollaborative'),
+            allowedCollaborators: any(named: 'allowedCollaborators'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
+            onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+          ),
+        ).thenAnswer((invocation) async {
+          writes.add(invocation);
+          return const CuratedListUpdateResult.saved();
+        });
+        final cubit = editor(service, opening);
+        addTearDown(cubit.close);
+        cubit.collaboratorsPicked(offered: {bob, carol}, picked: {carol});
+        current = opening.copyWith(hasRelayConflict: true);
+        cubit.requestDiscardDraft();
+        expect(cubit.state.confirmDiscardDraft, isTrue);
+        await cubit.discardDraftAndAdoptRelay();
+        expect(cubit.state.canEdit, isTrue);
+        expect(cubit.state.collaboratorPubkeys, [carol]);
+        expect(cubit.state.collaboratorsEdited, isFalse);
+
+        cubit.nameChanged('Metadata only');
+        await cubit.submitted();
+
+        expect(writes, hasLength(1));
+        expect(writes.single.namedArguments[#allowedCollaborators], isNull);
+        expect(
+          writes.single.namedArguments[#previousAllowedCollaborators],
+          isNull,
+        );
+        expect(writes.single.namedArguments[#isCollaborative], isNull);
+      },
+    );
+
+    for (final nameEdited in [true, false]) {
+      test(
+        'unchanged draft metadata follows accepted remote fields through Sync and Save (nameEdited=$nameEdited)',
+        () async {
+          final service = _Service();
+          final baseline = list();
+          final desired = baseline.copyWith(
+            name: nameEdited ? 'Local name' : baseline.name,
+            description: nameEdited
+                ? baseline.description
+                : 'Local description',
+          );
+          var current = baseline.copyWith(
+            name: nameEdited ? baseline.name : 'Remote name',
+            description: nameEdited
+                ? 'Remote description'
+                : baseline.description,
+            hasRelayConflict: true,
+            localEditDraft: CuratedListEditDraft(
+              baseline: baseline,
+              desired: desired,
+            ),
+          );
+          when(() => service.getListById(current.authorScopedId))
+              .thenAnswer((_) => current);
+          when(() => service.retryListSync(current.authorScopedId))
+              .thenAnswer((_) async {
+                current = current.copyWith(
+                  name: nameEdited ? desired.name : current.name,
+                  description: nameEdited
+                      ? current.description
+                      : desired.description,
+                  clearLocalEditDraft: true,
+                  hasRelayConflict: false,
+                  pendingRepublish: false,
+                );
+                return true;
+              });
+          String? savedName;
+          String? savedDescription;
+          when(
+            () => service.updateListWithResult(
+              listId: any(named: 'listId'),
+              name: any(named: 'name'),
+              description: any(named: 'description'),
+              isPublic: any(named: 'isPublic'),
+              isCollaborative: any(named: 'isCollaborative'),
+              allowedCollaborators: any(named: 'allowedCollaborators'),
+              previousAllowedCollaborators: any(
+                named: 'previousAllowedCollaborators',
+              ),
+              onLocalSaved: any(named: 'onLocalSaved'),
+              onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            ),
+          ).thenAnswer((i) async {
+            savedName = i.namedArguments[#name] as String?;
+            savedDescription = i.namedArguments[#description] as String?;
+            return const CuratedListUpdateResult.saved();
+          });
+          final cubit = editor(service, current);
+          addTearDown(cubit.close);
+          final expectedName = nameEdited ? 'Local name' : 'Remote name';
+          final expectedDescription = nameEdited
+              ? 'Remote description'
+              : 'Local description';
+          expect(cubit.state.name, expectedName);
+          expect(cubit.state.description, expectedDescription);
+          await cubit.retrySync();
+          expect(cubit.state.name, expectedName);
+          expect(cubit.state.description, expectedDescription);
+          await cubit.submitted();
+          expect(savedName, expectedName);
+          expect(savedDescription, expectedDescription);
+        },
+      );
+    }
+
+    test(
+      'conflicting remote metadata does not hide a saved description clear',
+      () {
+        final service = _Service();
+        final baseline = list();
+        final current = baseline.copyWith(
+          name: 'Remote name',
+          description: 'Remote description',
+          hasRelayConflict: true,
+          localEditDraft: CuratedListEditDraft(
+            baseline: baseline,
+            desired: baseline.copyWith(
+              name: 'Local name',
+              clearDescription: true,
+            ),
+          ),
+        );
+        final cubit = editor(service, current);
+        addTearDown(cubit.close);
+        expect(cubit.state.name, 'Local name');
+        expect(cubit.state.description, isEmpty);
+        expect(cubit.state.hasRelayConflict, isTrue);
+      },
+    );
+    test('confirmation is required and cancel preserves the draft', () async {
+      final service = _Service();
+      final pending = list().copyWith(hasRelayConflict: true);
+      when(() => service.getListById(pending.authorScopedId))
+          .thenReturn(pending);
+      final cubit = editor(service, pending);
+      addTearDown(cubit.close);
+      expect(cubit.state.canEdit, isFalse);
+      await cubit.discardDraftAndAdoptRelay();
+      verifyNever(() => service.discardLocalEditsAndAdoptRelay(any()));
+      cubit.requestDiscardDraft();
+      expect(cubit.state.confirmDiscardDraft, isTrue);
+      cubit.cancelDiscardDraft();
+      expect(cubit.state.confirmDiscardDraft, isFalse);
+      expect(cubit.state.name, 'Original');
+      expect(cubit.state.hasRelayConflict, isTrue);
+    });
+
+    test(
+      'failed adoption retains the draft and confirmation for retry',
+      () async {
+        final service = _Service();
+        final pending = list().copyWith(hasRelayConflict: true);
+        when(() => service.getListById(pending.authorScopedId))
+            .thenReturn(pending);
+        when(
+          () => service.discardLocalEditsAndAdoptRelay(pending.authorScopedId),
+        ).thenAnswer((_) async => false);
+        final cubit = editor(service, pending);
+        addTearDown(cubit.close);
+        cubit.requestDiscardDraft();
+        await cubit.discardDraftAndAdoptRelay();
+        expect(cubit.state.status, CuratedListInfoStatus.failure);
+        expect(cubit.state.name, 'Original');
+        expect(cubit.state.hasRelayConflict, isTrue);
+        expect(cubit.state.confirmDiscardDraft, isTrue);
+      },
+    );
+
+    test(
+      'session change while adopting cannot replace another account form',
+      () async {
+        final service = _Service();
+        final pending = list().copyWith(hasRelayConflict: true);
+        final completer = Completer<bool>();
+        var activeOwner = owner;
+        when(() => service.getListById(pending.authorScopedId))
+            .thenReturn(pending);
+        when(
+          () => service.discardLocalEditsAndAdoptRelay(pending.authorScopedId),
+        ).thenAnswer((_) => completer.future);
+        final cubit = CuratedListInfoCubit(
+          resolveService: () => service,
+          currentOwnerPubkey: () => activeOwner,
+          existingList: pending,
+        );
+        addTearDown(cubit.close);
+        cubit.requestDiscardDraft();
+        final adopting = cubit.discardDraftAndAdoptRelay();
+        activeOwner = bob;
+        completer.complete(true);
+        await adopting;
+        expect(cubit.state.name, 'Original');
+        expect(cubit.state.hasRelayConflict, isTrue);
+        expect(cubit.isSessionCurrent, isFalse);
+      },
+    );
+  });
+
   group('submitted private conversion', () {
     test(
       'private conversion rejection preserves every draft and saved baseline',
@@ -61,6 +320,9 @@ void main() {
             allowedCollaborators: any(named: 'allowedCollaborators'),
             onLocalSaved: any(named: 'onLocalSaved'),
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         ).thenAnswer(
           (_) async => const CuratedListUpdateResult.privateListFull(),
@@ -151,6 +413,9 @@ void main() {
             allowedCollaborators: any(named: 'allowedCollaborators'),
             onLocalSaved: any(named: 'onLocalSaved'),
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         ).thenAnswer((_) async => const CuratedListUpdateResult.saved());
         final cubit = editor(service, saved);
@@ -174,6 +439,9 @@ void main() {
             isCollaborative: true,
             allowedCollaborators: [carol],
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         ).called(1);
       },
@@ -226,6 +494,9 @@ void main() {
             allowedCollaborators: any(named: 'allowedCollaborators'),
             onLocalSaved: any(named: 'onLocalSaved'),
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         ).thenAnswer((_) async => const CuratedListUpdateResult.saved());
         final cubit = editor(service, saved);
@@ -487,6 +758,9 @@ void main() {
           allowedCollaborators: any(named: 'allowedCollaborators'),
           onLocalSaved: any(named: 'onLocalSaved'),
           onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+          previousAllowedCollaborators: any(
+            named: 'previousAllowedCollaborators',
+          ),
         ),
       ).thenAnswer((_) async => const CuratedListUpdateResult.failed());
       final cubit = editor(service, saved);
@@ -619,6 +893,9 @@ void main() {
               allowedCollaborators: any(named: 'allowedCollaborators'),
               onLocalSaved: any(named: 'onLocalSaved'),
               onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+              previousAllowedCollaborators: any(
+                named: 'previousAllowedCollaborators',
+              ),
             ),
           ).thenAnswer((_) async {
             if (accepted) current = list(isPublic: false, pending: false);
