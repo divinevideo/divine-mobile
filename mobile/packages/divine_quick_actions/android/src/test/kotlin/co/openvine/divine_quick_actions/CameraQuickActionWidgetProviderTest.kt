@@ -54,7 +54,7 @@ class CameraQuickActionWidgetProviderTest {
     }
 
     @Test
-    fun updatesTheWidgetOffTheBroadcastThread() {
+    fun holdsTheBroadcastUntilTheQueuedUpdateRuns() {
         val widgetId = bindWidget(AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN)
 
         deliverUpdate(widgetId)
