@@ -37,6 +37,9 @@ class CameraQuickActionWidgetProviderTest {
     private val broadcast = Mockito.mock(BroadcastReceiver.PendingResult::class.java)
     private val provider = CameraQuickActionWidgetProvider(Executor(queuedUpdates::addLast))
 
+    // goAsync() documents 10 s for a receiver to finish its broadcast in.
+    private val receiverBudget = Duration.ofSeconds(10)
+
     @Before
     fun registerLauncherActivity() {
         // The widget opens the app's launcher activity, which a library has none of.
@@ -99,9 +102,7 @@ class CameraQuickActionWidgetProviderTest {
         val widgetId = bindWidget(AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN)
 
         deliverUpdate(widgetId)
-        shadowOf(Looper.getMainLooper()).idleFor(
-            Duration.ofMillis(CameraQuickActionWidgetProvider.BROADCAST_DEADLINE_MILLIS)
-        )
+        shadowOf(Looper.getMainLooper()).idleFor(receiverBudget)
 
         Mockito.verify(broadcast).finish()
 

@@ -55,7 +55,7 @@ class CameraQuickActionWidgetProvider internal constructor(
         private const val UPDATE_THREAD_IDLE_SECONDS = 10L
 
         // Half the 10 seconds the platform gives a receiver before an ANR.
-        internal const val BROADCAST_DEADLINE_MILLIS = 5_000L
+        private const val BROADCAST_DEADLINE_MILLIS = 5_000L
 
         // One thread keeps updates in the order they were sent. It exits when
         // idle: with no update period, the widget updates only now and then.
