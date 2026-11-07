@@ -57,6 +57,98 @@ void main() {
       expect(find.byKey(const Key('trailing')), findsOneWidget);
     });
 
+    group('leading', () {
+      const leadingWidget = Text('Filter', key: Key('leading'));
+
+      testWidgets('renders the leading widget in the header', (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(
+              body: VineBottomSheet(
+                title: Text('Test Sheet'),
+                leading: leadingWidget,
+                body: Text('Content'),
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          find.descendant(
+            of: find.byType(VineBottomSheetHeader),
+            matching: find.byKey(const Key('leading')),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('renders the leading widget in fixed mode', (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(
+              body: VineBottomSheet(
+                scrollable: false,
+                title: Text('Test Sheet'),
+                leading: leadingWidget,
+                body: Text('Content'),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byKey(const Key('leading')), findsOneWidget);
+      });
+
+      testWidgets('gives way to the close button of onComplete', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: VineBottomSheet(
+                title: const Text('Test Sheet'),
+                leading: leadingWidget,
+                onComplete: () async {},
+                body: const Text('Content'),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byKey(const Key('leading')), findsNothing);
+      });
+
+      for (final scrollable in [true, false]) {
+        testWidgets('show forwards it when scrollable is $scrollable', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => ElevatedButton(
+                    onPressed: () => VineBottomSheet.show<void>(
+                      context: context,
+                      scrollable: scrollable,
+                      title: const Text('With Leading'),
+                      leading: leadingWidget,
+                      children: const [Text('Body')],
+                    ),
+                    child: const Text('Open'),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          await tester.tap(find.text('Open'));
+          await tester.pumpAndSettle();
+
+          expect(find.byKey(const Key('leading')), findsOneWidget);
+        });
+      }
+    });
+
     testWidgets('renders with bottom input', (tester) async {
       const inputWidget = TextField(
         key: Key('input'),

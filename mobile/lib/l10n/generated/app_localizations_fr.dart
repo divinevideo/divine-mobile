@@ -8868,6 +8868,49 @@ class AppLocalizationsFr extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Tri des commentaires';
 
   @override
+  String get commentsHiddenToggleSemanticLabel =>
+      'Afficher les commentaires masqués';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Le créateur a masqué ces commentaires volontairement.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Tu as masqué ces commentaires dans Divine. D\'autres apps et sites peuvent encore les afficher, alors signale tout ce qui est nuisible.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Tu veux aussi signaler ce commentaire ?';
+
+  @override
+  String get commentHiddenReportAction => 'Signaler';
+
+  @override
+  String get commentHiddenByCreator => 'Masqué par le créateur';
+
+  @override
+  String get commentHiddenByYou => 'Masqué par toi';
+
+  @override
+  String get commentOptionsHideLabel => 'Masquer le commentaire';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Masquer ce commentaire sur ta vidéo';
+
+  @override
+  String get commentOptionsShowLabel => 'Afficher le commentaire';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Afficher à nouveau ce commentaire sur ta vidéo';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Impossible de mettre à jour les commentaires masqués. Réessaie.';
+
+  @override
   String get commentReply => 'Répondre';
 
   @override

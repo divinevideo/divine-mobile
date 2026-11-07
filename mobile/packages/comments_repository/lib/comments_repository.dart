@@ -2,6 +2,8 @@
 ///
 /// This package provides:
 /// - `CommentsRepository` - Repository for comment management using NostrClient
+/// - `CommentModerationRepository` - A video owner's comment moderation
+///   (NIP-78 kind 30078)
 /// - `Comment` - Model for individual comments
 /// - `CommentThread` - Model for threaded comment structure
 /// - `CommentNode` - Tree node for comment threading
@@ -9,6 +11,7 @@
 library;
 
 export 'src/blocked_comment_filter.dart';
+export 'src/comment_moderation_repository.dart';
 export 'src/comments_repository.dart';
 export 'src/exceptions.dart';
 export 'src/models/models.dart';

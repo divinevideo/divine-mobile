@@ -8835,6 +8835,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Comments sorting';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => 'Show hidden comments';
+
+  @override
+  String get commentsHiddenNotice =>
+      'The creator hid these comments on purpose.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'You hid these in Divine. Other apps and sites may still show them, so report anything harmful.';
+
+  @override
+  String get commentHiddenReportPrompt => 'Want to report this comment too?';
+
+  @override
+  String get commentHiddenReportAction => 'Report';
+
+  @override
+  String get commentHiddenByCreator => 'Hidden by the creator';
+
+  @override
+  String get commentHiddenByYou => 'Hidden by you';
+
+  @override
+  String get commentOptionsHideLabel => 'Hide comment';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Hide this comment on your video';
+
+  @override
+  String get commentOptionsShowLabel => 'Show comment';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Show this comment on your video again';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Couldn\'t update the hidden comments. Try again.';
+
+  @override
   String get commentReply => 'Reply';
 
   @override

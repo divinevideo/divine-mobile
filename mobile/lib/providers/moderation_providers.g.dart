@@ -773,3 +773,93 @@ final class BlockedFollowReconcilerProvider
 
 String _$blockedFollowReconcilerHash() =>
     r'bc150b83fa02264803e1c87e5a711f8b0072244e';
+
+/// Keeps the commenters an account auto-hides on its videos in step with its
+/// blocks (#5044).
+///
+/// Blocking someone hides their comments on all of the blocker's videos for
+/// every Divine viewer, through the per-account NIP-78 list of
+/// [CommentModerationRepository]. A block adds them and a fresh unblock
+/// removes them. Once the session can sign, blocks the list is missing — made
+/// before it existed, or while it could not be published — are added too.
+/// An unblock that could not be published is kept per account and removed at
+/// the next block, unblock, session start or return to the app, also after a
+/// restart. Nothing
+/// else removes an entry, so a device still loading its blocks never strips
+/// one another device added.
+///
+/// Activated by `AppShellSideEffects`.
+
+@ProviderFor(blockedCommenterReconciler)
+final blockedCommenterReconcilerProvider =
+    BlockedCommenterReconcilerProvider._();
+
+/// Keeps the commenters an account auto-hides on its videos in step with its
+/// blocks (#5044).
+///
+/// Blocking someone hides their comments on all of the blocker's videos for
+/// every Divine viewer, through the per-account NIP-78 list of
+/// [CommentModerationRepository]. A block adds them and a fresh unblock
+/// removes them. Once the session can sign, blocks the list is missing — made
+/// before it existed, or while it could not be published — are added too.
+/// An unblock that could not be published is kept per account and removed at
+/// the next block, unblock, session start or return to the app, also after a
+/// restart. Nothing
+/// else removes an entry, so a device still loading its blocks never strips
+/// one another device added.
+///
+/// Activated by `AppShellSideEffects`.
+
+final class BlockedCommenterReconcilerProvider
+    extends $FunctionalProvider<void, void, void>
+    with $Provider<void> {
+  /// Keeps the commenters an account auto-hides on its videos in step with its
+  /// blocks (#5044).
+  ///
+  /// Blocking someone hides their comments on all of the blocker's videos for
+  /// every Divine viewer, through the per-account NIP-78 list of
+  /// [CommentModerationRepository]. A block adds them and a fresh unblock
+  /// removes them. Once the session can sign, blocks the list is missing — made
+  /// before it existed, or while it could not be published — are added too.
+  /// An unblock that could not be published is kept per account and removed at
+  /// the next block, unblock, session start or return to the app, also after a
+  /// restart. Nothing
+  /// else removes an entry, so a device still loading its blocks never strips
+  /// one another device added.
+  ///
+  /// Activated by `AppShellSideEffects`.
+  BlockedCommenterReconcilerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'blockedCommenterReconcilerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$blockedCommenterReconcilerHash();
+
+  @$internal
+  @override
+  $ProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  void create(Ref ref) {
+    return blockedCommenterReconciler(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$blockedCommenterReconcilerHash() =>
+    r'04681a0793fcda156eff8e6b963fcc16ecbcbcbe';

@@ -8,7 +8,8 @@ The videos responding to a Divine video, for its replies and Add yours stickers:
   chain's hashtag.
 - **Pins and hides**: the reply its creator pinned to the front and the ones they
   hid, in a NIP-78 `kind:30078` event of theirs whose `d` tag is
-  `divine:replies:<video address>`.
+  `divine:replies:<video address>`, and the accounts whose replies they hide on
+  all their videos, in the one whose `d` tag is `divine:hidden-commenters`.
 
 Funnelcake counts the responses and returns the latest
 (`GET /api/videos/{id}/responses`). While it does not answer, the repository

@@ -8319,6 +8319,43 @@ class AppLocalizationsKo extends AppLocalizations {
   String get commentsSortSemanticLabel => '댓글 정렬';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => '숨긴 댓글 보기';
+
+  @override
+  String get commentsHiddenNotice => '크리에이터가 일부러 이 댓글들을 숨겼어요.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Divine에서 내가 숨긴 댓글이에요. 다른 앱과 사이트에서는 여전히 보일 수 있으니 해로운 내용은 신고해 주세요.';
+
+  @override
+  String get commentHiddenReportPrompt => '이 댓글도 신고할까요?';
+
+  @override
+  String get commentHiddenReportAction => '신고';
+
+  @override
+  String get commentHiddenByCreator => '크리에이터가 숨김';
+
+  @override
+  String get commentHiddenByYou => '내가 숨김';
+
+  @override
+  String get commentOptionsHideLabel => '댓글 숨기기';
+
+  @override
+  String get commentOptionsHideSemanticLabel => '내 동영상에서 이 댓글 숨기기';
+
+  @override
+  String get commentOptionsShowLabel => '댓글 보이기';
+
+  @override
+  String get commentOptionsShowSemanticLabel => '내 동영상에서 이 댓글 다시 보이기';
+
+  @override
+  String get commentsErrorModerationFailed => '숨긴 댓글을 업데이트하지 못했어요. 다시 시도해 주세요.';
+
+  @override
   String get commentReply => '답글';
 
   @override

@@ -22,8 +22,8 @@ typedef StickerResponsesFilter = List<VideoEvent> Function(
 ///
 /// They pass through [StickerResponsesFilter], the feeds' blocks, mutes and
 /// content filters, since they show on someone else's video and open in a
-/// feed; the replies the video's creator hid are left out too, and the reply
-/// they pinned comes first.
+/// feed; the replies the video's creator hid, and those of the accounts they
+/// blocked, are left out too, and the reply they pinned comes first.
 class StickerResponsesCubit extends Cubit<StickerResponsesState>
     with CloseGuardedEmit<StickerResponsesState> {
   StickerResponsesCubit({

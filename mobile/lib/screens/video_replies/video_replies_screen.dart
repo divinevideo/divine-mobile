@@ -195,7 +195,8 @@ class _ReplyTile extends ConsumerWidget {
     final (isPinned, isHidden) = context.select(
       (VideoRepliesCubit cubit) => (
         cubit.state.curation.pinnedId == key,
-        cubit.state.curation.hiddenIds.contains(key),
+        // Also when the creator blocked its author.
+        cubit.state.curation.hides(reply),
       ),
     );
     final cubit = context.read<VideoRepliesCubit>();
@@ -208,10 +209,11 @@ class _ReplyTile extends ConsumerWidget {
             .value
             ?.bestDisplayName ??
         UserProfile.generatedNameFor(reply.pubkey);
-    final status = isPinned
-        ? l10n.videoStickerRepliesPinned
-        : isHidden
+    // A pinned reply whose author the creator blocked is not shown either.
+    final status = isHidden
         ? l10n.videoStickerRepliesHidden
+        : isPinned
+        ? l10n.videoStickerRepliesPinned
         : null;
     // Listed, blurred, so the creator can hide it, but not played: some of
     // what the settings hide is locked to hide for the account.

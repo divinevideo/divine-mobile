@@ -348,8 +348,13 @@ then show the sticker only as it is in the frames.
   per reply, a tag marked `pinned` or `hidden`: `["a", "<reply address>", "",
   "hidden"]` for an addressable reply, so the mark outlives an edit of the
   reply, or `["e", "<reply id>", "", "hidden"]` for one that is not. A newer
-  one replaces the one before. Viewers see the pinned reply first and none of
-  the hidden ones, on the sticker and in the feed.
+  one replaces the one before. The replies of the accounts the creator
+  blocked are hidden too: they are named in the creator's
+  `["d", "divine:hidden-commenters"]` event (see `docs/NOSTR_EVENT_TYPES.md`),
+  and one the creator shows or pins in the list is marked `restored` by its
+  event id, so a version its author replaces is hidden again. Viewers see
+  the pinned reply first and none of the hidden ones, on the sticker and in
+  the feed.
 
 Funnelcake counts both and returns the latest
 (`GET /api/videos/{id}/responses?type=replies|joined&tag=<hashtag>`). For

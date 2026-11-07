@@ -8300,6 +8300,44 @@ class AppLocalizationsJa extends AppLocalizations {
   String get commentsSortSemanticLabel => 'コメントの並び替え';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => '非表示のコメントを表示';
+
+  @override
+  String get commentsHiddenNotice => 'クリエイターがこれらのコメントを意図的に非表示にしました。';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'これらのコメントはDivineであなたが非表示にしました。他のアプリやサイトではまだ表示されることがあるので、有害なものは報告してください。';
+
+  @override
+  String get commentHiddenReportPrompt => 'このコメントを報告もしますか？';
+
+  @override
+  String get commentHiddenReportAction => '報告';
+
+  @override
+  String get commentHiddenByCreator => 'クリエイターにより非表示';
+
+  @override
+  String get commentHiddenByYou => 'あなたにより非表示';
+
+  @override
+  String get commentOptionsHideLabel => 'コメントを非表示';
+
+  @override
+  String get commentOptionsHideSemanticLabel => '自分の動画でこのコメントを非表示にする';
+
+  @override
+  String get commentOptionsShowLabel => 'コメントを表示';
+
+  @override
+  String get commentOptionsShowSemanticLabel => '自分の動画でこのコメントを再表示する';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      '非表示のコメントを更新できませんでした。もう一度お試しください。';
+
+  @override
   String get commentReply => '返信';
 
   @override

@@ -112,6 +112,57 @@ void main() {
         ).called(1),
       );
 
+      blocTest<StickerResponsesCubit, StickerResponsesState>(
+        'leaves out the replies of the accounts the creator blocked, but '
+        'one they showed again, and counts them out',
+        setUp: () {
+          when(
+            () => repository.fetchReplies(
+              videoId: any(named: 'videoId'),
+              videoAddress: any(named: 'videoAddress'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer(
+            (_) async => VideoResponses(
+              total: 5,
+              videos: [
+                _video(1),
+                _video(2),
+                _video(3, pubkey: _hex(1002)),
+              ],
+            ),
+          );
+          when(
+            () => repository.fetchCuration(
+              creatorPubkey: _creator,
+              videoAddress: rootAddress,
+            ),
+          ).thenAnswer(
+            (_) async => RepliesCuration(
+              restoredIds: {_hex(3)},
+              hiddenAuthors: {_hex(1002)},
+            ),
+          );
+        },
+        build: () => build(_region(VideoStickerKind.replies)),
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        expect: () => [
+          StickerResponsesState(
+            status: StickerResponsesStatus.loaded,
+            total: 4,
+            videos: [
+              _video(1),
+              _video(3, pubkey: _hex(1002)),
+            ],
+            curation: RepliesCuration(
+              restoredIds: {_hex(3)},
+              hiddenAuthors: {_hex(1002)},
+            ),
+          ),
+        ],
+      );
+
       group('with a pin older than the replies read', () {
         setUp(() {
           when(

@@ -8748,6 +8748,47 @@ class AppLocalizationsAr extends AppLocalizations {
   String get commentsSortSemanticLabel => 'ترتيب التعليقات';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => 'عرض التعليقات المخفية';
+
+  @override
+  String get commentsHiddenNotice =>
+      'أُخفيت هذه التعليقات عمدًا من قِبل الصانع.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'أخفيت هذه التعليقات في Divine. قد تظل التطبيقات والمواقع الأخرى تعرضها، لذا أبلغ عن أي محتوى ضار.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'هل تريد الإبلاغ عن هذا التعليق أيضًا؟';
+
+  @override
+  String get commentHiddenReportAction => 'إبلاغ';
+
+  @override
+  String get commentHiddenByCreator => 'مخفي من قِبل الصانع';
+
+  @override
+  String get commentHiddenByYou => 'مخفي من قِبلك';
+
+  @override
+  String get commentOptionsHideLabel => 'إخفاء التعليق';
+
+  @override
+  String get commentOptionsHideSemanticLabel => 'إخفاء هذا التعليق على الفيديو';
+
+  @override
+  String get commentOptionsShowLabel => 'إظهار التعليق';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'إظهار هذا التعليق على الفيديو مجددًا';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'تعذّر تحديث التعليقات المخفية. يُرجى المحاولة مرة أخرى.';
+
+  @override
   String get commentReply => 'رد';
 
   @override

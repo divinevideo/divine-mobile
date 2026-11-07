@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:comments_repository/comments_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -489,6 +490,142 @@ void blockedFollowReconciler(Ref ref) {
     for (final subscription in subscriptions) {
       unawaited(subscription.cancel());
     }
+  });
+}
+
+/// Prefix of the per-account preferences key holding the unblocks
+/// [blockedCommenterReconcilerProvider] has not published yet.
+const hiddenCommenterRemovalsPrefsPrefix = 'hidden_commenter_removals.';
+
+/// Keeps the commenters an account auto-hides on its videos in step with its
+/// blocks (#5044).
+///
+/// Blocking someone hides their comments on all of the blocker's videos for
+/// every Divine viewer, through the per-account NIP-78 list of
+/// [CommentModerationRepository]. A block adds them and a fresh unblock
+/// removes them. Once the session can sign, blocks the list is missing — made
+/// before it existed, or while it could not be published — are added too.
+/// An unblock that could not be published is kept per account and removed at
+/// the next block, unblock, session start or return to the app, also after a
+/// restart. Nothing
+/// else removes an entry, so a device still loading its blocks never strips
+/// one another device added.
+///
+/// Activated by `AppShellSideEffects`.
+@Riverpod(keepAlive: true)
+void blockedCommenterReconciler(Ref ref) {
+  final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
+  final moderationRepository = ref.watch(commentModerationRepositoryProvider);
+  final prefs = ref.watch(sharedPreferencesProvider);
+
+  // Unblocks not yet published, per account. Kept on disk, or an unblock
+  // that failed before a restart would hide the account for good.
+  String pendingKey(String owner) =>
+      '$hiddenCommenterRemovalsPrefsPrefix$owner';
+  Set<String> pendingRemovalsOf(String owner) => {
+    ...?prefs.getStringList(pendingKey(owner)),
+  };
+  void savePendingRemovals(String owner, Set<String> pending) {
+    runProviderDetached(
+      pending.isEmpty
+          ? prefs.remove(pendingKey(owner))
+          : prefs.setStringList(pendingKey(owner), pending.toList()),
+      'save pending auto-hidden commenter removals',
+      logName: 'BlockedCommenterReconciler',
+    );
+  }
+
+  var queue = Future<void>.value();
+  var scheduled = false;
+  var disposed = false;
+
+  Future<void> reconcile() async {
+    if (disposed) return;
+    final readiness = ref.read(nostrSessionProvider);
+    final owner = readiness.pubkey;
+    if (!readiness.isReadyForActiveClient || owner == null) return;
+
+    final blocked = blocklistRepository.blockedPubkeysForAccount(owner);
+    final removals = pendingRemovalsOf(owner).difference(blocked);
+    if (blocked.isEmpty && removals.isEmpty) return;
+    try {
+      await moderationRepository.updateAutoHiddenAuthors(
+        add: blocked,
+        remove: removals,
+      );
+      // Read again: an unblock may have been added during the publish.
+      savePendingRemovals(owner, pendingRemovalsOf(owner).difference(removals));
+    } on CommentModerationFailedException catch (e) {
+      // The next block, unblock, session start or return to the app tries
+      // again.
+      Log.warning(
+        'Failed to sync auto-hidden commenters: $e',
+        name: 'BlockedCommenterReconciler',
+        category: LogCategory.system,
+      );
+    }
+  }
+
+  // Coalesces a burst of changes, such as a block list arriving from relays,
+  // into one read and at most one publish.
+  void schedule() {
+    if (scheduled || disposed) return;
+    scheduled = true;
+    final next = queue.then((_) {
+      scheduled = false;
+      return reconcile();
+    });
+    // The failure is reported below; the next reconcile still runs.
+    queue = next.then((_) {}, onError: (Object _) {});
+    runProviderDetached(
+      next,
+      'sync auto-hidden commenters',
+      logName: 'BlockedCommenterReconciler',
+    );
+  }
+
+  final subscription = blocklistRepository.changes.listen((change) {
+    final owner = ref.read(nostrSessionProvider).pubkey;
+    switch (change.op) {
+      case BlocklistOp.blocked:
+        if (owner != null) {
+          savePendingRemovals(
+            owner,
+            pendingRemovalsOf(owner)..remove(change.pubkey),
+          );
+        }
+        schedule();
+      case BlocklistOp.unblocked:
+        if (owner != null) {
+          savePendingRemovals(
+            owner,
+            pendingRemovalsOf(owner)..add(change.pubkey),
+          );
+        }
+        schedule();
+      case BlocklistOp.muted ||
+          BlocklistOp.unmuted ||
+          BlocklistOp.mutedByUs ||
+          BlocklistOp.unmutedByUs ||
+          BlocklistOp.blockedUs ||
+          BlocklistOp.unblockedUs:
+        break;
+    }
+  });
+
+  ref
+    ..listen<NostrSessionReadiness>(nostrSessionProvider, (_, next) {
+      if (next.isReadyForActiveClient) schedule();
+    })
+    // An unblock that failed offline is tried again when the app returns.
+    ..listen<bool>(appForegroundProvider, (previous, next) {
+      if (next && previous != true) schedule();
+    });
+  schedule();
+
+  ref.onDispose(() {
+    disposed = true;
+    unawaited(subscription.cancel());
   });
 }
 

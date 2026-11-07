@@ -8737,6 +8737,48 @@ class AppLocalizationsMs extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Isihan komen';
 
   @override
+  String get commentsHiddenToggleSemanticLabel =>
+      'Tunjuk komen yang disembunyikan';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Pencipta sengaja menyembunyikan komen ini.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Anda menyembunyikan komen ini dalam Divine. Aplikasi dan laman lain mungkin masih memaparkannya, jadi laporkan apa-apa yang berbahaya.';
+
+  @override
+  String get commentHiddenReportPrompt => 'Mahu laporkan komen ini juga?';
+
+  @override
+  String get commentHiddenReportAction => 'Laporkan';
+
+  @override
+  String get commentHiddenByCreator => 'Disembunyikan oleh pencipta';
+
+  @override
+  String get commentHiddenByYou => 'Disembunyikan oleh anda';
+
+  @override
+  String get commentOptionsHideLabel => 'Sembunyikan komen';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Sembunyikan komen ini pada video anda';
+
+  @override
+  String get commentOptionsShowLabel => 'Tunjuk komen';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Tunjuk semula komen ini pada video anda';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Gagal mengemas kini komen yang disembunyikan. Cuba lagi.';
+
+  @override
   String get commentReply => 'Balas';
 
   @override

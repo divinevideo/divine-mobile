@@ -1,5 +1,11 @@
 part of 'comments_list_bloc.dart';
 
+/// A fresh snapshot of the viewer's account-scoped blocks.
+final class _ViewerBlockedAuthorsChanged extends CommentsListEvent {
+  const _ViewerBlockedAuthorsChanged(this.authors);
+  final Set<String> authors;
+}
+
 /// Base class for all comments-list events.
 sealed class CommentsListEvent {
   const CommentsListEvent();
@@ -44,6 +50,20 @@ final class CommentsInitialBackfillCompleted extends CommentsListEvent {
 /// User acknowledged the new comments (e.g., tapped the pill or scrolled to top).
 final class NewCommentsAcknowledged extends CommentsListEvent {
   const NewCommentsAcknowledged();
+}
+
+/// The viewer shows or hides again the comments the video owner hid.
+final class HiddenCommentsVisibilityToggled extends CommentsListEvent {
+  const HiddenCommentsVisibilityToggled();
+}
+
+/// The video owner hides [comment] from the thread's default view, or shows
+/// it again when [hide] is false.
+final class CommentModerationRequested extends CommentsListEvent {
+  const CommentModerationRequested(this.comment, {required this.hide});
+
+  final Comment comment;
+  final bool hide;
 }
 
 /// Clear any transient error.
@@ -117,6 +137,9 @@ final class CommentDeletionReceived extends CommentsListEvent {
 }
 
 /// Remove every comment authored by [authorPubkey] (post-block cleanup).
+///
+/// On the viewer's own video the comments stay, hidden by default, because
+/// the owner's block is comment moderation there (#5044).
 final class CommentsRemovedByAuthorFromStore extends CommentsListEvent {
   const CommentsRemovedByAuthorFromStore(this.authorPubkey);
 

@@ -8818,6 +8818,48 @@ class AppLocalizationsBg extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Подреждане на коментарите';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => 'Покажи скритите коментари';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Тези коментари са скрити нарочно от създателя.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Ти скри тези коментари в Divine. Други приложения и сайтове може още да ги показват, затова докладвай всичко вредно.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Искаш ли да докладваш и този коментар?';
+
+  @override
+  String get commentHiddenReportAction => 'Докладвай';
+
+  @override
+  String get commentHiddenByCreator => 'Скрит от създателя';
+
+  @override
+  String get commentHiddenByYou => 'Скрит от теб';
+
+  @override
+  String get commentOptionsHideLabel => 'Скрий коментара';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Скрий този коментар в своето видео';
+
+  @override
+  String get commentOptionsShowLabel => 'Покажи коментара';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Покажи отново този коментар в своето видео';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Скритите коментари не бяха обновени. Опитай отново.';
+
+  @override
   String get commentReply => 'Отговори';
 
   @override

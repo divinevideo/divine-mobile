@@ -43,7 +43,7 @@ class VideoRepliesState extends Equatable {
   final RepliesCuration curation;
 
   /// The replies as viewers see them: the pinned one first, the hidden ones
-  /// left out.
+  /// and those of the accounts the creator blocked left out.
   List<VideoEvent> get shown => curation.apply(replies);
 
   VideoRepliesState copyWith({

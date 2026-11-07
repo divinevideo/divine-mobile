@@ -8853,6 +8853,49 @@ class AppLocalizationsDe extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Kommentare sortieren';
 
   @override
+  String get commentsHiddenToggleSemanticLabel =>
+      'Ausgeblendete Kommentare anzeigen';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Der Creator hat diese Kommentare bewusst ausgeblendet.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Du hast diese Kommentare in Divine ausgeblendet. Andere Apps und Websites können sie weiter zeigen, also melde alles, was schadet.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Willst du den Kommentar auch melden?';
+
+  @override
+  String get commentHiddenReportAction => 'Melden';
+
+  @override
+  String get commentHiddenByCreator => 'Vom Creator ausgeblendet';
+
+  @override
+  String get commentHiddenByYou => 'Von dir ausgeblendet';
+
+  @override
+  String get commentOptionsHideLabel => 'Kommentar ausblenden';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Diesen Kommentar auf deinem Video ausblenden';
+
+  @override
+  String get commentOptionsShowLabel => 'Kommentar einblenden';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Diesen Kommentar auf deinem Video wieder einblenden';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Die ausgeblendeten Kommentare konnten nicht aktualisiert werden. Versuch es noch mal.';
+
+  @override
   String get commentReply => 'Antworten';
 
   @override

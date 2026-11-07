@@ -138,6 +138,95 @@ void main() {
       semanticsHandle.dispose();
     });
 
+    group('video owner moderation', () {
+      /// Opens the menu for someone else's comment and returns what it
+      /// reports once [tapLabel] is tapped, or `null` without a tap.
+      Future<CommentOptionResult?> openAndTap(
+        WidgetTester tester, {
+        required bool viewerOwnsVideo,
+        bool isHidden = false,
+        String? tapLabel,
+      }) async {
+        CommentOptionResult? result;
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) => Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    onPressed: () async {
+                      result =
+                          await CommentOptionsModal.showForOtherUserIntegrated(
+                            context,
+                            commentId: 'c' * 64,
+                            authorPubkey: 'a' * 64,
+                            viewerOwnsVideo: viewerOwnsVideo,
+                            isHidden: isHidden,
+                          );
+                    },
+                    child: const Text('Open options'),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+        await tester.pumpWidget(
+          MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        );
+        await tester.tap(find.text('Open options'));
+        await tester.pumpAndSettle();
+        if (tapLabel != null) {
+          await tester.tap(find.text(tapLabel));
+          await tester.pumpAndSettle();
+        }
+        return result;
+      }
+
+      testWidgets('lets the owner hide a shown comment', (tester) async {
+        final result = await openAndTap(
+          tester,
+          viewerOwnsVideo: true,
+          tapLabel: l10n.commentOptionsHideLabel,
+        );
+
+        expect(
+          result,
+          isA<CommentModerationResult>().having((r) => r.hide, 'hide', isTrue),
+        );
+      });
+
+      testWidgets('lets the owner show a hidden comment again', (
+        tester,
+      ) async {
+        final result = await openAndTap(
+          tester,
+          viewerOwnsVideo: true,
+          isHidden: true,
+          tapLabel: l10n.commentOptionsShowLabel,
+        );
+
+        expect(
+          result,
+          isA<CommentModerationResult>().having((r) => r.hide, 'hide', isFalse),
+        );
+        expect(find.text(l10n.commentOptionsHideLabel), findsNothing);
+      });
+
+      testWidgets('offers no moderation to anyone else', (tester) async {
+        await openAndTap(tester, viewerOwnsVideo: false);
+
+        expect(find.text(l10n.commentOptionsHideLabel), findsNothing);
+        expect(find.text(l10n.commentOptionsShowLabel), findsNothing);
+        expect(find.text(l10n.commentOptionsFlagContentLabel), findsOneWidget);
+      });
+    });
+
     group('Flag Content', () {
       // Full-length hex, never truncated.
       final commentId = 'c' * 64;

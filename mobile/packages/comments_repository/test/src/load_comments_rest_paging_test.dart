@@ -110,7 +110,7 @@ void main() {
         repository = CommentsRepository(
           nostrClient: nostrClient,
           funnelcakeApiClient: funnelcake,
-          blockFilter: (pubkey) => pubkey == blockedPubkey,
+          blockFilter: (pubkey, {rootAuthorPubkey}) => pubkey == blockedPubkey,
         );
         stubRestPage(0, [
           restComment('first', rootEventId: currentId, createdAt: 3000),

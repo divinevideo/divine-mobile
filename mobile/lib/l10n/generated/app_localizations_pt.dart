@@ -8819,6 +8819,48 @@ class AppLocalizationsPt extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Ordenação dos comentários';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => 'Mostrar comentários ocultos';
+
+  @override
+  String get commentsHiddenNotice =>
+      'O criador ocultou estes comentários de propósito.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Você ocultou estes comentários no Divine. Outros apps e sites ainda podem mostrá-los, então denuncie o que for prejudicial.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Quer denunciar este comentário também?';
+
+  @override
+  String get commentHiddenReportAction => 'Denunciar';
+
+  @override
+  String get commentHiddenByCreator => 'Oculto pelo criador';
+
+  @override
+  String get commentHiddenByYou => 'Oculto por você';
+
+  @override
+  String get commentOptionsHideLabel => 'Ocultar comentário';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Ocultar este comentário no seu vídeo';
+
+  @override
+  String get commentOptionsShowLabel => 'Mostrar comentário';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Mostrar este comentário de novo no seu vídeo';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Não foi possível atualizar os comentários ocultos. Tente de novo.';
+
+  @override
   String get commentReply => 'Responder';
 
   @override
