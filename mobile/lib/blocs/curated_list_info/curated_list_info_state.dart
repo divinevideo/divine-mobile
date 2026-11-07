@@ -55,6 +55,7 @@ class CuratedListInfoState extends Equatable {
     this.storedCollaborators = const [],
     this.visibilityEdited = false,
     this.collaboratorsEdited = false,
+    this.collaboratorEditBaseline,
     this.lastAttemptWasSync = false,
   });
 
@@ -98,6 +99,9 @@ class CuratedListInfoState extends Equatable {
   final List<String> storedCollaborators;
   final bool visibilityEdited;
   final bool collaboratorsEdited;
+
+  /// Permissions when the current collaborator draft began, until it is reset.
+  final List<String>? collaboratorEditBaseline;
 
   /// Whether delivery refresh may settle the most recent failed attempt.
   final bool lastAttemptWasSync;
@@ -156,6 +160,7 @@ class CuratedListInfoState extends Equatable {
     List<String>? storedCollaborators,
     bool? visibilityEdited,
     bool? collaboratorsEdited,
+    List<String>? collaboratorEditBaseline,
     bool? lastAttemptWasSync,
   }) {
     return CuratedListInfoState(
@@ -176,6 +181,9 @@ class CuratedListInfoState extends Equatable {
       storedCollaborators: storedCollaborators ?? this.storedCollaborators,
       visibilityEdited: visibilityEdited ?? this.visibilityEdited,
       collaboratorsEdited: collaboratorsEdited ?? this.collaboratorsEdited,
+      collaboratorEditBaseline: collaboratorsEdited == false
+          ? null
+          : collaboratorEditBaseline ?? this.collaboratorEditBaseline,
       lastAttemptWasSync: lastAttemptWasSync ?? this.lastAttemptWasSync,
     );
   }
@@ -197,6 +205,7 @@ class CuratedListInfoState extends Equatable {
     storedCollaborators,
     visibilityEdited,
     collaboratorsEdited,
+    collaboratorEditBaseline,
     lastAttemptWasSync,
   ];
 }

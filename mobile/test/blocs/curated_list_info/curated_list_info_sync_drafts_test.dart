@@ -45,6 +45,62 @@ void main() {
       );
 
   group('explicit conflict recovery', () {
+    test(
+      'adoption clears collaborator intent before a metadata-only save',
+      () async {
+        final service = _Service();
+        final opening = list(collaborators: [bob], pending: false);
+        var current = opening;
+        when(() => service.getListById(any())).thenAnswer((_) => current);
+        when(
+          () => service.discardLocalEditsAndAdoptRelay(opening.authorScopedId),
+        ).thenAnswer((_) async {
+          current = list(collaborators: [carol], pending: false);
+          return true;
+        });
+        final writes = <Invocation>[];
+        when(
+          () => service.updateListWithResult(
+            listId: any(named: 'listId'),
+            name: any(named: 'name'),
+            description: any(named: 'description'),
+            isPublic: any(named: 'isPublic'),
+            isCollaborative: any(named: 'isCollaborative'),
+            allowedCollaborators: any(named: 'allowedCollaborators'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
+            onLocalSaved: any(named: 'onLocalSaved'),
+            onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+          ),
+        ).thenAnswer((invocation) async {
+          writes.add(invocation);
+          return const CuratedListUpdateResult.saved();
+        });
+        final cubit = editor(service, opening);
+        addTearDown(cubit.close);
+        cubit.collaboratorsPicked(offered: {bob, carol}, picked: {carol});
+        current = opening.copyWith(hasRelayConflict: true);
+        cubit.requestDiscardDraft();
+        expect(cubit.state.confirmDiscardDraft, isTrue);
+        await cubit.discardDraftAndAdoptRelay();
+        expect(cubit.state.canEdit, isTrue);
+        expect(cubit.state.collaboratorPubkeys, [carol]);
+        expect(cubit.state.collaboratorsEdited, isFalse);
+
+        cubit.nameChanged('Metadata only');
+        await cubit.submitted();
+
+        expect(writes, hasLength(1));
+        expect(writes.single.namedArguments[#allowedCollaborators], isNull);
+        expect(
+          writes.single.namedArguments[#previousAllowedCollaborators],
+          isNull,
+        );
+        expect(writes.single.namedArguments[#isCollaborative], isNull);
+      },
+    );
+
     for (final nameEdited in [true, false]) {
       test(
         'unchanged draft metadata follows accepted remote fields through Sync and Save (nameEdited=$nameEdited)',
