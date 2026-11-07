@@ -510,9 +510,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   /// Sets the playback volume (0.0 silent, 1.0 full).
   ///
-  /// Only the active controller is updated immediately. Neighbour controllers
-  /// already receive the correct volume during their initialization via
-  /// [_initController], so there is no need to touch them here.
+  /// Only an initialized active controller is updated immediately. Every other
+  /// controller, including an active one whose `initialize()` is still in
+  /// flight, reads the new volume when [_initController] applies it, so there
+  /// is no need to touch them here.
   ///
   /// Calls [InfiniteVideoFeed.onVolumeChanged] with the new value.
   void setVolume(double volume) {
@@ -520,7 +521,9 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (_volume == clamped) return;
     _volume = clamped;
     final active = _controllers[_currentIndex];
-    if (active != null) unawaited(active.setVolume(clamped));
+    if (active != null && active.isInitialized) {
+      unawaited(active.setVolume(clamped));
+    }
     widget.onVolumeChanged?.call(clamped);
   }
 
