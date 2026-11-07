@@ -12015,6 +12015,18 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'Kumpirmahin ang kulay';
 
   @override
+  String get videoEditorEyedropperSemanticLabel =>
+      'Pumili ng kulay mula sa video';
+
+  @override
+  String get videoEditorEyedropperHint =>
+      'I-tap at i-drag para pumili ng kulay';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel =>
+      'Itigil ang pagpili ng kulay';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
       'Saturation at brightness';
 

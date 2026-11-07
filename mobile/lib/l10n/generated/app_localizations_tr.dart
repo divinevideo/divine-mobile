@@ -11841,6 +11841,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'Rengi onayla';
 
   @override
+  String get videoEditorEyedropperSemanticLabel => 'Videodan renk seç';
+
+  @override
+  String get videoEditorEyedropperHint => 'Renk seçmek için dokun ve sürükle';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => 'Renk seçmeyi bırak';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
       'Doygunluk ve parlaklık';
 

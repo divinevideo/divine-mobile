@@ -3993,6 +3993,9 @@
   "videoEditorCloseColorPickerSemanticLabel": "የቀለም መራጭን ይዝጉ",
   "videoEditorPickColorTitle": "ቀለም ይምረጡ",
   "videoEditorConfirmColorSemanticLabel": "ቀለም ያረጋግጡ",
+  "videoEditorEyedropperSemanticLabel": "ከቪዲዮው ቀለም ይምረጡ",
+  "videoEditorEyedropperHint": "ቀለም ለመምረጥ ይንኩና ይጎትቱ",
+  "videoEditorEyedropperCancelSemanticLabel": "ቀለም መምረጥን ያቁሙ",
   "videoEditorSaturationBrightnessSemanticLabel": "ሙሌት እና ብሩህነት",
   "videoEditorSaturationBrightnessValue": "ሙሌት {saturation}%፣ ብሩህነት {brightness}%",
   "@videoEditorSaturationBrightnessValue": {

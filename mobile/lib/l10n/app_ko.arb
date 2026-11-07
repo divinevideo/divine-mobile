@@ -2140,6 +2140,9 @@
     }
   },
   "videoEditorConfirmColorSemanticLabel": "색상 확인",
+  "videoEditorEyedropperSemanticLabel": "영상에서 색상 선택",
+  "videoEditorEyedropperHint": "터치한 채로 드래그해서 색상을 선택하세요",
+  "videoEditorEyedropperCancelSemanticLabel": "색상 선택 그만하기",
   "videoEditorDeleteLabel": "삭제",
   "videoEditorDeleteLayerDropZone": "레이어 삭제 드롭 영역",
   "videoEditorDeleteSelectedItemSemanticLabel": "선택한 항목 삭제",

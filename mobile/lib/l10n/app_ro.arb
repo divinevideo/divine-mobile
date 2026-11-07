@@ -3363,6 +3363,9 @@
   "videoEditorCloseColorPickerSemanticLabel": "Închide selectorul de culoare",
   "videoEditorPickColorTitle": "Alege culoarea",
   "videoEditorConfirmColorSemanticLabel": "Confirmă culoarea",
+  "videoEditorEyedropperSemanticLabel": "Alege o culoare din videoclip",
+  "videoEditorEyedropperHint": "Atinge și trage pentru a alege o culoare",
+  "videoEditorEyedropperCancelSemanticLabel": "Oprește alegerea culorii",
   "videoEditorSaturationBrightnessSemanticLabel": "Saturație și luminozitate",
   "videoEditorSaturationBrightnessValue": "Saturație {saturation}%, Luminozitate {brightness}%",
   "@videoEditorSaturationBrightnessValue": {

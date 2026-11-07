@@ -11980,6 +11980,17 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'Kleur bevestigen';
 
   @override
+  String get videoEditorEyedropperSemanticLabel =>
+      'Kies een kleur uit de video';
+
+  @override
+  String get videoEditorEyedropperHint => 'Tik en sleep om een kleur te kiezen';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel =>
+      'Stoppen met kleur kiezen';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
       'Verzadiging en helderheid';
 

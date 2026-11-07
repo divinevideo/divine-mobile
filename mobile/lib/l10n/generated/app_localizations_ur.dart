@@ -11928,6 +11928,15 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'رنگ کی تصدیق کریں';
 
   @override
+  String get videoEditorEyedropperSemanticLabel => 'ویڈیو سے رنگ چنیں';
+
+  @override
+  String get videoEditorEyedropperHint => 'رنگ چننے کے لیے چھوئیں اور گھسیٹیں';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => 'رنگ چننا بند کریں';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel => 'سیچوریشن اور چمک';
 
   @override

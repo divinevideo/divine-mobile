@@ -12034,6 +12034,16 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'Потвърдете цвета';
 
   @override
+  String get videoEditorEyedropperSemanticLabel => 'Избери цвят от видеото';
+
+  @override
+  String get videoEditorEyedropperHint =>
+      'Докосни и плъзни, за да избереш цвят';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => 'Спри избора на цвят';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
       'Наситеност и яркост';
 

@@ -12068,6 +12068,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'Farbe bestätigen';
 
   @override
+  String get videoEditorEyedropperSemanticLabel => 'Farbe aus dem Video wählen';
+
+  @override
+  String get videoEditorEyedropperHint =>
+      'Tippe und ziehe, um eine Farbe zu wählen';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => 'Farbauswahl beenden';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
       'Sättigung und Helligkeit';
 

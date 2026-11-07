@@ -11650,6 +11650,15 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'ቀለም ያረጋግጡ';
 
   @override
+  String get videoEditorEyedropperSemanticLabel => 'ከቪዲዮው ቀለም ይምረጡ';
+
+  @override
+  String get videoEditorEyedropperHint => 'ቀለም ለመምረጥ ይንኩና ይጎትቱ';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => 'ቀለም መምረጥን ያቁሙ';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel => 'ሙሌት እና ብሩህነት';
 
   @override

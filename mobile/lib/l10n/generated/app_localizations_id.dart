@@ -11827,6 +11827,17 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'Konfirmasi warna';
 
   @override
+  String get videoEditorEyedropperSemanticLabel => 'Pilih warna dari video';
+
+  @override
+  String get videoEditorEyedropperHint =>
+      'Sentuh dan geser untuk memilih warna';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel =>
+      'Berhenti memilih warna';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
       'Saturasi dan kecerahan';
 

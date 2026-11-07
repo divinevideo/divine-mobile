@@ -3363,6 +3363,9 @@
   "videoEditorCloseColorPickerSemanticLabel": "Stäng färgväljare",
   "videoEditorPickColorTitle": "Välj färg",
   "videoEditorConfirmColorSemanticLabel": "Bekräfta färg",
+  "videoEditorEyedropperSemanticLabel": "Välj en färg från videon",
+  "videoEditorEyedropperHint": "Tryck och dra för att välja en färg",
+  "videoEditorEyedropperCancelSemanticLabel": "Sluta välja färg",
   "videoEditorSaturationBrightnessSemanticLabel": "Mättnad och ljusstyrka",
   "videoEditorSaturationBrightnessValue": "Mättnad {saturation}%, Ljusstyrka {brightness}%",
   "@videoEditorSaturationBrightnessValue": {

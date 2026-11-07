@@ -11936,6 +11936,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'تأكيد اللون';
 
   @override
+  String get videoEditorEyedropperSemanticLabel => 'اختيار لون من الفيديو';
+
+  @override
+  String get videoEditorEyedropperHint => 'اختيار لون باللمس والسحب';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => 'إيقاف اختيار اللون';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel => 'التشبع والسطوع';
 
   @override

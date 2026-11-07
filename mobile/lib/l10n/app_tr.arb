@@ -2601,6 +2601,9 @@
     }
   },
   "videoEditorConfirmColorSemanticLabel": "Rengi onayla",
+  "videoEditorEyedropperSemanticLabel": "Videodan renk seç",
+  "videoEditorEyedropperHint": "Renk seçmek için dokun ve sürükle",
+  "videoEditorEyedropperCancelSemanticLabel": "Renk seçmeyi bırak",
   "videoEditorDeleteLabel": "Sil",
   "videoEditorDeleteLayerDropZone": "Katman silme bırakma alanı",
   "videoEditorDeleteSelectedItemSemanticLabel": "Seçili öğeyi sil",

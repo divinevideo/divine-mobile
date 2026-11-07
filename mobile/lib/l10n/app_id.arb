@@ -2601,6 +2601,9 @@
     }
   },
   "videoEditorConfirmColorSemanticLabel": "Konfirmasi warna",
+  "videoEditorEyedropperSemanticLabel": "Pilih warna dari video",
+  "videoEditorEyedropperHint": "Sentuh dan geser untuk memilih warna",
+  "videoEditorEyedropperCancelSemanticLabel": "Berhenti memilih warna",
   "videoEditorDeleteLabel": "Hapus",
   "videoEditorDeleteLayerDropZone": "Area lepas untuk menghapus lapisan",
   "videoEditorDeleteSelectedItemSemanticLabel": "Hapus item yang dipilih",

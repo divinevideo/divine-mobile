@@ -21,6 +21,7 @@ import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dar
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_clip_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_controls.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
+import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -610,6 +611,8 @@ class _Preview extends StatelessWidget {
   /// Keeps a video backdrop aligned with the clip. See [ChromaKeyBackdropSync].
   final ChromaKeyBackdropSync? backdropSync;
 
+  static const _borderRadius = BorderRadius.all(Radius.circular(16));
+
   @override
   Widget build(BuildContext context) {
     final controller = player;
@@ -627,11 +630,16 @@ class _Preview extends StatelessWidget {
         child: AspectRatio(
           aspectRatio: aspectRatio,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: _borderRadius,
             child: ChromaKeyedVideo(
               chromaKey: chromaKey,
               backdropSync: backdropSync,
-              child: DivineVideoPlayer(controller: controller),
+              // Below the key's filter, so the eyedropper picks the footage
+              // — the screen color included — rather than what the key left.
+              child: EyedropperSourceRegion(
+                borderRadius: _borderRadius,
+                child: DivineVideoPlayer(controller: controller),
+              ),
             ),
           ),
         ),

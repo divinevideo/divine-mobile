@@ -15,6 +15,7 @@ import 'package:openvine/l10n/resolve_app_ui_locale.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/startup/database_corruption_gate.dart';
+import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerRasterizerHost;
 
@@ -59,11 +60,16 @@ class DivineMaterialApp extends ConsumerWidget {
         // The rasterizer host sits above both: baking a draft's editor layers
         // needs them mounted somewhere, and that has to keep working while the
         // corruption gate swaps out everything below it.
+        //
+        // The eyedropper sources sit above the navigator, so a color sheet or
+        // a screen pushed over a video view still finds what to pick from.
         builder: (context, child) => LayerRasterizerHost(
           rasterizer: ref.read(layerRasterizerProvider),
           child: DatabaseCorruptionGate(
             child: AppReviewCoordinator(
-              child: child ?? const SizedBox.shrink(),
+              child: EyedropperSources(
+                child: child ?? const SizedBox.shrink(),
+              ),
             ),
           ),
         ),

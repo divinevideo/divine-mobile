@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,18 +26,22 @@ void main() {
     Widget buildWidget({
       Color selectedColor = Colors.white,
       ValueChanged<Color>? onColorSelected,
+      EyedropperSourceRegistry? eyedropperSources,
     }) {
       return ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
         ],
-        child: MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: VideoEditorColorPickerSheet(
-              selectedColor: selectedColor,
-              onColorSelected: onColorSelected ?? (_) {},
+        child: EyedropperSources(
+          registry: eyedropperSources,
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: VideoEditorColorPickerSheet(
+                selectedColor: selectedColor,
+                onColorSelected: onColorSelected ?? (_) {},
+              ),
             ),
           ),
         ),
@@ -178,5 +183,207 @@ void main() {
         expect(find.bySemanticsLabel(label), findsOneWidget);
       });
     });
+
+    group('Eyedropper', () {
+      /// Six recent colors, none of them in the palette.
+      const recents = [
+        Color(0xFF010203),
+        Color(0xFF040506),
+        Color(0xFF070809),
+        Color(0xFF0A0B0C),
+        Color(0xFF0D0E0F),
+        Color(0xFF101112),
+      ];
+      const fromVideo = Color(0xFF19A55B);
+
+      late _FakeEyedropperSource source;
+      late EyedropperSourceRegistry registry;
+
+      setUp(() {
+        source = _FakeEyedropperSource(fromVideo);
+        registry = EyedropperSourceRegistry()..register(source);
+      });
+
+      Future<void> storeRecents() async {
+        SharedPreferences.setMockInitialValues({
+          'video_editor_recent_colors': [
+            for (final color in recents) color.toARGB32().toString(),
+          ],
+        });
+        sharedPreferences = await SharedPreferences.getInstance();
+      }
+
+      String labelOf(Color color) {
+        int channel(double value) => (value * 255.0).round().clamp(0, 255);
+        return 'RGB ${channel(color.r)}, ${channel(color.g)}, '
+            '${channel(color.b)}';
+      }
+
+      testWidgets('stays out of the grid of colors', (tester) async {
+        await storeRecents();
+        await tester.pumpWidget(buildWidget(eyedropperSources: registry));
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorEyedropperSemanticLabel),
+          findsNothing,
+        );
+        for (final color in recents) {
+          expect(find.bySemanticsLabel(labelOf(color)), findsOneWidget);
+        }
+      });
+
+      testWidgets('is offered in the custom color sheet too', (tester) async {
+        Color? selected;
+        await tester.pumpWidget(
+          buildWidget(
+            eyedropperSources: registry,
+            onColorSelected: (color) => selected = color,
+          ),
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorColorPickerSemanticLabel),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.videoEditorPickColorTitle), findsOneWidget);
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(BottomSheet),
+            matching: find.bySemanticsLabel(
+              l10n.videoEditorEyedropperSemanticLabel,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(source.picks, 1);
+        expect(selected, fromVideo);
+        expect(find.text(l10n.videoEditorPickColorTitle), findsNothing);
+        // Kept like any custom color.
+        expect(
+          sharedPreferences.getStringList('video_editor_recent_colors'),
+          [fromVideo.toARGB32().toString()],
+        );
+      });
+    });
+
+    group('showFullColorPicker', () {
+      const fromVideo = Color(0xFF19A55B);
+
+      Future<void> pumpOpener(
+        WidgetTester tester, {
+        required void Function(Color?) onResult,
+        EyedropperSource? source,
+      }) async {
+        tester.view.physicalSize = const Size(1080, 2340);
+        tester.view.devicePixelRatio = 3;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          EyedropperSources(
+            registry: EyedropperSourceRegistry()..registerIfAny(source),
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    onPressed: () async => onResult(
+                      await showFullColorPicker(
+                        context,
+                        initialColor: Colors.white,
+                      ),
+                    ),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('resolves with the color the eyedropper picked', (
+        tester,
+      ) async {
+        Color? result;
+        await pumpOpener(
+          tester,
+          source: _FakeEyedropperSource(fromVideo),
+          onResult: (color) => result = color,
+        );
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorEyedropperSemanticLabel),
+        );
+        await tester.pumpAndSettle();
+
+        expect(result, fromVideo);
+        expect(find.text(l10n.videoEditorPickColorTitle), findsNothing);
+      });
+
+      testWidgets('stays open when the eyedropper is closed', (tester) async {
+        var resolved = false;
+        final source = _FakeEyedropperSource(null);
+        await pumpOpener(
+          tester,
+          source: source,
+          onResult: (_) => resolved = true,
+        );
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorEyedropperSemanticLabel),
+        );
+        await tester.pumpAndSettle();
+
+        expect(source.picks, 1);
+        expect(resolved, isFalse);
+        expect(find.text(l10n.videoEditorPickColorTitle), findsOneWidget);
+      });
+
+      testWidgets('offers no eyedropper while no video is on screen', (
+        tester,
+      ) async {
+        await pumpOpener(tester, onResult: (_) {});
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.videoEditorPickColorTitle), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorEyedropperSemanticLabel),
+          findsNothing,
+        );
+      });
+    });
   });
+}
+
+/// A video view on screen whose eyedropper always picks [color], or is closed
+/// without a color when [color] is `null`.
+class _FakeEyedropperSource implements EyedropperSource {
+  _FakeEyedropperSource(this.color);
+
+  final Color? color;
+
+  int picks = 0;
+
+  @override
+  bool isVisible = true;
+
+  @override
+  Future<Color?> pick(BuildContext context) async {
+    picks++;
+    return color;
+  }
+}
+
+extension on EyedropperSourceRegistry {
+  void registerIfAny(EyedropperSource? source) {
+    if (source != null) register(source);
+  }
 }

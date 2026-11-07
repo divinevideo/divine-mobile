@@ -3604,6 +3604,9 @@
   "videoEditorCloseColorPickerSemanticLabel": "Затворете инструмента за избор на цвят",
   "videoEditorPickColorTitle": "Избери цвят",
   "videoEditorConfirmColorSemanticLabel": "Потвърдете цвета",
+  "videoEditorEyedropperSemanticLabel": "Избери цвят от видеото",
+  "videoEditorEyedropperHint": "Докосни и плъзни, за да избереш цвят",
+  "videoEditorEyedropperCancelSemanticLabel": "Спри избора на цвят",
   "videoEditorSaturationBrightnessSemanticLabel": "Наситеност и яркост",
   "videoEditorSaturationBrightnessValue": "Наситеност {saturation}%, яркост {brightness}%",
   "@videoEditorSaturationBrightnessValue": {
