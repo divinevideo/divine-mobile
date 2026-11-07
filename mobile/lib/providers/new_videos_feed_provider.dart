@@ -168,7 +168,7 @@ class NewVideosFeed extends _$NewVideosFeed {
         state = AsyncData(
           currentState.copyWith(
             videos: allVideos,
-            hasMoreContent: hasMore && (filteredNew.isNotEmpty || progressed),
+            hasMoreContent: hasMore && filteredNew.isNotEmpty,
             isLoadingMore: false,
             error: null,
             lastUpdated: DateTime.now(),

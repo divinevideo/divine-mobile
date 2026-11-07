@@ -961,13 +961,12 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
                 ),
               ),
             );
-            // Use raw page progress, not the number of displayed additions.
+            // Progress only decides whether to read another page: a page
+            // that showed nothing new ends the feed.
             result = HomeFeedResult(
               videos: result.videos,
               paginationCursor: nextCursor,
-              hasMore:
-                  hasMore &&
-                  (displayable.length > state.videos.length || progressed),
+              hasMore: hasMore && displayable.length > state.videos.length,
             );
             break;
           }
