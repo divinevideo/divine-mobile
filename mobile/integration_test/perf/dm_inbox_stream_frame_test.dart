@@ -1,17 +1,18 @@
 // ABOUTME: #7923 — what the unpaginated Messages streams cost the UI isolate on
 // ABOUTME: a heavy DM account, and whether a burst of conversation writes
-// ABOUTME: drops frames while the inbox is on screen.
+// ABOUTME: drops frames with the inbox closed and open.
 //
 // Since #6286 the inbox watches the COMPLETE accepted set and windows it
 // client-side, so every conversations-table write re-delivers every row.
-// Everything below the bloc is the production stack: an encrypted Drift
+// Everything below the UI is the production stack: an encrypted Drift
 // database on its background isolate (`openEncryptedConnection`), the real
 // DAOs, `DmRepository`, `ContentBlocklistRepository`, `ConversationListBloc`
 // and `DmUnreadCountCubit` with their default 200 ms debounce. Only the
 // `NostrClient` (never reached) and `FollowRepository` (a plain fake, so a
 // mock's dispatch cost is not mistaken for the app's) are stand-ins.
 //
-// Two measurements per account size and blocklist variant:
+// Two measurements per account size and blocklist variant, and a third per
+// size:
 //
 // * The ladder adds one layer at a time — writes alone, raw DAO watches,
 //   repository watches (row -> DmConversation mapping, before any debounce),
@@ -23,6 +24,8 @@
 // * The frame trace renders a list that selects `visibleConversations` the
 //   way `InboxView` does, under a continuously running animation, and counts
 //   over-budget frames for an idle baseline, a burst, and a trickle.
+// * The synchronous recompute pieces, classify + mergeAndSort and the state
+//   equality check, are timed alone.
 //
 // Run in profile mode on a device; debug and host numbers are relative only:
 //   flutter drive --profile --driver=test_driver/integration_test.dart \
@@ -49,8 +52,9 @@ import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
-/// Follow state the bloc and cubit read on every recompute, answered from a
-/// set so the lookup costs what the real repository's does.
+/// Follow state the bloc and cubit read on every recompute. A set lookup is
+/// cheaper than the real repository's list scan, so classifying requests here
+/// costs less than it does on a long follow list.
 class _FakeFollowRepository extends Fake implements FollowRepository {
   _FakeFollowRepository(this._following);
 
@@ -84,8 +88,10 @@ const _burstWrites = 200;
 const _trickleSeconds = 10;
 
 /// Pubkeys blocked in the blocklist variant. Half are 1:1 peers, half are
-/// members of group threads whose last message they sent, so the hidden-member
-/// pass (#10156) has rows to re-read on every recompute.
+/// members of group threads whose last message they sent, so the list's
+/// hidden-member pass (#10150) has rows to re-read on every recompute. Those
+/// groups are seeded read, so the unread-only badge reaches one only after a
+/// write marks it unread.
 const _blockedPubkeys = 20;
 
 const _owner =
@@ -146,7 +152,7 @@ class _Account {
     return account;
   }
 
-  /// 85% accepted, 15% potential requests (half from followed accounts),
+  /// 85% accepted, 15% potential requests (two thirds from followed accounts),
   /// one in ten a group of three to five, one in ten unread.
   Future<void> _seed() async {
     final following = <String>{};
@@ -192,8 +198,8 @@ class _Account {
     for (final group in groups) {
       final member = group.participants.firstWhere((p) => p != _owner);
       blocked.add(member);
-      // The hidden member wrote last, so the row reads through #10156's
-      // visible-activity query, which needs an older visible message.
+      // The hidden member wrote last, so the row reads through #10150's
+      // visible-activity query, which needs a visible message to fall back to.
       final visible = group.participants.lastWhere((p) => p != _owner);
       await messages.insertMessage(
         id: _hex(rng, 32),
@@ -637,8 +643,8 @@ void main() {
           );
 
           results['ladder_${size}_${variant.name}'] = ladder;
-          // Seeding 5000 rows and six bursts outlasts the 30 s default on a
-          // phone.
+          // Seeding 5000 rows and a burst per ladder step outlast the 30 s
+          // default on a phone.
         }, timeout: const Timeout(Duration(minutes: 5)));
       }
     }
@@ -761,7 +767,8 @@ void main() {
               await act();
               wall.stop();
               actFrames = timings.length;
-              // The engine reports FrameTimings about once a second.
+              // FrameTimings arrive in batches, about every 100 ms in profile
+              // builds: wait out the last debounced recompute and its batch.
               await Future<void>.delayed(const Duration(seconds: 2));
             } finally {
               sampler.cancel();
