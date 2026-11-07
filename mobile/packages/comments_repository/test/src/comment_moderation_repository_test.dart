@@ -189,7 +189,7 @@ void main() {
       );
 
       test(
-        'writes the shared identifier and removes a legacy reply hide on restore',
+        'shares the identifier and clears legacy reply hides on restore',
         () async {
           answerReads([
             _moderationEvent(

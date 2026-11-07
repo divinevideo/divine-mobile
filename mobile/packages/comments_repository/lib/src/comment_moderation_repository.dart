@@ -118,8 +118,9 @@ class CommentModerationRepository {
     required String rootAddressableId,
   }) {
     final owner = ownerOf(rootAddressableId);
-    if (owner == null)
+    if (owner == null) {
       return const (moderation: CommentModeration.empty, revision: 0);
+    }
     return (
       moderation: _moderationOf(owner, rootAddressableId),
       revision: _latestEvents.revisionFor(
