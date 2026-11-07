@@ -116,7 +116,11 @@ class _Account {
   final ContentBlocklistRepository blocklist = ContentBlocklistRepository();
   late final _FakeFollowRepository follows;
 
-  final _rows = <({String id, List<String> participants, bool isGroup})>[];
+  final _rows =
+      <
+        ({String id, List<String> participants, bool isGroup, bool seededRead})
+      >[];
+  final _touched = <String>{};
   var _clock = 1700000000;
 
   static Future<_Account> open(int size, _Variant variant) async {
@@ -148,7 +152,12 @@ class _Account {
         if (!accepted && i.isEven) following.addAll(peers);
         final participants = [_owner, ...peers]..sort();
         final id = DmRepository.computeConversationId(participants);
-        _rows.add((id: id, participants: participants, isGroup: isGroup));
+        _rows.add((
+          id: id,
+          participants: participants,
+          isGroup: isGroup,
+          seededRead: i % 10 != 0,
+        ));
         await conversations.upsertConversation(
           id: id,
           participantPubkeys: _json(participants),
@@ -197,6 +206,7 @@ class _Account {
   /// A new message in a random existing conversation, as ingest writes it.
   Future<void> write() {
     final row = _rows[rng.nextInt(_rows.length)];
+    _touched.add(row.id);
     _clock++;
     return conversations.upsertConversation(
       id: row.id,
@@ -210,6 +220,17 @@ class _Account {
       ownerPubkey: _owner,
       isNewMessage: true,
     );
+  }
+
+  /// Marks read again the seeded-read rows written since the last call, so
+  /// every ladder step starts from the seeded unread set.
+  Future<void> restoreSeededReadState() async {
+    final ids = [
+      for (final row in _rows)
+        if (row.seededRead && _touched.contains(row.id)) row.id,
+    ];
+    _touched.clear();
+    await conversations.markMultipleAsRead(ids, ownerPubkey: _owner);
   }
 
   Future<void> close() async {
@@ -388,6 +409,7 @@ void main() {
             await _settle();
             wall.stop();
             final s = sampler.stop();
+            await account.restoreSeededReadState();
             report.writeln(
               'N=$size ${variant.name} $layer: '
               'longest stall=${_fmt(s.maxMs)}ms '
