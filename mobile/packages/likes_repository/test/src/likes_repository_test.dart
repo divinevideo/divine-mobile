@@ -6306,6 +6306,80 @@ void main() {
       }
 
       group('on the relays after a cold start', () {
+        test('likeEvent adopts the like left under the legacy key instead of '
+            'sending another', () async {
+          final reaction = createMockReaction(
+            id: testReactionEventId,
+            targetEventId: oldEventId,
+            authorPubkey: testUserPubkey,
+            tags: [
+              ['e', oldEventId],
+              ['a', legacyCoordinate],
+            ],
+          );
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) async {
+            final filters = invocation.positionalArguments[0] as List<Filter>;
+            return QueryResult(
+              events:
+                  filters.any(
+                    (filter) => filter.a?.contains(legacyCoordinate) ?? false,
+                  )
+                  ? [reaction]
+                  : <Event>[],
+              endedBy: QueryEnd.complete,
+            );
+          });
+          repository = createRepository(withLocalStorage: false);
+
+          await expectLater(
+            repository.likeEvent(
+              eventId: newEventId,
+              authorPubkey: testAuthorPubkey,
+              addressableId: coordinate,
+              targetKind: 34235,
+            ),
+            throwsA(isA<AlreadyLikedException>()),
+          );
+
+          expect(
+            (await repository.getLikeRecordByCoordinate(
+              coordinate,
+            ))?.reactionEventId,
+            testReactionEventId,
+          );
+          verifyNever(
+            () => mockNostrClient.sendLike(
+              any(),
+              content: any(named: 'content'),
+              addressableId: any(named: 'addressableId'),
+              targetAuthorPubkey: any(named: 'targetAuthorPubkey'),
+              targetKind: any(named: 'targetKind'),
+            ),
+          );
+          when(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).thenAnswer((_) async => MockEvent());
+
+          await repository.unlikeEvent(
+            newEventId,
+            addressableId: coordinate,
+          );
+
+          expect(
+            await repository.getLikeRecordByCoordinate(coordinate),
+            isNull,
+          );
+          verify(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).called(1);
+        });
+
         Event legacyDownvote() => createMockReaction(
           id: testReactionEventId,
           targetEventId: oldEventId,

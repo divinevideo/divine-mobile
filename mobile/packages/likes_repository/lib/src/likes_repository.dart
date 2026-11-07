@@ -3487,6 +3487,9 @@ class LikesRepository {
         site: LikesRepositoryReportableSites.adoptRemoteLikeDeleteAlias,
       );
     }
+    // The placeholder may use the own-kind coordinate while the adopted
+    // reaction carries its legacy key. Remove both placeholder indexes first.
+    _deindexLikeRecord(record.targetEventId);
     _indexLikeRecord(record);
     await _bestEffortLocalStorage(
       () async => _localStorage?.saveLikeRecord(record),
@@ -3606,8 +3609,8 @@ class LikesRepository {
     );
   }
 
-  /// Whether [reaction] targets [eventId], or the coordinate [addressableId]
-  /// when one is given.
+  /// Whether [reaction] targets [eventId], or [addressableId] or its legacy
+  /// key when a coordinate is given.
   bool _isReactionOn(Event reaction, String eventId, String? addressableId) {
     if (_extractTargetEventId(reaction) == eventId) return true;
     if (addressableId == null || addressableId.isEmpty) return false;
