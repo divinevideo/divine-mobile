@@ -1490,6 +1490,24 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Textning av';
 
   @override
+  String get videoSettingsReactionsOn => 'Reaktioner på';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reaktioner av';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Visa reaktioner';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Dölj reaktioner';
+
+  @override
+  String get feedReactionDismiss => 'Dölj reaktion';
+
+  @override
+  String get feedReactionOpenComment => 'Öppna i kommentarer';
+
+  @override
   String get contentWarningLabel => 'Innehållsvarning';
 
   @override
@@ -6391,10 +6409,6 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Reaktionen misslyckades, dubbeltryck för att försöka igen';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Din reaktion $emoji kunde inte skickas. Dubbeltryck för att försöka igen';
   }
@@ -7815,15 +7829,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get geoBlockedTitle => 'Tjänsten är inte tillgänglig';
-
-  @override
-  String get likedVideosEmpty => 'Inga gillade videor';
-
-  @override
-  String get likedVideosInvalidRoute => 'Ogiltig rutt';
-
-  @override
-  String get likedVideosTitle => 'Gillade videor';
 
   @override
   String get uploadFailureSheetRetryingSnackbar => 'Försöker ladda upp igen…';
@@ -15842,10 +15847,6 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'Den här veckan har lite mer av dig i sig.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'Kreativa dagar den här veckan: $count. Fortsätt så.';
   }
@@ -15864,13 +15865,34 @@ class AppLocalizationsSv extends AppLocalizations {
       'Den mest sedda av dina videor från den här veckan';
 
   @override
-  String get creatorHighlightCreate => 'Skapa en till';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Visningar hittills: $countString och det fortsätter.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Gilla-markeringar hittills på videorna du publicerade den här veckan: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Kommentarer hittills på videorna du publicerade den här veckan: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'Se din statistik';
-
-  @override
-  String get creatorHighlightWatch => 'Titta på videon';
 
   @override
   String get messagesPublicRoomsDisclosure =>

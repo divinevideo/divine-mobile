@@ -36,7 +36,7 @@ class DetachedClipSpeedBodies {
 /// often — the layer blanks during each swap and the clip restarts from its
 /// first frame.
 class DetachedClipPlayer {
-  DetachedClipPlayer._(this._controller, this._clip);
+  DetachedClipPlayer._(this._controller, this._clip) : _volume = _clip.volume;
 
   /// A player around an already loaded [controller], for tests that drive the
   /// playhead coupling without a native player.
@@ -146,6 +146,9 @@ class DetachedClipPlayer {
   DateTime? _lastSeekAt;
   bool _isPlaying = false;
   bool _muted = false;
+
+  /// The clip volume the player plays at, which starts as the clip's own.
+  double _volume;
   bool _disposed = false;
 
   /// The controller to hand to a `DivineVideoPlayer`.
@@ -213,7 +216,9 @@ class DetachedClipPlayer {
     _onTick();
   }
 
-  /// Whether the playhead is inside the layer's window.
+  /// Whether the playhead is inside the layer's window: from its start up to,
+  /// but not at, its end, the half-open rule the editor's layers and the
+  /// export share (#9786).
   ///
   /// The canvas asks before rendering the texture: outside the window the
   /// editor hides a layer with an opacity-0 compositing layer, which a platform
@@ -222,7 +227,7 @@ class DetachedClipPlayer {
   bool isWithinWindow(Duration playTime) {
     if (playTime < _windowStart) return false;
     final end = _windowEnd;
-    return end == null || playTime <= end;
+    return end == null || playTime < end;
   }
 
   /// Silences the clip, or lets it play at its own volume again.
@@ -234,6 +239,18 @@ class DetachedClipPlayer {
     if (muted == _muted) return Future<void>.value();
     _muted = muted;
     return _controller.setVolume(muted ? 0 : 1);
+  }
+
+  /// Plays the clip at [volume] from now on, from 0 to 300 %, without
+  /// reloading it.
+  ///
+  /// This is the clip's own volume, the one the export plays it at, so a
+  /// change to it lands on the running player instead of opening a new one.
+  /// Independent of [setMuted], which silences the player on top of it.
+  Future<void> setVolume(double volume) {
+    if (volume == _volume) return Future<void>.value();
+    _volume = volume;
+    return _controller.setClipVolumes([volume]);
   }
 
   /// Stops following the playhead. The player itself stays open.

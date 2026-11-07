@@ -1508,6 +1508,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Captions off';
 
   @override
+  String get videoSettingsReactionsOn => 'Reactions on';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reactions off';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Show reactions';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Hide reactions';
+
+  @override
+  String get feedReactionDismiss => 'Hide reaction';
+
+  @override
+  String get feedReactionOpenComment => 'Open in comments';
+
+  @override
   String get contentWarningLabel => 'Content Warning';
 
   @override
@@ -6480,10 +6498,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Reaction failed, double tap to retry';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Couldn\'t send your $emoji reaction. Double tap to try again';
   }
@@ -7915,15 +7929,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get geoBlockedTitle => 'Service Unavailable';
-
-  @override
-  String get likedVideosEmpty => 'No liked videos';
-
-  @override
-  String get likedVideosInvalidRoute => 'Invalid route';
-
-  @override
-  String get likedVideosTitle => 'Liked Videos';
 
   @override
   String get uploadFailureSheetRetryingSnackbar => 'Retrying upload…';
@@ -15925,10 +15930,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'Your week has a little more you in it.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -15948,8 +15949,8 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$countString views on videos you posted this week, so far.',
-      one: '$countString view on videos you posted this week, so far.',
+      other: '$countString views on this week’s videos so far.',
+      one: '$countString view on this week’s videos so far.',
     );
     return '$_temp0';
   }
@@ -15958,13 +15959,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get creatorHighlightTopVideo => 'Most-watched of this week’s videos';
 
   @override
-  String get creatorHighlightCreate => 'Make another';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString views and counting.',
+      one: '$countString view and counting.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString likes on this week’s videos so far.',
+      one: '$countString like on this week’s videos so far.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString comments on this week’s videos so far.',
+      one: '$countString comment on this week’s videos so far.',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'See your stats';
-
-  @override
-  String get creatorHighlightWatch => 'Watch video';
 
   @override
   String get messagesPublicRoomsDisclosure =>

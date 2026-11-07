@@ -75,6 +75,49 @@ void main() {
       );
     });
 
+    test('addressable with no d-tag cites its event id instead', () {
+      final citation = DmSharedVideoCitation.build(
+        videoKind: 34236,
+        authorPubkey: author,
+        relayHint: relay,
+        eventId: eventId,
+      )!;
+
+      expect(citation.qTag, equals(['q', eventId, relay, author]));
+      final decoded = NIP19Tlv.decodeNevent(
+        citation.nostrUri.substring('nostr:'.length),
+      )!;
+      expect(decoded.id, equals(eventId));
+      expect(decoded.author, equals(author));
+    });
+
+    test('addressable with an empty d-tag cites its event id instead', () {
+      final citation = DmSharedVideoCitation.build(
+        videoKind: 34235,
+        authorPubkey: author,
+        relayHint: relay,
+        dTag: '',
+        eventId: eventId,
+      )!;
+
+      expect(citation.qTag, equals(['q', eventId, relay, author]));
+      expect(citation.nostrUri, startsWith('nostr:nevent1'));
+    });
+
+    test('an event-id fallback parses back to the shared event', () {
+      final citation = DmSharedVideoCitation.build(
+        videoKind: 34236,
+        authorPubkey: author,
+        relayHint: relay,
+        eventId: eventId,
+      )!;
+
+      final ref = DmSharedVideoCitation.parse([citation.qTag]);
+
+      expect(ref?.eventId, equals(eventId));
+      expect(ref?.authorPubkey, equals(author));
+    });
+
     test('returns null when regular event id is missing/invalid', () {
       expect(
         DmSharedVideoCitation.build(

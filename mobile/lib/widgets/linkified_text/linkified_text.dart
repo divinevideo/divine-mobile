@@ -24,6 +24,8 @@ class LinkifiedText extends ConsumerStatefulWidget {
     this.mentionProfilePubkeys = const [],
     this.dismissModalBeforeNavigation = false,
     this.compactUrls = false,
+    this.textWidthBasis,
+    this.excludeNonLinkSemantics = false,
   });
 
   final String text;
@@ -39,6 +41,15 @@ class LinkifiedText extends ConsumerStatefulWidget {
 
   /// Shows URLs without scheme or query string; taps still open the full URL.
   final bool compactUrls;
+
+  /// How the text's width is measured; [TextWidthBasis.longestLine] lets a
+  /// container hug wrapped text. Defaults to the [Text] default.
+  final TextWidthBasis? textWidthBasis;
+
+  /// Omits non-interactive runs when an ancestor labels the complete text.
+  ///
+  /// Links retain their own semantic labels, actions and on-screen bounds.
+  final bool excludeNonLinkSemantics;
 
   @override
   ConsumerState<LinkifiedText> createState() => _LinkifiedTextState();
@@ -71,7 +82,7 @@ class _LinkifiedTextState extends ConsumerState<LinkifiedText> {
         );
     final mentionStyle =
         widget.mentionStyle ?? linkStyle.copyWith(fontWeight: FontWeight.w600);
-    final spans = LinkifiedTextSpanBuilder(
+    final builtSpans = LinkifiedTextSpanBuilder(
       text: text,
       defaultStyle: defaultStyle,
       linkStyle: linkStyle,
@@ -89,6 +100,33 @@ class _LinkifiedTextState extends ConsumerState<LinkifiedText> {
       onUrlTap: _handleUrlTap,
       compactUrls: widget.compactUrls,
     ).build();
+    // Keep the builder's actionable spans intact. Only its flat plain-text
+    // and decorative emoji runs are silent beneath the ancestor's label.
+    final spans = widget.excludeNonLinkSemantics
+        ? [
+            for (final span in builtSpans)
+              switch (span) {
+                TextSpan(
+                  recognizer: null,
+                  children: null,
+                  :final text,
+                  :final style,
+                ) =>
+                  TextSpan(
+                    text: text,
+                    style: style,
+                    semanticsLabel: '',
+                  ),
+                WidgetSpan(:final child, :final alignment, :final baseline) =>
+                  WidgetSpan(
+                    alignment: alignment,
+                    baseline: baseline,
+                    child: ExcludeSemantics(child: child),
+                  ),
+                _ => span,
+              },
+          ]
+        : builtSpans;
 
     if (!_hasClickableOrStylableToken(spans, defaultStyle)) {
       _replaceCurrentSpans(const []);
@@ -97,6 +135,8 @@ class _LinkifiedTextState extends ConsumerState<LinkifiedText> {
         style: widget.style,
         maxLines: widget.maxLines,
         overflow: widget.overflow,
+        textWidthBasis: widget.textWidthBasis,
+        semanticsLabel: widget.excludeNonLinkSemantics ? '' : null,
       );
     }
 
@@ -105,6 +145,7 @@ class _LinkifiedTextState extends ConsumerState<LinkifiedText> {
       TextSpan(children: _currentSpans),
       maxLines: widget.maxLines,
       overflow: widget.overflow,
+      textWidthBasis: widget.textWidthBasis,
     );
   }
 

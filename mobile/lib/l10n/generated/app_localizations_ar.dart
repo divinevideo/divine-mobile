@@ -1499,6 +1499,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'الترجمة متوقفة';
 
   @override
+  String get videoSettingsReactionsOn => 'التفاعلات مفعّلة';
+
+  @override
+  String get videoSettingsReactionsOff => 'التفاعلات متوقفة';
+
+  @override
+  String get videoSettingsReactionsEnable => 'إظهار التفاعلات';
+
+  @override
+  String get videoSettingsReactionsDisable => 'إخفاء التفاعلات';
+
+  @override
+  String get feedReactionDismiss => 'إخفاء التفاعل';
+
+  @override
+  String get feedReactionOpenComment => 'فتح في التعليقات';
+
+  @override
   String get contentWarningLabel => 'تحذير محتوى';
 
   @override
@@ -6393,10 +6411,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'فشل التفاعل، انقر مرتين لإعادة المحاولة';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'تعذّر إرسال تفاعلك $emoji. النقر مرتين يعيد المحاولة';
   }
@@ -7829,15 +7843,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get geoBlockedTitle => 'الخدمة غير متاحة';
-
-  @override
-  String get likedVideosEmpty => 'لا توجد فيديوهات معجب بها';
-
-  @override
-  String get likedVideosInvalidRoute => 'مسار غير صالح';
-
-  @override
-  String get likedVideosTitle => 'الفيديوهات المعجب بها';
 
   @override
   String get uploadFailureSheetRetryingSnackbar => 'جارٍ إعادة محاولة الرفع…';
@@ -15869,9 +15874,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle => 'هذا الأسبوع يحمل المزيد منك.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'أيام الإبداع هذا الأسبوع: $count. لنواصل الإبداع.';
   }
@@ -15890,13 +15892,34 @@ class AppLocalizationsAr extends AppLocalizations {
       'الأكثر مشاهدة بين فيديوهاتك المنشورة هذا الأسبوع';
 
   @override
-  String get creatorHighlightCreate => 'إنشاء فيديو آخر';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'المشاهدات حتى الآن: $countString، والعدد مستمر.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'إجمالي الإعجابات على فيديوهاتك المنشورة هذا الأسبوع حتى الآن: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'إجمالي التعليقات على فيديوهاتك المنشورة هذا الأسبوع حتى الآن: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'عرض إحصاءاتك';
-
-  @override
-  String get creatorHighlightWatch => 'مشاهدة الفيديو';
 
   @override
   String get messagesPublicRoomsDisclosure =>

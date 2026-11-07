@@ -68,7 +68,7 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
     );
     on<MyFollowingEditRequested>(
       _onEditRequested,
-      transformer: droppable(),
+      transformer: concurrent(),
     );
     on<MyFollowingBlocklistChanged>(
       _onBlocklistChanged,
@@ -280,14 +280,16 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
   /// feed badge can tell a follow made from it apart from one that predates
   /// the item.
   ///
-  /// Follow and Unfollow share one [droppable] bucket, so two contact-list
-  /// publishes never race: an edit sent while another is still publishing is
-  /// dropped, not queued.
+  /// Edits run concurrently, so a tap on one row while another row's contact
+  /// list is still publishing is not lost (#10784). [FollowRepository] queues
+  /// the publishes, so two never replace the list at the same time.
   Future<void> _onEditRequested(
     MyFollowingEditRequested event,
     Emitter<MyFollowingState> emit,
   ) async {
     // Clear the previous failure so a retry's failure is a new transition.
+    // Edits already in flight are not retries: two that fail together emit
+    // the same failure state, so the screen shows one message for both.
     if (state.status == MyFollowingStatus.toggleFailure) {
       emit(state.copyWith(status: MyFollowingStatus.success));
     }

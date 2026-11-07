@@ -1547,6 +1547,24 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Subtitrări dezactivate';
 
   @override
+  String get videoSettingsReactionsOn => 'Reacții activate';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reacții dezactivate';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Afișează reacțiile';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Ascunde reacțiile';
+
+  @override
+  String get feedReactionDismiss => 'Ascunde reacția';
+
+  @override
+  String get feedReactionOpenComment => 'Deschide în comentarii';
+
+  @override
   String get contentWarningLabel => 'Atenționare de conținut';
 
   @override
@@ -6568,10 +6586,6 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Reacția a eșuat, atinge de două ori pentru a reîncerca';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Reacția ta $emoji nu a putut fi trimisă. Atinge de două ori pentru a reîncerca';
   }
@@ -8014,15 +8028,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get geoBlockedTitle => 'Serviciu indisponibil';
-
-  @override
-  String get likedVideosEmpty => 'Niciun videoclip apreciat';
-
-  @override
-  String get likedVideosInvalidRoute => 'Rută invalidă';
-
-  @override
-  String get likedVideosTitle => 'Videoclipuri apreciate';
 
   @override
   String get uploadFailureSheetRetryingSnackbar => 'Se reîncearcă încărcarea…';
@@ -16143,10 +16148,6 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'Săptămâna asta are ceva mai mult din tine.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'Zile de creație săptămâna asta: $count. Continuă așa.';
   }
@@ -16165,13 +16166,34 @@ class AppLocalizationsRo extends AppLocalizations {
       'Cel mai vizionat dintre videoclipurile tale publicate săptămâna asta';
 
   @override
-  String get creatorHighlightCreate => 'Creează încă unul';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Vizionări până acum: $countString și continuă.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Aprecieri până acum la videoclipurile pe care le-ai publicat săptămâna asta: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Comentarii până acum la videoclipurile pe care le-ai publicat săptămâna asta: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'Vezi statisticile tale';
-
-  @override
-  String get creatorHighlightWatch => 'Urmărește videoclipul';
 
   @override
   String get messagesPublicRoomsDisclosure =>

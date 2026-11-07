@@ -19,8 +19,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/codec_heavy_surface/codec_heavy_surface_cubit.dart';
+import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_cubit.dart';
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_state.dart';
+import 'package:openvine/blocs/feed_reactions/feed_reactions_cubit.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_state.dart';
@@ -46,6 +48,7 @@ import 'package:openvine/providers/playback_telemetry_provider.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/repositories/community_content_label_repository.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:openvine/screens/comments/widgets/comments_list.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_error_listener.dart';
 import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
@@ -62,6 +65,7 @@ import 'package:openvine/widgets/video_feed_item/actions/help_classify_action_bu
 import 'package:openvine/widgets/video_feed_item/actions/report_action_button.dart';
 import 'package:openvine/widgets/video_feed_item/content_warning_helpers.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
+import 'package:openvine/widgets/video_feed_item/feed_reactions_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
 import 'package:openvine/widgets/video_feed_item/moderated_content_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/paused_video_overlay.dart';
@@ -3454,10 +3458,277 @@ void main() {
     );
   });
 
+  group('reactions mode', () {
+    final video = _makeVideo();
+    final nextVideo = _makeVideo(
+      id: '7777777777777777777777777777777777777777777777777777777777777777',
+    );
+    final topComment = Comment(
+      id: '8888888888888888888888888888888888888888888888888888888888888888',
+      content: 'this loop is everything',
+      authorPubkey:
+          '9999999999999999999999999999999999999999999999999999999999999999',
+      createdAt: DateTime(2024),
+      rootEventId: video.id,
+      rootAuthorPubkey: video.pubkey,
+    );
+    late _MockCommentsRepository commentsRepository;
+
+    void stubLoadComments(
+      Future<CommentThread> Function(Invocation invocation) answer,
+    ) {
+      when(
+        () => commentsRepository.loadComments(
+          rootEventId: any(named: 'rootEventId'),
+          rootEventKind: any(named: 'rootEventKind'),
+          rootAddressableId: any(named: 'rootAddressableId'),
+          limit: any(named: 'limit'),
+          before: any(named: 'before'),
+          offset: any(named: 'offset'),
+          includeVideoReplies: any(named: 'includeVideoReplies'),
+        ),
+      ).thenAnswer(answer);
+    }
+
+    /// Pumps a two-video feed with reactions and Auto on, and returns it
+    /// after the active video has looped once.
+    Future<InfiniteVideoFeedState> pumpLoopedFeed(WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final reactions = FeedReactionsCubit(sharedPreferences: prefs);
+      await reactions.setEnabled(enabled: true);
+      final auto = FeedAutoAdvanceCubit()..setEnabled(enabled: true);
+      addTearDown(reactions.close);
+      addTearDown(auto.close);
+      commentsRepository = _MockCommentsRepository()..stubAll();
+      stubLoadComments(
+        (invocation) async => CommentThread(
+          rootEventId: invocation.namedArguments[#rootEventId]! as String,
+          comments: [topComment],
+        ),
+      );
+      when(
+        () => commentsRepository.findAuthorDeletedComments(any()),
+      ).thenAnswer((_) async => <String>{});
+      final likesRepository = _MockLikesRepository()..stubAll();
+      when(
+        () => likesRepository.getVoteCounts(
+          any(),
+          addressableIds: any(named: 'addressableIds'),
+        ),
+      ).thenAnswer(
+        (_) async => (
+          upvotes: const <String, int>{},
+          downvotes: const <String, int>{},
+        ),
+      );
+      final container = ProviderContainer(
+        overrides: _buildOverrides(
+          commentsRepository: commentsRepository,
+          likesRepository: likesRepository,
+        ).cast(),
+      );
+      addTearDown(container.dispose);
+      final playback = _MockVideoPlaybackStatusCubit()
+        ..stub(PlaybackStatus.ready, video.id);
+      final volume = _MockVideoVolumeCubit()..stub();
+      addTearDown(playback.close);
+      addTearDown(volume.close);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: MultiBlocProvider(
+              providers: [
+                BlocProvider<FeedAutoAdvanceCubit>.value(value: auto),
+                BlocProvider<FeedReactionsCubit>.value(value: reactions),
+                BlocProvider<VideoPlaybackStatusCubit>.value(value: playback),
+                BlocProvider<VideoVolumeCubit>.value(value: volume),
+              ],
+              child: Scaffold(
+                body: FeedVideos(
+                  videos: [video, nextVideo],
+                  onNearEnd: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 4));
+      final feed = tester.state<InfiniteVideoFeedState>(
+        find.byType(InfiniteVideoFeed),
+      );
+      expect(feed.currentIndex, 0);
+      expect(find.text(topComment.content), findsNothing);
+
+      tester
+          .widget<InfiniteVideoFeed>(find.byType(InfiniteVideoFeed))
+          .onVideoLoopCompleted!(0);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 4));
+      return feed;
+    }
+
+    testWidgets(
+      "a loop shows the active video's top comment and does not advance",
+      (tester) async {
+        final feed = await pumpLoopedFeed(tester);
+
+        expect(feed.currentIndex, 0, reason: 'reactions hold the video');
+        expect(find.text(topComment.content), findsOneWidget);
+        verifyNever(
+          () => commentsRepository.loadComments(
+            rootEventId: nextVideo.id,
+            rootEventKind: any(named: 'rootEventKind'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+            limit: any(named: 'limit'),
+          ),
+        );
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 4));
+      },
+    );
+
+    testWidgets(
+      'tapping the reaction hides it and opens the comments at that comment',
+      (tester) async {
+        await pumpLoopedFeed(tester);
+        expect(find.text(topComment.content), findsOneWidget);
+        // Hold the sheet's own load, so its pending focus stays observable.
+        stubLoadComments((_) => Completer<CommentThread>().future);
+        when(
+          () => commentsRepository.stopWatchingComments(),
+        ).thenAnswer((_) async {});
+
+        await tester.tap(find.text(topComment.content));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        final reactionOpacity = tester.widget<AnimatedOpacity>(
+          find.descendant(
+            of: find.byType(FeedReactionsOverlay),
+            matching: find.byType(AnimatedOpacity),
+          ),
+        );
+        expect(reactionOpacity.opacity, 0);
+        final sheetBloc = tester
+            .element(find.byType(CommentsList))
+            .read<CommentsListBloc>();
+        expect(sheetBloc.state.pendingFocusCommentId, topComment.id);
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 4));
+      },
+    );
+  });
+
   // -------------------------------------------------------------------------
   // Pagination flush (didUpdateWidget)
   // -------------------------------------------------------------------------
   group('pagination flush', () {
+    for (final reactionsInitiallyEnabled in [false, true]) {
+      testWidgets(
+        'reactions cancel queued Auto wrap without disabling its preference '
+        '(initially enabled: $reactionsInitiallyEnabled)',
+        (
+          tester,
+        ) async {
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          final reactions = FeedReactionsCubit(sharedPreferences: prefs);
+          if (reactionsInitiallyEnabled) {
+            await reactions.setEnabled(enabled: true);
+          }
+          final auto = FeedAutoAdvanceCubit()..setEnabled(enabled: true);
+          addTearDown(reactions.close);
+          addTearDown(auto.close);
+          final container = ProviderContainer(
+            overrides: _buildOverrides().cast(),
+          );
+          addTearDown(container.dispose);
+          final video = _makeVideo();
+          final nextVideo = _makeVideo(
+            id: '7777777777777777777777777777777777777777777777777777777777777777',
+          );
+          var loading = true;
+          late StateSetter rebuildState;
+          final playback = _MockVideoPlaybackStatusCubit()
+            ..stub(PlaybackStatus.ready, video.id);
+          final volume = _MockVideoVolumeCubit()..stub();
+          addTearDown(playback.close);
+          addTearDown(volume.close);
+
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: MultiBlocProvider(
+                  providers: [
+                    BlocProvider<FeedAutoAdvanceCubit>.value(value: auto),
+                    BlocProvider<FeedReactionsCubit>.value(value: reactions),
+                    BlocProvider<VideoPlaybackStatusCubit>.value(
+                      value: playback,
+                    ),
+                    BlocProvider<VideoVolumeCubit>.value(value: volume),
+                  ],
+                  child: Scaffold(
+                    body: StatefulBuilder(
+                      builder: (context, setState) {
+                        rebuildState = setState;
+                        return FeedVideos(
+                          videos: [video, nextVideo],
+                          currentIndex: 1,
+                          onNearEnd: () {},
+                          hasMore: loading,
+                          isLoadingMore: loading,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pump(const Duration(seconds: 4));
+          final feed = tester.state<InfiniteVideoFeedState>(
+            find.byType(InfiniteVideoFeed),
+          );
+          expect(feed.currentIndex, 1);
+          auto.markPendingPaginationAdvance();
+          expect(auto.state.pendingPaginationAdvance, isTrue);
+          await reactions.setEnabled(enabled: true);
+          await tester.pump();
+          if (!reactionsInitiallyEnabled) {
+            expect(auto.state.pendingPaginationAdvance, isFalse);
+          }
+          rebuildState(() => loading = false);
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 4));
+
+          expect(feed.currentIndex, 1);
+          expect(auto.state.enabled, isTrue);
+          expect(auto.state.pendingPaginationAdvance, isFalse);
+
+          await reactions.setEnabled(enabled: false);
+          await tester.pump();
+          final widget = tester.widget<InfiniteVideoFeed>(
+            find.byType(InfiniteVideoFeed),
+          );
+          widget.onVideoLoopCompleted!(1);
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 4));
+          expect(feed.currentIndex, 0);
+          await tester.pumpWidget(const SizedBox());
+          await tester.pump(const Duration(seconds: 4));
+        },
+      );
+    }
+
     testWidgets('does not throw when hasMore and isLoadingMore change', (
       tester,
     ) async {

@@ -1520,6 +1520,24 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Субтитрите са изключени';
 
   @override
+  String get videoSettingsReactionsOn => 'Реакциите са включени';
+
+  @override
+  String get videoSettingsReactionsOff => 'Реакциите са изключени';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Показване на реакциите';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Скриване на реакциите';
+
+  @override
+  String get feedReactionDismiss => 'Скриване на реакцията';
+
+  @override
+  String get feedReactionOpenComment => 'Отвори в коментарите';
+
+  @override
   String get contentWarningLabel => 'Предупреждение за съдържание';
 
   @override
@@ -6457,10 +6475,6 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Реакцията не мина, докосни два пъти за нов опит';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Реакцията ти $emoji не можа да се изпрати. Докосни два пъти за нов опит';
   }
@@ -7900,15 +7914,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get geoBlockedTitle => 'Услугата не е налична';
-
-  @override
-  String get likedVideosEmpty => 'Няма харесани видеа';
-
-  @override
-  String get likedVideosInvalidRoute => 'Невалиден маршрут';
-
-  @override
-  String get likedVideosTitle => 'Харесани видеа';
 
   @override
   String get uploadFailureSheetRetryingSnackbar => 'Повторно качване…';
@@ -15972,10 +15977,6 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'В тази седмица има още малко от теб.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'Творчески дни тази седмица: $count. Продължавай.';
   }
@@ -15994,13 +15995,34 @@ class AppLocalizationsBg extends AppLocalizations {
       'Най-гледаното от видеата ти, публикувани тази седмица';
 
   @override
-  String get creatorHighlightCreate => 'Създай още едно';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Гледания досега: $countString и продължават.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Харесвания досега на видеата, които публикува тази седмица: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Коментари досега към видеата, които публикува тази седмица: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'Виж статистиката си';
-
-  @override
-  String get creatorHighlightWatch => 'Гледай видеото';
 
   @override
   String get messagesPublicRoomsDisclosure =>

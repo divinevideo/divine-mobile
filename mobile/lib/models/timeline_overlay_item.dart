@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'dart:ui' show BlendMode;
 
 import 'package:equatable/equatable.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -234,6 +235,15 @@ class TimelineOverlayItem extends Equatable {
   /// Whether a sound item fades in or out at all.
   bool get hasFade => fadeIn > Duration.zero || fadeOut > Duration.zero;
 
+  /// Whether this is a clip detached onto the canvas, which carries a sound
+  /// of its own.
+  bool get isDetachedClip {
+    final layer = this.layer;
+    return type == TimelineOverlayType.layer &&
+        layer != null &&
+        DetachedClipLayerData.isDetachedClipLayer(layer);
+  }
+
   /// How long a sound item's window lasts that plays [source] of its audio.
   Duration timelineSpanOf(Duration source) => source * (1 / averageSpeed);
 
@@ -242,6 +252,28 @@ class TimelineOverlayItem extends Equatable {
   double get durationInSeconds => duration.inMilliseconds / 1000;
 
   Duration get duration => endTime - startTime;
+
+  /// Whether the item shows at [time]: from [startTime] up to, but not at,
+  /// [endTime].
+  ///
+  /// The editor preview and the export share this half-open rule, so a tool
+  /// that needs the item on the canvas acts on a moment the posted video
+  /// contains (#9786).
+  bool showsAt(Duration time) => time >= startTime && time < endTime;
+
+  /// The last moment the item still shows: [lastShownTimeResolution] before
+  /// [endTime], or [startTime] for an item shorter than that.
+  ///
+  /// A playhead parked here keeps the item on the canvas, which one parked on
+  /// [endTime] would not, as [showsAt] excludes it.
+  Duration get lastShownTime {
+    final last = endTime - lastShownTimeResolution;
+    return last < startTime ? startTime : last;
+  }
+
+  /// The step the editor's playhead reports in, so the smallest distance it
+  /// can sit before an item's [endTime].
+  static const lastShownTimeResolution = Duration(milliseconds: 1);
 
   TimelineOverlayItem copyWith({
     String? id,

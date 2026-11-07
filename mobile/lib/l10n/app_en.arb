@@ -968,6 +968,30 @@
   "@videoSettingsCaptionsOff": {
     "description": "Snackbar confirming that captions were just turned off from the playback-settings pill."
   },
+  "videoSettingsReactionsOn": "Reactions on",
+  "@videoSettingsReactionsOn": {
+    "description": "Snackbar confirming that reactions mode was just turned on from the playback-settings pill. In reactions mode the feed shows a video's top comment after its first loop."
+  },
+  "videoSettingsReactionsOff": "Reactions off",
+  "@videoSettingsReactionsOff": {
+    "description": "Snackbar confirming that reactions mode was just turned off from the playback-settings pill."
+  },
+  "videoSettingsReactionsEnable": "Show reactions",
+  "@videoSettingsReactionsEnable": {
+    "description": "Semantic label for the reactions toggle in the playback-settings popover when reactions mode is currently off."
+  },
+  "videoSettingsReactionsDisable": "Hide reactions",
+  "@videoSettingsReactionsDisable": {
+    "description": "Semantic label for the reactions toggle in the playback-settings popover when reactions mode is currently on."
+  },
+  "feedReactionDismiss": "Hide reaction",
+  "@feedReactionDismiss": {
+    "description": "Semantic label for the darkened area around a video's top comment in reactions mode; activating it hides the comment."
+  },
+  "feedReactionOpenComment": "Open in comments",
+  "@feedReactionOpenComment": {
+    "description": "Semantic hint for a video's top comment in reactions mode; activating it opens the comments sheet at that comment."
+  },
   "contentWarningLabel": "Content Warning",
   "contentWarningNudity": "Nudity",
   "contentWarningSexualContent": "Sexual Content",
@@ -4426,10 +4450,6 @@
       }
     }
   },
-  "dmReactionChipFailedA11yLabel": "Reaction failed, double tap to retry",
-  "@dmReactionChipFailedA11yLabel": {
-    "description": "Screen-reader label for a reaction chip whose publish failed."
-  },
   "dmReactionChipUnconfirmedA11yLabel": "Couldn't send your {emoji} reaction. Double tap to try again",
   "@dmReactionChipUnconfirmedA11yLabel": {
     "description": "Screen-reader label for the current account's reaction whose automatic retries ran out without a relay confirming it. Double-tapping retries sending it.",
@@ -5495,9 +5515,6 @@
   "geoBlockedLegalNotice": "We respect your local laws and regulations. This restriction is based on your IP address location.",
   "geoBlockedRegionLabel": "Region",
   "geoBlockedTitle": "Service Unavailable",
-  "likedVideosEmpty": "No liked videos",
-  "likedVideosInvalidRoute": "Invalid route",
-  "likedVideosTitle": "Liked Videos",
   "uploadFailureSheetRetryingSnackbar": "Retrying upload…",
   "uploadFailureSheetSaveToDraftsButton": "Save to Drafts",
   "uploadFailureSheetSavedToDraftsSnackbar": "Saved to drafts",
@@ -12949,10 +12966,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "Your week has a little more you in it.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "{count, plural, =1{One creative day this week. Keep going.} other{{count} creative days this week. Keep going.}}",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -12962,7 +12975,7 @@
       }
     }
   },
-  "creatorHighlightWeeklyViews": "{count, plural, =1{{count} view on videos you posted this week, so far.} other{{count} views on videos you posted this week, so far.}}",
+  "creatorHighlightWeeklyViews": "{count, plural, =1{{count} view on this week’s videos so far.} other{{count} views on this week’s videos so far.}}",
   "@creatorHighlightWeeklyViews": {
     "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
     "placeholders": {
@@ -12976,16 +12989,38 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Make another",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  "creatorHighlightTopVideoViews": "{count, plural, =1{{count} view and counting.} other{{count} views and counting.}}",
+  "@creatorHighlightTopVideoViews": {
+    "description": "Headline beside the creator's most-watched video published this local calendar week. Lifetime views on that video so far. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightWeeklyLikes": "{count, plural, =1{{count} like on this week’s videos so far.} other{{count} likes on this week’s videos so far.}}",
+  "@creatorHighlightWeeklyLikes": {
+    "description": "Lifetime likes so far across videos published this local calendar week, not likes received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightWeeklyComments": "{count, plural, =1{{count} comment on this week’s videos so far.} other{{count} comments on this week’s videos so far.}}",
+  "@creatorHighlightWeeklyComments": {
+    "description": "Lifetime comments so far across videos published this local calendar week, not comments received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
   },
   "creatorHighlightAnalytics": "See your stats",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Watch video",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "messagesPublicRoomsDisclosure": "These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.",

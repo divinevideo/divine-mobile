@@ -718,6 +718,12 @@
   "videoSettingsAutoAdvanceOff": "خودکار آگے بڑھنا آف",
   "videoSettingsCaptionsOn": "کیپشن آن",
   "videoSettingsCaptionsOff": "کیپشن آف",
+  "videoSettingsReactionsOn": "ردعمل آن",
+  "videoSettingsReactionsOff": "ردعمل آف",
+  "videoSettingsReactionsEnable": "ردعمل دکھائیں",
+  "videoSettingsReactionsDisable": "ردعمل چھپائیں",
+  "feedReactionDismiss": "یہ ردعمل چھپائیں",
+  "feedReactionOpenComment": "تبصروں میں کھولیں",
   "@videoSettingsCaptionsDisable": {
     "description": "Semantic label for the closed-captions toggle in the playback-settings popover when captions are currently on."
   },
@@ -3169,10 +3175,6 @@
       }
     }
   },
-  "dmReactionChipFailedA11yLabel": "ردعمل ناکام، دوبارہ کوشش کے لیے ڈبل ٹیپ کریں",
-  "@dmReactionChipFailedA11yLabel": {
-    "description": "Screen-reader label for a reaction chip whose publish failed."
-  },
   "dmReactionChipUnconfirmedA11yLabel": "آپ کا {emoji} ردعمل نہیں بھیجا جا سکا۔ دوبارہ کوشش کے لیے ڈبل ٹیپ کریں",
   "dmReactionChipRetryAnnouncement": "ردعمل دوبارہ کوشش ہو رہی ہے",
   "@dmReactionChipRetryAnnouncement": {
@@ -3869,9 +3871,6 @@
   "geoBlockedLegalNotice": "ہم آپ کے مقامی قوانین اور ضوابط کا احترام کرتے ہیں۔ یہ پابندی آپ کے IP ایڈریس کے مقام پر مبنی ہے۔",
   "geoBlockedRegionLabel": "علاقہ",
   "geoBlockedTitle": "سروس دستیاب نہیں",
-  "likedVideosEmpty": "کوئی پسندیدہ ویڈیو نہیں",
-  "likedVideosInvalidRoute": "غلط روٹ",
-  "likedVideosTitle": "پسندیدہ ویڈیوز",
   "uploadFailureSheetRetryingSnackbar": "اپلوڈ دوبارہ کوشش ہو رہی ہے…",
   "uploadFailureSheetSaveToDraftsButton": "مسودوں میں محفوظ کریں",
   "uploadFailureSheetSavedToDraftsSnackbar": "مسودوں میں محفوظ ہو گیا",
@@ -7596,10 +7595,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "اس ہفتے میں آپ کا رنگ کچھ اور بڑھ گیا ہے۔",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "اس ہفتے تخلیق کے دن: {count}۔ بناتے رہیے۔",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -7623,16 +7618,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "ایک اور بنائیں",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "اب تک کے ویوز: {count}، اور سلسلہ جاری ہے۔",
+  "creatorHighlightWeeklyLikes": "اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز پر اب تک کی کل پسندیں: {count}۔",
+  "creatorHighlightWeeklyComments": "اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز پر اب تک کے کل تبصرے: {count}۔",
   "creatorHighlightAnalytics": "اپنے اعداد و شمار دیکھیں",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "ویڈیو دیکھیں",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   }
 }

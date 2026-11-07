@@ -2557,6 +2557,42 @@ abstract class AppLocalizations {
   /// **'Captions off'**
   String get videoSettingsCaptionsOff;
 
+  /// Snackbar confirming that reactions mode was just turned on from the playback-settings pill. In reactions mode the feed shows a video's top comment after its first loop.
+  ///
+  /// In en, this message translates to:
+  /// **'Reactions on'**
+  String get videoSettingsReactionsOn;
+
+  /// Snackbar confirming that reactions mode was just turned off from the playback-settings pill.
+  ///
+  /// In en, this message translates to:
+  /// **'Reactions off'**
+  String get videoSettingsReactionsOff;
+
+  /// Semantic label for the reactions toggle in the playback-settings popover when reactions mode is currently off.
+  ///
+  /// In en, this message translates to:
+  /// **'Show reactions'**
+  String get videoSettingsReactionsEnable;
+
+  /// Semantic label for the reactions toggle in the playback-settings popover when reactions mode is currently on.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide reactions'**
+  String get videoSettingsReactionsDisable;
+
+  /// Semantic label for the darkened area around a video's top comment in reactions mode; activating it hides the comment.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide reaction'**
+  String get feedReactionDismiss;
+
+  /// Semantic hint for a video's top comment in reactions mode; activating it opens the comments sheet at that comment.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in comments'**
+  String get feedReactionOpenComment;
+
   /// No description provided for @contentWarningLabel.
   ///
   /// In en, this message translates to:
@@ -10819,12 +10855,6 @@ abstract class AppLocalizations {
   /// **'Sending reaction: {emoji}'**
   String dmReactionChipPendingA11yLabel(String emoji);
 
-  /// Screen-reader label for a reaction chip whose publish failed.
-  ///
-  /// In en, this message translates to:
-  /// **'Reaction failed, double tap to retry'**
-  String get dmReactionChipFailedA11yLabel;
-
   /// Screen-reader label for the current account's reaction whose automatic retries ran out without a relay confirming it. Double-tapping retries sending it.
   ///
   /// In en, this message translates to:
@@ -13137,24 +13167,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Service Unavailable'**
   String get geoBlockedTitle;
-
-  /// No description provided for @likedVideosEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'No liked videos'**
-  String get likedVideosEmpty;
-
-  /// No description provided for @likedVideosInvalidRoute.
-  ///
-  /// In en, this message translates to:
-  /// **'Invalid route'**
-  String get likedVideosInvalidRoute;
-
-  /// No description provided for @likedVideosTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Liked Videos'**
-  String get likedVideosTitle;
 
   /// No description provided for @uploadFailureSheetRetryingSnackbar.
   ///
@@ -26400,19 +26412,13 @@ abstract class AppLocalizations {
   /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
   ///
   /// In en, this message translates to:
-  /// **'Your week has a little more you in it.'**
-  String get creatorHighlightWeekTitle;
-
-  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
-  ///
-  /// In en, this message translates to:
   /// **'{count, plural, =1{One creative day this week. Keep going.} other{{count} creative days this week. Keep going.}}'**
   String creatorHighlightCreationDays(int count);
 
   /// Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{{count} view on videos you posted this week, so far.} other{{count} views on videos you posted this week, so far.}}'**
+  /// **'{count, plural, =1{{count} view on this week’s videos so far.} other{{count} views on this week’s videos so far.}}'**
   String creatorHighlightWeeklyViews(int count);
 
   /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
@@ -26421,23 +26427,29 @@ abstract class AppLocalizations {
   /// **'Most-watched of this week’s videos'**
   String get creatorHighlightTopVideo;
 
-  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  /// Headline beside the creator's most-watched video published this local calendar week. Lifetime views on that video so far. Format the count for the selected app language.
   ///
   /// In en, this message translates to:
-  /// **'Make another'**
-  String get creatorHighlightCreate;
+  /// **'{count, plural, =1{{count} view and counting.} other{{count} views and counting.}}'**
+  String creatorHighlightTopVideoViews(int count);
+
+  /// Lifetime likes so far across videos published this local calendar week, not likes received this week. Format the count for the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} like on this week’s videos so far.} other{{count} likes on this week’s videos so far.}}'**
+  String creatorHighlightWeeklyLikes(int count);
+
+  /// Lifetime comments so far across videos published this local calendar week, not comments received this week. Format the count for the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} comment on this week’s videos so far.} other{{count} comments on this week’s videos so far.}}'**
+  String creatorHighlightWeeklyComments(int count);
 
   /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
   ///
   /// In en, this message translates to:
   /// **'See your stats'**
   String get creatorHighlightAnalytics;
-
-  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
-  ///
-  /// In en, this message translates to:
-  /// **'Watch video'**
-  String get creatorHighlightWatch;
 
   /// Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture.
   ///

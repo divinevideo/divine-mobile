@@ -1385,6 +1385,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoSettingsCaptionsOff => '字幕已关闭';
 
   @override
+  String get videoSettingsReactionsOn => '反应已开启';
+
+  @override
+  String get videoSettingsReactionsOff => '反应已关闭';
+
+  @override
+  String get videoSettingsReactionsEnable => '显示反应';
+
+  @override
+  String get videoSettingsReactionsDisable => '隐藏反应';
+
+  @override
+  String get feedReactionDismiss => '隐藏此反应';
+
+  @override
+  String get feedReactionOpenComment => '在评论中打开';
+
+  @override
   String get contentWarningLabel => '内容警告';
 
   @override
@@ -6015,9 +6033,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel => '回应失败，双击重试';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return '无法发送你的 $emoji 回应，双击重试';
   }
@@ -7356,15 +7371,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get geoBlockedTitle => '服务不可用';
-
-  @override
-  String get likedVideosEmpty => '没有点赞的视频';
-
-  @override
-  String get likedVideosInvalidRoute => '无效的路由';
-
-  @override
-  String get likedVideosTitle => '点赞的视频';
 
   @override
   String get uploadFailureSheetRetryingSnackbar => '正在重试上传…';
@@ -14894,9 +14900,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle => '这周又多了一点你的色彩。';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return '本周创作天数：$count 天。继续创作吧。';
   }
@@ -14914,13 +14917,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get creatorHighlightTopVideo => '你本周发布的视频中播放次数最多的一条';
 
   @override
-  String get creatorHighlightCreate => '再创作一个';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '目前播放次数：$countString 次，还在继续。';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '你本周发布的视频截至目前的总点赞数：$countString 个。';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '你本周发布的视频截至目前的总评论数：$countString 条。';
+  }
 
   @override
   String get creatorHighlightAnalytics => '查看你的数据';
-
-  @override
-  String get creatorHighlightWatch => '观看视频';
 
   @override
   String get messagesPublicRoomsDisclosure =>

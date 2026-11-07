@@ -182,7 +182,7 @@ Future<(String, int)> setSourceWithFallbacks({
       }
       final nextAttempt = attemptIndex + 1;
       if (nextAttempt < sources.length) {
-        if (isCanary) {
+        if (isB2OriginalPlaybackSource(source)) {
           log(
             'B2 canary fallback index $index: failedSource=$source '
             'retrySource=${sources[nextAttempt]} code=$nativeErrorCode',

@@ -57,7 +57,7 @@ class InlineCommentComposerCubit extends Cubit<InlineCommentComposerState>
       await _commentsRepository.postComment(
         content: trimmed,
         rootEventId: video.id,
-        rootEventKind: NIP71VideoKinds.addressableShortVideo,
+        rootEventKind: video.referenceKind,
         rootEventAuthorPubkey: video.pubkey,
         rootAddressableId: video.addressableId,
       );

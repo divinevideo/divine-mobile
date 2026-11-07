@@ -56,6 +56,18 @@ typedef _WebSocketFollowerStats = ({
   List<_FollowerCountObservation> followerCounts,
 });
 
+/// The signed-in account changed while a contact-list publish waited for the
+/// one ahead of it, so the edit it carried belongs to another account.
+class _AccountChangedWhileQueuedException
+    implements TerminalSocialActionException {
+  const _AccountChangedWhileQueuedException();
+
+  @override
+  String toString() =>
+      'AccountChangedWhileQueuedException: the signed-in account changed '
+      'while the contact list publish waited';
+}
+
 /// Repository for managing follow relationships.
 /// Single source of truth for follow data.
 ///
@@ -459,8 +471,17 @@ class FollowRepository {
 
   // A contact-list broadcast withheld because the read that precedes it came
   // back inconclusive. Flushed by [retryPendingContactListBroadcast] and by
-  // the next follow or unfollow, which rebroadcasts the whole list anyway.
+  // the next follow or unfollow that publishes, since every publish carries
+  // the whole list.
   bool _contactListBroadcastPending = false;
+
+  // Completes when the newest contact-list broadcast so far has finished,
+  // whichever way. See [_broadcastContactList].
+  Future<void>? _contactListBroadcastTail;
+
+  // A failed publish may undo only its own edit, not a newer edit to the same
+  // account that is still waiting to publish.
+  final _pendingFollowEdits = <String, Object>{};
   bool _isInitialized = false;
   final Completer<void> _initializedCompleter = Completer<void>();
 
@@ -1038,7 +1059,9 @@ class FollowRepository {
   /// Cache-backed stream of the current user's followers.
   ///
   /// Emits a [CacheResult.cached] if disk-cached data exists, then a single
-  /// [CacheResult.live] once the network fetch resolves.
+  /// [CacheResult.live] once the network fetch succeeds, or the fetch's error
+  /// if it fails. If the account changes or the repository is disposed before
+  /// the result arrives, the stream ends without it; an error can still arrive.
   ///
   /// Durable relationship rows take precedence over an older CacheSync entry.
   /// They are explicitly stale; only the completed network snapshot is live.
@@ -1087,16 +1110,18 @@ class FollowRepository {
       }
     }
     if (_isDisposed || owner != _nostrClient.publicKey) return;
-    await for (final result in CacheSync.watchOne<FollowersSnapshot>(
-      key: _myFollowersCacheKey(owner),
-      fetch: fetchMyFollowersSnapshot,
-      fromJson: FollowersSnapshot.fromJson,
-      toJson: (s) => s.toJson(),
-      ttl: _profileListCacheTtl,
-    )) {
-      if (_isDisposed || owner != _nostrClient.publicKey) return;
-      if (result.isLive || !deliveredDurable) yield result;
-    }
+    // `yield*`, not `await for`: a cancelled subscription stops an async*
+    // body only at a yield, so an `await for` would keep waiting on the fetch
+    // and fail the listener's cancel future with the fetch's late error.
+    yield* CacheSync.watchOne<FollowersSnapshot>(
+          key: _myFollowersCacheKey(owner),
+          fetch: fetchMyFollowersSnapshot,
+          fromJson: FollowersSnapshot.fromJson,
+          toJson: (s) => s.toJson(),
+          ttl: _profileListCacheTtl,
+        )
+        .takeWhile((_) => !_isDisposed && owner == _nostrClient.publicKey)
+        .where((result) => result.isLive || !deliveredDurable);
   }
 
   /// Cache-backed stream of the current user's following list.
@@ -2552,7 +2577,8 @@ class FollowRepository {
   /// Throws:
   ///
   /// * [ArgumentError] if [pubkey] is not a 32-byte hex pubkey.
-  /// * [Exception] if the user is not authenticated.
+  /// * [Exception] if the user is not authenticated, or if the signed-in
+  ///   account changed while the publish waited for an earlier one.
   /// * Anything the Kind 3 publish or the local-storage write threw, after
   ///   rolling the optimistic update back.
   Future<void> follow(String pubkey) async {
@@ -2563,6 +2589,8 @@ class FollowRepository {
   ///
   /// Preserves the optimistic local update and errors of [follow]. A queued
   /// result includes offline sync and a publish withheld until a safe relay read.
+  /// The result is unchanged when an unfollow undid the follow before its
+  /// contact list was published.
   Future<FollowOutcome> followWithResult(String pubkey) async {
     if (!_nostrClient.hasKeys) {
       Log.error(
@@ -2609,54 +2637,71 @@ class FollowRepository {
       category: LogCategory.system,
     );
 
-    // 1. Update in-memory cache immediately
-    _followingPubkeys = [..._followingPubkeys, pubkey];
-    _emitFollowingList();
-    await _invalidateMyFollowingCache();
-
-    // Check if offline and queue if needed
-    if (_isOnline != null && !_isOnline() && _queueOfflineAction != null) {
-      await _queueOfflineAction(isFollow: true, pubkey: pubkey);
-
-      // Save to local storage for persistence
-      await _saveToLocalStorage();
-
-      Log.info(
-        'Queued follow action for offline sync: '
-        '${pubkeyForLogs(pubkey)}',
-        name: 'FollowRepository',
-        category: LogCategory.system,
-      );
-      return FollowOutcome.queued;
-    }
-
+    final edit = Object();
+    _pendingFollowEdits[pubkey] = edit;
     try {
-      // 2. Broadcast to network
-      final published = await _broadcastContactList();
-
-      // 3. Save to local storage
-      await _saveToLocalStorage();
-
-      Log.info(
-        'Follow ${published ? 'published' : 'pending broadcast'}: '
-        '${pubkeyForLogs(pubkey)}',
-        name: 'FollowRepository',
-        category: LogCategory.system,
-      );
-      return published ? FollowOutcome.published : FollowOutcome.queued;
-    } catch (e) {
-      // Roll back this follow only. Restoring a whole pre-follow snapshot
-      // would also throw away a newer contact list the pre-publish read
-      // adopted, putting the stale list back (#8266).
-      _followingPubkeys = _followingPubkeys.where((p) => p != pubkey).toList();
+      // 1. Update in-memory cache immediately
+      _followingPubkeys = [..._followingPubkeys, pubkey];
       _emitFollowingList();
+      await _invalidateMyFollowingCache();
 
-      Log.error(
-        'Error following user: $e',
-        name: 'FollowRepository',
-        category: LogCategory.system,
-      );
-      rethrow;
+      // Check if offline and queue if needed
+      if (_isOnline != null && !_isOnline() && _queueOfflineAction != null) {
+        await _queueOfflineAction(isFollow: true, pubkey: pubkey);
+
+        // Save to local storage for persistence
+        await _saveToLocalStorage();
+
+        Log.info(
+          'Queued follow action for offline sync: '
+          '${pubkeyForLogs(pubkey)}',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+        return FollowOutcome.queued;
+      }
+
+      try {
+        // 2. Broadcast to network
+        final published = await _broadcastContactList();
+
+        // 3. Save to local storage
+        await _saveToLocalStorage();
+
+        Log.info(
+          'Follow ${published ? 'published' : 'pending broadcast'}: '
+          '${pubkeyForLogs(pubkey)}',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+        if (!published) return FollowOutcome.queued;
+        // An unfollow sent meanwhile can undo the follow before its list is
+        // built; then nothing about this account reached the relay.
+        return _followingPubkeys.contains(pubkey)
+            ? FollowOutcome.published
+            : FollowOutcome.unchanged;
+      } catch (e) {
+        // Roll back this follow only. Restoring a whole pre-follow snapshot
+        // would also throw away a newer contact list the pre-publish read
+        // adopted, putting the stale list back (#8266).
+        if (identical(_pendingFollowEdits[pubkey], edit)) {
+          _followingPubkeys = _followingPubkeys
+              .where((p) => p != pubkey)
+              .toList();
+          _emitFollowingList();
+        }
+
+        Log.error(
+          'Error following user: $e',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+        rethrow;
+      }
+    } finally {
+      if (identical(_pendingFollowEdits[pubkey], edit)) {
+        _pendingFollowEdits.remove(pubkey);
+      }
     }
   }
 
@@ -2725,56 +2770,66 @@ class FollowRepository {
       category: LogCategory.system,
     );
 
-    // 1. Update in-memory cache immediately
-    _followingPubkeys = _followingPubkeys.where((p) => p != pubkey).toList();
-    _emitFollowingList();
-    await _invalidateMyFollowingCache();
-
-    // Check if offline and queue if needed
-    if (_isOnline != null && !_isOnline() && _queueOfflineAction != null) {
-      await _queueOfflineAction(isFollow: false, pubkey: pubkey);
-
-      // Save to local storage for persistence
-      await _saveToLocalStorage();
-
-      _emitConfirmedUnfollow(pubkey);
-
-      Log.info(
-        'Queued unfollow action for offline sync: '
-        '${pubkeyForLogs(pubkey)}',
-        name: 'FollowRepository',
-        category: LogCategory.system,
-      );
-      return;
-    }
-
+    final edit = Object();
+    _pendingFollowEdits[pubkey] = edit;
     try {
-      // 2. Broadcast to network
-      await _broadcastContactList();
-
-      // 3. Save to local storage
-      await _saveToLocalStorage();
-
-      _emitConfirmedUnfollow(pubkey);
-
-      Log.info(
-        'Successfully unfollowed user: ${pubkeyForLogs(pubkey)}',
-        name: 'FollowRepository',
-        category: LogCategory.system,
-      );
-    } catch (e) {
-      // Roll back this unfollow only, for the same reason as [follow].
-      if (!_followingPubkeys.contains(pubkey)) {
-        _followingPubkeys = [..._followingPubkeys, pubkey];
-      }
+      // 1. Update in-memory cache immediately
+      _followingPubkeys = _followingPubkeys.where((p) => p != pubkey).toList();
       _emitFollowingList();
+      await _invalidateMyFollowingCache();
 
-      Log.error(
-        'Error unfollowing user: $e',
-        name: 'FollowRepository',
-        category: LogCategory.system,
-      );
-      rethrow;
+      // Check if offline and queue if needed
+      if (_isOnline != null && !_isOnline() && _queueOfflineAction != null) {
+        await _queueOfflineAction(isFollow: false, pubkey: pubkey);
+
+        // Save to local storage for persistence
+        await _saveToLocalStorage();
+
+        _emitConfirmedUnfollow(pubkey);
+
+        Log.info(
+          'Queued unfollow action for offline sync: '
+          '${pubkeyForLogs(pubkey)}',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+        return;
+      }
+
+      try {
+        // 2. Broadcast to network
+        await _broadcastContactList();
+
+        // 3. Save to local storage
+        await _saveToLocalStorage();
+
+        _emitConfirmedUnfollow(pubkey);
+
+        Log.info(
+          'Successfully unfollowed user: ${pubkeyForLogs(pubkey)}',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+      } catch (e) {
+        // Roll back this unfollow only, for the same reason as [follow].
+        if (identical(_pendingFollowEdits[pubkey], edit)) {
+          if (!_followingPubkeys.contains(pubkey)) {
+            _followingPubkeys = [..._followingPubkeys, pubkey];
+          }
+          _emitFollowingList();
+        }
+
+        Log.error(
+          'Error unfollowing user: $e',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+        rethrow;
+      }
+    } finally {
+      if (identical(_pendingFollowEdits[pubkey], edit)) {
+        _pendingFollowEdits.remove(pubkey);
+      }
     }
   }
 
@@ -3464,8 +3519,56 @@ class FollowRepository {
     }
   }
 
-  /// Broadcast updated contact list to network (Kind 3 event)
+  /// Broadcast updated contact list to network (Kind 3 event), one at a time.
+  ///
+  /// Every publish replaces the whole list (NIP-02), so two in flight at once
+  /// race to replace each other, and one that fails rolls its own edit back
+  /// locally while the other carries it to the relay (#10784). A broadcast
+  /// that has to wait publishes nothing when the one ahead of it already
+  /// carried its edit, so a later refusal cannot roll back a follow that is on
+  /// the relay. It fails when the account changed while it waited.
   Future<bool> _broadcastContactList() async {
+    final previous = _contactListBroadcastTail;
+    final turn = Completer<void>();
+    _contactListBroadcastTail = turn.future;
+    try {
+      if (previous == null) return await _broadcastContactListNow();
+
+      final owner = _nostrClient.publicKey;
+      await previous;
+      // Dispose closes the following stream only after it unsubscribes, so
+      // the pre-publish read's own check can miss a dispose still under way.
+      if (_isDisposed) return false;
+      // Failing rather than reporting it withheld keeps the caller from
+      // saving this account's list under the new account's storage key.
+      if (_nostrClient.publicKey != owner) {
+        throw const _AccountChangedWhileQueuedException();
+      }
+      if (_newestContactListMatchesPublishable()) return true;
+      return await _broadcastContactListNow();
+    } finally {
+      turn.complete();
+      if (identical(_contactListBroadcastTail, turn.future)) {
+        _contactListBroadcastTail = null;
+      }
+    }
+  }
+
+  /// Whether the newest contact list known to be on a relay already holds
+  /// exactly the follows a broadcast would publish now.
+  bool _newestContactListMatchesPublishable() {
+    final newest = _currentUserContactListEvent;
+    if (newest == null) return false;
+    final published = {
+      for (final tag in newest.tags)
+        if (tag.length > 1 && tag[0] == 'p') tag[1],
+    };
+    final publishable = _publishableFollows();
+    return publishable.length == published.length &&
+        publishable.every(published.contains);
+  }
+
+  Future<bool> _broadcastContactListNow() async {
     // Last line of defence: [executeFollowAction] appends without validating,
     // and an invalid pubkey here makes Contact's constructor throw and abort
     // the publish, blocking every follow and unfollow until the entry is gone.
@@ -3492,6 +3595,9 @@ class FollowRepository {
       return false;
     }
 
+    // The list this publish is built from. An edit made while it is sending is
+    // still pending, so it must not become part of the adopted base.
+    final base = List<String>.from(_followingPubkeys);
     final contactList = ContactList();
     for (final pubkey in _publishableFollows()) {
       contactList.add(Contact(publicKey: pubkey));
@@ -3510,11 +3616,15 @@ class FollowRepository {
     // Cache the contact list event
     _cacheUserEvent?.call(event);
 
-    _currentUserContactListEvent = event;
-    // The event we just published is now the newest one we know of, and its
-    // tags are the new base for the next pending-change diff.
-    _followingProvenance = (createdAt: event.createdAt, id: event.id);
-    _adoptedFollows = List<String>.from(_followingPubkeys);
+    // A newer remote base may have arrived on the subscription while this
+    // event was sending. Do not replace its content or adopted list with an
+    // older event merely because that send finished later.
+    _rememberContactListEvent(event);
+    final provenance = _followingProvenance;
+    if (provenance == null || _isNewer(event.createdAt, event.id, provenance)) {
+      _followingProvenance = (createdAt: event.createdAt, id: event.id);
+      _adoptedFollows = base;
+    }
     _contactListBroadcastPending = false;
     _followingConfirmedByRelay = true;
 
@@ -3536,6 +3646,10 @@ class FollowRepository {
   /// fingerprint it looked for — and it re-broadcast the union, publishing the
   /// resurrected follows back to the relay (#8266).
   void _processContactListEvent(Event event) {
+    // A relay may echo a publish before its send completes, while another
+    // local edit is already queued. Adopt the remote base without losing
+    // those edits, just as the pre-publish read does.
+    final pending = _pendingFollowEdits.isEmpty ? null : _pendingLocalChange();
     final adopted = _adoptContactList(
       _followsOf(event, source: 'network Kind 3 event ${event.id}'),
       createdAt: event.createdAt,
@@ -3545,6 +3659,7 @@ class FollowRepository {
     _rememberContactListEvent(event);
     _followingConfirmedByRelay = true;
     if (!adopted) return;
+    if (pending != null) _applyPendingLocalChange(pending);
 
     unawaited(_saveToLocalStorage());
     unawaited(_invalidateMyFollowingCache());

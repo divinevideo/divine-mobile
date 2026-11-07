@@ -126,6 +126,58 @@ void main() {
       );
     });
 
+    group('setVolumeState', () {
+      final audio = AudioEvent(id: 'audio-1', pubkey: 'pub', createdAt: 1);
+
+      test('writes nothing when the entry already holds these volumes', () {
+        // Mute-all writes its own entry, then the clip and sound blocs write
+        // the same volumes again; a second entry would undo nothing.
+        when(() => stateManager.activeMeta).thenReturn({
+          VideoEditorConstants.clipsStateHistoryKey: [_clip('clip-1').toJson()],
+          VideoEditorConstants.audioStateHistoryKey: [audio.toJson()],
+        });
+
+        editor.setVolumeState(clips: [_clip('clip-1')], audioTracks: [audio]);
+
+        verifyNever(() => editor.addHistory(meta: any(named: 'meta')));
+      });
+
+      test('writes a volume the entry does not hold yet', () {
+        when(() => stateManager.activeMeta).thenReturn({
+          VideoEditorConstants.clipsStateHistoryKey: [_clip('clip-1').toJson()],
+          VideoEditorConstants.audioStateHistoryKey: [audio.toJson()],
+        });
+
+        editor.setVolumeState(
+          clips: [_clip('clip-1')],
+          audioTracks: [audio.copyWith(volume: 0)],
+        );
+
+        verify(() => editor.addHistory(meta: any(named: 'meta'))).called(1);
+      });
+
+      test('writes the layers it is given in the same entry', () {
+        when(() => stateManager.activeMeta).thenReturn({
+          VideoEditorConstants.clipsStateHistoryKey: [_clip('clip-1').toJson()],
+          VideoEditorConstants.audioStateHistoryKey: [audio.toJson()],
+        });
+        final layers = <Layer>[TextLayer(text: 'title')];
+
+        editor.setVolumeState(
+          clips: [_clip('clip-1')],
+          audioTracks: [audio],
+          layers: layers,
+        );
+
+        verify(
+          () => editor.addHistory(
+            layers: layers,
+            meta: any(named: 'meta'),
+          ),
+        ).called(1);
+      });
+    });
+
     group('setLengthenedClipState', () {
       // #6401 on the content-added path: a sound clamped to a 3s composition
       // when it was added, then the user shoots more stills from the editor's

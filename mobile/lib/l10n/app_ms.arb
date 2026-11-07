@@ -718,6 +718,12 @@
   "videoSettingsAutoAdvanceOff": "Maju automatik dimatikan",
   "videoSettingsCaptionsOn": "Sarikata dihidupkan",
   "videoSettingsCaptionsOff": "Sarikata dimatikan",
+  "videoSettingsReactionsOn": "Reaksi dihidupkan",
+  "videoSettingsReactionsOff": "Reaksi dimatikan",
+  "videoSettingsReactionsEnable": "Tunjukkan reaksi",
+  "videoSettingsReactionsDisable": "Sembunyikan reaksi",
+  "feedReactionDismiss": "Sembunyikan reaksi ini",
+  "feedReactionOpenComment": "Buka dalam komen",
   "@videoSettingsCaptionsDisable": {
     "description": "Semantic label for the closed-captions toggle in the playback-settings popover when captions are currently on."
   },
@@ -3169,10 +3175,6 @@
       }
     }
   },
-  "dmReactionChipFailedA11yLabel": "Tindak balas gagal, ketik dua kali untuk cuba semula",
-  "@dmReactionChipFailedA11yLabel": {
-    "description": "Screen-reader label for a reaction chip whose publish failed."
-  },
   "dmReactionChipUnconfirmedA11yLabel": "Tindak balas {emoji} anda tidak dapat dihantar. Ketik dua kali untuk cuba semula",
   "dmReactionChipRetryAnnouncement": "Mencuba semula tindak balas",
   "@dmReactionChipRetryAnnouncement": {
@@ -3869,9 +3871,6 @@
   "geoBlockedLegalNotice": "Kami menghormati undang-undang dan peraturan tempatan anda. Sekatan ini berdasarkan lokasi alamat IP anda.",
   "geoBlockedRegionLabel": "Wilayah",
   "geoBlockedTitle": "Perkhidmatan Tidak Tersedia",
-  "likedVideosEmpty": "Tiada video disukai",
-  "likedVideosInvalidRoute": "Laluan tidak sah",
-  "likedVideosTitle": "Video Disukai",
   "uploadFailureSheetRetryingSnackbar": "Mencuba semula muat naik…",
   "uploadFailureSheetSaveToDraftsButton": "Simpan ke Draf",
   "uploadFailureSheetSavedToDraftsSnackbar": "Disimpan ke draf",
@@ -7596,10 +7595,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "Minggu ini ada sedikit lagi sentuhan anda.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "Hari berkarya minggu ini: {count}. Teruskan berkarya.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -7623,16 +7618,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Hasilkan lagi",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "Tontonan setakat ini: {count}, dan terus bertambah.",
+  "creatorHighlightWeeklyLikes": "Jumlah sukaan setakat ini bagi video yang anda siarkan minggu ini: {count}.",
+  "creatorHighlightWeeklyComments": "Jumlah komen setakat ini bagi video yang anda siarkan minggu ini: {count}.",
   "creatorHighlightAnalytics": "Lihat statistik anda",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Tonton video",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   }
 }

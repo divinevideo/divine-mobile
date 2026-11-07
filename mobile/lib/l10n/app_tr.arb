@@ -4199,6 +4199,12 @@
   "videoSettingsAutoAdvanceOff": "Otomatik ilerleme kapalı",
   "videoSettingsCaptionsOn": "Altyazı açık",
   "videoSettingsCaptionsOff": "Altyazı kapalı",
+  "videoSettingsReactionsOn": "Tepkiler açık",
+  "videoSettingsReactionsOff": "Tepkiler kapalı",
+  "videoSettingsReactionsEnable": "Tepkileri göster",
+  "videoSettingsReactionsDisable": "Tepkileri gizle",
+  "feedReactionDismiss": "Tepkiyi gizle",
+  "feedReactionOpenComment": "Yorumlarda aç",
   "videoActionReportLabel": "Bildir",
   "videoActionReport": "Videoyu bildir",
   "videoActionEditLabel": "Düzenle",
@@ -4441,7 +4447,6 @@
   "dmReactionChipOwnA11yLabel": "Senin tepkin: {emoji}",
   "dmReactionChipOtherA11yLabel": "{name} {emoji} ile tepki verdi",
   "dmReactionChipPendingA11yLabel": "Tepki gönderiliyor: {emoji}",
-  "dmReactionChipFailedA11yLabel": "Tepki başarısız, tekrar denemek için çift dokun",
   "dmReactionChipUnconfirmedA11yLabel": "{emoji} tepkin gönderilemedi. Tekrar denemek için çift dokun",
   "dmReactionChipRetryAnnouncement": "Tepki yeniden deneniyor",
   "dmFormatBold": "Kalın",
@@ -5277,9 +5282,6 @@
   "geoBlockedLegalNotice": "Yerel yasalarına ve düzenlemelerine saygı duyuyoruz. Bu kısıtlama, IP adresi konumuna göre uygulanır.",
   "geoBlockedRegionLabel": "Bölge",
   "geoBlockedTitle": "Hizmet Kullanılamıyor",
-  "likedVideosEmpty": "Beğenilen video yok",
-  "likedVideosInvalidRoute": "Geçersiz rota",
-  "likedVideosTitle": "Beğenilen Videolar",
   "uploadFailureSheetRetryingSnackbar": "Yükleme tekrar deneniyor…",
   "uploadFailureSheetSaveToDraftsButton": "Taslaklara Kaydet",
   "uploadFailureSheetSavedToDraftsSnackbar": "Taslaklara kaydedildi",
@@ -6285,10 +6287,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "Bu hafta biraz daha senin izini taşıyor.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "Bu hafta ürettiğin gün sayısı: {count}. Devam et.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6312,16 +6310,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Bir tane daha yap",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "Şu ana kadarki izlenme: {count} ve devam ediyor.",
+  "creatorHighlightWeeklyLikes": "Bu hafta paylaştığın videoların şu ana kadarki toplam beğeni sayısı: {count}.",
+  "creatorHighlightWeeklyComments": "Bu hafta paylaştığın videoların şu ana kadarki toplam yorum sayısı: {count}.",
   "creatorHighlightAnalytics": "İstatistiklerine bak",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Videoyu izle",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "Abone olundu",

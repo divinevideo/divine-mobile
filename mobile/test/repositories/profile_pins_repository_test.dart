@@ -94,9 +94,10 @@ Event _videoVersion(
   String dTag, {
   String pubkey = _owner,
   int createdAt = 1000,
+  int kind = EventKind.videoVertical,
 }) => Event(
   pubkey,
-  EventKind.videoVertical,
+  kind,
   [
     ['d', dTag],
   ],
@@ -671,8 +672,18 @@ void main() {
         final [deletions, versions] = lookup;
         expect(deletions.kinds, [EventKind.eventDeletion]);
         expect(deletions.authors, [_owner]);
-        expect(deletions.a, [_coordinate('one'), _coordinate('two')]);
-        expect(versions.kinds, [EventKind.videoVertical]);
+        // A pin of a Kind 34235 video keeps the 34236 key, but its deletion
+        // names the video's own 34235 coordinate (#10776).
+        expect(deletions.a, [
+          _coordinate('one'),
+          _coordinate('two'),
+          '34235:$_owner:one',
+          '34235:$_owner:two',
+        ]);
+        expect(versions.kinds, [
+          EventKind.videoVertical,
+          EventKind.videoHorizontal,
+        ]);
         expect(versions.authors, [_owner]);
         expect(versions.d, ['one', 'two']);
       });
@@ -734,6 +745,71 @@ void main() {
 
         expect(released, isEmpty);
         expect(signedTags, isEmpty);
+      });
+
+      group('the pin of a Kind 34235 video (#10776)', () {
+        test('is released by a deletion naming its 34235 coordinate', () async {
+          stubRelayAnswer([
+            _pinList([
+              ['a', _coordinate('keep')],
+              ['a', _coordinate('normal')],
+            ]),
+            _deletion(['34235:$_owner:normal']),
+          ]);
+
+          final released = await repository.releaseDeleted([
+            _coordinate('normal'),
+          ]);
+
+          expect(released, [_coordinate('keep')]);
+          expect(signedTags, [
+            ['a', _coordinate('keep')],
+          ]);
+        });
+
+        test(
+          'stays when its video was republished after the deletion',
+          () async {
+            stubRelayAnswer([
+              _pinList([
+                ['a', _coordinate('normal')],
+              ]),
+              _deletion(['34235:$_owner:normal']),
+              _videoVersion(
+                'normal',
+                createdAt: 1001,
+                kind: EventKind.videoHorizontal,
+              ),
+            ]);
+
+            final released = await repository.releaseDeleted([
+              _coordinate('normal'),
+            ]);
+
+            expect(released, isNull);
+            verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+          },
+        );
+
+        test(
+          'is not taken from a real Kind 34236 video under the same d',
+          () async {
+            stubRelayAnswer([
+              _pinList([
+                ['a', _coordinate('both')],
+              ]),
+              _deletion(['34235:$_owner:both']),
+              _videoVersion('both', createdAt: 999),
+            ]);
+
+            final released = await repository.releaseDeleted([
+              _coordinate('both'),
+            ]);
+
+            expect(released, isNull);
+            verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+          },
+        );
       });
 
       test('releases nothing over an inconclusive lookup', () async {

@@ -4199,6 +4199,12 @@
   "videoSettingsAutoAdvanceOff": "Automatisches Weiterblättern aus",
   "videoSettingsCaptionsOn": "Untertitel an",
   "videoSettingsCaptionsOff": "Untertitel aus",
+  "videoSettingsReactionsOn": "Reaktionen an",
+  "videoSettingsReactionsOff": "Reaktionen aus",
+  "videoSettingsReactionsEnable": "Reaktionen anzeigen",
+  "videoSettingsReactionsDisable": "Reaktionen ausblenden",
+  "feedReactionDismiss": "Reaktion ausblenden",
+  "feedReactionOpenComment": "In Kommentaren öffnen",
   "videoActionReportLabel": "Melden",
   "videoActionReport": "Video melden",
   "videoActionEditLabel": "Bearbeiten",
@@ -4441,7 +4447,6 @@
   "dmReactionChipOwnA11yLabel": "Deine Reaktion: {emoji}",
   "dmReactionChipOtherA11yLabel": "{name} hat mit {emoji} reagiert",
   "dmReactionChipPendingA11yLabel": "Reaktion wird gesendet: {emoji}",
-  "dmReactionChipFailedA11yLabel": "Reaktion fehlgeschlagen, doppelt tippen zum Wiederholen",
   "dmReactionChipUnconfirmedA11yLabel": "Deine Reaktion {emoji} konnte nicht gesendet werden. Doppelt tippen zum Wiederholen",
   "dmReactionChipRetryAnnouncement": "Reaktion wird wiederholt",
   "dmFormatBold": "Fett",
@@ -5277,9 +5282,6 @@
   "geoBlockedLegalNotice": "Wir respektieren deine lokalen Gesetze und Vorschriften. Diese Einschränkung basiert auf dem Standort deiner IP-Adresse.",
   "geoBlockedRegionLabel": "Region",
   "geoBlockedTitle": "Dienst nicht verfügbar",
-  "likedVideosEmpty": "Keine gelikten Videos",
-  "likedVideosInvalidRoute": "Ungültige Route",
-  "likedVideosTitle": "Gelikte Videos",
   "uploadFailureSheetRetryingSnackbar": "Upload wird wiederholt …",
   "uploadFailureSheetSaveToDraftsButton": "In Entwürfen speichern",
   "uploadFailureSheetSavedToDraftsSnackbar": "In Entwürfen gespeichert",
@@ -6285,10 +6287,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "In dieser Woche steckt ein bisschen mehr von dir.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "Kreative Tage diese Woche: {count}. Mach weiter.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6312,16 +6310,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Mach noch eins",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "Aufrufe bisher: {count} – und es werden mehr.",
+  "creatorHighlightWeeklyLikes": "Bisherige Likes für die Videos, die du diese Woche gepostet hast: {count}.",
+  "creatorHighlightWeeklyComments": "Bisherige Kommentare zu den Videos, die du diese Woche gepostet hast: {count}.",
   "creatorHighlightAnalytics": "Sieh dir deine Statistik an",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Video ansehen",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "Abonniert",

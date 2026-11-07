@@ -1470,6 +1470,24 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'መግለጫ ጽሑፎች ጠፍተዋል';
 
   @override
+  String get videoSettingsReactionsOn => 'ምላሾች በርተዋል';
+
+  @override
+  String get videoSettingsReactionsOff => 'ምላሾች ጠፍተዋል';
+
+  @override
+  String get videoSettingsReactionsEnable => 'ምላሾችን አሳይ';
+
+  @override
+  String get videoSettingsReactionsDisable => 'ምላሾችን ደብቅ';
+
+  @override
+  String get feedReactionDismiss => 'ምላሹን ደብቅ';
+
+  @override
+  String get feedReactionOpenComment => 'በአስተያየቶች ውስጥ ክፈት';
+
+  @override
   String get contentWarningLabel => 'የይዘት ማስጠንቀቂያ';
 
   @override
@@ -6245,9 +6263,6 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel => 'ምላሹ አልተሳካም፣ እንደገና ለመሞከር ሁለቴ ንካ';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'የ$emoji ምላሽዎን መላክ አልተቻለም። እንደገና ለመሞከር ሁለቴ ይንኩ';
   }
@@ -7637,15 +7652,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get geoBlockedTitle => 'አገልግሎት አይገኝም';
-
-  @override
-  String get likedVideosEmpty => 'ምንም የተወደዱ ቪዲዮዎች የሉም';
-
-  @override
-  String get likedVideosInvalidRoute => 'ልክ ያልሆነ መንገድ';
-
-  @override
-  String get likedVideosTitle => 'የተወደዱ ቪዲዮዎች';
 
   @override
   String get uploadFailureSheetRetryingSnackbar => 'ስቀላን እንደገና በመሞከር ላይ…';
@@ -15442,9 +15448,6 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle => 'በዚህ ሳምንት ከእርስዎ የሆነ ነገር ትንሽ ተጨምሯል።';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'በዚህ ሳምንት የፈጠሩባቸው ቀናት፦ $count። ይቀጥሉ።';
   }
@@ -15462,13 +15465,34 @@ class AppLocalizationsAm extends AppLocalizations {
   String get creatorHighlightTopVideo => 'በዚህ ሳምንት ካሳተሟቸው ቪዲዮዎች በብዛት የታየው';
 
   @override
-  String get creatorHighlightCreate => 'ሌላ ይፍጠሩ';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'እስካሁን ያገኙት እይታዎች፦ $countString፤ አሁንም እየጨመሩ ነው።';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ መውደዶች፦ $countString።';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ አስተያየቶች፦ $countString።';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'ስታቲስቲክስዎን ይመልከቱ';
-
-  @override
-  String get creatorHighlightWatch => 'ቪዲዮውን ይመልከቱ';
 
   @override
   String get messagesPublicRoomsDisclosure =>

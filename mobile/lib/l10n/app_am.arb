@@ -4279,6 +4279,12 @@
   "videoSettingsAutoAdvanceOff": "ራስ-ሰር ማስቀደም ጠፍቷል",
   "videoSettingsCaptionsOn": "መግለጫ ጽሑፎች በርተዋል",
   "videoSettingsCaptionsOff": "መግለጫ ጽሑፎች ጠፍተዋል",
+  "videoSettingsReactionsOn": "ምላሾች በርተዋል",
+  "videoSettingsReactionsOff": "ምላሾች ጠፍተዋል",
+  "videoSettingsReactionsEnable": "ምላሾችን አሳይ",
+  "videoSettingsReactionsDisable": "ምላሾችን ደብቅ",
+  "feedReactionDismiss": "ምላሹን ደብቅ",
+  "feedReactionOpenComment": "በአስተያየቶች ውስጥ ክፈት",
   "videoActionReportLabel": "ሪፖርት",
   "videoActionReport": "ቪዲዮውን ሪፖርት አድርግ",
   "videoActionEditLabel": "አርትዕ",
@@ -4528,7 +4534,6 @@
   "dmReactionChipOwnA11yLabel": "የአንተ ምላሽ፦ {emoji}",
   "dmReactionChipOtherA11yLabel": "{name} በ{emoji} ምላሽ ሰጥቷል",
   "dmReactionChipPendingA11yLabel": "ምላሽ በመላክ ላይ፦ {emoji}",
-  "dmReactionChipFailedA11yLabel": "ምላሹ አልተሳካም፣ እንደገና ለመሞከር ሁለቴ ንካ",
   "dmReactionChipUnconfirmedA11yLabel": "የ{emoji} ምላሽዎን መላክ አልተቻለም። እንደገና ለመሞከር ሁለቴ ይንኩ",
   "dmReactionChipRetryAnnouncement": "ምላሹን እንደገና በመሞከር ላይ",
   "dmFormatBold": "ደማቅ",
@@ -5364,9 +5369,6 @@
   "geoBlockedLegalNotice": "የአካባቢ ህጎችዎን እና ደንቦችዎን እናከብራለን። ይህ ገደብ በIP አድራሻዎ አካባቢ ላይ የተመሰረተ ነው።",
   "geoBlockedRegionLabel": "ክልል",
   "geoBlockedTitle": "አገልግሎት አይገኝም",
-  "likedVideosEmpty": "ምንም የተወደዱ ቪዲዮዎች የሉም",
-  "likedVideosInvalidRoute": "ልክ ያልሆነ መንገድ",
-  "likedVideosTitle": "የተወደዱ ቪዲዮዎች",
   "uploadFailureSheetRetryingSnackbar": "ስቀላን እንደገና በመሞከር ላይ…",
   "uploadFailureSheetSaveToDraftsButton": "ወደ ረቂቆች አስቀምጥ",
   "uploadFailureSheetSavedToDraftsSnackbar": "ወደ ረቂቆች ተቀምጧል",
@@ -6338,10 +6340,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "በዚህ ሳምንት ከእርስዎ የሆነ ነገር ትንሽ ተጨምሯል።",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "በዚህ ሳምንት የፈጠሩባቸው ቀናት፦ {count}። ይቀጥሉ።",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6365,16 +6363,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "ሌላ ይፍጠሩ",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "እስካሁን ያገኙት እይታዎች፦ {count}፤ አሁንም እየጨመሩ ነው።",
+  "creatorHighlightWeeklyLikes": "በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ መውደዶች፦ {count}።",
+  "creatorHighlightWeeklyComments": "በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ አስተያየቶች፦ {count}።",
   "creatorHighlightAnalytics": "ስታቲስቲክስዎን ይመልከቱ",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "ቪዲዮውን ይመልከቱ",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "ተከትለዋል",

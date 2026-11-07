@@ -2661,5 +2661,33 @@ void main() {
         ],
       );
     });
+
+    group('a Kind 34235 video (#10776)', () {
+      VideoEvent normalReply() => VideoEvent.fromNostrEvent(
+        _video(id: 401, createdAt: 900, dTag: 'reply-401', kind: 34235),
+        permissive: true,
+      );
+
+      test('names a reply by the 34236 key marks were saved under', () {
+        expect(
+          RepliesCuration.keyOf(normalReply()),
+          equals('34236:$_viewer:reply-401'),
+        );
+      });
+
+      test('keeps a reply hidden under the key saved before', () {
+        final curation = RepliesCuration(
+          hiddenIds: {'34236:$_viewer:reply-401'},
+        );
+        expect(curation.apply([normalReply()]), isEmpty);
+      });
+
+      test('files the curation of the video under its 34236 d tag', () {
+        expect(
+          RepliesCuration.dTagFor('34235:$_creator:root-d'),
+          equals(RepliesCuration.dTagFor(_rootAddress)),
+        );
+      });
+    });
   });
 }

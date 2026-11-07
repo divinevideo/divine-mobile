@@ -1521,6 +1521,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Untertitel aus';
 
   @override
+  String get videoSettingsReactionsOn => 'Reaktionen an';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reaktionen aus';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Reaktionen anzeigen';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Reaktionen ausblenden';
+
+  @override
+  String get feedReactionDismiss => 'Reaktion ausblenden';
+
+  @override
+  String get feedReactionOpenComment => 'In Kommentaren öffnen';
+
+  @override
   String get contentWarningLabel => 'Inhaltswarnung';
 
   @override
@@ -6482,10 +6500,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Reaktion fehlgeschlagen, doppelt tippen zum Wiederholen';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Deine Reaktion $emoji konnte nicht gesendet werden. Doppelt tippen zum Wiederholen';
   }
@@ -7921,15 +7935,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get geoBlockedTitle => 'Dienst nicht verfügbar';
-
-  @override
-  String get likedVideosEmpty => 'Keine gelikten Videos';
-
-  @override
-  String get likedVideosInvalidRoute => 'Ungültige Route';
-
-  @override
-  String get likedVideosTitle => 'Gelikte Videos';
 
   @override
   String get uploadFailureSheetRetryingSnackbar => 'Upload wird wiederholt …';
@@ -16011,10 +16016,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'In dieser Woche steckt ein bisschen mehr von dir.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'Kreative Tage diese Woche: $count. Mach weiter.';
   }
@@ -16033,13 +16034,34 @@ class AppLocalizationsDe extends AppLocalizations {
       'Das meistgesehene deiner Videos von dieser Woche';
 
   @override
-  String get creatorHighlightCreate => 'Mach noch eins';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Aufrufe bisher: $countString – und es werden mehr.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Bisherige Likes für die Videos, die du diese Woche gepostet hast: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Bisherige Kommentare zu den Videos, die du diese Woche gepostet hast: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'Sieh dir deine Statistik an';
-
-  @override
-  String get creatorHighlightWatch => 'Video ansehen';
 
   @override
   String get messagesPublicRoomsDisclosure =>

@@ -4199,6 +4199,12 @@
   "videoSettingsAutoAdvanceOff": "自動送りオフ",
   "videoSettingsCaptionsOn": "字幕オン",
   "videoSettingsCaptionsOff": "字幕オフ",
+  "videoSettingsReactionsOn": "リアクションオン",
+  "videoSettingsReactionsOff": "リアクションオフ",
+  "videoSettingsReactionsEnable": "リアクションを表示",
+  "videoSettingsReactionsDisable": "リアクションを非表示",
+  "feedReactionDismiss": "このリアクションを非表示",
+  "feedReactionOpenComment": "コメントで開く",
   "videoActionReportLabel": "報告",
   "videoActionReport": "動画を報告",
   "videoActionEditLabel": "編集",
@@ -4441,7 +4447,6 @@
   "dmReactionChipOwnA11yLabel": "あなたのリアクション: {emoji}",
   "dmReactionChipOtherA11yLabel": "{name} が {emoji} でリアクションしました",
   "dmReactionChipPendingA11yLabel": "リアクションを送信中: {emoji}",
-  "dmReactionChipFailedA11yLabel": "リアクションに失敗しました。ダブルタップで再試行",
   "dmReactionChipUnconfirmedA11yLabel": "{emoji} のリアクションを送信できませんでした。ダブルタップで再試行",
   "dmReactionChipRetryAnnouncement": "リアクションを再試行中",
   "dmFormatBold": "太字",
@@ -5277,9 +5282,6 @@
   "geoBlockedLegalNotice": "私たちはあなたの地域の法律や規制を尊重してるよ。この制限は、あなたの IP アドレスの位置情報に基づいてるよ。",
   "geoBlockedRegionLabel": "地域",
   "geoBlockedTitle": "サービスは利用できないよ",
-  "likedVideosEmpty": "いいねした動画はないよ",
-  "likedVideosInvalidRoute": "無効なルート",
-  "likedVideosTitle": "いいねした動画",
   "uploadFailureSheetRetryingSnackbar": "アップロードを再試行中…",
   "uploadFailureSheetSaveToDraftsButton": "下書きに保存",
   "uploadFailureSheetSavedToDraftsSnackbar": "下書きに保存したよ",
@@ -6285,10 +6287,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "あなたらしさが、今週を少し彩りました。",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "今週、創作した日数：{count}日。この調子で続けましょう。",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6312,16 +6310,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "もう一本つくる",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "これまでの再生回数：{count}回。まだまだ続きます。",
+  "creatorHighlightWeeklyLikes": "今週投稿した動画の、これまでの合計いいね数：{count}件。",
+  "creatorHighlightWeeklyComments": "今週投稿した動画の、これまでの合計コメント数：{count}件。",
   "creatorHighlightAnalytics": "自分の統計を見る",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "動画を見る",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "購読中",

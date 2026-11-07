@@ -198,8 +198,40 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
         ? _soundItems.length
         : _soundRowCount;
 
+    // A clip detached onto the canvas carries a sound of its own, so in
+    // volume edit mode it leaves the layer strip for a row of its own right
+    // under the sounds, beside its arc in the volume panel.
+    final detachedClipItems = isVolumeEditMode
+        ? [
+            for (final item in _layerItems)
+              if (item.isDetachedClip) item,
+          ]
+        : const <TimelineOverlayItem>[];
+    final remainingLayerItems = detachedClipItems.isEmpty
+        ? _layerItems
+        : [
+            for (final item in _layerItems)
+              if (!item.isDetachedClip) item,
+          ];
+    // The rows the detached clips leave behind close up, as the sounds' rows
+    // are renumbered above. Display only: volume edit mode does not let a
+    // layer be dragged, so a renumbered row is never written back.
+    final remainingLayerRows = ({
+      for (final item in remainingLayerItems) item.row,
+    }.toList()..sort());
+    final layerItemsForDisplay = detachedClipItems.isEmpty
+        ? _layerItems
+        : [
+            for (final item in remainingLayerItems)
+              item.copyWith(row: remainingLayerRows.indexOf(item.row)),
+          ];
+    final layerRowCountForDisplay = detachedClipItems.isEmpty
+        ? _layerRowCount
+        : remainingLayerRows.length;
+
     final stripConfigs = [
       (
+        key: 'sound',
         items: soundItemsForDisplay,
         rowCount: soundRowCountForDisplay,
         isCollapsed:
@@ -210,6 +242,19 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
         rowHeight: TimelineConstants.soundOverlayRowHeight,
       ),
       (
+        key: 'detachedClip',
+        items: [
+          for (var i = 0; i < detachedClipItems.length; i++)
+            detachedClipItems[i].copyWith(row: i),
+        ],
+        rowCount: detachedClipItems.length,
+        isCollapsed: false,
+        type: TimelineOverlayType.layer,
+        color: VineTheme.accentVioletBackground,
+        rowHeight: TimelineConstants.overlayRowHeight,
+      ),
+      (
+        key: 'filter',
         items: _filterItems,
         rowCount: _filterRowCount,
         isCollapsed: collapsedTypes.contains(TimelineOverlayType.filter),
@@ -218,6 +263,7 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
         rowHeight: TimelineConstants.overlayRowHeight,
       ),
       (
+        key: 'tune',
         items: _tuneItems,
         rowCount: _tuneRowCount,
         isCollapsed: collapsedTypes.contains(TimelineOverlayType.tune),
@@ -226,6 +272,7 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
         rowHeight: TimelineConstants.overlayRowHeight,
       ),
       (
+        key: 'effect',
         items: _effectItems,
         rowCount: _effectRowCount,
         isCollapsed: collapsedTypes.contains(TimelineOverlayType.effect),
@@ -234,14 +281,16 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
         rowHeight: TimelineConstants.overlayRowHeight,
       ),
       (
-        items: _layerItems,
-        rowCount: _layerRowCount,
+        key: 'layer',
+        items: layerItemsForDisplay,
+        rowCount: layerRowCountForDisplay,
         isCollapsed: collapsedTypes.contains(TimelineOverlayType.layer),
         type: TimelineOverlayType.layer,
         color: VineTheme.accentVioletBackground,
         rowHeight: TimelineConstants.overlayRowHeight,
       ),
       (
+        key: 'caption',
         items: _captionItems,
         rowCount: _captionRowCount,
         isCollapsed: collapsedTypes.contains(TimelineOverlayType.captions),
@@ -261,6 +310,9 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
           for (final config in stripConfigs)
             if (config.items.isNotEmpty)
               TimelineOverlayStrip(
+                // Keyed, so entering volume edit mode, which adds and drops
+                // strips, never hands one strip's state to another.
+                key: ValueKey(config.key),
                 items: config.items,
                 rowCount: config.rowCount,
                 totalWidth: widget.totalWidth,

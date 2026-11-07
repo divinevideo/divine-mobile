@@ -3223,6 +3223,12 @@
   "videoSettingsAutoAdvanceOff": "Naka-off ang auto advance",
   "videoSettingsCaptionsOn": "Naka-on ang captions",
   "videoSettingsCaptionsOff": "Naka-off ang captions",
+  "videoSettingsReactionsOn": "Naka-on ang reactions",
+  "videoSettingsReactionsOff": "Naka-off ang reactions",
+  "videoSettingsReactionsEnable": "Ipakita ang reactions",
+  "videoSettingsReactionsDisable": "Itago ang reactions",
+  "feedReactionDismiss": "Itago ang reaction",
+  "feedReactionOpenComment": "Buksan sa comments",
   "videoActionReportLabel": "I-report",
   "videoActionReport": "I-report ang video",
   "videoActionEditLabel": "I-edit",
@@ -3461,7 +3467,6 @@
   "dmReactionChipOwnA11yLabel": "Reaction mo: {emoji}",
   "dmReactionChipOtherA11yLabel": "Nag-react si {name} ng {emoji}",
   "dmReactionChipPendingA11yLabel": "Ipinapadala ang reaction: {emoji}",
-  "dmReactionChipFailedA11yLabel": "Nabigo ang reaction, i-double tap para subukan ulit",
   "dmReactionChipUnconfirmedA11yLabel": "Hindi naipadala ang iyong {emoji} reaction. I-double tap para subukan ulit",
   "dmReactionChipRetryAnnouncement": "Sinusubukan ulit ang reaction",
   "dmFormatBold": "Makapal",
@@ -4297,9 +4302,6 @@
   "geoBlockedLegalNotice": "Iginagalang namin ang iyong mga lokal na batas at regulasyon. Nakabatay ang restriksyong ito sa lokasyon ng iyong IP address.",
   "geoBlockedRegionLabel": "Rehiyon",
   "geoBlockedTitle": "Hindi Available ang Serbisyo",
-  "likedVideosEmpty": "Walang naka-like na video",
-  "likedVideosInvalidRoute": "Hindi wastong route",
-  "likedVideosTitle": "Mga Naka-like na Video",
   "uploadFailureSheetRetryingSnackbar": "Sinusubukan ulit ang upload…",
   "uploadFailureSheetSaveToDraftsButton": "I-save sa Drafts",
   "uploadFailureSheetSavedToDraftsSnackbar": "Na-save sa drafts",
@@ -5305,10 +5307,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "May dagdag na bahagi mo sa linggong ito.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "Mga araw na gumawa ka ngayong linggo: {count}. Tuloy lang.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -5332,16 +5330,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Gumawa pa",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "Views sa ngayon: {count}, at dumarami pa.",
+  "creatorHighlightWeeklyLikes": "Kabuuang like sa ngayon ng mga video na pinost mo ngayong linggo: {count}.",
+  "creatorHighlightWeeklyComments": "Kabuuang komento sa ngayon ng mga video na pinost mo ngayong linggo: {count}.",
   "creatorHighlightAnalytics": "Tingnan ang stats mo",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Panoorin ang video",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "Naka-subscribe",

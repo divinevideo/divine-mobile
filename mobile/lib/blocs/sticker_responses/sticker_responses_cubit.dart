@@ -71,9 +71,11 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
         responses = await _withPinned(replies, curation);
       } else {
         final hashtag = _region.promptHashtag;
-        final chain = address == null || hashtag == null
+        // Answers cite the chain by the key Divine always gave it.
+        final chainAddress = _video.divineAddress;
+        final chain = chainAddress == null || hashtag == null
             ? null
-            : await _chain(address, hashtag);
+            : await _chain(chainAddress, hashtag);
         chainRoot = chain?.join;
         responses = chain == null || hashtag == null
             ? const VideoResponses()

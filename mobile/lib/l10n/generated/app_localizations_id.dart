@@ -1436,6 +1436,24 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Teks nonaktif';
 
   @override
+  String get videoSettingsReactionsOn => 'Reaksi aktif';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reaksi nonaktif';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Tampilkan reaksi';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Sembunyikan reaksi';
+
+  @override
+  String get feedReactionDismiss => 'Sembunyikan reaksi ini';
+
+  @override
+  String get feedReactionOpenComment => 'Buka di komentar';
+
+  @override
   String get contentWarningLabel => 'Peringatan Konten';
 
   @override
@@ -6316,10 +6334,6 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Reaksi gagal, ketuk dua kali untuk mencoba lagi';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Reaksi $emoji kamu tidak dapat dikirim. Ketuk dua kali untuk mencoba lagi';
   }
@@ -7734,15 +7748,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get geoBlockedTitle => 'Layanan Tidak Tersedia';
-
-  @override
-  String get likedVideosEmpty => 'Tidak ada video yang disukai';
-
-  @override
-  String get likedVideosInvalidRoute => 'Rute tidak valid';
-
-  @override
-  String get likedVideosTitle => 'Video yang Disukai';
 
   @override
   String get uploadFailureSheetRetryingSnackbar => 'Mencoba mengunggah lagi…';
@@ -15715,10 +15720,6 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'Minggu ini jadi sedikit lebih mencerminkan dirimu.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'Hari berkarya minggu ini: $count. Terus berkarya.';
   }
@@ -15737,13 +15738,34 @@ class AppLocalizationsId extends AppLocalizations {
       'Yang paling banyak ditonton dari video yang kamu posting minggu ini';
 
   @override
-  String get creatorHighlightCreate => 'Buat lagi';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Tayangan sejauh ini: $countString, dan terus bertambah.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Total suka sejauh ini pada video yang kamu posting minggu ini: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Total komentar sejauh ini pada video yang kamu posting minggu ini: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'Lihat statistikmu';
-
-  @override
-  String get creatorHighlightWatch => 'Tonton video';
 
   @override
   String get messagesPublicRoomsDisclosure =>

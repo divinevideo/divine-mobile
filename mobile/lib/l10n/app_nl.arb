@@ -4199,6 +4199,12 @@
   "videoSettingsAutoAdvanceOff": "Automatisch doorgaan uit",
   "videoSettingsCaptionsOn": "Ondertiteling aan",
   "videoSettingsCaptionsOff": "Ondertiteling uit",
+  "videoSettingsReactionsOn": "Reacties aan",
+  "videoSettingsReactionsOff": "Reacties uit",
+  "videoSettingsReactionsEnable": "Reacties tonen",
+  "videoSettingsReactionsDisable": "Reacties verbergen",
+  "feedReactionDismiss": "Reactie verbergen",
+  "feedReactionOpenComment": "Openen in reacties",
   "videoActionReportLabel": "Rapporteren",
   "videoActionReport": "Video rapporteren",
   "videoActionEditLabel": "Bewerken",
@@ -4441,7 +4447,6 @@
   "dmReactionChipOwnA11yLabel": "Jouw reactie: {emoji}",
   "dmReactionChipOtherA11yLabel": "{name} reageerde met {emoji}",
   "dmReactionChipPendingA11yLabel": "Reactie versturen: {emoji}",
-  "dmReactionChipFailedA11yLabel": "Reactie mislukt, dubbeltik om opnieuw te proberen",
   "dmReactionChipUnconfirmedA11yLabel": "Je reactie {emoji} kon niet worden verstuurd. Dubbeltik om het opnieuw te proberen",
   "dmReactionChipRetryAnnouncement": "Reactie opnieuw proberen",
   "dmFormatBold": "Vet",
@@ -5277,9 +5282,6 @@
   "geoBlockedLegalNotice": "We respecteren je lokale wetten en regels. Deze beperking is gebaseerd op de locatie van je IP-adres.",
   "geoBlockedRegionLabel": "Regio",
   "geoBlockedTitle": "Dienst niet beschikbaar",
-  "likedVideosEmpty": "Geen gelikete video's",
-  "likedVideosInvalidRoute": "Ongeldige route",
-  "likedVideosTitle": "Gelikete video's",
   "uploadFailureSheetRetryingSnackbar": "Upload opnieuw proberen…",
   "uploadFailureSheetSaveToDraftsButton": "Opslaan als concept",
   "uploadFailureSheetSavedToDraftsSnackbar": "Opgeslagen als concept",
@@ -6285,10 +6287,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "Deze week heeft een beetje meer van jou.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "Creatieve dagen deze week: {count}. Ga zo door.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6312,16 +6310,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Maak er nog een",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "Weergaven tot nu toe: {count}, en de teller loopt.",
+  "creatorHighlightWeeklyLikes": "Totaal aantal likes tot nu toe op video’s die je deze week hebt geplaatst: {count}.",
+  "creatorHighlightWeeklyComments": "Totaal aantal reacties tot nu toe op video’s die je deze week hebt geplaatst: {count}.",
   "creatorHighlightAnalytics": "Bekijk je statistieken",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Bekijk video",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "Volgend",

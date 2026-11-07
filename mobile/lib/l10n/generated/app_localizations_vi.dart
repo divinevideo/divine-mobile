@@ -1470,6 +1470,24 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Đã tắt phụ đề';
 
   @override
+  String get videoSettingsReactionsOn => 'Đã bật phản hồi';
+
+  @override
+  String get videoSettingsReactionsOff => 'Đã tắt phản hồi';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Hiện phản hồi';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Ẩn phản hồi';
+
+  @override
+  String get feedReactionDismiss => 'Ẩn phản hồi này';
+
+  @override
+  String get feedReactionOpenComment => 'Mở trong bình luận';
+
+  @override
   String get contentWarningLabel => 'Cảnh báo nội dung';
 
   @override
@@ -6355,10 +6373,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Cảm xúc thất bại, chạm hai lần để thử lại';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Không gửi được cảm xúc $emoji của bạn. Chạm hai lần để thử lại';
   }
@@ -7781,15 +7795,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get geoBlockedTitle => 'Dịch vụ không khả dụng';
-
-  @override
-  String get likedVideosEmpty => 'Chưa có video đã thích';
-
-  @override
-  String get likedVideosInvalidRoute => 'Tuyến không hợp lệ';
-
-  @override
-  String get likedVideosTitle => 'Video đã thích';
 
   @override
   String get uploadFailureSheetRetryingSnackbar => 'Đang thử tải lên lại…';
@@ -15768,10 +15773,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'Tuần này có thêm một chút dấu ấn của bạn.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'Số ngày sáng tạo trong tuần này: $count. Cứ tiếp tục nhé.';
   }
@@ -15790,13 +15791,34 @@ class AppLocalizationsVi extends AppLocalizations {
       'Video được xem nhiều nhất trong số video bạn đăng tuần này';
 
   @override
-  String get creatorHighlightCreate => 'Tạo thêm video';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Lượt xem đến nay: $countString và vẫn tiếp tục.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Tổng lượt thích tính đến hiện tại của các video bạn đăng trong tuần này: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Tổng bình luận tính đến hiện tại của các video bạn đăng trong tuần này: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'Xem số liệu của bạn';
-
-  @override
-  String get creatorHighlightWatch => 'Xem video';
 
   @override
   String get messagesPublicRoomsDisclosure =>

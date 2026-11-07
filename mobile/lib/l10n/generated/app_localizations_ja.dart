@@ -1368,6 +1368,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoSettingsCaptionsOff => '字幕オフ';
 
   @override
+  String get videoSettingsReactionsOn => 'リアクションオン';
+
+  @override
+  String get videoSettingsReactionsOff => 'リアクションオフ';
+
+  @override
+  String get videoSettingsReactionsEnable => 'リアクションを表示';
+
+  @override
+  String get videoSettingsReactionsDisable => 'リアクションを非表示';
+
+  @override
+  String get feedReactionDismiss => 'このリアクションを非表示';
+
+  @override
+  String get feedReactionOpenComment => 'コメントで開く';
+
+  @override
   String get contentWarningLabel => 'コンテンツ警告';
 
   @override
@@ -6049,9 +6067,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel => 'リアクションに失敗しました。ダブルタップで再試行';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return '$emoji のリアクションを送信できませんでした。ダブルタップで再試行';
   }
@@ -7416,15 +7431,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get geoBlockedTitle => 'サービスは利用できないよ';
-
-  @override
-  String get likedVideosEmpty => 'いいねした動画はないよ';
-
-  @override
-  String get likedVideosInvalidRoute => '無効なルート';
-
-  @override
-  String get likedVideosTitle => 'いいねした動画';
 
   @override
   String get uploadFailureSheetRetryingSnackbar => 'アップロードを再試行中…';
@@ -15076,9 +15082,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle => 'あなたらしさが、今週を少し彩りました。';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return '今週、創作した日数：$count日。この調子で続けましょう。';
   }
@@ -15096,13 +15099,34 @@ class AppLocalizationsJa extends AppLocalizations {
   String get creatorHighlightTopVideo => '今週投稿した動画で最も再生された動画';
 
   @override
-  String get creatorHighlightCreate => 'もう一本つくる';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'これまでの再生回数：$countString回。まだまだ続きます。';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '今週投稿した動画の、これまでの合計いいね数：$countString件。';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '今週投稿した動画の、これまでの合計コメント数：$countString件。';
+  }
 
   @override
   String get creatorHighlightAnalytics => '自分の統計を見る';
-
-  @override
-  String get creatorHighlightWatch => '動画を見る';
 
   @override
   String get messagesPublicRoomsDisclosure =>

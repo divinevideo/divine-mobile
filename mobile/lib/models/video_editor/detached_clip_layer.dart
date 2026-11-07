@@ -2,6 +2,7 @@
 // ABOUTME: timeline, so the canvas and the renderer can treat it as video
 
 import 'package:collection/collection.dart' show DeepCollectionEquality;
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/utils/json_tree_rewrite.dart';
@@ -242,6 +243,47 @@ class DetachedClipLayerData {
     final copy = {...meta!}..remove(detachedClipLayerOpacityKey);
     if (value < 1) copy[detachedClipLayerOpacityKey] = value;
     return copy;
+  }
+
+  /// Key under which [DivineVideoClip.toJson] writes the clip's volume.
+  static const String _clipVolumeKey = 'volume';
+
+  /// How loud the clip on the layer [meta] describes plays, from 0 (muted) to
+  /// [VideoEditorConstants.volumeMax].
+  ///
+  /// The volume is the detached clip's own, carried in its serialized clip,
+  /// which is what the canvas player and the export both play it at. Reads the
+  /// map alone, so the action bar can show a muted clip without resolving a
+  /// documents path. Anything that is not a number reads as full volume, the
+  /// clip default.
+  static double volumeOf(Map<String, dynamic>? meta) {
+    if (!isDetachedClipMeta(meta)) return 1;
+    final clip = meta![detachedClipLayerClipKey];
+    if (clip is! Map) return 1;
+    final raw = clip[_clipVolumeKey];
+    if (raw is! num || raw.isNaN) return 1;
+    return raw.clamp(0, VideoEditorConstants.volumeMax).toDouble();
+  }
+
+  /// [meta] with its clip's volume set to [volume], clamped to 0 to
+  /// [VideoEditorConstants.volumeMax].
+  ///
+  /// Edits the serialized clip in place of rebuilding it, so the payload
+  /// travels across untouched and no documents path is needed.
+  static Map<String, dynamic>? withVolume(
+    Map<String, dynamic>? meta,
+    double volume,
+  ) {
+    if (!isDetachedClipMeta(meta)) return null;
+    final clip = meta![detachedClipLayerClipKey];
+    if (clip is! Map) return null;
+    return {
+      ...meta,
+      detachedClipLayerClipKey: {
+        ...Map<String, dynamic>.from(clip),
+        _clipVolumeKey: volume.clamp(0.0, VideoEditorConstants.volumeMax),
+      },
+    };
   }
 
   /// [meta] carrying [clip] in place of the clip it had.

@@ -2,6 +2,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:vector_graphics/vector_graphics.dart';
 
 void main() {
   group('DivineIconName', () {
@@ -80,6 +81,14 @@ void main() {
       );
     });
 
+    test('chatCircleFill maps to its fill icon', () {
+      expect(DivineIconName.chatCircleFill.fileName, 'chat_circle_fill');
+      expect(
+        DivineIconName.chatCircleFill.assetPath,
+        'assets/icon/chat_circle_fill.svg',
+      );
+    });
+
     test('all enum values have non-empty file names', () {
       for (final icon in DivineIconName.values) {
         expect(
@@ -92,6 +101,22 @@ void main() {
   });
 
   group('DivineIcon', () {
+    testWidgets('loads compiled vectors without runtime SVG decoding', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: DivineIcon(icon: DivineIconName.heart)),
+        ),
+      );
+
+      final picture = tester.widget<SvgPicture>(find.byType(SvgPicture));
+      expect(picture.bytesLoader, isA<AssetBytesLoader>());
+      final loader = picture.bytesLoader as AssetBytesLoader;
+      expect(loader.assetName, 'assets/icons/heart.vec');
+      expect(loader.packageName, 'divine_ui');
+    });
+
     testWidgets('renders an SvgPicture', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(

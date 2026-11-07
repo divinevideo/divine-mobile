@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart' show DeepCollectionEquality;
 import 'package:flutter/foundation.dart';
 import 'package:loop_alignment_repository/loop_alignment_repository.dart';
 import 'package:models/models.dart';
@@ -466,22 +467,58 @@ extension VideoEditorExtensions on ProImageEditorState {
   ///
   /// Canonical history write for volume changes. Creates one undo point that
   /// captures both tracks, whether a single volume source changed or clips and
-  /// audio volumes were updated together (e.g. mute-all toggle).
+  /// audio volumes were updated together (e.g. mute-all toggle). Pass
+  /// [layers] to replace the canvas layers in the same entry, as mute-all
+  /// does for clips detached onto the canvas.
+  ///
+  /// Without [layers], writes nothing when the current entry already holds
+  /// exactly these clips and sounds. Mute-all writes its entry itself and also
+  /// updates the clip and sound blocs, which write the same volumes again a
+  /// frame later; that second entry would be an undo step that undoes nothing.
   void setVolumeState({
     required List<DivineVideoClip> clips,
     required List<AudioEvent> audioTracks,
-  }) => setClipAndAudioState(clips: clips, audioTracks: audioTracks);
+    List<Layer>? layers,
+  }) {
+    if (layers == null && _holdsVolumeState(clips, audioTracks)) return;
+    setClipAndAudioState(
+      clips: clips,
+      audioTracks: audioTracks,
+      layers: layers,
+    );
+  }
+
+  /// Whether the current history entry already records [clips] and
+  /// [audioTracks] exactly as [setVolumeState] would write them.
+  bool _holdsVolumeState(
+    List<DivineVideoClip> clips,
+    List<AudioEvent> audioTracks,
+  ) {
+    final meta = stateManager.activeMeta;
+    const equality = DeepCollectionEquality();
+    return equality.equals(
+          meta[VideoEditorConstants.clipsStateHistoryKey],
+          clips.map((c) => c.toJson()).toList(),
+        ) &&
+        equality.equals(
+          meta[VideoEditorConstants.audioStateHistoryKey],
+          audioTracks.map((e) => e.toJson()).toList(),
+        );
+  }
 
   /// Persists clips and audio tracks in a single history entry.
   ///
   /// Use this when an edit changes both the clip list and the sound timeline
-  /// so undo/redo restores the full timeline atomically.
+  /// so undo/redo restores the full timeline atomically. [layers], when given,
+  /// replace the canvas layers in the same entry.
   void setClipAndAudioState({
     required List<DivineVideoClip> clips,
     required List<AudioEvent> audioTracks,
     List<Duration>? timelineMarkers,
+    List<Layer>? layers,
   }) {
     addHistory(
+      layers: layers,
       meta: {
         ..._clipHistoryMeta(clips, timelineMarkers: timelineMarkers),
         VideoEditorConstants.audioStateHistoryKey: audioTracks

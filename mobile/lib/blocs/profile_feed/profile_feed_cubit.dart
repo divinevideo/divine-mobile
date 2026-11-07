@@ -792,7 +792,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     Emitter<ProfileFeedState> emit,
   ) async {
     final loaded = {
-      for (final video in _unfilteredVideos) ?video.addressableId,
+      for (final video in _unfilteredVideos) ?video.divineAddress,
       ..._resolvedPinnedVideos.keys,
     };
     final missing = _pinnedCoordinates
@@ -808,7 +808,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
         );
         if (isClosed) return;
         for (final video in videos) {
-          final coordinate = video.addressableId;
+          final coordinate = video.divineAddress;
           if (coordinate != null && missing.contains(coordinate)) {
             _resolvedPinnedVideos[coordinate] = video;
           }
@@ -834,7 +834,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
   Future<void> _releaseDeletedPins(Emitter<ProfileFeedState> emit) async {
     final loaded = <String, VideoEvent>{
       ..._resolvedPinnedVideos,
-      for (final video in _unfilteredVideos) ?video.addressableId: video,
+      for (final video in _unfilteredVideos) ?video.divineAddress: video,
     };
     final unavailable = _pinnedCoordinates.where((coordinate) {
       final video = loaded[coordinate];
@@ -944,7 +944,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     ProfileFeedPinMutationRequested event,
     Emitter<ProfileFeedState> emit,
   ) async {
-    final coordinate = event.video.addressableId;
+    final coordinate = event.video.divineAddress;
     if (coordinate == null ||
         !ProfilePinsRepository.isEligibleCoordinate(
           coordinate,
@@ -1082,7 +1082,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
         for (final video in _withoutTombstones(
           _filterVisible(_resolvedPinnedVideos.values.toList()),
         ))
-          video.addressableId!: video,
+          video.divineAddress!: video,
       },
     );
   }

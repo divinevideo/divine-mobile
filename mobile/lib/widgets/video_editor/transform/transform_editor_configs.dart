@@ -18,8 +18,8 @@ import 'package:pro_image_editor/pro_image_editor.dart'
         ReactiveAppbar,
         ReactiveWidget;
 
-/// Hero tag for the crop-rotate editors, deliberately *not* the package
-/// default the main video editor runs on.
+/// Hero tag for the crop-rotate editors, deliberately *not* a tag the main
+/// video editor runs on.
 ///
 /// Sharing a tag makes Flutter fly a hero between the two routes, which
 /// re-parents the main editor's content into the navigator overlay for the

@@ -4,6 +4,7 @@ import 'package:models/models.dart';
 import 'package:openvine/features/creator_highlights/creator_highlight.dart';
 import 'package:openvine/features/creator_highlights/creator_highlight_card.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/notifications/widgets/notification_video_thumbnail.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 const _owner =
@@ -14,6 +15,8 @@ final _card = CreatorHighlight(
   createdToday: 1,
   creationDaysThisWeek: 2,
   views: 3,
+  topVideoViews: 3,
+  likes: 4,
   celebrate: true,
   topVideo: VideoEvent(
     id: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
@@ -53,7 +56,6 @@ void main() {
                     highlight: _card,
                     isVisible: true,
                     onPresented: () => presented++,
-                    onCreate: () {},
                     onAnalytics: () {},
                     onWatch: () {},
                   ),
@@ -91,7 +93,6 @@ void main() {
       tester,
     ) async {
       var presented = 0;
-      var created = 0;
       var analytics = 0;
       var watched = 0;
       Widget subject(bool visible) => MaterialApp(
@@ -100,10 +101,10 @@ void main() {
         home: Scaffold(
           body: SingleChildScrollView(
             child: CreatorHighlightCard(
-              highlight: _card,
+              // Lead with the top video so its thumbnail is on screen.
+              highlight: _card.copyWith(rotation: 1),
               isVisible: visible,
               onPresented: () => presented++,
-              onCreate: () => created++,
               onAnalytics: () => analytics++,
               onWatch: () => watched++,
             ),
@@ -119,10 +120,9 @@ void main() {
       final l10n = AppLocalizations.of(
         tester.element(find.byType(CreatorHighlightCard)),
       );
-      await tester.tap(find.text(l10n.creatorHighlightCreate));
       await tester.tap(find.text(l10n.creatorHighlightAnalytics));
-      await tester.tap(find.text(l10n.creatorHighlightWatch));
-      expect((created, analytics, watched), (1, 1, 1));
+      await tester.tap(find.byType(NotificationVideoThumbnail));
+      expect((analytics, watched), (1, 1));
       await tester.pumpWidget(subject(true));
       await tester.pumpAndSettle();
       expect(presented, 1);
@@ -143,6 +143,102 @@ void main() {
   });
 
   group('renders', () {
+    Widget subject(CreatorHighlight highlight) => MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: CreatorHighlightCard(
+            highlight: highlight,
+            isVisible: true,
+            onPresented: () {},
+            onAnalytics: () {},
+            onWatch: () {},
+          ),
+        ),
+      ),
+    );
+
+    testWidgets('leads with one spotlight and links its video only there', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.pumpWidget(subject(_card));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.creatorHighlightCreatedToday(1)), findsOneWidget);
+      expect(find.text(l10n.creatorHighlightTopVideoViews(3)), findsNothing);
+      expect(find.byType(NotificationVideoThumbnail), findsNothing);
+
+      await tester.pumpWidget(subject(_card.copyWith(rotation: 1)));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.creatorHighlightTopVideoViews(3)), findsOneWidget);
+      expect(find.text('A tiny dance'), findsOneWidget);
+      expect(find.text(l10n.creatorHighlightTopVideo), findsOneWidget);
+      expect(find.byType(NotificationVideoThumbnail), findsOneWidget);
+      expect(find.text(l10n.creatorHighlightCreatedToday(1)), findsNothing);
+
+      await tester.pumpWidget(subject(_card.copyWith(rotation: 2)));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.creatorHighlightWeeklyLikes(4)), findsOneWidget);
+      expect(find.byType(NotificationVideoThumbnail), findsNothing);
+      expect(find.text(l10n.creatorHighlightAnalytics), findsOneWidget);
+    });
+
+    testWidgets('screen readers reach the video apart from the stats card', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      await tester.pumpWidget(subject(_card.copyWith(rotation: 1)));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(find.byType(NotificationVideoThumbnail)),
+        matchesSemantics(
+          label: l10n.notificationsVideoThumbnailFor('A tiny dance'),
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
+      final card = tester.getSemantics(
+        find.descendant(
+          of: find.byType(CreatorHighlightCard),
+          matching: find.byType(InkWell),
+        ),
+      );
+      expect(card.flagsCollection.isButton, isTrue);
+      expect(card.label, contains(l10n.creatorHighlightAnalytics));
+      expect(card.label, contains(l10n.creatorHighlightTopVideoViews(3)));
+      semantics.dispose();
+    });
+
+    testWidgets('advancing the spotlight records a new presentation', (
+      tester,
+    ) async {
+      var presented = 0;
+      Widget card(int rotation) => MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: CreatorHighlightCard(
+            highlight: _card.copyWith(rotation: rotation, celebrate: false),
+            isVisible: true,
+            onPresented: () => presented++,
+            onAnalytics: () {},
+            onWatch: () {},
+          ),
+        ),
+      );
+      await tester.pumpWidget(card(0));
+      await tester.pumpAndSettle();
+      expect(presented, 1);
+      await tester.pumpWidget(card(0));
+      await tester.pumpAndSettle();
+      expect(presented, 1);
+      await tester.pumpWidget(card(1));
+      await tester.pumpAndSettle();
+      expect(presented, 2);
+    });
+
     for (final brightness in Brightness.values) {
       for (final locale in AppLocalizations.supportedLocales) {
         testWidgets(
@@ -171,7 +267,6 @@ void main() {
                           highlight: _card,
                           isVisible: true,
                           onPresented: () {},
-                          onCreate: () {},
                           onAnalytics: () {},
                           onWatch: () {},
                         ),
@@ -188,7 +283,9 @@ void main() {
               findsOneWidget,
             );
             expect(
-              find.text(l10n.creatorHighlightWeeklyViews(_card.views!)),
+              find.text(
+                l10n.creatorHighlightCreationDays(_card.creationDaysThisWeek),
+              ),
               findsOneWidget,
             );
             expect(tester.takeException(), isNull);

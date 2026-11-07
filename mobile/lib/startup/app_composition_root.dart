@@ -14,6 +14,7 @@ import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/blocs/codec_heavy_surface/codec_heavy_surface_cubit.dart';
 import 'package:openvine/blocs/email_verification/email_verification_cubit.dart';
+import 'package:openvine/blocs/feed_reactions/feed_reactions_cubit.dart';
 import 'package:openvine/blocs/locale/locale_cubit.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
 import 'package:openvine/blocs/sound_requests/sound_requests_scope.dart';
@@ -108,6 +109,11 @@ class AppCompositionRoot extends ConsumerWidget {
             BlocProvider(
               lazy: false,
               create: (_) => VideoVolumeCubit(
+                sharedPreferences: ref.read(sharedPreferencesProvider),
+              ),
+            ),
+            BlocProvider(
+              create: (_) => FeedReactionsCubit(
                 sharedPreferences: ref.read(sharedPreferencesProvider),
               ),
             ),

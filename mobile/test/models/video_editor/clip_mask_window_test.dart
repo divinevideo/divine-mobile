@@ -154,6 +154,23 @@ void main() {
   });
 
   group(ClipMaskWindow, () {
+    test('a cut shows only the incoming clip mask at the shared boundary', () {
+      final windows = clipMaskWindows([
+        clip('a', mask: circle),
+        clip('b', mask: heart),
+      ]);
+      const cut = Duration(seconds: 2);
+
+      expect(windows.first.weightAt(Duration.zero), 1);
+      expect(
+        windows.first.weightAt(cut - const Duration(microseconds: 1)),
+        1,
+      );
+      expect(windows.first.weightAt(cut), 0);
+      expect(windows.last.weightAt(cut), 1);
+      expect(windows.last.weightAt(const Duration(seconds: 4)), 0);
+    });
+
     const window = ClipMaskWindow(
       clipId: 'a',
       mask: circle,

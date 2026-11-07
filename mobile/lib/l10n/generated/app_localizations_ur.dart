@@ -1506,6 +1506,24 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'کیپشن آف';
 
   @override
+  String get videoSettingsReactionsOn => 'ردعمل آن';
+
+  @override
+  String get videoSettingsReactionsOff => 'ردعمل آف';
+
+  @override
+  String get videoSettingsReactionsEnable => 'ردعمل دکھائیں';
+
+  @override
+  String get videoSettingsReactionsDisable => 'ردعمل چھپائیں';
+
+  @override
+  String get feedReactionDismiss => 'یہ ردعمل چھپائیں';
+
+  @override
+  String get feedReactionOpenComment => 'تبصروں میں کھولیں';
+
+  @override
   String get contentWarningLabel => 'مواد انتباہ';
 
   @override
@@ -6402,10 +6420,6 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'ردعمل ناکام، دوبارہ کوشش کے لیے ڈبل ٹیپ کریں';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'آپ کا $emoji ردعمل نہیں بھیجا جا سکا۔ دوبارہ کوشش کے لیے ڈبل ٹیپ کریں';
   }
@@ -7820,15 +7834,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get geoBlockedTitle => 'سروس دستیاب نہیں';
-
-  @override
-  String get likedVideosEmpty => 'کوئی پسندیدہ ویڈیو نہیں';
-
-  @override
-  String get likedVideosInvalidRoute => 'غلط روٹ';
-
-  @override
-  String get likedVideosTitle => 'پسندیدہ ویڈیوز';
 
   @override
   String get uploadFailureSheetRetryingSnackbar =>
@@ -15824,10 +15829,6 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'اس ہفتے میں آپ کا رنگ کچھ اور بڑھ گیا ہے۔';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'اس ہفتے تخلیق کے دن: $count۔ بناتے رہیے۔';
   }
@@ -15846,13 +15847,34 @@ class AppLocalizationsUr extends AppLocalizations {
       'اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز میں سب سے زیادہ دیکھی جانے والی ویڈیو';
 
   @override
-  String get creatorHighlightCreate => 'ایک اور بنائیں';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'اب تک کے ویوز: $countString، اور سلسلہ جاری ہے۔';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز پر اب تک کی کل پسندیں: $countString۔';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز پر اب تک کے کل تبصرے: $countString۔';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'اپنے اعداد و شمار دیکھیں';
-
-  @override
-  String get creatorHighlightWatch => 'ویڈیو دیکھیں';
 
   @override
   String get messagesPublicRoomsDisclosure =>

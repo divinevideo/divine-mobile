@@ -1,4 +1,5 @@
-// ABOUTME: Tests for which layers the timeline's multi-select can combine.
+// ABOUTME: Tests for which layers the timeline's multi-select can combine,
+// ABOUTME: and the half-open time window an overlay item shows in.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -52,6 +53,42 @@ void main() {
         layerMergeKindOf(drawing()..blendMode = BlendMode.multiply),
         isNull,
       );
+    });
+  });
+
+  group(TimelineOverlayItem, () {
+    const item = TimelineOverlayItem(
+      id: 'layer-1',
+      type: TimelineOverlayType.layer,
+      startTime: Duration(seconds: 2),
+      endTime: Duration(seconds: 6),
+    );
+
+    group('showsAt', () {
+      test('shows from the start up to, but not at, the end', () {
+        expect(item.showsAt(const Duration(milliseconds: 1999)), isFalse);
+        expect(item.showsAt(const Duration(seconds: 2)), isTrue);
+        expect(item.showsAt(const Duration(milliseconds: 5999)), isTrue);
+        expect(item.showsAt(const Duration(seconds: 6)), isFalse);
+      });
+    });
+
+    group('lastShownTime', () {
+      test('is one playhead step before the end and still shows', () {
+        expect(item.lastShownTime, const Duration(milliseconds: 5999));
+        expect(item.showsAt(item.lastShownTime), isTrue);
+      });
+
+      test('stays on the start of an item shorter than one step', () {
+        const tiny = TimelineOverlayItem(
+          id: 'layer-2',
+          type: TimelineOverlayType.layer,
+          startTime: Duration(seconds: 2),
+          endTime: Duration(seconds: 2, microseconds: 500),
+        );
+
+        expect(tiny.lastShownTime, const Duration(seconds: 2));
+      });
     });
   });
 }

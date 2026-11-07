@@ -203,7 +203,6 @@ void main() {
     test('leaves a non-numeric index on the route GoRouter matched', () {
       final expected = {
         '/explore/latest': null,
-        '/liked-videos/latest': null,
         '/home/latest': '/home/0',
         '/notifications/latest': '/notifications/0',
       };

@@ -11,6 +11,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/codec_heavy_surface/codec_heavy_surface_cubit.dart';
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_cubit.dart';
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_state.dart';
+import 'package:openvine/blocs/feed_reactions/feed_reactions_cubit.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
@@ -47,6 +48,7 @@ import 'package:openvine/widgets/video_feed_item/content_warning_helpers.dart';
 import 'package:openvine/widgets/video_feed_item/double_tap_heart_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/double_tap_like_helpers.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
+import 'package:openvine/widgets/video_feed_item/feed_reactions_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/moderated_content_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/paused_video_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
@@ -148,6 +150,10 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
       context.read<FeedAutoAdvanceCubit>();
   final _feedKey = GlobalKey<InfiniteVideoFeedState>();
   bool _routeAllowsPlayback = true;
+
+  /// Feed index of each completed loop of the active video, for the
+  /// reactions overlay that appears after a video's first loop.
+  final _loopCompletions = StreamController<int>.broadcast();
 
   /// Last error type reported per video.id to
   /// [VideoPlaybackStatusCubit]. Used to dedupe at the call site so
@@ -295,9 +301,14 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
       });
     }
     // When pagination settles (hasMore / isLoadingMore changed), flush any
-    // pending auto-advance that was waiting on more content.
+    // pending auto-advance that was waiting on more content, or drop it while
+    // reactions mode holds the viewer on the video.
     if (widget.hasMore != oldWidget.hasMore ||
         widget.isLoadingMore != oldWidget.isLoadingMore) {
+      if (context.read<FeedReactionsCubit?>()?.state ?? false) {
+        _autoAdvanceCubit.clearPendingPaginationAdvance();
+        return;
+      }
       final currentIndex = _feedKey.currentState?.currentIndex ?? 0;
       continueFeedAutoAdvanceAfterPagination(
         cubit: _autoAdvanceCubit,
@@ -324,6 +335,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   @override
   void dispose() {
     routeObserver.unsubscribe(this);
+    unawaited(_loopCompletions.close());
     super.dispose();
   }
 
@@ -343,7 +355,12 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
 
   void _resumeAutoAdvanceAfterSwipe() => _autoAdvanceCubit.resumeAfterSwipe();
 
-  void _handleAutoAdvanceCompleted(int currentIndex) {
+  void _handleVideoLoopCompleted(int currentIndex) {
+    _loopCompletions.add(currentIndex);
+    // Reactions mode holds the viewer on every video, so Auto never advances.
+    final reactionsEnabled =
+        context.read<FeedReactionsCubit?>()?.state ?? false;
+    if (reactionsEnabled) return;
     handleFeedAutoAdvanceCompleted(
       cubit: _autoAdvanceCubit,
       snapshot: FeedAutoAdvanceSnapshot(
@@ -393,6 +410,13 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         );
     return MultiBlocListener(
       listeners: [
+        if (context.read<FeedReactionsCubit?>() case final reactionsCubit?)
+          BlocListener<FeedReactionsCubit, bool>(
+            bloc: reactionsCubit,
+            listenWhen: (previous, current) => !previous && current,
+            listener: (_, _) =>
+                _autoAdvanceCubit.clearPendingPaginationAdvance(),
+          ),
         BlocListener<VideoVolumeCubit, VideoVolumeState>(
           // Sync volume when hardware buttons change system volume.
           listener: (_, state) {
@@ -471,7 +495,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         // loop point stays in the platform player and the join stays seamless
         // (#5544, #6421).
         maxPlaybackDuration: AppConstants.maxFeedPlaybackDuration,
-        onVideoLoopCompleted: _handleAutoAdvanceCompleted,
+        onVideoLoopCompleted: _handleVideoLoopCompleted,
         shouldPortraitExpand: widget.shouldPortraitExpand,
         canAutoPlay: _canAutoPlayVideo,
         videoBuilder: (context, child, index, controller) {
@@ -618,6 +642,9 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
                       ),
                   onContentWarningRevealed: () =>
                       _revealContentWarning(video.id),
+                  loopCompletions: _loopCompletions.stream
+                      .where((loopedIndex) => loopedIndex == index)
+                      .map((_) {}),
                   onSuppressAutoAdvance: _suppressAutoAdvance,
                   onResumeAutoAdvance: _resumeAutoAdvanceAfterSwipe,
                   onSkipToNextVideo: () => _skipPooledVideoAt(index),
@@ -647,6 +674,7 @@ class _Overlay extends ConsumerStatefulWidget {
     required this.onSkipToNextVideo,
     required this.onAutomaticSkipToNextVideo,
     required this.shouldPortraitExpand,
+    required this.loopCompletions,
     this.onSuppressAutoAdvance,
     this.onResumeAutoAdvance,
   });
@@ -678,6 +706,9 @@ class _Overlay extends ConsumerStatefulWidget {
 
   final VoidCallback onSkipToNextVideo;
   final VoidCallback onAutomaticSkipToNextVideo;
+
+  /// Fires each time this item's video finishes a loop.
+  final Stream<void> loopCompletions;
 
   final VoidCallback? onSuppressAutoAdvance;
 
@@ -1148,9 +1179,17 @@ class __OverlayState extends ConsumerState<_Overlay> {
       (FeedAutoAdvanceCubit cubit) => cubit.state.isEffectivelyActive,
     );
 
-    // Gate the runtime on the user's reduced-motion preference. When Auto is
+    // Nullable: surfaces without the app-wide cubit (tests, isolated
+    // previews) simply have reactions off.
+    final reactionsEnabled = context.select<FeedReactionsCubit?, bool>(
+      (cubit) => cubit?.state ?? false,
+    );
+
+    // Gate the runtime on the user's reduced-motion preference and on
+    // reactions mode, which holds the viewer on each video. When Auto is
     // unavailable, force it "off" at the view layer regardless of cubit state.
-    final autoAdvanceAvailable = !MediaQuery.disableAnimationsOf(context);
+    final autoAdvanceAvailable =
+        !MediaQuery.disableAnimationsOf(context) && !reactionsEnabled;
 
     // Watch the kill-switch so the blur re-evaluates on a flip, and start
     // prefetching if it flips on for an already-mounted overlay (initState's
@@ -1297,6 +1336,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
                     commentsRepository: commentsRepository,
                     repostsRepository: repostsRepository,
                     addressableId: addressableId,
+                    eventKind: video.eventKind,
                     initialLikeCount: liveLikeCountSeed(video),
                     archivedLikeCount: video.originalLikes,
                     initialCommentCount: liveCommentCountSeed(video),
@@ -1323,110 +1363,129 @@ class __OverlayState extends ConsumerState<_Overlay> {
                   // The player's label and hint live on the gesture surface
                   // below, not on a wrapper here: a node with no tap action
                   // cannot name the one a screen reader activates.
-                  return Stack(
-                    children: [
-                      // The raw [Listener] owns immersive mode's release: it
-                      // counts the pointers over the item and exits once the
-                      // last lifts. `onLongPressEnd` alone would not do —
-                      // it does not fire for a pointer cancelled after the
-                      // press was accepted (`onLongPressCancel` does), and
-                      // neither callback can tell an incidental second finger
-                      // lifting from the hold finger lifting. A Listener also
-                      // sits outside the gesture arena, so it can't steal the
-                      // press.
-                      Positioned.fill(
-                        child: Listener(
-                          // Must match the translucent child below: with
-                          // `deferToChild` a press on empty video area never
-                          // adds this Listener to the hit-test path (the
-                          // translucent GestureDetector adds itself but still
-                          // reports a miss), so the pointer events would never
-                          // arrive.
-                          behavior: HitTestBehavior.translucent,
-                          // The raw pointer stream also owns the pinch that
-                          // toggles the persistent pin. A ScaleGestureRecognizer
-                          // would join the gesture arena and compete with the
-                          // PageView's vertical drag, breaking feed swiping;
-                          // measuring the raw pointers never enters the arena.
-                          onPointerDown: _handleImmersivePointerDown,
-                          onPointerMove: _handleImmersivePointerMove,
-                          onPointerUp: (event) =>
-                              _handleImmersivePointerEnd(event.pointer),
-                          onPointerCancel: (event) =>
-                              _handleImmersivePointerEnd(event.pointer),
-                          child: _PinAwareGestureSurface(
-                            interactiveReady: interactiveReady,
-                            isOwnVideo: isOwnVideo,
-                            onTap: _handlePlayerTap,
-                            onDoubleTapDown: (details) => _handleDoubleTapLike(
-                              context,
-                              details,
-                              isOwnVideo: isOwnVideo,
-                            ),
-                            onLongPressStart: _enterImmersive,
-                            onRestoreChrome: _handleRestoreTap,
-                          ),
-                        ),
-                      ),
-                      // Above the gesture surface, which still sees every
-                      // pointer through them, and below the chrome, whose
-                      // buttons win where they cover a sticker.
-                      if (widget.controller != null &&
-                          video.stickerRegions.isNotEmpty)
+                  return FeedTopCommentHost(
+                    enabled: reactionsEnabled && widget.isActive,
+                    video: video,
+                    loopCompletions: widget.loopCompletions,
+                    child: Stack(
+                      children: [
+                        // The raw [Listener] owns immersive mode's release: it
+                        // counts the pointers over the item and exits once the
+                        // last lifts. `onLongPressEnd` alone would not do —
+                        // it does not fire for a pointer cancelled after the
+                        // press was accepted (`onLongPressCancel` does), and
+                        // neither callback can tell an incidental second finger
+                        // lifting from the hold finger lifting. A Listener also
+                        // sits outside the gesture arena, so it can't steal the
+                        // press.
                         Positioned.fill(
-                          child: VideoStickerTapAreas(
-                            video: video,
-                            controller: widget.controller!,
-                            shouldPortraitExpand: widget.shouldPortraitExpand,
-                            isActive: widget.isActive && widget.isFeedActive,
-                            onVoteStarted: widget.onSuppressAutoAdvance,
+                          child: Listener(
+                            // Must match the translucent child below: with
+                            // `deferToChild` a press on empty video area never
+                            // adds this Listener to the hit-test path (the
+                            // translucent GestureDetector adds itself but
+                            // still reports a miss), so the pointer events
+                            // would never arrive.
+                            behavior: HitTestBehavior.translucent,
+                            // The raw pointer stream also owns the pinch that
+                            // toggles the persistent pin. A
+                            // ScaleGestureRecognizer would join the gesture
+                            // arena and compete with the PageView's vertical
+                            // drag, breaking feed swiping; measuring the raw
+                            // pointers never enters the arena.
+                            onPointerDown: _handleImmersivePointerDown,
+                            onPointerMove: _handleImmersivePointerMove,
+                            onPointerUp: (event) =>
+                                _handleImmersivePointerEnd(event.pointer),
+                            onPointerCancel: (event) =>
+                                _handleImmersivePointerEnd(event.pointer),
+                            child: _PinAwareGestureSurface(
+                              interactiveReady: interactiveReady,
+                              isOwnVideo: isOwnVideo,
+                              onTap: _handlePlayerTap,
+                              onDoubleTapDown: (details) =>
+                                  _handleDoubleTapLike(
+                                    context,
+                                    details,
+                                    isOwnVideo: isOwnVideo,
+                                  ),
+                              onLongPressStart: _enterImmersive,
+                              onRestoreChrome: _handleRestoreTap,
+                            ),
                           ),
                         ),
-                      if (widget.controller != null)
-                        // The paused play indicator is chrome too — it
-                        // covers the frame the peek is meant to reveal,
-                        // and the pause a hold makes is undone on release,
-                        // so showing it would contradict the gesture.
+                        // Above the gesture surface, which still sees every
+                        // pointer through them, and below the chrome, whose
+                        // buttons win where they cover a sticker.
+                        if (widget.controller != null &&
+                            video.stickerRegions.isNotEmpty)
+                          Positioned.fill(
+                            child: VideoStickerTapAreas(
+                              video: video,
+                              controller: widget.controller!,
+                              shouldPortraitExpand: widget.shouldPortraitExpand,
+                              isActive: widget.isActive && widget.isFeedActive,
+                              onVoteStarted: widget.onSuppressAutoAdvance,
+                            ),
+                          ),
+                        if (widget.controller != null)
+                          // The paused play indicator is chrome too — it
+                          // covers the frame the peek is meant to reveal,
+                          // and the pause a hold makes is undone on release,
+                          // so showing it would contradict the gesture.
+                          FeedImmersiveChrome(
+                            child: _HoldAwarePausedVideoOverlay(
+                              controller: widget.controller!,
+                              // Only a pause the user can undo gets the
+                              // affordance. A comments/share sheet, a pushed
+                              // route or a backgrounded app pauses the player
+                              // too, but resumes it on its own — showing a
+                              // play button behind the sheet just reads as
+                              // broken.
+                              isVisible: widget.isActive && widget.isFeedActive,
+                              pausedForHold: _pausedForHold,
+                            ),
+                          ),
+                        if (reactionsEnabled && widget.isActive)
+                          // Below the action chrome, so the rail and creator
+                          // info stay tappable above the reaction.
+                          Positioned.fill(
+                            child: FeedImmersiveChrome(
+                              child: FeedReactionsOverlay(video: video),
+                            ),
+                          ),
                         FeedImmersiveChrome(
-                          child: _HoldAwarePausedVideoOverlay(
-                            controller: widget.controller!,
-                            // Only a pause the user can undo gets the
-                            // affordance. A comments/share sheet, a pushed
-                            // route or a backgrounded app pauses the player
-                            // too, but resumes it on its own — showing a play
-                            // button behind the sheet just reads as broken.
-                            isVisible: widget.isActive && widget.isFeedActive,
-                            pausedForHold: _pausedForHold,
+                          child: _FeedItemActions(
+                            video: video,
+                            index: widget.index,
+                            contextTitle: widget.contextTitle,
+                            isOwnVideo: isOwnVideo,
+                            onSuppressAutoAdvance: widget.onSuppressAutoAdvance,
+                            // Captions fade with the rest of the chrome, by
+                            // design: the hold reveals the frame the UI
+                            // covers, and the caption is an overlay over that
+                            // same frame, so keeping it up would re-cover
+                            // exactly what the peek exposes. It is gone while
+                            // the viewer holds, returns the instant they
+                            // release, and stays gone while a pinch keeps the
+                            // chrome pinned hidden.
+                            subtitleLayer:
+                                video.hasSubtitles && widget.controller != null
+                                ? HiddenWhileTopCommentShown(
+                                    child: _SubtitleLayer(
+                                      video: video,
+                                      controller: widget.controller!,
+                                    ),
+                                  )
+                                : null,
+                            pagePositionListenable: pagePositionListenable,
                           ),
                         ),
-                      FeedImmersiveChrome(
-                        child: _FeedItemActions(
-                          video: video,
-                          index: widget.index,
-                          contextTitle: widget.contextTitle,
-                          isOwnVideo: isOwnVideo,
-                          onSuppressAutoAdvance: widget.onSuppressAutoAdvance,
-                          // Captions fade with the rest of the chrome, by
-                          // design: the hold reveals the frame the UI covers,
-                          // and the caption is an overlay over that same frame,
-                          // so keeping it up would re-cover exactly what the
-                          // peek exposes. It is gone while the viewer holds,
-                          // returns the instant they release, and stays gone
-                          // while a pinch keeps the chrome pinned hidden.
-                          subtitleLayer:
-                              video.hasSubtitles && widget.controller != null
-                              ? _SubtitleLayer(
-                                  video: video,
-                                  controller: widget.controller!,
-                                )
-                              : null,
-                          pagePositionListenable: pagePositionListenable,
+                        Positioned.fill(
+                          child: DoubleTapHeartOverlay(trigger: _heartTrigger),
                         ),
-                      ),
-                      Positioned.fill(
-                        child: DoubleTapHeartOverlay(trigger: _heartTrigger),
-                      ),
-                    ],
+                      ],
+                    ),
                   );
                 },
               ),

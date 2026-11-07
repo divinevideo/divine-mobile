@@ -943,6 +943,12 @@
   "@videoSettingsCaptionsOff": {
     "description": "Snackbar confirming that captions were just turned off from the playback-settings pill."
   },
+  "videoSettingsReactionsOn": "ప్రతిస్పందనలు ఆన్‌లో ఉన్నాయి",
+  "videoSettingsReactionsOff": "ప్రతిస్పందనలు ఆఫ్",
+  "videoSettingsReactionsEnable": "ప్రతిస్పందనలను చూపించు",
+  "videoSettingsReactionsDisable": "ప్రతిస్పందనలను దాచు",
+  "feedReactionDismiss": "ప్రతిస్పందనను దాచు",
+  "feedReactionOpenComment": "వ్యాఖ్యలలో తెరవండి",
   "contentWarningLabel": "కంటెంట్ హెచ్చరిక",
   "contentWarningNudity": "నగ్నత్వం",
   "contentWarningSexualContent": "లైంగిక కంటెంట్",
@@ -3690,10 +3696,6 @@
       }
     }
   },
-  "dmReactionChipFailedA11yLabel": "ప్రతిచర్య విఫలమైంది, మళ్లీ ప్రయత్నించడానికి రెండుసార్లు నొక్కండి",
-  "@dmReactionChipFailedA11yLabel": {
-    "description": "Screen-reader label for a reaction chip whose publish failed."
-  },
   "dmReactionChipUnconfirmedA11yLabel": "మీ {emoji} ప్రతిచర్యను పంపడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించడానికి రెండుసార్లు నొక్కండి",
   "dmReactionChipRetryAnnouncement": "ప్రతిచర్యను మళ్లీ ప్రయత్నిస్తోంది",
   "@dmReactionChipRetryAnnouncement": {
@@ -4549,9 +4551,6 @@
   "geoBlockedLegalNotice": "మేము మీ స్థానిక చట్టాలు మరియు నిబంధనలను గౌరవిస్తాము. ఈ పరిమితి మీ IP చిరునామా స్థానం ఆధారంగా ఉంటుంది.",
   "geoBlockedRegionLabel": "ప్రాంతం",
   "geoBlockedTitle": "సేవ అందుబాటులో లేదు",
-  "likedVideosEmpty": "ఇష్టపడిన వీడియోలు లేవు",
-  "likedVideosInvalidRoute": "మార్గం చెల్లదు",
-  "likedVideosTitle": "ఇష్టపడిన వీడియోలు",
   "uploadFailureSheetRetryingSnackbar": "అప్‌లోడ్ చేయడానికి మళ్లీ ప్రయత్నిస్తోంది…",
   "uploadFailureSheetSaveToDraftsButton": "డ్రాఫ్ట్‌లకు సేవ్ చేయండి",
   "uploadFailureSheetSavedToDraftsSnackbar": "చిత్తుప్రతులకు సేవ్ చేయబడింది",
@@ -9219,10 +9218,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "ఈ వారంలో మీ ముద్ర మరికాస్త పెరిగింది.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "ఈ వారం మీరు సృష్టించిన రోజులు: {count}. ఇలాగే కొనసాగించండి.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -9246,16 +9241,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "మరొకటి సృష్టించండి",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "ఇప్పటివరకు వీక్షణలు: {count}, ఇంకా కొనసాగుతున్నాయి.",
+  "creatorHighlightWeeklyLikes": "ఈ వారం మీరు పోస్ట్ చేసిన వీడియోలకు ఇప్పటివరకు వచ్చిన మొత్తం ఇష్టాలు: {count}.",
+  "creatorHighlightWeeklyComments": "ఈ వారం మీరు పోస్ట్ చేసిన వీడియోలకు ఇప్పటివరకు వచ్చిన మొత్తం వ్యాఖ్యలు: {count}.",
   "creatorHighlightAnalytics": "మీ గణాంకాలను చూడండి",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "వీడియో చూడండి",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   }
 }

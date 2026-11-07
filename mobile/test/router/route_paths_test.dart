@@ -39,7 +39,6 @@ void main() {
       expect(RoutePaths.libraryClips, equals('/clips'));
       expect(RoutePaths.libraryClipsOnly, equals('/clips-only'));
       expect(RoutePaths.libraryDrafts, equals('/drafts'));
-      expect(RoutePaths.likedVideos, equals('/liked-videos'));
       expect(RoutePaths.messageRequests, equals('/inbox/message-requests'));
       expect(RoutePaths.minorAccountReview, equals('/account-review'));
       expect(
@@ -121,8 +120,6 @@ void main() {
       expect(RoutePaths.followersForPubkey('pk'), equals('/followers/pk'));
       expect(RoutePaths.followingForPubkey('pk'), equals('/following/pk'));
       expect(RoutePaths.hashtagForTag('a b'), equals('/hashtag/a%20b'));
-      expect(RoutePaths.likedVideosForIndex(null), equals('/liked-videos'));
-      expect(RoutePaths.likedVideosForIndex(2), equals('/liked-videos/2'));
       expect(RoutePaths.notificationsForIndex(), equals('/notifications'));
       expect(RoutePaths.notificationsForIndex(1), equals('/notifications/1'));
       expect(

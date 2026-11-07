@@ -8,6 +8,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:test/test.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class MockNostrClient extends Mock implements NostrClient {}
 
@@ -72,6 +73,7 @@ void main() {
       String authorPubkey = 'reaction_author_pubkey_1234567890abcdef',
     }) {
       final event = MockEvent();
+      when(() => event.id).thenReturn('deletion_of_${deletedEventIds.join()}');
       when(() => event.pubkey).thenReturn(authorPubkey);
       when(
         () => event.tags,
@@ -87,20 +89,23 @@ void main() {
       });
     }
 
-    void mockDetailedQueryEventsSequence(List<List<Event>> responses) {
+    /// Stubs the reads that must tell a complete answer from a short one —
+    /// the sync's and the like check's — with [responses] in call order,
+    /// each a complete read.
+    void mockReadEventsSequence(List<List<Event>> responses) {
       var callCount = 0;
       when(
-        () => mockNostrClient.queryEventsDetailed(
+        () => mockNostrClient.readEvents(
           any(),
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          timeout: any(named: 'timeout'),
         ),
-      ).thenAnswer((_) async {
-        return (
+      ).thenAnswer(
+        (_) async => QueryResult(
           events: responses[callCount++ % responses.length],
-          timedOut: false,
-          noRelays: false,
-        );
-      });
+          endedBy: QueryEnd.complete,
+        ),
+      );
     }
 
     // Helper to create repository with standard setup
@@ -128,6 +133,7 @@ void main() {
       registerFallbackValue(<Filter>[]);
       registerFallbackValue(createLikeRecord());
       registerFallbackValue('');
+      registerFallbackValue(Duration.zero);
     });
 
     setUp(() {
@@ -508,7 +514,7 @@ void main() {
         when(
           () => mockLocalStorage.getAllLikeRecords(),
         ).thenThrow(storageFailure);
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [createMockReaction(id: reactionId, targetEventId: targetId)],
           [],
         ]);
@@ -525,7 +531,7 @@ void main() {
         when(
           () => mockLocalStorage.saveLikeRecordsBatch(any()),
         ).thenThrow(storageFailure);
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [createMockReaction(id: reactionId, targetEventId: targetId)],
           [],
         ]);
@@ -550,7 +556,7 @@ void main() {
         when(
           () => mockLocalStorage.deleteLikeRecord(any()),
         ).thenThrow(storageFailure);
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [createMockReaction(id: reactionId, targetEventId: targetId)],
           [
             createMockDeletion([reactionId]),
@@ -621,7 +627,139 @@ void main() {
       });
     });
 
+    late List<({Object error, String site})> reported;
+    late Set<LogEntry> priorLogs;
+
+    List<LogEntry> missingCoordinateWarnings() => LogCaptureService()
+        .getRecentLogs()
+        .where(
+          (entry) =>
+              !priorLogs.contains(entry) &&
+              entry.name == 'LikesRepository' &&
+              entry.level == LogLevel.warning &&
+              entry.message.contains('publishing without an a tag'),
+        )
+        .toList();
+
+    /// Stubs every publish to succeed with a reaction for [testEventId].
+    void stubAnyPublish() {
+      when(
+        () => mockNostrClient.sendLike(
+          any(),
+          content: any(named: 'content'),
+          addressableId: any(named: 'addressableId'),
+          targetAuthorPubkey: any(named: 'targetAuthorPubkey'),
+          targetKind: any(named: 'targetKind'),
+        ),
+      ).thenAnswer(
+        (_) async => createMockReaction(
+          id: testReactionEventId,
+          targetEventId: testEventId,
+        ),
+      );
+    }
+
+    /// A repository with no local storage that records reporter calls.
+    LikesRepository createReportingRepository() {
+      reported = [];
+      priorLogs = LogCaptureService().getRecentLogs().toSet();
+      return createRepository(
+        withLocalStorage: false,
+        errorReporter: (error, stackTrace, {required site}) {
+          reported.add((error: error, site: site));
+        },
+      );
+    }
+
     group('likeEvent', () {
+      group('on an addressable target with no coordinate (#6980)', () {
+        test('still publishes the like with its kind', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            targetKind: 34236,
+          );
+
+          verify(
+            () => mockNostrClient.sendLike(
+              testEventId,
+              content: '+',
+              targetAuthorPubkey: testAuthorPubkey,
+              targetKind: 34236,
+            ),
+          ).called(1);
+        });
+
+        test('logs missing remote data without a crash report', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            targetKind: 34236,
+          );
+
+          expect(missingCoordinateWarnings(), hasLength(1));
+          expect(reported, isEmpty);
+        });
+
+        test('adds no warning for a like it does not publish', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            targetKind: 34236,
+          );
+          expect(missingCoordinateWarnings(), hasLength(1));
+
+          await expectLater(
+            repository.likeEvent(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              targetKind: 34236,
+            ),
+            throwsA(isA<AlreadyLikedException>()),
+          );
+
+          expect(missingCoordinateWarnings(), hasLength(1));
+          expect(reported, isEmpty);
+        });
+
+        test('logs no warning when the coordinate is known', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            addressableId: '34236:$testAuthorPubkey:test-d-tag',
+            targetKind: 34236,
+          );
+
+          expect(missingCoordinateWarnings(), isEmpty);
+          expect(reported, isEmpty);
+        });
+
+        test('logs no warning for a regular target kind', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            targetKind: 1111,
+          );
+
+          expect(missingCoordinateWarnings(), isEmpty);
+          expect(reported, isEmpty);
+        });
+      });
+
       test('publishes like reaction and stores record', () async {
         final mockEvent = MockEvent();
         when(() => mockEvent.id).thenReturn(testReactionEventId);
@@ -899,6 +1037,8 @@ void main() {
           () => mockLocalStorage.deleteLikeRecord(any()),
         ).thenAnswer((_) async => true);
 
+        // The relay holds no like, so the tap goes on to publish.
+        mockReadEventsSequence([<Event>[]]);
         var queueCalls = 0;
         repository = createRepository(
           queueOfflineAction:
@@ -1311,6 +1451,8 @@ void main() {
             () => mockNostrClient.deleteEvent('reaction_a'),
           ).thenAnswer((_) async => null);
 
+          // The relay holds no like, so the tap goes on to publish.
+          mockReadEventsSequence([<Event>[]]);
           bool? queuedIsLike;
           String? queuedEventId;
           repository = createRepository(
@@ -1839,6 +1981,21 @@ void main() {
     });
 
     group('downvoteEvent', () {
+      test('logs a missing coordinate on an addressable target '
+          '(#6980)', () async {
+        stubAnyPublish();
+        repository = createReportingRepository();
+
+        await repository.downvoteEvent(
+          eventId: testEventId,
+          authorPubkey: testAuthorPubkey,
+          targetKind: 34236,
+        );
+
+        expect(missingCoordinateWarnings(), hasLength(1));
+        expect(reported, isEmpty);
+      });
+
       test('ticks watchDownvotedEventIds before sendLike completes', () async {
         // Block sendLike on a completer so the optimistic stream emit
         // is observable before the network call returns.
@@ -3408,16 +3565,17 @@ void main() {
           when(
             () => mockNostrClient.resolvePublicKey(),
           ).thenAnswer((_) async => testUserPubkey);
-          mockQueryEventsSequence([
-            [],
-            [],
-          ]);
+          mockReadEventsSequence([<Event>[]]);
 
           repository = createRepository();
           await repository.syncUserReactions();
 
           final captured = verify(
-            () => mockNostrClient.queryEvents(captureAny()),
+            () => mockNostrClient.readEvents(
+              captureAny(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
           ).captured.cast<List<Filter>>();
           expect(captured, isNotEmpty);
           for (final filters in captured) {
@@ -3489,7 +3647,7 @@ void main() {
           targetEventId: targetId,
         );
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockReaction],
           [],
         ]);
@@ -3520,7 +3678,7 @@ void main() {
         );
         final mockDeletion = createMockDeletion([reactionId1]);
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockReaction1, mockReaction2],
           [mockDeletion],
         ]);
@@ -3554,7 +3712,7 @@ void main() {
         );
         final mockDeletion = createMockDeletion([reactionId]);
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockReaction],
           [mockDeletion],
         ]);
@@ -3578,7 +3736,7 @@ void main() {
           content: '-', // Dislike
         );
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockReaction],
           [],
         ]);
@@ -3590,9 +3748,7 @@ void main() {
       });
 
       test('handles empty relay response', () async {
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => []);
+        mockReadEventsSequence([<Event>[]]);
 
         repository = createRepository();
         final result = await repository.syncUserReactions();
@@ -3611,7 +3767,11 @@ void main() {
           ],
         );
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.readEvents(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenThrow(Exception('Network error'));
 
         repository = createRepository();
@@ -3627,7 +3787,11 @@ void main() {
         'throws SyncFailedException when relay fails and no local data',
         () async {
           when(
-            () => mockNostrClient.queryEvents(any()),
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
           ).thenThrow(Exception('Network error'));
 
           repository = createRepository();
@@ -3655,7 +3819,7 @@ void main() {
         );
         final mockDeletion = createMockDeletion([reactionId1]);
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockReaction1, mockReaction2],
           [mockDeletion],
         ]);
@@ -3686,7 +3850,7 @@ void main() {
         );
         final mockDeletion = createMockDeletion([reactionId1, reactionId2]);
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockReaction1, mockReaction2],
           [mockDeletion],
         ]);
@@ -3696,6 +3860,36 @@ void main() {
 
         expect(result.orderedEventIds, isEmpty);
       });
+
+      test(
+        "keeps a reaction that only another account's deletion names",
+        () async {
+          const targetId = 'target_event_1234567890abcdef';
+          const reactionId = 'reaction_event_1234567890abcdef';
+          final mockReaction = createMockReaction(
+            id: reactionId,
+            targetEventId: targetId,
+          );
+          // NIP-09: only the reaction's author can retract it.
+          final foreignDeletion = createMockDeletion(
+            [reactionId],
+            authorPubkey: 'another_account_pubkey_1234567890abcdef',
+          );
+
+          mockReadEventsSequence([
+            [mockReaction],
+            [foreignDeletion],
+          ]);
+          when(
+            () => mockLocalStorage.saveLikeRecordsBatch(any()),
+          ).thenAnswer((_) async {});
+
+          repository = createRepository();
+          final result = await repository.syncUserReactions();
+
+          expect(result.orderedEventIds, contains(targetId));
+        },
+      );
 
       test('updates newer record when duplicate target events exist', () async {
         const targetId = 'target_event_1234567890abcdef';
@@ -3712,7 +3906,7 @@ void main() {
           createdAt: 1700000100,
         );
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockOlder, mockNewer],
           [],
         ]);
@@ -3762,7 +3956,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [relayReaction],
             <Event>[],
           ]);
@@ -3834,7 +4028,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [olderRelayReaction],
             <Event>[],
           ]);
@@ -4978,7 +5172,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockDetailedQueryEventsSequence([
+          mockReadEventsSequence([
             [relayReaction],
             <Event>[],
           ]);
@@ -4989,10 +5183,12 @@ void main() {
           repository = createRepository();
           await repository.initialize();
 
+          // The reactions read, then the deletions naming the one it found.
           verify(
-            () => mockNostrClient.queryEventsDetailed(
+            () => mockNostrClient.readEvents(
               any(),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
             ),
           ).called(2);
           expect(
@@ -5022,7 +5218,7 @@ void main() {
               ),
             ],
           );
-          mockDetailedQueryEventsSequence([
+          mockReadEventsSequence([
             <Event>[],
             <Event>[],
           ]);
@@ -5030,12 +5226,14 @@ void main() {
           repository = createRepository();
           await repository.initialize();
 
+          // No reaction came back, so there is no deletion to look for.
           verify(
-            () => mockNostrClient.queryEventsDetailed(
+            () => mockNostrClient.readEvents(
               any(),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
             ),
-          ).called(2);
+          ).called(1);
         },
       );
 
@@ -5055,11 +5253,10 @@ void main() {
             (_) async => [createLikeRecord(targetEventId: oldEventId)],
           );
           when(
-            () => mockNostrClient.queryEventsDetailed(
+            () => mockNostrClient.readEvents(
               any(),
-              requireAllRelaysSettled: any(
-                named: 'requireAllRelaysSettled',
-              ),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenThrow(Exception('offline'));
 
@@ -5293,7 +5490,25 @@ void main() {
     });
 
     group('executeLikeAction', () {
+      test('logs a replayed like missing its coordinate (#6980)', () async {
+        // The relay holds no like, so the replay goes on to publish.
+        mockReadEventsSequence([<Event>[]]);
+        stubAnyPublish();
+        repository = createReportingRepository();
+
+        await repository.executeLikeAction(
+          eventId: testEventId,
+          authorPubkey: testAuthorPubkey,
+          targetKind: 34236,
+        );
+
+        expect(missingCoordinateWarnings(), hasLength(1));
+        expect(reported, isEmpty);
+      });
+
       test('publishes like directly to relays', () async {
+        // The relay holds no like, so the replay goes on to publish.
+        mockReadEventsSequence([<Event>[]]);
         when(
           () => mockNostrClient.sendLike(
             any(),
@@ -5330,6 +5545,8 @@ void main() {
       });
 
       test('updates placeholder record with real event ID', () async {
+        // The relay holds no like, so the replay goes on to publish.
+        mockReadEventsSequence([<Event>[]]);
         when(
           () => mockNostrClient.sendLike(
             any(),
@@ -5439,7 +5656,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [otherDeviceReaction],
             <Event>[],
           ]);
@@ -5525,7 +5742,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [otherDeviceReaction],
             <Event>[],
           ]);
@@ -5597,6 +5814,8 @@ void main() {
       test(
         'terminalizes a trusted account restriction during replay',
         () async {
+          // The relay holds no like, so the replay goes on to publish.
+          mockReadEventsSequence([<Event>[]]);
           final event = MockEvent();
           when(
             () => mockNostrClient.sendLike(
@@ -5877,7 +6096,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [reaction],
             <Event>[],
           ]);
@@ -5915,7 +6134,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [reaction],
             <Event>[],
           ]);
@@ -5944,7 +6163,7 @@ void main() {
             ['a', coordinate],
           ],
         );
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [reaction],
           <Event>[],
         ]);
@@ -6067,6 +6286,264 @@ void main() {
           ).called(1);
         },
       );
+    });
+
+    group('legacy 34236 key of a Kind 34235 video (#10776)', () {
+      const oldEventId = 'old_event_id_1234567890abcdef';
+      const newEventId = 'new_event_id_1234567890abcdef';
+      const coordinate = '34235:$testAuthorPubkey:test-d-tag';
+      const legacyCoordinate = '34236:$testAuthorPubkey:test-d-tag';
+
+      void stubLegacyRecord() {
+        when(() => mockLocalStorage.getAllLikeRecords()).thenAnswer(
+          (_) async => [
+            createLikeRecord(
+              targetEventId: oldEventId,
+              addressableId: legacyCoordinate,
+            ),
+          ],
+        );
+      }
+
+      group('on the relays after a cold start', () {
+        test('likeEvent adopts the like left under the legacy key instead of '
+            'sending another', () async {
+          final reaction = createMockReaction(
+            id: testReactionEventId,
+            targetEventId: oldEventId,
+            authorPubkey: testUserPubkey,
+            tags: [
+              ['e', oldEventId],
+              ['a', legacyCoordinate],
+            ],
+          );
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) async {
+            final filters = invocation.positionalArguments[0] as List<Filter>;
+            return QueryResult(
+              events:
+                  filters.any(
+                    (filter) => filter.a?.contains(legacyCoordinate) ?? false,
+                  )
+                  ? [reaction]
+                  : <Event>[],
+              endedBy: QueryEnd.complete,
+            );
+          });
+          repository = createRepository(withLocalStorage: false);
+
+          await expectLater(
+            repository.likeEvent(
+              eventId: newEventId,
+              authorPubkey: testAuthorPubkey,
+              addressableId: coordinate,
+              targetKind: 34235,
+            ),
+            throwsA(isA<AlreadyLikedException>()),
+          );
+
+          expect(
+            (await repository.getLikeRecordByCoordinate(
+              coordinate,
+            ))?.reactionEventId,
+            testReactionEventId,
+          );
+          verifyNever(
+            () => mockNostrClient.sendLike(
+              any(),
+              content: any(named: 'content'),
+              addressableId: any(named: 'addressableId'),
+              targetAuthorPubkey: any(named: 'targetAuthorPubkey'),
+              targetKind: any(named: 'targetKind'),
+            ),
+          );
+          when(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).thenAnswer((_) async => MockEvent());
+
+          await repository.unlikeEvent(
+            newEventId,
+            addressableId: coordinate,
+          );
+
+          expect(
+            await repository.getLikeRecordByCoordinate(coordinate),
+            isNull,
+          );
+          verify(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).called(1);
+        });
+
+        Event legacyDownvote() => createMockReaction(
+          id: testReactionEventId,
+          targetEventId: oldEventId,
+          authorPubkey: testUserPubkey,
+          content: '-',
+          tags: [
+            ['e', oldEventId],
+            ['a', legacyCoordinate],
+          ],
+        );
+
+        test('downvoteEvent finds the downvote left under the legacy key '
+            'instead of sending another', () async {
+          mockQueryEventsSequence([
+            <Event>[],
+            [legacyDownvote()],
+            <Event>[],
+          ]);
+          repository = createRepository(withLocalStorage: false);
+
+          await expectLater(
+            repository.downvoteEvent(
+              eventId: newEventId,
+              authorPubkey: testAuthorPubkey,
+              addressableId: coordinate,
+              targetKind: 34235,
+            ),
+            throwsA(isA<AlreadyDownvotedException>()),
+          );
+          verifyNever(
+            () => mockNostrClient.sendLike(
+              any(),
+              content: any(named: 'content'),
+              addressableId: any(named: 'addressableId'),
+              targetAuthorPubkey: any(named: 'targetAuthorPubkey'),
+              targetKind: any(named: 'targetKind'),
+            ),
+          );
+        });
+
+        test('removeDownvote deletes the downvote left under the legacy '
+            'key', () async {
+          mockQueryEventsSequence([
+            <Event>[],
+            [legacyDownvote()],
+            <Event>[],
+          ]);
+          when(
+            () => mockNostrClient.deleteEvent(any()),
+          ).thenAnswer((_) async => MockEvent());
+          repository = createRepository(withLocalStorage: false);
+
+          await repository.removeDownvote(
+            newEventId,
+            addressableId: coordinate,
+          );
+
+          verify(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).called(1);
+        });
+      });
+
+      test('resolves the like stored under the legacy key', () async {
+        stubLegacyRecord();
+        repository = createRepository();
+        await repository.initialize();
+
+        expect(
+          await repository.isLikedResolvingCoordinate(
+            eventId: newEventId,
+            addressableId: coordinate,
+          ),
+          isTrue,
+        );
+      });
+
+      test(
+        'toggleLike unlikes the legacy reaction rather than creating a '
+        'duplicate',
+        () async {
+          stubLegacyRecord();
+          when(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).thenAnswer((_) async => MockEvent());
+          when(
+            () => mockLocalStorage.deleteLikeRecord(oldEventId),
+          ).thenAnswer((_) async => true);
+          repository = createRepository();
+          await repository.initialize();
+
+          final isNowLiked = await repository.toggleLike(
+            eventId: newEventId,
+            authorPubkey: testAuthorPubkey,
+            addressableId: coordinate,
+            targetKind: 34235,
+          );
+
+          expect(isNowLiked, isFalse);
+          verify(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).called(1);
+        },
+      );
+
+      test(
+        'getLikeCounts credits a 34236 coordinate to the real Kind 34236 '
+        'video, not to the alias of a 34235 video in the same batch',
+        () async {
+          const shortVideoId = 'short_video_id_1234567890abcdef';
+          const normalVideoId = 'normal_video_id_1234567890abcdef';
+          final reactionOnOlderShortVersion = createMockReaction(
+            id: 'reaction_short',
+            targetEventId: oldEventId,
+            authorPubkey: 'liker_a_pubkey_1234567890abcdef',
+            tags: [
+              ['e', oldEventId],
+              ['a', legacyCoordinate],
+            ],
+          );
+          mockQueryEventsSequence([
+            <Event>[],
+            [reactionOnOlderShortVersion],
+            <Event>[],
+          ]);
+
+          repository = createRepository();
+          final counts = await repository.getLikeCounts(
+            [shortVideoId, normalVideoId],
+            addressableIds: {
+              shortVideoId: legacyCoordinate,
+              normalVideoId: coordinate,
+            },
+          );
+
+          expect(counts, equals({shortVideoId: 1, normalVideoId: 0}));
+        },
+      );
+
+      test('getLikeCount counts a like tagged with the legacy key', () async {
+        const liker = 'liker_a_pubkey_1234567890abcdef';
+        final legacyTaggedReaction = createMockReaction(
+          id: 'reaction_legacy',
+          targetEventId: oldEventId,
+          authorPubkey: liker,
+          tags: [
+            ['e', oldEventId],
+            ['a', legacyCoordinate],
+          ],
+        );
+        mockQueryEventsSequence([
+          <Event>[],
+          [legacyTaggedReaction],
+          <Event>[],
+        ]);
+
+        repository = createRepository();
+        final count = await repository.getLikeCount(
+          newEventId,
+          addressableId: coordinate,
+        );
+
+        expect(count, equals(1));
+      });
     });
 
     group('unlikeEvent resolves by coordinate (#6020)', () {
@@ -6609,7 +7086,7 @@ void main() {
           ],
         );
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [oldReaction, newReaction],
           <Event>[],
           [oldReaction, newReaction],

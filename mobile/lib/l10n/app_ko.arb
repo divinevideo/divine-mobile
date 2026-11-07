@@ -3745,6 +3745,12 @@
   "videoSettingsAutoAdvanceOff": "자동 넘기기 꺼짐",
   "videoSettingsCaptionsOn": "자막 켜짐",
   "videoSettingsCaptionsOff": "자막 꺼짐",
+  "videoSettingsReactionsOn": "반응 켜짐",
+  "videoSettingsReactionsOff": "반응 꺼짐",
+  "videoSettingsReactionsEnable": "반응 보기",
+  "videoSettingsReactionsDisable": "반응 숨기기",
+  "feedReactionDismiss": "이 반응 숨기기",
+  "feedReactionOpenComment": "댓글에서 열기",
   "videoActionReportLabel": "신고",
   "videoActionReport": "동영상 신고",
   "videoActionEditLabel": "편집",
@@ -3987,7 +3993,6 @@
   "dmReactionChipOwnA11yLabel": "내 반응: {emoji}",
   "dmReactionChipOtherA11yLabel": "{name}님이 {emoji}(으)로 반응했어요",
   "dmReactionChipPendingA11yLabel": "반응 보내는 중: {emoji}",
-  "dmReactionChipFailedA11yLabel": "반응 실패, 두 번 탭하면 다시 시도",
   "dmReactionChipUnconfirmedA11yLabel": "{emoji} 반응을 보내지 못했어요. 두 번 탭하면 다시 시도해요",
   "dmReactionChipRetryAnnouncement": "반응 다시 시도 중",
   "dmFormatBold": "굵게",
@@ -4823,9 +4828,6 @@
   "geoBlockedLegalNotice": "우리는 당신 지역의 법과 규정을 존중해요. 이 제한은 당신의 IP 주소 위치를 기반으로 해요.",
   "geoBlockedRegionLabel": "지역",
   "geoBlockedTitle": "서비스를 이용할 수 없어요",
-  "likedVideosEmpty": "좋아요한 영상 없음",
-  "likedVideosInvalidRoute": "잘못된 경로",
-  "likedVideosTitle": "좋아요한 영상",
   "uploadFailureSheetRetryingSnackbar": "업로드 다시 시도 중…",
   "uploadFailureSheetSaveToDraftsButton": "초안에 저장",
   "uploadFailureSheetSavedToDraftsSnackbar": "초안에 저장했어요",
@@ -5831,10 +5833,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "이번 주에 나만의 색깔을 조금 더했어요.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "이번 주에 창작한 날: {count}일. 계속 만들어 봐요.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -5858,16 +5856,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "하나 더 만들기",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "지금까지 조회수: {count}회. 계속 늘어나는 중이에요.",
+  "creatorHighlightWeeklyLikes": "이번 주에 올린 동영상의 지금까지 누적 좋아요: {count}개.",
+  "creatorHighlightWeeklyComments": "이번 주에 올린 동영상의 지금까지 누적 댓글: {count}개.",
   "creatorHighlightAnalytics": "내 통계 보기",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "동영상 보기",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "구독 중",

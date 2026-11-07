@@ -78,6 +78,9 @@ class _HighlightsInboxBodyState extends State<_HighlightsInboxBody>
     with WidgetsBindingObserver {
   Timer? _dayBoundary;
   bool _foreground = true;
+  // Set once the app actually leaves the screen; inactive alone does not count.
+  bool _backgrounded = false;
+  DateTime? _lastRefresh;
   bool get _isVisible => widget.isVisible && _foreground;
   @override
   void initState() {
@@ -97,17 +100,31 @@ class _HighlightsInboxBodyState extends State<_HighlightsInboxBody>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state case .hidden || .paused || .detached) _backgrounded = true;
     final foreground = state == AppLifecycleState.resumed;
     if (_foreground != foreground) setState(() => _foreground = foreground);
-    if (_isVisible) {
+    if (!_isVisible) {
+      _dayBoundary?.cancel();
+      return;
+    }
+    // Control Center, Notification Center and system prompts only make the
+    // app inactive. Returning from them is not a new showing, so the
+    // spotlight stays put unless the calendar day changed meanwhile.
+    final last = _lastRefresh;
+    final now = DateTime.now();
+    final sameDay =
+        last != null &&
+        last.year == now.year &&
+        last.month == now.month &&
+        last.day == now.day;
+    if (_backgrounded || !sameDay) {
       _refresh();
     } else {
-      _dayBoundary?.cancel();
+      _scheduleDayBoundary();
     }
   }
 
-  void _refresh() {
-    if (!_isVisible) return;
+  void _scheduleDayBoundary() {
     _dayBoundary?.cancel();
     final now = DateTime.now();
     final midnight = DateTime(now.year, now.month, now.day + 1);
@@ -115,6 +132,13 @@ class _HighlightsInboxBodyState extends State<_HighlightsInboxBody>
     _dayBoundary = Timer(midnight.difference(now), () {
       if (mounted && _isVisible) _refresh();
     });
+  }
+
+  void _refresh() {
+    if (!_isVisible) return;
+    _backgrounded = false;
+    _lastRefresh = DateTime.now();
+    _scheduleDayBoundary();
     runDetached(
       context.read<CreatorHighlightsCubit>().refresh(),
       'refresh private creator highlights',
@@ -138,34 +162,34 @@ class _HighlightsInboxBodyState extends State<_HighlightsInboxBody>
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) => BlocBuilder<CreatorHighlightsCubit, CreatorHighlightsState>(
-    builder: (context, state) => NotificationsView(
-      onRefresh: _refresh,
-      header: state.card == null
-          ? null
-          : CreatorHighlightCard(
-              highlight: state.card!,
-              isVisible: _isVisible,
-              onPresented: () => runDetached(
-                context.read<CreatorHighlightsCubit>().presented(state.card!),
-                'record creator highlight presentation',
-                logName: 'CreatorHighlights',
-                category: LogCategory.ui,
-              ),
-              onCreate: () => _open(RoutePaths.videoRecorder),
-              onAnalytics: () => _open(RoutePaths.creatorAnalytics),
-              onWatch: () {
-                final video = state.card?.topVideo;
-                if (video != null) {
-                  _open(
-                    RoutePaths.videoDetailForId(video.id),
-                    extra: VideoDetailRouteExtra(initialVideo: video),
-                  );
-                }
-              },
-            ),
-    ),
-  );
+  Widget build(BuildContext context) =>
+      BlocBuilder<CreatorHighlightsCubit, CreatorHighlightsState>(
+        builder: (context, state) => NotificationsView(
+          onRefresh: _refresh,
+          header: state.card == null
+              ? null
+              : CreatorHighlightCard(
+                  highlight: state.card!,
+                  isVisible: _isVisible,
+                  onPresented: () => runDetached(
+                    context.read<CreatorHighlightsCubit>().presented(
+                      state.card!,
+                    ),
+                    'record creator highlight presentation',
+                    logName: 'CreatorHighlights',
+                    category: LogCategory.ui,
+                  ),
+                  onAnalytics: () => _open(RoutePaths.creatorAnalytics),
+                  onWatch: () {
+                    final video = state.card?.topVideo;
+                    if (video != null) {
+                      _open(
+                        RoutePaths.videoDetailForId(video.id),
+                        extra: VideoDetailRouteExtra(initialVideo: video),
+                      );
+                    }
+                  },
+                ),
+        ),
+      );
 }

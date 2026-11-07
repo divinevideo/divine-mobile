@@ -9,14 +9,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' hide NIP71VideoKinds;
+import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/comments/comment_composer/comment_composer_bloc.dart';
 import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/blocs/comments/comments_surface_performance_telemetry.dart';
-import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -236,7 +235,7 @@ abstract final class CommentsScreen {
                 create: (_) => CommentsListBloc(
                   commentsRepository: commentsRepository,
                   rootEventId: video.id,
-                  rootEventKind: NIP71VideoKinds.addressableShortVideo,
+                  rootEventKind: video.referenceKind,
                   rootAuthorPubkey: video.pubkey,
                   rootAddressableId: video.addressableId,
                   initialTotalCount: seedCommentCount,
@@ -269,7 +268,7 @@ abstract final class CommentsScreen {
                     commentsRepository: commentsRepository,
                     authService: authService,
                     rootEventId: video.id,
-                    rootEventKind: NIP71VideoKinds.addressableShortVideo,
+                    rootEventKind: video.referenceKind,
                     rootAuthorPubkey: video.pubkey,
                     rootAddressableId: video.addressableId,
                     consumptionAnalytics: container.read(

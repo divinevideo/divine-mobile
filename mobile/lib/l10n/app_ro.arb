@@ -4199,6 +4199,12 @@
   "videoSettingsAutoAdvanceOff": "Avansare automată dezactivată",
   "videoSettingsCaptionsOn": "Subtitrări activate",
   "videoSettingsCaptionsOff": "Subtitrări dezactivate",
+  "videoSettingsReactionsOn": "Reacții activate",
+  "videoSettingsReactionsOff": "Reacții dezactivate",
+  "videoSettingsReactionsEnable": "Afișează reacțiile",
+  "videoSettingsReactionsDisable": "Ascunde reacțiile",
+  "feedReactionDismiss": "Ascunde reacția",
+  "feedReactionOpenComment": "Deschide în comentarii",
   "videoActionReportLabel": "Raportează",
   "videoActionReport": "Raportează videoclipul",
   "videoActionEditLabel": "Editează",
@@ -4441,7 +4447,6 @@
   "dmReactionChipOwnA11yLabel": "Reacția ta: {emoji}",
   "dmReactionChipOtherA11yLabel": "{name} a reacționat cu {emoji}",
   "dmReactionChipPendingA11yLabel": "Se trimite reacția: {emoji}",
-  "dmReactionChipFailedA11yLabel": "Reacția a eșuat, atinge de două ori pentru a reîncerca",
   "dmReactionChipUnconfirmedA11yLabel": "Reacția ta {emoji} nu a putut fi trimisă. Atinge de două ori pentru a reîncerca",
   "dmReactionChipRetryAnnouncement": "Se reîncearcă reacția",
   "dmFormatBold": "Aldin",
@@ -5277,9 +5282,6 @@
   "geoBlockedLegalNotice": "Îți respectăm legile și reglementările locale. Această restricție se bazează pe locația adresei tale IP.",
   "geoBlockedRegionLabel": "Regiune",
   "geoBlockedTitle": "Serviciu indisponibil",
-  "likedVideosEmpty": "Niciun videoclip apreciat",
-  "likedVideosInvalidRoute": "Rută invalidă",
-  "likedVideosTitle": "Videoclipuri apreciate",
   "uploadFailureSheetRetryingSnackbar": "Se reîncearcă încărcarea…",
   "uploadFailureSheetSaveToDraftsButton": "Salvează în ciorne",
   "uploadFailureSheetSavedToDraftsSnackbar": "Salvat în ciorne",
@@ -6285,10 +6287,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "Săptămâna asta are ceva mai mult din tine.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "Zile de creație săptămâna asta: {count}. Continuă așa.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6312,16 +6310,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Creează încă unul",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "Vizionări până acum: {count} și continuă.",
+  "creatorHighlightWeeklyLikes": "Aprecieri până acum la videoclipurile pe care le-ai publicat săptămâna asta: {count}.",
+  "creatorHighlightWeeklyComments": "Comentarii până acum la videoclipurile pe care le-ai publicat săptămâna asta: {count}.",
   "creatorHighlightAnalytics": "Vezi statisticile tale",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Urmărește videoclipul",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "Abonat",

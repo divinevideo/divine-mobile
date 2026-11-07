@@ -1578,13 +1578,38 @@ class VideoEvent {
   bool get hasAddressableDTag =>
       addressableDTag != null && addressableDTag!.isNotEmpty;
 
-  String? get addressableId => hasAddressableDTag
-      ? AId(
-          kind: EventKind.videoVertical,
-          pubkey: pubkey,
-          dTag: addressableDTag!,
-        ).toAString()
-      : null;
+  /// The `kind:pubkey:d-tag` coordinate of this video, under its own kind.
+  ///
+  /// Null without a `d` tag, and for a regular kind (21, 22) even when the
+  /// event carries one: those videos have no address. An unknown kind is read
+  /// as 34236, the only kind Divine publishes.
+  String? get addressableId {
+    final kind = _coordinateKind;
+    if (!hasAddressableDTag || kind == null) return null;
+    return AId(kind: kind, pubkey: pubkey, dTag: addressableDTag!).toAString();
+  }
+
+  int? get _coordinateKind => switch (eventKind) {
+    null => NIP71VideoKinds.addressableShortVideo,
+    NIP71VideoKinds.addressableShortVideo ||
+    NIP71VideoKinds.addressableNormalVideo => eventKind,
+    _ => null,
+  };
+
+  /// The kind other events name this video by in their `k` and `K` tags:
+  /// its own, or 34236, the only kind Divine publishes, for a row stored
+  /// before [eventKind] was kept.
+  int get referenceKind => eventKind ?? NIP71VideoKinds.addressableShortVideo;
+
+  /// The coordinate Divine-only formats name this video by: profile pins,
+  /// reply curation and Add yours chains. It is [addressableId], except that
+  /// a Kind 34235 video keeps the 34236 key Divine gave it before #10776, so
+  /// app versions from before then still read the same events.
+  String? get divineAddress {
+    final coordinate = addressableId;
+    if (coordinate == null) return null;
+    return legacyVideoCoordinateFor(coordinate) ?? coordinate;
+  }
 
   /// Canonical identity for feed/session deduplication.
   ///

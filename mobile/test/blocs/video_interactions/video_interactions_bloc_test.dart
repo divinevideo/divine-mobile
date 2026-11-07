@@ -88,6 +88,7 @@ void main() {
 
     VideoInteractionsBloc createBloc({
       String? addressableId,
+      int? eventKind,
       int? initialLikeCount,
       int? archivedLikeCount,
       int? initialCommentCount,
@@ -99,6 +100,7 @@ void main() {
       commentsRepository: mockCommentsRepository,
       repostsRepository: mockRepostsRepository,
       addressableId: addressableId,
+      eventKind: eventKind,
       initialLikeCount: initialLikeCount,
       archivedLikeCount: archivedLikeCount,
       initialCommentCount: initialCommentCount,
@@ -976,6 +978,107 @@ void main() {
     });
 
     group('VideoInteractionsLikeToggled', () {
+      blocTest<VideoInteractionsBloc, VideoInteractionsState>(
+        'names the real kind of a coordinate-less 34235 video',
+        setUp: () {
+          when(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              targetKind: 34235,
+            ),
+          ).thenAnswer((_) async => true);
+        },
+        build: () => createBloc(eventKind: 34235),
+        act: (bloc) => bloc.add(const VideoInteractionsLikeToggled()),
+        verify: (_) {
+          verify(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              targetKind: 34235,
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<VideoInteractionsBloc, VideoInteractionsState>(
+        'names the kind of a 34235 video that has a coordinate',
+        setUp: () {
+          when(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              addressableId: '34235:$testAuthorPubkey:test-d-tag',
+              targetKind: 34235,
+            ),
+          ).thenAnswer((_) async => true);
+        },
+        build: () => createBloc(
+          addressableId: '34235:$testAuthorPubkey:test-d-tag',
+          eventKind: 34235,
+        ),
+        act: (bloc) => bloc.add(const VideoInteractionsLikeToggled()),
+        verify: (_) {
+          verify(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              addressableId: '34235:$testAuthorPubkey:test-d-tag',
+              targetKind: 34235,
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<VideoInteractionsBloc, VideoInteractionsState>(
+        'names the kind of a regular video',
+        setUp: () {
+          when(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              targetKind: 22,
+            ),
+          ).thenAnswer((_) async => true);
+        },
+        build: () => createBloc(eventKind: 22),
+        act: (bloc) => bloc.add(const VideoInteractionsLikeToggled()),
+        verify: (_) {
+          verify(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              targetKind: 22,
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<VideoInteractionsBloc, VideoInteractionsState>(
+        'names the kind of an addressable video that has no coordinate',
+        setUp: () {
+          when(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              targetKind: 34236,
+            ),
+          ).thenAnswer((_) async => true);
+        },
+        build: () => createBloc(eventKind: 34236),
+        act: (bloc) => bloc.add(const VideoInteractionsLikeToggled()),
+        verify: (_) {
+          verify(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              targetKind: 34236,
+            ),
+          ).called(1);
+        },
+      );
+
       blocTest<VideoInteractionsBloc, VideoInteractionsState>(
         'likes video when not already liked',
         setUp: () {
@@ -1967,6 +2070,57 @@ void main() {
     });
 
     group('VideoInteractionsSubscriptionRequested', () {
+      const normalVideoCoordinate = '34235:$testAuthorPubkey:test-d-tag';
+      const legacyNormalVideoCoordinate = '34236:$testAuthorPubkey:test-d-tag';
+
+      blocTest<VideoInteractionsBloc, VideoInteractionsState>(
+        'reads a 34235 like stored under its legacy 34236 key as liked',
+        build: () => createBloc(
+          addressableId: normalVideoCoordinate,
+          eventKind: 34235,
+        ),
+        seed: () => const VideoInteractionsState(
+          status: VideoInteractionsStatus.success,
+        ),
+        act: (bloc) async {
+          bloc.add(const VideoInteractionsSubscriptionRequested());
+          await pumpEventQueue();
+          expect(likedAddressableIdsController.hasListener, isTrue);
+          likedAddressableIdsController.add({legacyNormalVideoCoordinate});
+          await pumpEventQueue();
+        },
+        expect: () => const [
+          VideoInteractionsState(
+            status: VideoInteractionsStatus.success,
+            isLiked: true,
+          ),
+        ],
+      );
+
+      blocTest<VideoInteractionsBloc, VideoInteractionsState>(
+        'reads a 34235 repost stored under its legacy 34236 key as reposted',
+        build: () => createBloc(
+          addressableId: normalVideoCoordinate,
+          eventKind: 34235,
+        ),
+        seed: () => const VideoInteractionsState(
+          status: VideoInteractionsStatus.success,
+        ),
+        act: (bloc) async {
+          bloc.add(const VideoInteractionsSubscriptionRequested());
+          await pumpEventQueue();
+          expect(repostedIdsController.hasListener, isTrue);
+          repostedIdsController.add({legacyNormalVideoCoordinate});
+          await pumpEventQueue();
+        },
+        expect: () => const [
+          VideoInteractionsState(
+            status: VideoInteractionsStatus.success,
+            isReposted: true,
+          ),
+        ],
+      );
+
       blocTest<VideoInteractionsBloc, VideoInteractionsState>(
         'updates isLiked without adjusting likeCount when stream emits liked',
         build: createBloc,

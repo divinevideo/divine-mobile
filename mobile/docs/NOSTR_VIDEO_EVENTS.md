@@ -717,6 +717,7 @@ with no new playback emits nothing. An app kill mid-session still leaves the
 
 - **No `d` tag** - ephemeral events are not addressable/replaceable
 - **Both `a` and `e` tags are required** - `a` provides stable addressable reference, `e` tracks specific version viewed
+- The `a` coordinate names the video's own kind: `34236:` for Divine's short videos, `34235:` for an addressable normal video from another client. Before #10776 mobile wrote `34236:` for both, and its likes and reposts still read that old key for a Kind 34235 video
 - The `viewed` tag carries elapsed playback seconds for the session, not positions within the video. Mobile always emits `["viewed", "0", "<whole seconds watched>"]`, so a 6s video looped twice reports `["viewed", "0", "12"]`, and a sub-second view truncates to `["viewed", "0", "0"]`
 - Analytics services should consume these events in real-time before relays discard them
 - No minimum watch threshold: a playback start counts as a view even when the session ends before the first loop completes (a fractional loop is valid)
