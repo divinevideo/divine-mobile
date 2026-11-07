@@ -59,6 +59,8 @@ Future<void> reattachDetachedClip(
       sourceOffset: data.sourceOffset,
       window: item.endTime - item.startTime,
       placeholderClipId: data.placeholderClipId,
+      chromaKey: data.chromaKey,
+      bakedChromaKey: data.bakedChromaKey,
     ),
   );
 }

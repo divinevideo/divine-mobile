@@ -494,6 +494,7 @@ class _ClipDetachResultListener extends StatelessWidget {
         :final previousClips,
         :final detachedClip,
         :final placeholder,
+        :final bakedChromaKey,
       ):
         _commitDetach(
           context,
@@ -501,6 +502,7 @@ class _ClipDetachResultListener extends StatelessWidget {
           previousClips,
           detachedClip,
           placeholderClipId: placeholder?.id,
+          bakedChromaKey: bakedChromaKey,
         );
       case ClipDetachFailure():
         ScaffoldMessenger.of(context).showSnackBar(
@@ -522,6 +524,7 @@ class _ClipDetachResultListener extends StatelessWidget {
     List<DivineVideoClip> previousClips,
     DivineVideoClip detachedClip, {
     String? placeholderClipId,
+    DetachedClipBakedChromaKey? bakedChromaKey,
   }) {
     final scope = VideoEditorScope.of(context);
     final editor = scope.editor;
@@ -574,6 +577,11 @@ class _ClipDetachResultListener extends StatelessWidget {
       layerId: layerId,
       // So putting the clip back can find the slot it left.
       placeholderClipId: placeholderClipId,
+      // A key taken off the clip's file plays live on the layer, so what it
+      // removed shows the track rather than the black or fill it was baked
+      // to. The record is what putting the clip back restores.
+      chromaKey: bakedChromaKey?.chromaKey,
+      bakedChromaKey: bakedChromaKey,
     ).toMeta();
     final layer = WidgetLayer(
       id: layerId,
