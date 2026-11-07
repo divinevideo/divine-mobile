@@ -147,6 +147,42 @@ void main() {
   tearDown(() => service.dispose());
 
   group('relay reconciliation before list mutations', () {
+    test(
+      'unpublished permission drafts can restore their local baseline',
+      () async {
+        final baseline = cached.copyWith(
+          clearNostrEventId: true,
+          pendingRepublish: true,
+        );
+        await reopen(baseline);
+        answer(
+          () async => (events: <Event>[], timedOut: true, noRelays: false),
+        );
+        expect(
+          await service.updateList(
+            listId: cached.id,
+            isCollaborative: true,
+            allowedCollaborators: [addedVideo],
+          ),
+          isFalse,
+        );
+        expect(
+          service.getListById(cached.id)!.hasPendingPermissionDraft,
+          isTrue,
+        );
+        answer(
+          () async => (events: <Event>[], timedOut: false, noRelays: false),
+        );
+
+        expect(await service.discardLocalEditsAndAdoptRelay(cached.id), isTrue);
+
+        expect(service.getListById(cached.id), baseline);
+        expect(published, isEmpty);
+        restart();
+        expect(service.getListById(cached.id), baseline);
+      },
+    );
+
     test('a queued retry cannot confirm a later permission proposal', () async {
       final entered = Completer<void>();
       final firstRead = Completer<_Read>();
