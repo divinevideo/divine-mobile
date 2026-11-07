@@ -116,18 +116,27 @@ class CameraQuickActionWidgetProviderTest {
     }
 
     @Test
-    fun givesALockScreenHostTheKeyguardLayout() {
-        val widgetId = bindWidget(AppWidgetProviderInfo.WIDGET_CATEGORY_KEYGUARD)
+    fun givesEachWidgetInOneUpdateTheLayoutForItsHost() {
+        val homeWidget = bindWidget(AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN)
+        val lockScreenWidget = bindWidget(
+            AppWidgetProviderInfo.WIDGET_CATEGORY_KEYGUARD,
+            widgetId = 8
+        )
 
-        deliverUpdate(widgetId)
+        deliverUpdate(homeWidget, lockScreenWidget)
         runQueuedUpdates()
 
-        val view = shadowOf(appWidgetManager).getViewFor(widgetId)
-        assertEquals(FrameLayout::class.java, view.javaClass)
+        assertEquals(
+            LinearLayout::class.java,
+            shadowOf(appWidgetManager).getViewFor(homeWidget)?.javaClass
+        )
+        assertEquals(
+            FrameLayout::class.java,
+            shadowOf(appWidgetManager).getViewFor(lockScreenWidget)?.javaClass
+        )
     }
 
-    private fun bindWidget(hostCategory: Int): Int {
-        val widgetId = 7
+    private fun bindWidget(hostCategory: Int, widgetId: Int = 7): Int {
         shadowOf(appWidgetManager).bindAppWidgetId(
             widgetId,
             ComponentName(context, CameraQuickActionWidgetProvider::class.java)
@@ -142,7 +151,7 @@ class CameraQuickActionWidgetProviderTest {
     }
 
     private fun deliverUpdate(
-        widgetId: Int,
+        vararg widgetIds: Int,
         receiver: CameraQuickActionWidgetProvider = provider
     ) {
         // The system hands each broadcast a pending result for goAsync().
@@ -157,7 +166,7 @@ class CameraQuickActionWidgetProviderTest {
         receiver.onReceive(
             context,
             Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
-                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(widgetId))
+                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, widgetIds)
         )
     }
 
