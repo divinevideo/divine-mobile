@@ -889,8 +889,10 @@ void main() {
           };
 
           final burst = over['burst']!;
-          // The final trickle is not checked: a small account's burst can
-          // leave every row unread, so its writes need not move the count.
+          // The final trickle is not checked for the badge: a small account's
+          // burst can leave every row unread, so its writes need not move the
+          // count. Every write outside a hidden member's group moves a row, so
+          // the list still updates.
           expect(
             over['trickle, inbox closed']!.badge,
             greaterThan(0),
@@ -905,6 +907,11 @@ void main() {
             burst.list,
             greaterThan(0),
             reason: 'the burst must reach the list',
+          );
+          expect(
+            over['trickle']!.list,
+            greaterThan(0),
+            reason: 'the trickle must reach the list',
           );
           expect(
             bloc.state.status,
