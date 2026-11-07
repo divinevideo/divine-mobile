@@ -19,6 +19,28 @@ import 'package:nostr_sdk/nostr_sdk.dart' show Event;
 class LatestAddressableEvents {
   final _events = <String, Event>{};
   final _operations = <String, Future<void>>{};
+  final _revisions = StreamController<int>.broadcast();
+  var _revision = 0;
+
+  /// Monotonic version of the accepted revisions in this store.
+  int get revision => _revision;
+
+  /// The current version followed by changes, without a subscribe/snapshot gap.
+  Stream<int> get revisions => Stream.multi((controller) {
+    final subscription = _revisions.stream.listen(
+      controller.add,
+      onError: controller.addError,
+      onDone: controller.close,
+    );
+    controller
+      ..add(_revision)
+      ..onCancel = subscription.cancel;
+  });
+
+  /// Closes revision notifications; existing repository operations keep their
+  /// own lifecycle and account guards.
+  Future<void> dispose() =>
+      _revisions.isClosed ? _revisions.done : _revisions.close();
 
   /// Serializes the whole read/modify/publish operation at one coordinate.
   /// An accepted revision alone cannot protect a second writer while the
@@ -65,6 +87,8 @@ class LatestAddressableEvents {
     if (known == null || isNewer(event, than: known)) {
       // A copy, so a caller changing its event cannot change the store.
       _events[key] = Event.fromJson(event.toJson());
+      _revision++;
+      if (!_revisions.isClosed) _revisions.add(_revision);
     }
   }
 

@@ -15,6 +15,9 @@ class _MockCommentsRepository extends Mock implements CommentsRepository {}
 
 class _MockLikesRepository extends Mock implements LikesRepository {}
 
+class _MockCommentModerationRepository extends Mock
+    implements CommentModerationRepository {}
+
 const _rootId =
     '1111111111111111111111111111111111111111111111111111111111111111';
 const _creator =
@@ -51,11 +54,18 @@ void main() {
   group(FeedTopCommentCubit, () {
     late _MockCommentsRepository commentsRepository;
     late _MockLikesRepository likesRepository;
+    late _MockCommentModerationRepository moderationRepository;
     late StreamController<void> loops;
 
     setUp(() {
       commentsRepository = _MockCommentsRepository();
       likesRepository = _MockLikesRepository();
+      moderationRepository = _MockCommentModerationRepository();
+      when(
+        () => moderationRepository.loadModeration(
+          rootAddressableId: any(named: 'rootAddressableId'),
+        ),
+      ).thenAnswer((_) async => CommentModeration.empty);
       loops = StreamController<void>.broadcast();
     });
 
@@ -88,19 +98,131 @@ void main() {
       );
     }
 
-    FeedTopCommentCubit buildCubit({String? rootAddressableId}) =>
-        FeedTopCommentCubit(
-          commentsRepository: commentsRepository,
-          likesRepository: likesRepository,
-          rootEventId: _rootId,
-          rootEventKind: 34236,
-          rootAuthorPubkey: _creator,
-          rootAddressableId: rootAddressableId,
-          loopCompletions: loops.stream,
-          now: () => _now,
-        );
+    FeedTopCommentCubit buildCubit({
+      String? rootAddressableId,
+      String? viewerPubkey,
+      Set<String> viewerBlockedAuthors = const {},
+    }) => FeedTopCommentCubit(
+      commentsRepository: commentsRepository,
+      likesRepository: likesRepository,
+      commentModerationRepository: moderationRepository,
+      viewerPubkey: viewerPubkey,
+      viewerBlockedAuthors: viewerBlockedAuthors,
+      rootEventId: _rootId,
+      rootEventKind: 34236,
+      rootAuthorPubkey: _creator,
+      rootAddressableId: rootAddressableId,
+      loopCompletions: loops.stream,
+      now: () => _now,
+    );
 
     group('load', () {
+      group('creator moderation', () {
+        const root = '34236:$_creator:root';
+
+        test('ranks only the default-visible comments', () async {
+          stubComments([_comment(_alice), _comment(_bob, author: _bob)]);
+          stubUpvotes({_alice: 20, _bob: 1});
+          when(
+            () => moderationRepository.loadModeration(rootAddressableId: root),
+          ).thenAnswer(
+            (_) async => const CommentModeration(hiddenCommentIds: {_alice}),
+          );
+          final cubit = buildCubit(rootAddressableId: root);
+          addTearDown(cubit.close);
+          await cubit.load();
+          expect(cubit.state.topComment?.id, _bob);
+          verify(
+            () => likesRepository.getVoteCounts([
+              _bob,
+            ], addressableIds: any(named: 'addressableIds')),
+          ).called(1);
+        });
+
+        test('keeps an explicitly restored comment eligible', () async {
+          stubComments([_comment(_alice), _comment(_bob, author: _bob)]);
+          stubUpvotes({_alice: 20, _bob: 1});
+          when(
+            () => moderationRepository.loadModeration(rootAddressableId: root),
+          ).thenAnswer(
+            (_) async => const CommentModeration(
+              autoHiddenAuthors: {_alice},
+              restoredCommentIds: {_alice},
+            ),
+          );
+          final cubit = buildCubit(rootAddressableId: root);
+          addTearDown(cubit.close);
+          await cubit.load();
+          expect(cubit.state.topComment?.id, _alice);
+        });
+
+        test(
+          'keeps the author view consistent with the comment sheet',
+          () async {
+            stubComments([_comment(_alice)]);
+            stubUpvotes({_alice: 20});
+            when(
+              () =>
+                  moderationRepository.loadModeration(rootAddressableId: root),
+            ).thenAnswer(
+              (_) async => const CommentModeration(hiddenCommentIds: {_alice}),
+            );
+            final cubit = buildCubit(
+              rootAddressableId: root,
+              viewerPubkey: _alice,
+            );
+            addTearDown(cubit.close);
+            await cubit.load();
+            expect(cubit.state.topComment?.id, _alice);
+          },
+        );
+
+        test(
+          'does not count hidden replies toward visible engagement',
+          () async {
+            final hiddenId = '5' * 64;
+            stubComments([
+              _comment(_alice),
+              _comment(hiddenId, content: '', replyToEventId: _alice),
+              _comment(_bob, author: _bob),
+            ]);
+            stubUpvotes({_bob: 1});
+            when(
+              () =>
+                  moderationRepository.loadModeration(rootAddressableId: root),
+            ).thenAnswer(
+              (_) async => CommentModeration(hiddenCommentIds: {hiddenId}),
+            );
+            final cubit = buildCubit(rootAddressableId: root);
+            addTearDown(cubit.close);
+            await cubit.load();
+            expect(cubit.state.topComment?.id, _bob);
+          },
+        );
+
+        test('stops loading after close during the moderation read', () async {
+          final read = Completer<CommentModeration>();
+          stubComments([_comment(_alice)]);
+          stubUpvotes({_alice: 20});
+          when(
+            () => moderationRepository.loadModeration(rootAddressableId: root),
+          ).thenAnswer((_) => read.future);
+          final cubit = buildCubit(rootAddressableId: root);
+          final loading = cubit.load();
+          await pumpEventQueue();
+          await cubit.close();
+          read.complete(CommentModeration.empty);
+          await loading;
+          verifyNever(
+            () => likesRepository.getVoteCounts(
+              any(),
+              addressableIds: any(named: 'addressableIds'),
+            ),
+          );
+          expect(cubit.state.status, FeedTopCommentStatus.loading);
+        });
+      });
+
       group('author deletions', () {
         const deletedId =
             '5555555555555555555555555555555555555555555555555555555555555555';

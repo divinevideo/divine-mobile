@@ -1,6 +1,8 @@
 // ABOUTME: Tests the store of the newest addressable events shared by the
 // ABOUTME: writers that replace the same event.
 
+import 'dart:async';
+
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:test/test.dart';
@@ -30,7 +32,10 @@ void main() {
   group(LatestAddressableEvents, () {
     late LatestAddressableEvents store;
 
-    setUp(() => store = LatestAddressableEvents());
+    setUp(() {
+      store = LatestAddressableEvents();
+      addTearDown(store.dispose);
+    });
 
     Event? latest({String? pubkey, String dTag = 'divine:replies:video'}) =>
         store.latest(pubkey: pubkey ?? _owner, kind: 30078, dTag: dTag);
@@ -48,6 +53,27 @@ void main() {
       await assertion;
       expect(await next, 'saved');
       expect(await run(() async => 'again'), 'again');
+    });
+
+    test('observes the current revision and only newer events', () async {
+      store.remember(_event(createdAt: 1000));
+      final changes = StreamIterator<int>(store.revisions);
+      addTearDown(changes.cancel);
+      expect(await changes.moveNext(), isTrue);
+      expect(changes.current, 1);
+      store
+        ..remember(_event(createdAt: 1000))
+        ..remember(_event(createdAt: 999))
+        ..remember(_event(createdAt: 1001));
+      expect(store.revision, 2);
+      expect(await changes.moveNext(), isTrue);
+      expect(changes.current, 2);
+    });
+
+    test('closes revision listeners when disposed', () async {
+      final revisions = store.revisions.toList();
+      await store.dispose();
+      expect(await revisions, [0]);
     });
 
     test('knows nothing it was not told', () {

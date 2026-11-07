@@ -165,9 +165,25 @@ final videoResponsesRepositoryProvider = Provider<VideoResponsesRepository>((
 /// comment moderation writer of [commentModerationRepositoryProvider]: both
 /// replace a video's `divine:replies:` event, and the relay may not serve
 /// one's publish back before the other builds on it.
-final latestAddressableEventsProvider = Provider<LatestAddressableEvents>(
-  (ref) => LatestAddressableEvents(),
-);
+final latestAddressableEventsProvider = Provider<LatestAddressableEvents>((
+  ref,
+) {
+  final events = LatestAddressableEvents();
+  ref.onDispose(
+    () => runProviderDetached(
+      events.dispose(),
+      'close addressable event revisions',
+      logName: 'LatestAddressableEvents',
+    ),
+  );
+  return events;
+});
+
+/// Refreshes consumers when another moderation surface accepts a new revision.
+final StreamProvider<int> latestAddressableEventsRevisionProvider =
+    StreamProvider.autoDispose<int>(
+      (ref) => ref.watch(latestAddressableEventsProvider).revisions,
+    );
 
 final FutureProviderFamily<List<ProfileBadgeViewData>, String>
 profileAcceptedBadgesProvider = FutureProvider.autoDispose

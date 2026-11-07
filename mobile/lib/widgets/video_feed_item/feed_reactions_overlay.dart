@@ -10,12 +10,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' hide NIP71VideoKinds;
+import 'package:models/models.dart';
 import 'package:openvine/blocs/feed_top_comment/feed_top_comment_cubit.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
-import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/comments/comments.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -34,6 +34,8 @@ import 'package:provider/provider.dart' as inherited_provider;
 /// created and is closed once [enabled] turns off or the item goes away;
 /// meanwhile [child] reads `null`. The tree under [child] keeps its shape
 /// either way, so flipping [enabled] does not remount the item.
+/// Account, block and shared moderation revisions refresh the candidate while
+/// preserving dismissal and loop progress for the same viewer/video.
 class FeedTopCommentHost extends ConsumerStatefulWidget {
   const FeedTopCommentHost({
     required this.enabled,
@@ -59,20 +61,58 @@ class _FeedTopCommentHostState extends ConsumerState<FeedTopCommentHost> {
   FeedTopCommentCubit? _cubit;
 
   /// What [_cubit] was created for; a change replaces it.
-  Object? _cubitKey;
+  ({(String, String?) video, Object dependencies})? _cubitKey;
 
   @override
   Widget build(BuildContext context) {
     final commentsRepository = ref.watch(commentsRepositoryProvider);
     final likesRepository = ref.watch(likesRepositoryProvider);
+    final moderationRepository = widget.enabled
+        ? ref.watch(commentModerationRepositoryProvider)
+        : null;
+    final viewerPubkey = widget.enabled
+        ? ref.watch(nostrSessionProvider.select((session) => session.pubkey))
+        : null;
+    final blocklistVersion = widget.enabled
+        ? ref.watch(blocklistVersionProvider)
+        : 0;
+    final moderationRevision = widget.enabled
+        ? (ref.watch(latestAddressableEventsRevisionProvider).value ??
+              ref.watch(latestAddressableEventsProvider).revision)
+        : 0;
+    final viewerBlocks = viewerPubkey == null
+        ? const <String>{}
+        : ref
+              .watch(contentBlocklistRepositoryProvider)
+              .blockedPubkeysForAccount(viewerPubkey);
     final key = widget.enabled
-        ? (widget.video.id, commentsRepository, likesRepository)
+        ? (
+            video: (widget.video.id, viewerPubkey),
+            dependencies: (
+              widget.video.referenceKind,
+              widget.video.addressableId,
+              commentsRepository,
+              likesRepository,
+              moderationRepository,
+              blocklistVersion,
+              moderationRevision,
+            ),
+          )
         : null;
     if (key != _cubitKey) {
+      final visibility = _cubitKey?.video == key?.video ? _cubit?.state : null;
       _closeCubit();
       _cubitKey = key;
-      if (key != null) {
-        _cubit = _createCubit(commentsRepository, likesRepository);
+      if (moderationRepository != null) {
+        _cubit = _createCubit(
+          commentsRepository,
+          likesRepository,
+          moderationRepository,
+          viewerPubkey,
+          viewerBlocks,
+          initialHasCompletedLoop: visibility?.hasCompletedLoop ?? false,
+          initiallyDismissed: visibility?.isDismissed ?? false,
+        );
       }
     }
     return inherited_provider.Provider<FeedTopCommentCubit?>.value(
@@ -84,13 +124,23 @@ class _FeedTopCommentHostState extends ConsumerState<FeedTopCommentHost> {
   FeedTopCommentCubit _createCubit(
     CommentsRepository commentsRepository,
     LikesRepository likesRepository,
-  ) {
+    CommentModerationRepository moderationRepository,
+    String? viewerPubkey,
+    Set<String> viewerBlockedAuthors, {
+    required bool initialHasCompletedLoop,
+    required bool initiallyDismissed,
+  }) {
     final video = widget.video;
     final cubit = FeedTopCommentCubit(
       commentsRepository: commentsRepository,
       likesRepository: likesRepository,
+      commentModerationRepository: moderationRepository,
+      viewerPubkey: viewerPubkey,
+      viewerBlockedAuthors: viewerBlockedAuthors,
+      initialHasCompletedLoop: initialHasCompletedLoop,
+      initiallyDismissed: initiallyDismissed,
       rootEventId: video.id,
-      rootEventKind: NIP71VideoKinds.addressableShortVideo,
+      rootEventKind: video.referenceKind,
       rootAuthorPubkey: video.pubkey,
       rootAddressableId: video.addressableId,
       loopCompletions: widget.loopCompletions,

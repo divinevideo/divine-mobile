@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,9 +16,12 @@ import 'package:likes_repository/likes_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart' show LatestAddressableEvents;
+import 'package:nostr_sdk/nostr_sdk.dart' as nostr;
 import 'package:openvine/blocs/feed_top_comment/feed_top_comment_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/router/routes/search_routes.dart';
@@ -35,6 +39,24 @@ class _MockFeedTopCommentCubit extends MockCubit<FeedTopCommentState>
 class _MockCommentsRepository extends Mock implements CommentsRepository {}
 
 class _MockLikesRepository extends Mock implements LikesRepository {}
+
+class _MockCommentModerationRepository extends Mock
+    implements CommentModerationRepository {}
+
+class _MockBlocklistRepository extends Mock
+    implements ContentBlocklistRepository {}
+
+class _TestNostrSession extends NostrSession {
+  _TestNostrSession(this.pubkey);
+  final String? pubkey;
+  @override
+  NostrSessionReadiness build() {
+    final key = pubkey;
+    return key == null
+        ? const NostrSessionReadiness.signedOut()
+        : NostrSessionReadiness.identityKnown(pubkey: key);
+  }
+}
 
 /// Counts its own `initState`s, so a test can tell a remount from a rebuild.
 class _MountCounter extends StatefulWidget {
@@ -934,10 +956,23 @@ void main() {
   group(FeedTopCommentHost, () {
     late _MockCommentsRepository commentsRepository;
     late _MockLikesRepository likesRepository;
+    late _MockCommentModerationRepository moderationRepository;
+    late _MockBlocklistRepository blocklistRepository;
+    String? viewer;
 
     setUp(() {
       commentsRepository = _MockCommentsRepository();
       likesRepository = _MockLikesRepository();
+      moderationRepository = _MockCommentModerationRepository();
+      blocklistRepository = _MockBlocklistRepository();
+      viewer = null;
+      when(
+        () => moderationRepository.loadModeration(
+          rootAddressableId: any(named: 'rootAddressableId'),
+        ),
+      ).thenAnswer((_) async => CommentModeration.empty);
+      when(() => blocklistRepository.blockedPubkeysForAccount(any()))
+          .thenReturn(const {});
       when(
         () => commentsRepository.findAuthorDeletedComments(any()),
       ).thenAnswer((_) async => <String>{});
@@ -955,10 +990,21 @@ void main() {
       required bool enabled,
       required VoidCallback onMount,
       VideoEvent? video,
+      Stream<void> loopCompletions = const Stream<void>.empty(),
+      LatestAddressableEvents? latestEvents,
     }) => ProviderScope(
       overrides: [
         commentsRepositoryProvider.overrideWithValue(commentsRepository),
         likesRepositoryProvider.overrideWithValue(likesRepository),
+        commentModerationRepositoryProvider.overrideWithValue(
+          moderationRepository,
+        ),
+        contentBlocklistRepositoryProvider.overrideWithValue(
+          blocklistRepository,
+        ),
+        nostrSessionProvider.overrideWith(() => _TestNostrSession(viewer)),
+        if (latestEvents != null)
+          latestAddressableEventsProvider.overrideWithValue(latestEvents),
       ],
       child: MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
@@ -966,13 +1012,209 @@ void main() {
         home: FeedTopCommentHost(
           enabled: enabled,
           video: video ?? _video,
-          loopCompletions: const Stream<void>.empty(),
+          loopCompletions: loopCompletions,
           child: _MountCounter(onMount: onMount),
         ),
       ),
     );
 
     group('renders', () {
+      void stubVisibleComment() {
+        when(
+          () => commentsRepository.loadComments(
+            rootEventId: any(named: 'rootEventId'),
+            rootEventKind: any(named: 'rootEventKind'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              CommentThread(rootEventId: _video.id, comments: [_topComment]),
+        );
+        when(
+          () => likesRepository.getVoteCounts(
+            any(),
+            addressableIds: any(named: 'addressableIds'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              (upvotes: {_topComment.id: 20}, downvotes: <String, int>{}),
+        );
+      }
+
+      FeedTopCommentCubit hosted(WidgetTester tester) => tester
+          .element(find.byType(_MountCounter))
+          .read<FeedTopCommentCubit?>()!;
+
+      testWidgets('does not feature a creator-hidden comment', (tester) async {
+        stubVisibleComment();
+        when(
+          () => moderationRepository.loadModeration(
+            rootAddressableId: any(named: 'rootAddressableId'),
+          ),
+        ).thenAnswer(
+          (_) async => CommentModeration(hiddenCommentIds: {_topComment.id}),
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            enabled: true,
+            onMount: () {},
+            video: _video.copyWith(addressableDTag: 'root'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(hosted(tester).state.status, FeedTopCommentStatus.empty);
+        expect(hosted(tester).state.topComment, isNull);
+      });
+
+      testWidgets(
+        'does not feature a locally blocked author on the owner video',
+        (tester) async {
+          stubVisibleComment();
+          viewer = _creator;
+          when(() => blocklistRepository.blockedPubkeysForAccount(_creator))
+              .thenReturn({_commenter});
+          await tester.pumpWidget(
+            buildSubject(
+              enabled: true,
+              onMount: () {},
+              video: _video.copyWith(addressableDTag: 'root'),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(hosted(tester).state.status, FeedTopCommentStatus.empty);
+          expect(hosted(tester).state.topComment, isNull);
+        },
+      );
+
+      testWidgets('refreshes the featured comment when owner blocks hydrate', (
+        tester,
+      ) async {
+        stubVisibleComment();
+        viewer = _creator;
+        await tester.pumpWidget(
+          buildSubject(
+            enabled: true,
+            onMount: () {},
+            video: _video.copyWith(addressableDTag: 'root'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final first = hosted(tester);
+        expect(first.state.status, FeedTopCommentStatus.ready);
+        when(() => blocklistRepository.blockedPubkeysForAccount(_creator))
+            .thenReturn({_commenter});
+        ProviderScope.containerOf(
+          tester.element(find.byType(FeedTopCommentHost)),
+        ).read(blocklistVersionProvider.notifier).increment();
+        await tester.pumpAndSettle();
+        expect(hosted(tester), isNot(same(first)));
+        expect(hosted(tester).state.status, FeedTopCommentStatus.empty);
+      });
+
+      testWidgets('loads comments using the native video kind', (tester) async {
+        final horizontal = _video.copyWith(
+          eventKind: 34235,
+          addressableDTag: 'root',
+        );
+        await tester.pumpWidget(
+          buildSubject(enabled: true, onMount: () {}, video: horizontal),
+        );
+        await tester.pumpAndSettle();
+        verify(
+          () => commentsRepository.loadComments(
+            rootEventId: horizontal.id,
+            rootEventKind: 34235,
+            rootAddressableId: horizontal.addressableId,
+            limit: FeedTopCommentCubit.commentPageSize,
+          ),
+        ).called(1);
+      });
+
+      testWidgets('keeps dismissal and loop progress across block refresh', (
+        tester,
+      ) async {
+        stubVisibleComment();
+        viewer = _creator;
+        final loops = StreamController<void>.broadcast();
+        addTearDown(loops.close);
+        await tester.pumpWidget(
+          buildSubject(
+            enabled: true,
+            onMount: () {},
+            video: _video.copyWith(addressableDTag: 'root'),
+            loopCompletions: loops.stream,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final first = hosted(tester);
+        loops.add(null);
+        await tester.pump();
+        expect(first.state.hasCompletedLoop, isTrue);
+        first.dismiss();
+        when(() => blocklistRepository.blockedPubkeysForAccount(_creator))
+            .thenReturn({'a' * 64});
+        ProviderScope.containerOf(
+          tester.element(find.byType(FeedTopCommentHost)),
+        ).read(blocklistVersionProvider.notifier).increment();
+        await tester.pumpAndSettle();
+        expect(hosted(tester), isNot(same(first)));
+        expect(hosted(tester).state.status, FeedTopCommentStatus.ready);
+        expect(hosted(tester).state.hasCompletedLoop, isTrue);
+        expect(hosted(tester).state.isDismissed, isTrue);
+      });
+
+      testWidgets(
+        'updates a featured comment when another surface accepts moderation',
+        (tester) async {
+          stubVisibleComment();
+          final key = '1'.padLeft(64, '0');
+          final owner = nostr.getPublicKey(key);
+          final video = _video.copyWith(pubkey: owner, addressableDTag: 'root');
+          final latestEvents = LatestAddressableEvents();
+          addTearDown(latestEvents.dispose);
+          final loops = StreamController<void>.broadcast();
+          addTearDown(loops.close);
+          await tester.pumpWidget(
+            buildSubject(
+              enabled: true,
+              onMount: () {},
+              video: video,
+              latestEvents: latestEvents,
+              loopCompletions: loops.stream,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final first = hosted(tester);
+          loops.add(null);
+          await tester.pump();
+          expect(first.state.isOverlayVisible, isTrue);
+          when(
+            () => moderationRepository.loadModeration(
+              rootAddressableId: any(named: 'rootAddressableId'),
+            ),
+          ).thenAnswer(
+            (_) async => CommentModeration(hiddenCommentIds: {_topComment.id}),
+          );
+          latestEvents.remember(
+            nostr.Event(
+              owner,
+              30078,
+              [
+                ['d', 'divine:replies:34236:$owner:root'],
+                ['e', _topComment.id, '', 'hidden'],
+              ],
+              '',
+              createdAt: 1000,
+            )..sign(key),
+          );
+          await tester.pumpAndSettle();
+          expect(hosted(tester), isNot(same(first)));
+          expect(hosted(tester).state.status, FeedTopCommentStatus.empty);
+          expect(hosted(tester).state.isOverlayVisible, isFalse);
+        },
+      );
+
       testWidgets('no cubit and loads nothing while disabled', (tester) async {
         await tester.pumpWidget(buildSubject(enabled: false, onMount: () {}));
 

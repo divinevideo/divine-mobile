@@ -21,6 +21,8 @@ part 'feed_top_comment_state.dart';
 /// the sheet, which nests them under their parent. The creator's own comments,
 /// video replies, blank comments, pending placeholders and comments dated more
 /// than [maxFutureSkew] ahead are not candidates.
+/// Creator-hidden comments are excluded before votes and reply counts are
+/// ranked, using the same author-view exception as the comments sheet.
 ///
 /// The overlay shows once the video has finished its first loop and the top
 /// comment is known, whichever happens last, and stays hidden after the
@@ -30,20 +32,33 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
   FeedTopCommentCubit({
     required CommentsRepository commentsRepository,
     required LikesRepository likesRepository,
+    required CommentModerationRepository commentModerationRepository,
     required String rootEventId,
     required int rootEventKind,
     required String rootAuthorPubkey,
     required Stream<void> loopCompletions,
     String? rootAddressableId,
+    String? viewerPubkey,
+    Set<String> viewerBlockedAuthors = const {},
+    bool initialHasCompletedLoop = false,
+    bool initiallyDismissed = false,
     DateTime Function()? now,
   }) : _commentsRepository = commentsRepository,
        _likesRepository = likesRepository,
+       _commentModerationRepository = commentModerationRepository,
        _rootEventId = rootEventId,
        _rootEventKind = rootEventKind,
        _rootAuthorPubkey = rootAuthorPubkey,
        _rootAddressableId = rootAddressableId,
+       _viewerPubkey = viewerPubkey,
+       _viewerBlockedAuthors = Set.unmodifiable(viewerBlockedAuthors),
        _now = now ?? DateTime.now,
-       super(const FeedTopCommentState()) {
+       super(
+         FeedTopCommentState(
+           hasCompletedLoop: initialHasCompletedLoop,
+           isDismissed: initiallyDismissed,
+         ),
+       ) {
     _loopSubscription = loopCompletions.listen((_) => _onLoopCompleted());
   }
 
@@ -57,6 +72,9 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
 
   final CommentsRepository _commentsRepository;
   final LikesRepository _likesRepository;
+  final CommentModerationRepository _commentModerationRepository;
+  final String? _viewerPubkey;
+  final Set<String> _viewerBlockedAuthors;
   final String _rootEventId;
   final int _rootEventKind;
 
@@ -76,13 +94,18 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
 
     final List<Comment> comments;
     try {
-      final thread = await _commentsRepository.loadComments(
-        rootEventId: _rootEventId,
-        rootEventKind: _rootEventKind,
-        rootAddressableId: _rootAddressableId,
-        limit: commentPageSize,
-      );
+      final results = await Future.wait<Object>([
+        _commentsRepository.loadComments(
+          rootEventId: _rootEventId,
+          rootEventKind: _rootEventKind,
+          rootAddressableId: _rootAddressableId,
+          limit: commentPageSize,
+        ),
+        _loadModeration(),
+      ]);
       if (isClosed) return;
+      final thread = results[0] as CommentThread;
+      final moderation = results[1] as CommentModeration;
       // Read sources can still serve author-deleted comments. The repository
       // validates NIP-09 requests and fails open when the relay cannot answer.
       final deleted = await _commentsRepository.findAuthorDeletedComments(
@@ -90,7 +113,12 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
       );
       if (isClosed) return;
       comments = thread.comments
-          .where((comment) => !deleted.contains(comment.id))
+          .where(
+            (comment) =>
+                !deleted.contains(comment.id) &&
+                (comment.authorPubkey == _viewerPubkey ||
+                    !moderation.hides(comment)),
+          )
           .toList();
     } on CommentsRepositoryException catch (error, stackTrace) {
       _fail(error, stackTrace, isExpected: true);
@@ -125,6 +153,20 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
         status: FeedTopCommentStatus.ready,
         topComment: top,
       ),
+    );
+  }
+
+  /// Creator moderation for the default view, including local owner blocks
+  /// that have not reached the published list yet.
+  Future<CommentModeration> _loadModeration() async {
+    final coordinate = _rootAddressableId;
+    final moderation = coordinate == null || coordinate.isEmpty
+        ? CommentModeration.empty
+        : await _commentModerationRepository.loadModeration(
+            rootAddressableId: coordinate,
+          );
+    return moderation.withAutoHiddenAuthors(
+      _viewerPubkey == _rootAuthorPubkey ? _viewerBlockedAuthors : const {},
     );
   }
 
