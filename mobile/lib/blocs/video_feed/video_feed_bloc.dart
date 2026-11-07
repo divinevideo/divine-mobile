@@ -973,6 +973,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           }
           previousUntil = nextUntil;
           previousCursor = nextCursor;
+          // Save the skipped page's position so a failed fetch retries here.
+          emit(
+            state.copyWith(
+              paginationCursor: nextCursor,
+              clearPaginationCursor: nextCursor == null,
+              coordination: state.coordination.copyWith(
+                newVideosUntil: nextUntil,
+              ),
+            ),
+          );
           result = await _fetchVideosForSource(
             source,
             until: nextCursor == null ? nextUntil : null,
