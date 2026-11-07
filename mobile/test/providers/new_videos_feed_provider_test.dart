@@ -326,6 +326,43 @@ void main() {
     });
 
     group('loadMore', () {
+      test('ends on an until page that brings no older row', () async {
+        final author = _videos(1).single.pubkey;
+        final first = [
+          for (final video in _videos(3)) video.copyWith(pubkey: author),
+        ];
+        final sameSecond = _videos(1, idPrefix: 'same').single.copyWith(
+          pubkey: author,
+          createdAt: first.last.createdAt,
+        );
+        var untilRequests = 0;
+        when(
+          () => videosRepository.getNewVideos(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((call) async {
+          final until = call.namedArguments[#until] as int?;
+          if (until == null) {
+            return HomeFeedResult(videos: first, hasMore: true);
+          }
+          if (until == first.last.createdAt && untilRequests++ == 0) {
+            return HomeFeedResult(videos: [sameSecond], hasMore: true);
+          }
+          throw StateError('Unexpected request until $until');
+        });
+        final container = createContainer();
+        await container.read(newVideosFeedProvider.future);
+
+        await container.read(newVideosFeedProvider.notifier).loadMore();
+
+        final state = container.read(newVideosFeedProvider).requireValue;
+        expect(untilRequests, equals(1));
+        expect(state.videos, first.take(2));
+        expect(state.hasMoreContent, isFalse);
+      });
+
       test('ignores a late page from before refresh', () async {
         final oldPage = Completer<HomeFeedResult>();
         final oldPageStarted = Completer<void>();
