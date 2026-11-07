@@ -2945,7 +2945,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     }
 
     final renders = <String>[];
-    final lifted = await _liftBakedChromaKey(clip, renders);
+    final unkey = await _bakedChromaKeyRemoval(clip, renders);
     if (isClosed) {
       _deferOrphanedPaths([...?placeholder?.ownedFilePaths, ...renders]);
       return;
@@ -2969,6 +2969,13 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       );
       return;
     }
+
+    // The clip can have changed while its poster was taken, so it leaves the
+    // timeline as it is now, and keeps its key baked unless that key is still
+    // the one the poster was taken for.
+    final current = currentClips[currentIndex];
+    final lifted = _liftedChromaKey(current, keyedAs: clip, unkey: unkey);
+    if (unkey != null && lifted == null) _deferOrphanedPaths(renders);
 
     final newClips = List<DivineVideoClip>.of(currentClips);
     if (placeholder == null) {
@@ -2994,7 +3001,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
           previousClips: currentClips,
           // A layer is moved by keyframes of its own, on the canvas; the
           // clip's motion stays with the timeline.
-          detachedClip: (lifted?.clip ?? clip).copyWith(keyframes: const []),
+          detachedClip: (lifted?.clip ?? current).copyWith(
+            keyframes: const [],
+          ),
           placeholder: placeholder,
           bakedChromaKey: lifted?.baked,
         ),
@@ -3002,15 +3011,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     );
   }
 
-  /// [clip] with the green screen baked into its file taken off again, for a
-  /// detach, or `null` when it stays baked.
-  ///
-  /// On the timeline a key has to be burned into the file, which flattens the
-  /// removed area to black or to the chosen fill. A detached clip is drawn
-  /// over the track, so the layer can play the footage the key was applied to
-  /// and apply the same key live: the removed area then shows the track
-  /// underneath, and a later change to the key starts from the clean footage
-  /// instead of keying a fill that is already blended into the edges.
+  /// A write that takes the green screen baked into [clip]'s file off again
+  /// for a detach, so the layer can apply it live — see
+  /// [DetachedClipBakedChromaKey] — or `null` when the key stays baked.
   ///
   /// A colour or image fill moves along with the key, so the layer looks as
   /// the clip did. A library clip behind the subject stays baked: a layer has
@@ -3020,16 +3023,39 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   /// Writes a fresh poster from that footage, added to [renders]: a key baked
   /// right after the take moved the poster onto the keyed file, and under the
   /// live key that one would flash its fill while the layer's player loads.
-  Future<({DivineVideoClip clip, DetachedClipBakedChromaKey baked})?>
-  _liftBakedChromaKey(DivineVideoClip clip, List<String> renders) async {
+  Future<DivineVideoClip Function(DivineVideoClip)?> _bakedChromaKeyRemoval(
+    DivineVideoClip clip,
+    List<String> renders,
+  ) async {
+    final key = clip.chromaKey;
+    if (key == null || clip.chromaKeySourcePath == null) return null;
+    if (clip.video?.file?.path == null) return null;
+    if (key.backgroundType == ClipChromaKeyBackgroundType.video) return null;
+    return _removedColorMask(clip, renders);
+  }
+
+  /// [clip] with [unkey] applied, and the record of the key it took off, or
+  /// `null` when [clip] keeps its key baked.
+  ///
+  /// [unkey] was prepared from [keyedAs] before the poster await, so it only
+  /// applies while [clip] still carries that key on that file: a key changed
+  /// or taken off meanwhile describes footage [unkey] knows nothing about.
+  ({DivineVideoClip clip, DetachedClipBakedChromaKey baked})? _liftedChromaKey(
+    DivineVideoClip clip, {
+    required DivineVideoClip keyedAs,
+    required DivineVideoClip Function(DivineVideoClip)? unkey,
+  }) {
     final key = clip.chromaKey;
     final source = clip.chromaKeySourcePath;
     final video = clip.video?.file?.path;
-    if (key == null || source == null || video == null) return null;
-    if (key.backgroundType == ClipChromaKeyBackgroundType.video) return null;
-
-    final unkey = await _removedColorMask(clip, renders);
-    if (unkey == null) return null;
+    if (unkey == null || key == null || source == null || video == null) {
+      return null;
+    }
+    if (key != keyedAs.chromaKey ||
+        source != keyedAs.chromaKeySourcePath ||
+        video != keyedAs.video?.file?.path) {
+      return null;
+    }
     return (
       clip: unkey(clip),
       baked: DetachedClipBakedChromaKey(
