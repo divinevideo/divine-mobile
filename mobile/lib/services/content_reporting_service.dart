@@ -237,6 +237,12 @@ class ContentReportingService implements ReportChannelDriver {
     'unverified_excerpt',
   ];
 
+  /// Rumor tag naming the reported account on a private report's DM, which
+  /// the moderation service queues for review. A public report leaves it out
+  /// because its kind-1984 already reaches that queue. It is not a `p` tag:
+  /// under NIP-17 that would add the account to the moderation conversation.
+  static const String reportedPubkeyTagKey = 'reported_pubkey';
+
   final List<ContentReport> _reportHistory = [];
   bool _isInitialized = false;
 
@@ -422,9 +428,12 @@ class ContentReportingService implements ReportChannelDriver {
           dmBody,
           unverifiedMessageExcerpt: unverifiedMessageExcerpt,
         );
-        final reportDmTags = moderationTags.isEmpty
-            ? moderationDmTags(reason: reason)
-            : moderationTags;
+        final reportDmTags = [
+          ...(moderationTags.isEmpty
+              ? moderationDmTags(reason: reason)
+              : moderationTags),
+          if (!publishToRelays) [reportedPubkeyTagKey, authorPubkey],
+        ];
         final dmTags = [
           ...reportDmTags,
           if (unverifiedMessageExcerpt != null) unverifiedExcerptTag,

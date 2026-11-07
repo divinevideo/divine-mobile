@@ -68,7 +68,9 @@ and a ticket can be mirrored into a public issue, so neither is created. The
 reporter may also include the reported message. It travels only in that DM,
 under an "unverified excerpt" heading. Only moderators read that DM, so the
 reporter's details and the included message lose nothing but private keys:
-both are evidence, so an email or a handle in either stays.
+both are evidence, so an email or a handle in either stays. The DM names the
+reported account in a `reported_pubkey` tag, so the moderation service can
+queue it for review without anything leaving the encrypted message.
 
 The email redaction rule also redacts NIP-05 identifiers such as
 `name@divine.video`. That is intentional for public support payloads: NIP-05s

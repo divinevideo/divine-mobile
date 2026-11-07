@@ -2636,6 +2636,57 @@ void main() {
         );
       });
 
+      group('the reported account tag', () {
+        List<List<String>> reportedAccountTags(PendingReport row) => [
+          for (final tag in moderationPayload(row)['tags'] as List)
+            if ((tag as List).first ==
+                ContentReportingService.reportedPubkeyTagKey)
+              tag.cast<String>(),
+        ];
+
+        test('names the sender of a privately reported message, so the '
+            'moderation service can queue the account for review', () async {
+          final result = await private.reportContent(
+            eventId: rumorId,
+            authorPubkey: sender,
+            reason: ContentFilterReason.childSafety,
+            details: '',
+            publishToRelays: false,
+          );
+
+          expect(reportedAccountTags((await dao.getById(result.reportId!))!), [
+            [ContentReportingService.reportedPubkeyTagKey, sender],
+          ]);
+        });
+
+        test('names the account in a private account report', () async {
+          final result = await private.reportUser(
+            userPubkey: sender,
+            reason: ContentFilterReason.underageUser,
+            details: '',
+            publishToRelays: false,
+          );
+
+          expect(reportedAccountTags((await dao.getById(result.reportId!))!), [
+            [ContentReportingService.reportedPubkeyTagKey, sender],
+          ]);
+        });
+
+        // A public report reaches the review queue through its kind-1984, so
+        // naming the account in its DM as well would queue it twice.
+        test('is left off a public report', () async {
+          final result = await private.reportUser(
+            userPubkey: sender,
+            reason: ContentFilterReason.harassment,
+            details: '',
+          );
+
+          final row = (await dao.getById(result.reportId!))!;
+          expect(row.relayStatus, PendingReportChannelStatus.pending);
+          expect(reportedAccountTags(row), isEmpty);
+        });
+      });
+
       test('refuses an excerpt on a report that would also be published, '
           'without repeating the excerpt in the error', () {
         const excerpt = 'the message they sent me';

@@ -64,7 +64,9 @@ This policy is displayed to users in the report dialog.
    - A report made from a direct message (a message, or the account from a
      conversation or the inbox) is not published: it goes to the moderation
      account as an encrypted NIP-17 message, optionally with the reported
-     message as an unverified excerpt (#7340)
+     message as an unverified excerpt (#7340). The message names the
+     reported account in a `reported_pubkey` tag, which the moderation
+     service turns into a review item for that account
 
 2. **Report Monitoring**
    - Divine moderation team monitors `wss://relay.divine.video` for kind 1984 events
