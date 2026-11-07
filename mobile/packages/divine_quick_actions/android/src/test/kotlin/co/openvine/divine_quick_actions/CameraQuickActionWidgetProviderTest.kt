@@ -12,6 +12,7 @@ import android.os.Looper
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -23,7 +24,9 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.util.ReflectionHelpers
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
+import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -68,6 +71,26 @@ class CameraQuickActionWidgetProviderTest {
         assertEquals(
             QuickActionContract.TYPE_CAMERA,
             opened.getStringExtra(QuickActionContract.EXTRA_ACTION_TYPE)
+        )
+    }
+
+    @Test
+    fun runsTheUpdateOnABackgroundThreadByDefault() {
+        val widgetId = bindWidget(AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN)
+        val finishedOn = CompletableFuture<Thread>()
+        Mockito.doAnswer {
+            finishedOn.complete(Thread.currentThread())
+            null
+        }.`when`(broadcast).finish()
+
+        deliverUpdate(widgetId, receiver = CameraQuickActionWidgetProvider())
+
+        // The main looper stays paused, so only the update can finish the broadcast.
+        val updateThread = finishedOn.get(5, TimeUnit.SECONDS)
+        assertNotSame(Looper.getMainLooper().thread, updateThread)
+        assertEquals(
+            LinearLayout::class.java,
+            shadowOf(appWidgetManager).getViewFor(widgetId)?.javaClass
         )
     }
 
@@ -117,17 +140,20 @@ class CameraQuickActionWidgetProviderTest {
         return widgetId
     }
 
-    private fun deliverUpdate(widgetId: Int) {
+    private fun deliverUpdate(
+        widgetId: Int,
+        receiver: CameraQuickActionWidgetProvider = provider
+    ) {
         // The system hands each broadcast a pending result for goAsync().
         ReflectionHelpers.callInstanceMethod<Any?>(
-            provider,
+            receiver,
             "setPendingResult",
             ReflectionHelpers.ClassParameter.from(
                 BroadcastReceiver.PendingResult::class.java,
                 broadcast
             )
         )
-        provider.onReceive(
+        receiver.onReceive(
             context,
             Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
                 .putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(widgetId))
