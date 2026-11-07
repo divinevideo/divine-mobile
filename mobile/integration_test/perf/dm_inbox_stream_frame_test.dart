@@ -15,9 +15,11 @@
 //
 // * The ladder adds one layer at a time — writes alone, raw DAO watches,
 //   repository watches (row -> DmConversation mapping, before any debounce),
-//   then the bloc and badge cubit — and records the longest uninterrupted
-//   stretch of UI-isolate work during a write burst. A frame cannot start
-//   while that stretch runs, so it is the number that decides jank.
+//   then the badge cubit alone and the bloc with it — and records the longest
+//   uninterrupted stretch of UI-isolate work during a write burst. A frame
+//   cannot start while that stretch runs, so it is the number that decides
+//   jank. The "x4" steps keep the pre-#7923 shape, list and badge both on
+//   every row, as the baseline; the step after them is the shape since then.
 // * The frame trace renders a list that selects `visibleConversations` the
 //   way `InboxView` does, under a continuously running animation, and counts
 //   over-budget frames for an idle baseline, a burst, and a trickle.
@@ -426,8 +428,8 @@ void main() {
             }
           }
 
-          // What the bloc and the cubit each subscribe to: two each, and each
-          // maps every row before its debounce.
+          // The pre-#7923 shape: the list and the badge both watch every row,
+          // two streams each, and each maps every row before its debounce.
           void attachRepositoryWatches() {
             for (var i = 0; i < 2; i++) {
               subscriptions
@@ -459,6 +461,23 @@ void main() {
           attachRepositoryWatches();
           ladder['repoWatchesAgain'] = await phase(
             'repository watches x4 (again)',
+          );
+          await cancelAll();
+
+          // The shape since #7923: the list watches every row, the badge only
+          // the unread ones.
+          subscriptions.addAll([
+            account.repository.watchAcceptedConversations().listen((_) {}),
+            account.repository.watchPotentialRequests().listen((_) {}),
+            account.repository
+                .watchAcceptedConversations(unreadOnly: true)
+                .listen((_) {}),
+            account.repository
+                .watchPotentialRequests(unreadOnly: true)
+                .listen((_) {}),
+          ]);
+          ladder['repoWatchesUnreadBadge'] = await phase(
+            'repository watches, list full + badge unread-only',
           );
           await cancelAll();
 
@@ -576,6 +595,9 @@ void main() {
           final account = await tester.runAsync(
             () => _Account.open(size, variant),
           );
+          // Teardowns run last-registered first: bloc, cubit, then the
+          // database, and they run when an expectation fails too.
+          addTearDown(account!.close);
           final view = PlatformDispatcher.instance.views.first;
           final hz = view.display.refreshRate;
           final budgetMs = hz > 0 ? 1000 / hz : 16.67;
@@ -584,10 +606,11 @@ void main() {
 
           // The badge is app-shell-wide: alive before the inbox opens.
           final cubit = DmUnreadCountCubit(
-            dmRepository: account!.repository,
+            dmRepository: account.repository,
             followRepository: account.follows,
             contentBlocklistRepository: account.blocklist,
           );
+          addTearDown(cubit.close);
           final feedRows = await tester.runAsync(
             () => account.repository.watchAcceptedConversations().first,
           );
@@ -673,6 +696,7 @@ void main() {
             followRepository: account.follows,
             contentBlocklistRepository: account.blocklist,
           )..add(const ConversationListStarted());
+          addTearDown(bloc.close);
           await tester.pumpWidget(
             BlocProvider<ConversationListBloc>.value(
               value: bloc,
@@ -735,11 +759,6 @@ void main() {
           }
 
           await tester.pumpWidget(const SizedBox.shrink());
-          await tester.runAsync(() async {
-            await bloc.close();
-            await cubit.close();
-            await account.close();
-          });
         });
       }
     }

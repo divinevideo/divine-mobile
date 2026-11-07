@@ -131,8 +131,12 @@ _buildDm() {
   when(
     () => dm.userPubkeyStream,
   ).thenAnswer((_) => const Stream<String>.empty());
-  when(dm.watchAcceptedConversations).thenAnswer((_) => accepted.stream);
-  when(dm.watchPotentialRequests).thenAnswer((_) => potential.stream);
+  when(
+    () => dm.watchAcceptedConversations(unreadOnly: true),
+  ).thenAnswer((_) => accepted.stream);
+  when(
+    () => dm.watchPotentialRequests(unreadOnly: true),
+  ).thenAnswer((_) => potential.stream);
   return (dm: dm, accepted: accepted, potential: potential);
 }
 

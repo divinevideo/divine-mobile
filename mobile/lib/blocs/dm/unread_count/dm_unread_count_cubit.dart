@@ -33,8 +33,11 @@ import 'package:unified_logger/unified_logger.dart';
 /// cannot drift from the list. It
 /// intentionally does NOT replicate one list-only concern:
 ///
-/// * **Pagination** — the list renders one page; the badge counts the full
-///   accepted set (unpaginated) so it reflects total unread, not the page.
+/// * **Read rows** — the list needs every conversation; the badge reads only
+///   the unread ones, so a DM write no longer re-reads the whole inbox on
+///   every screen (#7923). The count is the same: every helper named above
+///   decides row by row, and the hidden-member pass only ever turns a row
+///   read, never unread.
 ///
 /// The pinned support row (#6283) IS counted, because the inbox renders it
 /// with an unread dot. That pulls one conversation out of the requests bucket
@@ -195,8 +198,8 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
               Object?,
               (List<DmConversation>, List<DmConversation>, String)
             >(
-              dmRepository.watchAcceptedConversations(),
-              dmRepository.watchPotentialRequests(),
+              dmRepository.watchAcceptedConversations(unreadOnly: true),
+              dmRepository.watchPotentialRequests(unreadOnly: true),
               followRepository.followingStream.startWith(const <String>[]),
               blocklistTicks,
               // Identity stream (#5374): the DAO streams emit cached rows before
@@ -242,7 +245,7 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
   }
 
   /// [conversations] read as the viewer sees them, through the same pass the
-  /// Messages list runs over the same two lists, so a group whose only unread
+  /// Messages list runs over its own two lists, so a group whose only unread
   /// messages are from members the viewer hides is not counted (#10150).
   ///
   /// Takes the repositories the current subscription was built with, so a
@@ -283,9 +286,9 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
     }
   }
 
-  /// Composes the visible Messages list (accepted ∪ followed-but-unreplied,
-  /// blocklist-filtered) and counts the unread ones — the same set the inbox
-  /// renders an unread dot for.
+  /// Composes the unread rows of the visible Messages list (accepted ∪
+  /// followed-but-unreplied, blocklist-filtered) and counts them — the same
+  /// set the inbox renders an unread dot for.
   int _countUnread({
     required List<DmConversation> accepted,
     required List<DmConversation> potentialRequests,

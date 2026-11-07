@@ -97,8 +97,12 @@ _buildDm() {
   when(
     () => dm.userPubkeyStream,
   ).thenAnswer((_) => const Stream<String>.empty());
-  when(dm.watchAcceptedConversations).thenAnswer((_) => accepted.stream);
-  when(dm.watchPotentialRequests).thenAnswer((_) => potential.stream);
+  when(
+    () => dm.watchAcceptedConversations(unreadOnly: true),
+  ).thenAnswer((_) => accepted.stream);
+  when(
+    () => dm.watchPotentialRequests(unreadOnly: true),
+  ).thenAnswer((_) => potential.stream);
   return (dm: dm, accepted: accepted, potential: potential);
 }
 
@@ -230,7 +234,9 @@ void main() {
         // has already subscribed to its repository with no consumer present.
         // Flipping either flag back to lazy leaves these subscriptions
         // un-created and turns the verifies red.
-        verify(dmA.dm.watchAcceptedConversations).called(1);
+        verify(
+          () => dmA.dm.watchAcceptedConversations(unreadOnly: true),
+        ).called(1);
         verify(notif.repo.watchUnreadCount).called(1);
         expect(guardedErrors, isEmpty);
         expect(tester.takeException(), isNull);
@@ -268,7 +274,9 @@ void main() {
 
         // The sync listeners forwarded the fresh repositories: the cubit now
         // watches dmB, so an unread conversation there reaches its state.
-        verify(dmB.dm.watchAcceptedConversations).called(1);
+        verify(
+          () => dmB.dm.watchAcceptedConversations(unreadOnly: true),
+        ).called(1);
 
         dmB.accepted.add([_unreadAccepted()]);
         dmB.potential.add(const []);

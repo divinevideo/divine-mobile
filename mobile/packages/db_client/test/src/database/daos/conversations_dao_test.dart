@@ -792,6 +792,98 @@ void main() {
       });
     });
 
+    group('unreadOnly watches (#7923)', () {
+      const owner = 'owner';
+
+      Future<void> seed(
+        String id, {
+        required bool sent,
+        required bool isRead,
+        String ownerPubkey = owner,
+        int timestamp = 1700000100,
+      }) => dao.upsertConversation(
+        id: id,
+        participantPubkeys: '["$ownerPubkey","peer_$id"]',
+        isGroup: false,
+        createdAt: 1700000000,
+        lastMessageTimestamp: timestamp,
+        isRead: isRead,
+        currentUserHasSent: sent,
+        ownerPubkey: ownerPubkey,
+      );
+
+      setUp(() async {
+        await seed('accepted_read', sent: true, isRead: true);
+        await seed('accepted_unread', sent: true, isRead: false);
+        await seed('request_read', sent: false, isRead: true);
+        await seed('request_unread', sent: false, isRead: false);
+        await seed(
+          'other_owner_unread',
+          sent: true,
+          isRead: false,
+          ownerPubkey: 'someone_else',
+        );
+      });
+
+      test('watchAcceptedConversations keeps only unread rows', () async {
+        final everything = await dao
+            .watchAcceptedConversations(ownerPubkey: owner)
+            .first;
+        expect(
+          everything.map((r) => r.id),
+          containsAll(['accepted_read', 'accepted_unread']),
+        );
+
+        final unread = await dao
+            .watchAcceptedConversations(ownerPubkey: owner, unreadOnly: true)
+            .first;
+
+        expect(unread.map((r) => r.id), equals(['accepted_unread']));
+      });
+
+      test(
+        'watchPotentialRequestConversations keeps only unread rows',
+        () async {
+          final unread = await dao
+              .watchPotentialRequestConversations(
+                ownerPubkey: owner,
+                unreadOnly: true,
+              )
+              .first;
+
+          expect(unread.map((r) => r.id), equals(['request_unread']));
+        },
+      );
+
+      test('a row leaves when read and returns on a new message', () async {
+        final emissions = <List<String>>[];
+        final subscription = dao
+            .watchAcceptedConversations(ownerPubkey: owner, unreadOnly: true)
+            .listen((rows) => emissions.add(rows.map((r) => r.id).toList()));
+        addTearDown(subscription.cancel);
+        await pumpEventQueue();
+
+        await dao.markAsRead('accepted_unread', ownerPubkey: owner);
+        await pumpEventQueue();
+        await seed(
+          'accepted_read',
+          sent: true,
+          isRead: false,
+          timestamp: 1700000200,
+        );
+        await pumpEventQueue();
+
+        expect(
+          emissions,
+          equals([
+            ['accepted_unread'],
+            <String>[],
+            ['accepted_read'],
+          ]),
+        );
+      });
+    });
+
     group('watchConversation', () {
       test('emits conversation when found', () async {
         await dao.upsertConversation(

@@ -153,13 +153,14 @@ void main() {
       when(
         () => dmRepository.userPubkeyStream,
       ).thenAnswer((_) => const Stream<String>.empty());
-      // No-arg stub: this matches only a call WITHOUT a limit, locking in that
-      // the badge counts the full (unpaginated) accepted set, not a page.
+      // Matches only an unread-only call WITHOUT a limit, locking in that the
+      // badge counts every unread conversation, not a page, and reads no read
+      // rows on each write (#7923).
       when(
-        () => dmRepository.watchAcceptedConversations(),
+        () => dmRepository.watchAcceptedConversations(unreadOnly: true),
       ).thenAnswer((_) => acceptedController.stream);
       when(
-        () => dmRepository.watchPotentialRequests(),
+        () => dmRepository.watchPotentialRequests(unreadOnly: true),
       ).thenAnswer((_) => potentialController.stream);
       when(
         () => followRepository.followingStream,
@@ -365,7 +366,9 @@ void main() {
 
       expect(cubit.state, equals(60));
       // The badge must subscribe without a limit (full count, not a page).
-      verify(() => dmRepository.watchAcceptedConversations()).called(1);
+      verify(
+        () => dmRepository.watchAcceptedConversations(unreadOnly: true),
+      ).called(1);
       _close(fake, cubit);
     });
 
@@ -713,10 +716,10 @@ void main() {
           () => dmRepository2.userPubkeyStream,
         ).thenAnswer((_) => const Stream<String>.empty());
         when(
-          dmRepository2.watchAcceptedConversations,
+          () => dmRepository2.watchAcceptedConversations(unreadOnly: true),
         ).thenAnswer((_) => acceptedController2.stream);
         when(
-          dmRepository2.watchPotentialRequests,
+          () => dmRepository2.watchPotentialRequests(unreadOnly: true),
         ).thenAnswer((_) => potentialController2.stream);
         when(
           () => followRepository2.followingStream,

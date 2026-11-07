@@ -11977,7 +11977,9 @@ class DmRepository {
   /// Watch conversations where the user has sent at least one message.
   ///
   /// Supports pagination via [limit]. These conversations are never
-  /// message requests.
+  /// message requests. With [unreadOnly], only unread ones: for a reader that
+  /// counts unread conversations, so a write re-reads those rather than the
+  /// whole inbox (#7923).
   ///
   /// A conversation whose participants collapse to the viewer alone is
   /// omitted. Divine does not support a conversation with only yourself
@@ -11990,13 +11992,17 @@ class DmRepository {
   /// and malformed data can leave an already-sent row on this stream instead.
   /// Startup maintenance removes known rows; this filter remains as defense in
   /// depth so the Messages list and unread badge cannot disagree (#4976).
-  Stream<List<DmConversation>> watchAcceptedConversations({int? limit}) {
+  Stream<List<DmConversation>> watchAcceptedConversations({
+    int? limit,
+    bool unreadOnly = false,
+  }) {
     final owner = _ownerPubkey;
     if (owner == null) return Stream.value(const <DmConversation>[]);
     return _watchConversationRows(
       () => _conversationsDao.watchAcceptedConversations(
         limit: limit,
         ownerPubkey: owner,
+        unreadOnly: unreadOnly,
       ),
     ).map(
       (conversations) => conversations
@@ -12013,12 +12019,16 @@ class DmRepository {
   /// These are potential message requests. Final classification (based on
   /// follow state) is applied by [classifyPotentialRequests]. Returned
   /// without pagination since the list is typically small and needed in full.
-  Stream<List<DmConversation>> watchPotentialRequests() {
+  /// [unreadOnly] narrows it as it does for [watchAcceptedConversations].
+  Stream<List<DmConversation>> watchPotentialRequests({
+    bool unreadOnly = false,
+  }) {
     final owner = _ownerPubkey;
     if (owner == null) return Stream.value(const <DmConversation>[]);
     return _watchConversationRows(
       () => _conversationsDao.watchPotentialRequestConversations(
         ownerPubkey: owner,
+        unreadOnly: unreadOnly,
       ),
     );
   }
