@@ -222,6 +222,27 @@ void main() {
         );
       },
     );
+    test(
+      'legacy copies without an original delta require explicit recovery',
+      () {
+        final draft = CuratedListEditDraft(
+          baseline: base,
+          desired: base.copyWith(name: 'Legacy copy'),
+          canReplay: false,
+        );
+        expect(CuratedListDraftReconciler.reconcile(draft, base), isNull);
+        final visible = base.copyWith(localEditDraft: draft);
+        expect(
+          CuratedListDraftReconciler.stage(
+            visible,
+            visible.copyWith(description: 'More intent'),
+          ).canReplay,
+          isFalse,
+        );
+        final restored = CuratedList.fromJson(visible.toJson());
+        expect(restored.localEditDraft!.canReplay, isFalse);
+      },
+    );
     test('a draft never moves to a different owner coordinate', () {
       expect(
         replay(base.copyWith(name: 'Renamed'), base.copyWith(pubkey: 'e' * 64)),

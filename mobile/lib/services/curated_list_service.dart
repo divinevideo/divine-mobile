@@ -16,6 +16,7 @@ import 'package:openvine/services/curated_list_relay_gateway.dart';
 import 'package:openvine/services/curated_lists/curated_list_account_authority.dart';
 import 'package:openvine/services/curated_lists/curated_list_default_publication_authority.dart';
 import 'package:openvine/services/curated_lists/curated_list_default_signed_intent_store.dart';
+import 'package:openvine/services/curated_lists/curated_list_draft_archive.dart';
 import 'package:openvine/services/curated_lists/curated_list_publisher.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
 import 'package:openvine/services/curated_lists/curated_list_recovery_storage.dart';
@@ -34,6 +35,7 @@ export 'package:openvine/services/curated_lists/curated_list_account_authority.d
 
 part 'curated_lists/curated_list_deletion.dart';
 part 'curated_lists/curated_list_draft_recovery.dart';
+part 'curated_lists/curated_list_draft_restore.dart';
 part 'curated_lists/curated_list_playlist.dart';
 part 'curated_lists/curated_list_publication.dart';
 part 'curated_lists/curated_list_recovery_service.dart';
@@ -70,12 +72,14 @@ class CuratedListService extends ChangeNotifier {
     OnListSubscribedCallback? onListSubscribed,
     OnListUnsubscribedCallback? onListUnsubscribed,
     CuratedDefaultSignedIntentStore? defaultSignedIntentStore,
+    CuratedListDraftArchive? draftArchive,
     Duration relaySyncTimeout = const Duration(seconds: 10),
     Duration maxPublishClockDrift = const Duration(seconds: 60),
   }) : _nostrService = nostrService,
        _authService = authService,
        _prefs = prefs,
        _defaultSignedIntentStore = defaultSignedIntentStore,
+       _draftArchive = draftArchive,
        _sessions =
            sessionCoordinator ??
            CuratedListSessionCoordinator.forPreferences(
@@ -174,6 +178,9 @@ class CuratedListService extends ChangeNotifier {
   final AuthService _authService;
   final SharedPreferences _prefs;
   final CuratedDefaultSignedIntentStore? _defaultSignedIntentStore;
+  final CuratedListDraftArchive? _draftArchive;
+  Future<bool>? _draftRestoration;
+  bool _draftsRestored = false;
   late final CuratedListAccountAuthority _accountAuthority;
   late final CuratedDefaultPublicationAuthority _defaultAuthority;
   late final CuratedListRelayEvidence _relayEvidence;
@@ -282,25 +289,29 @@ class CuratedListService extends ChangeNotifier {
   }) {
     if (!isReadyForMutations) return Future.value(cancelled as T);
     final owner = _relayGateway.currentAuthenticatedPubkey();
-    return _sessionLease.runListOperation(
-      getListById(listId)?.authorScopedId ?? listId,
-      () async {
-        if (!await _reconcileListBeforeMutation(
-          listId,
-          owner,
-          recovering: recovering,
-          allowOfflineDraft: allowOfflineDraft,
-        )) {
-          return cancelled as T;
-        }
-        try {
-          return await operation();
-        } finally {
-          _offlineListOperations.remove(listId);
-        }
-      },
-      isCurrentOwner: () => isReadyForMutations && _isCurrent(owner),
-      cancelled: cancelled,
+    return _afterDraftRestoration(
+      owner,
+      () => _sessionLease.runListOperation(
+        getListById(listId)?.authorScopedId ?? listId,
+        () async {
+          if (!await _reconcileListBeforeMutation(
+            listId,
+            owner,
+            recovering: recovering,
+            allowOfflineDraft: allowOfflineDraft,
+          )) {
+            return cancelled as T;
+          }
+          try {
+            return await operation();
+          } finally {
+            _offlineListOperations.remove(listId);
+          }
+        },
+        isCurrentOwner: () => isReadyForMutations && _isCurrent(owner),
+        cancelled: cancelled,
+      ),
+      cancelled: cancelled as T,
     );
   }
 
@@ -383,6 +394,11 @@ class CuratedListService extends ChangeNotifier {
         _isInitializing = false;
         notifyListeners();
         return;
+      }
+      if (!await _ensureDraftsRestored(
+        _relayGateway.currentAuthenticatedPubkey(),
+      )) {
+        throw const CuratedListDraftArchiveException();
       }
       await _recoverDeletedSubscriptions();
       if (!isCurrentSession) return;
@@ -906,8 +922,14 @@ class CuratedListService extends ChangeNotifier {
 
   /// Discards pending local edits only after an explicit owner choice and a
   /// complete, readable relay revision. Failed recovery retains the draft.
-  Future<bool> discardLocalEditsAndAdoptRelay(String listId) =>
-      _discardLocalEditsAndAdoptRelay(listId);
+  Future<bool> discardLocalEditsAndAdoptRelay(String listId) {
+    final owner = _relayGateway.currentAuthenticatedPubkey();
+    return _afterDraftRestoration(
+      owner,
+      () => _discardLocalEditsAndAdoptRelay(listId),
+      cancelled: false,
+    );
+  }
 
   /// Check if video is in a specific list
   bool isVideoInList(String listId, String videoEventId) {
@@ -1200,6 +1222,15 @@ class CuratedListService extends ChangeNotifier {
 
   /// Deletes the captured owned coordinate after confirming any relay deletion.
   Future<bool> deleteOwnedList(String listId) {
+    final owner = _relayGateway.currentAuthenticatedPubkey();
+    return _afterDraftRestoration(
+      owner,
+      () => _deleteOwnedListAfterRestoration(listId),
+      cancelled: false,
+    );
+  }
+
+  Future<bool> _deleteOwnedListAfterRestoration(String listId) {
     if (!isReadyForMutations) return Future.value(false);
     final list = getListById(listId);
     if (list == null) {

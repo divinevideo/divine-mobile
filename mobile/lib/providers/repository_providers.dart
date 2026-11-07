@@ -54,6 +54,7 @@ import 'package:openvine/services/challenges/challenge_app_session.dart';
 import 'package:openvine/services/challenges/challenge_video_policy.dart';
 import 'package:openvine/services/challenges/sqlite_challenge_store.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_draft_archive.dart';
 import 'package:openvine/services/curated_lists/curated_list_default_signed_intent_store.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/hive_box_opener.dart';
@@ -771,6 +772,9 @@ class CuratedListsState extends _$CuratedListsState {
     ref.watch(currentAccountActivationReceiptProvider);
 
     final service = CuratedListService(
+      draftArchive: SecureCuratedListDraftArchive(
+        ref.watch(flutterSecureStorageProvider),
+      ),
       defaultSignedIntentStore: CuratedDefaultSignedIntentStore(
         ref.watch(databaseProvider).personalEventsDao,
       ),

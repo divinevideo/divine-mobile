@@ -37,6 +37,7 @@ abstract final class CuratedListDraftReconciler {
     return CuratedListEditDraft(
       baseline: draft?.baseline ?? previous.copyWith(pubkey: updated.pubkey),
       desired: CuratedList.fromJson(value..remove('localEditDraft')),
+      canReplay: draft?.canReplay ?? true,
     );
   }
 
@@ -54,6 +55,7 @@ abstract final class CuratedListDraftReconciler {
     CuratedListEditDraft draft,
     CuratedList remote,
   ) {
+    if (!draft.canReplay) return null;
     final baseline = draft.baseline;
     final desired = draft.desired;
     if (baseline.authorScopedId != remote.authorScopedId ||

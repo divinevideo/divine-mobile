@@ -56,6 +56,7 @@ import 'package:openvine/services/pending_action_service.dart';
 import 'package:openvine/services/product_event_queue.dart';
 import 'package:openvine/services/profile_save_retry_service.dart';
 import 'package:openvine/services/report_retry_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_draft_archive.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/view_event_publisher.dart';
 import 'package:openvine/services/view_event_retry_service.dart';
@@ -742,6 +743,9 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
   final accountWrites = ref.watch(accountStateWriteBarrierProvider);
   final service = UserDataCleanupService(
     prefs,
+    listDraftArchive: SecureCuratedListDraftArchive(
+      ref.watch(flutterSecureStorageProvider),
+    ),
     onAccountStateWritesStop: accountWrites.stop,
   );
 
