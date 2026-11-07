@@ -455,7 +455,8 @@ void main() {
         find.byWidgetPredicate(
           (widget) =>
               widget is Semantics &&
-              widget.properties.label == l10n.dmReactionChipFailedA11yLabel,
+              widget.properties.label ==
+                  l10n.dmReactionChipUnconfirmedA11yLabel('😂'),
         ),
         findsOneWidget,
       );
@@ -538,6 +539,213 @@ void main() {
       );
 
       semantics.dispose();
+    });
+
+    // A settled own reaction reads the plain label. `received` is reachable on
+    // an own row: a reaction made on another device, or re-synced, arrives
+    // from relays with no local publish status (#8697).
+    group('settled own reaction', () {
+      for (final status in [
+        DmReactionPublishStatus.sent,
+        DmReactionPublishStatus.blocked,
+        DmReactionPublishStatus.received,
+      ]) {
+        testWidgets('announces the plain own-reaction label when '
+            '${status.name}', (tester) async {
+          final semantics = tester.ensureSemantics();
+          primeState([
+            makeReaction(
+              id: 'own-${status.name}',
+              reactorPubkey: ownerPubkey,
+              emoji: '🔥',
+              publishStatus: status,
+            ),
+          ]);
+
+          await open(tester);
+
+          // The row offers Remove, so the label comes from the status
+          // switch rather than the closed-thread branch above it.
+          expect(find.text(l10n.dmReactionRemoveAction), findsOneWidget);
+          // Read from the semantics tree: what a screen reader is given.
+          expect(
+            find.bySemanticsLabel(
+              RegExp(RegExp.escape(l10n.dmReactionChipOwnA11yLabel('🔥'))),
+            ),
+            findsOneWidget,
+          );
+
+          semantics.dispose();
+        });
+      }
+    });
+
+    // Each row is one screen-reader stop. The row's label used to sit on a node
+    // with no tap action while the tap went to a second node reading the
+    // visible text, so activating the announced label did nothing.
+    group('screen reader', () {
+      testWidgets('a settled own row is one stop that removes the reaction', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        primeState([
+          makeReaction(id: 'own1', reactorPubkey: ownerPubkey, emoji: '🔥'),
+        ]);
+
+        await open(tester);
+
+        final label = l10n.dmReactionChipOwnA11yLabel('🔥');
+        expect(
+          tester.getSemantics(find.bySemanticsLabel(label)),
+          isSemantics(
+            label: label,
+            hint: l10n.dmReactionRemoveAction,
+            isButton: true,
+            hasTapAction: true,
+            isFocusable: true,
+          ),
+        );
+        // The visible "Remove" is not a second stop of its own.
+        expect(
+          find.bySemanticsLabel(
+            RegExp(RegExp.escape(l10n.dmReactionRemoveAction)),
+          ),
+          findsNothing,
+        );
+
+        tester.semantics.tap(find.semantics.byLabel(label));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => cubit.add(
+            const ConversationReactionToggled(
+              conversationId: conversationId,
+              messageId: messageId,
+              messageAuthorPubkey: otherPubkey,
+              emoji: '🔥',
+            ),
+          ),
+        ).called(1);
+        semantics.dispose();
+      });
+
+      testWidgets('a failed own row is one stop that retries the reaction', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        primeState([
+          makeReaction(
+            id: 'own1',
+            reactorPubkey: ownerPubkey,
+            emoji: '🔥',
+            publishStatus: DmReactionPublishStatus.failed,
+          ),
+        ]);
+
+        await open(tester);
+
+        final label = l10n.dmReactionChipUnconfirmedA11yLabel('🔥');
+        expect(
+          tester.getSemantics(find.bySemanticsLabel(label)),
+          isSemantics(label: label, isButton: true, hasTapAction: true),
+        );
+        expect(
+          find.bySemanticsLabel(
+            RegExp(RegExp.escape(l10n.dmReactionRetryAction)),
+          ),
+          findsNothing,
+        );
+
+        tester.semantics.tap(find.semantics.byLabel(label));
+        await tester.pump();
+
+        verify(
+          () => cubit.add(
+            const ConversationReactionRetryRequested(
+              rumorId: 'own1',
+              messageId: messageId,
+              messageAuthorPubkey: otherPubkey,
+              emoji: '🔥',
+            ),
+          ),
+        ).called(1);
+        semantics.dispose();
+      });
+
+      testWidgets('a pending own row is announced but cannot be activated', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        primeState([
+          makeReaction(
+            id: 'own1',
+            reactorPubkey: ownerPubkey,
+            emoji: '🔥',
+            publishStatus: DmReactionPublishStatus.pending,
+          ),
+        ]);
+
+        await open(tester, settle: false);
+
+        final label = l10n.dmReactionChipPendingA11yLabel('🔥');
+        expect(
+          tester.getSemantics(find.bySemanticsLabel(label)),
+          isSemantics(label: label, isButton: false, hasTapAction: false),
+        );
+        semantics.dispose();
+      });
+
+      testWidgets('an own row on a closed thread offers no action', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        primeState([
+          makeReaction(id: 'own1', reactorPubkey: ownerPubkey, emoji: '🔥'),
+        ]);
+
+        await open(tester, removalEnabled: false);
+
+        final label = l10n.dmReactionChipOwnA11yLabel('🔥');
+        expect(
+          tester.getSemantics(find.bySemanticsLabel(label)),
+          isSemantics(
+            label: label,
+            hint: '',
+            isButton: false,
+            hasTapAction: false,
+          ),
+        );
+        semantics.dispose();
+      });
+
+      testWidgets("another reactor's row reads its label alone", (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        primeState([
+          makeReaction(
+            id: 'other1',
+            reactorPubkey: otherPubkey,
+            emoji: '😂',
+            publishStatus: DmReactionPublishStatus.received,
+          ),
+        ]);
+
+        await open(tester);
+
+        // The reactor's name varies with profile resolution; the rest of the
+        // label does not, and nothing else may be appended to it.
+        final reactedWith = l10n.dmReactionChipOtherA11yLabel('', '😂').trim();
+        final row = find.bySemanticsLabel(
+          RegExp('${RegExp.escape(reactedWith)}\$'),
+        );
+        expect(row, findsOneWidget);
+        expect(
+          tester.getSemantics(row),
+          isSemantics(isButton: false, hasTapAction: false),
+        );
+        semantics.dispose();
+      });
     });
 
     // Official branding follows recorded custody (#9963). A reactor can be any
@@ -698,14 +906,12 @@ void main() {
           // assistive tech, so it has to name the state too — a screen-reader
           // user would otherwise hear the generated handle the sheet no longer
           // shows.
-          // The row merges its label with the avatar's and the title's, so
-          // assert on the merged announcement rather than one node: every part
-          // of it has to name the state, and none of them may carry the
-          // identity the sheet stopped showing.
+          // The row's one node carries that label alone; the avatar and the
+          // title are excluded, so nothing may add the hidden identity back.
           final announced = tester.semantics.find(find.byType(ListTile)).label;
           expect(
             announced,
-            contains(
+            equals(
               l10n.dmReactionChipOtherA11yLabel(
                 l10n.profileDeletedAccountName,
                 '😂',

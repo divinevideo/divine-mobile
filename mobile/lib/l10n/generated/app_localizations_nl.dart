@@ -6444,10 +6444,6 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Reactie mislukt, dubbeltik om opnieuw te proberen';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Je reactie $emoji kon niet worden verstuurd. Dubbeltik om het opnieuw te proberen';
   }

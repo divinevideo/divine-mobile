@@ -6498,10 +6498,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Reaction failed, double tap to retry';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Couldn\'t send your $emoji reaction. Double tap to try again';
   }

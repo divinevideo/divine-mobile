@@ -213,75 +213,106 @@ class _ReactorRow extends ConsumerWidget {
     // trailing collapses to a bare emoji, so an own reaction keeps the plain
     // descriptive label rather than promising an action wired to nothing.
     final String label;
+    final String? hint;
     if (!isOwn) {
       label = context.l10n.dmReactionChipOtherA11yLabel(
         isIdentityResolving ? context.l10n.commonLoading : name,
         reaction.emoji,
       );
+      hint = null;
     } else if (!canRetract) {
       label = context.l10n.dmReactionChipOwnA11yLabel(reaction.emoji);
+      hint = null;
     } else {
-      label = switch (reaction.publishStatus) {
-        DmReactionPublishStatus.pending =>
+      // The retry labels already say what a tap does; a settled reaction's
+      // label does not, so its hint names the visible Remove action.
+      (label, hint) = switch (reaction.publishStatus) {
+        DmReactionPublishStatus.pending => (
           context.l10n.dmReactionChipPendingA11yLabel(reaction.emoji),
-        DmReactionPublishStatus.failed =>
-          context.l10n.dmReactionChipFailedA11yLabel,
-        DmReactionPublishStatus.unconfirmed =>
+          null,
+        ),
+        // Both are retried the same way, and the label names the emoji so
+        // the row says which reaction a retry sends again.
+        DmReactionPublishStatus.failed ||
+        DmReactionPublishStatus.unconfirmed => (
           context.l10n.dmReactionChipUnconfirmedA11yLabel(reaction.emoji),
-        DmReactionPublishStatus.removalRefused =>
+          null,
+        ),
+        DmReactionPublishStatus.removalRefused => (
           context.l10n.dmReactionRemovalRefusedA11yLabel(reaction.emoji),
-        _ => context.l10n.dmReactionChipOwnA11yLabel(reaction.emoji),
+          null,
+        ),
+        // An own `received` row came from another device or a re-sync.
+        DmReactionPublishStatus.sent ||
+        DmReactionPublishStatus.blocked ||
+        DmReactionPublishStatus.received => (
+          context.l10n.dmReactionChipOwnA11yLabel(reaction.emoji),
+          context.l10n.dmReactionRemoveAction,
+        ),
       };
     }
-    return Semantics(
-      button: canRetract && !isPending,
-      label: label,
-      child: Material(
-        type: MaterialType.transparency,
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 4,
-          ),
-          // cornerRadius == size / 2 renders a true circle whose border is
-          // also circular. Wrapping the rounded-square UserAvatar in ClipOval
-          // would slice its border into arcs (the "cut border" artifact).
-          leading: IdentitySkeletonizer(
-            isLoading: isIdentityResolving,
-            excludeSemantics: true,
-            child: UserAvatar(
-              imageUrl: avatar.imageUrl,
-              name: visualName,
-              size: _avatarSize,
-              cornerRadius: _avatarSize / 2,
-              contentOverride: avatar.contentOverride,
+    final VoidCallback? onTap = (canRetract && !isPending)
+        ? () => _onOwnTap(
+            context,
+            isFailed: isFailed,
+            isRemovalRefused: isRemovalRefused,
+          )
+        : null;
+    // One screen-reader stop per row. The tile's visible text is excluded so
+    // the label stands alone, and merging keeps the tile's own tap and focus
+    // on that one node; otherwise the label sat on a node with no action.
+    return MergeSemantics(
+      child: Semantics(
+        button: onTap != null,
+        label: label,
+        hint: hint,
+        child: Material(
+          type: MaterialType.transparency,
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 4,
             ),
-          ),
-          title: IdentitySkeletonizer(
-            isLoading: isIdentityResolving,
-            excludeSemantics: true,
-            child: Text(
-              visualName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: VineTheme.titleSmallFont(
-                color: context.vineColors.onSurface,
+            // cornerRadius == size / 2 renders a true circle whose border is
+            // also circular. Wrapping the rounded-square UserAvatar in ClipOval
+            // would slice its border into arcs (the "cut border" artifact).
+            leading: ExcludeSemantics(
+              child: IdentitySkeletonizer(
+                isLoading: isIdentityResolving,
+                excludeSemantics: true,
+                child: UserAvatar(
+                  imageUrl: avatar.imageUrl,
+                  name: visualName,
+                  size: _avatarSize,
+                  cornerRadius: _avatarSize / 2,
+                  contentOverride: avatar.contentOverride,
+                ),
               ),
             ),
+            title: ExcludeSemantics(
+              child: IdentitySkeletonizer(
+                isLoading: isIdentityResolving,
+                excludeSemantics: true,
+                child: Text(
+                  visualName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: VineTheme.titleSmallFont(
+                    color: context.vineColors.onSurface,
+                  ),
+                ),
+              ),
+            ),
+            trailing: ExcludeSemantics(
+              child: _Trailing(
+                emoji: reaction.emoji,
+                showAction: canRetract,
+                isFailed: isFailed || isRemovalRefused,
+                isPending: isPending,
+              ),
+            ),
+            onTap: onTap,
           ),
-          trailing: _Trailing(
-            emoji: reaction.emoji,
-            showAction: canRetract,
-            isFailed: isFailed || isRemovalRefused,
-            isPending: isPending,
-          ),
-          onTap: (canRetract && !isPending)
-              ? () => _onOwnTap(
-                  context,
-                  isFailed: isFailed,
-                  isRemovalRefused: isRemovalRefused,
-                )
-              : null,
         ),
       ),
     );

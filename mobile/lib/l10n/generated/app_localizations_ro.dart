@@ -6586,10 +6586,6 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Reacția a eșuat, atinge de două ori pentru a reîncerca';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Reacția ta $emoji nu a putut fi trimisă. Atinge de două ori pentru a reîncerca';
   }

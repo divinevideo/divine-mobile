@@ -4447,7 +4447,6 @@
   "dmReactionChipOwnA11yLabel": "Reacția ta: {emoji}",
   "dmReactionChipOtherA11yLabel": "{name} a reacționat cu {emoji}",
   "dmReactionChipPendingA11yLabel": "Se trimite reacția: {emoji}",
-  "dmReactionChipFailedA11yLabel": "Reacția a eșuat, atinge de două ori pentru a reîncerca",
   "dmReactionChipUnconfirmedA11yLabel": "Reacția ta {emoji} nu a putut fi trimisă. Atinge de două ori pentru a reîncerca",
   "dmReactionChipRetryAnnouncement": "Se reîncearcă reacția",
   "dmFormatBold": "Aldin",

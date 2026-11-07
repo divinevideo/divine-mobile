@@ -6348,10 +6348,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Tepki başarısız, tekrar denemek için çift dokun';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return '$emoji tepkin gönderilemedi. Tekrar denemek için çift dokun';
   }

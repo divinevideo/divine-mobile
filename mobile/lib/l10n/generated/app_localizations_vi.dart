@@ -6373,10 +6373,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Cảm xúc thất bại, chạm hai lần để thử lại';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Không gửi được cảm xúc $emoji của bạn. Chạm hai lần để thử lại';
   }

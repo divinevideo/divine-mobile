@@ -6067,9 +6067,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel => 'リアクションに失敗しました。ダブルタップで再試行';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return '$emoji のリアクションを送信できませんでした。ダブルタップで再試行';
   }
