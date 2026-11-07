@@ -72,6 +72,10 @@ const _accountSizes = [100, 1000, 5000];
 /// reported only.
 const _gatedSize = 1000;
 
+/// A single UI-isolate stall this long fails a gated window: the dropped-frame
+/// count cannot see a freeze that starts the window.
+const _frozenUiStallMs = 100.0;
+
 /// Conversation writes in one burst, issued as fast as Drift accepts them:
 /// the shape of a post-reinstall history drain landing rows one by one.
 const _burstWrites = 200;
@@ -133,7 +137,12 @@ class _Account {
       ),
     );
     final account = _Account._(size, variant, dir, db, rng);
-    await account._seed();
+    try {
+      await account._seed();
+    } on Object {
+      await account.close();
+      rethrow;
+    }
     return account;
   }
 
@@ -234,10 +243,13 @@ class _Account {
   }
 
   Future<void> close() async {
-    await repository.stopListening();
-    blocklist.dispose();
-    await db.close();
-    _dir.deleteSync(recursive: true);
+    try {
+      await repository.stopListening();
+      blocklist.dispose();
+      await db.close();
+    } finally {
+      _dir.deleteSync(recursive: true);
+    }
   }
 
   static String _json(List<String> pubkeys) =>
@@ -264,9 +276,14 @@ class _StallSampler {
     });
   }
 
-  ({double maxMs, double over8Ms, int over8, int over16}) stop() {
+  /// Stops sampling; safe to call more than once.
+  void cancel() {
     _timer?.cancel();
     _watch.stop();
+  }
+
+  ({double maxMs, double over8Ms, int over8, int over16}) stop() {
+    cancel();
     final gaps = _gapsMicros.map((g) => g / 1000).toList();
     return (
       maxMs: gaps.fold(0, max),
@@ -444,13 +461,17 @@ void main() {
             ];
             final sampler = _StallSampler()..start();
             final wall = Stopwatch()..start();
-            await _burst(account);
-            await _settle();
-            wall.stop();
-            final s = sampler.stop();
-            for (final watcher in watchers) {
-              await watcher.cancel();
+            try {
+              await _burst(account);
+              await _settle();
+              wall.stop();
+            } finally {
+              sampler.cancel();
+              for (final watcher in watchers) {
+                await watcher.cancel();
+              }
             }
+            final s = sampler.stop();
             await account.restoreSeededReadState();
             report.writeln(
               'N=$size ${variant.name} $layer: '
@@ -572,6 +593,7 @@ void main() {
             followRepository: account.follows,
             contentBlocklistRepository: account.blocklist,
           );
+          addTearDown(badgeAlone.close);
           await _counted(badgeAlone);
           ladder['badgeAlone'] = await phase(
             'badge cubit alone',
@@ -584,11 +606,13 @@ void main() {
             followRepository: account.follows,
             contentBlocklistRepository: account.blocklist,
           )..add(const ConversationListStarted());
+          addTearDown(bloc.close);
           final cubit = DmUnreadCountCubit(
             dmRepository: account.repository,
             followRepository: account.follows,
             contentBlocklistRepository: account.blocklist,
           );
+          addTearDown(cubit.close);
           await bloc.stream
               .firstWhere((s) => s.status == ConversationListStatus.loaded)
               .timeout(const Duration(seconds: 30));
@@ -708,6 +732,7 @@ void main() {
                   int frames,
                   int over,
                   int dropped,
+                  int actFrames,
                   double stall,
                   int badge,
                   int list,
@@ -731,15 +756,21 @@ void main() {
             ];
             final sampler = _StallSampler()..start();
             final wall = Stopwatch()..start();
-            await act();
-            wall.stop();
-            // The engine reports FrameTimings about once a second.
-            await Future<void>.delayed(const Duration(seconds: 2));
-            final s = sampler.stop();
-            binding.removeTimingsCallback(collect);
-            for (final watcher in watchers) {
-              await watcher.cancel();
+            var actFrames = 0;
+            try {
+              await act();
+              wall.stop();
+              actFrames = timings.length;
+              // The engine reports FrameTimings about once a second.
+              await Future<void>.delayed(const Duration(seconds: 2));
+            } finally {
+              sampler.cancel();
+              binding.removeTimingsCallback(collect);
+              for (final watcher in watchers) {
+                await watcher.cancel();
+              }
             }
+            final s = sampler.stop();
             double ms(Duration d) => d.inMicroseconds / 1000;
             final build = timings.map((t) => ms(t.buildDuration)).toList()
               ..sort();
@@ -777,6 +808,7 @@ void main() {
             }
             over[label] = (
               frames: timings.length,
+              actFrames: actFrames,
               over: overBudget,
               dropped: dropped,
               stall: s.maxMs,
@@ -785,6 +817,7 @@ void main() {
             );
             report.writeln(
               'N=$size ${variant.name} $label: frames=${timings.length} '
+              '($actFrames while acting) '
               'in ${wall.elapsedMilliseconds}ms+2000ms dropped=$dropped '
               'over-budget=$overBudget (late start=$late) '
               'build p50/p99/max=${_fmt(p(build, .5))}/${_fmt(p(build, .99))}/'
@@ -833,6 +866,7 @@ void main() {
             for (final e in over.entries)
               e.key: {
                 'frames': e.value.frames,
+                'framesWhileActing': e.value.actFrames,
                 'overBudget': e.value.over,
                 'dropped': e.value.dropped,
                 'longestStallMs': e.value.stall,
@@ -870,9 +904,9 @@ void main() {
             reason: 'a bloc or cubit failed while it was being measured',
           );
           expect(
-            burst.frames,
-            greaterThan(30),
-            reason: 'the burst must render frames',
+            burst.actFrames,
+            greaterThan(0),
+            reason: 'the burst must render frames while it runs',
           );
           if (size == _gatedSize) {
             void expectNoWorseThanIdle(String idleLabel, String label) {
@@ -884,6 +918,11 @@ void main() {
                           phase.frames)
                       .ceil() +
                   2;
+              expect(
+                phase.stall,
+                lessThan(_frozenUiStallMs),
+                reason: 'N=$size ${variant.name} $label froze the UI isolate',
+              );
               expect(
                 phase.over + phase.dropped,
                 lessThanOrEqualTo(allowed),
