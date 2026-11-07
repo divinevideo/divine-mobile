@@ -169,7 +169,11 @@ Future<void> _openVideoEditorFromRecorder(
       ? context.push(VideoEditorScreen.path)
       : context.push(VideoMetadataScreen.path);
 
-  await awaitPushTransition(context);
+  // A route popped during its entrance animation never covers the recorder, so
+  // the transition wait alone would never resolve: the camera would never come
+  // back and the editor navigation would never end. Stop waiting once the route
+  // has returned; the release and re-init below then run as for any return.
+  await Future.any<void>([awaitPushTransition(context), navigation]);
   if (bloc.isClosed) return;
   await _pauseCameraForNavigation(bloc);
   if (recorderMode.hasVideoEditor) {

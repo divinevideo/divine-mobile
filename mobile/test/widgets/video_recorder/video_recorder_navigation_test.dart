@@ -486,6 +486,30 @@ void main() {
 
         expect(find.text('editor'), findsOneWidget);
       });
+
+      testWidgets('openVideoEditorFromRecorder opens the editor again after '
+          'it was closed during its entrance animation', (tester) async {
+        await tester.pumpWidget(buildHarness());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('open-editor')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        // Popped before it covers the recorder, as Android back can do.
+        GoRouter.of(tester.element(find.text('editor'))).pop();
+        await tester.pumpAndSettle();
+        expect(find.text('editor'), findsNothing);
+        // The camera comes back as after any other return, which also
+        // releases the recording lock set before the push.
+        verify(
+          () => recorderBloc.add(const VideoRecorderInitializeRequested()),
+        ).called(1);
+
+        await tester.tap(find.byKey(const Key('open-editor')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('editor'), findsOneWidget);
+      });
     });
 
     group('when restore resolves to terminal unauthenticated', () {
