@@ -300,7 +300,7 @@ class CuratedListService extends ChangeNotifier {
             recovering: recovering,
             allowOfflineDraft: allowOfflineDraft,
           )) {
-            return cancelled as T;
+            return cancelled;
           }
           try {
             return await operation();
