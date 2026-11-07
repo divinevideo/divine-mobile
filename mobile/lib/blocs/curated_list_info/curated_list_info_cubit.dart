@@ -96,7 +96,6 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
       _currentOwnerPubkey() == _openingOwnerPubkey;
 
   final CuratedListVideo? _video;
-  List<String>? _collaboratorEditBaseline;
 
   /// Refreshes saved delivery and permissions without replacing unsaved edits.
   ///
@@ -221,9 +220,9 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   }) {
     _refreshRecoveryHold();
     if (!state.canEdit || isClosed || !isSessionCurrent) return;
-    if (!state.collaboratorsEdited) {
-      _collaboratorEditBaseline = List.of(state.storedCollaborators);
-    }
+    final baseline = state.collaboratorsEdited
+        ? state.collaboratorEditBaseline
+        : List<String>.unmodifiable(state.storedCollaborators);
     final neverOffered = state.collaboratorPubkeys.where(
       (pubkey) => !offered.contains(pubkey),
     );
@@ -236,6 +235,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
     emitIfOpen(
       state.copyWith(
         collaboratorPubkeys: next,
+        collaboratorEditBaseline: baseline,
         collaboratorsEdited: true,
         status: CuratedListInfoStatus.editing,
       ),
@@ -454,7 +454,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
 
       // Keep the draft's baseline even if background sync refreshed storage.
       final collaboratorBaseline =
-          _collaboratorEditBaseline ?? state.storedCollaborators;
+          state.collaboratorEditBaseline ?? state.storedCollaborators;
       // Only an explicit permissions edit or privacy flip changes collaborators.
       final writesCollaborators =
           (visibilityWillChange && !isPublic) ||
