@@ -4132,9 +4132,11 @@ void main() {
       bloc.add(const ConversationListSearchQueryChanged('pizza'));
       // Wait for the staged name resolution to settle, so the only thing that
       // could emit afterwards is the repository swap under test.
-      final before = await bloc.stream.firstWhere(
-        (s) => s.searchQuery == 'pizza' && s.profileNames.isNotEmpty,
-      );
+      final before = await bloc.stream
+          .firstWhere(
+            (s) => s.searchQuery == 'pizza' && s.profileNames.isNotEmpty,
+          )
+          .timeout(settleTimeout);
 
       final emitted = <ConversationListState>[];
       final subscription = bloc.stream.listen(emitted.add);
@@ -4214,9 +4216,9 @@ void main() {
         await load(bloc);
 
         bloc.add(const ConversationListSearchQueryChanged('alice'));
-        final state = await bloc.stream.firstWhere(
-          (s) => s.profileNames.containsKey(_testPubkey2),
-        );
+        final state = await bloc.stream
+            .firstWhere((s) => s.profileNames.containsKey(_testPubkey2))
+            .timeout(settleTimeout);
 
         expect(
           state.profileNames.keys,
@@ -4353,12 +4355,14 @@ void main() {
         acceptedController.add([
           _createConversation(id: 'pizza', lastMessageContent: 'pizza friday?'),
         ]);
-        await bloc.stream.firstWhere(
-          (s) => s.status == ConversationListStatus.loaded,
-        );
+        await bloc.stream
+            .firstWhere((s) => s.status == ConversationListStatus.loaded)
+            .timeout(settleTimeout);
 
         bloc.add(const ConversationListSearchQueryChanged('alice'));
-        await bloc.stream.firstWhere((s) => s.searchQuery == 'alice');
+        await bloc.stream
+            .firstWhere((s) => s.searchQuery == 'alice')
+            .timeout(settleTimeout);
         // Alice is not in the list yet, so nothing matches.
         expect(bloc.state.visibleConversations, isEmpty);
 
@@ -4373,9 +4377,11 @@ void main() {
           ),
         ]);
 
-        final state = await bloc.stream.firstWhere(
-          (s) => s.visibleConversations.any((c) => c.id == 'alice'),
-        );
+        final state = await bloc.stream
+            .firstWhere(
+              (s) => s.visibleConversations.any((c) => c.id == 'alice'),
+            )
+            .timeout(settleTimeout);
         expect(
           state.visibleConversations.map((c) => c.id),
           contains('alice'),
