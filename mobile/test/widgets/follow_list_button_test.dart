@@ -1,5 +1,5 @@
-// ABOUTME: Widget tests for FollowListButton, the Follow/Following pill in a
-// ABOUTME: list screen's app bar.
+// ABOUTME: Widget tests for FollowListButton, the Follow/Following button in a
+// ABOUTME: list header's action row, or a compact pill in an app bar.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +15,7 @@ void main() {
       WidgetTester tester, {
       required bool isFollowing,
       bool isBusy = false,
+      bool compact = false,
       VoidCallback? onPressed,
     }) {
       return tester.pumpWidget(
@@ -26,6 +27,7 @@ void main() {
               child: FollowListButton(
                 isFollowing: isFollowing,
                 isBusy: isBusy,
+                compact: compact,
                 onPressed: onPressed ?? () {},
               ),
             ),
@@ -49,6 +51,38 @@ void main() {
 
         expect(find.text(l10n.listFollowingButton), findsOneWidget);
         expect(find.text(l10n.listFollowButton), findsNothing);
+      });
+
+      testWidgets('Follow is primary and Following is secondary', (
+        tester,
+      ) async {
+        await pumpButton(tester, isFollowing: false);
+        expect(
+          tester.widget<DivineButton>(find.byType(DivineButton)).type,
+          DivineButtonType.primary,
+        );
+
+        await pumpButton(tester, isFollowing: true);
+        expect(
+          tester.widget<DivineButton>(find.byType(DivineButton)).type,
+          DivineButtonType.secondary,
+        );
+      });
+
+      testWidgets('fills its slot by default', (tester) async {
+        await pumpButton(tester, isFollowing: false);
+
+        final button = tester.widget<DivineButton>(find.byType(DivineButton));
+        expect(button.expanded, isTrue);
+        expect(button.size, DivineButtonSize.base);
+      });
+
+      testWidgets('is a small pill when compact', (tester) async {
+        await pumpButton(tester, isFollowing: false, compact: true);
+
+        final button = tester.widget<DivineButton>(find.byType(DivineButton));
+        expect(button.expanded, isFalse);
+        expect(button.size, DivineButtonSize.small);
       });
     });
 

@@ -1404,12 +1404,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Tiada video tersedia';
 
   @override
-  String get explorePeopleLists => 'Senarai Orang';
-
-  @override
-  String get exploreVideoLists => 'Senarai Video';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Ralat memuatkan senarai. Sila cuba lagi.';
 
@@ -5267,7 +5261,9 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'Oleh ';
+  String listByAuthor(String name) {
+    return 'oleh $name';
+  }
 
   @override
   String get listDone => 'Siap';
@@ -5277,6 +5273,15 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'Cipta Senarai Baharu';
+
+  @override
+  String get listTypeSheetTitle => 'Senarai baharu';
+
+  @override
+  String get listTypeVideoList => 'Senarai video';
+
+  @override
+  String get listTypePeopleList => 'Senarai orang';
 
   @override
   String get listNewPeopleList => 'Senarai orang baharu';
@@ -5351,7 +5356,13 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Kongsi senarai';
+  String get listShareButton => 'Kongsi';
+
+  @override
+  String get listManageButton => 'Urus';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Urus orang';
 
   @override
   String get listShareFailed => 'Senarai ini tidak dapat dikongsi. Cuba lagi.';

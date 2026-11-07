@@ -290,11 +290,12 @@ void main() {
     }
 
     Future<void> openOwnerPicker(WidgetTester tester) async {
-      // The member-controls slice moves this action into the owner's menu.
+      // Owners reach the add-people picker through Manage and the roster.
       expect(find.byTooltip(strings.peopleListsActionsTooltip), findsOneWidget);
-      await tester.tap(find.byTooltip(strings.peopleListsActionsTooltip));
+      await tester.tap(find.text(strings.listManageButton));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(strings.peopleListsAddPeopleTooltip));
+      expect(find.byType(PeopleListMembersScreen), findsOneWidget);
+      await tester.tap(find.byTooltip(strings.peopleListsAddPeopleTooltip));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.byType(AddPeopleToListScreen), findsOneWidget);
@@ -485,6 +486,7 @@ void main() {
           findsNothing,
         );
         expect(find.byTooltip(strings.peopleListsActionsTooltip), findsNothing);
+        expect(find.text(strings.listManageButton), findsNothing);
         expect(find.text('Own cached list'), findsNothing);
         expect(find.text('Public list'), findsWidgets);
         verify(

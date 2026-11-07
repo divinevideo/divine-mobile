@@ -18,7 +18,10 @@ import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_action_buttons.dart';
+import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
+import 'package:openvine/widgets/share_list_button.dart';
 import 'package:riverpod/misc.dart' show Override;
 
 import '../helpers/finders.dart';
@@ -186,6 +189,9 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    Finder manageVideosButton() =>
+        find.widgetWithText(DivineButton, l10n.listManageButton);
+
     group('navigation', () {
       testWidgets('back button pops when the router can pop', (tester) async {
         final goRouter = MockGoRouter();
@@ -245,7 +251,7 @@ void main() {
         expect(find.text('Puppets'), findsOneWidget);
         expect(find.text(l10n.listVideoCount(3)), findsOneWidget);
         expect(find.text(l10n.listVisibilityPrivate), findsOneWidget);
-        expect(find.text(l10n.listByAuthorPrefix), findsNothing);
+        expect(find.byType(ListAuthorByline), findsNothing);
       });
 
       testWidgets("shows author attribution for someone else's list", (
@@ -274,8 +280,13 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(find.text(l10n.listByAuthorPrefix), findsOneWidget);
+        expect(find.byType(ListAuthorByline), findsOneWidget);
         expect(find.text(l10n.listVideoCount(3)), findsOneWidget);
+        // The byline sits between the title and the video count.
+        expect(
+          tester.getTopLeft(find.byType(ListAuthorByline)).dy,
+          lessThan(tester.getTopLeft(find.text(l10n.listVideoCount(3))).dy),
+        );
         expect(find.text(l10n.listVisibilityPublic), findsNothing);
       });
 
@@ -624,17 +635,15 @@ void main() {
         await tester.pump();
 
         expect(find.text(l10n.listFollowButton), findsOneWidget);
-        expect(findByTooltip(l10n.listShareAction), findsOneWidget);
+        expect(find.byType(ShareListButton), findsOneWidget);
         expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
 
-        // Share is the rightmost control in the row, after the follow pill.
-        final followRight = tester
-            .getTopRight(find.text(l10n.listFollowButton))
-            .dx;
-        final shareLeft = tester
-            .getTopLeft(findByTooltip(l10n.listShareAction))
-            .dx;
-        expect(shareLeft, greaterThan(followRight));
+        // Follow and Share split the header's last row, Follow first.
+        final follow = tester.getRect(find.byType(FollowListButton));
+        final share = tester.getRect(find.byType(ShareListButton));
+        expect(share.left, greaterThan(follow.right));
+        expect(share.width, follow.width);
+        expect(share.top, follow.top);
       });
 
       testWidgets('follow pill reads Following when subscribed', (
@@ -667,7 +676,7 @@ void main() {
           await tester.pump();
           await tester.pump();
 
-          expect(findByTooltip(l10n.listShareAction), findsOneWidget);
+          expect(find.byType(ShareListButton), findsOneWidget);
           expect(find.text('From the relay.'), findsOneWidget);
         },
       );
@@ -675,6 +684,7 @@ void main() {
       testWidgets('keeps share hidden when the discovered list is private', (
         tester,
       ) async {
+        isSubscribed = false;
         final discovered = CuratedList(
           id: 'external-list',
           name: 'External List',
@@ -689,8 +699,40 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(findByTooltip(l10n.listShareAction), findsNothing);
+        // Its videos are sealed to the author: nothing to follow or share.
+        expect(find.byType(ShareListButton), findsNothing);
+        expect(find.byType(FollowListButton), findsNothing);
       });
+
+      testWidgets(
+        'keeps Following on a followed list its author made private',
+        (
+          tester,
+        ) async {
+          final discovered = CuratedList(
+            id: 'external-list',
+            name: 'External List',
+            pubkey: 'external-pubkey',
+            isPublic: false,
+            videoEventIds: const [],
+            createdAt: DateTime(2026),
+            updatedAt: DateTime(2026),
+          );
+
+          await tester.pumpWidget(buildSubject(discoveredList: discovered));
+          await tester.pump();
+          await tester.pump();
+
+          // The follower still needs a way to unfollow it.
+          expect(find.text(l10n.listFollowingButton), findsOneWidget);
+          expect(find.byType(ShareListButton), findsNothing);
+          await tester.tap(find.byType(FollowListButton));
+          await tester.pumpAndSettle();
+          verify(
+            () => mockService.unsubscribeFromList('external-list'),
+          ).called(1);
+        },
+      );
 
       testWidgets('subscribing caches the relay-resolved list', (
         tester,
@@ -802,7 +844,7 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(findByTooltip(l10n.listShareAction), findsNothing);
+        expect(find.byType(ShareListButton), findsNothing);
       });
 
       testWidgets('tapping the pill toggles the subscription', (tester) async {
@@ -968,7 +1010,65 @@ void main() {
         expect(appBar.customActions, isEmpty);
       });
 
-      testWidgets('sheet offers edit, manage posts, share, and delete', (
+      testWidgets('header offers Manage videos and Share for a public list', (
+        tester,
+      ) async {
+        stubOwnedList(videoEventIds: const ['one']);
+
+        await tester.pumpWidget(
+          buildSubject(
+            listId: 'owned-list',
+            listName: 'Owned List',
+            videoEvents: [_videoEvent()],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        final manage = tester.getRect(manageVideosButton());
+        final share = tester.getRect(find.byType(ShareListButton));
+        expect(share.left, greaterThan(manage.right));
+        expect(share.width, manage.width);
+        // The same gap above the grid as the people-list page.
+        expect(
+          tester
+                  .getTopLeft(find.bySemanticsIdentifier('video_thumbnail_0'))
+                  .dy -
+              share.bottom,
+          kListHeroBottomPadding,
+        );
+        expect(find.byType(FollowListButton), findsNothing);
+        final manageButton = tester.widget<DivineButton>(manageVideosButton());
+        expect(manageButton.type, DivineButtonType.secondary);
+        // A short label beside a video icon; screen readers hear the full
+        // action.
+        expect(manageButton.leadingIcon, DivineIconName.play);
+        expect(manageButton.semanticLabel, l10n.listManageVideosAction);
+      });
+
+      testWidgets('a private list leaves Manage videos the whole row', (
+        tester,
+      ) async {
+        stubOwnedList(isPublic: false);
+
+        await tester.pumpWidget(
+          buildSubject(
+            listId: 'owned-list',
+            listName: 'Owned List',
+            isPublic: false,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(ShareListButton), findsNothing);
+        final screenWidth =
+            tester.view.physicalSize.width / tester.view.devicePixelRatio;
+        // The header's 16pt side padding is the only space left beside it.
+        expect(tester.getSize(manageVideosButton()).width, screenWidth - 32);
+      });
+
+      testWidgets('sheet offers edit and delete; manage and share sit below', (
         tester,
       ) async {
         stubOwnedList();
@@ -981,9 +1081,16 @@ void main() {
         await openOwnerSheet(tester);
 
         expect(find.text(l10n.listEditInfoAction), findsOneWidget);
-        expect(find.text(l10n.listManageVideosAction), findsOneWidget);
-        expect(find.text(l10n.listShareAction), findsOneWidget);
         expect(find.text(l10n.listDeleteAction), findsOneWidget);
+        // Manage videos and Share are the header's buttons, not sheet tiles.
+        expect(find.text(l10n.listShareButton), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(BottomSheet),
+            matching: find.text(l10n.listManageVideosAction),
+          ),
+          findsNothing,
+        );
         // Reporting your own list stays disabled, as it is for videos.
         expect(find.text(l10n.listReportAction), findsNothing);
       });
@@ -1009,12 +1116,12 @@ void main() {
 
         tester.semantics.tap(
           find.semantics.byPredicate(
-            (node) => node.identifier == 'list_manage_posts_option',
+            (node) => node.identifier == 'list_edit_info_option',
           ),
         );
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.listRemoveVideosButton(0)), findsOneWidget);
+        expect(find.byType(ListInfoForm), findsOneWidget);
         semantics.dispose();
       });
 
@@ -1022,29 +1129,22 @@ void main() {
         tester,
       ) async {
         stubOwnedList();
-        final semantics = tester.ensureSemantics();
 
         await tester.pumpWidget(
           buildSubject(listId: 'owned-list', listName: 'Owned List'),
         );
         await tester.pump();
-        await openOwnerSheet(tester);
+        await tester.pump();
 
-        final node = find.semantics
-            .byPredicate(
-              (node) => node.identifier == 'list_manage_posts_option',
-            )
-            .evaluate()
-            .single;
-        expect(node, isSemantics(hasEnabledState: true, isEnabled: false));
-
-        await tester.tap(find.text(l10n.listManageVideosAction));
+        expect(
+          tester.widget<DivineButton>(manageVideosButton()).onPressed,
+          isNull,
+        );
+        await tester.tap(manageVideosButton());
         await tester.pumpAndSettle();
 
-        // The tap is inert: no manage mode, and the sheet stays up.
+        // The tap is inert: no manage mode.
         expect(find.text(l10n.listRemoveVideosButton(0)), findsNothing);
-        expect(find.text(l10n.listManageVideosAction), findsOneWidget);
-        semantics.dispose();
       });
 
       testWidgets('disables manage posts when the videos fail to load', (
@@ -1068,13 +1168,15 @@ void main() {
         );
         await tester.pump();
         await tester.pump();
-        await openOwnerSheet(tester);
 
-        await tester.tap(find.text(l10n.listManageVideosAction));
-        await tester.pumpAndSettle();
-
+        // The error view replaces the header, so there is nothing to manage.
+        expect(
+          tester
+              .widgetList<DivineButton>(manageVideosButton())
+              .every((button) => button.onPressed == null),
+          isTrue,
+        );
         expect(find.text(l10n.listRemoveVideosButton(0)), findsNothing);
-        expect(find.text(l10n.listManageVideosAction), findsOneWidget);
       });
 
       testWidgets("edit list info opens the sheet on the list's own values", (
@@ -1109,7 +1211,7 @@ void main() {
         expect(find.bySemanticsLabel(l10n.listSave), findsOneWidget);
       });
 
-      testWidgets('sheet hides share for a list without an author', (
+      testWidgets('hides Share for a list without an author', (
         tester,
       ) async {
         stubOwnedList(pubkey: null);
@@ -1119,9 +1221,10 @@ void main() {
         );
         await tester.pump();
         await tester.pump();
+        // Sharing needs the author for the list's web address.
+        expect(find.byType(ShareListButton), findsNothing);
         await openOwnerSheet(tester);
 
-        expect(find.text(l10n.listShareAction), findsNothing);
         expect(find.text(l10n.listEditInfoAction), findsOneWidget);
         expect(find.text(l10n.listDeleteAction), findsOneWidget);
       });
@@ -1271,8 +1374,7 @@ void main() {
 
     group('manage posts mode', () {
       Future<void> enterManageMode(WidgetTester tester) async {
-        await openOwnerSheet(tester);
-        await tester.tap(find.text(l10n.listManageVideosAction));
+        await tester.tap(manageVideosButton());
         await tester.pumpAndSettle();
       }
 

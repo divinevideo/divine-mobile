@@ -1452,12 +1452,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Keine Videos verfügbar';
 
   @override
-  String get explorePeopleLists => 'Personen-Listen';
-
-  @override
-  String get exploreVideoLists => 'Video-Listen';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Fehler beim Laden der Listen. Bitte versuch es nochmal.';
 
@@ -5340,7 +5334,9 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'Von ';
+  String listByAuthor(String name) {
+    return 'von $name';
+  }
 
   @override
   String get listDone => 'Fertig';
@@ -5350,6 +5346,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'Neue Liste erstellen';
+
+  @override
+  String get listTypeSheetTitle => 'Neue Liste';
+
+  @override
+  String get listTypeVideoList => 'Videoliste';
+
+  @override
+  String get listTypePeopleList => 'Personenliste';
 
   @override
   String get listNewPeopleList => 'Neue Personenliste';
@@ -5424,7 +5429,13 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Liste teilen';
+  String get listShareButton => 'Teilen';
+
+  @override
+  String get listManageButton => 'Verwalten';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Personen verwalten';
 
   @override
   String get listShareFailed =>

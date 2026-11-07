@@ -1421,12 +1421,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Inga videor tillgängliga';
 
   @override
-  String get explorePeopleLists => 'Personlistor';
-
-  @override
-  String get exploreVideoLists => 'Videolistor';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Fel vid inläsning av listor. Försök igen.';
 
@@ -5264,7 +5258,9 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'Av ';
+  String listByAuthor(String name) {
+    return 'av $name';
+  }
 
   @override
   String get listDone => 'Klar';
@@ -5274,6 +5270,15 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'Skapa ny lista';
+
+  @override
+  String get listTypeSheetTitle => 'Ny lista';
+
+  @override
+  String get listTypeVideoList => 'Videolista';
+
+  @override
+  String get listTypePeopleList => 'Personlista';
 
   @override
   String get listNewPeopleList => 'Ny personlista';
@@ -5348,7 +5353,13 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Dela lista';
+  String get listShareButton => 'Dela';
+
+  @override
+  String get listManageButton => 'Hantera';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Hantera personer';
 
   @override
   String get listShareFailed => 'Kunde inte dela listan. Försök igen.';

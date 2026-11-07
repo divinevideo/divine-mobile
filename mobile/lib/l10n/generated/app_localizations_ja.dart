@@ -1308,12 +1308,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exploreNoVideosAvailable => '動画がないよ';
 
   @override
-  String get explorePeopleLists => 'ピープルリスト';
-
-  @override
-  String get exploreVideoLists => 'ビデオリスト';
-
-  @override
   String get exploreErrorLoadingLists => 'リストの読み込みに失敗。もう一回試してみて。';
 
   @override
@@ -4954,7 +4948,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => '作成者: ';
+  String listByAuthor(String name) {
+    return '作成者: $name';
+  }
 
   @override
   String get listDone => '完了';
@@ -4964,6 +4960,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listCreateNewList => '新しいリストを作る';
+
+  @override
+  String get listTypeSheetTitle => '新しいリスト';
+
+  @override
+  String get listTypeVideoList => '動画リスト';
+
+  @override
+  String get listTypePeopleList => '人リスト';
 
   @override
   String get listNewPeopleList => '新しい人リスト';
@@ -5036,7 +5041,13 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'リストを共有';
+  String get listShareButton => 'シェア';
+
+  @override
+  String get listManageButton => '管理';
+
+  @override
+  String get peopleListsManagePeopleButton => 'ユーザーを管理';
 
   @override
   String get listShareFailed => 'リストを共有できなかった。もう一度試してね。';
