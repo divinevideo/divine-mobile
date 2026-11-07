@@ -50,7 +50,6 @@ void main() {
       RenderClipPlaceholderFn? renderClipPlaceholder,
       void Function()? onFinalClipInvalidated,
       ExtractPosterFn? extractPoster,
-      DeferFileCleanupFn? deferFileCleanup,
     }) => ClipEditorBloc(
       onFinalClipInvalidated: onFinalClipInvalidated ?? () {},
       saveClipToLibrary: ({required clip}) async => false,
@@ -60,7 +59,6 @@ void main() {
           renderClipPlaceholder ??
           ({required fill, required source, taskId}) async => null,
       extractPoster: extractPoster,
-      deferFileCleanup: deferFileCleanup,
     );
 
     ClipEditorBloc seeded({
@@ -68,13 +66,11 @@ void main() {
       void Function()? onFinalClipInvalidated,
       List<DivineVideoClip>? withClips,
       ExtractPosterFn? extractPoster,
-      DeferFileCleanupFn? deferFileCleanup,
     }) {
       final bloc = buildBloc(
         renderClipPlaceholder: renderClipPlaceholder,
         onFinalClipInvalidated: onFinalClipInvalidated,
         extractPoster: extractPoster,
-        deferFileCleanup: deferFileCleanup,
       );
       addTearDown(bloc.close);
       return bloc..add(ClipEditorInitialized(withClips ?? clips));
@@ -507,69 +503,6 @@ void main() {
 
         expect(result.detachedClip.video?.file?.path, '/documents/b_keyed.mp4');
         expect(result.bakedChromaKey, isNull);
-      });
-
-      test('hands the fresh poster to the reaper when the clip is deleted '
-          'meanwhile', () async {
-        final gate = Completer<ThumbnailFileResult?>();
-        final queued = <String>[];
-        final bloc = seeded(
-          withClips: [_clip('a'), keyed(), _clip('c')],
-          extractPoster: ({required videoPath, required timestamp}) =>
-              gate.future,
-          deferFileCleanup: (paths) => queued.addAll(paths.nonNulls),
-        );
-        await bloc.stream.first;
-
-        bloc.add(const ClipEditorClipDetachRequested(clipId: 'b'));
-        await pumpEventQueue();
-        bloc.add(const ClipEditorClipRemoved('b'));
-        await bloc.stream.firstWhere(
-          (s) => s.clips.every((c) => c.id != 'b'),
-        );
-
-        gate.complete(
-          ThumbnailFileResult(
-            path: '${tempDir.path}/fresh_poster.jpg',
-            timestamp: Duration.zero,
-          ),
-        );
-        final state = await bloc.stream.firstWhere(
-          (s) => s.lastDetachResult != null,
-        );
-
-        expect(state.lastDetachResult, isA<ClipDetachDiscarded>());
-        expect(queued, contains('${tempDir.path}/fresh_poster.jpg'));
-      });
-
-      test('hands the fresh poster to the reaper when the editor closes '
-          'meanwhile', () async {
-        final gate = Completer<ThumbnailFileResult?>();
-        final started = Completer<void>();
-        final queued = <String>[];
-        final bloc = buildBloc(
-          extractPoster: ({required videoPath, required timestamp}) {
-            started.complete();
-            return gate.future;
-          },
-          deferFileCleanup: (paths) => queued.addAll(paths.nonNulls),
-        )..add(ClipEditorInitialized([_clip('a'), keyed(), _clip('c')]));
-        await bloc.stream.first;
-
-        bloc.add(const ClipEditorClipDetachRequested(clipId: 'b'));
-        await started.future;
-        final closing = bloc.close();
-        gate.complete(
-          ThumbnailFileResult(
-            path: '${tempDir.path}/fresh_poster.jpg',
-            timestamp: Duration.zero,
-          ),
-        );
-        await closing;
-        await pumpEventQueue();
-
-        // No layer will ever play the poster the closed editor took.
-        expect(queued, contains('${tempDir.path}/fresh_poster.jpg'));
       });
     });
 
