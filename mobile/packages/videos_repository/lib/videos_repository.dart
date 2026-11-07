@@ -12,6 +12,7 @@ export 'src/db_video_local_storage.dart';
 export 'src/following_video_feed_session.dart';
 export 'src/home_feed_result.dart';
 export 'src/in_memory_feed_cache.dart';
+export 'src/new_feed_video_filter.dart';
 export 'src/popular_videos_page.dart';
 export 'src/profile_video_merge.dart';
 export 'src/recommendation_session_seed.dart';

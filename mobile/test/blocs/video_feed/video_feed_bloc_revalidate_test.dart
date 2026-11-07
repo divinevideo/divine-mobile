@@ -120,13 +120,52 @@ void main() {
         homeFeedCache: homeFeedCache,
       );
 
+      test('caps the cached New window and its fresh splice', () async {
+        final cached = [
+          _video('a' * 64),
+          _video('b' * 64),
+          _video('c' * 64),
+          _video('d' * 64).copyWith(pubkey: '1' * 64),
+        ];
+        final fresh = [
+          _video('e' * 64),
+          _video('f' * 64),
+          _video('1' * 64).copyWith(pubkey: '2' * 64),
+        ];
+        when(() => homeFeedCache.readVideos(pubkey: null, mode: 'latest'))
+            .thenAnswer((_) async => cached);
+        when(
+          () => videosRepository.getNewVideos(
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((_) => freshResult.future);
+        final bloc = buildBloc();
+        addTearDown(bloc.close);
+        final cachedReady = bloc.stream.firstWhere((s) => s.videos.isNotEmpty);
+
+        bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+        final cachedState = await cachedReady;
+
+        expect(cachedState.videos, [cached[0], cached[1], cached[3]]);
+        freshResult.complete(HomeFeedResult(videos: fresh, hasMore: false));
+        await pumpEventQueue();
+        expect(bloc.state.videos, [cached[0], cached[1], fresh[2]]);
+        expect(cached, hasLength(4));
+        expect(fresh, hasLength(3));
+      });
+
       test(
         'late cached-window pagination cannot replace a fresh cursor',
         () async {
           final cached = _video(''.padLeft(64, 'a')).copyWith(createdAt: 1000);
           final fresh = _video(''.padLeft(64, 'b')).copyWith(createdAt: 9000);
           final stale = _video(''.padLeft(64, 'c')).copyWith(createdAt: 999);
-          final next = _video(''.padLeft(64, 'd')).copyWith(createdAt: 8999);
+          final next = _video(''.padLeft(64, 'd')).copyWith(
+            createdAt: 8999,
+            pubkey: '1' * 64,
+          );
           final oldPage = Completer<HomeFeedResult>();
           final oldPageStarted = Completer<void>();
           when(() => homeFeedCache.readVideos(pubkey: null, mode: 'latest'))
