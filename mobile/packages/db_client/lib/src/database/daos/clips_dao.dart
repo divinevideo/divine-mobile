@@ -21,6 +21,37 @@ part 'clips_dao.g.dart';
 class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
   ClipsDao(super.attachedDatabase);
 
+  /// Cross-account inventory including trashed rows, without clip payloads.
+  Future<
+    List<
+      ({
+        String? draftId,
+        String? filePath,
+        String? ownerPubkey,
+        DateTime? deletedAt,
+      })
+    >
+  >
+  getClipInventory() {
+    final query = selectOnly(clips)
+      ..addColumns([
+        clips.draftId,
+        clips.filePath,
+        clips.ownerPubkey,
+        clips.deletedAt,
+      ]);
+    return query
+        .map(
+          (row) => (
+            draftId: row.read(clips.draftId),
+            filePath: row.read(clips.filePath),
+            ownerPubkey: row.read(clips.ownerPubkey),
+            deletedAt: row.read(clips.deletedAt),
+          ),
+        )
+        .get();
+  }
+
   /// Upsert a clip (insert or update on conflict)
   Future<void> upsertClip({
     required String id,

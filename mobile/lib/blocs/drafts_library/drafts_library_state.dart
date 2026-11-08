@@ -26,7 +26,7 @@ final class DraftsLibraryLoaded extends DraftsLibraryState {
   const DraftsLibraryLoaded({required this.drafts});
 
   /// List of loaded drafts, sorted by most recent first.
-  final List<DivineVideoDraft> drafts;
+  final List<DraftSummary> drafts;
 
   @override
   List<Object?> get props => [drafts];
@@ -37,7 +37,7 @@ final class DraftsLibraryDraftDuplicated extends DraftsLibraryState {
   const DraftsLibraryDraftDuplicated({required this.drafts});
 
   /// Updated list of drafts including the new copy.
-  final List<DivineVideoDraft> drafts;
+  final List<DraftSummary> drafts;
 
   @override
   List<Object?> get props => [drafts];
@@ -48,7 +48,7 @@ final class DraftsLibraryDuplicateFailed extends DraftsLibraryState {
   const DraftsLibraryDuplicateFailed({required this.drafts});
 
   /// Original list of drafts (unchanged due to failure).
-  final List<DivineVideoDraft> drafts;
+  final List<DraftSummary> drafts;
 
   @override
   List<Object?> get props => [drafts];
@@ -59,7 +59,7 @@ final class DraftsLibraryDraftDeleted extends DraftsLibraryState {
   const DraftsLibraryDraftDeleted({required this.drafts});
 
   /// Updated list of drafts after deletion.
-  final List<DivineVideoDraft> drafts;
+  final List<DraftSummary> drafts;
 
   @override
   List<Object?> get props => [drafts];
@@ -70,7 +70,7 @@ final class DraftsLibraryDeleteFailed extends DraftsLibraryState {
   const DraftsLibraryDeleteFailed({required this.drafts});
 
   /// Original list of drafts (unchanged due to failure).
-  final List<DivineVideoDraft> drafts;
+  final List<DraftSummary> drafts;
 
   @override
   List<Object?> get props => [drafts];
