@@ -49,7 +49,7 @@ void main() {
               instrumentedHttpClientFactoryProvider.overrideWithValue(
                 () => MockClient((request) async {
                   requests.add(request.url);
-                  return http.Response('{"videos":[]}', 200);
+                  return http.Response('{"data":[]}', 200);
                 }),
               ),
             ],
@@ -61,9 +61,9 @@ void main() {
 
           await client.getRecentVideos(limit: 1);
 
-          expect(client.baseUrl, config.apiBaseUrl);
+          expect(client.baseUrl, equals(config.apiBaseUrl));
           expect(requests, hasLength(1));
-          expect(requests.single.origin, config.apiBaseUrl);
+          expect(requests.single.origin, equals(config.apiBaseUrl));
           expect(
             await container.read(funnelcakeAvailableProvider.future),
             isTrue,
@@ -95,7 +95,7 @@ void main() {
           instrumentedHttpClientFactoryProvider.overrideWithValue(
             () => MockClient((request) async {
               requests.add(request.url);
-              return http.Response('{"videos":[]}', 200);
+              return http.Response('{"data":[]}', 200);
             }),
           ),
         ];
@@ -113,7 +113,10 @@ void main() {
           (_, _) {},
         );
         final original = clientSubscription.read();
-        expect(original.baseUrl, EnvironmentConfig.production.apiBaseUrl);
+        expect(
+          original.baseUrl,
+          equals(EnvironmentConfig.production.apiBaseUrl),
+        );
         expect(
           await container.read(funnelcakeAvailableProvider.future),
           isTrue,
@@ -128,7 +131,7 @@ void main() {
 
         final switched = clientSubscription.read();
         expect(switched, isNot(same(original)));
-        expect(switched.baseUrl, local.apiBaseUrl);
+        expect(switched.baseUrl, equals(local.apiBaseUrl));
         expect(
           await container.read(funnelcakeAvailableProvider.future),
           isTrue,
@@ -168,11 +171,8 @@ void main() {
     });
 
     ProviderContainer createContainer() {
-      final nostrClient = _MockNostrClient();
-      when(() => nostrClient.configuredRelays).thenReturn(<String>[]);
       final container = ProviderContainer(
         overrides: [
-          nostrServiceProvider.overrideWithValue(nostrClient),
           currentEnvironmentProvider.overrideWithValue(
             EnvironmentConfig.production,
           ),
