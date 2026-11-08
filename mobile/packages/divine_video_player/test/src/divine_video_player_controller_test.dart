@@ -1148,6 +1148,30 @@ void main() {
 
         expect(fakeLinuxBackend.disposeCalls, 1);
       });
+
+      test(
+        'releases a Linux backend that initializes after disposal',
+        () async {
+          final ready = Completer<void>();
+          final fakeLinuxBackend = _ControllerFakeLinuxBackend()
+            ..initialization = ready.future;
+          DivineVideoPlayerController.debugForceLinuxBackend = true;
+          DivineVideoPlayerController.linuxBackendFactory = () =>
+              fakeLinuxBackend;
+
+          final initialization = controller.initialize();
+          expect(fakeLinuxBackend.initializeCalls, 1);
+          await controller.dispose();
+          expect(fakeLinuxBackend.disposeCalls, 0);
+          ready.complete();
+          await initialization;
+          await controller.dispose();
+
+          expect(fakeLinuxBackend.disposeCalls, 1);
+          expect(controller.isInitialized, isFalse);
+          expect(DivineVideoPlayerController.liveControllerCount, 0);
+        },
+      );
     });
 
     group('liveControllerCount', () {
@@ -1356,6 +1380,7 @@ class _TestStreamHandler extends MockStreamHandler {
 }
 
 class _ControllerFakeLinuxBackend implements LinuxVideoPlayerBackend {
+  Future<void>? initialization;
   int initializeCalls = 0;
   int disposeCalls = 0;
   List<VideoClip>? lastClips;
@@ -1380,6 +1405,7 @@ class _ControllerFakeLinuxBackend implements LinuxVideoPlayerBackend {
   }) async {
     initializeCalls++;
     _onStateChanged = onStateChanged;
+    await initialization;
   }
 
   @override

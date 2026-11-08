@@ -356,6 +356,7 @@ class DivineVideoPlayerController {
 
   var _state = const DivineVideoPlayerState();
   var _initialized = false;
+  var _initializationStarted = false;
   var _disposed = false;
   var _isLinuxBackend = false;
   var _isWebBackend = false;
@@ -405,11 +406,15 @@ class DivineVideoPlayerController {
   /// Creates the native player instance. Must be called before any
   /// other method.
   ///
-  /// Throws [StateError] if called more than once.
+  /// Throws [StateError] if called more than once or after disposal.
   Future<void> initialize() async {
-    if (_initialized) {
+    if (_disposed) {
+      throw StateError('Controller has been disposed.');
+    }
+    if (_initializationStarted) {
       throw StateError('Controller is already initialized.');
     }
+    _initializationStarted = true;
 
     _playerId = _nextId++;
     _isWebBackend = debugForceWebBackend ?? kIsWeb;
@@ -443,6 +448,11 @@ class DivineVideoPlayerController {
           'debugLabel': debugLabel,
         },
       );
+      // A late create response must release its player before exposing it.
+      if (_disposed) {
+        await _disposePlayer();
+        return;
+      }
       _supportsPlaybackTelemetry =
           result?['playbackTelemetrySupported'] == true;
       if (useTexture && result != null) {
@@ -455,6 +465,11 @@ class DivineVideoPlayerController {
       );
     }
 
+    // Dart backends can also finish initializing after disposal.
+    if (_disposed) {
+      await _disposePlayer();
+      return;
+    }
     _initialized = true;
     _liveControllers.add(this);
   }
@@ -754,18 +769,19 @@ class DivineVideoPlayerController {
     _eventSubscription = null;
 
     await Future.wait<void>([
-      if (_initialized && _isWebBackend)
-        _webBackend!.dispose()
-      else if (_initialized && _isLinuxBackend)
-        _linuxBackend!.dispose()
-      else if (_initialized)
-        _globalChannel.invokeMethod<void>('dispose', {'id': _playerId}),
+      if (_initialized) _disposePlayer(),
       _stateController.close(),
       _playbackNetworkEvents.close(),
     ]);
   }
 
   // -- internals --
+
+  Future<void> _disposePlayer() {
+    if (_isWebBackend) return _webBackend!.dispose();
+    if (_isLinuxBackend) return _linuxBackend!.dispose();
+    return _globalChannel.invokeMethod<void>('dispose', {'id': _playerId});
+  }
 
   /// Enforces Divine's app-wide invariant that only one live
   /// [DivineVideoPlayerController] is playing at a time.
