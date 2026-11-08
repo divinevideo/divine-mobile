@@ -1,5 +1,5 @@
 // ABOUTME: DI for the featured Explore tab repository and its viewer gate.
-// ABOUTME: Rebuilds with the Funnelcake client so a relay/env swap propagates.
+// ABOUTME: Rebuilds with the Funnelcake client so an env swap propagates.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -9,8 +9,8 @@ import 'package:openvine/repositories/featured_tabs_repository.dart';
 
 /// Repository backing the server-configured featured Explore tab.
 ///
-/// Rebuilds whenever the Funnelcake client identity changes (environment or
-/// relay-derived base URL), which drops the cached config with it — the
+/// Rebuilds whenever the Funnelcake client identity changes (an environment
+/// switch moves its base URL), which drops the cached config with it — the
 /// previous host's answer must not survive the swap.
 final featuredTabsRepositoryProvider = Provider<FeaturedTabsRepository>((ref) {
   final apiClient = ref.watch(funnelcakeApiClientProvider);

@@ -92,8 +92,8 @@ class ExploreScreen extends ConsumerWidget {
           ),
         ),
         BlocProvider(
-          // Keyed on the repository so an environment or relay swap rebuilds
-          // the cubit against the new host instead of polling a stale one.
+          // Keyed on the repository so an environment swap rebuilds the cubit
+          // against the new host instead of polling a stale one.
           // The shell keeps Explore mounted after the first visit; continuing
           // at the clamped cadence lets backend kill switches land off-tab.
           key: ValueKey(featuredTabsRepository),

@@ -73,7 +73,7 @@ class FunnelcakeAvailable extends _$FunnelcakeAvailable {
       return false;
     }
 
-    // Probe the same origin the client uses, independently of relay preferences.
+    // Same origin the client uses; *.divine.video APIs skip the probe.
     final baseUrl = ref.watch(currentEnvironmentProvider).apiBaseUrl;
     final host = Uri.parse(baseUrl).host;
     if (host.endsWith('.divine.video')) {
