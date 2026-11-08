@@ -16,6 +16,7 @@ import 'package:openvine/blocs/minor_consent_capture/minor_consent_flow_cubit.da
 import 'package:openvine/blocs/minor_consent_capture/minor_consent_playback_cubit.dart';
 import 'package:openvine/blocs/minor_consent_capture/minor_consent_submit_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/consent_camera_lifecycle.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/minor_account_review_providers.dart';
 import 'package:openvine/providers/permissions_providers.dart';
@@ -23,8 +24,6 @@ import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
-import 'package:openvine/services/consent_file_store.dart';
-import 'package:openvine/services/minor_consent_recorder_port.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:openvine/widgets/minor_account_review_checklist_card.dart';
 
@@ -56,6 +55,7 @@ class MinorAccountReviewRecordConsentScreen extends ConsumerWidget {
     final recorder = ref.watch(minorConsentRecorderProvider);
     final permissions = ref.watch(permissionsServiceProvider);
     final setWakelock = ref.watch(minorConsentWakelockProvider);
+    final deleteClip = ref.watch(minorConsentDeleteClipProvider);
     return MultiBlocProvider(
       key: ValueKey(recorder),
       providers: [
@@ -69,7 +69,7 @@ class MinorAccountReviewRecordConsentScreen extends ConsumerWidget {
         BlocProvider(
           key: ValueKey((recorder, setWakelock)),
           create: (_) => MinorConsentCaptureCubit(
-            deleteClip: ConsentFileStore.instance.deleteClip,
+            deleteClip: deleteClip,
             recorder: recorder,
             setWakelock: setWakelock,
           ),
@@ -82,7 +82,7 @@ class MinorAccountReviewRecordConsentScreen extends ConsumerWidget {
             releaseCamera: context
                 .read<MinorConsentCaptureCubit>()
                 .releaseRecorder,
-            deleteClip: ConsentFileStore.instance.deleteClip,
+            deleteClip: deleteClip,
             refreshPermissions: () => context.read<CameraPermissionBloc>().add(
               const CameraPermissionRefresh(),
             ),

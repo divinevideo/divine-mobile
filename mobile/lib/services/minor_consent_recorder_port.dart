@@ -1,7 +1,8 @@
 // ABOUTME: Platform-independent recording boundary for parent consent.
 
-/// App visibility translated before entering the consent business layer.
-enum ConsentCameraLifecycle { detached, resumed, inactive, hidden, paused }
+import 'package:openvine/models/consent_camera_lifecycle.dart';
+
+export 'package:openvine/models/consent_camera_lifecycle.dart';
 
 /// Narrow recording surface used by the in-app parent-consent capture flow.
 abstract class MinorConsentRecorder {

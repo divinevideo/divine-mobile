@@ -142,6 +142,11 @@ final minorConsentWakelockProvider = Provider<Future<void> Function(bool)>((
   return (enabled) => WakelockPlus.toggle(enable: enabled);
 });
 
+/// Clip deletion supplied to consent cubits by the platform file owner.
+final minorConsentDeleteClipProvider = Provider<Future<void> Function(String)>(
+  (ref) => ConsentFileStore.instance.deleteClip,
+);
+
 /// Private recording directory allocated by the platform file owner.
 final minorConsentOutputDirectoryProvider = Provider<Future<String> Function()>(
   (ref) {
