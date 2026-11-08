@@ -95,14 +95,6 @@ void main() {
       ).thenReturn(false);
       when(() => mockBlocklistRepository.hasMutedUs(any())).thenReturn(false);
       when(() => mockBlocklistRepository.hasBlockedUs(any())).thenReturn(false);
-      when(() => mockVideoEventService.isHiddenByHostingPreference(any()))
-          .thenAnswer(
-            (i) => VideoSourceVisibilityPolicy.isHiddenByHostingPreference(
-              i.positionalArguments[0] as VideoEvent,
-              divineHostedOnly: true,
-              viewerPubkey: mockNostrClient.publicKey,
-            ),
-          );
       when(
         () => mockVideoEventService.shouldHideVideo(any()),
       ).thenReturn(false);
@@ -383,6 +375,14 @@ void main() {
       );
 
       void stubHidden(VideoEvent video) {
+        when(() => mockVideoEventService.isHiddenByHostingPreference(any()))
+            .thenAnswer(
+              (i) => VideoSourceVisibilityPolicy.isHiddenByHostingPreference(
+                i.positionalArguments[0] as VideoEvent,
+                divineHostedOnly: true,
+                viewerPubkey: mockNostrClient.publicKey,
+              ),
+            );
         when(
           () => mockVideosRepository.lookupVideoForRouteId(
             any(),
