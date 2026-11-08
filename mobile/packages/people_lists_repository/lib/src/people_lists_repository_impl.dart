@@ -220,8 +220,8 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   /// How long an authoritative read waits for every relay to settle.
   ///
   /// Deliberately shorter than the 5s default: an expiry reports `timedOut`,
-  /// which refuses the mutation, so erring short errs toward not publishing
-  /// over a list we could not read.
+  /// which refuses a replacement, so erring short errs toward not publishing
+  /// over a list we could not read. Deletions use best-effort reconciliation.
   static const _reconcileTimeout = Duration(seconds: 3);
 
   @override

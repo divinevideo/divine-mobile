@@ -17,9 +17,14 @@ import 'package:people_lists_repository/src/people_list_search_result.dart';
 abstract interface class PeopleListsRepository {
   /// Emits the current people lists owned by [ownerPubkey], then re-emits on
   /// every subsequent cache mutation for that owner.
+  ///
+  /// Excludes reserved and application-managed machinery lists.
   Stream<List<UserList>> watchLists({required String ownerPubkey});
 
   /// Reads the current people lists owned by [ownerPubkey] from the cache.
+  ///
+  /// Excludes reserved and application-managed machinery lists. Ordinary
+  /// mutations of those protected identifiers return a failed publish result.
   Future<List<UserList>> readLists({required String ownerPubkey});
 
   /// Queries relays for kind `30000` events authored by [ownerPubkey] and
@@ -90,6 +95,9 @@ abstract interface class PeopleListsRepository {
 
   /// Publishes a NIP-09 kind `5` deletion event for the list identified by
   /// [listId] and tombstones the list locally once submission succeeds.
+  ///
+  /// Reconciliation is best-effort: an inconclusive relay read does not prevent
+  /// deletion, whose timestamp advances beyond the newest known revision.
   Future<PeopleListPublishResult> deleteList({
     required String ownerPubkey,
     required String listId,
