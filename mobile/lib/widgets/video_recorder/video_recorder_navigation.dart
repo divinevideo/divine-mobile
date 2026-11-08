@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -87,14 +88,36 @@ void discardRecorderSession(WidgetRef ref) {
 /// The camera is disposed only after the push animation is past the visible
 /// frame (disposing immediately would flash the camera-init screen behind the
 /// transition), and re-initialized once the pushed route pops.
+///
+/// A call made while an earlier one is still on its way to the editor, or
+/// while the route it pushed is still open, does nothing.
 Future<void> openVideoEditorFromRecorder(
   BuildContext context,
   WidgetRef ref,
 ) async {
+  final bloc = context.read<VideoRecorderBloc>();
+  // Everything below awaits (auth, the pending clip deletion, analytics)
+  // before it pushes, so a second tap on "next" in that window would push a
+  // second editor over the first, both seeded from the same clips. The bloc
+  // handles the event within this tap's microtasks, before the next tap is
+  // delivered.
+  if (bloc.isClosed || bloc.state.editorNavigationInProgress) return;
+  bloc.add(const VideoRecorderEditorNavigationStarted());
+  try {
+    await _openVideoEditorFromRecorder(context, ref, bloc);
+  } finally {
+    bloc.addIfOpen(const VideoRecorderEditorNavigationEnded());
+  }
+}
+
+Future<void> _openVideoEditorFromRecorder(
+  BuildContext context,
+  WidgetRef ref,
+  VideoRecorderBloc bloc,
+) async {
   if (!await _ensureAuthenticatedForRecorderExit(context, ref)) return;
   if (!context.mounted) return;
 
-  final bloc = context.read<VideoRecorderBloc>();
   final recorderMode = bloc.state.recorderMode;
   final clipManager = ref.read(clipManagerProvider.notifier);
 
@@ -146,7 +169,11 @@ Future<void> openVideoEditorFromRecorder(
       ? context.push(VideoEditorScreen.path)
       : context.push(VideoMetadataScreen.path);
 
-  await awaitPushTransition(context);
+  // A route popped during its entrance animation never covers the recorder, so
+  // the transition wait alone would never resolve: the camera would never come
+  // back and the editor navigation would never end. Stop waiting once the route
+  // has returned; the release and re-init below then run as for any return.
+  await Future.any<void>([awaitPushTransition(context), navigation]);
   if (bloc.isClosed) return;
   await _pauseCameraForNavigation(bloc);
   if (recorderMode.hasVideoEditor) {
