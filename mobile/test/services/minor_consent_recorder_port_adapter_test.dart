@@ -7,7 +7,9 @@ import 'package:divine_camera/divine_camera.dart'
     show DivineCameraLens, DivineVideoQuality, DivineVideoStabilizationMode;
 import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/services/minor_consent_recorder.dart';
+import 'package:openvine/services/minor_consent_recorder.dart'
+    show CameraMinorConsentRecorder, minorConsentAutoStoppedPath;
+import 'package:openvine/services/minor_consent_recorder_port.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 import '../mocks/mock_camera_service.dart';
