@@ -66,7 +66,8 @@ abstract final class Nip51PeopleListCodec {
   /// Kind 30000 identifiers other clients use for machinery, not curation.
   ///
   /// Each is a set nobody would browse, so public discovery and search skip
-  /// them; the owner's own collection is untouched.
+  /// them. The repository also hides them from the owner's collection and
+  /// refuses ordinary people-list edits or deletions of these coordinates.
   ///
   /// * `mute`: per-client mute sets.
   /// * `dm-contacts`: DM address books.

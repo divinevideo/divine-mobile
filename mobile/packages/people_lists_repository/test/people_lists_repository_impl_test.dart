@@ -1899,7 +1899,195 @@ void main() {
       );
     });
 
+    group('protected lists', () {
+      final protectedIds = {
+        ...Nip51PeopleListCodec.reservedDTags,
+        ...Nip51PeopleListCodec.machineryDTags,
+      };
+
+      Future<LocalPeopleListsCache> seedProtectedLists() async {
+        final cache = LocalPeopleListsCache(openBox: makeOpener());
+        for (final id in {...protectedIds, 'curated-friends'}) {
+          final event = signedEvent(
+            kind: _peopleListKind,
+            tags: [
+              ['d', id],
+              ['p', _memberA],
+            ],
+            content: 'opaque-private-members',
+          );
+          final now = DateTime.now().toUtc();
+          await cache.putList(
+            ownerPubkey: _ownerPubkey,
+            list: UserList(
+              id: id,
+              name: id,
+              pubkeys: const [_memberA],
+              createdAt: now,
+              updatedAt: now,
+            ),
+            receivedAt: now,
+            sourceTags: event.tags,
+            sourceContent: event.content,
+          );
+        }
+        return cache;
+      }
+
+      test('readLists hides protected entries already in the cache', () async {
+        final cache = await seedProtectedLists();
+        final repository = buildRepository(
+          nostrClient: _MockNostrClient(),
+          cache: cache,
+        );
+
+        expect(await cache.readLists(ownerPubkey: _ownerPubkey), hasLength(6));
+        expect(
+          (await repository.readLists(ownerPubkey: _ownerPubkey)).map(
+            (list) => list.id,
+          ),
+          ['curated-friends'],
+        );
+      });
+
+      test('watchLists hides protected cached entries', () async {
+        final cache = await seedProtectedLists();
+        final repository = buildRepository(
+          nostrClient: _MockNostrClient(),
+          cache: cache,
+        );
+
+        expect(
+          (await repository.watchLists(ownerPubkey: _ownerPubkey).first).map(
+            (list) => list.id,
+          ),
+          ['curated-friends'],
+        );
+      });
+
+      for (final id in protectedIds) {
+        test('refuses every direct mutation of $id without relay IO', () async {
+          final cache = await seedProtectedLists();
+          final client = _MockNostrClient();
+          final repository = buildRepository(nostrClient: client, cache: cache);
+          final results = [
+            await repository.updateList(
+              ownerPubkey: _ownerPubkey,
+              listId: id,
+              name: 'Renamed',
+              description: 'Changed',
+            ),
+            await repository.updateListInfo(
+              ownerPubkey: _ownerPubkey,
+              listId: id,
+              name: 'Renamed',
+            ),
+            await repository.addPubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: id,
+              pubkey: _memberB,
+            ),
+            await repository.removePubkey(
+              ownerPubkey: _ownerPubkey,
+              listId: id,
+              pubkey: _memberA,
+            ),
+            await repository.deleteList(ownerPubkey: _ownerPubkey, listId: id),
+          ];
+
+          expect(
+            results.map((result) => result.status),
+            everyElement(PeopleListPublishStatus.failed),
+          );
+          verifyZeroInteractions(client);
+          expect(
+            (await cache.readRecord(
+              ownerPubkey: _ownerPubkey,
+              listId: id,
+            ))!.sourceContent,
+            'opaque-private-members',
+          );
+        });
+      }
+    });
+
     group('deleteList', () {
+      for (final unavailable in ['timeout', 'no relays', 'exception']) {
+        test('publishes despite reconcile $unavailable using the newest known '
+            'revision', () async {
+          final now = DateTime.utc(2026, 11, 8);
+          await withClock(Clock.fixed(now), () async {
+            final client = _MockNostrClient();
+            final cache = LocalPeopleListsCache(openBox: makeOpener());
+            final repository = buildRepository(
+              nostrClient: client,
+              cache: cache,
+            );
+            final cached = signedEvent(
+              kind: _peopleListKind,
+              tags: const [
+                ['d', 'curated-friends'],
+                ['p', _memberA],
+              ],
+              createdAt: now.millisecondsSinceEpoch ~/ 1000,
+            );
+            await cache.putList(
+              ownerPubkey: _ownerPubkey,
+              list: Nip51PeopleListCodec.decode(cached)!,
+              receivedAt: now,
+              sourceTags: cached.tags,
+              sourceContent: cached.content,
+            );
+            final newer = signedEvent(
+              kind: _peopleListKind,
+              tags: cached.tags,
+              createdAt: cached.createdAt + 10,
+            );
+            when(
+              () => client.queryEventsDetailed(
+                any(),
+                useCache: false,
+                requireAllRelaysSettled: true,
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer((_) async {
+              if (unavailable == 'exception') throw StateError('relay closed');
+              return (
+                events: unavailable == 'timeout' ? [newer] : <Event>[],
+                timedOut: unavailable == 'timeout',
+                noRelays: unavailable == 'no relays',
+              );
+            });
+            when(() => client.publishEventAwaitOk(any())).thenAnswer(
+              (invocation) async => _accepted(
+                event: invocation.positionalArguments.single as Event,
+              ),
+            );
+
+            final result = await repository.deleteList(
+              ownerPubkey: _ownerPubkey,
+              listId: 'curated-friends',
+            );
+
+            expect(result.status, PeopleListPublishStatus.submitted);
+            final deletion =
+                verify(
+                      () => client.publishEventAwaitOk(captureAny()),
+                    ).captured.single
+                    as Event;
+            expect(deletion.kind, _deletionKind);
+            expect(
+              deletion.createdAt,
+              (unavailable == 'timeout' ? newer : cached).createdAt + 1,
+            );
+            expect(
+              await repository.readLists(ownerPubkey: _ownerPubkey),
+              isEmpty,
+            );
+          });
+        });
+      }
+
       test('publishes NIP-09 kind 5 event with a and k tags, then tombstones '
           'locally', () async {
         final client = _MockNostrClient();
