@@ -301,6 +301,28 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             self.assertEqual(channel['default'], 'BETA')
             self.assertEqual(channel['options'], ['BETA', 'PRODUCTION'])
 
+    def test_zapstore_publish_only_reuses_publisher_without_building(self) -> None:
+        workflows = self._resolved_config()['workflows']
+        self.assertIn('zapstore-publish', workflows)
+        workflow = workflows['zapstore-publish']
+        self.assertEqual(workflow['environment']['groups'],
+                         ['github_credentials', 'zapstore_credentials'])
+        self.assertEqual(workflow['triggering']['events'], [])
+        self.assertNotIn('publishing', workflow)
+        self.assertNotIn('android_signing', workflow['environment'])
+        self.assertEqual(len(workflow['scripts']), 2)
+        self.assertEqual(workflow['scripts'][1],
+                         next(step for step in workflows['android-build']['scripts']
+                              if step['name'] == 'Publish to Zapstore'))
+        self.assertEqual(workflow['inputs']['PUBLISH_TO_GITHUB']['default'], 'YES')
+        self.assertEqual(workflow['inputs']['RELEASE_CHANNEL']['default'], 'PRODUCTION')
+        guard = workflow['scripts'][0]['script']
+        for branch, allowed in [('main', True), ('feature/test', False), ('', False)]:
+            with self.subTest(branch=branch):
+                result = subprocess.run(['bash', '-c', guard], capture_output=True,
+                                        text=True, env={'CM_BRANCH': branch})
+                self.assertEqual(result.returncode == 0, allowed, result.stderr)
+
     def test_beta_zapstore_step_exits_before_credentials_or_network(self) -> None:
         scripts = self._resolved_config()['workflows']['android-build']['scripts']
         script = next(step['script'] for step in scripts if step['name'] == 'Publish to Zapstore')
@@ -309,6 +331,33 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         result = subprocess.run(['bash', '-c', script], capture_output=True, text=True, env={})
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('Skipping Zapstore', result.stdout)
+
+    def test_zapstore_config_restricts_both_fetches_to_exact_release(self) -> None:
+        scripts = self._resolved_config()['workflows']['android-build']['scripts']
+        script = next(step['script'] for step in scripts if step['name'] == 'Publish to Zapstore')
+        preparation = script.split('cd "$CM_BUILD_DIR"', 1)[1].split(
+            '"$ZSP_BIN" publish --check', 1)[0]
+        inspect = ('ruby -ryaml -rjson -e '
+                   + shlex.quote('puts JSON.generate(YAML.safe_load_file(ARGV[0]))')
+                   + ' "$ZAPSTORE_CONFIG"')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'zapstore.yaml').write_text(
+                'repository: https://github.com/divinevideo/divine-mobile\n'
+                'icon: ./mobile/assets/icon/app_icon.png\n')
+            result = subprocess.run(['bash', '-c', 'set -euo pipefail\n'
+                                     'cd "$CM_BUILD_DIR"\n' + preparation + inspect],
+                                    env={'PATH': os.environ['PATH'],
+                                         'CM_BUILD_DIR': directory, 'TAG': '1.0.28'},
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            config = json.loads(result.stdout)
+            self.assertEqual(config['icon'], './mobile/assets/icon/app_icon.png')
+            pattern = config['release_filter']
+            self.assertIsNotNone(re.search(pattern, '1.0.28'))
+            for other in ('1.0.27', '1X0X28', '1.0.280', '1.0.28-beta.production.test'):
+                self.assertIsNone(re.search(pattern, other), other)
+            self.assertEqual(list(root.iterdir()), [root / 'zapstore.yaml'])
 
     def test_stable_publish_refuses_non_main_branches(self) -> None:
         scripts = self._resolved_config()['workflows']['macos-build']['scripts']
@@ -368,10 +417,10 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn('if [ "${{ inputs.RELEASE_CHANNEL }}" != "PRODUCTION" ]; then', definition)
         self.assertIn('--exclude-drafts --exclude-pre-releases', definition)
         self.assertIn('if [ "$REMOTE_TAG" != "$TAG" ]; then', definition)
-        self.assertIn('"$ZSP_BIN" publish --check zapstore.yaml', definition)
+        self.assertIn('"$ZSP_BIN" publish --check "$ZAPSTORE_CONFIG"', definition)
         self.assertRegex(
             definition,
-            r'"\$ZSP_BIN" publish zapstore\.yaml --quiet --skip-preview\s*\\\s*'
+            r'"\$ZSP_BIN" publish "\$ZAPSTORE_CONFIG" --quiet --skip-preview\s*\\\s*'
             r'--skip-certificate-linking',
         )
         self.assertNotIn('--pre-release', definition)

@@ -187,10 +187,16 @@ promotion. Other platforms need not delay them. Later platforms can be promoted
 again from the same beta: identical assets are skipped.
 
 This command promotes GitHub only; it does not require or perform store
-promotion. For Zapstore, publish the resulting
-stable GitHub release through the existing signed Zapstore tooling; do not
-rebuild Android merely to trigger a store publication. Never promote a staging
-or POC beta to production.
+promotion. For Zapstore, run Codemagic's manual **Publish existing release to
+Zapstore** workflow (`zapstore-publish`) from `main`. It uses the existing
+`zapstore_credentials` signing key and publishes only the stable GitHub release
+matching `mobile/pubspec.yaml`. Its shared publisher refuses a missing or
+different newest stable release, and pins Zapstore's release filter to the exact
+version so a missing APK cannot select an older release. This workflow does not
+build APKs, upload to GitHub, or submit to Play. Keep the existing APKs; do not rebuild Android merely
+to trigger publication. The signed manual Zapstore command remains available
+for an already configured local signer. Never promote a staging or POC beta to
+production.
 
 No script changes or repairs old tags automatically. If a production tag has
 already shipped from a different source, use the next maintainer-approved
