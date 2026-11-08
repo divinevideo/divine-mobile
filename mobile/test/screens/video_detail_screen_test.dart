@@ -416,6 +416,38 @@ void main() {
         );
       });
 
+      testWidgets('does not blame hosting for an owner hidden by provenance', (
+        tester,
+      ) async {
+        final video = offHostVideo().copyWith(pubkey: 'a' * 64);
+        when(() => mockNostrClient.publicKey).thenReturn(video.pubkey);
+        stubHidden(video);
+        final provenance = _MockVideoProvenanceFilterService();
+        when(() => provenance.showVerifiedOnly).thenReturn(true);
+        await tester.pumpWidget(
+          buildSubject(
+            extraOverrides: [
+              videoProvenanceFilterServiceProvider.overrideWithValue(
+                provenance,
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        expect(
+          find.text(l10n.videoDetailHiddenByProvenanceFilterBody),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            l10n.videoDetailHiddenByHostFilterBody(
+              'separately-robust-roughy.edgecompute.app',
+            ),
+          ),
+          findsNothing,
+        );
+      });
+
       testWidgets('names the provenance setting when that is the cause', (
         tester,
       ) async {

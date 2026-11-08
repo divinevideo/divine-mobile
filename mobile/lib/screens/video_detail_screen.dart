@@ -24,6 +24,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/safety_settings_screen.dart';
+import 'package:openvine/services/video_source_visibility_policy.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/takeover_close_button.dart';
@@ -213,8 +214,15 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
   }
 
   _HiddenReason _hiddenReason(VideoEvent video) {
-    if (!video.isFromDivineServer &&
-        ref.read(divineHostFilterServiceProvider).showDivineHostedOnly) {
+    if (VideoSourceVisibilityPolicy.isHiddenByHostingPreference(
+      video,
+      divineHostedOnly: ref
+          .read(divineHostFilterServiceProvider)
+          .showDivineHostedOnly,
+      viewerPubkey:
+          ref.read(authServiceProvider).currentPublicKeyHex ??
+          ref.read(nostrServiceProvider).publicKey,
+    )) {
       return _HiddenReason.divineHostedOnly;
     }
     if (!video.hasProofMode &&

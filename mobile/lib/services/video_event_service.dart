@@ -490,6 +490,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       video,
       divineHostedOnly: shouldFilterNonDivineVideos,
       verifiedOnly: _shouldFilterUnverifiedVideos,
+      viewerPubkey: shouldFilterNonDivineVideos ? _currentUserPubkey() : null,
     )) {
       return true;
     }

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -16,6 +17,9 @@ import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:videos_repository/videos_repository.dart';
+
+class _MockVideoLocalStorage extends Mock implements VideoLocalStorage {}
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -106,6 +110,75 @@ void main() {
       when(() => mockDivineHost.showDivineHostedOnly).thenReturn(false);
       when(() => mockAspectRatio.shouldHideVideo(any())).thenReturn(false);
     });
+
+    test(
+      'repository and service follow the current owner for off-host media',
+      () async {
+        final host = _MockDivineHostFilterService();
+        when(() => host.showDivineHostedOnly).thenReturn(true);
+        final provenance = _MockProvenanceFilter();
+        when(() => provenance.showVerifiedOnly).thenReturn(false);
+        final storage = _MockVideoLocalStorage();
+        final event = Event.fromJson({
+          'id': 'c' * 64,
+          'pubkey': 'a' * 64,
+          'created_at': 1770000000,
+          'kind': 34236,
+          'content': '',
+          'sig': 'd' * 128,
+          'tags': [
+            ['d', 'external-upload'],
+            ['imeta', 'url https://example.com/video.mp4', 'm video/mp4'],
+          ],
+        });
+        when(() => storage.getEventsByIds(any()))
+            .thenAnswer((_) async => [event]);
+        var viewer = 'a' * 64;
+        when(() => mockNostrClient.publicKey).thenAnswer((_) => viewer);
+        final container = ProviderContainer(
+          overrides: [
+            appVersionProvider.overrideWithValue('test'),
+            videoLocalStorageProvider.overrideWithValue(storage),
+            sharedPreferencesProvider.overrideWithValue(mockPrefs),
+            nostrServiceProvider.overrideWithValue(mockNostrClient),
+            contentFilterServiceProvider.overrideWithValue(mockContentFilter),
+            feedAspectRatioPreferenceServiceProvider.overrideWithValue(
+              mockAspectRatio,
+            ),
+            contentFilterVersionProvider.overrideWith(
+              _StaticContentFilterVersion.new,
+            ),
+            divineHostFilterVersionProvider.overrideWith(
+              _StaticDivineHostFilterVersion.new,
+            ),
+            divineHostFilterServiceProvider.overrideWithValue(host),
+            videoProvenanceFilterServiceProvider.overrideWithValue(provenance),
+          ],
+        );
+        addTearDown(container.dispose);
+        final video = VideoEvent(
+          id: 'c' * 64,
+          pubkey: viewer,
+          createdAt: 1770000000,
+          timestamp: DateTime.utc(2026),
+          content: '',
+          videoUrl: 'https://example.com/video.mp4',
+        );
+        final repository = container.read(videosRepositoryProvider);
+        final service = container.read(videoEventServiceProvider);
+        expect(repository.applyContentPreferences([video]), [video]);
+        expect(service.shouldHideVideo(video), isFalse);
+        final route = await repository.lookupVideoForRouteId(video.id);
+        expect(route, isA<VideoRouteFound>());
+        expect((route as VideoRouteFound).video.id, video.id);
+        viewer = 'b' * 64;
+        expect(repository.applyContentPreferences([video]), isEmpty);
+        expect(service.shouldHideVideo(video), isTrue);
+        viewer = '';
+        expect(repository.applyContentPreferences([video]), isEmpty);
+        expect(service.shouldHideVideo(video), isTrue);
+      },
+    );
 
     for (final provenance in [false, true]) {
       test(
