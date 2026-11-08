@@ -55,6 +55,7 @@ class _RecordingNip98AuthService implements Nip98AuthService {
     String? payload,
     String? payloadHash,
     bool reuseCached = true,
+    bool allowUserInteraction = true,
   }) async {
     createCalled = true;
     createCount++;
