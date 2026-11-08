@@ -22,6 +22,7 @@ import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
+import 'package:openvine/services/video_source_visibility_policy.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
@@ -94,6 +95,14 @@ void main() {
       ).thenReturn(false);
       when(() => mockBlocklistRepository.hasMutedUs(any())).thenReturn(false);
       when(() => mockBlocklistRepository.hasBlockedUs(any())).thenReturn(false);
+      when(() => mockVideoEventService.isHiddenByHostingPreference(any()))
+          .thenAnswer(
+            (i) => VideoSourceVisibilityPolicy.isHiddenByHostingPreference(
+              i.positionalArguments[0] as VideoEvent,
+              divineHostedOnly: true,
+              viewerPubkey: mockNostrClient.publicKey,
+            ),
+          );
       when(
         () => mockVideoEventService.shouldHideVideo(any()),
       ).thenReturn(false);

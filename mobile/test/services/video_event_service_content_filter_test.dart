@@ -158,8 +158,10 @@ void main() {
           videoUrl: 'https://example.com/video.mp4',
         );
         expect(videoEventService.filterVideoList([video]), [video]);
+        expect(videoEventService.isHiddenByHostingPreference(video), isFalse);
         videoEventService.setCurrentUserPubkeyProvider(() => otherPubkey);
         expect(videoEventService.filterVideoList([video]), isEmpty);
+        expect(videoEventService.isHiddenByHostingPreference(video), isTrue);
         videoEventService.setCurrentUserPubkeyProvider(() => null);
         expect(videoEventService.filterVideoList([video]), isEmpty);
       },
