@@ -856,11 +856,11 @@ class _ClipPlaybackState extends ConsumerState<_ClipPlayback> {
               fit: StackFit.expand,
               children: [
                 DivineVideoPlayer(controller: _controller),
-                const Center(child: CircularProgressIndicator()),
+                const Center(child: DivineCircularProgressIndicator()),
               ],
             ),
             MinorConsentPlaybackState.loading => const Center(
-              child: CircularProgressIndicator(),
+              child: DivineCircularProgressIndicator(),
             ),
           },
         ),
