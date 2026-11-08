@@ -68,6 +68,11 @@ void main() {
             await container.read(funnelcakeAvailableProvider.future),
             isTrue,
           );
+          final probes = switch (environment) {
+            AppEnvironment.production || AppEnvironment.staging => 0,
+            AppEnvironment.poc || AppEnvironment.local => 1,
+          };
+          expect(requests, hasLength(1 + probes));
           expect(
             requests.map((url) => url.origin),
             everyElement(config.apiBaseUrl),
