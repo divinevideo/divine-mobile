@@ -8,8 +8,8 @@ Keycast and relay enforcement use synthetic, allowlisted local responses; all
 other outbound requests are denied. No existing service configuration or
 credentials are loaded.
 
-Use backend PR #312's exact candidate
-`85d5015785b97d8d0082d3aa3743dbe395ac90ba` and the mobile repository's pinned
+Use backend PR #312’s merged revision
+`d96a1229ee94acf88e6b2321eeb6e36ca346fefc` and the mobile repository's pinned
 Flutter SDK. In an isolated backend checkout/snapshot, run
 `npm ci --legacy-peer-deps` from `worker/` (matching that candidate's CI),
 then from the mobile repository root:

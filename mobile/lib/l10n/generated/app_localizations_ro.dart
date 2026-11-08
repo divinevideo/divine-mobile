@@ -16245,4 +16245,8 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'Videoclipul tău este trimis în privat echipelor de asistență și de încredere și siguranță ale Divine pentru verificare. Nu este publicat sau distribuit altor utilizatori.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Trimiterea nu a fost acceptată. Verifică adresa de e-mail, înregistrează din nou videoclipul sau folosește e-mailul.';
 }

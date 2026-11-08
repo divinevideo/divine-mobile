@@ -58,6 +58,7 @@ const mf = new Miniflare({
     NOSTR_NSEC: nip19.nsecEncode(syntheticAdminKey),
     MANAGEMENT_URL: 'https://relay.test/management',
     FUNNELCAKE_API_URL: 'https://funnelcake.test',
+    CDN_DOMAIN: 'consent-media.test', BLOSSOM_WEBHOOK_SECRET: 'local-only',
     ZENDESK_SUBDOMAIN: 'consent-local', ZENDESK_EMAIL: 'agent@example.test',
     ZENDESK_API_TOKEN: 'local-only',
     KEYCAST_URL: 'https://keycast.test', KEYCAST_SERVICE_TOKEN: 'local-only',
@@ -83,6 +84,7 @@ const mf = new Miniflare({
     if (url.hostname === 'keycast.test') {
       return json({ success: true, status: 'active', verified_minor: request.method === 'PUT' });
     }
+    if (url.hostname === 'consent-media.test' && url.pathname.startsWith('/admin/api/user/')) return json([]);
     if (url.hostname === 'relay.test') return json({ result: true });
     if (url.hostname === 'funnelcake.test') return json({ data: [], pagination: { next_cursor: null } });
     unexpected.push(request.url);

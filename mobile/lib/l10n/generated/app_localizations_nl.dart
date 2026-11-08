@@ -16011,4 +16011,8 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'Je video wordt vertrouwelijk naar de teams voor ondersteuning en vertrouwen en veiligheid van Divine gestuurd voor beoordeling. De video wordt niet gepubliceerd of met andere gebruikers gedeeld.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Je inzending is niet geaccepteerd. Controleer je e-mailadres, neem de video opnieuw op of gebruik e-mail.';
 }

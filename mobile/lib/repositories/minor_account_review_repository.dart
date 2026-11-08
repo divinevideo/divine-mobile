@@ -1,7 +1,6 @@
 // ABOUTME: Repository for fetching the current account's parental consent /
 // ABOUTME: minor-account review restriction status from the backend.
 
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/services/api_service.dart';
 import 'package:openvine/services/consent_upload_session.dart';
@@ -10,7 +9,13 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// One confirmation form's submission lifetime, including its retry snapshot.
 class ParentConsentSubmission {
-  final _uploadSession = ConsentUploadSession();
+  ConsentUploadSession _uploadSession = ConsentUploadSession();
+
+  /// Starts a new body only after the server definitively refused the old one.
+  Future<void> resetAfterRejection() async {
+    await _uploadSession.dispose();
+    _uploadSession = ConsentUploadSession();
+  }
 
   /// Releases private upload bytes after any active transport finishes.
   Future<void> dispose() => _uploadSession.dispose();
@@ -20,9 +25,12 @@ class MinorAccountReviewRepository {
   MinorAccountReviewRepository({
     required ApiService apiService,
     required MinorAccountReviewOverrideService overrideService,
+    bool allowLocalOverrides = false,
   }) : _apiService = apiService,
-       _overrideService = overrideService;
+       _overrideService = overrideService,
+       _allowLocalOverrides = allowLocalOverrides;
 
+  final bool _allowLocalOverrides;
   final ApiService _apiService;
   final MinorAccountReviewOverrideService _overrideService;
 
@@ -110,7 +118,7 @@ class MinorAccountReviewRepository {
     String caseId,
     MinorReviewInstructions? localReceipt,
   ) async {
-    if (!kDebugMode || localReceipt == null) return false;
+    if (!_allowLocalOverrides || localReceipt == null) return false;
     final localOverride = _overrideService.getOverride();
     final localCase = localOverride?.currentCase;
     if (localCase == null || localCase.id != caseId) return false;

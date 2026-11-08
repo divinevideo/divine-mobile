@@ -16112,4 +16112,8 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'Dein Video wird vertraulich an die Teams für Support sowie Vertrauen und Sicherheit von Divine zur Prüfung gesendet. Es wird nicht veröffentlicht oder mit anderen Nutzern geteilt.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Deine Einreichung wurde nicht angenommen. Prüfe deine E-Mail-Adresse, nimm das Video erneut auf oder nutze E-Mail.';
 }

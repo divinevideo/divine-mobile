@@ -19,6 +19,8 @@ import 'package:openvine/screens/minor_account_review_record_consent_screen.dart
 import 'package:openvine/services/minor_consent_recorder.dart';
 import 'package:permissions_service/permissions_service.dart';
 
+import '../helpers/fake_consent_preview_controller.dart';
+
 /// Boundary around the whole screen, so the scaffold surface is inside the
 /// captured image rather than a transparent ring outside it.
 const ValueKey<String> _goldenKey = ValueKey('minor-consent-golden');
@@ -45,7 +47,7 @@ class _PendingInitRecorder implements MinorConsentRecorder {
   Future<String?> stop() async => '/tmp/consent.mp4';
 
   @override
-  Future<void> handleAppLifecycleState(AppLifecycleState state) async {}
+  Future<void> handleAppLifecycleState(ConsentCameraLifecycle state) async {}
 
   @override
   Future<void> dispose() async {}
@@ -69,7 +71,7 @@ class _ReviewRecorder implements MinorConsentRecorder {
   Future<String?> stop() async => '/tmp/consent.mp4';
 
   @override
-  Future<void> handleAppLifecycleState(AppLifecycleState state) async {}
+  Future<void> handleAppLifecycleState(ConsentCameraLifecycle state) async {}
 
   @override
   Future<void> dispose() async {}
@@ -265,7 +267,7 @@ Future<void> _pumpFrames(WidgetTester tester, {int frames = 8}) async {
 /// variant; without it a golden silently captures Ahem blocks.
 Future<void> _drainFonts(WidgetTester tester) async {
   await tester.runAsync(GoogleFonts.pendingFonts);
-  await tester.pump();
+  await tester.pumpAndSettle();
 }
 
 Future<void> _pumpRecordConsentScreen(
@@ -298,6 +300,12 @@ Future<void> _pumpRecordConsentScreen(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        minorConsentOutputDirectoryProvider.overrideWithValue(
+          () async => '/tmp',
+        ),
+        minorConsentPreviewControllerProvider.overrideWithValue(
+          FakeConsentPreviewController.new,
+        ),
         minorConsentWakelockProvider.overrideWithValue((_) async {}),
         minorConsentRecorderProvider.overrideWithValue(recorder),
         permissionsServiceProvider.overrideWithValue(permissions),

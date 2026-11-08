@@ -15000,4 +15000,8 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       '你的视频将私下发送给 Divine 支持及信任与安全团队审核，不会公开发布或与其他用户分享。';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      '提交未被接受。请检查邮箱地址、重新录制视频，或改用电子邮件。';
 }

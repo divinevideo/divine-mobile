@@ -59,6 +59,7 @@ void main() {
               MinorAccountReviewRepository(
                 apiService: _UnreachableApiService(),
                 overrideService: overrideService,
+                allowLocalOverrides: true,
               ),
             ),
             currentMinorAccountReviewStatusProvider.overrideWith((ref) async {

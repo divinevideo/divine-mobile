@@ -111,10 +111,10 @@ void main() {
     test('forwards lifecycle until the camera is disposed', () async {
       final camera = _FakeCameraService();
       final recorder = CameraMinorConsentRecorder(camera: camera);
-      await recorder.handleAppLifecycleState(AppLifecycleState.paused);
-      await recorder.handleAppLifecycleState(AppLifecycleState.resumed);
+      await recorder.handleAppLifecycleState(ConsentCameraLifecycle.paused);
+      await recorder.handleAppLifecycleState(ConsentCameraLifecycle.resumed);
       await recorder.dispose();
-      await recorder.handleAppLifecycleState(AppLifecycleState.resumed);
+      await recorder.handleAppLifecycleState(ConsentCameraLifecycle.resumed);
       expect(camera.lifecycleStates, [
         AppLifecycleState.paused,
         AppLifecycleState.resumed,
@@ -126,7 +126,7 @@ void main() {
       await camera.initialize();
       final recorder = CameraMinorConsentRecorder(camera: camera);
       final resuming = recorder.handleAppLifecycleState(
-        AppLifecycleState.resumed,
+        ConsentCameraLifecycle.resumed,
       );
       final disposing = recorder.dispose();
       final initializedWhileResuming = camera.isInitialized;

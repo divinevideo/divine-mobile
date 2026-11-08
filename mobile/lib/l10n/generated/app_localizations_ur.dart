@@ -15926,4 +15926,8 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'آپ کی ویڈیو جائزے کے لیے نجی طور پر Divine کی سپورٹ اور اعتماد و حفاظت کی ٹیموں کو بھیجی جاتی ہے۔ اسے شائع نہیں کیا جاتا اور نہ ہی دوسرے صارفین کے ساتھ شیئر کیا جاتا ہے۔';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'آپ کی جمع کرائی گئی معلومات قبول نہیں ہوئیں۔ اپنا ای میل پتہ چیک کریں، ویڈیو دوبارہ ریکارڈ کریں، یا ای میل استعمال کریں۔';
 }

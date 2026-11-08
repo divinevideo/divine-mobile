@@ -15944,4 +15944,8 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'Din video skickas privat till Divines team för support samt tillit och säkerhet för granskning. Den publiceras inte och delas inte med andra användare.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Din inskickning godkändes inte. Kontrollera din e-postadress, spela in videon igen eller använd e-post.';
 }

@@ -15817,4 +15817,8 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'Video Anda dikirim secara pribadi ke tim Dukungan serta Kepercayaan dan Keamanan Divine untuk ditinjau. Video tidak dipublikasikan atau dibagikan kepada pengguna lain.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Kirimanmu tidak diterima. Periksa alamat emailmu, rekam ulang video, atau gunakan email.';
 }

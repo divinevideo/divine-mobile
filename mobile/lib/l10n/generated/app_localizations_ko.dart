@@ -15198,4 +15198,8 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       '동영상은 검토를 위해 Divine 지원 및 신뢰·안전 팀에 비공개로 전송됩니다. 공개되거나 다른 사용자와 공유되지 않습니다.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      '제출이 승인되지 않았어요. 이메일 주소를 확인하거나, 동영상을 다시 촬영하거나, 이메일을 이용해 주세요.';
 }

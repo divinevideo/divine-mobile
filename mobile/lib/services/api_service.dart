@@ -31,11 +31,13 @@ class ApiService {
     required String appVersion,
     http.Client? client,
     Nip98AuthService? authService,
+    Future<ConsentUpload> Function(http.MultipartRequest)? prepareConsentUpload,
     Duration requestTimeout = _defaultTimeout,
     Duration uploadTimeout = _defaultUploadTimeout,
   }) : _relayManagerBaseUrl = relayManagerBaseUrl,
        _client = client ?? http.Client(),
        _authService = authService,
+       _prepareConsentUpload = prepareConsentUpload ?? ConsentUpload.prepare,
        _appVersion = appVersion,
        _requestTimeout = requestTimeout,
        _uploadTimeout = uploadTimeout;
@@ -54,6 +56,8 @@ class ApiService {
   static const Duration _defaultUploadTimeout = Duration(seconds: 120);
   final Duration _uploadTimeout;
 
+  final Future<ConsentUpload> Function(http.MultipartRequest)
+  _prepareConsentUpload;
   final http.Client _client;
   final Nip98AuthService? _authService;
 
@@ -206,8 +210,8 @@ class ApiService {
             prepare: () async {
               final file = File(videoPath);
               if (!file.existsSync()) {
-                throw ApiException(
-                  'Parent consent video not found or unreadable at $videoPath',
+                throw const ApiException(
+                  'Parent consent video not found or unreadable',
                 );
               }
               final multipart = http.MultipartRequest('POST', uri)
@@ -219,7 +223,7 @@ class ApiService {
                     contentType: MediaType('video', 'mp4'),
                   ),
                 );
-              return ConsentUpload.prepare(multipart);
+              return _prepareConsentUpload(multipart);
             },
             transmit: (upload) async {
               final token = await _authService?.createAuthToken(

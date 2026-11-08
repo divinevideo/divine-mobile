@@ -27,7 +27,11 @@ class FeatureFlagScreen extends ConsumerWidget {
     final state = ref.watch(featureFlagStateProvider);
     final showInternalFlags = ref.watch(isDeveloperModeEnabledProvider);
     final visibleFlags = FeatureFlag.values
-        .where((flag) => !flag.isInternal || showInternalFlags)
+        .where(
+          (flag) =>
+              service.isAvailable(flag) &&
+              (!flag.isInternal || showInternalFlags),
+        )
         .toList(growable: false);
 
     return Scaffold(
@@ -109,7 +113,7 @@ class FeatureFlagScreen extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
                       child: DivineButton(
-                        label: context.l10n.authMinAgeNotice,
+                        label: context.l10n.minorAccountReviewTitle,
                         expanded: true,
                         onPressed: () =>
                             context.push(MinorAccountReviewScreen.welcomePath),

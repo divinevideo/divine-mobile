@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:openvine/services/consent_file_store.dart';
 import 'package:openvine/services/consent_upload.dart';
 
 void main() {
@@ -24,7 +25,10 @@ void main() {
               ..files.add(
                 await http.MultipartFile.fromPath('video', clip.path),
               );
-        final upload = await ConsentUpload.prepare(multipart);
+        final upload = await ConsentUpload.prepare(
+          multipart,
+          store: ConsentFileStore(directory),
+        );
         await clip.delete();
         final bytes = await upload.request.finalize().toBytes();
         final retry = await upload.request.finalize().toBytes();
@@ -48,7 +52,10 @@ void main() {
           'POST',
           Uri.parse('https://api.test'),
         )..files.add(await http.MultipartFile.fromPath('video', clip.path));
-        final upload = await ConsentUpload.prepare(multipart);
+        final upload = await ConsentUpload.prepare(
+          multipart,
+          store: ConsentFileStore(directory),
+        );
         await upload.dispose();
         expect(await clip.readAsBytes(), [0, 128, 255]);
         await expectLater(

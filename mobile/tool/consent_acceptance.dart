@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/services/api_service.dart';
+import 'package:openvine/services/consent_file_store.dart';
 import 'package:openvine/services/consent_upload.dart';
 import 'package:openvine/services/consent_upload_session.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
@@ -38,16 +39,20 @@ void main() {
         ),
       );
       addTearDown(auth.dispose);
-      final api = ApiService(
-        relayManagerBaseUrl: endpoint,
-        appVersion: 'local-acceptance',
-        authService: auth,
-      );
-      addTearDown(api.dispose);
       final directory = Directory.systemTemp.createTempSync(
         'consent-contract-',
       );
       addTearDown(() => directory.deleteSync(recursive: true));
+      final fileStore = ConsentFileStore(directory);
+      Future<ConsentUpload> prepare(http.MultipartRequest body) =>
+          ConsentUpload.prepare(body, store: fileStore);
+      final api = ApiService(
+        relayManagerBaseUrl: endpoint,
+        prepareConsentUpload: prepare,
+        appVersion: 'local-acceptance',
+        authService: auth,
+      );
+      addTearDown(api.dispose);
       final clip = File('${directory.path}/synthetic.mp4');
       final bytes = List<int>.generate(65537, (i) => i % 256);
       clip.writeAsBytesSync(bytes);
@@ -84,6 +89,7 @@ void main() {
       addTearDown(otherAuth.dispose);
       final otherApi = ApiService(
         relayManagerBaseUrl: endpoint,
+        prepareConsentUpload: prepare,
         appVersion: 'local-acceptance',
         authService: otherAuth,
       );
@@ -99,7 +105,7 @@ void main() {
       final uploadUrl = base.resolve(
         '/v1/minor-review-cases/$caseId/parent-consent',
       );
-      final mismatched = await ConsentUpload.prepare(
+      final mismatched = await prepare(
         http.MultipartRequest('POST', uploadUrl)
           ..fields['email'] = 'parent@example.test'
           ..files.add(

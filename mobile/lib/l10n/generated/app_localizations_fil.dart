@@ -16059,4 +16059,8 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'Pribadong ipinapadala ang iyong video sa mga team ng Suporta at Tiwala at Kaligtasan ng Divine para suriin. Hindi ito inilalathala o ibinabahagi sa ibang mga user.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Hindi tinanggap ang ipinasa mo. Suriin ang email mo, i-record muli ang video, o gumamit ng email.';
 }

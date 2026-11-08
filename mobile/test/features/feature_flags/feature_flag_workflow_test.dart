@@ -9,6 +9,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart';
+import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 import 'package:openvine/features/feature_flags/widgets/feature_flag_widget.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -58,7 +59,12 @@ void main() {
       addTearDown(router.dispose);
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(mockPrefs),
+            buildConfigurationProvider.overrideWithValue(
+              const BuildConfiguration(consentDeliveryVerified: true),
+            ),
+          ],
           child: MaterialApp.router(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -75,8 +81,8 @@ void main() {
       final l10n = AppLocalizations.of(
         tester.element(find.byType(FeatureFlagScreen)),
       );
-      await tester.ensureVisible(find.text(l10n.authMinAgeNotice));
-      await tester.tap(find.text(l10n.authMinAgeNotice));
+      await tester.ensureVisible(find.text(l10n.minorAccountReviewTitle));
+      await tester.tap(find.text(l10n.minorAccountReviewTitle));
       await tester.pumpAndSettle();
       expect(find.byType(MinorAccountReviewScreen), findsOneWidget);
       expect(find.text(l10n.minorAccountReviewTeenCta), findsOneWidget);
@@ -103,7 +109,12 @@ void main() {
       );
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(mockPrefs),
+            buildConfigurationProvider.overrideWithValue(
+              const BuildConfiguration(consentDeliveryVerified: true),
+            ),
+          ],
           child: MaterialApp.router(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -173,7 +184,12 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(mockPrefs),
+            buildConfigurationProvider.overrideWithValue(
+              const BuildConfiguration(consentDeliveryVerified: true),
+            ),
+          ],
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -238,7 +254,12 @@ void main() {
       // Simulate first app launch with user changing flags
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(mockPrefs),
+            buildConfigurationProvider.overrideWithValue(
+              const BuildConfiguration(consentDeliveryVerified: true),
+            ),
+          ],
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -283,7 +304,12 @@ void main() {
       // Create new app instance (simulating restart)
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(mockPrefs),
+            buildConfigurationProvider.overrideWithValue(
+              const BuildConfiguration(consentDeliveryVerified: true),
+            ),
+          ],
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -314,7 +340,12 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(mockPrefs),
+            buildConfigurationProvider.overrideWithValue(
+              const BuildConfiguration(consentDeliveryVerified: true),
+            ),
+          ],
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -385,7 +416,12 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(mockPrefs),
+            buildConfigurationProvider.overrideWithValue(
+              const BuildConfiguration(consentDeliveryVerified: true),
+            ),
+          ],
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -463,7 +499,12 @@ void main() {
       );
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(mockPrefs),
+            buildConfigurationProvider.overrideWithValue(
+              const BuildConfiguration(consentDeliveryVerified: true),
+            ),
+          ],
           child: MaterialApp.router(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,

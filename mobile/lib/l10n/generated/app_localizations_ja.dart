@@ -15181,4 +15181,8 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       '動画は確認のため、Divineのサポートおよびトラスト＆セーフティのチームに非公開で送信されます。公開されたり、他のユーザーと共有されたりすることはありません。';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      '送信内容が受け付けられませんでした。メールアドレスを確認するか、動画を撮り直すか、メールをご利用ください。';
 }

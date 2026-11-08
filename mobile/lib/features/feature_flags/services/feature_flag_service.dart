@@ -22,13 +22,20 @@ class FeatureFlagService extends ChangeNotifier {
   final bool Function() _canOverrideInternalFlags;
   late FeatureFlagState _currentState;
 
+  bool _defaultValue(FeatureFlag flag) =>
+      isAvailable(flag) && _buildConfig.getDefault(flag);
+
+  bool isAvailable(FeatureFlag flag) =>
+      flag != FeatureFlag.minorConsentInAppRecording ||
+      _buildConfig.consentDeliveryVerified;
+
   static bool _denyInternal() => false;
 
   /// Initialize with build defaults (called in constructor)
   void _initializeWithDefaults() {
     final flags = <FeatureFlag, bool>{};
     for (final flag in FeatureFlag.values) {
-      flags[flag] = _buildConfig.getDefault(flag);
+      flags[flag] = _defaultValue(flag);
     }
     _currentState = FeatureFlagState(flags);
   }
@@ -47,7 +54,7 @@ class FeatureFlagService extends ChangeNotifier {
 
       flags[flag] = _canUsePersistedOverride(flag, savedValue)
           ? savedValue!
-          : _buildConfig.getDefault(flag);
+          : _defaultValue(flag);
     }
 
     _currentState = FeatureFlagState(flags);
@@ -56,7 +63,7 @@ class FeatureFlagService extends ChangeNotifier {
 
   /// Check if a feature flag is enabled
   bool isEnabled(FeatureFlag flag) {
-    return _currentState.isEnabled(flag);
+    return isAvailable(flag) && _currentState.isEnabled(flag);
   }
 
   /// Set a feature flag value and persist it
@@ -67,7 +74,7 @@ class FeatureFlagService extends ChangeNotifier {
     if (!_canOverrideFlag(flag)) {
       _currentState = _currentState.copyWith(
         flag,
-        _buildConfig.getDefault(flag),
+        _defaultValue(flag),
       );
       notifyListeners();
       return;
@@ -100,7 +107,7 @@ class FeatureFlagService extends ChangeNotifier {
     try {
       await _prefs.remove(key);
 
-      final defaultValue = _buildConfig.getDefault(flag);
+      final defaultValue = _defaultValue(flag);
       _currentState = _currentState.copyWith(flag, defaultValue);
       notifyListeners();
     } catch (e) {
@@ -111,7 +118,7 @@ class FeatureFlagService extends ChangeNotifier {
         category: LogCategory.system,
       );
       // Still update in-memory state even if persistence fails
-      final defaultValue = _buildConfig.getDefault(flag);
+      final defaultValue = _defaultValue(flag);
       _currentState = _currentState.copyWith(flag, defaultValue);
       notifyListeners();
     }
@@ -135,7 +142,7 @@ class FeatureFlagService extends ChangeNotifier {
           );
         }
       }
-      flags[flag] = _buildConfig.getDefault(flag);
+      flags[flag] = _defaultValue(flag);
     }
 
     _currentState = FeatureFlagState(flags);
@@ -159,7 +166,7 @@ class FeatureFlagService extends ChangeNotifier {
       flag: flag,
       isEnabled: isEnabled(flag),
       hasUserOverride: hasUserOverride(flag),
-      buildDefault: _buildConfig.getDefault(flag),
+      buildDefault: _defaultValue(flag),
     );
   }
 
@@ -177,6 +184,7 @@ class FeatureFlagService extends ChangeNotifier {
   }
 
   bool _canOverrideFlag(FeatureFlag flag) {
-    return !flag.isInternal || _canOverrideInternalFlags();
+    return isAvailable(flag) &&
+        (!flag.isInternal || _canOverrideInternalFlags());
   }
 }

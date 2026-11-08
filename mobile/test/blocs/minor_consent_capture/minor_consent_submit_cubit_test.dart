@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/minor_consent_capture/minor_consent_submit_cubit.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
+import 'package:openvine/services/api_service.dart';
 
 const _receipt = MinorReviewInstructions(
   title: 'Received',
@@ -62,6 +63,7 @@ MinorConsentSubmitCubit _buildCubit(
   void Function()? onUploadFinished,
 }) {
   return MinorConsentSubmitCubit(
+    submission: ParentConsentSubmission(),
     repository: repository,
     onSubmitted: onSubmitted ?? () {},
     onUploadStarted: onUploadStarted,
@@ -79,6 +81,27 @@ Future<void> _submit(MinorConsentSubmitCubit cubit) => cubit.submit(
 void main() {
   group(MinorConsentSubmitCubit, () {
     group('submit', () {
+      test(
+        'definitive rejection allows a corrected email on a new body',
+        () async {
+          final repository = _FakeRepository()
+            ..failWith = const ApiException('invalid contact', statusCode: 400);
+          final cubit = _buildCubit(repository);
+          await _submit(cubit);
+          expect(cubit.state.canEditEmail, isTrue);
+          expect(cubit.state.rejectionStatus, 400);
+          repository.failWith = null;
+          await cubit.submit(
+            caseId: 'case-1',
+            email: 'corrected@example.com',
+            videoPath: '/tmp/consent.mp4',
+            localReceipt: _receipt,
+          );
+          expect(repository.submittedEmail, 'corrected@example.com');
+          await cubit.close();
+        },
+      );
+
       test('forwards the clip and email, then reports success', () async {
         final repository = _FakeRepository();
         final cubit = _buildCubit(repository);

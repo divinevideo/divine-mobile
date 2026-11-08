@@ -15870,4 +15870,8 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'Video của bạn được gửi riêng tư đến các nhóm Hỗ trợ và Tin cậy và An toàn của Divine để xem xét. Video không được đăng công khai hoặc chia sẻ với người dùng khác.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Nội dung gửi chưa được chấp nhận. Hãy kiểm tra địa chỉ email, quay lại video hoặc dùng email.';
 }

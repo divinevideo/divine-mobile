@@ -26,6 +26,7 @@ void main() {
       );
       repository = MinorAccountReviewRepository(
         apiService: apiService,
+        allowLocalOverrides: true,
         overrideService: overrideService,
       );
     });

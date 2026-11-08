@@ -15546,4 +15546,8 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'ቪዲዮዎ ለግምገማ በግል ወደ Divine ድጋፍ እና እምነትና ደህንነት ቡድኖች ይላካል። አይታተምም ወይም ከሌሎች ተጠቃሚዎች ጋር አይጋራም።';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'የላኩት አልተቀበለም። የኢሜይል አድራሻዎን ያረጋግጡ፣ ቪዲዮውን እንደገና ይቅረጹ ወይም በኢሜይል ይላኩ።';
 }

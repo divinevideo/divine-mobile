@@ -16297,4 +16297,8 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'మీ వీడియో సమీక్ష కోసం Divine మద్దతు మరియు నమ్మకం, భద్రత బృందాలకు ప్రైవేట్‌గా పంపబడుతుంది. ఇది ప్రచురించబడదు లేదా ఇతర వినియోగదారులతో పంచుకోబడదు.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'మీ సమర్పణ అంగీకరించబడలేదు. మీ ఇమెయిల్ చిరునామాను తనిఖీ చేయండి, వీడియోను మళ్లీ రికార్డ్ చేయండి లేదా ఇమెయిల్ ఉపయోగించండి.';
 }

@@ -16074,4 +16074,8 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'Видеото ви се изпраща поверително до екипите за поддръжка и доверие и безопасност на Divine за преглед. То не се публикува и не се споделя с други потребители.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Изпратеното не беше прието. Провери имейл адреса си, запиши видеото отново или използвай имейл.';
 }

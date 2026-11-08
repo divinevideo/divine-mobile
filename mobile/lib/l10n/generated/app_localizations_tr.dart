@@ -15854,4 +15854,8 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'Videonuz incelenmek üzere Divine Destek ve Güven ve Güvenlik ekiplerine özel olarak gönderilir. Yayınlanmaz veya diğer kullanıcılarla paylaşılmaz.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Gönderimin kabul edilmedi. E-posta adresini kontrol et, videoyu yeniden kaydet veya e-posta kullan.';
 }

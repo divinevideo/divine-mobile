@@ -26540,6 +26540,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your video goes privately to Divine Support and Trust & Safety for review. It is not published or shared with other users.'**
   String get minorAccountReviewRecordConsentPrivacyBody;
+
+  /// No description provided for @minorAccountReviewRecordConsentRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Your submission wasn\'t accepted. Check your email, retake the video, or use email instead.'**
+  String get minorAccountReviewRecordConsentRejected;
 }
 
 class _AppLocalizationsDelegate

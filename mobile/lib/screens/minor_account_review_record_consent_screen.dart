@@ -2,7 +2,6 @@
 // ABOUTME: video, lets the parent review or retake it, and falls back to email.
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:divine_camera/divine_camera.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -13,17 +12,27 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/blocs/minor_consent_capture/minor_consent_capture_cubit.dart';
+import 'package:openvine/blocs/minor_consent_capture/minor_consent_flow_cubit.dart';
+import 'package:openvine/blocs/minor_consent_capture/minor_consent_playback_cubit.dart';
 import 'package:openvine/blocs/minor_consent_capture/minor_consent_submit_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/minor_account_review_providers.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
+import 'package:openvine/services/consent_file_store.dart';
+import 'package:openvine/services/minor_consent_recorder_port.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:openvine/widgets/minor_account_review_checklist_card.dart';
-import 'package:path_provider/path_provider.dart';
+
+/// Player boundary for the recorded consent preview.
+final minorConsentPreviewControllerProvider =
+    Provider<DivineVideoPlayerController Function()>(
+      (ref) => DivineVideoPlayerController.new,
+    );
 
 /// Records the parent-consent video in-app, then lets the parent review it.
 ///
@@ -48,6 +57,7 @@ class MinorAccountReviewRecordConsentScreen extends ConsumerWidget {
     final permissions = ref.watch(permissionsServiceProvider);
     final setWakelock = ref.watch(minorConsentWakelockProvider);
     return MultiBlocProvider(
+      key: ValueKey(recorder),
       providers: [
         BlocProvider(
           key: ValueKey(permissions),
@@ -59,8 +69,26 @@ class MinorAccountReviewRecordConsentScreen extends ConsumerWidget {
         BlocProvider(
           key: ValueKey((recorder, setWakelock)),
           create: (_) => MinorConsentCaptureCubit(
+            deleteClip: ConsentFileStore.instance.deleteClip,
             recorder: recorder,
             setWakelock: setWakelock,
+          ),
+        ),
+        BlocProvider(
+          create: (context) => MinorConsentFlowCubit(
+            initializeCamera: context
+                .read<MinorConsentCaptureCubit>()
+                .initialize,
+            releaseCamera: context
+                .read<MinorConsentCaptureCubit>()
+                .releaseRecorder,
+            deleteClip: ConsentFileStore.instance.deleteClip,
+            refreshPermissions: () => context.read<CameraPermissionBloc>().add(
+              const CameraPermissionRefresh(),
+            ),
+            requestPermissions: () => context.read<CameraPermissionBloc>().add(
+              const CameraPermissionRequest(),
+            ),
           ),
         ),
       ],
@@ -78,213 +106,104 @@ class _RecordConsentView extends ConsumerStatefulWidget {
 
 class _RecordConsentViewState extends ConsumerState<_RecordConsentView>
     with WidgetsBindingObserver {
-  bool _cameraReady = false;
-  bool _accessDenied = false;
-  bool _requiresSettings = false;
-  bool _autoRequested = false;
-  bool _requestAfterRefresh = false;
-  bool _wasInBackground = false;
-  bool _initializingCamera = false;
-  String? _pendingVideoPath;
-  String? _lastRecordedPath;
-  bool _uploadInFlight = false;
-  bool _disposed = false;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      context.read<CameraPermissionBloc>().add(const CameraPermissionRefresh());
+      if (mounted) {
+        context.read<CameraPermissionBloc>().add(
+          const CameraPermissionRefresh(),
+        );
+      }
     });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _disposed = true;
-    // The capture is local only until the parent submits; discard a clip they
-    // exit without submitting. A clip whose upload is still in flight is kept
-    // until that upload returns (see _onUploadFinished).
-    _deletePendingClip();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_cameraReady) {
+    final flow = context.read<MinorConsentFlowCubit>();
+    if (flow.state.cameraReady) {
       unawaited(
-        context.read<MinorConsentCaptureCubit>().handleAppLifecycleState(state),
+        context.read<MinorConsentCaptureCubit>().handleAppLifecycleState(
+          ConsentCameraLifecycle.values.byName(state.name),
+        ),
       );
     }
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.hidden) {
-      _wasInBackground = true;
-    } else if (state == AppLifecycleState.resumed && _wasInBackground) {
-      _wasInBackground = false;
-      if (_accessDenied) {
-        context.read<CameraPermissionBloc>().add(
-          const CameraPermissionRefresh(),
-        );
-      }
-    }
-  }
-
-  void _onPermissionState(CameraPermissionState state) {
-    if (state is CameraPermissionLoading) {
-      // A dismissed native dialog can leave its request unresolved. Keep an
-      // explicit recovery action available once the parent returns.
-      setState(() => _accessDenied = true);
-    } else if (state is CameraPermissionError) {
-      setState(() => _accessDenied = true);
-    } else if (state is CameraPermissionLoaded) {
-      final requestAfterRefresh = _requestAfterRefresh;
-      _requestAfterRefresh = false;
-      switch (state.status) {
-        case CameraPermissionStatus.authorized:
-          setState(() {
-            _accessDenied = false;
-            _requiresSettings = false;
-          });
-          unawaited(_initializeCamera());
-        case CameraPermissionStatus.canRequest:
-          setState(() => _requiresSettings = false);
-          if (!_autoRequested || requestAfterRefresh) {
-            _autoRequested = true;
-            context.read<CameraPermissionBloc>().add(
-              const CameraPermissionRequest(),
-            );
-          } else {
-            setState(() => _accessDenied = true);
-          }
-        case CameraPermissionStatus.requiresSettings:
-          setState(() {
-            _accessDenied = true;
-            _requiresSettings = true;
-          });
-      }
-    }
-  }
-
-  Future<void> _initializeCamera() async {
-    if (_cameraReady || _initializingCamera) return;
-    _initializingCamera = true;
-    try {
-      await context.read<MinorConsentCaptureCubit>().initialize();
-      if (!mounted) return;
-      setState(() => _cameraReady = true);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _accessDenied = true);
-    } finally {
-      _initializingCamera = false;
-    }
-  }
-
-  void _retryPermissions() {
-    // Refresh first: Request is accepted only from Loaded(canRequest), and a
-    // Back-dismissed Android request may still be stuck in Loading.
-    final permissions = context.read<CameraPermissionBloc>();
-    final state = permissions.state;
-    if (state is CameraPermissionLoaded &&
-        state.status == CameraPermissionStatus.canRequest) {
-      permissions.add(const CameraPermissionRequest());
-    } else {
-      _requestAfterRefresh = true;
-      permissions.add(const CameraPermissionRefresh());
-    }
-  }
-
-  void _openSettings() {
-    context.read<CameraPermissionBloc>().add(
-      const CameraPermissionOpenSettings(),
+    flow.visibilityChanged(
+      background:
+          state == AppLifecycleState.paused ||
+          state == AppLifecycleState.hidden,
+      resumed: state == AppLifecycleState.resumed,
     );
   }
 
+  void _onPermissionState(CameraPermissionState state) {
+    final permission = switch (state) {
+      CameraPermissionLoaded(:final status) => switch (status) {
+        CameraPermissionStatus.authorized => ConsentPermission.authorized,
+        CameraPermissionStatus.canRequest => ConsentPermission.canRequest,
+        CameraPermissionStatus.requiresSettings =>
+          ConsentPermission.requiresSettings,
+      },
+      CameraPermissionError() => ConsentPermission.error,
+      _ => ConsentPermission.loading,
+    };
+    context.read<MinorConsentFlowCubit>().permissionChanged(permission);
+  }
+
+  void _retryPermissions() {
+    final state = context.read<CameraPermissionBloc>().state;
+    context.read<MinorConsentFlowCubit>().retryPermissions(
+      canRequest:
+          state is CameraPermissionLoaded &&
+          state.status == CameraPermissionStatus.canRequest,
+    );
+  }
+
+  void _openSettings() => context.read<CameraPermissionBloc>().add(
+    const CameraPermissionOpenSettings(),
+  );
+
   Future<void> _onRecord() async {
     try {
-      final outputDirectory = (await getTemporaryDirectory()).path;
+      final directory = await ref.read(minorConsentOutputDirectoryProvider)();
       if (!mounted) return;
       await context.read<MinorConsentCaptureCubit>().start(
-        outputDirectory: outputDirectory,
+        outputDirectory: directory,
       );
     } catch (_) {
-      // Resolving the temp directory or starting the camera can throw before
-      // the recorder reports a denial; surface it as an error so the retry
-      // pane stays reachable instead of a dead record control.
-      if (!mounted) return;
-      context.read<MinorConsentCaptureCubit>().fail();
+      if (mounted) context.read<MinorConsentCaptureCubit>().fail();
     }
   }
 
-  Future<void> _onStop() async {
-    await context.read<MinorConsentCaptureCubit>().stop();
+  Future<void> _retakeSubmission() async {
+    // Release the old native owner before invalidation constructs its successor.
+    await ref.read(minorConsentRecorderProvider).dispose();
+    if (mounted) ref.invalidate(minorConsentRecorderProvider);
   }
 
+  Future<void> _onStop() => context.read<MinorConsentCaptureCubit>().stop();
   void _onRetake() => context.read<MinorConsentCaptureCubit>().retake();
+  void _onUseVideo(String path) =>
+      unawaited(context.read<MinorConsentFlowCubit>().accept(path));
 
-  void _onUseVideo(String filePath) {
-    // Release the camera as soon as the clip is accepted — the file stays
-    // usable for upload while the parent confirms their email — then swap the
-    // view to the confirm-and-submit step.
-    unawaited(_acceptVideo(filePath));
-  }
-
-  Future<void> _acceptVideo(String filePath) async {
-    try {
-      await context.read<MinorConsentCaptureCubit>().releaseRecorder();
-    } catch (_) {
-      // Releasing the camera failed; the accepted clip is still submittable, so
-      // keep going rather than stranding the parent on the review pane.
-    }
-    if (!mounted) return;
-    setState(() => _pendingVideoPath = filePath);
-  }
-
-  /// Returns to the email / private-link consent screen without stacking a
-  /// second copy of it.
-  ///
-  /// This screen is normally pushed from that one, so popping lands back on
-  /// the screen already in the stack; repeated attempts would otherwise grow a
-  /// ParentConsent → Record → ParentConsent → … stack. A direct entry (deep
-  /// link) has nothing to pop and replaces this route instead.
   void _onUseEmailFallback() {
     if (context.canPop()) {
       context.pop();
-      return;
-    }
-    context.pushReplacement(MinorAccountReviewParentConsentScreen.path);
-  }
-
-  void _onUploadStarted() => _uploadInFlight = true;
-
-  void _onUploadFinished() {
-    _uploadInFlight = false;
-    // The screen may have been disposed mid-upload; now that the upload has
-    // returned, the retained clip can be discarded.
-    if (_disposed) _deletePendingClip();
-  }
-
-  void _deletePendingClip() {
-    if (_uploadInFlight) return;
-    final path = _pendingVideoPath ?? _lastRecordedPath;
-    if (path == null) return;
-    _pendingVideoPath = null;
-    _lastRecordedPath = null;
-    _deleteClip(path);
-  }
-
-  void _deleteClip(String path) {
-    try {
-      File(path).deleteSync();
-    } on FileSystemException {
-      // Already removed by retake or the OS; discarding is best-effort.
+    } else {
+      context.pushReplacement(MinorAccountReviewParentConsentScreen.path);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final flow = context.watch<MinorConsentFlowCubit>().state;
     return BlocListener<CameraPermissionBloc, CameraPermissionState>(
       listener: (context, state) => _onPermissionState(state),
       child: Scaffold(
@@ -298,12 +217,17 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView>
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 640),
-              child: _pendingVideoPath != null
+              child: flow.accepted && flow.videoPath != null
                   ? MinorConsentSubmitView(
-                      videoPath: _pendingVideoPath!,
+                      videoPath: flow.videoPath!,
                       onUseEmailFallback: _onUseEmailFallback,
-                      onUploadStarted: _onUploadStarted,
-                      onUploadFinished: _onUploadFinished,
+                      onRetake: () => unawaited(_retakeSubmission()),
+                      onUploadStarted: context
+                          .read<MinorConsentFlowCubit>()
+                          .uploadStarted,
+                      onUploadFinished: context
+                          .read<MinorConsentFlowCubit>()
+                          .uploadFinished,
                     )
                   : BlocListener<
                       MinorConsentCaptureCubit,
@@ -313,7 +237,9 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView>
                           current is MinorConsentCaptureReview,
                       listener: (context, state) {
                         if (state is MinorConsentCaptureReview) {
-                          _lastRecordedPath = state.filePath;
+                          context.read<MinorConsentFlowCubit>().recorded(
+                            state.filePath,
+                          );
                         }
                       },
                       child:
@@ -324,24 +250,24 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView>
                             builder: (context, state) {
                               return switch (state) {
                                 MinorConsentCaptureIdle() =>
-                                  _accessDenied
+                                  flow.accessDenied
                                       ? _DeniedPane(
                                           onUseEmailFallback:
                                               _onUseEmailFallback,
-                                          onRetry: _requiresSettings
+                                          onRetry: flow.requiresSettings
                                               ? null
                                               : _retryPermissions,
-                                          onOpenSettings: _requiresSettings
+                                          onOpenSettings: flow.requiresSettings
                                               ? _openSettings
                                               : null,
                                         )
                                       : _CapturePane(
-                                          cameraReady: _cameraReady,
+                                          cameraReady: flow.cameraReady,
                                           onRecord: _onRecord,
                                         ),
                                 MinorConsentCaptureRecording() =>
                                   _RecordingPane(
-                                    cameraReady: _cameraReady,
+                                    cameraReady: flow.cameraReady,
                                     onStop: _onStop,
                                   ),
                                 MinorConsentCaptureReview(:final filePath) =>
@@ -378,6 +304,7 @@ class MinorConsentSubmitView extends ConsumerWidget {
   const MinorConsentSubmitView({
     required this.videoPath,
     required this.onUseEmailFallback,
+    this.onRetake,
     this.onUploadStarted,
     this.onUploadFinished,
     super.key,
@@ -390,6 +317,8 @@ class MinorConsentSubmitView extends ConsumerWidget {
   final VoidCallback onUseEmailFallback;
 
   /// Called when the consent upload starts, before any await.
+  final VoidCallback? onRetake;
+
   final VoidCallback? onUploadStarted;
 
   /// Called once the consent upload has returned, success or failure.
@@ -407,6 +336,7 @@ class MinorConsentSubmitView extends ConsumerWidget {
     return BlocProvider<MinorConsentSubmitCubit>(
       key: ValueKey(repository),
       create: (_) => MinorConsentSubmitCubit(
+        submission: ParentConsentSubmission(),
         repository: repository,
         onSubmitted: () {
           container
@@ -419,6 +349,7 @@ class MinorConsentSubmitView extends ConsumerWidget {
       child: _MinorConsentSubmitForm(
         videoPath: videoPath,
         onUseEmailFallback: onUseEmailFallback,
+        onRetake: onRetake,
       ),
     );
   }
@@ -428,8 +359,10 @@ class _MinorConsentSubmitForm extends ConsumerStatefulWidget {
   const _MinorConsentSubmitForm({
     required this.videoPath,
     required this.onUseEmailFallback,
+    this.onRetake,
   });
 
+  final VoidCallback? onRetake;
   final String videoPath;
   final VoidCallback onUseEmailFallback;
 
@@ -496,7 +429,7 @@ class _MinorConsentSubmitFormState
           child: DivineAuthTextField(
             label: l10n.minorAccountReviewParentContactFieldLabel,
             controller: _emailController,
-            enabled: state.status == MinorConsentSubmitStatus.editing,
+            enabled: state.canEditEmail,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
             autocorrect: false,
@@ -511,7 +444,9 @@ class _MinorConsentSubmitFormState
         if (state.status == MinorConsentSubmitStatus.failure) ...[
           const SizedBox(height: 12),
           Text(
-            l10n.minorAccountReviewRecordConsentSubmitError,
+            state.rejectionStatus == null
+                ? l10n.minorAccountReviewRecordConsentSubmitError
+                : l10n.minorAccountReviewRecordConsentRejected,
             style: VineTheme.bodyMediumFont(
               color: context.vineColors.onErrorContainer,
             ),
@@ -523,8 +458,22 @@ class _MinorConsentSubmitFormState
               ? l10n.minorAccountReviewSubmitting
               : l10n.minorAccountReviewRecordConsentSubmitCta,
           expanded: true,
-          onPressed: isSubmitting ? null : () => _submit(caseId),
+          onPressed:
+              isSubmitting ||
+                  state.rejectionStatus == 413 ||
+                  state.rejectionStatus == 415
+              ? null
+              : () => _submit(caseId),
         ),
+        if (state.rejectionStatus != null && widget.onRetake != null) ...[
+          const SizedBox(height: 12),
+          DivineButton(
+            label: l10n.minorAccountReviewRecordConsentRetakeCta,
+            type: DivineButtonType.secondary,
+            expanded: true,
+            onPressed: widget.onRetake,
+          ),
+        ],
         const SizedBox(height: 12),
         DivineButton(
           label: l10n.minorAccountReviewRecordConsentEmailInsteadCta,
@@ -666,6 +615,30 @@ class _ReviewPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => MinorConsentPlaybackCubit(),
+      child: _ReviewPaneBody(
+        filePath: filePath,
+        onRetake: onRetake,
+        onUseVideo: onUseVideo,
+      ),
+    );
+  }
+}
+
+class _ReviewPaneBody extends StatelessWidget {
+  const _ReviewPaneBody({
+    required this.filePath,
+    required this.onRetake,
+    required this.onUseVideo,
+  });
+  final String filePath;
+  final VoidCallback onRetake;
+  final VoidCallback onUseVideo;
+
+  @override
+  Widget build(BuildContext context) {
+    final playback = context.watch<MinorConsentPlaybackCubit>().state;
     return _Pane(
       children: [
         _ClipPlayback(filePath: filePath),
@@ -685,7 +658,9 @@ class _ReviewPane extends StatelessWidget {
         DivineButton(
           label: context.l10n.minorAccountReviewRecordConsentUseVideoCta,
           expanded: true,
-          onPressed: onUseVideo,
+          onPressed: playback == MinorConsentPlaybackState.ready
+              ? onUseVideo
+              : null,
         ),
         const SizedBox(height: 12),
         DivineButton(
@@ -800,41 +775,57 @@ class _CameraPreview extends StatelessWidget {
 }
 
 /// Plays back the just-recorded local clip.
-class _ClipPlayback extends StatefulWidget {
+class _ClipPlayback extends ConsumerStatefulWidget {
   const _ClipPlayback({required this.filePath});
 
   final String filePath;
 
   @override
-  State<_ClipPlayback> createState() => _ClipPlaybackState();
+  ConsumerState<_ClipPlayback> createState() => _ClipPlaybackState();
 }
 
-class _ClipPlaybackState extends State<_ClipPlayback> {
-  late final DivineVideoPlayerController _controller;
-  bool _ready = false;
+class _ClipPlaybackState extends ConsumerState<_ClipPlayback> {
+  late DivineVideoPlayerController _controller;
+  Future<void>? _loading;
 
   @override
   void initState() {
     super.initState();
-    _controller = DivineVideoPlayerController();
+    _controller = ref.read(minorConsentPreviewControllerProvider)();
     unawaited(_load());
   }
 
-  Future<void> _load() async {
-    try {
-      await _controller.initialize();
-      await _controller.setSource(VideoClip.file(widget.filePath));
-      await _controller.play();
-    } catch (_) {
-      return;
-    }
-    if (!mounted) return;
-    setState(() => _ready = true);
+  Future<void> _load() {
+    final cubit = context.read<MinorConsentPlaybackCubit>();
+    return _loading = cubit.load(
+      () async {
+        if (_controller.isInitialized) {
+          await _controller.dispose();
+          if (!mounted) return;
+          _controller = ref.read(minorConsentPreviewControllerProvider)();
+        }
+        await _controller.initialize();
+        await _controller.setSource(VideoClip.file(widget.filePath));
+        await _controller.play();
+        if (_controller.state.status == PlaybackStatus.error) {
+          throw StateError('Consent preview could not decode');
+        }
+      },
+      waitForFrame: () => _controller.firstFrameRendered,
+      errors: () => _controller.stateStream.map(
+        (state) => state.status == PlaybackStatus.error,
+      ),
+    );
+  }
+
+  Future<void> _disposePlayer() async {
+    await _loading;
+    await _controller.dispose();
   }
 
   @override
   void dispose() {
-    unawaited(_controller.dispose());
+    unawaited(_disposePlayer());
     super.dispose();
   }
 
@@ -847,9 +838,31 @@ class _ClipPlaybackState extends State<_ClipPlayback> {
         width: double.infinity,
         child: ColoredBox(
           color: context.vineColors.surfaceContainerHigh,
-          child: _ready
-              ? DivineVideoPlayer(controller: _controller)
-              : const SizedBox.shrink(),
+          child: switch (context.watch<MinorConsentPlaybackCubit>().state) {
+            MinorConsentPlaybackState.ready => DivineVideoPlayer(
+              controller: _controller,
+            ),
+            MinorConsentPlaybackState.failure => Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(context.l10n.videoErrorPlaybackStartFailed),
+                DivineButton(
+                  label: context.l10n.videoErrorRetry,
+                  onPressed: () => unawaited(_load()),
+                ),
+              ],
+            ),
+            MinorConsentPlaybackState.decoding => Stack(
+              fit: StackFit.expand,
+              children: [
+                DivineVideoPlayer(controller: _controller),
+                const Center(child: CircularProgressIndicator()),
+              ],
+            ),
+            MinorConsentPlaybackState.loading => const Center(
+              child: CircularProgressIndicator(),
+            ),
+          },
         ),
       ),
     );

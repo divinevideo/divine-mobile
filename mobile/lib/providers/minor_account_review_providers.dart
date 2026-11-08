@@ -13,12 +13,14 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/consent_file_store.dart';
 import 'package:openvine/services/minor_account_review_override_service.dart';
 import 'package:openvine/services/minor_account_review_status_store.dart';
 import 'package:openvine/services/minor_consent_recorder.dart';
 import 'package:openvine/services/support_email_composer.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 typedef MinorAccountReviewComposeEmail = Future<void> Function({
@@ -42,6 +44,7 @@ final minorAccountReviewRepositoryProvider =
       final apiService = ref.watch(apiServiceProvider);
       return MinorAccountReviewRepository(
         apiService: apiService,
+        allowLocalOverrides: kDebugMode,
         overrideService: ref.watch(minorAccountReviewOverrideServiceProvider),
       );
     });
@@ -119,7 +122,16 @@ final Provider<MinorConsentRecorder> minorConsentRecorderProvider =
         ),
       );
       recorder = CameraMinorConsentRecorder(camera: camera);
-      ref.onDispose(() => recorder.dispose().ignore());
+      ref.onDispose(() {
+        unawaited(
+          recorder.dispose().catchError((Object error, StackTrace stack) {
+            Log.warning(
+              'Consent camera disposal failed',
+              name: 'MinorAccountReviewProviders',
+            );
+          }),
+        );
+      });
       return recorder;
     });
 
@@ -129,3 +141,10 @@ final minorConsentWakelockProvider = Provider<Future<void> Function(bool)>((
 ) {
   return (enabled) => WakelockPlus.toggle(enable: enabled);
 });
+
+/// Private recording directory allocated by the platform file owner.
+final minorConsentOutputDirectoryProvider = Provider<Future<String> Function()>(
+  (ref) {
+    return ConsentFileStore.instance.createRecordingDirectory;
+  },
+);

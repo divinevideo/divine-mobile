@@ -120,11 +120,14 @@ void main() {
         () => Future<void>.delayed(const Duration(seconds: 2)),
       );
       await tester.tap(find.text(l10n.minorAccountReviewRecordConsentStopCta));
-      final useVideo = find.text(
+      final useVideo = find.widgetWithText(
+        DivineButton,
         l10n.minorAccountReviewRecordConsentUseVideoCta,
       );
       await waitFor(
-        () => useVideo.evaluate().isNotEmpty,
+        () =>
+            useVideo.evaluate().isNotEmpty &&
+            tester.widget<DivineButton>(useVideo).onPressed != null,
         'native recorder returns a reviewable clip',
       );
       await tester.ensureVisible(useVideo);

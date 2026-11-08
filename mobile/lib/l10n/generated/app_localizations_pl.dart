@@ -16265,4 +16265,8 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'Twój film jest przesyłany prywatnie do zespołów wsparcia oraz zaufania i bezpieczeństwa Divine do sprawdzenia. Nie jest publikowany ani udostępniany innym użytkownikom.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Nie przyjęto zgłoszenia. Sprawdź adres e-mail, nagraj film ponownie lub skorzystaj z poczty e-mail.';
 }

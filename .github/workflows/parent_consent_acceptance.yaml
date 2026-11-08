@@ -43,7 +43,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: divinevideo/divine-relay-manager
-          ref: 85d5015785b97d8d0082d3aa3743dbe395ac90ba
+          ref: d96a1229ee94acf88e6b2321eeb6e36ca346fefc
           path: .consent-backend
           persist-credentials: false
       - uses: actions/setup-node@v6

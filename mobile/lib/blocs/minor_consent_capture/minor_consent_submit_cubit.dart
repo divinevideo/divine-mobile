@@ -1,11 +1,12 @@
 // ABOUTME: Cubit owning the confirm-and-submit step of the in-app parent
 // ABOUTME: consent flow: uploading the accepted clip and the parent's email.
 
+import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
+import 'package:openvine/services/api_service.dart';
 
 /// Where the confirm-and-submit step is in its upload.
 enum MinorConsentSubmitStatus {
@@ -28,24 +29,41 @@ class MinorConsentSubmitState extends Equatable {
   const MinorConsentSubmitState({
     this.status = MinorConsentSubmitStatus.editing,
     this.submittedEmail,
+    this.submissionEmail,
+    this.rejectionStatus,
   });
 
   /// Current upload phase.
   final MinorConsentSubmitStatus status;
 
+  final String? submissionEmail;
+  final int? rejectionStatus;
+
+  bool get canEditEmail =>
+      status == MinorConsentSubmitStatus.editing || rejectionStatus != null;
+
   /// Email the accepted submission was made with, once it succeeded.
   final String? submittedEmail;
 
   /// Copy of this state with [status] replaced.
-  MinorConsentSubmitState copyWith({MinorConsentSubmitStatus? status}) {
+  MinorConsentSubmitState copyWith({
+    MinorConsentSubmitStatus? status,
+    String? submissionEmail,
+  }) {
     return MinorConsentSubmitState(
       status: status ?? this.status,
       submittedEmail: submittedEmail,
+      submissionEmail: submissionEmail ?? this.submissionEmail,
     );
   }
 
   @override
-  List<Object?> get props => [status, submittedEmail];
+  List<Object?> get props => [
+    status,
+    submittedEmail,
+    submissionEmail,
+    rejectionStatus,
+  ];
 }
 
 /// Submits the accepted consent clip and the parent's email.
@@ -64,16 +82,17 @@ class MinorConsentSubmitCubit extends Cubit<MinorConsentSubmitState>
   MinorConsentSubmitCubit({
     required MinorAccountReviewRepository repository,
     required void Function() onSubmitted,
+    required ParentConsentSubmission submission,
     void Function()? onUploadStarted,
     void Function()? onUploadFinished,
-  }) : _repository = repository,
+  }) : _session = submission,
+       _repository = repository,
        _onSubmitted = onSubmitted,
        _onUploadStarted = onUploadStarted,
        _onUploadFinished = onUploadFinished,
        super(const MinorConsentSubmitState());
 
-  final _session = ParentConsentSubmission();
-  String? _submissionEmail;
+  final ParentConsentSubmission _session;
   final MinorAccountReviewRepository _repository;
   final void Function() _onSubmitted;
   final void Function()? _onUploadStarted;
@@ -95,14 +114,21 @@ class MinorConsentSubmitCubit extends Cubit<MinorConsentSubmitState>
         state.status == MinorConsentSubmitStatus.success) {
       return;
     }
-    _submissionEmail ??= email;
-    emit(state.copyWith(status: MinorConsentSubmitStatus.submitting));
+    final submissionEmail = state.canEditEmail
+        ? email
+        : state.submissionEmail ?? email;
+    emit(
+      state.copyWith(
+        status: MinorConsentSubmitStatus.submitting,
+        submissionEmail: submissionEmail,
+      ),
+    );
     _onUploadStarted?.call();
 
     try {
       await _repository.submitParentConsent(
         caseId: caseId,
-        email: _submissionEmail!,
+        email: submissionEmail,
         videoPath: videoPath,
         localReceipt: localReceipt,
         submission: _session,
@@ -112,12 +138,28 @@ class MinorConsentSubmitCubit extends Cubit<MinorConsentSubmitState>
       emitIfOpen(
         MinorConsentSubmitState(
           status: MinorConsentSubmitStatus.success,
-          submittedEmail: _submissionEmail,
+          submittedEmail: submissionEmail,
         ),
       );
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emitIfOpen(state.copyWith(status: MinorConsentSubmitStatus.failure));
+      final status = error is ApiException ? error.statusCode : null;
+      // A definite client refusal did not accept this body. A timeout or 5xx
+      // keeps the original session because the transport may have succeeded.
+      final rejected =
+          status != null &&
+          status >= 400 &&
+          status < 500 &&
+          status != 408 &&
+          status != 429;
+      if (rejected) await _session.resetAfterRejection();
+      emitIfOpen(
+        MinorConsentSubmitState(
+          status: MinorConsentSubmitStatus.failure,
+          submissionEmail: submissionEmail,
+          rejectionStatus: rejected ? status : null,
+        ),
+      );
     } finally {
       _onUploadFinished?.call();
     }

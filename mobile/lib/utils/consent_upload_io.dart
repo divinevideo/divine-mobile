@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
+import 'package:openvine/services/consent_file_store.dart';
 
 /// A multipart snapshot retained for the lifetime of one submission.
 class ConsentUpload {
@@ -33,8 +34,12 @@ class ConsentUpload {
   final Directory _directory;
 
   /// Spools once so a source-file change while signing cannot change the body.
-  static Future<ConsentUpload> prepare(http.MultipartRequest multipart) async {
-    final directory = await Directory.systemTemp.createTemp('consent-upload-');
+  static Future<ConsentUpload> prepare(
+    http.MultipartRequest multipart, {
+    ConsentFileStore? store,
+  }) async {
+    final directory = await (store ?? ConsentFileStore.instance)
+        .createDirectory();
     try {
       final file = File('${directory.path}/body');
       final sink = file.openWrite();

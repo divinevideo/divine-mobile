@@ -67,7 +67,7 @@ class _PendingRecorder implements MinorConsentRecorder {
   Future<String?> stop() async => null;
 
   @override
-  Future<void> handleAppLifecycleState(AppLifecycleState state) async {}
+  Future<void> handleAppLifecycleState(ConsentCameraLifecycle state) async {}
 
   @override
   Future<void> dispose() async {}

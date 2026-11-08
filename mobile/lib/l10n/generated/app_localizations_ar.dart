@@ -15972,4 +15972,8 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'يُرسل الفيديو بشكل خاص إلى فريقي الدعم والثقة والسلامة في Divine لمراجعته. لن يُنشر أو يُشارك مع مستخدمين آخرين.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'لم يُقبل الإرسال. تحقق من بريدك الإلكتروني أو أعد تسجيل الفيديو أو استخدم البريد الإلكتروني بدلاً من ذلك.';
 }

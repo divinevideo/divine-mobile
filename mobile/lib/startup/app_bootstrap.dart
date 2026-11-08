@@ -41,6 +41,7 @@ import 'package:openvine/repositories/shorebird_patch_repository.dart';
 import 'package:openvine/services/app_engagement_store.dart';
 import 'package:openvine/services/build_provenance_service.dart';
 import 'package:openvine/services/c2pa_signing_service.dart';
+import 'package:openvine/services/consent_file_store.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/database_corruption_service.dart';
 import 'package:openvine/services/database_encryption_bootstrap.dart';
@@ -175,6 +176,14 @@ Future<void> startOpenVineApp({
 
   // Ensure bindings are initialized first (required for everything)
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  unawaited(
+    ConsentFileStore.instance.initialize().catchError((Object error) {
+      Log.warning(
+        'Could not recover private consent files; recording remains unavailable',
+        name: 'AppBootstrap',
+      );
+    }),
+  );
 
   // Fail the launch on a malformed C2PA signing endpoint rather than letting it
   // surface mid-capture as an opaque "Signature: internal error", which reads

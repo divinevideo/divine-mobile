@@ -11,7 +11,6 @@ import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/minor_account_review_providers.dart';
 import 'package:openvine/providers/permissions_providers.dart';
-import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
@@ -19,8 +18,8 @@ import 'package:openvine/screens/minor_account_review_record_consent_screen.dart
 import 'package:openvine/services/minor_consent_recorder.dart';
 import 'package:permissions_service/permissions_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart' show Override;
-import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/fake_consent_preview_controller.dart';
 import '../helpers/scroll.dart';
 
 class _FakeRecorder implements MinorConsentRecorder {
@@ -40,7 +39,7 @@ class _FakeRecorder implements MinorConsentRecorder {
   Future<String?> stop() async => '/tmp/consent.mp4';
 
   @override
-  Future<void> handleAppLifecycleState(AppLifecycleState state) async {}
+  Future<void> handleAppLifecycleState(ConsentCameraLifecycle state) async {}
 
   @override
   Future<void> dispose() async {}
@@ -183,22 +182,66 @@ void main() {
       });
     }
 
+    for (final state in [
+      MinorReviewCaseState.restrictedPendingParentalConsent,
+      MinorReviewCaseState.restrictedPendingSupportEmail,
+      MinorReviewCaseState.needsFollowUp,
+    ]) {
+      testWidgets(
+        'flag-off email fallback handles $state without rejected contact submission',
+        (tester) async {
+          var composed = false;
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: _recordingEnabledOverrides(
+                enabled: false,
+                caseState: state,
+              ),
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: MinorAccountReviewParentConsentScreen(
+                  composeEmail:
+                      ({
+                        required toEmail,
+                        required subject,
+                        required body,
+                        sharePositionOrigin,
+                      }) async {
+                        composed = true;
+                      },
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(MinorAccountReviewParentConsentScreen)),
+          );
+          await container.read(currentMinorAccountReviewStatusProvider.future);
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await scrollUntilTappable(
+            tester,
+            find.text(l10n.minorAccountReviewParentConsentEmailCta),
+            200,
+            scrollable: find.byType(Scrollable),
+          );
+          await tester.tap(
+            find.text(l10n.minorAccountReviewParentConsentEmailCta),
+          );
+          await tester.pumpAndSettle();
+          expect(composed, isTrue);
+        },
+      );
+    }
+
     testWidgets(
-      'a family can opt into recording from the consent explanation',
+      'families cannot enable recording from the consent explanation',
       (tester) async {
-        SharedPreferences.setMockInitialValues({});
-        final prefs = await SharedPreferences.getInstance();
         await tester.pumpWidget(
           ProviderScope(
-            overrides: [
-              sharedPreferencesProvider.overrideWithValue(prefs),
-              _authState(AuthState.authenticated),
-              currentMinorAccountReviewStatusProvider.overrideWith(
-                (ref) async => MinorAccountReviewStatus.active(),
-              ),
-            ],
+            overrides: _recordingEnabledOverrides(enabled: false),
             child: const MaterialApp(
-              locale: Locale('es'),
               localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: MinorAccountReviewParentConsentScreen(),
@@ -206,81 +249,24 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final l10n = lookupAppLocalizations(const Locale('es'));
+        expect(find.byType(DivineSwitch), findsNothing);
+        final l10n = lookupAppLocalizations(const Locale('en'));
         expect(
-          find.widgetWithText(
-            DivineButton,
-            l10n.minorAccountReviewParentConsentRecordCta,
-          ),
+          find.text(l10n.minorAccountReviewParentConsentRecordCta),
           findsNothing,
         );
         await scrollUntilTappable(
           tester,
-          find.byType(DivineSwitch),
+          find.text(l10n.minorAccountReviewParentConsentEmailCta),
           200,
           scrollable: find.byType(Scrollable),
         );
         expect(
-          find.widgetWithText(
-            ListTile,
-            l10n.minorAccountReviewRecordConsentTitle,
-          ),
+          find.text(l10n.minorAccountReviewParentConsentEmailCta),
           findsOneWidget,
-        );
-        await tester.tap(find.byType(DivineSwitch));
-        await tester.pumpAndSettle();
-        expect(
-          find.widgetWithText(
-            DivineButton,
-            l10n.minorAccountReviewParentConsentRecordCta,
-          ),
-          findsOneWidget,
-        );
-        expect(prefs.getBool('ff_minorConsentInAppRecording'), isTrue);
-        expect(
-          find.text(l10n.minorAccountReviewRecordConsentPrivacyBody),
-          findsOneWidget,
-        );
-        expect(
-          find.textContaining(l10n.minorAccountReviewParentConsentBody),
-          findsNothing,
         );
       },
     );
-
-    testWidgets('names the recording opt-in on its switch for screen readers', (
-      tester,
-    ) async {
-      final semantics = tester.ensureSemantics();
-      final l10n = lookupAppLocalizations(const Locale('en'));
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: _recordingEnabledOverrides(enabled: false),
-          child: const MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: MinorAccountReviewParentConsentScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await scrollUntilTappable(
-        tester,
-        find.byType(DivineSwitch),
-        200,
-        scrollable: find.byType(Scrollable),
-      );
-
-      expect(
-        tester.getSemantics(find.byType(DivineSwitch)),
-        isSemantics(
-          label: l10n.minorAccountReviewRecordConsentTitle,
-          hasToggledState: true,
-        ),
-      );
-      semantics.dispose();
-    });
 
     testWidgets(
       'emails support with the case ID for a voluntary application',
@@ -593,6 +579,12 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              minorConsentOutputDirectoryProvider.overrideWithValue(
+                () async => '/tmp',
+              ),
+              minorConsentPreviewControllerProvider.overrideWithValue(
+                FakeConsentPreviewController.new,
+              ),
               minorConsentWakelockProvider.overrideWithValue((_) async {}),
               minorConsentRecorderProvider.overrideWithValue(_FakeRecorder()),
               permissionsServiceProvider.overrideWithValue(_FakePermissions()),

@@ -14,6 +14,8 @@ import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/api_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/consent_file_store.dart';
+import 'package:openvine/services/consent_upload.dart';
 import 'package:openvine/services/consent_upload_session.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 
@@ -93,8 +95,10 @@ void main() {
   late Directory tempDir;
   late File clip;
 
+  late ConsentFileStore fileStore;
   setUp(() {
     tempDir = Directory.systemTemp.createTempSync('consent-api-test');
+    fileStore = ConsentFileStore(tempDir);
     clip = File('${tempDir.path}/consent.mp4')..writeAsBytesSync([1, 2, 3, 4]);
   });
 
@@ -113,6 +117,8 @@ void main() {
         final bodies = <List<int>>[];
         final auth = _RecordingNip98AuthService();
         final api = ApiService(
+          prepareConsentUpload: (body) =>
+              ConsentUpload.prepare(body, store: fileStore),
           relayManagerBaseUrl: 'https://api.test',
           appVersion: 'test',
           authService: auth,
@@ -149,6 +155,8 @@ void main() {
         });
         final auth = _RecordingNip98AuthService();
         ApiService api({Duration? timeout}) => ApiService(
+          prepareConsentUpload: (body) =>
+              ConsentUpload.prepare(body, store: fileStore),
           relayManagerBaseUrl: 'https://api.test',
           appVersion: 'test',
           uploadTimeout: timeout ?? const Duration(seconds: 120),
@@ -191,6 +199,8 @@ void main() {
           return response.future;
         });
         ApiService api({Duration? timeout}) => ApiService(
+          prepareConsentUpload: (body) =>
+              ConsentUpload.prepare(body, store: fileStore),
           relayManagerBaseUrl: 'https://api.test',
           appVersion: 'test',
           uploadTimeout: timeout ?? const Duration(seconds: 120),
@@ -256,6 +266,8 @@ void main() {
         addTearDown(auth.dispose);
         http.Request? sent;
         final api = ApiService(
+          prepareConsentUpload: (body) =>
+              ConsentUpload.prepare(body, store: fileStore),
           relayManagerBaseUrl: 'https://api.test',
           appVersion: 'test',
           authService: auth,
@@ -293,6 +305,8 @@ void main() {
       });
       final auth = _RecordingNip98AuthService();
       final api = ApiService(
+        prepareConsentUpload: (body) =>
+            ConsentUpload.prepare(body, store: fileStore),
         client: client,
         authService: auth,
         relayManagerBaseUrl: 'https://api-relay-prod.divine.video',
@@ -333,6 +347,8 @@ void main() {
         return http.Response('', 201);
       });
       final api = ApiService(
+        prepareConsentUpload: (body) =>
+            ConsentUpload.prepare(body, store: fileStore),
         client: client,
         authService: _RecordingNip98AuthService(),
         relayManagerBaseUrl: 'https://api-relay-prod.divine.video',
@@ -368,6 +384,8 @@ void main() {
         });
         final auth = _RecordingNip98AuthService();
         final api = ApiService(
+          prepareConsentUpload: (body) =>
+              ConsentUpload.prepare(body, store: fileStore),
           client: client,
           authService: auth,
           relayManagerBaseUrl: 'https://api-relay-prod.divine.video',
@@ -414,6 +432,8 @@ void main() {
         }
       });
       final api = ApiService(
+        prepareConsentUpload: (body) =>
+            ConsentUpload.prepare(body, store: fileStore),
         client: client,
         authService: _RecordingNip98AuthService(),
         relayManagerBaseUrl: 'https://api-relay-prod.divine.video',

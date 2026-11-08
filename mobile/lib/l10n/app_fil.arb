@@ -5331,5 +5331,6 @@
   "badgeSubscriptionLoadError": "Hindi ma-load ang iyong mga subscription sa badge. Subukan muli.",
   "minorAccountReviewVideoSubmittedBody": "Naipasa na ang video mo para sa pagsusuri.",
   "minorAccountReviewVideoSubmittedTitle": "Naipasa na ang video",
-  "minorAccountReviewRecordConsentPrivacyBody": "Pribadong ipinapadala ang iyong video sa mga team ng Suporta at Tiwala at Kaligtasan ng Divine para suriin. Hindi ito inilalathala o ibinabahagi sa ibang mga user."
+  "minorAccountReviewRecordConsentPrivacyBody": "Pribadong ipinapadala ang iyong video sa mga team ng Suporta at Tiwala at Kaligtasan ng Divine para suriin. Hindi ito inilalathala o ibinabahagi sa ibang mga user.",
+  "minorAccountReviewRecordConsentRejected": "Hindi tinanggap ang ipinasa mo. Suriin ang email mo, i-record muli ang video, o gumamit ng email."
 }

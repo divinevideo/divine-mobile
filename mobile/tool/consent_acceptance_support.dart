@@ -24,6 +24,7 @@ class SyntheticConsentSigner extends Fake implements AuthService {
     required String content,
     List<List<String>>? tags,
     int? createdAt,
+    bool allowUserInteraction = true,
   }) async => Event(
     currentPublicKeyHex,
     kind,

@@ -15922,4 +15922,8 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentPrivacyBody =>
       'Video anda dihantar secara peribadi kepada pasukan Sokongan serta Kepercayaan dan Keselamatan Divine untuk semakan. Video tidak diterbitkan atau dikongsi dengan pengguna lain.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Penyerahan anda tidak diterima. Semak alamat e-mel anda, rakam semula video atau gunakan e-mel.';
 }
