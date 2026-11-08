@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
@@ -107,14 +108,17 @@ void main() {
       final inputPath = path.join(tempDir.path, 'source.mp4');
       final sourceClip = _clip(id: 'clip-1', inputPath: inputPath);
 
-      final result = await VideoEditorReverseService.reverseClip(
-        sourceClip: sourceClip,
-        renderId: 'reverse-render-1',
+      final result = await withClock(
+        Clock.fixed(_renderTime),
+        () => VideoEditorReverseService.reverseClip(
+          sourceClip: sourceClip,
+          renderId: 'reverse-render-1',
+        ),
       );
 
       final expectedOutputPath = path.join(
         documentsPath,
-        'clip-1_reversed.mp4',
+        _outputName('clip-1'),
       );
       expect(result.file?.path, expectedOutputPath);
       expect(proVideoEditor.canceledTaskIds, isEmpty);
@@ -157,6 +161,53 @@ void main() {
       expect(segment.endTime, const Duration(seconds: 5));
     });
 
+    // A trimmed clip or a split half reverses into a standalone file and keeps
+    // no forward copy, so reversing it again renders from that file. Naming
+    // the output after the clip alone pointed that render at its own input.
+    test('reverses a clip that plays its own earlier reverse', () async {
+      var ticks = 0;
+      final advancingClock = Clock(
+        () => _renderTime.add(Duration(microseconds: ticks++)),
+      );
+      Future<EditorVideo> reverse(DivineVideoClip clip, String renderId) =>
+          withClock(
+            advancingClock,
+            () => VideoEditorReverseService.reverseClip(
+              sourceClip: clip,
+              renderId: renderId,
+            ),
+          );
+
+      final firstReverse = await reverse(
+        _clip(
+          id: 'clip-twice',
+          inputPath: path.join(tempDir.path, 'source.mp4'),
+          trimStart: const Duration(seconds: 1),
+        ),
+        'reverse-render-first',
+      );
+      final firstPath = firstReverse.file!.path;
+      await File(firstPath).writeAsString('first reverse');
+
+      final secondReverse = await reverse(
+        _clip(
+          id: 'clip-twice',
+          inputPath: firstPath,
+          duration: const Duration(seconds: 5),
+        ),
+        'reverse-render-second',
+      );
+
+      final secondPath = secondReverse.file!.path;
+      expect(secondPath, isNot(firstPath));
+      expect(proVideoEditor.renderedPaths, [firstPath, secondPath]);
+      final segment = proVideoEditor.renderedData.last.videoSegments!.single;
+      expect(await segment.video.safeFilePath(), firstPath);
+      expect(segment.endTime, const Duration(seconds: 5));
+      // Undo history still plays the first render.
+      expect(await File(firstPath).readAsString(), 'first reverse');
+    });
+
     test(
       'does not cancel before rendering when there is no active render',
       () async {
@@ -183,13 +234,16 @@ void main() {
       );
       final outputPath = path.join(
         documentsPath,
-        'clip-stale-output_reversed.mp4',
+        _outputName('clip-stale-output'),
       );
       await File(outputPath).writeAsString('old reverse render');
 
-      await VideoEditorReverseService.reverseClip(
-        sourceClip: sourceClip,
-        renderId: 'reverse-render-stale',
+      await withClock(
+        Clock.fixed(_renderTime),
+        () => VideoEditorReverseService.reverseClip(
+          sourceClip: sourceClip,
+          renderId: 'reverse-render-stale',
+        ),
       );
 
       expect(proVideoEditor.outputExistedWhenRenderStarted, [isFalse]);
@@ -198,18 +252,18 @@ void main() {
     test('does not delete the source video when input equals output', () async {
       final collidingPath = path.join(
         documentsPath,
-        'clip-reversed_reversed.mp4',
+        _outputName('clip-reversed'),
       );
       await File(collidingPath).writeAsString('source video');
-      final sourceClip = _clip(
-        id: 'clip-reversed',
-        inputPath: collidingPath,
-      );
+      final sourceClip = _clip(id: 'clip-reversed', inputPath: collidingPath);
 
       await expectLater(
-        () => VideoEditorReverseService.reverseClip(
-          sourceClip: sourceClip,
-          renderId: 'reverse-render-collision',
+        () => withClock(
+          Clock.fixed(_renderTime),
+          () => VideoEditorReverseService.reverseClip(
+            sourceClip: sourceClip,
+            renderId: 'reverse-render-collision',
+          ),
         ),
         throwsA(isA<StateError>()),
       );
@@ -229,13 +283,16 @@ void main() {
       );
       final outputPath = path.join(
         documentsPath,
-        'clip-partial-output_reversed.mp4',
+        _outputName('clip-partial-output'),
       );
 
       await expectLater(
-        () => VideoEditorReverseService.reverseClip(
-          sourceClip: sourceClip,
-          renderId: 'reverse-render-failure',
+        () => withClock(
+          Clock.fixed(_renderTime),
+          () => VideoEditorReverseService.reverseClip(
+            sourceClip: sourceClip,
+            renderId: 'reverse-render-failure',
+          ),
         ),
         throwsException,
       );
@@ -245,9 +302,17 @@ void main() {
   });
 }
 
+/// The moment every pinned-clock test renders at.
+final _renderTime = DateTime.utc(2026, 11, 7, 12);
+
+/// The file a reverse of clip [id] writes at [_renderTime].
+String _outputName(String id) =>
+    '${id}_reversed_${_renderTime.microsecondsSinceEpoch}.mp4';
+
 DivineVideoClip _clip({
   required String id,
   required String inputPath,
+  Duration duration = const Duration(seconds: 6),
   Duration trimStart = Duration.zero,
   Duration trimEnd = Duration.zero,
   Duration minTrimStart = Duration.zero,
@@ -255,7 +320,7 @@ DivineVideoClip _clip({
   return DivineVideoClip(
     id: id,
     video: EditorVideo.file(inputPath),
-    duration: const Duration(seconds: 6),
+    duration: duration,
     recordedAt: DateTime(2026, 6, 10, 12),
     targetAspectRatio: model.AspectRatio.vertical,
     originalAspectRatio: 9 / 16,
