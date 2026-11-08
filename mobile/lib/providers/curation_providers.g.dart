@@ -59,12 +59,12 @@ final class FunnelcakeApiClientProvider
 }
 
 String _$funnelcakeApiClientHash() =>
-    r'be923708581acc9a95104de7e774d34f54efb4fb';
+    r'11ed027fa4affdbe56921081b3fe89654cd4d887';
 
 /// Single source of truth for Funnelcake REST API availability.
 ///
 /// Uses capability detection - actually probes the API to verify it works.
-/// Re-checks when environment or relay configuration changes.
+/// Re-checks when the environment's API client changes.
 ///
 /// All feed providers should watch this instead of checking
 /// `client.isAvailable` directly.
@@ -75,7 +75,7 @@ final funnelcakeAvailableProvider = FunnelcakeAvailableProvider._();
 /// Single source of truth for Funnelcake REST API availability.
 ///
 /// Uses capability detection - actually probes the API to verify it works.
-/// Re-checks when environment or relay configuration changes.
+/// Re-checks when the environment's API client changes.
 ///
 /// All feed providers should watch this instead of checking
 /// `client.isAvailable` directly.
@@ -84,7 +84,7 @@ final class FunnelcakeAvailableProvider
   /// Single source of truth for Funnelcake REST API availability.
   ///
   /// Uses capability detection - actually probes the API to verify it works.
-  /// Re-checks when environment or relay configuration changes.
+  /// Re-checks when the environment's API client changes.
   ///
   /// All feed providers should watch this instead of checking
   /// `client.isAvailable` directly.
@@ -108,12 +108,12 @@ final class FunnelcakeAvailableProvider
 }
 
 String _$funnelcakeAvailableHash() =>
-    r'35bb222c27e7b722396f57582b6fc2f9df4cec2c';
+    r'651c74fcb36f7810c2113cbd43fdd03a8da6e535';
 
 /// Single source of truth for Funnelcake REST API availability.
 ///
 /// Uses capability detection - actually probes the API to verify it works.
-/// Re-checks when environment or relay configuration changes.
+/// Re-checks when the environment's API client changes.
 ///
 /// All feed providers should watch this instead of checking
 /// `client.isAvailable` directly.

@@ -199,28 +199,6 @@ void main() {
     );
   });
 
-  group('resolveApiBaseUrlFromRelays', () {
-    test('maps relay.divine.video to api.divine.video for REST', () {
-      expect(
-        resolveApiBaseUrlFromRelays(
-          configuredRelays: const ['wss://relay.divine.video'],
-          fallbackBaseUrl: 'https://api.divine.video',
-        ),
-        'https://api.divine.video',
-      );
-    });
-
-    test('uses the first configured non-divine relay when needed', () {
-      expect(
-        resolveApiBaseUrlFromRelays(
-          configuredRelays: const ['wss://relay.staging.divine.video'],
-          fallbackBaseUrl: 'https://relay.staging.divine.video',
-        ),
-        'https://relay.staging.divine.video',
-      );
-    });
-  });
-
   group('isDivineHostedRelayUrl', () {
     test('accepts every Divine-operated relay host', () {
       expect(isDivineHostedRelayUrl('wss://relay.divine.video'), isTrue);
