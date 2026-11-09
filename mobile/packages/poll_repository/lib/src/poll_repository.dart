@@ -42,7 +42,8 @@ class PollVoteException implements Exception {
 /// votes are counted here from the `kind:1018` events the relays hold, read in
 /// one request of at most [maxVotesRead]. A read that runs out of time returns
 /// what arrived, so a large poll can count low. A vote the viewer cast here
-/// counts as theirs before the relays return it, which can take minutes.
+/// counts as theirs before the relays return it, which can take minutes; see
+/// [castVoteKept].
 class PollRepository {
   /// Creates the repository, reading and publishing through [nostrClient],
   /// signing votes with [signEvent] and telling the viewer's own vote by
@@ -73,11 +74,18 @@ class PollRepository {
   final Map<String, int> _ownVoteTimes = {};
 
   /// The latest vote each viewer cast here on each poll that a relay took, by
-  /// [_voteKey].
+  /// [_voteKey], counted for [castVoteKept].
   ///
   /// A relay can take minutes to return a vote it took, so a read soon after
   /// would miss it and offer the viewer the poll again as if unanswered.
   final Map<String, Event> _castVotes = {};
+
+  /// How long a vote cast here counts while the relays do not return it.
+  ///
+  /// A relay's `OK` means it took the vote, not that it stored it. One the
+  /// relays still do not return after this is taken as lost, and the viewer
+  /// can vote again.
+  static const Duration castVoteKept = Duration(minutes: 10);
 
   /// The relay a vote names in its `e` tag.
   final String? relayUrl;
@@ -103,15 +111,12 @@ class PollRepository {
     }
 
     final serverTally = _fetchServerTally(client, pollId);
-    final events = _withCastVote(
-      pollId,
-      viewerPubkey,
-      await _nostrClient.queryEvents([
-        Filter(ids: [pollId], kinds: [Poll.eventKind]),
-        if (viewerPubkey != null)
-          Filter(kinds: [Poll.voteKind], e: [pollId], authors: [viewerPubkey]),
-      ]),
-    );
+    final fromRelays = await _nostrClient.queryEvents([
+      Filter(ids: [pollId], kinds: [Poll.eventKind]),
+      if (viewerPubkey != null)
+        Filter(kinds: [Poll.voteKind], e: [pollId], authors: [viewerPubkey]),
+    ]);
+    final events = [...fromRelays, ?_recentCastVote(pollId, viewerPubkey)];
     final poll = _pollIn(events, pollId, authorPubkey);
     final tally = await serverTally.timeout(
       serverCountWait,
@@ -122,23 +127,35 @@ class PollRepository {
     if (tally == null) {
       return _countOnDevice(pollId, authorPubkey, viewerPubkey, known: events);
     }
+    final counted = PollResults.counted(
+      tally.votes,
+      ownVoteId: PollResults.tally(
+        poll,
+        fromRelays,
+        viewerPubkey: viewerPubkey,
+      ).ownVoteId,
+      replacedVoteId: viewerPubkey == null
+          ? null
+          : PollResults.replacedPick(
+              poll,
+              fromRelays,
+              viewerPubkey: viewerPubkey,
+            ),
+    );
+    // A later vote cast here that the relays do not return yet is not in
+    // Funnelcake's count either: the relay stores what it takes in batches,
+    // and the count is read from what it stored. It moves the count as it did
+    // on the card when it was cast.
+    final ownVoteId = PollResults.tally(
+      poll,
+      events,
+      viewerPubkey: viewerPubkey,
+    ).ownVoteId;
     return PollSnapshot(
       poll: poll,
-      results: PollResults.counted(
-        tally.votes,
-        ownVoteId: PollResults.tally(
-          poll,
-          events,
-          viewerPubkey: viewerPubkey,
-        ).ownVoteId,
-        replacedVoteId: viewerPubkey == null
-            ? null
-            : PollResults.replacedPick(
-                poll,
-                events,
-                viewerPubkey: viewerPubkey,
-              ),
-      ),
+      results: ownVoteId == null || ownVoteId == counted.ownVoteId
+          ? counted
+          : counted.withOwnVote(ownVoteId),
     );
   }
 
@@ -163,7 +180,8 @@ class PollRepository {
     String? viewerPubkey, {
     List<Event> known = const [],
   }) async {
-    final events = _withCastVote(pollId, viewerPubkey, [
+    // A vote read twice, or also cast here, counts once: each pubkey's latest.
+    final events = [
       ...known,
       ...await _nostrClient.queryEvents([
         Filter(ids: [pollId], kinds: [Poll.eventKind]),
@@ -172,7 +190,8 @@ class PollRepository {
         if (viewerPubkey != null)
           Filter(kinds: [Poll.voteKind], e: [pollId], authors: [viewerPubkey]),
       ]),
-    ]);
+      ?_recentCastVote(pollId, viewerPubkey),
+    ];
     final poll = _pollIn(events, pollId, authorPubkey);
     if (poll == null) return null;
     _noteOwnVotes(events, pollId, viewerPubkey);
@@ -185,20 +204,16 @@ class PollRepository {
   static String _voteKey(String? viewerPubkey, String pollId) =>
       '$viewerPubkey:$pollId';
 
-  /// [events] with the vote [viewerPubkey] cast here on [pollId], when the
-  /// relays did not return it.
-  List<Event> _withCastVote(
-    String pollId,
-    String? viewerPubkey,
-    List<Event> events,
-  ) {
-    final cast = viewerPubkey == null
-        ? null
-        : _castVotes[_voteKey(viewerPubkey, pollId)];
-    if (cast == null || events.any((event) => event.id == cast.id)) {
-      return events;
-    }
-    return [...events, cast];
+  /// The vote [viewerPubkey] cast here on [pollId] within [castVoteKept], or
+  /// `null` when there is none. An older one is forgotten.
+  Event? _recentCastVote(String pollId, String? viewerPubkey) {
+    if (viewerPubkey == null) return null;
+    final key = _voteKey(viewerPubkey, pollId);
+    final cast = _castVotes[key];
+    if (cast == null) return null;
+    if (_now() - cast.createdAt < castVoteKept.inSeconds) return cast;
+    _castVotes.remove(key);
+    return null;
   }
 
   /// Notes when [viewerPubkey]'s latest vote among [events] on [pollId] is

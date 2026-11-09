@@ -248,6 +248,31 @@ void main() {
         expect(snapshot?.results.hasVoted, isFalse);
       });
 
+      test('forgets a vote cast here that the relays still do not return '
+          'once it is older than castVoteKept', () async {
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        when(
+          () => nostrClient.queryEvents(any()),
+        ).thenAnswer((_) async => [_pollEvent()]);
+        final subject = repository();
+        // Stamped 2000.
+        await subject.vote(Poll.fromEvent(_pollEvent())!, '1');
+
+        now = 2000 + PollRepository.castVoteKept.inSeconds - 1;
+        final kept = await subject.fetchPoll(_pollId, authorPubkey: _author);
+        now += 1;
+        final forgotten = await subject.fetchPoll(
+          _pollId,
+          authorPubkey: _author,
+        );
+
+        expect(kept?.results.ownVoteId, equals('1'));
+        expect(forgotten?.poll.id, equals(_pollId));
+        expect(forgotten?.results.hasVoted, isFalse);
+      });
+
       test('keeps a vote cast here to the account that cast it', () async {
         when(
           () => nostrClient.publishEventAwaitOk(any()),
@@ -342,6 +367,83 @@ void main() {
         );
 
         expect(snapshot?.results.counts, equals({'0': 4, '1': 1}));
+        expect(snapshot?.results.ownVoteId, equals('1'));
+      });
+
+      test("adds the viewer's vote cast here to an answer others voted for, "
+          'which Funnelcake has not counted it on yet', () async {
+        when(() => funnelcake.getPollResults(_pollId)).thenAnswer(
+          (_) async => const PollVoteTally(votes: {'0': 4, '1': 3}, voters: 7),
+        );
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        when(
+          () => nostrClient.queryEvents(any()),
+        ).thenAnswer((_) async => [_pollEvent()]);
+        final subject = repository(funnelcakeApiClient: funnelcake);
+        await subject.vote(Poll.fromEvent(_pollEvent())!, '1');
+
+        final snapshot = await subject.fetchPoll(
+          _pollId,
+          authorPubkey: _author,
+        );
+
+        expect(snapshot?.results.counts, equals({'0': 4, '1': 4}));
+        expect(snapshot?.results.ownVoteId, equals('1'));
+      });
+
+      test('moves a vote changed here off the answer the relays still '
+          'return', () async {
+        when(() => funnelcake.getPollResults(_pollId)).thenAnswer(
+          (_) async => const PollVoteTally(votes: {'0': 4, '1': 3}, voters: 7),
+        );
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        // The first vote, counted by Funnelcake; the change, stamped 2000,
+        // is not returned yet.
+        when(() => nostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [_pollEvent(), _vote(_viewer, '0', createdAt: 1900)],
+        );
+        final subject = repository(funnelcakeApiClient: funnelcake);
+        await subject.vote(Poll.fromEvent(_pollEvent())!, '1');
+
+        final snapshot = await subject.fetchPoll(
+          _pollId,
+          authorPubkey: _author,
+        );
+
+        expect(snapshot?.results.counts, equals({'0': 3, '1': 4}));
+        expect(snapshot?.results.ownVoteId, equals('1'));
+      });
+
+      test('moves a vote changed here off the old answer once the relays '
+          'return it too', () async {
+        when(() => funnelcake.getPollResults(_pollId)).thenAnswer(
+          (_) async => const PollVoteTally(votes: {'0': 4}, voters: 4),
+        );
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        // The relays return the change, stamped 2000, as well as the vote it
+        // replaced; Funnelcake has counted neither change yet.
+        when(() => nostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [
+            _pollEvent(),
+            _vote(_viewer, '0', createdAt: 1900),
+            _vote(_viewer, '1'),
+          ],
+        );
+        final subject = repository(funnelcakeApiClient: funnelcake);
+        await subject.vote(Poll.fromEvent(_pollEvent())!, '1');
+
+        final snapshot = await subject.fetchPoll(
+          _pollId,
+          authorPubkey: _author,
+        );
+
+        expect(snapshot?.results.counts, equals({'0': 3, '1': 1}));
         expect(snapshot?.results.ownVoteId, equals('1'));
       });
 
