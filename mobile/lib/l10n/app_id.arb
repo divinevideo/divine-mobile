@@ -750,6 +750,7 @@
   "videoEngagementLikersEmpty": "Belum ada suka",
   "videoEngagementRepostersEmpty": "Belum ada repost",
   "videoEngagementLoadFailed": "Tidak dapat memuat daftar",
+  "videoEngagementListIncomplete": "Tidak dapat memuat semuanya",
   "metadataBadgeNotDivine": "Bukan Divine",
   "metadataBadgeHumanMade": "Buatan Manusia",
   "metadataSoundsLabel": "Suara",

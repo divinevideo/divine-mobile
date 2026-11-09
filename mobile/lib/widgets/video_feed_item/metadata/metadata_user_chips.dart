@@ -278,6 +278,9 @@ class MetadataInspiredBySection extends StatelessWidget {
 /// [VideoEvent.reposterPubkeys] from feed consolidation.
 /// Renders skeleton chips while the relay query runs and the feed's repost
 /// count promises at least one, and nothing once no reposters are found.
+/// A read that stopped before every relay answered and found nobody is not
+/// "no reposters": while the feed counts reposts, the row stays with a retry
+/// notice (#10846).
 class MetadataRepostedBySection extends StatelessWidget {
   const MetadataRepostedBySection({required this.video, super.key});
 
@@ -296,6 +299,7 @@ class MetadataRepostedBySection extends StatelessWidget {
           pubkeys: allPubkeys,
           video: video,
           isLoading: state.isLoading,
+          isComplete: state.isComplete,
         );
       },
     );
@@ -313,13 +317,15 @@ class MetadataRepostedBySection extends StatelessWidget {
 /// chip names has resolved: the feed already knows how many reposts the video
 /// has, so the section can take its final shape before the relay answers
 /// instead of appearing out of nowhere. Renders nothing while nothing is
-/// promised, and collapses through an [AnimatedReveal] when the relay
-/// contradicts the promise.
+/// promised, and collapses through an [AnimatedReveal] when a finished relay
+/// read contradicts the promise; one that stopped early keeps the row with a
+/// retry notice instead (#10846).
 class _RepostedByContent extends ConsumerStatefulWidget {
   const _RepostedByContent({
     required this.pubkeys,
     required this.video,
     required this.isLoading,
+    required this.isComplete,
   });
 
   /// Roughly three rows of chips on a phone — nine came out at five.
@@ -333,6 +339,9 @@ class _RepostedByContent extends ConsumerStatefulWidget {
 
   /// Whether the relay query behind [pubkeys] is still in flight.
   final bool isLoading;
+
+  /// Whether the relay query behind [pubkeys] finished.
+  final bool isComplete;
 
   @override
   ConsumerState<_RepostedByContent> createState() => _RepostedByContentState();
@@ -390,12 +399,19 @@ class _RepostedByContentState extends ConsumerState<_RepostedByContent> {
       );
     } else {
       final placeholderCount = _placeholderChipCount(candidate);
-      content = placeholderCount <= 0
-          ? null
-          : _UserChipsSkeleton(
-              label: context.l10n.metadataRepostedByLabel,
-              chipCount: placeholderCount,
-            );
+      if (placeholderCount > 0) {
+        content = _UserChipsSkeleton(
+          label: context.l10n.metadataRepostedByLabel,
+          chipCount: placeholderCount,
+        );
+      } else if (_readStoppedShortOfPromise) {
+        content = MetadataSection(
+          label: context.l10n.metadataRepostedByLabel,
+          child: const _RepostersIncompleteNotice(),
+        );
+      } else {
+        content = null;
+      }
     }
 
     return AnimatedReveal(child: content);
@@ -427,6 +443,14 @@ class _RepostedByContentState extends ConsumerState<_RepostedByContent> {
         (promisedCount > _RepostedByContent._maxVisibleReposters ? 1 : 0);
   }
 
+  /// Whether the read stopped before every relay answered although the feed
+  /// counts reposts (#10846).
+  ///
+  /// Only asked once no chip or placeholder is left, so the read found
+  /// nobody; a read in flight is never unfinished.
+  bool get _readStoppedShortOfPromise =>
+      !widget.isComplete && (widget.video.nostrRepostCount ?? 0) > 0;
+
   void _syncGraceTimer(List<String> candidate, bool namesSettled) {
     if (candidate.isEmpty || namesSettled || _revealed.isNotEmpty) {
       _cancelGraceTimer();
@@ -455,6 +479,35 @@ class _RepostedByContentState extends ConsumerState<_RepostedByContent> {
   void _cancelGraceTimer() {
     _graceTimer?.cancel();
     _graceTimer = null;
+  }
+}
+
+/// Stands in for the reposter chips when the read stopped before every relay
+/// answered and found nobody, although the feed counts reposts (#10846).
+class _RepostersIncompleteNotice extends StatelessWidget {
+  const _RepostersIncompleteNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      spacing: 8,
+      children: [
+        Flexible(
+          child: Text(
+            context.l10n.videoEngagementListIncomplete,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.secondaryText,
+            ),
+          ),
+        ),
+        DivineButton(
+          label: context.l10n.commonRetry,
+          type: DivineButtonType.link,
+          size: DivineButtonSize.small,
+          onPressed: () => context.read<VideoRepostersCubit>().retry(),
+        ),
+      ],
+    );
   }
 }
 

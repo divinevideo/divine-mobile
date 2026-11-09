@@ -1989,6 +1989,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Det gick inte att läsa in listan';
 
   @override
+  String get videoEngagementListIncomplete => 'Det gick inte att läsa in alla';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'Öppna videodetaljer';
 
   @override

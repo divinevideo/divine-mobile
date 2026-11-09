@@ -2024,6 +2024,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Liste konnte nicht geladen werden';
 
   @override
+  String get videoEngagementListIncomplete =>
+      'Nicht alle konnten geladen werden';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'Videodetails öffnen';
 
   @override

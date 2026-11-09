@@ -750,6 +750,7 @@
   "videoEngagementLikersEmpty": "لا توجد إعجابات بعد",
   "videoEngagementRepostersEmpty": "لا توجد إعادات نشر بعد",
   "videoEngagementLoadFailed": "تعذّر تحميل القائمة",
+  "videoEngagementListIncomplete": "تعذّر تحميل الجميع",
   "metadataBadgeNotDivine": "ليس Divine",
   "metadataBadgeHumanMade": "من صنع البشر",
   "metadataSoundsLabel": "أصوات",

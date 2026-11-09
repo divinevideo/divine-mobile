@@ -1931,6 +1931,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Liste yüklenemedi';
 
   @override
+  String get videoEngagementListIncomplete => 'Herkes yüklenemedi';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'Video detaylarını aç';
 
   @override

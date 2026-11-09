@@ -40,7 +40,7 @@ void main() {
           eventId: any(named: 'eventId'),
           addressableId: any(named: 'addressableId'),
         ),
-      ).thenAnswer((_) async => const <String>[]);
+      ).thenAnswer((_) async => const RepostersPage(pubkeys: []));
     });
 
     Future<void> pump(WidgetTester tester, String description) async {

@@ -1867,6 +1867,107 @@ void main() {
       },
     );
 
+    testWidgetsWithSurfaceSize(
+      'keeps the row with a retry notice when the read stopped early with '
+      'nobody and the feed counts reposts (#10846)',
+      (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            repostersState: const VideoRepostersState(
+              isLoading: false,
+              isComplete: false,
+            ),
+            child: MetadataRepostedBySection(
+              video: _makeVideo(nostrRepostCount: 3),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = _l10n(tester);
+        expect(find.text(l10n.metadataRepostedByLabel), findsOneWidget);
+        expect(find.text(l10n.videoEngagementListIncomplete), findsOneWidget);
+        expect(find.text(l10n.commonRetry), findsOneWidget);
+        expect(_skeletonChips(), findsNothing);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'collapses the row when the read stopped early with nobody and the '
+      'feed counts no reposts (#10846)',
+      (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            repostersState: const VideoRepostersState(
+              isLoading: false,
+              isComplete: false,
+            ),
+            child: MetadataRepostedBySection(
+              video: _makeVideo(nostrRepostCount: 0),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = _l10n(tester);
+        expect(find.text(l10n.metadataRepostedByLabel), findsNothing);
+        expect(find.text(l10n.videoEngagementListIncomplete), findsNothing);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'shows the reposters a read found before it stopped, without the '
+      'notice (#10846)',
+      (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            repostersState: const VideoRepostersState(
+              pubkeys: [_reposterPubkey],
+              isLoading: false,
+              isComplete: false,
+            ),
+            providerOverrides: [
+              fetchUserProfileProvider(_reposterPubkey).overrideWith(
+                (ref) async => _makeProfile(_reposterPubkey, 'Improvising'),
+              ),
+            ],
+            child: MetadataRepostedBySection(
+              video: _makeVideo(nostrRepostCount: 3),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Improvising'), findsOneWidget);
+        expect(
+          find.text(_l10n(tester).videoEngagementListIncomplete),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'reads the reposters again when Retry is tapped (#10846)',
+      (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            repostersState: const VideoRepostersState(
+              isLoading: false,
+              isComplete: false,
+            ),
+            child: MetadataRepostedBySection(
+              video: _makeVideo(nostrRepostCount: 3),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(_l10n(tester).commonRetry));
+
+        verify(() => mockRepostersCubit.retry()).called(1);
+      },
+    );
+
     testWidgetsWithSurfaceSize('renders reposters fetched from relay', (
       tester,
     ) async {

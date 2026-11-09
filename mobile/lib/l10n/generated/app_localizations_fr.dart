@@ -2034,6 +2034,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Impossible de charger la liste';
 
   @override
+  String get videoEngagementListIncomplete =>
+      'Impossible de charger tout le monde';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle =>
       'Ouvrir les détails de la vidéo';
 

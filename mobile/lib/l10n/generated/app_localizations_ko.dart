@@ -1847,6 +1847,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEngagementLoadFailed => '목록을 불러올 수 없습니다';
 
   @override
+  String get videoEngagementListIncomplete => '모두 불러오지 못했습니다';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => '영상 세부 정보 열기';
 
   @override

@@ -750,6 +750,7 @@
   "videoEngagementLikersEmpty": "まだいいねがありません",
   "videoEngagementRepostersEmpty": "まだリポストがありません",
   "videoEngagementLoadFailed": "リストを読み込めませんでした",
+  "videoEngagementListIncomplete": "全員を読み込めませんでした",
   "metadataBadgeNotDivine": "Divine 以外",
   "metadataBadgeHumanMade": "人間が制作",
   "metadataSoundsLabel": "サウンド",

@@ -1951,6 +1951,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEngagementLoadFailed => 'ዝርዝሩን መጫን አልተቻለም';
 
   @override
+  String get videoEngagementListIncomplete => 'ሁሉንም መጫን አልተቻለም';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'የቪዲዮ ዝርዝሮችን ይክፈቱ';
 
   @override

@@ -1963,6 +1963,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Không tải được danh sách đó';
 
   @override
+  String get videoEngagementListIncomplete => 'Không tải được tất cả mọi người';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'Mở chi tiết video';
 
   @override

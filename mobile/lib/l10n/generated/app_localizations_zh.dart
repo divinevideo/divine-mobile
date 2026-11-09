@@ -1856,6 +1856,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEngagementLoadFailed => '列表加载失败';
 
   @override
+  String get videoEngagementListIncomplete => '未能加载全部';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => '打开视频详情';
 
   @override

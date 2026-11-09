@@ -1996,6 +1996,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEngagementLoadFailed => 'وہ فہرست لوڈ نہیں ہو سکی';
 
   @override
+  String get videoEngagementListIncomplete => 'سب کو لوڈ نہیں کیا جا سکا';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'ویڈیو تفصیلات کھولیں';
 
   @override

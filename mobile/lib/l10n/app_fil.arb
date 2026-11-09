@@ -621,6 +621,7 @@
   "videoEngagementLikersEmpty": "Wala pang nag-like",
   "videoEngagementRepostersEmpty": "Wala pang nag-repost",
   "videoEngagementLoadFailed": "Hindi ma-load ang listahan",
+  "videoEngagementListIncomplete": "Hindi ma-load ang lahat",
   "videoFeedLoopCountLine": "{compactCount} {count, plural, =1{loop} other{loops}}",
   "metadataBadgeNotDivine": "Hindi Divine",
   "metadataBadgeHumanMade": "Gawa ng Tao",

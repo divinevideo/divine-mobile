@@ -2016,6 +2016,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEngagementLoadFailed => 'No se pudo cargar la lista';
 
   @override
+  String get videoEngagementListIncomplete => 'No se pudo cargar a todos';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'Abrir detalles del video';
 
   @override

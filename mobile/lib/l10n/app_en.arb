@@ -1328,6 +1328,10 @@
   "@videoEngagementLoadFailed": {
     "description": "Error-state heading on the engagement list screen when the relay query fails."
   },
+  "videoEngagementListIncomplete": "Couldn't load everyone.",
+  "@videoEngagementListIncomplete": {
+    "description": "Shown when a read of who liked or reposted a video stopped before every relay answered, so people may be missing: below the Liked by or Reposted by list, or in place of the Reposted by row in a video's details. A Retry button sits with it."
+  },
   "videoOverlayOpenMetadataFromTitle": "Open video details",
   "@videoOverlayOpenMetadataFromTitle": {
     "description": "Screen-reader label for the tappable title row on the video overlay. Action-oriented: describes what tapping does (opens the metadata sheet), not the title text itself — that's already read aloud by the underlying Text widget."

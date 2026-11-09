@@ -1010,6 +1010,7 @@
     "description": "Empty-state message on the reposters list screen when no one has reposted the video yet."
   },
   "videoEngagementLoadFailed": "وہ فہرست لوڈ نہیں ہو سکی",
+  "videoEngagementListIncomplete": "سب کو لوڈ نہیں کیا جا سکا",
   "@videoEngagementLoadFailed": {
     "description": "Error-state heading on the engagement list screen when the relay query fails."
   },

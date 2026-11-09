@@ -1244,6 +1244,7 @@
     "description": "Empty-state message on the reposters list screen when no one has reposted the video yet."
   },
   "videoEngagementLoadFailed": "ఆ జాబితాను లోడ్ చేయడం సాధ్యపడలేదు",
+  "videoEngagementListIncomplete": "అందరినీ లోడ్ చేయడం సాధ్యపడలేదు",
   "@videoEngagementLoadFailed": {
     "description": "Error-state heading on the engagement list screen when the relay query fails."
   },
