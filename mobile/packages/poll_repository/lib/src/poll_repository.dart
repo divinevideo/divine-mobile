@@ -41,7 +41,8 @@ class PollVoteException implements Exception {
 /// viewer's own. When Funnelcake is not configured or does not answer, the
 /// votes are counted here from the `kind:1018` events the relays hold, read in
 /// one request of at most [maxVotesRead]. A read that runs out of time returns
-/// what arrived, so a large poll can count low.
+/// what arrived, so a large poll can count low. A vote the viewer cast here
+/// counts as theirs before the relays return it, which can take minutes.
 class PollRepository {
   /// Creates the repository, reading and publishing through [nostrClient],
   /// signing votes with [signEvent] and telling the viewer's own vote by
@@ -71,6 +72,13 @@ class PollRepository {
   /// or cast here, by [_voteKey].
   final Map<String, int> _ownVoteTimes = {};
 
+  /// The latest vote each viewer cast here on each poll that a relay took, by
+  /// [_voteKey].
+  ///
+  /// A relay can take minutes to return a vote it took, so a read soon after
+  /// would miss it and offer the viewer the poll again as if unanswered.
+  final Map<String, Event> _castVotes = {};
+
   /// The relay a vote names in its `e` tag.
   final String? relayUrl;
 
@@ -95,11 +103,15 @@ class PollRepository {
     }
 
     final serverTally = _fetchServerTally(client, pollId);
-    final events = await _nostrClient.queryEvents([
-      Filter(ids: [pollId], kinds: [Poll.eventKind]),
-      if (viewerPubkey != null)
-        Filter(kinds: [Poll.voteKind], e: [pollId], authors: [viewerPubkey]),
-    ]);
+    final events = _withCastVote(
+      pollId,
+      viewerPubkey,
+      await _nostrClient.queryEvents([
+        Filter(ids: [pollId], kinds: [Poll.eventKind]),
+        if (viewerPubkey != null)
+          Filter(kinds: [Poll.voteKind], e: [pollId], authors: [viewerPubkey]),
+      ]),
+    );
     final poll = _pollIn(events, pollId, authorPubkey);
     final tally = await serverTally.timeout(
       serverCountWait,
@@ -151,7 +163,7 @@ class PollRepository {
     String? viewerPubkey, {
     List<Event> known = const [],
   }) async {
-    final events = [
+    final events = _withCastVote(pollId, viewerPubkey, [
       ...known,
       ...await _nostrClient.queryEvents([
         Filter(ids: [pollId], kinds: [Poll.eventKind]),
@@ -160,7 +172,7 @@ class PollRepository {
         if (viewerPubkey != null)
           Filter(kinds: [Poll.voteKind], e: [pollId], authors: [viewerPubkey]),
       ]),
-    ];
+    ]);
     final poll = _pollIn(events, pollId, authorPubkey);
     if (poll == null) return null;
     _noteOwnVotes(events, pollId, viewerPubkey);
@@ -172,6 +184,22 @@ class PollRepository {
 
   static String _voteKey(String? viewerPubkey, String pollId) =>
       '$viewerPubkey:$pollId';
+
+  /// [events] with the vote [viewerPubkey] cast here on [pollId], when the
+  /// relays did not return it.
+  List<Event> _withCastVote(
+    String pollId,
+    String? viewerPubkey,
+    List<Event> events,
+  ) {
+    final cast = viewerPubkey == null
+        ? null
+        : _castVotes[_voteKey(viewerPubkey, pollId)];
+    if (cast == null || events.any((event) => event.id == cast.id)) {
+      return events;
+    }
+    return [...events, cast];
+  }
 
   /// Notes when [viewerPubkey]'s latest vote among [events] on [pollId] is
   /// stamped, so a vote they change it to is stamped later.
@@ -216,18 +244,19 @@ class PollRepository {
     }
     final key = _voteKey(_currentPubkey(), poll.id);
     final previous = _ownVoteTimes[key];
-    final Event? event;
+    final Event event;
     final PublishOutcome outcome;
     try {
-      event = await _signEvent(
+      final signed = await _signEvent(
         kind: Poll.voteKind,
         content: '',
         tags: Poll.voteTags(poll.id, optionId, relayUrl: relayUrl),
         createdAt: previous == null ? null : math.max(previous + 1, _now()),
       );
-      if (event == null) {
+      if (signed == null) {
         throw const PollVoteException('Could not sign the vote');
       }
+      event = signed;
       _noteOwnVote(key, event.createdAt);
       outcome = await _nostrClient.publishEventAwaitOk(event);
     } on PollVoteException {
@@ -241,5 +270,6 @@ class PollRepository {
         outcome: outcome,
       );
     }
+    _castVotes[key] = event;
   }
 }
