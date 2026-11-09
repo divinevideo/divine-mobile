@@ -18,7 +18,6 @@ import 'package:openvine/widgets/retry_after_settings_on_resume.dart';
 
 Future<void> showWatermarkDownloadSheet({
   required BuildContext context,
-  required WidgetRef ref,
   required VideoEvent video,
   required String watermarkText,
 }) {
@@ -33,27 +32,27 @@ Future<void> showWatermarkDownloadSheet({
     builder: (sheetContext) => _WatermarkDownloadProgressSheet(
       video: video,
       watermarkText: watermarkText,
-      ref: ref,
     ),
   );
 }
 
-class _WatermarkDownloadProgressSheet extends StatelessWidget {
+/// Reads its providers through its own `ref`: the widget that opened the
+/// sheet may already be gone, as the feed share sheet closes itself first.
+class _WatermarkDownloadProgressSheet extends ConsumerWidget {
   const _WatermarkDownloadProgressSheet({
     required this.video,
     required this.watermarkText,
-    required this.ref,
   });
 
   final VideoEvent video;
   final String watermarkText;
-  final WidgetRef ref;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return BlocProvider(
       create: (_) {
         final cubit = WatermarkDownloadProgressCubit(
+          // Not account-scoped, so it cannot go stale during one download.
           service: ref.read(watermarkDownloadServiceProvider),
           video: video,
           watermarkText: watermarkText,
@@ -66,26 +65,24 @@ class _WatermarkDownloadProgressSheet extends StatelessWidget {
         );
         return cubit;
       },
-      child: _WatermarkDownloadProgressView(ref: ref),
+      child: const _WatermarkDownloadProgressView(),
     );
   }
 }
 
-class _WatermarkDownloadProgressView extends StatefulWidget {
-  const _WatermarkDownloadProgressView({required this.ref});
-
-  final WidgetRef ref;
+class _WatermarkDownloadProgressView extends ConsumerStatefulWidget {
+  const _WatermarkDownloadProgressView();
 
   @override
-  State<_WatermarkDownloadProgressView> createState() =>
+  ConsumerState<_WatermarkDownloadProgressView> createState() =>
       _WatermarkDownloadProgressViewState();
 }
 
 class _WatermarkDownloadProgressViewState
-    extends State<_WatermarkDownloadProgressView>
+    extends ConsumerState<_WatermarkDownloadProgressView>
     with RetryAfterSettingsOnResume {
   Future<void> _openSettings() async {
-    final permissionsService = widget.ref.read(permissionsServiceProvider);
+    final permissionsService = ref.read(permissionsServiceProvider);
     final cubit = context.read<WatermarkDownloadProgressCubit>();
     await openSettingsAndRetryOnResume(
       openSettings: permissionsService.openAppSettings,

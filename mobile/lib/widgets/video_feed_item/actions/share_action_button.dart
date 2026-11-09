@@ -680,7 +680,6 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     await _presentAfterDismiss<void>((hostContext) {
       return showSaveOriginalSheet(
         context: hostContext,
-        ref: ref,
         video: widget.video,
       );
     });
@@ -699,7 +698,6 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     await _presentAfterDismiss<void>((hostContext) {
       return showWatermarkDownloadSheet(
         context: hostContext,
-        ref: ref,
         video: widget.video,
         watermarkText: watermarkText,
       );

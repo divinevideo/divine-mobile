@@ -19,7 +19,6 @@ import 'package:openvine/widgets/retry_after_settings_on_resume.dart';
 /// Shows a bottom sheet that tracks original video save progress.
 Future<void> showSaveOriginalSheet({
   required BuildContext context,
-  required WidgetRef ref,
   required VideoEvent video,
 }) {
   return showModalBottomSheet<void>(
@@ -30,22 +29,23 @@ Future<void> showSaveOriginalSheet({
         top: Radius.circular(VineTheme.bottomSheetBorderRadius),
       ),
     ),
-    builder: (sheetContext) =>
-        _SaveOriginalProgressSheet(video: video, ref: ref),
+    builder: (sheetContext) => _SaveOriginalProgressSheet(video: video),
   );
 }
 
-class _SaveOriginalProgressSheet extends StatelessWidget {
-  const _SaveOriginalProgressSheet({required this.video, required this.ref});
+/// Reads its providers through its own `ref`: the widget that opened the
+/// sheet may already be gone, as the feed share sheet closes itself first.
+class _SaveOriginalProgressSheet extends ConsumerWidget {
+  const _SaveOriginalProgressSheet({required this.video});
 
   final VideoEvent video;
-  final WidgetRef ref;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return BlocProvider(
       create: (_) {
         final cubit = SaveOriginalProgressCubit(
+          // Not account-scoped, so it cannot go stale during one download.
           service: ref.read(watermarkDownloadServiceProvider),
           video: video,
         );
@@ -57,25 +57,24 @@ class _SaveOriginalProgressSheet extends StatelessWidget {
         );
         return cubit;
       },
-      child: _SaveOriginalProgressView(ref: ref),
+      child: const _SaveOriginalProgressView(),
     );
   }
 }
 
-class _SaveOriginalProgressView extends StatefulWidget {
-  const _SaveOriginalProgressView({required this.ref});
-
-  final WidgetRef ref;
+class _SaveOriginalProgressView extends ConsumerStatefulWidget {
+  const _SaveOriginalProgressView();
 
   @override
-  State<_SaveOriginalProgressView> createState() =>
+  ConsumerState<_SaveOriginalProgressView> createState() =>
       _SaveOriginalProgressViewState();
 }
 
-class _SaveOriginalProgressViewState extends State<_SaveOriginalProgressView>
+class _SaveOriginalProgressViewState
+    extends ConsumerState<_SaveOriginalProgressView>
     with RetryAfterSettingsOnResume {
   Future<void> _openSettings() async {
-    final permissionsService = widget.ref.read(permissionsServiceProvider);
+    final permissionsService = ref.read(permissionsServiceProvider);
     final cubit = context.read<SaveOriginalProgressCubit>();
     await openSettingsAndRetryOnResume(
       openSettings: permissionsService.openAppSettings,

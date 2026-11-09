@@ -48,7 +48,10 @@ void main() {
     mockPermissions = _MockPermissionsService();
   });
 
-  Widget buildTestWidget({required VideoEvent video}) {
+  Widget buildTestWidget({
+    required VideoEvent video,
+    required ValueNotifier<bool> openerVisible,
+  }) {
     return ProviderScope(
       overrides: [
         watermarkDownloadServiceProvider.overrideWithValue(mockService),
@@ -58,38 +61,42 @@ void main() {
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData.dark(),
-        home: Builder(
-          builder: (context) {
-            return Consumer(
-              builder: (context, ref, _) {
-                return Scaffold(
-                  body: ElevatedButton(
-                    onPressed: () async {
-                      await showWatermarkDownloadSheet(
-                        context: context,
-                        ref: ref,
-                        video: video,
-                        watermarkText: 'TestUser',
-                      );
-                    },
-                    child: const Text('Show Sheet'),
-                  ),
-                );
-              },
-            );
-          },
+        home: Scaffold(
+          body: ValueListenableBuilder<bool>(
+            valueListenable: openerVisible,
+            builder: (context, visible, _) {
+              if (!visible) return const SizedBox.shrink();
+              return ElevatedButton(
+                onPressed: () async {
+                  await showWatermarkDownloadSheet(
+                    context: context,
+                    video: video,
+                    watermarkText: 'TestUser',
+                  );
+                },
+                child: const Text('Show Sheet'),
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-  Future<void> pumpSheet(
+  /// Pumps the opener and returns the switch that removes it from the tree
+  /// while the sheet stays open.
+  Future<ValueNotifier<bool>> pumpSheet(
     WidgetTester tester, {
     required VideoEvent video,
   }) async {
     await tester.binding.setSurfaceSize(const Size(800, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(buildTestWidget(video: video));
+    final openerVisible = ValueNotifier(true);
+    addTearDown(openerVisible.dispose);
+    await tester.pumpWidget(
+      buildTestWidget(video: video, openerVisible: openerVisible),
+    );
+    return openerVisible;
   }
 
   group('showWatermarkDownloadSheet', () {
@@ -276,6 +283,59 @@ void main() {
           findsNothing,
         );
         expect(callCount, equals(2));
+      },
+    );
+
+    testWidgets(
+      'Open Settings retries after the widget that opened the sheet is gone',
+      (tester) async {
+        // The feed share sheet closes itself as it opens this sheet, so the
+        // opener is unmounted long before the user taps Open Settings.
+        when(
+          () => mockPermissions.openAppSettings(),
+        ).thenAnswer((_) async => true);
+
+        var callCount = 0;
+        when(
+          () => mockService.downloadWithWatermark(
+            video: any(named: 'video'),
+            watermarkText: any(named: 'watermarkText'),
+            onProgress: any(named: 'onProgress'),
+          ),
+        ).thenAnswer((_) async {
+          callCount++;
+          if (callCount == 1) {
+            return const WatermarkDownloadPermissionDenied();
+          }
+          return const WatermarkDownloadSuccess('/tmp/v.mp4');
+        });
+
+        final openerVisible = await pumpSheet(
+          tester,
+          video: _createTestVideo(),
+        );
+        await tester.tap(find.text('Show Sheet'));
+        await tester.pumpAndSettle();
+
+        openerVisible.value = false;
+        await tester.pump();
+        expect(find.text('Show Sheet'), findsNothing);
+
+        await tester.tap(find.text(l10n.watermarkDownloadOpenSettings));
+        await tester.pump();
+
+        verify(() => mockPermissions.openAppSettings()).called(1);
+
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+
+        expect(callCount, equals(2));
+        expect(
+          find.text(l10n.watermarkDownloadSavedToCameraRoll),
+          findsOneWidget,
+        );
       },
     );
 
