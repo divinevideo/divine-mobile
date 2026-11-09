@@ -82,6 +82,58 @@ void main() {
       );
     });
 
+    test('deletes a listed draft even when its history cannot load', () async {
+      await seed();
+      await File('${directory.path}/cover.jpg').writeAsBytes([0]);
+      final service = DraftStorageService(
+        draftsDao: db.draftsDao,
+        clipsDao: db.clipsDao,
+      );
+      expect(await service.getDraftSummaries(), hasLength(1));
+      expect(await service.getDraftById('draft'), isNull);
+
+      await service.deleteDraft('draft');
+
+      expect(await db.draftsDao.getDraftById('draft'), isNull);
+      expect(await db.clipsDao.getClipsByDraftId('draft'), isEmpty);
+      expect(await service.getDraftSummaries(), isEmpty);
+      expect(File('${directory.path}/clip.mp4').existsSync(), isFalse);
+      expect(File('${directory.path}/cover.jpg').existsSync(), isFalse);
+    });
+
+    test("deleting an unreadable draft keeps another draft's media", () async {
+      await seed();
+      final service = DraftStorageService(
+        draftsDao: db.draftsDao,
+        clipsDao: db.clipsDao,
+      );
+      final clip = DivineVideoClip(
+        id: 'shared-clip',
+        video: EditorVideo.file('${directory.path}/clip.mp4'),
+        duration: const Duration(seconds: 6),
+        recordedAt: DateTime(2026),
+        originalAspectRatio: 1,
+        targetAspectRatio: .square,
+      );
+      await service.saveDraft(
+        DivineVideoDraft.create(
+          id: 'survivor',
+          clips: [clip],
+          title: 'Survivor',
+          description: '',
+          hashtags: {},
+          selectedApproach: 'video',
+        ),
+      );
+      expect(await service.getDraftSummaries(), hasLength(2));
+
+      await service.deleteDraft('draft');
+
+      expect(await db.draftsDao.getDraftById('draft'), isNull);
+      expect(await service.getValidatedDraftById('survivor'), isNotNull);
+      expect(File('${directory.path}/clip.mp4').existsSync(), isTrue);
+    });
+
     for (final scenario in [
       'source',
       'rendered',

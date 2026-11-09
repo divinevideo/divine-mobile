@@ -267,7 +267,7 @@ void main() {
         await tester.tap(find.text(en.libraryDraftActionPost));
         await tester.pumpAndSettle();
         expect(publisher.published, isEmpty);
-        expect(find.text(en.libraryCouldNotLoadDrafts), findsOneWidget);
+        expect(find.text(en.commonSomethingWentWrong), findsOneWidget);
       });
     });
 

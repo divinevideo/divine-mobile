@@ -99,6 +99,17 @@ void main() {
       expect(await db.draftsDao.getDraftSummaries(), hasLength(4));
     });
 
+    test(
+      'missing render version defaults to the full draft legacy version',
+      () async {
+        await seed('legacy-render', data: '{}');
+        expect(
+          (await db.draftsDao.getDraftSummaries()).single.finalRenderVersion,
+          0,
+        );
+      },
+    );
+
     test('malformed payload is hidden but remains in inventory', () async {
       await seed('bad', data: 'not json');
       expect(await db.draftsDao.getDraftSummaries(), isEmpty);

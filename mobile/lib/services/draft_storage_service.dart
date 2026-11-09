@@ -846,7 +846,10 @@ class DraftStorageService {
     // primary key — an owner-scoped read would turn every deletion issued by a
     // service whose ownerPubkey no longer matches the row into a silent no-op.
     final draft = await _loadDraftAcrossAccounts(id);
-    if (draft == null) return;
+    if (draft == null) {
+      await _deleteUnreadableDraft(id);
+      return;
+    }
     final documentsPath = await getDocumentsPath();
     final detachedClipPaths = DetachedClipLayerData.ownedFilePathsInHistory(
       draft.editorStateHistory,
@@ -914,6 +917,55 @@ class DraftStorageService {
         referencedAudioFilenames: await _referencedLocalAudioFilenames(),
       );
     }
+  }
+
+  /// Deletes an unreadable draft using independently recoverable media metadata.
+  Future<void> _deleteUnreadableDraft(String id) async {
+    final row = await _draftsDao.getDraftById(id);
+    if (row == null) return;
+    final documentsPath = await getDocumentsPath();
+    final clipRows = await _clipsDao.getClipsByDraftId(id);
+    final clips = <DivineVideoClip>[];
+    final indexedPaths = <String?>[
+      resolvePath(row.renderedFilePath, documentsPath),
+      resolvePath(row.renderedThumbnailPath, documentsPath),
+      resolvePath(row.customThumbnailPath, documentsPath),
+      for (final clip in clipRows) ...[
+        resolvePath(clip.filePath, documentsPath),
+        resolvePath(clip.thumbnailPath, documentsPath),
+      ],
+    ];
+    for (final clip in clipRows) {
+      try {
+        clips.add(
+          DivineVideoClip.fromJson(
+            json.decode(clip.data) as Map<String, dynamic>,
+            documentsPath,
+          ),
+        );
+      } catch (error) {
+        Log.warning(
+          'Skipping unreadable clip metadata during draft deletion: $error',
+          name: 'DraftStorageService',
+          category: LogCategory.video,
+        );
+      }
+    }
+
+    // Unreadable editor metadata cannot safely identify extra owned assets.
+    // Retain those for the existing orphan-file cleanup rather than guess.
+    await _draftsDao.deleteDraft(id);
+    await FileCleanupService.deleteRecordingClipsFiles(
+      clips,
+      draftsDao: _draftsDao,
+      clipsDao: _clipsDao,
+      referencedGhostFrameFilenames: await _referencedGhostFrameFilenames(),
+    );
+    await FileCleanupService.deleteFilesIfUnreferenced(
+      indexedPaths,
+      draftsDao: _draftsDao,
+      clipsDao: _clipsDao,
+    );
   }
 
   /// Basenames of draft-local audio files referenced by any surviving draft or

@@ -132,7 +132,7 @@ class DraftsDao extends DatabaseAccessor<AppDatabase> with _$DraftsDaoMixin {
   Future<List<DraftSummaryRow>> getDraftSummaries({String? ownerPubkey}) {
     const version = CustomExpression<int>(
       r"CASE WHEN json_type(data, '$.finalRenderVersion') = 'integer' "
-      r"THEN json_extract(data, '$.finalRenderVersion') ELSE 1 END",
+      r"THEN json_extract(data, '$.finalRenderVersion') ELSE 0 END",
     );
     final query = selectOnly(drafts)
       ..addColumns([

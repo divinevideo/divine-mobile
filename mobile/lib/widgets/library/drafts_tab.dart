@@ -264,7 +264,7 @@ class _DraftsList extends ConsumerWidget {
           elevation: 0,
           behavior: SnackBarBehavior.floating,
           content: DivineSnackbarContainer(
-            label: context.l10n.libraryCouldNotLoadDrafts,
+            label: context.l10n.commonSomethingWentWrong,
           ),
         ),
       );
