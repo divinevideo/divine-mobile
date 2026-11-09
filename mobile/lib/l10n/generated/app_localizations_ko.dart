@@ -11371,6 +11371,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => '색상 확인';
 
   @override
+  String get videoEditorEyedropperSemanticLabel => '영상에서 색상 선택';
+
+  @override
+  String get videoEditorEyedropperHint => '터치한 채로 드래그해서 색상을 선택하세요';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => '색상 선택 그만하기';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel => '채도 및 밝기';
 
   @override

@@ -12179,6 +12179,18 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'Confirmă culoarea';
 
   @override
+  String get videoEditorEyedropperSemanticLabel =>
+      'Alege o culoare din videoclip';
+
+  @override
+  String get videoEditorEyedropperHint =>
+      'Atinge și trage pentru a alege o culoare';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel =>
+      'Oprește alegerea culorii';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
       'Saturație și luminozitate';
 

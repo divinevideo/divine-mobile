@@ -11227,6 +11227,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => '确认颜色';
 
   @override
+  String get videoEditorEyedropperSemanticLabel => '从视频中取色';
+
+  @override
+  String get videoEditorEyedropperHint => '按住并拖动来取色';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => '停止取色';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel => '饱和度和亮度';
 
   @override

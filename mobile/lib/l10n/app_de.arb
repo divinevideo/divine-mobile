@@ -3363,6 +3363,9 @@
   "videoEditorCloseColorPickerSemanticLabel": "Farbwähler schließen",
   "videoEditorPickColorTitle": "Farbe auswählen",
   "videoEditorConfirmColorSemanticLabel": "Farbe bestätigen",
+  "videoEditorEyedropperSemanticLabel": "Farbe aus dem Video wählen",
+  "videoEditorEyedropperHint": "Tippe und ziehe, um eine Farbe zu wählen",
+  "videoEditorEyedropperCancelSemanticLabel": "Farbauswahl beenden",
   "videoEditorSaturationBrightnessSemanticLabel": "Sättigung und Helligkeit",
   "videoEditorSaturationBrightnessValue": "Sättigung {saturation} %, Helligkeit {brightness} %",
   "@videoEditorSaturationBrightnessValue": {

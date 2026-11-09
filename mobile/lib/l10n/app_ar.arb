@@ -2594,6 +2594,9 @@
     }
   },
   "videoEditorConfirmColorSemanticLabel": "تأكيد اللون",
+  "videoEditorEyedropperSemanticLabel": "اختيار لون من الفيديو",
+  "videoEditorEyedropperHint": "اختيار لون باللمس والسحب",
+  "videoEditorEyedropperCancelSemanticLabel": "إيقاف اختيار اللون",
   "videoEditorDeleteLabel": "حذف",
   "videoEditorDeleteLayerDropZone": "منطقة إسقاط لحذف الطبقة",
   "videoEditorDeleteSelectedItemSemanticLabel": "حذف العنصر المحدد",

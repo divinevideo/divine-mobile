@@ -20181,6 +20181,24 @@ abstract class AppLocalizations {
   /// **'Confirm color'**
   String get videoEditorConfirmColorSemanticLabel;
 
+  /// Accessibility label of the eyedropper button in the video editor's Pick color sheet (videoEditorPickColorTitle), beside the confirm button. Opens a picker that takes a color straight off the video on screen; the sheet offers it wherever a color is chosen in the editor — drawing, text, the color mask and the rest.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a color from the video'**
+  String get videoEditorEyedropperSemanticLabel;
+
+  /// Instruction shown at the top of the eyedropper while it is open: the user touches the video, drags the magnifier onto the color they want and lifts the finger to pick it. Keep it short — it sits on one line between the close button and the screen edge.
+  ///
+  /// In en, this message translates to:
+  /// **'Touch and drag to pick a color'**
+  String get videoEditorEyedropperHint;
+
+  /// Accessibility label of the button that closes the eyedropper without picking a color, which goes back to the Pick color sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop picking a color'**
+  String get videoEditorEyedropperCancelSemanticLabel;
+
   /// No description provided for @videoEditorSaturationBrightnessSemanticLabel.
   ///
   /// In en, this message translates to:

@@ -5880,6 +5880,9 @@
   "videoEditorCloseColorPickerSemanticLabel": "Tutup pemilih warna",
   "videoEditorPickColorTitle": "Pilih warna",
   "videoEditorConfirmColorSemanticLabel": "Sahkan warna",
+  "videoEditorEyedropperSemanticLabel": "Pilih warna daripada video",
+  "videoEditorEyedropperHint": "Sentuh dan seret untuk memilih warna",
+  "videoEditorEyedropperCancelSemanticLabel": "Berhenti memilih warna",
   "videoEditorSaturationBrightnessSemanticLabel": "Ketepuan dan kecerahan",
   "videoEditorSaturationBrightnessValue": "Ketepuan {saturation}%, Kecerahan {brightness}%",
   "@videoEditorSaturationBrightnessValue": {
