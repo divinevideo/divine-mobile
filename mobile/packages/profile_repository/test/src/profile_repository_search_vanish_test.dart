@@ -155,8 +155,8 @@ void main() {
             .searchUsersProgressive(query: 'test account')
             .toList();
 
-        expect(results, hasLength(3));
-        for (final result in results.skip(1)) {
+        expect(results, hasLength(4));
+        for (final result in results.skip(2)) {
           expect(result.profiles.map((p) => p.pubkey), [live]);
         }
         expect(results.last.isComplete, isTrue);
@@ -252,9 +252,124 @@ void main() {
         ),
       );
       final results = await pending;
-      expect(results, hasLength(1));
+      expect(results, hasLength(2));
       expect(repo.isVanished(deleted), isFalse);
       expect(await db.userProfilesDao.getProfile(deleted), isNotNull);
     });
+
+    test('REST rows are emitted before waiting on the bulk recheck', () async {
+      final response = Completer<BulkProfilesResponse>();
+      final started = Completer<void>();
+      when(() => api.getBulkProfiles(any())).thenAnswer((_) {
+        started.complete();
+        return response.future;
+      });
+      when(
+        () => api.searchProfiles(
+          query: any(named: 'query'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          sortBy: any(named: 'sortBy'),
+          hasVideos: any(named: 'hasVideos'),
+        ),
+      ).thenAnswer(
+        (_) async => [
+          const ProfileSearchResult(
+            pubkey: live,
+            name: 'test account',
+            displayName: 'test account REST answer',
+          ),
+        ],
+      );
+      final emissions = <ProgressiveSearchResult>[];
+      final done = repo
+          .searchUsersProgressive(query: 'test account')
+          .forEach(emissions.add);
+      await started.future.timeout(const Duration(seconds: 2));
+
+      expect(emissions, hasLength(2));
+      expect(
+        emissions.last.profiles
+            .singleWhere((p) => p.pubkey == live)
+            .displayName,
+        'test account REST answer',
+      );
+      expect(
+        emissions.last.sources[SearchSource.funnelcakeApi],
+        isA<SearchSourceSuccess>(),
+      );
+      response.complete(const BulkProfilesResponse(profiles: {}));
+      await done;
+      expect(emissions.last.isComplete, isTrue);
+    });
+
+    test(
+      'large cached result sets respect the bulk endpoint batch limit',
+      () async {
+        for (var i = 0; i < 203; i++) {
+          await db.userProfilesDao.upsertProfile(
+            profile(i.toRadixString(16).padLeft(64, '0')),
+          );
+        }
+
+        final result = await repo
+            .searchUsersProgressive(query: 'test account', limit: 205)
+            .last;
+
+        expect(result.profiles, hasLength(205));
+        final requests = verify(
+          () => api.getBulkProfiles(captureAny()),
+        ).captured.cast<List<String>>();
+        expect(requests.map((r) => r.length), [100, 100, 5]);
+        expect(requests.expand((r) => r).toSet(), hasLength(205));
+      },
+    );
+
+    test(
+      'a hidden REST hit triggers the existing once-per-session recovery',
+      () async {
+        await db.vanishedProfilesDao.markVanished(deleted);
+        final response = Completer<UserProfileResult>();
+        final started = Completer<void>();
+        when(() => api.getUserProfile(deleted)).thenAnswer((_) {
+          started.complete();
+          return response.future;
+        });
+        when(
+          () => api.searchProfiles(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+            hasVideos: any(named: 'hasVideos'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            const ProfileSearchResult(pubkey: deleted, name: 'test account'),
+          ],
+        );
+        final first = await repo
+            .searchUsersProgressive(query: 'test account')
+            .toList();
+        await started.future.timeout(const Duration(seconds: 2));
+        expect(
+          first.every((s) => s.profiles.every((p) => p.pubkey != deleted)),
+          isTrue,
+        );
+        await repo.searchUsersProgressive(query: 'test account').last;
+        verify(() => api.getUserProfile(deleted)).called(1);
+
+        final cleared = repo.watchVanishedPubkeys().firstWhere(
+          (keys) => !keys.contains(deleted),
+        );
+        response.complete(const UserProfileNotPublished(pubkey: deleted));
+        await cleared;
+        expect(repo.isVanished(deleted), isFalse);
+        final recovered = await repo
+            .searchUsersProgressive(query: 'test account')
+            .last;
+        expect(recovered.profiles.map((p) => p.pubkey), contains(deleted));
+      },
+    );
   });
 }

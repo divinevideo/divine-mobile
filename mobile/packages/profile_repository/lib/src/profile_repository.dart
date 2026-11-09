@@ -60,6 +60,9 @@ const _nip50RelayQueryTimeout = Duration(milliseconds: 4500);
 // REST phases, and the search that confirms the owner is discoverable.
 const _usernameOwnerSearchTimeout = Duration(seconds: 3);
 
+// /api/users/bulk accepts at most 100 pubkeys per request.
+const _searchProfileRecheckBatchSize = 100;
+
 // Divine usernames resolve as `<username>@divine.video` and are published as
 // `_@<username>.divine.video`.
 const _divineDomain = 'divine.video';
@@ -2521,6 +2524,7 @@ class ProfileRepository implements ProfileReader {
     // otherwise the server's revision is kept whole, including the fields it
     // cleared.
     void mergeRestResult(ProfileSearchResult result) {
+      if (isVanished(result.pubkey)) revalidateVanishOnce(result.pubkey);
       final cached = resultMap[result.pubkey];
       final serverRevision = result.createdAt;
       // Compare event revisions before conversion: an older API can omit
@@ -2603,29 +2607,50 @@ class ProfileRepository implements ProfileReader {
       }
     }
 
-    var removedCachedProfile = false;
+    final cachedOnly = resultMap.keys
+        .where(
+          (pubkey) => !restPubkeys.contains(pubkey) && !isVanished(pubkey),
+        )
+        .toList();
+    final recheckCached =
+        offset == 0 &&
+        (_funnelcakeApiClient?.isAvailable ?? false) &&
+        cachedOnly.isNotEmpty;
+
+    // Publish the REST answer before spending another request's latency on
+    // cached rows. The bloc's outer timeout measures gaps between emissions.
+    if (recheckCached ||
+        resultMap.length > prevCount ||
+        ownerPubkey != null ||
+        (sortBy == profileSearchSortRelevance && restPositions.isNotEmpty)) {
+      yield snapshot(isComplete: false);
+    }
+
     // Cached rows omitted by search may predate an account's deletion. A
     // sparse bulk miss is not proof of deletion; only its typed vanish answer
     // evicts a row. Keep this separate from fetchBatchProfiles, which trusts
     // cached rows and deliberately does not re-fetch them.
-    if (offset == 0 && (_funnelcakeApiClient?.isAvailable ?? false)) {
-      final cachedOnly = resultMap.keys
-          .where(
-            (pubkey) => !restPubkeys.contains(pubkey) && !isVanished(pubkey),
-          )
-          .toList();
-      if (cachedOnly.isNotEmpty) {
+    if (recheckCached) {
+      for (
+        var start = 0;
+        start < cachedOnly.length;
+        start += _searchProfileRecheckBatchSize
+      ) {
+        if (_isSearchCancelled(cancellationToken)) return;
+        final batch = cachedOnly
+            .skip(start)
+            .take(_searchProfileRecheckBatchSize)
+            .toList();
         try {
           final response = await _funnelcakeApiClient!.getBulkProfiles(
-            cachedOnly,
+            batch,
           );
           if (_isSearchCancelled(cancellationToken)) return;
-          for (final pubkey in cachedOnly) {
+          for (final pubkey in batch) {
             if (_isSearchCancelled(cancellationToken)) return;
             if (response.profiles[pubkey] is UserProfileVanished) {
               await _applyVanish(pubkey);
               resultMap.remove(pubkey);
-              removedCachedProfile = true;
             }
           }
         } on Exception catch (e) {
@@ -2635,21 +2660,13 @@ class ProfileRepository implements ProfileReader {
             category: LogCategory.api,
           );
         }
+        if (_isSearchCancelled(cancellationToken)) return;
+        // Even a sparse or failed batch completes a phase. Keep the next
+        // batch and NIP-50 from extending the same silent timeout window.
+        yield snapshot(isComplete: false);
       }
     }
     if (_isSearchCancelled(cancellationToken)) return;
-
-    // Yield after Phase 2 if new results were added or the owner was pinned,
-    // or if a relevance search got the server's order: it can reorder rows the
-    // cache already listed without adding any. Skips enrichment for faster
-    // progressive display; the final Phase 3 yield enriches all results from
-    // cache.
-    if (removedCachedProfile ||
-        resultMap.length > prevCount ||
-        ownerPubkey != null ||
-        (sortBy == profileSearchSortRelevance && restPositions.isNotEmpty)) {
-      yield snapshot(isComplete: false);
-    }
 
     // Phase 3: NIP-50 WebSocket (first page only)
     if (_isSearchCancelled(cancellationToken)) return;
@@ -2663,6 +2680,7 @@ class ProfileRepository implements ProfileReader {
         if (_isSearchCancelled(cancellationToken)) return;
         for (final event in events) {
           final profile = UserProfile.fromNostrEvent(event);
+          if (isVanished(profile.pubkey)) revalidateVanishOnce(profile.pubkey);
           resultMap.putIfAbsent(profile.pubkey, () => profile);
         }
         sources[SearchSource.nip50Relay] = SearchSourceSuccess(
