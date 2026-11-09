@@ -8942,6 +8942,48 @@ class AppLocalizationsRo extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Sortarea comentariilor';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => 'Arată comentariile ascunse';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Creatorul a ascuns intenționat aceste comentarii.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Ai ascuns aceste comentarii în Divine. Alte aplicații și site-uri le pot afișa în continuare, așa că raportează orice e dăunător.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Vrei să raportezi și acest comentariu?';
+
+  @override
+  String get commentHiddenReportAction => 'Raportează';
+
+  @override
+  String get commentHiddenByCreator => 'Ascuns de creator';
+
+  @override
+  String get commentHiddenByYou => 'Ascuns de tine';
+
+  @override
+  String get commentOptionsHideLabel => 'Ascunde comentariul';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Ascunde acest comentariu pe videoclipul tău';
+
+  @override
+  String get commentOptionsShowLabel => 'Arată comentariul';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Arată din nou acest comentariu pe videoclipul tău';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Nu am putut actualiza comentariile ascunse. Încearcă din nou.';
+
+  @override
   String get commentReply => 'Răspunde';
 
   @override

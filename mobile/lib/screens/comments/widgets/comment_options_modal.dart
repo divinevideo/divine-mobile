@@ -1,4 +1,4 @@
-// ABOUTME: Options modal for comment actions (delete, report, block)
+// ABOUTME: Options modal for comment actions (delete, report, block, hide)
 // ABOUTME: Shows different options for own vs other users' comments
 
 import 'package:divine_ui/divine_ui.dart';
@@ -24,6 +24,14 @@ class CommentBlockUserResult extends CommentOptionResult {
   final String authorPubkey;
 }
 
+/// The video owner chose to hide another user's comment on their video, or
+/// to show it again when [hide] is false.
+class CommentModerationResult extends CommentOptionResult {
+  const CommentModerationResult({required this.hide});
+
+  final bool hide;
+}
+
 /// User chose to edit their own comment.
 class CommentEditResult extends CommentOptionResult {
   const CommentEditResult({required this.commentId, required this.content});
@@ -37,7 +45,8 @@ class CommentEditResult extends CommentOptionResult {
 /// Shows different menus depending on whether the comment is from the
 /// current user or another user:
 /// - Own comments: Delete
-/// - Other users' comments: Flag Content, Block User
+/// - Other users' comments: Flag Content, Block User, and for the video
+///   owner Hide or Show comment
 ///
 /// Returns a [CommentOptionResult] or `null` if cancelled.
 class CommentOptionsModal {
@@ -91,10 +100,16 @@ class CommentOptionsModal {
   /// Flag Content opens the shared report form ([ReportContentDialog]) for
   /// the comment, which submits the report itself, so that path returns
   /// `null`. Block User returns a [CommentBlockUserResult].
+  ///
+  /// [viewerOwnsVideo] adds the owner's Hide comment, or Show comment while
+  /// [isHidden], which return a [CommentModerationResult]. Hiding leaves the
+  /// author unblocked.
   static Future<CommentOptionResult?> showForOtherUserIntegrated(
     BuildContext context, {
     required String commentId,
     required String authorPubkey,
+    bool viewerOwnsVideo = false,
+    bool isHidden = false,
   }) async {
     final navigator = Navigator.of(context);
     final action = await VineBottomSheet.show<String>(
@@ -108,6 +123,22 @@ class CommentOptionsModal {
       body: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (viewerOwnsVideo && isHidden)
+            _OptionTile(
+              identifier: 'show_comment_option',
+              label: context.l10n.commentOptionsShowLabel,
+              semanticLabel: context.l10n.commentOptionsShowSemanticLabel,
+              iconPath: DivineIconName.eye.assetPath,
+              onTap: () => navigator.pop('show'),
+            )
+          else if (viewerOwnsVideo)
+            _OptionTile(
+              identifier: 'hide_comment_option',
+              label: context.l10n.commentOptionsHideLabel,
+              semanticLabel: context.l10n.commentOptionsHideSemanticLabel,
+              iconPath: DivineIconName.eyeSlash.assetPath,
+              onTap: () => navigator.pop('hide'),
+            ),
           _OptionTile(
             identifier: 'flag_content_option',
             label: context.l10n.commentOptionsFlagContentLabel,
@@ -131,6 +162,10 @@ class CommentOptionsModal {
 
     if (action == 'block') {
       return CommentBlockUserResult(authorPubkey: authorPubkey);
+    }
+
+    if (action == 'hide' || action == 'show') {
+      return CommentModerationResult(hide: action == 'hide');
     }
 
     if (action == 'flag' && context.mounted) {

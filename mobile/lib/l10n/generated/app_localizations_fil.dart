@@ -8798,6 +8798,49 @@ class AppLocalizationsFil extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Pagkakasunod-sunod ng mga komento';
 
   @override
+  String get commentsHiddenToggleSemanticLabel =>
+      'Ipakita ang mga nakatagong komento';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Sinadya ng creator na itago ang mga komentong ito.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Itinago mo ang mga komentong ito sa Divine. Puwede pa rin itong ipakita ng ibang app at site, kaya i-report ang anumang nakakapinsala.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Gusto mo rin bang i-report ang komentong ito?';
+
+  @override
+  String get commentHiddenReportAction => 'I-report';
+
+  @override
+  String get commentHiddenByCreator => 'Itinago ng creator';
+
+  @override
+  String get commentHiddenByYou => 'Itinago mo';
+
+  @override
+  String get commentOptionsHideLabel => 'Itago ang komento';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Itago ang komentong ito sa video mo';
+
+  @override
+  String get commentOptionsShowLabel => 'Ipakita ang komento';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Ipakita ulit ang komentong ito sa video mo';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Hindi na-update ang mga nakatagong komento. Subukan ulit.';
+
+  @override
   String get commentReply => 'Sumagot';
 
   @override

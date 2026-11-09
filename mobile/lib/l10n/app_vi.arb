@@ -4510,6 +4510,18 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
+  "commentsHiddenToggleSemanticLabel": "Hiện bình luận đã ẩn",
+  "commentsHiddenNotice": "Nhà sáng tạo đã cố ý ẩn những bình luận này.",
+  "commentsHiddenNoticeOwner": "Bạn đã ẩn những bình luận này trên Divine. Ứng dụng và trang web khác vẫn có thể hiển thị chúng, nên hãy báo cáo bất cứ điều gì gây hại.",
+  "commentHiddenReportPrompt": "Bạn có muốn báo cáo bình luận này luôn không?",
+  "commentHiddenReportAction": "Báo cáo",
+  "commentHiddenByCreator": "Nhà sáng tạo đã ẩn",
+  "commentHiddenByYou": "Bạn đã ẩn",
+  "commentOptionsHideLabel": "Ẩn bình luận",
+  "commentOptionsHideSemanticLabel": "Ẩn bình luận này trên video của bạn",
+  "commentOptionsShowLabel": "Hiện bình luận",
+  "commentOptionsShowSemanticLabel": "Hiện lại bình luận này trên video của bạn",
+  "commentsErrorModerationFailed": "Không cập nhật được các bình luận đã ẩn. Hãy thử lại.",
   "commentReply": "Trả lời",
   "@commentReply": {
     "description": "Button label under a comment that opens the reply composer."

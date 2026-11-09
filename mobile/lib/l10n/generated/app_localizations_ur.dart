@@ -8739,6 +8739,48 @@ class AppLocalizationsUr extends AppLocalizations {
   String get commentsSortSemanticLabel => 'تبصروں کی ترتیب';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => 'چھپے ہوئے تبصرے دکھائیں';
+
+  @override
+  String get commentsHiddenNotice =>
+      'کریئیٹر نے یہ تبصرے جان بوجھ کر چھپائے ہیں۔';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'آپ نے یہ تبصرے Divine میں چھپائے ہیں۔ دوسری ایپس اور سائٹس انہیں اب بھی دکھا سکتی ہیں، اس لیے کوئی بھی نقصان دہ چیز رپورٹ کریں۔';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'کیا آپ اس تبصرے کو رپورٹ بھی کرنا چاہتے ہیں؟';
+
+  @override
+  String get commentHiddenReportAction => 'رپورٹ کریں';
+
+  @override
+  String get commentHiddenByCreator => 'کریئیٹر نے چھپایا';
+
+  @override
+  String get commentHiddenByYou => 'آپ نے چھپایا';
+
+  @override
+  String get commentOptionsHideLabel => 'تبصرہ چھپائیں';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'اپنی ویڈیو پر یہ تبصرہ چھپائیں';
+
+  @override
+  String get commentOptionsShowLabel => 'تبصرہ دکھائیں';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'اپنی ویڈیو پر یہ تبصرہ دوبارہ دکھائیں';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'چھپے ہوئے تبصرے اپ ڈیٹ نہیں ہو سکے۔ دوبارہ کوشش کریں۔';
+
+  @override
   String get commentReply => 'جواب';
 
   @override

@@ -14621,6 +14621,78 @@ abstract class AppLocalizations {
   /// **'Comments sorting'**
   String get commentsSortSemanticLabel;
 
+  /// Accessibility label of the header toggle that shows the comments the video owner hid. Screen readers add the on/off state and the count.
+  ///
+  /// In en, this message translates to:
+  /// **'Show hidden comments'**
+  String get commentsHiddenToggleSemanticLabel;
+
+  /// Short notice above the comments while a viewer has chosen to see the ones the video owner hid on purpose.
+  ///
+  /// In en, this message translates to:
+  /// **'The creator hid these comments on purpose.'**
+  String get commentsHiddenNotice;
+
+  /// Short notice above the comments while the video owner looks at the comments they hid. Divine leaves them out for its viewers, but other apps and sites may still show them, so it points the owner to reporting what is harmful.
+  ///
+  /// In en, this message translates to:
+  /// **'You hid these in Divine. Other apps and sites may still show them, so report anything harmful.'**
+  String get commentsHiddenNoticeOwner;
+
+  /// Snackbar right after the video owner hid a comment, offering to report it as well, since hiding does not reach moderators.
+  ///
+  /// In en, this message translates to:
+  /// **'Want to report this comment too?'**
+  String get commentHiddenReportPrompt;
+
+  /// Action of that snackbar: opens the report form for the comment.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get commentHiddenReportAction;
+
+  /// Small label on a comment the video owner hid, shown while a viewer has chosen to see hidden comments.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden by the creator'**
+  String get commentHiddenByCreator;
+
+  /// Small label on a comment the video owner hid, shown to that owner on their own video.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden by you'**
+  String get commentHiddenByYou;
+
+  /// Comment menu action for the video owner: hide someone else's comment on their own video without blocking that person.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide comment'**
+  String get commentOptionsHideLabel;
+
+  /// Accessibility label of the video owner's hide-comment action.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide this comment on your video'**
+  String get commentOptionsHideSemanticLabel;
+
+  /// Comment menu action for the video owner: show a comment they hid on their own video again.
+  ///
+  /// In en, this message translates to:
+  /// **'Show comment'**
+  String get commentOptionsShowLabel;
+
+  /// Accessibility label of the video owner's show-comment-again action.
+  ///
+  /// In en, this message translates to:
+  /// **'Show this comment on your video again'**
+  String get commentOptionsShowSemanticLabel;
+
+  /// Snackbar shown when hiding or showing a comment on the owner's own video could not be saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update the hidden comments. Try again.'**
+  String get commentsErrorModerationFailed;
+
   /// Button label under a comment that opens the reply composer.
   ///
   /// In en, this message translates to:

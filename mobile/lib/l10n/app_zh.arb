@@ -4510,6 +4510,18 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
+  "commentsHiddenToggleSemanticLabel": "显示已隐藏的评论",
+  "commentsHiddenNotice": "创作者有意隐藏了这些评论。",
+  "commentsHiddenNoticeOwner": "这些评论是你在 Divine 中隐藏的。其他应用和网站仍可能显示它们，如有有害内容请举报。",
+  "commentHiddenReportPrompt": "要同时举报这条评论吗？",
+  "commentHiddenReportAction": "举报",
+  "commentHiddenByCreator": "已被创作者隐藏",
+  "commentHiddenByYou": "已被你隐藏",
+  "commentOptionsHideLabel": "隐藏评论",
+  "commentOptionsHideSemanticLabel": "在你的视频上隐藏这条评论",
+  "commentOptionsShowLabel": "显示评论",
+  "commentOptionsShowSemanticLabel": "在你的视频上重新显示这条评论",
+  "commentsErrorModerationFailed": "无法更新已隐藏的评论。请重试。",
   "commentReply": "回复",
   "@commentReply": {
     "description": "Button label under a comment that opens the reply composer."

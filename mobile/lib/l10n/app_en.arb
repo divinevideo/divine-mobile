@@ -6236,6 +6236,54 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
+  "commentsHiddenToggleSemanticLabel": "Show hidden comments",
+  "@commentsHiddenToggleSemanticLabel": {
+    "description": "Accessibility label of the header toggle that shows the comments the video owner hid. Screen readers add the on/off state and the count."
+  },
+  "commentsHiddenNotice": "The creator hid these comments on purpose.",
+  "@commentsHiddenNotice": {
+    "description": "Short notice above the comments while a viewer has chosen to see the ones the video owner hid on purpose."
+  },
+  "commentsHiddenNoticeOwner": "You hid these in Divine. Other apps and sites may still show them, so report anything harmful.",
+  "@commentsHiddenNoticeOwner": {
+    "description": "Short notice above the comments while the video owner looks at the comments they hid. Divine leaves them out for its viewers, but other apps and sites may still show them, so it points the owner to reporting what is harmful."
+  },
+  "commentHiddenReportPrompt": "Want to report this comment too?",
+  "@commentHiddenReportPrompt": {
+    "description": "Snackbar right after the video owner hid a comment, offering to report it as well, since hiding does not reach moderators."
+  },
+  "commentHiddenReportAction": "Report",
+  "@commentHiddenReportAction": {
+    "description": "Action of that snackbar: opens the report form for the comment."
+  },
+  "commentHiddenByCreator": "Hidden by the creator",
+  "@commentHiddenByCreator": {
+    "description": "Small label on a comment the video owner hid, shown while a viewer has chosen to see hidden comments."
+  },
+  "commentHiddenByYou": "Hidden by you",
+  "@commentHiddenByYou": {
+    "description": "Small label on a comment the video owner hid, shown to that owner on their own video."
+  },
+  "commentOptionsHideLabel": "Hide comment",
+  "@commentOptionsHideLabel": {
+    "description": "Comment menu action for the video owner: hide someone else's comment on their own video without blocking that person."
+  },
+  "commentOptionsHideSemanticLabel": "Hide this comment on your video",
+  "@commentOptionsHideSemanticLabel": {
+    "description": "Accessibility label of the video owner's hide-comment action."
+  },
+  "commentOptionsShowLabel": "Show comment",
+  "@commentOptionsShowLabel": {
+    "description": "Comment menu action for the video owner: show a comment they hid on their own video again."
+  },
+  "commentOptionsShowSemanticLabel": "Show this comment on your video again",
+  "@commentOptionsShowSemanticLabel": {
+    "description": "Accessibility label of the video owner's show-comment-again action."
+  },
+  "commentsErrorModerationFailed": "Couldn't update the hidden comments. Try again.",
+  "@commentsErrorModerationFailed": {
+    "description": "Snackbar shown when hiding or showing a comment on the owner's own video could not be saved."
+  },
   "commentReply": "Reply",
   "@commentReply": {
     "description": "Button label under a comment that opens the reply composer."

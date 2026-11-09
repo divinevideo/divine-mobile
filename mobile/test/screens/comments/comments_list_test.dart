@@ -3,6 +3,7 @@
 // ABOUTME: split CommentsListBloc + CommentReactionsBloc provider tree.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:comments_repository/comments_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -90,6 +91,155 @@ void main() {
         ),
       );
     }
+
+    group('comments the video owner hid', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      const harasserPubkey =
+          'c3d4e5f6789012345678901234567890abcdef123456789012345678901234ab';
+      final hidden = CommentBuilder()
+          .withId('1' * 64)
+          .withAuthorPubkey(harasserPubkey)
+          .withRootEventId(testVideoEventId)
+          .withRootAuthorPubkey(testVideoAuthorPubkey)
+          .withContent('Unwanted comment')
+          .build();
+      final shown = CommentBuilder()
+          .withId('2' * 64)
+          .withRootEventId(testVideoEventId)
+          .withRootAuthorPubkey(testVideoAuthorPubkey)
+          .withContent('Kind comment')
+          .build();
+
+      CommentsListState stateWith({
+        bool showHiddenComments = false,
+        String? viewerPubkey,
+      }) => CommentsListState(
+        rootEventId: testVideoEventId,
+        rootAuthorPubkey: testVideoAuthorPubkey,
+        status: CommentsStatus.success,
+        commentsById: {hidden.id: hidden, shown.id: shown},
+        moderation: const CommentModeration(
+          autoHiddenAuthors: {harasserPubkey},
+        ),
+        showHiddenComments: showHiddenComments,
+        viewerPubkey: viewerPubkey,
+      );
+
+      testWidgets('leaves them out by default', (tester) async {
+        await tester.pumpWidget(buildTestWidget(listState: stateWith()));
+        await tester.pump();
+
+        expect(find.text('Kind comment'), findsOneWidget);
+        expect(find.text('Unwanted comment'), findsNothing);
+        expect(find.byType(HiddenCommentsNotice), findsNothing);
+      });
+
+      for (final coordinate in <String?>[
+        null,
+        '34235:$testVideoAuthorPubkey:video',
+      ]) {
+        testWidgets(
+          'passes root moderation capability for coordinate $coordinate',
+          (tester) async {
+            final state = CommentsListState(
+              rootEventId: testVideoEventId,
+              rootAuthorPubkey: testVideoAuthorPubkey,
+              rootAddressableId: coordinate,
+              viewerPubkey: testVideoAuthorPubkey,
+              status: CommentsStatus.success,
+              commentsById: {shown.id: shown},
+            );
+            await tester.pumpWidget(buildTestWidget(listState: state));
+            await tester.pump();
+            final item = tester.widget<CommentItem>(find.byType(CommentItem));
+            expect(item.viewerOwnsVideo, isTrue);
+            expect(item.supportsModeration, coordinate != null);
+          },
+        );
+      }
+
+      testWidgets('shows them below a notice once the viewer asks', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildTestWidget(listState: stateWith(showHiddenComments: true)),
+        );
+        await tester.pump();
+
+        expect(find.text(l10n.commentsHiddenNotice), findsOneWidget);
+        expect(find.text('Unwanted comment'), findsOneWidget);
+        expect(find.text(l10n.commentHiddenByCreator), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.byType(HiddenCommentsNotice)).dy,
+          lessThan(tester.getTopLeft(find.text('Kind comment')).dy),
+        );
+      });
+
+      testWidgets('tells the owner they hid them', (tester) async {
+        await tester.pumpWidget(
+          buildTestWidget(
+            listState: stateWith(
+              showHiddenComments: true,
+              viewerPubkey: testVideoAuthorPubkey,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text(l10n.commentsHiddenNoticeOwner), findsOneWidget);
+        expect(find.text(l10n.commentHiddenByYou), findsOneWidget);
+      });
+
+      // A reply to a hidden comment is listed on its own, and its reply line
+      // must not name the author the owner hid.
+      group('a reply to one of them', () {
+        final reply = CommentBuilder()
+            .withId('3' * 64)
+            .withRootEventId(testVideoEventId)
+            .withRootAuthorPubkey(testVideoAuthorPubkey)
+            .withReplyToEventId(hidden.id)
+            .withReplyToAuthorPubkey(harasserPubkey)
+            .withContent('A reply')
+            .build();
+
+        CommentItem replyItem(WidgetTester tester) => tester.widget(
+          find.ancestor(
+            of: find.text('A reply'),
+            matching: find.byType(CommentItem),
+          ),
+        );
+
+        testWidgets('leaves the hidden author out of its reply line', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildTestWidget(
+              listState: stateWith().copyWith(
+                commentsById: {hidden.id: hidden, reply.id: reply},
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(replyItem(tester).repliesToHiddenComment, isTrue);
+        });
+
+        testWidgets('names the author once the hidden comments are shown', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildTestWidget(
+              listState: stateWith(showHiddenComments: true).copyWith(
+                commentsById: {hidden.id: hidden, reply.id: reply},
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(replyItem(tester).repliesToHiddenComment, isFalse);
+        });
+      });
+    });
 
     testWidgets('shows skeleton loader when loading', (tester) async {
       const state = CommentsListState(

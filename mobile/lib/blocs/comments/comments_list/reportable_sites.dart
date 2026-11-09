@@ -6,4 +6,6 @@ abstract class CommentsListBlocReportableSites {
   static const String startWatchingComments = '_startWatchingComments';
   static const String removeAuthorDeletedComments =
       '_removeAuthorDeletedComments';
+  static const String onCommentModerationRequested =
+      '_onCommentModerationRequested';
 }

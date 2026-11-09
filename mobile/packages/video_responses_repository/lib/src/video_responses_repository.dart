@@ -97,13 +97,20 @@ class VideoResponsesRepository {
   /// Creates the repository, reading and publishing through [nostrClient]
   /// and signing curations with [signEvent]. [funnelcakeApiClient] counts the
   /// responses when given.
+  ///
+  /// [latestEvents] holds the newest curations seen. Share it with the
+  /// comment moderation writer of `comments_repository`, which replaces the
+  /// same per-video event, so neither builds on a version older than the
+  /// other just published.
   VideoResponsesRepository({
     required NostrClient nostrClient,
     required ResponsesEventSigner signEvent,
     FunnelcakeApiClient? funnelcakeApiClient,
+    LatestAddressableEvents? latestEvents,
   }) : _nostrClient = nostrClient,
        _signEvent = signEvent,
-       _funnelcakeApiClient = funnelcakeApiClient;
+       _funnelcakeApiClient = funnelcakeApiClient,
+       _latestEvents = latestEvents ?? LatestAddressableEvents();
 
   final NostrClient _nostrClient;
   final ResponsesEventSigner _signEvent;
@@ -115,13 +122,10 @@ class VideoResponsesRepository {
   /// holding the first; the next one is signed after it instead.
   final _curationSignedAt = <String, int>{};
 
-  /// The last save queued for each account and video; the next one waits for
-  /// it.
-  final _curationOperations = <String, Future<void>>{};
-
-  /// The newest authenticated curation read or saved for each account and
-  /// video, retained when a later read returns only older revisions.
-  final _knownCurations = <String, Event>{};
+  /// The newest authenticated curations read or saved, here or by a writer
+  /// sharing the store, retained when a later read returns only older
+  /// revisions.
+  final LatestAddressableEvents _latestEvents;
 
   /// The most responses one read from the relays asks for.
   static const int maxResponsesRead = 500;
@@ -383,7 +387,8 @@ class VideoResponsesRepository {
   }
 
   /// The reply its creator, [creatorPubkey], pinned to the front of the
-  /// replies to the video at [videoAddress], and the ones they hid.
+  /// replies to the video at [videoAddress], the ones they hid, and the
+  /// accounts whose replies they hide on all their videos.
   ///
   /// Throws a [RepliesCurationUnavailableException] when the relays timed out
   /// or none could be asked and nothing came back.
@@ -398,25 +403,49 @@ class VideoResponsesRepository {
           Filter(
             kinds: [RepliesCuration.kind],
             authors: [creatorPubkey],
-            d: [dTag],
+            d: [dTag, RepliesCuration.hiddenAuthorsDTag],
           ),
         ]);
     final eligible = events
         .where((event) => _isCurationBy(event, creatorPubkey, dTag))
         .toList();
+    final authorLists = events
+        .where(
+          (event) => _isCurationBy(
+            event,
+            creatorPubkey,
+            RepliesCuration.hiddenAuthorsDTag,
+          ),
+        )
+        .toList();
+    // The hidden accounts alone say nothing about this video's pins and
+    // hides, so a read that missed the curation fails as before.
     if (eligible.isEmpty && (timedOut || noRelays)) {
       throw RepliesCurationUnavailableException(
         noRelays ? 'No relay could be asked' : 'The relays did not answer',
       );
     }
-    final latest = [...eligible, ?_knownCurations[key]]
+    final latest = [...eligible, ?_known(creatorPubkey, dTag)]
       ..sort(_compareCurationRevisions);
     if (latest.firstOrNull case final newest?) {
-      _rememberCuration(key, newest);
+      _latestEvents.remember(newest);
       _noteCurationSignedAt(key, newest.createdAt);
     }
-    return latest.map(RepliesCuration.fromEvent).nonNulls.firstOrNull ??
+    final latestAuthors = [
+      ...authorLists,
+      ?_known(creatorPubkey, RepliesCuration.hiddenAuthorsDTag),
+    ]..sort(_compareCurationRevisions);
+    if (latestAuthors.firstOrNull case final newest?) {
+      _latestEvents.remember(newest);
+    }
+    final curation =
+        latest.map(RepliesCuration.fromEvent).nonNulls.firstOrNull ??
         const RepliesCuration();
+    return curation.withHiddenAuthors(
+      latestAuthors.isEmpty
+          ? const {}
+          : RepliesCuration.hiddenAuthorsIn(latestAuthors.first),
+    );
   }
 
   static bool _isCurationBy(Event event, String owner, String dTag) =>
@@ -431,12 +460,11 @@ class VideoResponsesRepository {
       ? b.createdAt.compareTo(a.createdAt)
       : a.id.compareTo(b.id);
 
-  void _rememberCuration(String key, Event event) {
-    final known = _knownCurations[key];
-    if (known == null || _compareCurationRevisions(event, known) < 0) {
-      _knownCurations[key] = Event.fromJson(event.toJson());
-    }
-  }
+  Event? _known(String pubkey, String dTag) => _latestEvents.latest(
+    pubkey: pubkey,
+    kind: RepliesCuration.kind,
+    dTag: dTag,
+  );
 
   void _noteCurationSignedAt(String key, int createdAt) =>
       _curationSignedAt[key] = math.max(
@@ -469,9 +497,11 @@ class VideoResponsesRepository {
   }) {
     final owner = _nostrClient.publicKey;
     final key = '$owner:${RepliesCuration.dTagFor(videoAddress)}';
-    final tail = _curationOperations[key] ?? Future<void>.value();
-    final result = tail.then(
-      (_) => _saveCuration(
+    return _latestEvents.run(
+      pubkey: owner,
+      kind: RepliesCuration.kind,
+      dTag: RepliesCuration.dTagFor(videoAddress),
+      operation: () => _saveCuration(
         curation,
         previous: previous,
         videoAddress: videoAddress,
@@ -479,10 +509,6 @@ class VideoResponsesRepository {
         key: key,
       ),
     );
-    // The next save waits for this one but not on its error, which the
-    // caller gets from `result`.
-    _curationOperations[key] = result.then((_) {}, onError: (_, _) {});
-    return result;
   }
 
   Future<RepliesCuration> _saveCuration(
@@ -510,7 +536,7 @@ class VideoResponsesRepository {
     final revisions = [
       for (final event in read.events)
         if (_isCurationBy(event, owner, dTag)) event,
-      ?_knownCurations[key],
+      ?_known(owner, dTag),
     ]..sort(_compareCurationRevisions);
     final source = revisions.firstOrNull;
     final latest = source == null
@@ -520,6 +546,15 @@ class VideoResponsesRepository {
     final hidden = {...latest.hiddenIds}
       ..addAll(curation.hiddenIds.difference(previous.hiddenIds))
       ..removeAll(previous.hiddenIds.difference(curation.hiddenIds));
+    final restored = {...latest.restoredIds}
+      ..addAll(curation.restoredIds.difference(previous.restoredIds))
+      ..removeAll(previous.restoredIds.difference(curation.restoredIds));
+    // Hiding a reply takes back its restored mark, and showing it again a
+    // hide by the same key, also when the other mark came from another
+    // device. A hide by address stays; the restore of one version wins over
+    // it until the reply is replaced.
+    hidden.removeAll(curation.restoredIds.difference(previous.restoredIds));
+    restored.removeAll(curation.hiddenIds.difference(previous.hiddenIds));
     final pinChanged = curation.pinnedId != previous.pinnedId;
     var pinned = latest.pinnedId;
     if (pinChanged) {
@@ -536,9 +571,12 @@ class VideoResponsesRepository {
     final replacement = RepliesCuration(
       pinnedId: hidden.contains(pinned) ? null : pinned,
       hiddenIds: hidden,
+      restoredIds: restored,
+      // Not part of this event; kept for the caller to go on showing.
+      hiddenAuthors: curation.hiddenAuthors,
     );
     if (source != null) {
-      _rememberCuration(key, source);
+      _latestEvents.remember(source);
       _noteCurationSignedAt(key, source.createdAt);
     }
     final now = NostrTimestamp.now(
@@ -571,7 +609,7 @@ class VideoResponsesRepository {
         outcome: outcome,
       );
     }
-    if (_isCurationBy(event, owner, dTag)) _rememberCuration(key, event);
+    if (_isCurationBy(event, owner, dTag)) _latestEvents.remember(event);
     return replacement;
   }
 

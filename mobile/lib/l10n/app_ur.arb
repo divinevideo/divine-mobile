@@ -4510,6 +4510,18 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
+  "commentsHiddenToggleSemanticLabel": "چھپے ہوئے تبصرے دکھائیں",
+  "commentsHiddenNotice": "کریئیٹر نے یہ تبصرے جان بوجھ کر چھپائے ہیں۔",
+  "commentsHiddenNoticeOwner": "آپ نے یہ تبصرے Divine میں چھپائے ہیں۔ دوسری ایپس اور سائٹس انہیں اب بھی دکھا سکتی ہیں، اس لیے کوئی بھی نقصان دہ چیز رپورٹ کریں۔",
+  "commentHiddenReportPrompt": "کیا آپ اس تبصرے کو رپورٹ بھی کرنا چاہتے ہیں؟",
+  "commentHiddenReportAction": "رپورٹ کریں",
+  "commentHiddenByCreator": "کریئیٹر نے چھپایا",
+  "commentHiddenByYou": "آپ نے چھپایا",
+  "commentOptionsHideLabel": "تبصرہ چھپائیں",
+  "commentOptionsHideSemanticLabel": "اپنی ویڈیو پر یہ تبصرہ چھپائیں",
+  "commentOptionsShowLabel": "تبصرہ دکھائیں",
+  "commentOptionsShowSemanticLabel": "اپنی ویڈیو پر یہ تبصرہ دوبارہ دکھائیں",
+  "commentsErrorModerationFailed": "چھپے ہوئے تبصرے اپ ڈیٹ نہیں ہو سکے۔ دوبارہ کوشش کریں۔",
   "commentReply": "جواب",
   "@commentReply": {
     "description": "Button label under a comment that opens the reply composer."

@@ -8777,6 +8777,47 @@ class AppLocalizationsNl extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Sortering van reacties';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => 'Verborgen reacties tonen';
+
+  @override
+  String get commentsHiddenNotice =>
+      'De maker heeft deze reacties bewust verborgen.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Je hebt deze reacties in Divine verborgen. Andere apps en sites kunnen ze nog tonen, dus meld alles wat schadelijk is.';
+
+  @override
+  String get commentHiddenReportPrompt => 'Wil je deze reactie ook melden?';
+
+  @override
+  String get commentHiddenReportAction => 'Melden';
+
+  @override
+  String get commentHiddenByCreator => 'Verborgen door de maker';
+
+  @override
+  String get commentHiddenByYou => 'Verborgen door jou';
+
+  @override
+  String get commentOptionsHideLabel => 'Reactie verbergen';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Deze reactie op je video verbergen';
+
+  @override
+  String get commentOptionsShowLabel => 'Reactie tonen';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Deze reactie op je video weer tonen';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'De verborgen reacties konden niet worden bijgewerkt. Probeer het opnieuw.';
+
+  @override
   String get commentReply => 'Antwoorden';
 
   @override

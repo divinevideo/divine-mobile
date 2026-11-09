@@ -16,16 +16,20 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/comments/comment_composer/comment_composer_bloc.dart';
 import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc.dart';
+import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/comments/widgets/comment_item.dart';
 import 'package:openvine/screens/comments/widgets/video_comment_player.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
@@ -63,6 +67,12 @@ class _MockReactionsBloc
     extends MockBloc<CommentReactionsEvent, CommentReactionsState>
     implements CommentReactionsBloc {}
 
+class _MockContentReportingService extends Mock
+    implements ContentReportingService {}
+
+class _MockListBloc extends MockBloc<CommentsListEvent, CommentsListState>
+    implements CommentsListBloc {}
+
 const _testHexPubkey =
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 const _testRootEventId =
@@ -75,6 +85,7 @@ void main() {
     VisibilityDetectorController.instance.updateInterval = Duration.zero;
     registerFallbackValue(const CommentReplyToggled(''));
     registerFallbackValue(const CommentReactionsErrorCleared());
+    registerFallbackValue(const CommentsListErrorCleared());
   });
 
   ({_MockComposerBloc composer, _MockReactionsBloc reactions}) buildMocks() {
@@ -91,6 +102,10 @@ void main() {
     required _MockReactionsBloc reactionsBloc,
     Comment? comment,
     List<Override>? overrides,
+    bool isHiddenByOwner = false,
+    bool repliesToHiddenComment = false,
+    bool supportsModeration = true,
+    _MockListBloc? listBloc,
   }) {
     comment ??= CommentBuilder()
         .withAuthorPubkey(_testHexPubkey)
@@ -109,8 +124,18 @@ void main() {
             providers: [
               BlocProvider<CommentComposerBloc>.value(value: composerBloc),
               BlocProvider<CommentReactionsBloc>.value(value: reactionsBloc),
+              if (listBloc != null)
+                BlocProvider<CommentsListBloc>.value(value: listBloc),
             ],
-            child: SingleChildScrollView(child: CommentItem(comment: comment)),
+            child: SingleChildScrollView(
+              child: CommentItem(
+                comment: comment,
+                isHiddenByOwner: isHiddenByOwner,
+                viewerOwnsVideo: listBloc != null,
+                supportsModeration: supportsModeration,
+                repliesToHiddenComment: repliesToHiddenComment,
+              ),
+            ),
           ),
         ),
       ),
@@ -125,6 +150,228 @@ void main() {
       ),
     );
   }
+
+  group('hidden by the video owner', () {
+    final l10n = lookupAppLocalizations(const Locale('en'));
+
+    testWidgets('says the creator hid it', (tester) async {
+      final mocks = buildMocks();
+      await tester.pumpWidget(
+        buildTestWidget(
+          'unwanted',
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          isHiddenByOwner: true,
+        ),
+      );
+
+      expect(find.text(l10n.commentHiddenByCreator), findsOneWidget);
+      expect(find.text(l10n.commentHiddenByYou), findsNothing);
+    });
+
+    testWidgets('tells the owner they hid it', (tester) async {
+      final mocks = buildMocks();
+      await tester.pumpWidget(
+        buildTestWidget(
+          'unwanted',
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          isHiddenByOwner: true,
+          listBloc: _MockListBloc(),
+        ),
+      );
+
+      expect(find.text(l10n.commentHiddenByYou), findsOneWidget);
+    });
+
+    group('on a reply to a comment the owner hid', () {
+      const hiddenAuthor =
+          'b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012a1';
+      final reply = CommentBuilder()
+          .withAuthorPubkey(_testHexPubkey)
+          .withRootEventId(_testRootEventId)
+          .withRootAuthorPubkey(_testRootAuthorPubkey)
+          .withContent('a reply')
+          .withReplyToEventId('f' * 64)
+          .withReplyToAuthorPubkey(hiddenAuthor)
+          .build();
+      final overrides = <Override>[
+        _signedOutSession,
+        userProfileReactiveProvider(hiddenAuthor).overrideWith((ref) async* {
+          yield UserProfile(
+            pubkey: hiddenAuthor,
+            rawData: const {},
+            createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+            eventId: 'e' * 64,
+            displayName: 'Hidden Author',
+          );
+        }),
+      ];
+
+      testWidgets('leaves its author out of the reply line', (tester) async {
+        final mocks = buildMocks();
+        await tester.pumpWidget(
+          buildTestWidget(
+            'a reply',
+            comment: reply,
+            composerBloc: mocks.composer,
+            reactionsBloc: mocks.reactions,
+            overrides: overrides,
+            repliesToHiddenComment: true,
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Hidden Author'), findsNothing);
+      });
+
+      testWidgets('names its author once it is shown', (tester) async {
+        final mocks = buildMocks();
+        await tester.pumpWidget(
+          buildTestWidget(
+            'a reply',
+            comment: reply,
+            composerBloc: mocks.composer,
+            reactionsBloc: mocks.reactions,
+            overrides: overrides,
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Hidden Author'), findsOneWidget);
+      });
+    });
+
+    testWidgets('labels nothing on a shown comment', (tester) async {
+      final mocks = buildMocks();
+      await tester.pumpWidget(
+        buildTestWidget(
+          'welcome',
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+        ),
+      );
+
+      expect(find.text(l10n.commentHiddenByCreator), findsNothing);
+      expect(find.text(l10n.commentHiddenByYou), findsNothing);
+    });
+
+    testWidgets(
+      'omits unsupported creator moderation without removing report',
+      (tester) async {
+        final mocks = buildMocks();
+        await tester.pumpWidget(
+          buildTestWidget(
+            'unwanted',
+            composerBloc: mocks.composer,
+            reactionsBloc: mocks.reactions,
+            listBloc: _MockListBloc(),
+            supportsModeration: false,
+          ),
+        );
+        await tester.longPress(find.text('unwanted'));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.commentOptionsHideLabel), findsNothing);
+        expect(find.text(l10n.commentOptionsShowLabel), findsNothing);
+        expect(find.text(l10n.commentOptionsFlagContentLabel), findsOneWidget);
+      },
+    );
+
+    testWidgets('lets the owner hide a comment from its menu', (tester) async {
+      final mocks = buildMocks();
+      final listBloc = _MockListBloc();
+      final comment = CommentBuilder()
+          .withAuthorPubkey(_testHexPubkey)
+          .withRootEventId(_testRootEventId)
+          .withRootAuthorPubkey(_testRootAuthorPubkey)
+          .withContent('unwanted')
+          .build();
+      await tester.pumpWidget(
+        buildTestWidget(
+          'unwanted',
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          comment: comment,
+          listBloc: listBloc,
+        ),
+      );
+
+      await tester.longPress(find.text('unwanted'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.commentOptionsHideLabel));
+      await tester.pumpAndSettle();
+
+      final added =
+          verify(() => listBloc.add(captureAny())).captured.single
+              as CommentModerationRequested;
+      expect(added.comment, comment);
+      expect(added.hide, isTrue);
+    });
+
+    testWidgets('offers to report a comment right after hiding it', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      final comment = CommentBuilder()
+          .withAuthorPubkey(_testHexPubkey)
+          .withRootEventId(_testRootEventId)
+          .withRootAuthorPubkey(_testRootAuthorPubkey)
+          .withContent('unwanted')
+          .build();
+      await tester.binding.setSurfaceSize(const Size(800, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        buildTestWidget(
+          'unwanted',
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          comment: comment,
+          listBloc: _MockListBloc(),
+          overrides: [
+            _signedOutSession,
+            contentReportingServiceProvider.overrideWith(
+              (ref) async => _MockContentReportingService(),
+            ),
+          ],
+        ),
+      );
+
+      await tester.longPress(find.text('unwanted'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.commentOptionsHideLabel));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.commentHiddenReportPrompt), findsOneWidget);
+
+      await tester.tap(find.text(l10n.commentHiddenReportAction));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ReportContentDialog), findsOneWidget);
+      expect(find.text(l10n.commentHiddenReportPrompt), findsNothing);
+    });
+
+    testWidgets('offers no report when the owner shows a comment again', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      await tester.pumpWidget(
+        buildTestWidget(
+          'unwanted',
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          isHiddenByOwner: true,
+          listBloc: _MockListBloc(),
+        ),
+      );
+
+      await tester.longPress(find.text('unwanted'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.commentOptionsShowLabel));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.commentHiddenReportPrompt), findsNothing);
+    });
+  });
 
   group('interactions', () {
     testWidgets('votes a video reply with its own coordinate and kind, not the '

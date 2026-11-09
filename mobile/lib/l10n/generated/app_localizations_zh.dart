@@ -8224,6 +8224,43 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commentsSortSemanticLabel => '评论排序';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => '显示已隐藏的评论';
+
+  @override
+  String get commentsHiddenNotice => '创作者有意隐藏了这些评论。';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      '这些评论是你在 Divine 中隐藏的。其他应用和网站仍可能显示它们，如有有害内容请举报。';
+
+  @override
+  String get commentHiddenReportPrompt => '要同时举报这条评论吗？';
+
+  @override
+  String get commentHiddenReportAction => '举报';
+
+  @override
+  String get commentHiddenByCreator => '已被创作者隐藏';
+
+  @override
+  String get commentHiddenByYou => '已被你隐藏';
+
+  @override
+  String get commentOptionsHideLabel => '隐藏评论';
+
+  @override
+  String get commentOptionsHideSemanticLabel => '在你的视频上隐藏这条评论';
+
+  @override
+  String get commentOptionsShowLabel => '显示评论';
+
+  @override
+  String get commentOptionsShowSemanticLabel => '在你的视频上重新显示这条评论';
+
+  @override
+  String get commentsErrorModerationFailed => '无法更新已隐藏的评论。请重试。';
+
+  @override
   String get commentReply => '回复';
 
   @override

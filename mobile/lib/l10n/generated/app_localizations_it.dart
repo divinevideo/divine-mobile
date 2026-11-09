@@ -8846,6 +8846,48 @@ class AppLocalizationsIt extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Ordinamento dei commenti';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => 'Mostra i commenti nascosti';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Il creator ha nascosto questi commenti di proposito.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Hai nascosto questi commenti in Divine. Altre app e siti possono ancora mostrarli, quindi segnala tutto ciò che è dannoso.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Vuoi segnalare anche questo commento?';
+
+  @override
+  String get commentHiddenReportAction => 'Segnala';
+
+  @override
+  String get commentHiddenByCreator => 'Nascosto dal creator';
+
+  @override
+  String get commentHiddenByYou => 'Nascosto da te';
+
+  @override
+  String get commentOptionsHideLabel => 'Nascondi commento';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Nascondi questo commento sul tuo video';
+
+  @override
+  String get commentOptionsShowLabel => 'Mostra commento';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Mostra di nuovo questo commento sul tuo video';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Non è stato possibile aggiornare i commenti nascosti. Riprova.';
+
+  @override
   String get commentReply => 'Rispondi';
 
   @override

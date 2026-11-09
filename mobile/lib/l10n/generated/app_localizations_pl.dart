@@ -8949,6 +8949,47 @@ class AppLocalizationsPl extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Sortowanie komentarzy';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => 'Pokaż ukryte komentarze';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Te komentarze zostały celowo ukryte przez twórcę.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Te komentarze ukrywasz w Divine. Inne aplikacje i strony mogą je nadal pokazywać, więc zgłoś wszystko, co szkodliwe.';
+
+  @override
+  String get commentHiddenReportPrompt => 'Chcesz też zgłosić ten komentarz?';
+
+  @override
+  String get commentHiddenReportAction => 'Zgłoś';
+
+  @override
+  String get commentHiddenByCreator => 'Ukryty przez twórcę';
+
+  @override
+  String get commentHiddenByYou => 'Ukryty przez ciebie';
+
+  @override
+  String get commentOptionsHideLabel => 'Ukryj komentarz';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Ukryj ten komentarz w swoim filmie';
+
+  @override
+  String get commentOptionsShowLabel => 'Pokaż komentarz';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Pokaż ponownie ten komentarz w swoim filmie';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Nie udało się zaktualizować ukrytych komentarzy. Spróbuj ponownie.';
+
+  @override
   String get commentReply => 'Odpowiedz';
 
   @override
