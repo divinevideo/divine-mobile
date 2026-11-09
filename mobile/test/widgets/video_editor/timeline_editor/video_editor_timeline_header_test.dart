@@ -517,12 +517,64 @@ void main() {
         );
 
         final de = lookupAppLocalizations(const Locale('de'));
+        final volume = buttonRect(tester, de.videoEditorVolumeSemanticLabel);
+        final undo = buttonRect(tester, de.videoEditorUndoSemanticLabel);
         final redo = buttonRect(tester, de.videoEditorRedoSemanticLabel);
         expect(redo.right, lessThanOrEqualTo(360));
-        final hint = tester.renderObject<RenderParagraph>(
+        final hintFinder = find.text(de.videoEditorTimelineSlideToAdjust);
+        final hint = tester.getRect(hintFinder);
+        expect(hint.left, greaterThanOrEqualTo(volume.right));
+        expect(hint.right, lessThanOrEqualTo(undo.left));
+        expect(hint.center.dy, moreOrLessEquals(undo.center.dy, epsilon: 1));
+        expect(
+          tester.renderObject<RenderParagraph>(hintFinder).didExceedMaxLines,
+          isFalse,
+        );
+      });
+
+      testWidgets('moves the German volume hint under the buttons at 1.3x on '
+          'a 360 dp phone', (tester) async {
+        useSmallPhone(tester, width: 360);
+        await tester.pumpWidget(
+          buildWidget(
+            mainState: const VideoEditorMainState(isVolumeEditMode: true),
+            clipState: ClipEditorState(clips: [_createTestClip(id: 'a')]),
+            locale: const Locale('de'),
+            textScale: 1.3,
+          ),
+        );
+
+        final de = lookupAppLocalizations(const Locale('de'));
+        final redo = buttonRect(tester, de.videoEditorRedoSemanticLabel);
+        expect(redo.right, lessThanOrEqualTo(360));
+        final hint = tester.getRect(
           find.text(de.videoEditorTimelineSlideToAdjust),
         );
-        expect(hint.didExceedMaxLines, isFalse);
+        expect(hint.top, greaterThanOrEqualTo(redo.bottom));
+      });
+
+      testWidgets('keeps every button on screen and never shrinks the time '
+          'as the text size grows', (tester) async {
+        useSmallPhone(tester);
+        for (var step = 0; step <= 10; step++) {
+          final scale = 1 + step * 0.05;
+          await tester.pumpWidget(
+            buildWidget(
+              clipState: ClipEditorState(clips: [_createTestClip(id: 'a')]),
+              textScale: scale,
+            ),
+          );
+
+          final reason = 'at text scale ${scale.toStringAsFixed(2)}';
+          final redo = buttonRect(tester, l10n.videoEditorRedoSemanticLabel);
+          expect(redo.right, lessThanOrEqualTo(375), reason: reason);
+          final timeFinder = find.textContaining('00:00');
+          expect(
+            tester.getRect(timeFinder).height,
+            moreOrLessEquals(tester.getSize(timeFinder).height),
+            reason: reason,
+          );
+        }
       });
     });
   });
