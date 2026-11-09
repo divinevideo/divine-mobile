@@ -6323,5 +6323,9 @@
   "badgeSubscribedAction": "Abonat",
   "badgeSubscribeAction": "Abonează-te la insignă",
   "badgeAcceptedHoldersTitle": "Persoane care au acceptat insigna",
-  "badgeSubscriptionLoadError": "Abonamentele tale la insigne nu au putut fi încărcate. Încearcă din nou."
+  "badgeSubscriptionLoadError": "Abonamentele tale la insigne nu au putut fi încărcate. Încearcă din nou.",
+  "minorAccountReviewVideoSubmittedBody": "Videoclipul tău a fost trimis pentru verificare.",
+  "minorAccountReviewVideoSubmittedTitle": "Videoclip trimis",
+  "minorAccountReviewRecordConsentPrivacyBody": "Videoclipul tău este trimis în privat echipelor de asistență și de încredere și siguranță ale Divine pentru verificare. Nu este publicat sau distribuit altor utilizatori.",
+  "minorAccountReviewRecordConsentRejected": "Trimiterea nu a fost acceptată. Verifică adresa de e-mail, înregistrează din nou videoclipul sau folosește e-mailul."
 }

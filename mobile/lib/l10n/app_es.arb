@@ -6323,5 +6323,9 @@
   "badgeSubscribedAction": "Suscrito",
   "badgeSubscribeAction": "Suscribirse a la insignia",
   "badgeAcceptedHoldersTitle": "Personas que aceptaron la insignia",
-  "badgeSubscriptionLoadError": "No se pudieron cargar tus suscripciones a insignias. Inténtalo de nuevo."
+  "badgeSubscriptionLoadError": "No se pudieron cargar tus suscripciones a insignias. Inténtalo de nuevo.",
+  "minorAccountReviewVideoSubmittedBody": "Tu video se envió para revisión.",
+  "minorAccountReviewVideoSubmittedTitle": "Video enviado",
+  "minorAccountReviewRecordConsentPrivacyBody": "Tu video se envía de forma privada a los equipos de soporte y de confianza y seguridad de Divine para su revisión. No se publica ni se comparte con otros usuarios.",
+  "minorAccountReviewRecordConsentRejected": "No se aceptó tu envío. Revisá tu correo, volvé a grabar el video o usá el correo electrónico."
 }

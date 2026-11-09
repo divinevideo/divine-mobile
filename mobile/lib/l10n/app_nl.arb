@@ -6323,5 +6323,9 @@
   "badgeSubscribedAction": "Volgend",
   "badgeSubscribeAction": "Badge volgen",
   "badgeAcceptedHoldersTitle": "Geaccepteerde badgehouders",
-  "badgeSubscriptionLoadError": "Je badge-abonnementen konden niet worden geladen. Probeer het opnieuw."
+  "badgeSubscriptionLoadError": "Je badge-abonnementen konden niet worden geladen. Probeer het opnieuw.",
+  "minorAccountReviewVideoSubmittedBody": "Je video is ingediend voor beoordeling.",
+  "minorAccountReviewVideoSubmittedTitle": "Video ingediend",
+  "minorAccountReviewRecordConsentPrivacyBody": "Je video wordt vertrouwelijk naar de teams voor ondersteuning en vertrouwen en veiligheid van Divine gestuurd voor beoordeling. De video wordt niet gepubliceerd of met andere gebruikers gedeeld.",
+  "minorAccountReviewRecordConsentRejected": "Je inzending is niet geaccepteerd. Controleer je e-mailadres, neem de video opnieuw op of gebruik e-mail."
 }

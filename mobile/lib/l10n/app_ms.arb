@@ -7627,5 +7627,9 @@
   "creatorHighlightAnalytics": "Lihat statistik anda",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "minorAccountReviewVideoSubmittedBody": "Video anda telah dihantar untuk semakan.",
+  "minorAccountReviewVideoSubmittedTitle": "Video dihantar",
+  "minorAccountReviewRecordConsentPrivacyBody": "Video anda dihantar secara peribadi kepada pasukan Sokongan serta Kepercayaan dan Keselamatan Divine untuk semakan. Video tidak diterbitkan atau dikongsi dengan pengguna lain.",
+  "minorAccountReviewRecordConsentRejected": "Penyerahan anda tidak diterima. Semak alamat e-mel anda, rakam semula video atau gunakan e-mel."
 }

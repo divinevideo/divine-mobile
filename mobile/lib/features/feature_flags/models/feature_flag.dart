@@ -104,6 +104,13 @@ enum FeatureFlag {
         'invitation. Unconfigured reviewer builds can opt into public test '
         'rooms. Messages are signed with your key and can be read publicly.',
     audience: FeatureFlagAudience.internal,
+  ),
+  // User-facing: families can start the existing Greenlight consent flow from
+  // Experimental Features, or opt in while already in account review.
+  minorConsentInAppRecording(
+    'In-App Parent Consent Recording',
+    'Let a parent record and submit a consent video in the app for a '
+        'Divine Greenlight account review.',
   );
 
   const FeatureFlag(

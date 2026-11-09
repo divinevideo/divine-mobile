@@ -6323,5 +6323,9 @@
   "badgeSubscribedAction": "Abonné",
   "badgeSubscribeAction": "S’abonner au badge",
   "badgeAcceptedHoldersTitle": "Titulaires ayant accepté le badge",
-  "badgeSubscriptionLoadError": "Impossible de charger tes abonnements aux badges. Réessaie."
+  "badgeSubscriptionLoadError": "Impossible de charger tes abonnements aux badges. Réessaie.",
+  "minorAccountReviewVideoSubmittedBody": "Ta vidéo a été envoyée pour examen.",
+  "minorAccountReviewVideoSubmittedTitle": "Vidéo envoyée",
+  "minorAccountReviewRecordConsentPrivacyBody": "Votre vidéo est envoyée en privé aux équipes d’assistance et de confiance et sécurité de Divine pour examen. Elle n’est ni publiée ni partagée avec d’autres utilisateurs.",
+  "minorAccountReviewRecordConsentRejected": "Votre envoi n’a pas été accepté. Vérifiez votre adresse e-mail, refaites la vidéo ou utilisez l’e-mail."
 }

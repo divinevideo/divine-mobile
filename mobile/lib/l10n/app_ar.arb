@@ -6323,5 +6323,9 @@
   "badgeSubscribedAction": "مشترك",
   "badgeSubscribeAction": "اشترك في الشارة",
   "badgeAcceptedHoldersTitle": "حاملو الشارة الذين قبلوها",
-  "badgeSubscriptionLoadError": "تعذر تحميل اشتراكات الشارات الخاصة بك. حاول مرة أخرى."
+  "badgeSubscriptionLoadError": "تعذر تحميل اشتراكات الشارات الخاصة بك. حاول مرة أخرى.",
+  "minorAccountReviewVideoSubmittedBody": "تم إرسال الفيديو للمراجعة.",
+  "minorAccountReviewVideoSubmittedTitle": "تم إرسال الفيديو",
+  "minorAccountReviewRecordConsentPrivacyBody": "يُرسل الفيديو بشكل خاص إلى فريقي الدعم والثقة والسلامة في Divine لمراجعته. لن يُنشر أو يُشارك مع مستخدمين آخرين.",
+  "minorAccountReviewRecordConsentRejected": "لم يُقبل الإرسال. تحقق من بريدك الإلكتروني أو أعد تسجيل الفيديو أو استخدم البريد الإلكتروني بدلاً من ذلك."
 }

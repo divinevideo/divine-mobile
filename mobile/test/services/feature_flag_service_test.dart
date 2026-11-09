@@ -242,7 +242,7 @@ void main() {
         await service.resetAllFlags();
 
         for (final flag in FeatureFlag.values) {
-          if (flag.isInternal) {
+          if (flag.isInternal || !service.isAvailable(flag)) {
             verifyNever(() => mockPrefs.remove('ff_${flag.name}'));
           } else {
             verify(() => mockPrefs.remove('ff_${flag.name}')).called(1);

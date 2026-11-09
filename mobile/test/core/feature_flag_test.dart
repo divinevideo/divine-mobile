@@ -91,6 +91,12 @@ void main() {
     test('should leave user-facing flags visible to users', () {
       expect(FeatureFlag.blueskyPublishing.audience, FeatureFlagAudience.user);
       expect(FeatureFlag.videoReplies.audience, FeatureFlagAudience.user);
+      // Parents opt in to Greenlight recording from the user-facing list;
+      // the toggle must not be developer-mode-only.
+      expect(
+        FeatureFlag.minorConsentInAppRecording.audience,
+        FeatureFlagAudience.user,
+      );
     });
   });
 }

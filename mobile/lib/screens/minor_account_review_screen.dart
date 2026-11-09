@@ -15,7 +15,6 @@ import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
-import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -537,12 +536,12 @@ class _LoadedView extends ConsumerWidget {
     }
 
     // Exhaustive, so a new resolution cannot compile without being routed.
-    // Every resolution but parent contact is asked of support through the
+    // Every resolution but parent consent is handled by support through the
     // appeal button; support-email-only never reaches here, being under 13.
     return switch (reviewCase.allowedResolution) {
       MinorReviewResolutionType.parentVideoOrEmail => _MinorReviewPrimaryAction(
         label: l10n.minorAccountReviewContinue,
-        path: MinorAccountReviewParentContactScreen.path,
+        path: MinorAccountReviewParentConsentScreen.path,
       ),
       MinorReviewResolutionType.supportEmailOnly ||
       MinorReviewResolutionType.supportReviewOnly ||

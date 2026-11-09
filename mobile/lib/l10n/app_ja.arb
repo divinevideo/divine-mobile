@@ -6323,5 +6323,9 @@
   "badgeSubscribedAction": "購読中",
   "badgeSubscribeAction": "バッジを購読",
   "badgeAcceptedHoldersTitle": "バッジを承認した人",
-  "badgeSubscriptionLoadError": "バッジの購読を読み込めませんでした。もう一度お試しください。"
+  "badgeSubscriptionLoadError": "バッジの購読を読み込めませんでした。もう一度お試しください。",
+  "minorAccountReviewVideoSubmittedBody": "動画を確認のために送信しました。",
+  "minorAccountReviewVideoSubmittedTitle": "動画を送信しました",
+  "minorAccountReviewRecordConsentPrivacyBody": "動画は確認のため、Divineのサポートおよびトラスト＆セーフティのチームに非公開で送信されます。公開されたり、他のユーザーと共有されたりすることはありません。",
+  "minorAccountReviewRecordConsentRejected": "送信内容が受け付けられませんでした。メールアドレスを確認するか、動画を撮り直すか、メールをご利用ください。"
 }

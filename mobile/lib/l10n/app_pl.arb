@@ -6323,5 +6323,9 @@
   "badgeSubscribedAction": "Subskrybujesz",
   "badgeSubscribeAction": "Subskrybuj odznakę",
   "badgeAcceptedHoldersTitle": "Osoby, które przyjęły odznakę",
-  "badgeSubscriptionLoadError": "Nie udało się wczytać twoich subskrypcji odznak. Spróbuj ponownie."
+  "badgeSubscriptionLoadError": "Nie udało się wczytać twoich subskrypcji odznak. Spróbuj ponownie.",
+  "minorAccountReviewVideoSubmittedBody": "Twój film został przesłany do sprawdzenia.",
+  "minorAccountReviewVideoSubmittedTitle": "Film przesłany",
+  "minorAccountReviewRecordConsentPrivacyBody": "Twój film jest przesyłany prywatnie do zespołów wsparcia oraz zaufania i bezpieczeństwa Divine do sprawdzenia. Nie jest publikowany ani udostępniany innym użytkownikom.",
+  "minorAccountReviewRecordConsentRejected": "Nie przyjęto zgłoszenia. Sprawdź adres e-mail, nagraj film ponownie lub skorzystaj z poczty e-mail."
 }

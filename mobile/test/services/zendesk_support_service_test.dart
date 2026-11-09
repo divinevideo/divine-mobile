@@ -2221,6 +2221,7 @@ class _RecordingUrlNip98AuthService implements Nip98AuthService {
     required String url,
     required HttpMethod method,
     String? payload,
+    String? payloadHash,
     bool reuseCached = true,
     bool allowUserInteraction = true,
   }) async {
