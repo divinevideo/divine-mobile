@@ -761,6 +761,9 @@ class ZendeskSupportService {
         category: LogCategory.system,
       );
 
+      // The error a report names; the retry's own when it fails differently.
+      var reportedError = e;
+
       // JWT pre-auth tokens expire after 5 minutes. If the user reports
       // content later than that, the SDK's JWT callback fails. Fall back to
       // anonymous identity (already has name/email from login) and retry
@@ -794,7 +797,23 @@ class ZendeskSupportService {
               );
               return true;
             }
+            Log.warning(
+              'Anonymous identity retry did not create the ticket: '
+              '$retryResult',
+              category: LogCategory.system,
+            );
+          } else {
+            Log.warning(
+              'Could not set an anonymous identity to retry with',
+              category: LogCategory.system,
+            );
           }
+        } on PlatformException catch (retryError) {
+          Log.warning(
+            'Anonymous identity retry also failed: $retryError',
+            category: LogCategory.system,
+          );
+          reportedError = retryError;
         } catch (retryError) {
           Log.warning(
             'Anonymous identity retry also failed: $retryError',
@@ -807,7 +826,7 @@ class ZendeskSupportService {
       // Release builds ship no REST API token, so there the SDK was the only
       // way to deliver this ticket.
       if (!ZendeskConfig.isRestApiConfigured) {
-        _reportNativeTicketFailure(e);
+        _reportNativeTicketFailure(reportedError);
         return false;
       }
       Log.info(

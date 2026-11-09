@@ -1044,13 +1044,20 @@ void main() {
       expect(crashReporter.logs.single, contains('Unprocessable Entity'));
     });
 
-    test('reports when the anonymous retry fails as well', () async {
-      final authFailure = PlatformException(
-        code: 'CREATE_FAILED',
-        message: 'Response body was null, failed to auth user.',
-        details: {'status': 400, 'networkError': false, 'authFailed': true},
-      );
-      await initializeWithCreateTicketFailures([authFailure, authFailure]);
+    test('reports the anonymous retry failure, not the authentication '
+        'failure that led to it', () async {
+      await initializeWithCreateTicketFailures([
+        PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Response body was null, failed to auth user.',
+          details: {'status': 400, 'networkError': false, 'authFailed': true},
+        ),
+        PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Unprocessable Entity',
+          details: {'status': 422, 'networkError': false, 'authFailed': false},
+        ),
+      ]);
 
       final result = await ZendeskSupportService.createTicket(
         subject: 'Content Report',
@@ -1060,6 +1067,37 @@ void main() {
       expect(result, isFalse);
       expect(createTicketCalls(), 2);
       expect(crashReporter.reasons, ['zendesk_sdk_create_failed']);
+      expect(
+        crashReporter.errors.single.toString(),
+        contains('CREATE_FAILED (HTTP 422)'),
+      );
+      expect(crashReporter.logs.single, contains('Unprocessable Entity'));
+      expect(crashReporter.logs.single, isNot(contains('failed to auth user')));
+    });
+
+    test('keeps an offline anonymous retry out of crash reports', () async {
+      await initializeWithCreateTicketFailures([
+        PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Response body was null, failed to auth user.',
+          details: {'status': 400, 'networkError': false, 'authFailed': true},
+        ),
+        PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Unable to resolve host',
+          details: {'status': -1, 'networkError': true, 'authFailed': false},
+        ),
+      ]);
+
+      final result = await ZendeskSupportService.createTicket(
+        subject: 'Content Report',
+        description: 'Test report',
+      );
+
+      expect(result, isFalse);
+      expect(createTicketCalls(), 2);
+      expect(crashReporter.reasons, isEmpty);
+      expect(crashReporter.logs, isEmpty);
     });
 
     test('keeps a network failure out of crash reports', () async {
