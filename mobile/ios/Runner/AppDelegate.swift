@@ -518,9 +518,12 @@ extension FlutterError: @retroactive Error {}
             DispatchQueue.main.async {
               if let error = error {
                 NSLog("❌ Zendesk: Failed to create ticket - \(error.localizedDescription)")
+                // Same `networkError` detail as Android, so Dart can keep an
+                // offline attempt out of crash reports.
+                let networkError = (error as NSError).domain == NSURLErrorDomain
                 result(FlutterError(code: "CREATE_FAILED",
                                   message: error.localizedDescription,
-                                  details: nil))
+                                  details: ["networkError": networkError]))
               } else if let request = request as? ZDKRequest {
                 NSLog("✅ Zendesk: Ticket created successfully - ID: \(request.requestId)")
                 result(true)
