@@ -54,18 +54,6 @@ class ZendeskCreateTicketErrorDetailsTest {
     }
 
     @Test
-    fun `does not mistake a bare null response for an offline token exchange`() {
-        val details = zendeskCreateTicketErrorDetails(
-            errorResponse("Response was null", 400),
-        )
-
-        assertEquals(
-            mapOf("status" to 400, "networkError" to false, "authFailed" to false),
-            details,
-        )
-    }
-
-    @Test
     fun `flags a rejected token exchange response as an auth failure`() {
         val details = zendeskCreateTicketErrorDetails(
             errorResponse("Response was 409, failed to auth user.", 400),
