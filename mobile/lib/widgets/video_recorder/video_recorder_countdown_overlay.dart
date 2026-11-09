@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 
 /// Fullscreen overlay displaying the running countdown.
 ///
@@ -42,6 +43,9 @@ class VideoRecorderCountdownOverlay extends StatelessWidget {
           child: Center(
             child: Text(
               countdownValue.toString(),
+              textScaler: MediaQuery.textScalerOf(
+                context,
+              ).clamp(maxScaleFactor: overlayNumeralTextScaleLimit),
               style: VineTheme.displayLargeFont(color: VineTheme.whiteText)
                   .copyWith(
                     fontSize: 114,
