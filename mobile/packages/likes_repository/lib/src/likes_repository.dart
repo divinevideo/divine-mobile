@@ -2784,7 +2784,7 @@ class LikesRepository {
         'Retraction check for the likers list failed, listing everyone '
         'the API returned: $e',
         name: 'LikesRepository',
-        category: LogCategory.api,
+        category: LogCategory.relay,
       );
       return const {};
     }
