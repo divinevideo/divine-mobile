@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/features/post_publish/post_publish_experiment.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
@@ -338,8 +339,12 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
   }
 
   /// Updates upload progress (0.0 to 1.0).
+  ///
+  /// The upload calls this from inside its own pipeline and can outlive the
+  /// notifier (see [publishVideo]), so it never throws once the notifier is
+  /// disposed: a throw here would fail an upload that is still running.
   void setUploadProgress({required String draftId, required double progress}) {
-    state = state.copyWith(uploadProgress: progress);
+    if (ref.mounted) state = state.copyWith(uploadProgress: progress);
 
     if (progress == 0.0 || progress == 1.0 || (progress * 100) % 10 == 0) {
       Log.info(
@@ -351,8 +356,13 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
   }
 
   /// Sets error state with user message.
+  ///
+  /// Only logs once the notifier is disposed, which a publish can outlive
+  /// (see [publishVideo]): nothing reads that state any more.
   void setError(String userMessage) {
-    state = state.copyWith(publishState: .error, errorMessage: userMessage);
+    if (ref.mounted) {
+      state = state.copyWith(publishState: .error, errorMessage: userMessage);
+    }
 
     Log.error(
       '❌ Publish error: $userMessage',
@@ -396,6 +406,12 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
 
   /// Publishes the video with ProofMode attestation and navigates to
   /// profile on success.
+  ///
+  /// The publish can outlive this notifier. An account switch disposes the
+  /// container it lives in while the upload is still running, and `ref`
+  /// throws from then on. The upload carries on with the services it was
+  /// handed, so neither the failure paths here nor the callbacks the upload
+  /// reports through may need `ref`.
   Future<void> publishVideo(
     BuildContext context,
     DivineVideoDraft draft,
@@ -411,6 +427,9 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       return;
     }
 
+    // Read before the first await: the failure copy below is still needed
+    // once an account switch has disposed this notifier.
+    final sharedPreferences = ref.read(sharedPreferencesProvider);
     _inFlightSourceDraftIds.add(sourceDraftId);
     state = state.copyWith(publishState: .preparing);
     final creationTracker = ref.read(creationAnalyticsTrackerProvider);
@@ -512,7 +531,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
             category: LogCategory.video,
           );
           final message = currentAppL10n(
-            ref.read(sharedPreferencesProvider),
+            sharedPreferences,
           ).publishErrorOverlaysUnavailable;
           setError(message);
           _showPublishError(message);
@@ -543,7 +562,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
           // server-unreachable one, and more detached clips than the device
           // can decode send the user to the editor to put some back: there is
           // no timeline here (#10141).
-          final l10n = currentAppL10n(ref.read(sharedPreferencesProvider));
+          final l10n = currentAppL10n(sharedPreferences);
           final (message, analyticsReason) = switch (error.reason) {
             VideoRenderFailureReason.stopMotionAssembly => (
               stopMotionFailedMessage ??
@@ -630,7 +649,9 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       final backgroundPublishBloc = context.read<BackgroundPublishBloc>();
       final publishService = await _createPublishService(
         onProgressChanged: ({required draftId, required progress}) {
-          backgroundPublishBloc.add(
+          // The bloc closes with the account that started the publish, while
+          // the upload goes on reporting.
+          backgroundPublishBloc.addIfOpen(
             BackgroundPublishProgressChanged(
               draftId: draftId,
               progress: progress,
@@ -735,7 +756,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
           }
 
         case PublishError(:final kind, :final serverName, :final rawFallback):
-          final l10n = currentAppL10n(ref.read(sharedPreferencesProvider));
+          final l10n = currentAppL10n(sharedPreferences);
           final message =
               rawFallback ??
               l10n.publishErrorMessage(kind, serverName: serverName);
@@ -762,7 +783,7 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       // retry, and surface the failure with a snackbar. This catch fires on a
       // pre-handoff throw — before the background publish bloc receives the
       // process — so nothing else would tell the user it failed (#6058).
-      final l10n = currentAppL10n(ref.read(sharedPreferencesProvider));
+      final l10n = currentAppL10n(sharedPreferences);
       final message = l10n.publishErrorMessage(PublishErrorKind.generic);
       setError(message);
       _showPublishError(message);
@@ -867,7 +888,12 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       AppLocalizations,
     );
     if (l10n == null) return;
-    final repository = ref.read(collaboratorInviteRecoveryRepositoryProvider);
+    // A publish that finished after an account switch shows its warning with
+    // this notifier already disposed, and the repository holding its invites
+    // went with it.
+    final repository = ref.mounted
+        ? ref.read(collaboratorInviteRecoveryRepositoryProvider)
+        : null;
     if (repository == null) {
       messenger.showSnackBar(
         SnackBar(

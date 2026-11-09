@@ -4,13 +4,16 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:dm_repository/dm_repository.dart'
-    show CollaboratorInviteRetrySummary;
+    show CollaboratorInviteRetrySummary, DmRepository;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show NativeProofData;
+import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/publish_error_kind_l10n.dart';
@@ -26,17 +29,22 @@ import 'package:openvine/providers/add_yours_context_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
+import 'package:openvine/providers/scheduled_posts_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/c2pa_creator_binding_factory.dart';
 import 'package:openvine/services/cawg_verifier_client.dart';
 import 'package:openvine/services/draft_storage_service.dart';
+import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/mention_resolution_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/nostr_creator_binding_service.dart';
+import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerRasterizer, TextLayer;
@@ -49,6 +57,22 @@ class MockProfileRepository extends Mock implements ProfileRepository {}
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
 
 class _FakeDivineVideoDraft extends Fake implements DivineVideoDraft {}
+
+class _MockBackgroundPublishBloc extends Mock
+    implements BackgroundPublishBloc {}
+
+class _MockUploadManager extends Mock implements UploadManager {}
+
+class _MockAuthService extends Mock implements AuthService {}
+
+class _MockVideoEventPublisher extends Mock implements VideoEventPublisher {}
+
+class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
+
+class _MockDmRepository extends Mock implements DmRepository {}
+
+class _MockLanguagePreferenceService extends Mock
+    implements LanguagePreferenceService {}
 
 class _FixedBindingFactory extends Fake implements C2paCreatorBindingFactory {
   @override
@@ -75,6 +99,41 @@ class _BakingClipManager extends ClipManagerNotifier {
       chromaKey: clip.captureChromaKey,
     );
   }
+}
+
+/// A rendered draft with creator identity metadata, so publishVideo skips
+/// both the render and the proof refresh.
+DivineVideoDraft _renderedDraft() {
+  final clip = DivineVideoClip(
+    id: 'clip_1',
+    video: EditorVideo.file('/tmp/test.mp4'),
+    duration: const Duration(seconds: 6),
+    recordedAt: DateTime(2025),
+    originalAspectRatio: 9 / 16,
+    targetAspectRatio: .vertical,
+  );
+  return DivineVideoDraft(
+    id: 'draft_1',
+    clips: [clip],
+    title: 'Plants',
+    description: '',
+    hashtags: const {},
+    selectedApproach: 'camera',
+    createdAt: DateTime(2025),
+    lastModified: DateTime(2025),
+    publishStatus: PublishStatus.draft,
+    publishAttempts: 0,
+    finalRenderedClip: clip,
+    // Creator identity metadata present so publishVideo skips the proof
+    // refresh and goes straight to saving the publish copy.
+    proofManifestJson: jsonEncode(
+      const NativeProofData(
+        videoHash: 'abc123',
+        creatorBindingAssertionLabel: 'video.divine.nostr.creator_binding',
+        creatorBindingPayloadJson: '{"version":1}',
+      ).toJson(),
+    ),
+  );
 }
 
 void main() {
@@ -384,43 +443,13 @@ void main() {
       registerFallbackValue(_FakeDivineVideoDraft());
     });
 
-    DivineVideoDraft createDraft() {
-      final clip = DivineVideoClip(
-        id: 'clip_1',
-        video: EditorVideo.file('/tmp/test.mp4'),
-        duration: const Duration(seconds: 6),
-        recordedAt: DateTime(2025),
-        originalAspectRatio: 9 / 16,
-        targetAspectRatio: .vertical,
-      );
-      return DivineVideoDraft(
-        id: 'draft_1',
-        clips: [clip],
-        title: 'Plants',
-        description: '',
-        hashtags: const {},
-        selectedApproach: 'camera',
-        createdAt: DateTime(2025),
-        lastModified: DateTime(2025),
-        publishStatus: PublishStatus.draft,
-        publishAttempts: 0,
-        finalRenderedClip: clip,
-        // Creator identity metadata present so publishVideo skips the
-        // proof refresh and suspends on the mocked saveDraft below.
-        proofManifestJson: jsonEncode(
-          const NativeProofData(
-            videoHash: 'abc123',
-            creatorBindingAssertionLabel: 'video.divine.nostr.creator_binding',
-            creatorBindingPayloadJson: '{"version":1}',
-          ).toJson(),
-        ),
-      );
-    }
-
     testWidgets(
       'reset during an in-flight publish does not reopen the gate for '
       'the same source draft',
       (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+
         final mockDraftStorage = _MockDraftStorageService();
         // Never completes - keeps the first publish in flight, like the
         // 20s+ audio-reuse window in production.
@@ -432,6 +461,7 @@ void main() {
         final container = ProviderContainer(
           overrides: [
             draftStorageServiceProvider.overrideWithValue(mockDraftStorage),
+            sharedPreferencesProvider.overrideWithValue(prefs),
           ],
         );
         addTearDown(container.dispose);
@@ -448,7 +478,7 @@ void main() {
         );
         final context = tester.element(find.byType(SizedBox));
         final notifier = container.read(videoPublishProvider.notifier);
-        final draft = createDraft();
+        final draft = _renderedDraft();
 
         unawaited(notifier.publishVideo(context, draft));
         await tester.pump();
@@ -503,7 +533,7 @@ void main() {
         final context = tester.element(find.byType(SizedBox));
         final notifier = container.read(videoPublishProvider.notifier);
 
-        await notifier.publishVideo(context, createDraft());
+        await notifier.publishVideo(context, _renderedDraft());
 
         expect(
           container.read(videoPublishProvider).publishState,
@@ -548,7 +578,7 @@ void main() {
         final context = tester.element(find.byType(SizedBox));
         final notifier = container.read(videoPublishProvider.notifier);
 
-        await notifier.publishVideo(context, createDraft());
+        await notifier.publishVideo(context, _renderedDraft());
         await tester.pump(); // let the snackbar animate in
 
         final expectedMessage = lookupAppLocalizations(
@@ -563,6 +593,112 @@ void main() {
         );
       },
     );
+  });
+
+  // An account switch mounts a new ProviderContainer and disposes the old one
+  // while a publish it started may still be uploading. From then on every use
+  // of the notifier's Ref throws, and publishVideo's own catch block threw
+  // again, which Crashlytics reported as "Cannot use the Ref of
+  // VideoPublishNotifier after it has been disposed".
+  group('VideoPublishNotifier publishVideo across an account switch', () {
+    setUpAll(() {
+      registerFallbackValue(_FakeDivineVideoDraft());
+      registerFallbackValue(BackgroundPublishVanished(draftId: 'fallback'));
+    });
+
+    testWidgets(
+      'completes when the handed-off publish fails after the switch',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+
+        final draftStorage = _MockDraftStorageService();
+        when(() => draftStorage.saveDraft(any())).thenAnswer((_) async {});
+        // The publish service's first await. Holding it keeps the handed-off
+        // publish in flight until after the switch.
+        final ownershipCheck = Completer<bool>();
+        when(
+          () => draftStorage.isDraftOwnedByAnotherAccount(any()),
+        ).thenAnswer((_) => ownershipCheck.future);
+
+        final authService = _MockAuthService();
+        // Without an npub the publish navigates nowhere, so no router is
+        // needed.
+        when(() => authService.currentNpub).thenReturn(null);
+
+        final backgroundPublishBloc = _MockBackgroundPublishBloc();
+        when(
+          () => backgroundPublishBloc.stream,
+        ).thenAnswer((_) => const Stream.empty());
+
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            draftStorageServiceProvider.overrideWithValue(draftStorage),
+            authServiceProvider.overrideWithValue(authService),
+            uploadManagerProvider.overrideWithValue(_MockUploadManager()),
+            videoEventPublisherProvider.overrideWithValue(
+              _MockVideoEventPublisher(),
+            ),
+            blossomUploadServiceProvider.overrideWithValue(
+              _MockBlossomUploadService(),
+            ),
+            profileRepositoryProvider.overrideWithValue(null),
+            dmRepositoryProvider.overrideWithValue(_MockDmRepository()),
+            languagePreferenceServiceProvider.overrideWithValue(
+              _MockLanguagePreferenceService(),
+            ),
+            scheduledPostsRepositoryProvider.overrideWithValue(null),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: BlocProvider<BackgroundPublishBloc>.value(
+              value: backgroundPublishBloc,
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: SizedBox(),
+              ),
+            ),
+          ),
+        );
+        final context = tester.element(find.byType(SizedBox));
+        final publish = container
+            .read(videoPublishProvider.notifier)
+            .publishVideo(context, _renderedDraft());
+        await tester.pump();
+        verify(
+          () => backgroundPublishBloc.add(
+            any(that: isA<BackgroundPublishRequested>()),
+          ),
+        ).called(1);
+
+        // The switch mounts the next account's tree first and disposes the
+        // previous container after that frame.
+        await tester.pumpWidget(const SizedBox());
+        container.dispose();
+        ownershipCheck.complete(true);
+
+        await expectLater(publish, completes);
+      },
+    );
+
+    test('ignores upload progress reported after the switch', () {
+      final container = ProviderContainer();
+      final notifier = container.read(videoPublishProvider.notifier);
+      container.dispose();
+
+      // Progress arrives from inside the upload, so a throw here would fail
+      // an upload that is still running.
+      expect(
+        () => notifier.setUploadProgress(draftId: 'draft_1', progress: 0.5),
+        returnsNormally,
+      );
+    });
   });
 
   // #5203 hid Post for drafts with no cached render because publishing one
