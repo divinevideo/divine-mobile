@@ -230,6 +230,7 @@ void main() {
         tester,
       ) async {
         await pump(tester, session: ready(_author));
+        await tester.pump(pollResultsGrowDuration);
 
         expect(find.text('100%'), findsOneWidget);
         expect(
@@ -243,6 +244,42 @@ void main() {
         await tester.tapAt(tester.getCenter(find.text('Blue')));
         verifyNever(() => repository.vote(any(), any()));
         expect(playerTaps, equals(1));
+      });
+
+      testWidgets('grows the votes in from nothing each time the poll opens', (
+        tester,
+      ) async {
+        // Red has every vote, Blue none.
+        await pump(tester, session: ready(_author));
+
+        expect(find.text('0%'), findsNWidgets(2));
+        await tester.pump(pollResultsGrowDuration);
+        expect(find.text('100%'), findsOneWidget);
+
+        // Scrolled away and back to: the votes come in again.
+        await pump(tester, session: ready(_author), isActive: false);
+        expect(find.text('100%'), findsNothing);
+        await pump(tester, session: ready(_author));
+        expect(find.text('0%'), findsNWidgets(2));
+        await tester.pump(pollResultsGrowDuration ~/ 2);
+        expect(find.text('0%'), findsOneWidget);
+        expect(find.text('100%'), findsNothing);
+        await tester.pump(pollResultsGrowDuration ~/ 2);
+        expect(find.text('100%'), findsOneWidget);
+      });
+
+      testWidgets('shows the votes at once under reduced motion', (
+        tester,
+      ) async {
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            const FakeAccessibilityFeatures(disableAnimations: true);
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+
+        await pump(tester, session: ready(_author));
+
+        expect(find.text('100%'), findsOneWidget);
       });
 
       testWidgets('reads a poll to a screen reader at the card, not as a '
@@ -314,6 +351,7 @@ void main() {
 
         await tester.tap(find.text('Blue'));
         await tester.pump();
+        await tester.pump(pollResultsGrowDuration);
 
         verify(() => repository.vote(_poll, '1')).called(1);
         expect(find.text('75%'), findsOneWidget);

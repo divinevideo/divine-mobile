@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart' show NumberFormat;
+import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
@@ -70,6 +71,10 @@ const double _barHeight = 28;
 
 /// The size of the mark showing where a slider stands on average.
 const double _averageMarkSize = 44;
+
+/// How long the votes take to grow in from nothing each time a poll's results
+/// show, and to move to new ones.
+const Duration pollResultsGrowDuration = Duration(milliseconds: 600);
 
 /// Text of an interactive card in [fontSize].
 TextStyle interactiveCardTextStyle(double fontSize) => VineTheme.titleLargeFont(
@@ -142,13 +147,16 @@ class PollStickerCard extends StatelessWidget {
               ),
             ),
             if (data.kind == SocialStickerKind.slider)
-              _SliderScale(
-                emoji: data.sliderEmoji ?? '',
-                value: sliderValue,
-                average: results?.average,
-                passesTaps: overFrames,
-                onSlide: onSlide,
-                onSlideEnd: onSlideEnd,
+              _Grown(
+                value: results?.average,
+                builder: (context, average) => _SliderScale(
+                  emoji: data.sliderEmoji ?? '',
+                  value: sliderValue,
+                  average: average,
+                  passesTaps: overFrames,
+                  onSlide: onSlide,
+                  onSlideEnd: onSlideEnd,
+                ),
               )
             else
               for (final (index, answer) in data.pollOptions.indexed)
@@ -280,11 +288,7 @@ class _Answer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final share = this.share;
-    final percent = share == null
-        ? null
-        : NumberFormat.percentPattern(
-            Localizations.maybeLocaleOf(context)?.toString(),
-          ).format(share);
+    final percent = share == null ? null : _percentOf(context, share);
     // Only the player has votes, and with them a quiz's outcome to say.
     final outcome = isRight
         ? context.l10n.videoStickerQuizRightAnswer
@@ -297,7 +301,65 @@ class _Answer extends StatelessWidget {
         : isRight || (isOwn && !isWrong)
         ? VineTheme.vineGreen
         : VineTheme.vineGreenLight;
-    final answer = SizedBox(
+    // A screen reader is told the share itself, not the one growing in.
+    final answer = _Grown(
+      value: share,
+      builder: (context, grown) => _AnswerPill(
+        text: text,
+        share: grown,
+        fill: fill,
+        isRight: isRight,
+        isWrong: isWrong,
+      ),
+    );
+    final onTap = this.onTap;
+    if (onTap == null) {
+      if (percent == null) return answer;
+      return Semantics(label: label, excludeSemantics: true, child: answer);
+    }
+    return Semantics(
+      button: true,
+      selected: isOwn,
+      label: label,
+      // Excluding the subtree takes the detector's own tap action with it.
+      onTap: onTap,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: answer,
+      ),
+    );
+  }
+}
+
+/// [share] from 0 to 1 as a percentage in the viewer's language.
+String _percentOf(BuildContext context, double share) =>
+    NumberFormat.percentPattern(
+      Localizations.maybeLocaleOf(context)?.toString(),
+    ).format(share);
+
+/// An answer's pill, with [share] of it filled in and written out once the
+/// votes are in.
+class _AnswerPill extends StatelessWidget {
+  const _AnswerPill({
+    required this.text,
+    required this.share,
+    required this.fill,
+    required this.isRight,
+    required this.isWrong,
+  });
+
+  final String text;
+  final double? share;
+  final Color fill;
+  final bool isRight;
+  final bool isWrong;
+
+  @override
+  Widget build(BuildContext context) {
+    final share = this.share;
+    return SizedBox(
       height: interactiveCardRowHeight,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(interactiveCardRowHeight / 2),
@@ -332,9 +394,9 @@ class _Answer extends StatelessWidget {
                         size: 48,
                         color: interactiveCardInk,
                       ),
-                    if (percent != null)
+                    if (share != null)
                       Text(
-                        percent,
+                        _percentOf(context, share),
                         style: interactiveCardTextStyle(42).copyWith(
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
@@ -348,23 +410,30 @@ class _Answer extends StatelessWidget {
         ),
       ),
     );
-    final onTap = this.onTap;
-    if (onTap == null) {
-      if (percent == null) return answer;
-      return Semantics(label: label, excludeSemantics: true, child: answer);
-    }
-    return Semantics(
-      button: true,
-      selected: isOwn,
-      label: label,
-      // Excluding the subtree takes the detector's own tap action with it.
-      onTap: onTap,
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: answer,
-      ),
+  }
+}
+
+/// What [builder] draws for a share or an average [value] of a poll's votes,
+/// grown in from nothing the first time it shows and moved to each new value
+/// after, so the votes come in again each time the poll is opened.
+///
+/// Without a [value] there are no votes to grow, and [builder] gets `null`.
+/// Under reduced motion the votes show at once.
+class _Grown extends StatelessWidget {
+  const _Grown({required this.value, required this.builder});
+
+  final double? value;
+  final Widget Function(BuildContext context, double? value) builder;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = this.value;
+    if (value == null) return builder(context, null);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: value),
+      duration: pollResultsGrowDuration.autoReduceMotion(context),
+      curve: Curves.easeOutCubic,
+      builder: (context, grown, _) => builder(context, grown),
     );
   }
 }
