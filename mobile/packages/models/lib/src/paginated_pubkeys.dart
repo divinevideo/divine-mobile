@@ -2,7 +2,9 @@ import 'package:meta/meta.dart';
 
 /// A paginated list of pubkeys from the Funnelcake API.
 ///
-/// Used for follower/following list responses which may be paginated.
+/// Used for follower/following list responses, which may be paginated, and
+/// for the engagement lists (likers, reposters), whose rows also name the
+/// event behind each pubkey (see [eventIdByPubkey]).
 @immutable
 class PaginatedPubkeys {
   /// Creates a new [PaginatedPubkeys] instance.
@@ -12,6 +14,7 @@ class PaginatedPubkeys {
     this.hasMore = false,
     this.nextCursor,
     this.appliedQuery,
+    this.eventIdByPubkey = const {},
   });
 
   /// Creates a [PaginatedPubkeys] from JSON response.
@@ -27,7 +30,8 @@ class PaginatedPubkeys {
   /// (`/api/videos/{id}/likers`, `/reposters`) return
   /// `{"pubkey": …, "created_at": …, "event_id": …}`. Objects without a
   /// string `pubkey` are dropped rather than stringified, so a shape change
-  /// surfaces as a short list instead of rows of `{pubkey: …}` garbage.
+  /// surfaces as a short list instead of rows of `{pubkey: …}` garbage. A
+  /// non-empty string `event_id` is kept in [eventIdByPubkey].
   factory PaginatedPubkeys.fromJson(Map<String, dynamic> json) {
     final pagination = json['pagination'] as Map<String, dynamic>?;
 
@@ -49,10 +53,17 @@ class PaginatedPubkeys {
         : rawCursor;
 
     final pubkeys = <String>[];
+    final eventIdByPubkey = <String, String>{};
     for (final entry in pubkeysData) {
       if (entry is Map<String, dynamic>) {
         final pubkey = entry['pubkey'];
-        if (pubkey is String && pubkey.isNotEmpty) pubkeys.add(pubkey);
+        if (pubkey is String && pubkey.isNotEmpty) {
+          pubkeys.add(pubkey);
+          final eventId = entry['event_id'];
+          if (eventId is String && eventId.isNotEmpty) {
+            eventIdByPubkey.putIfAbsent(pubkey, () => eventId);
+          }
+        }
         continue;
       }
       pubkeys.add(entry.toString());
@@ -64,6 +75,7 @@ class PaginatedPubkeys {
       hasMore: hasMore,
       nextCursor: nextCursor,
       appliedQuery: json['query'] as String?,
+      eventIdByPubkey: Map.unmodifiable(eventIdByPubkey),
     );
   }
 
@@ -94,6 +106,13 @@ class PaginatedPubkeys {
   /// search matches: check this first.
   final String? appliedQuery;
 
+  /// The event behind each pubkey on the list, keyed by pubkey.
+  ///
+  /// The engagement endpoints report one event per person: the newest like or
+  /// repost they count. Empty for the follow lists and for a row that sent no
+  /// `event_id`.
+  final Map<String, String> eventIdByPubkey;
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -101,6 +120,10 @@ class PaginatedPubkeys {
     if (other.total != total || other.hasMore != hasMore) return false;
     if (other.nextCursor != nextCursor) return false;
     if (other.appliedQuery != appliedQuery) return false;
+    if (other.eventIdByPubkey.length != eventIdByPubkey.length) return false;
+    for (final entry in eventIdByPubkey.entries) {
+      if (other.eventIdByPubkey[entry.key] != entry.value) return false;
+    }
     if (other.pubkeys.length != pubkeys.length) return false;
     for (var i = 0; i < pubkeys.length; i++) {
       if (other.pubkeys[i] != pubkeys[i]) return false;
@@ -115,6 +138,11 @@ class PaginatedPubkeys {
     hasMore,
     nextCursor,
     appliedQuery,
+    // XOR keeps equal maps equal whatever order their entries were added in.
+    eventIdByPubkey.entries.fold<int>(
+      0,
+      (h, e) => h ^ Object.hash(e.key, e.value),
+    ),
   );
 
   @override

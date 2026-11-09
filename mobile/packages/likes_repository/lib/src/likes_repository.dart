@@ -74,6 +74,12 @@ const _queuedLikeCheckAttempts = 3;
 /// `LikesRepository._provesAbsence`).
 typedef _RelayRead = ({List<Event> events, bool isComplete});
 
+/// One page from Funnelcake after the retraction check. `listedAnyone` says
+/// whether the API listed someone before that check removed anyone.
+typedef _ApiLikers = ({LikersPage page, bool listedAnyone});
+
+final _eventIdPattern = RegExp(r'^[0-9a-f]{64}$');
+
 /// What this account's deletions say about some of its reactions, by id: the
 /// ones a deletion names, and the ones a short read leaves unknown.
 typedef _Retractions = ({Set<String> retracted, Set<String> undecided});
@@ -2600,6 +2606,12 @@ class LikesRepository {
   /// relay filter below (#6021). It also drops accounts the server has
   /// moderated, which the relay path cannot know about.
   ///
+  /// The API list is checked against the relays for one thing: a liker whose
+  /// reaction a kind 5 from the same key retracts on a relay the API never
+  /// read is removed (#9357). The check never adds anyone — people only other
+  /// relays know about, and accounts the server hides, stay the API's call —
+  /// and an unfinished or failed read leaves the list as the API sent it.
+  ///
   /// The relay fallback queries kind 7 (NIP-25) reactions referencing the
   /// target via the `e` tag and (when [addressableId] is provided) the `a`
   /// tag. Both filters are queried because clients may reference addressable
@@ -2644,7 +2656,7 @@ class LikesRepository {
         cursor: cursor,
         isContinuation: continuing,
       );
-      if (fromApi != null && fromApi.pubkeys.isNotEmpty) return fromApi;
+      if (fromApi != null && fromApi.listedAnyone) return fromApi.page;
 
       // A cursor is a Funnelcake concept: relays cannot continue someone
       // else's page, and re-running the relay query would replay the likers
@@ -2654,7 +2666,7 @@ class LikesRepository {
       // LikersPage.empty would end the list with pages still to come. A
       // failed continuation throws from _fetchLikersFromApi instead, so
       // the caller can offer a retry.
-      if (continuing) return fromApi ?? LikersPage.empty;
+      if (continuing) return fromApi?.page ?? LikersPage.empty;
 
       final likersByEvent = await _fetchResolvedLikersByEvent(
         [eventId],
@@ -2680,7 +2692,7 @@ class LikesRepository {
   /// fix (#9358).
   ///
   /// One page only: the caller follows [LikersPage.nextCursor] for the rest.
-  Future<LikersPage?> _fetchLikersFromApi({
+  Future<_ApiLikers?> _fetchLikersFromApi({
     required String eventId,
     String? addressableId,
     String? cursor,
@@ -2701,9 +2713,17 @@ class LikesRepository {
           : page.pubkeys.where((pubkey) => !blockFilter(pubkey));
       // Dedupe defensively so the documented per-liker guarantee holds even
       // if the endpoint ever repeats a pubkey; mirrors the relay path.
-      return LikersPage(
-        pubkeys: {...filtered}.toList(),
-        nextCursor: page.nextCursor,
+      final listed = {...filtered}.toList();
+      final retracted = await _retractedLikers(page.eventIdByPubkey, listed);
+      return (
+        page: LikersPage(
+          pubkeys: [
+            for (final pubkey in listed)
+              if (!retracted.contains(pubkey)) pubkey,
+          ],
+          nextCursor: page.nextCursor,
+        ),
+        listedAnyone: listed.isNotEmpty,
       );
     } on FunnelcakeException catch (e) {
       if (isContinuation) rethrow;
@@ -2714,6 +2734,59 @@ class LikesRepository {
         category: LogCategory.api,
       );
       return null;
+    }
+  }
+
+  /// The likers in [listed] whose own reaction a kind 5 from the same key
+  /// retracts on the relays (#9357).
+  ///
+  /// [reactionByLiker] is the reaction each API row reports: the newest one
+  /// the server still counts as live. A person with another live reaction it
+  /// does not report is dropped when that one is retracted. Only a kind 5 this
+  /// read returned removes anyone; a read that is short, unanswered or failed
+  /// leaves everyone listed. Waits at most [_settledReadTimeout], and asks
+  /// about at most one chunk of well-formed ids, since they come from a REST
+  /// body.
+  Future<Set<String>> _retractedLikers(
+    Map<String, String> reactionByLiker,
+    Iterable<String> listed,
+  ) async {
+    final likerByReaction = <String, String>{
+      for (final pubkey in listed.take(_reqEidChunkSize))
+        if (reactionByLiker[pubkey] case final reactionId?
+            when _eventIdPattern.hasMatch(reactionId))
+          reactionId: pubkey,
+    };
+    if (likerByReaction.isEmpty) return const {};
+
+    try {
+      final read = await _readChunked(
+        likerByReaction.keys.toList(),
+        (chunk) => Filter(
+          kinds: const [EventKind.eventDeletion],
+          e: chunk,
+          limit: _defaultReactionFetchLimit,
+        ),
+      );
+      final retracted = <String>{};
+      for (final deletion in read.events) {
+        for (final tag in deletion.tags) {
+          if (tag.length > 1 &&
+              tag[0] == 'e' &&
+              likerByReaction[tag[1]] == deletion.pubkey) {
+            retracted.add(deletion.pubkey);
+          }
+        }
+      }
+      return retracted;
+    } on Exception catch (e) {
+      Log.warning(
+        'Retraction check for the likers list failed, listing everyone '
+        'the API returned: $e',
+        name: 'LikesRepository',
+        category: LogCategory.relay,
+      );
+      return const {};
     }
   }
 
