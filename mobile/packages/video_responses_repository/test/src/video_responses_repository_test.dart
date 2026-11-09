@@ -2218,6 +2218,40 @@ void main() {
         ]);
       });
 
+      test(
+        'hiding an addressable reply takes back a remote restore of its '
+        'version',
+        () async {
+          final address = '34236:${_hex(3)}:reply-d';
+          curationAnswers([
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(202), '', 'restored'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+          const previous = RepliesCuration();
+
+          final reconciled = await repository().saveCuration(
+            previous.hidden(address, eventId: _hex(202)),
+            videoAddress: _rootAddress,
+            previous: previous,
+            takenBackRestores: {_hex(202)},
+          );
+
+          expect(reconciled.restoredIds, isEmpty);
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['a', _rootAddress],
+            ['a', address, '', 'hidden'],
+          ]);
+        },
+      );
+
       group('queued saves', () {
         late VideoResponsesRepository responses;
 
