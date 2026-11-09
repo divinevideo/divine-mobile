@@ -2,6 +2,7 @@
 // ABOUTME: Handles save, load, delete, clear, and migration from SharedPreferences
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:db_client/db_client.dart';
 import 'package:flutter/foundation.dart';
@@ -9,6 +10,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/draft_local_audio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/draft_summary.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/observability/crash_reporter.dart';
@@ -719,6 +721,79 @@ class DraftStorageService {
     );
   }
 
+  /// Library metadata without decoding or retaining any draft history.
+  /// Clip payloads are validated one draft at a time to preserve stop-motion
+  /// recovery and missing-media filtering; none escape into Library state.
+  Future<List<DraftSummary>> getDraftSummaries() async {
+    final rows = await _draftsDao.getDraftSummaries(ownerPubkey: ownerPubkey);
+    final documentsPath = await getDocumentsPath();
+    final summaries = <DraftSummary>[];
+    final emptyDraftIds = <String>[];
+    for (final row in rows) {
+      final clipRows = await _clipsDao.getClipsByDraftId(row.id);
+      if (clipRows.isEmpty) {
+        emptyDraftIds.add(row.id);
+        continue;
+      }
+      try {
+        final clips = _filterValidClips([
+          for (final clip in clipRows)
+            DivineVideoClip.fromJson(
+              json.decode(clip.data) as Map<String, dynamic>,
+              documentsPath,
+            ),
+        ]);
+        if (clips.isEmpty) continue;
+        final renderPath = resolvePath(row.renderedFilePath, documentsPath);
+        final hasUsableRender =
+            row.finalRenderVersion ==
+                DivineVideoDraft.currentFinalRenderVersion &&
+            renderPath != null &&
+            File(renderPath).existsSync();
+        summaries.add(
+          DraftSummary(
+            id: row.id,
+            title: row.title,
+            lastModified: row.lastModified,
+            publishStatus: PublishStatus.values.byName(row.publishStatus),
+            clipCount: clips.length,
+            coverThumbnailPath:
+                resolvePath(row.customThumbnailPath, documentsPath) ??
+                (hasUsableRender
+                    ? resolvePath(row.renderedThumbnailPath, documentsPath)
+                    : null) ??
+                clips.first.thumbnailPath,
+          ),
+        );
+      } on Object catch (error, stack) {
+        Log.warning(
+          'Draft ${row.id} could not be summarized: $error',
+          name: 'DraftStorageService',
+          category: LogCategory.video,
+        );
+        await _crashReporter.recordError(
+          error,
+          stack,
+          reason: 'Failed to summarize draft',
+        );
+      }
+    }
+    await _removeEmptyDrafts(emptyDraftIds);
+    return summaries;
+  }
+
+  Future<void> _removeEmptyDrafts(List<String> ids) async {
+    if (ids.isEmpty) return;
+    Log.warning(
+      '🧹 Removing ${ids.length} corrupted draft(s) with 0 clips: $ids',
+      name: 'DraftStorageService',
+      category: LogCategory.video,
+    );
+    for (final id in ids) {
+      await _draftsDao.deleteDraft(id);
+    }
+  }
+
   /// Get all drafts from storage
   Future<List<DivineVideoDraft>> getAllDrafts() async {
     try {
@@ -746,18 +821,7 @@ class DraftStorageService {
         }
       }
 
-      // Clean up corrupted drafts (0 clips) in the background
-      if (corruptedDraftIds.isNotEmpty) {
-        Log.warning(
-          '🧹 Removing ${corruptedDraftIds.length} corrupted '
-          'draft(s) with 0 clips: $corruptedDraftIds',
-          name: 'DraftStorageService',
-          category: LogCategory.video,
-        );
-        for (final id in corruptedDraftIds) {
-          await _draftsDao.deleteDraft(id);
-        }
-      }
+      await _removeEmptyDrafts(corruptedDraftIds);
 
       return drafts;
     } catch (e, stackTrace) {
@@ -782,7 +846,10 @@ class DraftStorageService {
     // primary key — an owner-scoped read would turn every deletion issued by a
     // service whose ownerPubkey no longer matches the row into a silent no-op.
     final draft = await _loadDraftAcrossAccounts(id);
-    if (draft == null) return;
+    if (draft == null) {
+      await _deleteUnreadableDraft(id);
+      return;
+    }
     final documentsPath = await getDocumentsPath();
     final detachedClipPaths = DetachedClipLayerData.ownedFilePathsInHistory(
       draft.editorStateHistory,
@@ -850,6 +917,55 @@ class DraftStorageService {
         referencedAudioFilenames: await _referencedLocalAudioFilenames(),
       );
     }
+  }
+
+  /// Deletes an unreadable draft using independently recoverable media metadata.
+  Future<void> _deleteUnreadableDraft(String id) async {
+    final row = await _draftsDao.getDraftById(id);
+    if (row == null) return;
+    final documentsPath = await getDocumentsPath();
+    final clipRows = await _clipsDao.getClipsByDraftId(id);
+    final clips = <DivineVideoClip>[];
+    final indexedPaths = <String?>[
+      resolvePath(row.renderedFilePath, documentsPath),
+      resolvePath(row.renderedThumbnailPath, documentsPath),
+      resolvePath(row.customThumbnailPath, documentsPath),
+      for (final clip in clipRows) ...[
+        resolvePath(clip.filePath, documentsPath),
+        resolvePath(clip.thumbnailPath, documentsPath),
+      ],
+    ];
+    for (final clip in clipRows) {
+      try {
+        clips.add(
+          DivineVideoClip.fromJson(
+            json.decode(clip.data) as Map<String, dynamic>,
+            documentsPath,
+          ),
+        );
+      } catch (error) {
+        Log.warning(
+          'Skipping unreadable clip metadata during draft deletion: $error',
+          name: 'DraftStorageService',
+          category: LogCategory.video,
+        );
+      }
+    }
+
+    // Unreadable editor metadata cannot safely identify extra owned assets.
+    // Retain those for the existing orphan-file cleanup rather than guess.
+    await _draftsDao.deleteDraft(id);
+    await FileCleanupService.deleteRecordingClipsFiles(
+      clips,
+      draftsDao: _draftsDao,
+      clipsDao: _clipsDao,
+      referencedGhostFrameFilenames: await _referencedGhostFrameFilenames(),
+    );
+    await FileCleanupService.deleteFilesIfUnreferenced(
+      indexedPaths,
+      draftsDao: _draftsDao,
+      clipsDao: _clipsDao,
+    );
   }
 
   /// Basenames of draft-local audio files referenced by any surviving draft or

@@ -32,8 +32,8 @@ class LocalContentDiagnosticsService {
       Future.value(File(path).existsSync());
 
   Future<Map<String, dynamic>> collect() async {
-    final clips = await _clipsDao.getAllClips(includeTrashed: true);
-    final drafts = await _draftsDao.getAllDrafts();
+    final clips = await _clipsDao.getClipInventory();
+    final drafts = await _draftsDao.getDraftInventory();
 
     final visibleClips = clips.where(
       (row) =>

@@ -38,6 +38,29 @@ class DraftClipData {
   final DateTime? archivedAt;
 }
 
+/// Scalar Library metadata. Never carries the stored editor history.
+class DraftSummaryRow {
+  const DraftSummaryRow({
+    required this.id,
+    required this.title,
+    required this.lastModified,
+    required this.publishStatus,
+    required this.customThumbnailPath,
+    required this.renderedFilePath,
+    required this.renderedThumbnailPath,
+    required this.finalRenderVersion,
+  });
+
+  final String id;
+  final String title;
+  final DateTime lastModified;
+  final String publishStatus;
+  final String? customThumbnailPath;
+  final String? renderedFilePath;
+  final String? renderedThumbnailPath;
+  final int finalRenderVersion;
+}
+
 @DriftAccessor(tables: [Drafts, Clips])
 class DraftsDao extends DatabaseAccessor<AppDatabase> with _$DraftsDaoMixin {
   DraftsDao(super.attachedDatabase);
@@ -101,6 +124,58 @@ class DraftsDao extends DatabaseAccessor<AppDatabase> with _$DraftsDaoMixin {
       query.limit(limit);
     }
     return query.get();
+  }
+
+  /// Library projection: transfer scalar metadata, never the draft payload.
+  /// The render version predates a dedicated column; extract only that scalar
+  /// in SQLite so checking cover freshness cannot expand an editor history.
+  Future<List<DraftSummaryRow>> getDraftSummaries({String? ownerPubkey}) {
+    const version = CustomExpression<int>(
+      r"CASE WHEN json_type(data, '$.finalRenderVersion') = 'integer' "
+      r"THEN json_extract(data, '$.finalRenderVersion') ELSE 0 END",
+    );
+    final query = selectOnly(drafts)
+      ..addColumns([
+        drafts.id,
+        drafts.title,
+        drafts.lastModified,
+        drafts.publishStatus,
+        drafts.customThumbnailPath,
+        drafts.renderedFilePath,
+        drafts.renderedThumbnailPath,
+        version,
+      ])
+      ..where(const CustomExpression<bool>('json_valid(data)'))
+      ..where(_ownedOrLegacy(drafts.ownerPubkey, ownerPubkey))
+      ..orderBy([OrderingTerm.desc(drafts.lastModified)]);
+    return query
+        .map(
+          (row) => DraftSummaryRow(
+            id: row.read(drafts.id)!,
+            title: row.read(drafts.title)!,
+            lastModified: row.read(drafts.lastModified)!,
+            publishStatus: row.read(drafts.publishStatus)!,
+            customThumbnailPath: row.read(drafts.customThumbnailPath),
+            renderedFilePath: row.read(drafts.renderedFilePath),
+            renderedThumbnailPath: row.read(drafts.renderedThumbnailPath),
+            finalRenderVersion: row.read(version)!,
+          ),
+        )
+        .get();
+  }
+
+  /// Cross-account inventory for diagnostics, without reading draft payloads.
+  Future<List<({String id, String? ownerPubkey})>> getDraftInventory() {
+    final query = selectOnly(drafts)
+      ..addColumns([drafts.id, drafts.ownerPubkey]);
+    return query
+        .map(
+          (row) => (
+            id: row.read(drafts.id)!,
+            ownerPubkey: row.read(drafts.ownerPubkey),
+          ),
+        )
+        .get();
   }
 
   /// Get a single draft by ID.

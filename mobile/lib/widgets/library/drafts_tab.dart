@@ -13,7 +13,7 @@ import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/draft_summary.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/utils/draft_copy_naming.dart';
@@ -176,7 +176,7 @@ class _DraftsList extends ConsumerWidget {
   Future<void> _openDraftOptions(
     BuildContext context,
     WidgetRef ref,
-    DivineVideoDraft draft,
+    DraftSummary draft,
   ) async {
     await VineBottomSheetActionMenu.show(
       context: context,
@@ -208,7 +208,7 @@ class _DraftsList extends ConsumerWidget {
     );
   }
 
-  void _duplicateDraft(BuildContext context, DivineVideoDraft draft) {
+  void _duplicateDraft(BuildContext context, DraftSummary draft) {
     Log.info(
       '📚 Duplicate draft: ${draft.id}',
       name: 'DraftsTab',
@@ -246,14 +246,33 @@ class _DraftsList extends ConsumerWidget {
   Future<void> _postDraft(
     BuildContext context,
     WidgetRef ref,
-    DivineVideoDraft draft,
+    DraftSummary draft,
   ) async {
     Log.info(
       '📚 Post draft: ${draft.id}',
       name: 'DraftsTab',
       category: LogCategory.video,
     );
-    await ref.read(videoPublishProvider.notifier).publishVideo(context, draft);
+    final fullDraft = await context.read<DraftsLibraryBloc>().loadDraftForPost(
+      draft.id,
+    );
+    if (!context.mounted) return;
+    if (fullDraft == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: VineTheme.transparent,
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          content: DivineSnackbarContainer(
+            label: context.l10n.commonSomethingWentWrong,
+          ),
+        ),
+      );
+      return;
+    }
+    await ref
+        .read(videoPublishProvider.notifier)
+        .publishVideo(context, fullDraft);
 
     // Reload so a published draft leaves the list. BackgroundPublishBloc owns
     // that deletion and runs it after its success state, so a reload racing it
@@ -266,7 +285,7 @@ class _DraftsList extends ConsumerWidget {
   Future<void> _openDraft(
     BuildContext context,
     WidgetRef ref,
-    DivineVideoDraft draft,
+    DraftSummary draft,
   ) async {
     Log.info(
       '📚 Opening draft: ${draft.id}',
@@ -297,7 +316,7 @@ class _DraftsList extends ConsumerWidget {
   Future<void> _deleteDraft(
     BuildContext context,
     WidgetRef ref,
-    DivineVideoDraft draft,
+    DraftSummary draft,
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -381,7 +400,7 @@ class DraftListTile extends StatelessWidget {
   });
 
   /// The draft to display.
-  final DivineVideoDraft draft;
+  final DraftSummary draft;
 
   /// Callback when the tile is tapped.
   final VoidCallback? onTap;
