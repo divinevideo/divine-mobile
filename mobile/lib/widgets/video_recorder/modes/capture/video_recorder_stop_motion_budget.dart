@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -61,40 +62,46 @@ class VideoRecorderStopMotionBudget extends ConsumerWidget {
     final label = context.l10n.videoRecorderStopMotionShotsLeft(remaining);
 
     return Flexible(
-      child: Semantics(
-        identifier: SemanticIds.cameraStopMotionBudget,
-        label: label,
-        // The count is announced once, from here. Excluding the subtree drops
-        // the duplicate the visible Text would otherwise contribute, and gives
-        // the identifier a node carrying something rather than an empty
-        // wrapper the platform is free to collapse.
-        excludeSemantics: true,
-        child: Column(
-          mainAxisSize: .min,
-          spacing: _labelSpacing,
-          children: [
-            VideoRecorderProgressBar(
-              filled: captured.clamp(0, budget),
-              remaining: remaining,
-              overflow: (captured - budget).clamp(0, captured),
-              label: label,
-              labelAbove: true,
-              labelSpacing: _labelSpacing,
-            ),
-            // The row centers its children, which would put the *group* —
-            // count plus bar — on the buttons' center line and leave the bar
-            // riding low. Mirroring the label below balances the group so the
-            // bar itself lands on that line, with the count reading above it.
-            // Measured from real text, so it tracks the font and the user's
-            // text scale; invisible, so it costs no paint.
-            Visibility(
-              visible: false,
-              maintainSize: true,
-              maintainAnimation: true,
-              maintainState: true,
-              child: Text(label, style: VideoRecorderProgressBar.labelStyle),
-            ),
-          ],
+      // The same cap as the audio chip lip-sync puts in this slot. Past it the
+      // count wraps on a small phone, and the row grows tall enough to push
+      // the buttons beside it down into the side rail.
+      child: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: chipLabelTextScaleLimit,
+        child: Semantics(
+          identifier: SemanticIds.cameraStopMotionBudget,
+          label: label,
+          // The count is announced once, from here. Excluding the subtree
+          // drops the duplicate the visible Text would otherwise contribute,
+          // and gives the identifier a node carrying something rather than an
+          // empty wrapper the platform is free to collapse.
+          excludeSemantics: true,
+          child: Column(
+            mainAxisSize: .min,
+            spacing: _labelSpacing,
+            children: [
+              VideoRecorderProgressBar(
+                filled: captured.clamp(0, budget),
+                remaining: remaining,
+                overflow: (captured - budget).clamp(0, captured),
+                label: label,
+                labelAbove: true,
+                labelSpacing: _labelSpacing,
+              ),
+              // The row centers its children, which would put the *group* —
+              // count plus bar — on the buttons' center line and leave the
+              // bar riding low. Mirroring the label below balances the group
+              // so the bar itself lands on that line, with the count reading
+              // above it. Measured from real text, so it tracks the font and
+              // the user's text scale; invisible, so it costs no paint.
+              Visibility(
+                visible: false,
+                maintainSize: true,
+                maintainAnimation: true,
+                maintainState: true,
+                child: VideoRecorderProgressBarLabel(label),
+              ),
+            ],
+          ),
         ),
       ),
     );
