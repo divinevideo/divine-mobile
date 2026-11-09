@@ -238,6 +238,69 @@ void main() {
           expect(find.text('https://relay.example'), findsNothing);
         },
       );
+
+      for (final outcome in ['succeeds', 'fails']) {
+        testWidgets(
+          'leaves a closed screen alone when the Blossom check $outcome',
+          (tester) async {
+            stubScreenDependencies();
+            final logCapture = LogCaptureService();
+            await logCapture.clearAllLogs();
+            addTearDown(logCapture.clearAllLogs);
+            final blossomCheck = Completer<BlossomHealthCheckResult>();
+            final blossomService = _MockBlossomUploadService();
+            when(
+              blossomService.testServerConnection,
+            ).thenAnswer((_) => blossomCheck.future);
+
+            await tester.pumpWidget(
+              testMaterialApp(
+                home: const RelayDiagnosticScreen(),
+                mockNostrService: nostrClient,
+                mockVideoEventService: videoEventService,
+                additionalOverrides: [
+                  blossomUploadServiceProvider.overrideWithValue(
+                    blossomService,
+                  ),
+                ],
+              ),
+            );
+            await tester.pump();
+            final l10n = lookupAppLocalizations(const Locale('en'));
+            await scrollUntilTappable(
+              tester,
+              find.text(l10n.relayDiagnosticBlossomServer),
+              300,
+              scrollable: find.byType(Scrollable).first,
+            );
+            await tester.tap(
+              find.text(l10n.relayDiagnosticTestAllEndpoints).first,
+            );
+            await tester.pump();
+
+            await tester.pumpWidget(const SizedBox());
+            if (outcome == 'succeeds') {
+              blossomCheck.complete(
+                const BlossomHealthCheckResult(isReachable: true, latencyMs: 1),
+              );
+            } else {
+              blossomCheck.completeError(Exception('connection reset'));
+            }
+            await tester.pump();
+
+            expect(tester.takeException(), isNull);
+            // A setState on the disposed screen would surface here as a
+            // logged check failure rather than as an exception.
+            final setStateFailures = logCapture.getRecentLogs().where(
+              (entry) =>
+                  entry.name == 'RelayDiagnostic' &&
+                  entry.level == LogLevel.error &&
+                  entry.message.contains('setState'),
+            );
+            expect(setStateFailures, isEmpty);
+          },
+        );
+      }
     });
   });
 }

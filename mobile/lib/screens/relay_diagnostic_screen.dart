@@ -217,6 +217,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
     try {
       final blossomService = ref.read(blossomUploadServiceProvider);
       final blossomResult = await blossomService.testServerConnection();
+      if (!mounted) return;
       setState(() {
         _blossomResult = blossomResult;
       });
@@ -227,6 +228,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
       );
     } catch (e) {
       Log.error('Blossom test error: $e', name: 'RelayDiagnostic');
+      if (!mounted) return;
       setState(() {
         _blossomResult = BlossomHealthCheckResult(
           isReachable: false,
@@ -237,7 +239,6 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
 
     // Test the FunnelCake API the app's REST client uses: the environment's
     // API origin, never a configured relay.
-    if (!mounted) return;
     final apiBaseUrl = ref.read(currentEnvironmentProvider).apiBaseUrl;
     final results = await _testAllFunnelCakeEndpoints(apiBaseUrl);
     if (!mounted) return;
