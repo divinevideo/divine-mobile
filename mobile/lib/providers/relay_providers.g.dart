@@ -308,7 +308,7 @@ final class RelayStatisticsStreamProvider
 }
 
 String _$relayStatisticsStreamHash() =>
-    r'b8256f2ad21b0ca38274fbd80a93049e8bd59858';
+    r'671b85b349174cd570325b16619e0d0e472b263e';
 
 /// Bridge provider that connects NostrClient relay status updates to
 /// RelayStatisticsService.

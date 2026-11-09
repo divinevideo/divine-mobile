@@ -162,51 +162,6 @@ Stream<List<VideoEvent>> _userListMemberVideos(
 List<VideoEvent> _newestFirst(List<VideoEvent> videos) =>
     videos..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-/// Provider that streams public lists containing a specific video
-/// Accumulates results as they arrive from Nostr relays, yielding updated list
-/// on each new result. This enables progressive UI updates via Riverpod.
-@riverpod
-Stream<List<CuratedList>> publicListsContainingVideo(
-  Ref ref,
-  String videoId,
-) async* {
-  /// wait to initialize the curated list service
-  await ref.read(curatedListsStateProvider.future);
-  final curatedListStream = ref
-      .read(curatedListsStateProvider.notifier)
-      .service
-      ?.streamPublicListsContainingVideo(videoId);
-  final accumulated = <CuratedList>[];
-  final seenIds = <String>{};
-
-  // Yield an initial value to avoid hanging if the stream is empty
-  yield const <CuratedList>[];
-
-  // Stream events from Nostr relays, accumulating as they arrive. A refusal
-  // from every relay ends the read; keep what already arrived.
-  await for (final CuratedList list
-      in curatedListStream?.handleError(
-            (Object error) => Log.warning(
-              '📋 Relay refused public list stream: $error',
-              name: 'PublicListsContainingVideo',
-              category: LogCategory.video,
-            ),
-            test: (error) => error is RelaySubscriptionRefusedException,
-          ) ??
-          const Stream.empty()) {
-    if (!seenIds.contains(list.id)) {
-      seenIds.add(list.id);
-      accumulated.add(list);
-      // Yield a copy of accumulated list on each new result
-      yield List<CuratedList>.from(accumulated);
-    }
-  }
-
-  // After stream completes (EOSE from relay), yield final accumulated result
-  // This ensures the provider has data even if stream completes immediately
-  yield accumulated;
-}
-
 /// Provider that fetches a public curated list (kind 30005) by author +
 /// d-tag for the `/list/:pubkey/:listId` universal-link route.
 ///

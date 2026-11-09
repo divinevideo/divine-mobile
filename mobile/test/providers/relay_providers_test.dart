@@ -1,5 +1,5 @@
 // ABOUTME: Tests for connectivityRelayReconnectProvider, the app-wide owner of
-// ABOUTME: connectivity-driven relay repair (#3161, #8990).
+// ABOUTME: connectivity-driven relay repair (#3161, #8990), and relay stats.
 
 import 'dart:async';
 
@@ -12,9 +12,13 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/services/connectivity_transition_monitor.dart';
+import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockRelayStatisticsService extends Mock
+    implements RelayStatisticsService {}
 
 /// Serves [_initial] and lets a test replace the client the way an account
 /// switch or a failed initialization does.
@@ -61,12 +65,10 @@ void main() {
     setUp(() {
       first = _MockNostrClient();
       second = _MockNostrClient();
-      when(first.forceReconnectAll).thenAnswer(
-        (_) async => ForceReconnectOutcome.completed,
-      );
-      when(second.forceReconnectAll).thenAnswer(
-        (_) async => ForceReconnectOutcome.completed,
-      );
+      when(first.forceReconnectAll)
+          .thenAnswer((_) async => ForceReconnectOutcome.completed);
+      when(second.forceReconnectAll)
+          .thenAnswer((_) async => ForceReconnectOutcome.completed);
     });
 
     ProviderContainer containerFor(_FakeConnectivity connectivity) {
@@ -245,6 +247,77 @@ void main() {
           ConnectivityTransition.online,
         ]);
       });
+    });
+  });
+
+  group('relayStatisticsStreamProvider', () {
+    const relayUrl = 'wss://relay.example.com';
+
+    test('emits the current statistics, then each change', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final service = container.read(relayStatisticsServiceProvider);
+      final emitted = <Map<String, RelayStatistics>>[];
+      container.listen(relayStatisticsStreamProvider, (_, next) {
+        if (next case AsyncData(:final value)) emitted.add(value);
+      });
+      await pumpEventQueue();
+
+      service.recordConnection(relayUrl);
+      await pumpEventQueue();
+
+      expect(emitted, hasLength(2));
+      expect(emitted.first, isEmpty);
+      expect(emitted.last[relayUrl]?.isConnected, isTrue);
+    });
+
+    group('when its Ref is unmounted before the stream starts', () {
+      test(
+        'reports no error when rebuilt in the same event-loop turn',
+        () async {
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+          final uncaught = <Object>[];
+
+          runZonedGuarded(() {
+            final subscription = container.listen(
+              relayStatisticsStreamProvider,
+              (_, _) {},
+            );
+            addTearDown(subscription.close);
+            container.refresh(relayStatisticsStreamProvider);
+          }, (error, _) => uncaught.add(error));
+          await pumpEventQueue();
+
+          expect(uncaught, isEmpty);
+          expect(container.read(relayStatisticsStreamProvider).value, isEmpty);
+        },
+      );
+
+      test(
+        'reports no error when disposed in the same event-loop turn',
+        () async {
+          final service = _MockRelayStatisticsService();
+          final container = ProviderContainer(
+            overrides: [
+              relayStatisticsServiceProvider.overrideWithValue(service),
+            ],
+          );
+          final uncaught = <Object>[];
+
+          runZonedGuarded(() {
+            container
+              ..listen(relayStatisticsStreamProvider, (_, _) {})
+              ..dispose();
+          }, (error, _) => uncaught.add(error));
+          await pumpEventQueue();
+
+          expect(uncaught, isEmpty);
+          // A read here would run after cancellation, where a throw is
+          // unhandled.
+          verifyNever(service.getAllStatistics);
+        },
+      );
     });
   });
 }

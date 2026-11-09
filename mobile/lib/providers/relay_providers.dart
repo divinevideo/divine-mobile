@@ -600,32 +600,24 @@ RelayStatisticsService relayStatisticsService(Ref ref) {
 /// Stream provider for reactive relay statistics updates
 /// Use this provider when you need UI to rebuild when statistics change
 @riverpod
-Stream<Map<String, RelayStatistics>> relayStatisticsStream(Ref ref) async* {
+Stream<Map<String, RelayStatistics>> relayStatisticsStream(Ref ref) {
   final service = ref.watch(relayStatisticsServiceProvider);
+  return _statisticsUpdates(service);
+}
 
-  // Emit current state immediately
-  yield service.getAllStatistics();
-
-  // Create a stream controller to emit updates on notifyListeners
-  final controller = StreamController<Map<String, RelayStatistics>>();
-
-  void listener() {
-    if (!controller.isClosed) {
-      controller.add(service.getAllStatistics());
-    }
-  }
-
-  service.addListener(listener);
-  ref.onDispose(() {
-    service.removeListener(listener);
-    runProviderDetached(
-      controller.close(),
-      'close relay-statistics updates',
-      logName: 'RelayStatistics',
-    );
-  });
-
-  yield* controller.stream;
+// Not `async*`: a generator body starts in a microtask after Riverpod listens,
+// so it also runs for a provider disposed or rebuilt before then, and its Ref
+// use escapes as an unhandled error. Here the listener is removed on cancel and
+// nothing reads the service until an event is delivered.
+Stream<Map<String, RelayStatistics>> _statisticsUpdates(
+  RelayStatisticsService service,
+) {
+  return Stream<void>.multi((changes) {
+    void onChange() => changes.add(null);
+    service.addListener(onChange);
+    changes.onCancel = () => service.removeListener(onChange);
+    onChange();
+  }).map((_) => service.getAllStatistics());
 }
 
 /// Bridge provider that connects NostrClient relay status updates to
