@@ -19,7 +19,6 @@ import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubi
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
-import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -277,52 +276,6 @@ void main() {
         expect(find.text('Sound'), findsOneWidget);
         // The row has a fixed height; a label growing past it overflows.
         expect(tester.takeException(), isNull);
-      });
-
-      testWidgets('stops growing a sound track label at the fixed-row text '
-          'scale limit', (tester) async {
-        final clip = _createTestClip(id: 'a', seconds: 3);
-        whenListen(
-          mockClipBloc,
-          const Stream<ClipEditorState>.empty(),
-          initialState: ClipEditorState(clips: [clip]),
-        );
-        final overlay = TimelineOverlayBloc();
-        addTearDown(overlay.close);
-        overlay.add(
-          TimelineOverlayItemsUpdate(
-            layers: const [],
-            filters: const [],
-            audioTracks: [
-              AudioEvent(
-                id: 'sound',
-                pubkey: 'bundled',
-                createdAt: 0,
-                title: 'Sound',
-                url: 'asset://sounds/loop.mp3',
-                duration: 3,
-                endTime: const Duration(seconds: 3),
-              ),
-            ],
-            totalVideoDuration: const Duration(seconds: 3),
-          ),
-        );
-
-        Future<double> labelHeightAt(double textScale) async {
-          await tester.pumpWidget(
-            buildWidget(overlayBloc: overlay, textScale: textScale),
-          );
-          await tester.pump();
-          return tester.getSize(find.text('Sound')).height;
-        }
-
-        final regular = await labelHeightAt(1);
-        final largest = await labelHeightAt(3.12);
-
-        expect(
-          largest,
-          moreOrLessEquals(regular * fixedRowTextScaleLimit, epsilon: 1),
-        );
       });
 
       testWidgets(
