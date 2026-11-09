@@ -45,7 +45,7 @@ class _SaveOriginalProgressSheet extends ConsumerWidget {
     return BlocProvider(
       create: (_) {
         final cubit = SaveOriginalProgressCubit(
-          // Not account-scoped, so it cannot go stale during one download.
+          // Not account-scoped, so it stays valid for the sheet's lifetime.
           service: ref.read(watermarkDownloadServiceProvider),
           video: video,
         );

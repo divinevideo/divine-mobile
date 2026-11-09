@@ -52,7 +52,7 @@ class _WatermarkDownloadProgressSheet extends ConsumerWidget {
     return BlocProvider(
       create: (_) {
         final cubit = WatermarkDownloadProgressCubit(
-          // Not account-scoped, so it cannot go stale during one download.
+          // Not account-scoped, so it stays valid for the sheet's lifetime.
           service: ref.read(watermarkDownloadServiceProvider),
           video: video,
           watermarkText: watermarkText,
