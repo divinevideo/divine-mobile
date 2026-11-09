@@ -1330,7 +1330,7 @@
   },
   "videoEngagementListIncomplete": "Couldn't load everyone.",
   "@videoEngagementListIncomplete": {
-    "description": "Shown below a likers or reposters list whose relay read stopped before every relay answered, so people may be missing. A Retry button sits under it."
+    "description": "Shown when a read of who liked or reposted a video stopped before every relay answered, so people may be missing: below the Liked by or Reposted by list, or in place of the Reposted by row in a video's details. A Retry button sits with it."
   },
   "videoOverlayOpenMetadataFromTitle": "Open video details",
   "@videoOverlayOpenMetadataFromTitle": {

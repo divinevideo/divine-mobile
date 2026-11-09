@@ -3397,7 +3397,7 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load that list'**
   String get videoEngagementLoadFailed;
 
-  /// Shown below a likers or reposters list whose relay read stopped before every relay answered, so people may be missing. A Retry button sits under it.
+  /// Shown when a read of who liked or reposted a video stopped before every relay answered, so people may be missing: below the Liked by or Reposted by list, or in place of the Reposted by row in a video's details. A Retry button sits with it.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t load everyone.'**
