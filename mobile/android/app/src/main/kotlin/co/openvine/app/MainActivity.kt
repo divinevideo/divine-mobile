@@ -806,13 +806,19 @@ private val zendeskAuthFailureMarkers = listOf(
     "expected type of authentication",
 )
 
+// The same interceptor reports an I/O error during that exchange as a
+// synthetic 400 with no throwable, so only the reason marks the device offline.
+// "Response body was null" and "Response was 409" are real auth failures.
+private const val ZENDESK_OFFLINE_TOKEN_EXCHANGE_MARKER = "response was null"
+
 /**
  * The `details` of the `CREATE_FAILED` error that `createTicket` raises when
  * the Zendesk SDK rejects a ticket.
  *
  * `status` is the HTTP status, or -1 when no response arrived; `networkError`
- * marks an I/O failure; `authFailed` marks a failure to authenticate the
- * current identity, which Dart retries with another identity.
+ * marks an I/O failure, including one while exchanging the token; `authFailed`
+ * marks a failure to authenticate the current identity, which Dart retries
+ * with another identity.
  */
 // `isNetworkError` is deprecated with no replacement on the interface, and
 // `!isHttpError` would also count an unparseable response as offline.
@@ -820,11 +826,13 @@ private val zendeskAuthFailureMarkers = listOf(
 internal fun zendeskCreateTicketErrorDetails(error: ErrorResponse?): Map<String, Any> {
     val status = error?.status ?: ErrorResponse.NON_HTTP_ERROR
     val reason = error?.reason.orEmpty()
-    val authFailed = status == 401 ||
-        zendeskAuthFailureMarkers.any { reason.contains(it, ignoreCase = true) }
+    val offlineDuringTokenExchange =
+        reason.contains(ZENDESK_OFFLINE_TOKEN_EXCHANGE_MARKER, ignoreCase = true)
+    val authFailed = !offlineDuringTokenExchange &&
+        (status == 401 || zendeskAuthFailureMarkers.any { reason.contains(it, ignoreCase = true) })
     return mapOf(
         "status" to status,
-        "networkError" to (error?.isNetworkError == true),
+        "networkError" to (error?.isNetworkError == true || offlineDuringTokenExchange),
         "authFailed" to authFailed,
     )
 }
