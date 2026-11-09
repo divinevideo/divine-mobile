@@ -12,8 +12,9 @@ class RepostersPage {
   /// Whether every relay finished answering the repost reads.
   ///
   /// `false` when a read ran out of time, a relay was cut off or dropped, or
-  /// a relay refused while no other relay answered: [pubkeys] then holds only
-  /// the people found before the read stopped, and an empty list does not
-  /// mean nobody reposted (#10846).
+  /// a relay refused while no other relay answered or for a reason a retry
+  /// may change (rate limit, `auth-required`, a transient error): [pubkeys]
+  /// then holds only the people found before the read stopped, and an empty
+  /// list does not mean nobody reposted (#10846).
   final bool isComplete;
 }

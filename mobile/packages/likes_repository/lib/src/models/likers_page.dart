@@ -36,8 +36,10 @@ class LikersPage {
   /// when every relay finished, or when the API had already listed nobody and
   /// the relays found nobody either. `false` when the relay fallback stopped
   /// first: it ran out of time, a relay was cut off or dropped, or a relay
-  /// refused while no other relay answered. [pubkeys] then holds only the
-  /// people found so far, and an empty list does not mean nobody (#10846).
+  /// refused while no other relay answered or for a reason a retry may change
+  /// (rate limit, `auth-required`, a transient error). [pubkeys] then holds
+  /// only the people found so far, and an empty list does not mean nobody
+  /// (#10846).
   final bool isComplete;
 
   /// Whether a further page can be requested.
