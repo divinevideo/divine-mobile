@@ -50,7 +50,25 @@ void main() {
 
   tearDown(LogCaptureService().clearAllLogs);
 
-  Widget buildTestWidget({required VideoEvent video}) {
+  /// Builds a button that opens the sheet. Setting [openerVisible] to false
+  /// removes the button from the tree while the sheet stays open.
+  Widget buildTestWidget({
+    required VideoEvent video,
+    ValueNotifier<bool>? openerVisible,
+  }) {
+    final opener = Builder(
+      builder: (context) {
+        return ElevatedButton(
+          onPressed: () async {
+            await showSaveOriginalSheet(
+              context: context,
+              video: video,
+            );
+          },
+          child: const Text('Show Sheet'),
+        );
+      },
+    );
     return ProviderScope(
       overrides: [
         watermarkDownloadServiceProvider.overrideWithValue(mockService),
@@ -60,25 +78,15 @@ void main() {
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData.dark(),
-        home: Builder(
-          builder: (context) {
-            return Consumer(
-              builder: (context, ref, _) {
-                return Scaffold(
-                  body: ElevatedButton(
-                    onPressed: () async {
-                      await showSaveOriginalSheet(
-                        context: context,
-                        ref: ref,
-                        video: video,
-                      );
-                    },
-                    child: const Text('Show Sheet'),
-                  ),
-                );
-              },
-            );
-          },
+        home: Scaffold(
+          body: openerVisible == null
+              ? opener
+              : ValueListenableBuilder<bool>(
+                  valueListenable: openerVisible,
+                  builder: (context, visible, child) =>
+                      visible ? child! : const SizedBox.shrink(),
+                  child: opener,
+                ),
         ),
       ),
     );
@@ -295,6 +303,62 @@ void main() {
         );
         expect(find.text(l10n.saveOriginalPhotosAccessNeeded), findsNothing);
         expect(callCount, equals(2));
+      },
+    );
+
+    testWidgets(
+      'Open Settings retries after the widget that opened the sheet is gone',
+      (tester) async {
+        // The feed share sheet pops itself before presenting this sheet, so
+        // the opener is unmounted long before the user taps Open Settings.
+        when(
+          () => mockPermissions.openAppSettings(),
+        ).thenAnswer((_) async => true);
+
+        var callCount = 0;
+        when(
+          () => mockService.downloadOriginal(
+            video: any(named: 'video'),
+            onProgress: any(named: 'onProgress'),
+          ),
+        ).thenAnswer((_) async {
+          callCount++;
+          if (callCount == 1) {
+            return const WatermarkDownloadPermissionDenied();
+          }
+          return const WatermarkDownloadSuccess('/tmp/video.mp4');
+        });
+
+        final openerVisible = ValueNotifier(true);
+        addTearDown(openerVisible.dispose);
+        await tester.pumpWidget(
+          buildTestWidget(
+            video: _createTestVideo(),
+            openerVisible: openerVisible,
+          ),
+        );
+        await tester.tap(find.text('Show Sheet'));
+        await tester.pumpAndSettle();
+
+        openerVisible.value = false;
+        await tester.pump();
+        expect(find.text('Show Sheet'), findsNothing);
+
+        await tester.tap(find.text(l10n.saveOriginalOpenSettings));
+        await tester.pump();
+
+        verify(() => mockPermissions.openAppSettings()).called(1);
+
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+
+        expect(callCount, equals(2));
+        expect(
+          find.text(l10n.saveOriginalSavedToCameraRoll),
+          findsOneWidget,
+        );
       },
     );
 

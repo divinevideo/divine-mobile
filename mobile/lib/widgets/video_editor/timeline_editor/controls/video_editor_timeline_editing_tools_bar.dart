@@ -1,5 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_actions_sheet.dart';
 
@@ -35,13 +36,18 @@ class TimelineEditingToolsBar extends StatelessWidget {
                 ),
               ],
             ),
-            child: DivineButton(
-              label: context.l10n.videoActionEdit,
-              leadingIcon: .slidersHorizontal,
-              trailingIcon: .caretUp,
-              type: .quiet,
-              maxLines: 2,
-              onPressed: () => VideoEditorMainActionsSheet.show(context),
+            // Floats over the tracks like the toolbar chips, so it stops
+            // growing where they do instead of covering a track.
+            child: MediaQuery.withClampedTextScaling(
+              maxScaleFactor: chipLabelTextScaleLimit,
+              child: DivineButton(
+                label: context.l10n.videoActionEdit,
+                leadingIcon: .slidersHorizontal,
+                trailingIcon: .caretUp,
+                type: .quiet,
+                maxLines: 2,
+                onPressed: () => VideoEditorMainActionsSheet.show(context),
+              ),
             ),
           ),
         ),

@@ -3,6 +3,7 @@
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -72,6 +73,8 @@ void main() {
       ClipEditorState? clipState,
       TimelineOverlayState? overlayState,
       Duration? position,
+      Locale? locale,
+      double textScale = 1,
     }) {
       if (mainState != null) {
         when(() => mockMainBloc.state).thenReturn(mainState);
@@ -87,8 +90,15 @@ void main() {
       }
 
       return MaterialApp(
+        locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         home: Scaffold(
           body: VideoEditorScope(
             editorKey: GlobalKey<ProImageEditorState>(),
@@ -440,6 +450,132 @@ void main() {
           expect(volumeButton.backgroundColor, isNull);
         },
       );
+    });
+
+    group('on a small phone', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      void useSmallPhone(WidgetTester tester, {double width = 375}) {
+        tester.view.physicalSize = Size(width, 667);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+      }
+
+      Rect buttonRect(WidgetTester tester, String label) => tester.getRect(
+        find.ancestor(
+          of: find.bySemanticsLabel(label),
+          matching: find.byType(DivineIconButton),
+        ),
+      );
+
+      testWidgets('keeps the time between the buttons at the default size', (
+        tester,
+      ) async {
+        useSmallPhone(tester);
+        await tester.pumpWidget(
+          buildWidget(
+            clipState: ClipEditorState(clips: [_createTestClip(id: 'a')]),
+          ),
+        );
+
+        final time = tester.getRect(find.textContaining('00:00'));
+        final undo = buttonRect(tester, l10n.videoEditorUndoSemanticLabel);
+        expect(time.center.dy, moreOrLessEquals(undo.center.dy));
+      });
+
+      testWidgets('moves the time under the buttons at the largest text size, '
+          'keeping undo and redo on screen', (tester) async {
+        useSmallPhone(tester);
+        await tester.pumpWidget(
+          buildWidget(
+            clipState: ClipEditorState(clips: [_createTestClip(id: 'a')]),
+            textScale: 3.12,
+          ),
+        );
+
+        final redo = buttonRect(tester, l10n.videoEditorRedoSemanticLabel);
+        expect(redo.right, lessThanOrEqualTo(375));
+        final timeFinder = find.textContaining('00:00');
+        final time = tester.getRect(timeFinder);
+        expect(time.top, greaterThanOrEqualTo(redo.bottom));
+        // Drawn at the size it is laid out at, not shrunk to fit.
+        expect(
+          time.height,
+          moreOrLessEquals(tester.getSize(timeFinder).height),
+        );
+      });
+
+      testWidgets('wraps the German volume hint between the buttons on a '
+          '360 dp phone', (tester) async {
+        useSmallPhone(tester, width: 360);
+        await tester.pumpWidget(
+          buildWidget(
+            mainState: const VideoEditorMainState(isVolumeEditMode: true),
+            clipState: ClipEditorState(clips: [_createTestClip(id: 'a')]),
+            locale: const Locale('de'),
+          ),
+        );
+
+        final de = lookupAppLocalizations(const Locale('de'));
+        final volume = buttonRect(tester, de.videoEditorVolumeSemanticLabel);
+        final undo = buttonRect(tester, de.videoEditorUndoSemanticLabel);
+        final redo = buttonRect(tester, de.videoEditorRedoSemanticLabel);
+        expect(redo.right, lessThanOrEqualTo(360));
+        final hintFinder = find.text(de.videoEditorTimelineSlideToAdjust);
+        final hint = tester.getRect(hintFinder);
+        expect(hint.left, greaterThanOrEqualTo(volume.right));
+        expect(hint.right, lessThanOrEqualTo(undo.left));
+        expect(hint.center.dy, moreOrLessEquals(undo.center.dy, epsilon: 1));
+        expect(
+          tester.renderObject<RenderParagraph>(hintFinder).didExceedMaxLines,
+          isFalse,
+        );
+      });
+
+      testWidgets('moves the German volume hint under the buttons at 1.3x on '
+          'a 360 dp phone', (tester) async {
+        useSmallPhone(tester, width: 360);
+        await tester.pumpWidget(
+          buildWidget(
+            mainState: const VideoEditorMainState(isVolumeEditMode: true),
+            clipState: ClipEditorState(clips: [_createTestClip(id: 'a')]),
+            locale: const Locale('de'),
+            textScale: 1.3,
+          ),
+        );
+
+        final de = lookupAppLocalizations(const Locale('de'));
+        final redo = buttonRect(tester, de.videoEditorRedoSemanticLabel);
+        expect(redo.right, lessThanOrEqualTo(360));
+        final hint = tester.getRect(
+          find.text(de.videoEditorTimelineSlideToAdjust),
+        );
+        expect(hint.top, greaterThanOrEqualTo(redo.bottom));
+      });
+
+      testWidgets('keeps every button on screen and never shrinks the time '
+          'as the text size grows', (tester) async {
+        useSmallPhone(tester);
+        for (var step = 0; step <= 10; step++) {
+          final scale = 1 + step * 0.05;
+          await tester.pumpWidget(
+            buildWidget(
+              clipState: ClipEditorState(clips: [_createTestClip(id: 'a')]),
+              textScale: scale,
+            ),
+          );
+
+          final reason = 'at text scale ${scale.toStringAsFixed(2)}';
+          final redo = buttonRect(tester, l10n.videoEditorRedoSemanticLabel);
+          expect(redo.right, lessThanOrEqualTo(375), reason: reason);
+          final timeFinder = find.textContaining('00:00');
+          expect(
+            tester.getRect(timeFinder).height,
+            moreOrLessEquals(tester.getSize(timeFinder).height),
+            reason: reason,
+          );
+        }
+      });
     });
   });
 }

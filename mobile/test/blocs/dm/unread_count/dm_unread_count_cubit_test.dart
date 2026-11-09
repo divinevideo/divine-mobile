@@ -153,13 +153,14 @@ void main() {
       when(
         () => dmRepository.userPubkeyStream,
       ).thenAnswer((_) => const Stream<String>.empty());
-      // No-arg stub: this matches only a call WITHOUT a limit, locking in that
-      // the badge counts the full (unpaginated) accepted set, not a page.
+      // Matches only an unread-only call WITHOUT a limit, locking in that the
+      // badge counts every unread inbox conversation, not a page, and reads no
+      // read rows on each write (#7923).
       when(
-        () => dmRepository.watchAcceptedConversations(),
+        () => dmRepository.watchAcceptedConversations(unreadOnly: true),
       ).thenAnswer((_) => acceptedController.stream);
       when(
-        () => dmRepository.watchPotentialRequests(),
+        () => dmRepository.watchPotentialRequests(unreadOnly: true),
       ).thenAnswer((_) => potentialController.stream);
       when(
         () => followRepository.followingStream,
@@ -346,7 +347,7 @@ void main() {
       _close(fake, cubit);
     });
 
-    _testWithFakeAsync('counts the full unpaginated accepted set', (fake) {
+    _testWithFakeAsync('counts all unread accepted rows, not a page', (fake) {
       final cubit = buildCubit();
 
       // More than one inbox page of unread accepted conversations.
@@ -364,8 +365,10 @@ void main() {
       _settle(fake);
 
       expect(cubit.state, equals(60));
-      // The badge must subscribe without a limit (full count, not a page).
-      verify(() => dmRepository.watchAcceptedConversations()).called(1);
+      // The badge subscribes to unread rows without a limit, not to a page.
+      verify(
+        () => dmRepository.watchAcceptedConversations(unreadOnly: true),
+      ).called(1);
       _close(fake, cubit);
     });
 
@@ -713,10 +716,10 @@ void main() {
           () => dmRepository2.userPubkeyStream,
         ).thenAnswer((_) => const Stream<String>.empty());
         when(
-          dmRepository2.watchAcceptedConversations,
+          () => dmRepository2.watchAcceptedConversations(unreadOnly: true),
         ).thenAnswer((_) => acceptedController2.stream);
         when(
-          dmRepository2.watchPotentialRequests,
+          () => dmRepository2.watchPotentialRequests(unreadOnly: true),
         ).thenAnswer((_) => potentialController2.stream);
         when(
           () => followRepository2.followingStream,

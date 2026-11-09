@@ -10,6 +10,7 @@ import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubi
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/extensions/layer_mask_keyframes.dart';
@@ -407,58 +408,63 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
                     height: isTimelineHiddenByUser
                         ? MediaQuery.viewPaddingOf(context).bottom
                         : TimelineConstants.height,
-                    child: OverflowBox(
-                      alignment: .topCenter,
-                      minHeight: TimelineConstants.height,
-                      maxHeight: TimelineConstants.height,
-                      child: VideoEditorTimelineInteractiveBody(
-                        playheadPosition: _playheadPosition,
-                        totalDuration: displayDuration,
-                        formatPosition: (pos) {
-                          final totalSeconds = pos.inMilliseconds / 1000.0;
-                          final minutes = totalSeconds ~/ 60;
-                          final seconds = (totalSeconds % 60).toStringAsFixed(
-                            1,
-                          );
-                          return context.l10n.videoEditorTimelinePositionFormat(
-                            minutes,
-                            seconds,
-                          );
-                        },
-                        onStepPosition: _stepPosition,
-                        onPointerDown: _onPointerDown,
-                        onPointerMove: _onPointerMove,
-                        onPointerUp: _onPointerUp,
-                        onPointerCancel: _onPointerCancel,
-                        onScrollNotification: _handleScrollNotification,
-                        scrollController: _scrollController,
-                        isPinching: _isPinching,
-                        isTrimming: _isTrimming,
-                        halfScreen: halfScreen,
-                        pixelsPerSecond: _pixelsPerSecond,
-                        clips: clips,
-                        totalWidth: totalWidth,
-                        isInteracting: _isUserScrolling || _isPinching,
-                        onReorder: _onClipsReordered,
-                        onReorderChanged: _onReorderChanged,
-                        trimmingClipId: trimmingClipId,
-                        onTrimChanged: _onClipTrimChange,
-                        onTrimDragChanged: _onTrimDragChanged,
-                        onClipTapped: _onClipTapped,
-                        isMultiSelectMode: isMultiSelectMode,
-                        selectedClipIds: selectedClipIds,
-                        onOverlayItemMoved: _onOverlayItemMoved,
-                        onOverlayItemMoving: _onOverlayItemMoving,
-                        onOverlayItemTrimmed: _onOverlayItemTrimmed,
-                        onOverlayTrimDragChanged: _onOverlayTrimDragChanged,
-                        onOverlayItemTapped: _onOverlayItemTapped,
-                        onOverlayDragStarted: _onOverlayDragStarted,
-                        onOverlayDragEnded: _onOverlayDragEnded,
-                        verticalScrollController: _verticalScrollController,
-                        overlayStripsScrollController:
-                            _overlayStripsScrollController,
-                        volumePreviewNotifier: _volumePreviewNotifier,
-                        onVolumePreviewCancelled: _cancelVolumePreview,
+                    // The tracks have fixed heights the text has to fit in.
+                    child: MediaQuery.withClampedTextScaling(
+                      maxScaleFactor: fixedRowTextScaleLimit,
+                      child: OverflowBox(
+                        alignment: .topCenter,
+                        minHeight: TimelineConstants.height,
+                        maxHeight: TimelineConstants.height,
+                        child: VideoEditorTimelineInteractiveBody(
+                          playheadPosition: _playheadPosition,
+                          totalDuration: displayDuration,
+                          formatPosition: (pos) {
+                            final totalSeconds = pos.inMilliseconds / 1000.0;
+                            final minutes = totalSeconds ~/ 60;
+                            final seconds = (totalSeconds % 60).toStringAsFixed(
+                              1,
+                            );
+                            return context.l10n
+                                .videoEditorTimelinePositionFormat(
+                                  minutes,
+                                  seconds,
+                                );
+                          },
+                          onStepPosition: _stepPosition,
+                          onPointerDown: _onPointerDown,
+                          onPointerMove: _onPointerMove,
+                          onPointerUp: _onPointerUp,
+                          onPointerCancel: _onPointerCancel,
+                          onScrollNotification: _handleScrollNotification,
+                          scrollController: _scrollController,
+                          isPinching: _isPinching,
+                          isTrimming: _isTrimming,
+                          halfScreen: halfScreen,
+                          pixelsPerSecond: _pixelsPerSecond,
+                          clips: clips,
+                          totalWidth: totalWidth,
+                          isInteracting: _isUserScrolling || _isPinching,
+                          onReorder: _onClipsReordered,
+                          onReorderChanged: _onReorderChanged,
+                          trimmingClipId: trimmingClipId,
+                          onTrimChanged: _onClipTrimChange,
+                          onTrimDragChanged: _onTrimDragChanged,
+                          onClipTapped: _onClipTapped,
+                          isMultiSelectMode: isMultiSelectMode,
+                          selectedClipIds: selectedClipIds,
+                          onOverlayItemMoved: _onOverlayItemMoved,
+                          onOverlayItemMoving: _onOverlayItemMoving,
+                          onOverlayItemTrimmed: _onOverlayItemTrimmed,
+                          onOverlayTrimDragChanged: _onOverlayTrimDragChanged,
+                          onOverlayItemTapped: _onOverlayItemTapped,
+                          onOverlayDragStarted: _onOverlayDragStarted,
+                          onOverlayDragEnded: _onOverlayDragEnded,
+                          verticalScrollController: _verticalScrollController,
+                          overlayStripsScrollController:
+                              _overlayStripsScrollController,
+                          volumePreviewNotifier: _volumePreviewNotifier,
+                          onVolumePreviewCancelled: _cancelVolumePreview,
+                        ),
                       ),
                     ),
                   ),

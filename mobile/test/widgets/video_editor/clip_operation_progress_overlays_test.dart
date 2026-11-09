@@ -13,6 +13,8 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/clip_operation_progress_overlays.dart';
 
+import '../../helpers/text_lines.dart';
+
 class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
     implements ClipEditorBloc {}
 
@@ -61,12 +63,23 @@ void main() {
       bloc = _MockClipEditorBloc();
     });
 
-    Future<void> pump(WidgetTester tester) {
+    Future<void> pump(
+      WidgetTester tester, {
+      Locale? locale,
+      double textScale = 1,
+    }) {
       return tester.pumpWidget(
         MaterialApp(
           theme: VineTheme.theme,
+          locale: locale,
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
           home: Scaffold(
             body: BlocProvider<ClipEditorBloc>.value(
               value: bloc,
@@ -106,6 +119,62 @@ void main() {
         expect(find.semantics.byLabel('Split'), findsNothing);
       },
     );
+
+    testWidgets('keeps every German word whole on a small phone at the '
+        'largest text size', (tester) async {
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      whenListen(
+        bloc,
+        const Stream<ClipEditorState>.empty(),
+        initialState: const ClipEditorState(
+          isStabilizing: true,
+          stabilizingClipId: 'clip',
+          stabilizeRenderId: 'stabilize',
+          stabilizeProgress: 0.4,
+        ),
+      );
+
+      await pump(tester, locale: const Locale('de'), textScale: 3.12);
+      await tester.pump();
+
+      final de = lookupAppLocalizations(const Locale('de'));
+      expect(tester.takeException(), isNull);
+      expect(
+        wordsSplitAcrossLines(
+          tester,
+          find.text(de.videoEditorStabilizeProgressLabel),
+        ),
+        isEmpty,
+      );
+    });
+
+    testWidgets('scrolls instead of overflowing on a screen shorter than its '
+        'content', (tester) async {
+      tester.view.physicalSize = const Size(375, 300);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      whenListen(
+        bloc,
+        const Stream<ClipEditorState>.empty(),
+        initialState: const ClipEditorState(
+          isStabilizing: true,
+          stabilizingClipId: 'clip',
+          stabilizeRenderId: 'stabilize',
+          stabilizeProgress: 0.4,
+        ),
+      );
+
+      await pump(tester, locale: const Locale('de'), textScale: 3.12);
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final scrollable = tester.state<ScrollableState>(
+        find.byType(Scrollable),
+      );
+      expect(scrollable.position.maxScrollExtent, greaterThan(0));
+    });
 
     testWidgets('announces the operation it waits on', (tester) async {
       final announced = _captureAnnouncements(tester);

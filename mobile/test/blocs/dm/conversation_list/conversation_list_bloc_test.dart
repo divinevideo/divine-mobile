@@ -2919,7 +2919,7 @@ void main() {
     // The unread chip and search filter client-side. If the watch were
     // paginated, they would answer about the loaded page instead of the inbox:
     // the list claimed "You're all caught up" while the Messages badge — which
-    // counts the full accepted set — still showed unread.
+    // counts unread across the whole inbox — still showed unread.
     group('filters see the whole inbox, not just the loaded page', () {
       setUp(stubUnreadInboxDependencies);
 

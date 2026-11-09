@@ -37,8 +37,8 @@ const overlayActionColumnTextScaleLimit = 1.3;
 /// across a small phone and over the controls at its sides.
 const overlayNumeralTextScaleLimit = 1.3;
 
-/// Single-line labels inside a pill or chip that can grow somewhat before
-/// the surrounding controls collide.
+/// Labels inside a pill or chip that can grow somewhat before the
+/// surrounding controls collide.
 const chipLabelTextScaleLimit = 1.4;
 
 /// Numeric stats in a divided row.
