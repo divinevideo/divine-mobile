@@ -306,16 +306,21 @@ END
   /// Watch conversations where the user has sent at least one message.
   ///
   /// These are "accepted" conversations that are never message requests.
-  /// Supports pagination via [limit] and [offset].
+  /// Supports pagination via [limit] and [offset]. With [unreadOnly], only
+  /// unread rows: a reader that counts unread conversations then re-reads
+  /// those on every write instead of the whole inbox (#7923).
   Stream<List<ConversationRow>> watchAcceptedConversations({
     int? limit,
     int? offset,
     String? ownerPubkey,
+    bool unreadOnly = false,
   }) {
     final query = select(conversations)
       ..where(
         (t) =>
-            t.currentUserHasSent.equals(true) & _visibleToOwner(t, ownerPubkey),
+            t.currentUserHasSent.equals(true) &
+            _visibleToOwner(t, ownerPubkey) &
+            _unreadWhen(t, unreadOnly: unreadOnly),
       )
       ..orderBy([
         (t) => OrderingTerm(
@@ -331,16 +336,19 @@ END
   ///
   /// These are potential message requests (final classification depends
   /// on follow state, which is applied in the BLoC layer). Returned
-  /// without pagination since the count is typically small and needed
-  /// in full for accurate badge counts.
+  /// without pagination: the count is typically small and callers classify
+  /// every row by follow state. [unreadOnly] narrows it the same way
+  /// [watchAcceptedConversations] does.
   Stream<List<ConversationRow>> watchPotentialRequestConversations({
     String? ownerPubkey,
+    bool unreadOnly = false,
   }) {
     final query = select(conversations)
       ..where(
         (t) =>
             t.currentUserHasSent.equals(false) &
-            _visibleToOwner(t, ownerPubkey),
+            _visibleToOwner(t, ownerPubkey) &
+            _unreadWhen(t, unreadOnly: unreadOnly),
       )
       ..orderBy([
         (t) => OrderingTerm(
@@ -350,6 +358,11 @@ END
       ]);
     return query.watch();
   }
+
+  Expression<bool> _unreadWhen(
+    $ConversationsTable t, {
+    required bool unreadOnly,
+  }) => unreadOnly ? t.isRead.equals(false) : const Constant(true);
 
   /// Watch count of potential request conversations.
   Stream<int> watchPotentialRequestCount({String? ownerPubkey}) {
