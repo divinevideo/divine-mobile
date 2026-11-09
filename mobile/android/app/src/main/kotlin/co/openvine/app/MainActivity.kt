@@ -629,7 +629,13 @@ class MainActivity : FlutterFragmentActivity() {
                                             return@post
                                         }
                                         Log.e(ZENDESK_TAG, "Failed to create ticket: ${error?.reason}")
-                                        result.success(false)
+                                        // An error, not `false`, as the iOS plugin does, so Dart
+                                        // sees the reason and can retry an auth failure.
+                                        result.error(
+                                            "CREATE_FAILED",
+                                            error?.reason,
+                                            zendeskCreateTicketErrorDetails(error),
+                                        )
                                     }
                                 }
                             })
@@ -789,4 +795,46 @@ internal fun dispatchBackPressToFlutter(
         }
         onFallback()
     }
+}
+
+// The Zendesk SDK answers an authentication it cannot complete with a
+// synthetic 400 whose message names the failure
+// (zendesk.core.ZendeskAccessInterceptor), so the status alone cannot tell it
+// from a rejected request.
+private val zendeskAuthFailureMarkers = listOf(
+    "failed to auth user",
+    "expected type of authentication",
+)
+
+// An I/O error during the token exchange comes back as the same kind of 400
+// with no throwable, so only the reason marks the device offline. The SDK also
+// sends it for an empty JWT user identifier, which is treated as offline too.
+// "Response body was null" and "Response was 409" are real auth failures.
+private const val ZENDESK_OFFLINE_TOKEN_EXCHANGE_MARKER =
+    "response was null, failed to auth user"
+
+/**
+ * The `details` of the `CREATE_FAILED` error that `createTicket` raises when
+ * the Zendesk SDK rejects a ticket.
+ *
+ * `status` is the HTTP status, or -1 when no response arrived; `networkError`
+ * marks an I/O failure, including one while exchanging the token; `authFailed`
+ * marks a failure to authenticate the current identity, which Dart retries
+ * with another identity.
+ */
+// `isNetworkError` is deprecated with no replacement on the interface, and
+// `!isHttpError` would also count an unparseable response as offline.
+@Suppress("DEPRECATION")
+internal fun zendeskCreateTicketErrorDetails(error: ErrorResponse?): Map<String, Any> {
+    val status = error?.status ?: ErrorResponse.NON_HTTP_ERROR
+    val reason = error?.reason.orEmpty()
+    val offlineDuringTokenExchange =
+        reason.contains(ZENDESK_OFFLINE_TOKEN_EXCHANGE_MARKER, ignoreCase = true)
+    val authFailed = !offlineDuringTokenExchange &&
+        (status == 401 || zendeskAuthFailureMarkers.any { reason.contains(it, ignoreCase = true) })
+    return mapOf(
+        "status" to status,
+        "networkError" to (error?.isNetworkError == true || offlineDuringTokenExchange),
+        "authFailed" to authFailed,
+    )
 }
