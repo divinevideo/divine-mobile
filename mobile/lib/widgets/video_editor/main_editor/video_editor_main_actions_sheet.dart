@@ -393,9 +393,10 @@ class _ItemButton extends StatelessWidget {
           enabled: enabled,
           child: GestureDetector(
             onTap: onTap,
-            // The grid can widen a column past its max extent by up to
-            // `crossAxisSpacing / columns`; the row height budgets for a
-            // max-extent tile, so a square at the column width overflows.
+            // A column can be wider than `_maxItemWidth` (the grid rounds the
+            // column count up, narrows its gaps, or drops a column for a long
+            // label word), and the row height budgets for a max-width tile, so
+            // a square at the column width overflows.
             child: ConstrainedBox(
               constraints: const BoxConstraints(
                 maxWidth: VideoEditorMainActionsSheet._maxItemWidth,

@@ -29,8 +29,8 @@ const fixedRowTextScaleLimit = 1.25;
 /// video's own controls.
 const overlayActionColumnTextScaleLimit = 1.3;
 
-/// Single-line labels inside a pill or chip that can grow somewhat before
-/// the surrounding controls collide.
+/// Labels inside a pill or chip that can grow somewhat before the
+/// surrounding controls collide.
 const chipLabelTextScaleLimit = 1.4;
 
 /// Numeric stats in a divided row.

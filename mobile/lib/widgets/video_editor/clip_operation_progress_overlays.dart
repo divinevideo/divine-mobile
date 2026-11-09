@@ -297,13 +297,13 @@ class _RenderProgressContent extends StatelessWidget {
   /// stream.
   final double? progress;
 
-  /// How wide the text runs at the default text size.
+  /// The widest the text block may get at the default text size.
   static const double _textMaxWidth = 240;
 
   @override
   Widget build(BuildContext context) {
     // The text keeps its short lines at the default size and widens with
-    // the text size, so a long word still fits on one line.
+    // the text size, up to the screen, so a long word fits on one line.
     final textMaxWidth = MediaQuery.textScalerOf(
       context,
     ).scale(_textMaxWidth);
