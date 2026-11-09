@@ -141,5 +141,71 @@ void main() {
         expect(emitted.last.value, FollowRelationship.mutual);
       },
     );
+
+    group('when its Ref is unmounted before the stream starts', () {
+      late _MockFollowRepository repository;
+
+      setUp(() {
+        repository = _MockFollowRepository();
+      });
+
+      ProviderContainer createContainer() {
+        when(
+          () => repository.relationshipTo(targetPubkey),
+        ).thenReturn(FollowRelationship.youFollow);
+        when(
+          () => repository.followingStream,
+        ).thenAnswer((_) => const Stream<List<String>>.empty());
+
+        return ProviderContainer(
+          overrides: [
+            followRepositoryProvider.overrideWithValue(repository),
+            nostrSessionProvider.overrideWith(
+              () => _TestNostrSession(const NostrSessionReadiness.signedOut()),
+            ),
+          ],
+        );
+      }
+
+      test(
+        'reports no error when rebuilt in the same event-loop turn',
+        () async {
+          final container = createContainer();
+          addTearDown(container.dispose);
+          final provider = followRelationshipProvider(targetPubkey);
+          final uncaught = <Object>[];
+
+          runZonedGuarded(() {
+            final subscription = container.listen(provider, (_, _) {});
+            addTearDown(subscription.close);
+            container.refresh(provider);
+          }, (error, _) => uncaught.add(error));
+          await pumpEventQueue();
+
+          expect(uncaught, isEmpty);
+          expect(container.read(provider).value, FollowRelationship.youFollow);
+        },
+      );
+
+      test(
+        'reports no error when disposed in the same event-loop turn',
+        () async {
+          final container = createContainer();
+          final uncaught = <Object>[];
+
+          runZonedGuarded(() {
+            container
+              ..listen(followRelationshipProvider(targetPubkey), (_, _) {})
+              ..dispose();
+          }, (error, _) => uncaught.add(error));
+          await pumpEventQueue();
+
+          expect(uncaught, isEmpty);
+          // A read here would run after cancellation, where a throw is
+          // unhandled.
+          verifyNever(() => repository.relationshipTo(any()));
+        },
+      );
+    });
   });
 }

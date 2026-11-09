@@ -148,7 +148,7 @@ final class FollowRelationshipProvider
 }
 
 String _$followRelationshipHash() =>
-    r'702f16242ad7aa7ef1bfc36c1128a2b6199efad9';
+    r'6349f4ec4ca6a1cccf003a32b1ce75466298ac2b';
 
 /// The current user's follow relationship with [pubkey], kept live.
 ///
