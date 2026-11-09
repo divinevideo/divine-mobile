@@ -36,8 +36,9 @@ Future<void> showWatermarkDownloadSheet({
   );
 }
 
-/// Reads its providers through its own `ref`: the widget that opened the
-/// sheet may already be gone, as the feed share sheet closes itself first.
+/// Reads providers through its own `ref`, not the opener's. The feed share
+/// sheet pops before this one is shown, so the opener can unmount while
+/// this sheet is open.
 class _WatermarkDownloadProgressSheet extends ConsumerWidget {
   const _WatermarkDownloadProgressSheet({
     required this.video,
