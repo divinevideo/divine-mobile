@@ -122,7 +122,9 @@ class _TvStaticMessage extends StatelessWidget {
       children: [
         DivineSticker(sticker: sticker, size: 154),
         const SizedBox(height: 20),
-        Text(
+        // Long compounds such as German "Berechtigungsfehler" split mid-word
+        // at the largest text sizes between this screen's wide margins.
+        DivineWordFitText(
           title,
           style: VineTheme.titleMediumFont(
             color: context.vineColors.onSurfaceMuted,
@@ -131,7 +133,7 @@ class _TvStaticMessage extends StatelessWidget {
         ),
         if (description case final description?) ...[
           const SizedBox(height: 8),
-          Text(
+          DivineWordFitText(
             description,
             style: VineTheme.bodyMediumFont(
               color: context.vineColors.onSurfaceMuted,

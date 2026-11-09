@@ -2,6 +2,7 @@
 // ABOUTME: Covers optional description, optional action, close, and footer
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -186,7 +187,63 @@ void main() {
 
       expect(column.bottom, equals(screen.bottom - 48));
     });
+
+    group('at the largest text size on a small phone', () {
+      // The German camera permission error: the language with the longest
+      // words, on an iPhone SE at the largest iOS text size.
+      const title = 'Berechtigungsfehler';
+      const description =
+          'Beim Prüfen der Berechtigungen ist etwas schiefgelaufen.';
+
+      Future<void> pumpScreen(WidgetTester tester) {
+        tester.view
+          ..physicalSize = const Size(375, 667)
+          ..devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 3.12;
+        addTearDown(() {
+          tester.view
+            ..resetPhysicalSize()
+            ..resetDevicePixelRatio();
+          tester.platformDispatcher.clearAllTestValues();
+        });
+        return tester.pumpWidget(
+          const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: TvStaticMessageScreen(
+              sticker: DivineStickerName.alert,
+              title: title,
+              description: description,
+              onClose: _noop,
+            ),
+          ),
+        );
+      }
+
+      testWidgets('keeps every word on one line', (tester) async {
+        await pumpScreen(tester);
+
+        _expectWordsWhole(tester, title);
+        _expectWordsWhole(tester, description);
+      });
+    });
   });
+}
+
+/// Expects each space-separated word of the rendered [text] on a single line.
+void _expectWordsWhole(WidgetTester tester, String text) {
+  final paragraph = tester.renderObject<RenderParagraph>(find.text(text));
+  var start = 0;
+  for (final word in text.split(' ')) {
+    final lineTops = paragraph
+        .getBoxesForSelection(
+          TextSelection(baseOffset: start, extentOffset: start + word.length),
+        )
+        .map((box) => box.top)
+        .toSet();
+    expect(lineTops, hasLength(1), reason: '"$word" was split across lines');
+    start += word.length + 1;
+  }
 }
 
 void _noop() {}

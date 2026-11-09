@@ -58,6 +58,12 @@ Complete dark-mode design system providing:
 | `VineBottomSheetSelectionMenu` | Selection menu variant (pick from options) |
 | `VineKeyboardAwareFooter` | Bottom-sheet footer that stays visible above the keyboard. |
 
+### Text
+
+| Component | Description |
+|-----------|-------------|
+| `DivineWordFitText` | `Text` that follows the system text size until its widest word would no longer fit on a line, then stops growing, so large text never splits a word such as German "Berechtigungsfehler". For headings and short messages in narrow columns. |
+
 ### Text Field
 
 | Component | Description |

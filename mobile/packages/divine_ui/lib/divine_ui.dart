@@ -20,6 +20,7 @@ export 'src/sliver_bottom_safe_area.dart';
 export 'src/sliver_pagination_trigger.dart';
 export 'src/sticker/sticker.dart';
 export 'src/switch/switch.dart';
+export 'src/text/text.dart';
 export 'src/text_field/text_field.dart';
 export 'src/theme/color_codec.dart';
 export 'src/theme/vine_theme.dart';
