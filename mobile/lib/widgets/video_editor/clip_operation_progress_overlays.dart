@@ -297,54 +297,68 @@ class _RenderProgressContent extends StatelessWidget {
   /// stream.
   final double? progress;
 
+  /// The widest the text block may get at the default text size.
+  static const double _textMaxWidth = 240;
+
   @override
   Widget build(BuildContext context) {
+    // The text keeps its short lines at the default size and widens with
+    // the text size, up to the screen, so a long word fits on one line.
+    final textMaxWidth = MediaQuery.textScalerOf(
+      context,
+    ).scale(_textMaxWidth);
     return VideoEditorBlockingOverlay(
       announcement: label,
       child: Center(
-        child: RepaintBoundary(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 24,
-            children: [
-              if (progress case final progress?)
-                PartialCircleSpinner(progress: progress)
-              else
-                // Transient render progress is read straight from the plugin
-                // stream (no service indirection) since it is purely ephemeral
-                // UI feedback that never outlives this overlay.
-                StreamBuilder<ProgressModel>(
-                  stream: ProVideoEditor.instance.progressStreamById(renderId),
-                  builder: (context, snapshot) {
-                    final progress = snapshot.data?.progress ?? 0;
-                    return PartialCircleSpinner(progress: progress);
-                  },
-                ),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 240),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: 8,
-                  children: [
-                    Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      style: VineTheme.bodyMediumFont(
-                        color: context.vineColors.primaryText,
-                      ),
+        // Scrolls rather than overflowing the screen at a large text size.
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: RepaintBoundary(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 24,
+              children: [
+                if (progress case final progress?)
+                  PartialCircleSpinner(progress: progress)
+                else
+                  // Transient render progress is read straight from the
+                  // plugin stream (no service indirection) since it is purely
+                  // ephemeral UI feedback that never outlives this overlay.
+                  StreamBuilder<ProgressModel>(
+                    stream: ProVideoEditor.instance.progressStreamById(
+                      renderId,
                     ),
-                    if (hint case final hint?)
+                    builder: (context, snapshot) {
+                      final progress = snapshot.data?.progress ?? 0;
+                      return PartialCircleSpinner(progress: progress);
+                    },
+                  ),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: textMaxWidth),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: 8,
+                    children: [
                       Text(
-                        hint,
+                        label,
                         textAlign: TextAlign.center,
-                        style: VineTheme.bodySmallFont(
-                          color: context.vineColors.secondaryText,
+                        style: VineTheme.bodyMediumFont(
+                          color: context.vineColors.primaryText,
                         ),
                       ),
-                  ],
+                      if (hint case final hint?)
+                        Text(
+                          hint,
+                          textAlign: TextAlign.center,
+                          style: VineTheme.bodySmallFont(
+                            color: context.vineColors.secondaryText,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
