@@ -806,7 +806,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
         final video = state.video;
         if (video == null) return;
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        await showSaveOriginalSheet(context: context, ref: ref, video: video);
+        await showSaveOriginalSheet(context: context, video: video);
         if (context.mounted) context.read<SharedVideoSaveCubit>().reset();
         return;
       case SharedVideoSaveStatus.watermarkReady:
@@ -816,7 +816,6 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         await showWatermarkDownloadSheet(
           context: context,
-          ref: ref,
           video: video,
           watermarkText: watermarkText,
         );
