@@ -8,6 +8,7 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/upload_manager.dart';
+import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -40,6 +41,18 @@ const _okResult = BlossomUploadResult(
   url: 'https://media.divine.video/abc',
   thumbnailUrl: 'https://media.divine.video/abc-thumb.jpg',
 );
+
+/// Reads no frame; [_okResult] already carries the thumbnail URL.
+///
+/// The default extractor reaches the process-global `ProVideoEditor.instance`
+/// and retries on real timers for about 600 ms. A test that ended mid-upload
+/// left those retries to land in whichever test ran next in the merged CI
+/// isolate, on that test's fake editor.
+Future<ThumbnailFileResult?> _noThumbnail({
+  required String videoPath,
+  required Duration targetTimestamp,
+  required int quality,
+}) async => null;
 
 Future<void> _withIsolatedHiveHome(
   String prefix,
@@ -120,6 +133,7 @@ void main() {
           initialDelay: Duration(milliseconds: 10),
           maxDelay: Duration(milliseconds: 10),
         ),
+        thumbnailExtractor: _noThumbnail,
       );
       await uploadManager.initialize();
     });
@@ -155,7 +169,7 @@ void main() {
     }
 
     test('onAppResumed re-drives uploads stuck in uploading state', () async {
-      await seedUpload();
+      final upload = await seedUpload();
 
       final resumeStarted = Completer<void>();
       when(
@@ -185,6 +199,12 @@ void main() {
         timeout: const Duration(seconds: 2),
         checkInterval: const Duration(milliseconds: 20),
       );
+      // Let the re-driven upload finish here, so none of it outlives the test.
+      await TestHelpers.waitForCondition(
+        () => !uploadManager.isUploadInFlight(upload.id),
+        timeout: const Duration(seconds: 2),
+        checkInterval: const Duration(milliseconds: 20),
+      );
     });
 
     test('onAppResumed wakes a live upload parked in retry backoff', () async {
@@ -196,6 +216,7 @@ void main() {
           initialDelay: Duration(hours: 1),
           maxDelay: Duration(hours: 1),
         ),
+        thumbnailExtractor: _noThumbnail,
       );
       await uploadManager.initialize();
 
@@ -259,7 +280,7 @@ void main() {
     });
 
     test('onAppResumed re-drives uploads stuck in retrying state', () async {
-      await seedUpload(status: UploadStatus.retrying);
+      final upload = await seedUpload(status: UploadStatus.retrying);
 
       final resumeStarted = Completer<void>();
       when(
@@ -286,6 +307,12 @@ void main() {
 
       await TestHelpers.waitForCondition(
         () => resumeStarted.isCompleted,
+        timeout: const Duration(seconds: 2),
+        checkInterval: const Duration(milliseconds: 20),
+      );
+      // Let the re-driven upload finish here, so none of it outlives the test.
+      await TestHelpers.waitForCondition(
+        () => !uploadManager.isUploadInFlight(upload.id),
         timeout: const Duration(seconds: 2),
         checkInterval: const Duration(milliseconds: 20),
       );

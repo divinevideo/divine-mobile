@@ -272,9 +272,11 @@ void main() {
     });
 
     test('holds a shorter cell on its last frame until the end', () async {
+      final long = _clip('long', seconds: 3);
+      final short = _clip('short');
       final task = await renderSideBySide([
-        (clip: _clip('long', seconds: 3), zoom: 1),
-        (clip: _clip('short'), zoom: 1),
+        (clip: long, zoom: 1),
+        (clip: short, zoom: 1),
       ]);
 
       expect(task.endTime, const Duration(seconds: 3));
@@ -283,8 +285,19 @@ void main() {
       expect(hold.size, ui.Size(canvas.width / 2, canvas.height));
       expect(hold.startTime, lessThan(const Duration(seconds: 2)));
       expect(hold.endTime, isNull);
+      // ProVideoEditor.instance is process-global, so in the merged CI isolate
+      // a call another test left running can reach this fake. Count only the
+      // requests for this test's own clips.
+      final request = editor.thumbnailRequests
+          .where(
+            (candidate) =>
+                identical(candidate.video, long.video) ||
+                identical(candidate.video, short.video),
+          )
+          .single;
+      expect(request.video, same(short.video));
       // The frame is read just inside the short clip's end.
-      final requested = editor.thumbnailRequests.single.timestamps.single;
+      final requested = request.timestamps.single;
       expect(requested, lessThan(const Duration(seconds: 2)));
       expect(requested, greaterThan(const Duration(milliseconds: 1900)));
     });
