@@ -24,6 +24,8 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
+import '../../../helpers/text_lines.dart';
+
 class _MockVideoEditorMainBloc
     extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
     implements VideoEditorMainBloc {}
@@ -152,6 +154,41 @@ void main() {
           expect(clipped, isEmpty);
         },
       );
+    }
+
+    for (final textScale in const [1.0, 3.12]) {
+      testWidgets('keeps every word of the de labels whole on a small phone '
+          'at text scale $textScale', (tester) async {
+        tester.view.physicalSize = const Size(375, 667);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = textScale;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await tester.pumpWidget(
+          _buildShowHost(
+            mainBloc: mainBloc,
+            clipBloc: clipBloc,
+            timelineOverlayBloc: timelineOverlayBloc,
+            tuneBloc: tuneBloc,
+            drawBloc: drawBloc,
+            locale: const Locale('de'),
+          ),
+        );
+        await tester.tap(find.byKey(const Key('open-sheet')));
+        await tester.pumpAndSettle();
+
+        expect(
+          wordsSplitAcrossLines(
+            tester,
+            find.descendant(
+              of: find.byType(VideoEditorMainActionsSheet),
+              matching: find.byType(RichText),
+            ),
+          ),
+          isEmpty,
+        );
+      });
     }
 
     testWidgets(

@@ -112,43 +112,48 @@ class _VideoEditorAudioDuckingSheetState
           thickness: 2,
           color: context.vineColors.surfaceContainer,
         ),
-        const SizedBox(height: 8),
-        ValueListenableBuilder<AudioDuckingSelection>(
-          valueListenable: _selection,
-          builder: (_, selection, _) => Column(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 16,
-            children: [
-              // The sheet body sits on a ColoredBox, which would hide the
-              // tile's ink; a transparent Material gives it a surface of its
-              // own.
-              Material(
-                type: MaterialType.transparency,
-                child: DivineSwitchTile(
-                  title: l10n.videoEditorDuckingSwitchLabel,
-                  subtitle: widget.hasVoiceOver
-                      ? l10n.videoEditorDuckingDescription
-                      : l10n.videoEditorDuckingNoVoiceOverHint,
-                  value: selection.enabled,
-                  onChanged: (enabled) => _selection.value = (
-                    enabled: enabled,
-                    volume: selection.volume,
+        // Scrolls under the header rather than running off a small screen at
+        // a large text size.
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(top: 8, bottom: 16),
+            child: ValueListenableBuilder<AudioDuckingSelection>(
+              valueListenable: _selection,
+              builder: (_, selection, _) => Column(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 16,
+                children: [
+                  // The sheet body sits on a ColoredBox, which would hide the
+                  // tile's ink; a transparent Material gives it a surface of
+                  // its own.
+                  Material(
+                    type: MaterialType.transparency,
+                    child: DivineSwitchTile(
+                      title: l10n.videoEditorDuckingSwitchLabel,
+                      subtitle: widget.hasVoiceOver
+                          ? l10n.videoEditorDuckingDescription
+                          : l10n.videoEditorDuckingNoVoiceOverHint,
+                      value: selection.enabled,
+                      onChanged: (enabled) => _selection.value = (
+                        enabled: enabled,
+                        volume: selection.volume,
+                      ),
+                    ),
                   ),
-                ),
+                  _StrengthControl(
+                    strength: 1 - selection.volume,
+                    onChanged: selection.enabled
+                        ? (strength) => _selection.value = (
+                            enabled: true,
+                            volume: 1 - strength,
+                          )
+                        : null,
+                  ),
+                ],
               ),
-              _StrengthControl(
-                strength: 1 - selection.volume,
-                onChanged: selection.enabled
-                    ? (strength) => _selection.value = (
-                        enabled: true,
-                        volume: 1 - strength,
-                      )
-                    : null,
-              ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 16),
       ],
     );
   }
