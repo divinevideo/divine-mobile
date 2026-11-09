@@ -401,7 +401,8 @@ void main() {
         build: createBloc,
         act: (bloc) =>
             bloc.add(const DraftsLibraryDuplicateRequested('draft1')),
-        errors: () => [isA<StateError>()],
+        // DivineBlocObserver forwards a bare StateError to Crashlytics.
+        errors: () => isEmpty,
         expect: () => [
           isA<DraftsLibraryDuplicateFailed>(),
           isA<DraftsLibraryLoaded>(),

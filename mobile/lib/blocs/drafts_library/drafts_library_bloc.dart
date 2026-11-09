@@ -163,7 +163,18 @@ class DraftsLibraryBloc extends Bloc<DraftsLibraryEvent, DraftsLibraryState> {
       final source = await _draftStorageService.getValidatedDraftById(
         event.draftId,
       );
-      if (source == null) throw StateError('Draft is no longer available');
+      // Deleted, emptied of media or unreadable since the list loaded: an
+      // expected outcome, so it must not reach the observer as a StateError.
+      if (source == null) {
+        Log.warning(
+          '📚 Draft ${event.draftId} is no longer available to duplicate',
+          name: 'DraftsLibraryBloc',
+          category: LogCategory.video,
+        );
+        emit(DraftsLibraryDuplicateFailed(drafts: currentDrafts));
+        emit(DraftsLibraryLoaded(drafts: currentDrafts));
+        return;
+      }
       final copy = source.duplicate(title: event.newTitle);
       await _draftStorageService.saveDraft(copy);
 
