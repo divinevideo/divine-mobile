@@ -319,6 +319,7 @@ class ProfileRepository implements ProfileReader {
     required String query,
     required int limit,
   }) async {
+    await loadVanishedPubkeys();
     final localSearch = _localProfileSearch;
     final candidates = localSearch == null
         ? await searchUsersLocally(query: query, limit: limit)
@@ -326,9 +327,12 @@ class ProfileRepository implements ProfileReader {
     final filtered =
         _profileSearchFilter?.call(query, candidates) ?? candidates;
     final blockFilter = _blockFilter;
-    return blockFilter == null
-        ? filtered
-        : filtered.where((p) => !blockFilter(p.pubkey)).toList();
+    return filtered
+        .where(
+          (p) =>
+              !isVanished(p.pubkey) && !(blockFilter?.call(p.pubkey) ?? false),
+        )
+        .toList();
   }
 
   /// Translates a full `npub` query into the hex form the bounded local
@@ -2429,6 +2433,9 @@ class ProfileRepository implements ProfileReader {
     if (trimmed.isEmpty) return;
     if (_isSearchCancelled(cancellationToken)) return;
 
+    await loadVanishedPubkeys();
+    if (_isSearchCancelled(cancellationToken)) return;
+
     final resultMap = <String, UserProfile>{};
     final serverSelectedPubkeys = <String>{};
     final sources = <SearchSource, SearchSourceStatus>{
@@ -2590,17 +2597,55 @@ class ProfileRepository implements ProfileReader {
       final discovered = await _discoverableUsernameOwner(candidate);
       if (_isSearchCancelled(cancellationToken)) return;
       if (discovered != null) {
+        restPubkeys.add(discovered.pubkey);
         mergeRestResult(discovered);
         ownerPubkey = candidate.pubkey;
       }
     }
+
+    var removedCachedProfile = false;
+    // Cached rows omitted by search may predate an account's deletion. A
+    // sparse bulk miss is not proof of deletion; only its typed vanish answer
+    // evicts a row. Keep this separate from fetchBatchProfiles, which trusts
+    // cached rows and deliberately does not re-fetch them.
+    if (offset == 0 && (_funnelcakeApiClient?.isAvailable ?? false)) {
+      final cachedOnly = resultMap.keys
+          .where(
+            (pubkey) => !restPubkeys.contains(pubkey) && !isVanished(pubkey),
+          )
+          .toList();
+      if (cachedOnly.isNotEmpty) {
+        try {
+          final response = await _funnelcakeApiClient!.getBulkProfiles(
+            cachedOnly,
+          );
+          if (_isSearchCancelled(cancellationToken)) return;
+          for (final pubkey in cachedOnly) {
+            if (_isSearchCancelled(cancellationToken)) return;
+            if (response.profiles[pubkey] is UserProfileVanished) {
+              await _applyVanish(pubkey);
+              resultMap.remove(pubkey);
+              removedCachedProfile = true;
+            }
+          }
+        } on Exception catch (e) {
+          Log.warning(
+            'Search profile recheck failed (${e.runtimeType})',
+            name: 'ProfileRepository.searchUsersProgressive',
+            category: LogCategory.api,
+          );
+        }
+      }
+    }
+    if (_isSearchCancelled(cancellationToken)) return;
 
     // Yield after Phase 2 if new results were added or the owner was pinned,
     // or if a relevance search got the server's order: it can reorder rows the
     // cache already listed without adding any. Skips enrichment for faster
     // progressive display; the final Phase 3 yield enriches all results from
     // cache.
-    if (resultMap.length > prevCount ||
+    if (removedCachedProfile ||
+        resultMap.length > prevCount ||
         ownerPubkey != null ||
         (sortBy == profileSearchSortRelevance && restPositions.isNotEmpty)) {
       yield snapshot(isComplete: false);
@@ -2744,11 +2789,15 @@ class ProfileRepository implements ProfileReader {
         ? _boostBelowExactMatches(query, filtered, boostPubkeys)
         : _boostBehindExactMatches(query, filtered, boostPubkeys);
     final blockFilter = _blockFilter;
-    if (blockFilter == null) return [...pinned, ...ordered];
     return [
-      ...pinned,
-      ...ordered,
-    ].where((p) => !blockFilter(p.pubkey)).toList();
+          ...pinned,
+          ...ordered,
+        ]
+        .where(
+          (p) =>
+              !isVanished(p.pubkey) && !(blockFilter?.call(p.pubkey) ?? false),
+        )
+        .toList();
   }
 
   /// Whether [profile] exactly matches the people-search [query]: its full

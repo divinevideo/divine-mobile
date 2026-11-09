@@ -4837,6 +4837,9 @@ void main() {
         'a relevance search lists a profile only the cache found after the '
         "server's",
         () async {
+          when(() => mockFunnelcakeClient.getBulkProfiles(any())).thenAnswer(
+            (_) async => const BulkProfilesResponse(profiles: {}),
+          );
           when(() => mockUserProfilesDao.getAllProfiles()).thenAnswer(
             (_) async => [
               UserProfile(
@@ -5324,6 +5327,9 @@ void main() {
 
       test('progressive search keeps identity matches and drops bio-only '
           'server hits', () async {
+        when(() => mockFunnelcakeClient.getBulkProfiles(any())).thenAnswer(
+          (_) async => const BulkProfilesResponse(profiles: {}),
+        );
         final cached = UserProfile(
           pubkey: pkCachedVine,
           displayName: 'Sam From Contacts',
@@ -5405,6 +5411,9 @@ void main() {
 
       test('searchUsersProgressive ranks a cached profile with no REST counts '
           'after the counted results', () async {
+        when(() => mockFunnelcakeClient.getBulkProfiles(any())).thenAnswer(
+          (_) async => const BulkProfilesResponse(profiles: {}),
+        );
         final cachedProfile = UserProfile(
           pubkey: pkCachedVine,
           displayName: 'Lauren Cached',
@@ -6432,6 +6441,9 @@ void main() {
         });
 
         test('yields progressively: local, then API+relay merged', () async {
+          when(() => mockFunnelcakeClient.getBulkProfiles(any())).thenAnswer(
+            (_) async => const BulkProfilesResponse(profiles: {}),
+          );
           // Arrange - local cache
           final cachedProfile = UserProfile(
             pubkey: testPubkey,
