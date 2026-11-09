@@ -686,10 +686,9 @@ class ZendeskSupportService {
       return false;
     }
 
-    // Refresh JWT before SDK action. The pre-auth token has a 5-minute TTL,
-    // so any delay between login and ticket creation will cause an
-    // authentication failure.
-    // This gets a fresh token every time, regardless of how long the user waited.
+    // Refresh the JWT before the SDK action. The pre-auth token has a 5-minute
+    // TTL and a refresh is reused for 4 minutes, so an older token is replaced
+    // here.
     await _ensureFreshJwt();
     if (!ownsTicket()) return false;
 
@@ -765,12 +764,11 @@ class ZendeskSupportService {
       // The error a report names; the retry's own when it fails differently.
       var reportedError = e;
 
-      // A pre-auth token lasts 5 minutes and `_ensureFreshJwt`, which ran
-      // before this call, reuses one for 4, so it can lapse only when that
-      // refresh failed or was skipped. The SDK then fails to authenticate:
-      // fall back to the anonymous identity (it already has name/email from
-      // login) and retry before the REST API. No ticket exists after an
-      // authentication failure, so the retry cannot file a duplicate.
+      // The SDK can fail to authenticate when, for example, the JWT refresh
+      // before this call failed or was skipped and the token lapsed. Fall back
+      // to the anonymous identity (it already has name/email from login) and
+      // retry before the REST API. No ticket exists after an authentication
+      // failure, so the retry cannot file a duplicate.
       if (e.code == 'CREATE_FAILED' && _isNativeAuthFailure(e)) {
         Log.info(
           '🔄 Zendesk SDK could not authenticate, retrying with anonymous '
