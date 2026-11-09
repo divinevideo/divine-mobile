@@ -149,6 +149,7 @@ void main() {
       ProImageEditorState? editor,
       LoopSuggestionCubit? loopCubit,
       TimelineOverlayBloc? overlayBloc,
+      double textScale = 1,
     }) {
       if (mainState != null) {
         when(() => mockMainBloc.state).thenReturn(mainState);
@@ -161,6 +162,12 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
           home: Scaffold(
             body: VideoEditorScope(
               editorKey: GlobalKey<ProImageEditorState>(),
@@ -232,6 +239,45 @@ void main() {
     });
 
     group('renders', () {
+      testWidgets('fits a sound track label in its row at the largest text '
+          'size', (tester) async {
+        final clip = _createTestClip(id: 'a', seconds: 3);
+        whenListen(
+          mockClipBloc,
+          const Stream<ClipEditorState>.empty(),
+          initialState: ClipEditorState(clips: [clip]),
+        );
+        final overlay = TimelineOverlayBloc();
+        addTearDown(overlay.close);
+        overlay.add(
+          TimelineOverlayItemsUpdate(
+            layers: const [],
+            filters: const [],
+            audioTracks: [
+              AudioEvent(
+                id: 'sound',
+                pubkey: 'bundled',
+                createdAt: 0,
+                title: 'Sound',
+                url: 'asset://sounds/loop.mp3',
+                duration: 3,
+                endTime: const Duration(seconds: 3),
+              ),
+            ],
+            totalVideoDuration: const Duration(seconds: 3),
+          ),
+        );
+
+        await tester.pumpWidget(
+          buildWidget(overlayBloc: overlay, textScale: 3.12),
+        );
+        await tester.pump();
+
+        expect(find.text('Sound'), findsOneWidget);
+        // The row has a fixed height; a label growing past it overflows.
+        expect(tester.takeException(), isNull);
+      });
+
       testWidgets(
         'a cancelled loop preview preserves sounds and markers beyond its end',
         (
