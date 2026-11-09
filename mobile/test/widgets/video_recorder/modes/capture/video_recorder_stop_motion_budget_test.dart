@@ -18,6 +18,8 @@ import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_stop_motion_budget.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_progress_bar.dart';
 
+import '../../../../helpers/text_lines.dart';
+
 class _MockVideoRecorderBloc
     extends MockBloc<VideoRecorderEvent, VideoRecorderBlocState>
     implements VideoRecorderBloc {}
@@ -297,22 +299,12 @@ void main() {
         ),
       );
 
-      final label = tester.renderObject<RenderParagraph>(
-        find.descendant(
-          of: find.byType(VideoRecorderProgressBar),
-          matching: find.byType(RichText),
-        ),
+      final labelFinder = find.descendant(
+        of: find.byType(VideoRecorderProgressBar),
+        matching: find.byType(RichText),
       );
-      final lineTops = label
-          .getBoxesForSelection(
-            TextSelection(
-              baseOffset: 0,
-              extentOffset: label.text.toPlainText().length,
-            ),
-          )
-          .map((box) => box.top)
-          .toSet();
-      expect(lineTops, hasLength(1));
+      expect(lineCountOf(tester, labelFinder), 1);
+      final label = tester.renderObject<RenderParagraph>(labelFinder);
       // No larger than the audio chip lip-sync puts in the same slot.
       expect(
         label.textScaler.scale(14),

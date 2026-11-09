@@ -2,11 +2,12 @@
 // ABOUTME: Covers optional description, optional action, close, and footer
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/tv_static_message_screen.dart';
+
+import '../helpers/text_lines.dart';
 
 void main() {
   group(TvStaticMessageScreen, () {
@@ -223,27 +224,14 @@ void main() {
       testWidgets('keeps every word on one line', (tester) async {
         await pumpScreen(tester);
 
-        _expectWordsWhole(tester, title);
-        _expectWordsWhole(tester, description);
+        expect(wordsSplitAcrossLines(tester, find.text(title)), isEmpty);
+        expect(
+          wordsSplitAcrossLines(tester, find.text(description)),
+          isEmpty,
+        );
       });
     });
   });
-}
-
-/// Expects each space-separated word of the rendered [text] on a single line.
-void _expectWordsWhole(WidgetTester tester, String text) {
-  final paragraph = tester.renderObject<RenderParagraph>(find.text(text));
-  var start = 0;
-  for (final word in text.split(' ')) {
-    final lineTops = paragraph
-        .getBoxesForSelection(
-          TextSelection(baseOffset: start, extentOffset: start + word.length),
-        )
-        .map((box) => box.top)
-        .toSet();
-    expect(lineTops, hasLength(1), reason: '"$word" was split across lines');
-    start += word.length + 1;
-  }
 }
 
 void _noop() {}
