@@ -40,7 +40,10 @@ void main() {
     late _MockVideoResponsesRepository repository;
     late RepliesWarnings warnings;
 
-    setUpAll(() => registerFallbackValue(const RepliesCuration()));
+    setUpAll(() {
+      registerFallbackValue(const RepliesCuration());
+      registerFallbackValue(<String>{});
+    });
 
     setUp(() {
       repository = _MockVideoResponsesRepository();
@@ -50,6 +53,7 @@ void main() {
           any(),
           videoAddress: any(named: 'videoAddress'),
           previous: any(named: 'previous'),
+          takenBackRestores: any(named: 'takenBackRestores'),
         ),
       ).thenAnswer(
         (call) async => call.positionalArguments.first as RepliesCuration,
@@ -260,6 +264,7 @@ void main() {
                 any(),
                 videoAddress: _address,
                 previous: const RepliesCuration(),
+                takenBackRestores: any(named: 'takenBackRestores'),
               ),
             ).thenAnswer(
               (_) async => RepliesCuration(
@@ -318,6 +323,34 @@ void main() {
             ),
           ),
         ],
+        // Showing must not take back the restore it adds: left out,
+        // takenBackRestores is expected at its empty default.
+        verify: (_) => verify(
+          () => repository.saveCuration(
+            any(),
+            videoAddress: _address,
+            previous: any(named: 'previous'),
+          ),
+        ).called(1),
+      );
+
+      blocTest<VideoRepliesCubit, VideoRepliesState>(
+        'takes back a restore of the hidden version made on another device',
+        build: build,
+        seed: () => VideoRepliesState(
+          status: VideoRepliesStatus.loaded,
+          replies: [_addressableReply],
+        ),
+        act: (cubit) =>
+            cubit.hideToggled(RepliesCuration.keyOf(_addressableReply)),
+        verify: (_) => verify(
+          () => repository.saveCuration(
+            any(),
+            videoAddress: _address,
+            previous: const RepliesCuration(),
+            takenBackRestores: {_hex(9)},
+          ),
+        ).called(1),
       );
 
       blocTest<VideoRepliesCubit, VideoRepliesState>(
@@ -362,6 +395,7 @@ void main() {
             any(),
             videoAddress: any(named: 'videoAddress'),
             previous: any(named: 'previous'),
+            takenBackRestores: any(named: 'takenBackRestores'),
           ),
         ).thenThrow(const RepliesCurationException('blocked')),
         build: build,
@@ -381,6 +415,7 @@ void main() {
             any(),
             videoAddress: any(named: 'videoAddress'),
             previous: any(named: 'previous'),
+            takenBackRestores: any(named: 'takenBackRestores'),
           ),
         ).thenThrow(StateError('signer gone')),
         build: build,

@@ -482,6 +482,11 @@ class VideoResponsesRepository {
   /// signed after the curation it replaces. Saves by the same account to the
   /// same video run one at a time.
   ///
+  /// [takenBackRestores] names the reply versions, by event id, whose
+  /// `restored` mark the edit takes back even when [previous] did not have
+  /// it. Hiding a reply passes its version, so a restore made on another
+  /// device does not outlast the hide.
+  ///
   /// Throws:
   ///
   /// * [RepliesCurationUnavailableException] if the read timed out or no
@@ -494,6 +499,7 @@ class VideoResponsesRepository {
     RepliesCuration curation, {
     required String videoAddress,
     required RepliesCuration previous,
+    Set<String> takenBackRestores = const {},
   }) {
     final owner = _nostrClient.publicKey;
     final key = '$owner:${RepliesCuration.dTagFor(videoAddress)}';
@@ -504,6 +510,7 @@ class VideoResponsesRepository {
       operation: () => _saveCuration(
         curation,
         previous: previous,
+        takenBackRestores: takenBackRestores,
         videoAddress: videoAddress,
         owner: owner,
         key: key,
@@ -514,6 +521,7 @@ class VideoResponsesRepository {
   Future<RepliesCuration> _saveCuration(
     RepliesCuration curation, {
     required RepliesCuration previous,
+    required Set<String> takenBackRestores,
     required String videoAddress,
     required String owner,
     required String key,
@@ -551,10 +559,14 @@ class VideoResponsesRepository {
       ..removeAll(previous.restoredIds.difference(curation.restoredIds));
     // Hiding a reply takes back its restored mark, and showing it again a
     // hide by the same key, also when the other mark came from another
-    // device. A hide by address stays; the restore of one version wins over
-    // it until the reply is replaced.
+    // device. A restore names a version by event id and a hide of an
+    // addressable reply names its address, so the caller names the versions
+    // its hide takes back. A hide by address stays; the restore of one
+    // version wins over it until the reply is replaced.
     hidden.removeAll(curation.restoredIds.difference(previous.restoredIds));
-    restored.removeAll(curation.hiddenIds.difference(previous.hiddenIds));
+    restored
+      ..removeAll(curation.hiddenIds.difference(previous.hiddenIds))
+      ..removeAll(takenBackRestores.map((id) => id.toLowerCase()));
     final pinChanged = curation.pinnedId != previous.pinnedId;
     var pinned = latest.pinnedId;
     if (pinChanged) {

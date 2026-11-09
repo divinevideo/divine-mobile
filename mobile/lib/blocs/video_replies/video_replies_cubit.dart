@@ -94,13 +94,15 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
     final hidden = reply == null
         ? curation.hiddenIds.contains(replyKey)
         : curation.hides(reply);
+    if (hidden) {
+      return _save(
+        curation.shown(replyKey, restoredEventId: _approvedVersion(replyKey)),
+      );
+    }
     return _save(
-      hidden
-          ? curation.shown(
-              replyKey,
-              restoredEventId: _approvedVersion(replyKey),
-            )
-          : curation.hidden(replyKey, eventId: reply?.id),
+      curation.hidden(replyKey, eventId: reply?.id),
+      // A restore of this version made on another device goes too.
+      takenBackRestores: {?reply?.id},
     );
   }
 
@@ -119,7 +121,10 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
         : null;
   }
 
-  Future<void> _save(RepliesCuration curation) async {
+  Future<void> _save(
+    RepliesCuration curation, {
+    Set<String> takenBackRestores = const {},
+  }) async {
     if (state.saveStatus == VideoRepliesSaveStatus.saving) return;
     final before = state.curation;
     emit(
@@ -133,6 +138,7 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
         curation,
         videoAddress: _videoAddress,
         previous: before,
+        takenBackRestores: takenBackRestores,
       );
       emitIfOpen(
         state.copyWith(
