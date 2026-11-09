@@ -368,7 +368,7 @@
 
 # Issue #8916. Material and Cupertino ship as the material_ui and cupertino_ui
 # pub packages now. `package:flutter/material.dart` still exists in Flutter
-# 3.47.2, so a reintroduced import compiles, analyzes and tests clean until its
+# 3.47.9, so a reintroduced import compiles, analyzes and tests clean until its
 # ThemeData or MaterialLocalizations meets ours -- and the type error then
 # surfaces in a file that does not contain the mistake. Nothing else here reads
 # import URIs.

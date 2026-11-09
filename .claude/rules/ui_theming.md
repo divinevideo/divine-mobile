@@ -7,7 +7,7 @@ packages, not as part of the framework (#8916). Import
 `package:material_ui/material_ui.dart` and
 `package:cupertino_ui/cupertino_ui.dart`; use `package:flutter/widgets.dart`
 for a file that touches no design-system widget.
-`package:flutter/material.dart` still resolves in Flutter 3.47.2 and is frozen
+`package:flutter/material.dart` still resolves in Flutter 3.47.9 and is frozen
 at zero by `mobile/scripts/check_legacy_design_imports.sh` — importing it gives
 you a second, incompatible `ThemeData` / `MaterialLocalizations`, and the type
 error lands somewhere other than the import.

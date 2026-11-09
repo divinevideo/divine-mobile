@@ -5,7 +5,7 @@
 # `package:flutter/cupertino.dart`.
 #
 # Why this needs a guard rather than a note in a rules file. Both libraries
-# still exist in Flutter 3.47.2, so a reintroduced import compiles, analyzes and
+# still exist in Flutter 3.47.9, so a reintroduced import compiles, analyzes and
 # tests clean — right up to the point where two `ThemeData`s, two `AppBar`s or
 # two `MaterialLocalizations` meet. The failure then reads as an unrelated type
 # error in whichever file happens to sit at the seam, and the actual mistake is
@@ -55,7 +55,7 @@ DETECT_RE="^[[:space:]]*(import|export)[[:space:]]+'package:flutter/(material|cu
 NEW_HINT="Material and Cupertino ship as pub packages now: import package:material_ui/material_ui.dart or package:cupertino_ui/cupertino_ui.dart. A file that needs no design-system widget should import package:flutter/widgets.dart instead. Mixing the two libraries gives you two incompatible ThemeData/MaterialLocalizations types and the error surfaces far from the import. See #8916."
 STALE_HINT="A file dropped its legacy Material/Cupertino import."
 FOOTER="Imports of package:flutter/material.dart and package:flutter/cupertino.dart
-are frozen at zero (#8916). Both libraries still exist in Flutter 3.47.2, so a
+are frozen at zero (#8916). Both libraries still exist in Flutter 3.47.9, so a
 reintroduced import compiles and only fails where the two type universes meet.
 List the sites with:
   cd mobile && grep -rnE \"^[[:space:]]*(import|export)[[:space:]]+'package:flutter/(material|cupertino)[.]dart'\" lib test integration_test packages tools"

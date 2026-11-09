@@ -511,9 +511,9 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         )
 
     def test_shorebird_install_reuses_only_the_expected_cached_version(self) -> None:
-        self.assertIn('EXPECTED_SHOREBIRD_VERSION="Shorebird 1.6.120"', self.contents)
+        self.assertIn('EXPECTED_SHOREBIRD_VERSION="Shorebird 1.6.138"', self.contents)
         self.assertIn(
-            'EXPECTED_SHOREBIRD_REVISION="5ac7f9a9a5c4a5e66a958e608da0f73e34a3d6bb"',
+            'EXPECTED_SHOREBIRD_REVISION="86b9685a87ba8945ddca2d1dfcd20b6828233f59"',
             self.contents,
         )
         self.assertIn('if [ -x "$SHOREBIRD_BIN" ]; then', self.contents)

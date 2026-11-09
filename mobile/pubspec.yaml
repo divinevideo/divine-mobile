@@ -114,7 +114,7 @@ dependencies:
 
   # Material and Cupertino left the Flutter framework and now ship as pub
   # packages maintained in flutter/packages. `package:flutter/material.dart`
-  # still exists in 3.47.2 but is the legacy path (#8916).
+  # still exists in 3.47.9 but is the legacy path (#8916).
   material_ui: ^1.2.0
   cupertino_ui: ^1.0.2
 
@@ -478,7 +478,7 @@ dev_dependencies:
   # Emitter.call (cancelled, so a no-op). Already in the tree transitively via
   # build_runner; named here so the guard does not depend on that staying true.
   # Held below 14 by test 1.31.1, the only test release matching the test_api
-  # that Flutter 3.47.2's flutter_test pins.
+  # that Flutter 3.47.9's flutter_test pins.
   analyzer: ^13.3.0
 
   # Testing

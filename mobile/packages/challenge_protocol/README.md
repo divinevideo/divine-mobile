@@ -92,7 +92,7 @@ Unicode version pins make this behavior reproducible; they do not promise
 compatibility with future canonical runtime versions. Callers must still bound
 transport bytes before decoding untrusted data, and retained batch size.
 
-Run with the repository's pinned Flutter 3.47.2 / Dart 3.13 toolchain:
+Run with the repository's pinned Flutter 3.47.9 / Dart 3.13 toolchain:
 
 ```sh
 cd mobile
