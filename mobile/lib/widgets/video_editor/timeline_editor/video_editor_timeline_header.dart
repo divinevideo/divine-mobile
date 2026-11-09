@@ -25,44 +25,84 @@ class VideoEditorTimelineHeader extends StatelessWidget {
   final ValueNotifier<double?> volumePreviewNotifier;
 
   static const _padding = EdgeInsets.symmetric(horizontal: 16);
+  static const _spacing = 8.0;
+
+  /// The width of a small [DivineIconButton] before the text size scales it.
+  static const _buttonExtent = 48.0;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isVolumeEditMode = context.select(
-          (VideoEditorMainBloc b) => b.state.isVolumeEditMode,
-        );
+    final isVolumeEditMode = context.select(
+      (VideoEditorMainBloc b) => b.state.isVolumeEditMode,
+    );
+    // The editor timeline draws clips at full length, but an overlap
+    // transition (every type but the dips) blends two clips so the rendered
+    // output is shorter. The time shows the output length — and the playhead
+    // mapped onto it — so the header reflects the final video, not the
+    // editing space. The timeline layout itself stays on the editor axis.
+    final clips = context.select((ClipEditorBloc b) => b.state.clips);
+    final timelineMap = TransitionTimelineMap.fromClips(clips);
 
-        return SingleChildScrollView(
-          padding: _padding,
-          scrollDirection: .horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minWidth: constraints.maxWidth - _padding.horizontal,
-            ),
-            child: Row(
-              mainAxisAlignment: .spaceBetween,
-              spacing: 8,
-              children: [
-                const Row(
-                  spacing: 8,
-                  children: [_PlayPauseButton(), _VolumeButton()],
-                ),
-
-                if (isVolumeEditMode)
-                  _VolumeTextDisplay(
+    return Padding(
+      padding: _padding,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final buttonWidth = DivineIcon.scaleSize(context, _buttonExtent);
+          final widthBetweenButtons =
+              constraints.maxWidth - 4 * buttonWidth - 4 * _spacing;
+          // Its own node, so a screen reader does not read it as part of
+          // the timeline's controls.
+          final text = Semantics(
+            container: true,
+            child: isVolumeEditMode
+                ? _VolumeTextDisplay(
                     volumePreviewNotifier: volumePreviewNotifier,
                   )
-                else
-                  _TimeDisplay(playheadPosition: playheadPosition),
+                : _TimeDisplay(
+                    playheadPosition: playheadPosition,
+                    timelineMap: timelineMap,
+                  ),
+          );
 
-                const Row(spacing: 8, children: [_UndoButton(), _RedoButton()]),
+          // Judged by the time in either mode, so entering volume mode never
+          // moves the timeline below.
+          if (_TimeDisplay.widthOf(context, timelineMap) <=
+              widthBetweenButtons) {
+            return Row(
+              spacing: _spacing,
+              children: [
+                const _PlayPauseButton(),
+                const _VolumeButton(),
+                Expanded(child: Center(child: text)),
+                const _UndoButton(),
+                const _RedoButton(),
               ],
-            ),
-          ),
-        );
-      },
+            );
+          }
+          // At a large text size the text takes its own line below the
+          // buttons, which keep their place at the edges.
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            spacing: _spacing,
+            children: [
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    spacing: _spacing,
+                    children: [_PlayPauseButton(), _VolumeButton()],
+                  ),
+                  Row(
+                    spacing: _spacing,
+                    children: [_UndoButton(), _RedoButton()],
+                  ),
+                ],
+              ),
+              text,
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -115,17 +155,25 @@ class _VolumeTextDisplay extends StatelessWidget {
       valueListenable: volumePreviewNotifier,
       builder: (context, preview, _) {
         if (preview != null) {
-          return Text(
-            context.l10n.videoEditorTimelineVolumePreview(
-              (preview * 100).round(),
-            ),
-            style: VineTheme.labelLargeFont(
-              color: volumeBoostColor(preview) ?? VineTheme.accentYellow,
+          // One line that shrinks to fit, so the value stays whole.
+          return FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              context.l10n.videoEditorTimelineVolumePreview(
+                (preview * 100).round(),
+              ),
+              maxLines: 1,
+              style: VineTheme.labelLargeFont(
+                color: volumeBoostColor(preview) ?? VineTheme.accentYellow,
+              ),
             ),
           );
         }
         return Text(
           context.l10n.videoEditorTimelineSlideToAdjust,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
           style: VineTheme.bodyMediumFont(
             color: context.vineColors.onSurfaceMuted,
           ),
@@ -172,22 +220,50 @@ class _VolumeButton extends StatelessWidget {
 }
 
 class _TimeDisplay extends StatelessWidget {
-  const _TimeDisplay({required this.playheadPosition});
+  const _TimeDisplay({
+    required this.playheadPosition,
+    required this.timelineMap,
+  });
 
   final ValueNotifier<Duration> playheadPosition;
 
+  /// Maps the playhead onto the rendered output.
+  final TransitionTimelineMap timelineMap;
+
+  static TextStyle _styleOf(BuildContext context) => VineTheme.labelLargeFont(
+    color: context.vineColors.primaryText,
+  ).copyWith(fontFeatures: [const FontFeature.tabularFigures()]);
+
+  /// The width the time takes on one line at the current text size.
+  ///
+  /// Measured with the output length on both sides of the slash: the
+  /// position never has more digits.
+  static double widthOf(
+    BuildContext context,
+    TransitionTimelineMap timelineMap,
+  ) {
+    var style = _styleOf(context);
+    // Bold Text widens every glyph, as [Text] applies it.
+    if (MediaQuery.boldTextOf(context)) {
+      style = style.copyWith(fontWeight: FontWeight.bold);
+    }
+    final total = TimeFormatter.formatCompactDuration(
+      timelineMap.outputDuration,
+    );
+    final painter = TextPainter(
+      text: TextSpan(text: '$total / $total', style: style),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final timeStyle = VineTheme.labelLargeFont(
-      color: context.vineColors.primaryText,
-    ).copyWith(fontFeatures: [const FontFeature.tabularFigures()]);
-    // The editor timeline draws clips at full length, but an overlap transition
-    // (every type but the dips) blends two clips so the rendered output is
-    // shorter. Show the output length — and the playhead mapped onto it — so the
-    // header reflects the final video, not the editing space. The timeline
-    // layout itself stays on the editor axis.
-    final clips = context.select((ClipEditorBloc b) => b.state.clips);
-    final timelineMap = TransitionTimelineMap.fromClips(clips);
+    final timeStyle = _styleOf(context);
     final outputDuration = timelineMap.outputDuration;
 
     return ValueListenableBuilder<Duration>(
@@ -203,18 +279,23 @@ class _TimeDisplay extends StatelessWidget {
               ? timeStyle.copyWith(color: VineTheme.warning)
               : timeStyle,
         );
-        return Text.rich(
-          TextSpan(
-            children: [
-              positionText,
-              TextSpan(text: ' / ', style: timeStyle),
-              TextSpan(
-                text: TimeFormatter.formatCompactDuration(outputDuration),
-                style: timeStyle,
-              ),
-            ],
+        // Shrinks rather than wrapping a time, should even a whole line be
+        // too narrow for it.
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text.rich(
+            TextSpan(
+              children: [
+                positionText,
+                TextSpan(text: ' / ', style: timeStyle),
+                TextSpan(
+                  text: TimeFormatter.formatCompactDuration(outputDuration),
+                  style: timeStyle,
+                ),
+              ],
+            ),
+            maxLines: 1,
           ),
-          maxLines: 1,
         );
       },
     );
