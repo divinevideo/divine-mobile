@@ -797,18 +797,21 @@ internal fun dispatchBackPressToFlutter(
     }
 }
 
-// The Zendesk SDK answers a failed token exchange with a synthetic 400 whose
-// message names the failure (zendesk.core.ZendeskAccessInterceptor), so the
-// status alone cannot tell it from a rejected request.
+// The Zendesk SDK answers an authentication it cannot complete with a
+// synthetic 400 whose message names the failure
+// (zendesk.core.ZendeskAccessInterceptor), so the status alone cannot tell it
+// from a rejected request.
 private val zendeskAuthFailureMarkers = listOf(
     "failed to auth user",
     "expected type of authentication",
 )
 
-// The same interceptor reports an I/O error during that exchange as a
-// synthetic 400 with no throwable, so only the reason marks the device offline.
+// An I/O error during the token exchange comes back as the same kind of 400
+// with no throwable, so only the reason marks the device offline. The SDK also
+// sends it for an empty JWT user identifier, which is treated as offline too.
 // "Response body was null" and "Response was 409" are real auth failures.
-private const val ZENDESK_OFFLINE_TOKEN_EXCHANGE_MARKER = "response was null"
+private const val ZENDESK_OFFLINE_TOKEN_EXCHANGE_MARKER =
+    "response was null, failed to auth user"
 
 /**
  * The `details` of the `CREATE_FAILED` error that `createTicket` raises when
