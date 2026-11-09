@@ -289,8 +289,8 @@ void main() {
     testWidgets(
       'Open Settings retries after the widget that opened the sheet is gone',
       (tester) async {
-        // The feed share sheet closes itself as it opens this sheet, so the
-        // opener is unmounted long before the user taps Open Settings.
+        // The feed share sheet pops itself before presenting this sheet, so
+        // the opener is unmounted long before the user taps Open Settings.
         when(
           () => mockPermissions.openAppSettings(),
         ).thenAnswer((_) async => true);
