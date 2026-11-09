@@ -687,7 +687,8 @@ class ZendeskSupportService {
     }
 
     // Refresh JWT before SDK action. The pre-auth token has a 5-minute TTL,
-    // so any delay between login and ticket creation will cause "unauthorized".
+    // so any delay between login and ticket creation will cause an
+    // authentication failure.
     // This gets a fresh token every time, regardless of how long the user waited.
     await _ensureFreshJwt();
     if (!ownsTicket()) return false;
@@ -764,11 +765,12 @@ class ZendeskSupportService {
       // The error a report names; the retry's own when it fails differently.
       var reportedError = e;
 
-      // JWT pre-auth tokens expire after 5 minutes. If the user reports
-      // content later than that, the SDK's JWT callback fails. Fall back to
-      // anonymous identity (already has name/email from login) and retry
-      // before trying the REST API. The SDK sent no ticket when it could not
-      // authenticate, so the retry cannot file a duplicate.
+      // A pre-auth token lasts 5 minutes and `_ensureFreshJwt`, which ran
+      // before this call, reuses one for 4, so it can lapse only when that
+      // refresh failed or was skipped. The SDK then fails to authenticate:
+      // fall back to the anonymous identity (it already has name/email from
+      // login) and retry before the REST API. No ticket exists after an
+      // authentication failure, so the retry cannot file a duplicate.
       if (e.code == 'CREATE_FAILED' && _isNativeAuthFailure(e)) {
         Log.info(
           '🔄 Zendesk SDK could not authenticate, retrying with anonymous '
@@ -863,7 +865,7 @@ class ZendeskSupportService {
   ///
   /// iOS says "unauthorized" in the message. Android flags `authFailed` in the
   /// details instead, because its SDK reports a failed token exchange as a 400
-  /// whose message never says so.
+  /// whose message never says "unauthorized".
   static bool _isNativeAuthFailure(PlatformException e) {
     final details = e.details;
     if (details is Map && details['authFailed'] == true) return true;

@@ -798,9 +798,8 @@ internal fun dispatchBackPressToFlutter(
 }
 
 // The Zendesk SDK answers a failed token exchange with a synthetic 400 whose
-// message names the failure (zendesk.core.ZendeskAccessInterceptor in
-// com.zendesk:core 4.0.9), so the status alone cannot tell it from a
-// rejected request.
+// message names the failure (zendesk.core.ZendeskAccessInterceptor), so the
+// status alone cannot tell it from a rejected request.
 private val zendeskAuthFailureMarkers = listOf(
     "failed to auth user",
     "expected type of authentication",
