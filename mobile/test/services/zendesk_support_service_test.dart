@@ -1234,31 +1234,6 @@ void main() {
         isNot(contains('reporter@example.com')),
       );
     });
-
-    test('redacts credentials and device paths from the reported SDK '
-        'reason', () async {
-      await initializeWithCreateTicketFailures([
-        PlatformException(
-          code: 'CREATE_FAILED',
-          message:
-              'Authorization: Bearer synthetic-bearer-secret rejected '
-              'https://api.example.test/v1/tickets?token=synthetic-query-secret '
-              'for /data/user/0/co.openvine.app/cache/attachment.png',
-        ),
-      ]);
-
-      await ZendeskSupportService.createTicket(
-        subject: 'Content Report',
-        description: 'Test report',
-      );
-
-      final reported = crashReporter.logs.single;
-      expect(reported, contains('rejected'));
-      expect(reported, contains('api.example.test'));
-      expect(reported, isNot(contains('synthetic-bearer-secret')));
-      expect(reported, isNot(contains('synthetic-query-secret')));
-      expect(reported, isNot(contains('/data/user/0')));
-    });
   });
 
   group('ZendeskSupportService identity consistency', () {

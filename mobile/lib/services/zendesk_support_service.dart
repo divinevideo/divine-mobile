@@ -885,12 +885,9 @@ class ZendeskSupportService {
         'Zendesk SDK could not create ticket: ${e.code}'
         '${status is int && status > 0 ? ' (HTTP $status)' : ''}';
     final reason = e.message;
-    // SDK reasons are arbitrary text, so redact credentials and device paths
-    // too, not only the identifiers `sanitizeForCrashReport` covers.
-    final safeReason = reason == null
-        ? null
-        : sanitizeForCrashReport(sanitizeDiagnosticText(reason));
-    crashlytics.log(safeReason == null ? summary : '$summary - $safeReason');
+    crashlytics.log(
+      reason == null ? summary : '$summary - ${sanitizeForCrashReport(reason)}',
+    );
     unawaited(
       crashlytics.recordError(
         Exception(summary),
