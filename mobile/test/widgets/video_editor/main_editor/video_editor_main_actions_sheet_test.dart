@@ -191,6 +191,37 @@ void main() {
       });
     }
 
+    testWidgets('keeps four columns for the English labels on a small phone', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        _buildShowHost(
+          mainBloc: mainBloc,
+          clipBloc: clipBloc,
+          timelineOverlayBloc: timelineOverlayBloc,
+          tuneBloc: tuneBloc,
+          drawBloc: drawBloc,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('open-sheet')));
+      await tester.pumpAndSettle();
+
+      final grid = tester.widget<GridView>(
+        find.descendant(
+          of: find.byType(VideoEditorMainActionsSheet),
+          matching: find.byType(GridView),
+        ),
+      );
+      final delegate =
+          grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+      expect(delegate.crossAxisCount, equals(4));
+    });
+
     testWidgets(
       'keeps a two-line de label inside its row when the grid widens columns',
       (tester) async {
