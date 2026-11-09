@@ -860,6 +860,28 @@ void main() {
       expect(container.exists(videoCardAuthorStatsProvider(pubkey)), isFalse);
       await updates.close();
     });
+
+    test(
+      'reports no error when disposed in the same event-loop turn',
+      () async {
+        when(
+          () => profileRepository.getCachedProfileStats(pubkey: pubkey),
+        ).thenAnswer((_) async => _stats(pubkey));
+        when(
+          () => profileRepository.watchProfileStats(pubkey: pubkey),
+        ).thenAnswer((_) => const Stream<ProfileStats?>.empty());
+        final uncaught = <Object>[];
+
+        runZonedGuarded(() {
+          container
+            ..listen(videoCardAuthorStatsProvider(pubkey), (_, _) {})
+            ..dispose();
+        }, (error, _) => uncaught.add(error));
+        await pumpEventQueue();
+
+        expect(uncaught, isEmpty);
+      },
+    );
   });
 
   group('read/write split (#6423)', () {

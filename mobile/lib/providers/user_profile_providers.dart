@@ -92,13 +92,19 @@ Stream<ProfileStats?> _watchProfileStats(
 /// when the card leaves the tree, and a fresh cached row short-circuits the
 /// fetch so re-mounting a card does not re-fetch.
 @riverpod
-Stream<ProfileStats?> videoCardAuthorStats(Ref ref, String pubkey) async* {
+Stream<ProfileStats?> videoCardAuthorStats(Ref ref, String pubkey) {
   final repo = ref.watch(profileReadRepositoryProvider);
-  if (repo == null) {
-    yield null;
-    return;
-  }
+  if (repo == null) return _nullProfileStatsStream();
 
+  return _watchCardAuthorStats(repo, pubkey);
+}
+
+// Takes no Ref: an `async*` body starts in a microtask after Riverpod listens,
+// and a card scrolled away before then has already unmounted the Ref.
+Stream<ProfileStats?> _watchCardAuthorStats(
+  ProfileReader repo,
+  String pubkey,
+) async* {
   final cached = await repo.getCachedProfileStats(pubkey: pubkey);
   if (cached?.hasKnownTotalViews != true) {
     unawaited(
