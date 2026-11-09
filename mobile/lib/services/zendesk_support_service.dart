@@ -890,7 +890,7 @@ class ZendeskSupportService {
     final status = details is Map ? details['status'] : null;
     final summary =
         'Zendesk SDK could not create ticket: ${e.code}'
-        '${status is int ? ' (HTTP $status)' : ''}';
+        '${status is int && status > 0 ? ' (HTTP $status)' : ''}';
     final reason = e.message;
     // SDK reasons are arbitrary text, so redact credentials and device paths
     // too, not only the identifiers `sanitizeForCrashReport` covers.

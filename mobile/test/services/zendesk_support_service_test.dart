@@ -955,10 +955,13 @@ void main() {
     late _RecordingCrashReporter crashReporter;
     late List<MethodCall> calls;
 
-    // Answers every `createTicket` with [failures] in order, then success.
+    // Answers every `createTicket` with [failures] in order, then success. A
+    // [PlatformException] is thrown; any other entry is returned as the
+    // result, such as `false` for a ticket the SDK declined without an error.
     Future<void> initializeWithCreateTicketFailures(
-      List<PlatformException> failures,
-    ) async {
+      List<Object> failures, {
+      bool withIdentity = true,
+    }) async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (MethodCall call) async {
             calls.add(call);
@@ -966,7 +969,11 @@ void main() {
               final attempt = calls
                   .where((c) => c.method == 'createTicket')
                   .length;
-              if (attempt <= failures.length) throw failures[attempt - 1];
+              if (attempt <= failures.length) {
+                final failure = failures[attempt - 1];
+                if (failure is PlatformException) throw failure;
+                return failure;
+              }
             }
             return true;
           });
@@ -975,23 +982,31 @@ void main() {
         clientId: 'test',
         zendeskUrl: 'https://test.zendesk.com',
       );
-      ZendeskSupportService.setUserIdentity(
-        npub: 'npub1test1234567890abcdef1234567890abcdef1234567890abcdef1234',
-        displayName: 'Test User',
-      );
+      if (withIdentity) {
+        ZendeskSupportService.setUserIdentity(
+          npub: 'npub1test1234567890abcdef1234567890abcdef1234567890abcdef1234',
+          displayName: 'Test User',
+        );
+      }
     }
 
     int createTicketCalls() =>
         calls.where((c) => c.method == 'createTicket').length;
 
     setUp(() {
-      // Without a REST API token the SDK is the only delivery path, which is
-      // the release-build case these tests pin.
-      expect(ZendeskConfig.isRestApiConfigured, isFalse);
       calls = [];
       crashReporter = _RecordingCrashReporter();
       originalCrashReporter = ZendeskSupportService.crashlytics;
       ZendeskSupportService.crashlytics = crashReporter;
+      // Without a REST API token the SDK is the only delivery path, which is
+      // the release-build case these tests pin.
+      expect(
+        ZendeskConfig.isRestApiConfigured,
+        isFalse,
+        reason:
+            'ZENDESK_API_TOKEN is defined, so the REST fallback would run '
+            'instead of the report these tests pin; run without it.',
+      );
     });
 
     tearDown(() => ZendeskSupportService.crashlytics = originalCrashReporter);
@@ -1098,6 +1113,87 @@ void main() {
       expect(createTicketCalls(), 2);
       expect(crashReporter.reasons, isEmpty);
       expect(crashReporter.logs, isEmpty);
+    });
+
+    test('leaves the HTTP status out of a report when no response '
+        'arrived', () async {
+      await initializeWithCreateTicketFailures([
+        PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Unparseable response',
+          details: {'status': -1, 'networkError': false, 'authFailed': false},
+        ),
+      ]);
+
+      await ZendeskSupportService.createTicket(
+        subject: 'Content Report',
+        description: 'Test report',
+      );
+
+      expect(crashReporter.reasons, ['zendesk_sdk_create_failed']);
+      final reported = crashReporter.errors.single.toString();
+      expect(reported, contains('CREATE_FAILED'));
+      expect(reported, isNot(contains('HTTP')));
+    });
+
+    test('reports the authentication failure when the anonymous retry '
+        'creates no ticket', () async {
+      await initializeWithCreateTicketFailures([
+        PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Response body was null, failed to auth user.',
+          details: {'status': 400, 'networkError': false, 'authFailed': true},
+        ),
+        false,
+      ]);
+
+      final result = await ZendeskSupportService.createTicket(
+        subject: 'Content Report',
+        description: 'Test report',
+      );
+
+      expect(result, isFalse);
+      expect(createTicketCalls(), 2);
+      expect(crashReporter.reasons, ['zendesk_sdk_create_failed']);
+      expect(crashReporter.logs.single, contains('failed to auth user'));
+    });
+
+    test('reports the authentication failure when no identity is set to '
+        'retry with', () async {
+      await initializeWithCreateTicketFailures([
+        PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Response body was null, failed to auth user.',
+          details: {'status': 400, 'networkError': false, 'authFailed': true},
+        ),
+      ], withIdentity: false);
+
+      final result = await ZendeskSupportService.createTicket(
+        subject: 'Content Report',
+        description: 'Test report',
+      );
+
+      expect(result, isFalse);
+      expect(createTicketCalls(), 1);
+      expect(crashReporter.reasons, ['zendesk_sdk_create_failed']);
+      expect(crashReporter.logs.single, contains('failed to auth user'));
+    });
+
+    test('reports only the summary when the SDK gives no reason', () async {
+      await initializeWithCreateTicketFailures([
+        PlatformException(
+          code: 'CREATE_FAILED',
+          details: {'status': 500, 'networkError': false, 'authFailed': false},
+        ),
+      ]);
+
+      await ZendeskSupportService.createTicket(
+        subject: 'Content Report',
+        description: 'Test report',
+      );
+
+      expect(crashReporter.reasons, ['zendesk_sdk_create_failed']);
+      expect(crashReporter.logs.single, endsWith('CREATE_FAILED (HTTP 500)'));
     });
 
     test('keeps a network failure out of crash reports', () async {
