@@ -9,7 +9,11 @@ import 'package:meta/meta.dart';
 @immutable
 class LikersPage {
   /// Creates a page of likers.
-  const LikersPage({required this.pubkeys, this.nextCursor});
+  const LikersPage({
+    required this.pubkeys,
+    this.nextCursor,
+    this.isComplete = true,
+  });
 
   /// A page with no likers and nothing further to fetch.
   static const empty = LikersPage(pubkeys: []);
@@ -26,10 +30,21 @@ class LikersPage {
   /// answers with everything it found in a single page.
   final String? nextCursor;
 
+  /// Whether [pubkeys] can be taken as everyone the source knows about.
+  ///
+  /// Always `true` for a page from the API, and for a relay fallback page
+  /// when every relay finished, or when the API had already listed nobody and
+  /// the relays found nobody either. `false` when the relay fallback stopped
+  /// first: it ran out of time, a relay was cut off or dropped, or a relay
+  /// refused while no other relay answered. [pubkeys] then holds only the
+  /// people found so far, and an empty list does not mean nobody (#10846).
+  final bool isComplete;
+
   /// Whether a further page can be requested.
   bool get hasMore => nextCursor != null;
 
   @override
   String toString() =>
-      'LikersPage(count: ${pubkeys.length}, nextCursor: $nextCursor)';
+      'LikersPage(count: ${pubkeys.length}, nextCursor: $nextCursor, '
+      'isComplete: $isComplete)';
 }

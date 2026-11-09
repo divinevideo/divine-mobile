@@ -81,12 +81,29 @@ void main() {
       return event;
     }
 
-    // Helper to mock queryEvents with sequential responses
+    /// Stubs relay reads with sequential [responses] in call order, shared by
+    /// queryEvents and the settled reads a likers list makes (#10846), each
+    /// of those settling in full.
     void mockQueryEventsSequence(List<List<Event>> responses) {
       var callCount = 0;
       when(() => mockNostrClient.queryEvents(any())).thenAnswer((_) async {
         return responses[callCount++ % responses.length];
       });
+      when(
+        () => mockNostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          acceptRelayClosedWhenOthersAnswered: any(
+            named: 'acceptRelayClosedWhenOthersAnswered',
+          ),
+        ),
+      ).thenAnswer(
+        (_) async => (
+          events: responses[callCount++ % responses.length],
+          timedOut: false,
+          noRelays: false,
+        ),
+      );
     }
 
     /// Stubs the reads that must tell a complete answer from a short one —
@@ -105,6 +122,42 @@ void main() {
           events: responses[callCount++ % responses.length],
           endedBy: QueryEnd.complete,
         ),
+      );
+    }
+
+    /// Asserts no relay list read ran, through queryEvents or the settled read
+    /// the likers fallback now makes (#10846). It does not cover readEvents,
+    /// which the sync and retraction reads use.
+    void verifyNoFallbackReads() {
+      verifyNever(() => mockNostrClient.queryEvents(any()));
+      verifyNever(
+        () => mockNostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          acceptRelayClosedWhenOthersAnswered: any(
+            named: 'acceptRelayClosedWhenOthersAnswered',
+          ),
+        ),
+      );
+    }
+
+    /// Stubs the reads a likers list waits on every relay for (#10846)
+    /// with [events], each ending unfinished unless [finished].
+    void stubSettledReads(
+      List<Event> events, {
+      bool finished = true,
+      bool noRelays = false,
+    }) {
+      when(
+        () => mockNostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          acceptRelayClosedWhenOthersAnswered: any(
+            named: 'acceptRelayClosedWhenOthersAnswered',
+          ),
+        ),
+      ).thenAnswer(
+        (_) async => (events: events, timedOut: !finished, noRelays: noRelays),
       );
     }
 
@@ -2878,7 +2931,16 @@ void main() {
           );
 
           expect(count, equals(2));
-          verify(() => mockNostrClient.queryEvents(any())).called(3);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
+          verify(() => mockNostrClient.queryEvents(any())).called(1);
         },
       );
 
@@ -2949,6 +3011,94 @@ void main() {
 
           expect(count, equals(likers.pubkeys.length));
           expect(likers.pubkeys, [likerC]);
+        },
+      );
+
+      test(
+        'returns null and caches nothing when the addressable read runs out '
+        'of time (#10846)',
+        () async {
+          const testAddressableId = '34236:$testAuthorPubkey:test-d-tag';
+          final reaction = createMockReaction(
+            id: 'reaction_e',
+            targetEventId: testEventId,
+            authorPubkey: 'liker_a_pubkey_1234567890abcdef',
+          );
+          final laterReaction = createMockReaction(
+            id: 'reaction_later',
+            targetEventId: testEventId,
+            authorPubkey: 'liker_b_pubkey_1234567890abcdef',
+          );
+          var finished = false;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: <Event>[reaction, if (finished) laterReaction],
+              timedOut: !finished,
+              noRelays: false,
+            ),
+          );
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          repository = createRepository();
+          final whileUnfinished = await repository.getLikeCount(
+            testEventId,
+            addressableId: testAddressableId,
+          );
+          finished = true;
+          final onceFinished = await repository.getLikeCount(
+            testEventId,
+            addressableId: testAddressableId,
+          );
+
+          expect(whileUnfinished, isNull);
+          expect(onceFinished, equals(2));
+        },
+      );
+
+      test(
+        'reads an addressable count without waiting for every relay (#10846)',
+        () async {
+          const testAddressableId = '34236:$testAuthorPubkey:test-d-tag';
+          stubSettledReads([
+            createMockReaction(
+              id: 'reaction_e',
+              targetEventId: testEventId,
+              authorPubkey: 'liker_a_pubkey_1234567890abcdef',
+            ),
+          ]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          repository = createRepository();
+          final count = await repository.getLikeCount(
+            testEventId,
+            addressableId: testAddressableId,
+          );
+
+          expect(count, equals(1));
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(
+                named: 'requireAllRelaysSettled',
+                that: isFalse,
+              ),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
         },
       );
 
@@ -3112,7 +3262,7 @@ void main() {
       test('returns empty map for empty input', () async {
         repository = createRepository();
         expect(await repository.getLikeCounts([]), isEmpty);
-        verifyNever(() => mockNostrClient.queryEvents(any()));
+        verifyNoFallbackReads();
       });
 
       test('queries relay for multiple event counts', () async {
@@ -3185,9 +3335,7 @@ void main() {
           // The addressable branch resolves through a different call site, so
           // it needs its own guard against an oversized `#e` frame.
           final eventIds = [for (var i = 0; i < 600; i++) 'event_id_$i'];
-          when(
-            () => mockNostrClient.queryEvents(any()),
-          ).thenAnswer((_) async => <Event>[]);
+          stubSettledReads(<Event>[]);
 
           repository = createRepository();
           await repository.getLikeCounts(
@@ -3198,7 +3346,17 @@ void main() {
           );
 
           final reactionFilters =
-              verify(() => mockNostrClient.queryEvents(captureAny())).captured
+              verify(
+                    () => mockNostrClient.queryEventsDetailed(
+                      captureAny(),
+                      requireAllRelaysSettled: any(
+                        named: 'requireAllRelaysSettled',
+                      ),
+                      acceptRelayClosedWhenOthersAnswered: any(
+                        named: 'acceptRelayClosedWhenOthersAnswered',
+                      ),
+                    ),
+                  ).captured
                   .cast<List<Filter>>()
                   .map((filters) => filters.single)
                   .where(
@@ -3332,13 +3490,11 @@ void main() {
             ],
           );
 
-          var callCount = 0;
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer((_) async {
-            callCount++;
-            if (callCount == 1) return [mockReactionByE];
-            if (callCount == 2) return [mockReactionByA1, mockReactionByA2];
-            return <Event>[];
-          });
+          mockQueryEventsSequence([
+            [mockReactionByE],
+            [mockReactionByA1, mockReactionByA2],
+            <Event>[],
+          ]);
 
           repository = createRepository();
           final counts = await repository.getLikeCounts(
@@ -3348,7 +3504,16 @@ void main() {
 
           // event1 has 1 from e-tag, event2 has 2 from a-tag
           expect(counts, {eventId1: 1, eventId2: 2});
-          verify(() => mockNostrClient.queryEvents(any())).called(3);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
+          verify(() => mockNostrClient.queryEvents(any())).called(1);
         },
       );
 
@@ -3394,15 +3559,11 @@ void main() {
           ],
         );
 
-        var callCount = 0;
-        when(() => mockNostrClient.queryEvents(any())).thenAnswer((_) async {
-          callCount++;
-          if (callCount == 1) {
-            return [mockReactionByE1, mockReactionByE2, mockReactionByE3];
-          }
-          if (callCount == 2) return [mockReactionByA1, mockReactionByA2];
-          return <Event>[];
-        });
+        mockQueryEventsSequence([
+          [mockReactionByE1, mockReactionByE2, mockReactionByE3],
+          [mockReactionByA1, mockReactionByA2],
+          <Event>[],
+        ]);
 
         repository = createRepository();
         final counts = await repository.getLikeCounts(
@@ -3481,7 +3642,16 @@ void main() {
 
           expect(counts[plainEvent], equals(1));
           expect(counts[addrEvent], equals(2));
-          verify(() => mockNostrClient.queryEvents(any())).called(3);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
+          verify(() => mockNostrClient.queryEvents(any())).called(1);
         },
       );
 
@@ -3518,7 +3688,106 @@ void main() {
           expect(second[eventId], equals(1));
           // First batch: e + a + deletion = 3 queries; the second is served
           // from _likeCountCache with no further relay calls.
-          verify(() => mockNostrClient.queryEvents(any())).called(3);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
+          verify(() => mockNostrClient.queryEvents(any())).called(1);
+        },
+      );
+
+      test(
+        'leaves out ids whose addressable read ran out of time, and asks '
+        'again next time (#10846)',
+        () async {
+          const eventId = 'unfinished_addr_event_1234567890abcdef0123';
+          const aTag = '34236:author:d-tag';
+          final reaction = createMockReaction(
+            id: 'reaction_e',
+            targetEventId: eventId,
+            authorPubkey: 'liker_a_pubkey_1234567890abcdef',
+          );
+          final laterReaction = createMockReaction(
+            id: 'reaction_later',
+            targetEventId: eventId,
+            authorPubkey: 'liker_b_pubkey_1234567890abcdef',
+          );
+          var finished = false;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: <Event>[reaction, if (finished) laterReaction],
+              timedOut: !finished,
+              noRelays: false,
+            ),
+          );
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          repository = createRepository();
+          final whileUnfinished = await repository.getLikeCounts(
+            [eventId],
+            addressableIds: {eventId: aTag},
+          );
+          finished = true;
+          final onceFinished = await repository.getLikeCounts(
+            [eventId],
+            addressableIds: {eventId: aTag},
+          );
+
+          expect(whileUnfinished, isEmpty);
+          expect(onceFinished, equals({eventId: 2}));
+        },
+      );
+
+      test(
+        'reads addressable counts without waiting for every relay (#10846)',
+        () async {
+          const eventId = 'settle_window_event_1234567890abcdef012345';
+          const aTag = '34236:author:d-tag';
+          stubSettledReads([
+            createMockReaction(
+              id: 'reaction_e',
+              targetEventId: eventId,
+              authorPubkey: 'liker_a_pubkey_1234567890abcdef',
+            ),
+          ]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          repository = createRepository();
+          final counts = await repository.getLikeCounts(
+            [eventId],
+            addressableIds: {eventId: aTag},
+          );
+
+          expect(counts, equals({eventId: 1}));
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(
+                named: 'requireAllRelaysSettled',
+                that: isFalse,
+              ),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
         },
       );
 
@@ -3597,7 +3866,14 @@ void main() {
           repository = createRepository();
           final result = await repository.syncUserReactions();
 
-          verifyNever(() => mockNostrClient.queryEvents(any()));
+          verifyNoFallbackReads();
+          verifyNever(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          );
           expect(result.orderedEventIds, contains(testEventId));
         },
       );
@@ -3615,7 +3891,14 @@ void main() {
           repository = createRepository();
           final result = await repository.syncUserReactions();
 
-          verifyNever(() => mockNostrClient.queryEvents(any()));
+          verifyNoFallbackReads();
+          verifyNever(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          );
           expect(result.orderedEventIds, contains(testEventId));
         },
       );
@@ -3630,7 +3913,7 @@ void main() {
           repository = createRepository();
           final statuses = await repository.getUserVoteStatuses([testEventId]);
 
-          verifyNever(() => mockNostrClient.queryEvents(any()));
+          verifyNoFallbackReads();
           expect(statuses.upvotedIds, isEmpty);
           expect(statuses.downvotedIds, isEmpty);
         },
@@ -4208,9 +4491,7 @@ void main() {
       }
 
       test('returns empty list when no reactions exist', () async {
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => <Event>[]);
+        stubSettledReads(<Event>[]);
 
         repository = createRepository();
         expect(
@@ -4327,8 +4608,9 @@ void main() {
           final calls = verify(
             () => mockNostrClient.queryEvents(captureAny()),
           ).captured.cast<List<Filter>>();
-          // 1 reaction (e) query + 2 chunked deletion queries.
-          expect(calls, hasLength(3));
+          // The reaction read is a settled read (#10846), so queryEvents sees
+          // only the 2 chunked deletion queries.
+          expect(calls, hasLength(2));
 
           final deletionFilters = calls
               .map((filters) => filters.single)
@@ -4523,14 +4805,26 @@ void main() {
 
       test('throws FetchLikersFailedException when relay query fails', () {
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
+          ),
         ).thenThrow(Exception('Network error'));
 
         repository = createRepository();
 
         expect(
           () => repository.fetchEventLikers(eventId: targetEventId),
-          throwsA(isA<FetchLikersFailedException>()),
+          throwsA(
+            isA<FetchLikersFailedException>().having(
+              (e) => e.message,
+              'message',
+              contains('Network error'),
+            ),
+          ),
         );
       });
 
@@ -4638,7 +4932,7 @@ void main() {
                 ),
                 throwsA(isA<FetchLikersFailedException>()),
               );
-              verifyNever(() => mockNostrClient.queryEvents(any()));
+              verifyNoFallbackReads();
             },
           );
 
@@ -4654,9 +4948,7 @@ void main() {
                   cursor: any(named: 'cursor'),
                 ),
               ).thenThrow(const FunnelcakeException('boom'));
-              when(
-                () => mockNostrClient.queryEvents(any()),
-              ).thenAnswer((_) async => <Event>[]);
+              stubSettledReads(<Event>[]);
 
               repository = createRepository(
                 funnelcakeApiClient: mockFunnelcake,
@@ -4666,9 +4958,13 @@ void main() {
               );
 
               expect(page.pubkeys, isEmpty);
-              verify(() => mockNostrClient.queryEvents(any())).called(
-                greaterThan(0),
-              );
+              verify(
+                () => mockNostrClient.queryEventsDetailed(
+                  any(),
+                  requireAllRelaysSettled: true,
+                  acceptRelayClosedWhenOthersAnswered: true,
+                ),
+              ).called(greaterThan(0));
             },
           );
 
@@ -4686,7 +4982,7 @@ void main() {
 
             expect(page.pubkeys, isEmpty);
             expect(page.hasMore, isFalse);
-            verifyNever(() => mockNostrClient.queryEvents(any()));
+            verifyNoFallbackReads();
           });
 
           // A full page whose every row the block filter removed still
@@ -4709,7 +5005,7 @@ void main() {
               expect(page.pubkeys, isEmpty);
               expect(page.nextCursor, equals('cursor_page_3'));
               expect(page.hasMore, isTrue);
-              verifyNever(() => mockNostrClient.queryEvents(any()));
+              verifyNoFallbackReads();
             },
           );
         });
@@ -4726,7 +5022,7 @@ void main() {
             )).pubkeys,
             equals([likerC, likerA]),
           );
-          verifyNever(() => mockNostrClient.queryEvents(any()));
+          verifyNoFallbackReads();
         });
 
         test('forwards the addressable coordinate to the API', () async {
@@ -4778,11 +5074,12 @@ void main() {
               addressableId: any(named: 'addressableId'),
             ),
           ).thenThrow(const FunnelcakeException('boom'));
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-            (_) async => [
-              createReaction(id: 'reaction_a', authorPubkey: likerA),
-            ],
-          );
+          stubSettledReads([
+            createReaction(id: 'reaction_a', authorPubkey: likerA),
+          ]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
 
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
 
@@ -4794,11 +5091,12 @@ void main() {
 
         test('falls back to relays when the API returns nobody', () async {
           stubLikers([]);
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-            (_) async => [
-              createReaction(id: 'reaction_a', authorPubkey: likerA),
-            ],
-          );
+          stubSettledReads([
+            createReaction(id: 'reaction_a', authorPubkey: likerA),
+          ]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
 
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
 
@@ -4810,11 +5108,12 @@ void main() {
 
         test('falls back to relays when the API is unconfigured', () async {
           when(() => mockFunnelcake.isAvailable).thenReturn(false);
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-            (_) async => [
-              createReaction(id: 'reaction_a', authorPubkey: likerA),
-            ],
-          );
+          stubSettledReads([
+            createReaction(id: 'reaction_a', authorPubkey: likerA),
+          ]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
 
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
 
@@ -4828,6 +5127,131 @@ void main() {
               addressableId: any(named: 'addressableId'),
             ),
           );
+        });
+
+        // #10846: the relay fallback used to read through queryEvents, which
+        // cannot say whether the relays finished, so a read cut short looked
+        // exactly like a video nobody liked.
+        group('relay fallback that does not finish', () {
+          void apiFails() {
+            when(
+              () => mockFunnelcake.getVideoLikers(
+                any(),
+                addressableId: any(named: 'addressableId'),
+              ),
+            ).thenThrow(const FunnelcakeException('boom'));
+          }
+
+          setUp(() {
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => <Event>[]);
+          });
+
+          test('marks an empty answer from an unfinished read', () async {
+            apiFails();
+            stubSettledReads(<Event>[], finished: false);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, isEmpty);
+            expect(page.isComplete, isFalse);
+          });
+
+          test('keeps the likers an unfinished read found, marked', () async {
+            apiFails();
+            stubSettledReads([
+              createReaction(id: 'reaction_a', authorPubkey: likerA),
+            ], finished: false);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, equals([likerA]));
+            expect(page.isComplete, isFalse);
+          });
+
+          test('marks a read every relay finished as complete', () async {
+            apiFails();
+            stubSettledReads([
+              createReaction(id: 'reaction_a', authorPubkey: likerA),
+            ]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, equals([likerA]));
+            expect(page.isComplete, isTrue);
+          });
+
+          test('treats a read no relay took as unfinished', () async {
+            apiFails();
+            stubSettledReads(<Event>[], noRelays: true);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.isComplete, isFalse);
+          });
+
+          test('trusts an API that listed nobody over an unfinished read '
+              'that found nobody', () async {
+            stubLikers([]);
+            stubSettledReads(<Event>[], finished: false);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, isEmpty);
+            expect(page.isComplete, isTrue);
+          });
+
+          test('marks people an unfinished read found after the API listed '
+              'nobody', () async {
+            stubLikers([]);
+            stubSettledReads([
+              createReaction(id: 'reaction_a', authorPubkey: likerA),
+            ], finished: false);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, equals([likerA]));
+            expect(page.isComplete, isFalse);
+          });
+
+          test('waits for every relay, settling on refusals once another '
+              'relay answered', () async {
+            apiFails();
+            stubSettledReads(<Event>[]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            await repository.fetchEventLikers(
+              eventId: targetEventId,
+              addressableId: addressableId,
+            );
+
+            verify(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
+              ),
+            ).called(2);
+          });
         });
 
         // #9357: /likers is built from what reached Funnelcake's own relay,
@@ -4914,7 +5338,7 @@ void main() {
               filters.single.e,
               unorderedEquals(const [reactionA, reactionB]),
             );
-            verifyNever(() => mockNostrClient.queryEvents(any()));
+            verifyNoFallbackReads();
           });
 
           test('keeps a liker when somebody else signed the kind 5 naming '
@@ -5065,7 +5489,7 @@ void main() {
 
             expect(page.pubkeys, isEmpty);
             expect(page.nextCursor, equals('cursor_page_2'));
-            verifyNever(() => mockNostrClient.queryEvents(any()));
+            verifyNoFallbackReads();
           });
 
           test('checks only the rows that name a reaction and keeps the '
@@ -5244,11 +5668,12 @@ void main() {
 
         test('leaves getLikeCount on the relay resolver', () async {
           stubLikers([likerA, likerB, likerC]);
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-            (_) async => [
-              createReaction(id: 'reaction_a', authorPubkey: likerA),
-            ],
-          );
+          stubSettledReads([
+            createReaction(id: 'reaction_a', authorPubkey: likerA),
+          ]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
 
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
 
@@ -7070,7 +7495,16 @@ void main() {
           );
           expect(secondCount, equals(1));
 
-          verify(() => mockNostrClient.queryEvents(any())).called(3);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
+          verify(() => mockNostrClient.queryEvents(any())).called(1);
         },
       );
     });
