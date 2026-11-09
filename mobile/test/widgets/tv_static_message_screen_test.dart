@@ -7,6 +7,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/tv_static_message_screen.dart';
 
+import '../helpers/text_lines.dart';
+
 void main() {
   group(TvStaticMessageScreen, () {
     testWidgets('renders the sticker, title, and description', (tester) async {
@@ -185,6 +187,49 @@ void main() {
       final screen = tester.getRect(find.byType(Scaffold));
 
       expect(column.bottom, equals(screen.bottom - 48));
+    });
+
+    group('at the largest text size on a small phone', () {
+      // The German camera permission error: the language with the longest
+      // words, on an iPhone SE at the largest iOS text size.
+      const title = 'Berechtigungsfehler';
+      const description =
+          'Beim Prüfen der Berechtigungen ist etwas schiefgelaufen.';
+
+      Future<void> pumpScreen(WidgetTester tester) {
+        tester.view
+          ..physicalSize = const Size(375, 667)
+          ..devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 3.12;
+        addTearDown(() {
+          tester.view
+            ..resetPhysicalSize()
+            ..resetDevicePixelRatio();
+          tester.platformDispatcher.clearAllTestValues();
+        });
+        return tester.pumpWidget(
+          const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: TvStaticMessageScreen(
+              sticker: DivineStickerName.alert,
+              title: title,
+              description: description,
+              onClose: _noop,
+            ),
+          ),
+        );
+      }
+
+      testWidgets('keeps every word on one line', (tester) async {
+        await pumpScreen(tester);
+
+        expect(wordsSplitAcrossLines(tester, find.text(title)), isEmpty);
+        expect(
+          wordsSplitAcrossLines(tester, find.text(description)),
+          isEmpty,
+        );
+      });
     });
   });
 }

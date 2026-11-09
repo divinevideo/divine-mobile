@@ -125,13 +125,23 @@ class SafeCacheInfoRepository implements CacheInfoRepository {
   ///
   /// This is called internally when the cache file is corrupted.
   /// Exposed as a visible method for testing purposes.
+  ///
+  /// A file that is already gone counts as deleted. `CacheStore`'s
+  /// constructor and `MediaCacheManager.initialize` open this repository
+  /// concurrently, so both can validate the same corrupt index and both
+  /// delete it; an existence check first still leaves the losing delete to
+  /// fail. The store keeps that `open()` future without a listener, so the
+  /// failure went unhandled and every later store operation rethrew it.
+  ///
+  /// Throws a [FileSystemException] for any other failure to delete.
   @visibleForTesting
   Future<void> deleteCacheFile() async {
     final directory = await _directoryProvider();
-    final filePath = path.join(directory.path, '$_databaseName.json');
-    final file = File(filePath);
-    if (file.existsSync()) {
+    final file = File(path.join(directory.path, '$_databaseName.json'));
+    try {
       await file.delete();
+    } on PathNotFoundException {
+      // Already deleted, by the other open or by the OS: the intended state.
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -15,6 +17,8 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_stop_motion_budget.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_progress_bar.dart';
+
+import '../../../../helpers/text_lines.dart';
 
 class _MockVideoRecorderBloc
     extends MockBloc<VideoRecorderEvent, VideoRecorderBlocState>
@@ -71,6 +75,8 @@ void main() {
       required int capturedFrames,
       int committedFrames = 0,
       int committedFramesPerImage = 1,
+      Locale locale = const Locale('en'),
+      bool betweenButtons = false,
     }) {
       when(() => recorderBloc.state).thenReturn(
         VideoRecorderBlocState(
@@ -94,13 +100,28 @@ void main() {
         ],
         child: BlocProvider<VideoRecorderBloc>.value(
           value: recorderBloc,
-          child: const MaterialApp(
+          child: MaterialApp(
+            locale: locale,
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             // Renders a Flexible for the top bar's center slot, so it needs a
             // Row around it.
             home: Scaffold(
-              body: Row(children: [VideoRecorderStopMotionBudget()]),
+              body: betweenButtons
+                  // The top bar's insets, with its close and next buttons on
+                  // either side.
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        spacing: 12,
+                        children: [
+                          SizedBox.square(dimension: 40),
+                          VideoRecorderStopMotionBudget(),
+                          SizedBox.square(dimension: 40),
+                        ],
+                      ),
+                    )
+                  : const Row(children: [VideoRecorderStopMotionBudget()]),
             ),
           ),
         ),
@@ -252,6 +273,43 @@ void main() {
       );
 
       handle.dispose();
+    });
+
+    testWidgets('keeps the count to one line between the top-bar buttons at '
+        'the largest font size', (tester) async {
+      // A 360dp Android phone at the largest font size, in German, whose
+      // count is the longest. Wrapped, it pushed the buttons down into the
+      // side rail.
+      tester.view
+        ..physicalSize = const Size(360, 640)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(() {
+        tester.view
+          ..resetPhysicalSize()
+          ..resetDevicePixelRatio();
+        tester.platformDispatcher.clearAllTestValues();
+      });
+
+      await tester.pumpWidget(
+        buildWidget(
+          capturedFrames: 5,
+          locale: const Locale('de'),
+          betweenButtons: true,
+        ),
+      );
+
+      final labelFinder = find.descendant(
+        of: find.byType(VideoRecorderProgressBar),
+        matching: find.byType(RichText),
+      );
+      expect(lineCountOf(tester, labelFinder), 1);
+      final label = tester.renderObject<RenderParagraph>(labelFinder);
+      // No larger than the audio chip lip-sync puts in the same slot.
+      expect(
+        label.textScaler.scale(14),
+        lessThanOrEqualTo(14 * chipLabelTextScaleLimit),
+      );
     });
 
     testWidgets('offers nothing once the composition fills the maximum', (

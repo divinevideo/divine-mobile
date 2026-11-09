@@ -29,6 +29,14 @@ const fixedRowTextScaleLimit = 1.25;
 /// video's own controls.
 const overlayActionColumnTextScaleLimit = 1.3;
 
+/// Display numerals drawn over the camera preview, such as the recorder's
+/// countdown.
+///
+/// They start several times larger than body text. Growing further only covers
+/// more of the preview, and at the largest sizes a two-digit count stretches
+/// across a small phone and over the controls at its sides.
+const overlayNumeralTextScaleLimit = 1.3;
+
 /// Labels inside a pill or chip that can grow somewhat before the
 /// surrounding controls collide.
 const chipLabelTextScaleLimit = 1.4;

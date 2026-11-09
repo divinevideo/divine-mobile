@@ -408,6 +408,65 @@ void main() {
         await repo.deleteCacheFile();
         expect(cacheFile.existsSync(), false);
       });
+
+      test('treats an index another delete removed first as deleted', () async {
+        // The cache store and the manifest load both open the repository at
+        // startup, so both validate a corrupt index and both delete it. The
+        // losing delete finds the file present, then gone.
+        final indexPath = '$testSupportPath/raced_index.json';
+        final indexFile = MockFile();
+        when(() => indexFile.path).thenReturn(indexPath);
+        when(indexFile.existsSync).thenReturn(true);
+        when(indexFile.delete).thenThrow(
+          PathNotFoundException(
+            indexPath,
+            const OSError('No such file or directory', 2),
+            'Cannot delete file',
+          ),
+        );
+
+        final repo = SafeCacheInfoRepository(
+          databaseName: 'raced_index',
+          repository: mockRepository,
+          directoryProvider: () async => testDirectory,
+        );
+
+        await expectLater(
+          IOOverrides.runZoned(
+            repo.deleteCacheFile,
+            createFile: (_) => indexFile,
+          ),
+          completes,
+        );
+      });
+
+      test('rethrows a delete that fails for another reason', () async {
+        final indexPath = '$testSupportPath/locked_index.json';
+        final indexFile = MockFile();
+        when(() => indexFile.path).thenReturn(indexPath);
+        when(indexFile.existsSync).thenReturn(true);
+        when(indexFile.delete).thenThrow(
+          FileSystemException(
+            'Cannot delete file',
+            indexPath,
+            const OSError('Operation not permitted', 1),
+          ),
+        );
+
+        final repo = SafeCacheInfoRepository(
+          databaseName: 'locked_index',
+          repository: mockRepository,
+          directoryProvider: () async => testDirectory,
+        );
+
+        await expectLater(
+          IOOverrides.runZoned(
+            repo.deleteCacheFile,
+            createFile: (_) => indexFile,
+          ),
+          throwsA(isA<FileSystemException>()),
+        );
+      });
     });
 
     group('delegation', () {
