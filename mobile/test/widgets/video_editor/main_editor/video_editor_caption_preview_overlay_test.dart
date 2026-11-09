@@ -68,37 +68,80 @@ void main() {
       playTime.dispose();
     });
 
-    Widget buildWidget() => MaterialApp(
-      localizationsDelegates: appLocalizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: VideoEditorScope(
-        editorKey: GlobalKey<ProImageEditorState>(),
-        removeAreaKey: GlobalKey(),
-        originalClipAspectRatio: 9 / 16,
-        bodySizeNotifier: ValueNotifier(const Size(400, 600)),
-        zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
-        playTimeNotifier: playTime,
-        playheadAdvancingNotifier: ValueNotifier<bool>(false),
-        fromLibrary: false,
-        onOpenCamera: () {},
-        onOpenClipsEditor: () {},
-        onAddStickers: () {},
-        onOpenMusicLibrary: () {},
-        onOpenVoiceOver: () {},
-        onOpenCaptions: () {},
-        onOpenEffects: () {},
-        onAddEditTextLayer: ([layer]) async => null,
-        child: MultiBlocProvider(
-          providers: [
-            BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
-            BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
-          ],
-          child: const Stack(children: [VideoEditorCaptionPreviewOverlay()]),
-        ),
-      ),
-    );
+    Widget buildWidget({Size? previewSize, double textScale = 1}) =>
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
+          home: VideoEditorScope(
+            editorKey: GlobalKey<ProImageEditorState>(),
+            removeAreaKey: GlobalKey(),
+            originalClipAspectRatio: 9 / 16,
+            bodySizeNotifier: ValueNotifier(const Size(400, 600)),
+            zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
+            playTimeNotifier: playTime,
+            playheadAdvancingNotifier: ValueNotifier<bool>(false),
+            fromLibrary: false,
+            onOpenCamera: () {},
+            onOpenClipsEditor: () {},
+            onAddStickers: () {},
+            onOpenMusicLibrary: () {},
+            onOpenVoiceOver: () {},
+            onOpenCaptions: () {},
+            onOpenEffects: () {},
+            onAddEditTextLayer: ([layer]) async => null,
+            child: MultiBlocProvider(
+              providers: [
+                BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
+                BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
+              ],
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox.fromSize(
+                  size: previewSize,
+                  child: const Stack(
+                    fit: StackFit.expand,
+                    children: [VideoEditorCaptionPreviewOverlay()],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
 
     group('renders', () {
+      // The preview above the timeline is about this short on an iPhone SE
+      // at the largest text size.
+      testWidgets('keeps a long cue inside a short preview at the largest '
+          'text size', (tester) async {
+        when(() => overlayBloc.state).thenReturn(
+          TimelineOverlayState(
+            items: [
+              _cue(
+                'long',
+                'A caption long enough to wrap onto a few lines',
+                0,
+                1000,
+              ),
+            ],
+          ),
+        );
+        playTime.value = const Duration(milliseconds: 200);
+        await tester.pumpWidget(
+          buildWidget(previewSize: const Size(375, 160), textScale: 3.12),
+        );
+
+        expect(tester.takeException(), isNull);
+        final pill = tester.getRect(find.byType(CaptionPill));
+        expect(pill.top, greaterThanOrEqualTo(0));
+        expect(pill.bottom, lessThanOrEqualTo(160));
+      });
+
       testWidgets('the cue active at the play time', (tester) async {
         playTime.value = const Duration(milliseconds: 200);
         await tester.pumpWidget(buildWidget());

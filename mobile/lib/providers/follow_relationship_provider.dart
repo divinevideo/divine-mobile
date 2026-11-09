@@ -5,6 +5,7 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:rxdart/rxdart.dart';
 
 part 'follow_relationship_provider.g.dart';
 
@@ -37,15 +38,26 @@ Future<void> myFollowersWarmup(Ref ref) async {
 /// [FollowRelationship.youFollow] upgrades to [FollowRelationship.mutual]
 /// without a rebuild of the surrounding list.
 @riverpod
-Stream<FollowRelationship> followRelationship(Ref ref, String pubkey) async* {
+Stream<FollowRelationship> followRelationship(Ref ref, String pubkey) {
   final repository = ref.watch(followRepositoryProvider);
 
   // Watched, not read: the loading -> data transition re-runs this body, which
   // is what promotes a relationship once the follower cache is populated.
   ref.watch(myFollowersWarmupProvider);
 
-  yield repository.relationshipTo(pubkey);
-  yield* repository.followingStream.map(
-    (_) => repository.relationshipTo(pubkey),
-  );
+  return _relationshipUpdates(repository, pubkey);
+}
+
+// Not `async*`: a generator body starts in a microtask after Riverpod listens,
+// so it also runs for a row disposed or rebuilt before then, and anything it
+// throws escapes as an unhandled error. Here nothing reads the repository
+// until an event is delivered.
+Stream<FollowRelationship> _relationshipUpdates(
+  FollowRepository repository,
+  String pubkey,
+) {
+  return Rx.concat<void>([
+    Stream.value(null),
+    Rx.defer(() => repository.followingStream),
+  ]).map((_) => repository.relationshipTo(pubkey));
 }

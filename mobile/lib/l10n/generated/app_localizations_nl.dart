@@ -8777,6 +8777,47 @@ class AppLocalizationsNl extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Sortering van reacties';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => 'Verborgen reacties tonen';
+
+  @override
+  String get commentsHiddenNotice =>
+      'De maker heeft deze reacties bewust verborgen.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Je hebt deze reacties in Divine verborgen. Andere apps en sites kunnen ze nog tonen, dus meld alles wat schadelijk is.';
+
+  @override
+  String get commentHiddenReportPrompt => 'Wil je deze reactie ook melden?';
+
+  @override
+  String get commentHiddenReportAction => 'Melden';
+
+  @override
+  String get commentHiddenByCreator => 'Verborgen door de maker';
+
+  @override
+  String get commentHiddenByYou => 'Verborgen door jou';
+
+  @override
+  String get commentOptionsHideLabel => 'Reactie verbergen';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Deze reactie op je video verbergen';
+
+  @override
+  String get commentOptionsShowLabel => 'Reactie tonen';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Deze reactie op je video weer tonen';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'De verborgen reacties konden niet worden bijgewerkt. Probeer het opnieuw.';
+
+  @override
   String get commentReply => 'Antwoorden';
 
   @override
@@ -12929,12 +12970,80 @@ class AppLocalizationsNl extends AppLocalizations {
   String get minorAccountReviewParentConsentEmailCta => 'Mail Divine-support';
 
   @override
+  String get minorAccountReviewParentConsentRecordCta => 'Record consent video';
+
+  @override
   String get minorAccountReviewParentConsentEmailSubject =>
       'Hulp bij Divine Greenlight-beoordeling (13-15 jaar)';
 
   @override
   String get minorAccountReviewParentConsentEmailBody =>
       'Hallo Divine-support,\n\nik neem contact op over Divine Greenlight voor een tiener van 13-15 jaar.\n\nIk heb een korte privévideo bijgevoegd die laat zien:\n- de tiener\n- een ouder of voogd die in de camera praat\n- dat de tiener toestemming heeft om Divine te gebruiken\n- dat de ouder of voogd van het account weet en toezicht houdt op het gebruik\n\nLand(en) van verblijf:\n\nHandige context:\n\nBedankt.';
+
+  @override
+  String get minorAccountReviewRecordConsentTitle => 'Record consent video';
+
+  @override
+  String get minorAccountReviewRecordConsentBody =>
+      'Record a short private video with the teen and a parent or guardian on camera. It stays on this device until you submit it.';
+
+  @override
+  String get minorAccountReviewRecordConsentPromptTitle => 'Say this on camera';
+
+  @override
+  String get minorAccountReviewRecordConsentRecordCta => 'Record';
+
+  @override
+  String get minorAccountReviewRecordConsentStopCta => 'Stop';
+
+  @override
+  String get minorAccountReviewRecordConsentPreviewLabel => 'Camera preview';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewTitle => 'Review your video';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewBody =>
+      'Watch it back. Retake if anything is missing, or use it if it shows everything above.';
+
+  @override
+  String get minorAccountReviewRecordConsentRetakeCta => 'Retake';
+
+  @override
+  String get minorAccountReviewRecordConsentUseVideoCta => 'Use this video';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedTitle =>
+      'We can\'t use the camera';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedBody =>
+      'Divine could not start the camera. You can still email a private video to Divine support instead.';
+
+  @override
+  String get minorAccountReviewRecordConsentEmailInsteadCta =>
+      'Use email instead';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorTitle => 'Recording failed';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorBody =>
+      'Something went wrong while recording. Please try again.';
+
+  @override
+  String get minorAccountReviewRecordConsentTryAgainCta => 'Try again';
+
+  @override
+  String get minorAccountReviewRecordConsentConfirmEmailTitle =>
+      'Confirm your email';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitCta => 'Submit video';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitError =>
+      'Could not submit your video. Please try again.';
 
   @override
   String get minorAccountReviewParentSupportInstructions =>
@@ -15943,4 +16052,19 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get messagesRoomDiscardDraft => 'Discard draft';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Je video is ingediend voor beoordeling.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video ingediend';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Je video wordt vertrouwelijk naar de teams voor ondersteuning en vertrouwen en veiligheid van Divine gestuurd voor beoordeling. De video wordt niet gepubliceerd of met andere gebruikers gedeeld.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Je inzending is niet geaccepteerd. Controleer je e-mailadres, neem de video opnieuw op of gebruik e-mail.';
 }

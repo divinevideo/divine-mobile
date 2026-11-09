@@ -21,6 +21,8 @@ part 'feed_top_comment_state.dart';
 /// the sheet, which nests them under their parent. The creator's own comments,
 /// video replies, blank comments, pending placeholders and comments dated more
 /// than [maxFutureSkew] ahead are not candidates.
+/// Creator-hidden comments are excluded before votes and reply counts are
+/// ranked, using the same author-view exception as the comments sheet.
 ///
 /// The overlay shows once the video has finished its first loop and the top
 /// comment is known, whichever happens last, and stays hidden after the
@@ -30,20 +32,33 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
   FeedTopCommentCubit({
     required CommentsRepository commentsRepository,
     required LikesRepository likesRepository,
+    required CommentModerationRepository commentModerationRepository,
     required String rootEventId,
     required int rootEventKind,
     required String rootAuthorPubkey,
     required Stream<void> loopCompletions,
     String? rootAddressableId,
+    String? viewerPubkey,
+    Set<String> viewerBlockedAuthors = const {},
+    bool initialHasCompletedLoop = false,
+    bool initiallyDismissed = false,
     DateTime Function()? now,
   }) : _commentsRepository = commentsRepository,
        _likesRepository = likesRepository,
+       _commentModerationRepository = commentModerationRepository,
        _rootEventId = rootEventId,
        _rootEventKind = rootEventKind,
        _rootAuthorPubkey = rootAuthorPubkey,
        _rootAddressableId = rootAddressableId,
+       _viewerPubkey = viewerPubkey,
+       _viewerBlockedAuthors = Set.unmodifiable(viewerBlockedAuthors),
        _now = now ?? DateTime.now,
-       super(const FeedTopCommentState()) {
+       super(
+         FeedTopCommentState(
+           hasCompletedLoop: initialHasCompletedLoop,
+           isDismissed: initiallyDismissed,
+         ),
+       ) {
     _loopSubscription = loopCompletions.listen((_) => _onLoopCompleted());
   }
 
@@ -57,6 +72,9 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
 
   final CommentsRepository _commentsRepository;
   final LikesRepository _likesRepository;
+  final CommentModerationRepository _commentModerationRepository;
+  final String? _viewerPubkey;
+  final Set<String> _viewerBlockedAuthors;
   final String _rootEventId;
   final int _rootEventKind;
 
@@ -76,13 +94,17 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
 
     final List<Comment> comments;
     try {
-      final thread = await _commentsRepository.loadComments(
-        rootEventId: _rootEventId,
-        rootEventKind: _rootEventKind,
-        rootAddressableId: _rootAddressableId,
-        limit: commentPageSize,
-      );
+      final results = await Future.wait<Object>([
+        _commentsRepository.loadComments(
+          rootEventId: _rootEventId,
+          rootEventKind: _rootEventKind,
+          rootAddressableId: _rootAddressableId,
+          limit: commentPageSize,
+        ),
+        _loadModeration(),
+      ]);
       if (isClosed) return;
+      final thread = results[0] as CommentThread;
       // Read sources can still serve author-deleted comments. The repository
       // validates NIP-09 requests and fails open when the relay cannot answer.
       final deleted = await _commentsRepository.findAuthorDeletedComments(
@@ -111,22 +133,83 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
               !comment.createdAt.isAfter(latestPlausible),
         )
         .toList();
-    if (candidates.isEmpty) {
-      emitIfOpen(state.copyWith(status: FeedTopCommentStatus.empty));
+    final beforeCounts = _knownModeration();
+    final effectiveBeforeCounts = _effectiveModeration(beforeCounts.moderation);
+    if (candidates.every(
+      (comment) => !_isVisible(comment, effectiveBeforeCounts),
+    )) {
+      emitIfOpen(
+        state.copyWith(
+          status: FeedTopCommentStatus.empty,
+          appliedModeration: beforeCounts.moderation,
+          moderationRevision: beforeCounts.revision,
+        ),
+      );
       return;
     }
 
     final upvotes = await _upvoteCounts(candidates);
     if (isClosed) return;
 
-    final top = _topComment(candidates, comments, upvotes);
+    // A relevant cache change while the network reads were in flight is
+    // already applied here; it must not cause the host to load the page again.
+    final current = _knownModeration();
+    final moderation = _effectiveModeration(current.moderation);
+    final visibleCandidates = candidates
+        .where((comment) => _isVisible(comment, moderation))
+        .toList();
+    if (visibleCandidates.isEmpty) {
+      emitIfOpen(
+        state.copyWith(
+          status: FeedTopCommentStatus.empty,
+          appliedModeration: current.moderation,
+          moderationRevision: current.revision,
+        ),
+      );
+      return;
+    }
+    final top = _topComment(
+      visibleCandidates,
+      comments.where((comment) => _isVisible(comment, moderation)).toList(),
+      upvotes,
+    );
     emitIfOpen(
       state.copyWith(
         status: FeedTopCommentStatus.ready,
         topComment: top,
+        appliedModeration: current.moderation,
+        moderationRevision: current.revision,
       ),
     );
   }
+
+  /// Populates the authenticated cache alongside the page read. Selection uses
+  /// its newest snapshot after vote counts settle, plus local owner blocks.
+  Future<CommentModeration> _loadModeration() async {
+    final coordinate = _rootAddressableId;
+    return coordinate == null || coordinate.isEmpty
+        ? CommentModeration.empty
+        : await _commentModerationRepository.loadModeration(
+            rootAddressableId: coordinate,
+          );
+  }
+
+  ({CommentModeration moderation, int revision}) _knownModeration() {
+    final coordinate = _rootAddressableId;
+    return coordinate == null || coordinate.isEmpty
+        ? const (moderation: CommentModeration.empty, revision: 0)
+        : _commentModerationRepository.knownModeration(
+            rootAddressableId: coordinate,
+          );
+  }
+
+  CommentModeration _effectiveModeration(CommentModeration moderation) =>
+      moderation.withAutoHiddenAuthors(
+        _viewerPubkey == _rootAuthorPubkey ? _viewerBlockedAuthors : const {},
+      );
+
+  bool _isVisible(Comment comment, CommentModeration moderation) =>
+      comment.authorPubkey == _viewerPubkey || !moderation.hides(comment);
 
   /// Hides the overlay for the rest of this video's time on screen.
   void dismiss() {

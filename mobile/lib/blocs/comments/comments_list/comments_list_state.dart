@@ -43,6 +43,9 @@ enum CommentsStatus {
 enum CommentsListError {
   /// Failed to load comments from relays.
   loadFailed,
+
+  /// The video owner's hide or restore of a comment could not be saved.
+  moderationFailed,
 }
 
 /// Sort mode for the comments list.
@@ -79,6 +82,10 @@ final class CommentsListState extends Equatable {
     this.isBackfillComplete = false,
     this.scrollToCommentId,
     this.pendingFocusCommentId,
+    this.viewerPubkey,
+    this.viewerBlockedAuthors = const {},
+    this.moderation = CommentModeration.empty,
+    this.showHiddenComments = false,
   });
 
   /// The current status of the list.
@@ -159,6 +166,77 @@ final class CommentsListState extends Equatable {
   /// comment cap, a page that adds nothing, or a failed load.
   final String? pendingFocusCommentId;
 
+  /// The signed-in viewer, or `null` while signed out.
+  final String? viewerPubkey;
+
+  /// The viewer's current account-scoped blocks, including late hydration.
+  final Set<String> viewerBlockedAuthors;
+
+  /// The creator's decisions plus the owner's local blocks while syncing.
+  CommentModeration get effectiveModeration => isViewerRootAuthor
+      ? moderation.withAutoHiddenAuthors(viewerBlockedAuthors)
+      : moderation;
+
+  /// What the video owner hid from the thread's default view (#5044).
+  ///
+  /// For the owner it also covers everyone they blocked, so their comments
+  /// stay reviewable here instead of being dropped.
+  final CommentModeration moderation;
+
+  /// Whether the viewer chose to see the comments the owner hid.
+  final bool showHiddenComments;
+
+  /// Whether this root has the coordinate required to persist moderation.
+  bool get supportsModeration => rootAddressableId?.isNotEmpty ?? false;
+
+  /// Whether the viewer owns the video, and so moderates its comments.
+  bool get isViewerRootAuthor {
+    final viewer = viewerPubkey;
+    return viewer != null && viewer.isNotEmpty && viewer == rootAuthorPubkey;
+  }
+
+  /// Whether the video owner hid [comment] from the default view.
+  ///
+  /// Never true for the viewer's own comments: their authors keep seeing
+  /// them as they posted them.
+  bool isHiddenByOwner(Comment comment) =>
+      comment.authorPubkey != viewerPubkey &&
+      effectiveModeration.hides(comment);
+
+  /// Whether [comment] answers a comment the list leaves out because the
+  /// video owner hid it, so its reply line must not name that comment's
+  /// author.
+  bool repliesToHiddenComment(Comment comment) {
+    if (showHiddenComments) return false;
+    final parentId = comment.replyToEventId;
+    final parent = parentId == null ? null : commentsById[parentId];
+    if (parent != null) return isHiddenByOwner(parent);
+    // Not loaded: its author tells whether the owner hides it.
+    final author = comment.replyToAuthorPubkey;
+    return author != null &&
+        author != viewerPubkey &&
+        effectiveModeration.autoHiddenAuthors.contains(author);
+  }
+
+  /// The authors of the comments the list shows, for mention suggestions:
+  /// the authors of comments the owner hid stay out.
+  Iterable<String> get shownAuthorPubkeys =>
+      shownCommentsById.values.map((comment) => comment.authorPubkey);
+
+  /// How many loaded comments the video owner hid.
+  int get hiddenCommentCount =>
+      commentsById.values.where(isHiddenByOwner).length;
+
+  /// The comments the list shows: all of them while [showHiddenComments],
+  /// otherwise those the video owner did not hide.
+  Map<String, Comment> get shownCommentsById {
+    if (showHiddenComments || hiddenCommentCount == 0) return commentsById;
+    return {
+      for (final entry in commentsById.entries)
+        if (!isHiddenByOwner(entry.value)) entry.key: entry.value,
+    };
+  }
+
   /// Returns a comparator for sorting comments based on [sortMode].
   ///
   /// For [CommentsSortMode.topEngagement] the caller must provide
@@ -202,9 +280,11 @@ final class CommentsListState extends Equatable {
       ..sort(_commentComparator(upvoteCounts: upvoteCounts));
   }
 
-  /// Threaded comments as a flat display list with depth info.
+  /// The comments the list shows ([shownCommentsById]), threaded as a flat
+  /// display list with depth info.
   ///
-  /// Root comments and orphaned replies appear at depth 0. For
+  /// Root comments and orphaned replies appear at depth 0; a reply to a
+  /// comment the owner hid is such an orphan. For
   /// [CommentsSortMode.topEngagement] pass [upvoteCounts] from
   /// [CommentReactionsBloc] so the engagement scoring can complete.
   List<CommentNode> threadedCommentsWith({
@@ -213,12 +293,13 @@ final class CommentsListState extends Equatable {
     // Build children map: parentId -> list of child comments.
     final childrenMap = <String, List<Comment>>{};
     final rootComments = <Comment>[];
+    final shown = shownCommentsById;
 
-    for (final comment in commentsById.values) {
+    for (final comment in shown.values) {
       final parentId = comment.replyToEventId;
       if (parentId == null ||
           parentId.isEmpty ||
-          !commentsById.containsKey(parentId)) {
+          !shown.containsKey(parentId)) {
         rootComments.add(comment);
       } else {
         childrenMap.putIfAbsent(parentId, () => []).add(comment);
@@ -271,6 +352,9 @@ final class CommentsListState extends Equatable {
     Set<String>? newCommentIds,
     bool? isBackfillComplete,
     String? scrollToCommentId,
+    CommentModeration? moderation,
+    Set<String>? viewerBlockedAuthors,
+    bool? showHiddenComments,
     bool clearError = false,
     bool clearScrollTo = false,
     bool clearPendingFocus = false,
@@ -300,6 +384,10 @@ final class CommentsListState extends Equatable {
           : (scrollToCommentId ?? this.scrollToCommentId),
       // Only the constructor sets it; copyWith can only clear it.
       pendingFocusCommentId: clearPendingFocus ? null : pendingFocusCommentId,
+      viewerPubkey: viewerPubkey,
+      viewerBlockedAuthors: viewerBlockedAuthors ?? this.viewerBlockedAuthors,
+      moderation: moderation ?? this.moderation,
+      showHiddenComments: showHiddenComments ?? this.showHiddenComments,
     );
   }
 
@@ -321,5 +409,9 @@ final class CommentsListState extends Equatable {
     isBackfillComplete,
     scrollToCommentId,
     pendingFocusCommentId,
+    viewerPubkey,
+    viewerBlockedAuthors,
+    moderation,
+    showHiddenComments,
   ];
 }

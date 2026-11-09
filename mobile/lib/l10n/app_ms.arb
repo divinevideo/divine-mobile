@@ -4510,6 +4510,18 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
+  "commentsHiddenToggleSemanticLabel": "Tunjuk komen yang disembunyikan",
+  "commentsHiddenNotice": "Pencipta sengaja menyembunyikan komen ini.",
+  "commentsHiddenNoticeOwner": "Anda menyembunyikan komen ini dalam Divine. Aplikasi dan laman lain mungkin masih memaparkannya, jadi laporkan apa-apa yang berbahaya.",
+  "commentHiddenReportPrompt": "Mahu laporkan komen ini juga?",
+  "commentHiddenReportAction": "Laporkan",
+  "commentHiddenByCreator": "Disembunyikan oleh pencipta",
+  "commentHiddenByYou": "Disembunyikan oleh anda",
+  "commentOptionsHideLabel": "Sembunyikan komen",
+  "commentOptionsHideSemanticLabel": "Sembunyikan komen ini pada video anda",
+  "commentOptionsShowLabel": "Tunjuk komen",
+  "commentOptionsShowSemanticLabel": "Tunjuk semula komen ini pada video anda",
+  "commentsErrorModerationFailed": "Gagal mengemas kini komen yang disembunyikan. Cuba lagi.",
   "commentReply": "Balas",
   "@commentReply": {
     "description": "Button label under a comment that opens the reply composer."
@@ -7615,5 +7627,9 @@
   "creatorHighlightAnalytics": "Lihat statistik anda",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "minorAccountReviewVideoSubmittedBody": "Video anda telah dihantar untuk semakan.",
+  "minorAccountReviewVideoSubmittedTitle": "Video dihantar",
+  "minorAccountReviewRecordConsentPrivacyBody": "Video anda dihantar secara peribadi kepada pasukan Sokongan serta Kepercayaan dan Keselamatan Divine untuk semakan. Video tidak diterbitkan atau dikongsi dengan pengguna lain.",
+  "minorAccountReviewRecordConsentRejected": "Penyerahan anda tidak diterima. Semak alamat e-mel anda, rakam semula video atau gunakan e-mel."
 }

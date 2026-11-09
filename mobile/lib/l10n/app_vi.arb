@@ -4510,6 +4510,18 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
+  "commentsHiddenToggleSemanticLabel": "Hiện bình luận đã ẩn",
+  "commentsHiddenNotice": "Nhà sáng tạo đã cố ý ẩn những bình luận này.",
+  "commentsHiddenNoticeOwner": "Bạn đã ẩn những bình luận này trên Divine. Ứng dụng và trang web khác vẫn có thể hiển thị chúng, nên hãy báo cáo bất cứ điều gì gây hại.",
+  "commentHiddenReportPrompt": "Bạn có muốn báo cáo bình luận này luôn không?",
+  "commentHiddenReportAction": "Báo cáo",
+  "commentHiddenByCreator": "Nhà sáng tạo đã ẩn",
+  "commentHiddenByYou": "Bạn đã ẩn",
+  "commentOptionsHideLabel": "Ẩn bình luận",
+  "commentOptionsHideSemanticLabel": "Ẩn bình luận này trên video của bạn",
+  "commentOptionsShowLabel": "Hiện bình luận",
+  "commentOptionsShowSemanticLabel": "Hiện lại bình luận này trên video của bạn",
+  "commentsErrorModerationFailed": "Không cập nhật được các bình luận đã ẩn. Hãy thử lại.",
   "commentReply": "Trả lời",
   "@commentReply": {
     "description": "Button label under a comment that opens the reply composer."
@@ -7615,5 +7627,9 @@
   "creatorHighlightAnalytics": "Xem số liệu của bạn",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "minorAccountReviewVideoSubmittedBody": "Video của bạn đã được gửi để xem xét.",
+  "minorAccountReviewVideoSubmittedTitle": "Đã gửi video",
+  "minorAccountReviewRecordConsentPrivacyBody": "Video của bạn được gửi riêng tư đến các nhóm Hỗ trợ và Tin cậy và An toàn của Divine để xem xét. Video không được đăng công khai hoặc chia sẻ với người dùng khác.",
+  "minorAccountReviewRecordConsentRejected": "Nội dung gửi chưa được chấp nhận. Hãy kiểm tra địa chỉ email, quay lại video hoặc dùng email."
 }

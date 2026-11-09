@@ -75,22 +75,56 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
   }
 
   /// Pins the reply [replyKey] names, its [RepliesCuration.keyOf], to the
-  /// front, or unpins it when it is pinned already.
-  Future<void> pinToggled(String replyKey) => _save(
-    state.curation.pinnedId == replyKey
-        ? state.curation.pinned(null)
-        : state.curation.pinned(replyKey),
-  );
+  /// front, or unpins it when it is pinned already. Pinning shows it again,
+  /// also when the creator blocked its author.
+  Future<void> pinToggled(String replyKey) {
+    final curation = state.curation;
+    if (curation.pinnedId == replyKey) return _save(curation.pinned(null));
+    return _save(
+      curation.pinned(replyKey, restoredEventId: _approvedVersion(replyKey)),
+    );
+  }
 
   /// Hides the reply [replyKey] names, its [RepliesCuration.keyOf], or shows
-  /// it again when it is hidden.
-  Future<void> hideToggled(String replyKey) => _save(
-    state.curation.hiddenIds.contains(replyKey)
-        ? state.curation.shown(replyKey)
-        : state.curation.hidden(replyKey),
-  );
+  /// it again when it is hidden, also when it is hidden because the creator
+  /// blocked its author.
+  Future<void> hideToggled(String replyKey) {
+    final curation = state.curation;
+    final reply = _replyOf(replyKey);
+    final hidden = reply == null
+        ? curation.hiddenIds.contains(replyKey)
+        : curation.hides(reply);
+    if (hidden) {
+      return _save(
+        curation.shown(replyKey, restoredEventId: _approvedVersion(replyKey)),
+      );
+    }
+    return _save(
+      curation.hidden(replyKey, eventId: reply?.id),
+      // A restore of this version made on another device goes too.
+      takenBackRestores: {?reply?.id},
+    );
+  }
 
-  Future<void> _save(RepliesCuration curation) async {
+  VideoEvent? _replyOf(String replyKey) => state.replies
+      .where((reply) => RepliesCuration.keyOf(reply) == replyKey)
+      .firstOrNull;
+
+  /// The event id of the version of the reply [replyKey] names that showing
+  /// or pinning it approves, when the creator blocked its author; `null`
+  /// otherwise, as it then needs no approval.
+  String? _approvedVersion(String replyKey) {
+    final reply = _replyOf(replyKey);
+    if (reply == null) return null;
+    return state.curation.hiddenAuthors.contains(reply.pubkey)
+        ? reply.id
+        : null;
+  }
+
+  Future<void> _save(
+    RepliesCuration curation, {
+    Set<String> takenBackRestores = const {},
+  }) async {
     if (state.saveStatus == VideoRepliesSaveStatus.saving) return;
     final before = state.curation;
     emit(
@@ -104,6 +138,7 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
         curation,
         videoAddress: _videoAddress,
         previous: before,
+        takenBackRestores: takenBackRestores,
       );
       emitIfOpen(
         state.copyWith(

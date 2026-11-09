@@ -142,6 +142,47 @@ void main() {
         expect(result.total, equals(2));
       });
 
+      // #9357: the row names the reaction it reports, which is what lets a
+      // caller check that one reaction for a retraction.
+      test('keeps the event id each object-shaped entry reports', () {
+        final result = PaginatedPubkeys.fromJson(const {
+          'data': [
+            {'pubkey': 'pub1', 'created_at': 1700000000, 'event_id': 'r1'},
+            {'pubkey': 'pub2', 'created_at': 1699999999, 'event_id': 'r2'},
+          ],
+        });
+
+        expect(result.eventIdByPubkey, equals({'pub1': 'r1', 'pub2': 'r2'}));
+      });
+
+      test(
+        'has no event id for an entry that sent none or an unusable one',
+        () {
+          final result = PaginatedPubkeys.fromJson(const {
+            'data': [
+              {'pubkey': 'pub1'},
+              {'pubkey': 'pub2', 'event_id': ''},
+              {'pubkey': 'pub3', 'event_id': 7},
+              'pub4',
+            ],
+          });
+
+          expect(result.pubkeys, equals(['pub1', 'pub2', 'pub3', 'pub4']));
+          expect(result.eventIdByPubkey, isEmpty);
+        },
+      );
+
+      test('keeps the first event id when a pubkey is listed twice', () {
+        final result = PaginatedPubkeys.fromJson(const {
+          'data': [
+            {'pubkey': 'pub1', 'event_id': 'first'},
+            {'pubkey': 'pub1', 'event_id': 'second'},
+          ],
+        });
+
+        expect(result.eventIdByPubkey, equals({'pub1': 'first'}));
+      });
+
       test('drops object entries with no usable pubkey', () {
         final result = PaginatedPubkeys.fromJson(const {
           'data': [
@@ -178,6 +219,35 @@ void main() {
         const b = PaginatedPubkeys(pubkeys: ['abc'], total: 99);
 
         expect(a, isNot(equals(b)));
+      });
+
+      test('equal when the event ids match, however they were inserted', () {
+        const a = PaginatedPubkeys(
+          pubkeys: ['abc', 'def'],
+          eventIdByPubkey: {'abc': 'r1', 'def': 'r2'},
+        );
+        const b = PaginatedPubkeys(
+          pubkeys: ['abc', 'def'],
+          eventIdByPubkey: {'def': 'r2', 'abc': 'r1'},
+        );
+
+        expect(a, equals(b));
+        expect(a.hashCode, equals(b.hashCode));
+      });
+
+      test('not equal when the event ids differ', () {
+        const a = PaginatedPubkeys(
+          pubkeys: ['abc'],
+          eventIdByPubkey: {'abc': 'r1'},
+        );
+        const b = PaginatedPubkeys(
+          pubkeys: ['abc'],
+          eventIdByPubkey: {'abc': 'r2'},
+        );
+        const c = PaginatedPubkeys(pubkeys: ['abc']);
+
+        expect(a, isNot(equals(b)));
+        expect(a, isNot(equals(c)));
       });
     });
 

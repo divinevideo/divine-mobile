@@ -55,5 +55,25 @@ void main() {
       expect(launcher.launched.last.url, equals(proofmodeLearnMoreUrl));
       expect(launcher.launched.last.useExternalApplication, isTrue);
     });
+
+    testWidgets('wraps the learn-more link on a small phone at large font '
+        'sizes', (tester) async {
+      // A 360dp Android phone at its largest font size, in German, whose link
+      // text is the longest.
+      tester.view
+        ..physicalSize = const Size(360, 640)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(() {
+        tester.view
+          ..resetPhysicalSize()
+          ..resetDevicePixelRatio();
+        tester.platformDispatcher.clearAllTestValues();
+      });
+
+      await tester.pumpWidget(pumpStack(locale: const Locale('de')));
+
+      expect(tester.takeException(), isNull);
+    });
   });
 }

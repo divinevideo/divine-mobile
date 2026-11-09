@@ -132,5 +132,34 @@ void main() {
 
       expect(find.byType(VideoRecorderCountdownOverlay), findsOneWidget);
     });
+
+    testWidgets('keeps a two-digit count clear of the side controls at the '
+        'largest text size', (tester) async {
+      // An iPhone SE at the largest iOS text size.
+      const screenWidth = 375.0;
+      tester.view
+        ..physicalSize = const Size(screenWidth, 667)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 3.12;
+      addTearDown(() {
+        tester.view
+          ..resetPhysicalSize()
+          ..resetDevicePixelRatio();
+        tester.platformDispatcher.clearAllTestValues();
+      });
+      when(
+        () => recorderBloc.state,
+      ).thenReturn(const VideoRecorderBlocState(countdownValue: 10));
+
+      await tester.pumpWidget(buildTestWidget());
+
+      // The capture side rail takes about 72px from the right edge, and the
+      // count is centered, so it has to stay that far in on both sides.
+      const sideRailInset = 72.0;
+      expect(
+        tester.getSize(find.text('10')).width,
+        lessThan(screenWidth - 2 * sideRailInset),
+      );
+    });
   });
 }

@@ -5,7 +5,15 @@ import 'package:flutter/foundation.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 
 class BuildConfiguration {
-  const BuildConfiguration({this.isWeb = kIsWeb});
+  const BuildConfiguration({
+    this.isWeb = kIsWeb,
+    this.consentDeliveryVerified = const bool.fromEnvironment(
+      'PARENT_CONSENT_DELIVERY_VERIFIED',
+    ),
+  });
+
+  /// Enabled only in builds targeting a verified consent deployment.
+  final bool consentDeliveryVerified;
 
   final bool isWeb;
 
@@ -83,6 +91,10 @@ class BuildConfiguration {
         // Unconfigured developer/reviewer builds retain their explicit opt-in.
         return const String.fromEnvironment('CONCORD_INVITE_URL').isNotEmpty ||
             const bool.fromEnvironment('FF_CONCORD_CHAT');
+      case FeatureFlag.minorConsentInAppRecording:
+        // A preference cannot override the build's verified-deployment gate.
+        return consentDeliveryVerified &&
+            const bool.fromEnvironment('FF_MINOR_CONSENT_IN_APP_RECORDING');
     }
   }
 
@@ -133,6 +145,8 @@ class BuildConfiguration {
         return 'FF_B2_PLAYBACK_CANARY';
       case FeatureFlag.concordChat:
         return 'FF_CONCORD_CHAT';
+      case FeatureFlag.minorConsentInAppRecording:
+        return 'FF_MINOR_CONSENT_IN_APP_RECORDING';
     }
   }
 }

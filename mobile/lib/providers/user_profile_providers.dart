@@ -92,23 +92,32 @@ Stream<ProfileStats?> _watchProfileStats(
 /// when the card leaves the tree, and a fresh cached row short-circuits the
 /// fetch so re-mounting a card does not re-fetch.
 @riverpod
-Stream<ProfileStats?> videoCardAuthorStats(Ref ref, String pubkey) async* {
+Stream<ProfileStats?> videoCardAuthorStats(Ref ref, String pubkey) {
   final repo = ref.watch(profileReadRepositoryProvider);
-  if (repo == null) {
-    yield null;
-    return;
-  }
+  if (repo == null) return _nullProfileStatsStream();
 
-  final cached = await repo.getCachedProfileStats(pubkey: pubkey);
-  if (cached?.hasKnownTotalViews != true) {
-    unawaited(
-      repo
-          .fetchFreshProfile(pubkey: pubkey)
-          .catchError((Object _, StackTrace _) => null),
-    );
-  }
+  return _watchCardAuthorStats(repo, pubkey);
+}
 
-  yield* repo.watchProfileStats(pubkey: pubkey);
+// Deliver a tick before starting the cache read, so immediate cancellation
+// touches no repository. Stream operators also consume a pending read's error
+// after cancellation instead of exposing it through an ignored cancel future.
+Stream<ProfileStats?> _watchCardAuthorStats(
+  ProfileReader repo,
+  String pubkey,
+) {
+  return Stream<void>.value(null)
+      .asyncMap((_) => repo.getCachedProfileStats(pubkey: pubkey))
+      .asyncExpand((cached) {
+        if (cached?.hasKnownTotalViews != true) {
+          unawaited(
+            repo
+                .fetchFreshProfile(pubkey: pubkey)
+                .catchError((Object _, StackTrace _) => null),
+          );
+        }
+        return repo.watchProfileStats(pubkey: pubkey);
+      });
 }
 
 /// Reactive profile provider backed by Drift's watchProfile stream.

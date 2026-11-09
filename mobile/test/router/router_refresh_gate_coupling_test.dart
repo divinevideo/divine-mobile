@@ -132,17 +132,31 @@ void main() {
       return landings;
     }
 
+    test('submission state changes refresh consent route admission', () {
+      expect(
+        minorAccountReviewStatusAffectsRouting(
+          AsyncData(restrictedStatus(id: 'case-gate')),
+          AsyncData(
+            restrictedStatus(
+              id: 'case-gate',
+              state: MinorReviewCaseState.submittedForReview,
+            ),
+          ),
+        ),
+        isTrue,
+      );
+    });
+
     testWidgets(
       'a routing-identical status refetch produces identical redirect outcomes',
       (tester) async {
         // Two restricted statuses that differ ONLY in fields the redirect must
-        // not branch on (case state, id, instructions, support email). The
-        // signatured fields — isRestricted, hasCase, moderation ids, and
-        // allowsParentVideoOrEmail — are held equal.
+        // not branch on (id, instructions, support email). These two case
+        // states both accept parent consent, keeping the signature equal.
         final baseline = restrictedStatus(id: 'case-baseline');
         final routingIdentical = restrictedStatus(
           id: 'case-refetched',
-          state: MinorReviewCaseState.submittedForReview,
+          state: MinorReviewCaseState.restrictedPendingParentalConsent,
           instructionsTitle: 'Updated review instructions',
           supportEmail: 'help@divine.video',
         );

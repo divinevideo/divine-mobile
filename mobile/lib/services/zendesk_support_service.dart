@@ -11,6 +11,7 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/config/zendesk_config.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -685,9 +686,9 @@ class ZendeskSupportService {
       return false;
     }
 
-    // Refresh JWT before SDK action. The pre-auth token has a 5-minute TTL,
-    // so any delay between login and ticket creation will cause "unauthorized".
-    // This gets a fresh token every time, regardless of how long the user waited.
+    // Refresh the JWT before the SDK action. The pre-auth token has a 5-minute
+    // TTL and a refresh is reused for 4 minutes, so an older token is replaced
+    // here.
     await _ensureFreshJwt();
     if (!ownsTicket()) return false;
 
@@ -760,15 +761,18 @@ class ZendeskSupportService {
         category: LogCategory.system,
       );
 
-      // JWT pre-auth tokens expire after 5 minutes. If the user reports
-      // content later than that, the SDK's JWT callback will fail with
-      // "unauthorized". Fall back to anonymous identity (already has
-      // name/email from login) and retry before trying the REST API.
-      if (e.code == 'CREATE_FAILED' &&
-          e.message != null &&
-          e.message!.toLowerCase().contains('unauthorized')) {
+      // The error a report names; the retry's own when it fails differently.
+      var reportedError = e;
+
+      // The SDK can fail to authenticate when, for example, the JWT refresh
+      // before this call failed or was skipped and the token lapsed. Fall back
+      // to the anonymous identity (it already has name/email from login) and
+      // retry before the REST API. No ticket exists after an authentication
+      // failure, so the retry cannot file a duplicate.
+      if (e.code == 'CREATE_FAILED' && _isNativeAuthFailure(e)) {
         Log.info(
-          '🔄 JWT expired, retrying with anonymous identity',
+          '🔄 Zendesk SDK could not authenticate, retrying with anonymous '
+          'identity',
           category: LogCategory.system,
         );
         try {
@@ -799,11 +803,17 @@ class ZendeskSupportService {
             'Anonymous identity retry also failed: $retryError',
             category: LogCategory.system,
           );
+          if (retryError is PlatformException) reportedError = retryError;
         }
       }
 
       if (!ownsTicket()) return false;
-      // Fall back to REST API on SDK error
+      // Release builds ship no REST API token, so there the SDK was the only
+      // way to deliver this ticket.
+      if (!ZendeskConfig.isRestApiConfigured) {
+        _reportNativeTicketFailure(reportedError);
+        return false;
+      }
       Log.info(
         '🔄 Falling back to REST API after SDK error',
         category: LogCategory.system,
@@ -831,6 +841,50 @@ class ZendeskSupportService {
       );
       return false;
     }
+  }
+
+  /// Whether a native `createTicket` failure means the SDK could not
+  /// authenticate its identity.
+  ///
+  /// iOS says "unauthorized" in the message. Android flags `authFailed` in the
+  /// details instead, because its SDK reports a failed token exchange as a 400
+  /// whose message never says "unauthorized".
+  static bool _isNativeAuthFailure(PlatformException e) {
+    final details = e.details;
+    if (details is Map && details['authFailed'] == true) return true;
+    return e.message?.toLowerCase().contains('unauthorized') ?? false;
+  }
+
+  /// Reports a ticket the native SDK failed to create when nothing else can
+  /// deliver it.
+  ///
+  /// A network failure is only logged: it is expected offline, and a content
+  /// report stays queued for its next attempt. The report names the error
+  /// code, HTTP status and SDK reason, never the ticket itself.
+  static void _reportNativeTicketFailure(PlatformException e) {
+    final details = e.details;
+    if (details is Map && details['networkError'] == true) {
+      Log.warning(
+        'Zendesk ticket not created: network error',
+        category: LogCategory.system,
+      );
+      return;
+    }
+    final status = details is Map ? details['status'] : null;
+    final summary =
+        'Zendesk SDK could not create ticket: ${e.code}'
+        '${status is int && status > 0 ? ' (HTTP $status)' : ''}';
+    final reason = e.message;
+    crashlytics.log(
+      reason == null ? summary : '$summary - ${sanitizeForCrashReport(reason)}',
+    );
+    unawaited(
+      crashlytics.recordError(
+        Exception(summary),
+        StackTrace.current,
+        reason: 'zendesk_sdk_create_failed',
+      ),
+    );
   }
 
   // ========================================================================

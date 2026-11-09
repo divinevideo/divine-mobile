@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/widgets/caption_pill.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -42,10 +43,12 @@ class VideoEditorCaptionPreviewOverlay extends StatelessWidget {
 
     return Positioned.fill(
       child: IgnorePointer(
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 48),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 48),
+          // The pill floats over the small preview like the toolbar chips,
+          // so its text stops growing where theirs does.
+          child: MediaQuery.withClampedTextScaling(
+            maxScaleFactor: chipLabelTextScaleLimit,
             child: _ActiveCuePill(
               items: items,
               playTime: scope.playTimeNotifier,
@@ -124,7 +127,7 @@ class _ActiveCuePillState extends State<_ActiveCuePill> {
       listener: (context, state) => _onPlayTime(),
       child: text == null || text.isEmpty
           ? const SizedBox.shrink()
-          : CaptionPill(text: text),
+          : _FittedCaptionPill(text: text),
     );
   }
 
@@ -140,5 +143,33 @@ class _ActiveCuePillState extends State<_ActiveCuePill> {
       }
     }
     return null;
+  }
+}
+
+/// The pill at the bottom of the space it is given, wrapping at its width and
+/// shrinking to fit its height.
+///
+/// The preview above the timeline is short on a small phone, so a long cue
+/// would otherwise run off its top.
+class _FittedCaptionPill extends StatelessWidget {
+  const _FittedCaptionPill({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => Align(
+        alignment: Alignment.bottomCenter,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+            child: CaptionPill(text: text),
+          ),
+        ),
+      ),
+    );
   }
 }

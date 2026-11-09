@@ -171,7 +171,7 @@ class VineBottomSheetPrompt extends StatelessWidget {
           const SizedBox(height: 32),
 
           // Title
-          Text(
+          DivineWordFitText(
             title,
             style: VineTheme.headlineSmallFont(
               color: context.vineColors.primaryText,
@@ -181,7 +181,7 @@ class VineBottomSheetPrompt extends StatelessWidget {
           const SizedBox(height: 8),
 
           // Subtitle
-          Text(
+          DivineWordFitText(
             subtitle,
             style: VineTheme.bodyLargeFont(
               color: context.vineColors.onSurfaceVariant,
@@ -193,7 +193,7 @@ class VineBottomSheetPrompt extends StatelessWidget {
           if (additionalText != null)
             Padding(
               padding: const .only(top: 8),
-              child: Text(
+              child: DivineWordFitText(
                 additionalText!,
                 style: VineTheme.bodyLargeFont(
                   color: context.vineColors.onSurfaceVariant,

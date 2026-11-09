@@ -6236,6 +6236,54 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
+  "commentsHiddenToggleSemanticLabel": "Show hidden comments",
+  "@commentsHiddenToggleSemanticLabel": {
+    "description": "Accessibility label of the header toggle that shows the comments the video owner hid. Screen readers add the on/off state and the count."
+  },
+  "commentsHiddenNotice": "The creator hid these comments on purpose.",
+  "@commentsHiddenNotice": {
+    "description": "Short notice above the comments while a viewer has chosen to see the ones the video owner hid on purpose."
+  },
+  "commentsHiddenNoticeOwner": "You hid these in Divine. Other apps and sites may still show them, so report anything harmful.",
+  "@commentsHiddenNoticeOwner": {
+    "description": "Short notice above the comments while the video owner looks at the comments they hid. Divine leaves them out for its viewers, but other apps and sites may still show them, so it points the owner to reporting what is harmful."
+  },
+  "commentHiddenReportPrompt": "Want to report this comment too?",
+  "@commentHiddenReportPrompt": {
+    "description": "Snackbar right after the video owner hid a comment, offering to report it as well, since hiding does not reach moderators."
+  },
+  "commentHiddenReportAction": "Report",
+  "@commentHiddenReportAction": {
+    "description": "Action of that snackbar: opens the report form for the comment."
+  },
+  "commentHiddenByCreator": "Hidden by the creator",
+  "@commentHiddenByCreator": {
+    "description": "Small label on a comment the video owner hid, shown while a viewer has chosen to see hidden comments."
+  },
+  "commentHiddenByYou": "Hidden by you",
+  "@commentHiddenByYou": {
+    "description": "Small label on a comment the video owner hid, shown to that owner on their own video."
+  },
+  "commentOptionsHideLabel": "Hide comment",
+  "@commentOptionsHideLabel": {
+    "description": "Comment menu action for the video owner: hide someone else's comment on their own video without blocking that person."
+  },
+  "commentOptionsHideSemanticLabel": "Hide this comment on your video",
+  "@commentOptionsHideSemanticLabel": {
+    "description": "Accessibility label of the video owner's hide-comment action."
+  },
+  "commentOptionsShowLabel": "Show comment",
+  "@commentOptionsShowLabel": {
+    "description": "Comment menu action for the video owner: show a comment they hid on their own video again."
+  },
+  "commentOptionsShowSemanticLabel": "Show this comment on your video again",
+  "@commentOptionsShowSemanticLabel": {
+    "description": "Accessibility label of the video owner's show-comment-again action."
+  },
+  "commentsErrorModerationFailed": "Couldn't update the hidden comments. Try again.",
+  "@commentsErrorModerationFailed": {
+    "description": "Snackbar shown when hiding or showing a comment on the owner's own video could not be saved."
+  },
   "commentReply": "Reply",
   "@commentReply": {
     "description": "Button label under a comment that opens the reply composer."
@@ -9916,8 +9964,28 @@
   "minorAccountReviewParentConsentDoNotSave": "Keep the video private and do not post it in the app",
   "minorAccountReviewParentConsentOneMove": "Our team will review it and reply with next steps",
   "minorAccountReviewParentConsentEmailCta": "Email Divine support",
+  "minorAccountReviewParentConsentRecordCta": "Record consent video",
   "minorAccountReviewParentConsentEmailSubject": "Divine Greenlight review help (ages 13-15)",
   "minorAccountReviewParentConsentEmailBody": "Hi Divine support,\n\nI am contacting Divine about Divine Greenlight for a teen who is 13-15.\n\nI have attached a short private video that shows:\n- the teen\n- a parent or guardian speaking on camera\n- that the teen has permission to use Divine\n- that the parent or guardian knows about the account and will supervise its use\n\nCountry/ies of residence:\n\nHelpful context:\n\nThanks.",
+  "minorAccountReviewRecordConsentTitle": "Record consent video",
+  "minorAccountReviewRecordConsentBody": "Record a short private video with the teen and a parent or guardian on camera. It stays on this device until you submit it.",
+  "minorAccountReviewRecordConsentPromptTitle": "Say this on camera",
+  "minorAccountReviewRecordConsentRecordCta": "Record",
+  "minorAccountReviewRecordConsentStopCta": "Stop",
+  "minorAccountReviewRecordConsentPreviewLabel": "Camera preview",
+  "minorAccountReviewRecordConsentReviewTitle": "Review your video",
+  "minorAccountReviewRecordConsentReviewBody": "Watch it back. Retake if anything is missing, or use it if it shows everything above.",
+  "minorAccountReviewRecordConsentRetakeCta": "Retake",
+  "minorAccountReviewRecordConsentUseVideoCta": "Use this video",
+  "minorAccountReviewRecordConsentDeniedTitle": "We can't use the camera",
+  "minorAccountReviewRecordConsentDeniedBody": "Divine could not start the camera. You can still email a private video to Divine support instead.",
+  "minorAccountReviewRecordConsentEmailInsteadCta": "Use email instead",
+  "minorAccountReviewRecordConsentErrorTitle": "Recording failed",
+  "minorAccountReviewRecordConsentErrorBody": "Something went wrong while recording. Please try again.",
+  "minorAccountReviewRecordConsentTryAgainCta": "Try again",
+  "minorAccountReviewRecordConsentConfirmEmailTitle": "Confirm your email",
+  "minorAccountReviewRecordConsentSubmitCta": "Submit video",
+  "minorAccountReviewRecordConsentSubmitError": "Could not submit your video. Please try again.",
   "minorAccountReviewParentSupportInstructions": "Parent Support Instructions",
   "minorAccountReviewContinue": "Continue",
   "minorAccountReviewErrorTitle": "We could not load your account review status.",
@@ -12994,5 +13062,9 @@
   "messagesRoomRestoreDraft": "Restore draft",
   "@messagesRoomRestoreDraft": {"description": "Copies a retained earlier-epoch message into the current room composer without publishing it."},
   "messagesRoomDiscardDraft": "Discard draft",
-  "@messagesRoomDiscardDraft": {"description": "Deletes only this account's retained unconfirmed local room draft."}
+  "@messagesRoomDiscardDraft": {"description": "Deletes only this account's retained unconfirmed local room draft."},
+  "minorAccountReviewVideoSubmittedBody": "Your video has been submitted for review.",
+  "minorAccountReviewVideoSubmittedTitle": "Video submitted",
+  "minorAccountReviewRecordConsentPrivacyBody": "Your video goes privately to Divine Support and Trust & Safety for review. It is not published or shared with other users.",
+  "minorAccountReviewRecordConsentRejected": "Your submission wasn't accepted. Check your email, retake the video, or use email instead."
 }

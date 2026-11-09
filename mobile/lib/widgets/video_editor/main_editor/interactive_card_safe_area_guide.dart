@@ -3,6 +3,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 
@@ -70,8 +71,13 @@ class InteractiveCardSafeAreaGuide extends StatelessWidget {
                   child: Center(
                     child: Transform.scale(
                       scale: unit,
-                      child: _Hint(
-                        text: context.l10n.videoEditorInteractiveCardAreaHint,
+                      // A chip over the video like the toolbar's, capped
+                      // where theirs are so it stays on the preview.
+                      child: MediaQuery.withClampedTextScaling(
+                        maxScaleFactor: chipLabelTextScaleLimit,
+                        child: _Hint(
+                          text: context.l10n.videoEditorInteractiveCardAreaHint,
+                        ),
                       ),
                     ),
                   ),

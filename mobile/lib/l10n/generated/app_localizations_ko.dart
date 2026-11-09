@@ -8319,6 +8319,43 @@ class AppLocalizationsKo extends AppLocalizations {
   String get commentsSortSemanticLabel => '댓글 정렬';
 
   @override
+  String get commentsHiddenToggleSemanticLabel => '숨긴 댓글 보기';
+
+  @override
+  String get commentsHiddenNotice => '크리에이터가 일부러 이 댓글들을 숨겼어요.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Divine에서 내가 숨긴 댓글이에요. 다른 앱과 사이트에서는 여전히 보일 수 있으니 해로운 내용은 신고해 주세요.';
+
+  @override
+  String get commentHiddenReportPrompt => '이 댓글도 신고할까요?';
+
+  @override
+  String get commentHiddenReportAction => '신고';
+
+  @override
+  String get commentHiddenByCreator => '크리에이터가 숨김';
+
+  @override
+  String get commentHiddenByYou => '내가 숨김';
+
+  @override
+  String get commentOptionsHideLabel => '댓글 숨기기';
+
+  @override
+  String get commentOptionsHideSemanticLabel => '내 동영상에서 이 댓글 숨기기';
+
+  @override
+  String get commentOptionsShowLabel => '댓글 보이기';
+
+  @override
+  String get commentOptionsShowSemanticLabel => '내 동영상에서 이 댓글 다시 보이기';
+
+  @override
+  String get commentsErrorModerationFailed => '숨긴 댓글을 업데이트하지 못했어요. 다시 시도해 주세요.';
+
+  @override
   String get commentReply => '답글';
 
   @override
@@ -12269,12 +12306,80 @@ class AppLocalizationsKo extends AppLocalizations {
   String get minorAccountReviewParentConsentEmailCta => 'Divine 지원팀에 이메일 보내기';
 
   @override
+  String get minorAccountReviewParentConsentRecordCta => 'Record consent video';
+
+  @override
   String get minorAccountReviewParentConsentEmailSubject =>
       'Divine Greenlight 검토 문의 (13~15세)';
 
   @override
   String get minorAccountReviewParentConsentEmailBody =>
       'Divine 지원팀께,\n\n13~15세 청소년과 관련해 Divine Greenlight 건으로 연락드립니다.\n\n다음 내용이 담긴 짧은 비공개 영상을 첨부했습니다:\n- 청소년 본인\n- 카메라 앞에서 말하는 부모님 또는 보호자\n- 청소년이 Divine 이용 허락을 받았다는 점\n- 부모님 또는 보호자가 계정을 알고 있으며 이용을 지켜보겠다는 점\n\n거주 국가:\n\n참고 사항:\n\n감사합니다.';
+
+  @override
+  String get minorAccountReviewRecordConsentTitle => 'Record consent video';
+
+  @override
+  String get minorAccountReviewRecordConsentBody =>
+      'Record a short private video with the teen and a parent or guardian on camera. It stays on this device until you submit it.';
+
+  @override
+  String get minorAccountReviewRecordConsentPromptTitle => 'Say this on camera';
+
+  @override
+  String get minorAccountReviewRecordConsentRecordCta => 'Record';
+
+  @override
+  String get minorAccountReviewRecordConsentStopCta => 'Stop';
+
+  @override
+  String get minorAccountReviewRecordConsentPreviewLabel => 'Camera preview';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewTitle => 'Review your video';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewBody =>
+      'Watch it back. Retake if anything is missing, or use it if it shows everything above.';
+
+  @override
+  String get minorAccountReviewRecordConsentRetakeCta => 'Retake';
+
+  @override
+  String get minorAccountReviewRecordConsentUseVideoCta => 'Use this video';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedTitle =>
+      'We can\'t use the camera';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedBody =>
+      'Divine could not start the camera. You can still email a private video to Divine support instead.';
+
+  @override
+  String get minorAccountReviewRecordConsentEmailInsteadCta =>
+      'Use email instead';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorTitle => 'Recording failed';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorBody =>
+      'Something went wrong while recording. Please try again.';
+
+  @override
+  String get minorAccountReviewRecordConsentTryAgainCta => 'Try again';
+
+  @override
+  String get minorAccountReviewRecordConsentConfirmEmailTitle =>
+      'Confirm your email';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitCta => 'Submit video';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitError =>
+      'Could not submit your video. Please try again.';
 
   @override
   String get minorAccountReviewParentSupportInstructions => '보호자 지원 안내';
@@ -15129,4 +15234,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get messagesRoomDiscardDraft => 'Discard draft';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody => '검토를 위해 동영상을 제출했어요.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => '동영상 제출 완료';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      '동영상은 검토를 위해 Divine 지원 및 신뢰·안전 팀에 비공개로 전송됩니다. 공개되거나 다른 사용자와 공유되지 않습니다.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      '제출이 승인되지 않았어요. 이메일 주소를 확인하거나, 동영상을 다시 촬영하거나, 이메일을 이용해 주세요.';
 }

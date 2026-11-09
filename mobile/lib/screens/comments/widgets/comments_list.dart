@@ -163,13 +163,23 @@ class _CommentsListState extends State<CommentsList> {
                   );
                 }
 
+                // While the viewer chose to see what the owner hid, say so
+                // once above the list.
+                final showNotice =
+                    state.showHiddenComments && state.hiddenCommentCount > 0;
+                final offset = showNotice ? 1 : 0;
                 return ListView.builder(
                   controller: widget.scrollController,
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  itemCount: threaded.length,
+                  itemCount: threaded.length + offset,
                   itemBuilder: (context, index) {
-                    final node = threaded[index];
+                    if (index < offset) {
+                      return HiddenCommentsNotice(
+                        viewerOwnsVideo: state.isViewerRootAuthor,
+                      );
+                    }
+                    final node = threaded[index - offset];
                     final isScrollTarget =
                         node.comment.id == state.scrollToCommentId;
                     return CommentItem(
@@ -178,6 +188,12 @@ class _CommentsListState extends State<CommentsList> {
                           : ValueKey('comment_${node.comment.id}'),
                       comment: node.comment,
                       depth: node.depth,
+                      isHiddenByOwner: state.isHiddenByOwner(node.comment),
+                      viewerOwnsVideo: state.isViewerRootAuthor,
+                      supportsModeration: state.supportsModeration,
+                      repliesToHiddenComment: state.repliesToHiddenComment(
+                        node.comment,
+                      ),
                     );
                   },
                 );
@@ -185,6 +201,38 @@ class _CommentsListState extends State<CommentsList> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Tells the viewer that the comments the owner hid are shown because they
+/// chose to see them: "You hid these comments…" to the owner, "The creator
+/// hid these comments on purpose." to everyone else.
+@visibleForTesting
+class HiddenCommentsNotice extends StatelessWidget {
+  const HiddenCommentsNotice({required this.viewerOwnsVideo, super.key});
+
+  final bool viewerOwnsVideo;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.vineColors.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Row(
+        spacing: 8,
+        children: [
+          DivineIcon(icon: DivineIconName.info, size: 16, color: color),
+          Expanded(
+            child: Text(
+              viewerOwnsVideo
+                  ? context.l10n.commentsHiddenNoticeOwner
+                  : context.l10n.commentsHiddenNotice,
+              style: VineTheme.bodySmallFont(color: color),
+            ),
+          ),
+        ],
       ),
     );
   }

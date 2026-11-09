@@ -8,6 +8,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_ducking_sheet.dart';
 
+import '../../../../helpers/scroll.dart';
+
 /// Opens the sheet from a base route and keeps what it pops.
 class _Harness {
   AudioDuckingSelection? result;
@@ -146,6 +148,22 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('75%'), findsOneWidget);
+    });
+
+    testWidgets('reaches the strength slider on a small phone at the largest '
+        'text size', (tester) async {
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await _open(tester, textScale: 3.12);
+      expect(tester.takeException(), isNull);
+
+      await scrollUntilTappable(tester, find.byType(DivineSlider), 100);
+      expect(
+        tester.getRect(find.byType(DivineSlider)).bottom,
+        lessThanOrEqualTo(667),
+      );
     });
 
     group('interactions', () {

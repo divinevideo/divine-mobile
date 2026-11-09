@@ -107,6 +107,35 @@ void main() {
           const CameraPermissionLoading(),
           const CameraPermissionLoaded(CameraPermissionStatus.authorized),
         ],
+        verify: (_) {
+          verify(() => mockPermissionsService.requestGalleryPermission())
+              .called(1);
+        },
+      );
+
+      blocTest<CameraPermissionBloc, CameraPermissionState>(
+        'private captures can request camera and microphone without gallery',
+        setUp: () {
+          when(() => mockPermissionsService.requestCameraPermission())
+              .thenAnswer((_) async => PermissionStatus.granted);
+          when(() => mockPermissionsService.requestMicrophonePermission())
+              .thenAnswer((_) async => PermissionStatus.granted);
+        },
+        build: () => CameraPermissionBloc(
+          permissionsService: mockPermissionsService,
+          requestGalleryPermission: false,
+          skipLinuxBypass: true,
+        ),
+        seed: () =>
+            const CameraPermissionLoaded(CameraPermissionStatus.canRequest),
+        act: (bloc) => bloc.add(const CameraPermissionRequest()),
+        expect: () => [
+          const CameraPermissionLoading(),
+          const CameraPermissionLoaded(CameraPermissionStatus.authorized),
+        ],
+        verify: (_) {
+          verifyNever(() => mockPermissionsService.requestGalleryPermission());
+        },
       );
 
       blocTest<CameraPermissionBloc, CameraPermissionState>(
@@ -331,6 +360,107 @@ void main() {
             CameraPermissionLoading(),
             CameraPermissionLoaded(CameraPermissionStatus.authorized),
           ]);
+        },
+      );
+
+      test(
+        'interrupted then denied request allows another retry and ignores stale grant',
+        () async {
+          final firstStarted = Completer<void>();
+          final firstRequest = Completer<PermissionStatus>();
+          var cameraCalls = 0;
+          when(
+            () => mockPermissionsService.requestCameraPermission(),
+          ).thenAnswer((_) {
+            cameraCalls++;
+            if (cameraCalls == 1) {
+              firstStarted.complete();
+              return firstRequest.future;
+            }
+            return Future.value(
+              cameraCalls == 2
+                  ? PermissionStatus.canRequest
+                  : PermissionStatus.granted,
+            );
+          });
+          when(
+            () => mockPermissionsService.requestMicrophonePermission(),
+          ).thenAnswer((_) async => PermissionStatus.granted);
+          when(
+            () => mockPermissionsService.requestGalleryPermission(),
+          ).thenAnswer((_) async => PermissionStatus.granted);
+          when(
+            () => mockPermissionsService.checkCameraStatus(),
+          ).thenAnswer((_) async => PermissionStatus.canRequest);
+          when(
+            () => mockPermissionsService.checkMicrophoneStatus(),
+          ).thenAnswer((_) async => PermissionStatus.canRequest);
+
+          final bloc = CameraPermissionBloc(
+            permissionsService: mockPermissionsService,
+            skipLinuxBypass: true,
+          );
+          addTearDown(bloc.close);
+          addTearDown(() async {
+            if (!firstRequest.isCompleted) {
+              firstRequest.complete(PermissionStatus.canRequest);
+            }
+            await pumpEventQueue();
+          });
+          final ready = bloc.stream.firstWhere(
+            (state) =>
+                state ==
+                const CameraPermissionLoaded(
+                  CameraPermissionStatus.canRequest,
+                ),
+          );
+          bloc.add(const CameraPermissionRefresh());
+          await ready;
+          final states = <CameraPermissionState>[];
+          final subscription = bloc.stream.listen(states.add);
+          addTearDown(subscription.cancel);
+
+          bloc.add(const CameraPermissionRequest());
+          await firstStarted.future;
+          expect(bloc.state, const CameraPermissionLoading());
+
+          final refreshed = bloc.stream.firstWhere(
+            (state) =>
+                state ==
+                const CameraPermissionLoaded(
+                  CameraPermissionStatus.canRequest,
+                ),
+          );
+          bloc.add(const CameraPermissionRefresh());
+          await refreshed;
+          bloc.add(const CameraPermissionRequest());
+          await pumpEventQueue();
+
+          expect(cameraCalls, 2);
+          expect(firstRequest.isCompleted, isFalse);
+          expect(
+            bloc.state,
+            const CameraPermissionLoaded(CameraPermissionStatus.canRequest),
+          );
+          bloc.add(const CameraPermissionRequest());
+          await pumpEventQueue();
+          expect(cameraCalls, 3);
+          expect(
+            bloc.state,
+            const CameraPermissionLoaded(CameraPermissionStatus.authorized),
+          );
+          firstRequest.complete(PermissionStatus.granted);
+          await pumpEventQueue();
+          expect(states, const [
+            CameraPermissionLoading(),
+            CameraPermissionLoaded(CameraPermissionStatus.canRequest),
+            CameraPermissionLoading(),
+            CameraPermissionLoaded(CameraPermissionStatus.canRequest),
+            CameraPermissionLoading(),
+            CameraPermissionLoaded(CameraPermissionStatus.authorized),
+          ]);
+          verify(() => mockPermissionsService.requestMicrophonePermission())
+              .called(1);
         },
       );
 

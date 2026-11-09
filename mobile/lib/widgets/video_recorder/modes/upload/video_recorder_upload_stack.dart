@@ -84,9 +84,11 @@ class _LearnMoreLink extends StatelessWidget {
             child: Row(
               spacing: 8,
               children: [
-                Text(
-                  context.l10n.videoRecorderUploadLearnMore,
-                  style: VineTheme.bodyMediumFont(color: VineTheme.primary),
+                Flexible(
+                  child: Text(
+                    context.l10n.videoRecorderUploadLearnMore,
+                    style: VineTheme.bodyMediumFont(color: VineTheme.primary),
+                  ),
                 ),
                 const ExcludeSemantics(
                   child: DivineIcon(
