@@ -4934,6 +4934,25 @@ void main() {
             );
           });
 
+          // The signer must own the reaction it names: a listed liker's kind
+          // 5 naming another listed liker's reaction retracts neither.
+          test('keeps both likers when one signed a kind 5 naming the '
+              "other's reaction", () async {
+            stubLikersWithReactions({likerA: reactionA, likerB: reactionB});
+            stubRetractionRead([
+              createMockDeletion([reactionB], authorPubkey: likerA),
+            ]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+
+            expect(
+              (await repository.fetchEventLikers(
+                eventId: targetEventId,
+              )).pubkeys,
+              equals([likerA, likerB]),
+            );
+          });
+
           test('keeps everyone when the relays found no retraction and did '
               'not all answer', () async {
             stubLikersWithReactions({likerA: reactionA, likerB: reactionB});
