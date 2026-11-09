@@ -156,6 +156,71 @@ void main() {
       expect(result.length, lessThan(600));
     });
 
+    test('keeps full interrupted-render diagnostics after 500 characters', () {
+      final details =
+          'memoryMb=512 peakMb=768 ${'phase=render ' * 50}'
+          'lastDraft=clips 1 history steps 1000';
+      final result = buildLogsSummary([
+        _log(
+          0,
+          LogLevel.warning,
+          'Previous session ended during a render: $details',
+          name: 'InterruptedRenderMonitor',
+        ),
+      ])!;
+
+      expect(result, contains(details));
+      expect(result, isNot(contains('... [truncated]')));
+    });
+
+    test('sanitizes the preserved tail of interrupted-render diagnostics', () {
+      final result = buildLogsSummary([
+        _log(
+          0,
+          LogLevel.warning,
+          'Previous session ended during a render: ${'x' * 600} '
+          'password: render-secret lastDraft=clips 1',
+          name: 'InterruptedRenderMonitor',
+        ),
+      ])!;
+
+      expect(result, contains('[REDACTED]'));
+      expect(result, isNot(contains('render-secret')));
+      expect(result, contains('lastDraft=clips 1'));
+    });
+
+    test('still truncates other entries from the render monitor', () {
+      final result = buildLogsSummary([
+        _log(
+          0,
+          LogLevel.warning,
+          'Other diagnostic: ${'x' * 1000}',
+          name: 'InterruptedRenderMonitor',
+        ),
+      ])!;
+      expect(result, contains('... [truncated]'));
+    });
+
+    test(
+      'preserved render diagnostics still consume the total report budget',
+      () {
+        final result = buildLogsSummary([
+          _log(
+            0,
+            LogLevel.warning,
+            'Previous session ended during a render: ${'phase ' * 1000} '
+            'lastDraft=clips 1',
+            name: 'InterruptedRenderMonitor',
+          ),
+          for (var i = 1; i <= 80; i++)
+            _log(i, LogLevel.error, 'error-$i ${'x' * 450}'),
+        ])!;
+        expect(result, contains('lastDraft=clips 1'));
+        expect(result, contains('entries truncated'));
+        expect(result.length, lessThanOrEqualTo(32 * 1024 + 100));
+      },
+    );
+
     test('redacts a credential inside a log entry', () {
       final result = buildLogsSummary([
         _log(0, LogLevel.error, 'auth failed password: hunter2'),
