@@ -797,16 +797,6 @@ class ZendeskSupportService {
               );
               return true;
             }
-            Log.warning(
-              'Anonymous identity retry did not create the ticket: '
-              '$retryResult',
-              category: LogCategory.system,
-            );
-          } else {
-            Log.warning(
-              'Could not set an anonymous identity to retry with',
-              category: LogCategory.system,
-            );
           }
         } catch (retryError) {
           Log.warning(
