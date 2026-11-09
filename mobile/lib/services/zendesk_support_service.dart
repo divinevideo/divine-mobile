@@ -808,17 +808,12 @@ class ZendeskSupportService {
               category: LogCategory.system,
             );
           }
-        } on PlatformException catch (retryError) {
-          Log.warning(
-            'Anonymous identity retry also failed: $retryError',
-            category: LogCategory.system,
-          );
-          reportedError = retryError;
         } catch (retryError) {
           Log.warning(
             'Anonymous identity retry also failed: $retryError',
             category: LogCategory.system,
           );
+          if (retryError is PlatformException) reportedError = retryError;
         }
       }
 
