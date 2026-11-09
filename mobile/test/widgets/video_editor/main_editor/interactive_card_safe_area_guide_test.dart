@@ -9,24 +9,33 @@ import 'package:openvine/widgets/video_editor/main_editor/interactive_card_safe_
 
 void main() {
   group(InteractiveCardSafeAreaGuide, () {
-    Future<void> pump(WidgetTester tester, {required bool isVisible}) =>
-        tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Center(
-              child: SizedBox(
-                width: 300,
-                height: 600,
-                child: InteractiveCardSafeAreaGuide(
-                  isVisible: isVisible,
-                  targetAspectRatio: 9 / 16,
-                  fittedBoxScale: 1,
-                ),
-              ),
+    Future<void> pump(
+      WidgetTester tester, {
+      required bool isVisible,
+      double textScale = 1,
+    }) => tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
+        home: Center(
+          child: SizedBox(
+            width: 300,
+            height: 600,
+            child: InteractiveCardSafeAreaGuide(
+              isVisible: isVisible,
+              targetAspectRatio: 9 / 16,
+              fittedBoxScale: 1,
             ),
           ),
-        );
+        ),
+      ),
+    );
 
     double opacity(WidgetTester tester) =>
         tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity;
@@ -61,6 +70,21 @@ void main() {
         expect(shown.top, closeTo(box.top, 0.01));
         expect(shown.right, closeTo(box.right, 0.01));
         expect(shown.bottom, closeTo(box.bottom, 0.01));
+      });
+
+      testWidgets('keeps the line on the canvas at the largest text size', (
+        tester,
+      ) async {
+        await pump(tester, isVisible: true, textScale: 3.12);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final canvas = tester.getRect(
+          find.byType(InteractiveCardSafeAreaGuide),
+        );
+        final hint = tester.getRect(
+          find.text(l10n.videoEditorInteractiveCardAreaHint),
+        );
+        expect(hint.bottom, lessThanOrEqualTo(canvas.bottom));
       });
 
       testWidgets('is hidden while no poll moves', (tester) async {
