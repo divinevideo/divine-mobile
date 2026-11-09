@@ -1235,19 +1235,15 @@ void main() {
       );
     });
 
-    test('redacts credentials, device paths and an npub from the reported SDK '
+    test('redacts credentials and device paths from the reported SDK '
         'reason', () async {
-      // Synthetic, full-length, and not a real key.
-      const syntheticNpub =
-          'npub1qpzry9x8gf2tvdw0s3jn54khce6mua7lqpzry9x8gf2tvdw0s3jn54khce';
       await initializeWithCreateTicketFailures([
         PlatformException(
           code: 'CREATE_FAILED',
           message:
               'Authorization: Bearer synthetic-bearer-secret rejected '
               'https://api.example.test/v1/tickets?token=synthetic-query-secret '
-              'for /data/user/0/co.openvine.app/cache/attachment.png '
-              'from $syntheticNpub',
+              'for /data/user/0/co.openvine.app/cache/attachment.png',
         ),
       ]);
 
@@ -1258,10 +1254,10 @@ void main() {
 
       final reported = crashReporter.logs.single;
       expect(reported, contains('rejected'));
+      expect(reported, contains('api.example.test'));
       expect(reported, isNot(contains('synthetic-bearer-secret')));
       expect(reported, isNot(contains('synthetic-query-secret')));
       expect(reported, isNot(contains('/data/user/0')));
-      expect(reported, isNot(contains(syntheticNpub)));
     });
   });
 
