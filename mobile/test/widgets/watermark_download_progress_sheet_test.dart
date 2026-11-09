@@ -48,10 +48,26 @@ void main() {
     mockPermissions = _MockPermissionsService();
   });
 
+  /// Builds a button that opens the sheet. Setting [openerVisible] to false
+  /// removes the button from the tree while the sheet stays open.
   Widget buildTestWidget({
     required VideoEvent video,
-    required ValueNotifier<bool> openerVisible,
+    ValueNotifier<bool>? openerVisible,
   }) {
+    final opener = Builder(
+      builder: (context) {
+        return ElevatedButton(
+          onPressed: () async {
+            await showWatermarkDownloadSheet(
+              context: context,
+              video: video,
+              watermarkText: 'TestUser',
+            );
+          },
+          child: const Text('Show Sheet'),
+        );
+      },
+    );
     return ProviderScope(
       overrides: [
         watermarkDownloadServiceProvider.overrideWithValue(mockService),
@@ -62,41 +78,29 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         theme: ThemeData.dark(),
         home: Scaffold(
-          body: ValueListenableBuilder<bool>(
-            valueListenable: openerVisible,
-            builder: (context, visible, _) {
-              if (!visible) return const SizedBox.shrink();
-              return ElevatedButton(
-                onPressed: () async {
-                  await showWatermarkDownloadSheet(
-                    context: context,
-                    video: video,
-                    watermarkText: 'TestUser',
-                  );
-                },
-                child: const Text('Show Sheet'),
-              );
-            },
-          ),
+          body: openerVisible == null
+              ? opener
+              : ValueListenableBuilder<bool>(
+                  valueListenable: openerVisible,
+                  builder: (context, visible, child) =>
+                      visible ? child! : const SizedBox.shrink(),
+                  child: opener,
+                ),
         ),
       ),
     );
   }
 
-  /// Pumps the opener and returns the switch that removes it from the tree
-  /// while the sheet stays open.
-  Future<ValueNotifier<bool>> pumpSheet(
+  Future<void> pumpSheet(
     WidgetTester tester, {
     required VideoEvent video,
+    ValueNotifier<bool>? openerVisible,
   }) async {
     await tester.binding.setSurfaceSize(const Size(800, 1200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final openerVisible = ValueNotifier(true);
-    addTearDown(openerVisible.dispose);
     await tester.pumpWidget(
       buildTestWidget(video: video, openerVisible: openerVisible),
     );
-    return openerVisible;
   }
 
   group('showWatermarkDownloadSheet', () {
@@ -310,9 +314,12 @@ void main() {
           return const WatermarkDownloadSuccess('/tmp/v.mp4');
         });
 
-        final openerVisible = await pumpSheet(
+        final openerVisible = ValueNotifier(true);
+        addTearDown(openerVisible.dispose);
+        await pumpSheet(
           tester,
           video: _createTestVideo(),
+          openerVisible: openerVisible,
         );
         await tester.tap(find.text('Show Sheet'));
         await tester.pumpAndSettle();
