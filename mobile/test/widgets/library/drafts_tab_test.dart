@@ -188,6 +188,40 @@ void main() {
       // publishing one shipped the raw recording without its editor layers.
       // Publish now renders on demand with those layers restored, so the
       // action stays available.
+      testWidgets('shows post action when draft has no final render', (
+        tester,
+      ) async {
+        when(
+          () => mockBloc.state,
+        ).thenReturn(DraftsLibraryLoaded(drafts: [createDraft(id: 'draft1')]));
+
+        await tester.pumpWidget(buildWidget());
+        await tester.tap(find.byType(IconButton));
+        await tester.pumpAndSettle();
+
+        expect(find.text(en.libraryDraftActionPost), findsOneWidget);
+        expect(find.text(en.libraryDraftActionEdit), findsOneWidget);
+        expect(find.text(en.libraryDraftActionDelete), findsOneWidget);
+      });
+
+      testWidgets('shows post action when draft has a final render', (
+        tester,
+      ) async {
+        when(() => mockBloc.state).thenReturn(
+          DraftsLibraryLoaded(
+            drafts: [
+              createDraft(id: 'draft1', finalRenderedClip: _createTestClip()),
+            ],
+          ),
+        );
+
+        await tester.pumpWidget(buildWidget());
+        await tester.tap(find.byType(IconButton));
+        await tester.pumpAndSettle();
+
+        expect(find.text(en.libraryDraftActionPost), findsOneWidget);
+      });
+
       testWidgets('loads a full draft only after Post is selected', (
         tester,
       ) async {
@@ -234,40 +268,6 @@ void main() {
         await tester.pumpAndSettle();
         expect(publisher.published, isEmpty);
         expect(find.text(en.libraryCouldNotLoadDrafts), findsOneWidget);
-      });
-
-      testWidgets('shows post action when draft has no final render', (
-        tester,
-      ) async {
-        when(
-          () => mockBloc.state,
-        ).thenReturn(DraftsLibraryLoaded(drafts: [createDraft(id: 'draft1')]));
-
-        await tester.pumpWidget(buildWidget());
-        await tester.tap(find.byType(IconButton));
-        await tester.pumpAndSettle();
-
-        expect(find.text(en.libraryDraftActionPost), findsOneWidget);
-        expect(find.text(en.libraryDraftActionEdit), findsOneWidget);
-        expect(find.text(en.libraryDraftActionDelete), findsOneWidget);
-      });
-
-      testWidgets('shows post action when draft has a final render', (
-        tester,
-      ) async {
-        when(() => mockBloc.state).thenReturn(
-          DraftsLibraryLoaded(
-            drafts: [
-              createDraft(id: 'draft1', finalRenderedClip: _createTestClip()),
-            ],
-          ),
-        );
-
-        await tester.pumpWidget(buildWidget());
-        await tester.tap(find.byType(IconButton));
-        await tester.pumpAndSettle();
-
-        expect(find.text(en.libraryDraftActionPost), findsOneWidget);
       });
     });
 
