@@ -2037,6 +2037,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEngagementLoadFailed => 'ఆ జాబితాను లోడ్ చేయడం సాధ్యపడలేదు';
 
   @override
+  String get videoEngagementListIncomplete => 'అందరినీ లోడ్ చేయడం సాధ్యపడలేదు';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'వీడియో వివరాలను తెరవండి';
 
   @override

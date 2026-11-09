@@ -1972,6 +1972,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Tidak dapat memuatkan senarai itu';
 
   @override
+  String get videoEngagementListIncomplete =>
+      'Tidak dapat memuatkan semua orang';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'Buka butiran video';
 
   @override

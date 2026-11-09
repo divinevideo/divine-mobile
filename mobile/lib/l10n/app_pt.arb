@@ -753,6 +753,7 @@
   "videoEngagementLikersEmpty": "Ainda sem curtidas",
   "videoEngagementRepostersEmpty": "Ainda sem reposts",
   "videoEngagementLoadFailed": "Não foi possível carregar a lista",
+  "videoEngagementListIncomplete": "Não foi possível carregar todos",
   "metadataBadgeNotDivine": "Não-Divine",
   "metadataBadgeHumanMade": "Feito por humano",
   "metadataSoundsLabel": "Sons",

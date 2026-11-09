@@ -2006,6 +2006,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Kon die lijst niet laden';
 
   @override
+  String get videoEngagementListIncomplete => 'Kon niet iedereen laden';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'Videodetails openen';
 
   @override

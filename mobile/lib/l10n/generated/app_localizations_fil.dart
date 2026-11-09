@@ -1990,6 +1990,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Hindi ma-load ang listahan';
 
   @override
+  String get videoEngagementListIncomplete => 'Hindi ma-load ang lahat';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'Buksan ang video details';
 
   @override

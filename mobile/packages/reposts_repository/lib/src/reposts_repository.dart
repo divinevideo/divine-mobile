@@ -12,6 +12,7 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:reposts_repository/src/blocked_reposter_filter.dart';
 import 'package:reposts_repository/src/exceptions.dart';
 import 'package:reposts_repository/src/models/repost_record.dart';
+import 'package:reposts_repository/src/models/reposters_page.dart';
 import 'package:reposts_repository/src/models/reposts_sync_result.dart';
 import 'package:reposts_repository/src/reposts_local_storage.dart';
 import 'package:reposts_repository/src/reposts_repository_reportable_sites.dart';
@@ -958,8 +959,14 @@ class RepostsRepository {
   /// - [addressableId]: Optional `kind:pubkey:d-tag` for Kind 30000+
   ///   events.
   ///
+  /// The repost reads wait for every relay, and the page says whether they
+  /// all finished, so a read cut short is not mistaken for nobody (#10846).
+  /// A relay's terminal refusal counts as finished once another relay
+  /// answered. The deletion read does not affect completeness: a deletion it
+  /// misses leaves someone listed, never anyone missing.
+  ///
   /// Throws [FetchRepostersFailedException] if relay queries fail.
-  Future<List<String>> fetchEventReposters({
+  Future<RepostersPage> fetchEventReposters({
     required String eventId,
     String? addressableId,
   }) async {
@@ -986,18 +993,26 @@ class RepostsRepository {
           ),
       ];
       final results = await Future.wait([
-        for (final filter in filters) _nostrClient.queryEvents([filter]),
+        for (final filter in filters)
+          _nostrClient.queryEventsDetailed(
+            [filter],
+            requireAllRelaysSettled: true,
+            acceptRelayClosedWhenOthersAnswered: true,
+          ),
       ]);
+      final isComplete = results.every(
+        (result) => !result.timedOut && !result.noRelays,
+      );
 
       final repostsById = <String, Event>{};
-      for (final batch in results) {
-        for (final event in batch) {
+      for (final result in results) {
+        for (final event in result.events) {
           repostsById[event.id] = event;
         }
       }
 
       if (repostsById.isEmpty) {
-        return <String>[];
+        return RepostersPage(pubkeys: const [], isComplete: isComplete);
       }
 
       // The newest 500 overall lie within the union of each filter's newest
@@ -1044,7 +1059,7 @@ class RepostsRepository {
           orderedPubkeys.add(event.pubkey);
         }
       }
-      return orderedPubkeys;
+      return RepostersPage(pubkeys: orderedPubkeys, isComplete: isComplete);
     } catch (e) {
       throw FetchRepostersFailedException(
         'Failed to fetch reposters for event $eventId: $e',

@@ -2049,6 +2049,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Lista nu a putut fi încărcată';
 
   @override
+  String get videoEngagementListIncomplete => 'Nu i-am putut încărca pe toți';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle =>
       'Deschide detaliile videoclipului';
 

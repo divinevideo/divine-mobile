@@ -2048,6 +2048,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Nie udało się wczytać listy';
 
   @override
+  String get videoEngagementListIncomplete =>
+      'Nie udało się wczytać wszystkich';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'Otwórz szczegóły filmu';
 
   @override

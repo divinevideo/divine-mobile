@@ -2021,6 +2021,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Списъкът не можа да се зареди';
 
   @override
+  String get videoEngagementListIncomplete => 'Не всички успяха да се заредят';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle =>
       'Отвори подробностите за видеото';
 

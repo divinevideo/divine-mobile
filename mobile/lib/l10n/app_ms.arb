@@ -1010,6 +1010,7 @@
     "description": "Empty-state message on the reposters list screen when no one has reposted the video yet."
   },
   "videoEngagementLoadFailed": "Tidak dapat memuatkan senarai itu",
+  "videoEngagementListIncomplete": "Tidak dapat memuatkan semua orang",
   "@videoEngagementLoadFailed": {
     "description": "Error-state heading on the engagement list screen when the relay query fails."
   },

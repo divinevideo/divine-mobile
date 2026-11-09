@@ -753,6 +753,7 @@
   "videoEngagementLikersEmpty": "Aucun j'aime pour l'instant",
   "videoEngagementRepostersEmpty": "Aucun repost pour l'instant",
   "videoEngagementLoadFailed": "Impossible de charger la liste",
+  "videoEngagementListIncomplete": "Impossible de charger tout le monde",
   "metadataBadgeNotDivine": "Pas Divine",
   "metadataBadgeHumanMade": "Fait main",
   "metadataSoundsLabel": "Sons",

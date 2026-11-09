@@ -753,6 +753,7 @@
   "videoEngagementLikersEmpty": "Brak polubień",
   "videoEngagementRepostersEmpty": "Brak udostępnień",
   "videoEngagementLoadFailed": "Nie udało się wczytać listy",
+  "videoEngagementListIncomplete": "Nie udało się wczytać wszystkich",
   "metadataBadgeNotDivine": "Nie Divine",
   "metadataBadgeHumanMade": "Zrobione przez człowieka",
   "metadataSoundsLabel": "Dźwięki",

@@ -750,6 +750,7 @@
   "videoEngagementLikersEmpty": "Henüz beğeni yok",
   "videoEngagementRepostersEmpty": "Henüz repost yok",
   "videoEngagementLoadFailed": "Liste yüklenemedi",
+  "videoEngagementListIncomplete": "Herkes yüklenemedi",
   "metadataBadgeNotDivine": "Divine Değil",
   "metadataBadgeHumanMade": "İnsan Yapımı",
   "metadataSoundsLabel": "Sesler",

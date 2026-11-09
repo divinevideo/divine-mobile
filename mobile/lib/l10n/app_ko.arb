@@ -559,6 +559,7 @@
   "videoEngagementLikersEmpty": "아직 좋아요가 없습니다",
   "videoEngagementRepostersEmpty": "아직 리포스트가 없습니다",
   "videoEngagementLoadFailed": "목록을 불러올 수 없습니다",
+  "videoEngagementListIncomplete": "모두 불러오지 못했습니다",
   "metadataBadgeNotDivine": "Divine 아님",
   "metadataBadgeHumanMade": "사람 제작",
   "metadataSoundsLabel": "사운드",

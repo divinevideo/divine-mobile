@@ -53,12 +53,12 @@ class VideoRepostersCubit extends Cubit<VideoRepostersState> {
       return;
     }
     try {
-      final pubkeys = await _repostsRepository.fetchEventReposters(
+      final page = await _repostsRepository.fetchEventReposters(
         eventId: _videoId,
         addressableId: _addressableId,
       );
       if (isClosed) return;
-      emit(VideoRepostersState(pubkeys: pubkeys, isLoading: false));
+      emit(VideoRepostersState(pubkeys: page.pubkeys, isLoading: false));
     } catch (e, stackTrace) {
       if (isClosed) return;
       addError(e, stackTrace);

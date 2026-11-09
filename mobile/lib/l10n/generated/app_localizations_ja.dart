@@ -1837,6 +1837,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEngagementLoadFailed => 'リストを読み込めませんでした';
 
   @override
+  String get videoEngagementListIncomplete => '全員を読み込めませんでした';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => '動画の詳細を開く';
 
   @override

@@ -25,7 +25,9 @@ void main() {
       setUp: () {
         when(
           () => repostsRepository.fetchEventReposters(eventId: 'video-id'),
-        ).thenAnswer((_) async => ['pubkey-a', 'pubkey-b']);
+        ).thenAnswer(
+          (_) async => const RepostersPage(pubkeys: ['pubkey-a', 'pubkey-b']),
+        );
       },
       build: () => VideoRepostersCubit(
         repostsRepository: repostsRepository,
@@ -47,7 +49,7 @@ void main() {
             eventId: 'video-id',
             addressableId: '34236:author:d-tag',
           ),
-        ).thenAnswer((_) async => ['pubkey-a']);
+        ).thenAnswer((_) async => const RepostersPage(pubkeys: ['pubkey-a']));
       },
       build: () => VideoRepostersCubit(
         repostsRepository: repostsRepository,
@@ -104,7 +106,7 @@ void main() {
       'does not emit (or throw) when closed before in-flight fetch resolves '
       '— regression for #3734 emit-after-close race',
       () async {
-        final completer = Completer<List<String>>();
+        final completer = Completer<RepostersPage>();
         when(
           () => repostsRepository.fetchEventReposters(eventId: 'video-id'),
         ).thenAnswer((_) => completer.future);
@@ -118,7 +120,7 @@ void main() {
         final subscription = cubit.stream.listen(emissions.add);
 
         await cubit.close();
-        completer.complete(['pubkey-late']);
+        completer.complete(const RepostersPage(pubkeys: ['pubkey-late']));
         await pumpEventQueue();
 
         expect(emissions, isEmpty);
@@ -129,7 +131,7 @@ void main() {
     test(
       'does not emit (or addError) when closed before in-flight fetch errors',
       () async {
-        final completer = Completer<List<String>>();
+        final completer = Completer<RepostersPage>();
         when(
           () => repostsRepository.fetchEventReposters(eventId: 'video-id'),
         ).thenAnswer((_) => completer.future);

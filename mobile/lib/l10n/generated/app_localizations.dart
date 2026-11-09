@@ -3397,6 +3397,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load that list'**
   String get videoEngagementLoadFailed;
 
+  /// Shown below a likers or reposters list whose relay read stopped before every relay answered, so people may be missing. A Retry button sits under it.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load everyone.'**
+  String get videoEngagementListIncomplete;
+
   /// Screen-reader label for the tappable title row on the video overlay. Action-oriented: describes what tapping does (opens the metadata sheet), not the title text itself — that's already read aloud by the underlying Text widget.
   ///
   /// In en, this message translates to:

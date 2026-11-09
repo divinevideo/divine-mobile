@@ -54,6 +54,7 @@ final class VideoEngagementState extends Equatable {
     this.pubkeys = const [],
     this.loadMoreStatus = VideoEngagementLoadMoreStatus.idle,
     this.nextCursor,
+    this.isComplete = true,
   });
 
   /// Whether this state is for the likers list or the reposters list.
@@ -75,6 +76,12 @@ final class VideoEngagementState extends Equatable {
   /// Always `null` for reposters, which are served from relays in one page.
   final String? nextCursor;
 
+  /// Whether the relays finished the read [pubkeys] came from.
+  ///
+  /// `false` when a relay read was cut short and still found people: the list
+  /// then shows them, with a way to try again for the rest (#10846).
+  final bool isComplete;
+
   /// Whether a further page can be requested.
   bool get hasMore => nextCursor != null;
 
@@ -87,6 +94,7 @@ final class VideoEngagementState extends Equatable {
     List<String>? pubkeys,
     VideoEngagementLoadMoreStatus? loadMoreStatus,
     Object? nextCursor = _unchanged,
+    bool? isComplete,
   }) {
     return VideoEngagementState(
       type: type,
@@ -96,6 +104,7 @@ final class VideoEngagementState extends Equatable {
       nextCursor: identical(nextCursor, _unchanged)
           ? this.nextCursor
           : nextCursor as String?,
+      isComplete: isComplete ?? this.isComplete,
     );
   }
 
@@ -106,5 +115,6 @@ final class VideoEngagementState extends Equatable {
     pubkeys,
     loadMoreStatus,
     nextCursor,
+    isComplete,
   ];
 }

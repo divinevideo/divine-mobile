@@ -802,6 +802,7 @@
   "videoEngagementLikersEmpty": "Още няма харесвания",
   "videoEngagementRepostersEmpty": "Още няма споделяния",
   "videoEngagementLoadFailed": "Списъкът не можа да се зареди",
+  "videoEngagementListIncomplete": "Не всички успяха да се заредят",
   "videoOverlayOpenMetadataFromTitle": "Отвори подробностите за видеото",
   "@videoOverlayOpenMetadataFromTitle": {
     "description": "Screen-reader label for the tappable title row on the video overlay. Action-oriented: describes what tapping does (opens the metadata sheet), not the title text itself — that's already read aloud by the underlying Text widget."

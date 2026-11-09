@@ -753,6 +753,7 @@
   "videoEngagementLikersEmpty": "Niciun like încă",
   "videoEngagementRepostersEmpty": "Niciun repost încă",
   "videoEngagementLoadFailed": "Lista nu a putut fi încărcată",
+  "videoEngagementListIncomplete": "Nu i-am putut încărca pe toți",
   "metadataBadgeNotDivine": "Nu e Divine",
   "metadataBadgeHumanMade": "Făcut de om",
   "metadataSoundsLabel": "Sunete",

@@ -1996,6 +1996,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEngagementLoadFailed => 'تعذّر تحميل القائمة';
 
   @override
+  String get videoEngagementListIncomplete => 'تعذّر تحميل الجميع';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'فتح تفاصيل الفيديو';
 
   @override

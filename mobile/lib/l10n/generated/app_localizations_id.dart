@@ -1926,6 +1926,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Tidak dapat memuat daftar';
 
   @override
+  String get videoEngagementListIncomplete => 'Tidak dapat memuat semuanya';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'Buka detail video';
 
   @override
