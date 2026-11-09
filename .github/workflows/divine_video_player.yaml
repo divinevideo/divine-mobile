@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: "stable"
           cache: true
       - run: flutter precache --ios --macos
@@ -38,7 +38,7 @@ jobs:
     with:
       run_bloc_lint: true
       working_directory: "mobile/packages/divine_video_player"
-      flutter_version: "3.47.2"
+      flutter_version: "3.47.9"
 
   android-unit-tests:
     name: Android Unit Tests
@@ -56,7 +56,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: "stable"
           cache: true
       - name: Setup Gradle

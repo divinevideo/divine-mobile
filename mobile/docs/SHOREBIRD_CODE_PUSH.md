@@ -108,7 +108,7 @@ The bundled texts were copied from `shorebirdtech/updater` at commit
 to each local text asset (upstream license blob ids
 `6802bc4b80c0f8df1413d55b16267c0969e352c9` and
 `a7e77cb28d386ec6eddeaabf441f91473ddefa1e`). The store engine paired with the
-current Flutter 3.47.2 pin is `315ff242617023c1c5549878bf17fad51ffec6f3`.
+current Flutter 3.47.9 pin is `38855c84ca367c58165b8e3844dd7d6a99dec844`.
 
 When Flutter or Shorebird changes, re-check attribution without producing a
 store artifact:
@@ -134,8 +134,8 @@ first — Shorebird supports a subset.
 
 The Codemagic installer also pins the Shorebird CLI version and its full source
 revision. That CLI must be the release that introduced support for the selected
-Flutter version or newer. Flutter 3.47.2 is paired with Shorebird 1.6.120 at
-revision `5ac7f9a9a5c4a5e66a958e608da0f73e34a3d6bb`; update the pin and its
+Flutter version or newer. Flutter 3.47.9 is paired with Shorebird 1.6.138 at
+revision `86b9685a87ba8945ddca2d1dfcd20b6828233f59`; update the pin and its
 configuration test together when either side moves.
 
 The pin moves as one unit across the repo, every CI workflow, and every

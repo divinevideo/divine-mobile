@@ -32,7 +32,7 @@ jobs:
     uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
     with:
       working_directory: "mobile/packages/challenges_repository"
-      flutter_version: "3.47.2"
+      flutter_version: "3.47.9"
       min_coverage: 95
 
   workspace:
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: stable
           cache: true
       - name: Resolve the real workspace

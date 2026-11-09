@@ -25,5 +25,5 @@ jobs:
     with:
       run_bloc_lint: true
       working_directory: "mobile/packages/permissions_service"
-      flutter_version: "3.47.2"
+      flutter_version: "3.47.9"
       min_coverage: 22
