@@ -150,6 +150,32 @@ void main() {
       );
     });
 
+    testWidgets('scrolls instead of overflowing on a screen shorter than its '
+        'content', (tester) async {
+      tester.view.physicalSize = const Size(375, 300);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      whenListen(
+        bloc,
+        const Stream<ClipEditorState>.empty(),
+        initialState: const ClipEditorState(
+          isStabilizing: true,
+          stabilizingClipId: 'clip',
+          stabilizeRenderId: 'stabilize',
+          stabilizeProgress: 0.4,
+        ),
+      );
+
+      await pump(tester, locale: const Locale('de'), textScale: 3.12);
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final scrollable = tester.state<ScrollableState>(
+        find.byType(Scrollable),
+      );
+      expect(scrollable.position.maxScrollExtent, greaterThan(0));
+    });
+
     testWidgets('announces the operation it waits on', (tester) async {
       final announced = _captureAnnouncements(tester);
       whenListen(
