@@ -477,7 +477,21 @@ class TrendingHashtags extends _$TrendingHashtags {
   /// Refresh trending hashtags from REST API, bypassing the repository cache.
   Future<void> refresh() async {
     final repo = ref.read(hashtagRepositoryProvider);
-    final hashtags = await repo.getTrendingHashtags(forceRefresh: true);
-    state = AsyncData(hashtags);
+    try {
+      final hashtags = await repo.getTrendingHashtags(forceRefresh: true);
+      if (!ref.mounted) return;
+      state = AsyncData(hashtags);
+    } catch (error, stackTrace) {
+      if (!ref.mounted) return;
+      Log.warning(
+        'Failed to refresh trending hashtags',
+        name: 'TrendingHashtags',
+        category: LogCategory.api,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      // Retain the last real ranking when a refresh fails.
+      if (!state.hasValue) state = AsyncError(error, stackTrace);
+    }
   }
 }

@@ -15,8 +15,8 @@ const maxLocalHashtagCount = 1000;
 /// Repository for searching hashtags.
 ///
 /// Provides a clean abstraction over the Funnelcake API for hashtag search.
-/// This layer owns caching for trending hashtags and falls back to
-/// [HashtagExtractor.suggestedHashtags] when the API is unavailable.
+/// This layer owns caching for trending hashtags. An unconfigured API
+/// returns no trends rather than presenting suggestions as current activity.
 class HashtagRepository {
   /// Creates a new [HashtagRepository] instance.
   HashtagRepository({
@@ -105,7 +105,7 @@ class HashtagRepository {
 
   /// Fetches trending hashtags.
   ///
-  /// Returns a list of [TrendingHashtag] sorted by popularity.
+  /// Returns a list of [TrendingHashtag] ranked by recent activity.
   /// [limit] defaults to 20.
   ///
   /// Throws:
@@ -127,8 +127,7 @@ class HashtagRepository {
   /// is made. On success the cache is updated.
   ///
   /// If the API is not configured ([FunnelcakeNotConfiguredException]), returns
-  /// a built-in list of default hashtags so callers always get a usable result
-  /// without needing to handle that exception themselves.
+  /// no trends. Static suggestions are not evidence of current activity.
   ///
   /// Throws:
   /// - [FunnelcakeApiException] on server error.
@@ -154,15 +153,7 @@ class HashtagRepository {
       _lastTrendingHashtagsFetch = DateTime.now();
       return results;
     } on FunnelcakeNotConfiguredException {
-      return _buildDefaultHashtags(limit);
+      return const [];
     }
-  }
-
-  List<TrendingHashtag> _buildDefaultHashtags(int limit) {
-    final tags = HashtagExtractor.suggestedHashtags.take(limit).toList();
-    return [
-      for (var i = 0; i < tags.length; i++)
-        TrendingHashtag(tag: tags[i], videoCount: 50 - (i * 2)),
-    ];
   }
 }

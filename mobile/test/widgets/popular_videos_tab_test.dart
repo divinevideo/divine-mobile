@@ -5,19 +5,24 @@ import 'package:clock/clock.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/popular_videos_tab.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
+
+class _MockHashtagRepository extends Mock implements HashtagRepository {}
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
@@ -62,6 +67,117 @@ void main() {
       ).thenReturn(false);
     });
 
+    group('current trending hashtags', () {
+      late _MockHashtagRepository hashtagRepository;
+
+      setUp(() {
+        hashtagRepository = _MockHashtagRepository();
+        when(
+          () => videosRepository.getPopularVideosPage(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
+            variant: any(named: 'variant'),
+            skipCache: any(named: 'skipCache'),
+            preferredLanguages: any(named: 'preferredLanguages'),
+            viewerCountry: any(named: 'viewerCountry'),
+          ),
+        ).thenAnswer((_) async => _popularPage([]));
+      });
+
+      Future<void> pumpTab(WidgetTester tester) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            additionalOverrides: [
+              appReadyProvider.overrideWithValue(true),
+              videosRepositoryProvider.overrideWithValue(videosRepository),
+              videoEventServiceProvider.overrideWithValue(videoEventService),
+              contentBlocklistRepositoryProvider.overrideWithValue(
+                blocklistRepository,
+              ),
+              hashtagRepositoryProvider.overrideWithValue(hashtagRepository),
+            ],
+            home: const Scaffold(body: PopularVideosTab()),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('replaces the loading state with live ranked hashtags', (
+        tester,
+      ) async {
+        final response = Completer<List<TrendingHashtag>>();
+        when(() => hashtagRepository.getTrendingHashtags())
+            .thenAnswer((_) => response.future);
+
+        await pumpTab(tester);
+        expect(find.text('#funny'), findsNothing);
+        expect(find.text('Loading hashtags...'), findsOneWidget);
+
+        response.complete([
+          TrendingHashtag(tag: 'today', videoCount: 3),
+          TrendingHashtag(tag: 'newloops', videoCount: 2),
+        ]);
+        await tester.pumpAndSettle();
+
+        expect(find.text('#today'), findsOneWidget);
+        expect(find.text('#newloops'), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text('#today')).dx,
+          lessThan(tester.getTopLeft(find.text('#newloops')).dx),
+        );
+        expect(find.text('Loading hashtags...'), findsNothing);
+      });
+
+      testWidgets(
+        'refreshes trends with the grid and keeps real trends on error',
+        (
+          tester,
+        ) async {
+          when(() => hashtagRepository.getTrendingHashtags()).thenAnswer(
+            (_) async => [TrendingHashtag(tag: 'today', videoCount: 3)],
+          );
+          when(() => hashtagRepository.getTrendingHashtags(forceRefresh: true))
+              .thenAnswer(
+                (_) async => [TrendingHashtag(tag: 'tomorrow', videoCount: 4)],
+              );
+          await pumpTab(tester);
+
+          await tester
+              .widget<ComposableVideoGrid>(find.byType(ComposableVideoGrid))
+              .onRefresh!();
+          await tester.pumpAndSettle();
+          expect(find.text('#tomorrow'), findsOneWidget);
+          expect(find.text('#today'), findsNothing);
+
+          when(() => hashtagRepository.getTrendingHashtags(forceRefresh: true))
+              .thenThrow(const FunnelcakeTimeoutException());
+          await tester
+              .widget<ComposableVideoGrid>(find.byType(ComposableVideoGrid))
+              .onRefresh!();
+          await tester.pumpAndSettle();
+          expect(find.text('#tomorrow'), findsOneWidget);
+          expect(find.text('#funny'), findsNothing);
+        },
+      );
+
+      testWidgets('keeps the source toggle usable when trends fail', (
+        tester,
+      ) async {
+        when(() => hashtagRepository.getTrendingHashtags())
+            .thenThrow(const FunnelcakeTimeoutException());
+        await pumpTab(tester);
+
+        expect(
+          find.byKey(const Key('popular-feed-variant-toggle')),
+          findsOneWidget,
+        );
+        expect(find.text('#funny'), findsNothing);
+        expect(find.text('Loading hashtags...'), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+    });
+
     testWidgets(
       'keeps the loaded grid on screen while the other variant loads',
       (
@@ -90,6 +206,7 @@ void main() {
         await tester.pumpWidget(
           testMaterialApp(
             additionalOverrides: [
+              trendingHashtagsProvider.overrideWith(_EmptyTrends.new),
               appReadyProvider.overrideWithValue(true),
               videosRepositoryProvider.overrideWithValue(videosRepository),
               videoEventServiceProvider.overrideWithValue(videoEventService),
@@ -198,6 +315,7 @@ void main() {
         await tester.pumpWidget(
           testMaterialApp(
             additionalOverrides: [
+              trendingHashtagsProvider.overrideWith(_EmptyTrends.new),
               appReadyProvider.overrideWithValue(true),
               videosRepositoryProvider.overrideWithValue(videosRepository),
               videoEventServiceProvider.overrideWithValue(videoEventService),
@@ -263,4 +381,9 @@ VideoEvent _video(String id) {
     videoUrl: 'https://example.com/$id.mp4',
     thumbnailUrl: 'https://example.com/$id.jpg',
   );
+}
+
+class _EmptyTrends extends TrendingHashtags {
+  @override
+  Future<List<TrendingHashtag>> build() async => [];
 }

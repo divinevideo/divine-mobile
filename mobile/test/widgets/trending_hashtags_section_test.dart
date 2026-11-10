@@ -59,12 +59,12 @@ void main() {
     });
 
     testWidgets(
-      'displays loading placeholder when hashtags list is empty and not loading',
+      'leaves room for the leading control without claiming empty trends are loading',
       (tester) async {
         await tester.pumpWidget(buildTestWidget(hashtags: []));
 
-        // Should still show loading placeholder when no hashtags available
-        expect(find.text('Loading hashtags...'), findsOneWidget);
+        expect(find.text('Loading hashtags...'), findsNothing);
+        expect(find.text('Trending'), findsNothing);
       },
     );
 

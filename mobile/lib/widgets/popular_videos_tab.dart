@@ -15,9 +15,9 @@ import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
+import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/popular_videos_feed_provider.dart';
-import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/state/video_feed_state.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -303,8 +303,8 @@ class _PopularVideosTrendingContentState
     final popularVideosFeedNotifier = ref.read(
       popularVideosFeedProvider.notifier,
     );
-    final topHashtags = ref.read(topHashtagsServiceProvider);
-    final hashtags = topHashtags.getTopHashtags(limit: 20);
+    final trendingHashtags = ref.watch(trendingHashtagsProvider);
+    final hashtags = trendingHashtags.value?.map((h) => h.tag).toList() ?? [];
 
     measureHeaderHeight();
 
@@ -354,7 +354,10 @@ class _PopularVideosTrendingContentState
                   '🔄 PopularVideosTab: Refreshing',
                   category: LogCategory.video,
                 );
-                await popularVideosFeedNotifier.refresh();
+                await Future.wait([
+                  popularVideosFeedNotifier.refresh(),
+                  ref.read(trendingHashtagsProvider.notifier).refresh(),
+                ]);
               },
               onLoadMore: () async {
                 Log.info(
@@ -381,7 +384,7 @@ class _PopularVideosTrendingContentState
           child: TrendingHashtagsSection(
             key: headerKey,
             hashtags: hashtags,
-            isLoading: !topHashtags.isLoaded,
+            isLoading: trendingHashtags.isLoading && !trendingHashtags.hasError,
             leading: const _PopularFeedVariantToggle(),
           ),
         ),

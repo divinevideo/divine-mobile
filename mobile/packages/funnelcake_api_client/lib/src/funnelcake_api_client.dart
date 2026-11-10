@@ -1879,7 +1879,7 @@ class FunnelcakeApiClient {
   /// (defaults to 20).
   ///
   /// Returns a list of [TrendingHashtag] objects sorted by
-  /// popularity.
+  /// recent activity.
   ///
   /// Throws:
   /// - [FunnelcakeNotConfiguredException] if the API is not
@@ -1893,7 +1893,7 @@ class FunnelcakeApiClient {
     }
 
     final uri = Uri.parse(
-      '$_baseUrl/api/hashtags',
+      '$_baseUrl/api/hashtags/trending',
     ).replace(queryParameters: {'limit': limit.toString()});
 
     try {
