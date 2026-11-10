@@ -62,7 +62,9 @@ class SecureCuratedListDraftArchive implements CuratedListDraftArchive {
       throw const CuratedListDraftArchiveException();
     } finally {
       completed.complete();
-      if (identical(_ownerTails[owner], tail)) _ownerTails.remove(owner);
+      if (identical(_ownerTails[owner], tail)) {
+        final _ = _ownerTails.remove(owner);
+      }
     }
   }
 
