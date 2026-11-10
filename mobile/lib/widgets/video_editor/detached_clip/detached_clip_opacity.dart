@@ -159,8 +159,9 @@ class _LayerOpacitySheetState extends State<LayerOpacitySheet> {
                 onPressed: () => context.pop<bool>(false),
               ),
               Flexible(
-                child: Text(
+                child: DivineWordFitText(
                   l10n.videoEditorOpacityLabel,
+                  textAlign: TextAlign.center,
                   style: VineTheme.titleMediumFont(
                     color: context.vineColors.primaryText,
                   ),

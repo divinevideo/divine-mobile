@@ -335,7 +335,9 @@ class _FullColorPickerSheetState extends State<_FullColorPickerSheet> {
                   onPressed: context.pop,
                 ),
                 Flexible(
-                  child: Text(
+                  // Between the buttons a large text size leaves the title
+                  // too little width for a long word such as "auswählen".
+                  child: DivineWordFitText(
                     context.l10n.videoEditorPickColorTitle,
                     style: VineTheme.titleMediumFont(
                       color: context.vineColors.primaryText,

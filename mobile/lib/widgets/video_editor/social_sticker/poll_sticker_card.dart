@@ -8,6 +8,7 @@ import 'package:intl/intl.dart' show NumberFormat;
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/sticker_text_scope.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 
 /// What the player shows over a poll, quiz or slider once its votes are in.
@@ -125,56 +126,59 @@ class PollStickerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final results = this.results;
-    final content = Padding(
-      padding: const .all(pollCardPadding),
-      child: SizedBox(
-        width: pollCardContentWidth,
-        child: Column(
-          mainAxisSize: .min,
-          crossAxisAlignment: .stretch,
-          spacing: 16,
-          children: [
-            IgnorePointer(
-              ignoring: overFrames,
-              child: Padding(
-                padding: const .only(bottom: 12),
-                child: StickerTextLine(
-                  text: data.pollQuestion ?? '',
-                  style: interactiveCardTextStyle(54),
-                  maxLines: 2,
-                  textAlign: .center,
-                ),
-              ),
-            ),
-            if (data.kind == SocialStickerKind.slider)
-              _Grown(
-                value: results?.average,
-                builder: (context, average) => _SliderScale(
-                  emoji: data.sliderEmoji ?? '',
-                  value: sliderValue,
-                  average: average,
-                  passesTaps: overFrames,
-                  onSlide: onSlide,
-                  onSlideEnd: onSlideEnd,
-                ),
-              )
-            else
-              for (final (index, answer) in data.pollOptions.indexed)
-                IgnorePointer(
-                  ignoring: overFrames && onAnswer == null,
-                  child: _Answer(
-                    text: answer,
-                    share: results?.shares.elementAtOrNull(index),
-                    isOwn: results?.ownAnswer == index,
-                    isRight: results?.rightAnswer == index,
-                    isWrong:
-                        results?.rightAnswer != null &&
-                        results?.ownAnswer == index &&
-                        results?.rightAnswer != index,
-                    onTap: onAnswer == null ? null : () => onAnswer!(index),
+    // The player builds the card without the sticker view around it.
+    final content = StickerTextScope(
+      child: Padding(
+        padding: const .all(pollCardPadding),
+        child: SizedBox(
+          width: pollCardContentWidth,
+          child: Column(
+            mainAxisSize: .min,
+            crossAxisAlignment: .stretch,
+            spacing: 16,
+            children: [
+              IgnorePointer(
+                ignoring: overFrames,
+                child: Padding(
+                  padding: const .only(bottom: 12),
+                  child: StickerTextLine(
+                    text: data.pollQuestion ?? '',
+                    style: interactiveCardTextStyle(54),
+                    maxLines: 2,
+                    textAlign: .center,
                   ),
                 ),
-          ],
+              ),
+              if (data.kind == SocialStickerKind.slider)
+                _Grown(
+                  value: results?.average,
+                  builder: (context, average) => _SliderScale(
+                    emoji: data.sliderEmoji ?? '',
+                    value: sliderValue,
+                    average: average,
+                    passesTaps: overFrames,
+                    onSlide: onSlide,
+                    onSlideEnd: onSlideEnd,
+                  ),
+                )
+              else
+                for (final (index, answer) in data.pollOptions.indexed)
+                  IgnorePointer(
+                    ignoring: overFrames && onAnswer == null,
+                    child: _Answer(
+                      text: answer,
+                      share: results?.shares.elementAtOrNull(index),
+                      isOwn: results?.ownAnswer == index,
+                      isRight: results?.rightAnswer == index,
+                      isWrong:
+                          results?.rightAnswer != null &&
+                          results?.ownAnswer == index &&
+                          results?.rightAnswer != index,
+                      onTap: onAnswer == null ? null : () => onAnswer!(index),
+                    ),
+                  ),
+            ],
+          ),
         ),
       ),
     );
@@ -400,7 +404,6 @@ class _AnswerPill extends StatelessWidget {
                         style: interactiveCardTextStyle(42).copyWith(
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
-                        textScaler: TextScaler.noScaling,
                       ),
                   ],
                 ),

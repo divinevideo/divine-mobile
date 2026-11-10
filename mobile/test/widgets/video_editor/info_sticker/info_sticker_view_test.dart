@@ -40,6 +40,52 @@ void main() {
         expect(text.text.toPlainText(), equals('23%'));
       });
 
+      testWidgets('the same at any system text size and with Bold Text', (
+        tester,
+      ) async {
+        Future<(Size, FontWeight?)> drawnWith(MediaQueryData media) async {
+          await tester.pumpWidget(
+            MediaQuery(
+              data: media,
+              child: const Directionality(
+                textDirection: TextDirection.ltr,
+                child: Center(
+                  child: InfoStickerView(
+                    data: InfoStickerData(
+                      kind: InfoStickerKind.battery,
+                      localeName: 'en',
+                      batteryLevel: 23,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          final text = tester.widget<RichText>(
+            find.descendant(
+              of: find.byType(InfoStickerView),
+              matching: find.byType(RichText),
+            ),
+          );
+          return (
+            tester.getSize(find.byType(InfoStickerView)),
+            text.text.style?.fontWeight,
+          );
+        }
+
+        final regular = await drawnWith(const MediaQueryData());
+        final large = await drawnWith(
+          const MediaQueryData(
+            textScaler: TextScaler.linear(3.12),
+            boldText: true,
+          ),
+        );
+
+        // The sticker is part of the video; the creator's text settings must
+        // not end up in its frames.
+        expect(large, equals(regular));
+      });
+
       testWidgets('a Turkish camcorder date in capitals with a dotted I', (
         tester,
       ) async {

@@ -15,6 +15,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/sound_credit_paint.dart';
 import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/sticker_text_scope.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/interactive_sticker_card.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/poll_sticker_card.dart';
@@ -101,57 +102,62 @@ class SocialStickerView extends StatelessWidget {
           ? textOf(data)
           : '${data.countdownTitle ?? ''} · $countdownValue',
       excludeSemantics: true,
-      // The headless draft rasterizer mounts the sticker without a Material
-      // above it, whose fallback text style underlines everything in yellow.
-      child: DefaultTextStyle(
-        style: VineTheme.bodyMediumFont(color: VineTheme.whiteText),
-        child: switch (data.kind) {
-          SocialStickerKind.soundCredit => _SoundCredit(
-            data: data,
-            overFrames: overFrames,
-          ),
-          SocialStickerKind.link => StickerPill(
-            palette: palette,
-            child: Row(
-              mainAxisSize: .min,
-              spacing: 14,
-              children: [
-                SocialStickerMarkView(
-                  mark: SocialStickerMark.link,
-                  size: _markSize,
-                  ink: palette.ink,
-                  shadows: palette.shadows,
-                ),
-                StickerTextLine(text: textOf(data), style: palette.textStyle()),
-              ],
+      child: StickerTextScope(
+        // The headless draft rasterizer mounts the sticker without a Material
+        // above it, whose fallback text style underlines everything in yellow.
+        child: DefaultTextStyle(
+          style: VineTheme.bodyMediumFont(color: VineTheme.whiteText),
+          child: switch (data.kind) {
+            SocialStickerKind.soundCredit => _SoundCredit(
+              data: data,
+              overFrames: overFrames,
             ),
-          ),
-          SocialStickerKind.countdown => _CountdownCard(
-            data: data,
-            palette: palette,
-            value: countdownValue ?? countdownDateOf(data),
-          ),
-          SocialStickerKind.reply => _ReplyCard(data: data, palette: palette),
-          SocialStickerKind.poll ||
-          SocialStickerKind.quiz ||
-          SocialStickerKind.slider => PollStickerCard(
-            data: data,
-            overFrames: overFrames,
-          ),
-          SocialStickerKind.question ||
-          SocialStickerKind.addYours ||
-          SocialStickerKind.replies => InteractiveStickerCard(
-            data: data,
-            overFrames: overFrames,
-          ),
-          _ => StickerPill(
-            palette: palette,
-            child: StickerTextLine(
-              text: textOf(data),
-              style: palette.textStyle(),
+            SocialStickerKind.link => StickerPill(
+              palette: palette,
+              child: Row(
+                mainAxisSize: .min,
+                spacing: 14,
+                children: [
+                  SocialStickerMarkView(
+                    mark: SocialStickerMark.link,
+                    size: _markSize,
+                    ink: palette.ink,
+                    shadows: palette.shadows,
+                  ),
+                  StickerTextLine(
+                    text: textOf(data),
+                    style: palette.textStyle(),
+                  ),
+                ],
+              ),
             ),
-          ),
-        },
+            SocialStickerKind.countdown => _CountdownCard(
+              data: data,
+              palette: palette,
+              value: countdownValue ?? countdownDateOf(data),
+            ),
+            SocialStickerKind.reply => _ReplyCard(data: data, palette: palette),
+            SocialStickerKind.poll ||
+            SocialStickerKind.quiz ||
+            SocialStickerKind.slider => PollStickerCard(
+              data: data,
+              overFrames: overFrames,
+            ),
+            SocialStickerKind.question ||
+            SocialStickerKind.addYours ||
+            SocialStickerKind.replies => InteractiveStickerCard(
+              data: data,
+              overFrames: overFrames,
+            ),
+            _ => StickerPill(
+              palette: palette,
+              child: StickerTextLine(
+                text: textOf(data),
+                style: palette.textStyle(),
+              ),
+            ),
+          },
+        ),
       ),
     );
   }
@@ -306,12 +312,7 @@ class _CountdownCard extends StatelessWidget {
             height: _countdownValueFontSize * 1.15,
             child: FittedBox(
               fit: .scaleDown,
-              child: Text(
-                value,
-                style: valueStyle,
-                maxLines: 1,
-                textScaler: TextScaler.noScaling,
-              ),
+              child: Text(value, style: valueStyle, maxLines: 1),
             ),
           ),
         ],
@@ -388,7 +389,6 @@ class _ReplyPicture extends StatelessWidget {
         child: Text(
           (data.name ?? '').characters.firstOrNull?.toUpperCase() ?? '',
           style: palette.textStyle(fontSize: 40),
-          textScaler: TextScaler.noScaling,
         ),
       ),
     );
@@ -414,11 +414,10 @@ class _ReplyPicture extends StatelessWidget {
 /// One line of sticker text, or up to [maxLines], cut short with an
 /// ellipsis past [_maxTextWidth].
 ///
-/// Unscaled by the system font size, like the sound credit's painted text:
-/// the sticker is part of the video, sized by the creator's pinch, and the
-/// player's copy of it has to match the frames at any font size. Its emoji
-/// are drawn in the sticker emoji font once that is loaded, which it loads
-/// when they are all its text needs beyond the sticker font.
+/// Like any sticker's text it is drawn under a [StickerTextScope], so the
+/// system font size does not change it. Its emoji are drawn in the sticker
+/// emoji font once that is loaded, which it loads when they are all its text
+/// needs beyond the sticker font.
 class StickerTextLine extends StatefulWidget {
   const StickerTextLine({
     required this.text,
@@ -468,7 +467,6 @@ class _StickerTextLineState extends State<StickerTextLine> {
         maxLines: widget.maxLines,
         overflow: .ellipsis,
         textAlign: widget.textAlign,
-        textScaler: TextScaler.noScaling,
       ),
     );
   }

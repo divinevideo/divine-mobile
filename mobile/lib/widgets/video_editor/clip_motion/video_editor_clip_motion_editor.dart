@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/clip_motion/clip_motion_editor_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/clip_keyframes.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
@@ -19,6 +20,7 @@ import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
+import 'package:openvine/widgets/whole_word_button_text_scale.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show AnimationCurve, SegmentKeyframe;
 import 'package:time_formatter/time_formatter.dart';
@@ -549,9 +551,9 @@ class _ClipMotionToolbar extends StatelessWidget {
   }
 }
 
-/// The panel below the canvas: a hint, the clip's own playhead with its
-/// keyframes, the keyframe and reset buttons, and the curve of the motion the
-/// playhead is in.
+/// The panel below the canvas: the clip's own playhead with its keyframes,
+/// the keyframe and reset buttons, the curve of the motion the playhead is in
+/// and a hint.
 class _ClipMotionPanel extends StatelessWidget {
   const _ClipMotionPanel({
     required this.clip,
@@ -586,87 +588,100 @@ class _ClipMotionPanel extends StatelessWidget {
         top: false,
         child: SizedBox(
           height: videoEditorClipMotionPanelHeight,
-          child: SingleChildScrollView(
-            padding: const .fromLTRB(16, 16, 16, 12),
-            child: ValueListenableBuilder<Duration>(
-              valueListenable: playTime,
-              builder: (context, _, _) {
-                final time = sourceTimeOf();
-                final keyframes = state.keyframes;
-                final isOnKeyframe =
-                    keyframes.indexAt(time, tolerance: _tolerance) >= 0;
-                final segment = keyframes.segmentIndexAt(
-                  time,
-                  tolerance: _tolerance,
-                );
-                return Column(
-                  crossAxisAlignment: .stretch,
-                  spacing: 12,
-                  children: [
-                    Text(
-                      l10n.videoEditorClipKeyframesHint,
-                      style: VineTheme.bodyMediumFont(
-                        color: context.vineColors.secondaryText,
-                      ),
-                    ),
-                    Row(
-                      spacing: 8,
-                      children: [
-                        _PlayPauseButton(onPressed: onTogglePlayback),
-                        Expanded(
-                          child: _ClipMotionScrubber(
-                            clip: clip,
-                            playedOffset: playTime.value - clipStart,
-                            keyframes: keyframes,
-                            onSeek: onSeek,
+          // The panel's height is fixed below the canvas, so its text stops
+          // growing where the controls still fit, as the mask editor's does.
+          child: MediaQuery.withClampedTextScaling(
+            maxScaleFactor: chipLabelTextScaleLimit,
+            child: SingleChildScrollView(
+              padding: const .fromLTRB(16, 16, 16, 12),
+              child: ValueListenableBuilder<Duration>(
+                valueListenable: playTime,
+                builder: (context, _, _) {
+                  final time = sourceTimeOf();
+                  final keyframes = state.keyframes;
+                  final isOnKeyframe =
+                      keyframes.indexAt(time, tolerance: _tolerance) >= 0;
+                  final segment = keyframes.segmentIndexAt(
+                    time,
+                    tolerance: _tolerance,
+                  );
+                  final keyframeLabel = isOnKeyframe
+                      ? l10n.videoEditorKeyframeRemove
+                      : l10n.videoEditorKeyframeAdd;
+                  return Column(
+                    crossAxisAlignment: .stretch,
+                    spacing: 12,
+                    children: [
+                      Row(
+                        spacing: 8,
+                        children: [
+                          _PlayPauseButton(onPressed: onTogglePlayback),
+                          Expanded(
+                            child: _ClipMotionScrubber(
+                              clip: clip,
+                              playedOffset: playTime.value - clipStart,
+                              keyframes: keyframes,
+                              onSeek: onSeek,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      spacing: 8,
-                      children: [
-                        Expanded(
-                          child: DivineButton(
-                            label: isOnKeyframe
-                                ? l10n.videoEditorKeyframeRemove
-                                : l10n.videoEditorKeyframeAdd,
-                            leadingIcon: isOnKeyframe ? .trash : .diamond,
-                            type: isOnKeyframe ? .secondary : .primary,
+                        ],
+                      ),
+                      Row(
+                        spacing: 8,
+                        children: [
+                          Expanded(
+                            child: WholeWordButtonTextScale(
+                              label: keyframeLabel,
+                              hasLeadingIcon: true,
+                              child: DivineButton(
+                                label: keyframeLabel,
+                                leadingIcon: isOnKeyframe ? .trash : .diamond,
+                                type: isOnKeyframe ? .secondary : .primary,
+                                size: .small,
+                                expanded: true,
+                                maxLines: 2,
+                                onPressed: () => cubit.toggleKeyframeAt(time),
+                              ),
+                            ),
+                          ),
+                          DivineIconButton(
+                            icon: .arrowCounterClockwise,
+                            semanticLabel: l10n.videoEditorTransformResetLabel,
                             size: .small,
-                            expanded: true,
-                            onPressed: () => cubit.toggleKeyframeAt(time),
+                            type: .secondary,
+                            onPressed: keyframes.isEmpty ? null : cubit.reset,
+                          ),
+                        ],
+                      ),
+                      if (segment != null) ...[
+                        Text(
+                          // The numbers name keyframes; they are not a count.
+                          l10n.videoEditorKeyframeCurveSegment(
+                            '${segment + 1}',
+                            '${segment + 2}',
+                          ),
+                          style: VineTheme.titleSmallFont(
+                            color: context.vineColors.primaryText,
                           ),
                         ),
-                        DivineIconButton(
-                          icon: .arrowCounterClockwise,
-                          semanticLabel: l10n.videoEditorTransformResetLabel,
-                          size: .small,
-                          type: .secondary,
-                          onPressed: keyframes.isEmpty ? null : cubit.reset,
+                        CurvePickerRow(
+                          selected: keyframes[segment].curve,
+                          onChanged: (AnimationCurve curve) =>
+                              cubit.setCurveAt(time, curve),
                         ),
                       ],
-                    ),
-                    if (segment != null) ...[
+                      // Last, so the controls stay in view when a long
+                      // translation at a large text size fills the panel.
                       Text(
-                        // The numbers name keyframes; they are not a count.
-                        l10n.videoEditorKeyframeCurveSegment(
-                          '${segment + 1}',
-                          '${segment + 2}',
+                        l10n.videoEditorClipKeyframesHint,
+                        style: VineTheme.bodyMediumFont(
+                          color: context.vineColors.secondaryText,
                         ),
-                        style: VineTheme.titleSmallFont(
-                          color: context.vineColors.primaryText,
-                        ),
-                      ),
-                      CurvePickerRow(
-                        selected: keyframes[segment].curve,
-                        onChanged: (AnimationCurve curve) =>
-                            cubit.setCurveAt(time, curve),
                       ),
                     ],
-                  ],
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ),

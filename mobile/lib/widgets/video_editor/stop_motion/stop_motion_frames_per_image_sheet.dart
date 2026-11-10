@@ -1,6 +1,8 @@
 // ABOUTME: Bottom sheet with a wheel picker for stop-motion frames-per-image
 // ABOUTME: Returns the chosen frames-per-image as an int via context.pop
 
+import 'dart:math' as math;
+
 import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoPicker;
 import 'package:divine_ui/divine_ui.dart';
 import 'package:go_router/go_router.dart';
@@ -29,6 +31,10 @@ class _StopMotionFramesPerImageSheetState
   static const int _min = StopMotionFrameOps.minFramesPerImage;
   static const int _max = StopMotionFrameOps.maxFramesPerImage;
 
+  /// The wheel's row height and height at the normal text size.
+  static const double _minItemExtent = 44;
+  static const double _minWheelHeight = 200;
+
   late final FixedExtentScrollController _controller;
   late int _value;
 
@@ -47,6 +53,15 @@ class _StopMotionFramesPerImageSheetState
 
   @override
   Widget build(BuildContext context) {
+    final itemStyle = VineTheme.titleMediumFont(
+      color: context.vineColors.primaryText,
+    );
+    // Each row holds one line of its label at the system text size, with
+    // room above and below, and is never shorter than the wheel's usual 44.
+    final itemLineHeight =
+        MediaQuery.textScalerOf(context).scale(itemStyle.fontSize!) *
+        itemStyle.height!;
+    final itemExtent = math.max(_minItemExtent, itemLineHeight + 12);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -63,8 +78,9 @@ class _StopMotionFramesPerImageSheetState
                 onPressed: () => context.pop<int>(),
               ),
               Flexible(
-                child: Text(
+                child: DivineWordFitText(
                   context.l10n.videoEditorStopMotionFramesPerImageLabel,
+                  textAlign: TextAlign.center,
                   style: VineTheme.titleMediumFont(
                     color: context.vineColors.primaryText,
                   ),
@@ -84,21 +100,20 @@ class _StopMotionFramesPerImageSheetState
           color: context.vineColors.surfaceContainer,
         ),
         SizedBox(
-          height: 200,
+          // Three and a half rows, as at the normal size.
+          height: math.max(_minWheelHeight, itemExtent * 3.5),
           // Lazy builder: the range can be hundreds of items, so build only
           // the visible rows instead of eagerly constructing every one.
           child: CupertinoPicker.builder(
             scrollController: _controller,
-            itemExtent: 44,
+            itemExtent: itemExtent,
             backgroundColor: context.vineColors.surface,
             onSelectedItemChanged: (index) => _value = _min + index,
             childCount: _max - _min + 1,
             itemBuilder: (context, index) => Center(
               child: Text(
                 context.l10n.videoEditorStopMotionFramesCount(_min + index),
-                style: VineTheme.titleMediumFont(
-                  color: context.vineColors.primaryText,
-                ),
+                style: itemStyle,
               ),
             ),
           ),

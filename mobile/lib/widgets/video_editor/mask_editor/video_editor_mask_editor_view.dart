@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
@@ -38,9 +39,20 @@ const EdgeInsets _panelPadding = EdgeInsets.only(top: 16, bottom: 12);
 /// it, out to the edges of the screen.
 const double _panelSideInset = 16;
 
+/// How far the panel's text grows with the system text size.
+///
+/// The panel sits below the canvas, so every line it grows by shrinks the
+/// video being masked. Up to this the names fit beside the 32 dp sliders and
+/// the 44 dp colors, so only the row of shapes grows.
+const double _panelTextScaleLimit = chipLabelTextScaleLimit;
+
 /// The height of the panel's row of shapes: a 52 dp tile, a 6 dp gap and one
-/// 16 dp line of its name.
-const double _shapeRowHeight = 52 + 6 + 16;
+/// line of its name, 16 dp at the normal text size.
+double _shapeRowHeight(TextScaler textScaler) =>
+    52 +
+    6 +
+    // The name is 12 dp text on a 16 dp line.
+    textScaler.clamp(maxScaleFactor: _panelTextScaleLimit).scale(12) * 16 / 12;
 
 /// The height a slider adds to the panel: the slider, as tall as its thumb,
 /// and the gap below it.
@@ -70,25 +82,31 @@ const Duration videoEditorMaskPanelResizeDuration = Duration(
 /// with.
 ///
 /// The editor keeps this much free below the canvas while the mask editor is
-/// open, so the video sits above the panel instead of under it.
+/// open, so the video sits above the panel instead of under it. The names of
+/// the shapes follow [textScaler] up to the panel's cap.
 double videoEditorMaskPanelHeight(
   LayerMask? mask, {
   bool withBackground = false,
+  TextScaler textScaler = TextScaler.noScaling,
 }) {
-  if (mask == null) return _panelPadding.vertical + _shapeRowHeight;
+  final shapeRowHeight = _shapeRowHeight(textScaler);
+  if (mask == null) return _panelPadding.vertical + shapeRowHeight;
   // Every shape has a softness, and a rectangle its corners as well.
   final sliders = _showsCorners(mask) ? 2 : 1;
   return _panelPadding.vertical +
-      _shapeRowHeight +
+      shapeRowHeight +
       sliders * _sliderRowHeight +
       (withBackground ? _backgroundRowHeight : 0);
 }
 
-/// The height of the mask editor's panel with every setting it can show.
-final double videoEditorMaskPanelMaxHeight = videoEditorMaskPanelHeight(
-  const LayerMask(shape: LayerMaskShape.rectangle),
-  withBackground: true,
-);
+/// The height of the mask editor's panel with every setting it can show, its
+/// names following [textScaler] up to the panel's cap.
+double videoEditorMaskPanelMaxHeight(TextScaler textScaler) =>
+    videoEditorMaskPanelHeight(
+      const LayerMask(shape: LayerMaskShape.rectangle),
+      withBackground: true,
+      textScaler: textScaler,
+    );
 
 /// Whether the panel offers how round the corners of [mask] are.
 bool _showsCorners(LayerMask? mask) => mask?.shape == LayerMaskShape.rectangle;
@@ -791,102 +809,109 @@ class _MaskEditorPanel extends StatelessWidget {
           height: videoEditorMaskPanelHeight(
             mask,
             withBackground: backgroundColor != null,
+            textScaler: MediaQuery.textScalerOf(context),
           ),
           // Laid out from the bottom, so the shapes stay at the foot of the
-          // panel and the sliders sit above them. A large system font can
-          // outgrow the height; it scrolls then rather than overflow.
-          child: SingleChildScrollView(
-            reverse: true,
-            padding: _panelPadding,
-            child: Column(
-              crossAxisAlignment: .stretch,
-              children: [
-                _MaskSettingReveal(
-                  // The colors scroll out to the edge of the screen.
-                  padding: const .only(left: _panelSideInset, bottom: 8),
-                  child: mask == null || backgroundColor == null
-                      ? null
-                      : _MaskBackgroundRow(
-                          color: backgroundColor,
-                          onChanged: onBackgroundColorChanged,
-                        ),
-                ),
-                _MaskSettingReveal(
-                  child: _showsCorners(mask)
-                      ? _MaskSlider(
-                          label: l10n.videoEditorShapeMaskCornersLabel,
-                          minLabel: l10n.videoEditorShapeMaskCornersSquare,
-                          maxLabel: l10n.videoEditorShapeMaskCornersRound,
-                          value: mask!.cornerRadius,
-                          onChanged: onCornerRadiusChanged,
-                        )
-                      : null,
-                ),
-                _MaskSettingReveal(
-                  child: mask == null
-                      ? null
-                      : _MaskSlider(
-                          label: l10n.videoEditorShapeMaskSoftnessLabel,
-                          minLabel: l10n.videoEditorShapeMaskSoftnessSharp,
-                          maxLabel: l10n.videoEditorShapeMaskSoftnessSoft,
-                          value: mask.feather.clamp(0.0, editorMaskMaxFeather),
-                          max: editorMaskMaxFeather,
-                          onChanged: onFeatherChanged,
-                        ),
-                ),
-                SingleChildScrollView(
-                  scrollDirection: .horizontal,
-                  padding: const .symmetric(horizontal: _panelSideInset),
-                  child: Row(
-                    spacing: 8,
-                    children: [
-                      _MaskOptionTile(
-                        label: l10n.videoEditorShapeMaskNone,
-                        selected: mask == null,
-                        onTap: () => onShapeSelected(null),
-                        child: DivineIcon(
-                          icon: .prohibit,
-                          color: colors.primaryText,
-                        ),
-                      ),
-                      for (final shape in editorMaskShapes)
-                        _MaskOptionTile(
-                          label: switch (shape) {
-                            .ellipse => l10n.videoEditorShapeMaskCircle,
-                            .rectangle => l10n.videoEditorShapeMaskRectangle,
-                            .heart => l10n.videoEditorShapeMaskHeart,
-                            .star => l10n.videoEditorShapeMaskStar,
-                            .triangle => l10n.videoEditorShapeMaskTriangle,
-                            .diamond => l10n.videoEditorShapeMaskDiamond,
-                            .hexagon => l10n.videoEditorShapeMaskHexagon,
-                            .speechBubble =>
-                              l10n.videoEditorShapeMaskSpeechBubble,
-                            .linear => l10n.videoEditorShapeMaskLinear,
-                          },
-                          selected: mask?.shape == shape,
-                          onTap: () => onShapeSelected(shape),
-                          child: _MaskShapeIcon(
-                            mask: editorMaskForShape(
-                              shape,
-                              boxSize: const Size.square(1),
+          // panel and the sliders sit above them. The text is capped where it
+          // still fits the height, so this only scrolls mid-animation.
+          child: MediaQuery.withClampedTextScaling(
+            maxScaleFactor: _panelTextScaleLimit,
+            child: SingleChildScrollView(
+              reverse: true,
+              padding: _panelPadding,
+              child: Column(
+                crossAxisAlignment: .stretch,
+                children: [
+                  _MaskSettingReveal(
+                    // The colors scroll out to the edge of the screen.
+                    padding: const .only(left: _panelSideInset, bottom: 8),
+                    child: mask == null || backgroundColor == null
+                        ? null
+                        : _MaskBackgroundRow(
+                            color: backgroundColor,
+                            onChanged: onBackgroundColorChanged,
+                          ),
+                  ),
+                  _MaskSettingReveal(
+                    child: _showsCorners(mask)
+                        ? _MaskSlider(
+                            label: l10n.videoEditorShapeMaskCornersLabel,
+                            minLabel: l10n.videoEditorShapeMaskCornersSquare,
+                            maxLabel: l10n.videoEditorShapeMaskCornersRound,
+                            value: mask!.cornerRadius,
+                            onChanged: onCornerRadiusChanged,
+                          )
+                        : null,
+                  ),
+                  _MaskSettingReveal(
+                    child: mask == null
+                        ? null
+                        : _MaskSlider(
+                            label: l10n.videoEditorShapeMaskSoftnessLabel,
+                            minLabel: l10n.videoEditorShapeMaskSoftnessSharp,
+                            maxLabel: l10n.videoEditorShapeMaskSoftnessSoft,
+                            value: mask.feather.clamp(
+                              0.0,
+                              editorMaskMaxFeather,
                             ),
+                            max: editorMaskMaxFeather,
+                            onChanged: onFeatherChanged,
+                          ),
+                  ),
+                  SingleChildScrollView(
+                    scrollDirection: .horizontal,
+                    padding: const .symmetric(horizontal: _panelSideInset),
+                    child: Row(
+                      spacing: 8,
+                      children: [
+                        _MaskOptionTile(
+                          label: l10n.videoEditorShapeMaskNone,
+                          selected: mask == null,
+                          onTap: () => onShapeSelected(null),
+                          child: DivineIcon(
+                            icon: .prohibit,
+                            color: colors.primaryText,
                           ),
                         ),
-                      _MaskOptionTile(
-                        label: l10n.videoEditorShapeMaskInvert,
-                        selected: mask?.invert ?? false,
-                        onTap: mask == null ? null : onInvertToggled,
-                        child: _MaskShapeIcon(
-                          mask: editorMaskForShape(
-                            mask?.shape ?? LayerMaskShape.ellipse,
-                            boxSize: const Size.square(1),
-                          ).copyWith(invert: true),
+                        for (final shape in editorMaskShapes)
+                          _MaskOptionTile(
+                            label: switch (shape) {
+                              .ellipse => l10n.videoEditorShapeMaskCircle,
+                              .rectangle => l10n.videoEditorShapeMaskRectangle,
+                              .heart => l10n.videoEditorShapeMaskHeart,
+                              .star => l10n.videoEditorShapeMaskStar,
+                              .triangle => l10n.videoEditorShapeMaskTriangle,
+                              .diamond => l10n.videoEditorShapeMaskDiamond,
+                              .hexagon => l10n.videoEditorShapeMaskHexagon,
+                              .speechBubble =>
+                                l10n.videoEditorShapeMaskSpeechBubble,
+                              .linear => l10n.videoEditorShapeMaskLinear,
+                            },
+                            selected: mask?.shape == shape,
+                            onTap: () => onShapeSelected(shape),
+                            child: _MaskShapeIcon(
+                              mask: editorMaskForShape(
+                                shape,
+                                boxSize: const Size.square(1),
+                              ),
+                            ),
+                          ),
+                        _MaskOptionTile(
+                          label: l10n.videoEditorShapeMaskInvert,
+                          selected: mask?.invert ?? false,
+                          onTap: mask == null ? null : onInvertToggled,
+                          child: _MaskShapeIcon(
+                            mask: editorMaskForShape(
+                              mask?.shape ?? LayerMaskShape.ellipse,
+                              boxSize: const Size.square(1),
+                            ).copyWith(invert: true),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -961,8 +986,9 @@ class _MaskOptionTile extends StatelessWidget {
         behavior: .opaque,
         child: Opacity(
           opacity: enabled ? 1 : 0.4,
-          child: SizedBox(
-            width: 64,
+          // As wide as its name, so a long one is not cut; the row scrolls.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 64),
             child: Column(
               spacing: 6,
               children: [
@@ -989,7 +1015,6 @@ class _MaskOptionTile extends StatelessWidget {
                   child: Text(
                     label,
                     maxLines: 1,
-                    overflow: .ellipsis,
                     style: VineTheme.bodySmallFont(
                       color: selected
                           ? colors.primaryText
@@ -1136,9 +1161,15 @@ class _MaskSettingLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The box grows with the text, up to the panel's cap, so a name that fits
+    // at the normal size fits at every size.
+    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
     return ExcludeSemantics(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 72, maxWidth: 112),
+        constraints: BoxConstraints(
+          minWidth: 72 * scale,
+          maxWidth: 112 * scale,
+        ),
         child: Text(
           label,
           maxLines: 1,

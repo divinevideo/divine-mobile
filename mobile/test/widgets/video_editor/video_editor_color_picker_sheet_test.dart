@@ -12,6 +12,8 @@ import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart'
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/text_lines.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -276,6 +278,7 @@ void main() {
         WidgetTester tester, {
         required void Function(Color?) onResult,
         EyedropperSource? source,
+        Locale? locale,
       }) async {
         tester.view.physicalSize = const Size(1080, 2340);
         tester.view.devicePixelRatio = 3;
@@ -285,6 +288,7 @@ void main() {
           EyedropperSources(
             registry: EyedropperSourceRegistry()..registerIfAny(source),
             child: MaterialApp(
+              locale: locale,
               localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
@@ -345,6 +349,25 @@ void main() {
         expect(source.picks, 1);
         expect(resolved, isFalse);
         expect(find.text(l10n.videoEditorPickColorTitle), findsOneWidget);
+      });
+
+      testWidgets('keeps the words of the title whole beside the eyedropper '
+          'at a large text size', (tester) async {
+        // German at 1.5x on a 360 pt wide phone split "auswähl/en".
+        tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        const german = Locale('de');
+        await pumpOpener(
+          tester,
+          locale: german,
+          source: _FakeEyedropperSource(fromVideo),
+          onResult: (_) {},
+        );
+
+        final title = find.text(
+          lookupAppLocalizations(german).videoEditorPickColorTitle,
+        );
+        expect(wordsSplitAcrossLines(tester, title), isEmpty);
       });
 
       testWidgets('offers no eyedropper while no video is on screen', (

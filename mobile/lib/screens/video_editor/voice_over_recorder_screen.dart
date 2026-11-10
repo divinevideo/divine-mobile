@@ -21,6 +21,7 @@ import 'package:openvine/widgets/audio/live_amplitude_waveform.dart';
 import 'package:openvine/widgets/audio/record_toggle_button.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:openvine/widgets/video_editor/voice_over/voice_over_video_timeline.dart';
+import 'package:openvine/widgets/whole_word_button_text_scale.dart';
 import 'package:permissions_service/permissions_service.dart';
 
 /// Full-screen recorder that lets the user capture one or more voice-over
@@ -372,40 +373,46 @@ class _PermissionDenied extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Padding(
+    return _CenteredScrollable(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 12,
-          children: [
-            DivineIcon(
-              icon: .microphone,
-              size: 48,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 12,
+        children: [
+          DivineIcon(
+            icon: .microphone,
+            size: 48,
+            color: context.vineColors.secondaryText,
+          ),
+          // Long compounds such as German "Mikrofonzugriff" would split
+          // mid-word at the largest text sizes.
+          DivineWordFitText(
+            l10n.videoEditorVoiceOverPermissionTitle,
+            textAlign: .center,
+            style: VineTheme.titleMediumFont(
+              color: context.vineColors.primaryText,
+            ),
+          ),
+          DivineWordFitText(
+            l10n.videoEditorVoiceOverPermissionBody,
+            textAlign: .center,
+            style: VineTheme.bodyMediumFont(
               color: context.vineColors.secondaryText,
             ),
-            Text(
-              l10n.videoEditorVoiceOverPermissionTitle,
-              textAlign: .center,
-              style: VineTheme.titleMediumFont(
-                color: context.vineColors.primaryText,
-              ),
-            ),
-            Text(
-              l10n.videoEditorVoiceOverPermissionBody,
-              textAlign: .center,
-              style: VineTheme.bodyMediumFont(
-                color: context.vineColors.secondaryText,
-              ),
-            ),
-            const SizedBox(height: 4),
-            DivineButton(
+          ),
+          const SizedBox(height: 4),
+          // Wraps rather than cutting off a long label, as German's.
+          WholeWordButtonTextScale(
+            label: l10n.videoEditorVoiceOverOpenSettings,
+            child: DivineButton(
               label: l10n.videoEditorVoiceOverOpenSettings,
               type: .secondary,
+              expanded: true,
+              maxLines: 2,
               onPressed: () => context.read<VoiceOverCubit>().openSettings(),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -430,7 +437,9 @@ class _WaveformPanel extends StatelessWidget {
       (VoiceOverCubit c) => c.state.availableDuration > Duration.zero,
     );
     final l10n = context.l10n;
-    return Center(
+    // Scrolls once a large text size makes the panel taller than the space
+    // between the toolbar and the record button.
+    return _CenteredScrollable(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         spacing: 16,
@@ -456,11 +465,12 @@ class _WaveformPanel extends StatelessWidget {
           // Always in the column, so the panel keeps its height — and its
           // centred position — from the first tap on record. Before any take
           // it reads 0:00 over the video length.
-          const _TimeReadout(),
+          const Padding(padding: _textPadding, child: _TimeReadout()),
           Padding(
             padding: _textPadding,
             child: Text(
               l10n.videoEditorVoiceOverRecordingsCount(recordingCount),
+              textAlign: .center,
               style: VineTheme.bodyMediumFont(
                 color: context.vineColors.secondaryText,
               ),
@@ -485,6 +495,28 @@ class _WaveformPanel extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Centres [child] in the space it is given, and lets it scroll once that
+/// space is shorter than it.
+class _CenteredScrollable extends StatelessWidget {
+  const _CenteredScrollable({required this.child, this.padding});
+
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: padding,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(child: child),
+        ),
       ),
     );
   }
@@ -534,19 +566,30 @@ class _TimeReadout extends StatelessWidget {
         color: isOver ? VineTheme.error : context.vineColors.onSurface,
       ),
     );
-    if (!isOver) return readout;
-    // Pair the red color with a shape cue so the over-length warning reaches
-    // color-blind users too (accessibility.md). The screen-reader announcement
-    // carries the meaning, so the icon itself is excluded from semantics.
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      spacing: 6,
-      children: [
-        const ExcludeSemantics(
-          child: DivineIcon(icon: .warning, size: 20, color: VineTheme.error),
-        ),
-        readout,
-      ],
+    // Shrinks to the screen's width rather than cutting the length off at the
+    // largest text sizes.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: isOver
+          // Pair the red color with a shape cue so the over-length warning
+          // reaches color-blind users too (accessibility.md). The
+          // screen-reader announcement carries the meaning, so the icon
+          // itself is excluded from semantics.
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 6,
+              children: [
+                const ExcludeSemantics(
+                  child: DivineIcon(
+                    icon: .warning,
+                    size: 20,
+                    color: VineTheme.error,
+                  ),
+                ),
+                readout,
+              ],
+            )
+          : readout,
     );
   }
 }
@@ -582,20 +625,28 @@ class _RecordControls extends StatelessWidget {
           spacing: 8,
           children: [
             const _RecordButton(),
-            SizedBox(
-              height: 40,
-              child: (hasTakes && !hasLiveTake)
-                  ? TextButton(
-                      onPressed: () =>
-                          context.read<VoiceOverCubit>().deleteLastTake(),
-                      child: Text(
-                        context.l10n.videoEditorVoiceOverDeleteLast,
-                        style: VineTheme.labelLargeFont(
-                          color: context.vineColors.secondaryText,
-                        ),
-                      ),
-                    )
-                  : null,
+            // Always laid out, so its slot is as tall as its label wraps to
+            // and the record button does not jump when it shows.
+            Visibility(
+              visible: hasTakes && !hasLiveTake,
+              maintainSize: true,
+              maintainAnimation: true,
+              maintainState: true,
+              child: TextButton(
+                // As tall as the slot it had at the normal text size.
+                style: TextButton.styleFrom(
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () =>
+                    context.read<VoiceOverCubit>().deleteLastTake(),
+                child: Text(
+                  context.l10n.videoEditorVoiceOverDeleteLast,
+                  textAlign: .center,
+                  style: VineTheme.labelLargeFont(
+                    color: context.vineColors.secondaryText,
+                  ),
+                ),
+              ),
             ),
           ],
         ),

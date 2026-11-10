@@ -7,6 +7,7 @@ import 'dart:math';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
@@ -81,8 +82,12 @@ class _VideoEditorFontListState extends State<VideoEditorFontList> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final textScaler = MediaQuery.textScalerOf(context);
     _metrics = _FontListMetrics(
-      MediaQuery.textScalerOf(context),
+      textScaler,
+      fontRowTextScaler: textScaler.clamp(
+        maxScaleFactor: _fontRowTextScaleLimit,
+      ),
       // The style DivineSectionHeader renders the category name in.
       headerStyle: VineTheme.labelMediumFont(
         color: context.vineColors.accentBrand,
@@ -194,21 +199,29 @@ class _VideoEditorFontListState extends State<VideoEditorFontList> {
 /// Font size of the preview each font row renders its name in.
 const double _fontPreviewSize = 24;
 
+/// Where a font row's preview stops following the system text size.
+///
+/// The preview already starts at a large size; growing further only cuts the
+/// names short and leaves room for two or three rows on a small phone.
+const double _fontRowTextScaleLimit = chipLabelTextScaleLimit;
+
 /// Row heights, and the scroll offset each section starts at.
 ///
 /// Rows have a fixed extent so a chip can jump to a section that has not been
 /// built yet: the list builds lazily, and a row's natural height depends on the
 /// metrics of the font it previews. The extents scale with the system text
-/// size, so a larger text setting still fits.
+/// size, so a larger text setting still fits: the headers with [textScaler],
+/// the font rows with the [fontRowTextScaler] their previews are drawn at.
 class _FontListMetrics {
   factory _FontListMetrics(
     TextScaler textScaler, {
+    required TextScaler fontRowTextScaler,
     required TextStyle headerStyle,
   }) {
     final headerExtent =
         textScaler.scale(headerStyle.fontSize!) * (headerStyle.height ?? 1.2) +
         _headerPadding.vertical;
-    final fontRowExtent = textScaler.scale(_fontPreviewSize) * 1.6 + 24;
+    final fontRowExtent = fontRowTextScaler.scale(_fontPreviewSize) * 1.6 + 24;
     final sectionOffsets = <double>[];
     var offset = 0.0;
     for (final section in editorFontSections) {
@@ -343,38 +356,41 @@ class _FontListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Semantics(
-      label: l10n.videoEditorFontSemanticLabel,
-      value: font.localizedDisplayName(l10n),
-      selected: isSelected,
-      button: true,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Padding(
-          padding: const .symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  font.localizedDisplayName(l10n),
-                  maxLines: 1,
-                  overflow: .ellipsis,
-                  style: font(
-                    fontSize: _fontPreviewSize,
-                    color: isSelected
-                        ? context.vineColors.primaryText
-                        : context.vineColors.onSurfaceVariant,
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: _fontRowTextScaleLimit,
+      child: Semantics(
+        label: l10n.videoEditorFontSemanticLabel,
+        value: font.localizedDisplayName(l10n),
+        selected: isSelected,
+        button: true,
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const .symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    font.localizedDisplayName(l10n),
+                    maxLines: 1,
+                    overflow: .ellipsis,
+                    style: font(
+                      fontSize: _fontPreviewSize,
+                      color: isSelected
+                          ? context.vineColors.primaryText
+                          : context.vineColors.onSurfaceVariant,
+                    ),
                   ),
                 ),
-              ),
-              if (isSelected)
-                DivineIcon(
-                  icon: DivineIconName.check,
-                  color: context.vineColors.accentPositive,
-                  size: 28,
-                ),
-            ],
+                if (isSelected)
+                  DivineIcon(
+                    icon: DivineIconName.check,
+                    color: context.vineColors.accentPositive,
+                    size: 28,
+                  ),
+              ],
+            ),
           ),
         ),
       ),

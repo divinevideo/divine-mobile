@@ -2,6 +2,7 @@
 // ABOUTME: has what it shows, and the sheet returns what the creator set up.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -10,6 +11,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/repositories/info_sticker_repository.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_sheet.dart';
+
+import '../../../helpers/text_lines.dart';
 
 class _MockInfoStickerRepository extends Mock
     implements InfoStickerRepository {}
@@ -51,6 +54,7 @@ void main() {
       required InfoStickerData initial,
       bool isNew = true,
       bool hasPlaceSearch = true,
+      Locale? locale,
     }) async {
       when(
         repository.isPlaceSearchAvailable,
@@ -62,6 +66,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: VineTheme.theme,
+          locale: locale,
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
@@ -85,6 +90,72 @@ void main() {
       await tester.pumpAndSettle();
       return results;
     }
+
+    group('renders', () {
+      /// A small phone at [textScale], with the keyboard up when [keyboard].
+      void setUpSmallPhone(
+        WidgetTester tester, {
+        required double textScale,
+        bool keyboard = false,
+      }) {
+        tester.view.physicalSize = const Size(375, 667);
+        tester.view.devicePixelRatio = 1;
+        if (keyboard) {
+          tester.view.viewInsets = const FakeViewPadding(bottom: 260);
+        }
+        tester.platformDispatcher.textScaleFactorTestValue = textScale;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      }
+
+      testWidgets('the field being typed in whole above the button', (
+        tester,
+      ) async {
+        setUpSmallPhone(tester, textScale: 1.65, keyboard: true);
+        await pumpSheet(
+          tester,
+          initial: const InfoStickerData(
+            kind: InfoStickerKind.dayCount,
+            localeName: 'en',
+            dayNumber: 12,
+          ),
+        );
+        final field = find.byType(TextField).first;
+        await tester.showKeyboard(field);
+        await tester.pumpAndSettle();
+
+        final options = tester.getRect(
+          find
+              .ancestor(of: field, matching: find.byType(SingleChildScrollView))
+              .first,
+        );
+        final fieldRect = tester.getRect(field);
+        expect(fieldRect.top, greaterThanOrEqualTo(options.top));
+        expect(fieldRect.bottom, lessThanOrEqualTo(options.bottom));
+      });
+
+      testWidgets('a long button label whole on two lines', (tester) async {
+        setUpSmallPhone(tester, textScale: 3.12);
+        await pumpSheet(
+          tester,
+          initial: const InfoStickerData(
+            kind: InfoStickerKind.battery,
+            localeName: 'de',
+            batteryLevel: 42,
+          ),
+          locale: const Locale('de'),
+        );
+
+        final label = find.text(
+          lookupAppLocalizations(const Locale('de')).videoEditorInfoStickerAdd,
+        );
+        expect(
+          tester.renderObject<RenderParagraph>(label).didExceedMaxLines,
+          isFalse,
+        );
+        expect(wordsSplitAcrossLines(tester, label), isEmpty);
+      });
+    });
 
     group('interactions', () {
       for (final initial in [

@@ -42,40 +42,47 @@ class VideoEditorTextColorPanel extends StatelessWidget {
     final (color, gradient) = context.select(
       (VideoEditorTextBloc bloc) => (bloc.state.color, bloc.state.gradient),
     );
-    return Column(
-      mainAxisSize: .min,
-      children: [
-        Padding(
-          padding: const .fromLTRB(16, 24, 16, 0),
-          child: _FillToggle(
-            gradient: gradient != null,
-            onChanged: (useGradient) => _setGradient(
-              context,
-              useGradient
-                  ? context.read<VideoEditorTextBloc>().state.gradientToRestore
-                  : null,
+    // Scrolls as a whole, toggle included, once the editor caps its height
+    // so it does not grow over the text being edited at a large text size.
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: .min,
+        children: [
+          Padding(
+            padding: const .fromLTRB(16, 24, 16, 0),
+            child: _FillToggle(
+              gradient: gradient != null,
+              onChanged: (useGradient) => _setGradient(
+                context,
+                useGradient
+                    ? context
+                          .read<VideoEditorTextBloc>()
+                          .state
+                          .gradientToRestore
+                    : null,
+              ),
             ),
           ),
-        ),
-        if (gradient != null)
-          SingleChildScrollView(
-            // No horizontal padding: the rows scroll out to the screen edge.
-            padding: .only(
-              top: 24,
-              bottom: 24 + MediaQuery.viewPaddingOf(context).bottom,
+          if (gradient != null)
+            Padding(
+              // No horizontal padding: the rows scroll out to the screen edge.
+              padding: .only(
+                top: 24,
+                bottom: 24 + MediaQuery.viewPaddingOf(context).bottom,
+              ),
+              child: TextGradientControls(
+                horizontalPadding: 16,
+                gradient: gradient,
+                onChanged: (gradient) => _setGradient(context, gradient),
+              ),
+            )
+          else
+            VideoEditorColorPickerSheet(
+              selectedColor: color,
+              onColorSelected: (color) => _setColor(context, color),
             ),
-            child: TextGradientControls(
-              horizontalPadding: 16,
-              gradient: gradient,
-              onChanged: (gradient) => _setGradient(context, gradient),
-            ),
-          )
-        else
-          VideoEditorColorPickerSheet(
-            selectedColor: color,
-            onColorSelected: (color) => _setColor(context, color),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
