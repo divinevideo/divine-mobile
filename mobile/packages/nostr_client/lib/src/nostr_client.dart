@@ -242,12 +242,16 @@ class NostrClient {
   /// Insertion-ordered (`LinkedHashMap`) so eviction drops the oldest.
   final Map<String, int> _tombstonedCoordinates = <String, int>{};
 
-  /// `"id:sig"` keys of events already persisted — and therefore already
-  /// signature-verified — in a previous session. Seeded once at
-  /// [initialize] so the relay pool can skip re-verifying events that relays
-  /// re-send on cold start. The signature is part of the key because a Nostr
-  /// event id does not commit to `sig`; trusting an id alone would let a
+  /// `"id:sig"` keys of events persisted in a previous session. Seeded once
+  /// at [initialize] so the relay pool can skip re-verifying events that
+  /// relays re-send on cold start. The signature is part of the key because a
+  /// Nostr event id does not commit to `sig`; trusting an id alone would let a
   /// replayed id carrying a forged signature bypass verification.
+  ///
+  /// A persisted event was either signature-verified here or delivered by a
+  /// relay the verification policy trusted at the time (the web default
+  /// trusts Divine's relays). Switching the policy to "All relays" later does
+  /// not re-check those exact `(id, sig)` pairs.
   final Set<String> _knownVerifiedEventKeys = <String>{};
 
   /// Loads recently-persisted `(id, sig)` pairs into

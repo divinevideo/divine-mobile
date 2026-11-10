@@ -54,10 +54,18 @@ class NativeEventVerifyWorker implements EventVerifyWorker {
     final completer = Completer<bool>();
     _pending.add(completer);
     unawaited(
-      _verify(eventJson).then((result) {
-        _pending.remove(completer);
-        if (!completer.isCompleted) completer.complete(result);
-      }),
+      _verify(eventJson)
+          .then(
+            (result) {
+              if (!completer.isCompleted) completer.complete(result);
+            },
+            onError: (Object error, StackTrace stackTrace) {
+              if (!completer.isCompleted) {
+                completer.completeError(error, stackTrace);
+              }
+            },
+          )
+          .whenComplete(() => _pending.remove(completer)),
     );
     return completer.future;
   }

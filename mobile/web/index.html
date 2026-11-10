@@ -51,6 +51,8 @@
   
   <!-- Preload critical resources -->
   <link rel="preload" href="flutter_bootstrap.js" as="script">
+  <link rel="modulepreload" href="nostr_crypto.js">
+  <link rel="modulepreload" href="vendor/noble-secp256k1/index.js">
   
   <style>
     /* Reset browser defaults for full-screen app */
@@ -157,7 +159,9 @@
   </script>
 
   <!-- Native-speed Nostr signature checks (see web/nostr_crypto.js). Module
-       scripts are deferred, so this does not block the first render. -->
+       scripts are deferred and run before flutter_bootstrap.js; the
+       modulepreload links below fetch both files early so they do not delay
+       it. -->
   <script type="module" src="nostr_crypto.js"></script>
 
   <script src="flutter_bootstrap.js" defer></script>
