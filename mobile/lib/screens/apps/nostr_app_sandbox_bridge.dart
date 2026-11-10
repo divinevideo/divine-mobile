@@ -1,5 +1,5 @@
 // ABOUTME: Pure bridge helpers for the Nostr app sandbox — bootstrap script
-// ABOUTME: builder, HTML injection, and Android web-message origin rules.
+// ABOUTME: builder, HTML injection, origin matching and web-message rules.
 
 /// Builds the bridge bootstrap JavaScript with optional eager pubkey,
 /// provider metadata, ready-event dispatch, and per-app auto-login.
@@ -120,25 +120,45 @@ String buildBridgeBootstrapScript({
 ''';
 }
 
-/// Normalises an app's allowed origins to `scheme://host[:port]` rules for
-/// `WebViewCompat.addWebMessageListener` on Android. Only `http`/`https`
-/// entries survive: `Uri.origin` is defined solely for those schemes and
-/// throws a `StateError` for anything else (`ws`/`wss`, `nostrsigner:`, …),
-/// and a websocket URL can never be a web frame's origin so it is meaningless
-/// for `addWebMessageListener` regardless. Unparseable entries and those with
-/// an empty host are dropped too, so the result is always a valid rule set the
-/// native side can pass through.
-List<String> webMessageAllowedOriginRules(List<String> allowedOrigins) {
+/// The `scheme://host[:port]` web origin of [uri], or `null` when it has none.
+///
+/// Only `http`/`https` URIs with a host have one. `Uri.origin` throws a
+/// `StateError` for anything else, and the WebView reports such pages
+/// (`data:`, `about:blank`, `blob:`, `file:`) as ordinary page URLs.
+String? webOriginOf(Uri uri) {
   const originSchemes = {'http', 'https'};
+  if (uri.host.isEmpty || !originSchemes.contains(uri.scheme)) {
+    return null;
+  }
+  return uri.origin;
+}
+
+/// Whether [uri] is on one of the web origins in [allowedOrigins].
+///
+/// Fails closed: a URI without a web origin never matches, so a `data:`,
+/// `about:` or `blob:` page is never treated as an allowed origin, even when
+/// it was created by one. Allowed entries without a web origin are ignored.
+bool isAllowedSandboxOrigin(Uri uri, List<String> allowedOrigins) {
+  final origin = webOriginOf(uri);
+  return origin != null &&
+      webMessageAllowedOriginRules(allowedOrigins).contains(origin);
+}
+
+/// Normalises an app's allowed origins to `scheme://host[:port]` rules for
+/// `WebViewCompat.addWebMessageListener` on Android. Only entries with a web
+/// origin survive (see [webOriginOf]): a websocket URL (`ws`/`wss`) or a
+/// `nostrsigner:` entry can never be a web frame's origin, so it is
+/// meaningless for `addWebMessageListener`. Unparseable entries are dropped
+/// too, so the result is always a valid rule set the native side can pass
+/// through.
+List<String> webMessageAllowedOriginRules(List<String> allowedOrigins) {
   final rules = <String>[];
   for (final origin in allowedOrigins) {
     final parsed = Uri.tryParse(origin);
-    if (parsed == null ||
-        parsed.host.isEmpty ||
-        !originSchemes.contains(parsed.scheme)) {
-      continue;
+    final rule = parsed == null ? null : webOriginOf(parsed);
+    if (rule != null) {
+      rules.add(rule);
     }
-    rules.add(parsed.origin);
   }
   return rules;
 }

@@ -272,6 +272,95 @@ void main() {
       },
     );
 
+    group('pages without a web origin', () {
+      // The URL Android WebView handed to onPageFinished in the crash.
+      // `Uri.origin` throws for any scheme but http and https.
+      const dataPageUrl = 'data:text/html;charset=utf-8;base64,';
+
+      Future<_FakeNavigationDelegate> pumpAndroidSandbox(
+        WidgetTester tester, {
+        required List<String> injectedScripts,
+      }) async {
+        final platform = _BootstrapAwareWebViewPlatform();
+        WebViewPlatform.instance = platform;
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        final bootstrapClient = MockClient(
+          (_) async => http.Response(
+            '<!doctype html><html><head></head><body></body></html>',
+            200,
+            request: http.Request('GET', Uri.parse(_fixtureApp().launchUrl)),
+            headers: const {'content-type': 'text/html'},
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: NostrAppSandboxScreen(
+              app: _fixtureApp(),
+              bootstrapHttpClientOverride: bootstrapClient,
+              javaScriptRunnerOverride: (script) async =>
+                  injectedScripts.add(script),
+              currentUserPubkeyOverride: 'f' * 64,
+            ),
+          ),
+        );
+        await tester.pump();
+        debugDefaultTargetPlatformOverride = null;
+
+        return platform.navigationDelegate!;
+      }
+
+      testWidgets('does not inject the bridge into a finished data: page', (
+        tester,
+      ) async {
+        final injectedScripts = <String>[];
+        final navigation = await pumpAndroidSandbox(
+          tester,
+          injectedScripts: injectedScripts,
+        );
+
+        navigation.onPageFinished!('https://primal.net/app');
+        await tester.pump();
+        expect(injectedScripts, hasLength(1));
+        expect(
+          injectedScripts.single,
+          contains('window.__divineNostrBridgeInstalled'),
+        );
+
+        navigation.onPageFinished!(dataPageUrl);
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(injectedScripts, hasLength(1));
+      });
+
+      testWidgets('refuses navigation to it without the safety card', (
+        tester,
+      ) async {
+        final navigation = await pumpAndroidSandbox(
+          tester,
+          injectedScripts: <String>[],
+        );
+
+        for (final url in const [
+          dataPageUrl,
+          'about:blank',
+          'blob:https://primal.net/6f0c1f2e-0000-4000-8000-000000000000',
+        ]) {
+          final decision = await navigation.onNavigationRequest!(
+            NavigationRequest(url: url, isMainFrame: true),
+          );
+          expect(decision, equals(NavigationDecision.prevent), reason: url);
+        }
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.appsSandboxBlockedTitle), findsNothing);
+      });
+    });
+
     testWidgets('handles bridge messages and emits JavaScript responses', (
       tester,
     ) async {
@@ -364,10 +453,7 @@ void main() {
       expect(executedScripts, hasLength(1));
       expect(executedScripts.single, contains('subframe-1'));
       expect(executedScripts.single, contains('subframe_or_unauthorized'));
-      expect(
-        executedScripts.single,
-        isNot(contains('"success":true')),
-      );
+      expect(executedScripts.single, isNot(contains('"success":true')));
     });
 
     testWidgets('keeps static bridge request errors but hides exception text', (
@@ -562,84 +648,82 @@ void main() {
         expect(capturedScripts.single, isNot(contains('"success":true')));
       });
 
-      testWidgets(
-        'rejects non-main-frame events even when nonce is valid',
-        (tester) async {
-          await pumpSandbox(tester);
+      testWidgets('rejects non-main-frame events even when nonce is valid', (
+        tester,
+      ) async {
+        await pumpSandbox(tester);
 
-          attestedEventHandler!({
-            'message': jsonEncode({
-              'id': 'frame-2',
-              'method': 'signEvent',
-              'args': <String, dynamic>{
-                'event': {'kind': 1},
+        attestedEventHandler!({
+          'message': jsonEncode({
+            'id': 'frame-2',
+            'method': 'signEvent',
+            'args': <String, dynamic>{
+              'event': {'kind': 1},
+            },
+            'nonce': 'test-nonce',
+          }),
+          'isMainFrame': false,
+        });
+        await tester.pump();
+
+        expect(capturedScripts.single, contains('subframe_rejected'));
+        expect(capturedScripts.single, isNot(contains('"success":true')));
+      });
+
+      testWidgets('forwards main-frame events to _handleBridgeMessage', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({});
+        final sharedPreferences = await SharedPreferences.getInstance();
+        final grantStore = NostrAppGrantStore(
+          sharedPreferences: sharedPreferences,
+        );
+        final bridgeService = NostrAppBridgeService(
+          authProvider: _FakeAuthProvider(),
+          policy: NostrAppBridgePolicy(
+            grantStore: grantStore,
+            currentUserPubkey: 'f' * 64,
+          ),
+          signerFactory: _FakeNostrSigner.new,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: NostrAppSandboxScreen(
+              app: _fixtureApp(),
+              sandboxBuilder: (_) => const SizedBox.shrink(),
+              bridgeServiceOverride: bridgeService,
+              javaScriptRunnerOverride: (script) async {
+                capturedScripts.add(script);
               },
-              'nonce': 'test-nonce',
-            }),
-            'isMainFrame': false,
-          });
-          await tester.pump();
-
-          expect(capturedScripts.single, contains('subframe_rejected'));
-          expect(capturedScripts.single, isNot(contains('"success":true')));
-        },
-      );
-
-      testWidgets(
-        'forwards main-frame events to _handleBridgeMessage',
-        (tester) async {
-          SharedPreferences.setMockInitialValues({});
-          final sharedPreferences = await SharedPreferences.getInstance();
-          final grantStore = NostrAppGrantStore(
-            sharedPreferences: sharedPreferences,
-          );
-          final bridgeService = NostrAppBridgeService(
-            authProvider: _FakeAuthProvider(),
-            policy: NostrAppBridgePolicy(
-              grantStore: grantStore,
-              currentUserPubkey: 'f' * 64,
+              onAttestedEventHandlerReady: (handler) {
+                attestedEventHandler = handler;
+              },
+              bridgeNonceOverride: 'test-nonce',
+              currentUserPubkeyOverride: 'f' * 64,
             ),
-            signerFactory: _FakeNostrSigner.new,
-          );
+          ),
+        );
 
-          await tester.pumpWidget(
-            MaterialApp(
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: NostrAppSandboxScreen(
-                app: _fixtureApp(),
-                sandboxBuilder: (_) => const SizedBox.shrink(),
-                bridgeServiceOverride: bridgeService,
-                javaScriptRunnerOverride: (script) async {
-                  capturedScripts.add(script);
-                },
-                onAttestedEventHandlerReady: (handler) {
-                  attestedEventHandler = handler;
-                },
-                bridgeNonceOverride: 'test-nonce',
-                currentUserPubkeyOverride: 'f' * 64,
-              ),
-            ),
-          );
+        attestedEventHandler!({
+          'message': jsonEncode({
+            'id': 'frame-3',
+            'method': 'getPublicKey',
+            'args': <String, dynamic>{},
+            'nonce': 'test-nonce',
+          }),
+          'isMainFrame': true,
+        });
+        await tester.pump();
 
-          attestedEventHandler!({
-            'message': jsonEncode({
-              'id': 'frame-3',
-              'method': 'getPublicKey',
-              'args': <String, dynamic>{},
-              'nonce': 'test-nonce',
-            }),
-            'isMainFrame': true,
-          });
-          await tester.pump();
-
-          expect(capturedScripts, hasLength(1));
-          expect(capturedScripts.single, contains('frame-3'));
-          // getPublicKey succeeds — nonce was valid and main-frame was true
-          expect(capturedScripts.single, contains('"success":true'));
-          expect(capturedScripts.single, contains('f' * 64));
-        },
-      );
+        expect(capturedScripts, hasLength(1));
+        expect(capturedScripts.single, contains('frame-3'));
+        // getPublicKey succeeds — nonce was valid and main-frame was true
+        expect(capturedScripts.single, contains('"success":true'));
+        expect(capturedScripts.single, contains('f' * 64));
+      });
 
       testWidgets(
         'main-frame events with wrong nonce still hit the nonce gate',
@@ -681,10 +765,7 @@ void main() {
 
     group('bridge bootstrap script', () {
       test('includes eager pubkey when provided', () {
-        final script = buildBridgeBootstrapScript(
-          nonce: 'n',
-          pubkey: 'abc123',
-        );
+        final script = buildBridgeBootstrapScript(nonce: 'n', pubkey: 'abc123');
         expect(script, contains("_pubkey: 'abc123'"));
       });
 
@@ -765,10 +846,7 @@ void main() {
 
       test('embeds the per-mount nonce in the bootstrap closure', () {
         final script = buildBridgeBootstrapScript(nonce: 'NONCE-XYZ');
-        expect(
-          script,
-          contains("const __divineBridgeNonce = 'NONCE-XYZ';"),
-        );
+        expect(script, contains("const __divineBridgeNonce = 'NONCE-XYZ';"));
       });
 
       test('includes the nonce on every outgoing bridge request', () {
@@ -778,10 +856,7 @@ void main() {
 
       test('escapes single quotes in the nonce', () {
         final script = buildBridgeBootstrapScript(nonce: "a'b");
-        expect(
-          script,
-          contains(r"const __divineBridgeNonce = 'a\'b';"),
-        );
+        expect(script, contains(r"const __divineBridgeNonce = 'a\'b';"));
       });
     });
 
@@ -816,10 +891,7 @@ void main() {
           nonce: 'NONCE-XYZ',
           pubkey: 'abc',
         );
-        expect(
-          html,
-          contains("const __divineBridgeNonce = 'NONCE-XYZ';"),
-        );
+        expect(html, contains("const __divineBridgeNonce = 'NONCE-XYZ';"));
       });
     });
 
@@ -876,6 +948,59 @@ void main() {
         );
       });
     });
+
+    group('isAllowedSandboxOrigin', () {
+      const allowedOrigins = ['https://primal.net'];
+
+      test('matches a page on an allowed origin', () {
+        expect(
+          isAllowedSandboxOrigin(
+            Uri.parse('https://primal.net/app/feed'),
+            allowedOrigins,
+          ),
+          isTrue,
+        );
+      });
+
+      test('refuses a page without a web origin instead of throwing', () {
+        for (final url in const [
+          'data:text/html;charset=utf-8;base64,',
+          'about:blank',
+          'blob:https://primal.net/6f0c1f2e-0000-4000-8000-000000000000',
+          'file:///index.html',
+        ]) {
+          expect(
+            isAllowedSandboxOrigin(Uri.parse(url), allowedOrigins),
+            isFalse,
+            reason: url,
+          );
+        }
+      });
+
+      test('skips allowed entries without a web origin instead of '
+          'throwing', () {
+        const mixedOrigins = [
+          'wss://relay.example.com',
+          'nostrsigner:',
+          'https://primal.net',
+        ];
+
+        expect(
+          isAllowedSandboxOrigin(
+            Uri.parse('https://primal.net/app'),
+            mixedOrigins,
+          ),
+          isTrue,
+        );
+        expect(
+          isAllowedSandboxOrigin(
+            Uri.parse('wss://relay.example.com'),
+            mixedOrigins,
+          ),
+          isFalse,
+        );
+      });
+    });
   });
 
   group('sandboxAndroidFileSelector', () {
@@ -900,9 +1025,8 @@ void main() {
     Future<File> passthroughStripper(File imageFile) async => imageFile;
 
     test('returns a file:// URI picked from the gallery', () async {
-      when(
-        () => picker.pickImage(source: ImageSource.gallery),
-      ).thenAnswer((_) async => XFile('/tmp/badge.png'));
+      when(() => picker.pickImage(source: ImageSource.gallery))
+          .thenAnswer((_) async => XFile('/tmp/badge.png'));
 
       final result = await sandboxAndroidFileSelector(
         params(),
@@ -915,9 +1039,8 @@ void main() {
 
     test('strips image metadata before returning the file URI', () async {
       final strippedPaths = <String>[];
-      when(
-        () => picker.pickImage(source: ImageSource.gallery),
-      ).thenAnswer((_) async => XFile('/tmp/badge.png'));
+      when(() => picker.pickImage(source: ImageSource.gallery))
+          .thenAnswer((_) async => XFile('/tmp/badge.png'));
 
       final result = await sandboxAndroidFileSelector(
         params(),
@@ -933,9 +1056,8 @@ void main() {
     });
 
     test('uses the camera when the input requests capture', () async {
-      when(
-        () => picker.pickImage(source: ImageSource.camera),
-      ).thenAnswer((_) async => XFile('/tmp/shot.jpg'));
+      when(() => picker.pickImage(source: ImageSource.camera))
+          .thenAnswer((_) async => XFile('/tmp/shot.jpg'));
 
       final result = await sandboxAndroidFileSelector(
         params(isCaptureEnabled: true),
@@ -948,9 +1070,8 @@ void main() {
     });
 
     test('returns empty when the user cancels the picker', () async {
-      when(
-        () => picker.pickImage(source: ImageSource.gallery),
-      ).thenAnswer((_) async => null);
+      when(() => picker.pickImage(source: ImageSource.gallery))
+          .thenAnswer((_) async => null);
 
       final result = await sandboxAndroidFileSelector(
         params(),
@@ -962,9 +1083,8 @@ void main() {
     });
 
     test('picks multiple images in openMultiple mode', () async {
-      when(() => picker.pickMultiImage()).thenAnswer(
-        (_) async => [XFile('/tmp/a.png'), XFile('/tmp/b.png')],
-      );
+      when(() => picker.pickMultiImage())
+          .thenAnswer((_) async => [XFile('/tmp/a.png'), XFile('/tmp/b.png')]);
 
       final result = await sandboxAndroidFileSelector(
         params(mode: FileSelectorMode.openMultiple),
@@ -978,9 +1098,8 @@ void main() {
     test(
       'uses the camera for openMultiple when capture is requested',
       () async {
-        when(
-          () => picker.pickImage(source: ImageSource.camera),
-        ).thenAnswer((_) async => XFile('/tmp/capture.jpg'));
+        when(() => picker.pickImage(source: ImageSource.camera))
+            .thenAnswer((_) async => XFile('/tmp/capture.jpg'));
 
         final result = await sandboxAndroidFileSelector(
           params(mode: FileSelectorMode.openMultiple, isCaptureEnabled: true),
@@ -1020,9 +1139,8 @@ void main() {
     });
 
     test('falls back to gallery images when no accept type is set', () async {
-      when(
-        () => picker.pickImage(source: ImageSource.gallery),
-      ).thenAnswer((_) async => XFile('/tmp/any.webp'));
+      when(() => picker.pickImage(source: ImageSource.gallery))
+          .thenAnswer((_) async => XFile('/tmp/any.webp'));
 
       final result = await sandboxAndroidFileSelector(
         params(acceptTypes: const []),
@@ -1039,9 +1157,8 @@ void main() {
     for (final anyToken in const ['', '*', '*/*']) {
       test('opens the gallery for the accept-anything token '
           '"$anyToken"', () async {
-        when(
-          () => picker.pickImage(source: ImageSource.gallery),
-        ).thenAnswer((_) async => XFile('/tmp/any.png'));
+        when(() => picker.pickImage(source: ImageSource.gallery))
+            .thenAnswer((_) async => XFile('/tmp/any.png'));
 
         final result = await sandboxAndroidFileSelector(
           params(acceptTypes: [anyToken]),
@@ -1057,9 +1174,8 @@ void main() {
       test(
         'opens the gallery for image extension token "$extension"',
         () async {
-          when(
-            () => picker.pickImage(source: ImageSource.gallery),
-          ).thenAnswer((_) async => XFile('/tmp/extension-image'));
+          when(() => picker.pickImage(source: ImageSource.gallery))
+              .thenAnswer((_) async => XFile('/tmp/extension-image'));
 
           final result = await sandboxAndroidFileSelector(
             params(acceptTypes: [extension]),
@@ -1073,9 +1189,8 @@ void main() {
     }
 
     test('returns empty when picking throws', () async {
-      when(
-        () => picker.pickImage(source: ImageSource.gallery),
-      ).thenThrow(Exception('picker exploded'));
+      when(() => picker.pickImage(source: ImageSource.gallery))
+          .thenThrow(Exception('picker exploded'));
 
       final result = await sandboxAndroidFileSelector(
         params(),
@@ -1199,6 +1314,7 @@ class _HistoryAwareWebViewPlatform extends WebViewPlatform {
 
 class _BootstrapAwareWebViewPlatform extends WebViewPlatform {
   late final _BootstrapAwareWebViewController controller;
+  _FakeNavigationDelegate? navigationDelegate;
 
   @override
   PlatformWebViewController createPlatformWebViewController(
@@ -1225,7 +1341,7 @@ class _BootstrapAwareWebViewPlatform extends WebViewPlatform {
   PlatformNavigationDelegate createPlatformNavigationDelegate(
     PlatformNavigationDelegateCreationParams params,
   ) {
-    return _FakeNavigationDelegate(params);
+    return navigationDelegate = _FakeNavigationDelegate(params);
   }
 }
 
@@ -1349,13 +1465,20 @@ class _FakeWebViewWidget extends PlatformWebViewWidget {
 class _FakeNavigationDelegate extends PlatformNavigationDelegate {
   _FakeNavigationDelegate(super.params) : super.implementation();
 
+  NavigationRequestCallback? onNavigationRequest;
+  PageEventCallback? onPageFinished;
+
   @override
   Future<void> setOnNavigationRequest(
     NavigationRequestCallback onNavigationRequest,
-  ) async {}
+  ) async {
+    this.onNavigationRequest = onNavigationRequest;
+  }
 
   @override
-  Future<void> setOnPageFinished(PageEventCallback onPageFinished) async {}
+  Future<void> setOnPageFinished(PageEventCallback onPageFinished) async {
+    this.onPageFinished = onPageFinished;
+  }
 
   @override
   Future<void> setOnPageStarted(PageEventCallback onPageStarted) async {}
@@ -1399,9 +1522,7 @@ class _ThrowingBridgeService extends NostrAppBridgeService {
     : super(
         authProvider: _FakeAuthProvider(),
         policy: NostrAppBridgePolicy(
-          grantStore: NostrAppGrantStore(
-            sharedPreferences: sharedPreferences,
-          ),
+          grantStore: NostrAppGrantStore(sharedPreferences: sharedPreferences),
           currentUserPubkey: 'f' * 64,
         ),
         signerFactory: _FakeNostrSigner.new,
