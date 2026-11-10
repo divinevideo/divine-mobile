@@ -11,8 +11,10 @@ import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
+import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -142,6 +144,54 @@ void main() {
     );
     videoEventService.setContentFilterService(contentFilterService);
     videoEventService.setModerationLabelService(moderationLabelService);
+  });
+
+  group('owner hosting preference', () {
+    test(
+      'keeps own off-host video visible and follows account switches',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final hosting = DivineHostFilterService(prefs);
+        addTearDown(hosting.dispose);
+        videoEventService.setDivineHostFilterService(hosting);
+        final video = _createVideo(id: 'own-off-host').copyWith(
+          videoUrl: 'https://example.com/video.mp4',
+        );
+        expect(videoEventService.filterVideoList([video]), [video]);
+        expect(videoEventService.isHiddenByHostingPreference(video), isFalse);
+        videoEventService.setCurrentUserPubkeyProvider(() => otherPubkey);
+        expect(videoEventService.filterVideoList([video]), isEmpty);
+        expect(videoEventService.isHiddenByHostingPreference(video), isTrue);
+        videoEventService.setCurrentUserPubkeyProvider(() => null);
+        expect(videoEventService.filterVideoList([video]), isEmpty);
+      },
+    );
+
+    test(
+      'still hides own off-host video for provenance or moderation',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        final hosting = DivineHostFilterService(prefs);
+        final provenance = VideoProvenanceFilterService(prefs);
+        addTearDown(hosting.dispose);
+        addTearDown(provenance.dispose);
+        videoEventService.setDivineHostFilterService(hosting);
+        videoEventService.setProvenanceFilterService(provenance);
+        final video = _createVideo(id: 'own-off-host').copyWith(
+          videoUrl: 'https://example.com/video.mp4',
+        );
+        await provenance.setShowVerifiedOnly(true);
+        expect(videoEventService.filterVideoList([video]), isEmpty);
+        await provenance.setShowVerifiedOnly(false);
+        expect(videoEventService.filterVideoList([video]), [video]);
+        expect(
+          videoEventService.filterVideoList([
+            video.copyWith(moderationLabels: ['nudity']),
+          ]),
+          isEmpty,
+        );
+      },
+    );
   });
 
   group('VideoEventService content filter integration', () {

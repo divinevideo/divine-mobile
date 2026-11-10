@@ -3,6 +3,7 @@
 
 import 'package:models/models.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
+import 'package:openvine/services/effective_content_labels.dart';
 
 /// Decides whether the viewer's source preferences hide a video.
 ///
@@ -12,6 +13,21 @@ import 'package:openvine/extensions/video_event_extensions.dart';
 /// "Not Divine" badge about the same video.
 class VideoSourceVisibilityPolicy {
   const VideoSourceVisibilityPolicy._();
+
+  /// Whether hosting preferences hide [video] from this viewer.
+  ///
+  /// Creators keep access to their own uploads regardless of media host.
+  /// Ownership does not exempt them from provenance or moderation rules.
+  static bool isHiddenByHostingPreference(
+    VideoEvent video, {
+    required bool divineHostedOnly,
+    required String? viewerPubkey,
+  }) =>
+      divineHostedOnly &&
+      !video.isFromDivineServer &&
+      !(viewerPubkey != null &&
+          viewerPubkey.isNotEmpty &&
+          contentOwnerMatches(video.pubkey, viewerPubkey));
 
   /// Whether [video] is hidden by the viewer's source preferences.
   ///
@@ -36,8 +52,15 @@ class VideoSourceVisibilityPolicy {
     VideoEvent video, {
     required bool divineHostedOnly,
     required bool verifiedOnly,
+    required String? viewerPubkey,
   }) {
-    if (divineHostedOnly && !video.isFromDivineServer) return true;
+    if (isHiddenByHostingPreference(
+      video,
+      divineHostedOnly: divineHostedOnly,
+      viewerPubkey: viewerPubkey,
+    )) {
+      return true;
+    }
     if (verifiedOnly && !video.hasProofMode && !video.countsAsArchiveVine) {
       return true;
     }

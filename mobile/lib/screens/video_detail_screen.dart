@@ -213,8 +213,9 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
   }
 
   _HiddenReason _hiddenReason(VideoEvent video) {
-    if (!video.isFromDivineServer &&
-        ref.read(divineHostFilterServiceProvider).showDivineHostedOnly) {
+    if (ref
+        .read(videoEventServiceProvider)
+        .isHiddenByHostingPreference(video)) {
       return _HiddenReason.divineHostedOnly;
     }
     if (!video.hasProofMode &&

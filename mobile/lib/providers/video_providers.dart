@@ -936,6 +936,8 @@ VideosRepository videosRepository(Ref ref) {
           video,
           divineHostedOnly: divineHostFilterService.showDivineHostedOnly,
           verifiedOnly: provenanceFilterService.showVerifiedOnly,
+          viewerPubkey:
+              authService.currentPublicKeyHex ?? nostrClient.publicKey,
         ),
     feedShapeFilter: feedAspectRatioPreference.shouldHideVideo,
     warningLabelsResolver: createNsfwWarnLabels(

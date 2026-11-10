@@ -478,23 +478,23 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   bool get shouldFilterNonDivineVideos =>
       _divineHostFilterService?.showDivineHostedOnly ?? false;
 
-  bool get _shouldFilterUnverifiedVideos =>
-      _provenanceFilterService?.showVerifiedOnly ?? false;
+  /// Whether the hosting preference hides this video from the current viewer.
+  bool isHiddenByHostingPreference(VideoEvent video) =>
+      VideoSourceVisibilityPolicy.isHiddenByHostingPreference(
+        video,
+        divineHostedOnly: shouldFilterNonDivineVideos,
+        viewerPubkey: shouldFilterNonDivineVideos ? _currentUserPubkey() : null,
+      );
 
   /// Returns true when shared feed policy hides this video.
-  bool shouldHideVideo(VideoEvent video) {
-    if (VideoBlockPolicy.isHiddenByBlocklist(video, _blocklistRepository)) {
-      return true;
-    }
-    if (VideoSourceVisibilityPolicy.isHiddenBySourcePreferences(
-      video,
-      divineHostedOnly: shouldFilterNonDivineVideos,
-      verifiedOnly: _shouldFilterUnverifiedVideos,
-    )) {
-      return true;
-    }
-    return false;
-  }
+  bool shouldHideVideo(VideoEvent video) =>
+      VideoBlockPolicy.isHiddenByBlocklist(video, _blocklistRepository) ||
+      VideoSourceVisibilityPolicy.isHiddenBySourcePreferences(
+        video,
+        divineHostedOnly: shouldFilterNonDivineVideos,
+        verifiedOnly: _provenanceFilterService?.showVerifiedOnly ?? false,
+        viewerPubkey: shouldFilterNonDivineVideos ? _currentUserPubkey() : null,
+      );
 
   bool _shouldHideForFeedShapePreference(VideoEvent video) =>
       _feedAspectRatioPreferenceService?.shouldHideVideo(video) ?? false;

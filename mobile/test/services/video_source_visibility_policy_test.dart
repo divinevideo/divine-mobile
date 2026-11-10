@@ -22,11 +22,48 @@ void main() {
       VideoEvent video, {
       bool divineHostedOnly = false,
       bool verifiedOnly = false,
+      String? viewerPubkey,
     }) => VideoSourceVisibilityPolicy.isHiddenBySourcePreferences(
       video,
       divineHostedOnly: divineHostedOnly,
       verifiedOnly: verifiedOnly,
+      viewerPubkey: viewerPubkey,
     );
+
+    test('hosting exemption is only for the current nonempty owner', () {
+      const author =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      final video = offHost.copyWith(pubkey: author);
+      for (final viewer in [author, author.toUpperCase()]) {
+        expect(
+          hidden(video, divineHostedOnly: true, viewerPubkey: viewer),
+          isFalse,
+        );
+        expect(
+          hidden(
+            video,
+            divineHostedOnly: true,
+            verifiedOnly: true,
+            viewerPubkey: viewer,
+          ),
+          isTrue,
+        );
+      }
+      for (final viewer in [null, '', 'b' * 64]) {
+        expect(
+          hidden(video, divineHostedOnly: true, viewerPubkey: viewer),
+          isTrue,
+        );
+      }
+      expect(
+        hidden(
+          offHost.copyWith(pubkey: ''),
+          divineHostedOnly: true,
+          viewerPubkey: '',
+        ),
+        isTrue,
+      );
+    });
 
     test('hides nothing when both preferences are off', () {
       expect(hidden(offHost), isFalse);
