@@ -131,10 +131,8 @@ AuthService authService(Ref ref) {
   final oauthClient = ref.watch(oauthClientProvider);
   final flutterSecureStorage = ref.watch(flutterSecureStorageProvider);
   final oauthConfig = ref.watch(oauthConfigProvider);
-  // NOTE: We construct FunnelcakeApiClient directly here instead of using
-  // funnelcakeApiClientProvider to avoid a circular dependency:
-  //   authService → funnelcakeApiClient → nostrService → authService
-  // Using currentEnvironmentProvider is safe (no auth/nostr dependency).
+  // currentEnvironmentProvider has no auth or Nostr dependency, so reading it
+  // here cannot form a cycle back to this provider.
   final authEnv = ref.read(currentEnvironmentProvider);
   final authService = AuthService(
     backgroundActivityManager: ref.read(backgroundActivityManagerProvider),

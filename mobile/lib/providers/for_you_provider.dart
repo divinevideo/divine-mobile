@@ -1,6 +1,7 @@
 // ABOUTME: For You recommendations provider - ML-powered personalized video feed
 // ABOUTME: Uses Funnelcake REST API for Gorse-based recommendations (staging only)
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -8,6 +9,7 @@ import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/feed_refresh_helpers.dart';
 import 'package:openvine/providers/feed_viewer_preference_hints.dart';
 import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
@@ -32,6 +34,11 @@ class ForYouFeed extends _$ForYouFeed {
 
   @override
   Future<VideoFeedState> build() async {
+    // A rebuild supersedes any fetch or page load still in flight, including
+    // on the early returns below, so a late page cannot overwrite this state.
+    _feedGeneration++;
+    _nextCursor = null;
+
     // Watch content filter version — rebuilds when preferences change.
     ref.watch(contentFilterVersionProvider);
     ref.watch(divineHostFilterVersionProvider);
@@ -70,7 +77,9 @@ class ForYouFeed extends _$ForYouFeed {
       return const VideoFeedState(videos: [], hasMoreContent: false);
     }
 
-    // Get current user pubkey
+    // The feed is personalized: rebuild whenever the signed-in account changes
+    // so it is recomputed for the new account.
+    ref.watch(nostrSessionProvider.select((session) => session.pubkey));
     final authService = ref.read(authServiceProvider);
     final currentUserPubkey = authService.currentPublicKeyHex;
 
@@ -167,6 +176,7 @@ class ForYouFeed extends _$ForYouFeed {
     }
 
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
+    final generation = _feedGeneration;
 
     try {
       final funnelcakeAvailable =
@@ -184,7 +194,6 @@ class ForYouFeed extends _$ForYouFeed {
       }
 
       final cursor = _nextCursor;
-      final generation = _feedGeneration;
       if (cursor == null) {
         state = AsyncData(
           currentState.copyWith(isLoadingMore: false, hasMoreContent: false),
@@ -236,7 +245,7 @@ class ForYouFeed extends _$ForYouFeed {
         category: LogCategory.video,
       );
 
-      if (!ref.mounted) return;
+      if (!ref.mounted || _feedGeneration != generation) return;
       state = AsyncData(
         currentState.copyWith(isLoadingMore: false, error: e.toString()),
       );
@@ -251,9 +260,14 @@ class ForYouFeed extends _$ForYouFeed {
       category: LogCategory.video,
     );
 
+    // A refresh that settles after the account changed would otherwise restore
+    // the previous account's feed, which staleWhileRevalidate captured upfront.
+    final viewer = ref.read(authServiceProvider).currentPublicKeyHex;
     await staleWhileRevalidate(
       getCurrentState: () => state,
-      isMounted: () => ref.mounted,
+      isMounted: () =>
+          ref.mounted &&
+          ref.read(authServiceProvider).currentPublicKeyHex == viewer,
       setState: (s) => state = s,
       fetchFresh: () =>
           _fetchRecommendations(preserveExistingOnError: true, skipCache: true),

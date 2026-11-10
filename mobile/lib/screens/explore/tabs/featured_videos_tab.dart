@@ -38,8 +38,8 @@ class FeaturedVideosTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(featuredTabsRepositoryProvider);
     return BlocProvider<FeaturedTabVideosCubit>(
-      // Rebuild the cubit when the repository identity changes (environment or
-      // relay swap) or when anything about the configuration changes. Keyed on
+      // Rebuild the cubit when the repository identity changes (an environment
+      // switch) or when anything about the configuration changes. Keyed on
       // the whole config, not just its id: the admin endpoint upserts by id, so
       // a tab can be retargeted in place, and the backing hashtag is
       // deliberately absent from the public config — the visible fields are the
