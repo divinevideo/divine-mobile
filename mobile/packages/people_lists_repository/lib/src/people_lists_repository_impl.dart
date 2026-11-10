@@ -108,8 +108,12 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
 
   Future<PeopleListPublishResult> _serializeMutation(
     String ownerPubkey,
-    Future<PeopleListPublishResult> Function() operation,
-  ) => _serializeOwner(ownerPubkey, () async {
+    Future<PeopleListPublishResult> Function() operation, {
+    String? listId,
+  }) => _serializeOwner(ownerPubkey, () async {
+    if (listId != null && _isProtectedListId(listId)) {
+      return _refuse(listId, 'the list is managed by an application');
+    }
     try {
       return await operation();
     } on Object catch (error, stackTrace) {
@@ -196,21 +200,28 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   /// Deployment-owned exclusions apply only to public discovery and search.
   final Set<String> _additionalExcludedPublicDTags;
 
+  static bool _isProtectedListId(String listId) =>
+      Nip51PeopleListCodec.reservedDTags.contains(listId) ||
+      Nip51PeopleListCodec.machineryDTags.contains(listId);
+
+  static List<UserList> _userFacingLists(List<UserList> lists) =>
+      lists.where((list) => !_isProtectedListId(list.id)).toList();
+
   @override
   Stream<List<UserList>> watchLists({required String ownerPubkey}) {
-    return _cache.watchLists(ownerPubkey: ownerPubkey);
+    return _cache.watchLists(ownerPubkey: ownerPubkey).map(_userFacingLists);
   }
 
   @override
-  Future<List<UserList>> readLists({required String ownerPubkey}) {
-    return _cache.readLists(ownerPubkey: ownerPubkey);
+  Future<List<UserList>> readLists({required String ownerPubkey}) async {
+    return _userFacingLists(await _cache.readLists(ownerPubkey: ownerPubkey));
   }
 
   /// How long an authoritative read waits for every relay to settle.
   ///
   /// Deliberately shorter than the 5s default: an expiry reports `timedOut`,
-  /// which refuses the mutation, so erring short errs toward not publishing
-  /// over a list we could not read.
+  /// which refuses a replacement, so erring short errs toward not publishing
+  /// over a list we could not read. Deletions use best-effort reconciliation.
   static const _reconcileTimeout = Duration(seconds: 3);
 
   @override
@@ -356,7 +367,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       sourceTags: tags,
       sourceContent: record.sourceContent,
     );
-  });
+  }, listId: listId);
 
   @override
   Future<PeopleListPublishResult> updateListInfo({
@@ -404,7 +415,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
       sourceTags: payload.tags,
       sourceContent: payload.content,
     );
-  });
+  }, listId: listId);
 
   @override
   Future<PeopleListPublishResult> addPubkey({
@@ -414,6 +425,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   }) => _serializeMutation(
     ownerPubkey,
     () => _addPubkey(ownerPubkey: ownerPubkey, listId: listId, pubkey: pubkey),
+    listId: listId,
   );
 
   Future<PeopleListPublishResult> _addPubkey({
@@ -463,6 +475,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     ownerPubkey,
     () =>
         _removePubkey(ownerPubkey: ownerPubkey, listId: listId, pubkey: pubkey),
+    listId: listId,
   );
 
   Future<PeopleListPublishResult> _removePubkey({
@@ -510,14 +523,26 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
   }) => _serializeMutation(
     ownerPubkey,
     () => _deleteList(ownerPubkey: ownerPubkey, listId: listId),
+    listId: listId,
   );
 
   Future<PeopleListPublishResult> _deleteList({
     required String ownerPubkey,
     required String listId,
   }) async {
-    if (!await _reconcileOwner(ownerPubkey)) {
-      return _refuse(listId, 'the owner read was inconclusive');
+    // Deletion does not replace membership. Use any revisions received before
+    // the deadline, but do not require every relay to answer before publishing.
+    try {
+      await _reconcileOwner(ownerPubkey);
+    } on Object catch (error, stackTrace) {
+      Log.warning(
+        'Could not refresh people list $listId before deletion; '
+        'using the latest cached revision',
+        name: _logName,
+        category: LogCategory.relay,
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
     final record = await _findList(ownerPubkey: ownerPubkey, listId: listId);
     final createdAt = _allocateRevision(ownerPubkey, listId, record?.list);
