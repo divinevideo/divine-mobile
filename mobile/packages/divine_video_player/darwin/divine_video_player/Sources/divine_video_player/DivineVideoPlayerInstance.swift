@@ -304,7 +304,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
 
     /// Non-nil when the player renders into a Flutter texture instead of
     /// a platform view.
-    private var textureOutput: VideoTextureOutput?
+    private(set) var textureOutput: VideoTextureOutput?
 
     /// Offsets of each clip on the global timeline (seconds).
     private var clipOffsets: [Double] = []
@@ -391,7 +391,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         // frame (e.g. exact boundary between composition segments). Retry
         // with a small tolerance to snap to the nearest decodable frame.
         output.onSeekStuck = { [weak self] stuckTime in
-            guard let self else { return }
+            // As in `rebuildQueueForLoopingChange`: `AVPlayerItem` raises on
+            // a seek to an invalid time rather than ignoring it.
+            guard let self, stuckTime.isNumeric,
+                  self.player?.currentItem != nil else { return }
             self.player?.seek(
                 to: stuckTime,
                 toleranceBefore: CMTime(value: 1, timescale: 10),
