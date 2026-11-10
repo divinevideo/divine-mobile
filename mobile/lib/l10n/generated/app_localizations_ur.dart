@@ -10724,6 +10724,17 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'خم';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'ہموار سلو موشن';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'فریمز کو ملاتا ہے تاکہ سلو موشن رواں رہے۔ تیز حرکت سائے چھوڑ سکتی ہے۔';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'کلپ کو 1× سے آہستہ کرنے پر یہ کام کرتا ہے۔';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'حسبِ منشا';
 
   @override

@@ -10102,6 +10102,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorSpeedModeCurve => '曲线';
 
   @override
+  String get videoEditorSpeedSmoothTitle => '流畅慢动作';
+
+  @override
+  String get videoEditorSpeedSmoothDescription => '混合相邻画面，让慢动作更流畅。快速动作可能留下重影。';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable => '把片段调到 1× 以下即可使用。';
+
+  @override
   String get videoEditorSpeedCurveCustom => '自定义';
 
   @override

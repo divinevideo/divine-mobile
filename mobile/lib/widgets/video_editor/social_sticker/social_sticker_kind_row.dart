@@ -146,7 +146,9 @@ class _SampleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return SizedBox(
-      height: 112,
+      height: StickerKindTile.rowHeightOf(context, [
+        for (final sample in samples) l10n.socialStickerKindLabel(sample.kind),
+      ]),
       child: ListView.separated(
         scrollDirection: .horizontal,
         padding: const .symmetric(horizontal: 16),

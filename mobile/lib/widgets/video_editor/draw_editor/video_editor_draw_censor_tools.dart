@@ -98,8 +98,10 @@ class _CensorToolItem extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: .opaque,
-        child: SizedBox(
-          width: 84,
+        // Widens to a long name, which the hint beside the tools makes room
+        // for, rather than cutting it.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 84),
           child: Column(
             mainAxisSize: .min,
             spacing: 4,

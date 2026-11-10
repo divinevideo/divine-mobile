@@ -16,6 +16,8 @@ import 'package:openvine/widgets/caption_pill.dart';
 import 'package:openvine/widgets/subtitle_editor/subtitle_cue_timeline.dart';
 import 'package:openvine/widgets/subtitle_editor/subtitle_editor_stage.dart';
 
+import '../../helpers/text_lines.dart';
+
 /// A loader that yields no frames, so the native decoder is never touched.
 Stream<List<TimelineFrame>> _noFrames({
   required String videoUrl,
@@ -52,13 +54,14 @@ void main() {
       List<String> playbackUrls = const ['https://example.com/video.mp4'],
       SubtitlePreviewControllerInitializer? initializePreviewController,
       SubtitlePreviewSourceLoader? loadPreviewSources,
+      Size size = const Size(400, 600),
     }) => MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: SizedBox(
-          height: 600,
-          width: 400,
+          height: size.height,
+          width: size.width,
           child: SubtitleEditorStage(
             videoUrl: 'https://example.com/video.mp4',
             playbackUrls: playbackUrls,
@@ -150,6 +153,39 @@ void main() {
         findsOneWidget,
       );
     });
+
+    for (final textScale in const [1.0, 3.12]) {
+      testWidgets('keeps a long live cue whole inside the small preview of a '
+          'small phone at text scale $textScale', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = textScale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        const text = 'Hallo und willkommen zurück';
+        // The stage takes half the body of an iPhone SE.
+        await tester.pumpWidget(
+          pump(
+            cues: const [EditableCue(start: 0, end: 1000, text: text)],
+            size: const Size(375, 287),
+          ),
+        );
+        await tester.pump();
+
+        // Inside the portrait picture the pill was about 70 pt wide: it split
+        // "Hallo" and ran off the preview.
+        expect(tester.takeException(), isNull);
+        expect(wordsSplitAcrossLines(tester, find.text(text)), isEmpty);
+        final preview = tester.getRect(
+          find
+              .ancestor(
+                of: find.byType(DivineVideoPlayer),
+                matching: find.byType(ColoredBox),
+              )
+              .first,
+        );
+        final pill = tester.getRect(find.byType(CaptionPill));
+        expect(preview.contains(pill.topLeft), isTrue);
+        expect(preview.contains(pill.bottomRight - const Offset(1, 1)), isTrue);
+      });
+    }
 
     test('rejects stale paused reports while a seek is pending', () {
       expect(

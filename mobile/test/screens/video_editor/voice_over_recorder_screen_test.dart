@@ -6,6 +6,8 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,8 +20,12 @@ import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/video_editor/voice_over_recorder_screen.dart';
 import 'package:openvine/widgets/audio/live_amplitude_waveform.dart';
+import 'package:openvine/widgets/audio/record_toggle_button.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:openvine/widgets/video_editor/voice_over/voice_over_video_timeline.dart';
+
+import '../../helpers/scroll.dart';
+import '../../helpers/text_lines.dart';
 
 class _MockVoiceOverCubit extends MockCubit<VoiceOverState>
     implements VoiceOverCubit {}
@@ -132,7 +138,11 @@ void main() {
           find.byType(VideoEditorToolbar),
         );
         expect(toolbar.onDone, isNull);
-        expect(find.text(l10n.videoEditorVoiceOverDeleteLast), findsNothing);
+        // Laid out but hidden, so it keeps its slot.
+        expect(
+          find.text(l10n.videoEditorVoiceOverDeleteLast).hitTestable(),
+          findsNothing,
+        );
         // The in-flight take still counts toward the readout.
         expect(find.text('0:02 / 0:06'), findsOneWidget);
       });
@@ -618,6 +628,138 @@ void main() {
           find.byType(AnimatedContainer),
         );
         expect(animated.duration, greaterThan(Duration.zero));
+      });
+    });
+
+    group('at a large text size on a small phone', () {
+      final de = lookupAppLocalizations(const Locale('de'));
+
+      Future<void> pumpAt(
+        WidgetTester tester, {
+        required Size size,
+        required double textScale,
+        Locale locale = const Locale('en'),
+      }) async {
+        tester.view
+          ..physicalSize = size
+          ..devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = textScale;
+        addTearDown(() {
+          tester.view.reset();
+          tester.platformDispatcher.clearAllTestValues();
+        });
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: locale,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<VoiceOverCubit>.value(
+              value: cubit,
+              child: const VoiceOverRecorderView(),
+            ),
+          ),
+        );
+      }
+
+      testWidgets('scrolls the panel instead of laying the hint on the '
+          'record button', (tester) async {
+        stub(const VoiceOverState(availableDuration: Duration(seconds: 6)));
+
+        await pumpAt(
+          tester,
+          size: const Size(360, 640),
+          textScale: 2,
+          locale: const Locale('de'),
+        );
+        final hint = find.text(de.videoEditorVoiceOverHint);
+        await tester.ensureVisible(hint);
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getRect(hint).bottom,
+          lessThanOrEqualTo(
+            tester.getRect(find.byType(RecordToggleButton)).top,
+          ),
+        );
+      });
+
+      testWidgets('shows the whole delete label', (tester) async {
+        stub(VoiceOverState(takes: [_take('a')]));
+
+        await pumpAt(
+          tester,
+          size: const Size(375, 667),
+          textScale: 2,
+          locale: const Locale('de'),
+        );
+
+        final label = tester.renderObject<RenderParagraph>(
+          find.text(de.videoEditorVoiceOverDeleteLast),
+        );
+        expect(
+          label.size.height,
+          greaterThanOrEqualTo(label.textSize.height),
+        );
+      });
+
+      testWidgets('keeps an over-length readout on the screen', (
+        tester,
+      ) async {
+        stub(
+          VoiceOverState(
+            takes: [_take('a', duration: 5), _take('b', duration: 3)],
+            availableDuration: const Duration(seconds: 6),
+          ),
+        );
+
+        await pumpAt(tester, size: const Size(375, 667), textScale: 3.12);
+
+        final readout = tester.getRect(find.text('0:08 / 0:06'));
+        expect(readout.left, greaterThanOrEqualTo(-precisionErrorTolerance));
+        expect(readout.right, lessThanOrEqualTo(375 + precisionErrorTolerance));
+      });
+
+      group('while the microphone is denied', () {
+        setUp(() {
+          stub(
+            const VoiceOverState(status: VoiceOverStatus.permissionDenied),
+          );
+        });
+
+        testWidgets('keeps every word whole', (tester) async {
+          await pumpAt(
+            tester,
+            size: const Size(375, 667),
+            textScale: 3.12,
+            locale: const Locale('de'),
+          );
+
+          for (final text in [
+            de.videoEditorVoiceOverPermissionTitle,
+            de.videoEditorVoiceOverPermissionBody,
+            de.videoEditorVoiceOverOpenSettings,
+          ]) {
+            expect(wordsSplitAcrossLines(tester, find.text(text)), isEmpty);
+          }
+          expect(
+            tester
+                .renderObject<RenderParagraph>(
+                  find.text(de.videoEditorVoiceOverOpenSettings),
+                )
+                .didExceedMaxLines,
+            isFalse,
+          );
+        });
+
+        testWidgets('scrolls to open settings', (tester) async {
+          await pumpAt(tester, size: const Size(375, 667), textScale: 3.12);
+
+          final openSettings = find.text(l10n.videoEditorVoiceOverOpenSettings);
+          await scrollUntilTappable(tester, openSettings, 100);
+          await tester.tap(openSettings);
+
+          verify(() => cubit.openSettings()).called(1);
+        });
       });
     });
 

@@ -1,6 +1,7 @@
 // ABOUTME: Tests the question, Add yours and replies cards: what the frames show,
 // ABOUTME: who joined or replied in the player's copy, and the buttons on them.
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -131,6 +132,30 @@ void main() {
           tester.getSize(find.byType(InteractiveStickerCard)),
           equals(without),
         );
+      });
+    });
+
+    group('renders at any system text size', () {
+      testWidgets('its icons the size they have in the frames', (
+        tester,
+      ) async {
+        Future<Size> iconSizeAt(double textScale) async {
+          await pump(
+            tester,
+            Builder(
+              builder: (context) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: TextScaler.linear(textScale)),
+                child: FittedBox(child: InteractiveStickerCard(data: replies)),
+              ),
+            ),
+          );
+          return tester.renderObject<RenderBox>(find.byType(DivineIcon)).size;
+        }
+
+        final regular = await iconSizeAt(1);
+        expect(await iconSizeAt(2), equals(regular));
       });
     });
 

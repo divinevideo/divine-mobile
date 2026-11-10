@@ -49,6 +49,7 @@ class DivineVideoClip {
     this.equalizer = model.EqualizerSettings.none,
     this.playbackSpeed,
     this.speedRamp,
+    this.smoothSlowMotion = false,
     this.reversed = false,
     this.isPlaceholder = false,
     this.placeholderFill,
@@ -182,6 +183,26 @@ class DivineVideoClip {
   /// [trimmedDuration], so a trim keeps the shape and stretches it over what
   /// is left.
   final VideoSpeedRamp? speedRamp;
+
+  /// Whether a slowed-down stretch of this clip blends its neighbouring
+  /// frames instead of repeating them, so slow motion runs on smoothly rather
+  /// than in steps. Fast movement can leave ghosts, so it is the user's
+  /// choice per clip.
+  ///
+  /// Only matters where the clip [slowsDown]; the preview's speed body and
+  /// the export blend the same way.
+  final bool smoothSlowMotion;
+
+  /// Whether some stretch of this clip plays slower than its own speed.
+  bool get slowsDown {
+    if (speedRamp case final ramp?) return ramp.points.any((p) => p.speed < 1);
+    final speed = playbackSpeed;
+    return speed != null && speed > 0 && speed < 1;
+  }
+
+  /// Whether this clip's slowed-down stretches are rendered with blended
+  /// frames: [smoothSlowMotion] where the clip [slowsDown].
+  bool get blendsFrames => smoothSlowMotion && slowsDown;
 
   /// Whether this clip plays at anything other than its own speed.
   bool get changesSpeed =>
@@ -779,6 +800,7 @@ class DivineVideoClip {
     bool clearPlaybackSpeed = false,
     VideoSpeedRamp? speedRamp,
     bool clearSpeedRamp = false,
+    bool? smoothSlowMotion,
     bool? reversed,
     bool? isPlaceholder,
     ClipPlaceholderFill? placeholderFill,
@@ -859,6 +881,7 @@ class DivineVideoClip {
           ? null
           : (playbackSpeed ?? this.playbackSpeed),
       speedRamp: clearSpeedRamp ? null : (speedRamp ?? this.speedRamp),
+      smoothSlowMotion: smoothSlowMotion ?? this.smoothSlowMotion,
       reversed: reversed ?? this.reversed,
       isPlaceholder: isPlaceholder ?? this.isPlaceholder,
       placeholderFill: placeholderFill ?? this.placeholderFill,
@@ -962,6 +985,7 @@ class DivineVideoClip {
       if (!equalizer.isNone) 'equalizer': equalizer.toJson(),
       if (playbackSpeed != null) 'playbackSpeed': playbackSpeed,
       if (speedRamp case final ramp?) 'speedRamp': ramp.toMap(),
+      if (smoothSlowMotion) 'smoothSlowMotion': true,
       if (reversed) 'reversed': true,
       if (isPlaceholder) 'isPlaceholder': true,
       if (placeholderFill case final fill?) 'placeholderFill': fill.toJson(),
@@ -1117,6 +1141,7 @@ class DivineVideoClip {
         ),
         _ => null,
       },
+      smoothSlowMotion: (json['smoothSlowMotion'] as bool?) ?? false,
       reversed: (json['reversed'] as bool?) ?? false,
       isPlaceholder: (json['isPlaceholder'] as bool?) ?? false,
       placeholderFill: _placeholderFillFromJson(

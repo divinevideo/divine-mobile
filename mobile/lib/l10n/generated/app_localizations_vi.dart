@@ -10677,6 +10677,17 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Đường cong';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Quay chậm mượt';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Trộn các khung hình để quay chậm mượt mà. Chuyển động nhanh có thể để lại bóng mờ.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Làm clip chậm hơn 1× để làm mượt.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Tùy chỉnh';
 
   @override

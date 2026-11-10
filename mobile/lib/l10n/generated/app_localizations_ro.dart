@@ -10955,6 +10955,17 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Curbă';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Slow-motion fluid';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Amestecă cadrele ca slow-motion-ul să curgă. Mișcările rapide pot lăsa fantome.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Încetinește clipul sub 1× ca să-l netezești.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Personalizată';
 
   @override

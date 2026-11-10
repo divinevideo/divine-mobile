@@ -10477,6 +10477,16 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'ኩርባ';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'ለስላሳ ዝግታ';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'ዝግ ያለው እንቅስቃሴ እንዲፈስ ፍሬሞችን ያዋህዳል። ፈጣን እንቅስቃሴ ጥላ ሊተው ይችላል።';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable => 'ክሊፑ ከ1× በታች ሲዘገይ ይሰራል።';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'ብጁ';
 
   @override

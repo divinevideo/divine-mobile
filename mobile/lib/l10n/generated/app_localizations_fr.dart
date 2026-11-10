@@ -10892,6 +10892,17 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Courbe';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Ralenti fluide';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Fond les images pour que le ralenti coule. Les mouvements rapides peuvent laisser des fantômes.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Ralentis le clip sous 1× pour le lisser.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Personnalisée';
 
   @override

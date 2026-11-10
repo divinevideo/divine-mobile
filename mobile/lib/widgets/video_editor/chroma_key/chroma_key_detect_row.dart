@@ -7,6 +7,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/whole_word_button_text_scale.dart';
 
 /// Auto-detect plus the two screen presets.
 ///
@@ -54,9 +55,9 @@ class ChromaKeyDetectRow extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) => _DetectRowLayout(
         children: [
-          _WholeWordTextScale(
+          WholeWordButtonTextScale(
             label: l10n.videoEditorChromaKeyAutoDetect,
-            rowWidth: constraints.maxWidth,
+            width: constraints.maxWidth,
             hasLeadingIcon: true,
             child: DivineButton(
               label: l10n.videoEditorChromaKeyAutoDetect,
@@ -71,9 +72,9 @@ class ChromaKeyDetectRow extends StatelessWidget {
               onPressed: isDetecting ? null : onDetect,
             ),
           ),
-          _WholeWordTextScale(
+          WholeWordButtonTextScale(
             label: l10n.videoEditorChromaKeyPresetGreen,
-            rowWidth: constraints.maxWidth,
+            width: constraints.maxWidth,
             child: DivineButton(
               label: l10n.videoEditorChromaKeyPresetGreen,
               type: .secondary,
@@ -82,9 +83,9 @@ class ChromaKeyDetectRow extends StatelessWidget {
               onPressed: onGreenPreset,
             ),
           ),
-          _WholeWordTextScale(
+          WholeWordButtonTextScale(
             label: l10n.videoEditorChromaKeyPresetBlue,
-            rowWidth: constraints.maxWidth,
+            width: constraints.maxWidth,
             child: DivineButton(
               label: l10n.videoEditorChromaKeyPresetBlue,
               type: .secondary,
@@ -95,73 +96,6 @@ class ChromaKeyDetectRow extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Stops a button's text from growing once the widest word of its [label]
-/// would no longer fit on a row of its own.
-///
-/// A label too long for a full row wraps, but a word wider than the row is
-/// still cut wherever it reaches the edge: at the largest iOS size Spanish
-/// "automáticamente" broke in two on a row to itself. Below that point the
-/// button follows the system text size; it never shrinks under the normal one.
-class _WholeWordTextScale extends StatelessWidget {
-  const _WholeWordTextScale({
-    required this.label,
-    required this.rowWidth,
-    required this.child,
-    this.hasLeadingIcon = false,
-  });
-
-  /// What a small [DivineButton] spends across its width on anything but its
-  /// content: the 4px tap halo and the 8px stretched inner padding documented
-  /// on [DivineButtonSize.small], on both sides.
-  static const double _buttonChrome = 24;
-
-  /// A small [DivineButton]'s leading icon before text scaling, and the gap
-  /// it leaves before the label.
-  static const double _iconSize = 24;
-  static const double _iconGap = 8;
-
-  final String label;
-  final double rowWidth;
-  final bool hasLeadingIcon;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!rowWidth.isFinite) return child;
-
-    final painter = TextPainter(
-      // The style a small DivineButton draws its label in. Only its metrics
-      // are read; the colour is never painted.
-      text: TextSpan(
-        text: label,
-        style: VineTheme.titleMediumFont(color: context.vineColors.onSurface),
-      ),
-      textDirection: Directionality.of(context),
-      locale: Localizations.maybeLocaleOf(context),
-    )..layout();
-    // The widest run the line breaker will not split, by its own rules:
-    // Chinese and Japanese break between characters, while "Auto-detect" does
-    // not break at its hyphen and so counts as one word.
-    final widestWord = painter.minIntrinsicWidth;
-    painter.dispose();
-    if (widestWord <= 0) return child;
-
-    final iconSlot = hasLeadingIcon
-        ? DivineIcon.scaleSize(context, _iconSize) + _iconGap
-        : 0.0;
-    final labelWidth = rowWidth - _buttonChrome - iconSlot;
-    // Text grows a little slower than its scale, since letter spacing does
-    // not scale, so the ratio at the normal size is a safe bound. The pixel
-    // of slack keeps rounding from putting the word a hair over.
-    final maxScaleFactor = math.max(1, (labelWidth - 1) / widestWord);
-
-    return MediaQuery.withClampedTextScaling(
-      maxScaleFactor: maxScaleFactor.toDouble(),
-      child: child,
     );
   }
 }

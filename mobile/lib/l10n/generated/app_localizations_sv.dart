@@ -10726,6 +10726,17 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Kurva';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Mjuk slow motion';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Blandar bildrutor så att slow motion flyter. Snabba rörelser kan lämna spökbilder.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Gör klippet långsammare än 1× för att jämna ut det.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Egen';
 
   @override

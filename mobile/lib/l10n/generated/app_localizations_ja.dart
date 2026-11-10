@@ -10204,6 +10204,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'カーブ';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'なめらかスロー';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'フレームを混ぜて、スローモーションをなめらかにします。速い動きには残像が出ることがあります。';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable => '1×より遅くすると使えます。';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'カスタム';
 
   @override

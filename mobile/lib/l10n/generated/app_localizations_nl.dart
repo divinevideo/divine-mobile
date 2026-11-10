@@ -10773,6 +10773,17 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Curve';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Vloeiende slow motion';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Mengt beelden zodat slow motion vloeit. Snelle bewegingen kunnen spookbeelden geven.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Maak de clip trager dan 1× om hem vloeiend te maken.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Eigen';
 
   @override

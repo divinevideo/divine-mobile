@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_ui/material_ui.dart';
@@ -67,9 +68,11 @@ void main() {
     ValueChanged<int>? onSelected,
     ScrollController? controller,
     Locale? locale,
+    Size viewSize = const Size(1080, 2400),
+    double? height,
   }) async {
     tester.view
-      ..physicalSize = const Size(1080, 2400)
+      ..physicalSize = viewSize
       ..devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
@@ -82,10 +85,13 @@ void main() {
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
-            body: VideoEditorFontList(
-              selectedIndex: selectedIndex,
-              onSelected: onSelected ?? (_) {},
-              controller: controller,
+            body: SizedBox(
+              height: height,
+              child: VideoEditorFontList(
+                selectedIndex: selectedIndex,
+                onSelected: onSelected ?? (_) {},
+                controller: controller,
+              ),
             ),
           ),
         ),
@@ -154,6 +160,38 @@ void main() {
           findsOneWidget,
         );
         expect(find.byType(DivineIcon), findsOneWidget);
+      });
+    });
+
+    group('large text', () {
+      testWidgets('keeps several fonts in view on a small phone at the '
+          'largest text size', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 3.12;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        // As tall as the text editor's font selector.
+        await pumpList(tester, viewSize: const Size(375, 667), height: 380);
+
+        final list = tester.getRect(find.byType(ListView));
+        final fontRows = find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.label == l10n.videoEditorFontSemanticLabel,
+        );
+        final fullyShown = fontRows.evaluate().where((element) {
+          final box = element.renderObject! as RenderBox;
+          final rect = box.localToGlobal(Offset.zero) & box.size;
+          return rect.top >= list.top && rect.bottom <= list.bottom;
+        });
+        expect(fullyShown.length, greaterThanOrEqualTo(2));
+        // The default font's name was cut short at this size.
+        expect(
+          tester.renderObject<RenderParagraph>(find.text('Inter')),
+          isA<RenderParagraph>().having(
+            (paragraph) => paragraph.didExceedMaxLines,
+            'didExceedMaxLines',
+            isFalse,
+          ),
+        );
       });
     });
 

@@ -10858,6 +10858,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Kurve';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Flüssige Zeitlupe';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Mischt Bilder, damit die Zeitlupe fließt. Schnelle Bewegungen können Geisterbilder hinterlassen.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Mach den Clip langsamer als 1×, um ihn zu glätten.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Eigene';
 
   @override

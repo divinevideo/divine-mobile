@@ -7968,6 +7968,18 @@
   "@videoEditorSpeedModeCurve": {
     "description": "Option in the clip speed sheet: the clip's speed changes along a curve while it plays (speed ramp)."
   },
+  "videoEditorSpeedSmoothTitle": "Smooth slow-mo",
+  "@videoEditorSpeedSmoothTitle": {
+    "description": "Title of the switch in the clip speed sheet that blends neighbouring frames of a slowed-down clip, so slow motion looks continuous instead of stepping."
+  },
+  "videoEditorSpeedSmoothDescription": "Blends frames so slow motion flows. Fast moves can leave ghosts.",
+  "@videoEditorSpeedSmoothDescription": {
+    "description": "Subtitle of the smooth slow-motion switch while the clip is slowed down: what it does, and that fast movement can show ghosts of both frames."
+  },
+  "videoEditorSpeedSmoothUnavailable": "Slow the clip below 1× to smooth it.",
+  "@videoEditorSpeedSmoothUnavailable": {
+    "description": "Subtitle of the smooth slow-motion switch while the clip plays at 1x or faster everywhere, so the switch is disabled."
+  },
   "videoEditorSpeedCurveCustom": "Custom",
   "@videoEditorSpeedCurveCustom": {
     "description": "Speed curve preset chip for a curve the user shapes by dragging points."

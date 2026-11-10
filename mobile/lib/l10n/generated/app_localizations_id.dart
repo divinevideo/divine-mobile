@@ -10633,6 +10633,17 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Kurva';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Slow-mo halus';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Memadukan frame agar gerak lambat mengalir. Gerakan cepat bisa meninggalkan bayangan.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Pelankan klip di bawah 1× untuk menghaluskannya.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Kustom';
 
   @override

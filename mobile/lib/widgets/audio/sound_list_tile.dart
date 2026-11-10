@@ -180,7 +180,9 @@ class SoundListActionTile extends StatelessWidget {
             ),
           ),
         ),
-        title: Text(
+        // Long compounds such as German "importieren" would split mid-word at
+        // the largest text sizes.
+        title: DivineWordFitText(
           title,
           style: VineTheme.titleMediumFont(color: colors.accentPositive),
         ),

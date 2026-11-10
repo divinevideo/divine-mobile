@@ -10730,6 +10730,17 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Lengkung';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Gerak perlahan lancar';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Menggabungkan bingkai supaya gerak perlahan mengalir. Gerakan pantas boleh meninggalkan bayang.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Perlahankan klip di bawah 1× untuk melancarkannya.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Tersuai';
 
   @override

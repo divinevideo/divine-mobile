@@ -74,6 +74,7 @@ abstract final class ClipNormalizationRender {
                 equalizer: c.equalizer.toRenderEqualizer(),
                 playbackSpeed: c.playbackSpeed,
                 speedRamp: c.speedRamp,
+                frameBlending: c.blendsFrames,
                 transition: clampedTransitions[c.id],
                 keyframes: c.keyframes,
               ),
@@ -120,6 +121,7 @@ abstract final class ClipNormalizationRender {
             equalizer: entry.clip.equalizer.toRenderEqualizer(),
             playbackSpeed: entry.clip.playbackSpeed,
             speedRamp: entry.clip.speedRamp,
+            frameBlending: entry.clip.blendsFrames,
             transition: clampedTransitions[entry.clip.id],
             keyframes: entry.clip.keyframes,
           ),
@@ -196,6 +198,7 @@ abstract final class ClipNormalizationRender {
           equalizer: clip.equalizer.toRenderEqualizer(),
           playbackSpeed: clip.playbackSpeed,
           speedRamp: clip.speedRamp,
+          frameBlending: clip.blendsFrames,
           // Moved before the crop, as in the concatenation; the normalized
           // file carries the motion.
           keyframes: clip.keyframes,

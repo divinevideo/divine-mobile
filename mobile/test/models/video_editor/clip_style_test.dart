@@ -1,5 +1,5 @@
-// ABOUTME: Tests for ClipStyle: which clips give and take a style, and when a
-// ABOUTME: paste has to change a clip's color mask.
+// ABOUTME: Tests for ClipStyle: which clips give and take a style, what a
+// ABOUTME: paste carries over, and when it has to change a clip's color mask.
 
 import 'dart:ui';
 
@@ -70,6 +70,17 @@ void main() {
     });
 
     group('applyTo', () {
+      test('carries smooth slow motion with the speed', () {
+        final smooth = ClipStyle.of(
+          _clip(speedRamp: _ramp).copyWith(smoothSlowMotion: true),
+        );
+        final target = _clip(playbackSpeed: 2);
+
+        expect(smooth.isOn(target), isFalse);
+        expect(smooth.applyTo(target).smoothSlowMotion, isTrue);
+        expect(smooth.isOn(smooth.applyTo(target)), isTrue);
+      });
+
       test('replaces a constant speed with a copied speed ramp', () {
         final styled = ClipStyle.of(
           _clip(speedRamp: _ramp),

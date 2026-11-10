@@ -10953,6 +10953,17 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Krzywa';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Płynne zwolnienie';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Łączy klatki, żeby zwolnienie płynęło. Szybki ruch może zostawić duchy.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Zwolnij klip poniżej 1×, żeby go wygładzić.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Własna';
 
   @override

@@ -39,6 +39,53 @@ class AudioEditorSelectionOverlay extends StatelessWidget {
   final bool isLoading;
 
   static const _coverSize = 48.0;
+  static const _rowSpacing = 12.0;
+
+  /// What a small [DivineButton] that hugs its label adds to the label's
+  /// width: 16 of padding and the 4 of its tap halo on each side.
+  static const _useButtonChrome = 40.0;
+
+  /// What the play button adds around its icon: 12 of padding and the 2 that
+  /// stand in for a border on each side.
+  static const _playButtonChrome = 28.0;
+
+  /// The least room the title and details keep beside the buttons at the
+  /// normal text size, about eight characters of the title. It grows with
+  /// the text.
+  static const _minDetailsWidth = 72.0;
+
+  /// Whether the Use button, labelled [useLabel], leaves the title and
+  /// details too little room beside it in a row [width] wide, and so goes on
+  /// a row of its own.
+  static bool _useNeedsOwnRow(
+    BuildContext context, {
+    required String useLabel,
+    required double width,
+  }) {
+    final textScaler = MediaQuery.textScalerOf(context);
+    // The style a small DivineButton draws its label in, with the weight it
+    // switches to for Bold Text; only its metrics are read.
+    final labelStyle = VineTheme.titleMediumFont(
+      color: context.vineColors.onSurface,
+    );
+    final painter = TextPainter(
+      text: TextSpan(
+        text: useLabel,
+        style: MediaQuery.boldTextOf(context)
+            ? labelStyle.copyWith(fontWeight: FontWeight.bold)
+            : labelStyle,
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+    final useWidth = painter.width + _useButtonChrome;
+    painter.dispose();
+    final playWidth = DivineIcon.scaleSize(context, 24) + _playButtonChrome;
+    final detailsWidth =
+        width - _coverSize - 3 * _rowSpacing - playWidth - useWidth;
+    return detailsWidth < textScaler.scale(_minDetailsWidth);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,43 +97,77 @@ class AudioEditorSelectionOverlay extends StatelessWidget {
           color: context.vineColors.containerLow,
           shape: RoundedRectangleBorder(borderRadius: .circular(24)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 10,
-          children: [
-            Row(
-              spacing: 12,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // A long label at a large text size would squeeze the title to
+            // a letter or two, or push the button off the card.
+            final useHasOwnRow = _useNeedsOwnRow(
+              context,
+              useLabel: context.l10n.videoEditorAudioUseSound,
+              width: constraints.maxWidth,
+            );
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 10,
               children: [
-                SoundCoverImage(
-                  cover: cover,
-                  size: _coverSize,
-                  borderRadius: 12,
-                  colorSeed: audio.id,
+                Row(
+                  spacing: _rowSpacing,
+                  children: [
+                    SoundCoverImage(
+                      cover: cover,
+                      size: _coverSize,
+                      borderRadius: 12,
+                      colorSeed: audio.id,
+                    ),
+                    Expanded(child: _Details(audio: audio)),
+                    _PlayPauseButton(
+                      audioService: audioService,
+                      isLoading: isLoading,
+                      onPressed: onTogglePlayState,
+                    ),
+                    if (!useHasOwnRow)
+                      _UseButton(
+                        expanded: false,
+                        onPressed: isLoading ? null : onTapDone,
+                      ),
+                  ],
                 ),
-                Expanded(child: _Details(audio: audio)),
-                _PlayPauseButton(
+                _PlaybackProgressLine(
                   audioService: audioService,
                   isLoading: isLoading,
-                  onPressed: onTogglePlayState,
                 ),
-                DivineButton(
-                  label: context.l10n.videoEditorAudioUseSound,
-                  size: .small,
-                  // Named again so the button reports when it is disabled:
-                  // the lip-sync E2E waits for it to become enabled.
-                  semanticLabel: context.l10n.videoEditorAudioUseSound,
-                  semanticIdentifier: SemanticIds.audioSelectionDoneButton,
-                  onPressed: isLoading ? null : onTapDone,
-                ),
+                if (useHasOwnRow)
+                  _UseButton(
+                    expanded: true,
+                    onPressed: isLoading ? null : onTapDone,
+                  ),
               ],
-            ),
-            _PlaybackProgressLine(
-              audioService: audioService,
-              isLoading: isLoading,
-            ),
-          ],
+            );
+          },
         ),
       ),
+    );
+  }
+}
+
+class _UseButton extends StatelessWidget {
+  const _UseButton({required this.expanded, required this.onPressed});
+
+  /// Whether the button fills a row of its own.
+  final bool expanded;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return DivineButton(
+      label: context.l10n.videoEditorAudioUseSound,
+      size: .small,
+      expanded: expanded,
+      // Named again so the button reports when it is disabled: the lip-sync
+      // E2E waits for it to become enabled.
+      semanticLabel: context.l10n.videoEditorAudioUseSound,
+      semanticIdentifier: SemanticIds.audioSelectionDoneButton,
+      onPressed: onPressed,
     );
   }
 }

@@ -45,6 +45,7 @@ class _FakeProVideoEditor extends editor.ProVideoEditor {
   /// The task id of every render started, in order.
   final renderedTaskIds = <String>[];
   final renderedKeyframes = <List<editor.SegmentKeyframe>>[];
+  final renderedFrameBlending = <bool>[];
 
   /// Task ids the service asked to cancel, in order.
   final cancelledTaskIds = <String>[];
@@ -78,6 +79,7 @@ class _FakeProVideoEditor extends editor.ProVideoEditor {
     final renderIndex = renderCount++;
     renderedTaskIds.add(value.id);
     renderedKeyframes.add(value.videoSegments!.single.keyframes);
+    renderedFrameBlending.add(value.videoSegments!.single.frameBlending);
     renderStartedAt(renderIndex).complete();
     await allowRenderToFinishAt(renderIndex).future;
     // Synchronous so a render released under `fakeAsync` settles on the
@@ -234,6 +236,21 @@ void main() {
         expect(service.cached(clip('a').copyWith(speedRamp: reshaped)), isNull);
       });
 
+      test('keeps a smooth slow-motion body apart from the plain one', () {
+        final slow = clip('a', playbackSpeed: 0.5);
+        final fast = clip('a', playbackSpeed: 2);
+        final service = ClipSpeedRenderService()
+          ..cacheForTest(slow, rendered)
+          ..cacheForTest(fast, rendered);
+
+        expect(service.cached(slow.copyWith(smoothSlowMotion: true)), isNull);
+        // Nothing to blend at 2×, so it plays the plain body.
+        expect(
+          service.cached(fast.copyWith(smoothSlowMotion: true)),
+          same(rendered),
+        );
+      });
+
       test('misses the cache when the trim changes', () {
         final untrimmed = clip('a', playbackSpeed: 2);
         final trimmed = clip(
@@ -293,6 +310,21 @@ void main() {
           expect(await service.render(c, bakeKeyframes: true), same(seamBody));
         },
       );
+      test('renders a smooth slowed-down clip with blended frames', () async {
+        final native = _FakeProVideoEditor();
+        editor.ProVideoEditor.instance = native;
+        final service = ClipSpeedRenderService();
+
+        final body = service.render(
+          clip('smooth', playbackSpeed: 0.5).copyWith(smoothSlowMotion: true),
+        );
+        await native.renderStartedAt(0).future;
+        native.allowRenderToFinishAt(0).complete();
+
+        expect(await body, isNotNull);
+        expect(native.renderedFrameBlending, [isTrue]);
+      });
+
       test('short-circuits to null for a 1× clip without touching native', () {
         final service = ClipSpeedRenderService();
 

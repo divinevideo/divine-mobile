@@ -1,4 +1,6 @@
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -17,6 +19,7 @@ import 'package:pro_video_editor/pro_video_editor.dart'
     show VideoEffect, VideoEffectType;
 
 import '../../../helpers/scroll.dart';
+import '../../../helpers/text_lines.dart';
 
 class _MockVideoEditorMainBloc
     extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
@@ -67,8 +70,13 @@ void main() {
 
     tearDown(() => cubit.close());
 
-    Widget buildWidget({double height = 600}) {
+    Widget buildWidget({
+      double height = 600,
+      double width = 400,
+      Locale? locale,
+    }) {
       return MaterialApp(
+        locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
@@ -96,7 +104,7 @@ void main() {
                 BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
               ],
               child: SizedBox(
-                width: 400,
+                width: width,
                 height: height,
                 child: const VideoEditorEffectsOverlayControls(),
               ),
@@ -290,6 +298,103 @@ void main() {
             ),
           );
         });
+      });
+    });
+
+    group('at a large text size', () {
+      final de = lookupAppLocalizations(const Locale('de'));
+
+      // The preview left above the effects picker on a small phone, which
+      // gets shorter as the picker grows with the text.
+      Future<void> pumpAt(
+        WidgetTester tester, {
+        required double textScale,
+        required double width,
+        required double height,
+        Locale locale = const Locale('en'),
+      }) async {
+        tester.platformDispatcher.textScaleFactorTestValue = textScale;
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
+        await tester.pumpWidget(
+          buildWidget(width: width, height: height, locale: locale),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('keeps the on-the-beat switch off the slider', (
+        tester,
+      ) async {
+        cubit
+          ..syncBeatSource(sounds: const [], clips: const [])
+          ..selectType(const EditorEffectType.builtIn(VideoEffectType.strobe))
+          ..setOnBeat(onBeat: true);
+
+        await pumpAt(
+          tester,
+          textScale: 1.65,
+          width: 375,
+          height: 330,
+          locale: const Locale('de'),
+        );
+
+        final slider = tester.getRect(find.byType(VideoEditorVerticalSlider));
+        final onBeatSwitch = tester.getRect(find.byType(DivineSwitchTile));
+        expect(slider.overlaps(onBeatSwitch), isFalse);
+        final status = tester.renderObject<RenderParagraph>(
+          find.text(de.videoEditorEffectsOnBeatNoSound),
+        );
+        expect(
+          status.size.height,
+          greaterThanOrEqualTo(status.textSize.height),
+        );
+      });
+
+      testWidgets('lays the preview notice over the preview, beside the '
+          'slider', (tester) async {
+        cubit.selectType(const EditorEffectType.builtIn(VideoEffectType.vhs));
+
+        await pumpAt(tester, textScale: 1.5, width: 360, height: 300);
+
+        // flutter_test cannot preview effects, so the notice always shows.
+        final notice = tester.getRect(
+          find.text(l10n.videoEditorChromaKeyPreviewUnavailable),
+        );
+        final slider = tester.getRect(find.byType(VideoEditorVerticalSlider));
+        expect(slider.top, lessThan(notice.bottom));
+        expect(slider.left, greaterThanOrEqualTo(notice.right));
+      });
+
+      testWidgets('keeps the drops settings whole', (tester) async {
+        cubit.selectType(EditorEffectType.drops);
+        await pumpAt(
+          tester,
+          textScale: 3.12,
+          width: 375,
+          height: 330,
+          locale: const Locale('de'),
+        );
+        await tester.tap(find.text(de.videoEditorDropsSettingsTitle));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester
+              .renderObject<RenderParagraph>(
+                find.text(de.videoEditorDropsSettingsTitle),
+              )
+              .didExceedMaxLines,
+          isFalse,
+        );
+        final fringes = find.text(de.videoEditorDropsFringesLabel);
+        await scrollUntilTappable(
+          tester,
+          fringes,
+          50,
+          scrollable: find.descendant(
+            of: find.byType(ExpansionTile),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        expect(wordsSplitAcrossLines(tester, fringes), isEmpty);
       });
     });
 

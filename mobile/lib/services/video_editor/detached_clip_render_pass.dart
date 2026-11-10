@@ -274,6 +274,7 @@ class DetachedClipRenderPass {
             endTime: clip.trimStart + clip.trimmedDuration,
             playbackSpeed: clip.speedRamp == null ? clip.playbackSpeed : null,
             speedRamp: clip.speedRamp,
+            frameBlending: clip.blendsFrames,
           ),
         ],
       ),

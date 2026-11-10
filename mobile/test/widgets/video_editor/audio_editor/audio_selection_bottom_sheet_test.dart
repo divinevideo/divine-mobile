@@ -8,6 +8,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -155,6 +156,7 @@ void main() {
       AudioFilePickerService? audioFilePicker,
       Set<String> blockedSoundAuthors = const {},
       double spaceBelow = 0,
+      Locale? locale,
     }) {
       final blocklist = _MockContentBlocklistRepository();
       when(() => blocklist.currentState).thenAnswer(
@@ -261,6 +263,7 @@ void main() {
             }),
           ],
           child: MaterialApp(
+            locale: locale,
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
@@ -1841,6 +1844,44 @@ void main() {
           expect(card, findsNothing);
         });
 
+        testWidgets('leaves the last row room to scroll clear of it at a '
+            'large text size', (tester) async {
+          tester.view
+            ..physicalSize = const Size(375, 667)
+            ..devicePixelRatio = 1;
+          tester.platformDispatcher.textScaleFactorTestValue = 3.12;
+          addTearDown(() {
+            tester.view.reset();
+            tester.platformDispatcher.clearAllTestValues();
+          });
+          await tester.pumpWidget(
+            buildWidget(
+              forYouSounds: testSounds,
+              audioService: _stubbedAudioService(),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.byType(AudioListTile).first);
+          await tester.pumpAndSettle();
+
+          final list = tester.state<ScrollableState>(
+            find
+                .descendant(
+                  of: find.byType(CustomScrollView),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
+          );
+          list.position.jumpTo(list.position.maxScrollExtent);
+          await tester.pumpAndSettle();
+
+          expect(card, findsOneWidget);
+          expect(
+            tester.getRect(find.byType(AudioListTile).last).bottom,
+            lessThanOrEqualTo(tester.getRect(card).top),
+          );
+        });
+
         testWidgets('appears in place at once when motion is reduced', (
           tester,
         ) async {
@@ -2370,6 +2411,46 @@ void main() {
           findsOneWidget,
         );
         expect(find.byIcon(Icons.music_off), findsOneWidget);
+      });
+
+      testWidgets('centres a wrapped title clear of the screen edges', (
+        tester,
+      ) async {
+        tester.view
+          ..physicalSize = const Size(360, 640)
+          ..devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(() {
+          tester.view.reset();
+          tester.platformDispatcher.clearAllTestValues();
+        });
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: const AsyncValue.data([]),
+            locale: const Locale('de'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final title = find.text(
+          lookupAppLocalizations(
+            const Locale('de'),
+          ).videoEditorAudioNoSoundsAvailableTitle,
+        );
+        final paragraph = tester.renderObject<RenderParagraph>(title);
+        final lines = paragraph.getBoxesForSelection(
+          TextSelection(
+            baseOffset: 0,
+            extentOffset: paragraph.text.toPlainText().length,
+          ),
+        );
+        expect(lines.length, greaterThan(1));
+        final lastLine = lines.last;
+        expect(
+          (lastLine.left + lastLine.right) / 2,
+          moreOrLessEquals(paragraph.size.width / 2, epsilon: 1),
+        );
+        expect(tester.getRect(title).left, greaterThanOrEqualTo(24));
       });
 
       testWidgets('renders bundled Wednesday clip on For you', (
