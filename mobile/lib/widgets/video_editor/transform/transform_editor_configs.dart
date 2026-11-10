@@ -52,12 +52,15 @@ const double freeCropAspectRatio = -1;
 /// detached clip wants: it floats on the canvas rather than filling the frame,
 /// so its shape is the user's to choose.
 /// [bottomBarLeading] is the extra action before Rotate (the clip editor's
-/// play/pause; a still has nothing to play). [loadingOverlay] covers the editor
-/// while Done rasterizes; omit it to leave the wait uncovered.
+/// play/pause; a still has nothing to play), and [bottomBarLeadingLabels]
+/// every label it can show, so the bar sizes its text for the widest.
+/// [loadingOverlay] covers the editor while Done rasterizes; omit it to leave
+/// the wait uncovered.
 ProImageEditorConfigs transformEditorConfigs(
   BuildContext context, {
   required double initAspectRatio,
   Widget? bottomBarLeading,
+  List<String> bottomBarLeadingLabels = const [],
   Widget? loadingOverlay,
 }) {
   return ProImageEditorConfigs(
@@ -84,6 +87,7 @@ ProImageEditorConfigs transformEditorConfigs(
           builder: (_) => TransformEditorBottomBar(
             editorState: editorState,
             leading: bottomBarLeading,
+            leadingLabels: bottomBarLeadingLabels,
           ),
         ),
       ),

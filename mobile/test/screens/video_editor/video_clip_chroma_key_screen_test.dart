@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +30,7 @@ import 'package:pro_video_editor/pro_video_editor.dart'
         EditorVideo;
 
 import '../../helpers/shared_channel_override.dart';
+import '../../helpers/text_lines.dart';
 
 class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
     implements ClipEditorBloc {}
@@ -370,6 +372,64 @@ void main() {
 
         expect(result(), isA<DetachedClipChromaKeyRemoved>());
         expect(find.byType(VideoClipChromaKeyScreen), findsNothing);
+      });
+    });
+
+    group('at large text sizes on a small phone', () {
+      void useSmallPhone(
+        WidgetTester tester, {
+        required double textScale,
+        Locale locale = const Locale('en'),
+      }) {
+        tester.view.physicalSize = const Size(360, 640);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        tester.platformDispatcher.textScaleFactorTestValue = textScale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        tester.platformDispatcher.localesTestValue = [locale];
+        addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+      }
+
+      testWidgets('wraps the title rather than push Done off the screen', (
+        tester,
+      ) async {
+        useSmallPhone(tester, textScale: 2);
+        await pump(tester, detect: (_) async => measured);
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(tester.takeException(), isNull);
+        final done = tester.getRect(
+          find.bySemanticsLabel(l10n.videoEditorChromaKeyDoneSemanticLabel),
+        );
+        expect(done.right, lessThanOrEqualTo(360));
+        expect(
+          wordsSplitAcrossLines(
+            tester,
+            find.text(l10n.videoEditorChromaKeyTitle),
+          ),
+          isEmpty,
+        );
+      });
+
+      testWidgets('shows the whole label of the remove button', (
+        tester,
+      ) async {
+        useSmallPhone(tester, textScale: 2, locale: const Locale('de'));
+        await pumpDetached(
+          tester,
+          chromaKey: const ClipChromaKey(key: ChromaKey.blueScreen()),
+          detect: (_) async => measured,
+        );
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('de'));
+        final label = find.text(l10n.videoEditorChromaKeyRemove);
+        expect(
+          tester.renderObject<RenderParagraph>(label).didExceedMaxLines,
+          isFalse,
+        );
+        expect(wordsSplitAcrossLines(tester, label), isEmpty);
       });
     });
 

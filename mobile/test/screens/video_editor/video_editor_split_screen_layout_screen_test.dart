@@ -9,6 +9,7 @@ import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_lay
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
+import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_preview.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 DivineVideoClip _clip(String id) => DivineVideoClip(
@@ -132,6 +133,55 @@ void main() {
 
       expect(result?.id, 'layout_of_picked');
       expect(find.byType(VideoEditorSplitScreenLayoutView), findsNothing);
+    });
+
+    testWidgets('scrolls the controls rather than squeeze the preview at the '
+        'largest text size', (tester) async {
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final layoutCubit = cubit()..clipsPicked([_clip('a')]);
+      addTearDown(layoutCubit.close);
+      layoutCubit.cellSelected(0);
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('de'),
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MediaQuery(
+            data: const MediaQueryData(
+              size: Size(375, 667),
+              textScaler: TextScaler.linear(3.12),
+            ),
+            child: BlocProvider.value(
+              value: layoutCubit,
+              child: VideoEditorSplitScreenLayoutView(
+                pickFromLibrary: pickFromLibrary,
+                recordWithCamera: recordNothing,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      final preview = tester.getRect(find.byType(SplitScreenLayoutPreview));
+      final controls = tester.getRect(find.byType(SingleChildScrollView));
+      expect(preview.height, greaterThanOrEqualTo(controls.height - 32));
+      expect(
+        tester
+            .state<ScrollableState>(
+              find
+                  .descendant(
+                    of: find.byType(SingleChildScrollView),
+                    matching: find.byType(Scrollable),
+                  )
+                  .first,
+            )
+            .position
+            .maxScrollExtent,
+        greaterThan(0),
+      );
     });
   });
 }

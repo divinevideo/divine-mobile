@@ -210,6 +210,10 @@ class _VideoClipTransformScreenState extends State<VideoClipTransformScreen> {
           initAspectRatio:
               widget.initAspectRatio ?? widget.clip.targetAspectRatio.value,
           bottomBarLeading: _PlayPauseAction(controller: playerController),
+          bottomBarLeadingLabels: [
+            context.l10n.videoEditorTransformPlayLabel,
+            context.l10n.videoEditorTransformPauseLabel,
+          ],
           // No overlay: nothing is rasterized here. Done only reads the crop
           // parameters back out and hands the render to the bloc, which puts
           // its own progress UI over the timeline.

@@ -110,5 +110,130 @@ void main() {
         ),
       );
     });
+
+    group('at large text sizes on a small phone', () {
+      Future<void> pumpBar(
+        WidgetTester tester, {
+        required Locale locale,
+        required double textScale,
+        required String Function(AppLocalizations) shownLeadingLabel,
+      }) async {
+        tester.view.physicalSize = const Size(360, 640);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final localized = lookupAppLocalizations(locale);
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: locale,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            home: MediaQuery(
+              data: MediaQueryData(
+                size: const Size(360, 640),
+                textScaler: TextScaler.linear(textScale),
+              ),
+              child: Scaffold(
+                bottomNavigationBar: TransformEditorBottomBar(
+                  editorState: editorState,
+                  leading: TransformEditorAction(
+                    icon: .play,
+                    label: shownLeadingLabel(localized),
+                    onPressed: () {},
+                  ),
+                  leadingLabels: [
+                    localized.videoEditorTransformPlayLabel,
+                    localized.videoEditorTransformPauseLabel,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      double labelTextScale(WidgetTester tester, String label) =>
+          MediaQuery.textScalerOf(tester.element(find.text(label))).scale(12) /
+          12;
+
+      testWidgets(
+        'keeps all four actions on screen at the largest size in every locale',
+        (tester) async {
+          for (final locale in AppLocalizations.supportedLocales) {
+            final localized = lookupAppLocalizations(locale);
+            await pumpBar(
+              tester,
+              locale: locale,
+              textScale: 3.12,
+              shownLeadingLabel: (l10n) => l10n.videoEditorTransformPlayLabel,
+            );
+
+            expect(tester.takeException(), isNull, reason: '$locale');
+            // Left to right as drawn, which right-to-left locales reverse.
+            final labelRects = [
+              for (final label
+                  in find
+                      .descendant(
+                        of: find.byType(TransformEditorAction),
+                        matching: find.byType(Text),
+                      )
+                      .evaluate())
+                tester.getRect(find.byWidget(label.widget)),
+            ]..sort((a, b) => a.left.compareTo(b.left));
+            expect(labelRects, hasLength(4));
+            expect(labelRects.first.left, greaterThanOrEqualTo(0));
+            expect(labelRects.last.right, lessThanOrEqualTo(360));
+            for (var i = 1; i < labelRects.length; i++) {
+              expect(
+                labelRects[i].left,
+                greaterThanOrEqualTo(labelRects[i - 1].right),
+                reason: '$locale: two labels run into each other',
+              );
+            }
+            expect(
+              labelTextScale(tester, localized.videoEditorTransformResetLabel),
+              greaterThanOrEqualTo(1),
+              reason: '$locale',
+            );
+          }
+        },
+      );
+
+      testWidgets('sizes the text for the widest label the leading action '
+          'can show', (tester) async {
+        const locale = Locale('de');
+        final localized = lookupAppLocalizations(locale);
+        await pumpBar(
+          tester,
+          locale: locale,
+          textScale: 2,
+          shownLeadingLabel: (l10n) => l10n.videoEditorTransformPauseLabel,
+        );
+        final whilePaused = labelTextScale(
+          tester,
+          localized.videoEditorTransformResetLabel,
+        );
+
+        await pumpBar(
+          tester,
+          locale: locale,
+          textScale: 2,
+          shownLeadingLabel: (l10n) => l10n.videoEditorTransformPlayLabel,
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(whilePaused, lessThan(2));
+        expect(
+          labelTextScale(tester, localized.videoEditorTransformResetLabel),
+          moreOrLessEquals(whilePaused),
+        );
+        expect(
+          tester
+              .getRect(find.text(localized.videoEditorTransformResetLabel))
+              .right,
+          lessThanOrEqualTo(360),
+        );
+      });
+    });
   });
 }

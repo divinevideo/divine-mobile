@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -11,6 +12,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/widgets/video_editor/clip_motion/video_editor_clip_motion_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+
+import '../../../helpers/text_lines.dart';
 
 DivineVideoClip _clip({List<SegmentKeyframe> keyframes = const []}) =>
     DivineVideoClip(
@@ -76,9 +79,14 @@ void main() {
 
     tearDown(() => playTime.dispose());
 
-    Future<void> pump(WidgetTester tester, DivineVideoClip clip) async {
+    Future<void> pump(
+      WidgetTester tester,
+      DivineVideoClip clip, {
+      Locale? locale,
+    }) async {
       await tester.pumpWidget(
         MaterialApp(
+          locale: locale,
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: MultiBlocProvider(
@@ -175,6 +183,36 @@ void main() {
           .whereType<ClipFrameOutlinePainter>()
           .single;
       expect(outline.frame.size, const Size(90, 160));
+    });
+
+    testWidgets('keeps the playhead and keyframe controls in the panel at the '
+        'largest text size', (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final l10n = lookupAppLocalizations(const Locale('de'));
+
+      await pump(tester, _clip(), locale: const Locale('de'));
+
+      final keyframeButton = find.ancestor(
+        of: find.text(l10n.videoEditorKeyframeAdd),
+        matching: find.byType(DivineButton),
+      );
+      expect(tester.getRect(keyframeButton).bottom, lessThanOrEqualTo(640));
+      expect(
+        tester
+            .renderObject<RenderParagraph>(
+              find.text(l10n.videoEditorKeyframeAdd),
+            )
+            .didExceedMaxLines,
+        isFalse,
+      );
+      expect(
+        wordsSplitAcrossLines(tester, find.text(l10n.videoEditorKeyframeAdd)),
+        isEmpty,
+      );
     });
   });
 }

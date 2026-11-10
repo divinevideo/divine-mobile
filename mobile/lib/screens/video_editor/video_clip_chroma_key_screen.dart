@@ -24,6 +24,7 @@ import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart
 import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
+import 'package:openvine/widgets/whole_word_button_text_scale.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo, ProVideoEditor, ProgressModel;
 import 'package:unified_logger/unified_logger.dart';
@@ -425,10 +426,15 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
                           doneSemanticLabel: context
                               .l10n
                               .videoEditorChromaKeyDoneSemanticLabel,
-                          center: Text(
-                            context.l10n.videoEditorChromaKeyTitle,
-                            style: VineTheme.titleMediumFont(
-                              color: context.vineColors.onSurface,
+                          // Flexible, so a large text size wraps the title
+                          // instead of pushing Done off the screen.
+                          center: Flexible(
+                            child: DivineWordFitText(
+                              context.l10n.videoEditorChromaKeyTitle,
+                              textAlign: TextAlign.center,
+                              style: VineTheme.titleMediumFont(
+                                color: context.vineColors.onSurface,
+                              ),
                             ),
                           ),
                         ),
@@ -448,12 +454,18 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
                       if (_canRemove)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: DivineButton(
+                          child: WholeWordButtonTextScale(
                             label: context.l10n.videoEditorChromaKeyRemove,
-                            type: .ghost,
-                            size: .small,
-                            expanded: true,
-                            onPressed: isBaking ? null : () => _remove(context),
+                            child: DivineButton(
+                              label: context.l10n.videoEditorChromaKeyRemove,
+                              type: .ghost,
+                              size: .small,
+                              expanded: true,
+                              maxLines: 2,
+                              onPressed: isBaking
+                                  ? null
+                                  : () => _remove(context),
+                            ),
                           ),
                         ),
                       Flexible(

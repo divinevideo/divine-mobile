@@ -4,6 +4,7 @@
 
 import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -47,7 +48,9 @@ void main() {
       LayerMask? initialMask,
       Duration keyframeTime = Duration.zero,
       Color? backgroundColor,
+      Locale? locale,
     }) => testMaterialApp(
+      locale: locale,
       home: VideoEditorMaskEditorView(
         initialMask: initialMask,
         keyframeTime: keyframeTime,
@@ -500,6 +503,73 @@ void main() {
         }
 
         expect(insets.toSet(), hasLength(1));
+      });
+
+      group('at the largest text size on a small phone', () {
+        const rectangle = LayerMask(shape: LayerMaskShape.rectangle);
+        final german = lookupAppLocalizations(const Locale('de'));
+
+        Future<void> pumpLarge(WidgetTester tester) async {
+          tester.view.physicalSize = const Size(375, 667);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          tester.platformDispatcher.textScaleFactorTestValue = 3.12;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          await tester.pumpWidget(
+            buildEditor(
+              initialMask: rectangle,
+              backgroundColor: black,
+              locale: const Locale('de'),
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+
+        testWidgets('keeps every setting in view', (tester) async {
+          await pumpLarge(tester);
+          final panel = find.byWidgetPredicate(
+            (widget) =>
+                widget is SingleChildScrollView &&
+                widget.scrollDirection == Axis.vertical,
+          );
+          final scrollable = tester.state<ScrollableState>(
+            find.descendant(of: panel, matching: find.byType(Scrollable)).first,
+          );
+
+          expect(scrollable.position.maxScrollExtent, 0);
+          expect(
+            tester.getSize(panel).height,
+            videoEditorMaskPanelHeight(
+              rectangle,
+              withBackground: true,
+              textScaler: const TextScaler.linear(3.12),
+            ),
+          );
+        });
+
+        testWidgets('shows the whole name of every setting and shape', (
+          tester,
+        ) async {
+          await pumpLarge(tester);
+
+          for (final label in [
+            german.videoEditorShapeMaskBackgroundLabel,
+            german.videoEditorShapeMaskCornersLabel,
+            german.videoEditorShapeMaskSoftnessLabel,
+            german.videoEditorShapeMaskRectangle,
+            german.videoEditorShapeMaskSpeechBubble,
+          ]) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.text(label),
+            );
+            expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+            expect(
+              paragraph.size.width,
+              greaterThanOrEqualTo(paragraph.textSize.width),
+              reason: label,
+            );
+          }
+        });
       });
 
       testWidgets('offers the background colors only for a clip with a '
