@@ -593,15 +593,25 @@ void main() {
         );
       });
 
-      test('propagates FunnelcakeTimeoutException', () {
+      test('propagates timeouts and permits a subsequent refresh', () async {
         when(
           () => mockClient.fetchTrendingHashtags(limit: any(named: 'limit')),
         ).thenThrow(const FunnelcakeTimeoutException());
 
-        expect(
-          () => cachingRepository.getTrendingHashtags(),
+        await expectLater(
+          cachingRepository.getTrendingHashtags(),
           throwsA(isA<FunnelcakeTimeoutException>()),
         );
+        when(
+          () => mockClient.fetchTrendingHashtags(limit: any(named: 'limit')),
+        ).thenAnswer(
+          (_) async => [TrendingHashtag(tag: 'recovered', videoCount: 2)],
+        );
+
+        final recovered = await cachingRepository.getTrendingHashtags(
+          forceRefresh: true,
+        );
+        expect(recovered.map((h) => h.tag), ['recovered']);
       });
     });
   });

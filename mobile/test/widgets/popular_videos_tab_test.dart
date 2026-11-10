@@ -24,6 +24,8 @@ import '../helpers/test_provider_overrides.dart';
 
 class _MockHashtagRepository extends Mock implements HashtagRepository {}
 
+class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
+
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
 class _MockVideoEventService extends Mock implements VideoEventService {}
@@ -85,7 +87,10 @@ void main() {
         ).thenAnswer((_) async => _popularPage([]));
       });
 
-      Future<void> pumpTab(WidgetTester tester) async {
+      Future<void> pumpTab(
+        WidgetTester tester, {
+        HashtagRepository? repository,
+      }) async {
         await tester.pumpWidget(
           testMaterialApp(
             additionalOverrides: [
@@ -95,7 +100,9 @@ void main() {
               contentBlocklistRepositoryProvider.overrideWithValue(
                 blocklistRepository,
               ),
-              hashtagRepositoryProvider.overrideWithValue(hashtagRepository),
+              hashtagRepositoryProvider.overrideWithValue(
+                repository ?? hashtagRepository,
+              ),
             ],
             home: const Scaffold(body: PopularVideosTab()),
           ),
@@ -158,8 +165,48 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.text('#tomorrow'), findsOneWidget);
           expect(find.text('#funny'), findsNothing);
+
+          when(() => hashtagRepository.getTrendingHashtags(forceRefresh: true))
+              .thenAnswer(
+                (_) async => [TrendingHashtag(tag: 'recovered', videoCount: 5)],
+              );
+          await tester
+              .widget<ComposableVideoGrid>(find.byType(ComposableVideoGrid))
+              .onRefresh!();
+          await tester.pumpAndSettle();
+          expect(find.text('#recovered'), findsOneWidget);
         },
       );
+
+      testWidgets('an initial request cannot overwrite a refreshed ranking', (
+        tester,
+      ) async {
+        final client = _MockFunnelcakeApiClient();
+        final initial = Completer<List<TrendingHashtag>>();
+        final refreshed = Completer<List<TrendingHashtag>>();
+        var requests = 0;
+        when(client.fetchTrendingHashtags).thenAnswer((_) {
+          requests++;
+          return requests == 1 ? initial.future : refreshed.future;
+        });
+        final repository = HashtagRepository(funnelcakeApiClient: client);
+        await pumpTab(tester, repository: repository);
+
+        final refreshing = tester
+            .widget<ComposableVideoGrid>(find.byType(ComposableVideoGrid))
+            .onRefresh!();
+        await tester.pump();
+        refreshed.complete([TrendingHashtag(tag: 'fresh', videoCount: 4)]);
+        await tester.pumpAndSettle();
+        initial.complete([TrendingHashtag(tag: 'older', videoCount: 3)]);
+        await refreshing;
+        await tester.pumpAndSettle();
+
+        expect(find.text('#fresh'), findsOneWidget);
+        expect(find.text('#older'), findsNothing);
+        final cached = await repository.getTrendingHashtags();
+        expect(cached.map((h) => h.tag), ['fresh']);
+      });
 
       testWidgets('keeps the source toggle usable when trends fail', (
         tester,

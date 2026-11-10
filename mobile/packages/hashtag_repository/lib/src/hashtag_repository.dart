@@ -1,6 +1,8 @@
 // ABOUTME: Repository for searching hashtags via Funnelcake API with local
 // ABOUTME: fallback. Owns source-selection and fallback strategy.
 
+import 'dart:async';
+
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:hashtag_repository/src/hashtag_extractor.dart';
 import 'package:models/models.dart';
@@ -33,6 +35,7 @@ class HashtagRepository {
 
   List<TrendingHashtag> _trendingHashtagsCache = [];
   DateTime? _lastTrendingHashtagsFetch;
+  Future<void> _trendingFetchQueue = Future<void>.value();
 
   /// Searches for hashtags matching [query].
   ///
@@ -136,6 +139,25 @@ class HashtagRepository {
   Future<List<TrendingHashtag>> getTrendingHashtags({
     bool forceRefresh = false,
     int limit = 20,
+  }) async {
+    // Finish earlier reads before a refresh can replace their ranking/cache.
+    final previous = _trendingFetchQueue;
+    final finished = Completer<void>();
+    _trendingFetchQueue = finished.future;
+    await previous;
+    try {
+      return await _loadTrendingHashtags(
+        forceRefresh: forceRefresh,
+        limit: limit,
+      );
+    } finally {
+      finished.complete();
+    }
+  }
+
+  Future<List<TrendingHashtag>> _loadTrendingHashtags({
+    required bool forceRefresh,
+    required int limit,
   }) async {
     if (!forceRefresh &&
         _lastTrendingHashtagsFetch != null &&
