@@ -718,10 +718,21 @@ class SeamTimeline {
     // appends the seam region at the end — mirroring [buildSeamAwarePlayerClips]
     // and [LoopWrapDisplay] so player, mapping and strips share one axis.
     final wrapTransition = n > 0 ? clamped[clips[n - 1].id] : null;
-    final wrapDisplay = LoopWrapDisplay.fromClamped(clips, wrapTransition);
-    final wrapSeam = wrapTransition != null && wrapDisplay.isActive
+    final displayWrap = LoopWrapDisplay.fromClamped(clips, wrapTransition);
+    final wrapSeam = wrapTransition != null && displayWrap.isActive
         ? seams.cached(clips[n - 1], clips[0], wrapTransition)
         : null;
+    // While the clips play whole in place of a wrap that takes all of them,
+    // they map without it and are then fitted onto the display axis.
+    final wrapDeferred = _defersLoopWrap(
+      clips,
+      clamped,
+      seams,
+      wrap: displayWrap,
+      wrapSeam: wrapSeam,
+      speedRenders: speedRenders,
+    );
+    final wrapDisplay = wrapDeferred ? LoopWrapDisplay.none : displayWrap;
     final wrapHeadPb = !wrapDisplay.isActive
         ? Duration.zero
         : wrapSeam != null
@@ -834,9 +845,36 @@ class SeamTimeline {
         ),
       );
     }
+
+    if (wrapDeferred) _fitEditorAxis(displayWrap.displayTotal(clips));
   }
 
   final List<_Segment> _segments = [];
+
+  /// Stretches the editor side of the segments so they end at [axis].
+  ///
+  /// The strip keeps drawing a deferred wrap's display axis, which is shorter
+  /// than the whole clips the player plays meanwhile. Mapped 1:1, the playhead
+  /// would run past the strip's end and the end of the clips could not be
+  /// scrubbed to.
+  void _fitEditorAxis(Duration axis) {
+    if (_segments.isEmpty) return;
+    final played = _segments.last.editorEnd.inMicroseconds;
+    if (played <= 0) return;
+    final scale = axis.inMicroseconds / played;
+    Duration fit(Duration editor) =>
+        Duration(microseconds: (editor.inMicroseconds * scale).round());
+    for (var i = 0; i < _segments.length; i++) {
+      final segment = _segments[i];
+      _segments[i] = _Segment(
+        segment.compositeStart,
+        segment.compositeEnd,
+        fit(segment.editorStart),
+        fit(segment.editorEnd),
+        isSeam: segment.isSeam,
+      );
+    }
+  }
 
   /// True when at least one seam compresses the timeline (otherwise both
   /// directions are the identity).
@@ -932,6 +970,10 @@ Duration _maxDur(Duration a, Duration b) => a > b ? a : b;
 /// When [owners] is given it receives, per returned clip, the id of the
 /// editor clip that clip plays — null for a seam, whose blended sound is
 /// rendered in at the volumes of both sides.
+///
+/// Never empty while a clip has a file to play: a loop-restart wrap that would
+/// take every frame before its seam renders is deferred (see
+/// [_defersLoopWrap]).
 List<player.VideoClip> buildSeamAwarePlayerClips(
   List<DivineVideoClip> clips,
   TransitionSeamRenderService seams, {
@@ -952,7 +994,69 @@ List<player.VideoClip> buildSeamAwarePlayerClips(
   final wrapSeam = wrapTransition != null && wrapDisplay.isActive
       ? seams.cached(clips[n - 1], clips[0], wrapTransition)
       : null;
+  final wrapDeferred = _defersLoopWrap(
+    clips,
+    clamped,
+    seams,
+    wrap: wrapDisplay,
+    wrapSeam: wrapSeam,
+    speedRenders: speedRenders,
+  );
 
+  return _seamAwarePlayerClips(
+    clips,
+    clamped,
+    seams,
+    wrapDisplay: wrapDeferred ? LoopWrapDisplay.none : wrapDisplay,
+    wrapSeam: wrapSeam,
+    speedRenders: speedRenders,
+    owners: owners,
+  );
+}
+
+/// Whether the preview plays [clips] whole until the seam of the loop-restart
+/// [wrap] renders.
+///
+/// The wrap takes the first clip's head and the last clip's tail before its
+/// seam lands, which keeps the display axis still. But it can take every
+/// frame: a 500ms dissolve takes 1s from each end, all of a 2s clip. With no
+/// seam to play either, the player would get no clips at all, and
+/// `DivineVideoPlayerController.setClips` rejects an empty list. The clips
+/// then play whole, a hard cut at the loop point as an unrendered transition
+/// between two clips plays, until the seam lands or for good if it fails.
+///
+/// [buildSeamAwarePlayerClips] and [SeamTimeline] both ask this, so the player
+/// and the position mapping always agree.
+bool _defersLoopWrap(
+  List<DivineVideoClip> clips,
+  Map<String, ClipTransition?> clamped,
+  TransitionSeamRenderService seams, {
+  required LoopWrapDisplay wrap,
+  required TransitionSeam? wrapSeam,
+  ClipSpeedRenderService? speedRenders,
+}) =>
+    wrap.isActive &&
+    wrapSeam == null &&
+    _seamAwarePlayerClips(
+      clips,
+      clamped,
+      seams,
+      wrapDisplay: wrap,
+      wrapSeam: null,
+      speedRenders: speedRenders,
+    ).isEmpty;
+
+/// [buildSeamAwarePlayerClips] with the loop-restart wrap already decided.
+List<player.VideoClip> _seamAwarePlayerClips(
+  List<DivineVideoClip> clips,
+  Map<String, ClipTransition?> clamped,
+  TransitionSeamRenderService seams, {
+  required LoopWrapDisplay wrapDisplay,
+  required TransitionSeam? wrapSeam,
+  ClipSpeedRenderService? speedRenders,
+  List<String?>? owners,
+}) {
+  final n = clips.length;
   final result = <player.VideoClip>[];
   for (var i = 0; i < n; i++) {
     final clip = clips[i];

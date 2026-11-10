@@ -75,16 +75,19 @@ class _RecordingCrashReporter implements CrashReporter {
 }
 
 void main() {
-  DivineVideoClip clip(String id, {editor.ClipTransition? transition}) =>
-      DivineVideoClip(
-        id: id,
-        video: editor.EditorVideo.file(File('/tmp/$id.mp4')),
-        duration: const Duration(seconds: 3),
-        recordedAt: DateTime(2024),
-        targetAspectRatio: model.AspectRatio.square,
-        originalAspectRatio: 1,
-        transition: transition,
-      );
+  DivineVideoClip clip(
+    String id, {
+    editor.ClipTransition? transition,
+    Duration duration = const Duration(seconds: 3),
+  }) => DivineVideoClip(
+    id: id,
+    video: editor.EditorVideo.file(File('/tmp/$id.mp4')),
+    duration: duration,
+    recordedAt: DateTime(2024),
+    targetAspectRatio: model.AspectRatio.square,
+    originalAspectRatio: 1,
+    transition: transition,
+  );
 
   // pro_video_editor's ClipTransition defaults to a 500ms duration.
   const dissolve = editor.ClipTransition(
@@ -209,6 +212,72 @@ void main() {
       expect(result[0].start, equals(const Duration(milliseconds: 500)));
       expect(result[0].end, equals(const Duration(milliseconds: 2500)));
       expect(result[1].uri, equals('/tmp/wrap.mp4'));
+    });
+
+    test('plays a clip whole while a wrap that takes all of it renders', () {
+      // A 500ms dissolve takes 1s from each end, so a 2s clip has no body
+      // left. Before its seam lands that left the player no clips at all, and
+      // DivineVideoPlayerController.setClips threw for the empty list.
+      final only = clip(
+        'a',
+        transition: dissolve,
+        duration: const Duration(seconds: 2),
+      );
+
+      final result = buildSeamAwarePlayerClips([
+        only,
+      ], TransitionSeamRenderService());
+
+      expect(result, hasLength(1));
+      expect(result[0].uri, equals('/tmp/a.mp4'));
+      expect(result[0].start, equals(Duration.zero));
+      expect(result[0].end, equals(const Duration(seconds: 2)));
+    });
+
+    test('plays every clip whole while a wrap that takes all of them '
+        'renders', () {
+      final first = clip('a', duration: const Duration(seconds: 1));
+      final last = clip(
+        'b',
+        transition: dissolve,
+        duration: const Duration(seconds: 1),
+      );
+
+      final result = buildSeamAwarePlayerClips([
+        first,
+        last,
+      ], TransitionSeamRenderService());
+
+      expect(result.map((c) => c.uri), equals(['/tmp/a.mp4', '/tmp/b.mp4']));
+      expect(
+        result.map((c) => c.end),
+        everyElement(const Duration(seconds: 1)),
+      );
+    });
+
+    test('plays only the wrap seam once a wrap that takes all of it '
+        'lands', () {
+      final only = clip(
+        'a',
+        transition: dissolve,
+        duration: const Duration(seconds: 2),
+      );
+      final service = TransitionSeamRenderService()
+        ..cacheSeamForTest(
+          only,
+          only,
+          dissolve,
+          const TransitionSeam(
+            path: '/tmp/wrap.mp4',
+            duration: Duration(milliseconds: 1500),
+            tailConsumed: Duration(seconds: 1),
+            headConsumed: Duration(seconds: 1),
+          ),
+        );
+
+      final result = buildSeamAwarePlayerClips([only], service);
+
+      expect(result.map((c) => c.uri), equals(['/tmp/wrap.mp4']));
     });
 
     test('splices the rendered seam between trimmed neighbours', () {
@@ -1076,10 +1145,10 @@ void main() {
 
   group('SeamTimeline', () {
     test('is the identity when no seam is spliced', () {
-      final timeline = SeamTimeline(
-        [clip('a'), clip('b')],
-        TransitionSeamRenderService(),
-      );
+      final timeline = SeamTimeline([
+        clip('a'),
+        clip('b'),
+      ], TransitionSeamRenderService());
 
       expect(timeline.hasSeams, isFalse);
       expect(
@@ -1332,6 +1401,33 @@ void main() {
         timeline.timelineToComposite(Duration.zero),
         equals(Duration.zero),
       );
+    });
+
+    test('spreads a whole clip over the display axis while a wrap that '
+        'takes all of it renders', () {
+      // The 2s clip plays whole (see buildSeamAwarePlayerClips), but the strip
+      // draws only the wrap's 1.5s seam region: 2×1s consumed minus the 500ms
+      // blend. The playhead must stay on that axis, not run past its end.
+      final only = clip(
+        'a',
+        transition: dissolve,
+        duration: const Duration(seconds: 2),
+      );
+      final timeline = SeamTimeline([only], TransitionSeamRenderService());
+
+      expect(
+        timeline.compositeToTimeline(const Duration(seconds: 2)),
+        equals(const Duration(milliseconds: 1500)),
+      );
+      expect(
+        timeline.compositeToTimeline(const Duration(seconds: 1)),
+        equals(const Duration(milliseconds: 750)),
+      );
+      expect(
+        timeline.timelineToComposite(const Duration(milliseconds: 1500)),
+        equals(const Duration(seconds: 2)),
+      );
+      expect(timeline.isSeamAt(const Duration(seconds: 1)), isFalse);
     });
   });
 
