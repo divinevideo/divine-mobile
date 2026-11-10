@@ -3415,7 +3415,7 @@ void main() {
         ).captured;
 
         final uri = captured.first as Uri;
-        expect(uri.path, equals('/api/hashtags'));
+        expect(uri.path, equals('/api/hashtags/trending'));
         expect(uri.queryParameters['limit'], equals('10'));
       });
 
