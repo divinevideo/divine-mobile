@@ -65,9 +65,20 @@ class SafeCacheInfoRepository implements CacheInfoRepository {
   @visibleForTesting
   CacheInfoRepository get repository => _repository;
 
+  /// The index check for the open the wrapped repository reads the file on.
+  ///
+  /// Upstream reads the index only when its open count goes from 0 to 1, and
+  /// `CacheStore` holds its open for the manager's lifetime, so the sweep's
+  /// and the manifest's opens never read it. Checking the file on those opens
+  /// raced upstream's save, which truncates the file before writing it: a
+  /// read in that window parsed an empty or partial index and deleted the
+  /// live one. Every open awaits this one check instead, and a close that
+  /// fully closes the repository clears it for the next read.
+  Future<void>? _indexCheck;
+
   @override
   Future<bool> open() async {
-    await _deleteCacheFileIfUnreadable();
+    await (_indexCheck ??= _deleteCacheFileIfUnreadable());
 
     // Kept for repositories that raise instead of reporting. The upstream
     // JSON repository is handled above, before it can swallow the error.
@@ -148,7 +159,11 @@ class SafeCacheInfoRepository implements CacheInfoRepository {
   // Delegate all CacheInfoRepository methods to the wrapped repository.
 
   @override
-  Future<bool> close() => _repository.close();
+  Future<bool> close() async {
+    final closed = await _repository.close();
+    if (closed) _indexCheck = null;
+    return closed;
+  }
 
   @override
   Future<int> delete(int id) => _repository.delete(id);
