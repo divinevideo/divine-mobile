@@ -156,6 +156,10 @@
     }
   </script>
 
+  <!-- Native-speed Nostr signature checks (see web/nostr_crypto.js). Module
+       scripts are deferred, so this does not block the first render. -->
+  <script type="module" src="nostr_crypto.js"></script>
+
   <script src="flutter_bootstrap.js" defer></script>
   
   <script>
