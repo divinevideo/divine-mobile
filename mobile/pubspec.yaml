@@ -234,7 +234,7 @@ dependencies:
   bech32: ^0.2.2
 
   # UI/UX
-  flutter_cache_manager: ^3.3.1
+  flutter_cache_manager: ^3.5.0
   share_plus: ^12.0.0 # Cross-platform sharing
   google_fonts: ^6.3.2 # For using Google Fonts including Pacifico
   flutter_svg: ^2.0.10+1 # For custom SVG icons

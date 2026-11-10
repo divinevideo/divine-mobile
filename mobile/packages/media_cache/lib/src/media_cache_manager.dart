@@ -39,10 +39,12 @@ final RegExp _timestampedCacheFilePattern = RegExp(
 /// Filenames written by `flutter_cache_manager`'s WebHelper — the path behind
 /// the inherited [CacheManager.downloadFile] / [CacheManager.getSingleFile] —
 /// are `<uuid-v1><ext>` (and `<uuid-v1>.file` for not-modified responses).
-/// Its eviction never deletes these files for this on-disk layout (it resolves
-/// the relative path against the process CWD), so they orphan just like the
-/// cancellable path's files. Cannot collide with seed media (raw hex event
-/// ids have no dashes) or the alias manifest.
+/// Its eviction deletes these files since flutter_cache_manager 3.4.2, but
+/// they still orphan when their row is lost: a corrupt index recreated empty,
+/// a kill between the file write and the row write, or eviction by an earlier
+/// version, which resolved the path against the process CWD and deleted
+/// nothing. Cannot collide with seed media (raw hex event ids have no dashes)
+/// or the alias manifest.
 final RegExp _webHelperCacheFilePattern = RegExp(
   '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}'
   r'-[0-9a-fA-F]{12}\.[A-Za-z0-9]+$',
@@ -1176,14 +1178,16 @@ class MediaCacheManager extends CacheManager {
   ///    neither the cache store nor the sync manifest still tracks and match
   ///    [_managedCacheFilePattern], [_hasLegacyUrlTailName] or
   ///    [_webHelperCacheFilePattern].
-  ///    `flutter_cache_manager` drops database rows on eviction without
-  ///    reliably deleting the underlying file for this on-disk layout, so
-  ///    evicted and superseded downloads pile up as untracked orphans; this
-  ///    pass removes them. Files still referenced by the manifest (live
-  ///    entries the store's object cap has demoted), files that match neither
-  ///    pattern (the alias manifest and caller-owned sidecars), caller-owned
-  ///    subdirectories, in-flight downloads, and files written within
-  ///    [_reclamationFreshnessWindow] are left untouched.
+  ///    `flutter_cache_manager` deletes the file with its row on eviction
+  ///    since 3.4.2, but superseded downloads, files whose row was never
+  ///    written or was lost with a corrupt index, and files evicted by
+  ///    earlier versions (which deleted nothing for this on-disk layout)
+  ///    still pile up as untracked orphans; this pass removes them. Files
+  ///    still referenced by the manifest (live entries whose store row is
+  ///    missing), files that match neither pattern (the alias manifest and
+  ///    caller-owned sidecars), caller-owned subdirectories, in-flight
+  ///    downloads, and files written within [_reclamationFreshnessWindow] are
+  ///    left untouched.
   /// 2. **Byte eviction** — when [MediaCacheConfig.maxCacheSizeBytes] is set,
   ///    totals every file in the directory (so the enforced number matches
   ///    what callers measure on disk) and deletes the oldest deletable files
@@ -1305,11 +1309,11 @@ class MediaCacheManager extends CacheManager {
     final dir = Directory(baseDir);
     if (!dir.existsSync()) return 0;
     // Files the sync manifest still points at are live cache entries — even
-    // when flutter_cache_manager has dropped their row from its capped store
-    // (its object cap is far smaller than the manifest can grow). Treating
-    // those as orphans deletes files getCachedFileSync is actively serving,
-    // which forces an immediate re-download that re-populates the manifest and
-    // triggers the next sweep — a churn storm that reads as constant jank.
+    // when the store has no row for them, as after a failed store write in
+    // cacheFileCancellable. Treating those as orphans deletes files
+    // getCachedFileSync is actively serving, which forces an immediate
+    // re-download that re-populates the manifest and triggers the next
+    // sweep — a churn storm that reads as constant jank.
     // Protect anything the manifest references.
     final manifestNames = {
       for (final filePath in _cacheManifest.values) path.basename(filePath),
