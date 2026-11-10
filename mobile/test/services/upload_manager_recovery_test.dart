@@ -44,10 +44,10 @@ const _okResult = BlossomUploadResult(
 
 /// Reads no frame; [_okResult] already carries the thumbnail URL.
 ///
-/// The default extractor reaches the process-global `ProVideoEditor.instance`
-/// and retries on real timers for about 600 ms. A test that ended mid-upload
-/// left those retries to land in whichever test ran next in the merged CI
-/// isolate, on that test's fake editor.
+/// The default extractor retries through the process-global
+/// `ProVideoEditor.instance` on real timers, so from a test that ends
+/// mid-upload those calls reach whatever fake editor a later test in the
+/// merged CI isolate has installed.
 Future<ThumbnailFileResult?> _noThumbnail({
   required String videoPath,
   required Duration targetTimestamp,

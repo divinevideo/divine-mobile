@@ -287,15 +287,14 @@ void main() {
       expect(hold.endTime, isNull);
       // ProVideoEditor.instance is process-global, so in the merged CI isolate
       // a call another test left running can reach this fake. Count only the
-      // requests for this test's own clips.
+      // requests for this test's own clips; EditorVideo compares by file.
       final request = editor.thumbnailRequests
           .where(
             (candidate) =>
-                identical(candidate.video, long.video) ||
-                identical(candidate.video, short.video),
+                candidate.video == long.video || candidate.video == short.video,
           )
           .single;
-      expect(request.video, same(short.video));
+      expect(request.video, short.video, reason: 'the shorter cell is held');
       // The frame is read just inside the short clip's end.
       final requested = request.timestamps.single;
       expect(requested, lessThan(const Duration(seconds: 2)));
