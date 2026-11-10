@@ -201,33 +201,80 @@ void main() {
   });
 
   group('owner-private draft archive', () {
-    test('malformed or foreign owner envelopes remain untouched', () async {
+    test(
+      'unreadable drafts are quarantined while readable lists remain usable',
+      () async {
+        final key = SecureCuratedListDraftArchive.storageKey(owner);
+        for (final raw in [
+          '{invalid',
+          jsonEncode({
+            'version': 1,
+            'owner': other,
+            'revision': 'synthetic-revision',
+            'lists': [row(owner).toJson()],
+          }),
+        ]) {
+          device.values[key] = raw;
+          final service = open();
+          await service.initialize();
+          expect(service.initializationError, isNull);
+          expect(
+            await service.addVideoToList('$owner:retained', third),
+            isTrue,
+          );
+          expect(
+            service.getListById('$owner:retained')!.videoEventIds,
+            contains(third),
+          );
+          expect(device.values[key], isNull);
+          expect(device.values.values, contains(raw));
+          expect(await archive.readOwner(owner), isNull);
+          service.dispose();
+          opened.remove(service);
+        }
+      },
+    );
+
+    test('unreadable draft quarantine failures hold mutations until preservation retries', () async {
       final key = SecureCuratedListDraftArchive.storageKey(owner);
-      for (final raw in [
-        '{invalid',
-        jsonEncode({
-          'version': 1,
-          'owner': other,
-          'revision': 'synthetic-revision',
-          'lists': [row(owner).toJson()],
-        }),
-      ]) {
-        device.values[key] = raw;
-        await expectLater(
-          archive.readOwner(owner),
-          throwsA(isA<CuratedListDraftArchiveException>()),
-        );
-        await expectLater(
-          archive.replaceOwner(owner, [row(owner)]),
-          throwsA(isA<CuratedListDraftArchiveException>()),
-        );
-        expect(device.values[key], raw);
-        final service = open();
-        final before = prefs.getString(CuratedListService.listsStorageKey);
-        expect(await service.addVideoToList('$owner:retained', third), isFalse);
-        expect(prefs.getString(CuratedListService.listsStorageKey), before);
-        expect(device.values[key], raw);
-      }
+      const raw = '{unreadable';
+      device.values[key] = raw;
+      device.rejectWrites = true;
+      final service = open();
+      await service.initialize();
+      expect(
+        service.initializationError,
+        isA<CuratedListDraftArchiveException>(),
+      );
+      final before = prefs.getString(CuratedListService.listsStorageKey);
+      expect(await service.addVideoToList('$owner:retained', third), isFalse);
+      expect(prefs.getString(CuratedListService.listsStorageKey), before);
+      expect(device.values[key], raw);
+      device.rejectWrites = false;
+      await service.initialize();
+      expect(service.initializationError, isNull);
+      expect(await service.addVideoToList('$owner:retained', third), isTrue);
+      expect(device.values[key], isNull);
+      expect(device.values.values, contains(raw));
+    });
+
+    test('switching accounts quarantines outgoing unreadable bytes and keeps both accounts usable', () async {
+      final key = SecureCuratedListDraftArchive.storageKey(owner);
+      const raw = '{outgoing-unreadable';
+      device.values[key] = raw;
+      await cleanup().clearUserSpecificData(
+        isIdentityChange: true,
+        userPubkey: other,
+      );
+      expect(device.values.values, contains(raw));
+      expect((await archive.readOwner(owner))!.lists.single.pubkey, owner);
+      await activate(other, cache: [row(other)]);
+      final second = open();
+      await second.initialize();
+      expect(second.initializationError, isNull);
+      expect(await second.addVideoToList('$other:retained', third), isTrue);
+      expect(device.values.values, contains(raw));
+      expect((await archive.readOwner(owner))!.lists.single.pubkey, owner);
     });
 
     test(
@@ -441,6 +488,12 @@ void main() {
     );
 
     test('removing inactive A preserves active B and only deletes A secure payload', () async {
+      device.values[SecureCuratedListDraftArchive.storageKey(owner)] =
+          '{owner-evidence';
+      device.values[SecureCuratedListDraftArchive.storageKey(other)] =
+          '{other-evidence';
+      await archive.readOwner(owner);
+      await archive.readOwner(other);
       await archive.replaceOwner(owner, [row(owner)]);
       await archive.replaceOwner(other, [row(other)]);
       final retainedB =
@@ -454,6 +507,8 @@ void main() {
         preserveActiveSession: true,
       );
       expect(await archive.readOwner(owner), isNull);
+      expect(device.values.values, isNot(contains('{owner-evidence')));
+      expect(device.values.values, contains('{other-evidence'));
       expect(
         device.values[SecureCuratedListDraftArchive.storageKey(other)],
         retainedB,
