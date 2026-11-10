@@ -4006,6 +4006,9 @@ void main() {
       );
     }
 
+    // Bounds a wait so a regression fails fast instead of at the 10 min default.
+    const settleTimeout = Duration(seconds: 5);
+
     test('filters by last message content', () async {
       _stubStreams(mockDmRepository, accepted: conversations());
       final bloc = createBloc();
@@ -4129,9 +4132,11 @@ void main() {
       bloc.add(const ConversationListSearchQueryChanged('pizza'));
       // Wait for the staged name resolution to settle, so the only thing that
       // could emit afterwards is the repository swap under test.
-      final before = await bloc.stream.firstWhere(
-        (s) => s.searchQuery == 'pizza' && s.profileNames.isNotEmpty,
-      );
+      final before = await bloc.stream
+          .firstWhere(
+            (s) => s.searchQuery == 'pizza' && s.profileNames.isNotEmpty,
+          )
+          .timeout(settleTimeout);
 
       final emitted = <ConversationListState>[];
       final subscription = bloc.stream.listen(emitted.add);
@@ -4211,9 +4216,9 @@ void main() {
         await load(bloc);
 
         bloc.add(const ConversationListSearchQueryChanged('alice'));
-        final state = await bloc.stream.firstWhere(
-          (s) => s.profileNames.containsKey(_testPubkey2),
-        );
+        final state = await bloc.stream
+            .firstWhere((s) => s.profileNames.containsKey(_testPubkey2))
+            .timeout(settleTimeout);
 
         expect(
           state.profileNames.keys,
@@ -4350,12 +4355,14 @@ void main() {
         acceptedController.add([
           _createConversation(id: 'pizza', lastMessageContent: 'pizza friday?'),
         ]);
-        await bloc.stream.firstWhere(
-          (s) => s.status == ConversationListStatus.loaded,
-        );
+        await bloc.stream
+            .firstWhere((s) => s.status == ConversationListStatus.loaded)
+            .timeout(settleTimeout);
 
         bloc.add(const ConversationListSearchQueryChanged('alice'));
-        await bloc.stream.firstWhere((s) => s.searchQuery == 'alice');
+        await bloc.stream
+            .firstWhere((s) => s.searchQuery == 'alice')
+            .timeout(settleTimeout);
         // Alice is not in the list yet, so nothing matches.
         expect(bloc.state.visibleConversations, isEmpty);
 
@@ -4370,12 +4377,276 @@ void main() {
           ),
         ]);
 
-        final state = await bloc.stream.firstWhere(
-          (s) => s.visibleConversations.any((c) => c.id == 'alice'),
-        );
+        final state = await bloc.stream
+            .firstWhere(
+              (s) => s.visibleConversations.any((c) => c.id == 'alice'),
+            )
+            .timeout(settleTimeout);
         expect(
           state.visibleConversations.map((c) => c.id),
           contains('alice'),
+        );
+      },
+    );
+
+    // #7924: the three tests below pin the two things that stop stream
+    // re-resolution from looping — every pubkey in a chunk gets a name even
+    // when its fetch fails, and the guard only looks at rows new to the tick.
+    test(
+      'a row streaming in during a search whose profile fetch fails gets its '
+      'fallback name and is resolved exactly once',
+      () async {
+        final acceptedController = StreamController<List<DmConversation>>();
+        _stubStreams(mockDmRepository);
+        when(
+          () => mockDmRepository.watchAcceptedConversations(
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) => acceptedController.stream);
+        when(
+          () => mockProfileRepository.fetchBatchProfiles(
+            pubkeys: any(named: 'pubkeys'),
+          ),
+        ).thenThrow(Exception('relay offline'));
+
+        final bloc = createBloc()..add(const ConversationListStarted());
+        addTearDown(() async {
+          await bloc.close();
+          await acceptedController.close();
+        });
+
+        final pizza = _createConversation(
+          id: 'pizza',
+          lastMessageContent: 'pizza friday?',
+        );
+        acceptedController.add([pizza]);
+        await bloc.stream
+            .firstWhere((s) => s.status == ConversationListStatus.loaded)
+            .timeout(settleTimeout);
+
+        // Search for the name the arriving row can only match by fallback.
+        final aliceFallback = UserProfile.defaultDisplayNameFor(_testPubkey3);
+        bloc.add(ConversationListSearchQueryChanged(aliceFallback));
+        await bloc.stream
+            .firstWhere((s) => s.searchQuery == aliceFallback)
+            .timeout(settleTimeout);
+        await pumpEventQueue();
+
+        final alice = _createConversation(
+          id: 'alice',
+          lastMessageContent: 'see you soon',
+          participantPubkeys: const [_testPubkey1, _testPubkey3],
+        );
+        acceptedController.add([pizza, alice]);
+        await bloc.stream
+            .firstWhere((s) => s.conversations.any((c) => c.id == 'alice'))
+            .timeout(settleTimeout);
+        await pumpEventQueue();
+
+        // Later ticks carry no new row. Each one changes a preview, so the
+        // wait proves the tick reached the bloc.
+        for (final preview in ['pizza saturday?', 'pizza sunday?']) {
+          acceptedController.add([
+            pizza.copyWith(lastMessageContent: preview),
+            alice,
+          ]);
+          await bloc.stream
+              .firstWhere(
+                (s) => s.conversations.any(
+                  (c) => c.lastMessageContent == preview,
+                ),
+              )
+              .timeout(settleTimeout);
+        }
+        await pumpEventQueue();
+
+        expect(
+          bloc.state.profileNames[_testPubkey3],
+          equals(aliceFallback),
+        );
+        // Not a guard check: `_peerName` matches this name before resolution.
+        expect(
+          bloc.state.visibleConversations.map((c) => c.id),
+          equals(['alice']),
+        );
+        final requested = verify(
+          () => mockProfileRepository.fetchBatchProfiles(
+            pubkeys: captureAny(named: 'pubkeys'),
+          ),
+        ).captured;
+        expect(
+          requested,
+          hasLength(2),
+          reason: 'one fetch for the query, one for the arriving row',
+        );
+        expect(
+          requested,
+          equals([
+            [_testPubkey2],
+            [_testPubkey3],
+          ]),
+        );
+      },
+    );
+
+    test(
+      'a profile batch missing a pubkey still names it, so the next arriving '
+      'row does not refetch it',
+      () async {
+        final acceptedController = StreamController<List<DmConversation>>();
+        _stubStreams(mockDmRepository);
+        when(
+          () => mockDmRepository.watchAcceptedConversations(
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) => acceptedController.stream);
+        // Answers for Alice only, whatever is asked: the per-pubkey miss.
+        when(
+          () => mockProfileRepository.fetchBatchProfiles(
+            pubkeys: any(named: 'pubkeys'),
+          ),
+        ).thenAnswer(
+          (_) async => {
+            _testPubkey3: UserProfile(
+              pubkey: _testPubkey3,
+              displayName: 'Alice Wonder',
+              rawData: const {},
+              createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+              eventId: _testConversationId1,
+            ),
+          },
+        );
+
+        final bloc = createBloc()..add(const ConversationListStarted());
+        addTearDown(() async {
+          await bloc.close();
+          await acceptedController.close();
+        });
+
+        final loaded = conversations();
+        acceptedController.add(loaded);
+        await bloc.stream
+            .firstWhere((s) => s.status == ConversationListStatus.loaded)
+            .timeout(settleTimeout);
+
+        bloc.add(const ConversationListSearchQueryChanged('alice'));
+        final named = await bloc.stream
+            .firstWhere((s) => s.profileNames.containsKey(_testPubkey3))
+            .timeout(settleTimeout);
+        expect(named.profileNames[_testPubkey3], equals('Alice Wonder'));
+        expect(
+          named.profileNames[_testPubkey2],
+          equals(UserProfile.defaultDisplayNameFor(_testPubkey2)),
+        );
+
+        acceptedController.add([
+          ...loaded,
+          _createConversation(
+            id: 'bob',
+            participantPubkeys: const [_testPubkey1, _testPubkey4],
+          ),
+        ]);
+        await bloc.stream
+            .firstWhere((s) => s.conversations.any((c) => c.id == 'bob'))
+            .timeout(settleTimeout);
+        await pumpEventQueue();
+
+        expect(
+          verify(
+            () => mockProfileRepository.fetchBatchProfiles(
+              pubkeys: captureAny(named: 'pubkeys'),
+            ),
+          ).captured,
+          equals([
+            unorderedEquals([_testPubkey2, _testPubkey3]),
+            [_testPubkey4],
+          ]),
+        );
+      },
+    );
+
+    test(
+      'a tick during a chunked resolution does not restart it when no row is '
+      'new',
+      () async {
+        // One more peer than a chunk holds, so the resolver needs two fetches.
+        final peers = List.generate(
+          searchProfileResolveChunkSize + 1,
+          (i) => (i + 1).toRadixString(16).padLeft(64, '0'),
+        );
+        List<DmConversation> rows(String firstPreview) => [
+          for (final (i, peer) in peers.indexed)
+            _createConversation(
+              id: 'peer-$i',
+              lastMessageContent: i == 0 ? firstPreview : 'hi',
+              participantPubkeys: [_testPubkey1, peer],
+            ),
+        ];
+        final acceptedController = StreamController<List<DmConversation>>();
+        _stubStreams(mockDmRepository);
+        when(
+          () => mockDmRepository.watchAcceptedConversations(
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) => acceptedController.stream);
+        final batch = Completer<Map<String, UserProfile>>();
+        when(
+          () => mockProfileRepository.fetchBatchProfiles(
+            pubkeys: any(named: 'pubkeys'),
+          ),
+        ).thenAnswer((_) => batch.future);
+
+        final bloc = createBloc()..add(const ConversationListStarted());
+        addTearDown(() async {
+          if (!batch.isCompleted) batch.complete(const {});
+          await bloc.close();
+          await acceptedController.close();
+        });
+
+        acceptedController.add(rows('first'));
+        await bloc.stream
+            .firstWhere((s) => s.status == ConversationListStatus.loaded)
+            .timeout(settleTimeout);
+
+        // The query's first chunk is now held open by `batch`.
+        bloc.add(const ConversationListSearchQueryChanged('peer'));
+        await bloc.stream
+            .firstWhere((s) => s.searchQuery == 'peer')
+            .timeout(settleTimeout);
+
+        acceptedController.add(rows('second'));
+        await bloc.stream
+            .firstWhere(
+              (s) => s.conversations.any(
+                (c) => c.lastMessageContent == 'second',
+              ),
+            )
+            .timeout(settleTimeout);
+        await pumpEventQueue();
+
+        expect(
+          verify(
+            () => mockProfileRepository.fetchBatchProfiles(
+              pubkeys: captureAny(named: 'pubkeys'),
+            ),
+          ).captured,
+          equals([peers.take(searchProfileResolveChunkSize).toList()]),
+          reason: 'the tick added no row, so the held chunk is not refetched',
+        );
+
+        batch.complete(const {});
+        await pumpEventQueue();
+
+        expect(
+          verify(
+            () => mockProfileRepository.fetchBatchProfiles(
+              pubkeys: captureAny(named: 'pubkeys'),
+            ),
+          ).captured,
+          equals([
+            [peers.last],
+          ]),
+          reason: 'the held resolution goes on to the second chunk',
         );
       },
     );
