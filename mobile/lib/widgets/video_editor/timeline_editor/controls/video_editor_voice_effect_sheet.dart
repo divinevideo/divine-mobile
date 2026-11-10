@@ -100,14 +100,25 @@ class VideoEditorVoiceEffectView extends StatelessWidget {
               thickness: 2,
               color: context.vineColors.surfaceContainer,
             ),
-            const SizedBox(height: 16),
-            const _PresetRow(),
-            const SizedBox(height: 16),
-            const _EffectSliders(),
-            const SizedBox(height: 8),
-            const _NoiseReductionTile(),
-            const _FailureMessage(),
-            const SizedBox(height: 16),
+            // Scrolls under the header rather than running off a small screen
+            // at a large text size, where the noise switch would be out of
+            // reach.
+            const Flexible(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(top: 16, bottom: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _PresetRow(),
+                    SizedBox(height: 16),
+                    _EffectSliders(),
+                    SizedBox(height: 8),
+                    _NoiseReductionTile(),
+                    _FailureMessage(),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

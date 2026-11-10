@@ -5,11 +5,12 @@
 import 'dart:math';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/semantics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -20,6 +21,10 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffectPreview;
+
+/// What the cards over the preview leave free on the right for the intensity
+/// slider.
+const double _sliderClearance = 72;
 
 /// Overlay controls for the effects editor.
 ///
@@ -54,47 +59,32 @@ class VideoEditorEffectsOverlayControls extends StatelessWidget {
             // Everything else sits under the toolbar: the bar under the
             // preview is tall, so nothing may reach up behind it.
             Expanded(
-              child: Stack(
-                fit: .expand,
-                children: [
-                  const Align(
-                    alignment: .bottomCenter,
-                    child: _OnBeatSwitch(),
-                  ),
-                  const Align(
-                    alignment: .bottomCenter,
-                    child: _DropsSettingsCard(),
-                  ),
-                  // Centered between the toolbar and the room kept at the
-                  // bottom for the on-the-beat switch.
-                  Padding(
-                    padding: const .only(
-                      bottom: VideoEditorConstants.bottomBarHeight,
-                    ),
-                    child: Align(
-                      alignment: .centerRight,
-                      child: AnimatedSwitcher(
-                        transitionBuilder: (child, animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: SlideTransition(
-                              position: Tween(
-                                begin: const Offset(1, 0),
-                                end: Offset.zero,
-                              ).animate(animation),
-                              child: child,
-                            ),
-                          );
-                        },
-                        switchInCurve: Curves.easeInOut,
-                        duration: const Duration(milliseconds: 220),
-                        child: hasEffect
-                            ? const _IntensitySlider()
-                            : const SizedBox.shrink(),
+              child: _ControlsLayout(
+                dropsMinHeight: _DropsSettingsCard.minOpenHeight(
+                  MediaQuery.textScalerOf(context),
+                ),
+                notice: const _PreviewUnavailableNotice(),
+                dropsSettings: const _DropsSettingsCard(),
+                onBeatSwitch: const _OnBeatSwitch(),
+                slider: AnimatedSwitcher(
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween(
+                          begin: const Offset(1, 0),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
                       ),
-                    ),
-                  ),
-                ],
+                    );
+                  },
+                  switchInCurve: Curves.easeInOut,
+                  duration: const Duration(milliseconds: 220),
+                  child: hasEffect
+                      ? const _IntensitySlider()
+                      : const SizedBox.shrink(),
+                ),
               ),
             ),
           ],
@@ -104,8 +94,204 @@ class VideoEditorEffectsOverlayControls extends StatelessWidget {
   }
 }
 
+/// Lays out the controls under the toolbar, so none of them covers another.
+///
+/// The intensity slider is centred on the right in the space above the room
+/// the on-the-beat switch takes at the normal text size. A switch that a
+/// larger text size grows into the slider leaves the slider's column free
+/// instead, as the drops' settings do, so the slider keeps its full height.
+///
+/// The notice that the preview cannot show effects lies over the preview at
+/// the top, which shows no effects on such a device anyway, so its lines take
+/// no room from the slider and the switch. The drops' settings open below it
+/// while their [dropsMinHeight] fits there. On a screen too short for the
+/// notice and a card, the card covers it, and the notice is left out rather
+/// than shown cut off.
+class _ControlsLayout extends MultiChildRenderObjectWidget {
+  _ControlsLayout({
+    required this.dropsMinHeight,
+    required Widget notice,
+    required Widget dropsSettings,
+    required Widget onBeatSwitch,
+    required Widget slider,
+  }) : super(children: [notice, dropsSettings, onBeatSwitch, slider]);
+
+  /// The least height the drops' settings take open.
+  final double dropsMinHeight;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderControlsLayout(dropsMinHeight: dropsMinHeight);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderControlsLayout renderObject,
+  ) {
+    renderObject.dropsMinHeight = dropsMinHeight;
+  }
+}
+
+class _ControlsParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderControlsLayout extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _ControlsParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _ControlsParentData> {
+  _RenderControlsLayout({required double dropsMinHeight})
+    : _dropsMinHeight = dropsMinHeight;
+
+  double get dropsMinHeight => _dropsMinHeight;
+  double _dropsMinHeight;
+  set dropsMinHeight(double value) {
+    if (_dropsMinHeight == value) return;
+    _dropsMinHeight = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _ControlsParentData) {
+      child.parentData = _ControlsParentData();
+    }
+  }
+
+  /// Whether a card covers the notice, which is then left out: neither
+  /// painted, read out nor in the way of a tap on the preview.
+  bool _isNoticeCovered = false;
+
+  /// Whether [child] takes part in painting, semantics and hit testing.
+  bool _isShown(RenderBox child) => !(_isNoticeCovered && child == firstChild);
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) => constraints.biggest;
+
+  /// Where the card [child] placed at the bottom starts to show, below its
+  /// [margin]; the bottom edge for a card that is not there.
+  double _cardTop(RenderBox child, double margin) => child.size.isEmpty
+      ? size.height
+      : (child.parentData! as _ControlsParentData).offset.dy + margin;
+
+  /// Lays [child] out within [maxSize], and places it [atBottom] or at the top,
+  /// centred across the width unless [atLeft].
+  void _place(
+    RenderBox child,
+    Size maxSize, {
+    required bool atBottom,
+    bool atLeft = false,
+  }) {
+    child.layout(BoxConstraints.loose(maxSize), parentUsesSize: true);
+    (child.parentData! as _ControlsParentData).offset = Offset(
+      atLeft ? 0 : (size.width - child.size.width) / 2,
+      atBottom ? size.height - child.size.height : 0,
+    );
+  }
+
+  @override
+  void performLayout() {
+    size = constraints.biggest;
+    final notice = firstChild!;
+    final dropsSettings = childAfter(notice)!;
+    final onBeatSwitch = childAfter(dropsSettings)!;
+    final slider = childAfter(onBeatSwitch)!;
+
+    _place(notice, size, atBottom: false);
+    final belowNotice = size.height - notice.size.height;
+    _place(
+      dropsSettings,
+      Size(
+        size.width,
+        belowNotice >= dropsMinHeight ? belowNotice : size.height,
+      ),
+      atBottom: true,
+    );
+
+    final area = max(0.0, size.height - VideoEditorConstants.bottomBarHeight);
+    slider.layout(
+      BoxConstraints.loose(Size(size.width, _IntensitySlider.heightIn(area))),
+      parentUsesSize: true,
+    );
+    final sliderTop = (area - slider.size.height) / 2;
+    (slider.parentData! as _ControlsParentData).offset = Offset(
+      size.width - slider.size.width,
+      sliderTop,
+    );
+
+    _place(onBeatSwitch, size, atBottom: true);
+    final switchTop =
+        size.height - onBeatSwitch.size.height + _OnBeatSwitch.margin;
+    if (!slider.size.isEmpty && switchTop < sliderTop + slider.size.height) {
+      _place(
+        onBeatSwitch,
+        Size(
+          size.width - _sliderClearance + _OnBeatSwitch.margin,
+          size.height,
+        ),
+        atBottom: true,
+        atLeft: true,
+      );
+    }
+
+    final isNoticeCovered =
+        !notice.size.isEmpty &&
+        min(
+              _cardTop(dropsSettings, _DropsSettingsCard._margin.top),
+              _cardTop(onBeatSwitch, _OnBeatSwitch.margin),
+            ) <
+            notice.size.height;
+    if (isNoticeCovered != _isNoticeCovered) {
+      _isNoticeCovered = isNoticeCovered;
+      markNeedsSemanticsUpdate();
+    }
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    var child = firstChild;
+    while (child != null) {
+      if (_isShown(child)) {
+        context.paintChild(
+          child,
+          (child.parentData! as _ControlsParentData).offset + offset,
+        );
+      }
+      child = childAfter(child);
+    }
+  }
+
+  @override
+  void visitChildrenForSemantics(RenderObjectVisitor visitor) {
+    var child = firstChild;
+    while (child != null) {
+      if (_isShown(child)) visitor(child);
+      child = childAfter(child);
+    }
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    for (var child = lastChild; child != null; child = childBefore(child)) {
+      final current = child;
+      if (_isShown(current) &&
+          result.addWithPaintOffset(
+            offset: (current.parentData! as _ControlsParentData).offset,
+            position: position,
+            hitTest: (result, transformed) =>
+                current.hitTest(result, position: transformed),
+          )) {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
+/// The intensity slider, as tall as it is allowed to be.
 class _IntensitySlider extends StatelessWidget {
   const _IntensitySlider();
+
+  /// How tall the slider is in [area] of height.
+  static double heightIn(double area) => min(300, area * 0.8);
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +302,7 @@ class _IntensitySlider extends StatelessWidget {
       padding: const .only(right: 16),
       child: LayoutBuilder(
         builder: (_, constraints) => VideoEditorVerticalSlider(
-          height: min(300, constraints.maxHeight * 0.8),
+          height: constraints.maxHeight,
           value: intensity,
           onChanged: context.read<VideoEditorEffectsCubit>().setIntensity,
         ),
@@ -148,6 +334,9 @@ String? onBeatStatusLabel(
 class _OnBeatSwitch extends StatelessWidget {
   const _OnBeatSwitch();
 
+  /// Around the card.
+  static const double margin = 16;
+
   @override
   Widget build(BuildContext context) {
     final canFire = context.select((VideoEditorEffectsCubit c) {
@@ -175,25 +364,29 @@ class _OnBeatSwitch extends StatelessWidget {
         onBeatStatusLabel(l10n, state)!,
         Directionality.of(context),
       ),
-      child: Padding(
-        padding: const .all(16),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.vineColors.surfaceContainer,
-              borderRadius: .circular(16),
-            ),
-            // The tile's ink needs a surface of its own over the video.
-            child: Material(
-              type: MaterialType.transparency,
-              child: DivineSwitchTile(
-                title: l10n.videoEditorEffectsOnBeat,
-                subtitle: status,
-                value: onBeat,
-                onChanged: (value) => context
-                    .read<VideoEditorEffectsCubit>()
-                    .setOnBeat(onBeat: value),
+      // Grows with the text only so far, or it would cover the preview.
+      child: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: chipLabelTextScaleLimit,
+        child: Padding(
+          padding: const .all(margin),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: context.vineColors.surfaceContainer,
+                borderRadius: .circular(16),
+              ),
+              // The tile's ink needs a surface of its own over the video.
+              child: Material(
+                type: MaterialType.transparency,
+                child: DivineSwitchTile(
+                  title: l10n.videoEditorEffectsOnBeat,
+                  subtitle: status,
+                  value: onBeat,
+                  onChanged: (value) => context
+                      .read<VideoEditorEffectsCubit>()
+                      .setOnBeat(onBeat: value),
+                ),
               ),
             ),
           ),
@@ -211,7 +404,12 @@ class _DropsSettingsCard extends StatelessWidget {
   const _DropsSettingsCard();
 
   /// Around the card, clear of the intensity slider on the right.
-  static const EdgeInsets _margin = EdgeInsets.fromLTRB(16, 16, 72, 16);
+  static const EdgeInsets _margin = EdgeInsets.fromLTRB(
+    16,
+    16,
+    _sliderClearance,
+    16,
+  );
   static const EdgeInsets _childrenPadding = EdgeInsets.fromLTRB(16, 0, 16, 16);
 
   /// A one-line [ListTile]'s height, and the padding it keeps around a title
@@ -219,6 +417,28 @@ class _DropsSettingsCard extends StatelessWidget {
   /// single line.
   static const double _titleRowMinHeight = 56;
   static const double _titleRowVerticalPadding = 8;
+
+  /// The card's text stops growing here: a fixed-width card over a small
+  /// area, whose title and labels would be cut past it, and whose settings
+  /// would show one row at a time.
+  static const double _textScaleLimit = chipLabelTextScaleLimit;
+
+  /// The title row's height at [textScaler], already clamped to the card's
+  /// limit.
+  static double _titleRowHeight(TextScaler textScaler) {
+    // Only the metrics are read; the color is never painted.
+    final titleStyle = VineTheme.titleSmallFont(color: VineTheme.transparent);
+    final titleLine =
+        textScaler.scale(titleStyle.fontSize!) * (titleStyle.height ?? 1.2);
+    return max(_titleRowMinHeight, titleLine + 2 * _titleRowVerticalPadding);
+  }
+
+  /// The least height the card takes open, its settings scrolled into no
+  /// room at all, at the system's [textScaler].
+  static double minOpenHeight(TextScaler textScaler) =>
+      _margin.vertical +
+      _titleRowHeight(textScaler.clamp(maxScaleFactor: _textScaleLimit)) +
+      _childrenPadding.vertical;
 
   @override
   Widget build(BuildContext context) {
@@ -231,66 +451,63 @@ class _DropsSettingsCard extends StatelessWidget {
     final titleStyle = VineTheme.titleSmallFont(
       color: context.vineColors.onSurface,
     );
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final titleLine =
-            MediaQuery.textScalerOf(context).scale(titleStyle.fontSize!) *
-            (titleStyle.height ?? 1.2);
-        final titleRow = max(
-          _titleRowMinHeight,
-          titleLine + 2 * _titleRowVerticalPadding,
-        );
-        // The settings scroll in what the area under the toolbar leaves
-        // them, and never take more than 40% of the screen, so most of the
-        // video stays in view.
-        final settingsHeight = max(
-          0.0,
-          min(
-            MediaQuery.sizeOf(context).height * 0.4,
-            constraints.maxHeight -
-                _margin.vertical -
-                titleRow -
-                _childrenPadding.vertical,
-          ),
-        );
-        return Padding(
-          padding: _margin,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 360),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: context.vineColors.surfaceContainer,
-                borderRadius: .circular(16),
-              ),
-              // The tile's ink needs a surface of its own over the video.
-              child: Material(
-                type: MaterialType.transparency,
-                child: ExpansionTile(
-                  title: Text(
-                    l10n.videoEditorDropsSettingsTitle,
-                    style: titleStyle,
-                    maxLines: 1,
-                    overflow: .ellipsis,
-                  ),
-                  shape: const Border(),
-                  collapsedShape: const Border(),
-                  iconColor: context.vineColors.onSurface,
-                  collapsedIconColor: context.vineColors.onSurface,
-                  childrenPadding: _childrenPadding,
-                  children: [
-                    ConstrainedBox(
-                      constraints: BoxConstraints(maxHeight: settingsHeight),
-                      child: const SingleChildScrollView(
-                        child: _DropsSettings(),
-                      ),
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: _textScaleLimit,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final titleRow = _titleRowHeight(MediaQuery.textScalerOf(context));
+          // The settings scroll in what the area under the toolbar leaves
+          // them, and never take more than 40% of the screen, so most of the
+          // video stays in view.
+          final settingsHeight = max(
+            0.0,
+            min(
+              MediaQuery.sizeOf(context).height * 0.4,
+              constraints.maxHeight -
+                  _margin.vertical -
+                  titleRow -
+                  _childrenPadding.vertical,
+            ),
+          );
+          return Padding(
+            padding: _margin,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 360),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: context.vineColors.surfaceContainer,
+                  borderRadius: .circular(16),
+                ),
+                // The tile's ink needs a surface of its own over the video.
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: ExpansionTile(
+                    title: Text(
+                      l10n.videoEditorDropsSettingsTitle,
+                      style: titleStyle,
+                      maxLines: 1,
+                      overflow: .ellipsis,
                     ),
-                  ],
+                    shape: const Border(),
+                    collapsedShape: const Border(),
+                    iconColor: context.vineColors.onSurface,
+                    collapsedIconColor: context.vineColors.onSurface,
+                    childrenPadding: _childrenPadding,
+                    children: [
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxHeight: settingsHeight),
+                        child: const SingleChildScrollView(
+                          child: _DropsSettings(),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
@@ -430,29 +647,23 @@ class _TopBarContent extends StatelessWidget {
 
     return Align(
       alignment: .topCenter,
-      child: Column(
-        mainAxisSize: .min,
-        children: [
-          VideoEditorToolbar(
-            closeSemanticLabel: context.l10n
-                .videoEditorDiscardToolChangesSemanticLabel(toolName),
-            doneSemanticLabel: context.l10n
-                .videoEditorApplyToolChangesSemanticLabel(toolName),
-            onClose: () {
-              cubit.cancel();
-              mainBloc.add(const VideoEditorMainSubEditorClosed());
-            },
-            onDone: () {
-              final result = cubit.confirm();
-              scope.editor?.setVideoEffectEntries(result.effects);
-              if (result.replacedFlashing) {
-                showFlashingEffectReplacedSnackBar(context);
-              }
-              mainBloc.add(const VideoEditorMainSubEditorClosed());
-            },
-          ),
-          const _PreviewUnavailableNotice(),
-        ],
+      child: VideoEditorToolbar(
+        closeSemanticLabel: context.l10n
+            .videoEditorDiscardToolChangesSemanticLabel(toolName),
+        doneSemanticLabel: context.l10n
+            .videoEditorApplyToolChangesSemanticLabel(toolName),
+        onClose: () {
+          cubit.cancel();
+          mainBloc.add(const VideoEditorMainSubEditorClosed());
+        },
+        onDone: () {
+          final result = cubit.confirm();
+          scope.editor?.setVideoEffectEntries(result.effects);
+          if (result.replacedFlashing) {
+            showFlashingEffectReplacedSnackBar(context);
+          }
+          mainBloc.add(const VideoEditorMainSubEditorClosed());
+        },
       ),
     );
   }
@@ -480,7 +691,7 @@ class _PreviewUnavailableNoticeState extends State<_PreviewUnavailableNotice> {
       builder: (context, snapshot) {
         if (snapshot.data != false) return const SizedBox.shrink();
         return Padding(
-          padding: const .symmetric(horizontal: 16),
+          padding: const .only(left: 16, right: _sliderClearance),
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: context.vineColors.surfaceContainer,
@@ -488,11 +699,16 @@ class _PreviewUnavailableNoticeState extends State<_PreviewUnavailableNotice> {
             ),
             child: Padding(
               padding: const .symmetric(horizontal: 12, vertical: 8),
-              child: Text(
-                context.l10n.videoEditorChromaKeyPreviewUnavailable,
-                textAlign: .center,
-                style: VineTheme.bodySmallFont(
-                  color: context.vineColors.onSurface,
+              // Covers the preview, so it stops growing before it covers
+              // most of it.
+              child: MediaQuery.withClampedTextScaling(
+                maxScaleFactor: chipLabelTextScaleLimit,
+                child: Text(
+                  context.l10n.videoEditorChromaKeyPreviewUnavailable,
+                  textAlign: .center,
+                  style: VineTheme.bodySmallFont(
+                    color: context.vineColors.onSurface,
+                  ),
                 ),
               ),
             ),

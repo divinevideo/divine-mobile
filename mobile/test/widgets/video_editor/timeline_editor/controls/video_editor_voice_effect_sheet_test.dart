@@ -321,6 +321,46 @@ void main() {
         expect(harness.result?.originalUrl, _take);
       });
 
+      testWidgets('scrolls to the noise switch at a large text size', (
+        tester,
+      ) async {
+        tester.view
+          ..physicalSize = const Size(360, 640)
+          ..devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(() {
+          tester.view.reset();
+          tester.platformDispatcher.clearAllTestValues();
+        });
+        await open(tester);
+
+        final noiseSwitch = find.text(
+          l10n.videoEditorVoiceEffectNoiseReduction,
+        );
+        await scrollUntilTappable(
+          tester,
+          noiseSwitch,
+          100,
+          scrollable: find
+              .byWidgetPredicate(
+                (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+              )
+              .first,
+        );
+        await tester.tap(noiseSwitch);
+        await tester.pumpAndSettle();
+
+        verify(
+          () => service.renderAudition(
+            source: any(named: 'source'),
+            effect: any(named: 'effect'),
+            noiseReduction: true,
+            start: any(named: 'start'),
+            length: any(named: 'length'),
+          ),
+        ).called(1);
+      });
+
       testWidgets('can cancel with the barrier before saving', (tester) async {
         await open(tester);
 

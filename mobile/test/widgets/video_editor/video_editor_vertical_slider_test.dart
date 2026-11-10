@@ -1,6 +1,7 @@
 // ABOUTME: Tests for VideoEditorVerticalSlider widget.
 // ABOUTME: Validates slider rendering, drag interactions, and value updates.
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -133,6 +134,18 @@ void main() {
         }).firstOrNull;
 
         expect(thumbContainer, isNotNull);
+      });
+
+      testWidgets('keeps its value label whole at the largest text size', (
+        tester,
+      ) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 3.12;
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
+
+        await tester.pumpWidget(buildSlider(value: 1));
+
+        final label = tester.renderObject<RenderParagraph>(find.text('100'));
+        expect(label.size.height, greaterThanOrEqualTo(label.textSize.height));
       });
 
       testWidgets('thumb position changes with value', (tester) async {
