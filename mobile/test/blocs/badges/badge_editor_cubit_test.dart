@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:badge_repository/badge_repository.dart';
@@ -145,6 +146,65 @@ void main() {
       ],
       errors: () => [isA<Exception>()],
     );
+
+    group('while the taken identifiers load', () {
+      late Completer<Set<String>> identifiers;
+
+      setUp(() {
+        identifiers = Completer<Set<String>>();
+      });
+
+      blocTest<BadgeEditorCubit, BadgeEditorState>(
+        'keeps a name typed before the lookup finishes',
+        setUp: () {
+          when(
+            repository.loadCreatedIdentifiers,
+          ).thenAnswer((_) => identifiers.future);
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          final loading = cubit.load();
+          cubit.nameChanged('Test');
+          identifiers.complete(const {'other'});
+          await loading;
+        },
+        skip: 2,
+        expect: () => [
+          isA<BadgeEditorState>()
+              .having((state) => state.name, 'name', 'Test')
+              .having((state) => state.identifier, 'identifier', 'test')
+              .having(
+                (state) => state.takenIdentifiers,
+                'takenIdentifiers',
+                {'other'},
+              ),
+        ],
+      );
+
+      blocTest<BadgeEditorCubit, BadgeEditorState>(
+        'drops a lookup that finishes after close',
+        setUp: () {
+          when(
+            repository.loadCreatedIdentifiers,
+          ).thenAnswer((_) => identifiers.future);
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          final loading = cubit.load();
+          await cubit.close();
+          identifiers.complete(const {'test'});
+          await loading;
+        },
+        expect: () => [
+          isA<BadgeEditorState>().having(
+            (state) => state.status,
+            'status',
+            BadgeEditorStatus.ready,
+          ),
+        ],
+        errors: () => isEmpty,
+      );
+    });
 
     blocTest<BadgeEditorCubit, BadgeEditorState>(
       'load prefills the form from the existing definition',
