@@ -495,9 +495,15 @@ class SocialStickerStylePicker extends StatelessWidget {
                 ? FittedBox(
                     child: SocialStickerView(data: data.copyWith(style: style)),
                   )
-                : Text(
-                    l10n.infoStickerStyleLabel(style),
-                    style: VineTheme.bodySmallFont(color: VineTheme.whiteText),
+                // Shrinks rather than splitting a long name across lines.
+                : FittedBox(
+                    fit: .scaleDown,
+                    child: Text(
+                      l10n.infoStickerStyleLabel(style),
+                      style: VineTheme.bodySmallFont(
+                        color: VineTheme.whiteText,
+                      ),
+                    ),
                   ),
           );
         },

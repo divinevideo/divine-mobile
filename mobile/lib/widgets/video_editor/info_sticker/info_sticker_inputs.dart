@@ -42,9 +42,15 @@ class InfoStickerStylePicker extends StatelessWidget {
                 ? FittedBox(
                     child: InfoStickerView(data: data.copyWith(style: style)),
                   )
-                : Text(
-                    l10n.infoStickerStyleLabel(style),
-                    style: VineTheme.bodySmallFont(color: VineTheme.whiteText),
+                // Shrinks rather than splitting a long name across lines.
+                : FittedBox(
+                    fit: .scaleDown,
+                    child: Text(
+                      l10n.infoStickerStyleLabel(style),
+                      style: VineTheme.bodySmallFont(
+                        color: VineTheme.whiteText,
+                      ),
+                    ),
                   ),
           );
         },
@@ -184,43 +190,65 @@ class InfoStickerValueField extends StatelessWidget {
           StickerSheetNote(text: l10n.videoEditorInfoStickerWeatherNow),
         Padding(
           padding: const .symmetric(horizontal: 16),
-          child: Row(
-            spacing: 12,
-            children: [
-              Expanded(
-                child: _NumberField(
-                  value: value,
-                  label: isWeather
-                      ? l10n.videoEditorInfoStickerTemperatureLabel
-                      : l10n.videoEditorInfoStickerAltitude,
-                  onChanged: isWeather
-                      ? cubit.temperatureEntered
-                      : cubit.altitudeEntered,
-                ),
-              ),
-              Semantics(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final label = isWeather
+                  ? l10n.videoEditorInfoStickerTemperatureLabel
+                  : l10n.videoEditorInfoStickerAltitude;
+              final units = isWeather ? const ['°C', '°F'] : const ['m', 'ft'];
+              final field = _NumberField(
+                value: value,
+                label: label,
+                onChanged: isWeather
+                    ? cubit.temperatureEntered
+                    : cubit.altitudeEntered,
+              );
+              final chips = Semantics(
                 label: l10n.videoEditorInfoStickerUnitLabel,
                 container: true,
                 child: Row(
-                  spacing: 8,
+                  mainAxisSize: .min,
+                  spacing: _chipGap,
                   children: [
-                    for (final second in [false, true])
+                    for (final (index, unit) in units.indexed)
                       StickerChoiceChip(
-                        label: switch ((isWeather, second)) {
-                          (true, false) => '°C',
-                          (true, true) => '°F',
-                          (false, false) => 'm',
-                          (false, true) => 'ft',
-                        },
-                        selected: usesSecondUnit == second,
+                        label: unit,
+                        selected: usesSecondUnit == (index == 1),
                         onTap: () => isWeather
-                            ? cubit.useFahrenheitChanged(second)
-                            : cubit.useFeetChanged(second),
+                            ? cubit.useFahrenheitChanged(index == 1)
+                            : cubit.useFeetChanged(index == 1),
                       ),
                   ],
                 ),
-              ),
-            ],
+              );
+              final chipsWidth =
+                  units.fold(
+                    0.0,
+                    (sum, unit) =>
+                        sum + StickerChoiceChip.widthOf(context, unit),
+                  ) +
+                  _chipGap * (units.length - 1);
+              final fieldWidth = constraints.maxWidth - _fieldGap - chipsWidth;
+              // With large text the label would be cut beside the units,
+              // so they move under the field.
+              if (stickerFieldWidthFor(context, label) > fieldWidth) {
+                return Column(
+                  crossAxisAlignment: .start,
+                  spacing: 8,
+                  children: [
+                    SizedBox(width: constraints.maxWidth, child: field),
+                    chips,
+                  ],
+                );
+              }
+              return Row(
+                spacing: _fieldGap,
+                children: [
+                  Expanded(child: field),
+                  chips,
+                ],
+              );
+            },
           ),
         ),
         StickerSheetNote(text: l10n.videoEditorInfoStickerMetAttribution),
@@ -243,29 +271,44 @@ class InfoStickerDayCountFields extends StatelessWidget {
     );
     final cubit = context.read<InfoStickerCubit>();
     final l10n = context.l10n;
+    final dayField = _NumberField(
+      value: day,
+      label: l10n.videoEditorInfoStickerDayLabel,
+      signed: false,
+      textInputAction: .next,
+      onChanged: cubit.dayNumberEntered,
+    );
+    final totalField = _NumberField(
+      value: total,
+      label: l10n.videoEditorInfoStickerDayTotalLabel,
+      signed: false,
+      onChanged: cubit.dayTotalEntered,
+    );
     return Padding(
       padding: const .symmetric(horizontal: 16),
-      child: Row(
-        spacing: 12,
-        children: [
-          Expanded(
-            child: _NumberField(
-              value: day,
-              label: l10n.videoEditorInfoStickerDayLabel,
-              signed: false,
-              textInputAction: .next,
-              onChanged: cubit.dayNumberEntered,
-            ),
-          ),
-          Expanded(
-            child: _NumberField(
-              value: total,
-              label: l10n.videoEditorInfoStickerDayTotalLabel,
-              signed: false,
-              onChanged: cubit.dayTotalEntered,
-            ),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final half = (constraints.maxWidth - _fieldGap) / 2;
+          final fitSideBySide = [dayField, totalField].every(
+            (field) => stickerFieldWidthFor(context, field.label) <= half,
+          );
+          // A label too long for half the width would be cut, so the fields
+          // stack instead.
+          if (!fitSideBySide) {
+            return Column(
+              crossAxisAlignment: .stretch,
+              spacing: 8,
+              children: [dayField, totalField],
+            );
+          }
+          return Row(
+            spacing: _fieldGap,
+            children: [
+              Expanded(child: dayField),
+              Expanded(child: totalField),
+            ],
+          );
+        },
       ),
     );
   }
@@ -421,6 +464,12 @@ class InfoStickerWeatherChoice extends StatelessWidget {
 
 /// How large an emoji is in front of a chip's label.
 const double _chipEmojiSize = 24;
+
+/// The gap between two fields side by side, or a field and its units.
+const double _fieldGap = 12;
+
+/// The gap between two unit chips.
+const double _chipGap = 8;
 
 /// How the lookup of the sun times, which cannot be typed, is going, and the
 /// time zone they are in.

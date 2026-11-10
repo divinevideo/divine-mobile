@@ -79,6 +79,37 @@ void main() {
       return results;
     }
 
+    group('renders', () {
+      testWidgets('the line being typed in whole above the button', (
+        tester,
+      ) async {
+        // An iPhone SE with its keyboard up, at the largest iOS text size.
+        tester.view.physicalSize = const Size(375, 667);
+        tester.view.devicePixelRatio = 1;
+        tester.view.viewInsets = const FakeViewPadding(bottom: 260);
+        tester.platformDispatcher.textScaleFactorTestValue = 3.12;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpSheet(
+          tester,
+          initial: SocialStickerData.poll(SocialStickerKind.poll),
+        );
+        // The question has the keyboard as the sheet opens.
+        final field = find.byType(EditableText).first;
+        await tester.showKeyboard(field);
+        await tester.pumpAndSettle();
+
+        final options = tester.getRect(
+          find
+              .ancestor(of: field, matching: find.byType(SingleChildScrollView))
+              .first,
+        );
+        final fieldRect = tester.getRect(field);
+        expect(fieldRect.top, greaterThanOrEqualTo(options.top));
+        expect(fieldRect.bottom, lessThanOrEqualTo(options.bottom));
+      });
+    });
+
     group('interactions', () {
       testWidgets('adds the hashtag picked from the suggestions', (
         tester,

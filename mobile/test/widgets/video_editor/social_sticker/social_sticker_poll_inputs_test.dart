@@ -3,6 +3,7 @@
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -12,11 +13,85 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_poll_inputs.dart';
 
+import '../../../helpers/text_lines.dart';
+
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
 
 void main() {
   group(SocialStickerPollFields, () {
+    group('renders on a small phone with large German text', () {
+      final l10n = lookupAppLocalizations(const Locale('de'));
+
+      Future<void> pumpFields(
+        WidgetTester tester,
+        SocialStickerData initial,
+      ) async {
+        tester.view.physicalSize = const Size(360, 640);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final cubit = SocialStickerCubit(
+          initial: initial,
+          blocklistRepository: _MockContentBlocklistRepository(),
+        );
+        addTearDown(cubit.close);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: VineTheme.theme,
+            locale: const Locale('de'),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: BlocProvider.value(
+                value: cubit,
+                child: const SingleChildScrollView(
+                  child: SocialStickerPollFields(),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      bool isCut(WidgetTester tester, String text) => tester
+          .renderObject<RenderParagraph>(find.text(text))
+          .didExceedMaxLines;
+
+      testWidgets(
+        "each quiz answer's label whole beside or under its buttons",
+        (
+          tester,
+        ) async {
+          await pumpFields(
+            tester,
+            SocialStickerData.poll(
+              SocialStickerKind.quiz,
+            ).copyWith(pollOptions: const ['', '', '', '']),
+          );
+
+          for (final answer in ['1', '2', '3', '4']) {
+            final label = l10n.videoEditorSocialStickerPollOptionHint(answer);
+            expect(isCut(tester, label), isFalse, reason: label);
+          }
+        },
+      );
+
+      testWidgets('the add answer button with its label whole', (
+        tester,
+      ) async {
+        await pumpFields(
+          tester,
+          SocialStickerData.poll(SocialStickerKind.poll),
+        );
+
+        final label = l10n.videoEditorSocialStickerPollAddOption;
+        expect(isCut(tester, label), isFalse);
+        expect(wordsSplitAcrossLines(tester, find.text(label)), isEmpty);
+      });
+    });
+
     group('interactions', () {
       testWidgets('Next goes from the question through every answer of a '
           'quiz, past the buttons beside them', (tester) async {

@@ -100,12 +100,18 @@ class SocialStickerSheet extends StatelessWidget {
       (SocialStickerCubit cubit) => cubit.state.data.kind,
     );
     // The options scroll on a short screen, between the preview above them
-    // and the button below them.
+    // and the button below them. While the keyboard is up the preview
+    // scrolls with them, so the field being typed in has the room.
+    final isTyping = MediaQuery.viewInsetsOf(context).bottom > 0;
+    const preview = Padding(
+      padding: .symmetric(horizontal: 16),
+      child: _Preview(),
+    );
     return Column(
       mainAxisSize: .min,
       crossAxisAlignment: .stretch,
       children: [
-        const Padding(padding: .fromLTRB(16, 8, 16, 0), child: _Preview()),
+        if (!isTyping) const Padding(padding: .only(top: 8), child: preview),
         Flexible(
           child: SingleChildScrollView(
             padding: const .symmetric(vertical: 16),
@@ -114,6 +120,7 @@ class SocialStickerSheet extends StatelessWidget {
               crossAxisAlignment: .stretch,
               spacing: 16,
               children: [
+                if (isTyping) preview,
                 ...switch (kind) {
                   SocialStickerKind.mention => const [SocialStickerPersonRow()],
                   SocialStickerKind.hashtag => [
@@ -167,8 +174,8 @@ class _Preview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final data = context.select((SocialStickerCubit cubit) => cubit.state.data);
-    // Smaller while the keyboard is up, so the field and what is suggested
-    // below it still fit above the button.
+    // Smaller while the keyboard is up, so less has to scroll away above the
+    // field and what is suggested below it.
     final isTyping = MediaQuery.viewInsetsOf(context).bottom > 0;
     return SizedBox(
       height: isTyping ? 72 : 140,
@@ -183,10 +190,13 @@ class _Preview extends StatelessWidget {
               ? FittedBox(child: SocialStickerView(data: data))
               // Nothing to show yet: a person, hashtag or address is to come.
               : Center(
-                  child: Text(
-                    context.l10n.socialStickerKindLabel(data.kind),
-                    style: VineTheme.titleMediumFont(
-                      color: VineTheme.whiteText.withValues(alpha: 0.6),
+                  child: FittedBox(
+                    fit: .scaleDown,
+                    child: Text(
+                      context.l10n.socialStickerKindLabel(data.kind),
+                      style: VineTheme.titleMediumFont(
+                        color: VineTheme.whiteText.withValues(alpha: 0.6),
+                      ),
                     ),
                   ),
                 ),
@@ -209,9 +219,8 @@ class _ConfirmButton extends StatelessWidget {
       (SocialStickerCubit cubit) => (cubit.state.data, cubit.state.canConfirm),
     );
     final l10n = context.l10n;
-    return DivineButton(
+    return StickerSheetButton(
       label: isNew ? l10n.videoEditorInfoStickerAdd : l10n.videoEditorDoneLabel,
-      expanded: true,
       onPressed: canConfirm ? () => Navigator.of(context).pop(data) : null,
     );
   }

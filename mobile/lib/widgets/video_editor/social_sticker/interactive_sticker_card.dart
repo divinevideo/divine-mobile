@@ -9,6 +9,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/sticker_text_scope.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/poll_sticker_card.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -119,41 +120,44 @@ class InteractiveStickerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: interactiveCardColor,
-        borderRadius: BorderRadius.circular(pollCardRadius),
-        boxShadow: overFrames
-            ? null
-            : const [
-                BoxShadow(
-                  color: VineTheme.scrim15,
-                  blurRadius: 40,
-                  offset: Offset(0, 12),
-                ),
-              ],
-      ),
-      child: Padding(
-        padding: const .all(pollCardPadding),
-        child: SizedBox(
-          width: pollCardContentWidth,
-          child: switch (data.kind) {
-            SocialStickerKind.question => _Question(
-              data: data,
-              onAnswer: onAnswer,
-            ),
-            SocialStickerKind.addYours => _AddYours(
-              data: data,
-              responses: responses,
-              onJoin: onJoin,
-              onOpenResponses: onOpenResponses,
-            ),
-            _ => _Replies(
-              data: data,
-              responses: responses,
-              onOpen: onOpenResponses,
-            ),
-          },
+    // The player builds the card without the sticker view around it.
+    return StickerTextScope(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: interactiveCardColor,
+          borderRadius: BorderRadius.circular(pollCardRadius),
+          boxShadow: overFrames
+              ? null
+              : const [
+                  BoxShadow(
+                    color: VineTheme.scrim15,
+                    blurRadius: 40,
+                    offset: Offset(0, 12),
+                  ),
+                ],
+        ),
+        child: Padding(
+          padding: const .all(pollCardPadding),
+          child: SizedBox(
+            width: pollCardContentWidth,
+            child: switch (data.kind) {
+              SocialStickerKind.question => _Question(
+                data: data,
+                onAnswer: onAnswer,
+              ),
+              SocialStickerKind.addYours => _AddYours(
+                data: data,
+                responses: responses,
+                onJoin: onJoin,
+                onOpenResponses: onOpenResponses,
+              ),
+              _ => _Replies(
+                data: data,
+                responses: responses,
+                onOpen: onOpenResponses,
+              ),
+            },
+          ),
         ),
       ),
     );

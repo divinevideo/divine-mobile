@@ -18,8 +18,12 @@ class InfoStickerKindRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context);
     final use24HourFormat = MediaQuery.alwaysUse24HourFormatOf(context);
+    final l10n = context.l10n;
     return SizedBox(
-      height: 112,
+      height: StickerKindTile.rowHeightOf(context, [
+        for (final kind in InfoStickerKind.values)
+          l10n.infoStickerKindLabel(kind),
+      ]),
       child: ListView.separated(
         scrollDirection: .horizontal,
         padding: const .symmetric(horizontal: 16),
@@ -28,7 +32,7 @@ class InfoStickerKindRow extends StatelessWidget {
         itemBuilder: (context, index) {
           final kind = InfoStickerKind.values[index];
           return StickerKindTile(
-            label: context.l10n.infoStickerKindLabel(kind),
+            label: l10n.infoStickerKindLabel(kind),
             onTap: () => context.pop(kind),
             child: InfoStickerView(
               data: _sample(context, kind, locale, use24HourFormat),

@@ -115,12 +115,18 @@ class _DesignStep extends StatelessWidget {
       (InfoStickerCubit cubit) => cubit.state.data.kind,
     );
     // The options scroll on a short screen, between the preview above them
-    // and the button below them.
+    // and the button below them. While the keyboard is up the preview
+    // scrolls with them, so the field being typed in has the room.
+    final isTyping = MediaQuery.viewInsetsOf(context).bottom > 0;
+    const preview = Padding(
+      padding: .symmetric(horizontal: 16),
+      child: _Preview(),
+    );
     return Column(
       mainAxisSize: .min,
       crossAxisAlignment: .stretch,
       children: [
-        const Padding(padding: .fromLTRB(16, 8, 16, 0), child: _Preview()),
+        if (!isTyping) const Padding(padding: .only(top: 8), child: preview),
         Flexible(
           child: SingleChildScrollView(
             padding: const .symmetric(vertical: 16),
@@ -129,6 +135,7 @@ class _DesignStep extends StatelessWidget {
               crossAxisAlignment: .stretch,
               spacing: 16,
               children: [
+                if (isTyping) preview,
                 if (kind.searchesPlace) const InfoStickerPlaceRow(),
                 const InfoStickerStylePicker(),
                 ...switch (kind) {
@@ -198,10 +205,13 @@ class _Preview extends StatelessWidget {
             ),
             // Nothing to show yet: a value is still to be entered.
             (false, false) => Center(
-              child: Text(
-                context.l10n.infoStickerKindLabel(data.kind),
-                style: VineTheme.titleMediumFont(
-                  color: VineTheme.whiteText.withValues(alpha: 0.6),
+              child: FittedBox(
+                fit: .scaleDown,
+                child: Text(
+                  context.l10n.infoStickerKindLabel(data.kind),
+                  style: VineTheme.titleMediumFont(
+                    color: VineTheme.whiteText.withValues(alpha: 0.6),
+                  ),
                 ),
               ),
             ),
@@ -227,9 +237,8 @@ class _ConfirmButton extends StatelessWidget {
       ),
     );
     final l10n = context.l10n;
-    return DivineButton(
+    return StickerSheetButton(
       label: isNew ? l10n.videoEditorInfoStickerAdd : l10n.videoEditorDoneLabel,
-      expanded: true,
       onPressed: data.isComplete && !isLoading
           ? () => Navigator.of(context).pop(data)
           : null,

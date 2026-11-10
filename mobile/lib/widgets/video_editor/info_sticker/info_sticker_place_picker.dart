@@ -77,23 +77,6 @@ class _InfoStickerPlacePickerState extends State<InfoStickerPlacePicker> {
               ),
             ),
             const Expanded(child: _Suggestions()),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                8,
-                16,
-                8 +
-                    (keyboard > 0
-                        ? 0
-                        : MediaQuery.viewPaddingOf(context).bottom),
-              ),
-              child: Text(
-                l10n.videoEditorInfoStickerPlacePrivacyNote,
-                style: VineTheme.bodySmallFont(
-                  color: context.vineColors.onSurfaceMuted,
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -123,35 +106,51 @@ class _Suggestions extends StatelessWidget {
         l10n.videoEditorInfoStickerPlaceNoResults,
       _ => null,
     };
-    if (message != null) {
-      return Padding(
-        padding: const .all(16),
-        child: Text(
-          message,
-          style: VineTheme.bodyMediumFont(
-            color: search.status == InfoStickerPlaceSearchStatus.failure
-                ? context.vineColors.accentWarning
-                : context.vineColors.onSurfaceMuted,
-          ),
-        ),
-      );
-    }
-    // The rows are list tiles, which paint on the nearest Material; the
-    // sheet's own background would hide their highlight.
+    // The privacy note ends the list, at the foot of the step while the
+    // list is short, so that it scrolls away with large text instead of
+    // taking the suggestions' room. The rows are list tiles, which paint on
+    // the nearest Material; the sheet's own background would hide their
+    // highlight.
     return Material(
       type: .transparency,
-      child: ListView.builder(
+      child: CustomScrollView(
         keyboardDismissBehavior: .onDrag,
-        itemCount: search.places.length,
-        itemBuilder: (context, index) {
-          final place = search.places[index];
-          return DivineSelectableRow(
-            title: place.name,
-            subtitle: place.detail,
-            isSelected: place == picked,
-            onTap: () => _pick(context, place),
-          );
-        },
+        slivers: [
+          if (message != null)
+            SliverPadding(
+              padding: const .all(16),
+              sliver: SliverToBoxAdapter(
+                child: Text(
+                  message,
+                  style: VineTheme.bodyMediumFont(
+                    color: search.status == InfoStickerPlaceSearchStatus.failure
+                        ? context.vineColors.accentWarning
+                        : context.vineColors.onSurfaceMuted,
+                  ),
+                ),
+              ),
+            )
+          else
+            SliverList.builder(
+              itemCount: search.places.length,
+              itemBuilder: (context, index) {
+                final place = search.places[index];
+                return DivineSelectableRow(
+                  title: place.name,
+                  subtitle: place.detail,
+                  isSelected: place == picked,
+                  onTap: () => _pick(context, place),
+                );
+              },
+            ),
+          const SliverFillRemaining(
+            hasScrollBody: false,
+            child: Align(
+              alignment: .bottomCenter,
+              child: _PrivacyNote(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -165,6 +164,31 @@ class _Suggestions extends StatelessWidget {
       'look up the info sticker value for a place',
       logName: 'InfoStickerPlacePicker',
       category: LogCategory.video,
+    );
+  }
+}
+
+/// Tells the creator that only the place's name goes into the video; clear
+/// of the system bar while the keyboard is down.
+class _PrivacyNote extends StatelessWidget {
+  const _PrivacyNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        8,
+        16,
+        8 + (keyboard > 0 ? 0 : MediaQuery.viewPaddingOf(context).bottom),
+      ),
+      child: Text(
+        context.l10n.videoEditorInfoStickerPlacePrivacyNote,
+        style: VineTheme.bodySmallFont(
+          color: context.vineColors.onSurfaceMuted,
+        ),
+      ),
     );
   }
 }
