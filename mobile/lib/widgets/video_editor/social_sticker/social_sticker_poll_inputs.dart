@@ -145,6 +145,9 @@ class _SocialStickerPollFieldsState extends State<SocialStickerPollFields> {
             child: _AnswerRow(
               labels: labels,
               field: DivineTextField(
+                // Keep the input connection when the responsive layout
+                // moves this field between a Row and a Column.
+                key: GlobalObjectKey(controller),
                 controller: controller,
                 focusNode: _focusNodes[index],
                 filled: true,

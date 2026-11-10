@@ -25,11 +25,12 @@ void main() {
 
       Future<void> pumpFields(
         WidgetTester tester,
-        SocialStickerData initial,
-      ) async {
+        SocialStickerData initial, {
+        double textScale = 2,
+      }) async {
         tester.view.physicalSize = const Size(360, 640);
         tester.view.devicePixelRatio = 1;
-        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        tester.platformDispatcher.textScaleFactorTestValue = textScale;
         addTearDown(tester.view.reset);
         addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
         final cubit = SocialStickerCubit(
@@ -89,6 +90,37 @@ void main() {
         final label = l10n.videoEditorSocialStickerPollAddOption;
         expect(isCut(tester, label), isFalse);
         expect(wordsSplitAcrossLines(tester, find.text(label)), isEmpty);
+      });
+
+      testWidgets('keeps the keyboard open when deleting an answer reflows '
+          'the remaining fields', (tester) async {
+        await pumpFields(
+          tester,
+          SocialStickerData.poll(SocialStickerKind.poll).copyWith(
+            pollOptions: const ['First', 'Second', 'Third'],
+          ),
+          textScale: 3.12,
+        );
+        final firstAnswer = find.byType(EditableText).at(1);
+        await tester.showKeyboard(firstAnswer);
+        await tester.pump();
+        expect(tester.testTextInput.isVisible, isTrue);
+
+        final removeThird = find.bySemanticsLabel(
+          l10n.videoEditorSocialStickerPollRemoveOption('3'),
+        );
+        await tester.ensureVisible(removeThird);
+        await tester.pumpAndSettle();
+        await tester.tap(removeThird);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(EditableText), findsNWidgets(3));
+        expect(tester.testTextInput.isVisible, isTrue);
+        expect(tester.testTextInput.hasAnyClients, isTrue);
+        expect(
+          tester.widget<EditableText>(firstAnswer).focusNode.hasPrimaryFocus,
+          isTrue,
+        );
       });
     });
 
