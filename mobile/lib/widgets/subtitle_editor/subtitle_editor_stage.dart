@@ -13,7 +13,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/subtitle_editor/subtitle_editor_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/subtitle_editor/timeline_frame.dart';
-import 'package:openvine/widgets/caption_pill.dart';
+import 'package:openvine/widgets/fitted_caption_pill.dart';
 import 'package:openvine/widgets/subtitle_editor/subtitle_cue_timeline.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -486,35 +486,37 @@ class _Preview extends StatelessWidget {
         onTap: onTogglePlayback,
         child: ColoredBox(
           color: context.vineColors.surfaceContainerHigh,
-          child: Center(
-            child: AspectRatio(
-              aspectRatio: aspectRatio,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  DivineVideoPlayer(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Center(
+                child: AspectRatio(
+                  aspectRatio: aspectRatio,
+                  child: DivineVideoPlayer(
                     controller: controller,
                     placeholder: ColoredBox(
                       color: context.vineColors.surfaceContainerHigh,
                     ),
                   ),
-                  _LiveCue(position: position, cues: cues),
-                  if (!isPlaying)
-                    Center(
-                      // Duplicates the surrounding tap target on purpose: the
-                      // whole picture toggles playback, this is what says so.
-                      child: ExcludeSemantics(
-                        child: DivineIconButton(
-                          icon: .play,
-                          type: .ghost,
-                          semanticLabel: l10n.subtitleEditorPlayPreview,
-                          onPressed: onTogglePlayback,
-                        ),
-                      ),
-                    ),
-                ],
+                ),
               ),
-            ),
+              // Over the whole preview, not just the picture: a portrait
+              // video on a small phone is too narrow to hold a line of text.
+              _LiveCue(position: position, cues: cues),
+              if (!isPlaying)
+                Center(
+                  // Duplicates the surrounding tap target on purpose: the
+                  // whole picture toggles playback, this is what says so.
+                  child: ExcludeSemantics(
+                    child: DivineIconButton(
+                      icon: .play,
+                      type: .ghost,
+                      semanticLabel: l10n.subtitleEditorPlayPreview,
+                      onPressed: onTogglePlayback,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
@@ -543,15 +545,12 @@ class _LiveCue extends StatelessWidget {
             .where((cue) => cue.text.trim().isNotEmpty)
             .firstOrNull;
         if (live == null) return const SizedBox.shrink();
-        return Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            // Silent to screen readers: the same text is announced by the
-            // cue's own row below, and merging it here would garble the
-            // preview's play/pause label.
-            child: ExcludeSemantics(child: CaptionPill(text: live.text)),
-          ),
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          // Silent to screen readers: the same text is announced by the
+          // cue's own row below, and merging it here would garble the
+          // preview's play/pause label.
+          child: ExcludeSemantics(child: FittedCaptionPill(text: live.text)),
         );
       },
     );
