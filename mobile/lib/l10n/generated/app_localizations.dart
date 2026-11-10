@@ -14609,7 +14609,7 @@ abstract class AppLocalizations {
   /// **'New'**
   String get commentsSortNew;
 
-  /// Comments-sort toggle label for engagement-weighted order.
+  /// Comments-sort toggle label for highest net vote score first.
   ///
   /// In en, this message translates to:
   /// **'Top'**

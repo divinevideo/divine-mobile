@@ -6230,7 +6230,7 @@
   },
   "commentsSortTop": "Top",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortOld": "Old",
   "@commentsSortOld": {

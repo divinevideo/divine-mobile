@@ -150,10 +150,12 @@ class CommentsTitle extends StatelessWidget {
                 NewCommentsPill(
                   count: state.newCommentCount,
                   onTap: () {
-                    onNewCommentsPillTap();
-                    context.read<CommentsListBloc>().add(
-                      const NewCommentsAcknowledged(),
+                    final bloc = context.read<CommentsListBloc>();
+                    bloc.add(
+                      const CommentsSortModeChanged(CommentsSortMode.newest),
                     );
+                    onNewCommentsPillTap();
+                    bloc.add(const NewCommentsAcknowledged());
                   },
                 ),
             ],

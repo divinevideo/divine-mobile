@@ -15,14 +15,12 @@ import 'package:unified_logger/unified_logger.dart';
 part 'feed_top_comment_state.dart';
 
 /// Loads one video's comments and their vote counts, and selects the one with
-/// the highest [commentEngagementScore], the score behind the comments sheet's
-/// Top ordering. Ties go to the newer comment, so the most recent one wins
-/// when none has an upvote or a reply. Text replies are ranked too, unlike
-/// the sheet, which nests them under their parent. The creator's own comments,
-/// video replies, blank comments, pending placeholders and comments dated more
-/// than [maxFutureSkew] ahead are not candidates.
-/// Creator-hidden comments are excluded before votes and reply counts are
-/// ranked, using the same author-view exception as the comments sheet.
+/// the highest net vote score, using the comments sheet's Top comparator.
+/// Ties go to the newer comment. Text replies are also candidates for the
+/// overlay. The creator's own comments, video replies, blank comments, pending
+/// placeholders and comments dated more than [maxFutureSkew] ahead are excluded.
+/// Creator-hidden comments are excluded using the same author-view
+/// exception as the comments sheet.
 ///
 /// The overlay shows once the video has finished its first loop and the top
 /// comment is known, whichever happens last, and stays hidden after the
@@ -66,8 +64,7 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
   static const commentPageSize = 50;
 
   /// Tolerated author clock skew. `created_at` is author-signed, so a comment
-  /// dated further ahead is implausible: it would rank as the newest comment
-  /// for as long as it stays ahead, and past two hours its score breaks.
+  /// dated further ahead could win a tie until its timestamp catches up.
   static const maxFutureSkew = Duration(minutes: 5);
 
   final CommentsRepository _commentsRepository;
@@ -148,7 +145,7 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
       return;
     }
 
-    final upvotes = await _upvoteCounts(candidates);
+    final votes = await _voteCounts(candidates);
     if (isClosed) return;
 
     // A relevant cache change while the network reads were in flight is
@@ -168,10 +165,12 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
       );
       return;
     }
-    final top = _topComment(
-      visibleCandidates,
-      comments.where((comment) => _isVisible(comment, moderation)).toList(),
-      upvotes,
+    final compare = commentVoteComparator(
+      upvoteCounts: votes.upvotes,
+      downvoteCounts: votes.downvotes,
+    );
+    final top = visibleCandidates.reduce(
+      (best, comment) => compare(comment, best) < 0 ? comment : best,
     );
     emitIfOpen(
       state.copyWith(
@@ -222,17 +221,17 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
     emitIfOpen(state.copyWith(hasCompletedLoop: true));
   }
 
-  /// Upvote counts per comment id. A failed fetch ranks by replies and age
-  /// alone rather than hiding the reaction.
-  Future<Map<String, int>> _upvoteCounts(List<Comment> comments) async {
+  /// A failed fetch gives every comment zero votes so ties fall back to recency.
+  Future<({Map<String, int> upvotes, Map<String, int> downvotes})> _voteCounts(
+    List<Comment> comments,
+  ) async {
     try {
-      final counts = await _likesRepository.getVoteCounts(
+      return await _likesRepository.getVoteCounts(
         [for (final comment in comments) comment.id],
         addressableIds: {
           for (final comment in comments) comment.id: ?comment.addressableId,
         },
       );
-      return counts.upvotes;
     } on LikesRepositoryException catch (error, stackTrace) {
       addError(error, stackTrace);
       Log.warning(
@@ -242,42 +241,14 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
         error: error,
         stackTrace: stackTrace,
       );
-      return const {};
+      return const (upvotes: <String, int>{}, downvotes: <String, int>{});
     } catch (error, stackTrace) {
       addError(
-        Reportable(error, context: 'FeedTopCommentCubit._upvoteCounts'),
+        Reportable(error, context: 'FeedTopCommentCubit._voteCounts'),
         stackTrace,
       );
-      return const {};
+      return const (upvotes: <String, int>{}, downvotes: <String, int>{});
     }
-  }
-
-  /// The candidate with the highest [commentEngagementScore]; equal scores go
-  /// to the newer comment, so a lone comment is always shown.
-  Comment _topComment(
-    List<Comment> candidates,
-    List<Comment> allComments,
-    Map<String, int> upvotes,
-  ) {
-    final now = _now();
-    final replyCounts = computeReplyCounts({
-      for (final comment in allComments) comment.id: comment,
-    });
-    double score(Comment comment) => commentEngagementScore(
-      comment: comment,
-      now: now,
-      likeCounts: upvotes,
-      replyCounts: replyCounts,
-    );
-
-    return candidates.reduce((best, comment) {
-      final bestScore = score(best);
-      final commentScore = score(comment);
-      if (commentScore != bestScore) {
-        return commentScore > bestScore ? comment : best;
-      }
-      return comment.createdAt.isAfter(best.createdAt) ? comment : best;
-    });
   }
 
   void _fail(Object error, StackTrace stackTrace, {required bool isExpected}) {

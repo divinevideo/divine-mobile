@@ -96,15 +96,16 @@ void main() {
       );
     }
 
-    void stubUpvotes(Map<String, int> upvotes) {
+    void stubUpvotes(
+      Map<String, int> upvotes, {
+      Map<String, int> downvotes = const {},
+    }) {
       when(
         () => likesRepository.getVoteCounts(
           any(),
           addressableIds: any(named: 'addressableIds'),
         ),
-      ).thenAnswer(
-        (_) async => (upvotes: upvotes, downvotes: const <String, int>{}),
-      );
+      ).thenAnswer((_) async => (upvotes: upvotes, downvotes: downvotes));
     }
 
     FeedTopCommentCubit buildCubit({
@@ -173,24 +174,6 @@ void main() {
             addTearDown(cubit.close);
             await cubit.load();
             expect(cubit.state.topComment?.id, _alice);
-          },
-        );
-
-        test(
-          'does not count hidden replies toward visible engagement',
-          () async {
-            final hiddenId = '5' * 64;
-            stubComments([
-              _comment(_alice),
-              _comment(hiddenId, content: '', replyToEventId: _alice),
-              _comment(_bob, author: _bob),
-            ]);
-            stubUpvotes({_bob: 1});
-            stubModeration(CommentModeration(hiddenCommentIds: {hiddenId}));
-            final cubit = buildCubit(rootAddressableId: root);
-            addTearDown(cubit.close);
-            await cubit.load();
-            expect(cubit.state.topComment?.id, _bob);
           },
         );
 
@@ -319,35 +302,6 @@ void main() {
             isA<FeedTopCommentState>()
                 .having((s) => s.status, 'status', FeedTopCommentStatus.empty)
                 .having((s) => s.topComment, 'topComment', isNull),
-          ],
-        );
-
-        blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-          'does not count an author-deleted reply toward engagement',
-          setUp: () {
-            stubComments([
-              _comment(keptId),
-              _comment(
-                deletedId,
-                content: '',
-                replyToEventId: keptId,
-              ),
-              _comment(_bob),
-            ]);
-            stubUpvotes({_bob: 1});
-            when(
-              () => commentsRepository.findAuthorDeletedComments(any()),
-            ).thenAnswer((_) async => {deletedId});
-          },
-          build: buildCubit,
-          act: (cubit) => cubit.load(),
-          skip: 1,
-          expect: () => [
-            isA<FeedTopCommentState>().having(
-              (s) => s.topComment?.id,
-              'topComment',
-              _bob,
-            ),
           ],
         );
 
@@ -481,19 +435,19 @@ void main() {
       );
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-        'counts replies toward a comment like the Top ordering does',
+        'uses net votes without weighting replies',
         setUp: () {
           stubComments([
-            _comment('quiet'),
-            _comment('discussed'),
+            _comment(_alice, age: const Duration(days: 1)),
+            _comment(_bob),
             _comment(
-              'answer',
+              'e' * 64,
               content: '',
-              replyToEventId: 'discussed',
+              replyToEventId: _bob,
               replyToAuthorPubkey: _alice,
             ),
           ]);
-          stubUpvotes({'quiet': 1});
+          stubUpvotes({_alice: 1, _bob: 5}, downvotes: {_bob: 5});
         },
         build: buildCubit,
         act: (cubit) => cubit.load(),
@@ -502,19 +456,17 @@ void main() {
           isA<FeedTopCommentState>().having(
             (s) => s.topComment?.id,
             'topComment',
-            'discussed',
+            _alice,
           ),
         ],
       );
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
         'breaks a tie in favour of the newer comment',
-        // Age is scored in whole minutes, so equal votes within one minute
-        // tie and only the tie-break orders them.
         setUp: () {
           stubComments([
-            _comment('older', age: const Duration(hours: 2, seconds: 40)),
-            _comment('newer', age: const Duration(hours: 2, seconds: 10)),
+            _comment('older', age: const Duration(days: 2)),
+            _comment('newer', age: const Duration(hours: 2)),
           ]);
           stubUpvotes({'older': 1, 'newer': 1});
         },
@@ -629,7 +581,7 @@ void main() {
       );
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-        'shows the most recent comment when none has an upvote or a reply',
+        'shows the most recent comment when scores are zero',
         setUp: () {
           stubComments([
             _comment('older', age: const Duration(hours: 5)),
@@ -701,16 +653,10 @@ void main() {
       );
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-        'still ranks by replies when vote counts fail',
+        'shows the most recent comment when vote counts fail',
         setUp: () {
           stubComments([
-            _comment('discussed', age: const Duration(hours: 2)),
-            _comment(
-              'answer',
-              content: '',
-              replyToEventId: 'discussed',
-              replyToAuthorPubkey: _alice,
-            ),
+            _comment('older', age: const Duration(hours: 2)),
             _comment('newer', age: const Duration(minutes: 5)),
           ]);
           when(
@@ -727,7 +673,7 @@ void main() {
         expect: () => [
           isA<FeedTopCommentState>()
               .having((s) => s.status, 'status', FeedTopCommentStatus.ready)
-              .having((s) => s.topComment?.id, 'topComment', 'discussed'),
+              .having((s) => s.topComment?.id, 'topComment', 'newer'),
         ],
       );
 

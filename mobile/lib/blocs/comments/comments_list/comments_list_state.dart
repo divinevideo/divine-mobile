@@ -50,13 +50,13 @@ enum CommentsListError {
 
 /// Sort mode for the comments list.
 enum CommentsSortMode {
-  /// Newest comments first (default).
+  /// Newest comments first.
   newest,
 
   /// Oldest comments first.
   oldest,
 
-  /// Top engagement: scored by likes + replies with time decay.
+  /// Highest net vote score first (default).
   topEngagement,
 }
 
@@ -76,8 +76,7 @@ final class CommentsListState extends Equatable {
     this.isLoadingMore = false,
     this.hasMoreContent = true,
     this.nextOffset,
-    this.sortMode = CommentsSortMode.newest,
-    this.replyCountsByCommentId = const {},
+    this.sortMode = CommentsSortMode.topEngagement,
     this.newCommentIds = const {},
     this.isBackfillComplete = false,
     this.scrollToCommentId,
@@ -111,15 +110,11 @@ final class CommentsListState extends Equatable {
   /// Uses [Comment] from the repository layer.
   final Map<String, Comment> commentsById;
 
-  /// Pre-computed reply counts per comment ID.
-  /// Updated whenever [commentsById] changes to avoid O(n^2) in getters.
-  final Map<String, int> replyCountsByCommentId;
-
   /// Current sort mode for the comments list.
   final CommentsSortMode sortMode;
 
   /// Comments received from the real-time subscription that the user has not
-  /// yet acknowledged (scrolled to top / tapped the pill).
+  /// yet acknowledged by scrolling to the top of New or tapping the pill.
   final Set<String> newCommentIds;
 
   /// How many new comments the pill shows; see [newCommentIds].
@@ -151,11 +146,9 @@ final class CommentsListState extends Equatable {
   final bool hasMoreContent;
 
   /// Transient one-shot signal: the id of a comment the UI should scroll into
-  /// view (e.g. the local user's just-inserted reply, which nests under an
-  /// older parent and would otherwise render off-screen — #5854). Set by the
-  /// optimistic-insert handler, and by the load once [pendingFocusCommentId]
-  /// is in the list; cleared by [CommentsScrollHandled] after the UI performs
-  /// the scroll.
+  /// view, such as a just-posted comment that sorted off-screen. Set on
+  /// optimistic insertion or when the requested [pendingFocusCommentId] loads.
+  /// Cleared by [CommentsScrollHandled] for the matching comment.
   final String? scrollToCommentId;
 
   /// The comment the list was opened on, such as the one a tapped reply
@@ -240,11 +233,10 @@ final class CommentsListState extends Equatable {
   /// Returns a comparator for sorting comments based on [sortMode].
   ///
   /// For [CommentsSortMode.topEngagement] the caller must provide
-  /// [upvoteCounts] from [CommentReactionsBloc] — engagement sort spans two
-  /// blocs and is reconciled in the UI builder rather than via cross-bloc
-  /// dependency.
+  /// [upvoteCounts] and [downvoteCounts] from [CommentReactionsBloc].
   Comparator<Comment> _commentComparator({
     Map<String, int> upvoteCounts = const {},
+    Map<String, int> downvoteCounts = const {},
   }) {
     switch (sortMode) {
       case CommentsSortMode.newest:
@@ -252,32 +244,27 @@ final class CommentsListState extends Equatable {
       case CommentsSortMode.oldest:
         return (a, b) => a.createdAt.compareTo(b.createdAt);
       case CommentsSortMode.topEngagement:
-        final now = DateTime.now();
-        return (a, b) {
-          final scoreA = commentEngagementScore(
-            comment: a,
-            now: now,
-            likeCounts: upvoteCounts,
-            replyCounts: replyCountsByCommentId,
-          );
-          final scoreB = commentEngagementScore(
-            comment: b,
-            now: now,
-            likeCounts: upvoteCounts,
-            replyCounts: replyCountsByCommentId,
-          );
-          return scoreB.compareTo(scoreA);
-        };
+        return commentVoteComparator(
+          upvoteCounts: upvoteCounts,
+          downvoteCounts: downvoteCounts,
+        );
     }
   }
 
   /// All comments sorted according to [sortMode].
   ///
-  /// For [CommentsSortMode.topEngagement] pass [upvoteCounts] from
+  /// For [CommentsSortMode.topEngagement] pass both vote count maps from
   /// [CommentReactionsBloc].
-  List<Comment> commentsSortedWith({Map<String, int> upvoteCounts = const {}}) {
-    return commentsById.values.toList()
-      ..sort(_commentComparator(upvoteCounts: upvoteCounts));
+  List<Comment> commentsSortedWith({
+    Map<String, int> upvoteCounts = const {},
+    Map<String, int> downvoteCounts = const {},
+  }) {
+    return commentsById.values.toList()..sort(
+      _commentComparator(
+        upvoteCounts: upvoteCounts,
+        downvoteCounts: downvoteCounts,
+      ),
+    );
   }
 
   /// The comments the list shows ([shownCommentsById]), threaded as a flat
@@ -285,10 +272,11 @@ final class CommentsListState extends Equatable {
   ///
   /// Root comments and orphaned replies appear at depth 0; a reply to a
   /// comment the owner hid is such an orphan. For
-  /// [CommentsSortMode.topEngagement] pass [upvoteCounts] from
-  /// [CommentReactionsBloc] so the engagement scoring can complete.
+  /// [CommentsSortMode.topEngagement] pass both vote count maps from
+  /// [CommentReactionsBloc].
   List<CommentNode> threadedCommentsWith({
     Map<String, int> upvoteCounts = const {},
+    Map<String, int> downvoteCounts = const {},
   }) {
     // Build children map: parentId -> list of child comments.
     final childrenMap = <String, List<Comment>>{};
@@ -306,7 +294,10 @@ final class CommentsListState extends Equatable {
       }
     }
 
-    final sorter = _commentComparator(upvoteCounts: upvoteCounts);
+    final sorter = _commentComparator(
+      upvoteCounts: upvoteCounts,
+      downvoteCounts: downvoteCounts,
+    );
 
     // Build tree recursively.
     List<CommentNode> buildNodes(List<Comment> comments, int depth) {
@@ -348,7 +339,6 @@ final class CommentsListState extends Equatable {
     bool? hasMoreContent,
     int? nextOffset,
     CommentsSortMode? sortMode,
-    Map<String, int>? replyCountsByCommentId,
     Set<String>? newCommentIds,
     bool? isBackfillComplete,
     String? scrollToCommentId,
@@ -375,8 +365,6 @@ final class CommentsListState extends Equatable {
       hasMoreContent: hasMoreContent ?? this.hasMoreContent,
       nextOffset: nextOffset ?? this.nextOffset,
       sortMode: sortMode ?? this.sortMode,
-      replyCountsByCommentId:
-          replyCountsByCommentId ?? this.replyCountsByCommentId,
       newCommentIds: newCommentIds ?? this.newCommentIds,
       isBackfillComplete: isBackfillComplete ?? this.isBackfillComplete,
       scrollToCommentId: clearScrollTo
@@ -404,7 +392,6 @@ final class CommentsListState extends Equatable {
     hasMoreContent,
     nextOffset,
     sortMode,
-    replyCountsByCommentId,
     newCommentIds,
     isBackfillComplete,
     scrollToCommentId,

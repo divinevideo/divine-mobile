@@ -233,6 +233,38 @@ void main() {
       expect(find.text(l10n.commentsHeaderCount(1)), findsOneWidget);
     });
 
+    testWidgets('new comments pill switches from Top to New', (tester) async {
+      when(() => listBloc.state).thenReturn(
+        CommentsListState(newCommentIds: {'1' * 64}),
+      );
+      var scrolled = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: BlocProvider<CommentsListBloc>.value(
+              value: listBloc,
+              child: CommentsTitle(
+                initialCount: 1,
+                onNewCommentsPillTap: () => scrolled = true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('1 new'));
+
+      expect(scrolled, isTrue);
+      verifyInOrder([
+        () => listBloc.add(
+          const CommentsSortModeChanged(CommentsSortMode.newest),
+        ),
+        () => listBloc.add(const NewCommentsAcknowledged()),
+      ]);
+    });
+
     testWidgets('stays away while the owner hid nothing', (tester) async {
       await pumpToggle(tester, stateWith(ownerHidSomething: false));
 
@@ -532,7 +564,6 @@ void main() {
             status: CommentsStatus.success,
             commentsById: {comment.id: comment},
             hasMoreContent: false,
-            sortMode: CommentsSortMode.topEngagement,
           );
           whenListen(
             mockListBloc,

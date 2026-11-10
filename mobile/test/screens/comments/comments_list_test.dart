@@ -2,6 +2,8 @@
 // ABOUTME: Tests loading, error, empty, and data state rendering with the
 // ABOUTME: split CommentsListBloc + CommentReactionsBloc provider tree.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -298,6 +300,56 @@ void main() {
       expect(find.text('Classic Vine'), findsOneWidget);
     });
 
+    testWidgets('defaults to net votes and reorders when downvotes change', (
+      tester,
+    ) async {
+      final highest = CommentBuilder()
+          .withId('1' * 64)
+          .withCreatedAt(DateTime.utc(2026))
+          .build();
+      final runnerUp = CommentBuilder()
+          .withId('2' * 64)
+          .withCreatedAt(DateTime.utc(2026, 2))
+          .build();
+      final unvoted = CommentBuilder()
+          .withId('3' * 64)
+          .withCreatedAt(DateTime.utc(2026, 3))
+          .build();
+      final reactions = CommentReactionsState(
+        commentUpvoteCounts: {highest.id: 6, runnerUp.id: 4},
+      );
+      final updates = StreamController<CommentReactionsState>();
+      addTearDown(updates.close);
+      whenListen(mockReactionsBloc, updates.stream, initialState: reactions);
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          listState: CommentsListState(
+            rootEventId: testVideoEventId,
+            rootAuthorPubkey: testVideoAuthorPubkey,
+            status: CommentsStatus.success,
+            commentsById: {
+              highest.id: highest,
+              runnerUp.id: runnerUp,
+              unvoted.id: unvoted,
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      Iterable<String> displayedOrder() => tester
+          .widgetList<CommentItem>(find.byType(CommentItem))
+          .map((item) => item.comment.id);
+
+      expect(displayedOrder(), [highest.id, runnerUp.id, unvoted.id]);
+
+      updates.add(reactions.copyWith(commentDownvoteCounts: {highest.id: 7}));
+      await tester.pump();
+
+      expect(displayedOrder(), [runnerUp.id, unvoted.id, highest.id]);
+    });
+
     testWidgets('renders CommentItem for each comment', (tester) async {
       final comment1 = CommentBuilder()
           .withId(TestCommentIds.comment1Id)
@@ -444,12 +496,22 @@ void main() {
         // The list scrolled down to reveal the flagged comment, and the
         // one-shot scroll signal was acknowledged.
         expect(sc.offset, greaterThan(0));
-        verify(() => mockListBloc.add(const CommentsScrollHandled())).called(1);
+        verify(
+          () => mockListBloc.add(
+            any(
+              that: isA<CommentsScrollHandled>().having(
+                (event) => event.commentId,
+                'commentId',
+                target.id,
+              ),
+            ),
+          ),
+        ).called(1);
       },
     );
 
     testWidgets(
-      'reaches a flagged comment far below what the list has built',
+      'reveals a far-off post when confirmation replaces its placeholder',
       (tester) async {
         final comments = [
           for (var i = 0; i < 80; i++)
@@ -461,18 +523,27 @@ void main() {
         ];
         // Far past the build cache extent of the first frame.
         final target = comments[70];
+        final placeholder = target.copyWith(id: 'pending_comment_70');
         final base = CommentsListState(
           rootEventId: testVideoEventId,
           rootAuthorPubkey: testVideoAuthorPubkey,
           status: CommentsStatus.success,
-          commentsById: {for (final c in comments) c.id: c},
+          commentsById: {
+            for (final c in comments)
+              if (c.id != target.id) c.id: c,
+            placeholder.id: placeholder,
+          },
         );
 
         whenListen(
           mockListBloc,
           Stream.fromIterable([
             base,
-            base.copyWith(scrollToCommentId: target.id),
+            base.copyWith(scrollToCommentId: placeholder.id),
+            base.copyWith(
+              commentsById: {for (final c in comments) c.id: c},
+              scrollToCommentId: target.id,
+            ),
           ]),
           initialState: base,
         );
@@ -510,7 +581,22 @@ void main() {
         expect(shown, findsOneWidget);
         final viewport = tester.getRect(find.byType(ListView));
         expect(viewport.contains(tester.getCenter(shown)), isTrue);
-        verify(() => mockListBloc.add(const CommentsScrollHandled())).called(1);
+        verifyNever(
+          () => mockListBloc.add(
+            const CommentsScrollHandled('pending_comment_70'),
+          ),
+        );
+        verify(
+          () => mockListBloc.add(
+            any(
+              that: isA<CommentsScrollHandled>().having(
+                (event) => event.commentId,
+                'commentId',
+                target.id,
+              ),
+            ),
+          ),
+        ).called(1);
       },
     );
 
