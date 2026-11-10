@@ -1429,6 +1429,29 @@ void main() {
       );
       expect(timeline.isSeamAt(const Duration(seconds: 1)), isFalse);
     });
+
+    test('spreads two whole clips over the display axis while a wrap that '
+        'takes all of them renders', () {
+      // Each segment is scaled, its start as well as its end: the second
+      // clip starts at 750ms of the 1.5s axis, not at 1s.
+      final timeline = SeamTimeline([
+        clip('a', duration: const Duration(seconds: 1)),
+        clip('b', transition: dissolve, duration: const Duration(seconds: 1)),
+      ], TransitionSeamRenderService());
+
+      expect(
+        timeline.compositeToTimeline(const Duration(milliseconds: 500)),
+        equals(const Duration(milliseconds: 375)),
+      );
+      expect(
+        timeline.compositeToTimeline(const Duration(seconds: 1)),
+        equals(const Duration(milliseconds: 750)),
+      );
+      expect(
+        timeline.timelineToComposite(const Duration(milliseconds: 750)),
+        equals(const Duration(seconds: 1)),
+      );
+    });
   });
 
   group('enforceSeamCacheLimit', () {
