@@ -2,17 +2,21 @@
 // ABOUTME: Verifies that explicit logout clears pubkey tracking and user data
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:cache_sync/cache_sync.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart'
     show SharedPreferencesRelayStorage;
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_draft_archive.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -117,6 +121,23 @@ Future<SecureKeyContainer> _completeGeneratedKeys(
 
 class _MockUserDataCleanupService extends Mock
     implements UserDataCleanupService {}
+
+class _RetainedListArchive extends Fake implements CuratedListDraftArchive {
+  CuratedListDraftArchiveSnapshot? snapshot;
+
+  @override
+  Future<CuratedListDraftArchiveSnapshot?> readOwner(String owner) async =>
+      snapshot?.owner == owner ? snapshot : null;
+
+  @override
+  Future<void> replaceOwner(String owner, List<CuratedList> lists) async {
+    snapshot = CuratedListDraftArchiveSnapshot(
+      owner: owner,
+      revision: 'synthetic-retry-revision',
+      lists: lists,
+    );
+  }
+}
 
 /// Tracking [CacheDao] so assertions can check which invalidation surface
 /// was hit on signOut. `deletePrefixCalls` records the prefix passed for
@@ -286,6 +307,60 @@ void main() {
 
     group('session metadata and local data', () {
       setUp(prepareAuthenticatedFixture);
+
+      test(
+        'failed ordinary cleanup keeps the draft owner until archival retry',
+        () async {
+          final owner = authService.currentPublicKeyHex!;
+          final baseline = CuratedList(
+            id: 'pending-list',
+            name: 'Pending list',
+            pubkey: owner,
+            videoEventIds: ['a' * 64],
+            createdAt: DateTime.utc(2026),
+            updatedAt: DateTime.utc(2026),
+          );
+          final draft = baseline.copyWith(
+            localEditDraft: CuratedListEditDraft(
+              baseline: baseline,
+              desired: baseline.copyWith(name: 'Unsynced edit'),
+            ),
+          );
+          final raw = jsonEncode([draft.toJson()]);
+          await prefs.setString(CuratedListService.listsStorageKey, raw);
+          when(
+            () => mockCleanupService.clearUserSpecificData(
+              reason: 'explicit_logout',
+              userPubkey: owner,
+            ),
+          ).thenThrow(const CuratedListDraftArchiveException());
+
+          await expectLater(
+            authService.signOut(),
+            throwsA(isA<UserDataCleanupException>()),
+          );
+
+          expect(authService.authState, AuthState.unauthenticated);
+          expect(authService.currentIdentity, isNull);
+          expect(authService.committedAccountActivationReceipt, isNull);
+          expect(prefs.getString(CuratedListService.listsStorageKey), raw);
+          expect(prefs.getString('current_user_pubkey_hex'), owner);
+          final archive = _RetainedListArchive();
+          final retry = UserDataCleanupService(
+            prefs,
+            listDraftArchive: archive,
+          );
+          expect(retry.shouldClearDataForUser('b' * 64), isTrue);
+          await retry.clearUserSpecificData(
+            isIdentityChange: true,
+            userPubkey: owner,
+          );
+          expect(archive.snapshot, isNotNull);
+          expect(archive.snapshot!.owner, owner);
+          expect(archive.snapshot!.lists, [draft]);
+          expect(prefs.getString(CuratedListService.listsStorageKey), isNull);
+        },
+      );
 
       test('signOut should clear current_user_pubkey_hex', () async {
         // Arrange: Verify pubkey is initially stored
