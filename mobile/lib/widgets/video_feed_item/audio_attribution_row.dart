@@ -206,18 +206,36 @@ class _ContentCreditAttribution extends StatelessWidget {
   }
 }
 
+/// A display-only sound row for a video that is not published yet.
+///
+/// Whether a video gets a sound row is only settled when it is published, so
+/// a preview that must keep that space clear shows this pill in its place.
+class AudioAttributionPlaceholder extends StatelessWidget {
+  /// Creates an [AudioAttributionPlaceholder].
+  const AudioAttributionPlaceholder({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _AudioAttributionPill(
+      soundName: context.l10n.audioAttributionOriginalSound,
+    );
+  }
+}
+
 /// The attribution pill itself: music note, `Sound · Creator`, and — only when
 /// [onTap] is set — a trailing chevron and button semantics.
 class _AudioAttributionPill extends StatelessWidget {
   const _AudioAttributionPill({
     required this.soundName,
-    required this.creatorName,
+    this.creatorName,
     this.semanticLabel,
     this.onTap,
   });
 
   final String soundName;
-  final String creatorName;
+
+  /// Follows [soundName] after a dot, when there is a creator to name.
+  final String? creatorName;
 
   /// Screen-reader label for the tappable form. Null for the display-only
   /// form, where the rendered text is already the whole content.
@@ -246,7 +264,7 @@ class _AudioAttributionPill extends StatelessWidget {
           ),
           Flexible(
             child: Text(
-              '$soundName · $creatorName',
+              [soundName, ?creatorName].join(' · '),
               style: VineTheme.labelMediumFont(
                 color: VineTheme.whiteText,
               ).copyWith(shadows: [const Shadow(blurRadius: 4)]),

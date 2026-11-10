@@ -1722,7 +1722,7 @@ class _SubtitleLayerState extends State<_SubtitleLayer> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.only(bottom: videoOverlaySubtitleGap),
       child: SubtitleCueStreamPill(
         video: widget.video,
         positionStream: _positionStream,
