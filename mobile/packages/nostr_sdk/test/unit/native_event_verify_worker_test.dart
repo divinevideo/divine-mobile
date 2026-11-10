@@ -2,8 +2,10 @@
 // ABOUTME: checks to a native verifier and falls back to Dart if it breaks.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:bip340/bip340.dart' as bip340;
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
@@ -96,6 +98,36 @@ void main() {
 
           final malformed = _json(event)..['sig'] = 'zz' * 64;
 
+          expect(await worker.verify(malformed), isFalse);
+          expect(native.calls, isEmpty);
+          expect(worker.usesNativeVerifier, isTrue);
+        },
+      );
+
+      test(
+        'rejects a malformed pubkey without asking the native verifier',
+        () async {
+          final native = _RecordingVerifier();
+          final worker = NativeEventVerifyWorker(native.call);
+          addTearDown(worker.close);
+          final event = await _signedEvent('valid');
+          final pubkey = 'zz' * 32;
+
+          // Give the malformed event a matching ID so the ID check cannot
+          // reject it before it reaches the verifier.
+          final serialized = jsonEncode([
+            0,
+            pubkey,
+            event.createdAt,
+            event.kind,
+            event.tags,
+            event.content,
+          ]);
+          final malformed = _json(event)
+            ..['pubkey'] = pubkey
+            ..['id'] = sha256.convert(utf8.encode(serialized)).toString();
+
+          expect(Event.fromJson(malformed).isValid, isTrue);
           expect(await worker.verify(malformed), isFalse);
           expect(native.calls, isEmpty);
           expect(worker.usesNativeVerifier, isTrue);
