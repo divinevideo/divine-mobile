@@ -1,9 +1,9 @@
 part of 'comments_list_bloc.dart';
 
-/// A node in the comment tree, used for threaded display.
+/// A comment row and its thread depth in the current sort mode.
 ///
 /// Not part of bloc state — produced by
-/// [CommentsListState.threadedCommentsWith] on demand.
+/// [CommentsListState.displayCommentsWith] on demand.
 @immutable
 final class CommentNode {
   const CommentNode({
@@ -50,13 +50,10 @@ enum CommentsListError {
 
 /// Sort mode for the comments list.
 enum CommentsSortMode {
-  /// Newest comments first.
+  /// Recent threads first, with replies nested under their parent.
   newest,
 
-  /// Oldest comments first.
-  oldest,
-
-  /// Highest net vote score first (default).
+  /// All visible comments ranked by net votes (default).
   topEngagement,
 }
 
@@ -114,7 +111,7 @@ final class CommentsListState extends Equatable {
   final CommentsSortMode sortMode;
 
   /// Comments received from the real-time subscription that the user has not
-  /// yet acknowledged by scrolling to the top of New or tapping the pill.
+  /// yet acknowledged by scrolling to the top of Recent or tapping the pill.
   final Set<String> newCommentIds;
 
   /// How many new comments the pill shows; see [newCommentIds].
@@ -230,59 +227,28 @@ final class CommentsListState extends Equatable {
     };
   }
 
-  /// Returns a comparator for sorting comments based on [sortMode].
+  /// Visible comments in display order.
   ///
-  /// For [CommentsSortMode.topEngagement] the caller must provide
-  /// [upvoteCounts] and [downvoteCounts] from [CommentReactionsBloc].
-  Comparator<Comment> _commentComparator({
+  /// Top ranks every comment by net votes. Recent orders threads by recency
+  /// and nests replies under visible parents.
+  List<CommentNode> displayCommentsWith({
     Map<String, int> upvoteCounts = const {},
     Map<String, int> downvoteCounts = const {},
   }) {
-    switch (sortMode) {
-      case CommentsSortMode.newest:
-        return (a, b) => b.createdAt.compareTo(a.createdAt);
-      case CommentsSortMode.oldest:
-        return (a, b) => a.createdAt.compareTo(b.createdAt);
-      case CommentsSortMode.topEngagement:
-        return commentVoteComparator(
-          upvoteCounts: upvoteCounts,
-          downvoteCounts: downvoteCounts,
+    final shown = shownCommentsById;
+    if (sortMode == CommentsSortMode.topEngagement) {
+      final ranked = shown.values.toList()
+        ..sort(
+          commentVoteComparator(
+            upvoteCounts: upvoteCounts,
+            downvoteCounts: downvoteCounts,
+          ),
         );
+      return [for (final comment in ranked) CommentNode(comment: comment)];
     }
-  }
 
-  /// All comments sorted according to [sortMode].
-  ///
-  /// For [CommentsSortMode.topEngagement] pass both vote count maps from
-  /// [CommentReactionsBloc].
-  List<Comment> commentsSortedWith({
-    Map<String, int> upvoteCounts = const {},
-    Map<String, int> downvoteCounts = const {},
-  }) {
-    return commentsById.values.toList()..sort(
-      _commentComparator(
-        upvoteCounts: upvoteCounts,
-        downvoteCounts: downvoteCounts,
-      ),
-    );
-  }
-
-  /// The comments the list shows ([shownCommentsById]), threaded as a flat
-  /// display list with depth info.
-  ///
-  /// Root comments and orphaned replies appear at depth 0; a reply to a
-  /// comment the owner hid is such an orphan. For
-  /// [CommentsSortMode.topEngagement] pass both vote count maps from
-  /// [CommentReactionsBloc].
-  List<CommentNode> threadedCommentsWith({
-    Map<String, int> upvoteCounts = const {},
-    Map<String, int> downvoteCounts = const {},
-  }) {
-    // Build children map: parentId -> list of child comments.
     final childrenMap = <String, List<Comment>>{};
     final rootComments = <Comment>[];
-    final shown = shownCommentsById;
-
     for (final comment in shown.values) {
       final parentId = comment.replyToEventId;
       if (parentId == null ||
@@ -294,14 +260,10 @@ final class CommentsListState extends Equatable {
       }
     }
 
-    final sorter = _commentComparator(
-      upvoteCounts: upvoteCounts,
-      downvoteCounts: downvoteCounts,
-    );
-
-    // Build tree recursively.
+    // Build the Recent tree recursively.
     List<CommentNode> buildNodes(List<Comment> comments, int depth) {
-      final sorted = List<Comment>.from(comments)..sort(sorter);
+      final sorted = List<Comment>.from(comments)
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return sorted.map((comment) {
         final children = childrenMap[comment.id] ?? [];
         return CommentNode(

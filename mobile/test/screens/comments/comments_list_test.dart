@@ -300,55 +300,60 @@ void main() {
       expect(find.text('Classic Vine'), findsOneWidget);
     });
 
-    testWidgets('defaults to net votes and reorders when downvotes change', (
-      tester,
-    ) async {
-      final highest = CommentBuilder()
-          .withId('1' * 64)
-          .withCreatedAt(DateTime.utc(2026))
-          .build();
-      final runnerUp = CommentBuilder()
-          .withId('2' * 64)
-          .withCreatedAt(DateTime.utc(2026, 2))
-          .build();
-      final unvoted = CommentBuilder()
-          .withId('3' * 64)
-          .withCreatedAt(DateTime.utc(2026, 3))
-          .build();
-      final reactions = CommentReactionsState(
-        commentUpvoteCounts: {highest.id: 6, runnerUp.id: 4},
-      );
-      final updates = StreamController<CommentReactionsState>();
-      addTearDown(updates.close);
-      whenListen(mockReactionsBloc, updates.stream, initialState: reactions);
+    testWidgets(
+      'ranks replies with all comments and reorders when downvotes change',
+      (
+        tester,
+      ) async {
+        final highest = CommentBuilder()
+            .withId('1' * 64)
+            .withCreatedAt(DateTime.utc(2026))
+            .withReplyToEventId('2' * 64)
+            .withReplyToAuthorPubkey(testVideoAuthorPubkey)
+            .build();
+        final runnerUp = CommentBuilder()
+            .withId('2' * 64)
+            .withCreatedAt(DateTime.utc(2026, 2))
+            .build();
+        final unvoted = CommentBuilder()
+            .withId('3' * 64)
+            .withCreatedAt(DateTime.utc(2026, 3))
+            .build();
+        final reactions = CommentReactionsState(
+          commentUpvoteCounts: {highest.id: 6, runnerUp.id: 4},
+        );
+        final updates = StreamController<CommentReactionsState>();
+        addTearDown(updates.close);
+        whenListen(mockReactionsBloc, updates.stream, initialState: reactions);
 
-      await tester.pumpWidget(
-        buildTestWidget(
-          listState: CommentsListState(
-            rootEventId: testVideoEventId,
-            rootAuthorPubkey: testVideoAuthorPubkey,
-            status: CommentsStatus.success,
-            commentsById: {
-              highest.id: highest,
-              runnerUp.id: runnerUp,
-              unvoted.id: unvoted,
-            },
+        await tester.pumpWidget(
+          buildTestWidget(
+            listState: CommentsListState(
+              rootEventId: testVideoEventId,
+              rootAuthorPubkey: testVideoAuthorPubkey,
+              status: CommentsStatus.success,
+              commentsById: {
+                highest.id: highest,
+                runnerUp.id: runnerUp,
+                unvoted.id: unvoted,
+              },
+            ),
           ),
-        ),
-      );
-      await tester.pump();
+        );
+        await tester.pump();
 
-      Iterable<String> displayedOrder() => tester
-          .widgetList<CommentItem>(find.byType(CommentItem))
-          .map((item) => item.comment.id);
+        Iterable<String> displayedOrder() => tester
+            .widgetList<CommentItem>(find.byType(CommentItem))
+            .map((item) => item.comment.id);
 
-      expect(displayedOrder(), [highest.id, runnerUp.id, unvoted.id]);
+        expect(displayedOrder(), [highest.id, runnerUp.id, unvoted.id]);
 
-      updates.add(reactions.copyWith(commentDownvoteCounts: {highest.id: 7}));
-      await tester.pump();
+        updates.add(reactions.copyWith(commentDownvoteCounts: {highest.id: 7}));
+        await tester.pump();
 
-      expect(displayedOrder(), [runnerUp.id, unvoted.id, highest.id]);
-    });
+        expect(displayedOrder(), [runnerUp.id, unvoted.id, highest.id]);
+      },
+    );
 
     testWidgets('renders CommentItem for each comment', (tester) async {
       final comment1 = CommentBuilder()

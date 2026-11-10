@@ -8291,13 +8291,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get commentsVideoReplyPendingSemanticLabel => '動画返信を投稿しています';
 
   @override
-  String get commentsSortNew => '新着';
+  String get commentsSortRecent => '新着';
 
   @override
   String get commentsSortTop => '人気';
-
-  @override
-  String get commentsSortOld => '古い順';
 
   @override
   String get commentsSortSemanticLabel => 'コメントの並び替え';

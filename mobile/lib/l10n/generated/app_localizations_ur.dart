@@ -8730,13 +8730,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'آپ کا ویڈیو جواب پوسٹ ہو رہا ہے';
 
   @override
-  String get commentsSortNew => 'نئے';
+  String get commentsSortRecent => 'تازہ ترین';
 
   @override
   String get commentsSortTop => 'بہترین';
-
-  @override
-  String get commentsSortOld => 'پرانے';
 
   @override
   String get commentsSortSemanticLabel => 'تبصروں کی ترتیب';

@@ -144,7 +144,7 @@ void main() {
     }
 
     List<String> shownIds(CommentsListState state) => [
-      for (final node in state.threadedCommentsWith()) node.comment.id,
+      for (final node in state.displayCommentsWith()) node.comment.id,
     ];
 
     group('block snapshots', () {
@@ -262,7 +262,7 @@ void main() {
           expect(shownIds(bloc.state), unorderedEquals(['kind', 'reply']));
           // The orphaned reply is promoted to the top level.
           expect(
-            bloc.state.threadedCommentsWith().map((node) => node.depth),
+            bloc.state.displayCommentsWith().map((node) => node.depth),
             everyElement(0),
           );
         },
@@ -348,9 +348,11 @@ void main() {
         await pumpEventQueue();
         expect(bloc.state.showHiddenComments, isTrue);
         expect(shownIds(bloc.state), contains('harassment'));
-        // The reply nests under its parent again.
+        // The reply nests under its parent again in Recent.
+        bloc.add(const CommentsSortModeChanged(CommentsSortMode.newest));
+        await pumpEventQueue();
         expect(
-          bloc.state.threadedCommentsWith().singleWhere(
+          bloc.state.displayCommentsWith().singleWhere(
             (node) => node.comment.id == 'reply',
           ),
           isA<CommentNode>().having((node) => node.depth, 'depth', 1),

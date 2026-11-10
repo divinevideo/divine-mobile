@@ -8789,13 +8789,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nagpo-post ang iyong video reply';
 
   @override
-  String get commentsSortNew => 'Bago';
+  String get commentsSortRecent => 'Kamakailan';
 
   @override
   String get commentsSortTop => 'Top';
-
-  @override
-  String get commentsSortOld => 'Luma';
 
   @override
   String get commentsSortSemanticLabel => 'Pagkakasunod-sunod ng mga komento';

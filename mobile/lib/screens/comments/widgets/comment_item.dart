@@ -1,5 +1,5 @@
 // ABOUTME: Individual comment widget for flat list display
-// ABOUTME: Renders a single comment with author info, content, like button,
+// ABOUTME: Renders a single comment with author info, content, voting controls,
 // ABOUTME: and reply indicator. Long-press shows options (edit/delete or
 // ABOUTME: flag/block).
 
@@ -40,7 +40,7 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// Replies are distinguished by a 16px left padding and "Re: npub..." indicator.
 /// Shows author avatar, name, timestamp, and content.
-/// Includes a reply button and like button in the actions row.
+/// Includes reply and vote buttons in the actions row.
 /// Long press opens options menu for any comment:
 /// - Own comments: Edit, Delete
 /// - Other users' comments: Flag Content, Block User, and for the video
@@ -197,8 +197,7 @@ class _CommentItemState extends ConsumerState<CommentItem> {
                           ),
                         ],
                         const SizedBox(height: 12),
-                        // Show reply indicator only for orphaned
-                        // replies at depth 0
+                        // Identify the parent when this reply is shown on its own.
                         if (widget.depth == 0 &&
                             widget.comment.replyToAuthorPubkey != null &&
                             !widget.repliesToHiddenComment)
@@ -626,7 +625,10 @@ class _ActionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
+      spacing: 20,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Semantics(
           identifier: 'reply_button',
@@ -675,7 +677,6 @@ class _ActionsRow extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 20),
         _CommentVoteButtons(
           commentId: commentId,
           authorPubkey: authorPubkey,
@@ -687,10 +688,7 @@ class _ActionsRow extends StatelessWidget {
   }
 }
 
-/// Upvote/downvote buttons for a comment, using BlocSelector for efficient
-/// rebuilds.
-///
-/// Layout: [↑ arrow] [net_score] [↓ arrow]
+/// Upvote and downvote buttons with their respective counts.
 class _CommentVoteButtons extends StatelessWidget {
   const _CommentVoteButtons({
     required this.commentId,
@@ -709,102 +707,42 @@ class _CommentVoteButtons extends StatelessWidget {
     return BlocSelector<
       CommentReactionsBloc,
       CommentReactionsState,
-      ({bool isUpvoted, bool isDownvoted, int upvotes, int downvotes})
+      ({bool isUpvoted, bool isDownvoted, int? upvotes, int? downvotes})
     >(
       selector: (state) => (
         isUpvoted: state.upvotedCommentIds.contains(commentId),
         isDownvoted: state.downvotedCommentIds.contains(commentId),
-        upvotes: state.commentUpvoteCounts[commentId] ?? 0,
-        downvotes: state.commentDownvoteCounts[commentId] ?? 0,
+        upvotes: state.commentUpvoteCounts[commentId],
+        downvotes: state.commentDownvoteCounts[commentId],
       ),
       builder: (context, voteState) {
-        final netScore = voteState.upvotes - voteState.downvotes;
+        void toggle(Vote vote) {
+          context.read<CommentReactionsBloc>().add(
+            CommentVoteToggled(
+              commentId: commentId,
+              authorPubkey: authorPubkey,
+              addressableId: addressableId,
+              targetKind: targetKind,
+              vote: vote,
+            ),
+          );
+        }
 
         return Row(
           mainAxisSize: MainAxisSize.min,
+          spacing: 4,
           children: [
-            // Upvote arrow
-            Semantics(
-              identifier: 'upvote_button',
-              button: true,
-              label: voteState.isUpvoted
-                  ? context.l10n.commentRemoveUpvoteLabel
-                  : context.l10n.commentUpvoteLabel,
-              child: InkWell(
-                onTap: () {
-                  context.read<CommentReactionsBloc>().add(
-                    CommentVoteToggled(
-                      commentId: commentId,
-                      authorPubkey: authorPubkey,
-                      addressableId: addressableId,
-                      targetKind: targetKind,
-                      vote: Vote.up,
-                    ),
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  child: DivineIcon(
-                    icon: DivineIconName.arrowFatUp,
-                    size: 16,
-                    color: voteState.isUpvoted
-                        ? context.vineColors.accentPositive
-                        : context.vineColors.onSurfaceMuted,
-                  ),
-                ),
-              ),
+            _CommentVoteButton(
+              vote: Vote.up,
+              count: voteState.upvotes,
+              isSelected: voteState.isUpvoted,
+              onTap: () => toggle(Vote.up),
             ),
-            // Net score
-            if (netScore != 0)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Text(
-                  netScore.formatScore,
-                  style: VineTheme.labelMediumFont(
-                    color: voteState.isUpvoted
-                        ? context.vineColors.accentPositive
-                        : voteState.isDownvoted
-                        ? VineTheme.likeRed
-                        : context.vineColors.onSurfaceMuted,
-                  ),
-                ),
-              ),
-            // Downvote arrow
-            Semantics(
-              identifier: 'downvote_button',
-              button: true,
-              label: voteState.isDownvoted
-                  ? context.l10n.commentRemoveDownvoteLabel
-                  : context.l10n.commentDownvoteLabel,
-              child: InkWell(
-                onTap: () {
-                  context.read<CommentReactionsBloc>().add(
-                    CommentVoteToggled(
-                      commentId: commentId,
-                      authorPubkey: authorPubkey,
-                      addressableId: addressableId,
-                      targetKind: targetKind,
-                      vote: Vote.down,
-                    ),
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  child: DivineIcon(
-                    icon: DivineIconName.arrowFatDown,
-                    size: 16,
-                    color: voteState.isDownvoted
-                        ? VineTheme.likeRed
-                        : context.vineColors.onSurfaceMuted,
-                  ),
-                ),
-              ),
+            _CommentVoteButton(
+              vote: Vote.down,
+              count: voteState.downvotes,
+              isSelected: voteState.isDownvoted,
+              onTap: () => toggle(Vote.down),
             ),
           ],
         );
@@ -813,15 +751,71 @@ class _CommentVoteButtons extends StatelessWidget {
   }
 }
 
-/// Formats an [int] score with locale-aware compact suffixes.
-extension _ScoreFormatting on int {
-  String get formatScore {
-    final abs = this.abs();
-    final prefix = this < 0 ? '-' : '';
-    if (abs >= 1000) {
-      return '$prefix${CountFormatter.formatCompact(abs)}';
-    }
-    return '$this';
+class _CommentVoteButton extends StatelessWidget {
+  const _CommentVoteButton({
+    required this.vote,
+    required this.count,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final Vote vote;
+  final int? count;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final (id, icon, label, selectedColor) = switch (vote) {
+      Vote.up => (
+        'upvote_button',
+        DivineIconName.arrowFatUp,
+        isSelected ? l10n.commentRemoveUpvoteLabel : l10n.commentUpvoteLabel,
+        context.vineColors.accentPositive,
+      ),
+      Vote.down => (
+        'downvote_button',
+        DivineIconName.arrowFatDown,
+        isSelected
+            ? l10n.commentRemoveDownvoteLabel
+            : l10n.commentDownvoteLabel,
+        VineTheme.likeRed,
+      ),
+    };
+    final color = isSelected
+        ? selectedColor
+        : context.vineColors.onSurfaceMuted;
+
+    return Semantics(
+      identifier: id,
+      button: true,
+      label: label,
+      value: count?.toString(),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: ExcludeSemantics(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 4,
+              children: [
+                DivineIcon(icon: icon, size: 16, color: color),
+                if (count case final value?)
+                  Text(
+                    CountFormatter.formatCompact(
+                      value,
+                      locale: l10n.localeName,
+                    ),
+                    style: VineTheme.labelMediumFont(color: color),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -8933,13 +8933,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Răspunsul tău video se publică';
 
   @override
-  String get commentsSortNew => 'Noi';
+  String get commentsSortRecent => 'Recente';
 
   @override
   String get commentsSortTop => 'Top';
-
-  @override
-  String get commentsSortOld => 'Vechi';
 
   @override
   String get commentsSortSemanticLabel => 'Sortarea comentariilor';

@@ -8684,13 +8684,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Câu trả lời video của bạn đang được đăng';
 
   @override
-  String get commentsSortNew => 'Mới';
+  String get commentsSortRecent => 'Gần đây';
 
   @override
   String get commentsSortTop => 'Nổi bật';
-
-  @override
-  String get commentsSortOld => 'Cũ';
 
   @override
   String get commentsSortSemanticLabel => 'Sắp xếp bình luận';

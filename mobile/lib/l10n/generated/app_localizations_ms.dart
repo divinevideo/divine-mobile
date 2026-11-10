@@ -8729,13 +8729,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Balasan video anda sedang disiarkan';
 
   @override
-  String get commentsSortNew => 'Baharu';
+  String get commentsSortRecent => 'Terkini';
 
   @override
   String get commentsSortTop => 'Teratas';
-
-  @override
-  String get commentsSortOld => 'Lama';
 
   @override
   String get commentsSortSemanticLabel => 'Isihan komen';

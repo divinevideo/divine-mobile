@@ -54,7 +54,7 @@ class _CommentsListState extends State<CommentsList> {
   }
 
   void _onScroll() {
-    // Scrolling to the top of New reveals the latest comments.
+    // Scrolling to the top of Recent reveals the latest comments.
     if (!widget.scrollController.hasClients) return;
     final bloc = context.read<CommentsListBloc>();
     if (widget.scrollController.offset <= 0 &&
@@ -152,16 +152,16 @@ class _CommentsListState extends State<CommentsList> {
                 downvotes: s.commentDownvoteCounts,
               ),
               builder: (context, votes) {
-                final all = state.threadedCommentsWith(
+                final all = state.displayCommentsWith(
                   upvoteCounts: votes.upvotes,
                   downvoteCounts: votes.downvotes,
                 );
-                final threaded = widget.showVideoReplies
+                final displayed = widget.showVideoReplies
                     ? all
                     : all.where((node) => !node.comment.hasVideo).toList();
 
-                _shownIds = [for (final node in threaded) node.comment.id];
-                if (threaded.isEmpty) {
+                _shownIds = [for (final node in displayed) node.comment.id];
+                if (displayed.isEmpty) {
                   return CommentsEmptyState(
                     isClassicVine: widget.showClassicVineNotice,
                   );
@@ -176,14 +176,14 @@ class _CommentsListState extends State<CommentsList> {
                   controller: widget.scrollController,
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  itemCount: threaded.length + offset,
+                  itemCount: displayed.length + offset,
                   itemBuilder: (context, index) {
                     if (index < offset) {
                       return HiddenCommentsNotice(
                         viewerOwnsVideo: state.isViewerRootAuthor,
                       );
                     }
-                    final node = threaded[index - offset];
+                    final node = displayed[index - offset];
                     final isScrollTarget =
                         node.comment.id == state.scrollToCommentId;
                     return CommentItem(

@@ -8722,13 +8722,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ditt videosvar publiceras';
 
   @override
-  String get commentsSortNew => 'Nya';
+  String get commentsSortRecent => 'Senaste';
 
   @override
   String get commentsSortTop => 'Bästa';
-
-  @override
-  String get commentsSortOld => 'Äldsta';
 
   @override
   String get commentsSortSemanticLabel => 'Sortering av kommentarer';

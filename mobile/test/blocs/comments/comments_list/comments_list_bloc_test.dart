@@ -488,7 +488,7 @@ void main() {
           );
           return CommentsListState(
             status: CommentsStatus.success,
-            sortMode: CommentsSortMode.oldest,
+            sortMode: CommentsSortMode.newest,
             commentsById: {
               newer.id: newer,
               older.id: older,
@@ -803,12 +803,12 @@ void main() {
         'updates sortMode',
         build: createBloc,
         act: (b) =>
-            b.add(const CommentsSortModeChanged(CommentsSortMode.oldest)),
+            b.add(const CommentsSortModeChanged(CommentsSortMode.newest)),
         expect: () => [
           isA<CommentsListState>().having(
             (s) => s.sortMode,
             'sortMode',
-            CommentsSortMode.oldest,
+            CommentsSortMode.newest,
           ),
         ],
       );
@@ -834,7 +834,7 @@ void main() {
 
     group('Cross-bloc store mutation events', () {
       blocTest<CommentsListBloc, CommentsListState>(
-        'OptimisticCommentInserted adds a top-level placeholder in New '
+        'OptimisticCommentInserted adds a top-level placeholder in Recent '
         'without flagging it for scroll (#5854)',
         build: createBloc,
         seed: () => const CommentsListState(sortMode: CommentsSortMode.newest),
@@ -851,7 +851,7 @@ void main() {
         },
         verify: (b) {
           expect(b.state.commentsById.containsKey('pending_comment_1'), isTrue);
-          // In New, a top-level comment already lands at the top.
+          // In Recent, a top-level comment already lands at the top.
           expect(b.state.scrollToCommentId, isNull);
         },
       );
@@ -1091,8 +1091,8 @@ void main() {
       );
     });
 
-    group('threadedCommentsWith', () {
-      test('sorts newest first when New is selected', () {
+    group('displayCommentsWith', () {
+      test('sorts newest first when Recent is selected', () {
         final older = makeComment(
           validId('c1'),
           createdAt: DateTime.fromMillisecondsSinceEpoch(1000),
@@ -1105,7 +1105,7 @@ void main() {
           commentsById: {older.id: older, newer.id: newer},
           sortMode: CommentsSortMode.newest,
         );
-        final threaded = state.threadedCommentsWith();
+        final threaded = state.displayCommentsWith();
         expect(threaded.first.comment.id, validId('c2'));
         expect(threaded.last.comment.id, validId('c1'));
       });
@@ -1116,7 +1116,7 @@ void main() {
         final state = CommentsListState(
           commentsById: {low.id: low, high.id: high},
         );
-        final threaded = state.threadedCommentsWith(
+        final threaded = state.displayCommentsWith(
           upvoteCounts: {low.id: 10, high.id: 3},
           downvoteCounts: {low.id: 8},
         );
@@ -1133,8 +1133,9 @@ void main() {
         );
         final state = CommentsListState(
           commentsById: {parent.id: parent, reply.id: reply},
+          sortMode: CommentsSortMode.newest,
         );
-        final threaded = state.threadedCommentsWith();
+        final threaded = state.displayCommentsWith();
         expect(threaded.length, 2);
         expect(threaded[0].depth, 0);
         expect(threaded[1].depth, 1);

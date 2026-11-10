@@ -508,8 +508,9 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     OptimisticCommentInserted event,
     Emitter<CommentsListState> emit,
   ) {
-    // Replies can nest off-screen (#5854), and a top-level post can sort
-    // below other comments in Top or Old. In New it lands at the top.
+    // A post can rank below other comments in Top. In Recent a new
+    // top-level post lands at the top, while replies can nest off-screen
+    // under an older parent (#5854).
     final updated = {
       ...state.commentsById,
       event.placeholder.id: event.placeholder,

@@ -51,13 +51,8 @@ class CommentReactionsBloc
       _onVoteToggled,
       transformer: sequentialByKey((event) => event.commentId),
     );
-    // restartable(): on a fast comment stream the UI bridge dispatches a
-    // fetch for each new id batch. Without this, a slow earlier fetch
-    // returning after a newer one could clobber the fresher counts.
-    on<CommentVoteCountsFetchRequested>(
-      _onVoteCountsFetchRequested,
-      transformer: restartable(),
-    );
+    // Disjoint batches load concurrently. The handler deduplicates pending ids.
+    on<CommentVoteCountsFetchRequested>(_onVoteCountsFetchRequested);
     // sequential(): every block republishes the whole kind 10000 mute list,
     // so two at once would race to replace it; each block still runs (#8168).
     on<CommentBlockUserRequested>(
@@ -80,6 +75,13 @@ class CommentReactionsBloc
   final ContentBlocklistRepository _contentBlocklistRepository;
   final String _rootEventId;
   final String? _rootAddressableId;
+
+  // A pending read may finish after the viewer changes their vote. Keep the
+  // read in flight for deduplication, while ignoring its stale result.
+  final _voteReads = <String, bool>{};
+  final _publishingVotes = <String>{};
+  final _confirmedLocalVotes = <String>{};
+  final _voteRefreshAfterPublish = <String, CommentVoteCountsFetchRequested>{};
 
   /// Logs [error] to the unified log and forwards through [addError]. Wraps
   /// with [Reportable] (matrix-YES → Crashlytics) when [error] is not one of
@@ -139,59 +141,93 @@ class CommentReactionsBloc
     CommentVoteCountsFetchRequested event,
     Emitter<CommentReactionsState> emit,
   ) async {
-    if (event.commentIds.isEmpty) return;
+    final commentIds = <String>[];
+    for (final id in event.commentIds) {
+      if (_voteReads.containsKey(id)) continue;
+      _voteReads[id] = !_publishingVotes.contains(id);
+      commentIds.add(id);
+    }
+    if (commentIds.isEmpty) return;
 
-    try {
-      final results = await Future.wait([
-        _likesRepository.getVoteCounts(
-          event.commentIds,
-          addressableIds: event.addressableIdsByCommentId,
-        ),
-        _likesRepository.getUserVoteStatuses(
-          event.commentIds,
-          addressableIds: event.addressableIdsByCommentId,
-        ),
-      ]);
+    bool canApply(String id) => _voteReads[id] == true;
 
-      final voteCounts =
-          results[0]
-              as ({Map<String, int> upvotes, Map<String, int> downvotes});
-      final voteStatuses =
-          results[1] as ({Set<String> upvotedIds, Set<String> downvotedIds});
+    Future<void> loadCounts() async {
+      final counts = await _likesRepository.getVoteCounts(
+        commentIds,
+        addressableIds: event.addressableIdsByCommentId,
+      );
+      if (emit.isDone) return;
 
-      // Merge into existing maps/sets rather than replacing — keep
-      // previously-fetched counts for ids not in this batch so an
-      // incremental fetch (only newly-loaded comments) doesn't lose
-      // already-known counts.
       emit(
         state.copyWith(
           commentUpvoteCounts: {
             ...state.commentUpvoteCounts,
-            ...voteCounts.upvotes,
+            for (final entry in counts.upvotes.entries)
+              if (canApply(entry.key)) entry.key: entry.value,
           },
           commentDownvoteCounts: {
             ...state.commentDownvoteCounts,
-            ...voteCounts.downvotes,
-          },
-          upvotedCommentIds: {
-            ...state.upvotedCommentIds,
-            ...voteStatuses.upvotedIds,
-          },
-          downvotedCommentIds: {
-            ...state.downvotedCommentIds,
-            ...voteStatuses.downvotedIds,
+            for (final entry in counts.downvotes.entries)
+              if (canApply(entry.key)) entry.key: entry.value,
           },
         ),
       );
+    }
+
+    Future<void> loadViewerVotes() async {
+      // A confirmed local action is newer than the viewer's relay snapshot.
+      final viewerIds = commentIds
+          .where((id) => !_confirmedLocalVotes.contains(id))
+          .toList();
+      if (viewerIds.isEmpty) return;
+
+      final votes = await _likesRepository.getUserVoteStatuses(
+        viewerIds,
+        addressableIds: event.addressableIdsByCommentId,
+      );
+      if (emit.isDone) return;
+
+      final refreshed = viewerIds.where(canApply).toSet();
+      emit(
+        state.copyWith(
+          upvotedCommentIds: {
+            ...state.upvotedCommentIds.difference(refreshed),
+            ...votes.upvotedIds.where(refreshed.contains),
+          },
+          downvotedCommentIds: {
+            ...state.downvotedCommentIds.difference(refreshed),
+            ...votes.downvotedIds.where(refreshed.contains),
+          },
+        ),
+      );
+    }
+
+    try {
+      await Future.wait([loadCounts(), loadViewerVotes()]);
     } catch (e, stackTrace) {
-      // LikesRepository fetch IO — matrix-NO (Network/IO). UI silently
-      // misses vote counts but the rest of the screen is unaffected.
       _logFailure(
         e,
         stackTrace,
         CommentReactionsBlocReportableSites.onVoteCountsFetchRequested,
-        'Error fetching comment vote counts',
+        'Error fetching comment votes',
       );
+    } finally {
+      for (final id in commentIds) {
+        final invalidated = _voteReads.remove(id) == false;
+        if (invalidated && !isClosed) {
+          final refresh = CommentVoteCountsFetchRequested(
+            [id],
+            addressableIdsByCommentId: {
+              id: ?event.addressableIdsByCommentId[id],
+            },
+          );
+          if (_publishingVotes.contains(id)) {
+            _voteRefreshAfterPublish[id] = refresh;
+          } else {
+            add(refresh);
+          }
+        }
+      }
     }
   }
 
@@ -205,6 +241,8 @@ class CommentReactionsBloc
     }
 
     final commentId = event.commentId;
+    _publishingVotes.add(commentId);
+    if (_voteReads.containsKey(commentId)) _voteReads[commentId] = false;
     final isUpvote = event.vote == Vote.up;
 
     final wasUpvoted = state.upvotedCommentIds.contains(commentId);
@@ -300,7 +338,9 @@ class CommentReactionsBloc
           );
         }
       }
+      _confirmedLocalVotes.add(commentId);
     } on AlreadyLikedException {
+      _confirmedLocalVotes.add(commentId);
       // State-sync sentinel (silent): repo already had the upvote, the
       // pre-tap baseline was wrong. Reconcile and continue.
       emit(
@@ -312,6 +352,7 @@ class CommentReactionsBloc
         ),
       );
     } on AlreadyDownvotedException {
+      _confirmedLocalVotes.add(commentId);
       // State-sync sentinel (silent): repo already had the downvote.
       emit(
         state.copyWith(
@@ -346,6 +387,10 @@ class CommentReactionsBloc
           error: ReactionsError.voteFailed,
         ),
       );
+    } finally {
+      _publishingVotes.remove(commentId);
+      final refresh = _voteRefreshAfterPublish.remove(commentId);
+      if (refresh != null && !isClosed) add(refresh);
     }
   }
 

@@ -8981,13 +8981,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీ వీడియో ప్రత్యుత్తరం పోస్ట్ చేయబడుతోంది';
 
   @override
-  String get commentsSortNew => 'కొత్తది';
+  String get commentsSortRecent => 'ఇటీవలిది';
 
   @override
   String get commentsSortTop => 'టాప్';
-
-  @override
-  String get commentsSortOld => 'పాతది';
 
   @override
   String get commentsSortSemanticLabel => 'వ్యాఖ్యల క్రమబద్ధీకరణ';

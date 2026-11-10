@@ -8941,13 +8941,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Twoja odpowiedź wideo jest publikowana';
 
   @override
-  String get commentsSortNew => 'Nowe';
+  String get commentsSortRecent => 'Najnowsze';
 
   @override
   String get commentsSortTop => 'Najlepsze';
-
-  @override
-  String get commentsSortOld => 'Stare';
 
   @override
   String get commentsSortSemanticLabel => 'Sortowanie komentarzy';

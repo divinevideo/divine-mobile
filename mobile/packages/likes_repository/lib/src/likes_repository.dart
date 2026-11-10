@@ -1924,8 +1924,8 @@ class LikesRepository {
     // [getUserVoteStatuses]. The coordinate leg reaches reactions cast against
     // every earlier revision of the target, including ones their author has
     // since deleted — switching an upvote to a downvote on an edited reply
-    // publishes exactly that pair, and counting both leaves netScore 0, which
-    // `comment_item.dart` renders by hiding the score outright (#6124).
+    // publishes exactly that pair. Counting both inflates the visible totals
+    // and incorrectly gives the reply a net score of zero (#6124).
     final reactionsById = {for (final event in events) event.id: event};
     final deletedReactionIds = await _deletedReactionIds(reactionsById);
 

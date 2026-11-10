@@ -4495,17 +4495,13 @@
   },
   "commentsVideoReplyPending": "Menyiarkan…",
   "commentsVideoReplyPendingSemanticLabel": "Balasan video anda sedang disiarkan",
-  "commentsSortNew": "Baharu",
-  "@commentsSortNew": {
+  "commentsSortRecent": "Terkini",
+  "@commentsSortRecent": {
     "description": "Comments-sort toggle label for newest-first order."
   },
   "commentsSortTop": "Teratas",
   "@commentsSortTop": {
     "description": "Comments-sort toggle label for engagement-weighted order."
-  },
-  "commentsSortOld": "Lama",
-  "@commentsSortOld": {
-    "description": "Comments-sort toggle label for oldest-first order."
   },
   "commentsSortSemanticLabel": "Isihan komen",
   "@commentsSortSemanticLabel": {

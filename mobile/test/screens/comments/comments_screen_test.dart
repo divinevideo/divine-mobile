@@ -3,6 +3,8 @@
 // ABOUTME: via MultiBlocProvider and exercises a content widget that mirrors
 // ABOUTME: the production screen.
 
+import 'dart:async';
+
 import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
@@ -233,7 +235,9 @@ void main() {
       expect(find.text(l10n.commentsHeaderCount(1)), findsOneWidget);
     });
 
-    testWidgets('new comments pill switches from Top to New', (tester) async {
+    testWidgets('new comments pill switches from Top to Recent', (
+      tester,
+    ) async {
       when(() => listBloc.state).thenReturn(
         CommentsListState(newCommentIds: {'1' * 64}),
       );
@@ -608,7 +612,7 @@ void main() {
           rootEventId: testVideoEventId,
           rootAuthorPubkey: testVideoAuthorPubkey,
           status: CommentsStatus.success,
-          sortMode: CommentsSortMode.oldest,
+          sortMode: CommentsSortMode.newest,
         );
         whenListen(
           mockListBloc,
@@ -638,7 +642,7 @@ void main() {
         );
         expect(
           sink.events.single.parameters,
-          containsPair(AnalyticsParam.sortMode, 'oldest'),
+          containsPair(AnalyticsParam.sortMode, 'newest'),
         );
       });
 
@@ -680,6 +684,58 @@ void main() {
         find.bySemanticsIdentifier(SemanticIds.commentsSheetTitle),
         findsOneWidget,
       );
+    });
+
+    testWidgets('sort toggle switches between Top and Recent', (tester) async {
+      final updates = StreamController<CommentsListState>();
+      addTearDown(updates.close);
+      const top = CommentsListState();
+      const recent = CommentsListState(sortMode: CommentsSortMode.newest);
+      whenListen(mockListBloc, updates.stream, initialState: top);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: BlocProvider<CommentsListBloc>.value(
+              value: mockListBloc,
+              child: const CommentsSortToggle(),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Top'), findsOneWidget);
+      await tester.tap(find.text('Top'));
+      verify(
+        () => mockListBloc.add(
+          any(
+            that: isA<CommentsSortModeChanged>().having(
+              (event) => event.sortMode,
+              'sortMode',
+              CommentsSortMode.newest,
+            ),
+          ),
+        ),
+      ).called(1);
+
+      updates.add(recent);
+      await tester.pump();
+
+      expect(find.text('Recent'), findsOneWidget);
+      await tester.tap(find.text('Recent'));
+      verify(
+        () => mockListBloc.add(
+          any(
+            that: isA<CommentsSortModeChanged>().having(
+              (event) => event.sortMode,
+              'sortMode',
+              CommentsSortMode.topEngagement,
+            ),
+          ),
+        ),
+      ).called(1);
     });
 
     group('widget structure', () {

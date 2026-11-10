@@ -8739,13 +8739,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get commentsVideoReplyPendingSemanticLabel => 'يتم نشر ردك بالفيديو';
 
   @override
-  String get commentsSortNew => 'الأحدث';
+  String get commentsSortRecent => 'الأحدث';
 
   @override
   String get commentsSortTop => 'الأفضل';
-
-  @override
-  String get commentsSortOld => 'الأقدم';
 
   @override
   String get commentsSortSemanticLabel => 'ترتيب التعليقات';

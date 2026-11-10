@@ -79,6 +79,142 @@ void main() {
     });
 
     group('CommentVoteCountsFetchRequested', () {
+      test('publishes totals while the viewer vote is still loading', () async {
+        final id = validId('c1');
+        final viewerVote =
+            Completer<({Set<String> upvotedIds, Set<String> downvotedIds})>();
+        when(() => mockLikesRepository.getVoteCounts([id])).thenAnswer(
+          (_) async => (upvotes: {id: 4}, downvotes: {id: 2}),
+        );
+        when(() => mockLikesRepository.getUserVoteStatuses([id])).thenAnswer(
+          (_) => viewerVote.future,
+        );
+
+        final bloc = createBloc();
+        addTearDown(() async {
+          if (!viewerVote.isCompleted) {
+            viewerVote.complete((upvotedIds: {id}, downvotedIds: <String>{}));
+          }
+          await bloc.close();
+        });
+        bloc.add(CommentVoteCountsFetchRequested([id]));
+        await pumpEventQueue();
+
+        expect(bloc.state.commentUpvoteCounts[id], 4);
+        expect(bloc.state.commentDownvoteCounts[id], 2);
+        expect(bloc.state.upvotedCommentIds, isEmpty);
+
+        viewerVote.complete((upvotedIds: {id}, downvotedIds: <String>{}));
+        await pumpEventQueue();
+
+        expect(bloc.state.upvotedCommentIds, {id});
+      });
+
+      test('a new batch keeps earlier vote reads in flight', () async {
+        final firstId = validId('c1');
+        final secondId = validId('c2');
+        final first =
+            Completer<
+              ({Map<String, int> upvotes, Map<String, int> downvotes})
+            >();
+        when(() => mockLikesRepository.getVoteCounts([firstId])).thenAnswer(
+          (_) => first.future,
+        );
+        when(() => mockLikesRepository.getVoteCounts([secondId])).thenAnswer(
+          (_) async => (upvotes: {secondId: 2}, downvotes: <String, int>{}),
+        );
+        // The previous handler re-queried the earlier id with each new batch.
+        when(
+          () => mockLikesRepository.getVoteCounts([firstId, secondId]),
+        ).thenAnswer(
+          (_) async => (upvotes: {secondId: 2}, downvotes: <String, int>{}),
+        );
+
+        final bloc = createBloc();
+        addTearDown(() async {
+          if (!first.isCompleted) {
+            first.complete((upvotes: {firstId: 4}, downvotes: <String, int>{}));
+          }
+          await bloc.close();
+        });
+        bloc.add(CommentVoteCountsFetchRequested([firstId]));
+        await pumpEventQueue();
+        bloc.add(CommentVoteCountsFetchRequested([firstId, secondId]));
+        await pumpEventQueue();
+
+        expect(bloc.state.commentUpvoteCounts[secondId], 2);
+
+        first.complete((upvotes: {firstId: 4}, downvotes: <String, int>{}));
+        await pumpEventQueue();
+
+        expect(bloc.state.commentUpvoteCounts, {firstId: 4, secondId: 2});
+        verifyNever(
+          () => mockLikesRepository.getVoteCounts([firstId, secondId]),
+        );
+      });
+
+      for (final succeeds in [true, false]) {
+        test(
+          'refreshes totals after an early vote, succeeds: $succeeds',
+          () async {
+            final id = validId('c1');
+            final initialCounts =
+                Completer<
+                  ({Map<String, int> upvotes, Map<String, int> downvotes})
+                >();
+            final publish = Completer<String>();
+            var reads = 0;
+            when(() => mockLikesRepository.getVoteCounts([id])).thenAnswer(
+              (_) async {
+                reads++;
+                if (reads == 1) return initialCounts.future;
+                return (upvotes: {id: succeeds ? 21 : 20}, downvotes: {id: 5});
+              },
+            );
+            when(
+              () => mockLikesRepository.likeEvent(
+                eventId: any(named: 'eventId'),
+                authorPubkey: any(named: 'authorPubkey'),
+                targetKind: any(named: 'targetKind'),
+              ),
+            ).thenAnswer((_) => publish.future);
+
+            final bloc = createBloc();
+            addTearDown(bloc.close);
+            bloc.add(CommentVoteCountsFetchRequested([id]));
+            await pumpEventQueue();
+            bloc.add(
+              CommentVoteToggled(
+                commentId: id,
+                authorPubkey: validId('author1'),
+                vote: Vote.up,
+              ),
+            );
+            await pumpEventQueue();
+
+            if (succeeds) {
+              // The read returns while publishing. Refresh waits for publish.
+              initialCounts.complete((upvotes: {id: 20}, downvotes: {id: 5}));
+              await pumpEventQueue();
+              expect(reads, 1);
+              expect(bloc.state.commentUpvoteCounts[id], 1);
+              publish.complete(validId('vote'));
+            } else {
+              // Rollback can finish before the invalidated read returns.
+              publish.completeError(const LikesRepositoryException('offline'));
+              await pumpEventQueue();
+              initialCounts.complete((upvotes: {id: 20}, downvotes: {id: 5}));
+            }
+            await pumpEventQueue();
+
+            expect(reads, 2);
+            expect(bloc.state.commentUpvoteCounts[id], succeeds ? 21 : 20);
+            expect(bloc.state.commentDownvoteCounts[id], 5);
+            expect(bloc.state.upvotedCommentIds.contains(id), succeeds);
+          },
+        );
+      }
+
       blocTest<CommentReactionsBloc, CommentReactionsState>(
         'populates counts and statuses from likes repo',
         setUp: () {
@@ -96,7 +232,9 @@ void main() {
         expect: () => [
           isA<CommentReactionsState>()
               .having((s) => s.commentUpvoteCounts[validId('c1')], 'up', 5)
-              .having((s) => s.commentDownvoteCounts[validId('c1')], 'down', 1)
+              .having((s) => s.commentDownvoteCounts[validId('c1')], 'down', 1),
+          isA<CommentReactionsState>()
+              .having((s) => s.commentUpvoteCounts[validId('c1')], 'up', 5)
               .having(
                 (s) => s.upvotedCommentIds.contains(validId('c1')),
                 'isUpvoted',

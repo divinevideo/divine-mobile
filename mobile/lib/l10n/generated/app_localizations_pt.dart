@@ -8810,13 +8810,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'A tua resposta em vídeo está a ser publicada';
 
   @override
-  String get commentsSortNew => 'Recentes';
+  String get commentsSortRecent => 'Recentes';
 
   @override
   String get commentsSortTop => 'Melhores';
-
-  @override
-  String get commentsSortOld => 'Antigos';
 
   @override
   String get commentsSortSemanticLabel => 'Ordenação dos comentários';

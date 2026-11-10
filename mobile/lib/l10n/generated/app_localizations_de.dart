@@ -8845,13 +8845,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Deine Videoantwort wird gepostet';
 
   @override
-  String get commentsSortNew => 'Neu';
+  String get commentsSortRecent => 'Neueste';
 
   @override
   String get commentsSortTop => 'Top';
-
-  @override
-  String get commentsSortOld => 'Alt';
 
   @override
   String get commentsSortSemanticLabel => 'Kommentare sortieren';

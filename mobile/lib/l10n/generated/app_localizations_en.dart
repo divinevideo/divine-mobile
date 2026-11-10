@@ -8826,13 +8826,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your video reply is posting';
 
   @override
-  String get commentsSortNew => 'New';
+  String get commentsSortRecent => 'Recent';
 
   @override
   String get commentsSortTop => 'Top';
-
-  @override
-  String get commentsSortOld => 'Old';
 
   @override
   String get commentsSortSemanticLabel => 'Comments sorting';

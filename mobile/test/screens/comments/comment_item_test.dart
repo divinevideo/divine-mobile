@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for CommentItem with the split CommentComposerBloc +
 // ABOUTME: CommentReactionsBloc provider tree.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -374,6 +376,53 @@ void main() {
   });
 
   group('interactions', () {
+    testWidgets('shows and updates the two vote counts independently', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      final comment = CommentBuilder().withId('1' * 64).build();
+      final initial = CommentReactionsState(
+        commentUpvoteCounts: {comment.id: 3},
+        commentDownvoteCounts: {comment.id: 3},
+      );
+      final updates = StreamController<CommentReactionsState>();
+      addTearDown(updates.close);
+      whenListen(mocks.reactions, updates.stream, initialState: initial);
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          comment.content,
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          comment: comment,
+        ),
+      );
+
+      final upvote = find.bySemanticsIdentifier('upvote_button');
+      final downvote = find.bySemanticsIdentifier('downvote_button');
+      Finder countInside(Finder button, String count) =>
+          find.descendant(of: button, matching: find.text(count));
+
+      expect(countInside(upvote, '3'), findsOneWidget);
+      expect(countInside(downvote, '3'), findsOneWidget);
+      expect(tester.getSemantics(upvote).value, '3');
+      expect(tester.getSemantics(downvote).value, '3');
+
+      updates.add(initial.copyWith(commentDownvoteCounts: {comment.id: 0}));
+      await tester.pump();
+
+      expect(countInside(upvote, '3'), findsOneWidget);
+      expect(countInside(downvote, '0'), findsOneWidget);
+      expect(tester.getSemantics(downvote).value, '0');
+
+      await tester.tap(countInside(downvote, '0'));
+      final event = verify(
+        () => mocks.reactions.add(captureAny()),
+      ).captured.whereType<CommentVoteToggled>().single;
+      expect(event.vote, Vote.down);
+      expect(event.commentId, comment.id);
+    });
+
     testWidgets('votes a video reply with its own coordinate and kind, not the '
         "parent video's (#6124)", (tester) async {
       // The reply's own coordinate is deliberate: funnelcake's

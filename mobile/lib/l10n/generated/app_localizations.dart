@@ -14606,20 +14606,14 @@ abstract class AppLocalizations {
   /// Comments-sort toggle label for newest-first order.
   ///
   /// In en, this message translates to:
-  /// **'New'**
-  String get commentsSortNew;
+  /// **'Recent'**
+  String get commentsSortRecent;
 
   /// Comments-sort toggle label for highest net vote score first.
   ///
   /// In en, this message translates to:
   /// **'Top'**
   String get commentsSortTop;
-
-  /// Comments-sort toggle label for oldest-first order.
-  ///
-  /// In en, this message translates to:
-  /// **'Old'**
-  String get commentsSortOld;
 
   /// Accessibility label for the comments-sort toggle group.
   ///
