@@ -134,6 +134,74 @@ void main() {
         expect(styled.divineEnterAnimations, [_fadeIn]);
       });
 
+      group('long draw-on timing', () {
+        LayerStyle longDrawingStyle() => LayerStyle.of(
+          _drawing(id: 'source')
+            ..animations = const [
+              pve.LayerAnimation(
+                type: pve.LayerAnimationType.drawOn,
+                phase: pve.AnimationPhase.animateIn,
+                duration: _total,
+              ),
+              pve.LayerAnimation(
+                type: pve.LayerAnimationType.fade,
+                phase: pve.AnimationPhase.animateIn,
+                duration: _total,
+              ),
+            ].toLayerAnimations(),
+          at: Duration.zero,
+        );
+
+        test('cuts remaining effects back when the target cannot draw on', () {
+          final styled = longDrawingStyle().applyTo(
+            TextLayer(id: 't', text: 'Target'),
+            canvasSize: _canvas,
+            totalDuration: _total,
+          );
+
+          expect(styled.divineEnterAnimations, const [
+            pve.LayerAnimation(
+              type: pve.LayerAnimationType.fade,
+              phase: pve.AnimationPhase.animateIn,
+              duration: Duration(seconds: 2),
+            ),
+          ]);
+        });
+
+        test('fits a retained draw-on to the target drawing duration', () {
+          final styled = longDrawingStyle().applyTo(
+            _drawing()
+              ..startTime = const Duration(seconds: 1)
+              ..endTime = const Duration(milliseconds: 4505),
+            canvasSize: _canvas,
+            totalDuration: _total,
+          );
+
+          expect(styled.divineEnterAnimations.map((a) => a.type), [
+            pve.LayerAnimationType.drawOn,
+            pve.LayerAnimationType.fade,
+          ]);
+          expect(
+            styled.divineEnterAnimations.map((a) => a.duration),
+            everyElement(const Duration(milliseconds: 3500)),
+          );
+        });
+
+        test('retains long timing when the drawing has room for it', () {
+          final styled = longDrawingStyle().applyTo(
+            _drawing(),
+            canvasSize: _canvas,
+            totalDuration: _total,
+          );
+
+          expect(styled.divineEnterAnimations, hasLength(2));
+          expect(
+            styled.divineEnterAnimations.map((a) => a.duration),
+            everyElement(_total),
+          );
+        });
+      });
+
       test('gives a sticker a viewer taps no animations', () {
         final source = TextLayer(
           text: 'Hi',

@@ -10,6 +10,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_apply.dart';
+import 'package:openvine/extensions/layer_animation_limits.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/layer_slide_point.dart';
@@ -33,8 +34,8 @@ const _minDurationMs = 10;
 /// Shortest cycle a loop can be set to: anything quicker reads as a flicker
 /// rather than a wiggle, hop, pulse or spin.
 const _minLoopDurationMs = 200;
-const _maxDurationMs = 2000;
-const _durationStepMs = 10;
+const int _maxDurationMs = layerAnimationMaxDurationMs;
+const int _durationStepMs = layerAnimationDurationStepMs;
 
 /// Default duration applied when a type is first picked for a phase.
 const _defaultDuration = Duration(milliseconds: 400);
@@ -115,7 +116,7 @@ Future<void> editLayerAnimation(
         initialLoop: draft.loop,
         allowTextReveal: layer is TextLayer,
         allowDrawOn: layer is PaintLayer && !layer.isCensor,
-        drawOnMaxDurationMs: _visibleDurationMs(layer, totalDuration),
+        drawOnMaxDurationMs: drawOnMaxDurationMs(layer, totalDuration),
         initialEnterPoint: draft.enterPoint,
         initialLeavePoint: draft.leavePoint,
         initialPhase: draft.phase,
@@ -174,19 +175,6 @@ Future<void> editLayerAnimation(
   );
 
   editor.addHistory(layers: layers);
-}
-
-/// How long [layer] shows in a video of [totalDuration], in milliseconds,
-/// rounded down to the duration slider's step. A layer without an end, or one
-/// that ends past the video, shows until the video ends.
-int _visibleDurationMs(Layer layer, Duration totalDuration) {
-  final start = layer.startTime ?? Duration.zero;
-  final layerEnd = layer.endTime;
-  final end = layerEnd != null && layerEnd < totalDuration
-      ? layerEnd
-      : totalDuration;
-  final ms = (end - start).inMilliseconds;
-  return ms - ms % _durationStepMs;
 }
 
 /// The picker's result: the chosen enter, leave and loop animations, the custom

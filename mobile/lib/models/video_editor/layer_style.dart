@@ -6,6 +6,7 @@ import 'dart:ui' show BlendMode, Offset, Size;
 
 import 'package:equatable/equatable.dart';
 import 'package:openvine/extensions/layer_animation_apply.dart';
+import 'package:openvine/extensions/layer_animation_limits.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
@@ -137,9 +138,9 @@ class LayerStyle extends Equatable {
             totalDuration: totalDuration,
           )
         : layer.withDivineAnimations(
-            enter: _playableOn(layer, enter),
-            leave: _playableOn(layer, leave),
-            loop: _playableOn(layer, loop),
+            enter: _playableOn(layer, enter, totalDuration),
+            leave: _playableOn(layer, leave, totalDuration),
+            loop: _playableOn(layer, loop, totalDuration),
             points: LayerSlidePoints(enter: enterPoint, leave: leavePoint),
             canvasSize: canvasSize,
             totalDuration: totalDuration,
@@ -174,14 +175,24 @@ class LayerStyle extends Equatable {
 /// letter by letter or word by word means nothing on a sticker or a drawing,
 /// drawing strokes one by one means nothing on anything but a drawing, and a
 /// sticker a viewer taps, such as a link or a location, holds still where it
-/// is tapped.
+/// is tapped. A draw-on phase also takes the target's duration limit, so its
+/// longer timing cannot leak into effects the picker would limit there.
 List<pve.LayerAnimation> _playableOn(
   Layer layer,
   List<pve.LayerAnimation> animations,
+  Duration totalDuration,
 ) {
   if (isTappableStickerLayer(layer)) return const [];
   final revealsText = layer is TextLayer;
   final drawsOn = layer is PaintLayer && !layer.isCensor;
+  final hadDrawOn = animations.any(
+    (animation) => animation.type == pve.LayerAnimationType.drawOn,
+  );
+  final maxDuration = Duration(
+    milliseconds: drawsOn
+        ? drawOnMaxDurationMs(layer, totalDuration)
+        : layerAnimationMaxDurationMs,
+  );
   return [
     for (final animation in animations)
       if (switch (animation.type) {
@@ -190,6 +201,14 @@ List<pve.LayerAnimation> _playableOn(
         pve.LayerAnimationType.drawOn => drawsOn,
         _ => true,
       })
-        animation,
+        // A long shared phase belongs to its draw-on, not to a fade pasted
+        // onto another kind of layer, or to a shorter target drawing.
+        if (hadDrawOn && animation.duration > maxDuration)
+          pve.LayerAnimation.fromMap({
+            ...animation.toMap(),
+            'durationUs': maxDuration.inMicroseconds,
+          })
+        else
+          animation,
   ];
 }
