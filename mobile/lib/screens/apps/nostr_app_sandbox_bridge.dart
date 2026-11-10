@@ -144,13 +144,13 @@ bool isAllowedSandboxOrigin(Uri uri, List<String> allowedOrigins) {
       webMessageAllowedOriginRules(allowedOrigins).contains(origin);
 }
 
-/// Normalises an app's allowed origins to `scheme://host[:port]` rules for
-/// `WebViewCompat.addWebMessageListener` on Android. Only entries with a web
-/// origin survive (see [webOriginOf]): a websocket URL (`ws`/`wss`) or a
+/// Normalises an app's allowed origins to `scheme://host[:port]` rules: the
+/// form [isAllowedSandboxOrigin] matches on every platform, and the rules
+/// `WebViewCompat.addWebMessageListener` takes on Android. Only entries with
+/// a web origin survive (see [webOriginOf]): a websocket URL (`ws`/`wss`) or a
 /// `nostrsigner:` entry can never be a web frame's origin, so it is
-/// meaningless for `addWebMessageListener`. Unparseable entries are dropped
-/// too, so the result is always a valid rule set the native side can pass
-/// through.
+/// meaningless for both. Unparseable entries are dropped too, so the result
+/// is always a valid rule set the native side can pass through.
 List<String> webMessageAllowedOriginRules(List<String> allowedOrigins) {
   final rules = <String>[];
   for (final origin in allowedOrigins) {

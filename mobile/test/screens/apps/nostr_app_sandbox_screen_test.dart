@@ -273,8 +273,7 @@ void main() {
     );
 
     group('pages without a web origin', () {
-      // The URL Android WebView handed to onPageFinished in the crash.
-      // `Uri.origin` throws for any scheme but http and https.
+      // What Android WebView reported to onPageFinished in the crash (#10888).
       const dataPageUrl = 'data:text/html;charset=utf-8;base64,';
 
       Future<_FakeNavigationDelegate> pumpAndroidSandbox(
@@ -336,7 +335,7 @@ void main() {
         expect(injectedScripts, hasLength(1));
       });
 
-      testWidgets('refuses navigation to it without the safety card', (
+      testWidgets('refuses navigation to them without the safety card', (
         tester,
       ) async {
         final navigation = await pumpAndroidSandbox(
@@ -968,6 +967,7 @@ void main() {
           'about:blank',
           'blob:https://primal.net/6f0c1f2e-0000-4000-8000-000000000000',
           'file:///index.html',
+          'https:no-host',
         ]) {
           expect(
             isAllowedSandboxOrigin(Uri.parse(url), allowedOrigins),

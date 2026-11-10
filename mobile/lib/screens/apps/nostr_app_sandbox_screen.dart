@@ -173,9 +173,9 @@ class _NostrAppSandboxScreenState extends ConsumerState<NostrAppSandboxScreen> {
       return true;
     }
 
-    // `about:blank` and `about:srcdoc` frames, `blob:` downloads and `data:`
-    // pages have no web origin. Refuse them without the safety card, which
-    // would cover a page that is still on an allowed origin.
+    // No http(s) origin: about:blank/srcdoc frames, blob:/data: pages, and
+    // mailto:/intent:/custom-scheme links. Refuse them without the safety
+    // card, which would cover a page that is still on an allowed origin.
     if (webOriginOf(uri) == null || !mounted) return false;
     setState(() {
       _blockedUri = uri;
