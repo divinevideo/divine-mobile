@@ -1,5 +1,6 @@
 // ABOUTME: Widget tests for VideoEditorClipSpeedSheet.
-// ABOUTME: Covers rendering, clamping, speed presets, speed curves and cancel/confirm.
+// ABOUTME: Covers rendering, clamping, speed presets, speed curves, smooth
+// ABOUTME: slow motion and cancel/confirm.
 
 import 'dart:ui' show Tristate;
 
@@ -26,6 +27,7 @@ Widget _buildSubject({
   double initialSpeed = 1.0,
   VideoSpeedRamp? initialRamp,
   Duration? sourceDuration,
+  bool? initialSmoothSlowMotion,
 }) {
   return MaterialApp.router(
     localizationsDelegates: appLocalizationsDelegates,
@@ -43,6 +45,7 @@ Widget _buildSubject({
                   initialSpeed: initialSpeed,
                   initialRamp: initialRamp,
                   sourceDuration: sourceDuration,
+                  initialSmoothSlowMotion: initialSmoothSlowMotion,
                 ),
               ),
             ),
@@ -59,6 +62,7 @@ Widget _buildSubject({
 Widget _buildPushingSubject({
   required ValueChanged<ClipSpeedChoice?> onResult,
   VideoSpeedRamp? initialRamp,
+  bool? initialSmoothSlowMotion,
 }) {
   return MaterialApp.router(
     localizationsDelegates: appLocalizationsDelegates,
@@ -78,7 +82,10 @@ Widget _buildPushingSubject({
             GoRoute(
               path: 'speed',
               builder: (context, state) => Scaffold(
-                body: VideoEditorClipSpeedSheet(initialRamp: initialRamp),
+                body: VideoEditorClipSpeedSheet(
+                  initialRamp: initialRamp,
+                  initialSmoothSlowMotion: initialSmoothSlowMotion,
+                ),
               ),
             ),
           ],
@@ -491,6 +498,76 @@ void main() {
           find.text(_l10n.videoEditorSpeedResultingLength('1.5')),
           findsOneWidget,
         );
+      });
+    });
+
+    group('smooth slow motion', () {
+      DivineSwitchTile smoothSwitch(WidgetTester tester) =>
+          tester.widget<DivineSwitchTile>(find.byType(DivineSwitchTile));
+
+      testWidgets('is not offered for a sound', (tester) async {
+        await tester.pumpWidget(_buildSubject());
+        await tester.pumpAndSettle();
+
+        expect(find.text(_l10n.videoEditorSpeedSmoothTitle), findsNothing);
+      });
+
+      testWidgets('is off at 1x and on once the clip slows down', (
+        tester,
+      ) async {
+        await tester.pumpWidget(_buildSubject(initialSmoothSlowMotion: false));
+        await tester.pumpAndSettle();
+
+        expect(smoothSwitch(tester).onChanged, isNull);
+        expect(
+          find.text(_l10n.videoEditorSpeedSmoothUnavailable),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('0.5×'));
+        await tester.pump();
+
+        expect(smoothSwitch(tester).onChanged, isNotNull);
+        expect(
+          find.text(_l10n.videoEditorSpeedSmoothDescription),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('is offered for a curve that dips below 1x', (tester) async {
+        await tester.pumpWidget(
+          _buildSubject(
+            initialRamp: ClipSpeedRampPreset.hero.ramp,
+            initialSmoothSlowMotion: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(smoothSwitch(tester).value, isTrue);
+        expect(smoothSwitch(tester).onChanged, isNotNull);
+      });
+
+      testWidgets('confirming returns it with the speed', (tester) async {
+        ClipSpeedChoice? result;
+        await tester.pumpWidget(
+          _buildPushingSubject(
+            onResult: (value) => result = value,
+            initialSmoothSlowMotion: false,
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('0.5×'));
+        await tester.pump();
+        await tester.tap(find.text(_l10n.videoEditorSpeedSmoothTitle));
+        await tester.pump();
+        await tester.tap(_confirmButton);
+        await tester.pumpAndSettle();
+
+        expect(result, isA<ConstantClipSpeed>());
+        expect((result! as ConstantClipSpeed).speed, equals(0.5));
+        expect(result!.smoothSlowMotion, isTrue);
       });
     });
 

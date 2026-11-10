@@ -18149,6 +18149,24 @@ abstract class AppLocalizations {
   /// **'Curve'**
   String get videoEditorSpeedModeCurve;
 
+  /// Title of the switch in the clip speed sheet that blends neighbouring frames of a slowed-down clip, so slow motion looks continuous instead of stepping.
+  ///
+  /// In en, this message translates to:
+  /// **'Smooth slow-mo'**
+  String get videoEditorSpeedSmoothTitle;
+
+  /// Subtitle of the smooth slow-motion switch while the clip is slowed down: what it does, and that fast movement can show ghosts of both frames.
+  ///
+  /// In en, this message translates to:
+  /// **'Blends frames so slow motion flows. Fast moves can leave ghosts.'**
+  String get videoEditorSpeedSmoothDescription;
+
+  /// Subtitle of the smooth slow-motion switch while the clip plays at 1x or faster everywhere, so the switch is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Slow the clip below 1× to smooth it.'**
+  String get videoEditorSpeedSmoothUnavailable;
+
   /// Speed curve preset chip for a curve the user shapes by dragging points.
   ///
   /// In en, this message translates to:

@@ -584,6 +584,8 @@ class TransitionSeamRenderService {
         // Only a ramped clip adds its points, so every other seam keeps the
         // key it was persisted under.
         '${c.speedRamp == null ? '' : ':${c.speedRamp!.toMap()}'}'
+        // Likewise only a clip that blends frames adds it.
+        '${c.blendsFrames ? ':blend' : ''}'
         ':motion:${c.keyframes.map((k) => k.toMap()).toList()}';
     final t =
         '${transition.type.name}:${transition.duration.inMicroseconds}:'

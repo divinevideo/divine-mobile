@@ -10733,6 +10733,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'منحنى';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'حركة بطيئة سلسة';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'مزج الإطارات لتنساب الحركة البطيئة. قد تترك الحركات السريعة أطيافًا.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'يعمل عند إبطاء المقطع إلى أقل من 1×.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'مخصص';
 
   @override

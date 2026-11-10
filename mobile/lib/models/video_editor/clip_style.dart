@@ -1,5 +1,5 @@
 // ABOUTME: The style of a timeline clip — volume, EQ, speed or speed ramp,
-// ABOUTME: color mask and shape mask — as one unit that Copy style lifts off a clip and Paste
+// ABOUTME: smooth slow motion, color mask and shape mask — as one unit that Copy style lifts off a clip and Paste
 // ABOUTME: style writes onto others (#10258).
 
 import 'dart:ui' show Color;
@@ -37,6 +37,7 @@ class ClipStyle extends Equatable {
     required this.equalizer,
     required this.playbackSpeed,
     this.speedRamp,
+    this.smoothSlowMotion = false,
     this.chromaKey,
     this.mask,
     this.maskBackgroundColor,
@@ -51,6 +52,7 @@ class ClipStyle extends Equatable {
     equalizer: clip.equalizer,
     playbackSpeed: clip.playbackSpeed ?? 1,
     speedRamp: clip.speedRamp,
+    smoothSlowMotion: clip.smoothSlowMotion,
     chromaKey: clip.chromaKey,
     mask: clip.mask,
     maskBackgroundColor: clip.maskBackgroundColor,
@@ -72,6 +74,10 @@ class ClipStyle extends Equatable {
   /// Its points are fractions of the trimmed clip, so it takes the same shape
   /// on a target of any length.
   final VideoSpeedRamp? speedRamp;
+
+  /// Whether the slowed-down stretches blend their frames; see
+  /// [DivineVideoClip.smoothSlowMotion].
+  final bool smoothSlowMotion;
 
   /// The color mask, or `null` for none.
   ///
@@ -103,7 +109,8 @@ class ClipStyle extends Equatable {
     return clip.volume == volume &&
         clip.equalizer == equalizer &&
         clip.speedRamp == speedRamp &&
-        (speedRamp != null || (clip.playbackSpeed ?? 1) == playbackSpeed);
+        (speedRamp != null || (clip.playbackSpeed ?? 1) == playbackSpeed) &&
+        clip.smoothSlowMotion == smoothSlowMotion;
   }
 
   /// Whether pasting onto [clip] has to put on, change or take off its color
@@ -139,6 +146,7 @@ class ClipStyle extends Equatable {
       clearPlaybackSpeed: ramp != null || playbackSpeed == 1,
       speedRamp: ramp,
       clearSpeedRamp: ramp == null,
+      smoothSlowMotion: smoothSlowMotion,
       mask: mask,
       clearMask: mask == null,
       maskBackgroundColor: maskBackgroundColor,
@@ -152,6 +160,7 @@ class ClipStyle extends Equatable {
     equalizer,
     playbackSpeed,
     speedRamp,
+    smoothSlowMotion,
     chromaKey,
     mask,
     maskBackgroundColor,

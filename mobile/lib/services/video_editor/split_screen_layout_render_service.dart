@@ -242,6 +242,7 @@ abstract final class SplitScreenLayoutRenderService {
             startTime: start == Duration.zero ? null : start,
             endTime: end,
             playbackSpeed: speed,
+            frameBlending: clip.blendsFrames,
           ),
         ],
       ),

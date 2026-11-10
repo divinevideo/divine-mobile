@@ -10805,6 +10805,17 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Curve';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Smooth slow-mo';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Pinaghahalo ang mga frame para tuloy-tuloy ang slow motion. Puwedeng mag-iwan ng ghost ang mabilis na galaw.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Pabagalin ang clip sa ilalim ng 1× para gumana ito.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Custom';
 
   @override
