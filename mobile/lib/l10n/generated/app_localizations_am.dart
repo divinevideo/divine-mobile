@@ -10916,6 +10916,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'ቃል በቃል';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'መስመር በመስመር';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'ምት';
 
   @override

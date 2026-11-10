@@ -2649,6 +2649,7 @@
   "videoEditorLayerAnimationBounce": "튕기기",
   "videoEditorLayerAnimationTypewriter": "타자기",
   "videoEditorLayerAnimationWordByWord": "단어별",
+  "videoEditorLayerAnimationDrawOn": "한 획씩",
   "videoEditorLayerAnimationPulse": "맥박",
   "videoEditorLayerAnimationPulseTo": "축소 크기",
   "videoEditorLayerAnimationWiggleAngle": "기울기",

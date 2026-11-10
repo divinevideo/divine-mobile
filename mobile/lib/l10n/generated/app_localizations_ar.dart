@@ -11178,6 +11178,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'كلمة بكلمة';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'خطًا بخط';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'نبض';
 
   @override

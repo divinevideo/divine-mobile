@@ -11222,6 +11222,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'Woord voor woord';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'Lijn voor lijn';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'Pulseren';
 
   @override

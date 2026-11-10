@@ -11407,6 +11407,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'Cuvânt cu cuvânt';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'Linie cu linie';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'Pulsare';
 
   @override

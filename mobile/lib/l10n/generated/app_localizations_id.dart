@@ -11078,6 +11078,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'Kata demi kata';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'Garis demi garis';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'Denyut';
 
   @override

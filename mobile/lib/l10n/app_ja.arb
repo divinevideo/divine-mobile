@@ -3103,6 +3103,7 @@
   "videoEditorLayerAnimationBounce": "バウンス",
   "videoEditorLayerAnimationTypewriter": "タイプライター",
   "videoEditorLayerAnimationWordByWord": "単語ごと",
+  "videoEditorLayerAnimationDrawOn": "一筆ずつ",
   "videoEditorLayerAnimationPulse": "パルス",
   "videoEditorLayerAnimationPulseTo": "縮小サイズ",
   "videoEditorLayerAnimationWiggleAngle": "傾き",

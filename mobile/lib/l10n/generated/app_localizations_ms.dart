@@ -11179,6 +11179,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'Perkataan demi perkataan';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'Garisan demi garisan';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'Denyut';
 
   @override

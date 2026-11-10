@@ -97,13 +97,11 @@ class EditorOverlaySnapshot {
         for (final item in capturedLayers)
           if (_windowFor(item.layer.startTime, item.layer.endTime, start, end)
               case final w?)
-            ExportedLayer(
+            _windowedCapture(
+              item,
               layer: _windowedLayer(item.layer, w, windowStart: start),
-              bytes: item.bytes,
-              logicalSize: item.logicalSize,
-              boxSize: item.boxSize,
-              highlightBytes: item.highlightBytes,
-              revealBytes: item.revealBytes,
+              start: start,
+              end: end,
             ),
       ],
       filterStates: [
@@ -140,6 +138,39 @@ class EditorOverlaySnapshot {
       blur: blur,
       bodySize: bodySize,
     );
+  }
+
+  static ExportedLayer _windowedCapture(
+    ExportedLayer item, {
+    required Layer layer,
+    required Duration start,
+    required Duration end,
+  }) {
+    final captured = ExportedLayer(
+      layer: layer,
+      bytes: item.bytes,
+      logicalSize: item.logicalSize,
+      boxSize: item.boxSize,
+      highlightBytes: item.highlightBytes,
+      revealBytes: item.revealBytes,
+      drawOnBytes: item.drawOnBytes,
+      drawOnFrameRate: item.drawOnFrameRate,
+    );
+    if (item.drawOnBytes.isEmpty) return captured;
+
+    // Resolve captured draw-on frames on their original clock, then slice
+    // them. Recomputing after windowing loses a reveal crossing a clip edge
+    // and changes its fraction keys when the clip starts between frames.
+    return _WindowedDrawing(captured, [
+      for (final frame in item.frames)
+        if (_windowFor(frame.startTime, frame.endTime, start, end)
+            case final w?)
+          ExportedLayerFrame(
+            bytes: frame.bytes,
+            startTime: w.start,
+            endTime: w.end,
+          ),
+    ]);
   }
 
   /// Copies [layer] onto its clip-local window [w], dropping any enter/leave
@@ -265,3 +296,21 @@ typedef _OverlayWindow = ({
   bool startClamped,
   bool endClamped,
 });
+
+/// A drawing's captured frames sliced onto a clip's local timeline.
+class _WindowedDrawing extends ExportedLayer {
+  _WindowedDrawing(ExportedLayer captured, this.frames)
+    : super(
+        layer: captured.layer,
+        bytes: captured.bytes,
+        logicalSize: captured.logicalSize,
+        boxSize: captured.boxSize,
+        highlightBytes: captured.highlightBytes,
+        revealBytes: captured.revealBytes,
+        drawOnBytes: captured.drawOnBytes,
+        drawOnFrameRate: captured.drawOnFrameRate,
+      );
+
+  @override
+  final List<ExportedLayerFrame> frames;
+}

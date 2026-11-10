@@ -395,6 +395,142 @@ void main() {
       });
     });
 
+    group('windowedTo draw-on', () {
+      ExportedLayer drawingFrom(Duration start) {
+        final layer = PaintLayer(
+          item: PaintedModel(
+            mode: PaintMode.freeStyle,
+            offsets: const [Offset.zero, Offset(10, 0)],
+            erasedOffsets: const [],
+            color: const Color(0xFF000000),
+            strokeWidth: 2,
+            opacity: 1,
+          ),
+          rawSize: const Size(10, 10),
+          opacity: 1,
+          startTime: start,
+          endTime: start + _s1,
+          animations: const [
+            LayerAnimation(
+              type: LayerAnimationType.drawOn,
+              phase: AnimationPhase.animateIn,
+              duration: _s1,
+            ),
+          ],
+        );
+        return ExportedLayer(
+          layer: layer,
+          bytes: Uint8List.fromList([99]),
+          logicalSize: const Size(10, 10),
+          drawOnFrameRate: 10,
+          drawOnBytes: {
+            for (var i = 0; i < 10; i++)
+              layer.drawnFractionAt(start + Duration(milliseconds: i * 100))!:
+                  Uint8List.fromList([i + 1]),
+          },
+        );
+      }
+
+      test('keeps a drawing in progress across both clip boundaries', () {
+        final drawing = drawingFrom(Duration.zero);
+        expect(drawing.frames.map((frame) => frame.bytes.single), [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+        ]);
+
+        final result = EditorOverlaySnapshot(capturedLayers: [drawing])
+            .windowedTo(
+              start: const Duration(milliseconds: 250),
+              end: const Duration(milliseconds: 750),
+            );
+        final frames = result.capturedLayers.single.frames;
+
+        expect(frames.map((frame) => frame.bytes.single), [3, 4, 5, 6, 7, 8]);
+        expect(frames.first.startTime, Duration.zero);
+        expect(frames.first.endTime, const Duration(milliseconds: 50));
+        expect(frames.last.endTime, const Duration(milliseconds: 500));
+      });
+
+      test('keeps captured fractions when the clip starts between frames', () {
+        final drawing = drawingFrom(const Duration(milliseconds: 500));
+        final result = EditorOverlaySnapshot(capturedLayers: [drawing])
+            .windowedTo(
+              start: const Duration(milliseconds: 25),
+              end: _s2,
+            );
+        final frames = result.capturedLayers.single.frames;
+
+        expect(frames.map((frame) => frame.bytes.single), [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+        ]);
+        expect(frames.first.startTime, const Duration(milliseconds: 475));
+        expect(frames.first.endTime, const Duration(milliseconds: 575));
+        expect(frames.last.endTime, const Duration(milliseconds: 1475));
+      });
+
+      test('keeps the images of a drawing that draws itself', () {
+        final drawing = ExportedLayer(
+          layer: PaintLayer(
+            item: PaintedModel(
+              mode: PaintMode.freeStyle,
+              offsets: const [Offset.zero, Offset(10, 0)],
+              erasedOffsets: const [],
+              color: const Color(0xFF000000),
+              strokeWidth: 2,
+              opacity: 1,
+            ),
+            rawSize: const Size(10, 10),
+            opacity: 1,
+            startTime: _s2,
+            endTime: _s5,
+            animations: const [
+              LayerAnimation(
+                type: LayerAnimationType.drawOn,
+                phase: AnimationPhase.animateIn,
+                duration: Duration(milliseconds: 200),
+              ),
+            ],
+          ),
+          bytes: Uint8List.fromList([0]),
+          logicalSize: const Size(10, 10),
+          drawOnFrameRate: 10,
+          drawOnBytes: {
+            0: Uint8List.fromList([1]),
+            0.5: Uint8List.fromList([2]),
+          },
+        );
+
+        final result = EditorOverlaySnapshot(
+          capturedLayers: [drawing],
+        ).windowedTo(start: _s1, end: _s6);
+
+        expect(
+          [
+            for (final frame in result.capturedLayers.single.frames)
+              frame.bytes.single,
+          ],
+          [1, 2, 0],
+        );
+      });
+    });
+
     group('windowedTo filters and tune', () {
       test('windows a filter like a layer', () {
         final result = EditorOverlaySnapshot(

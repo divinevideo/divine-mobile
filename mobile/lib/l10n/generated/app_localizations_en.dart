@@ -11267,6 +11267,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'Word by word';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'Draw on';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'Pulse';
 
   @override

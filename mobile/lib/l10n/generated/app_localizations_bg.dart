@@ -11273,6 +11273,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'Дума по дума';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'Линия по линия';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'Пулсиране';
 
   @override
