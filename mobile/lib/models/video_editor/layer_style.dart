@@ -16,7 +16,7 @@ import 'package:openvine/models/video_editor/sticker_card_layer.dart';
 import 'package:openvine/models/video_editor/tappable_sticker_layer.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show Layer, LayerMask, TextLayer;
+    show Layer, LayerMask, PaintLayer, TextLayer;
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 
 /// Whether [layer] can give its style to Copy style and take one from Paste
@@ -172,18 +172,24 @@ class LayerStyle extends Equatable {
 
 /// [animations] without the ones [layer] cannot play: typing a text out
 /// letter by letter or word by word means nothing on a sticker or a drawing,
-/// and a sticker a viewer taps, such as a link or a location, holds still
-/// where it is tapped.
+/// drawing strokes one by one means nothing on anything but a drawing, and a
+/// sticker a viewer taps, such as a link or a location, holds still where it
+/// is tapped.
 List<pve.LayerAnimation> _playableOn(
   Layer layer,
   List<pve.LayerAnimation> animations,
 ) {
   if (isTappableStickerLayer(layer)) return const [];
-  if (layer is TextLayer) return animations;
+  final revealsText = layer is TextLayer;
+  final drawsOn = layer is PaintLayer && !layer.isCensor;
   return [
     for (final animation in animations)
-      if (animation.type != pve.LayerAnimationType.typewriter &&
-          animation.type != pve.LayerAnimationType.wordByWord)
+      if (switch (animation.type) {
+        pve.LayerAnimationType.typewriter ||
+        pve.LayerAnimationType.wordByWord => revealsText,
+        pve.LayerAnimationType.drawOn => drawsOn,
+        _ => true,
+      })
         animation,
   ];
 }

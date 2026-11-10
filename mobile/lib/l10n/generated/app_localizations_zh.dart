@@ -10517,6 +10517,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => '逐词';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => '逐笔';
+
+  @override
   String get videoEditorLayerAnimationPulse => '脉动';
 
   @override

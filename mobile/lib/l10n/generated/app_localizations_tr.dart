@@ -11074,6 +11074,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'Kelime kelime';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'Çizgi çizgi';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'Nabız';
 
   @override

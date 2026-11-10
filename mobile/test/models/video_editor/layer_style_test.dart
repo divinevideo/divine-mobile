@@ -21,6 +21,11 @@ const _typewriter = pve.LayerAnimation(
   phase: pve.AnimationPhase.animateIn,
   duration: Duration(milliseconds: 500),
 );
+const _drawOn = pve.LayerAnimation(
+  type: pve.LayerAnimationType.drawOn,
+  phase: pve.AnimationPhase.animateIn,
+  duration: Duration(seconds: 1),
+);
 const _fadeIn = pve.LayerAnimation(
   type: pve.LayerAnimationType.fade,
   phase: pve.AnimationPhase.animateIn,
@@ -102,6 +107,31 @@ void main() {
         expect(styled, isA<PaintLayer>());
         expect(styled.divineEnterAnimations, [_fadeIn]);
         expect(styled.opacity, 0.5);
+      });
+
+      test("gives a drawing another drawing's draw-on", () {
+        final source = _drawing(id: 's')
+          ..animations = const [_drawOn, _fadeIn].toLayerAnimations();
+
+        final styled = LayerStyle.of(
+          source,
+          at: Duration.zero,
+        ).applyTo(_drawing(), canvasSize: _canvas, totalDuration: _total);
+
+        expect(styled.divineEnterAnimations, [_drawOn, _fadeIn]);
+      });
+
+      test("gives a text a drawing's animations without its draw-on", () {
+        final source = _drawing(id: 's')
+          ..animations = const [_drawOn, _fadeIn].toLayerAnimations();
+
+        final styled = LayerStyle.of(source, at: Duration.zero).applyTo(
+          TextLayer(id: 't', text: 'Target'),
+          canvasSize: _canvas,
+          totalDuration: _total,
+        );
+
+        expect(styled.divineEnterAnimations, [_fadeIn]);
       });
 
       test('gives a sticker a viewer taps no animations', () {

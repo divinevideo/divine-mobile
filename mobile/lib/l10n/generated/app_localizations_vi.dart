@@ -11113,6 +11113,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'Từng từ';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'Từng nét';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'Nhịp đập';
 
   @override

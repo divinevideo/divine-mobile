@@ -11163,6 +11163,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'لفظ بہ لفظ';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'لکیر بہ لکیر';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'دھڑکن';
 
   @override

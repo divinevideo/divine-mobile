@@ -11244,6 +11244,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'Bawat salita';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'Bawat guhit';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'Pulso';
 
   @override

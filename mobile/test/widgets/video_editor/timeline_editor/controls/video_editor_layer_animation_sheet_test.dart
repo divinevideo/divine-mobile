@@ -14,7 +14,7 @@ import 'package:openvine/models/video_editor/layer_slide_point.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show Layer, ProImageEditorState;
+    show Layer, PaintLayer, PaintMode, PaintedModel, ProImageEditorState;
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
 
 class _MockProImageEditorState extends Mock implements ProImageEditorState {
@@ -36,6 +36,8 @@ void main() {
       List<editor.LayerAnimation> initialLeave = const [],
       List<editor.LayerAnimation> initialLoop = const [],
       bool allowTextReveal = false,
+      bool allowDrawOn = false,
+      int drawOnMaxDurationMs = 2000,
       double viewWidth = 500,
       double viewHeight = 1600,
       bool disableAnimations = false,
@@ -78,6 +80,8 @@ void main() {
                               initialLeave: initialLeave,
                               initialLoop: initialLoop,
                               allowTextReveal: allowTextReveal,
+                              allowDrawOn: allowDrawOn,
+                              drawOnMaxDurationMs: drawOnMaxDurationMs,
                               initialEnterPoint: initialEnterPoint,
                               initialLeavePoint: initialLeavePoint,
                               layerAnchor: layerAnchor,
@@ -394,6 +398,139 @@ void main() {
         expect(reveal.type, editor.LayerAnimationType.wordByWord);
         expect(reveal.curve, editor.AnimationCurve.linear);
         expect(reveal.duration, const Duration(seconds: 1));
+      });
+    });
+
+    group('draw on', () {
+      testWidgets('is not offered for another layer', (tester) async {
+        await openPicker(tester, viewWidth: 800, allowTextReveal: true);
+
+        expect(find.text(l10n.videoEditorLayerAnimationDrawOn), findsNothing);
+      });
+
+      testWidgets('draws a drawing at an even pace', (tester) async {
+        await openPicker(tester, viewWidth: 800, allowDrawOn: true);
+
+        await tester.tap(find.text(l10n.videoEditorLayerAnimationDrawOn));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        await tester.tap(find.text(l10n.videoEditorDoneLabel));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        final drawOn = result!.enter.single;
+        expect(drawOn.type, editor.LayerAnimationType.drawOn);
+        expect(drawOn.curve, editor.AnimationCurve.linear);
+        expect(drawOn.duration, const Duration(seconds: 1));
+      });
+
+      group('duration', () {
+        /// Drags the duration slider past its end, so it lands on its maximum
+        /// whatever the surface width, and confirms the picker.
+        Future<void> slideToMaxAndConfirm(WidgetTester tester) async {
+          final slider = find.byType(DivineSlider);
+          await tester.drag(
+            slider,
+            Offset(tester.getSize(slider).width * 2, 0),
+          );
+          await tester.pump();
+          await tester.tap(find.text(l10n.videoEditorDoneLabel));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 350));
+        }
+
+        testWidgets('lets a drawing draw itself as long as it shows', (
+          tester,
+        ) async {
+          await openPicker(
+            tester,
+            viewWidth: 800,
+            allowDrawOn: true,
+            drawOnMaxDurationMs: 6300,
+          );
+
+          await tester.tap(find.text(l10n.videoEditorLayerAnimationDrawOn));
+          await tester.pump();
+          await slideToMaxAndConfirm(tester);
+
+          expect(
+            result!.enter.single.duration,
+            const Duration(milliseconds: 6300),
+          );
+        });
+
+        testWidgets('keeps every other effect to two seconds', (tester) async {
+          await openPicker(
+            tester,
+            viewWidth: 800,
+            allowDrawOn: true,
+            drawOnMaxDurationMs: 6300,
+          );
+
+          await tester.tap(find.text(l10n.videoEditorLayerAnimationFade));
+          await tester.pump();
+          await slideToMaxAndConfirm(tester);
+
+          expect(result!.enter.single.duration, const Duration(seconds: 2));
+        });
+
+        testWidgets('never offers less than two seconds', (tester) async {
+          await openPicker(
+            tester,
+            viewWidth: 800,
+            allowDrawOn: true,
+            drawOnMaxDurationMs: 500,
+          );
+
+          await tester.tap(find.text(l10n.videoEditorLayerAnimationDrawOn));
+          await tester.pump();
+          await slideToMaxAndConfirm(tester);
+
+          expect(result!.enter.single.duration, const Duration(seconds: 2));
+        });
+
+        testWidgets('cuts a long phase back once the draw-on is dropped', (
+          tester,
+        ) async {
+          const long = Duration(milliseconds: 5000);
+          await openPicker(
+            tester,
+            viewWidth: 800,
+            allowDrawOn: true,
+            drawOnMaxDurationMs: 6300,
+            initialEnter: const [
+              editor.LayerAnimation(
+                type: editor.LayerAnimationType.fade,
+                phase: editor.AnimationPhase.animateIn,
+                duration: long,
+              ),
+              editor.LayerAnimation(
+                type: editor.LayerAnimationType.drawOn,
+                phase: editor.AnimationPhase.animateIn,
+                duration: long,
+              ),
+            ],
+          );
+
+          await tester.tap(find.text(l10n.videoEditorLayerAnimationDrawOn));
+          await tester.pump();
+          await tester.tap(find.text(l10n.videoEditorDoneLabel));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 350));
+
+          final fade = result!.enter.single;
+          expect(fade.type, editor.LayerAnimationType.fade);
+          expect(fade.duration, const Duration(seconds: 2));
+        });
+      });
+
+      testWidgets('is not offered in a loop', (tester) async {
+        await openPicker(tester, viewWidth: 800, allowDrawOn: true);
+
+        await tester.tap(find.text(l10n.videoEditorLayerAnimationLoop));
+        await tester.pump();
+
+        expect(find.text(l10n.videoEditorLayerAnimationDrawOn), findsNothing);
       });
     });
 
@@ -870,9 +1007,10 @@ void main() {
       WidgetTester tester,
       Layer layer, {
       bool withCanvas = false,
+      double viewWidth = 500,
     }) async {
       when(() => mockEditor.activeLayers).thenReturn([layer]);
-      tester.view.physicalSize = const Size(500, 1600);
+      tester.view.physicalSize = Size(viewWidth, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -1013,6 +1151,40 @@ void main() {
       expect(
         capturedLayers().single.endTime,
         equals(const Duration(seconds: 2)),
+      );
+    });
+
+    testWidgets('lets a drawing draw itself for as long as it shows', (
+      tester,
+    ) async {
+      final drawing = PaintLayer(
+        id: 'd1',
+        rawSize: const Size(10, 10),
+        opacity: 1,
+        item: PaintedModel(
+          mode: PaintMode.freeStyle,
+          offsets: const [Offset.zero, Offset(10, 10)],
+          erasedOffsets: const [],
+          color: const Color(0xFFFF0000),
+          strokeWidth: 6,
+          opacity: 1,
+        ),
+        startTime: const Duration(seconds: 1),
+        endTime: const Duration(milliseconds: 4505),
+      );
+      await openEditor(tester, drawing, viewWidth: 800);
+
+      await tester.tap(find.text(l10n.videoEditorLayerAnimationDrawOn));
+      await tester.pump();
+      final slider = find.byType(DivineSlider);
+      await tester.drag(slider, Offset(tester.getSize(slider).width * 2, 0));
+      await tester.pump();
+      await tapDone(tester);
+
+      // On screen from 1 s to 4.505 s, rounded down to the slider's step.
+      expect(
+        capturedLayers().single.divineEnterAnimations.single.duration,
+        const Duration(milliseconds: 3500),
       );
     });
 

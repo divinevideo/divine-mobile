@@ -395,6 +395,53 @@ void main() {
       });
     });
 
+    group('windowedTo draw-on', () {
+      test('keeps the images of a drawing that draws itself', () {
+        final drawing = ExportedLayer(
+          layer: PaintLayer(
+            item: PaintedModel(
+              mode: PaintMode.freeStyle,
+              offsets: const [Offset.zero, Offset(10, 0)],
+              erasedOffsets: const [],
+              color: const Color(0xFF000000),
+              strokeWidth: 2,
+              opacity: 1,
+            ),
+            rawSize: const Size(10, 10),
+            opacity: 1,
+            startTime: _s2,
+            endTime: _s5,
+            animations: const [
+              LayerAnimation(
+                type: LayerAnimationType.drawOn,
+                phase: AnimationPhase.animateIn,
+                duration: Duration(milliseconds: 200),
+              ),
+            ],
+          ),
+          bytes: Uint8List.fromList([0]),
+          logicalSize: const Size(10, 10),
+          drawOnFrameRate: 10,
+          drawOnBytes: {
+            0: Uint8List.fromList([1]),
+            0.5: Uint8List.fromList([2]),
+          },
+        );
+
+        final result = EditorOverlaySnapshot(
+          capturedLayers: [drawing],
+        ).windowedTo(start: _s1, end: _s6);
+
+        expect(
+          [
+            for (final frame in result.capturedLayers.single.frames)
+              frame.bytes.single,
+          ],
+          [1, 2, 0],
+        );
+      });
+    });
+
     group('windowedTo filters and tune', () {
       test('windows a filter like a layer', () {
         final result = EditorOverlaySnapshot(

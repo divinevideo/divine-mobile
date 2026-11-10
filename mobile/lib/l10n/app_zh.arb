@@ -5577,6 +5577,7 @@
   "videoEditorLayerAnimationBounce": "弹跳",
   "videoEditorLayerAnimationTypewriter": "打字机",
   "videoEditorLayerAnimationWordByWord": "逐词",
+  "videoEditorLayerAnimationDrawOn": "逐笔",
   "videoEditorLayerAnimationPulse": "脉动",
   "videoEditorLayerAnimationPulseTo": "缩小至",
   "videoEditorLayerAnimationWiggleAngle": "倾斜度",

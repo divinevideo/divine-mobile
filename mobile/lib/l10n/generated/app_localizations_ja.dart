@@ -10622,6 +10622,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => '単語ごと';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => '一筆ずつ';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'パルス';
 
   @override

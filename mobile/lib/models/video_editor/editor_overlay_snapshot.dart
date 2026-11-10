@@ -104,6 +104,8 @@ class EditorOverlaySnapshot {
               boxSize: item.boxSize,
               highlightBytes: item.highlightBytes,
               revealBytes: item.revealBytes,
+              drawOnBytes: item.drawOnBytes,
+              drawOnFrameRate: item.drawOnFrameRate,
             ),
       ],
       filterStates: [

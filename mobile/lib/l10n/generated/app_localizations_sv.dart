@@ -11165,6 +11165,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'Ord för ord';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'Drag för drag';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'Puls';
 
   @override

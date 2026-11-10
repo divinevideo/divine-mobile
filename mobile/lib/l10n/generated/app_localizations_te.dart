@@ -11453,6 +11453,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'పదం పదంగా';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'గీత గీతగా';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'పల్స్';
 
   @override

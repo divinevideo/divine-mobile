@@ -225,6 +225,9 @@ class TitleStylePreview extends StatelessWidget {
         case LayerAnimationType.typewriter:
         case LayerAnimationType.wordByWord:
           reveal = math.min(reveal, _revealed(animation.type, progress));
+        case LayerAnimationType.drawOn:
+          // A title is text; only a drawing draws itself.
+          break;
       }
     }
 

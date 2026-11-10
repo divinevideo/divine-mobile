@@ -11298,6 +11298,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => 'Wort für Wort';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => 'Strich für Strich';
+
+  @override
   String get videoEditorLayerAnimationPulse => 'Pulsieren';
 
   @override

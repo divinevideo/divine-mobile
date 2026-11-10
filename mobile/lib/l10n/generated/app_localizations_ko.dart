@@ -10642,6 +10642,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorLayerAnimationWordByWord => '단어별';
 
   @override
+  String get videoEditorLayerAnimationDrawOn => '한 획씩';
+
+  @override
   String get videoEditorLayerAnimationPulse => '맥박';
 
   @override

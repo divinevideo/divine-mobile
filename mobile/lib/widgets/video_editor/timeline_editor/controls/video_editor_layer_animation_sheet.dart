@@ -1,5 +1,6 @@
 // ABOUTME: Bottom-sheet picker for a layer's enter/leave/loop animation
-// ABOUTME: (fade, slide, scale, wiggle, bounce, spin, flip, text reveals) —
+// ABOUTME: (fade, slide, scale, wiggle, bounce, spin, flip, text reveals,
+// ABOUTME: draw on) —
 // ABOUTME: twin of the clip-transition sheet, shared controls.
 
 import 'dart:math' as math;
@@ -16,7 +17,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_slide_point_picker.dart';
 import 'package:pro_image_editor/core/models/layers/layer.dart'
-    show Layer, TextLayer;
+    show Layer, PaintLayer, TextLayer;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show
         AnimationCurve,
@@ -113,6 +114,8 @@ Future<void> editLayerAnimation(
         initialLeave: draft.leave,
         initialLoop: draft.loop,
         allowTextReveal: layer is TextLayer,
+        allowDrawOn: layer is PaintLayer && !layer.isCensor,
+        drawOnMaxDurationMs: _visibleDurationMs(layer, totalDuration),
         initialEnterPoint: draft.enterPoint,
         initialLeavePoint: draft.leavePoint,
         initialPhase: draft.phase,
@@ -173,6 +176,19 @@ Future<void> editLayerAnimation(
   editor.addHistory(layers: layers);
 }
 
+/// How long [layer] shows in a video of [totalDuration], in milliseconds,
+/// rounded down to the duration slider's step. A layer without an end, or one
+/// that ends past the video, shows until the video ends.
+int _visibleDurationMs(Layer layer, Duration totalDuration) {
+  final start = layer.startTime ?? Duration.zero;
+  final layerEnd = layer.endTime;
+  final end = layerEnd != null && layerEnd < totalDuration
+      ? layerEnd
+      : totalDuration;
+  final ms = (end - start).inMilliseconds;
+  return ms - ms % _durationStepMs;
+}
+
 /// The picker's result: the chosen enter, leave and loop animations, the custom
 /// slide point each phase travels from (a canvas fraction, `null` for a plain
 /// edge slide), the phase on screen when the sheet closed, and whether it
@@ -199,6 +215,7 @@ class LayerAnimationPickerView extends StatefulWidget {
     required this.initialLeave,
     this.initialLoop = const [],
     this.allowTextReveal = false,
+    this.allowDrawOn = false,
     this.initialEnterPoint,
     this.initialLeavePoint,
     this.initialPhase = AnimationPhase.animateIn,
@@ -206,6 +223,7 @@ class LayerAnimationPickerView extends StatefulWidget {
     this.canvasAspectRatio = 1,
     this.canPickPoint = false,
     this.maxDurationMs = _maxDurationMs,
+    this.drawOnMaxDurationMs = _maxDurationMs,
     super.key,
   });
 
@@ -218,6 +236,10 @@ class LayerAnimationPickerView extends StatefulWidget {
   /// Whether the typewriter and word-by-word reveals are offered, which only
   /// a text layer can play.
   final bool allowTextReveal;
+
+  /// Whether the draw-on is offered, which only a drawing can play: its
+  /// strokes draw themselves in the order they were drawn.
+  final bool allowDrawOn;
 
   /// Where the enter slide starts, as a canvas fraction. `null` slides in from
   /// a canvas edge.
@@ -244,7 +266,13 @@ class LayerAnimationPickerView extends StatefulWidget {
   /// place it on, which hides the option rather than offering a dead end.
   final bool canPickPoint;
 
+  /// The longest a phase may take, in milliseconds.
   final int maxDurationMs;
+
+  /// The longest a phase with the draw-on may take, in milliseconds: how long
+  /// the layer shows, so a drawing can draw itself across all of it. Never
+  /// shorter than [maxDurationMs].
+  final int drawOnMaxDurationMs;
 
   @override
   State<LayerAnimationPickerView> createState() =>
@@ -265,8 +293,8 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
   ///
   /// A loop offers only what reads well over and over: a wiggle, a hop, a
   /// pulse and a spin. Fade (a blink) and slide (back and forth across the
-  /// frame) are left out, and so are the text reveals, which only a text
-  /// layer plays.
+  /// frame) are left out, and so are the text reveals and the draw-on, which
+  /// only a text or a drawing plays, once on the way in or out.
   List<LayerAnimationType?> get _typeOptions => [
     null,
     if (_phase == AnimationPhase.loop) ...const [
@@ -286,6 +314,7 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
         LayerAnimationType.typewriter,
         LayerAnimationType.wordByWord,
       ],
+      if (widget.allowDrawOn) LayerAnimationType.drawOn,
     ],
   ];
 
@@ -302,6 +331,7 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
     LayerAnimationType.flip,
     LayerAnimationType.typewriter,
     LayerAnimationType.wordByWord,
+    LayerAnimationType.drawOn,
   ];
 
   @override
@@ -358,16 +388,31 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
       switch (_phase) {
         case AnimationPhase.animateIn:
         case AnimationPhase.animateInOut:
-          _enter = update(_enter);
+          _enter = _withinMax(update(_enter));
         case AnimationPhase.animateOut:
-          _leave = update(_leave);
+          _leave = _withinMax(update(_leave));
         case AnimationPhase.loop:
-          _loop = update(_loop);
+          _loop = _withinMax(update(_loop));
       }
     });
   }
 
-  int get _maxMs => widget.maxDurationMs;
+  int get _maxMs => _maxMsOf(_active);
+
+  /// A draw-on may take as long as the layer shows; every other effect stops
+  /// at [LayerAnimationPickerView.maxDurationMs].
+  int _maxMsOf(_PhaseConfig config) =>
+      config.types.contains(LayerAnimationType.drawOn)
+      ? math.max(widget.maxDurationMs, widget.drawOnMaxDurationMs)
+      : widget.maxDurationMs;
+
+  /// [config] with its duration cut back to what it may take, so dropping the
+  /// draw-on does not leave a fade or a slide as long as the drawing took.
+  _PhaseConfig _withinMax(_PhaseConfig config) {
+    final maxMs = _maxMsOf(config);
+    if (config.duration.inMilliseconds <= maxMs) return config;
+    return config.copyWith(duration: Duration(milliseconds: maxMs));
+  }
 
   int get _minMs =>
       _phase == AnimationPhase.loop ? _minLoopDurationMs : _minDurationMs;
@@ -772,6 +817,7 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
     LayerAnimationType.flip => l10n.videoEditorTransitionFlip,
     LayerAnimationType.typewriter => l10n.videoEditorLayerAnimationTypewriter,
     LayerAnimationType.wordByWord => l10n.videoEditorLayerAnimationWordByWord,
+    LayerAnimationType.drawOn => l10n.videoEditorLayerAnimationDrawOn,
   };
 }
 
@@ -849,6 +895,7 @@ class _PhaseConfig {
         case LayerAnimationType.fade:
         case LayerAnimationType.typewriter:
         case LayerAnimationType.wordByWord:
+        case LayerAnimationType.drawOn:
           break;
       }
     }
@@ -900,7 +947,8 @@ class _PhaseConfig {
   /// The two text reveals exclude each other: a text cannot type itself out
   /// letter by letter and word by word at once. The first effect added to an
   /// empty [phase] brings the timing it looks right with — a bounce lands with
-  /// a bounce curve, a typewriter types at an even pace, a loop wiggles like a
+  /// a bounce curve, a typewriter types and a drawing draws at an even pace, a
+  /// loop wiggles like a
   /// pendulum — since the shared curve and duration have nothing to keep yet.
   _PhaseConfig toggled(
     LayerAnimationType? type, {
@@ -967,7 +1015,9 @@ class _PhaseConfig {
         duration: const Duration(milliseconds: 600),
         curve: AnimationCurve.easeOutCubic,
       ),
-      LayerAnimationType.typewriter || LayerAnimationType.wordByWord => (
+      LayerAnimationType.typewriter ||
+      LayerAnimationType.wordByWord ||
+      LayerAnimationType.drawOn => (
         duration: const Duration(seconds: 1),
         curve: AnimationCurve.linear,
       ),
@@ -1477,6 +1527,9 @@ class _LayerEffect extends StatelessWidget {
               presence: presence,
             ),
           ),
+          LayerAnimationType.drawOn => Center(
+            child: _DrawOnPlaceholder(presence: presence),
+          ),
         },
       ),
     );
@@ -1541,6 +1594,56 @@ class _RevealPlaceholder extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A sample squiggle drawn from its start as far as [presence] (1 = all) has
+/// come, the way a drawing draws itself.
+///
+/// Decorative, like the other placeholders.
+class _DrawOnPlaceholder extends StatelessWidget {
+  const _DrawOnPlaceholder({required this.presence});
+
+  final double presence;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size(36, 24),
+      painter: _SquigglePainter(
+        drawn: presence.clamp(0.0, 1.0),
+        color: context.vineColors.primaryText,
+      ),
+    );
+  }
+}
+
+class _SquigglePainter extends CustomPainter {
+  const _SquigglePainter({required this.drawn, required this.color});
+
+  /// How much of the squiggle shows, from 0 (nothing) to 1 (all).
+  final double drawn;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (drawn <= 0) return;
+    final squiggle = Path()
+      ..moveTo(2, 18)
+      ..cubicTo(8, 2, 14, 2, 18, 12)
+      ..cubicTo(22, 22, 28, 22, 34, 6);
+    final paint = Paint()
+      ..color = color
+      ..style = .stroke
+      ..strokeWidth = 3
+      ..strokeCap = .round;
+    for (final metric in squiggle.computeMetrics()) {
+      canvas.drawPath(metric.extractPath(0, metric.length * drawn), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_SquigglePainter oldDelegate) =>
+      oldDelegate.drawn != drawn || oldDelegate.color != color;
 }
 
 class _PlaceholderLayer extends StatelessWidget {

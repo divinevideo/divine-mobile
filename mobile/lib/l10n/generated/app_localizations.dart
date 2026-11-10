@@ -18929,6 +18929,12 @@ abstract class AppLocalizations {
   /// **'Word by word'**
   String get videoEditorLayerAnimationWordByWord;
 
+  /// Layer animation type, drawing layers only: the drawing draws itself stroke by stroke, in the order and direction it was drawn (Enter), or takes itself away in reverse (Leave).
+  ///
+  /// In en, this message translates to:
+  /// **'Draw on'**
+  String get videoEditorLayerAnimationDrawOn;
+
   /// Label of the scale animation in the Loop tab: the layer keeps shrinking a little and growing back while visible.
   ///
   /// In en, this message translates to:
