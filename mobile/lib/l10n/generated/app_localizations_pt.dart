@@ -10820,6 +10820,17 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Curva';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Câmera lenta suave';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Mistura quadros para a câmera lenta fluir. Movimentos rápidos podem deixar fantasmas.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Deixe o clipe abaixo de 1× para suavizar.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Personalizada';
 
   @override

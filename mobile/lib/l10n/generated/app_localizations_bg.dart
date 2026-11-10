@@ -10819,6 +10819,17 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Крива';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Плавен забавен каданс';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Смесва кадрите, за да тече забавеното движение. Бързите движения може да оставят призраци.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Забави клипа под 1×, за да го изгладиш.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Персонализирана';
 
   @override

@@ -10636,6 +10636,17 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Eğri';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Akıcı ağır çekim';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Ağır çekim aksın diye kareleri karıştırır. Hızlı hareketler hayalet bırakabilir.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Yumuşatmak için klibi 1×\'in altına yavaşlat.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Özel';
 
   @override

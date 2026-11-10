@@ -281,6 +281,7 @@ class VideoEditorCanvas extends StatelessWidget {
           a.equalizer != b.equalizer ||
           a.playbackSpeed != b.playbackSpeed ||
           a.speedRamp != b.speedRamp ||
+          a.smoothSlowMotion != b.smoothSlowMotion ||
           a.reversed != b.reversed ||
           a.sourceStartOffset != b.sourceStartOffset ||
           a.transition != b.transition) {
@@ -580,6 +581,7 @@ class VideoEditorCanvas extends StatelessWidget {
           a.equalizer != b.equalizer ||
           a.playbackSpeed != b.playbackSpeed ||
           a.speedRamp != b.speedRamp ||
+          a.smoothSlowMotion != b.smoothSlowMotion ||
           a.transition != b.transition ||
           a.mask != b.mask ||
           a.maskBackgroundColor != b.maskBackgroundColor ||
@@ -2949,11 +2951,14 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
 
     // Update native player speeds when any clip's playback speed or speed
-    // ramp changes. VideoSpeedRamp overrides `==`, so the record comparison
-    // detects a reshaped curve.
-    ref.listen<List<(double?, VideoSpeedRamp?)>>(
+    // ramp changes, and swap in a blended or plain speed body when smooth
+    // slow motion is switched. VideoSpeedRamp overrides `==`, so the record
+    // comparison detects a reshaped curve.
+    ref.listen<List<(double?, VideoSpeedRamp?, bool)>>(
       clipManagerProvider.select(
-        (s) => s.clips.map((c) => (c.playbackSpeed, c.speedRamp)).toList(),
+        (s) => s.clips
+            .map((c) => (c.playbackSpeed, c.speedRamp, c.blendsFrames))
+            .toList(),
       ),
       (previous, current) {
         if (listEquals(previous, current)) return;

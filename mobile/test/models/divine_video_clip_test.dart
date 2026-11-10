@@ -333,6 +333,54 @@ void main() {
     });
   });
 
+  group('DivineVideoClip.smoothSlowMotion', () {
+    test('round-trips through stored JSON and is absent when off', () {
+      final smooth = clip(
+        '/videos/clip.mp4',
+      ).copyWith(playbackSpeed: 0.5, smoothSlowMotion: true);
+      final stored = jsonDecode(jsonEncode(smooth.toJson()));
+
+      expect(
+        DivineVideoClip.fromJson(
+          stored as Map<String, dynamic>,
+          '/videos',
+        ).smoothSlowMotion,
+        isTrue,
+      );
+      expect(
+        clip('/videos/clip.mp4').toJson(),
+        isNot(contains('smoothSlowMotion')),
+      );
+    });
+
+    test('blends frames only where the clip slows down', () {
+      final smooth = clip(
+        '/videos/clip.mp4',
+      ).copyWith(smoothSlowMotion: true);
+      const fastRamp = editor.VideoSpeedRamp([
+        editor.VideoSpeedRampPoint(position: 0, speed: 1),
+        editor.VideoSpeedRampPoint(position: 1, speed: 2),
+      ]);
+      const dippingRamp = editor.VideoSpeedRamp([
+        editor.VideoSpeedRampPoint(position: 0, speed: 2),
+        editor.VideoSpeedRampPoint(position: 0.5, speed: 0.3),
+        editor.VideoSpeedRampPoint(position: 1, speed: 2),
+      ]);
+
+      expect(smooth.copyWith(playbackSpeed: 0.5).blendsFrames, isTrue);
+      expect(smooth.copyWith(speedRamp: dippingRamp).blendsFrames, isTrue);
+      expect(smooth.blendsFrames, isFalse);
+      expect(smooth.copyWith(playbackSpeed: 2).blendsFrames, isFalse);
+      expect(smooth.copyWith(speedRamp: fastRamp).blendsFrames, isFalse);
+      expect(
+        smooth
+            .copyWith(playbackSpeed: 0.5, smoothSlowMotion: false)
+            .blendsFrames,
+        isFalse,
+      );
+    });
+  });
+
   group('DivineVideoClip.mask', () {
     const mask = LayerMask(
       shape: LayerMaskShape.heart,

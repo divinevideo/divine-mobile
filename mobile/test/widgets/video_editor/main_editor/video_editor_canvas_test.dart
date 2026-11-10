@@ -1020,6 +1020,13 @@ void main() {
       expect(VideoEditorCanvas.clipsChanged([a], [b]), isTrue);
     });
 
+    test('detects smooth slow motion switched on, so the export blends', () {
+      final a = _createClip(id: 'c').copyWith(playbackSpeed: 0.5);
+      final b = a.copyWith(smoothSlowMotion: true);
+
+      expect(VideoEditorCanvas.clipsChanged([a], [b]), isTrue);
+    });
+
     test('detects a clip-count change', () {
       final a = _createStopMotionClip(id: 'sm', holds: [hold2]);
 

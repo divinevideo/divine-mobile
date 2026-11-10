@@ -217,6 +217,7 @@ class ClipSpeedRenderService {
                   endTime: clip.trimStart + clip.trimmedDuration,
                   playbackSpeed: clip.playbackSpeed,
                   speedRamp: clip.speedRamp,
+                  frameBlending: clip.blendsFrames,
                   keyframes: bakeKeyframes ? clip.keyframes : const [],
                 ),
               ],
@@ -406,17 +407,19 @@ class ClipSpeedRenderService {
   /// body rendered from an HDR clip by an earlier build carries it.
   static const _cacheVersion = 3;
 
-  /// Keyed by what the render actually bakes in — source file, trims and speed
-  /// or speed ramp — and deliberately **not** by [DivineVideoClip.id]. Duplicating a clip,
-  /// splitting one and undoing the split, or reopening a draft all mint fresh
-  /// ids for byte-identical bodies; keying on the id re-encoded every one of
-  /// them. Two clips that agree on all of these produce the same file, so they
-  /// can share a single render.
+  /// Keyed by what the render actually bakes in — source file, trims, speed
+  /// or speed ramp, and whether it blends frames — and deliberately **not** by
+  /// [DivineVideoClip.id]. Duplicating a clip, splitting one and undoing the
+  /// split, or reopening a draft all mint fresh ids for byte-identical bodies;
+  /// keying on the id re-encoded every one of them. Two clips that agree on
+  /// all of these produce the same file, so they can share a single render.
   String _key(DivineVideoClip clip) =>
       'v$_cacheVersion|${clip.video?.file?.path}:'
       '${clip.duration.inMicroseconds}:${clip.trimStart.inMicroseconds}:'
       '${clip.trimEnd.inMicroseconds}:${clip.playbackSpeed ?? 1.0}'
-      '${_rampKey(clip.speedRamp)}';
+      '${_rampKey(clip.speedRamp)}'
+      // Only a blended body adds it, so every other key stays as it was.
+      '${clip.blendsFrames ? ':blend' : ''}';
 
   /// The ramp as it serializes, empty without one, so every key of a clip at
   /// a constant speed stays as it was. Its points alone are not enough: a

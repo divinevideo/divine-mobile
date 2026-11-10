@@ -10224,6 +10224,16 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorSpeedModeCurve => '곡선';
 
   @override
+  String get videoEditorSpeedSmoothTitle => '부드러운 슬로모션';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      '프레임을 섞어 슬로모션을 부드럽게 해요. 빠른 움직임엔 잔상이 남을 수 있어요.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable => '클립을 1×보다 느리게 하면 쓸 수 있어요.';
+
+  @override
   String get videoEditorSpeedCurveCustom => '사용자 지정';
 
   @override

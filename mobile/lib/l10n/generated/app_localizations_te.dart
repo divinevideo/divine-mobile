@@ -11009,6 +11009,17 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'వక్రం';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'మృదువైన స్లో-మో';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'స్లో మోషన్ సాఫీగా సాగేలా ఫ్రేమ్‌లను కలుపుతుంది. వేగవంతమైన కదలికలు నీడలను వదలవచ్చు.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'క్లిప్‌ను 1× కంటే నెమ్మదిగా చేసినప్పుడు ఇది పనిచేస్తుంది.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'అనుకూలం';
 
   @override

@@ -566,6 +566,7 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
         initialSpeed: clip.playbackSpeed ?? 1.0,
         initialRamp: clip.speedRamp,
         sourceDuration: clip.trimmedDuration,
+        initialSmoothSlowMotion: clip.smoothSlowMotion,
       ),
     );
 
@@ -585,10 +586,12 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       ConstantClipSpeed(:final speed) => currentClips[index].copyWith(
         playbackSpeed: speed,
         clearSpeedRamp: true,
+        smoothSlowMotion: result.smoothSlowMotion,
       ),
       RampClipSpeed(:final ramp) => currentClips[index].copyWith(
         speedRamp: ramp,
         clearPlaybackSpeed: true,
+        smoothSlowMotion: result.smoothSlowMotion,
       ),
     };
     final newClips = List.of(currentClips)..[index] = updated;
