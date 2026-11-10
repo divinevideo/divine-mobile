@@ -226,6 +226,67 @@ void main() {
       });
 
       test(
+        'leaves an index that is being saved alone on a later open',
+        () async {
+          // The store holds the first open for the manager's lifetime, so the
+          // sweep's open and close leave the repository open. Upstream 3.4.1
+          // saves in place, truncating before it writes, so the next sweep can
+          // open while the file holds only part of the index.
+          when(() => mockRepository.open()).thenAnswer((_) async => true);
+          when(() => mockRepository.close()).thenAnswer((_) async => false);
+
+          final index = jsonEncode([
+            CacheObject(
+              'https://example.com/a.mp4',
+              relativePath: 'a.mp4',
+              validTill: DateTime.now().add(const Duration(days: 1)),
+              id: 1,
+            ).toMap(),
+          ]);
+          final cacheFile = File('$testSupportPath/test_saving_index.json');
+          await cacheFile.writeAsString(index);
+
+          final repo = SafeCacheInfoRepository(
+            databaseName: 'test_saving_index',
+            repository: mockRepository,
+            directoryProvider: () async => testDirectory,
+          );
+
+          await repo.open();
+          await repo.open();
+          await repo.close();
+
+          await cacheFile.writeAsString(index.substring(0, index.length ~/ 2));
+          expect(await repo.open(), isTrue);
+
+          expect(cacheFile.existsSync(), isTrue);
+        },
+      );
+
+      test('opens concurrently only after a corrupt index is gone', () async {
+        // The store's constructor and the manifest load open at startup
+        // without waiting for each other. Neither may reach the repository,
+        // which reads the file, before the corrupt index is deleted.
+        final cacheFile = File('$testSupportPath/test_concurrent_corrupt.json');
+        await cacheFile.writeAsString('{"truncated":');
+        final indexPresentAtOpen = <bool>[];
+        when(() => mockRepository.open()).thenAnswer((_) async {
+          indexPresentAtOpen.add(cacheFile.existsSync());
+          return true;
+        });
+
+        final repo = SafeCacheInfoRepository(
+          databaseName: 'test_concurrent_corrupt',
+          repository: mockRepository,
+          directoryProvider: () async => testDirectory,
+        );
+
+        await Future.wait([repo.open(), repo.open()]);
+
+        expect(indexPresentAtOpen, equals([false, false]));
+      });
+
+      test(
         'leaves FlutterError.onError untouched across concurrent opens',
         () async {
           // The regression this guards: open() used to swap the process-global
