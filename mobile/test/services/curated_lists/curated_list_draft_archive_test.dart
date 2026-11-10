@@ -1,6 +1,7 @@
 // ABOUTME: Verifies the owner-private archive through platform storage calls.
 // ABOUTME: Covers verified writes, revision consumption and exact-owner erasure.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
@@ -18,6 +19,14 @@ void main() {
   late SecureCuratedListDraftArchive archive;
   late bool refuseWrites;
   late bool refuseDeletes;
+  late bool rejectReads;
+  late bool rejectWrites;
+  late bool corruptWrites;
+  late bool rejectBackupReadback;
+  String? pausedReadKey;
+  Completer<void>? readStarted;
+  Completer<void>? releaseRead;
+  var readPaused = false;
 
   CuratedList draft(String pubkey, {String name = 'Private draft'}) =>
       CuratedList(
@@ -34,16 +43,44 @@ void main() {
     values = {};
     refuseWrites = false;
     refuseDeletes = false;
+    rejectReads = false;
+    rejectWrites = false;
+    corruptWrites = false;
+    rejectBackupReadback = false;
+    pausedReadKey = null;
+    readStarted = null;
+    releaseRead = null;
+    readPaused = false;
     overrideSharedChannel(
       const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
       (call) async {
         final args = call.arguments as Map;
-        final key = args['key'] as String;
+        final key = args['key'] as String?;
         switch (call.method) {
           case 'read':
-            return values[key];
+            if (rejectReads ||
+                (rejectBackupReadback &&
+                    key!.startsWith('curated_list_draft_quarantine_v1:') &&
+                    values.containsKey(key))) {
+              throw PlatformException(code: 'read_failed');
+            }
+            final before = values[key];
+            if (key == pausedReadKey && !readPaused) {
+              readPaused = true;
+              readStarted!.complete();
+              await releaseRead!.future;
+            }
+            return before;
+          case 'readAll':
+            if (rejectReads) throw PlatformException(code: 'read_failed');
+            return Map<String, String>.of(values);
           case 'write':
-            if (!refuseWrites) values[key] = args['value'] as String;
+            if (rejectWrites) throw PlatformException(code: 'write_failed');
+            if (!refuseWrites) {
+              values[key!] = corruptWrites
+                  ? 'readback-mismatch'
+                  : args['value'] as String;
+            }
             return null;
           case 'delete':
             if (!refuseDeletes) values.remove(key);
@@ -90,29 +127,211 @@ void main() {
     });
 
     test(
-      'normal reads and replacement preserve malformed owner envelopes',
+      'quarantines each unreadable revision before replacing live drafts',
       () async {
         final key = SecureCuratedListDraftArchive.storageKey(owner);
-        for (final raw in [
+        final unreadable = [
           '{invalid',
+          jsonEncode({
+            'version': 2,
+            'owner': owner,
+            'revision': 'new-format',
+            'lists': [],
+          }),
           jsonEncode({
             'version': 1,
             'owner': other,
-            'revision': 'synthetic-revision',
-            'lists': [draft(owner).toJson()],
+            'revision': 'foreign',
+            'lists': [draft(other).toJson()],
           }),
-        ]) {
+        ];
+        for (final raw in unreadable) {
           values[key] = raw;
-          await expectLater(
-            archive.readOwner(owner),
-            throwsA(isA<CuratedListDraftArchiveException>()),
-          );
-          await expectLater(
-            archive.replaceOwner(owner, [draft(owner)]),
-            throwsA(isA<CuratedListDraftArchiveException>()),
-          );
-          expect(values[key], raw);
+          expect(await archive.readOwner(owner), isNull);
+          expect(values[key], isNull);
+          expect(values.values, contains(raw));
         }
+        expect(values.values, containsAll(unreadable));
+        expect(values.length, unreadable.length);
+        await archive.replaceOwner(owner, [draft(owner)]);
+        final snapshot = (await archive.readOwner(owner))!;
+        expect(await archive.consumeOwner(owner, snapshot.revision), isTrue);
+        expect(values.values, containsAll(unreadable));
+        await archive.replaceOwner(owner, []);
+        expect(values.values, containsAll(unreadable));
+      },
+    );
+
+    for (final failure in [
+      'rejected write',
+      'ignored write',
+      'mismatched readback',
+      'failed deletion',
+    ]) {
+      test('quarantine $failure keeps the live source and retries', () async {
+        final key = SecureCuratedListDraftArchive.storageKey(owner);
+        const raw = '{unreadable';
+        values[key] = raw;
+        rejectWrites = failure == 'rejected write';
+        refuseWrites = failure == 'ignored write';
+        corruptWrites = failure == 'mismatched readback';
+        refuseDeletes = failure == 'failed deletion';
+        await expectLater(
+          archive.readOwner(owner),
+          throwsA(isA<CuratedListDraftArchiveException>()),
+        );
+        expect(values[key], raw);
+        rejectWrites = refuseWrites = corruptWrites = refuseDeletes = false;
+        expect(await archive.readOwner(owner), isNull);
+        expect(values.values.where((value) => value == raw), hasLength(1));
+        if (failure == 'mismatched readback') {
+          expect(values.values, contains('readback-mismatch'));
+        }
+      });
+    }
+
+    test(
+      'storage read failures never masquerade as malformed archives',
+      () async {
+        final key = SecureCuratedListDraftArchive.storageKey(owner);
+        values[key] = '{unreadable';
+        rejectReads = true;
+        await expectLater(
+          archive.readOwner(owner),
+          throwsA(isA<CuratedListDraftArchiveException>()),
+        );
+        expect(values, {key: '{unreadable'});
+        rejectReads = false;
+        expect(await archive.readOwner(owner), isNull);
+        expect(values.values, ['{unreadable']);
+      },
+    );
+
+    test('a backup readback outage leaves both copies and retries without duplication', () async {
+      final key = SecureCuratedListDraftArchive.storageKey(owner);
+      const raw = '{unreadable';
+      values[key] = raw;
+      rejectBackupReadback = true;
+      await expectLater(
+        archive.readOwner(owner),
+        throwsA(isA<CuratedListDraftArchiveException>()),
+      );
+      expect(values[key], raw);
+      expect(values.values.where((value) => value == raw), hasLength(2));
+      rejectBackupReadback = false;
+      expect(await archive.readOwner(owner), isNull);
+      expect(values.values, [raw]);
+    });
+
+    test(
+      'a stale unreadable read cannot recreate explicitly destroyed evidence',
+      () async {
+        final key = SecureCuratedListDraftArchive.storageKey(owner);
+        values[key] = '{removed-evidence';
+        pausedReadKey = key;
+        readStarted = Completer<void>();
+        releaseRead = Completer<void>();
+        final reading = archive.readOwner(owner);
+        await readStarted!.future;
+        final second = SecureCuratedListDraftArchive(
+          const FlutterSecureStorage(),
+        );
+        await second.removeOwner(owner);
+        releaseRead!.complete();
+        expect(await reading, isNull);
+        expect(values, isEmpty);
+      },
+    );
+
+    test('explicit destruction erases only exact-owner live and quarantined revisions', () async {
+      final key = SecureCuratedListDraftArchive.storageKey(owner);
+      final otherKey = SecureCuratedListDraftArchive.storageKey(other);
+      values[key] = '{owner-revision';
+      values[otherKey] = '{other-revision';
+      await archive.readOwner(owner);
+      await archive.readOwner(other);
+      await archive.replaceOwner(owner, [draft(owner)]);
+      await archive.replaceOwner(other, [draft(other)]);
+      final beforeOther = {
+        for (final entry in values.entries)
+          if (entry.value == '{other-revision' || entry.key == otherKey)
+            entry.key: entry.value,
+      };
+      await archive.removeOwner(owner);
+      expect(values, beforeOther);
+    });
+
+    test(
+      'failed explicit quarantine deletion retains other owners and retries',
+      () async {
+        final key = SecureCuratedListDraftArchive.storageKey(owner);
+        final otherKey = SecureCuratedListDraftArchive.storageKey(other);
+        values[key] = '{owner-evidence';
+        values[otherKey] = '{other-evidence';
+        await archive.readOwner(owner);
+        await archive.readOwner(other);
+        refuseDeletes = true;
+        await expectLater(
+          archive.removeOwner(owner),
+          throwsA(isA<CuratedListDraftArchiveException>()),
+        );
+        expect(
+          values.values,
+          containsAll(['{owner-evidence', '{other-evidence']),
+        );
+        refuseDeletes = false;
+        await archive.removeOwner(owner);
+        expect(values.values, ['{other-evidence']);
+      },
+    );
+
+    test(
+      'a paused stale read cannot quarantine or delete a newer live draft',
+      () async {
+        final key = SecureCuratedListDraftArchive.storageKey(owner);
+        values[key] = '{old-unreadable';
+        pausedReadKey = key;
+        readStarted = Completer<void>();
+        releaseRead = Completer<void>();
+        final reading = archive.readOwner(owner);
+        await readStarted!.future;
+        final second = SecureCuratedListDraftArchive(
+          const FlutterSecureStorage(),
+        );
+        await second.replaceOwner(owner, [draft(owner, name: 'Newer draft')]);
+        releaseRead!.complete();
+        expect((await reading)!.lists.single.name, 'Newer draft');
+        expect(
+          (await archive.readOwner(owner))!.lists.single.name,
+          'Newer draft',
+        );
+        expect(values.values, contains('{old-unreadable'));
+      },
+    );
+
+    test(
+      'consume and replacement are serialized across archive instances',
+      () async {
+        await archive.replaceOwner(owner, [draft(owner)]);
+        final snapshot = (await archive.readOwner(owner))!;
+        pausedReadKey = SecureCuratedListDraftArchive.storageKey(owner);
+        readStarted = Completer<void>();
+        releaseRead = Completer<void>();
+        final consuming = archive.consumeOwner(owner, snapshot.revision);
+        await readStarted!.future;
+        final second = SecureCuratedListDraftArchive(
+          const FlutterSecureStorage(),
+        );
+        final replacing = second.replaceOwner(owner, [
+          draft(owner, name: 'Newer draft'),
+        ]);
+        releaseRead!.complete();
+        expect(await consuming, isTrue);
+        await replacing;
+        expect(
+          (await archive.readOwner(owner))!.lists.single.name,
+          'Newer draft',
+        );
       },
     );
 
@@ -138,6 +357,14 @@ void main() {
       );
       expect(await archive.readOwner(owner), isNotNull);
       refuseDeletes = false;
+      rejectReads = false;
+      rejectWrites = false;
+      corruptWrites = false;
+      rejectBackupReadback = false;
+      pausedReadKey = null;
+      readStarted = null;
+      releaseRead = null;
+      readPaused = false;
       await archive.removeOwner(owner);
       expect(await archive.readOwner(owner), isNull);
       expect((await archive.readOwner(other))!.revision, retained.revision);
