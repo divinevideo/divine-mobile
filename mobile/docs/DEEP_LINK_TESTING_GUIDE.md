@@ -103,10 +103,15 @@ adb shell pm verify-app-links --re-verify co.openvine.app
    - `🔗 Setting up deep link listener...`
    - `🔗 Deep link service initialized`
    - `📱 App opened with deep link: https://divine.video/...`
-   - `🔗 Processing deep link: DeepLink(type: video, videoId: ...)`
+   - `🔗 Processing deep link: DeepLink(type: video, videoRef: ...)`
    - `📱 Navigating to video: /video/{id}`
    - `✅ Navigation completed to: /video/{id}`
    - `📱 Loading video by ID: {id}`
+
+   Query values in these lines read `REDACTED`, and so does any path segment
+   that carries an `nsec` or `ncryptsec`: a link is untrusted input, and a
+   pasted private key must not reach the log (#10385). Public ids such as an
+   npub or a note id are logged whole.
 
 ### ❌ Failure Indicators
 
