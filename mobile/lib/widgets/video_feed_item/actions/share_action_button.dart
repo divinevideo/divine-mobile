@@ -704,9 +704,14 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     });
   }
 
+  /// Dismisses this sheet, then presents [presenter] from the root navigator.
+  ///
+  /// Callers may reach this after an `await`, when the sheet has already been
+  /// closed and disposed; reading [context] then throws, so it does nothing.
   Future<T?> _presentAfterDismiss<T>(
     Future<T?> Function(BuildContext hostContext) presenter,
   ) async {
+    if (!mounted) return null;
     final hostContext = Navigator.of(context, rootNavigator: true).context;
     _safePop(context);
     await Future<void>.delayed(Duration.zero);

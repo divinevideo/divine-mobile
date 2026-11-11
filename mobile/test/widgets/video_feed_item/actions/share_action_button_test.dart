@@ -735,6 +735,32 @@ void main() {
           expect(find.byType(SelectListSheetBody), findsOneWidget);
         });
 
+        testWidgets(
+          'Save with Watermark does nothing when the sheet closes before '
+          'the profile lookup finishes',
+          (tester) async {
+            await pumpOwnerSheet(tester);
+            final lookup = Completer<UserProfile?>();
+            when(
+              () => mockProfileRepository.getCachedProfile(
+                pubkey: any(named: 'pubkey'),
+              ),
+            ).thenAnswer((_) => lookup.future);
+
+            await tester.tap(find.text(l10n.shareSheetSaveWithWatermark));
+            await tester.pump();
+            Navigator.of(tester.element(find.text('Share with'))).pop();
+            await tester.pumpAndSettle();
+            expect(find.text('Share with'), findsNothing);
+
+            lookup.complete(null);
+            await tester.pumpAndSettle();
+
+            expect(tester.takeException(), isNull);
+            expect(find.byType(BottomSheet), findsNothing);
+          },
+        );
+
         testWidgets('opening Share does not request crosspost signing', (
           tester,
         ) async {
