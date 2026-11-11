@@ -435,7 +435,12 @@ class _ProfileGridViewState extends ConsumerState<ProfileGridView>
     final controller = widget.scrollController;
     if (controller == null || !controller.hasClients) return;
     final position = controller.position;
-    if (position.isScrollingNotifier.value) return;
+    // A profile built beneath an opaque route is not laid out, so its
+    // position has no viewport yet. The tabs' first layout reports metrics
+    // to _onTabScrollNotification, which schedules this again.
+    if (!position.hasViewportDimension || position.isScrollingNotifier.value) {
+      return;
+    }
     final limit = _outerScrollLimit(position.viewportDimension);
     if (limit == null || position.pixels <= limit) return;
     if (_activeTabIsLoading()) return;

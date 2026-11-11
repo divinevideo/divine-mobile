@@ -279,8 +279,9 @@ void main() {
       ScrollController? scrollController,
       List<Override> additionalOverrides = const [],
       String viewedUserHex = userIdHex,
+      bool coveredByOpaqueRoute = false,
     }) {
-      final grid = MultiBlocProvider(
+      final profileGrid = MultiBlocProvider(
         providers: [
           BlocProvider<MyProfileBloc>.value(value: myProfileBloc),
           BlocProvider<ProfileFeedCubit>.value(value: profileFeedCubit),
@@ -295,6 +296,16 @@ void main() {
           scrollController: scrollController,
         ),
       );
+      // An opaque route above keeps the grid built but never laid out.
+      final grid = coveredByOpaqueRoute
+          ? Navigator(
+              pages: [
+                MaterialPage<void>(child: profileGrid),
+                const MaterialPage<void>(child: SizedBox.shrink()),
+              ],
+              onDidRemovePage: (_) {},
+            )
+          : profileGrid;
 
       return testMaterialApp(
         theme: VineTheme.theme,
@@ -1345,6 +1356,42 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(scrollController.offset, equals(0));
+    });
+
+    testWidgets('builds under an opaque route without reading its viewport', (
+      tester,
+    ) async {
+      final scrollController = ScrollController();
+      addTearDown(scrollController.dispose);
+      await tester.pumpWidget(
+        buildSubject(
+          isOwnProfile: false,
+          videos: videos(3),
+          scrollController: scrollController,
+          coveredByOpaqueRoute: true,
+        ),
+      );
+      await tester.pump();
+
+      // Attached to the controller but never laid out: the crash's state.
+      expect(scrollController.hasClients, isTrue);
+      expect(scrollController.position.hasViewportDimension, isFalse);
+      expect(tester.takeException(), isNull);
+
+      tester.state<NavigatorState>(find.byType(Navigator).last).pop();
+      await tester.pumpAndSettle();
+
+      expect(scrollController.position.hasViewportDimension, isTrue);
+      expect(find.byType(NestedScrollView), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      // The skipped measurement runs once the grid is laid out, so the short
+      // tab still stops at its last row.
+      await scrollAllTheWayUp(tester);
+      expect(
+        scrollController.offset,
+        lessThan(scrollController.position.maxScrollExtent),
+      );
     });
 
     testWidgets('flings toward the end under a status bar without errors', (
