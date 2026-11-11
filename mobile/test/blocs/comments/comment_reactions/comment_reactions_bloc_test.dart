@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 
 class _MockCommentsRepository extends Mock implements CommentsRepository {}
@@ -297,6 +298,28 @@ void main() {
         build: createBloc,
         act: (b) => b.add(const CommentVoteCountsFetchRequested([])),
         expect: () => isEmpty,
+      );
+
+      blocTest<CommentReactionsBloc, CommentReactionsState>(
+        'reports a failure from each read, not only the first',
+        setUp: () {
+          when(
+            () => mockLikesRepository.getVoteCounts(any()),
+          ).thenThrow(const LikesRepositoryException('offline'));
+          when(
+            () => mockLikesRepository.getUserVoteStatuses(any()),
+          ).thenThrow(StateError('malformed vote status'));
+        },
+        build: createBloc,
+        act: (b) => b.add(CommentVoteCountsFetchRequested([validId('c1')])),
+        errors: () => [
+          isA<LikesRepositoryException>(),
+          isA<Reportable<Object>>().having(
+            (r) => r.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        ],
       );
     });
 

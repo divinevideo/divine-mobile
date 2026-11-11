@@ -214,15 +214,29 @@ class CommentReactionsBloc
       );
     }
 
+    // Each read reports its own failure: Future.wait surfaces only the first
+    // error, so a second, reportable one would never reach Crashlytics.
+    Future<void> reportingFailure(
+      Future<void> Function() read,
+      String operation,
+    ) async {
+      try {
+        await read();
+      } catch (e, stackTrace) {
+        _logFailure(
+          e,
+          stackTrace,
+          CommentReactionsBlocReportableSites.onVoteCountsFetchRequested,
+          operation,
+        );
+      }
+    }
+
     try {
-      await Future.wait([loadCounts(), loadViewerVotes()]);
-    } catch (e, stackTrace) {
-      _logFailure(
-        e,
-        stackTrace,
-        CommentReactionsBlocReportableSites.onVoteCountsFetchRequested,
-        'Error fetching comment votes',
-      );
+      await Future.wait([
+        reportingFailure(loadCounts, 'Error fetching comment vote counts'),
+        reportingFailure(loadViewerVotes, 'Error fetching viewer votes'),
+      ]);
     } finally {
       for (final id in commentIds) {
         final invalidated = _voteReads.remove(id) == _VoteRead.stale;
