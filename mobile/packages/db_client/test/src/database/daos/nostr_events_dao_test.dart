@@ -2180,16 +2180,25 @@ void main() {
       });
     });
 
-    group('getRecentEventIdSigs', () {
+    group('getRecentVerifiedEventIdSigs', () {
+      test('excludes cached events without a local signature check', () async {
+        final unchecked = createEvent();
+        await dao.upsertEvent(unchecked);
+
+        expect(await dao.getRecentVerifiedEventIdSigs(), isEmpty);
+      });
+
       test(
         'returns (id, sig) pairs ordered by created_at descending',
         () async {
-          final older = createEvent(content: 'older', createdAt: 1000);
-          final newer = createEvent(content: 'newer', createdAt: 2000);
+          final older = createEvent(content: 'older', createdAt: 1000)
+            ..markSignatureVerified();
+          final newer = createEvent(content: 'newer', createdAt: 2000)
+            ..markSignatureVerified();
           await dao.upsertEvent(older);
           await dao.upsertEvent(newer);
 
-          final pairs = await dao.getRecentEventIdSigs();
+          final pairs = await dao.getRecentVerifiedEventIdSigs();
 
           expect(pairs, [
             (id: newer.id, sig: newer.sig),
@@ -2201,18 +2210,69 @@ void main() {
       test('respects the limit', () async {
         for (var i = 0; i < 5; i++) {
           await dao.upsertEvent(
-            createEvent(content: 'e$i', createdAt: 1000 + i),
+            createEvent(content: 'e$i', createdAt: 1000 + i)
+              ..markSignatureVerified(),
           );
         }
 
-        final pairs = await dao.getRecentEventIdSigs(limit: 2);
+        final pairs = await dao.getRecentVerifiedEventIdSigs(limit: 2);
 
         expect(pairs, hasLength(2));
       });
 
       test('returns empty when no events exist', () async {
-        expect(await dao.getRecentEventIdSigs(), isEmpty);
+        expect(await dao.getRecentVerifiedEventIdSigs(), isEmpty);
       });
+
+      test(
+        'retains verification only across writes of the same pair',
+        () async {
+          final event = createEvent()..markSignatureVerified();
+          final unchecked = Event.fromJson(event.toJson());
+          await dao.upsertEvent(event);
+          await dao.cacheEventsBatch([unchecked]);
+
+          expect(await dao.getRecentVerifiedEventIdSigs(), [
+            (id: event.id, sig: event.sig),
+          ]);
+
+          await dao.cacheEventsBatch([event..sig = 'other signature']);
+
+          expect(await dao.getRecentVerifiedEventIdSigs(), isEmpty);
+        },
+      );
+
+      test('records a verified replay of a cached replaceable event', () async {
+        final event = createEvent(kind: EventKind.metadata);
+        await dao.upsertEvent(event);
+
+        await dao.upsertEventsBatch([event..markSignatureVerified()]);
+
+        expect(await dao.getRecentVerifiedEventIdSigs(), [
+          (id: event.id, sig: event.sig),
+        ]);
+      });
+
+      for (final kind in [EventKind.metadata, EventKind.longForm]) {
+        test('repairs a different cached signature for kind $kind', () async {
+          final verified = createEvent(
+            kind: kind,
+            tags: [
+              ['d', 'article'],
+            ],
+          )..markSignatureVerified();
+          final cached = Event.fromJson(verified.toJson())
+            ..sig = 'unchecked signature';
+          await dao.upsertEvent(cached);
+
+          await dao.upsertEventsBatch([verified]);
+
+          expect((await dao.getEventById(verified.id))?.sig, verified.sig);
+          expect(await dao.getRecentVerifiedEventIdSigs(), [
+            (id: verified.id, sig: verified.sig),
+          ]);
+        });
+      }
     });
   });
 }

@@ -1132,11 +1132,10 @@ class RelayPool {
   ///
   /// Relays re-send events the app already downloaded and persisted, so on
   /// every cold start those events arrive again and would be re-verified. The
-  /// app injects a lookup backed by its local event store (every persisted
-  /// event was verified before being written), letting [_onEvent] skip the
-  /// expensive Schnorr verify for a known id **only when the incoming
-  /// signature matches the one that was persisted** — the id alone does not
-  /// commit to `sig`. Must be a cheap, synchronous, side-effect-free test.
+  /// app injects a lookup of pairs explicitly recorded as verified in its
+  /// local event store. The incoming signature must match the one that was
+  /// checked because the id does not commit to `sig`. Must be a cheap,
+  /// synchronous, side-effect-free test.
   bool Function(String eventId, String signature)? isKnownVerifiedEvent;
 
   /// Diagnostic counters for how [_onEvent] treated each incoming event's
@@ -2204,6 +2203,7 @@ class RelayPool {
         }
 
         final verifyKey = '${event.id}:${event.sig}';
+        var signatureVerified = true;
         if (_verifiedEventKeys.contains(verifyKey)) {
           _verifiesSkippedSessionDup++;
         } else if (isKnownVerifiedEvent?.call(event.id, event.sig) ?? false) {
@@ -2225,6 +2225,10 @@ class RelayPool {
           }
         } else {
           _verifiesSkippedByPolicy++;
+          signatureVerified = false;
+        }
+        if (signatureVerified) {
+          event.markSignatureVerified();
         }
 
         final poolSubscription = _subscriptions[subId];

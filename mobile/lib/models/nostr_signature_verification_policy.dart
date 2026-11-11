@@ -23,10 +23,15 @@ enum NostrSignatureVerificationPolicy {
     }
   }
 
-  static NostrSignatureVerificationPolicy fromStorage(String? value) {
+  /// Parses a stored value, returning [fallback] when it is missing or
+  /// unrecognised.
+  static NostrSignatureVerificationPolicy fromStorage(
+    String? value, {
+    NostrSignatureVerificationPolicy fallback = all,
+  }) {
     for (final policy in values) {
       if (policy.storageValue == value) return policy;
     }
-    return all;
+    return fallback;
   }
 }

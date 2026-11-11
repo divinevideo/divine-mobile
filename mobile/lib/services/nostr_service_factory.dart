@@ -50,8 +50,13 @@ class NostrServiceFactory {
     final config = NostrClientConfig(
       signer: effectiveSigner,
       // Verify inbound relay-event signatures off the main isolate (#5863).
-      // Web has no Isolate.spawn, so it stays on the inline path there.
-      eventVerifyWorkerSpawner: kIsWeb ? null : EventVerifyIsolate.spawn,
+      // Web has no Isolate.spawn. It checks signatures with the browser's
+      // native BigInt (web/nostr_crypto.js) rather than Dart's software
+      // BigInt, which costs ~89 ms per event on the main thread, and verifies
+      // inline as before if that script did not load.
+      eventVerifyWorkerSpawner: kIsWeb
+          ? NativeEventVerifyWorker.spawn
+          : EventVerifyIsolate.spawn,
     );
 
     // In non-production environments, lock relays to the environment host so a

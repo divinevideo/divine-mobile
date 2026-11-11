@@ -173,7 +173,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 32;
+  int get schemaVersion => 33;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -423,6 +423,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 32 && to >= 32) {
         await _migrateToV32OwnerScopedDedup(m);
       }
+      if (from < 33 && to >= 33) {
+        await _repairSchemaV33(m);
+      }
       await _withholdV31Columns(to);
     },
     beforeOpen: (details) async {
@@ -460,6 +463,9 @@ class AppDatabase extends _$AppDatabase {
         await _repairSchemaV20();
         await _repairConversationDismissals();
         await _repairSchemaV28();
+        if (details.versionNow >= 33) {
+          await _repairSchemaV33(createMigrator());
+        }
         await _withholdV31Columns(details.versionNow);
       }
 
@@ -467,6 +473,12 @@ class AppDatabase extends _$AppDatabase {
       await runStartupCleanup();
     },
   );
+
+  Future<void> _repairSchemaV33(Migrator m) async {
+    if (!(await _columnNames('event')).contains('signature_verified')) {
+      await m.addColumn(nostrEvents, nostrEvents.signatureVerified);
+    }
+  }
 
   /// Creates or repairs the independent v25 dismissal store.
   Future<void> _repairConversationDismissals() async {
@@ -1873,8 +1885,8 @@ class AppDatabase extends _$AppDatabase {
       }
     }
 
-    const requiredColumns = <String, List<String>>{
-      'event': ['d_tag'],
+    final requiredColumns = <String, List<String>>{
+      'event': ['d_tag', if (schemaVersion >= 33) 'signature_verified'],
       'clips': [
         'file_path',
         'thumbnail_path',

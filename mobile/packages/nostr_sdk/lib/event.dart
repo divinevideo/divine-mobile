@@ -79,6 +79,17 @@ class Event {
   /// 64-byte Schnorr signature of [Event.id].
   String sig = '';
 
+  ({String id, String sig})? _verifiedSignature;
+
+  /// Whether the current ID and signature passed a local signature check.
+  /// This metadata is local and never read from the event JSON.
+  bool get hasVerifiedSignature => _verifiedSignature == (id: id, sig: sig);
+
+  /// Records that the relay pool verified this exact ID and signature.
+  void markSignatureVerified() {
+    _verifiedSignature = (id: id, sig: sig);
+  }
+
   /// Relay that an event was received from.
   List<String> sources = [];
 

@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 32** (see `app_database.dart`).
+**Version: 33** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -332,6 +332,11 @@ without an upgrade never reaches the v32 step to replace it.
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only
 for startup cleanup and guarded recovery of damaged local databases.
+
+Version 33 adds `event.signature_verified`. The relay pool can reuse a
+signature check across launches only when the stored event records that check.
+Existing rows start with the flag off and can gain it when a verified replay
+is saved. The flag follows the exact event ID and signature.
 
 ## Project Structure
 
