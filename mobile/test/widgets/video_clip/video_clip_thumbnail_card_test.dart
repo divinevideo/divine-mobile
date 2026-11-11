@@ -10,6 +10,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/widgets/library/pinch_zoom_grid.dart';
 import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -225,6 +226,80 @@ void main() {
 
         await tester.tap(find.byType(VideoClipThumbnailCard));
         expect(tapped, isFalse);
+      });
+    });
+
+    group('inside a $PinchZoomGrid', () {
+      // Zooming out of the clip grid used to draw the badges oversized and then
+      // shrink them, because they scaled with the layout the pinch magnifies.
+      testWidgets('keeps the duration and selection badges at their size '
+          'mid-pinch', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: VineTheme.theme,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: PinchZoomGrid(
+                columnCount: 3,
+                minColumnCount: 2,
+                maxColumnCount: 5,
+                onColumnCountChanged: (_) {},
+                backgroundColor: VineTheme.backgroundColor,
+                builder: (context, columns, controller) => GridView.count(
+                  controller: controller,
+                  crossAxisCount: columns,
+                  childAspectRatio: 9 / 16,
+                  children: [
+                    for (var i = 0; i < 12; i++)
+                      VideoClipThumbnailCard(
+                        clip: createClip(id: 'clip-$i'),
+                        selectionIndex: i + 1,
+                        onTap: () {},
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+
+        final card = find.byType(VideoClipThumbnailCard).first;
+        final duration = find.text('5.00').first;
+        final selection = find.text('1');
+        final settledDuration = tester.getRect(duration).size;
+        final settledSelection = tester.getRect(selection).size;
+
+        // Pinching closed lays the grid out for 4 columns and magnifies it
+        // to the in-between tile size the fingers are at.
+        final centre = tester.getCenter(find.byType(PinchZoomGrid));
+        final first = await tester.startGesture(centre - const Offset(160, 0));
+        final second = await tester.startGesture(
+          centre + const Offset(160, 0),
+        );
+        await tester.pump();
+        for (final step in const [148.0, 137.0]) {
+          await first.moveTo(centre - Offset(step, 0));
+          await second.moveTo(centre + Offset(step, 0));
+          await tester.pump();
+          await tester.pump();
+        }
+
+        final cardWidth = tester.getRect(card).width;
+        expect(cardWidth, greaterThan(800 / 4 + 1));
+        expect(cardWidth, lessThan(800 / 3 - 1));
+        for (final (badge, settled) in [
+          (duration, settledDuration),
+          (selection, settledSelection),
+        ]) {
+          final size = tester.getRect(badge).size;
+          expect(size.width, closeTo(settled.width, 0.01));
+          expect(size.height, closeTo(settled.height, 0.01));
+        }
+
+        await first.up();
+        await second.up();
+        await tester.pumpAndSettle();
       });
     });
 

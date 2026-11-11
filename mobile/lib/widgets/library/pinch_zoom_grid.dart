@@ -57,6 +57,9 @@ class PinchZoomNotification extends Notification {
 /// On release the fractional count settles onto the nearest whole one, which
 /// finishes the slide and the crossfade together, and the new count is
 /// reported via [onColumnCountChanged].
+///
+/// Tile chrome that should not scale with the thumbnails, such as badges,
+/// wraps itself in [PinchZoomUnscaled].
 class PinchZoomGrid extends StatefulWidget {
   const PinchZoomGrid({
     required this.columnCount,
@@ -538,13 +541,195 @@ class _CrossfadeLayer extends StatelessWidget {
       builder: (context, value, child) => Opacity(
         opacity: _opacityAt(value),
         child: Transform.scale(
-          scale: value <= 0 ? 1.0 : layoutColumns / value,
+          scale: _layerScale(layoutColumns: layoutColumns, columns: value),
           alignment: Alignment.topLeft,
           child: child,
         ),
       ),
+      child: _LayerScaleScope(
+        columns: columns,
+        layoutColumns: layoutColumns,
+        child: child,
+      ),
+    );
+  }
+}
+
+/// How far a layout of [layoutColumns] columns is magnified on screen while
+/// the fingers are at [columns].
+double _layerScale({required double layoutColumns, required double columns}) =>
+    columns <= 0 ? 1.0 : layoutColumns / columns;
+
+/// Tells [PinchZoomUnscaled] widgets how far the layer they sit in is scaled.
+class _LayerScaleScope extends InheritedWidget {
+  const _LayerScaleScope({
+    required this.columns,
+    required this.layoutColumns,
+    required super.child,
+  });
+
+  final ValueListenable<double> columns;
+  final double layoutColumns;
+
+  @override
+  bool updateShouldNotify(_LayerScaleScope oldWidget) =>
+      columns != oldWidget.columns || layoutColumns != oldWidget.layoutColumns;
+}
+
+/// Keeps [child] at its settled on-screen size while a [PinchZoomGrid] scales
+/// the layout around it.
+///
+/// During a pinch the grid draws its layout magnified or shrunk to the tile
+/// size the fingers are at, which would scale badges and labels along with the
+/// thumbnails: zooming out, they would show up oversized and then shrink. The
+/// [child] is instead laid out at the size this widget covers on screen and
+/// drawn at 1:1, so its insets, sizes and text match the settled grid for the
+/// whole pinch.
+///
+/// Fills its parent, which must be bounded — typically as a non-positioned
+/// child of a `Stack(fit: StackFit.expand)` over a tile. Outside a
+/// [PinchZoomGrid] it is a plain pass-through.
+///
+/// The outgoing layout of a crossfade is a frozen raster, so its overlays
+/// scale with it as one picture until it has faded.
+class PinchZoomUnscaled extends StatelessWidget {
+  const PinchZoomUnscaled({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = context
+        .dependOnInheritedWidgetOfExactType<_LayerScaleScope>();
+    if (scope == null) return child;
+    return _Unscaled(
+      columns: scope.columns,
+      layoutColumns: scope.layoutColumns,
       child: child,
     );
+  }
+}
+
+class _Unscaled extends SingleChildRenderObjectWidget {
+  const _Unscaled({
+    required this.columns,
+    required this.layoutColumns,
+    required super.child,
+  });
+
+  final ValueListenable<double> columns;
+  final double layoutColumns;
+
+  @override
+  _RenderUnscaled createRenderObject(BuildContext context) =>
+      _RenderUnscaled(columns: columns, layoutColumns: layoutColumns);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderUnscaled renderObject) {
+    renderObject
+      ..columns = columns
+      ..layoutColumns = layoutColumns;
+  }
+}
+
+/// Lays its child out at its own size times the layer scale and paints it
+/// scaled back down, which cancels the layer's transform.
+///
+/// Listens to the fractional column count itself rather than being rebuilt
+/// for it, so a pinch frame relayouts the overlays without rebuilding every
+/// tile.
+class _RenderUnscaled extends RenderProxyBox {
+  _RenderUnscaled({
+    required ValueListenable<double> columns,
+    required double layoutColumns,
+  }) : _columns = columns,
+       _layoutColumns = layoutColumns;
+
+  ValueListenable<double> get columns => _columns;
+  ValueListenable<double> _columns;
+  set columns(ValueListenable<double> value) {
+    if (identical(value, _columns)) return;
+    if (attached) {
+      _columns.removeListener(markNeedsLayout);
+      value.addListener(markNeedsLayout);
+    }
+    _columns = value;
+    markNeedsLayout();
+  }
+
+  double get layoutColumns => _layoutColumns;
+  double _layoutColumns;
+  set layoutColumns(double value) {
+    if (value == _layoutColumns) return;
+    _layoutColumns = value;
+    markNeedsLayout();
+  }
+
+  /// Layer scale the child was last laid out for, which paint and hit testing
+  /// have to agree with.
+  double _scale = 1;
+
+  Matrix4 get _transform => Matrix4.diagonal3Values(1 / _scale, 1 / _scale, 1);
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _columns.addListener(markNeedsLayout);
+  }
+
+  @override
+  void detach() {
+    _columns.removeListener(markNeedsLayout);
+    super.detach();
+  }
+
+  @override
+  bool get sizedByParent => true;
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) => constraints.biggest;
+
+  @override
+  void performLayout() {
+    _scale = _layerScale(
+      layoutColumns: _layoutColumns,
+      columns: _columns.value,
+    );
+    child?.layout(BoxConstraints.tight(size * _scale));
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final child = this.child;
+    if (child == null) return;
+    if (_scale == 1) {
+      layer = null;
+      context.paintChild(child, offset);
+      return;
+    }
+    layer = context.pushTransform(
+      needsCompositing,
+      offset,
+      _transform,
+      super.paint,
+      oldLayer: layer is TransformLayer ? layer as TransformLayer? : null,
+    );
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    final child = this.child;
+    if (child == null) return false;
+    return result.addWithPaintTransform(
+      transform: _scale == 1 ? null : _transform,
+      position: position,
+      hitTest: (result, position) => child.hitTest(result, position: position),
+    );
+  }
+
+  @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    if (_scale != 1) transform.multiply(_transform);
   }
 }
 
