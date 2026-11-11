@@ -2095,7 +2095,9 @@ void main() {
     testWidgetsWithSurfaceSize(
       'the more-reposters button dismisses the sheet before navigating',
       (tester) async {
-        final video = _makeVideo();
+        // Addressable, so the pushed location has to carry its coordinate.
+        final video = _makeVideo(addressableDTag: 'reposted-clip');
+        expect(video.addressableId, isNotNull);
         String? pushedLocation;
         final pubkeys = List<String>.generate(
           12,
