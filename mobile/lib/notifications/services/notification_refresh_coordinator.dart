@@ -191,8 +191,8 @@ class NotificationRefreshCoordinator {
       );
     } catch (e, s) {
       if (e is StateError && _repository.isClosed) {
-        // An account switch closed the repository mid-refresh; the
-        // snapshot emit threw before any DAO write. Expected noise.
+        // An account switch closed the repository mid-refresh, so a later
+        // call on it threw. Expected noise.
         Log.debug(
           'Notification refresh aborted (${reason.name}): '
           'repository closed',
