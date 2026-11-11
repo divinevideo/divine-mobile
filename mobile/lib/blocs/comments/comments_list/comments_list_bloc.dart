@@ -21,8 +21,8 @@ part 'comments_list_state.dart';
 /// video. Mutations from [CommentComposerBloc] and [CommentReactionsBloc]
 /// flow in through UI [BlocListener]s as Optimistic*/CommentReplacedInStore /
 /// CommentRemovedFromStore / CommentsRemovedByAuthorFromStore events.
-/// Engagement sort needs upvote counts from [CommentReactionsBloc] — see
-/// [CommentsListState.threadedCommentsWith].
+/// Top sort needs vote counts from [CommentReactionsBloc]; see
+/// [CommentsListState.displayCommentsWith].
 ///
 /// With a [CommentModerationRepository] it also loads what the video owner
 /// hid from the thread (#5044), and lets the owner hide and restore comments.

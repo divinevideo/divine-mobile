@@ -4501,7 +4501,7 @@
   },
   "commentsSortTop": "بہترین",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortSemanticLabel": "تبصروں کی ترتیب",
   "@commentsSortSemanticLabel": {

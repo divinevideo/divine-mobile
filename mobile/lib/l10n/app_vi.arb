@@ -4501,7 +4501,7 @@
   },
   "commentsSortTop": "Nổi bật",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortSemanticLabel": "Sắp xếp bình luận",
   "@commentsSortSemanticLabel": {

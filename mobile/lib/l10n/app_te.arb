@@ -5237,7 +5237,7 @@
   },
   "commentsSortTop": "టాప్",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortSemanticLabel": "వ్యాఖ్యల క్రమబద్ధీకరణ",
   "@commentsSortSemanticLabel": {
