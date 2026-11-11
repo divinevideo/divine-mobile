@@ -61,6 +61,36 @@ void main() {
       }
     });
 
+    // Any app can open divine://, so the key can sit where only the log sink
+    // stops it: the host, or the first segment of an app route.
+    group('a divine:// link carrying the key', () {
+      for (final (label, url, logLine) in const [
+        (
+          'as its host',
+          'divine://$nsec/x',
+          'unrecognised authority',
+        ),
+        (
+          'as its first segment',
+          'divine:///$nsec',
+          'No DeepLinkType for divine:// route',
+        ),
+      ]) {
+        test('does not log the key $label', () async {
+          await LogCaptureService().clearAllLogs();
+
+          DeepLinkService.parseDeepLink(url);
+
+          final logged = [
+            for (final entry in LogCaptureService().getRecentLogs())
+              entry.message,
+          ].join('\n');
+          expect(logged, contains(logLine));
+          expect(logged.toLowerCase(), isNot(contains('nsec1')));
+        });
+      }
+    });
+
     // app_links throws while parsing a malformed link, and the error's text
     // carries the raw link.
     group('a link the platform cannot parse', () {
