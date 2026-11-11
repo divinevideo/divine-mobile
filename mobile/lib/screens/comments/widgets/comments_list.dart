@@ -172,11 +172,22 @@ class _CommentsListState extends State<CommentsList> {
                 final showNotice =
                     state.showHiddenComments && state.hiddenCommentCount > 0;
                 final offset = showNotice ? 1 : 0;
+                Key rowKey(String id) => id == state.scrollToCommentId
+                    ? _scrollTargetKey
+                    : ValueKey('comment_$id');
+                final indexByKey = <Key, int>{
+                  for (final (i, node) in displayed.indexed)
+                    rowKey(node.comment.id): i + offset,
+                };
                 return ListView.builder(
                   controller: widget.scrollController,
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   itemCount: displayed.length + offset,
+                  // Top re-ranks rows as votes change. Without this a moved
+                  // row is rebuilt from scratch, stopping an inline video
+                  // reply and dropping screen-reader focus.
+                  findChildIndexCallback: (key) => indexByKey[key],
                   itemBuilder: (context, index) {
                     if (index < offset) {
                       return HiddenCommentsNotice(
@@ -184,12 +195,8 @@ class _CommentsListState extends State<CommentsList> {
                       );
                     }
                     final node = displayed[index - offset];
-                    final isScrollTarget =
-                        node.comment.id == state.scrollToCommentId;
                     return CommentItem(
-                      key: isScrollTarget
-                          ? _scrollTargetKey
-                          : ValueKey('comment_${node.comment.id}'),
+                      key: rowKey(node.comment.id),
                       comment: node.comment,
                       depth: node.depth,
                       isHiddenByOwner: state.isHiddenByOwner(node.comment),

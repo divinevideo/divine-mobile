@@ -355,6 +355,47 @@ void main() {
       },
     );
 
+    testWidgets('keeps the state of a row that Top moves', (tester) async {
+      final newer = CommentBuilder()
+          .withId('1' * 64)
+          .withCreatedAt(DateTime.utc(2026, 2))
+          .build();
+      final older = CommentBuilder()
+          .withId('2' * 64)
+          .withCreatedAt(DateTime.utc(2026))
+          .build();
+      const reactions = CommentReactionsState();
+      final updates = StreamController<CommentReactionsState>();
+      addTearDown(updates.close);
+      whenListen(mockReactionsBloc, updates.stream, initialState: reactions);
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          listState: CommentsListState(
+            rootEventId: testVideoEventId,
+            rootAuthorPubkey: testVideoAuthorPubkey,
+            status: CommentsStatus.success,
+            commentsById: {newer.id: newer, older.id: older},
+          ),
+        ),
+      );
+      await tester.pump();
+
+      Iterable<String> displayedOrder() => tester
+          .widgetList<CommentItem>(find.byType(CommentItem))
+          .map((item) => item.comment.id);
+      final olderRow = find.byKey(ValueKey('comment_${older.id}'));
+      expect(displayedOrder(), [newer.id, older.id]);
+      final rowState = tester.state(olderRow);
+
+      updates.add(reactions.copyWith(commentUpvoteCounts: {older.id: 1}));
+      await tester.pump();
+
+      // A rebuilt row would stop an inline video reply and drop focus.
+      expect(displayedOrder(), [older.id, newer.id]);
+      expect(tester.state(olderRow), same(rowState));
+    });
+
     testWidgets('renders CommentItem for each comment', (tester) async {
       final comment1 = CommentBuilder()
           .withId(TestCommentIds.comment1Id)
