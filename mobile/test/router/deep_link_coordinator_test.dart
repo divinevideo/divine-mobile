@@ -9,6 +9,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/router/deep_link_coordinator.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/deep_link_service.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -236,6 +237,44 @@ void main() {
           equals('/home/0'),
         );
       });
+    });
+
+    group('logging a link that carries a secret (#10385)', () {
+      // NIP-19's published test vector; it controls no real account.
+      const nsec =
+          'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
+      for (final (link, navigatingLine) in const [
+        (
+          DeepLink(type: DeepLinkType.profile, npub: nsec),
+          'Navigating to profile',
+        ),
+        (
+          DeepLink(type: DeepLinkType.video, videoRef: nsec),
+          'Navigating to video',
+        ),
+        (
+          DeepLink(type: DeepLinkType.hashtag, hashtag: nsec),
+          'Navigating to hashtag',
+        ),
+        (
+          DeepLink(type: DeepLinkType.search, searchTerm: nsec),
+          'Navigating to search',
+        ),
+      ]) {
+        test('does not log the nsec of a ${link.type.name} link', () async {
+          await LogCaptureService().clearAllLogs();
+
+          handleAndReadLocation(link);
+
+          final logged = [
+            for (final entry in LogCaptureService().getRecentLogs())
+              entry.message,
+          ].join('\n');
+          expect(logged, contains(navigatingLine));
+          expect(logged.toLowerCase(), isNot(contains('nsec1')));
+        });
+      }
     });
   });
 }
