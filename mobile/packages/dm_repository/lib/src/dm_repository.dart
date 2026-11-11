@@ -9419,7 +9419,7 @@ class DmRepository {
       // A relay that refused the kept wrap for good would refuse it again, so
       // the next attempt builds a new one; any other failure keeps it.
       if (wrapRefused) {
-        await outgoingDao.clearUnconfirmedRecipientWrap(rumorId);
+        await _clearUnconfirmedWrap(outgoingDao: outgoingDao, rumorId: rumorId);
       }
     } on Object catch (e, stackTrace) {
       Log.error(
@@ -9606,6 +9606,30 @@ class DmRepository {
         e,
         stackTrace,
         site: DmRepositoryReportableSites.keepUnconfirmedRecipientWrap,
+      );
+    }
+  }
+
+  /// Forgets a permanently refused wrap while the caller owns the row's
+  /// recovery key. Non-rethrowing: a failed clear leaves that wrap retryable.
+  Future<void> _clearUnconfirmedWrap({
+    required OutgoingDmsDao outgoingDao,
+    required String rumorId,
+  }) async {
+    try {
+      await outgoingDao.clearUnconfirmedRecipientWrap(rumorId);
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Failed to clear unconfirmed recipient wrap for outgoing_dms row '
+        '$rumorId: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _errorReporter?.call(
+        e,
+        stackTrace,
+        site: DmRepositoryReportableSites.clearUnconfirmedRecipientWrap,
       );
     }
   }
@@ -10360,6 +10384,14 @@ class DmRepository {
           // after every sibling has published, and a retry of this row in
           // between would otherwise build a second wrap (#8441).
           if (outgoingDao != null) {
+            // Clear under the same key too: the later finalize pass must not
+            // erase a newer wrap that a recovery kept between siblings.
+            if (published.recipientWrapRefused) {
+              await _clearUnconfirmedWrap(
+                outgoingDao: outgoingDao,
+                rumorId: queueIds[i],
+              );
+            }
             await _keepUnconfirmedWrap(
               outgoingDao: outgoingDao,
               rumorId: queueIds[i],
@@ -10606,7 +10638,6 @@ class DmRepository {
             rumorId: queueIds[i],
             errorMessage: result.error ?? 'Unknown publish failure',
             reachedNoRelay: result.reachedNoRelay,
-            wrapRefused: result.recipientWrapRefused,
           );
           results[i] = _stampQueuedRow(result, queueIds[i]);
         }

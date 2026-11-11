@@ -62,6 +62,11 @@ abstract class DmRepositoryReportableSites {
   static const String keepUnconfirmedRecipientWrap =
       'keepUnconfirmedRecipientWrap';
 
+  /// `_clearUnconfirmedWrap`: forgetting a permanently refused recipient
+  /// wrap threw. The failed attempt stands; the next attempt retries it.
+  static const String clearUnconfirmedRecipientWrap =
+      'clearUnconfirmedRecipientWrap';
+
   /// `_chargeFailedReplay`: bumping the retry count for a failed
   /// `recoverFullSend` / `recoverSelfWrap` attempt threw. The caller already
   /// has the failure result; a missed bump only means one extra retry.
