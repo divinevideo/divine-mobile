@@ -5183,6 +5183,26 @@ class AppLocalizationsBg extends AppLocalizations {
       'Divine ще преглежда сигналите за съдържание до 24 часа и при нужда ще премахва съдържание или ще блокира акаунта, който го е публикувал.';
 
   @override
+  String get reportPrivateNotice =>
+      'Този сигнал се изпраща поверително до екипа по модерация на Divine. Не се публикува.';
+
+  @override
+  String get reportIncludeMessageTitle => 'Включи това съобщение';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Екипът по модерация на Divine ще го види. Остава поверително и не се публикува.';
+
+  @override
+  String reportMessageTooLong(String optionTitle) {
+    return 'Това съобщение е твърде дълго, за да се включи. Махни отметката от „$optionTitle“ и опитай пак.';
+  }
+
+  @override
+  String get reportDetailsTooLong =>
+      'Подробностите ти са твърде дълги, за да се изпратят. Съкрати ги и опитай пак.';
+
+  @override
   String get reportBlockUser => 'Блокирай този потребител';
 
   @override

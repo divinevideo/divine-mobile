@@ -111,7 +111,7 @@ These are past Apple review rejections and how they were resolved. Keep this rec
 
 ### Reporting Protocol
 
-Divine uses NIP-56 (kind 1984) report events on the Nostr protocol for content reporting. Reports are signed by the reporting user and relayed to moderation infrastructure.
+Divine uses NIP-56 (kind 1984) report events on the Nostr protocol for content reporting. Reports are signed by the reporting user and relayed to moderation infrastructure. A report made from a direct message is sent privately instead, as an encrypted message to Divine's moderation account, so it is never published.
 
 ### Report Categories
 

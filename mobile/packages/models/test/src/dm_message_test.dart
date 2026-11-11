@@ -17,6 +17,28 @@ DmMessage _messageWith(List<List<String>> tags) => DmMessage(
 
 void main() {
   group(DmMessage, () {
+    group('readableText', () {
+      test('is the text of a text message', () {
+        final message = DmMessage(
+          id: 'a' * 64,
+          conversationId: 'conversation',
+          senderPubkey: 'b' * 64,
+          content: 'hello there',
+          createdAt: 1757385263,
+          giftWrapId: 'c' * 64,
+        );
+
+        expect(message.readableText, equals('hello there'));
+      });
+
+      test(
+        'is null for a file message, whose content is its encrypted URL',
+        () {
+          expect(_messageWith(const []).readableText, isNull);
+        },
+      );
+    });
+
     group('answeredQuestion', () {
       test('reads the question and video a private answer names', () {
         final message = _messageWith([

@@ -3550,6 +3550,7 @@ void main() {
             relatedEventIds: any(named: 'relatedEventIds'),
             moderationContent: any(named: 'moderationContent'),
             moderationTags: any(named: 'moderationTags'),
+            publishToRelays: any(named: 'publishToRelays'),
           ),
         ).thenAnswer(
           (_) async =>
@@ -3597,7 +3598,7 @@ void main() {
 
       testWidgets(
         'opens the report form for the counterparty and files a user report '
-        'with the chosen reason and note',
+        'with the chosen reason and note, privately',
         (tester) async {
           await tester.binding.setSurfaceSize(const Size(800, 1600));
           addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -3630,6 +3631,8 @@ void main() {
               relatedEventIds: any(named: 'relatedEventIds'),
               moderationContent: any(named: 'moderationContent'),
               moderationTags: any(named: 'moderationTags'),
+              // Made from the inbox, so it stays private (#7340).
+              publishToRelays: false,
             ),
           ).called(1);
           verifyNever(

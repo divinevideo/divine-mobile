@@ -8635,6 +8635,36 @@ abstract class AppLocalizations {
   /// **'Divine will act on content reports within 24 hours by removing the content and ejecting the user who provided the offending content.'**
   String get reportPolicyNotice;
 
+  /// Shown under the report policy notice when the report is made from a direct message. Such a report is sent only to Divine's moderation team and nothing about it is published.
+  ///
+  /// In en, this message translates to:
+  /// **'This report goes privately to Divine’s moderation team. It isn’t posted publicly.'**
+  String get reportPrivateNotice;
+
+  /// Title of the opt-in checkbox on the sheet for reporting a received direct message. Ticking it sends that message's text privately to Divine's moderation team.
+  ///
+  /// In en, this message translates to:
+  /// **'Include this message'**
+  String get reportIncludeMessageTitle;
+
+  /// Consent line under the reportIncludeMessageTitle checkbox. 'it' is the reported message.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine’s moderation team will see it. It stays private and isn’t posted publicly.'**
+  String get reportIncludeMessageDescription;
+
+  /// Error on the direct-message report sheet when the included message is too large to send to moderators.
+  ///
+  /// In en, this message translates to:
+  /// **'This message is too long to include. Uncheck “{optionTitle}” and try again.'**
+  String reportMessageTooLong(String optionTitle);
+
+  /// Error on a private report sheet (one opened from direct messages) when the text typed into the report's details field is too large to send to moderators. 'Details' is that field, labelled by reportDetailsOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Your details are too long to send. Shorten them and try again.'**
+  String get reportDetailsTooLong;
+
   /// No description provided for @reportBlockUser.
   ///
   /// In en, this message translates to:

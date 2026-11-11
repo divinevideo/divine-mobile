@@ -5088,6 +5088,26 @@ class AppLocalizationsVi extends AppLocalizations {
       'Divine sẽ xử lý báo cáo nội dung trong vòng 24 giờ bằng cách gỡ nội dung và loại người dùng đăng nội dung vi phạm.';
 
   @override
+  String get reportPrivateNotice =>
+      'Báo cáo này được gửi riêng tư đến đội kiểm duyệt của Divine. Báo cáo không được đăng công khai.';
+
+  @override
+  String get reportIncludeMessageTitle => 'Gửi kèm tin nhắn này';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Đội kiểm duyệt của Divine sẽ xem tin nhắn này. Tin nhắn vẫn được giữ riêng tư và không được đăng công khai.';
+
+  @override
+  String reportMessageTooLong(String optionTitle) {
+    return 'Tin nhắn này quá dài để gửi kèm. Bỏ chọn “$optionTitle” rồi thử lại.';
+  }
+
+  @override
+  String get reportDetailsTooLong =>
+      'Phần chi tiết của bạn quá dài để gửi. Rút ngắn rồi thử lại.';
+
+  @override
   String get reportBlockUser => 'Chặn người dùng này';
 
   @override

@@ -16181,12 +16181,15 @@ class PendingReportRow extends DataClass
 
   /// Serialized kind-1984 intent, initially unsigned for offline acceptance.
   /// Delivery saves its signature before publishing and reuses it on retries.
+  /// Empty for a private report, which has no relay channel to drive.
   final String eventJson;
 
-  /// JSON list of target relays for the report, or null for the default set.
+  /// JSON list of target relays for the report, or null for the default set
+  /// (and for a private report, which publishes nothing).
   final String? targetRelays;
 
   /// JSON of the Zendesk ticket fields, already redacted at enqueue time.
+  /// Empty for a private report, which files no ticket.
   final String zendeskPayload;
 
   /// Private moderation-DM intent, redacted before storage.

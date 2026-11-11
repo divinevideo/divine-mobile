@@ -241,6 +241,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
           await ReportContentDialog.showForUser(
             context,
             userPubkey: otherPubkey,
+            fromDirectMessages: true,
           );
         case MoreSheetResult.blockConfirmed:
           await _setBlocked(otherPubkey, blocked: true);
@@ -1972,6 +1973,7 @@ class _MessageList extends StatelessWidget {
           context,
           messageId: message.id,
           senderPubkey: message.senderPubkey,
+          messageText: message.readableText,
         );
       case MessageAction.blockSender:
       case MessageAction.unblockSender:

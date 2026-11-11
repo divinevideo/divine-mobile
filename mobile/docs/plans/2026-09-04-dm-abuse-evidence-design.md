@@ -1,6 +1,8 @@
 # Private Evidence for DM Abuse Reports
 
-Status: Proposed decision for #8508 and #7340
+Status: Decided for #8508 and #7340. The mobile side of the first
+implementation (private reports and the unverified excerpt) shipped with the
+fix for #7340, without the support record: see below.
 
 ## Decision
 
@@ -56,6 +58,9 @@ For DM reports:
 - Send the private moderation DM.
 - Create the existing private support record if that remains part of the
   moderation workflow.
+  As implemented, a DM report files no support ticket at all: a ticket can be
+  mirrored into a public GitHub issue (`docs/DIAGNOSTIC_DATA_POLICY.md`),
+  which would break the promise that the report stays private.
 - Do not create or publish a kind-1984 event.
 - Do not copy the selected message excerpt into the support record unless its
   access and retention policy is explicitly approved for private DM evidence.

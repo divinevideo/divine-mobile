@@ -5301,6 +5301,26 @@ class AppLocalizationsTe extends AppLocalizations {
       'Divine కంటెంట్‌ని తీసివేసి, ఆక్షేపణీయ కంటెంట్‌ని అందించిన వినియోగదారుని ఎజెక్ట్ చేయడం ద్వారా 24 గంటలలోపు కంటెంట్ నివేదికలపై పని చేస్తుంది.';
 
   @override
+  String get reportPrivateNotice =>
+      'ఈ నివేదిక ప్రైవేట్‌గా Divine మోడరేషన్ బృందానికి వెళ్తుంది. ఇది పబ్లిక్‌గా పోస్ట్ చేయబడదు.';
+
+  @override
+  String get reportIncludeMessageTitle => 'ఈ సందేశాన్ని చేర్చండి';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Divine మోడరేషన్ బృందం దీన్ని చూస్తుంది. ఇది ప్రైవేట్‌గా ఉంటుంది, పబ్లిక్‌గా పోస్ట్ చేయబడదు.';
+
+  @override
+  String reportMessageTooLong(String optionTitle) {
+    return 'ఈ సందేశం చేర్చడానికి చాలా పొడవుగా ఉంది. “$optionTitle” ఎంపికను తీసివేసి, మళ్లీ ప్రయత్నించండి.';
+  }
+
+  @override
+  String get reportDetailsTooLong =>
+      'మీ వివరాలు పంపడానికి చాలా పొడవుగా ఉన్నాయి. వాటిని కుదించి, మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get reportBlockUser => 'ఈ వినియోగదారుని బ్లాక్ చేయండి';
 
   @override

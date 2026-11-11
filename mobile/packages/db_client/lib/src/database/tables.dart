@@ -1698,12 +1698,15 @@ class PendingReports extends Table {
 
   /// Serialized kind-1984 intent, initially unsigned for offline acceptance.
   /// Delivery saves its signature before publishing and reuses it on retries.
+  /// Empty for a private report, which has no relay channel to drive.
   TextColumn get eventJson => text().named('event_json')();
 
-  /// JSON list of target relays for the report, or null for the default set.
+  /// JSON list of target relays for the report, or null for the default set
+  /// (and for a private report, which publishes nothing).
   TextColumn get targetRelays => text().nullable().named('target_relays')();
 
   /// JSON of the Zendesk ticket fields, already redacted at enqueue time.
+  /// Empty for a private report, which files no ticket.
   TextColumn get zendeskPayload => text().named('zendesk_payload')();
 
   /// Private moderation-DM intent, redacted before storage.

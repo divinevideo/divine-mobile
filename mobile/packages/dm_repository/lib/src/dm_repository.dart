@@ -1077,7 +1077,7 @@ class DmRepository {
   /// identical sends in the same Unix second produce distinct rumor ids.
   /// Divine's own receive path and other clients ignore unrecognised rumor
   /// tags, so it is inert on the wire.
-  static const _sendBatchTagKey = 'batch';
+  static const String _sendBatchTagKey = dmSendBatchTagKey;
 
   /// Default [_newSendBatchId]: a 256-bit secure-random, event-id-shaped hex
   /// token. Independent of rumor content, so two byte-identical same-second
@@ -7164,7 +7164,7 @@ class DmRepository {
   /// Returns rather than throws so a caller that loops over recipients — such
   /// as `CollaboratorInviteService.sendInvites` — is not aborted mid-fan-out.
   NIP17SendResult? _refuseIfOversized(Event rumor) {
-    final rumorBytes = utf8.encode(jsonEncode(rumor.toJson())).length;
+    final rumorBytes = dmRumorBytes(rumor);
     if (rumorBytes <= maxDmRumorBytes) return null;
     Log.info(
       'DM refused: rumor serializes to $rumorBytes bytes, over the '

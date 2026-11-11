@@ -3530,6 +3530,32 @@
     "description": "Heading of the report form when the thing being reported is a comment. The same form with the general heading reportWhyReporting reports videos, lists, messages, and accounts."
   },
   "reportPolicyNotice": "Divine will act on content reports within 24 hours by removing the content and ejecting the user who provided the offending content.",
+  "reportPrivateNotice": "This report goes privately to Divine’s moderation team. It isn’t posted publicly.",
+  "@reportPrivateNotice": {
+    "description": "Shown under the report policy notice when the report is made from a direct message. Such a report is sent only to Divine's moderation team and nothing about it is published."
+  },
+  "reportIncludeMessageTitle": "Include this message",
+  "@reportIncludeMessageTitle": {
+    "description": "Title of the opt-in checkbox on the sheet for reporting a received direct message. Ticking it sends that message's text privately to Divine's moderation team."
+  },
+  "reportIncludeMessageDescription": "Divine’s moderation team will see it. It stays private and isn’t posted publicly.",
+  "@reportIncludeMessageDescription": {
+    "description": "Consent line under the reportIncludeMessageTitle checkbox. 'it' is the reported message."
+  },
+  "reportMessageTooLong": "This message is too long to include. Uncheck “{optionTitle}” and try again.",
+  "@reportMessageTooLong": {
+    "description": "Error on the direct-message report sheet when the included message is too large to send to moderators.",
+    "placeholders": {
+      "optionTitle": {
+        "type": "String",
+        "description": "The checkbox's title, reportIncludeMessageTitle."
+      }
+    }
+  },
+  "reportDetailsTooLong": "Your details are too long to send. Shorten them and try again.",
+  "@reportDetailsTooLong": {
+    "description": "Error on a private report sheet (one opened from direct messages) when the text typed into the report's details field is too large to send to moderators. 'Details' is that field, labelled by reportDetailsOptional."
+  },
   "reportBlockUser": "Block this user",
   "reportCancel": "Cancel",
   "reportSubmit": "Report",

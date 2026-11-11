@@ -5050,6 +5050,26 @@ class AppLocalizationsId extends AppLocalizations {
       'Divine akan menindak laporan konten dalam 24 jam dengan menghapus konten dan mengeluarkan pengguna yang memberikan konten yang melanggar.';
 
   @override
+  String get reportPrivateNotice =>
+      'Laporan ini dikirim secara privat ke tim moderasi Divine. Laporannya tidak diposting ke publik.';
+
+  @override
+  String get reportIncludeMessageTitle => 'Sertakan pesan ini';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Tim moderasi Divine akan melihatnya. Pesannya tetap privat dan tidak diposting ke publik.';
+
+  @override
+  String reportMessageTooLong(String optionTitle) {
+    return 'Pesan ini terlalu panjang untuk disertakan. Hapus centang “$optionTitle” lalu coba lagi.';
+  }
+
+  @override
+  String get reportDetailsTooLong =>
+      'Detail kamu terlalu panjang untuk dikirim. Persingkat lalu coba lagi.';
+
+  @override
   String get reportBlockUser => 'Blokir pengguna ini';
 
   @override

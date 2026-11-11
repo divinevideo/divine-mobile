@@ -4825,6 +4825,25 @@ class AppLocalizationsJa extends AppLocalizations {
       'Divine はコンテンツの報告に24時間以内に対応して、問題のあるコンテンツを削除し、違反ユーザーを排除するよ。';
 
   @override
+  String get reportPrivateNotice =>
+      'この報告は非公開で Divine のモデレーションチームに届きます。一般に公開されることはありません。';
+
+  @override
+  String get reportIncludeMessageTitle => 'このメッセージを含める';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'このメッセージは Divine のモデレーションチームが確認します。非公開のままで、一般に公開されることはありません。';
+
+  @override
+  String reportMessageTooLong(String optionTitle) {
+    return 'このメッセージは長すぎて含められません。「$optionTitle」のチェックを外して、もう一度お試しください。';
+  }
+
+  @override
+  String get reportDetailsTooLong => '詳細が長すぎて送信できません。短くして、もう一度お試しください。';
+
+  @override
   String get reportBlockUser => 'このユーザーをブロック';
 
   @override

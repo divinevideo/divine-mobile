@@ -5148,6 +5148,26 @@ class AppLocalizationsNl extends AppLocalizations {
       'Divine handelt binnen 24 uur op meldingen van inhoud door de inhoud te verwijderen en de gebruiker die de schendende inhoud plaatste eruit te zetten.';
 
   @override
+  String get reportPrivateNotice =>
+      'Deze melding gaat privé naar het moderatieteam van Divine. Ze wordt niet openbaar geplaatst.';
+
+  @override
+  String get reportIncludeMessageTitle => 'Dit bericht meesturen';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Het moderatieteam van Divine krijgt het te zien. Het blijft privé en wordt niet openbaar geplaatst.';
+
+  @override
+  String reportMessageTooLong(String optionTitle) {
+    return 'Dit bericht is te lang om mee te sturen. Vink ‘$optionTitle’ uit en probeer het opnieuw.';
+  }
+
+  @override
+  String get reportDetailsTooLong =>
+      'Je details zijn te lang om te versturen. Maak ze korter en probeer het opnieuw.';
+
+  @override
   String get reportBlockUser => 'Deze gebruiker blokkeren';
 
   @override

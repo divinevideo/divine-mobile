@@ -5171,6 +5171,26 @@ class AppLocalizationsPt extends AppLocalizations {
       'O Divine vai agir sobre denúncias de conteúdo em até 24 horas, removendo o conteúdo e expulsando o usuário que o publicou.';
 
   @override
+  String get reportPrivateNotice =>
+      'Essa denúncia vai de forma privada para a equipe de moderação do Divine. Ela não é publicada.';
+
+  @override
+  String get reportIncludeMessageTitle => 'Incluir esta mensagem';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'A equipe de moderação do Divine vai ver essa mensagem. Ela fica privada e não é publicada.';
+
+  @override
+  String reportMessageTooLong(String optionTitle) {
+    return 'Essa mensagem é longa demais para incluir. Desmarque “$optionTitle” e tente novamente.';
+  }
+
+  @override
+  String get reportDetailsTooLong =>
+      'Seus detalhes são longos demais para enviar. Encurte e tente novamente.';
+
+  @override
   String get reportBlockUser => 'Bloquear este usuário';
 
   @override

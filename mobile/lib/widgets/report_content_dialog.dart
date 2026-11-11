@@ -51,6 +51,7 @@ enum ReportedSubject {
 ///   context,
 ///   messageId: message.id,
 ///   senderPubkey: message.senderPubkey,
+///   messageText: message.readableText,
 /// );
 /// await ReportContentDialog.showForUser(
 ///   context,
@@ -76,6 +77,8 @@ class ReportContentDialog extends ConsumerWidget {
     this.addressableCoordinate,
     this.subject = ReportedSubject.content,
     this.isFromShareMenu = false,
+    this.publishesPublicReport = true,
+    this.messageExcerpt,
     this.draggableController,
     this.scrollController,
   }) {
@@ -132,6 +135,14 @@ class ReportContentDialog extends ConsumerWidget {
 
   final bool isFromShareMenu;
 
+  /// Whether the report also goes out as a public NIP-56 event. False for a
+  /// report made from a direct message, which stays private (#7340).
+  final bool publishesPublicReport;
+
+  /// The reported message's text, which the reporter may choose to include
+  /// privately. Only a private report offers it.
+  final String? messageExcerpt;
+
   /// Optional controller used to programmatically expand the bottom sheet
   /// to full height when the details field takes focus (so it is reachable
   /// above the keyboard).
@@ -168,12 +179,18 @@ class ReportContentDialog extends ConsumerWidget {
         .whenComplete(controller.dispose);
   }
 
-  /// Shows the bottom sheet for reporting a DM message. Uses the same UX
-  /// as the video flow; differs only in the moderation-DM body labels.
+  /// Shows the bottom sheet for reporting a received DM message.
+  ///
+  /// The report stays private: it goes to Divine's moderation team and is
+  /// never published, since a public report would tie the reporter to the
+  /// person they message (#7340). The reporter may include [messageText],
+  /// which is offered only when there is readable text: null for a file
+  /// message, whose content is an encrypted URL.
   static Future<void> showForMessage(
     BuildContext context, {
     required String messageId,
     required String senderPubkey,
+    required String? messageText,
   }) {
     final controller = DraggableScrollableController();
     return context
@@ -187,6 +204,10 @@ class ReportContentDialog extends ConsumerWidget {
             authorPubkey: senderPubkey,
             moderationKindLabel: 'DM Message Report',
             moderationEventLabel: 'Message ID',
+            publishesPublicReport: false,
+            messageExcerpt: (messageText?.trim().isEmpty ?? true)
+                ? null
+                : messageText,
             draggableController: controller,
             scrollController: scrollController,
           ),
@@ -228,9 +249,14 @@ class ReportContentDialog extends ConsumerWidget {
   ///
   /// Routes submission through `ContentReportingService.reportUser`, which
   /// emits a NIP-56 report with the synthetic `user_<pubkey>` event id.
+  ///
+  /// [fromDirectMessages] marks a report made from a conversation or the
+  /// inbox. It stays private and emits no NIP-56 report, which would name
+  /// the person the reporter messages (#7340).
   static Future<void> showForUser(
     BuildContext context, {
     required String userPubkey,
+    bool fromDirectMessages = false,
   }) {
     final controller = DraggableScrollableController();
     return context
@@ -243,6 +269,7 @@ class ReportContentDialog extends ConsumerWidget {
             userPubkey: userPubkey,
             moderationKindLabel: 'User Report',
             moderationEventLabel: 'User Pubkey',
+            publishesPublicReport: !fromDirectMessages,
             draggableController: controller,
             scrollController: scrollController,
           ),
@@ -304,6 +331,8 @@ class ReportContentDialog extends ConsumerWidget {
       moderationEventLabel: moderationEventLabel,
       additionalContext: additionalContext,
       addressableCoordinate: addressableCoordinate,
+      publishesPublicReport: publishesPublicReport,
+      messageExcerpt: messageExcerpt,
     );
   }
 
@@ -322,6 +351,8 @@ class ReportContentDialog extends ConsumerWidget {
         reasons: reasons,
         subject: subject,
         isFromShareMenu: isFromShareMenu,
+        isPrivate: !publishesPublicReport,
+        canIncludeMessage: messageExcerpt != null,
         draggableController: draggableController,
         scrollController: scrollController,
       ),
@@ -336,6 +367,8 @@ class _ReportContentView extends StatefulWidget {
     required this.reasons,
     required this.subject,
     required this.isFromShareMenu,
+    required this.isPrivate,
+    required this.canIncludeMessage,
     this.draggableController,
     this.scrollController,
   });
@@ -343,6 +376,12 @@ class _ReportContentView extends StatefulWidget {
   final List<ContentFilterReason> reasons;
   final ReportedSubject subject;
   final bool isFromShareMenu;
+
+  /// Whether the report goes only to Divine's moderation team.
+  final bool isPrivate;
+
+  /// Whether the reporter can choose to include the reported message.
+  final bool canIncludeMessage;
   final DraggableScrollableController? draggableController;
   final ScrollController? scrollController;
 
@@ -375,6 +414,10 @@ class _ReportContentViewState extends State<_ReportContentView> {
   /// Whether Report was tapped under Other with no note. Shown inside the
   /// note box, beside the field it asks the reporter to fill in.
   bool _noteRequired = false;
+
+  /// Whether the reporter chose to send the reported message to moderators.
+  /// Off until they tick it: including it is their decision.
+  bool _includeMessage = false;
 
   /// Whether the reporter just tried to insert an image the report cannot
   /// carry. Held here, beside the other form state, so the one-shot notice
@@ -558,6 +601,11 @@ class _ReportContentViewState extends State<_ReportContentView> {
                       imageInsertionRejected: _imageInsertionRejected,
                       noteRequired: _noteRequired,
                       onImageInserted: _onImageInsertionRejected,
+                      isPrivate: widget.isPrivate,
+                      includeMessage: widget.canIncludeMessage
+                          ? _includeMessage
+                          : null,
+                      onIncludeMessageChanged: _onIncludeMessageChanged,
                     ),
             ),
           ),
@@ -599,6 +647,13 @@ class _ReportContentViewState extends State<_ReportContentView> {
       ],
     );
   }
+
+  void _onIncludeMessageChanged(bool include) => setState(() {
+    _includeMessage = include;
+    // What will be sent changed, so a previous submit's error no longer
+    // describes it.
+    _errorMessage = null;
+  });
 
   void _onDetailsChanged() {
     if (_errorMessage == null && !_noteRequired && !_imageInsertionRejected) {
@@ -663,6 +718,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
       reason: reason,
       reasonTitle: selectedReasonTitle,
       details: details,
+      includeMessage: _includeMessage,
     );
     if (!mounted) return;
 
@@ -670,6 +726,10 @@ class _ReportContentViewState extends State<_ReportContentView> {
     setState(() {
       _errorMessage = switch (status) {
         ReportSubmissionStatus.failure => l10n.reportFailed,
+        ReportSubmissionStatus.tooLong => l10n.reportMessageTooLong(
+          l10n.reportIncludeMessageTitle,
+        ),
+        ReportSubmissionStatus.detailsTooLong => l10n.reportDetailsTooLong,
         _ => null,
       };
     });
@@ -721,6 +781,9 @@ class _ReportFormBody extends StatelessWidget {
     required this.imageInsertionRejected,
     required this.noteRequired,
     required this.onImageInserted,
+    required this.isPrivate,
+    required this.includeMessage,
+    required this.onIncludeMessageChanged,
   });
 
   final List<ContentFilterReason> reasons;
@@ -754,6 +817,16 @@ class _ReportFormBody extends StatelessWidget {
   /// Forwarded to the details field's content-insertion handler.
   final VoidCallback onImageInserted;
 
+  /// Whether the report goes only to Divine's moderation team, which the
+  /// form says under the policy notice.
+  final bool isPrivate;
+
+  /// Whether the reporter ticked "include this message", or null when there
+  /// is no message to include and the checkbox is not shown.
+  final bool? includeMessage;
+
+  final ValueChanged<bool> onIncludeMessageChanged;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -780,6 +853,15 @@ class _ReportFormBody extends StatelessWidget {
             color: context.vineColors.onSurfaceMuted,
           ),
         ),
+        if (isPrivate) ...[
+          const SizedBox(height: 8),
+          Text(
+            l10n.reportPrivateNotice,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.onSurfaceMuted,
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         for (final reason in reasons) ...[
           Padding(
@@ -849,6 +931,18 @@ class _ReportFormBody extends StatelessWidget {
               ),
             ),
         ],
+        if (includeMessage case final include?)
+          // The sheet paints its background with a ColoredBox, which would
+          // hide the row's ink: ListTile draws on the nearest Material.
+          Material(
+            type: MaterialType.transparency,
+            child: DivineCheckboxTile(
+              title: l10n.reportIncludeMessageTitle,
+              subtitle: l10n.reportIncludeMessageDescription,
+              value: include,
+              onChanged: onIncludeMessageChanged,
+            ),
+          ),
       ],
     );
   }

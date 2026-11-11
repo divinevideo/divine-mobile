@@ -4800,6 +4800,24 @@ class AppLocalizationsZh extends AppLocalizations {
       'Divine 会在 24 小时内处理内容举报：移除违规内容，并将发布违规内容的用户清出平台。';
 
   @override
+  String get reportPrivateNotice => '这条举报会私下发给 Divine 审核团队，不会公开发布。';
+
+  @override
+  String get reportIncludeMessageTitle => '附上这条消息';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Divine 审核团队会看到这条消息。它会保持私密，不会公开发布。';
+
+  @override
+  String reportMessageTooLong(String optionTitle) {
+    return '这条消息太长，无法附上。请取消勾选“$optionTitle”后重试。';
+  }
+
+  @override
+  String get reportDetailsTooLong => '你填写的详情太长，无法发送。请精简后重试。';
+
+  @override
   String get reportBlockUser => '屏蔽该用户';
 
   @override
