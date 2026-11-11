@@ -4,7 +4,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:models/models.dart';
 import 'package:uuid/uuid.dart';
@@ -45,6 +44,11 @@ class SecureCuratedListDraftArchive implements CuratedListDraftArchive {
   static const storagePrefix = 'curated_list_draft_archive_v1:';
   static const _quarantinePrefix = 'curated_list_draft_quarantine_v1:';
 
+  /// Finite owner-local addressing lets explicit destruction find every slot
+  /// without enumerating or decrypting other accounts' secure storage. Full
+  /// capacity fails preservation with the live source intact; nothing is evicted.
+  static const _quarantineCapacity = 256;
+
   // Service restoration and account cleanup use separate archive instances.
   // Serialize their mutations for each owner across those instances.
   static final _ownerTails = <String, Future<void>>{};
@@ -72,6 +76,9 @@ class SecureCuratedListDraftArchive implements CuratedListDraftArchive {
     storageKey(owner);
     return '$_quarantinePrefix$owner:';
   }
+
+  static String _quarantineKey(String owner, int slot) =>
+      '${_ownerQuarantinePrefix(owner)}$slot';
 
   static String storageKey(String owner) {
     if (!NostrHexUtils.isValidPubkey(owner)) {
@@ -144,31 +151,32 @@ class SecureCuratedListDraftArchive implements CuratedListDraftArchive {
       try {
         return _decode(owner, raw);
       } on CuratedListDraftArchiveException {
-        // One immutable encrypted slot per distinct unreadable revision. The
-        // slot owner scopes evidence; fields inside the bytes grant no rights.
-        var backupKey =
-            '${_ownerQuarantinePrefix(owner)}${sha256.convert(utf8.encode(raw))}';
-        var backup = await _storage.read(key: backupKey);
-        if (backup != null && backup != raw) {
-          // Preserve a damaged earlier backup too. A fresh immutable slot lets
-          // preservation retry after a previous write failed verification.
-          backupKey = '$backupKey:${const Uuid().v4()}';
-          backup = await _storage.read(key: backupKey);
-        }
-        if (backup == null) {
-          await _storage.write(key: backupKey, value: raw);
-        } else if (backup != raw) {
-          throw const CuratedListDraftArchiveException();
-        }
-        if (await _storage.read(key: backupKey) != raw) {
-          throw const CuratedListDraftArchiveException();
-        }
+        await _preserveUnreadable(owner, raw);
         // Another archive instance cannot mutate this owner while queued.
         // Also refuse to retire a source changed outside this queue.
         if (await _storage.read(key: key) != raw) continue;
         await _deleteVerified(key);
         return null;
       }
+    }
+  }
+
+  /// No occupied slot is overwritten, including a damaged earlier write.
+  /// Scan past holes before appending so a retry reuses an existing exact copy.
+  Future<void> _preserveUnreadable(String owner, String raw) async {
+    String? vacantKey;
+    for (var slot = 0; slot < _quarantineCapacity; slot++) {
+      final key = _quarantineKey(owner, slot);
+      final backup = await _storage.read(key: key);
+      if (backup == raw) return;
+      if (backup == null) vacantKey ??= key;
+    }
+    if (vacantKey == null) throw const CuratedListDraftArchiveException();
+    // One attempt per operation: a failed or corrupt write retains the live
+    // source, and the next explicit retry can use another vacant slot.
+    await _storage.write(key: vacantKey, value: raw);
+    if (await _storage.read(key: vacantKey) != raw) {
+      throw const CuratedListDraftArchiveException();
     }
   }
 
@@ -204,7 +212,7 @@ class SecureCuratedListDraftArchive implements CuratedListDraftArchive {
 
   Future<void> _deleteVerified(String key) async {
     await _storage.delete(key: key);
-    if (await _storage.read(key: key) != null) {
+    if (await _storage.containsKey(key: key)) {
       throw const CuratedListDraftArchiveException();
     }
   }
@@ -212,17 +220,12 @@ class SecureCuratedListDraftArchive implements CuratedListDraftArchive {
   @override
   Future<void> removeOwner(String owner) => _exclusive(owner, () async {
     // Only explicit account destruction removes this owner's quarantine.
-    // Enumerate first so a storage read failure cannot start partial erasure.
-    final prefix = _ownerQuarantinePrefix(owner);
-    final keys = (await _storage.readAll()).keys
-        .where((key) => key.startsWith(prefix))
-        .toList();
     await _deleteVerified(storageKey(owner));
-    for (final key in keys) {
-      await _deleteVerified(key);
-    }
-    if ((await _storage.readAll()).keys.any((key) => key.startsWith(prefix))) {
-      throw const CuratedListDraftArchiveException();
+    // Probe every owner-local address, even after a hole left by interrupted
+    // deletion. containsKey never needs to decrypt a quarantined payload.
+    for (var slot = 0; slot < _quarantineCapacity; slot++) {
+      final key = _quarantineKey(owner, slot);
+      if (await _storage.containsKey(key: key)) await _deleteVerified(key);
     }
   });
 }
