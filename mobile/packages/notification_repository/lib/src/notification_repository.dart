@@ -836,7 +836,9 @@ class NotificationRepository {
   ///
   /// A [refresh] issued while this call is in flight supersedes it: the
   /// late completion neither updates the stored cursor nor touches the
-  /// snapshot, and returns the current snapshot unchanged.
+  /// snapshot, and returns the current snapshot unchanged. A [close] issued
+  /// while it is in flight supersedes it the same way, and a failure is then
+  /// logged but not rethrown.
   Future<NotificationPage> getNotifications({
     String? cursor,
     String? cursorId,
@@ -883,7 +885,7 @@ class NotificationRepository {
         name: 'NotificationRepository.getNotifications',
         category: LogCategory.api,
       );
-      if (generation != feed.fetchGeneration) {
+      if (_closed || generation != feed.fetchGeneration) {
         return (page: feed.snapshot.value, applied: false);
       }
 
@@ -897,7 +899,7 @@ class NotificationRepository {
           filter: filter,
         ),
       );
-      if (generation != feed.fetchGeneration) {
+      if (_closed || generation != feed.fetchGeneration) {
         return (page: feed.snapshot.value, applied: false);
       }
 
@@ -928,6 +930,8 @@ class NotificationRepository {
         category: LogCategory.api,
         stackTrace: s,
       );
+      // The feed's subject is closed, and no caller can act on the failure.
+      if (_closed) return (page: feed.snapshot.value, applied: false);
       if (isFirstPage && generation == feed.fetchGeneration) {
         _markRefreshError(feed);
       }
