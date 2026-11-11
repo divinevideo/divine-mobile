@@ -362,6 +362,15 @@ void main() {
       expect(entry.error, contains('bad link [REDACTED]'));
     });
 
+    // The 52 data characters already hold the whole key; the last six are
+    // checksum, so a paste cut short is still the secret.
+    test('redacts an nsec missing its checksum', () {
+      Log.info('opened /profile/${nsec.substring(0, 57)}', name: 'Test');
+
+      final entry = LogCaptureService().getRecentLogs().last;
+      expect(entry.message, equals('opened /profile/[REDACTED]'));
+    });
+
     test('logs public ids whole', () {
       Log.info('author $npub ($hex)', name: 'Test');
 
