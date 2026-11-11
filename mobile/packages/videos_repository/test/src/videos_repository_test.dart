@@ -14676,6 +14676,33 @@ void main() {
             expect(result?.id, equals(authorEventId));
           });
 
+          test('skips a candidate that names a different author than '
+              'expectedAuthor', () async {
+            final authorsVideo = _createVideoEventWithDTag(
+              id: authorEventId,
+              pubkey: author,
+              dTag: dTag,
+              videoUrl: 'https://example.com/author.mp4',
+              createdAt: 1739350000,
+            );
+            _answerQueriesFrom(mockNostrClient, [
+              authorsVideo,
+              otherAuthorsVideo,
+            ]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            expect(
+              await repo.fetchVideoWithStatsForRouteId(
+                '34236:$otherAuthor:$dTag',
+                expectedAuthor: author,
+              ),
+              isNull,
+            );
+          });
+
           test('ignores an expectedAuthor that is not a hex pubkey', () async {
             _answerQueriesFrom(mockNostrClient, [authorsRegularVideo]);
             final repo = VideosRepository(

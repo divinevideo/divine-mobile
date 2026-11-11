@@ -3414,8 +3414,8 @@ class VideosRepository {
   /// publish under, so a known author has to travel with it: every candidate
   /// is held to [expectedAuthor] when that is a hex pubkey, or otherwise to
   /// the author an author-named [routeId] (a coordinate or `naddr1`) names.
-  /// Any other [expectedAuthor] value is ignored. A candidate that names its
-  /// own author keeps it (#10384).
+  /// Any other [expectedAuthor] value is ignored. A candidate that names a
+  /// different author is skipped (#10384).
   Future<VideoRouteLookupResult> lookupVideoForRouteId(
     String routeId, {
     List<String> fallbackRouteIds = const [],
@@ -3482,9 +3482,19 @@ class VideosRepository {
       return null;
     }
 
-    // A candidate that names its own author keeps it; any other is held to
-    // the author the whole lookup carries.
-    final author = candidate.addressablePubkey ?? routeAuthor;
+    // A lookup held to one author never answers with another's video, so a
+    // candidate naming a different author cannot satisfy it.
+    final ownAuthor = candidate.addressablePubkey;
+    if (ownAuthor != null && routeAuthor != null && ownAuthor != routeAuthor) {
+      Log.info(
+        'Route lookup skipped $routeId: it names a different author than '
+        'the lookup is held to (${pubkeyForLogs(routeAuthor)})',
+        name: 'VideosRepository',
+        category: LogCategory.video,
+      );
+      return null;
+    }
+    final author = ownAuthor ?? routeAuthor;
 
     // Sources that answered "no", in the order they were tried. A null from
     // this method renders a permanent "video not found", so the misses are
