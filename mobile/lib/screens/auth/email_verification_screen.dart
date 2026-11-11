@@ -20,7 +20,6 @@ import 'package:openvine/l10n/email_verification_error_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -452,7 +451,7 @@ class _EmailVerificationScreenState
       ),
     );
     // Redirect to login screen
-    const LoginOptionsRouteData().go(context);
+    context.go(WelcomeScreen.loginOptionsPath);
   }
 
   Future<void> _handleCancel() async {
