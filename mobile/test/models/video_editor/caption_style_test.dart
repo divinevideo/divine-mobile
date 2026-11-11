@@ -203,7 +203,7 @@ void main() {
     test('buildLayer marks the caption cue layer with its id and timing', () {
       final layer = style.buildLayer(
         cue,
-        bodySize: const Size(200, 400),
+        frameSize: const Size(200, 400),
       );
 
       expect(
@@ -228,7 +228,7 @@ void main() {
           .copyWith(effects: effects)
           .resolve();
 
-      final layer = outlined.buildLayer(cue, bodySize: const Size(200, 400));
+      final layer = outlined.buildLayer(cue, frameSize: const Size(200, 400));
 
       expect(layer.outlineWidth, effects.outlineWidth);
       expect(layer.outlineColor, effects.outlineColor);
@@ -240,7 +240,7 @@ void main() {
       final layer = CaptionCustomStyle.initial()
           .copyWith(colorMode: LayerBackgroundMode.onlyColor)
           .resolve()
-          .buildLayer(cue, bodySize: const Size(200, 400));
+          .buildLayer(cue, frameSize: const Size(200, 400));
 
       expect(layer.background.a, 0);
     });
@@ -250,7 +250,7 @@ void main() {
 
       final layer = initial.resolve().buildLayer(
         cue,
-        bodySize: const Size(200, 400),
+        frameSize: const Size(200, 400),
       );
 
       expect(initial.hasBackground, isTrue);
@@ -258,14 +258,14 @@ void main() {
     });
 
     test('buildLayer draws neither without effects', () {
-      final layer = style.buildLayer(cue, bodySize: const Size(200, 400));
+      final layer = style.buildLayer(cue, frameSize: const Size(200, 400));
 
       expect(layer.hasOutline, isFalse);
       expect(layer.textStyle?.shadows, isEmpty);
     });
 
     test('buildLayer adds no highlights for a style without them', () {
-      final layer = style.buildLayer(cue, bodySize: const Size(200, 400));
+      final layer = style.buildLayer(cue, frameSize: const Size(200, 400));
 
       expect(layer.highlights, isEmpty);
     });
@@ -293,7 +293,7 @@ void main() {
             ),
           ],
         ),
-        bodySize: const Size(200, 400),
+        frameSize: const Size(200, 400),
       );
 
       expect(layer.highlightColor, equals(const Color(0xFF27C58B)));

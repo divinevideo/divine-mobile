@@ -74,9 +74,10 @@ class CaptionStylePreset {
   /// The outline and shadow drawn around the caption text.
   TextEffects get effects => style.effects;
 
-  /// Builds the burned-in editor layer for [cue].
-  TextLayer buildLayer(CaptionCue cue, {required Size bodySize}) =>
-      style.buildLayer(cue, bodySize: bodySize);
+  /// Builds the burned-in editor layer for [cue]; see
+  /// [CaptionStyle.buildLayer].
+  TextLayer buildLayer(CaptionCue cue, {required Size frameSize}) =>
+      style.buildLayer(cue, frameSize: frameSize);
 
   /// Resolves [id] to its preset, falling back to the first preset so an
   /// unknown id from an old draft still renders.

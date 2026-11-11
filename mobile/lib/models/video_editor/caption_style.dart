@@ -159,14 +159,20 @@ class CaptionStyle {
   /// The outline and shadow drawn around the caption text.
   final TextEffects effects;
 
-  /// Vertical placement of caption cues: fraction of the canvas height below
-  /// center, keeping captions in the lower third without touching the edge.
+  /// Vertical placement of caption cues: fraction of the frame's height below
+  /// its center, keeping captions in the lower third without touching the
+  /// edge.
   static const double _bottomOffsetFactor = 0.32;
 
   /// Builds the burned-in editor layer for [cue].
+  ///
+  /// [frameSize] is the part of the editor canvas the export keeps, centred
+  /// on it, in the canvas's pixels. A square video keeps less of a 9:16
+  /// recording's canvas than a 9:16 one, so placed against the whole canvas
+  /// its captions would land below the frame.
   TextLayer buildLayer(
     CaptionCue cue, {
-    required Size bodySize,
+    required Size frameSize,
   }) {
     final highlightColor = this.highlightColor;
     return TextLayer(
@@ -184,7 +190,7 @@ class CaptionStyle {
           : background,
       align: TextAlign.center,
       fontScale: fontScale,
-      offset: Offset(0, bodySize.shortestSide * _bottomOffsetFactor),
+      offset: Offset(0, frameSize.height * _bottomOffsetFactor),
       startTime: cue.start,
       endTime: cue.end,
       animations: [...enter, ...leave].toLayerAnimations(),
