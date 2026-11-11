@@ -69,7 +69,7 @@ class VideoRecorderRouteData extends GoRouteData with $VideoRecorderRouteData {
             challengeRecordingId: challengeRecording,
             entryPoint: CreationEntryPoint.fromName(entryPoint),
             // Read from the URI, not a field: the screen owns the key and its
-            // parsing, and pathForEntryPoint is the only location that sets it.
+            // parsing, and pathForEntryPoint is the only builder that sets it.
             autoRecord: VideoRecorderScreen.autoRecordFromQueryParameters(
               state.uri.queryParameters,
             ),
