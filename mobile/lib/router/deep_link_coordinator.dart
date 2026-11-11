@@ -472,7 +472,7 @@ class DeepLinkCoordinator {
           case DeepLinkType.savedVideos:
             const targetPath = SavedVideosScreen.path;
             Log.info(
-              '📱 Navigating to saved videos: ${redactUriStringForLogs(targetPath)}',
+              '📱 Navigating to saved videos: $targetPath',
               name: 'DeepLinkHandler',
               category: LogCategory.ui,
             );
@@ -496,7 +496,7 @@ class DeepLinkCoordinator {
                   _push(targetPath);
               }
               Log.info(
-                '✅ Navigation completed to: ${redactUriStringForLogs(targetPath)}',
+                '✅ Navigation completed to: $targetPath',
                 name: 'DeepLinkHandler',
                 category: LogCategory.ui,
               );
