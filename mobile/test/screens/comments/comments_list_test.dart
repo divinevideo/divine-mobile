@@ -627,9 +627,17 @@ void main() {
         expect(shown, findsOneWidget);
         final viewport = tester.getRect(find.byType(ListView));
         expect(viewport.contains(tester.getCenter(shown)), isTrue);
+        // Matched by field: the event has no value equality, so a const
+        // instance would never equal the one the widget builds.
         verifyNever(
           () => mockListBloc.add(
-            const CommentsScrollHandled('pending_comment_70'),
+            any(
+              that: isA<CommentsScrollHandled>().having(
+                (event) => event.commentId,
+                'commentId',
+                'pending_comment_70',
+              ),
+            ),
           ),
         );
         verify(
