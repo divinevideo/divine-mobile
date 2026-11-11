@@ -224,111 +224,32 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       // screen background.
       backgroundColor: context.vineColors.nav,
       appBar: appBar,
-      body: videosAsync.when(
-        // Keep the current grid on screen while the provider re-runs after a
-        // blocklist version bump, instead of flashing the spinner and resetting
-        // scroll (#5104).
-        skipLoadingOnReload: true,
-        data: (videos) {
-          ref
-              .read(screenAnalyticsServiceProvider)
-              .markDataLoaded(
-                'curated_list',
-                dataMetrics: {'video_count': videos.length},
-              );
-
-          // If in video mode, show fullscreen video player
-          if (_activeVideoIndex != null) {
-            return ListVideoPlayerMode(
-              videos: videos,
-              activeIndex: _activeVideoIndex!,
-              listName: widget.listName,
-              onExit: _exitVideoMode,
-              unavailableMessage: context.l10n.curatedListVideoNotAvailable,
-              trafficSource: ViewTrafficSource.search,
-            );
-          }
-
-          if (_manageCubit case final cubit?) {
-            return BlocSelector<
-              CuratedListManagePostsCubit,
-              CuratedListManagePostsState,
-              Set<String>
-            >(
-              bloc: cubit,
-              selector: (state) => state.selectedVideoIds,
-              builder: (context, selectedVideoIds) => RoundedGridViewport(
-                child: ComposableVideoGrid(
-                  videos: videos,
-                  useMasonryLayout: true,
-                  // Edge-to-edge like the Explore grids: the 4px column gap
-                  // comes from the grid's spacing, not outer side padding.
-                  // No top padding, so the first row sits flush on the
-                  // panel's rounded top edge.
-                  padding: const EdgeInsets.only(bottom: 4),
-                  topOuterRadius: VineTheme.shellInnerCornerRadius,
-                  backgroundColor: context.vineColors.surfaceContainerHigh,
-                  showSubscribedListBadge: false,
-                  selectedVideoIds: selectedVideoIds,
-                  onVideoTap: (videoList, index) =>
-                      cubit.togglePost(videoList[index].id),
-                  emptyBuilder: () => const _EmptyListMessage(),
-                ),
-              ),
-            );
-          }
-
-          return RoundedGridViewport(
-            child: ComposableVideoGrid(
-              videos: videos,
-              useMasonryLayout: true,
-              // Edge-to-edge like the Explore grids: the 4px column gap comes
-              // from the grid's spacing, not outer side padding. No top
-              // padding, so the first row sits flush on the panel's rounded
-              // top edge.
-              padding: const EdgeInsets.only(bottom: 4),
-              topOuterRadius: VineTheme.shellInnerCornerRadius,
-              backgroundColor: context.vineColors.surfaceContainerHigh,
-              showSubscribedListBadge: false,
-              headerSlivers: [
-                SliverToBoxAdapter(
-                  child: _ListHeroHeader(
-                    name: list?.name ?? widget.listName,
-                    videoCount:
-                        list?.videoEventIds.length ??
-                        widget.videoIds?.length ??
-                        0,
-                    description: list?.description,
-                    authorPubkey: isOwned
-                        ? null
-                        : widget.authorPubkey ?? list?.pubkey,
-                    isPublic: list?.isPublic,
-                    onAuthorTap: _openAuthorProfile,
-                    actions: headerButtons,
-                  ),
-                ),
-              ],
-              onVideoTap: (videoList, index) {
-                Log.info(
-                  'Tapped video in curated list: ${videoList[index].id}',
-                  category: LogCategory.ui,
-                );
-                setState(() {
-                  _activeVideoIndex = index;
-                });
-              },
-              onRefresh: () async {
-                _refreshListVideos();
-              },
-              emptyBuilder: () => const _EmptyListMessage(),
-            ),
-          );
-        },
-        loading: () => const _ListLoadingView(),
-        error: (error, stack) => _ListErrorView(
-          error: error,
-          onRetry: _refreshListVideos,
+      body: _ListBody(
+        videosAsync: videosAsync,
+        activeVideoIndex: _activeVideoIndex,
+        manageCubit: _manageCubit,
+        listName: widget.listName,
+        header: _ListHeroHeader(
+          name: list?.name ?? widget.listName,
+          videoCount:
+              list?.videoEventIds.length ?? widget.videoIds?.length ?? 0,
+          description: list?.description,
+          authorPubkey: isOwned ? null : widget.authorPubkey ?? list?.pubkey,
+          isPublic: list?.isPublic,
+          onAuthorTap: _openAuthorProfile,
+          actions: headerButtons,
         ),
+        onExitVideoMode: _exitVideoMode,
+        onVideoTap: (videoList, index) {
+          Log.info(
+            'Tapped video in curated list: ${videoList[index].id}',
+            category: LogCategory.ui,
+          );
+          setState(() {
+            _activeVideoIndex = index;
+          });
+        },
+        onRefresh: _refreshListVideos,
       ),
       bottomNavigationBar: _manageCubit == null
           ? null
@@ -746,6 +667,121 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       SnackBar(
         content: Text(context.l10n.discoverListsFailedToUpdateSubscription),
         backgroundColor: VineTheme.likeRed,
+      ),
+    );
+  }
+}
+
+/// The list page below the app bar: the grid with the hero header, or
+/// fullscreen playback once a video is tapped.
+///
+/// The header stays mounted whatever state the videos are in, so Follow and
+/// Share remain usable while they load or after they fail; only the area
+/// under the header switches between the grid, a spinner and the error.
+class _ListBody extends ConsumerWidget {
+  const _ListBody({
+    required this.videosAsync,
+    required this.activeVideoIndex,
+    required this.manageCubit,
+    required this.listName,
+    required this.header,
+    required this.onExitVideoMode,
+    required this.onVideoTap,
+    required this.onRefresh,
+  });
+
+  final AsyncValue<List<VideoEvent>> videosAsync;
+  final int? activeVideoIndex;
+  final CuratedListManagePostsCubit? manageCubit;
+  final String listName;
+  final Widget header;
+  final VoidCallback onExitVideoMode;
+  final void Function(List<VideoEvent> videoList, int index) onVideoTap;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // An error routes to the error view even when a previous value is kept,
+    // while a reload keeps the current grid on screen instead of flashing
+    // the spinner and resetting scroll (#5104).
+    final videos = videosAsync.hasError ? null : videosAsync.value;
+    if (videos != null) {
+      ref
+          .read(screenAnalyticsServiceProvider)
+          .markDataLoaded(
+            'curated_list',
+            dataMetrics: {'video_count': videos.length},
+          );
+    }
+
+    final activeVideoIndex = this.activeVideoIndex;
+    if (activeVideoIndex != null && videos != null) {
+      return ListVideoPlayerMode(
+        videos: videos,
+        activeIndex: activeVideoIndex,
+        listName: listName,
+        onExit: onExitVideoMode,
+        unavailableMessage: context.l10n.curatedListVideoNotAvailable,
+        trafficSource: ViewTrafficSource.search,
+      );
+    }
+
+    final cubit = manageCubit;
+    if (cubit != null && videos != null) {
+      return BlocSelector<
+        CuratedListManagePostsCubit,
+        CuratedListManagePostsState,
+        Set<String>
+      >(
+        bloc: cubit,
+        selector: (state) => state.selectedVideoIds,
+        builder: (context, selectedVideoIds) => RoundedGridViewport(
+          child: ComposableVideoGrid(
+            videos: videos,
+            useMasonryLayout: true,
+            // Edge-to-edge like the Explore grids: the 4px column gap comes
+            // from the grid's spacing, not outer side padding. No top
+            // padding, so the first row sits flush on the panel's rounded
+            // top edge.
+            padding: const EdgeInsets.only(bottom: 4),
+            topOuterRadius: VineTheme.shellInnerCornerRadius,
+            backgroundColor: context.vineColors.surfaceContainerHigh,
+            showSubscribedListBadge: false,
+            selectedVideoIds: selectedVideoIds,
+            onVideoTap: (videoList, index) =>
+                cubit.togglePost(videoList[index].id),
+            emptyBuilder: () => const _EmptyListMessage(),
+          ),
+        ),
+      );
+    }
+
+    return RoundedGridViewport(
+      child: ComposableVideoGrid(
+        videos: videos ?? const <VideoEvent>[],
+        useMasonryLayout: true,
+        // Edge-to-edge like the Explore grids: the 4px column gap comes from
+        // the grid's spacing, not outer side padding. No top padding, so the
+        // first row sits flush on the panel's rounded top edge.
+        padding: const EdgeInsets.only(bottom: 4),
+        topOuterRadius: VineTheme.shellInnerCornerRadius,
+        backgroundColor: context.vineColors.surfaceContainerHigh,
+        showSubscribedListBadge: false,
+        headerSlivers: [SliverToBoxAdapter(child: header)],
+        onVideoTap: onVideoTap,
+        onRefresh: () async => onRefresh(),
+        emptyBuilder: () {
+          // hasError rather than an AsyncError match: while the provider
+          // retries, the failure rides on a loading value.
+          if (videosAsync.hasError) {
+            return _ListErrorView(
+              error: videosAsync.error!,
+              onRetry: onRefresh,
+            );
+          }
+          if (videos == null) return const _ListLoadingView();
+          return const _EmptyListMessage();
+        },
       ),
     );
   }

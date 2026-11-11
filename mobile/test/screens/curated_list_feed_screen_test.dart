@@ -135,9 +135,8 @@ void main() {
           // the grid's own tests do: its sync would hit unstubbed service
           // members the moment a tile renders.
           subscribedListVideoCacheProvider.overrideWithValue(null),
-          // The hero header and grid live in the videos provider's data
-          // branch, so resolve it with an empty grid instead of leaving the
-          // screen on the loading spinner. Callers that override the same
+          // Resolve the videos with an empty grid instead of leaving the
+          // grid area on the loading spinner. Callers that override the same
           // providers themselves win via extraOverrides (last one applies).
           if (overrideVideoEvents) ...[
             if (videoIds != null)
@@ -1615,6 +1614,107 @@ void main() {
         verifyNever(() => goRouter.pop<Object?>());
         expect(find.text(l10n.listRemoveVideosButton(0)), findsNothing);
         expect(findByTooltip(l10n.curatedListActionsTooltip), findsOneWidget);
+      });
+    });
+
+    group('while the list videos are unavailable', () {
+      final author = 'a' * 64;
+
+      Override pendingVideos(String listId) {
+        final videos = StreamController<List<VideoEvent>>();
+        addTearDown(videos.close);
+        return curatedListVideoEventsProvider(
+          listId,
+        ).overrideWith((ref) => videos.stream);
+      }
+
+      Override failedVideos(String listId) => curatedListVideoEventsProvider(
+        listId,
+      ).overrideWith((ref) => Stream.error(Exception('relay unavailable')));
+
+      void stubFollowedList() {
+        when(() => mockService.getListById('external-list')).thenReturn(
+          CuratedList(
+            id: 'external-list',
+            name: 'External List',
+            pubkey: author,
+            videoEventIds: const ['one'],
+            createdAt: DateTime(2026),
+            updatedAt: DateTime(2026),
+          ),
+        );
+      }
+
+      testWidgets('keeps Following and Share on a followed list while its '
+          'videos load', (tester) async {
+        stubFollowedList();
+
+        await tester.pumpWidget(
+          buildSubject(
+            authorPubkey: author,
+            videoIds: null,
+            overrideVideoEvents: false,
+            extraOverrides: [pendingVideos('external-list')],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text(l10n.curatedListLoadingVideos), findsOneWidget);
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+        expect(find.text(l10n.listFollowingButton), findsOneWidget);
+        expect(find.byType(ShareListButton), findsOneWidget);
+      });
+
+      testWidgets('keeps Following and Share on a followed list whose '
+          'videos fail, and still unfollows it', (tester) async {
+        stubFollowedList();
+
+        await tester.pumpWidget(
+          buildSubject(
+            authorPubkey: author,
+            videoIds: null,
+            overrideVideoEvents: false,
+            extraOverrides: [failedVideos('external-list')],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text(l10n.curatedListFailedToLoad), findsOneWidget);
+        expect(find.byType(ShareListButton), findsOneWidget);
+
+        await tester.tap(find.text(l10n.listFollowingButton));
+        await tester.pump();
+
+        verify(
+          () => mockService.unsubscribeFromList('external-list'),
+        ).called(1);
+      });
+
+      testWidgets('shows Manage disabled beside Share on an own list while '
+          'its videos load', (tester) async {
+        stubOwnedList(videoEventIds: const ['one']);
+
+        await tester.pumpWidget(
+          buildSubject(
+            listId: 'owned-list',
+            listName: 'Owned List',
+            videoIds: null,
+            overrideVideoEvents: false,
+            extraOverrides: [pendingVideos('owned-list')],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text(l10n.curatedListLoadingVideos), findsOneWidget);
+        expect(manageVideosButton(), findsOneWidget);
+        expect(
+          tester.widget<DivineButton>(manageVideosButton()).onPressed,
+          isNull,
+        );
+        expect(find.byType(ShareListButton), findsOneWidget);
       });
     });
   });
