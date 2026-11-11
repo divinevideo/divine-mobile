@@ -106,6 +106,7 @@ class OutgoingDm {
     this.lastAttemptAt,
     this.sendBatchId,
     this.environment,
+    this.unconfirmedRecipientWrapJson,
   }) : rumorId = _rumorIdFromJson(rumorEventJson) ?? id;
 
   /// Opaque durable queue-row handle.
@@ -151,6 +152,10 @@ class OutgoingDm {
   /// Null for rows queued before it was recorded.
   final String? environment;
 
+  /// The signed recipient gift wrap an attempt wrote to a relay without
+  /// hearing its `OK`; see `OutgoingDms.unconfirmedRecipientWrapJson`.
+  final String? unconfirmedRecipientWrapJson;
+
   /// The kind-14/15 wire rumor id, stable across retries and recipients.
   ///
   /// Legacy and malformed fixtures fall back to [id]. Production rows always
@@ -192,6 +197,7 @@ class OutgoingDm {
     String? ownerPubkey,
     String? sendBatchId,
     String? environment,
+    String? unconfirmedRecipientWrapJson,
   }) => OutgoingDm(
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
@@ -214,6 +220,8 @@ class OutgoingDm {
     ownerPubkey: ownerPubkey ?? this.ownerPubkey,
     sendBatchId: sendBatchId ?? this.sendBatchId,
     environment: environment ?? this.environment,
+    unconfirmedRecipientWrapJson:
+        unconfirmedRecipientWrapJson ?? this.unconfirmedRecipientWrapJson,
   );
 
   // Full value equality. `id` alone is NOT sufficient: bloc states carry
@@ -245,10 +253,11 @@ class OutgoingDm {
           queuedAt == other.queuedAt &&
           ownerPubkey == other.ownerPubkey &&
           sendBatchId == other.sendBatchId &&
-          environment == other.environment;
+          environment == other.environment &&
+          unconfirmedRecipientWrapJson == other.unconfirmedRecipientWrapJson;
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     conversationId,
     recipientPubkey,
@@ -269,7 +278,8 @@ class OutgoingDm {
     ownerPubkey,
     sendBatchId,
     environment,
-  );
+    unconfirmedRecipientWrapJson,
+  ]);
 
   @override
   String toString() =>
@@ -309,6 +319,7 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       ownerPubkey: dm.ownerPubkey,
       sendBatchId: Value(dm.sendBatchId),
       environment: Value(dm.environment),
+      unconfirmedRecipientWrapJson: Value(dm.unconfirmedRecipientWrapJson),
     );
   }
 
@@ -334,6 +345,7 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
       ownerPubkey: row.ownerPubkey,
       sendBatchId: row.sendBatchId,
       environment: row.environment,
+      unconfirmedRecipientWrapJson: row.unconfirmedRecipientWrapJson,
     );
   }
 
@@ -483,6 +495,45 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
                 ? Value(lastError)
                 : const Value.absent(),
             lastAttemptAt: Value(DateTime.now()),
+          ),
+        );
+    return rows > 0;
+  }
+
+  /// Keeps [wrapJson], the signed recipient gift wrap of an attempt that
+  /// reached a relay without hearing its `OK`, so the next attempt re-sends
+  /// that event rather than a new one (#8441).
+  ///
+  /// Applies only while the recipient wrap is still `pending` or `failed`;
+  /// returns `false` otherwise, and for a missing row.
+  Future<bool> recordUnconfirmedRecipientWrap({
+    required String id,
+    required String wrapJson,
+  }) async {
+    final rows =
+        await (update(outgoingDms)..where(
+              (t) =>
+                  t.id.equals(id) &
+                  t.recipientWrapStatus.isIn([
+                    OutgoingWrapStatus.pending.name,
+                    OutgoingWrapStatus.failed.name,
+                  ]),
+            ))
+            .write(
+              OutgoingDmsCompanion(
+                unconfirmedRecipientWrapJson: Value(wrapJson),
+              ),
+            );
+    return rows > 0;
+  }
+
+  /// Forgets the wrap [recordUnconfirmedRecipientWrap] kept for [id], so the
+  /// next attempt builds a new one. Returns `false` for a missing row.
+  Future<bool> clearUnconfirmedRecipientWrap(String id) async {
+    final rows = await (update(outgoingDms)..where((t) => t.id.equals(id)))
+        .write(
+          const OutgoingDmsCompanion(
+            unconfirmedRecipientWrapJson: Value(null),
           ),
         );
     return rows > 0;

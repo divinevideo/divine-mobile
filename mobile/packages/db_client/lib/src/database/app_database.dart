@@ -74,6 +74,13 @@ const _v31HeldWrapColumns = <(String, String)>[
   ('direct_messages', 'held_deletion_wraps'),
 ];
 
+/// Columns v34 added: the unconfirmed recipient wrap a queued DM re-sends
+/// (#8441). Withheld from an earlier version for the same reason as
+/// [_v31HeldWrapColumns].
+const _v34Columns = <(String, String)>[
+  ('outgoing_dms', 'unconfirmed_recipient_wrap_json'),
+];
+
 /// Main application database using Drift
 ///
 /// This database uses SQLite (divine_db.db) to store all Nostr events,
@@ -173,7 +180,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 33;
+  int get schemaVersion => 34;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -426,7 +433,15 @@ class AppDatabase extends _$AppDatabase {
       if (from < 33 && to >= 33) {
         await _repairSchemaV33(m);
       }
+      if (from < 34 && to >= 34) {
+        await _addColumnIfMissing(
+          'outgoing_dms',
+          'unconfirmed_recipient_wrap_json',
+          'TEXT NULL',
+        );
+      }
       await _withholdV31Columns(to);
+      await _withholdV34Columns(to);
     },
     beforeOpen: (details) async {
       // Salvage may preserve only one of these local-only tables. A missing
@@ -467,6 +482,7 @@ class AppDatabase extends _$AppDatabase {
           await _repairSchemaV33(createMigrator());
         }
         await _withholdV31Columns(details.versionNow);
+        await _withholdV34Columns(details.versionNow);
       }
 
       // Run cleanup of expired data on every app startup
@@ -744,6 +760,17 @@ class AppDatabase extends _$AppDatabase {
   Future<void> _withholdV31Columns(int version) async {
     if (version >= 31) return;
     for (final (table, column) in _v31HeldWrapColumns) {
+      if ((await _columnNames(table)).contains(column)) {
+        await customStatement('ALTER TABLE $table DROP COLUMN $column');
+      }
+    }
+  }
+
+  /// Drops the v34 columns again from a database opened at an earlier
+  /// [version], which only a migration test does; see [_withholdV31Columns].
+  Future<void> _withholdV34Columns(int version) async {
+    if (version >= 34) return;
+    for (final (table, column) in _v34Columns) {
       if ((await _columnNames(table)).contains(column)) {
         await customStatement('ALTER TABLE $table DROP COLUMN $column');
       }
@@ -1820,6 +1847,14 @@ class AppDatabase extends _$AppDatabase {
     // v22; see tables.dart.
     await _addColumnIfMissing('outgoing_dms', 'environment', 'TEXT NULL');
 
+    // The unconfirmed recipient wrap a queued DM re-sends (#8441), for DBs
+    // created before v34; see tables.dart.
+    await _addColumnIfMissing(
+      'outgoing_dms',
+      'unconfirmed_recipient_wrap_json',
+      'TEXT NULL',
+    );
+
     // Addressable coordinate for own-like state, so it survives a target
     // edit that mints a new event id for the same coordinate (#6020).
     await _addColumnIfMissing('personal_reactions', 'addressable_id', 'TEXT');
@@ -1934,7 +1969,11 @@ class AppDatabase extends _$AppDatabase {
       ],
       'pending_product_events': ['owner_pubkey'],
       'dm_message_reactions': ['recipient_pubkeys'],
-      'outgoing_dms': ['send_batch_id', 'environment'],
+      'outgoing_dms': [
+        'send_batch_id',
+        'environment',
+        if (schemaVersion >= 34) 'unconfirmed_recipient_wrap_json',
+      ],
       'removed_conversations': ['rejoined_at'],
       'personal_reactions': ['addressable_id'],
       'profile_statistics': ['follower_counts_updated_at'],
