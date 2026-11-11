@@ -14,8 +14,8 @@ const redactedUriComponentForLogs = 'REDACTED';
 
 /// Returns a URI string safe for logs: clears [userInfo], redacts query and
 /// fragment values, and redacts legacy `/invite/<code>` path segments and any
-/// segment carrying a Nostr private key, while keeping public route
-/// identifiers verbatim.
+/// host, path segment or query key carrying a Nostr private key, while keeping
+/// public route identifiers verbatim.
 ///
 /// On parse failure, returns `[invalid-uri]` without echoing [uriString].
 String redactUriStringForLogs(String uriString) {
@@ -41,14 +41,16 @@ String redactUriStringForLogs(String uriString) {
   } else {
     qp = {
       for (final e in uri.queryParametersAll.entries)
-        e.key: e.value.length == 1
+        _redactSecretSegment(e.key): e.value.length == 1
             ? redactedUriComponentForLogs
             : List<String>.filled(e.value.length, redactedUriComponentForLogs),
     };
   }
 
+  // Any app can open divine://, so the host is as untrusted as the path.
   var redactedUri = uri.replace(
     userInfo: '',
+    host: uri.hasAuthority ? _redactSecretSegment(uri.host) : null,
     pathSegments: pathSegments,
     queryParameters: qp,
   );

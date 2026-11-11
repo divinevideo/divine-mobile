@@ -128,6 +128,35 @@ void main() {
         expect(out.toLowerCase(), isNot(contains('nsec1')));
       });
 
+      test('redacts an nsec carried as the host of a divine:// link', () {
+        expect(
+          redactUriStringForLogs('divine://$nsec/x').toLowerCase(),
+          isNot(contains('nsec1')),
+        );
+        expect(
+          redactUriStringForLogs('divine://$nsec').toLowerCase(),
+          isNot(contains('nsec1')),
+        );
+      });
+
+      test('redacts an nsec carried as a query key', () {
+        expect(
+          redactUriStringForLogs('https://divine.video/x?$nsec=1'),
+          isNot(contains('nsec1')),
+        );
+        expect(
+          redactUriStringForLogs('https://divine.video/x?$nsec'),
+          isNot(contains('nsec1')),
+        );
+      });
+
+      test('keeps an ordinary host and query key', () {
+        expect(
+          redactUriStringForLogs('divine://nostrconnect?relay=wss://r.example'),
+          equals('divine://nostrconnect?relay=$redactedUriComponentForLogs'),
+        );
+      });
+
       test('redacts an ncryptsec segment', () {
         final out = redactUriStringForLogs(
           'https://divine.video/video/ncryptsec1qgqeyafqwz',
