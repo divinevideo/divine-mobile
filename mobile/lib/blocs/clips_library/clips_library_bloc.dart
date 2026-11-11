@@ -221,10 +221,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
       // Kick off background recovery for clips missing thumbnails/ghost
       // frames. When done, the listing refreshes in place so the UI picks
       // up the updated assets.
-      final hasIncomplete = clips.any(
-        (c) => c.thumbnailPath == null || c.ghostFramePath == null,
-      );
-      if (hasIncomplete) {
+      if (clips.any(ClipLibraryService.needsAssetRecovery)) {
         unawaited(_recoverAndReload(clips));
       }
     } catch (e, stackTrace) {

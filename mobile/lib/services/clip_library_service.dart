@@ -972,20 +972,36 @@ class ClipLibraryService {
     );
   }
 
-  /// Recovers missing thumbnails and ghost frames for clips that were
-  /// persisted before their assets had been generated.
+  /// Whether [recoverMissingAssets] would try to rebuild [clip]'s assets: a
+  /// video clip whose thumbnail or ghost frame is unset or gone from disk,
+  /// with attempts left.
   ///
-  /// Stop-motion clips and clips whose video file no longer exists are
-  /// skipped.
+  /// A stop-motion clip never is: its thumbnail is its first still, and it
+  /// has no rendered video to take a frame from.
+  static bool needsAssetRecovery(DivineVideoClip clip) =>
+      !clip.isStopMotion &&
+      clip.assetRecoveryAttempts <
+          ClipLibraryConstants.maxAssetRecoveryAttempts &&
+      (_isMissingFile(clip.thumbnailPath) ||
+          _isMissingFile(clip.ghostFramePath));
+
+  static bool _isMissingFile(String? path) =>
+      path == null || !File(path).existsSync();
+
+  /// Rebuilds the missing thumbnails and ghost frames of the clips that
+  /// [needsAssetRecovery] picks, one clip after another.
+  ///
+  /// Each pass on a clip counts as an attempt, whether or not it succeeds,
+  /// and a clip gets at most [ClipLibraryConstants.maxAssetRecoveryAttempts]
+  /// of them, so a video that cannot be read is not retried on every library
+  /// load.
   ///
   /// Returns the updated list if any clips were recovered, or the original
   /// list unchanged.
   Future<List<DivineVideoClip>> recoverMissingAssets(
     List<DivineVideoClip> clips,
   ) async {
-    final incomplete = clips
-        .where((c) => c.thumbnailPath == null || c.ghostFramePath == null)
-        .toList();
+    final incomplete = clips.where(needsAssetRecovery).toList();
 
     if (incomplete.isEmpty) return clips;
 
@@ -998,12 +1014,15 @@ class ClipLibraryService {
 
     var updated = false;
     final missingVideoClipIds = <String>[];
+    final exhaustedClipIds = <String>[];
 
     for (final clip in incomplete) {
+      final attempt = clip.assetRecoveryAttempts + 1;
       try {
-        // Stop-motion clips have no rendered video to recover assets from;
-        // their thumbnail is the first captured frame.
-        if (clip.isStopMotion) continue;
+        // Noted before the extraction, so a video that brings the extractor
+        // down still uses up its attempts instead of being retried on every
+        // launch.
+        await _noteAssetRecoveryAttempt(clip.id, attempt);
         final videoPath = await clip.video!.safeFilePath();
         // Nothing to extract from, and trying anyway reports a failed
         // extraction to Crashlytics on every library load.
@@ -1013,7 +1032,7 @@ class ClipLibraryService {
         }
         var updatedClip = clip;
 
-        if (clip.thumbnailPath == null) {
+        if (_isMissingFile(clip.thumbnailPath)) {
           final result = await VideoThumbnailService.extractThumbnail(
             videoPath: videoPath,
           );
@@ -1025,7 +1044,7 @@ class ClipLibraryService {
           }
         }
 
-        if (clip.ghostFramePath == null) {
+        if (_isMissingFile(clip.ghostFramePath)) {
           final ghostPath = await VideoThumbnailService.extractLastFrame(
             videoPath: videoPath,
             videoDuration: clip.duration,
@@ -1035,14 +1054,22 @@ class ClipLibraryService {
           }
         }
 
-        if (updatedClip != clip) {
-          await saveClip(updatedClip);
+        if (!identical(updatedClip, clip)) {
+          final complete =
+              !_isMissingFile(updatedClip.thumbnailPath) &&
+              !_isMissingFile(updatedClip.ghostFramePath);
+          // A clip with every asset back starts over, should one go missing
+          // again later.
+          await saveClip(
+            updatedClip.copyWith(assetRecoveryAttempts: complete ? 0 : attempt),
+          );
           updated = true;
           Log.debug(
             '📚 Recovered assets for clip ${clip.id}',
             name: 'ClipLibraryService',
             category: LogCategory.video,
           );
+          if (complete) continue;
         }
       } catch (e, s) {
         Log.error(
@@ -1052,6 +1079,9 @@ class ClipLibraryService {
           error: e,
           stackTrace: s,
         );
+      }
+      if (attempt >= ClipLibraryConstants.maxAssetRecoveryAttempts) {
+        exhaustedClipIds.add(clip.id);
       }
     }
 
@@ -1066,9 +1096,41 @@ class ClipLibraryService {
       );
     }
 
+    if (exhaustedClipIds.isNotEmpty) {
+      Log.warning(
+        '📚 Gave up recovering the thumbnail or ghost frame of '
+        '${exhaustedClipIds.length} clip(s) after '
+        '${ClipLibraryConstants.maxAssetRecoveryAttempts} attempts: '
+        '${exhaustedClipIds.join(', ')}',
+        name: 'ClipLibraryService',
+        category: LogCategory.video,
+      );
+    }
+
     if (updated) {
       return getAllClips();
     }
     return clips;
+  }
+
+  /// Stores [attempts] as the asset recovery count of the clip [clipId] in
+  /// whichever row the library lists it from: its own entry, or the autosave
+  /// draft's copy of a clip that has none yet.
+  Future<void> _noteAssetRecoveryAttempt(String clipId, int attempts) async {
+    final documentsPath = await getDocumentsPath();
+    String rewrite(String data) => json.encode(
+      DivineVideoClip.fromJson(
+        json.decode(data) as Map<String, dynamic>,
+        documentsPath,
+      ).copyWith(assetRecoveryAttempts: attempts).toJson(),
+    );
+    if (await _clipsDao.getClipById(clipId) != null) {
+      await _clipsDao.rewriteClipData(id: clipId, rewrite: rewrite);
+    } else {
+      await _clipsDao.rewriteClipData(
+        id: _autosaveDraftRowId(clipId),
+        rewrite: rewrite,
+      );
+    }
   }
 }

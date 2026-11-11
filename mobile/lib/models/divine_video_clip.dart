@@ -74,6 +74,7 @@ class DivineVideoClip {
     this.derivedFrom,
     this.recordingSha256,
     this.galleryBackup,
+    this.assetRecoveryAttempts = 0,
     this.stickerRegions = const [],
     String? sourceAuthorPubkey,
     String? sourceEventId,
@@ -389,6 +390,11 @@ class DivineVideoClip {
   /// Owned by the library entry: only `ClipLibraryService.setGalleryBackup`
   /// changes it, and a save of an older copy keeps what the entry holds.
   final ClipGalleryBackup? galleryBackup;
+
+  /// How often the library tried to rebuild this clip's missing thumbnail or
+  /// ghost frame from its video; `ClipLibraryService.recoverMissingAssets`
+  /// stops at `ClipLibraryConstants.maxAssetRecoveryAttempts`.
+  final int assetRecoveryAttempts;
 
   /// Where a viewer can tap the stickers on this clip once it is published;
   /// set only on a final render, from the layers it was rendered with.
@@ -839,6 +845,7 @@ class DivineVideoClip {
     bool clearRecordingSha256 = false,
     ClipGalleryBackup? galleryBackup,
     bool clearGalleryBackup = false,
+    int? assetRecoveryAttempts,
     List<model.VideoStickerRegion>? stickerRegions,
     // Provenance is copied as a whole list: the scalar source fields are a
     // read-only view of its first entry, so setting one here could only mean
@@ -942,6 +949,10 @@ class DivineVideoClip {
       galleryBackup: isNewLogicalClip || clearGalleryBackup
           ? null
           : (galleryBackup ?? this.galleryBackup),
+      // A split or duplicate has assets of its own to recover.
+      assetRecoveryAttempts: isNewLogicalClip
+          ? 0
+          : (assetRecoveryAttempts ?? this.assetRecoveryAttempts),
       stickerRegions: stickerRegions ?? this.stickerRegions,
       sourceCredits: nextSourceCredits,
     );
@@ -1015,6 +1026,8 @@ class DivineVideoClip {
         'derivedFrom': [for (final source in sources) source.toJson()],
       if (recordingSha256 != null) 'recordingSha256': recordingSha256,
       if (galleryBackup case final backup?) 'galleryBackup': backup.toJson(),
+      if (assetRecoveryAttempts > 0)
+        'assetRecoveryAttempts': assetRecoveryAttempts,
       if (stickerRegions.isNotEmpty)
         'stickerRegions': [for (final region in stickerRegions) region.toTag()],
       if (sourceAuthorPubkey != null) 'sourceAuthorPubkey': sourceAuthorPubkey,
@@ -1224,6 +1237,7 @@ class DivineVideoClip {
         documentsPath,
         useOriginalPath: useOriginalPath,
       ),
+      assetRecoveryAttempts: json['assetRecoveryAttempts'] as int? ?? 0,
       sourceAuthorPubkey: json['sourceAuthorPubkey'] as String?,
       sourceEventId: json['sourceEventId'] as String?,
       sourceAddressableId: json['sourceAddressableId'] as String?,
