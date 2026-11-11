@@ -10,6 +10,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/widgets/library/pinch_zoom_grid.dart';
 import 'package:openvine/widgets/video_clip/video_clip_hero.dart';
 import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -258,6 +259,107 @@ void main() {
 
         await tester.tap(find.byType(VideoClipThumbnailCard));
         expect(tapped, isFalse);
+      });
+    });
+
+    group('inside a $PinchZoomGrid', () {
+      // Zooming out of the clip grid used to draw the badges oversized and then
+      // shrink them, because they scaled with the layout the pinch magnifies.
+      testWidgets('keeps the badges at their size and the title band across '
+          'the card mid-pinch', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: VineTheme.theme,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: PinchZoomGrid(
+                columnCount: 3,
+                minColumnCount: 2,
+                maxColumnCount: 5,
+                onColumnCountChanged: (_) {},
+                backgroundColor: VineTheme.backgroundColor,
+                builder: (context, columns, controller) => GridView.count(
+                  controller: controller,
+                  crossAxisCount: columns,
+                  childAspectRatio: 9 / 16,
+                  children: [
+                    for (var i = 0; i < 12; i++)
+                      VideoClipThumbnailCard(
+                        clip: createClip(
+                          id: 'clip-$i',
+                          libraryTitle: 'Clip $i',
+                        ),
+                        selectionIndex: i + 1,
+                        showArchivedBadge: true,
+                        onTap: () {},
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+
+        final card = find.byType(VideoClipThumbnailCard).first;
+        final duration = find.text('5.00').first;
+        final selection = find.text('1');
+        final archived = find.descendant(
+          of: card,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.stackSimple,
+          ),
+        );
+        final title = find.text('Clip 0');
+        final titleBand = find
+            .ancestor(of: title, matching: find.byType(DecoratedBox))
+            .first;
+        final settledDuration = tester.getRect(duration).size;
+        final settledSelection = tester.getRect(selection).size;
+        final settledArchived = tester.getRect(archived).size;
+        final settledTitleHeight = tester.getRect(title).height;
+        expect(
+          tester.getRect(titleBand).width,
+          closeTo(tester.getRect(card).width - 16, 0.01),
+        );
+
+        // Pinching closed lays the grid out for 4 columns and magnifies it
+        // to the in-between tile size the fingers are at.
+        final centre = tester.getCenter(find.byType(PinchZoomGrid));
+        final first = await tester.startGesture(centre - const Offset(160, 0));
+        final second = await tester.startGesture(
+          centre + const Offset(160, 0),
+        );
+        await tester.pump();
+        for (final step in const [148.0, 137.0]) {
+          await first.moveTo(centre - Offset(step, 0));
+          await second.moveTo(centre + Offset(step, 0));
+          await tester.pump();
+          await tester.pump();
+        }
+
+        final cardWidth = tester.getRect(card).width;
+        expect(cardWidth, greaterThan(800 / 4 + 1));
+        expect(cardWidth, lessThan(800 / 3 - 1));
+        for (final (badge, settled) in [
+          (duration, settledDuration),
+          (selection, settledSelection),
+          (archived, settledArchived),
+        ]) {
+          final size = tester.getRect(badge).size;
+          expect(size.width, closeTo(settled.width, 0.01));
+          expect(size.height, closeTo(settled.height, 0.01));
+        }
+        // The title band is laid out at the card's on-screen width, so it
+        // keeps spanning the card instead of scaling with it.
+        expect(tester.getRect(titleBand).width, closeTo(cardWidth - 16, 0.01));
+        expect(tester.getRect(title).height, closeTo(settledTitleHeight, 0.01));
+
+        await first.up();
+        await second.up();
+        await tester.pumpAndSettle();
       });
     });
 

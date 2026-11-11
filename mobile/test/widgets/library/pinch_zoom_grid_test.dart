@@ -26,7 +26,7 @@ void main() {
       renderedColumns = 3;
     });
 
-    Widget buildWidget({int columnCount = 3}) {
+    Widget buildWidget({int columnCount = 3, bool withBadges = false}) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -44,7 +44,28 @@ void main() {
                 crossAxisCount: columns,
                 children: [
                   for (var i = 0; i < 60; i++)
-                    ColoredBox(color: Colors.grey, child: Text('$i')),
+                    if (withBadges)
+                      Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ColoredBox(color: Colors.grey, child: Text('$i')),
+                          PinchZoomUnscaled(
+                            child: Align(
+                              alignment: Alignment.bottomLeft,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: SizedBox(
+                                  key: ValueKey('badge-$i'),
+                                  width: 40,
+                                  height: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      ColoredBox(color: Colors.grey, child: Text('$i')),
                 ],
               );
             },
@@ -155,6 +176,74 @@ void main() {
       // Settled onto the whole step: 800 / 2.
       expect(tester.getRect(tile).width, closeTo(400, 0.5));
       expect(reported, equals([2]));
+    });
+
+    group(PinchZoomUnscaled, () {
+      final tile = find
+          .descendant(
+            of: find.byType(GridView),
+            matching: find.byType(ColoredBox),
+          )
+          .first;
+      final badge = find.byKey(const ValueKey('badge-0'));
+
+      // Spreading shrinks the incoming 2-column layout on screen, pinching
+      // closed magnifies the incoming 4-column one: the badge has to hold its
+      // size against both.
+      for (final (description, start, steps, layoutColumns) in [
+        ('zooming in', 80.0, const [120.0], 2),
+        ('zooming out', 160.0, const [148.0, 137.0], 4),
+      ]) {
+        testWidgets('keeps its child at the settled size while $description', (
+          tester,
+        ) async {
+          await tester.pumpWidget(buildWidget(withBadges: true));
+
+          final centre = tester.getCenter(find.byType(PinchZoomGrid));
+          final first = await tester.startGesture(centre - Offset(start, 0));
+          final second = await tester.startGesture(centre + Offset(start, 0));
+          await tester.pump();
+          for (final step in steps) {
+            await first.moveTo(centre - Offset(step, 0));
+            await second.moveTo(centre + Offset(step, 0));
+            await tester.pump();
+            await tester.pump();
+          }
+
+          // The live grid is laid out for the next step but drawn between the
+          // two, so the tile around the badge is scaled.
+          expect(renderedColumns, equals(layoutColumns));
+          final tileRect = tester.getRect(tile);
+          expect(tileRect.width, isNot(closeTo(800 / layoutColumns, 1)));
+          expect(tileRect.width, isNot(closeTo(800 / 3, 1)));
+
+          final badgeRect = tester.getRect(badge);
+          expect(badgeRect.width, closeTo(40, 0.01));
+          expect(badgeRect.height, closeTo(20, 0.01));
+          expect(badgeRect.left, closeTo(tileRect.left + 8, 0.01));
+          expect(badgeRect.bottom, closeTo(tileRect.bottom - 8, 0.01));
+
+          // getRect follows applyPaintTransform; pin what paint draws too.
+          final layerScale = tileRect.width / (800 / layoutColumns);
+          expect(
+            find.ancestor(of: badge, matching: find.byType(PinchZoomUnscaled)),
+            paints..transform(
+              matrix4: predicate<List<double>>(
+                (matrix) =>
+                    (matrix[0] - 1 / layerScale).abs() < 1e-6 &&
+                    (matrix[5] - 1 / layerScale).abs() < 1e-6,
+                'a transform scaling by 1 / $layerScale',
+              ),
+            ),
+          );
+
+          await first.up();
+          await second.up();
+          await tester.pumpAndSettle();
+
+          expect(tester.getRect(badge).size, equals(const Size(40, 20)));
+        });
+      }
     });
 
     testWidgets('crossfades the two layouts by how far the pinch got', (
