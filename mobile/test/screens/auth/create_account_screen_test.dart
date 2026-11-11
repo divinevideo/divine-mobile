@@ -339,9 +339,11 @@ void main() {
       );
 
       testWidgets(
-        'calls TextInput.finishAutofillContext on $DivineAuthEmailVerification',
+        'finishes autofill and opens verification on '
+        '$DivineAuthEmailVerification',
         (tester) async {
           final recorder = AutofillContextRecorder.install();
+          Map<String, String>? verifyEmailQuery;
 
           // Return verification-required result so the cubit emits
           // DivineAuthEmailVerification.
@@ -398,7 +400,10 @@ void main() {
               ),
               GoRoute(
                 path: '/verify-email',
-                builder: (_, _) => const Scaffold(),
+                builder: (_, state) {
+                  verifyEmailQuery = state.uri.queryParameters;
+                  return const Scaffold();
+                },
               ),
             ],
           );
@@ -439,7 +444,17 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
 
+          await tester.pumpAndSettle();
+
           expect(recorder.didFinishAutofillContext, isTrue);
+          expect(
+            verifyEmailQuery,
+            equals(<String, String>{
+              'deviceCode': 'test-device-code',
+              'verifier': 'test-verifier',
+              'email': 'test@example.com',
+            }),
+          );
         },
       );
 
