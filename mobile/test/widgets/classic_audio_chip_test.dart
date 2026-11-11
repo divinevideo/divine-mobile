@@ -29,6 +29,7 @@ void main() {
     WidgetTester tester,
     VideoEvent video, {
     required Future<bool> permission,
+    void Function()? onPermissionRead,
   }) async {
     final router = GoRouter(
       routes: [
@@ -52,7 +53,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          audioReuseConsentProvider.overrideWith((ref, sound) => permission),
+          audioReuseConsentProvider.overrideWith((ref, sound) {
+            onPermissionRead?.call();
+            return permission;
+          }),
         ],
         child: MaterialApp.router(
           routerConfig: router,
@@ -80,20 +84,30 @@ void main() {
     });
 
     testWidgets(
-      'pending or denied policy retains credit without reuse action',
+      'checks policy only on tap and does not navigate while pending or denied',
       (
         tester,
       ) async {
         final permission = Completer<bool>();
-        await showChip(tester, classic(), permission: permission.future);
+        var reads = 0;
+        await showChip(
+          tester,
+          classic(),
+          permission: permission.future,
+          onPermissionRead: () => reads++,
+        );
 
         expect(find.textContaining('The tiny puppet show'), findsOneWidget);
-        expect(find.byType(GestureDetector), findsNothing);
+        expect(reads, 0);
+        await tester.tap(find.textContaining('The tiny puppet show'));
+        await tester.pump();
+        expect(reads, 1);
+        expect(find.text('The tiny puppet show library page'), findsNothing);
         permission.complete(false);
         await tester.pumpAndSettle();
 
         expect(find.textContaining('The tiny puppet show'), findsOneWidget);
-        expect(find.byType(GestureDetector), findsNothing);
+        expect(find.text('The tiny puppet show library page'), findsNothing);
       },
     );
 
@@ -106,7 +120,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('The tiny puppet show'), findsOneWidget);
-      expect(find.byType(GestureDetector), findsNothing);
+      await tester.tap(find.textContaining('The tiny puppet show'));
+      await tester.pumpAndSettle();
+      expect(find.text('The tiny puppet show library page'), findsNothing);
     });
   });
 }
