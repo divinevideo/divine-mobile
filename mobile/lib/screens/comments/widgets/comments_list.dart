@@ -65,9 +65,10 @@ class _CommentsListState extends State<CommentsList> {
   }
 
   /// Scrolls the flagged comment into view after the next frame (so the target
-  /// item is laid out), then acks the one-shot signal. A target the list has
-  /// not built yet, such as a comment far down that the list was opened on,
-  /// is jumped towards first, [_maxJumpsTowardsTarget] times at most.
+  /// item is laid out), then acks the one-shot signal, unless a newer target
+  /// has replaced [commentId]. A target the list has not built yet, such as a
+  /// comment far down that the list was opened on, is jumped towards first,
+  /// [_maxJumpsTowardsTarget] times at most.
   void _scrollToTarget(String commentId, [int jumps = 0]) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

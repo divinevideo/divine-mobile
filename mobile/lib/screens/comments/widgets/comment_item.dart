@@ -38,7 +38,9 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Widget that renders a single comment in a flat list.
 ///
-/// Replies are distinguished by a 16px left padding and "Re: npub..." indicator.
+/// A reply nested under its parent is indented; one shown at the top level,
+/// as every reply is in Top, names its parent's author on a "Re:" line
+/// instead, unless the owner hid that parent.
 /// Shows author avatar, name, timestamp, and content.
 /// Includes reply and vote buttons in the actions row.
 /// Long press opens options menu for any comment:
@@ -197,7 +199,7 @@ class _CommentItemState extends ConsumerState<CommentItem> {
                           ),
                         ],
                         const SizedBox(height: 12),
-                        // Identify the parent when this reply is shown on its own.
+                        // Name the parent when this reply is shown on its own.
                         if (widget.depth == 0 &&
                             widget.comment.replyToAuthorPubkey != null &&
                             !widget.repliesToHiddenComment)

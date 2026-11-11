@@ -487,8 +487,8 @@ void main() {
             CommentBuilder()
                 .withId('$i'.padLeft(64, 'a'))
                 .withContent('comment number $i')
-                // Newest-first sort: minute 12-i means i=0 is newest (top),
-                // so higher indices sit lower in the list.
+                // No votes, so Top falls back to newest first: minute 12-i
+                // puts i=0 on top and higher indices lower in the list.
                 .withCreatedAt(DateTime(2026).add(Duration(minutes: 12 - i)))
                 .build(),
         ];

@@ -124,7 +124,7 @@ void main() {
         when(() => mockLikesRepository.getVoteCounts([secondId])).thenAnswer(
           (_) async => (upvotes: {secondId: 2}, downvotes: <String, int>{}),
         );
-        // The previous handler re-queried the earlier id with each new batch.
+        // Stubbed so the verifyNever below catches a re-query of that id.
         when(
           () => mockLikesRepository.getVoteCounts([firstId, secondId]),
         ).thenAnswer(

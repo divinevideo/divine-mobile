@@ -241,8 +241,8 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       return;
     }
 
-    // Cursor = min createdAt across non-placeholder comments. Sort-mode
-    // agnostic so `oldest` / `topEngagement` don't fold to the wrong cursor.
+    // Cursor = min createdAt across non-placeholder comments, whatever the
+    // sort mode, so Top's vote ranking never moves the paging cursor.
     // Returns early if every comment is an optimistic placeholder.
     final realCreatedAts = state.commentsById.values
         .where((c) => !c.id.startsWith(commentPlaceholderIdPrefix))

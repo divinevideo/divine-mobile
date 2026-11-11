@@ -15,10 +15,10 @@ final class CommentNode {
   /// The comment this node represents.
   final Comment comment;
 
-  /// Child replies to this comment.
+  /// Replies nested under this comment in Recent; empty in Top.
   final List<CommentNode> replies;
 
-  /// Nesting depth (0 = root, 1 = reply, etc.).
+  /// Nesting depth: 0 for a top-level row, which every row is in Top.
   final int depth;
 }
 

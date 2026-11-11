@@ -7805,8 +7805,8 @@ void main() {
         // Switching an upvote to a downvote on an edited reply publishes a
         // Kind 5 for the pre-edit reaction and a new downvote on the current
         // one. The coordinate leg reaches both, so counting the retracted
-        // upvote would leave netScore 0 — which comment_item renders by
-        // hiding the score entirely.
+        // upvote would inflate the upvote total and zero the net score that
+        // Top ranks by.
         const voter = 'some_voter_pubkey_1234567890abcdef';
         final retractedUpvote = createMockReaction(
           id: 'retracted_upvote',

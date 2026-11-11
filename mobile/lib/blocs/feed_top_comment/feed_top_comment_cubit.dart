@@ -15,12 +15,12 @@ import 'package:unified_logger/unified_logger.dart';
 part 'feed_top_comment_state.dart';
 
 /// Loads one video's comments and their vote counts, and selects the one with
-/// the highest net vote score, using the comments sheet's Top comparator.
-/// Ties go to the newer comment. Text replies are also candidates for the
-/// overlay. The creator's own comments, video replies, blank comments, pending
-/// placeholders and comments dated more than [maxFutureSkew] ahead are excluded.
-/// Creator-hidden comments are excluded using the same author-view
-/// exception as the comments sheet.
+/// the highest net vote score, using the comments sheet's Top comparator:
+/// ties go to the newer comment, then the lower id. Text replies are also
+/// candidates for the overlay. The creator's own comments, video replies,
+/// blank comments, pending placeholders and comments dated more than
+/// [maxFutureSkew] ahead are excluded. Creator-hidden comments are excluded
+/// using the same author-view exception as the comments sheet.
 ///
 /// The overlay shows once the video has finished its first loop and the top
 /// comment is known, whichever happens last, and stays hidden after the
@@ -221,7 +221,7 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
     emitIfOpen(state.copyWith(hasCompletedLoop: true));
   }
 
-  /// A failed fetch gives every comment zero votes so ties fall back to recency.
+  /// A failed fetch gives every comment zero votes, so recency decides.
   Future<({Map<String, int> upvotes, Map<String, int> downvotes})> _voteCounts(
     List<Comment> comments,
   ) async {
