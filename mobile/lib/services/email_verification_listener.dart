@@ -66,7 +66,8 @@ class EmailVerificationListener {
     }
 
     Log.info(
-      'Email verification callback detected: $uri',
+      'Email verification callback detected: '
+      '${redactUriStringForLogs(uri.toString())}',
       name: '$EmailVerificationListener',
       category: LogCategory.auth,
     );

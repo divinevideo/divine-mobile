@@ -88,6 +88,23 @@ void main() {
         expect(logged, contains('Callback from host'));
         expect(logged.toLowerCase(), isNot(contains('nsec1')));
       });
+
+      test('does not log the verification token it navigates with', () async {
+        const token = 'test-verification-token-abc123';
+        when(() => mockRouter.go(any())).thenReturn(null);
+        await LogCaptureService().clearAllLogs();
+
+        await listener.handleUri(
+          Uri.parse('https://login.divine.video/verify-email?token=$token'),
+        );
+
+        final logged = [
+          for (final entry in LogCaptureService().getRecentLogs())
+            entry.message,
+        ].join('\n');
+        expect(logged, contains('Email verification callback detected'));
+        expect(logged, isNot(contains(token)));
+      });
     });
   });
 }
