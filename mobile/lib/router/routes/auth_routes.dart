@@ -19,8 +19,9 @@ part 'auth_routes.g.dart';
 
 /// The sign-in screens.
 ///
-/// The redirect gate decides who may reach them by comparing these location
-/// strings, so a path or query key here changes who is let through.
+/// The redirect gate decides who may reach them: it compares these paths and
+/// reads the `email` key on sign-in, so a change to either changes who is let
+/// through.
 List<RouteBase> authRoutes() => $appRoutes;
 
 /// Welcome, with create account and sign in nested under it.
