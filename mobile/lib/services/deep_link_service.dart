@@ -34,10 +34,11 @@ enum DeepLinkType {
 /// select detail, even when their d-tag is `members` or `add-people`.
 enum PeopleListLinkView { detail, members, addPeople }
 
-/// [value] with any Nostr private key in it redacted, for log lines.
+/// [value] with any Nostr private key in it redacted, for [DeepLink.toString].
 ///
 /// Link segments are untrusted input, and a pasted nsec can sit where a
-/// public id belongs (#10385).
+/// public id belongs (#10385). A `Log` line needs nothing extra, because the
+/// log sink redacts keys itself; `toString` can be printed anywhere.
 String _forLogs(String? value) =>
     value == null ? 'null' : redactNostrPrivateKeys(value);
 
@@ -283,7 +284,7 @@ class DeepLinkService {
       if (pathSegments.length == 2 && pathSegments[0] == 'video') {
         final videoRef = pathSegments[1];
         Log.info(
-          '📱 Parsed video deep link ref: ${_forLogs(videoRef)}',
+          '📱 Parsed video deep link ref: $videoRef',
           name: 'DeepLinkService',
           category: LogCategory.ui,
         );
@@ -314,7 +315,7 @@ class DeepLinkService {
             ? int.tryParse(pathSegments[2])
             : null;
         Log.info(
-          '📱 Parsed hashtag deep link: ${_forLogs(hashtag)}'
+          '📱 Parsed hashtag deep link: $hashtag'
           '${index != null ? " (index: $index)" : ""}',
           name: 'DeepLinkService',
           category: LogCategory.ui,
@@ -334,7 +335,7 @@ class DeepLinkService {
             ? int.tryParse(pathSegments[2])
             : null;
         Log.info(
-          '📱 Parsed search deep link: ${_forLogs(searchTerm)}'
+          '📱 Parsed search deep link: $searchTerm'
           '${index != null ? " (index: $index)" : ""}',
           name: 'DeepLinkService',
           category: LogCategory.ui,
@@ -353,7 +354,7 @@ class DeepLinkService {
           return const DeepLink(type: DeepLinkType.unknown);
         }
         Log.info(
-          '📱 Parsed list deep link id: ${_forLogs(listId)}',
+          '📱 Parsed list deep link id: $listId',
           name: 'DeepLinkService',
           category: LogCategory.ui,
         );
@@ -379,8 +380,7 @@ class DeepLinkService {
           return const DeepLink(type: DeepLinkType.unknown);
         }
         Log.info(
-          '📱 Parsed list deep link: ${pubkeyForLogs(listPubkey)}/'
-          '${_forLogs(listId)}',
+          '📱 Parsed list deep link: ${pubkeyForLogs(listPubkey)}/$listId',
           name: 'DeepLinkService',
           category: LogCategory.ui,
         );
@@ -418,7 +418,7 @@ class DeepLinkService {
         }
         Log.info(
           '📱 Parsed people list deep link: '
-          '${pubkeyForLogs(listPubkey)}/${_forLogs(listId)}',
+          '${pubkeyForLogs(listPubkey)}/$listId',
           name: 'DeepLinkService',
           category: LogCategory.ui,
         );
@@ -452,7 +452,7 @@ class DeepLinkService {
         }
         Log.info(
           '📱 Parsed people list deep link: '
-          '${pubkeyForLogs(listPubkey)}/${_forLogs(listId)}',
+          '${pubkeyForLogs(listPubkey)}/$listId',
           name: 'DeepLinkService',
           category: LogCategory.ui,
         );
