@@ -116,6 +116,24 @@ void main() {
       },
     );
 
+    test('routes a citation whose author is not a hex pubkey like an '
+        'unattributed link', () {
+      // Divine's clients always write a hex author; another client's npub or
+      // truncated key would build a coordinate no lookup can parse.
+      final target = resolveDmVideoTarget(
+        content: 'watch this',
+        sharedVideoRef: const DmSharedVideoRef(
+          coordinateOrId: '34236:npub1notahexpubkey:skate-loop',
+          videoKind: DmSharedVideoKind.addressableShortVideo,
+        ),
+      );
+
+      expect(target, isNotNull);
+      expect(target!.stableId, 'skate-loop');
+      expect(target.routeId, 'skate-loop');
+      expect(target.fallbackRouteIds, isEmpty);
+    });
+
     test('rejects a malformed addressable reference without a URL', () {
       final target = resolveDmVideoTarget(
         content: 'watch this',

@@ -36,18 +36,26 @@ class DmVideoTarget {
   /// Repository routes tried after [routeId].
   List<String> get fallbackRouteIds {
     if (_authorScopedCoordinate != null) return const [];
-    final author = authorPubkey;
+    final author = _routingAuthor;
     final kind = videoKind;
     if (author == null || kind == null) return const [];
     return ['$kind:$author:$stableId'];
   }
 
   String? get _authorScopedCoordinate {
-    final author = authorPubkey;
+    final author = _routingAuthor;
     final kind = videoKind;
     if (author == null || kind == null) return null;
     if (!NIP71VideoKinds.isAddressableVideoKind(kind)) return null;
     return '$kind:$author:$stableId';
+  }
+
+  /// [authorPubkey] when it is a hex pubkey. Another client's npub or
+  /// truncated key cannot scope a lookup, so routing treats it as absent.
+  String? get _routingAuthor {
+    final author = authorPubkey;
+    if (!NostrHexUtils.isValidPubkey(author)) return null;
+    return author!.toLowerCase();
   }
 
   @override
