@@ -7010,6 +7010,49 @@
   "videoEditorTuneShadows": "Shadows",
   "videoEditorTuneVibrance": "Vibrance",
   "videoEditorTuneSharpen": "Sharpen",
+  "videoEditorTuneColor": "Color",
+  "@videoEditorTuneColor": {
+    "description": "Chip in the video editor's Adjust bar that opens the controls for the hue, saturation and lightness of single colours."
+  },
+  "videoEditorTuneCurve": "Curve",
+  "@videoEditorTuneCurve": {
+    "description": "Chip in the video editor's Adjust bar that opens the tone curve."
+  },
+  "videoEditorTuneLightness": "Lightness",
+  "@videoEditorTuneLightness": {
+    "description": "Slider in Adjust's Color section that darkens or lightens one colour."
+  },
+  "videoEditorTuneColorRed": "Red",
+  "videoEditorTuneColorOrange": "Orange",
+  "videoEditorTuneColorYellow": "Yellow",
+  "videoEditorTuneColorGreen": "Green",
+  "videoEditorTuneColorAqua": "Aqua",
+  "@videoEditorTuneColorAqua": {
+    "description": "The colour band between green and blue (cyan) in Adjust's Color section."
+  },
+  "videoEditorTuneColorBlue": "Blue",
+  "videoEditorTuneColorPurple": "Purple",
+  "videoEditorTuneColorMagenta": "Magenta",
+  "videoEditorTuneCurveRgb": "RGB",
+  "@videoEditorTuneCurveRgb": {
+    "description": "Tab of the master tone curve, which changes red, green and blue alike."
+  },
+  "videoEditorTuneCurveBlacks": "Blacks",
+  "@videoEditorTuneCurveBlacks": {
+    "description": "The tone curve point at black."
+  },
+  "videoEditorTuneCurveMidtones": "Midtones",
+  "@videoEditorTuneCurveMidtones": {
+    "description": "The tone curve point in the middle, between black and white."
+  },
+  "videoEditorTuneCurveWhites": "Whites",
+  "@videoEditorTuneCurveWhites": {
+    "description": "The tone curve point at white."
+  },
+  "videoEditorTuneChanged": "Changed",
+  "@videoEditorTuneChanged": {
+    "description": "Read by screen readers after a colour band or Adjust section that has been changed."
+  },
   "videoEditorAudioLabel": "Audio",
   "videoEditorAddTitle": "Add",
   "videoEditorOpenLibrarySemanticLabel": "Open Library",

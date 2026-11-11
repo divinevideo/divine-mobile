@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/video_editor/adjust_color_controls.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -18,13 +19,15 @@ class VideoEditorTuneBloc
     extends Bloc<VideoEditorTuneEvent, VideoEditorTuneState> {
   VideoEditorTuneBloc()
     : super(
-        const VideoEditorTuneState(
+        VideoEditorTuneState(
           adjustments: VideoEditorConstants.tuneAdjustments,
         ),
       ) {
     on<VideoEditorTuneSessionStarted>(_onSessionStarted);
     on<VideoEditorTuneEditorInitialized>(_onEditorInitialized);
     on<VideoEditorTuneAdjustmentSelected>(_onAdjustmentSelected);
+    on<VideoEditorTuneColorBandSelected>(_onColorBandSelected);
+    on<VideoEditorTuneCurveChannelSelected>(_onCurveChannelSelected);
     on<VideoEditorTuneValueChanged>(_onValueChanged);
     on<VideoEditorTuneCancelled>(_onCancelled);
     on<VideoEditorTuneConfirmed>(_onConfirmed);
@@ -34,8 +37,11 @@ class VideoEditorTuneBloc
     VideoEditorTuneSessionStarted event,
     Emitter<VideoEditorTuneState> emit,
   ) {
+    // The bar opens on the first slider, not on the section the previous
+    // session ended in.
     emit(
       state.copyWith(
+        selectedIndex: 0,
         values: event.values,
         editingSetId: event.setId,
         clearEditingSetId: event.setId == null,
@@ -69,12 +75,37 @@ class VideoEditorTuneBloc
     emit(state.copyWith(selectedIndex: event.index));
   }
 
+  void _onColorBandSelected(
+    VideoEditorTuneColorBandSelected event,
+    Emitter<VideoEditorTuneState> emit,
+  ) {
+    final index = state.indexOf(event.band.kindOf(AdjustColorProperty.hue));
+    if (index < 0) return;
+    emit(state.copyWith(selectedIndex: index, colorBand: event.band));
+  }
+
+  void _onCurveChannelSelected(
+    VideoEditorTuneCurveChannelSelected event,
+    Emitter<VideoEditorTuneState> emit,
+  ) {
+    final index = state.indexOf(event.channel.kindOf(AdjustCurvePoint.blacks));
+    if (index < 0) return;
+    emit(state.copyWith(selectedIndex: index, curveChannel: event.channel));
+  }
+
   void _onValueChanged(
     VideoEditorTuneValueChanged event,
     Emitter<VideoEditorTuneState> emit,
   ) {
-    final id = state.selectedAdjustment.id;
-    emit(state.copyWith(values: {...state.values, id: event.value}));
+    final id = event.id ?? state.selectedAdjustment.id;
+    final index = state.indexOf(id);
+    if (index < 0) return;
+    emit(
+      state.copyWith(
+        selectedIndex: index,
+        values: {...state.values, id: event.value},
+      ),
+    );
   }
 
   void _onCancelled(

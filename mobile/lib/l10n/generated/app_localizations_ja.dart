@@ -9070,6 +9070,54 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTuneSharpen => 'シャープネス';
 
   @override
+  String get videoEditorTuneColor => 'カラー';
+
+  @override
+  String get videoEditorTuneCurve => 'カーブ';
+
+  @override
+  String get videoEditorTuneLightness => '輝度';
+
+  @override
+  String get videoEditorTuneColorRed => 'レッド';
+
+  @override
+  String get videoEditorTuneColorOrange => 'オレンジ';
+
+  @override
+  String get videoEditorTuneColorYellow => 'イエロー';
+
+  @override
+  String get videoEditorTuneColorGreen => 'グリーン';
+
+  @override
+  String get videoEditorTuneColorAqua => 'アクア';
+
+  @override
+  String get videoEditorTuneColorBlue => 'ブルー';
+
+  @override
+  String get videoEditorTuneColorPurple => 'パープル';
+
+  @override
+  String get videoEditorTuneColorMagenta => 'マゼンタ';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RGB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => '黒レベル';
+
+  @override
+  String get videoEditorTuneCurveMidtones => '中間調';
+
+  @override
+  String get videoEditorTuneCurveWhites => '白レベル';
+
+  @override
+  String get videoEditorTuneChanged => '変更済み';
+
+  @override
   String get videoEditorAudioLabel => 'オーディオ';
 
   @override

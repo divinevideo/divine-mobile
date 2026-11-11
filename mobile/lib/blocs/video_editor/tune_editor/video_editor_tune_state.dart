@@ -1,5 +1,17 @@
 part of 'video_editor_tune_bloc.dart';
 
+/// The part of the Adjust bar a selected adjustment belongs to.
+enum VideoEditorTuneSection {
+  /// One of the adjustments with a slider and chip of their own.
+  slider,
+
+  /// The Color section: hue, saturation and lightness per colour band.
+  color,
+
+  /// The Curve section: the tone curve's points.
+  curve,
+}
+
 /// State for the video editor tune adjustments.
 class VideoEditorTuneState extends Equatable {
   const VideoEditorTuneState({
@@ -8,9 +20,12 @@ class VideoEditorTuneState extends Equatable {
     this.values = const {},
     this.initialValues = const {},
     this.editingSetId,
+    this.colorBand = AdjustColorBand.red,
+    this.curveChannel = AdjustCurveChannel.rgb,
   });
 
-  /// The available tune adjustment options, in display order.
+  /// The available tune adjustment options: those with a slider and chip of
+  /// their own first, then the Color and Curve sections' adjustments.
   final List<TuneAdjustmentItem> adjustments;
 
   /// Index of the currently selected adjustment in [adjustments].
@@ -30,8 +45,38 @@ class VideoEditorTuneState extends Equatable {
   /// fresh set.
   final String? editingSetId;
 
+  /// The colour band the Color section shows.
+  final AdjustColorBand colorBand;
+
+  /// The curve the Curve section shows.
+  final AdjustCurveChannel curveChannel;
+
   /// The currently selected adjustment.
   TuneAdjustmentItem get selectedAdjustment => adjustments[selectedIndex];
+
+  /// The section the selected adjustment belongs to.
+  VideoEditorTuneSection get section => sectionOf(selectedAdjustment.id);
+
+  /// The adjustments with a slider and chip of their own, in display order.
+  List<TuneAdjustmentItem> get sliderAdjustments => [
+    for (final adjustment in adjustments)
+      if (sectionOf(adjustment.id) == .slider) adjustment,
+  ];
+
+  /// Whether any adjustment of [section] is set.
+  bool isSectionAdjusted(VideoEditorTuneSection section) => values.entries.any(
+    (entry) => entry.value != 0 && sectionOf(entry.key) == section,
+  );
+
+  /// The index of the adjustment [id] in [adjustments], or -1.
+  int indexOf(String id) => adjustments.indexWhere((a) => a.id == id);
+
+  /// The section the adjustment [id] belongs to.
+  static VideoEditorTuneSection sectionOf(String id) {
+    if (adjustColorKinds.contains(id)) return .color;
+    if (adjustCurveKinds.contains(id)) return .curve;
+    return .slider;
+  }
 
   /// The value of the currently selected adjustment.
   double get selectedValue => valueOf(selectedAdjustment.id);
@@ -47,6 +92,8 @@ class VideoEditorTuneState extends Equatable {
     Map<String, double>? initialValues,
     String? editingSetId,
     bool clearEditingSetId = false,
+    AdjustColorBand? colorBand,
+    AdjustCurveChannel? curveChannel,
   }) {
     return VideoEditorTuneState(
       adjustments: adjustments ?? this.adjustments,
@@ -56,6 +103,8 @@ class VideoEditorTuneState extends Equatable {
       editingSetId: clearEditingSetId
           ? null
           : (editingSetId ?? this.editingSetId),
+      colorBand: colorBand ?? this.colorBand,
+      curveChannel: curveChannel ?? this.curveChannel,
     );
   }
 
@@ -66,5 +115,7 @@ class VideoEditorTuneState extends Equatable {
     values,
     initialValues,
     editingSetId,
+    colorBand,
+    curveChannel,
   ];
 }

@@ -45,6 +45,28 @@ void main() {
       );
     });
 
+    test('carries the Color and Curve values by their kind', () {
+      expect(
+        adjustVideoEffect(const {
+          'saturation': 0.4,
+          'redHue': 0.5,
+          'blueSaturation': -1,
+          'greenLightness': 0,
+          'curveRgbShadows': 0.1,
+          'curveBlueWhites': -0.2,
+        }),
+        const CustomVideoEffect(
+          id: adjustVideoEffectId,
+          params: {
+            'redHue': 0.5,
+            'blueSaturation': -1.0,
+            'curveRgbShadows': 0.1,
+            'curveBlueWhites': -0.2,
+          },
+        ),
+      );
+    });
+
     test('is null when none of them is set', () {
       expect(
         adjustVideoEffect(const {'contrast': 0.2, 'highlights': 0}),

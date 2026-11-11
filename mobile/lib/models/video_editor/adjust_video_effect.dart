@@ -1,7 +1,8 @@
 // ABOUTME: The Adjust controls a colour matrix cannot draw — highlights,
-// ABOUTME: shadows, vibrance and sharpening — as Divine's native effect.
+// ABOUTME: shadows, vibrance, sharpening, Color and Curve — as a native effect.
 
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
+import 'package:openvine/models/video_editor/adjust_color_controls.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show CustomVideoEffect;
 
@@ -16,11 +17,20 @@ const adjustVideoEffectId = 'divine.adjust';
 /// Every other Adjust control, and every filter, reaches the video as a 4×5
 /// colour matrix, which changes every pixel the same way. Highlights,
 /// shadows and vibrance depend on each pixel's own brightness or saturation,
-/// and sharpening on its neighbours, so these are drawn by the native
-/// effect, for the editor preview and the export alike. They stay
-/// `TuneAdjustmentMatrix` members of their Adjust set with an identity
-/// matrix, so the timeline, undo and drafts treat them like the others.
-const adjustVideoEffectKinds = {'highlights', 'shadows', 'vibrance', 'sharpen'};
+/// sharpening on its neighbours, the Color section on each pixel's hue
+/// ([adjustColorKinds]) and the tone curve on its level in each channel
+/// ([adjustCurveKinds]), so these are drawn by the native effect, for the
+/// editor preview and the export alike. They stay `TuneAdjustmentMatrix`
+/// members of their Adjust set with an identity matrix, so the timeline, undo
+/// and drafts treat them like the others.
+final Set<String> adjustVideoEffectKinds = {
+  'highlights',
+  'shadows',
+  'vibrance',
+  'sharpen',
+  ...adjustColorKinds,
+  ...adjustCurveKinds,
+};
 
 /// The effect that draws [values], adjustment kind to value, between
 /// [startTime] and [endTime], or `null` when none of

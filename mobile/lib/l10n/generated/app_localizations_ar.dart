@@ -9550,6 +9550,54 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTuneSharpen => 'الحدة';
 
   @override
+  String get videoEditorTuneColor => 'الألوان';
+
+  @override
+  String get videoEditorTuneCurve => 'المنحنى';
+
+  @override
+  String get videoEditorTuneLightness => 'الإضاءة';
+
+  @override
+  String get videoEditorTuneColorRed => 'أحمر';
+
+  @override
+  String get videoEditorTuneColorOrange => 'برتقالي';
+
+  @override
+  String get videoEditorTuneColorYellow => 'أصفر';
+
+  @override
+  String get videoEditorTuneColorGreen => 'أخضر';
+
+  @override
+  String get videoEditorTuneColorAqua => 'أزرق مخضر';
+
+  @override
+  String get videoEditorTuneColorBlue => 'أزرق';
+
+  @override
+  String get videoEditorTuneColorPurple => 'بنفسجي';
+
+  @override
+  String get videoEditorTuneColorMagenta => 'أرجواني';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RGB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => 'الأسود';
+
+  @override
+  String get videoEditorTuneCurveMidtones => 'الدرجات المتوسطة';
+
+  @override
+  String get videoEditorTuneCurveWhites => 'الأبيض';
+
+  @override
+  String get videoEditorTuneChanged => 'تم التغيير';
+
+  @override
   String get videoEditorAudioLabel => 'الصوت';
 
   @override

@@ -9088,6 +9088,54 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTuneSharpen => '선명도';
 
   @override
+  String get videoEditorTuneColor => '컬러';
+
+  @override
+  String get videoEditorTuneCurve => '커브';
+
+  @override
+  String get videoEditorTuneLightness => '휘도';
+
+  @override
+  String get videoEditorTuneColorRed => '빨강';
+
+  @override
+  String get videoEditorTuneColorOrange => '주황';
+
+  @override
+  String get videoEditorTuneColorYellow => '노랑';
+
+  @override
+  String get videoEditorTuneColorGreen => '초록';
+
+  @override
+  String get videoEditorTuneColorAqua => '아쿠아';
+
+  @override
+  String get videoEditorTuneColorBlue => '파랑';
+
+  @override
+  String get videoEditorTuneColorPurple => '보라';
+
+  @override
+  String get videoEditorTuneColorMagenta => '마젠타';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RGB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => '검정 계열';
+
+  @override
+  String get videoEditorTuneCurveMidtones => '중간 톤';
+
+  @override
+  String get videoEditorTuneCurveWhites => '흰색 계열';
+
+  @override
+  String get videoEditorTuneChanged => '변경됨';
+
+  @override
   String get videoEditorAudioLabel => '오디오';
 
   @override

@@ -61,15 +61,50 @@ class VideoEditorTuneAdjustmentSelected extends VideoEditorTuneEvent {
   List<Object?> get props => [index];
 }
 
-/// Triggered when the value of the selected adjustment changes.
-class VideoEditorTuneValueChanged extends VideoEditorTuneEvent {
-  const VideoEditorTuneValueChanged(this.value);
+/// Triggered when the user picks a colour band in the Color section.
+///
+/// Remembers the band for the section and selects its hue, which keeps the
+/// Color chip selected.
+class VideoEditorTuneColorBandSelected extends VideoEditorTuneEvent {
+  const VideoEditorTuneColorBandSelected(this.band);
 
-  /// The new value for the currently selected adjustment.
-  final double value;
+  /// The band whose hue, saturation and lightness the section shows.
+  final AdjustColorBand band;
 
   @override
-  List<Object?> get props => [value];
+  List<Object?> get props => [band];
+}
+
+/// Triggered when the user picks a curve in the Curve section.
+///
+/// Remembers the curve for the section and selects its first point, which
+/// keeps the Curve chip selected.
+class VideoEditorTuneCurveChannelSelected extends VideoEditorTuneEvent {
+  const VideoEditorTuneCurveChannelSelected(this.channel);
+
+  /// The curve the section shows.
+  final AdjustCurveChannel channel;
+
+  @override
+  List<Object?> get props => [channel];
+}
+
+/// Triggered when the value of an adjustment changes.
+class VideoEditorTuneValueChanged extends VideoEditorTuneEvent {
+  const VideoEditorTuneValueChanged(this.value, {this.id});
+
+  /// The new value.
+  final double value;
+
+  /// The adjustment that changed, which becomes the selected one, or `null`
+  /// for the selected adjustment.
+  ///
+  /// The Color and Curve sections show several controls at once, each
+  /// setting its own adjustment.
+  final String? id;
+
+  @override
+  List<Object?> get props => [value, id];
 }
 
 /// Triggered when the user cancels tune editing.

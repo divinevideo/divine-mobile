@@ -9315,6 +9315,54 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTuneSharpen => 'ጥርትነት';
 
   @override
+  String get videoEditorTuneColor => 'ቀለማት';
+
+  @override
+  String get videoEditorTuneCurve => 'ኩርባ';
+
+  @override
+  String get videoEditorTuneLightness => 'ፈካነት';
+
+  @override
+  String get videoEditorTuneColorRed => 'ቀይ';
+
+  @override
+  String get videoEditorTuneColorOrange => 'ብርቱካናማ';
+
+  @override
+  String get videoEditorTuneColorYellow => 'ቢጫ';
+
+  @override
+  String get videoEditorTuneColorGreen => 'አረንጓዴ';
+
+  @override
+  String get videoEditorTuneColorAqua => 'ውሃ ሰማያዊ';
+
+  @override
+  String get videoEditorTuneColorBlue => 'ሰማያዊ';
+
+  @override
+  String get videoEditorTuneColorPurple => 'ሐምራዊ';
+
+  @override
+  String get videoEditorTuneColorMagenta => 'ማጀንታ';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RGB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => 'ጥቁሮች';
+
+  @override
+  String get videoEditorTuneCurveMidtones => 'መካከለኛ ቃናዎች';
+
+  @override
+  String get videoEditorTuneCurveWhites => 'ነጮች';
+
+  @override
+  String get videoEditorTuneChanged => 'ተቀይሯል';
+
+  @override
   String get videoEditorAudioLabel => 'ኦዲዮ';
 
   @override

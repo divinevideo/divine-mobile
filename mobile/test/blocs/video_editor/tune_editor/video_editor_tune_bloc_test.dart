@@ -5,6 +5,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/models/video_editor/adjust_color_controls.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show TuneAdjustmentMatrix;
 
@@ -56,7 +57,7 @@ void main() {
       blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
         'resets selectedIndex to 0 on re-init',
         build: buildBloc,
-        seed: () => const VideoEditorTuneState(
+        seed: () => VideoEditorTuneState(
           adjustments: VideoEditorConstants.tuneAdjustments,
           selectedIndex: 3,
         ),
@@ -105,7 +106,7 @@ void main() {
       blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
         'sets the value for the currently selected adjustment',
         build: buildBloc,
-        seed: () => const VideoEditorTuneState(
+        seed: () => VideoEditorTuneState(
           adjustments: VideoEditorConstants.tuneAdjustments,
           selectedIndex: 1, // contrast
         ),
@@ -120,10 +121,10 @@ void main() {
       blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
         'keeps values for other adjustments untouched',
         build: buildBloc,
-        seed: () => const VideoEditorTuneState(
+        seed: () => VideoEditorTuneState(
           adjustments: VideoEditorConstants.tuneAdjustments,
           // selectedIndex defaults to 0 (brightness).
-          values: {'contrast': -0.2},
+          values: const {'contrast': -0.2},
         ),
         act: (bloc) => bloc.add(const VideoEditorTuneValueChanged(0.5)),
         expect: () => [
@@ -134,14 +135,150 @@ void main() {
       );
     });
 
+    group('VideoEditorTuneValueChanged with an id', () {
+      blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
+        'sets that adjustment and selects it',
+        build: buildBloc,
+        act: (bloc) =>
+            bloc.add(const VideoEditorTuneValueChanged(-0.4, id: 'blueHue')),
+        expect: () => [
+          isA<VideoEditorTuneState>()
+              .having((s) => s.values, 'values', {'blueHue': -0.4})
+              .having((s) => s.selectedAdjustment.id, 'selected', 'blueHue')
+              .having(
+                (s) => s.section,
+                'section',
+                VideoEditorTuneSection.color,
+              ),
+        ],
+      );
+
+      blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
+        'ignores an adjustment the bar does not have',
+        build: buildBloc,
+        act: (bloc) =>
+            bloc.add(const VideoEditorTuneValueChanged(0.4, id: 'unknown')),
+        expect: () => <VideoEditorTuneState>[],
+      );
+    });
+
+    group('VideoEditorTuneColorBandSelected', () {
+      blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
+        'remembers the band and selects its hue, opening the Color section',
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const VideoEditorTuneColorBandSelected(AdjustColorBand.aqua),
+        ),
+        expect: () => [
+          isA<VideoEditorTuneState>()
+              .having((s) => s.colorBand, 'colorBand', AdjustColorBand.aqua)
+              .having((s) => s.selectedAdjustment.id, 'selected', 'aquaHue')
+              .having(
+                (s) => s.section,
+                'section',
+                VideoEditorTuneSection.color,
+              ),
+        ],
+      );
+    });
+
+    group('VideoEditorTuneCurveChannelSelected', () {
+      blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
+        'remembers the curve and opens the Curve section',
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const VideoEditorTuneCurveChannelSelected(AdjustCurveChannel.green),
+        ),
+        expect: () => [
+          isA<VideoEditorTuneState>()
+              .having(
+                (s) => s.curveChannel,
+                'curveChannel',
+                AdjustCurveChannel.green,
+              )
+              .having(
+                (s) => s.selectedAdjustment.id,
+                'selected',
+                'curveGreenBlacks',
+              )
+              .having(
+                (s) => s.section,
+                'section',
+                VideoEditorTuneSection.curve,
+              ),
+        ],
+      );
+
+      blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
+        'keeps the colour band for when the Color section opens again',
+        build: buildBloc,
+        act: (bloc) => bloc
+          ..add(const VideoEditorTuneColorBandSelected(AdjustColorBand.purple))
+          ..add(
+            const VideoEditorTuneCurveChannelSelected(AdjustCurveChannel.red),
+          ),
+        skip: 1,
+        expect: () => [
+          isA<VideoEditorTuneState>()
+              .having((s) => s.colorBand, 'colorBand', AdjustColorBand.purple)
+              .having(
+                (s) => s.section,
+                'section',
+                VideoEditorTuneSection.curve,
+              ),
+        ],
+      );
+    });
+
+    group('VideoEditorTuneState', () {
+      test('lists the twelve sliders as chips, without the sections', () {
+        final state = VideoEditorTuneState(
+          adjustments: VideoEditorConstants.tuneAdjustments,
+        );
+
+        expect(
+          state.sliderAdjustments.map((a) => a.id),
+          [
+            'brightness',
+            'contrast',
+            'highlights',
+            'shadows',
+            'saturation',
+            'vibrance',
+            'exposure',
+            'hue',
+            'temperature',
+            'tint',
+            'fade',
+            'sharpen',
+          ],
+        );
+      });
+
+      test('marks a section adjusted only while one of its values is set', () {
+        final state = VideoEditorTuneState(
+          adjustments: VideoEditorConstants.tuneAdjustments,
+          values: const {
+            'brightness': 0.2,
+            'redLightness': 0,
+            'curveRgbWhites': -0.1,
+          },
+        );
+
+        expect(state.isSectionAdjusted(VideoEditorTuneSection.color), isFalse);
+        expect(state.isSectionAdjusted(VideoEditorTuneSection.curve), isTrue);
+        expect(state.isSectionAdjusted(VideoEditorTuneSection.slider), isTrue);
+      });
+    });
+
     group('VideoEditorTuneCancelled', () {
       blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
         'restores the values captured when the editor opened',
         build: buildBloc,
-        seed: () => const VideoEditorTuneState(
+        seed: () => VideoEditorTuneState(
           adjustments: VideoEditorConstants.tuneAdjustments,
-          values: {'brightness': 0.4},
-          initialValues: {'brightness': 0.1},
+          values: const {'brightness': 0.4},
+          initialValues: const {'brightness': 0.1},
         ),
         act: (bloc) => bloc.add(const VideoEditorTuneCancelled()),
         expect: () => [
@@ -158,10 +295,10 @@ void main() {
       blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
         'promotes the current values to the restore baseline',
         build: buildBloc,
-        seed: () => const VideoEditorTuneState(
+        seed: () => VideoEditorTuneState(
           adjustments: VideoEditorConstants.tuneAdjustments,
-          values: {'brightness': 0.4},
-          initialValues: {'brightness': 0.1},
+          values: const {'brightness': 0.4},
+          initialValues: const {'brightness': 0.1},
         ),
         act: (bloc) => bloc.add(const VideoEditorTuneConfirmed()),
         expect: () => [
@@ -176,7 +313,7 @@ void main() {
       blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
         'clears the editing set id',
         build: buildBloc,
-        seed: () => const VideoEditorTuneState(
+        seed: () => VideoEditorTuneState(
           adjustments: VideoEditorConstants.tuneAdjustments,
           editingSetId: 'set-1',
         ),
@@ -207,9 +344,28 @@ void main() {
       );
 
       blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
+        'opens on the first slider even when the last session ended on Color',
+        build: buildBloc,
+        seed: () => VideoEditorTuneState(
+          adjustments: VideoEditorConstants.tuneAdjustments,
+          selectedIndex: VideoEditorConstants.tuneAdjustments.indexWhere(
+            (a) => a.id == 'blueHue',
+          ),
+        ),
+        act: (bloc) => bloc.add(const VideoEditorTuneSessionStarted()),
+        expect: () => [
+          isA<VideoEditorTuneState>().having(
+            (s) => s.section,
+            'section',
+            VideoEditorTuneSection.slider,
+          ),
+        ],
+      );
+
+      blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
         'clears the editing set id for a new session',
         build: buildBloc,
-        seed: () => const VideoEditorTuneState(
+        seed: () => VideoEditorTuneState(
           adjustments: VideoEditorConstants.tuneAdjustments,
           editingSetId: 'set-1',
         ),
@@ -226,9 +382,9 @@ void main() {
       blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
         "replaces the previous session's values with the new session's",
         build: buildBloc,
-        seed: () => const VideoEditorTuneState(
+        seed: () => VideoEditorTuneState(
           adjustments: VideoEditorConstants.tuneAdjustments,
-          values: {'sharpen': 0.5},
+          values: const {'sharpen': 0.5},
         ),
         act: (bloc) => bloc.add(
           const VideoEditorTuneSessionStarted(
@@ -248,9 +404,9 @@ void main() {
       blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
         'is preserved across VideoEditorTuneEditorInitialized',
         build: buildBloc,
-        seed: () => const VideoEditorTuneState(
+        seed: () => VideoEditorTuneState(
           adjustments: VideoEditorConstants.tuneAdjustments,
-          values: {'brightness': 0.5},
+          values: const {'brightness': 0.5},
           editingSetId: 'set-1',
         ),
         act: (bloc) => bloc.add(

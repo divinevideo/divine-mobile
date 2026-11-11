@@ -9617,6 +9617,54 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTuneSharpen => 'Острота';
 
   @override
+  String get videoEditorTuneColor => 'Цвят';
+
+  @override
+  String get videoEditorTuneCurve => 'Крива';
+
+  @override
+  String get videoEditorTuneLightness => 'Светлота';
+
+  @override
+  String get videoEditorTuneColorRed => 'Червено';
+
+  @override
+  String get videoEditorTuneColorOrange => 'Оранжево';
+
+  @override
+  String get videoEditorTuneColorYellow => 'Жълто';
+
+  @override
+  String get videoEditorTuneColorGreen => 'Зелено';
+
+  @override
+  String get videoEditorTuneColorAqua => 'Аквамарин';
+
+  @override
+  String get videoEditorTuneColorBlue => 'Синьо';
+
+  @override
+  String get videoEditorTuneColorPurple => 'Лилаво';
+
+  @override
+  String get videoEditorTuneColorMagenta => 'Магента';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RGB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => 'Черни';
+
+  @override
+  String get videoEditorTuneCurveMidtones => 'Средни тонове';
+
+  @override
+  String get videoEditorTuneCurveWhites => 'Бели';
+
+  @override
+  String get videoEditorTuneChanged => 'Променено';
+
+  @override
   String get videoEditorAudioLabel => 'Аудио';
 
   @override

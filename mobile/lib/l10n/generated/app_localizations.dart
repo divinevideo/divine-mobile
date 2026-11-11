@@ -16025,6 +16025,102 @@ abstract class AppLocalizations {
   /// **'Sharpen'**
   String get videoEditorTuneSharpen;
 
+  /// Chip in the video editor's Adjust bar that opens the controls for the hue, saturation and lightness of single colours.
+  ///
+  /// In en, this message translates to:
+  /// **'Color'**
+  String get videoEditorTuneColor;
+
+  /// Chip in the video editor's Adjust bar that opens the tone curve.
+  ///
+  /// In en, this message translates to:
+  /// **'Curve'**
+  String get videoEditorTuneCurve;
+
+  /// Slider in Adjust's Color section that darkens or lightens one colour.
+  ///
+  /// In en, this message translates to:
+  /// **'Lightness'**
+  String get videoEditorTuneLightness;
+
+  /// No description provided for @videoEditorTuneColorRed.
+  ///
+  /// In en, this message translates to:
+  /// **'Red'**
+  String get videoEditorTuneColorRed;
+
+  /// No description provided for @videoEditorTuneColorOrange.
+  ///
+  /// In en, this message translates to:
+  /// **'Orange'**
+  String get videoEditorTuneColorOrange;
+
+  /// No description provided for @videoEditorTuneColorYellow.
+  ///
+  /// In en, this message translates to:
+  /// **'Yellow'**
+  String get videoEditorTuneColorYellow;
+
+  /// No description provided for @videoEditorTuneColorGreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Green'**
+  String get videoEditorTuneColorGreen;
+
+  /// The colour band between green and blue (cyan) in Adjust's Color section.
+  ///
+  /// In en, this message translates to:
+  /// **'Aqua'**
+  String get videoEditorTuneColorAqua;
+
+  /// No description provided for @videoEditorTuneColorBlue.
+  ///
+  /// In en, this message translates to:
+  /// **'Blue'**
+  String get videoEditorTuneColorBlue;
+
+  /// No description provided for @videoEditorTuneColorPurple.
+  ///
+  /// In en, this message translates to:
+  /// **'Purple'**
+  String get videoEditorTuneColorPurple;
+
+  /// No description provided for @videoEditorTuneColorMagenta.
+  ///
+  /// In en, this message translates to:
+  /// **'Magenta'**
+  String get videoEditorTuneColorMagenta;
+
+  /// Tab of the master tone curve, which changes red, green and blue alike.
+  ///
+  /// In en, this message translates to:
+  /// **'RGB'**
+  String get videoEditorTuneCurveRgb;
+
+  /// The tone curve point at black.
+  ///
+  /// In en, this message translates to:
+  /// **'Blacks'**
+  String get videoEditorTuneCurveBlacks;
+
+  /// The tone curve point in the middle, between black and white.
+  ///
+  /// In en, this message translates to:
+  /// **'Midtones'**
+  String get videoEditorTuneCurveMidtones;
+
+  /// The tone curve point at white.
+  ///
+  /// In en, this message translates to:
+  /// **'Whites'**
+  String get videoEditorTuneCurveWhites;
+
+  /// Read by screen readers after a colour band or Adjust section that has been changed.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed'**
+  String get videoEditorTuneChanged;
+
   /// No description provided for @videoEditorAudioLabel.
   ///
   /// In en, this message translates to:
