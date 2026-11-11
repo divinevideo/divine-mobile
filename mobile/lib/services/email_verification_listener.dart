@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Service to listen for email verification redirects (deeplinks)
@@ -54,7 +55,7 @@ class EmailVerificationListener {
   @visibleForTesting
   Future<void> handleUri(Uri uri) async {
     Log.info(
-      'Callback from host ${uri.host} path: ${uri.path}',
+      'Callback from host ${uri.host} path: ${redactUriStringForLogs(uri.path)}',
       name: '$EmailVerificationListener',
       category: LogCategory.auth,
     );

@@ -8,6 +8,8 @@ import 'package:openvine/router/providers/deep_link_listeners.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/services/email_verification_listener.dart';
 
+import 'package:unified_logger/unified_logger.dart';
+
 import '../helpers/go_router.dart';
 
 void main() {
@@ -66,6 +68,26 @@ void main() {
       );
 
       verifyNever(() => mockRouter.go(any()));
+    });
+
+    group('logging (#10385)', () {
+      test('does not log the nsec of a link it only inspects', () async {
+        // NIP-19's published test vector; it controls no real account.
+        const nsec =
+            'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+        await LogCaptureService().clearAllLogs();
+
+        await listener.handleUri(
+          Uri.parse('https://divine.video/profile/$nsec'),
+        );
+
+        final logged = [
+          for (final entry in LogCaptureService().getRecentLogs())
+            entry.message,
+        ].join('\n');
+        expect(logged, contains('Callback from host'));
+        expect(logged.toLowerCase(), isNot(contains('nsec1')));
+      });
     });
   });
 }

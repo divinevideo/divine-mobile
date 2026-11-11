@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Service to listen for Password Reset redirects (deeplinks)
@@ -50,7 +51,7 @@ class PasswordResetListener {
   @visibleForTesting
   Future<void> handleUri(Uri uri) async {
     Log.info(
-      '🔑 callback from host ${uri.host} path: ${uri.path}',
+      '🔑 callback from host ${uri.host} path: ${redactUriStringForLogs(uri.path)}',
       name: '$PasswordResetListener',
     );
 
@@ -61,7 +62,7 @@ class PasswordResetListener {
 
     // Log path only — query params can contain the account email (PII).
     Log.info(
-      '🔑 Password reset callback detected for path: ${uri.path}',
+      '🔑 Password reset callback detected for path: ${redactUriStringForLogs(uri.path)}',
       name: '$PasswordResetListener',
     );
 
