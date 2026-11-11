@@ -393,7 +393,7 @@ class DivineVideoClip {
 
   /// How often the library tried to rebuild this clip's missing thumbnail or
   /// ghost frame from its video; `ClipLibraryService.recoverMissingAssets`
-  /// stops at `ClipLibraryService.maxAssetRecoveryAttempts`.
+  /// stops at `ClipLibraryConstants.maxAssetRecoveryAttempts`.
   final int assetRecoveryAttempts;
 
   /// Where a viewer can tap the stickers on this clip once it is published;
