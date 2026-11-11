@@ -85,7 +85,7 @@ void main() {
       ).thenReturn(const TimelineOverlayState());
       when(() => drawBloc.state).thenReturn(const VideoEditorDrawState());
       when(() => tuneBloc.state).thenReturn(
-        const VideoEditorTuneState(
+        VideoEditorTuneState(
           adjustments: VideoEditorConstants.tuneAdjustments,
         ),
       );

@@ -9533,6 +9533,54 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTuneSharpen => 'Ketajaman';
 
   @override
+  String get videoEditorTuneColor => 'Warna';
+
+  @override
+  String get videoEditorTuneCurve => 'Lengkung';
+
+  @override
+  String get videoEditorTuneLightness => 'Luminans';
+
+  @override
+  String get videoEditorTuneColorRed => 'Merah';
+
+  @override
+  String get videoEditorTuneColorOrange => 'Oren';
+
+  @override
+  String get videoEditorTuneColorYellow => 'Kuning';
+
+  @override
+  String get videoEditorTuneColorGreen => 'Hijau';
+
+  @override
+  String get videoEditorTuneColorAqua => 'Akua';
+
+  @override
+  String get videoEditorTuneColorBlue => 'Biru';
+
+  @override
+  String get videoEditorTuneColorPurple => 'Ungu';
+
+  @override
+  String get videoEditorTuneColorMagenta => 'Magenta';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RGB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => 'Hitam';
+
+  @override
+  String get videoEditorTuneCurveMidtones => 'Ton tengah';
+
+  @override
+  String get videoEditorTuneCurveWhites => 'Putih';
+
+  @override
+  String get videoEditorTuneChanged => 'Diubah';
+
+  @override
   String get videoEditorAudioLabel => 'Audio';
 
   @override

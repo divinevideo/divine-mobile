@@ -86,7 +86,7 @@ void main() {
           final tune = _Tune();
           when(() => draw.state).thenReturn(const VideoEditorDrawState());
           when(() => tune.state).thenReturn(
-            const VideoEditorTuneState(
+            VideoEditorTuneState(
               adjustments: VideoEditorConstants.tuneAdjustments,
             ),
           );

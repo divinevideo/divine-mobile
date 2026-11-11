@@ -3,6 +3,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/models/video_editor/adjust_color_controls.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show AudioVisualizerStyle;
@@ -970,9 +971,41 @@ class VideoEditorConstants {
   /// [_unusedTuneIcon]) — but the English `label` names the adjustment on its
   /// timeline bar (`TimelineOverlayBloc`).
   ///
-  /// Highlights, shadows, vibrance and sharpen carry no colour matrix
-  /// ([_noColorMatrix]); the native `divine.adjust` effect draws them.
-  static const List<TuneAdjustmentItem> tuneAdjustments = [
+  /// The twelve sliders the bar shows as chips come first, then the Color
+  /// section's hue, saturation and lightness of each colour band
+  /// ([adjustColorKinds]) and the Curve section's points
+  /// ([adjustCurveKinds]), which the bar groups behind one chip each.
+  ///
+  /// Highlights, shadows, vibrance, sharpen and every Color and Curve value
+  /// carry no colour matrix ([_noColorMatrix]); the native `divine.adjust`
+  /// effect draws them. A whole Color or Curve section names its timeline bar
+  /// once, as `Color` or `Curve`.
+  static final List<TuneAdjustmentItem> tuneAdjustments = [
+    ..._sliderAdjustments,
+    for (final band in AdjustColorBand.values)
+      for (final property in AdjustColorProperty.values)
+        TuneAdjustmentItem(
+          id: band.kindOf(property),
+          icon: _unusedTuneIcon,
+          label: 'Color',
+          min: -1,
+          max: 1,
+          toMatrix: _noColorMatrix,
+        ),
+    for (final channel in AdjustCurveChannel.values)
+      for (final point in AdjustCurvePoint.values)
+        TuneAdjustmentItem(
+          id: channel.kindOf(point),
+          icon: _unusedTuneIcon,
+          label: 'Curve',
+          min: point.min,
+          max: point.max,
+          toMatrix: _noColorMatrix,
+        ),
+  ];
+
+  /// The adjustments with a slider of their own, one chip each.
+  static const List<TuneAdjustmentItem> _sliderAdjustments = [
     TuneAdjustmentItem(
       id: 'brightness',
       icon: _unusedTuneIcon,

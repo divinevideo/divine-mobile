@@ -9486,6 +9486,54 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTuneSharpen => 'Độ sắc nét';
 
   @override
+  String get videoEditorTuneColor => 'Màu';
+
+  @override
+  String get videoEditorTuneCurve => 'Đường cong';
+
+  @override
+  String get videoEditorTuneLightness => 'Độ chói';
+
+  @override
+  String get videoEditorTuneColorRed => 'Đỏ';
+
+  @override
+  String get videoEditorTuneColorOrange => 'Cam';
+
+  @override
+  String get videoEditorTuneColorYellow => 'Vàng';
+
+  @override
+  String get videoEditorTuneColorGreen => 'Lục';
+
+  @override
+  String get videoEditorTuneColorAqua => 'Xanh ngọc';
+
+  @override
+  String get videoEditorTuneColorBlue => 'Lam';
+
+  @override
+  String get videoEditorTuneColorPurple => 'Tím';
+
+  @override
+  String get videoEditorTuneColorMagenta => 'Hồng tím';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RGB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => 'Vùng đen';
+
+  @override
+  String get videoEditorTuneCurveMidtones => 'Vùng trung';
+
+  @override
+  String get videoEditorTuneCurveWhites => 'Vùng trắng';
+
+  @override
+  String get videoEditorTuneChanged => 'Đã thay đổi';
+
+  @override
   String get videoEditorAudioLabel => 'Âm thanh';
 
   @override

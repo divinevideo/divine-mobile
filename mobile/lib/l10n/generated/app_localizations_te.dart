@@ -9787,6 +9787,54 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorTuneSharpen => 'పదును';
 
   @override
+  String get videoEditorTuneColor => 'రంగులు';
+
+  @override
+  String get videoEditorTuneCurve => 'వక్రరేఖ';
+
+  @override
+  String get videoEditorTuneLightness => 'తేలికదనం';
+
+  @override
+  String get videoEditorTuneColorRed => 'ఎరుపు';
+
+  @override
+  String get videoEditorTuneColorOrange => 'నారింజ';
+
+  @override
+  String get videoEditorTuneColorYellow => 'పసుపు';
+
+  @override
+  String get videoEditorTuneColorGreen => 'ఆకుపచ్చ';
+
+  @override
+  String get videoEditorTuneColorAqua => 'నీలి ఆకుపచ్చ';
+
+  @override
+  String get videoEditorTuneColorBlue => 'నీలం';
+
+  @override
+  String get videoEditorTuneColorPurple => 'ఊదా';
+
+  @override
+  String get videoEditorTuneColorMagenta => 'మెజెంటా';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RGB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => 'నలుపులు';
+
+  @override
+  String get videoEditorTuneCurveMidtones => 'మధ్యస్థ టోన్లు';
+
+  @override
+  String get videoEditorTuneCurveWhites => 'తెలుపులు';
+
+  @override
+  String get videoEditorTuneChanged => 'మార్చబడింది';
+
+  @override
   String get videoEditorAudioLabel => 'ఆడియో';
 
   @override

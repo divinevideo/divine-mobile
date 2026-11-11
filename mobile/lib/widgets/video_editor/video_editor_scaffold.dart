@@ -394,6 +394,8 @@ class _BottomActionsState extends State<_BottomActions> {
             SubEditorType.filter => VideoEditorFilterBottomBar.heightOf(
               context,
             ),
+            // The Color and Curve sections are taller than a slider.
+            SubEditorType.tune => VideoEditorTuneBottomBar.heightOf(context),
             _ => VideoEditorConstants.bottomBarHeight,
           },
       child: switch (openSubEditor) {

@@ -9595,6 +9595,54 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTuneSharpen => 'Talas';
 
   @override
+  String get videoEditorTuneColor => 'Mga kulay';
+
+  @override
+  String get videoEditorTuneCurve => 'Kurba';
+
+  @override
+  String get videoEditorTuneLightness => 'Pagkaliwanag';
+
+  @override
+  String get videoEditorTuneColorRed => 'Pula';
+
+  @override
+  String get videoEditorTuneColorOrange => 'Kahel';
+
+  @override
+  String get videoEditorTuneColorYellow => 'Dilaw';
+
+  @override
+  String get videoEditorTuneColorGreen => 'Berde';
+
+  @override
+  String get videoEditorTuneColorAqua => 'Aqua';
+
+  @override
+  String get videoEditorTuneColorBlue => 'Asul';
+
+  @override
+  String get videoEditorTuneColorPurple => 'Lila';
+
+  @override
+  String get videoEditorTuneColorMagenta => 'Magenta';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RGB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => 'Itim';
+
+  @override
+  String get videoEditorTuneCurveMidtones => 'Midtone';
+
+  @override
+  String get videoEditorTuneCurveWhites => 'Puti';
+
+  @override
+  String get videoEditorTuneChanged => 'Binago';
+
+  @override
   String get videoEditorAudioLabel => 'Audio';
 
   @override

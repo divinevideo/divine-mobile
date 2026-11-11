@@ -8991,6 +8991,54 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTuneSharpen => '锐化';
 
   @override
+  String get videoEditorTuneColor => '颜色';
+
+  @override
+  String get videoEditorTuneCurve => '曲线';
+
+  @override
+  String get videoEditorTuneLightness => '明亮度';
+
+  @override
+  String get videoEditorTuneColorRed => '红色';
+
+  @override
+  String get videoEditorTuneColorOrange => '橙色';
+
+  @override
+  String get videoEditorTuneColorYellow => '黄色';
+
+  @override
+  String get videoEditorTuneColorGreen => '绿色';
+
+  @override
+  String get videoEditorTuneColorAqua => '浅绿色';
+
+  @override
+  String get videoEditorTuneColorBlue => '蓝色';
+
+  @override
+  String get videoEditorTuneColorPurple => '紫色';
+
+  @override
+  String get videoEditorTuneColorMagenta => '洋红';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RGB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => '黑色色阶';
+
+  @override
+  String get videoEditorTuneCurveMidtones => '中间调';
+
+  @override
+  String get videoEditorTuneCurveWhites => '白色色阶';
+
+  @override
+  String get videoEditorTuneChanged => '已更改';
+
+  @override
   String get videoEditorAudioLabel => '音频';
 
   @override

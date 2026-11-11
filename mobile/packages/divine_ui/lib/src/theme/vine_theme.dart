@@ -1402,6 +1402,23 @@ class VineTheme {
   /// Scrim at 80% opacity (black 80%).
   static const Color scrim80 = Color(0xCC000000);
 
+  /// The swatches of the eight colour bands in the video editor's Adjust
+  /// Color section, from red to magenta: each band's centre hue (0°, 30°,
+  /// 60°, 120°, 180°, 240°, 270° and 300°) at full strength.
+  ///
+  /// They show a hue rather than a surface, so both appearances share them.
+  /// The red, green and blue ones also draw those channels' tone curves.
+  static const List<Color> adjustColorBandSwatches = [
+    Color(0xFFEE2B2B),
+    Color(0xFFEE8C2B),
+    Color(0xFFEEEE2B),
+    Color(0xFF2BEE2B),
+    Color(0xFF2BEEEE),
+    Color(0xFF2B2BEE),
+    Color(0xFF8C2BEE),
+    Color(0xFFEE2BEE),
+  ];
+
   /// The complete theme data for the app.
   ///
   /// Kept as a `static final` (not a getter) so its object identity is

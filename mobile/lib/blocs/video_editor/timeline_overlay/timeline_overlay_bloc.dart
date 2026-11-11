@@ -169,7 +169,9 @@ class TimelineOverlayBloc
           // every member), so the first member is representative.
           startTime: entry.value.first.startTime ?? .zero,
           endTime: _clampEnd(entry.value.first.endTime ?? total, total),
-          label: entry.value.map(_tuneKindLabel).join(', '),
+          // Every Color and Curve value shares its section's label, which
+          // the bar names once.
+          label: entry.value.map(_tuneKindLabel).toSet().join(', '),
         ),
     ];
 

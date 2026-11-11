@@ -513,6 +513,46 @@ void main() {
       );
 
       blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'names the Color and Curve sections once each in a set label',
+        build: TimelineOverlayBloc.new,
+        act: (bloc) => bloc.add(
+          TimelineOverlayItemsUpdate(
+            layers: const <Layer>[],
+            filters: const <FilterState>[],
+            tuneAdjustments: [
+              for (final (kind, value) in const [
+                ('contrast', 0.1),
+                ('redHue', 0.3),
+                ('curveRgbShadows', 0.2),
+                ('blueLightness', -0.5),
+                ('curveBlueWhites', -0.1),
+              ])
+                TuneAdjustmentMatrix(
+                  id: '${kind}__set-1',
+                  value: value,
+                  matrix: const [],
+                  meta: {
+                    VideoEditorConstants.tuneSetIdMetaKey: 'set-1',
+                    VideoEditorConstants.tuneKindMetaKey: kind,
+                  },
+                ),
+            ],
+            audioTracks: const <AudioEvent>[],
+            totalVideoDuration: const Duration(seconds: 12),
+          ),
+        ),
+        expect: () => [
+          isA<TimelineOverlayState>().having((s) => s.items, 'items', [
+            isA<TimelineOverlayItem>().having(
+              (i) => i.label,
+              'label',
+              'Contrast, Color, Curve',
+            ),
+          ]),
+        ],
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
         'keeps separate set ids as separate bars',
         build: TimelineOverlayBloc.new,
         act: (bloc) => bloc.add(

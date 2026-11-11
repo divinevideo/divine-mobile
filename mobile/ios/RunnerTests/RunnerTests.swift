@@ -3218,17 +3218,31 @@ final class ShaderVideoEffectTests: XCTestCase {
   }
 }
 
-/// Highlights, shadows, vibrance and sharpening are drawn with a Metal kernel
-/// on iOS and macOS, and with the same shader in GLSL on Android
-/// (`AdjustVideoEffect`). This checks every pixel of the kernel against the
-/// shader's formulas computed here on the CPU, for the whole frame and for a
-/// tile Core Image renders on its own, so a change to the kernel that the
-/// formulas here do not share fails, and so does a kernel that reads its
-/// textures upside down or samples outside the region it asked for. No test
-/// runs the Android copy: a change to it has to be made here as well.
+/// Highlights, shadows, vibrance, sharpening, the Color section and the tone
+/// curve are drawn with a Metal kernel on iOS and macOS, and with the same
+/// shader in GLSL on Android (`AdjustVideoEffect`). This checks every pixel of
+/// the kernel against the shader's formulas computed here on the CPU, for the
+/// whole frame and for a tile Core Image renders on its own, so a change to
+/// the kernel that the formulas here do not share fails, and so does a kernel
+/// that reads its textures upside down or samples outside the region it asked
+/// for. No test runs the Android copy: a change to it has to be made here as
+/// well.
 final class AdjustVideoEffectTests: XCTestCase {
   private let width = 90
   private let height = 160
+
+  /// The values the shader draws with, as `AdjustSettings` reads them.
+  private struct Values {
+    var h = 0.0
+    var s = 0.0
+    var v = 0.0
+    var k = 0.0
+    var hue = [Double](repeating: 0, count: 8)
+    var saturation = [Double](repeating: 0, count: 8)
+    var lightness = [Double](repeating: 0, count: 8)
+    /// The master, red, green and blue curves, each from blacks to whites.
+    var curves = [[Double]](repeating: [Double](repeating: 0, count: 5), count: 4)
+  }
 
   func testDrawsWhatTheAndroidShaderDraws() {
     // Brightness ramps up the frame for the tone curve, with a
@@ -3246,6 +3260,102 @@ final class AdjustVideoEffectTests: XCTestCase {
         rgb[i + 2] = fy * fx * fx
       }
     }
+
+    // Params, and the values the shader draws them with: out of range ones
+    // are clamped, as on Android.
+    let cases: [([String: Any], Values)] = [
+      (["highlights": -1.0], Values(h: -1)),
+      (["highlights": 1.0, "shadows": -1.0], Values(h: 1, s: -1)),
+      (["shadows": 1.0, "vibrance": 1.0], Values(s: 1, v: 1)),
+      (["vibrance": -1.0, "sharpen": 1.0], Values(v: -1, k: 1)),
+      (
+        ["highlights": -0.6, "shadows": 0.7, "vibrance": 0.5, "sharpen": 0.4],
+        Values(h: -0.6, s: 0.7, v: 0.5, k: 0.4)
+      ),
+      (["highlights": -3.0, "sharpen": -0.5], Values(h: -1)),
+      ([:], Values()),
+    ]
+    assertDraws(rgb, cases)
+  }
+
+  func testDrawsTheColorSectionAndToneCurveAsTheAndroidShaderDoes() {
+    // Every hue runs across the frame and dark to light up it, in stripes
+    // from full strength to almost grey, so each band and its blend into the
+    // next occur, and so do the greys the Color section leaves alone.
+    let strengths = [1.0, 0.65, 0.3, 0.08]
+    var rgb = [Double](repeating: 0, count: width * height * 3)
+    for y in 0..<height {
+      for x in 0..<width {
+        let hue = (Double(x) + 0.5) / Double(width) * 6
+        let value = 0.12 + 0.86 * (Double(y) + 0.5) / Double(height)
+        let chroma = value * strengths[(y / 8) % strengths.count]
+        let second = chroma * (1 - abs(hue.truncatingRemainder(dividingBy: 2) - 1))
+        let (r, g, b): (Double, Double, Double)
+        switch Int(hue) {
+        case 0: (r, g, b) = (chroma, second, 0)
+        case 1: (r, g, b) = (second, chroma, 0)
+        case 2: (r, g, b) = (0, chroma, second)
+        case 3: (r, g, b) = (0, second, chroma)
+        case 4: (r, g, b) = (second, 0, chroma)
+        default: (r, g, b) = (chroma, 0, second)
+        }
+        let i = (y * width + x) * 3
+        // On a 1/1024 grid, which the half-float textures hold exactly, so the
+        // kernel reads what the formulas here read.
+        for (k, c) in [r, g, b].enumerated() {
+          rgb[i + k] = ((c + value - chroma) * 1024).rounded() / 1024
+        }
+      }
+    }
+
+    var bands = Values()
+    bands.hue = [0.6, -0.4, 0, 1, -1, 0.3, 0, -0.7]
+    bands.saturation = [-1, 0.5, 1, -0.3, 0, 0.8, -0.6, 0]
+    bands.lightness = [0.7, 0, -0.5, 0.4, -1, 1, 0, -0.2]
+    var curves = Values()
+    curves.curves = [
+      [0.08, 0.1, 0.05, -0.05, -0.1],
+      [0, -0.1, 0, 0.1, 0],
+      [0.1, 0, 0, 0, 0],
+      [0, 0.2, 0.2, 0.15, 0],
+    ]
+    var both = bands
+    both.curves = curves.curves
+    both.s = 0.4
+    both.v = 0.3
+    func params(_ values: Values) -> [String: Any] {
+      var params: [String: Any] = ["shadows": values.s, "vibrance": values.v]
+      for (i, band) in AdjustSettings.bands.enumerated() {
+        params["\(band)Hue"] = values.hue[i]
+        params["\(band)Saturation"] = values.saturation[i]
+        params["\(band)Lightness"] = values.lightness[i]
+      }
+      for (c, curve) in AdjustSettings.curveNames.enumerated() {
+        for (p, point) in AdjustSettings.curvePoints.enumerated() {
+          params["curve\(curve)\(point)"] = values.curves[c][p]
+        }
+      }
+      return params
+    }
+    var clamped = Values()
+    clamped.hue[5] = 1
+    clamped.curves[0] = [0, 0.75, 0, 0, -1]
+    let cases: [([String: Any], Values)] = [
+      (params(bands), bands),
+      (params(curves), curves),
+      (params(both), both),
+      // Out of range: a band past 1, a point below black or above white.
+      (["blueHue": 4.0, "curveRgbShadows": 2.0, "curveRgbWhites": -3.0], clamped),
+    ]
+    assertDraws(rgb, cases)
+  }
+
+  /// Checks the kernel draws each case's params as the formulas draw its
+  /// values, over the whole frame and over a tile on its own.
+  private func assertDraws(
+    _ rgb: [Double], _ cases: [([String: Any], Values)], file: StaticString = #filePath,
+    line: UInt = #line
+  ) {
     // A bitmap's first row is the top of the image, Core Image's y = 0 the bottom.
     var pixels = [Float](repeating: 1, count: width * height * 4)
     for y in 0..<height {
@@ -3262,22 +3372,11 @@ final class AdjustVideoEffectTests: XCTestCase {
       colorSpace: nil)
     let context = CIContext(options: [.workingColorSpace: NSNull()])
 
-    // Params, and the values the shader draws them with: out of range ones
-    // are clamped, as on Android.
-    let cases: [([String: Any], (h: Double, s: Double, v: Double, k: Double))] = [
-      (["highlights": -1.0], (-1, 0, 0, 0)),
-      (["highlights": 1.0, "shadows": -1.0], (1, -1, 0, 0)),
-      (["shadows": 1.0, "vibrance": 1.0], (0, 1, 1, 0)),
-      (["vibrance": -1.0, "sharpen": 1.0], (0, 0, -1, 1)),
-      (["highlights": -0.6, "shadows": 0.7, "vibrance": 0.5, "sharpen": 0.4], (-0.6, 0.7, 0.5, 0.4)),
-      (["highlights": -3.0, "sharpen": -0.5], (-1, 0, 0, 0)),
-      ([:], (0, 0, 0, 0)),
-    ]
     let tile = CGRect(x: 20, y: 50, width: 31, height: 47)
     for (params, values) in cases {
       let output = AdjustVideoEffect(params: params)
         .render(frame, history: [], timeUs: 0, effectTimeUs: 0)
-      XCTAssertEqual(output.extent, frame.extent)
+      XCTAssertEqual(output.extent, frame.extent, file: file, line: line)
       let expected = draw(rgb, values)
       for bounds in [frame.extent, tile] {
         let w = Int(bounds.width), h = Int(bounds.height)
@@ -3298,15 +3397,13 @@ final class AdjustVideoEffectTests: XCTestCase {
           }
         }
         // Half-float textures round to about 0.0005.
-        XCTAssertLessThan(worst, 0.003, "\(params) in \(bounds)")
+        XCTAssertLessThan(worst, 0.003, "\(params) in \(bounds)", file: file, line: line)
       }
     }
   }
 
   /// The shader on the CPU, for an RGB frame stored bottom row first.
-  private func draw(_ rgb: [Double], _ v: (h: Double, s: Double, v: Double, k: Double))
-    -> [Double]
-  {
+  private func draw(_ rgb: [Double], _ v: Values) -> [Double] {
     let w = Double(width), h = Double(height)
     func tap(_ qx: Double, _ qy: Double) -> [Double] {
       let x = min(max(qx, 0.5), w - 0.5) - 0.5, y = min(max(qy, 0.5), h - 0.5) - 0.5
@@ -3324,8 +3421,68 @@ final class AdjustVideoEffectTests: XCTestCase {
       let t = unit((x - a) / (b - a))
       return t * t * (3 - 2 * t)
     }
+    func sign(_ x: Double) -> Double { x > 0 ? 1 : x < 0 ? -1 : 0 }
+    func slope(_ before: Double, _ after: Double) -> Double {
+      (sign(before) + sign(after)) * min(min(abs(before), abs(after)), 0.25 * abs(before + after))
+    }
+    func curve(_ x: Double, _ points: [Double]) -> Double {
+      if points.allSatisfy({ $0 == 0 }) { return x }
+      let ys = points.enumerated().map { unit(Double($0.offset) / 4 + $0.element) }
+      let d = (0..<4).map { 4 * (ys[$0 + 1] - ys[$0]) }
+      let m = [d[0], slope(d[0], d[1]), slope(d[1], d[2]), slope(d[2], d[3]), d[3]]
+      let s = unit(x) * 4
+      let k = min(s.rounded(.down), 3)
+      let t = s - k, i = Int(k)
+      let t2 = t * t, t3 = t2 * t
+      return unit(
+        (2 * t3 - 3 * t2 + 1) * ys[i] + (t3 - 2 * t2 + t) * 0.25 * m[i]
+          + (3 * t2 - 2 * t3) * ys[i + 1] + (t3 - t2) * 0.25 * m[i + 1])
+    }
+    func band(_ hue: Double, _ before: Double, _ centre: Double, _ after: Double) -> Double {
+      if hue < before || hue > after { return 0 }
+      let t = hue < centre ? (hue - before) / (centre - before) : (after - hue) / (after - centre)
+      return t * t * (3 - 2 * t)
+    }
+    func mixColors(_ color: [Double]) -> [Double] {
+      let hi = color.max()!, lo = color.min()!
+      let chroma = hi - lo
+      if chroma < 0.00001 { return color }
+      var lightness = (hi + lo) * 0.5
+      var saturation = min(chroma / (1 - abs(2 * lightness - 1)), 1)
+      var hue: Double
+      if hi == color[0] {
+        hue = (color[1] - color[2]) / chroma
+      } else if hi == color[1] {
+        hue = (color[2] - color[0]) / chroma + 2
+      } else {
+        hue = (color[0] - color[1]) / chroma + 4
+      }
+      hue *= 60
+      if hue < 0 { hue += 360 }
+      let redHue = hue > 180 ? hue - 360 : hue
+      let weights = [
+        band(redHue, -60, 0, 30), band(hue, 0, 30, 60), band(hue, 30, 60, 120),
+        band(hue, 60, 120, 180), band(hue, 120, 180, 240), band(hue, 180, 240, 270),
+        band(hue, 240, 270, 300), band(hue, 270, 300, 360),
+      ]
+      func blend(_ values: [Double]) -> Double { zip(weights, values).map(*).reduce(0, +) }
+      let light = blend(v.lightness) * smoothstep(0, 0.2, chroma)
+      hue += 30 * blend(v.hue)
+      if hue < 0 { hue += 360 }
+      if hue >= 360 { hue -= 360 }
+      saturation = unit(saturation * (1 + blend(v.saturation)))
+      lightness =
+        light > 0 ? lightness + (1 - lightness) * light * 0.5 : lightness * (1 + light * 0.5)
+      let a = saturation * min(lightness, 1 - lightness)
+      return [0.0, 8, 4].map { n in
+        var k = n + hue / 30
+        k -= 12 * (k / 12).rounded(.down)
+        return unit(lightness - a * min(max(min(k - 3, 9 - k), -1), 1))
+      }
+    }
 
     let r = max(1, 1.5 * min(w, h) / 1080)
+    let colorMix = !(v.hue + v.saturation + v.lightness).allSatisfy { $0 == 0 }
     var out = [Double](repeating: 0, count: rgb.count)
     for yi in 0..<height {
       for xi in 0..<width {
@@ -3355,6 +3512,7 @@ final class AdjustVideoEffectTests: XCTestCase {
         let highlightGain: Double = v.h < 0 ? 0.2 : 0.065
         let toned = l + v.s * shadowGain * lows + v.h * highlightGain * highs
         color = color.map { unit(l > 0.0001 ? $0 * (toned / l) : $0 + (toned - l)) }
+        color = (0..<3).map { curve(curve(color[$0], v.curves[0]), v.curves[$0 + 1]) }
         if v.v != 0 {
           let chroma = color.max()! - color.min()!
           var skin = 0.0
@@ -3375,6 +3533,7 @@ final class AdjustVideoEffectTests: XCTestCase {
           let grey = luma(color)
           color = color.map { unit(grey + ($0 - grey) * (1 + amount)) }
         }
+        if colorMix { color = mixColors(color) }
         for k in 0..<3 { out[(yi * width + xi) * 3 + k] = color[k] }
       }
     }

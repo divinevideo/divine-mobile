@@ -9444,6 +9444,54 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTuneSharpen => 'Keskinlik';
 
   @override
+  String get videoEditorTuneColor => 'Renk';
+
+  @override
+  String get videoEditorTuneCurve => 'Eğri';
+
+  @override
+  String get videoEditorTuneLightness => 'Açıklık';
+
+  @override
+  String get videoEditorTuneColorRed => 'Kırmızı';
+
+  @override
+  String get videoEditorTuneColorOrange => 'Turuncu';
+
+  @override
+  String get videoEditorTuneColorYellow => 'Sarı';
+
+  @override
+  String get videoEditorTuneColorGreen => 'Yeşil';
+
+  @override
+  String get videoEditorTuneColorAqua => 'Su mavisi';
+
+  @override
+  String get videoEditorTuneColorBlue => 'Mavi';
+
+  @override
+  String get videoEditorTuneColorPurple => 'Mor';
+
+  @override
+  String get videoEditorTuneColorMagenta => 'Macenta';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RGB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => 'Siyahlar';
+
+  @override
+  String get videoEditorTuneCurveMidtones => 'Orta tonlar';
+
+  @override
+  String get videoEditorTuneCurveWhites => 'Beyazlar';
+
+  @override
+  String get videoEditorTuneChanged => 'Değiştirildi';
+
+  @override
   String get videoEditorAudioLabel => 'Ses';
 
   @override

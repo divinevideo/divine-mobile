@@ -9530,6 +9530,54 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorTuneSharpen => 'شارپنس';
 
   @override
+  String get videoEditorTuneColor => 'رنگ';
+
+  @override
+  String get videoEditorTuneCurve => 'منحنی';
+
+  @override
+  String get videoEditorTuneLightness => 'ہلکا پن';
+
+  @override
+  String get videoEditorTuneColorRed => 'سرخ';
+
+  @override
+  String get videoEditorTuneColorOrange => 'نارنجی';
+
+  @override
+  String get videoEditorTuneColorYellow => 'پیلا';
+
+  @override
+  String get videoEditorTuneColorGreen => 'سبز';
+
+  @override
+  String get videoEditorTuneColorAqua => 'فیروزی';
+
+  @override
+  String get videoEditorTuneColorBlue => 'نیلا';
+
+  @override
+  String get videoEditorTuneColorPurple => 'جامنی';
+
+  @override
+  String get videoEditorTuneColorMagenta => 'میجنٹا';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RGB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => 'سیاہ حصے';
+
+  @override
+  String get videoEditorTuneCurveMidtones => 'درمیانی ٹونز';
+
+  @override
+  String get videoEditorTuneCurveWhites => 'سفید حصے';
+
+  @override
+  String get videoEditorTuneChanged => 'تبدیل شدہ';
+
+  @override
   String get videoEditorAudioLabel => 'آڈیو';
 
   @override

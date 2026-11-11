@@ -9673,6 +9673,54 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorTuneSharpen => 'Netteté';
 
   @override
+  String get videoEditorTuneColor => 'Couleur';
+
+  @override
+  String get videoEditorTuneCurve => 'Courbe';
+
+  @override
+  String get videoEditorTuneLightness => 'Luminance';
+
+  @override
+  String get videoEditorTuneColorRed => 'Rouge';
+
+  @override
+  String get videoEditorTuneColorOrange => 'Orange';
+
+  @override
+  String get videoEditorTuneColorYellow => 'Jaune';
+
+  @override
+  String get videoEditorTuneColorGreen => 'Vert';
+
+  @override
+  String get videoEditorTuneColorAqua => 'Turquoise';
+
+  @override
+  String get videoEditorTuneColorBlue => 'Bleu';
+
+  @override
+  String get videoEditorTuneColorPurple => 'Violet';
+
+  @override
+  String get videoEditorTuneColorMagenta => 'Magenta';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RVB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => 'Noirs';
+
+  @override
+  String get videoEditorTuneCurveMidtones => 'Tons moyens';
+
+  @override
+  String get videoEditorTuneCurveWhites => 'Blancs';
+
+  @override
+  String get videoEditorTuneChanged => 'Modifié';
+
+  @override
   String get videoEditorAudioLabel => 'Audio';
 
   @override

@@ -9571,6 +9571,54 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTuneSharpen => 'Scherpte';
 
   @override
+  String get videoEditorTuneColor => 'Kleur';
+
+  @override
+  String get videoEditorTuneCurve => 'Curve';
+
+  @override
+  String get videoEditorTuneLightness => 'Luminantie';
+
+  @override
+  String get videoEditorTuneColorRed => 'Rood';
+
+  @override
+  String get videoEditorTuneColorOrange => 'Oranje';
+
+  @override
+  String get videoEditorTuneColorYellow => 'Geel';
+
+  @override
+  String get videoEditorTuneColorGreen => 'Groen';
+
+  @override
+  String get videoEditorTuneColorAqua => 'Aqua';
+
+  @override
+  String get videoEditorTuneColorBlue => 'Blauw';
+
+  @override
+  String get videoEditorTuneColorPurple => 'Paars';
+
+  @override
+  String get videoEditorTuneColorMagenta => 'Magenta';
+
+  @override
+  String get videoEditorTuneCurveRgb => 'RGB';
+
+  @override
+  String get videoEditorTuneCurveBlacks => 'Zwarten';
+
+  @override
+  String get videoEditorTuneCurveMidtones => 'Middentonen';
+
+  @override
+  String get videoEditorTuneCurveWhites => 'Witten';
+
+  @override
+  String get videoEditorTuneChanged => 'Gewijzigd';
+
+  @override
   String get videoEditorAudioLabel => 'Audio';
 
   @override
