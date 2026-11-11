@@ -11,6 +11,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as models show AspectRatio;
 import 'package:models/models.dart' show NativeProofData;
+import 'package:openvine/constants/clip_library_constants.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/clip_gallery_backup.dart';
@@ -921,6 +922,68 @@ void main() {
           expect(result, same(clips));
         },
       );
+
+      test(
+        'rebuilds a thumbnail whose file is gone while the video is there',
+        () async {
+          final clip = clipWithoutAssets('evicted');
+          File(clip.video!.file!.path).writeAsBytesSync(const [0, 1, 2, 3]);
+          final ghost = File(p.join(documentsDir.path, 'ghost.jpg'))
+            ..writeAsBytesSync(const [0]);
+          final missingThumbnail = p.join(documentsDir.path, 'gone.jpg');
+          await service.saveClip(
+            clip.copyWith(
+              thumbnailPath: missingThumbnail,
+              ghostFramePath: ghost.path,
+              assetRecoveryAttempts: 2,
+            ),
+          );
+
+          final clips = await service.recoverMissingAssets(
+            await service.getAllClips(),
+          );
+
+          final recovered = clips.single;
+          expect(recovered.thumbnailPath, isNot(missingThumbnail));
+          expect(File(recovered.thumbnailPath!).existsSync(), isTrue);
+          expect(recovered.ghostFramePath, ghost.path);
+          // A recovered clip starts over, should its thumbnail go again.
+          expect(recovered.assetRecoveryAttempts, 0);
+        },
+      );
+
+      test('gives up on a clip after the last attempt', () async {
+        await service.saveClip(clipWithoutAssets('gone'));
+
+        for (var load = 0; load < 5; load++) {
+          await service.recoverMissingAssets(await service.getAllClips());
+        }
+
+        final clip = (await service.getAllClips()).single;
+        expect(
+          clip.assetRecoveryAttempts,
+          ClipLibraryConstants.maxAssetRecoveryAttempts,
+        );
+        expect(ClipLibraryService.needsAssetRecovery(clip), isFalse);
+      });
+
+      test('leaves a stop-motion clip without a ghost frame alone', () {
+        final clip = DivineVideoClip(
+          id: 'sm_clip',
+          stopMotionFrames: const [
+            StopMotionClipFrame(
+              path: '/tmp/frame0.jpg',
+              duration: Duration(milliseconds: 167),
+            ),
+          ],
+          duration: const Duration(milliseconds: 167),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+
+        expect(ClipLibraryService.needsAssetRecovery(clip), isFalse);
+      });
     });
 
     group('getAllClips', () {

@@ -47,6 +47,7 @@ void main() {
             'trimStartMs': 10,
             'id': 'clip',
             'thumbnailPath': 'new.jpg',
+            'assetRecoveryAttempts': 1,
           },
         ],
       );

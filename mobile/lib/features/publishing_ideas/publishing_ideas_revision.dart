@@ -24,6 +24,7 @@ const _presentationOnly = {
   'thumbnailTimestampMs',
   'proofManifestJson',
   'ghostFramePath',
+  'assetRecoveryAttempts',
   'lensMetadata',
   'libraryTitle',
   'recordedAt',
