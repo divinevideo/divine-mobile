@@ -258,7 +258,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('1 new'));
+      await tester.tap(find.byType(NewCommentsPill));
 
       expect(scrolled, isTrue);
       verifyInOrder([
@@ -687,6 +687,7 @@ void main() {
     });
 
     testWidgets('sort toggle switches between Top and Recent', (tester) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
       final updates = StreamController<CommentsListState>();
       addTearDown(updates.close);
       const top = CommentsListState();
@@ -706,8 +707,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Top'), findsOneWidget);
-      await tester.tap(find.text('Top'));
+      expect(find.text(l10n.commentsSortTop), findsOneWidget);
+      await tester.tap(find.text(l10n.commentsSortTop));
       verify(
         () => mockListBloc.add(
           any(
@@ -723,8 +724,8 @@ void main() {
       updates.add(recent);
       await tester.pump();
 
-      expect(find.text('Recent'), findsOneWidget);
-      await tester.tap(find.text('Recent'));
+      expect(find.text(l10n.commentsSortRecent), findsOneWidget);
+      await tester.tap(find.text(l10n.commentsSortRecent));
       verify(
         () => mockListBloc.add(
           any(
@@ -1061,7 +1062,7 @@ void main() {
     });
 
     group('threaded comments', () {
-      testWidgets('renders nested reply with indentation', (tester) async {
+      testWidgets('nests a reply under its parent in Recent', (tester) async {
         final parent = CommentBuilder()
             .withId(TestCommentIds.comment1Id)
             .withAuthorPubkey(TestCommentIds.author1Pubkey)
@@ -1081,6 +1082,7 @@ void main() {
           rootEventId: testVideoEventId,
           rootAuthorPubkey: testVideoAuthorPubkey,
           status: CommentsStatus.success,
+          sortMode: CommentsSortMode.newest,
           commentsById: {parent.id: parent, reply.id: reply},
         );
 
@@ -1088,8 +1090,14 @@ void main() {
         await tester.pump();
 
         expect(find.text('Parent comment'), findsOneWidget);
-        expect(find.text('Reply comment'), findsOneWidget);
         expect(find.byType(CommentItem), findsNWidgets(2));
+        final replyItem = tester.widget<CommentItem>(
+          find.ancestor(
+            of: find.text('Reply comment'),
+            matching: find.byType(CommentItem),
+          ),
+        );
+        expect(replyItem.depth, 1);
       });
     });
 
