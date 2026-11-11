@@ -13,6 +13,7 @@ import 'package:openvine/screens/auth/reset_password.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -148,6 +149,31 @@ void main() {
           reason: 'registered route $template was rewritten from $location',
         );
       }
+    });
+
+    // A skipped location keeps its query, and the auth links carry their
+    // token, and the reset link the account's email, in it (#10385).
+    test('logs a skipped location without its query values', () async {
+      await LogCaptureService().clearAllLogs();
+
+      normalizedPathFor(
+        routes,
+        Uri.parse('${EmailVerificationScreen.path}?token=SECRETTOKEN'),
+      );
+      normalizedPathFor(
+        routes,
+        Uri.parse(
+          '${ResetPasswordScreen.path}?token=SECRETTOKEN'
+          '&email=someone%40example.com',
+        ),
+      );
+
+      final logged = [
+        for (final entry in LogCaptureService().getRecentLogs()) entry.message,
+      ].join('\n');
+      expect(logged, contains('skipping normalization'));
+      expect(logged, isNot(contains('SECRETTOKEN')));
+      expect(logged, isNot(contains('someone')));
     });
 
     test('canonicalizes a negative index on its own route', () {
