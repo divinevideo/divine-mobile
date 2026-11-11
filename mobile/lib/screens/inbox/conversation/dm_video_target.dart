@@ -25,12 +25,28 @@ class DmVideoTarget {
   /// Canonical web URL for copying or sharing this video.
   String get canonicalUrl => 'https://divine.video/video/$stableId';
 
-  /// Author-scoped repository route used to disambiguate addressable videos.
+  /// The repository route this video resolves by.
+  ///
+  /// An addressable share with a known author resolves by its coordinate
+  /// alone: the bare d tag names no author, and another account's video can
+  /// share it (#10384).
+  String get routeId => _authorScopedCoordinate ?? stableId;
+
+  /// Repository routes tried after [routeId].
   List<String> get fallbackRouteIds {
+    if (_authorScopedCoordinate != null) return const [];
     final author = authorPubkey;
     final kind = videoKind;
     if (author == null || kind == null) return const [];
     return ['$kind:$author:$stableId'];
+  }
+
+  String? get _authorScopedCoordinate {
+    final author = authorPubkey;
+    final kind = videoKind;
+    if (author == null || kind == null) return null;
+    if (!NIP71VideoKinds.isAddressableVideoKind(kind)) return null;
+    return '$kind:$author:$stableId';
   }
 
   @override
@@ -67,10 +83,16 @@ DmVideoTarget? resolveDmVideoTarget({
   final structuredTarget = _targetFromRef(sharedVideoRef);
 
   if (urlStableId != null) {
+    // An addressable citation of another d tag names a different video, so
+    // its author must not scope this URL's lookup.
+    final citesUrl =
+        structuredTarget != null &&
+        (sharedVideoRef?.isAddressable != true ||
+            structuredTarget.stableId == urlStableId);
     return DmVideoTarget(
       stableId: urlStableId,
-      authorPubkey: structuredTarget?.authorPubkey,
-      videoKind: structuredTarget?.videoKind,
+      authorPubkey: citesUrl ? structuredTarget.authorPubkey : null,
+      videoKind: citesUrl ? structuredTarget.videoKind : null,
     );
   }
 

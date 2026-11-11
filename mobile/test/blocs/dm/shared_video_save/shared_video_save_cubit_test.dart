@@ -7,6 +7,8 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/dm/shared_video_save/shared_video_save_cubit.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -17,6 +19,8 @@ import '../../../builders/video_event_builder.dart';
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
 
 void main() {
   const currentPubkey =
@@ -34,6 +38,7 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(<String>[]);
+    registerFallbackValue(<Filter>[]);
   });
 
   setUp(() {
@@ -59,7 +64,7 @@ void main() {
         ).build();
         when(
           () => videosRepository.fetchVideoWithStatsForRouteId(
-            target.stableId,
+            target.routeId,
             fallbackRouteIds: target.fallbackRouteIds,
           ),
         ).thenAnswer((_) async => video);
@@ -87,7 +92,7 @@ void main() {
         ).build();
         when(
           () => videosRepository.fetchVideoWithStatsForRouteId(
-            target.stableId,
+            target.routeId,
             fallbackRouteIds: target.fallbackRouteIds,
           ),
         ).thenAnswer((_) async => video);
@@ -127,7 +132,7 @@ void main() {
       build: () {
         when(
           () => videosRepository.fetchVideoWithStatsForRouteId(
-            target.stableId,
+            target.routeId,
             fallbackRouteIds: target.fallbackRouteIds,
           ),
         ).thenThrow(StateError('closed'));
@@ -144,7 +149,7 @@ void main() {
       final completer = Completer<VideoEvent?>();
       when(
         () => videosRepository.fetchVideoWithStatsForRouteId(
-          target.stableId,
+          target.routeId,
           fallbackRouteIds: target.fallbackRouteIds,
         ),
       ).thenAnswer((_) => completer.future);
@@ -157,7 +162,7 @@ void main() {
 
       verify(
         () => videosRepository.fetchVideoWithStatsForRouteId(
-          target.stableId,
+          target.routeId,
           fallbackRouteIds: target.fallbackRouteIds,
         ),
       ).called(1);
@@ -166,5 +171,66 @@ void main() {
       await Future.wait([first, second]);
       expect(cubit.state.status, SharedVideoSaveStatus.unavailable);
     });
+
+    test("reports unavailable rather than saving another author's video "
+        'under the same d tag', () async {
+      const otherEventId =
+          'b2b2f6b60119d9521934a691347d9f78'
+          'e8770b56da16bb255ee77ac112b4c1f6';
+      // Divine's d tag is the sha256 of the uploaded file, so two accounts
+      // that upload the same bytes share one.
+      const dTag =
+          'ea331e1d9e63bb0bb35ff888f142a888'
+          '4fd0859ce2428ea3ec33613fa7629478';
+      final nostrClient = _MockNostrClient();
+      _answerQueriesFrom(nostrClient, [
+        Event.fromJson({
+          'id': otherEventId,
+          'pubkey': currentPubkey,
+          'created_at': 1739350100,
+          'kind': 34236,
+          'tags': [
+            ['d', dTag],
+            ['url', 'https://example.com/other.mp4'],
+          ],
+          'content': '',
+          'sig': '',
+        }),
+      ]);
+      final repository = VideosRepository(nostrClient: nostrClient);
+
+      // Positive control: the relay does hold a video under this d tag.
+      final bare = await repository.fetchVideoWithStatsForRouteId(dTag);
+      expect(bare?.id, equals(otherEventId));
+
+      final cubit = SharedVideoSaveCubit(
+        videosRepository: repository,
+        profileRepository: profileRepository,
+        currentPubkey: currentPubkey,
+      );
+      addTearDown(cubit.close);
+
+      await cubit.save(
+        const DmVideoTarget(
+          stableId: dTag,
+          authorPubkey: otherPubkey,
+          videoKind: 34236,
+        ),
+      );
+
+      expect(cubit.state.status, SharedVideoSaveStatus.unavailable);
+    });
+  });
+}
+
+/// Answers [NostrClient.queryEvents] the way a relay holding [stored] would,
+/// applying each filter with [Filter.checkEvent].
+void _answerQueriesFrom(_MockNostrClient client, List<Event> stored) {
+  when(() => client.queryEvents(any())).thenAnswer((invocation) async {
+    final filters = invocation.positionalArguments.single as List<Filter>;
+    return [
+      for (final event in stored)
+        if (filters.any((filter) => filter.checkEvent(event))) event,
+    ];
   });
 }

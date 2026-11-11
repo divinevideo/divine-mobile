@@ -21,6 +21,7 @@ void main() {
       expect(target!.stableId, 'skate-loop');
       expect(target.authorPubkey, isNull);
       expect(target.videoKind, isNull);
+      expect(target.routeId, 'skate-loop');
       expect(target.fallbackRouteIds, isEmpty);
       expect(
         target.canonicalUrl,
@@ -42,6 +43,7 @@ void main() {
       expect(target!.stableId, eventId);
       expect(target.authorPubkey, author);
       expect(target.videoKind, 22);
+      expect(target.routeId, eventId);
       expect(target.fallbackRouteIds, ['22:$author:$eventId']);
       expect(
         target.canonicalUrl,
@@ -62,7 +64,10 @@ void main() {
       expect(target!.stableId, 'skate-loop');
       expect(target.authorPubkey, author);
       expect(target.videoKind, 34236);
-      expect(target.fallbackRouteIds, ['34236:$author:skate-loop']);
+      // The bare d tag names no author, and another account's video can
+      // share it, so an author-named share resolves by its coordinate alone.
+      expect(target.routeId, '34236:$author:skate-loop');
+      expect(target.fallbackRouteIds, isEmpty);
       expect(
         target.canonicalUrl,
         'https://divine.video/video/skate-loop',
@@ -70,8 +75,30 @@ void main() {
     });
 
     test(
-      'prefers the URL identity and retains structured routing metadata',
+      'keeps structured routing metadata when it names the URL d tag',
       () {
+        final target = resolveDmVideoTarget(
+          content: 'https://divine.video/video/skate-loop',
+          sharedVideoRef: const DmSharedVideoRef(
+            coordinateOrId: '34236:$author:skate-loop',
+            videoKind: DmSharedVideoKind.addressableShortVideo,
+          ),
+        );
+
+        expect(target, isNotNull);
+        expect(target!.stableId, 'skate-loop');
+        expect(target.authorPubkey, author);
+        expect(target.videoKind, 34236);
+        expect(target.routeId, '34236:$author:skate-loop');
+      },
+    );
+
+    test(
+      'drops structured routing metadata that names a different d tag '
+      'from the URL',
+      () {
+        // Pairing the URL's d tag with another video's author builds a
+        // coordinate that names neither video.
         final target = resolveDmVideoTarget(
           content: 'https://divine.video/video/url-stable-id',
           sharedVideoRef: const DmSharedVideoRef(
@@ -82,9 +109,10 @@ void main() {
 
         expect(target, isNotNull);
         expect(target!.stableId, 'url-stable-id');
-        expect(target.authorPubkey, author);
-        expect(target.videoKind, 34236);
-        expect(target.fallbackRouteIds, ['34236:$author:url-stable-id']);
+        expect(target.authorPubkey, isNull);
+        expect(target.videoKind, isNull);
+        expect(target.routeId, 'url-stable-id');
+        expect(target.fallbackRouteIds, isEmpty);
       },
     );
 
@@ -182,7 +210,8 @@ void main() {
       expect(target!.stableId, equals(dTag));
       expect(target.authorPubkey, equals(author));
       expect(target.videoKind, equals(34236));
-      expect(target.fallbackRouteIds, equals(['34236:$author:$dTag']));
+      expect(target.routeId, equals('34236:$author:$dTag'));
+      expect(target.fallbackRouteIds, isEmpty);
       expect(
         target.canonicalUrl,
         equals('https://divine.video/video/$dTag'),

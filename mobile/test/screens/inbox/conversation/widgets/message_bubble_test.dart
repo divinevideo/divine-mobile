@@ -51,6 +51,9 @@ String _longestRenderedText(WidgetTester tester) {
 
 const _testHexPubkey =
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
+/// The route an author-named share of `abc123` resolves by (#10384).
+const _testCoordinate = '34236:$_testHexPubkey:abc123';
 const _testEventId =
     'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210';
 
@@ -1974,7 +1977,7 @@ void main() {
       ) async {
         when(
           () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-            'abc123',
+            _testCoordinate,
             fallbackRouteIds: any(named: 'fallbackRouteIds'),
           ),
         ).thenAnswer((_) async => testVideo);
@@ -2000,7 +2003,7 @@ void main() {
         expect(find.textContaining('nostr:'), findsNothing);
         verify(
           () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-            'abc123',
+            _testCoordinate,
             fallbackRouteIds: any(named: 'fallbackRouteIds'),
           ),
         ).called(greaterThanOrEqualTo(1));
@@ -2113,7 +2116,7 @@ void main() {
         (tester) async {
           when(
             () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-              'abc123',
+              _testCoordinate,
               fallbackRouteIds: any(named: 'fallbackRouteIds'),
             ),
           ).thenAnswer((_) async => testVideo);
@@ -2143,7 +2146,7 @@ void main() {
       ) async {
         when(
           () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-            'abc123',
+            _testCoordinate,
             fallbackRouteIds: any(named: 'fallbackRouteIds'),
           ),
         ).thenAnswer((_) async => testVideo);
@@ -2858,7 +2861,7 @@ void main() {
         (tester) async {
           when(
             () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-              'abc123',
+              _testCoordinate,
               fallbackRouteIds: any(named: 'fallbackRouteIds'),
             ),
           ).thenAnswer((_) async => testVideo);
@@ -2917,7 +2920,7 @@ void main() {
         (tester) async {
           when(
             () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-              'abc123',
+              _testCoordinate,
               fallbackRouteIds: any(named: 'fallbackRouteIds'),
             ),
           ).thenAnswer((_) async => testVideo);
@@ -2951,7 +2954,7 @@ void main() {
         (tester) async {
           when(
             () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-              'abc123',
+              _testCoordinate,
               fallbackRouteIds: any(named: 'fallbackRouteIds'),
             ),
           ).thenAnswer((_) async => testVideo);
@@ -3026,7 +3029,7 @@ void main() {
         (tester) async {
           when(
             () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-              'abc123',
+              _testCoordinate,
               fallbackRouteIds: any(named: 'fallbackRouteIds'),
             ),
           ).thenAnswer((_) async => testVideo);
@@ -3086,7 +3089,7 @@ void main() {
         ) async {
           when(
             () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-              'abc123',
+              _testCoordinate,
               fallbackRouteIds: any(named: 'fallbackRouteIds'),
             ),
           ).thenAnswer((_) async => testVideo);
