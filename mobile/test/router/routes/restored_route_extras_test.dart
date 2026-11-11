@@ -376,7 +376,7 @@ void main() {
       const slug = 'sample-app';
       final screen = await buildFromUrl(
         tester,
-        withRef(appsRoutes),
+        appsRoutes(),
         AppDetailScreen.routeName,
         location: AppDetailScreen.pathForSlug(slug),
         pathParameters: const {'slug': slug},

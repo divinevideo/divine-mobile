@@ -29,8 +29,8 @@ void main() {
       (tester) async {
         final mockGoRouter = MockGoRouter();
         when(
-          () => mockGoRouter.push(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async => null);
+          () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
 
         await tester.pumpWidget(
           ProviderScope(
@@ -82,7 +82,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final captured = verify(
-          () => mockGoRouter.push(
+          () => mockGoRouter.push<void>(
             NostrAppSandboxScreen.pathForAppId('primal-app'),
             extra: captureAny(named: 'extra'),
           ),
@@ -103,8 +103,8 @@ void main() {
 
         final mockGoRouter = MockGoRouter();
         when(
-          () => mockGoRouter.push(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async => null);
+          () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
 
         await tester.pumpWidget(
           ProviderScope(
@@ -141,7 +141,9 @@ void main() {
         expect(launcher.launched, hasLength(1));
         expect(launcher.launched.single.url, 'https://verifier.divine.video/');
         expect(launcher.launched.single.useExternalApplication, isTrue);
-        verifyNever(() => mockGoRouter.push(any(), extra: any(named: 'extra')));
+        verifyNever(
+          () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+        );
       },
     );
   });
