@@ -10,6 +10,8 @@ import 'package:videos_repository/videos_repository.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
+class _MockVideoLocalStorage extends Mock implements VideoLocalStorage {}
+
 class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {
   // A live client reports false; an unstubbed mock getter would return null.
   @override
@@ -106,6 +108,45 @@ void main() {
       final result = await repo.lookupVideoForRouteId('34236:$_pubkey:$_dTag');
 
       expect(result, isA<VideoRouteMissing>());
+    });
+
+    test('reports a route held to an author as missing, not hidden, when '
+        "only another author's cached video squats on its id", () async {
+      const otherPubkey =
+          'e95aa8fc0eff8e488952495b8064991d27fb96ed8652f12cdedc5a4e8b5ae540';
+      const otherEventId =
+          'b2440ed755f6a4ccabf91adaa28e90a3940fdabd2537110ad945f8d41b2e22e1';
+      final squatter = Event.fromJson({
+        ..._offHostVideo().toJson(),
+        'id': otherEventId,
+        'pubkey': otherPubkey,
+        'tags': [
+          ['d', _eventId],
+          ['url', 'https://example.com/squat.mp4'],
+        ],
+      });
+      final storage = _MockVideoLocalStorage();
+      when(() => storage.getEventsByIds(any())).thenAnswer((_) async => []);
+      when(
+        () => storage.getEventsByDTag(_eventId),
+      ).thenAnswer((_) async => [squatter]);
+
+      // Hides every video, so only the author check can keep the squatter
+      // out of the hidden-by-filter result.
+      final repo = VideosRepository(
+        nostrClient: nostr,
+        funnelcakeApiClient: funnelcake,
+        localStorage: storage,
+        contentFilter: (_) => true,
+      );
+
+      final result = await repo.lookupVideoForRouteId(
+        _eventId,
+        expectedAuthor: _pubkey,
+      );
+
+      expect(result, isA<VideoRouteMissing>());
+      verify(() => storage.getEventsByDTag(_eventId)).called(1);
     });
 
     test('reports a genuinely absent video as missing', () async {
