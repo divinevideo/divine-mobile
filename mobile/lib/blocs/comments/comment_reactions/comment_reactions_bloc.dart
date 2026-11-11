@@ -76,11 +76,21 @@ class CommentReactionsBloc
   final String _rootEventId;
   final String? _rootAddressableId;
 
-  // A pending read may finish after the viewer changes their vote. Keep the
-  // read in flight for deduplication, while ignoring its stale result.
-  final _voteReads = <String, bool>{};
+  /// Vote reads in flight. A vote on the comment marks its read stale: the
+  /// entry stays so the id is not read twice, the result is dropped, and the
+  /// comment is read again once the read and any publish finish.
+  final _voteReads = <String, _VoteRead>{};
+
+  /// Comments with a vote publishing. A set is enough because
+  /// [sequentialByKey] runs one vote per comment at a time.
   final _publishingVotes = <String>{};
+
+  /// Comments whose viewer vote this sheet confirmed. The relay's copy of
+  /// that vote is older, so it is not read again.
   final _confirmedLocalVotes = <String>{};
+
+  /// Reads to send when a comment's publish finishes. An entry exists only
+  /// while the comment is in [_publishingVotes].
   final _voteRefreshAfterPublish = <String, CommentVoteCountsFetchRequested>{};
 
   /// Logs [error] to the unified log and forwards through [addError]. Wraps
@@ -144,12 +154,14 @@ class CommentReactionsBloc
     final commentIds = <String>[];
     for (final id in event.commentIds) {
       if (_voteReads.containsKey(id)) continue;
-      _voteReads[id] = !_publishingVotes.contains(id);
+      _voteReads[id] = _publishingVotes.contains(id)
+          ? _VoteRead.stale
+          : _VoteRead.current;
       commentIds.add(id);
     }
     if (commentIds.isEmpty) return;
 
-    bool canApply(String id) => _voteReads[id] == true;
+    bool canApply(String id) => _voteReads[id] == _VoteRead.current;
 
     Future<void> loadCounts() async {
       final counts = await _likesRepository.getVoteCounts(
@@ -213,7 +225,7 @@ class CommentReactionsBloc
       );
     } finally {
       for (final id in commentIds) {
-        final invalidated = _voteReads.remove(id) == false;
+        final invalidated = _voteReads.remove(id) == _VoteRead.stale;
         if (invalidated && !isClosed) {
           final refresh = CommentVoteCountsFetchRequested(
             [id],
@@ -250,7 +262,9 @@ class CommentReactionsBloc
 
     final commentId = event.commentId;
     _publishingVotes.add(commentId);
-    if (_voteReads.containsKey(commentId)) _voteReads[commentId] = false;
+    if (_voteReads.containsKey(commentId)) {
+      _voteReads[commentId] = _VoteRead.stale;
+    }
     final isUpvote = event.vote == Vote.up;
 
     final wasUpvoted = state.upvotedCommentIds.contains(commentId);
@@ -481,3 +495,6 @@ class CommentReactionsBloc
     }
   }
 }
+
+/// Whether an in-flight vote read may still be applied.
+enum _VoteRead { current, stale }
