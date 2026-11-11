@@ -145,8 +145,8 @@ void main() {
         });
 
         // RoutePaths.appDetailForSlug does not encode the slug, so for an id
-        // that needs escaping the typed location is the safe one. Nothing in
-        // the app navigates to a detail page by slug today.
+        // that needs escaping the typed location is the safe one. Its one
+        // caller, buildRoute in page_context_provider.dart, encodes first.
         test('the detail location encodes the slug "$id"', () {
           expect(
             AppDetailRouteData(slug: id).location,
