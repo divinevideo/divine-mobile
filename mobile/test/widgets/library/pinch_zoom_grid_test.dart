@@ -52,10 +52,13 @@ void main() {
                           PinchZoomUnscaled(
                             child: Align(
                               alignment: Alignment.bottomLeft,
-                              child: SizedBox(
-                                key: ValueKey('badge-$i'),
-                                width: 40,
-                                height: 20,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: SizedBox(
+                                  key: ValueKey('badge-$i'),
+                                  width: 40,
+                                  height: 20,
+                                ),
                               ),
                             ),
                           ),
@@ -217,8 +220,8 @@ void main() {
           final badgeRect = tester.getRect(badge);
           expect(badgeRect.width, closeTo(40, 0.01));
           expect(badgeRect.height, closeTo(20, 0.01));
-          expect(badgeRect.left, closeTo(tileRect.left, 0.01));
-          expect(badgeRect.bottom, closeTo(tileRect.bottom, 0.01));
+          expect(badgeRect.left, closeTo(tileRect.left + 8, 0.01));
+          expect(badgeRect.bottom, closeTo(tileRect.bottom - 8, 0.01));
 
           // getRect follows applyPaintTransform; pin what paint draws too.
           final layerScale = tileRect.width / (800 / layoutColumns);
