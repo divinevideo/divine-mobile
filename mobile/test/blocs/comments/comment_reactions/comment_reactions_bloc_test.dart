@@ -197,7 +197,8 @@ void main() {
               initialCounts.complete((upvotes: {id: 20}, downvotes: {id: 5}));
               await pumpEventQueue();
               expect(reads, 1);
-              expect(bloc.state.commentUpvoteCounts[id], 1);
+              // The stale read is dropped, and no total is guessed meanwhile.
+              expect(bloc.state.commentUpvoteCounts[id], isNull);
               publish.complete(validId('vote'));
             } else {
               // Rollback can finish before the invalidated read returns.
@@ -312,6 +313,10 @@ void main() {
           ).thenAnswer((_) async => 'like-event-id');
         },
         build: createBloc,
+        seed: () => CommentReactionsState(
+          commentUpvoteCounts: {validId('c1'): 4},
+          commentDownvoteCounts: {validId('c1'): 0},
+        ),
         act: (b) => b.add(
           CommentVoteToggled(
             commentId: validId('c1'),
@@ -326,7 +331,7 @@ void main() {
                 'isUpvoted',
                 true,
               )
-              .having((s) => s.commentUpvoteCounts[validId('c1')], 'up', 1),
+              .having((s) => s.commentUpvoteCounts[validId('c1')], 'up', 5),
         ],
         verify: (_) {
           verify(
@@ -400,6 +405,79 @@ void main() {
           expect(b.state.upvotedCommentIds.contains(validId('c3')), isTrue);
         },
       );
+    });
+
+    group('CommentVoteToggled (unknown totals)', () {
+      void stubLike(Future<String> Function() answer) {
+        when(
+          () => mockLikesRepository.likeEvent(
+            eventId: any(named: 'eventId'),
+            authorPubkey: any(named: 'authorPubkey'),
+            targetKind: any(named: 'targetKind'),
+          ),
+        ).thenAnswer((_) => answer());
+      }
+
+      test('shows no guessed total, then reads both after the vote', () async {
+        final id = validId('c1');
+        final publish = Completer<String>();
+        stubLike(() => publish.future);
+        when(() => mockLikesRepository.getVoteCounts([id])).thenAnswer(
+          (_) async => (upvotes: {id: 8}, downvotes: {id: 2}),
+        );
+
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(
+          CommentVoteToggled(
+            commentId: id,
+            authorPubkey: validId('author1'),
+            vote: Vote.up,
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(bloc.state.upvotedCommentIds, {id});
+        expect(bloc.state.commentUpvoteCounts, isNot(contains(id)));
+        expect(bloc.state.commentDownvoteCounts, isNot(contains(id)));
+        verifyNever(() => mockLikesRepository.getVoteCounts([id]));
+
+        publish.complete(validId('vote'));
+        await pumpEventQueue();
+
+        expect(bloc.state.commentUpvoteCounts[id], 8);
+        expect(bloc.state.commentDownvoteCounts[id], 2);
+        expect(bloc.state.upvotedCommentIds, {id});
+      });
+
+      test('a failed vote leaves an unread total unread', () async {
+        final id = validId('c1');
+        stubLike(
+          () => Future.error(const LikesRepositoryException('offline')),
+        );
+        when(
+          () => mockLikesRepository.getVoteCounts([id]),
+        ).thenThrow(const LikesRepositoryException('offline'));
+
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(
+          CommentVoteToggled(
+            commentId: id,
+            authorPubkey: validId('author1'),
+            vote: Vote.up,
+          ),
+        );
+        await pumpEventQueue();
+
+        expect(bloc.state.error, ReactionsError.voteFailed);
+        expect(bloc.state.upvotedCommentIds, isEmpty);
+        // Both totals were unknown before the tap; a rollback to 0 would
+        // render "0" on both arrows and stop the list asking again.
+        expect(bloc.state.commentUpvoteCounts, isNot(contains(id)));
+        expect(bloc.state.commentDownvoteCounts, isNot(contains(id)));
+        verify(() => mockLikesRepository.getVoteCounts([id])).called(1);
+      });
     });
 
     group('CommentVoteToggled (downvote)', () {

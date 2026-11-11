@@ -231,6 +231,14 @@ class CommentReactionsBloc
     }
   }
 
+  /// [counts] with [id] set back to [count], or without [id] when it was
+  /// never loaded.
+  static Map<String, int> _restoreCount(
+    Map<String, int> counts,
+    String id,
+    int? count,
+  ) => count == null ? ({...counts}..remove(id)) : {...counts, id: count};
+
   Future<void> _onVoteToggled(
     CommentVoteToggled event,
     Emitter<CommentReactionsState> emit,
@@ -249,8 +257,16 @@ class CommentReactionsBloc
     final wasDownvoted = state.downvotedCommentIds.contains(commentId);
     final hadSameVote = isUpvote ? wasUpvoted : wasDownvoted;
     final hadOppositeVote = isUpvote ? wasDownvoted : wasUpvoted;
-    final prevUpCount = state.commentUpvoteCounts[commentId] ?? 0;
-    final prevDownCount = state.commentDownvoteCounts[commentId] ?? 0;
+    // Null means the total never loaded. Adjusting it would show a guess as
+    // a real count, so leave it unknown and read both once the vote settles.
+    final prevUpCount = state.commentUpvoteCounts[commentId];
+    final prevDownCount = state.commentDownvoteCounts[commentId];
+    if (prevUpCount == null || prevDownCount == null) {
+      _voteRefreshAfterPublish[commentId] ??= CommentVoteCountsFetchRequested(
+        [commentId],
+        addressableIdsByCommentId: {commentId: ?event.addressableId},
+      );
+    }
 
     // Optimistic update.
     final upIds = Set<String>.from(state.upvotedCommentIds);
@@ -265,15 +281,19 @@ class CommentReactionsBloc
     final oppositeCounts = isUpvote ? downCounts : upCounts;
     final prevOppositeCount = isUpvote ? prevDownCount : prevUpCount;
 
+    void adjust(Map<String, int> counts, int? previous, int delta) {
+      if (previous != null) counts[commentId] = max(0, previous + delta);
+    }
+
     if (hadSameVote) {
       sameIds.remove(commentId);
-      sameCounts[commentId] = max(0, prevSameCount - 1);
+      adjust(sameCounts, prevSameCount, -1);
     } else {
       sameIds.add(commentId);
-      sameCounts[commentId] = prevSameCount + 1;
+      adjust(sameCounts, prevSameCount, 1);
       if (hadOppositeVote) {
         oppositeIds.remove(commentId);
-        oppositeCounts[commentId] = max(0, prevOppositeCount - 1);
+        adjust(oppositeCounts, prevOppositeCount, -1);
       }
     }
 
@@ -379,11 +399,16 @@ class CommentReactionsBloc
           downvotedCommentIds: Set<String>.from(state.downvotedCommentIds)
             ..addAll(wasDownvoted ? {commentId} : {})
             ..removeAll(wasDownvoted ? {} : {commentId}),
-          commentUpvoteCounts: Map<String, int>.from(state.commentUpvoteCounts)
-            ..[commentId] = prevUpCount,
-          commentDownvoteCounts: Map<String, int>.from(
+          commentUpvoteCounts: _restoreCount(
+            state.commentUpvoteCounts,
+            commentId,
+            prevUpCount,
+          ),
+          commentDownvoteCounts: _restoreCount(
             state.commentDownvoteCounts,
-          )..[commentId] = prevDownCount,
+            commentId,
+            prevDownCount,
+          ),
           error: ReactionsError.voteFailed,
         ),
       );
