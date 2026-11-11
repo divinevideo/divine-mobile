@@ -33,6 +33,11 @@ class NostrEvents extends Table {
   /// the tags JSON of every (pubkey, kind) row.
   TextColumn get dTag => text().nullable().named('d_tag')();
 
+  /// Whether the exact signature in this row was verified on the client.
+  BoolColumn get signatureVerified => boolean()
+      .named('signature_verified')
+      .withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 

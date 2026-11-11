@@ -152,8 +152,11 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     await customInsert(
       'INSERT OR REPLACE INTO event '
       '(id, pubkey, created_at, kind, tags, content, sig, sources, '
-      'expire_at, d_tag) '
-      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'expire_at, d_tag, signature_verified) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '
+      'CASE WHEN ? THEN 1 ELSE EXISTS ( '
+      'SELECT 1 FROM event WHERE id = ? AND sig = ? '
+      'AND signature_verified = 1) END)',
       variables: [
         Variable.withString(event.id),
         Variable.withString(event.pubkey),
@@ -173,6 +176,9 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
           Variable.withString(event.dTagValue)
         else
           const Variable(null),
+        Variable.withBool(event.hasVerifiedSignature),
+        Variable.withString(event.id),
+        Variable.withString(event.sig),
       ],
       updates: {nostrEvents},
     );
@@ -206,6 +212,7 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     if (maxCreatedAt != null) {
       if (event.createdAt <= maxCreatedAt) {
         // Existing event is newer or same age, don't replace
+        await _recordVerifiedSignature(event);
         return;
       }
       // Delete every superseded version before inserting the new one. Deleting
@@ -259,6 +266,7 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     if (maxCreatedAt != null) {
       if (event.createdAt <= maxCreatedAt) {
         // Existing event is newer or same age, don't replace
+        await _recordVerifiedSignature(event);
         return;
       }
       // Delete all older versions before inserting the new one
@@ -280,6 +288,20 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     if (event.kind == 34236) {
       await db.videoMetricsDao.upsertVideoMetrics(event);
     }
+  }
+
+  /// Promotes an already-cached pair after a verified replay. Replaceable
+  /// upserts otherwise leave rows at the same timestamp untouched.
+  Future<void> _recordVerifiedSignature(Event event) async {
+    if (!event.hasVerifiedSignature) return;
+    await customUpdate(
+      'UPDATE event SET signature_verified = 1 '
+      'WHERE id = ? AND sig = ? AND signature_verified = 0',
+      variables: [
+        Variable.withString(event.id),
+        Variable.withString(event.sig),
+      ],
+    );
   }
 
   /// Batch insert or replace multiple events in a single transaction.
@@ -711,16 +733,10 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     return result.read<int>('count');
   }
 
-  /// Returns the `(id, sig)` pairs of the most recently created events,
-  /// newest first, capped at [limit].
-  ///
-  /// Used to seed the relay pool's already-verified set: every event in this
-  /// table was signature-verified before being written, so re-verifying the
-  /// same events when relays re-send them on the next cold start is wasted
-  /// work. The signature is returned alongside the id because a Nostr event
-  /// id commits to the event body but not to `sig`, so trust must be keyed by
-  /// the exact `(id, sig)` pair that was verified — an id alone would let a
-  /// replayed id carrying a forged signature bypass verification.
+  /// Returns locally verified `(id, sig)` pairs, newest first, capped at
+  /// [limit]. Cached events without a recorded check are excluded.
+  /// The signature is part of the key because an event ID commits only to
+  /// the event body.
   ///
   /// The default [limit] is intentionally large: on-device profiling showed
   /// this seed take cold-start relay verify from ~37% of startup CPU to ~1%,
@@ -729,11 +745,12 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
   /// seed cost (~SQLite read + string/set builds) is negligible against the
   /// per-event verify seconds it saves. Newest-first so the cap keeps the
   /// most-likely-re-sent events.
-  Future<List<({String id, String sig})>> getRecentEventIdSigs({
+  Future<List<({String id, String sig})>> getRecentVerifiedEventIdSigs({
     int limit = 50000,
   }) async {
     final rows = await customSelect(
-      'SELECT id, sig FROM event ORDER BY created_at DESC LIMIT ?',
+      'SELECT id, sig FROM event WHERE signature_verified = 1 '
+      'ORDER BY created_at DESC LIMIT ?',
       variables: [Variable.withInt(limit)],
       readsFrom: {nostrEvents},
     ).get();
