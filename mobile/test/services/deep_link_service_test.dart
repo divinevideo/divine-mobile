@@ -906,17 +906,22 @@ void main() {
         expect(link.toString(), equals('DeepLink(type: video, videoRef: abc)'));
       });
 
-      test('formats list deep link with full untruncated pubkey', () {
-        const pubkey =
-            'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+      test('formats list deep link with both full pubkey encodings', () {
+        // NIP-19's published pubkey test vector.
+        const hex =
+            '7e7e9c42a91bfef19fa929e5fda1b72e0ebc1a4c1141673e2794234d86addf4e';
+        const npub =
+            'npub10elfcs4fr0l0r8af98jlmgdh9c8tcxjvz9qkw038js35mp4dma8qzvjptg';
         const link = DeepLink(
           type: DeepLinkType.list,
-          listPubkey: pubkey,
+          listPubkey: hex,
           listId: 'my-vines',
         );
         expect(
           link.toString(),
-          equals('DeepLink(type: list, listPubkey: $pubkey, listId: my-vines)'),
+          equals(
+            'DeepLink(type: list, listPubkey: $npub ($hex), listId: my-vines)',
+          ),
         );
       });
 

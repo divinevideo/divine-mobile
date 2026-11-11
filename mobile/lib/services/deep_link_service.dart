@@ -108,10 +108,12 @@ class DeepLink {
         return 'DeepLink(type: search, '
             'searchTerm: ${_forLogs(searchTerm)}$indexStr)';
       case DeepLinkType.list:
-        return 'DeepLink(type: list, listPubkey: $listPubkey, '
+        return 'DeepLink(type: list, '
+            'listPubkey: ${pubkeyForLogs(listPubkey)}, '
             'listId: ${_forLogs(listId)})';
       case DeepLinkType.peopleList:
-        return 'DeepLink(type: peopleList, listPubkey: $listPubkey, '
+        return 'DeepLink(type: peopleList, '
+            'listPubkey: ${pubkeyForLogs(listPubkey)}, '
             'listId: ${_forLogs(listId)})';
       case DeepLinkType.savedVideos:
         return 'DeepLink(type: savedVideos)';
