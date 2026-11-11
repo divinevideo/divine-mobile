@@ -163,6 +163,10 @@ class _ListsGallery extends ConsumerWidget {
     final loading = videoStatus == _SourceStatus.loading || peopleLoading;
     final isEmpty =
         entries.isEmpty && !loading && !videoFailed && !peopleFailed;
+    // The people owner read fails whenever one relay is slow to settle, even
+    // though the lists came back; under a full gallery its error reads as if
+    // every card failed, so it shows only when there is nothing to show.
+    final showsPeopleReadFailure = peopleFailed && entries.isEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -174,7 +178,7 @@ class _ListsGallery extends ConsumerWidget {
           CuratedListInitializationFailure(
             onRetry: () => ref.invalidate(curatedListsStateProvider),
           ),
-        if (peopleFailed)
+        if (showsPeopleReadFailure)
           _ListReadFailure(
             onRetry: () => context.read<PeopleListsBloc>().add(
               const PeopleListsOwnerSyncRequested(),

@@ -326,9 +326,12 @@ void main() {
         expect(find.text(l10n.profileListsEmpty), findsNothing);
       });
 
-      testWidgets('people read failure keeps cached lists and offers retry', (
+      testWidgets('people read failure stays hidden behind loaded lists', (
         tester,
       ) async {
+        // A slow relay fails the strict owner read even though the lists
+        // came back; the gallery shows them without an error under them.
+        when(() => mockListService.myLists).thenReturn([_videoList('a')]);
         when(() => peopleBloc.state).thenReturn(
           PeopleListsState(
             status: PeopleListsStatus.ready,
@@ -340,6 +343,25 @@ void main() {
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
         expect(find.text('Friends'), findsOneWidget);
+        expect(find.text('Video a'), findsOneWidget);
+        expect(find.text(l10n.listErrorLoading), findsNothing);
+        expect(find.text(l10n.peopleListsAddPeopleRetry), findsNothing);
+        expect(find.text(l10n.profileListsEmpty), findsNothing);
+      });
+
+      testWidgets('people read failure with no lists offers retry', (
+        tester,
+      ) async {
+        when(() => peopleBloc.state).thenReturn(
+          const PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: owner,
+            ownerReadStatus: PeopleListsOwnerReadStatus.failed,
+          ),
+        );
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listErrorLoading), findsOneWidget);
         expect(find.text(l10n.profileListsEmpty), findsNothing);
         await tester.tap(find.text(l10n.peopleListsAddPeopleRetry));
         verify(
