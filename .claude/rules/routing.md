@@ -109,11 +109,13 @@ something here.
   `Ref`, so `build` and `redirect` read providers with
   `ProviderScope.containerOf(context, listen: false)`. With no `ProviderScope`
   above the router that throws, so a test of such a route pumps one.
-- **Shells keep `notifyRootObserver: false` by hand.** `@TypedStatefulShellRoute`
-  accepts the parameter, but go_router_builder 4.5.2 never reads it, so the
-  generated shell notifies the root observers anyway. The shell module
-  migrates last and rebuilds its `StatefulShellRoute` from the generated
-  route's fields.
+- **Shells keep `notifyRootObserver: false` by hand.** go_router 18.0.1's
+  `StatefulShellRouteData.$route` takes no `notifyRootObserver`, and
+  go_router_builder 4.5.2 never reads the annotation's value, so the generated
+  shell would notify the root observers. `shellRoutes()` in
+  `mobile/lib/router/routes/shell.dart` rebuilds the generated
+  `StatefulShellRoute` from its fields with `notifyRootObserver: false`; the
+  wrapper can go once both are fixed upstream.
 
 ## Navigation Methods
 
