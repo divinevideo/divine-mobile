@@ -232,8 +232,8 @@ void main() {
     group('inside a $PinchZoomGrid', () {
       // Zooming out of the clip grid used to draw the badges oversized and then
       // shrink them, because they scaled with the layout the pinch magnifies.
-      testWidgets('keeps the duration and selection badges at their size '
-          'mid-pinch', (tester) async {
+      testWidgets('keeps the badges at their size and the title band across '
+          'the card mid-pinch', (tester) async {
         await tester.pumpWidget(
           MaterialApp(
             theme: VineTheme.theme,
@@ -253,8 +253,12 @@ void main() {
                   children: [
                     for (var i = 0; i < 12; i++)
                       VideoClipThumbnailCard(
-                        clip: createClip(id: 'clip-$i'),
+                        clip: createClip(
+                          id: 'clip-$i',
+                          libraryTitle: 'Clip $i',
+                        ),
                         selectionIndex: i + 1,
+                        showArchivedBadge: true,
                         onTap: () {},
                       ),
                   ],
@@ -267,8 +271,26 @@ void main() {
         final card = find.byType(VideoClipThumbnailCard).first;
         final duration = find.text('5.00').first;
         final selection = find.text('1');
+        final archived = find.descendant(
+          of: card,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.stackSimple,
+          ),
+        );
+        final title = find.text('Clip 0');
+        final titleBand = find
+            .ancestor(of: title, matching: find.byType(DecoratedBox))
+            .first;
         final settledDuration = tester.getRect(duration).size;
         final settledSelection = tester.getRect(selection).size;
+        final settledArchived = tester.getRect(archived).size;
+        final settledTitleHeight = tester.getRect(title).height;
+        expect(
+          tester.getRect(titleBand).width,
+          closeTo(tester.getRect(card).width - 16, 0.01),
+        );
 
         // Pinching closed lays the grid out for 4 columns and magnifies it
         // to the in-between tile size the fingers are at.
@@ -291,11 +313,16 @@ void main() {
         for (final (badge, settled) in [
           (duration, settledDuration),
           (selection, settledSelection),
+          (archived, settledArchived),
         ]) {
           final size = tester.getRect(badge).size;
           expect(size.width, closeTo(settled.width, 0.01));
           expect(size.height, closeTo(settled.height, 0.01));
         }
+        // The title band is laid out at the card's on-screen width, so it
+        // keeps spanning the card instead of scaling with it.
+        expect(tester.getRect(titleBand).width, closeTo(cardWidth - 16, 0.01));
+        expect(tester.getRect(title).height, closeTo(settledTitleHeight, 0.01));
 
         await first.up();
         await second.up();
