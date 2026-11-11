@@ -6,34 +6,37 @@ import 'package:material_ui/material_ui.dart';
 
 String videoClipPreviewHeroTag(String clipId) => 'Video-Clip-Preview-$clipId';
 
+/// The tile a clip shows in place of a thumbnail it does not have: a soft
+/// diagonal gradient with a camera icon in its centre.
+///
+/// It paints its own ground because the grid card's background sits
+/// *outside* the card's [Hero]: a shuttle flying in the navigator overlay
+/// would otherwise show a bare icon over the scrim instead of the tile the
+/// user just tapped.
 class VideoClipThumbnailPlaceholder extends StatelessWidget {
   const VideoClipThumbnailPlaceholder({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return DivineIcon(
-      icon: DivineIconName.videoCamera,
-      color: context.vineColors.mutedText,
-      size: 32,
-    );
-  }
-}
-
-/// [VideoClipThumbnailPlaceholder] with the ground the grid card paints
-/// behind it.
-///
-/// The card's [ColoredBox] sits *outside* its [Hero], so a shuttle flying in
-/// the navigator overlay has nothing behind it: a clip whose thumbnail file
-/// is gone would fly as a bare icon over the scrim instead of the tile the
-/// user just tapped. A flight brings its own ground.
-class VideoClipThumbnailTile extends StatelessWidget {
-  const VideoClipThumbnailTile({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: context.vineColors.card,
-      child: const VideoClipThumbnailPlaceholder(),
+    final colors = context.vineColors;
+    // Every caller hands this the tight constraints of a full tile, so the
+    // icon is centred; unwrapped, it would be stretched across the tile.
+    // Default icon size: the camera glyph is about 1.6 times as wide as it is
+    // tall, so anything larger crowds a five-column grid tile.
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
+          colors: [colors.containerLow, colors.surfaceContainer],
+        ),
+      ),
+      child: Center(
+        child: DivineIcon(
+          icon: DivineIconName.videoCamera,
+          color: colors.onSurfaceMuted,
+        ),
+      ),
     );
   }
 }

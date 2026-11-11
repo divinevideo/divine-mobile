@@ -10,6 +10,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/widgets/video_clip/video_clip_hero.dart';
 import 'package:openvine/widgets/video_clip/video_clip_thumbnail_card.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -174,6 +175,38 @@ void main() {
           ),
           findsNothing,
         );
+      });
+
+      testWidgets('placeholder fills the tile without a thumbnail', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget());
+
+        final tile = tester.getRect(find.byType(AspectRatio));
+        expect(
+          tester.getRect(find.byType(VideoClipThumbnailPlaceholder)),
+          tile,
+        );
+      });
+
+      testWidgets('placeholder icon at its own size without a thumbnail', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget());
+
+        final placeholder = find.byWidgetPredicate(
+          (w) => w is DivineIcon && w.icon == DivineIconName.videoCamera,
+        );
+        final tile = tester.getRect(find.byType(AspectRatio));
+        final icon = tester.getRect(placeholder);
+        final iconSize = tester.widget<DivineIcon>(placeholder).size;
+
+        // Without centring, the tile's tight constraints stretch the icon
+        // across the whole tile.
+        expect(tile.height, greaterThan(iconSize));
+        expect(icon.height, equals(iconSize));
+        expect(icon.width, lessThan(tile.width));
+        expect(icon.center, equals(tile.center));
       });
 
       testWidgets('selection index when selected', (tester) async {

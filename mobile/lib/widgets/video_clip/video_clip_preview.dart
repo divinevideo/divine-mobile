@@ -326,7 +326,7 @@ class _ClipHero extends StatelessWidget {
           fit: BoxFit.cover,
           cacheHeight: cacheHeight,
           excludeFromSemantics: true,
-          placeholder: const VideoClipThumbnailTile(),
+          placeholder: const VideoClipThumbnailPlaceholder(),
         ),
       ),
       child: child,

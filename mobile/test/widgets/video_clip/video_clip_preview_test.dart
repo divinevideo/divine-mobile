@@ -559,7 +559,7 @@ void main() {
       expect(thumbnail.path, frameFile.path);
       expect(thumbnail.fit, BoxFit.cover);
       expect(thumbnail.excludeFromSemantics, isTrue);
-      expect(thumbnail.placeholder, isA<VideoClipThumbnailTile>());
+      expect(thumbnail.placeholder, isA<VideoClipThumbnailPlaceholder>());
 
       // The shuttle and the player resolve to one cache entry, so their decode
       // bounds have to stay in step — pinned to the real value as well, or a
@@ -636,8 +636,9 @@ void main() {
       /// blocking inside `runAsync` instead would deadlock), and it carries no
       /// duration, so the flight stays where [flyToPreview] left it.
       Future<void> settleDecodeFailure(WidgetTester tester, String path) async {
+        final placeholder = find.byType(VideoClipThumbnailPlaceholder);
         for (var attempt = 0; attempt < 50; attempt++) {
-          if (find.byType(VideoClipThumbnailTile).evaluate().isNotEmpty) return;
+          if (placeholder.evaluate().isNotEmpty) return;
           await tester.runAsync(
             () =>
                 File(path).readAsBytes().then<void>((_) {}, onError: (_, _) {}),
@@ -726,21 +727,21 @@ void main() {
 
         // Without a ground of its own the shuttle would fly the bare icon over
         // whatever is beneath it; the grid paints its card outside the hero.
-        expect(find.byType(VideoClipThumbnailTile), findsOneWidget);
-        final tile = tester.element(find.byType(VideoClipThumbnailTile));
-        final ground = tester.widget<ColoredBox>(
-          find.descendant(
-            of: find.byType(VideoClipThumbnailTile),
-            matching: find.byType(ColoredBox),
-          ),
+        final placeholder = find.byType(VideoClipThumbnailPlaceholder);
+        expect(placeholder, findsOneWidget);
+        final colors = tester.element(placeholder).vineColors;
+        final ground = tester.widget<DecoratedBox>(
+          find.descendant(of: placeholder, matching: find.byType(DecoratedBox)),
         );
-        expect(ground.color, tile.vineColors.card);
+        final gradient =
+            (ground.decoration as BoxDecoration).gradient! as LinearGradient;
+        expect(gradient.colors, [colors.containerLow, colors.surfaceContainer]);
 
         // The fallback bypasses `Image.excludeFromSemantics`, so the shuttle
         // keeps it out of the tree itself.
         expect(
           find.ancestor(
-            of: find.byType(VideoClipThumbnailTile),
+            of: placeholder,
             matching: find.byType(ExcludeSemantics),
           ),
           findsOneWidget,
