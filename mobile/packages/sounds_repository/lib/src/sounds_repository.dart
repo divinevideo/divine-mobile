@@ -596,11 +596,9 @@ class SoundsRepository {
   /// those and the union is what the caller sees. Composing them here rather
   /// than in a bloc is what keeps the caller from having to know that.
   ///
-  /// A multi-word query is split by [searchTermsOf] and every term must match
-  /// something on the sound — the relay is asked for *any* of them, which is
-  /// how candidates are found, and [AudioEvent.matchesSearch] then narrows
-  /// them. Returns an empty list without querying when [query] holds no
-  /// searchable term.
+  /// Full-text search finds names and descriptions without a warm cache.
+  /// Tag search also finds relays' hashtag matches; [AudioEvent.matchesSearch]
+  /// requires every query term across the sound's searchable fields.
   ///
   /// Newest first, except that a video's own audio left untitled and
   /// uncredited that no other account used follows the rest

@@ -24,8 +24,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// Two modes:
 /// - **Shared audio**: Video has a Kind 1063 audio event — shows sound name,
 ///   artist, and tapping navigates to [SoundDetailScreen].
-/// - **Original sound**: No audio event — shows "Original sound - @creator"
-///   as display-only info.
+/// - **Original sound**: No audio event — shows the classic's name or
+///   "Original sound", tappable when current policy permits reuse.
 class MetadataSoundsSection extends ConsumerWidget {
   const MetadataSoundsSection({required this.video, super.key});
 

@@ -14,7 +14,7 @@ import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/video_feed_item/audio_attribution_credit.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// A tappable row showing audio attribution on every video in the feed.
+/// Sound attribution for shared audio and classic originals in the feed.
 ///
 /// Three display modes:
 /// - **Shared audio**: `♪ Sound name · Creator` → taps to [SoundDetailScreen]
