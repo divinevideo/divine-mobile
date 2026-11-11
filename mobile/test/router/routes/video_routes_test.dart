@@ -354,18 +354,17 @@ void main() {
         );
       });
 
-      test('the fixed paths keep their locations', () {
+      // What callers push for the no-argument forms: the bare path, with no
+      // `?` for the absent `from` and `mode` query fields.
+      test('the no-argument routes push their bare paths', () {
         expect(
           const CreatorAnalyticsRouteData().location,
-          equals(RoutePaths.creatorAnalytics),
+          equals('/creator-analytics'),
         );
-        expect(
-          const VideoEditorRouteData().location,
-          equals(VideoEditorScreen.pathFor()),
-        );
+        expect(const VideoEditorRouteData().location, equals('/video-editor'));
         expect(
           const VideoMetadataRouteData().location,
-          equals(RoutePaths.videoMetadata),
+          equals('/video-metadata'),
         );
       });
 
