@@ -1,5 +1,6 @@
 // ABOUTME: Pinch-to-zoom wrapper that maps a scale gesture to a column count
 // ABOUTME: Slides the next column in and crossfades in step with the pinch
+// ABOUTME: PinchZoomUnscaled keeps tile badges at their on-screen size
 
 import 'dart:math' as math;
 import 'dart:ui' as ui;
