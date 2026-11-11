@@ -19,7 +19,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/screens/auth/welcome_screen.dart';
+import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
 import 'package:openvine/screens/key_management_screen.dart';
 import 'package:openvine/screens/relay_diagnostic_screen.dart';
@@ -221,7 +221,7 @@ class _RemoveKeysTile extends StatelessWidget {
       );
       progressOverlay.dismiss();
       if (!context.mounted) return;
-      context.go(WelcomeScreen.path);
+      const WelcomeRouteData().go(context);
     } on SecureKeyStorageException {
       progressOverlay.dismiss();
       // Platform key deletion failed — user stays signed in and can

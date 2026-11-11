@@ -19,6 +19,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/account_deletion_recovery_routes.dart';
+import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
@@ -41,8 +42,14 @@ class WelcomeScreen extends ConsumerWidget {
   /// Path for login options route.
   static const String loginOptionsPath = RoutePaths.welcomeLoginOptions;
 
+  /// Path segment of the create account child route.
+  static const createAccountSegment = 'create-account';
+
+  /// Path segment of the sign-in child route.
+  static const loginOptionsSegment = 'login-options';
+
   /// Path for create account route.
-  static const createAccountPath = '/welcome/create-account';
+  static const createAccountPath = '$path/$createAccountSegment';
 
   /// Path for reset password route.
   static const String resetPasswordPath = RoutePaths.welcomeResetPassword;
@@ -150,14 +157,14 @@ class _WelcomeView extends ConsumerWidget {
         switch (state.status) {
           case WelcomeStatus.navigatingToCreateAccount:
             runDetached(
-              context.push<void>(WelcomeScreen.createAccountPath),
+              const CreateAccountRouteData().push<void>(context),
               'open account creation',
               logName: 'WelcomeScreen',
               category: LogCategory.auth,
             );
           case WelcomeStatus.navigatingToLoginOptions:
             runDetached(
-              context.push<void>(WelcomeScreen.loginOptionsPath),
+              const LoginOptionsRouteData().push<void>(context),
               'open sign-in options',
               logName: 'WelcomeScreen',
               category: LogCategory.auth,

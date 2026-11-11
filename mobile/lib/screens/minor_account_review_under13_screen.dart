@@ -1,8 +1,7 @@
 import 'package:divine_ui/divine_ui.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/screens/auth/welcome_screen.dart';
+import 'package:openvine/router/routes/auth_routes.dart';
 
 class MinorAccountReviewUnder13Screen extends StatelessWidget {
   static const routeName = 'minor-account-review-under13';
@@ -68,7 +67,7 @@ class MinorAccountReviewUnder13Screen extends StatelessWidget {
   Future<void> _close(BuildContext context) async {
     final popped = await Navigator.of(context).maybePop();
     if (!context.mounted || popped) return;
-    context.go(WelcomeScreen.path);
+    const WelcomeRouteData().go(context);
   }
 }
 

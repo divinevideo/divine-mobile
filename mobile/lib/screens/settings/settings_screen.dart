@@ -32,9 +32,8 @@ import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/providers/swap_account.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
-import 'package:openvine/screens/auth/secure_account_screen.dart';
-import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/notification_settings_screen.dart';
 import 'package:openvine/screens/settings/account/change_email_screen.dart';
 import 'package:openvine/screens/settings/account/change_password_screen.dart';
@@ -440,7 +439,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     DivineListTile(
                       icon: DivineIconName.shieldCheck,
                       title: context.l10n.settingsSecureAccount,
-                      onTap: () => context.push(SecureAccountScreen.path),
+                      onTap: () =>
+                          const SecureAccountRouteData().push<void>(context),
                     ),
                   if (!authService.isAnonymous && hasExpiredOAuthSession)
                     DivineListTile(
@@ -466,7 +466,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     DivineListTile(
                       icon: DivineIconName.userPlus,
                       title: context.l10n.authSignInTitle,
-                      onTap: () => context.go(WelcomeScreen.path),
+                      onTap: () => const WelcomeRouteData().go(context),
                     ),
                   if (isAuthenticated &&
                       authService.authenticationSource ==
