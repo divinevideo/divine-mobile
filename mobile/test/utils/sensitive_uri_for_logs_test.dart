@@ -90,6 +90,54 @@ void main() {
       expect(out, contains('/invite/$redactedUriComponentForLogs'));
     });
 
+    group('Nostr private keys in the path (#10385)', () {
+      // NIP-19's published test vector; it controls no real account.
+      const nsec =
+          'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
+      test('redacts an nsec profile segment of a universal link', () {
+        final out = redactUriStringForLogs(
+          'https://divine.video/profile/$nsec',
+        );
+
+        expect(out, isNot(contains('nsec1')));
+        expect(
+          out,
+          equals('https://divine.video/profile/$redactedUriComponentForLogs'),
+        );
+      });
+
+      test('redacts the segment in a router location and keeps the rest', () {
+        final out = redactUriStringForLogs('/profile/$nsec/3');
+
+        expect(out, equals('/profile/$redactedUriComponentForLogs/3'));
+      });
+
+      test('redacts an nsec carried by the divine:// scheme', () {
+        final out = redactUriStringForLogs('divine:///profile/$nsec');
+
+        expect(out, isNot(contains('nsec1')));
+        expect(out, contains('/profile/$redactedUriComponentForLogs'));
+      });
+
+      test('redacts an uppercase nsec, which bech32 also accepts', () {
+        final out = redactUriStringForLogs(
+          'https://divine.video/profile/${nsec.toUpperCase()}',
+        );
+
+        expect(out.toLowerCase(), isNot(contains('nsec1')));
+      });
+
+      test('redacts an ncryptsec segment', () {
+        final out = redactUriStringForLogs(
+          'https://divine.video/video/ncryptsec1qgqeyafqwz',
+        );
+
+        expect(out, isNot(contains('ncryptsec1')));
+        expect(out, contains('/video/$redactedUriComponentForLogs'));
+      });
+    });
+
     test('clears userInfo credentials', () {
       const raw = 'https://user:sekret@divine.video/video/foo';
       final out = redactUriStringForLogs(raw);

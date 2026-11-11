@@ -3,6 +3,8 @@
 // ABOUTME: are handled here; Nostr key stripping for crash reports lives in
 // ABOUTME: lib/observability/reportable_error.dart).
 
+import 'package:openvine/config/bug_report_config.dart';
+
 /// Placeholder for secrets in free-form log text or HTTP headers.
 const redactedSensitiveLogPlaceholder = '[REDACTED]';
 
@@ -11,8 +13,9 @@ const redactedSensitiveLogPlaceholder = '[REDACTED]';
 const redactedUriComponentForLogs = 'REDACTED';
 
 /// Returns a URI string safe for logs: clears [userInfo], redacts query and
-/// fragment values, and redacts legacy `/invite/<code>` path segments while
-/// keeping public route identifiers verbatim.
+/// fragment values, and redacts legacy `/invite/<code>` path segments and any
+/// segment carrying a Nostr private key, while keeping public route
+/// identifiers verbatim.
 ///
 /// On parse failure, returns `[invalid-uri]` without echoing [uriString].
 String redactUriStringForLogs(String uriString) {
@@ -22,7 +25,7 @@ String redactUriStringForLogs(String uriString) {
     return '[invalid-uri]';
   }
 
-  var pathSegments = List<String>.from(uri.pathSegments);
+  var pathSegments = uri.pathSegments.map(_redactSecretSegment).toList();
   if (pathSegments.length >= 2 &&
       pathSegments.first.toLowerCase() == 'invite') {
     pathSegments = [
@@ -60,6 +63,12 @@ String redactUriStringForLogs(String uriString) {
   }
   return out;
 }
+
+// A link can carry a pasted nsec where a public id belongs (#10385).
+String _redactSecretSegment(String segment) =>
+    BugReportConfig.nostrPrivateKeyPatterns.any((p) => p.hasMatch(segment))
+    ? redactedUriComponentForLogs
+    : segment;
 
 /// Returns an email address safe for diagnostic logs.
 ///
