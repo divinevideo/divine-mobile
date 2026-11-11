@@ -674,10 +674,6 @@ class NIP17MessageService {
   static const Duration _recipientOkConfirmTimeout =
       DmSendBudget.recipientOkConfirm;
 
-  /// Hard bound on the self-wrap publish. `publishEvent` is frame-accept
-  /// with no timeout of its own, so a stalled socket would otherwise hang
-  /// the send's tail past the caller's outer cap and misclassify a
-  /// recipient-confirmed send as retryable-pending.
   /// Refusals a later attempt with the same wrap can get past (#8441).
   static const _retryableRefusalPrefixes = [
     'rate-limited:',
@@ -685,6 +681,10 @@ class NIP17MessageService {
     'auth-required:',
   ];
 
+  /// Hard bound on the self-wrap publish. `publishEvent` is frame-accept
+  /// with no timeout of its own, so a stalled socket would otherwise hang
+  /// the send's tail past the caller's outer cap and misclassify a
+  /// recipient-confirmed send as retryable-pending.
   static const Duration _selfWrapPublishTimeout = DmSendBudget.selfWrapPublish;
 
   /// Wrap and publish a pre-built [rumorEvent] to the recipient and to
