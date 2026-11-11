@@ -596,6 +596,7 @@ class _LayerScaleScope extends InheritedWidget {
 class PinchZoomUnscaled extends StatelessWidget {
   const PinchZoomUnscaled({required this.child, super.key});
 
+  /// The overlay kept at its settled on-screen size.
   final Widget child;
 
   @override
