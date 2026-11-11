@@ -1018,6 +1018,28 @@ void main() {
       verify(() => mockPlayer.play()).called(1);
     });
 
+    test('plays a remote URL directly when downloads are off', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 2));
+      final cache = _FakeRemoteAudioCache();
+      final service = AudioPlaybackService(
+        audioPlayer: mockPlayer,
+        audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: cache,
+        downloadRemoteAudio: false,
+      );
+      addTearDown(service.dispose);
+
+      await service.loadAudio(soundUrl);
+
+      final capturedSource =
+          verify(() => mockPlayer.setAudioSource(captureAny())).captured.single
+              as UriAudioSource;
+      expect(capturedSource.uri, Uri.parse(soundUrl));
+      expect(cache.requested, isEmpty);
+    });
+
     test('loadAudio returns null when disposed during the download', () async {
       final cache = _HeldRemoteAudioCache();
       final service = serviceWith(cache);

@@ -29,12 +29,15 @@ class AudioPlaybackService {
   ///
   /// The [audioPlayer] parameter allows for dependency injection in tests.
   /// The [audioSessionWrapper] parameter allows for mocking audio session.
-  /// The [remoteAudioCache] downloads and keeps http(s) sounds.
+  /// With [downloadRemoteAudio], an http(s) sound plays from a file the
+  /// [remoteAudioCache] downloaded and keeps. It is off on the web, which has
+  /// no file system for the cache and whose browser plays the URL itself.
   // coverage:ignore-start
   AudioPlaybackService({
     AudioPlayer? audioPlayer,
     AudioSessionWrapper? audioSessionWrapper,
     RemoteAudioCache? remoteAudioCache,
+    bool downloadRemoteAudio = !kIsWeb,
     bool handleAudioSessionActivation = true,
   }) : _audioPlayer =
            audioPlayer ??
@@ -43,7 +46,9 @@ class AudioPlaybackService {
            ),
        _audioSessionWrapper =
            audioSessionWrapper ?? DefaultAudioSessionWrapper(),
-       _remoteAudioCache = remoteAudioCache ?? RemoteAudioCache() {
+       _remoteAudioCache = downloadRemoteAudio
+           ? remoteAudioCache ?? RemoteAudioCache()
+           : null {
     _audioSessionService = AudioSessionService(
       audioSessionWrapper: _audioSessionWrapper,
     );
@@ -53,7 +58,7 @@ class AudioPlaybackService {
 
   final AudioPlayer _audioPlayer;
   final AudioSessionWrapper _audioSessionWrapper;
-  final RemoteAudioCache _remoteAudioCache;
+  final RemoteAudioCache? _remoteAudioCache;
   late final AudioSessionService _audioSessionService;
 
   /// BehaviorSubject for headphone connection state.
@@ -321,7 +326,8 @@ class AudioPlaybackService {
 
   /// The player source for a network [uri].
   ///
-  /// An http(s) sound is downloaded to a local file first. just_audio's
+  /// An http(s) sound is downloaded to a local file first, unless the
+  /// service plays remote sounds by URL (the web). just_audio's
   /// `LockCachingAudioSource` downloaded inside the player instead, where a
   /// server error escaped as an unhandled error no caller could catch.
   ///
@@ -331,11 +337,13 @@ class AudioPlaybackService {
   /// keeps the player, as it would if the player itself had been loading.
   Future<UriAudioSource?> _uriSource(String uri, int generation) async {
     final parsedUri = Uri.parse(uri);
-    if (parsedUri.scheme != 'http' && parsedUri.scheme != 'https') {
+    final cache = _remoteAudioCache;
+    if (cache == null ||
+        (parsedUri.scheme != 'http' && parsedUri.scheme != 'https')) {
       return AudioSource.uri(parsedUri);
     }
 
-    final file = await _remoteAudioCache.fileFor(parsedUri);
+    final file = await cache.fileFor(parsedUri);
     if (_isDisposed) return null;
     if (generation != _loadGeneration) {
       throw PlayerInterruptedException('Loading interrupted');
