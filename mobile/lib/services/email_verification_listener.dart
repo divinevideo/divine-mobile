@@ -55,7 +55,7 @@ class EmailVerificationListener {
   @visibleForTesting
   Future<void> handleUri(Uri uri) async {
     Log.info(
-      'Callback from host ${uri.host} path: ${redactUriStringForLogs(uri.path)}',
+      'Callback from ${redactUriStringForLogs(uri.toString())}',
       name: '$EmailVerificationListener',
       category: LogCategory.auth,
     );

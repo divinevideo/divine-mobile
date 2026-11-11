@@ -51,7 +51,7 @@ class PasswordResetListener {
   @visibleForTesting
   Future<void> handleUri(Uri uri) async {
     Log.info(
-      '🔑 callback from host ${uri.host} path: ${redactUriStringForLogs(uri.path)}',
+      '🔑 callback from ${redactUriStringForLogs(uri.toString())}',
       name: '$PasswordResetListener',
     );
 

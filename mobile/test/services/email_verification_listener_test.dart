@@ -85,8 +85,24 @@ void main() {
           for (final entry in LogCaptureService().getRecentLogs())
             entry.message,
         ].join('\n');
-        expect(logged, contains('Callback from host'));
+        expect(logged, contains('Callback from '));
         expect(logged.toLowerCase(), isNot(contains('nsec1')));
+      });
+
+      // NIP-46 callbacks reach this line too, and have no path.
+      test('logs a path-less signer callback as the link it is', () async {
+        await LogCaptureService().clearAllLogs();
+
+        await listener.handleUri(
+          Uri.parse('divine://nostrconnect?relay=wss://relay.example.com'),
+        );
+
+        final logged = [
+          for (final entry in LogCaptureService().getRecentLogs())
+            entry.message,
+        ].join('\n');
+        expect(logged, contains('Callback from divine://nostrconnect'));
+        expect(logged, isNot(contains('[invalid-uri]')));
       });
 
       test('does not log the verification token it navigates with', () async {
