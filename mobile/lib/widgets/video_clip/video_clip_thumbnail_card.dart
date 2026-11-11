@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/widgets/library/pinch_zoom_grid.dart';
 import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_clip/video_clip_hero.dart';
@@ -147,44 +148,57 @@ class _VideoClipThumbnailCardState extends State<VideoClipThumbnailCard> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    /// Thumbnail or placeholder
+                    // Thumbnail or placeholder
                     _Thumbnail(clip: widget.clip),
 
-                    /// The part of the frame a picker above will keep
+                    // The part of the frame a picker above will keep
                     if (ClipCropGuide.maybeOf(context) case final guide?)
                       ClipCropGuideOverlay(
                         aspectRatio: guide.aspectRatio,
                         contentAspectRatio: widget.clip.videoAspectRatio,
                       ),
 
-                    /// Stop-motion marker + still count and the archived
-                    /// marker - top left
-                    if (widget.clip.isStopMotion ||
-                        widget.showArchivedBadge ||
-                        backupStatus != null)
-                      _TopLeftBadges(
-                        frameCount: widget.clip.isStopMotion
-                            ? widget.clip.stopMotionFrames?.length ?? 0
-                            : null,
-                        showArchived: widget.showArchivedBadge,
-                        backupStatus: backupStatus,
+                    // The badges keep their size while a pinch on the clip
+                    // grid scales the thumbnail under them.
+                    PinchZoomUnscaled(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // Stop-motion, archived and gallery backup markers -
+                          // top left
+                          if (widget.clip.isStopMotion ||
+                              widget.showArchivedBadge ||
+                              backupStatus != null)
+                            _TopLeftBadges(
+                              frameCount: widget.clip.isStopMotion
+                                  ? widget.clip.stopMotionFrames?.length ?? 0
+                                  : null,
+                              showArchived: widget.showArchivedBadge,
+                              backupStatus: backupStatus,
+                            ),
+
+                          // Duration badge - bottom left. Hidden for
+                          // stop-motion recordings: their length (the sum of
+                          // each still's hold) is a misleading value, so they
+                          // read as a still image marked only by the
+                          // stop-motion badge.
+                          if (showDurationBadge)
+                            _DurationBadge(clip: widget.clip),
+
+                          if (widget.clip.libraryTitle case final title?)
+                            _TitleBadge(
+                              title: title,
+                              bottomOffset: showDurationBadge ? 32 : 8,
+                            ),
+
+                          // Selection circle with the pick order - top right
+                          if (widget.showSelectionIndicator)
+                            _SelectionOverlay(
+                              selectionIndex: widget.selectionIndex,
+                            ),
+                        ],
                       ),
-
-                    /// Duration badge - bottom left. Hidden for stop-motion
-                    /// recordings: their playback length (frame count / 12fps)
-                    /// is a tiny, misleading value, so they read as a still
-                    /// image marked only by the stop-motion badge.
-                    if (showDurationBadge) _DurationBadge(clip: widget.clip),
-
-                    if (widget.clip.libraryTitle case final title?)
-                      _TitleBadge(
-                        title: title,
-                        bottomOffset: showDurationBadge ? 32 : 8,
-                      ),
-
-                    /// Selection check circle - top right
-                    if (widget.showSelectionIndicator)
-                      _SelectionOverlay(selectionIndex: widget.selectionIndex),
+                    ),
                   ],
                 ),
               ),
