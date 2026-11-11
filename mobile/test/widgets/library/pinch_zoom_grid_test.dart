@@ -220,6 +220,20 @@ void main() {
           expect(badgeRect.left, closeTo(tileRect.left, 0.01));
           expect(badgeRect.bottom, closeTo(tileRect.bottom, 0.01));
 
+          // getRect follows applyPaintTransform; pin what paint draws too.
+          final layerScale = tileRect.width / (800 / layoutColumns);
+          expect(
+            find.ancestor(of: badge, matching: find.byType(PinchZoomUnscaled)),
+            paints..transform(
+              matrix4: predicate<List<double>>(
+                (matrix) =>
+                    (matrix[0] - 1 / layerScale).abs() < 1e-6 &&
+                    (matrix[5] - 1 / layerScale).abs() < 1e-6,
+                'a transform scaling by 1 / $layerScale',
+              ),
+            ),
+          );
+
           await first.up();
           await second.up();
           await tester.pumpAndSettle();
