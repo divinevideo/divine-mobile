@@ -15205,6 +15205,24 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorOpenLayoutSemanticLabel => 'ቅንጥቦችን በተከፈለ ማያ ማደራጀት';
 
   @override
+  String get videoEditorMakeSquareLabel => 'ካሬ';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'አቀባዊ';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'ቪዲዮውን ካሬ አድርግ';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => 'ቪዲዮውን አቀባዊ አድርግ';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'ቪዲዮው አሁን ካሬ ነው';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => 'ቪዲዮው አሁን አቀባዊ ነው';
+
+  @override
   String get videoEditorLayoutTitle => 'አቀማመጥ';
 
   @override

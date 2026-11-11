@@ -8,6 +8,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' as model show AspectRatio;
 import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_manager_state.dart';
@@ -19,6 +20,7 @@ import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/editor_background_work.dart';
 import 'package:openvine/providers/recording_gallery_backup_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
@@ -873,6 +875,69 @@ void main() {
           expect(state.firstClipOrNull, equals(replacementClip));
         },
       );
+
+      group('replaceClips and the cover', () {
+        DivineVideoClip clipShaped(model.AspectRatio ratio) => DivineVideoClip(
+          id: 'clip',
+          video: EditorVideo.file('/path/to/clip.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: ratio,
+          originalAspectRatio: 9 / 16,
+        );
+
+        void pickCover() {
+          final editor = container.read(videoEditorProvider.notifier);
+          editor.state = editor.state.copyWith(
+            customThumbnailPath: '/docs/cover.jpg',
+            thumbnailTimestamp: const Duration(seconds: 2),
+          );
+        }
+
+        test('drops a picked cover image when the video switches between '
+            'square and 9:16, keeping the moment it was picked at', () {
+          final notifier = container.read(clipManagerProvider.notifier)
+            ..replaceClips([clipShaped(model.AspectRatio.vertical)]);
+          pickCover();
+
+          notifier.replaceClips([clipShaped(model.AspectRatio.square)]);
+
+          final editor = container.read(videoEditorProvider);
+          expect(editor.customThumbnailPath, isNull);
+          expect(editor.thumbnailTimestamp, const Duration(seconds: 2));
+        });
+
+        test('keeps the picked cover image while the shape stays', () {
+          final notifier = container.read(clipManagerProvider.notifier)
+            ..replaceClips([clipShaped(model.AspectRatio.vertical)]);
+          pickCover();
+
+          notifier.replaceClips([
+            clipShaped(model.AspectRatio.vertical).copyWith(volume: 0.5),
+          ]);
+
+          expect(
+            container.read(videoEditorProvider).customThumbnailPath,
+            '/docs/cover.jpg',
+          );
+        });
+
+        test('keeps the picked cover image when the clips are only '
+            'installed, not edited', () {
+          final notifier = container.read(clipManagerProvider.notifier)
+            ..replaceClips([clipShaped(model.AspectRatio.vertical)]);
+          pickCover();
+
+          notifier.replaceClips([
+            clipShaped(model.AspectRatio.square),
+          ], autosave: false);
+
+          expect(
+            container.read(videoEditorProvider).customThumbnailPath,
+            '/docs/cover.jpg',
+          );
+        });
+      });
     });
 
     group('addClip proof generation', () {

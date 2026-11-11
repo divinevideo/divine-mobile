@@ -15473,6 +15473,24 @@ class AppLocalizationsId extends AppLocalizations {
       'Atur klip dalam layar terbagi';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Persegi';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Vertikal';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'Jadikan video persegi';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => 'Jadikan video vertikal';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'Video sekarang persegi';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => 'Video sekarang vertikal';
+
+  @override
   String get videoEditorLayoutTitle => 'Tata letak';
 
   @override

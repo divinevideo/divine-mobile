@@ -15627,6 +15627,24 @@ class AppLocalizationsAr extends AppLocalizations {
       'ترتيب المقاطع في شاشة مقسّمة';
 
   @override
+  String get videoEditorMakeSquareLabel => 'مربع';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'عمودي';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'اجعل الفيديو مربعًا';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => 'اجعل الفيديو عموديًا';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'الفيديو مربع الآن';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => 'الفيديو عمودي الآن';
+
+  @override
   String get videoEditorLayoutTitle => 'التخطيط';
 
   @override

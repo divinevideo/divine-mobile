@@ -84,6 +84,46 @@ LayerMask? maskForDetachedClip(
   return _withEachKeyframe(mask, moved);
 }
 
+/// Moves a timeline clip's [mask] from the frame an export cropped to [from]
+/// keeps onto the one an export cropped to [to] keeps, when the video
+/// switches between square and 9:16.
+///
+/// Both frames are cut from the middle of the clip's picture, whose shape is
+/// [videoAspectRatio], so the shape is placed on the same part of the picture
+/// and keeps its proportions. One that would hang off the new frame is kept on
+/// it ([fitEditorMask]). Its keyframes move with it, each the same way.
+LayerMask? maskForAspectRatioSwitch(
+  LayerMask? mask, {
+  required double videoAspectRatio,
+  required double from,
+  required double to,
+}) {
+  if (mask == null || from == to || videoAspectRatio <= 0) return mask;
+  final picture = Size(videoAspectRatio, 1);
+  final old = ExportLayerMapping.keptRect(picture, from);
+  final next = ExportLayerMapping.keptRect(picture, to);
+  LayerMask moved(LayerMask still) => fitEditorMask(
+    still.copyWith(
+      center: Offset(
+        (old.left + still.center.dx * old.width - next.left) / next.width,
+        (old.top + still.center.dy * old.height - next.top) / next.height,
+      ),
+      size: clampEditorMaskSize(
+        Size(
+          still.size.width * old.width / next.width,
+          still.size.height * old.height / next.height,
+        ),
+      ),
+      feather: math.min(
+        editorMaskMaxFeather,
+        still.feather * old.shortestSide / next.shortestSide,
+      ),
+    ),
+    next.size,
+  );
+  return _withEachKeyframe(mask, moved);
+}
+
 /// [mask] with [change] made to its own values and, the same way, to the
 /// geometry of each of its keyframes.
 LayerMask _withEachKeyframe(

@@ -181,6 +181,9 @@ class VideoEditorRenderService {
   /// - The rendered [DivineVideoClip]
   /// - The proofManifestJson (or null if ProofMode unavailable)
   ///
+  /// The cover is taken from the rendered video at [coverTimestamp], or at
+  /// the default moment when none is given.
+  ///
   /// Throws:
   ///
   /// * [VideoRenderFailedException] if the render produced no video — the
@@ -193,12 +196,14 @@ class VideoEditorRenderService {
     required Map<String, dynamic> editorStateHistory,
     CompleteParameters? parameters,
     String? taskId,
+    Duration? coverTimestamp,
   }) {
     final render = _renderVideoToClip(
       clips: clips,
       editorStateHistory: editorStateHistory,
       parameters: parameters,
       taskId: taskId,
+      coverTimestamp: coverTimestamp,
     );
     final effectiveTaskId = taskId ?? (clips.isEmpty ? null : clips.first.id);
 
@@ -218,6 +223,7 @@ class VideoEditorRenderService {
     required Map<String, dynamic> editorStateHistory,
     CompleteParameters? parameters,
     String? taskId,
+    Duration? coverTimestamp,
   }) async {
     if (renderVideoToClipOverride != null) {
       return renderVideoToClipOverride!(
@@ -374,6 +380,8 @@ class VideoEditorRenderService {
       // whose extraction failed from losing its preview entirely.
       final cover = await VideoThumbnailService.extractThumbnail(
         videoPath: outputPath,
+        targetTimestamp:
+            coverTimestamp ?? VideoEditorConstants.defaultThumbnailExtractTime,
       );
 
       final clip = DivineVideoClip(

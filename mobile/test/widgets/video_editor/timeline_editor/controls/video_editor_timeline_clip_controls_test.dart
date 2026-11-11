@@ -344,6 +344,83 @@ void main() {
       expect(controls.onDetach, isNotNull);
     });
 
+    group('aspect ratio switch', () {
+      VideoEditorTimelineControls controlsFor(WidgetTester tester) =>
+          tester.widget<VideoEditorTimelineControls>(
+            find.byType(VideoEditorTimelineControls),
+          );
+
+      testWidgets('offers to make a 9:16 video square on a selected clip', (
+        tester,
+      ) async {
+        when(
+          () => bloc.state,
+        ).thenReturn(ClipEditorState(clips: [clip('clip-1')]));
+
+        await tester.pumpWidget(build());
+
+        final controls = controlsFor(tester);
+        expect(controls.onSwitchAspectRatio, isNotNull);
+        expect(controls.isSquareVideo, isFalse);
+        expect(controls.isAspectRatioSwitchDisabled, isFalse);
+      });
+
+      testWidgets('offers 9:16 once the video is square', (tester) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(
+            clips: [
+              clip(
+                'clip-1',
+              ).copyWith(targetAspectRatio: model.AspectRatio.square),
+            ],
+          ),
+        );
+
+        await tester.pumpWidget(build());
+
+        expect(controlsFor(tester).isSquareVideo, isTrue);
+      });
+
+      testWidgets('waits for a clip still being rendered', (tester) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(isStabilizing: true, clips: [clip('clip-1')]),
+        );
+
+        await tester.pumpWidget(build());
+
+        expect(controlsFor(tester).isAspectRatioSwitchDisabled, isTrue);
+      });
+
+      testWidgets('is offered on a freeze frame and a backdrop too', (
+        tester,
+      ) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(
+            clips: [
+              clip('clip-1'),
+              clip('freeze').copyWith(isFreezeFrame: true),
+            ],
+            currentClipIndex: 1,
+          ),
+        );
+        await tester.pumpWidget(build());
+        expect(controlsFor(tester).onSwitchAspectRatio, isNotNull);
+
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(
+            clips: [
+              clip('clip-1'),
+              clip('slot').copyWith(isPlaceholder: true),
+            ],
+            currentClipIndex: 1,
+          ),
+        );
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpWidget(build());
+        expect(controlsFor(tester).onSwitchAspectRatio, isNotNull);
+      });
+    });
+
     testWidgets('loop alignment is available only in the tools drawer', (
       tester,
     ) async {

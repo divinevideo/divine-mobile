@@ -5,6 +5,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -19,13 +20,14 @@ DivineVideoClip _clip(
   String id, {
   Duration duration = const Duration(seconds: 2),
   double originalAspectRatio = 9 / 16,
+  model.AspectRatio targetAspectRatio = .vertical,
   bool isPlaceholder = false,
 }) => DivineVideoClip(
   id: id,
   video: EditorVideo.file('/documents/$id.mp4'),
   duration: duration,
   recordedAt: DateTime(2026),
-  targetAspectRatio: .vertical,
+  targetAspectRatio: targetAspectRatio,
   originalAspectRatio: originalAspectRatio,
   isPlaceholder: isPlaceholder,
 );
@@ -162,6 +164,34 @@ void main() {
       // square one would move every other layer.
       expect(state.clips.first.id, 'b');
       expect(state.clips.first.originalAspectRatio, 9 / 16);
+    });
+
+    test('takes the shape the video has now, which a switch between square '
+        'and 9:16 can have changed since it left', () async {
+      final bloc = seeded([
+        _clip(
+          'placeholder_1',
+          isPlaceholder: true,
+          targetAspectRatio: .square,
+        ),
+        _clip('c', targetAspectRatio: .square),
+      ]);
+      await bloc.stream.first;
+
+      bloc.add(
+        ClipEditorDetachedClipReattachRequested(
+          layerId: 'detached_b',
+          // Detached while the video was still 9:16.
+          clip: _clip('b'),
+          playhead: Duration.zero,
+          placeholderClipId: 'placeholder_1',
+        ),
+      );
+      final state = await bloc.stream.first;
+
+      // In front, the 9:16 it left with would switch the video back.
+      expect(state.clips.first.id, 'b');
+      expect(state.clips.first.targetAspectRatio, model.AspectRatio.square);
     });
 
     test('gives a second copy of the same clip its own id', () async {

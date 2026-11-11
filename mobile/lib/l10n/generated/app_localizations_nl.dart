@@ -15665,6 +15665,24 @@ class AppLocalizationsNl extends AppLocalizations {
       'Clips in een gesplitst scherm zetten';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Vierkant';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Verticaal';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'Video vierkant maken';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => 'Video verticaal maken';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'De video is nu vierkant';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => 'De video is nu verticaal';
+
+  @override
   String get videoEditorLayoutTitle => 'Lay-out';
 
   @override

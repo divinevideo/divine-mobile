@@ -15768,6 +15768,27 @@ class AppLocalizationsDe extends AppLocalizations {
       'Clips im Split-Screen anordnen';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Quadratisch';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Hochformat';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'Video quadratisch machen';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel =>
+      'Video ins Hochformat bringen';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement =>
+      'Das Video ist jetzt quadratisch';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement =>
+      'Das Video ist jetzt im Hochformat';
+
+  @override
   String get videoEditorLayoutTitle => 'Layout';
 
   @override

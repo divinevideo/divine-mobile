@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
@@ -26,6 +27,7 @@ import 'package:openvine/services/video_editor/video_editor_split_service.dart';
 import 'package:openvine/utils/image_orientation.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/widgets/video_editor/clip_motion/video_editor_clip_motion_editor.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_aspect_ratio_switch.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor.dart';
 import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
@@ -167,6 +169,15 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     final hasCopiedStyle = context.select(
       (StyleClipboardCubit cubit) => cubit.state.clipStyle != null,
     );
+    // Switching between square and 9:16 reshapes the whole video, which a
+    // clip still being rendered would miss.
+    final (isSquareVideo, isAspectRatioSwitchDisabled) = context.select(
+      (ClipEditorBloc b) => (
+        b.state.clips.firstOrNull?.targetAspectRatio ==
+            model.AspectRatio.square,
+        b.state.hasPendingClipOperation,
+      ),
+    );
 
     // A colour or photo standing in for a detached clip is a backdrop, not
     // footage. Splitting, reversing, speeding up or extracting audio from a
@@ -178,6 +189,9 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
         onDelete: isLastClip ? null : () => _deleteClip(context),
         onBackdrop: () => _changeBackdrop(context, current: placeholderFill),
         isChangingBackdrop: isChangingBackdropCurrentClip,
+        onSwitchAspectRatio: () => switchEditorAspectRatio(context),
+        isSquareVideo: isSquareVideo,
+        isAspectRatioSwitchDisabled: isAspectRatioSwitchDisabled,
         onDone: () => context.read<ClipEditorBloc>().add(
           const ClipEditorEditingStopped(),
         ),
@@ -204,6 +218,9 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
         onPasteStyle: () => _pasteStyle(context),
         canPasteStyle: hasCopiedStyle,
         onMultiSelect: isLastClip ? null : () => _startMultiSelect(context),
+        onSwitchAspectRatio: () => switchEditorAspectRatio(context),
+        isSquareVideo: isSquareVideo,
+        isAspectRatioSwitchDisabled: isAspectRatioSwitchDisabled,
         onDone: () => context.read<ClipEditorBloc>().add(
           const ClipEditorEditingStopped(),
         ),
@@ -260,6 +277,9 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       onPasteStyle: () => _pasteStyle(context),
       canPasteStyle: hasCopiedStyle,
       onMultiSelect: isLastClip ? null : () => _startMultiSelect(context),
+      onSwitchAspectRatio: () => switchEditorAspectRatio(context),
+      isSquareVideo: isSquareVideo,
+      isAspectRatioSwitchDisabled: isAspectRatioSwitchDisabled,
       isReversed: isReversed,
       isExtractingAudio: isExtractingAudioCurrentClip,
       // Done stays enabled during a render: leaving edit mode is safe because

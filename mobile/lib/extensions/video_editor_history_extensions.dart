@@ -49,6 +49,21 @@ extension VideoEditorHistoryExtensions on StateManager {
       ..sort();
   }
 
+  /// The shape of the video in the current history entry: its first clip's
+  /// target aspect ratio, or `null` when the entry holds no clips.
+  ///
+  /// The clip manager mirrors an entry's clips only after the frame it was
+  /// written in, so code that runs in that frame, after a switch between
+  /// square and 9:16 or its undo, reads the shape here. A clip stored without
+  /// one is square, as [DivineVideoClip.fromJson] reads it.
+  AspectRatio? get compositionAspectRatio {
+    final raw = activeMeta[VideoEditorConstants.clipsStateHistoryKey];
+    if (raw is! List || raw.isEmpty || raw.first is! Map) return null;
+    final first = raw.first as Map;
+    final name = first['targetAspectRatio'] ?? first['aspectRatio'];
+    return AspectRatio.values.asNameMap()[name] ?? AspectRatio.square;
+  }
+
   /// Restores [DivineVideoClip] objects from the current history entry's
   /// metadata.
   ///

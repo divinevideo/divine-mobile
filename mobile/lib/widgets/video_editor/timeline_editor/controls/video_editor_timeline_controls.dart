@@ -66,6 +66,9 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.pasteStyleSemanticLabel,
     this.onMultiSelect,
     this.multiSelectSemanticLabel,
+    this.onSwitchAspectRatio,
+    this.isSquareVideo = false,
+    this.isAspectRatioSwitchDisabled = false,
     this.transformSemanticLabel,
     this.keyframesSemanticLabel,
     this.extraControls = const [],
@@ -288,6 +291,17 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// Overrides the multi-select button's accessibility label. Defaults to the
   /// clip-oriented copy; draw-layer callers pass a drawing-specific label.
   final String? multiSelectSemanticLabel;
+
+  /// Switches the whole video between square and 9:16. The button names the
+  /// shape a tap switches to.
+  final VoidCallback? onSwitchAspectRatio;
+
+  /// Whether the video is square now, so [onSwitchAspectRatio] makes it 9:16.
+  final bool isSquareVideo;
+
+  /// Keeps [onSwitchAspectRatio] in place but disabled, while a clip is still
+  /// being rendered.
+  final bool isAspectRatioSwitchDisabled;
   final VoidCallback? onDone;
 
   @override
@@ -552,6 +566,17 @@ class VideoEditorTimelineControls extends StatelessWidget {
                 multiSelectSemanticLabel ??
                 context.l10n.videoEditorMultiSelectSemanticLabel,
             onPressed: onMultiSelect,
+          ),
+        if (onSwitchAspectRatio != null)
+          TimelineActionButton(
+            icon: isSquareVideo ? .cropPortrait : .cropSquare,
+            label: isSquareVideo
+                ? context.l10n.videoEditorMakeVerticalLabel
+                : context.l10n.videoEditorMakeSquareLabel,
+            semanticLabel: isSquareVideo
+                ? context.l10n.videoEditorMakeVerticalSemanticLabel
+                : context.l10n.videoEditorMakeSquareSemanticLabel,
+            onPressed: isAspectRatioSwitchDisabled ? null : onSwitchAspectRatio,
           ),
         ...extraControls,
         TimelineActionButton(

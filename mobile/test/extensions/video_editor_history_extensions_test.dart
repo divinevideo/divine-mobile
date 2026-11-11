@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart' show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -28,6 +29,31 @@ List<DivineVideoClip> _clipsIn(EditorStateHistory entry) => [
 
 void main() {
   group('VideoEditorHistoryExtensions', () {
+    group('compositionAspectRatio', () {
+      StateManager managerWith(Map<String, dynamic> meta) =>
+          StateManager(onStateHistoryChange: null, activeBackgroundImage: null)
+            ..stateHistory = [EditorStateHistory(meta: meta)];
+
+      test("reads the first clip's shape in the current entry", () {
+        final manager = managerWith({
+          _clipsKey: [
+            _clip('a').copyWith(targetAspectRatio: .square).toJson(),
+            _clip('b').toJson(),
+          ],
+        });
+
+        expect(manager.compositionAspectRatio, AspectRatio.square);
+      });
+
+      test('is null for an entry without clips', () {
+        expect(managerWith(const {}).compositionAspectRatio, isNull);
+        expect(
+          managerWith(const {_clipsKey: <Object>[]}).compositionAspectRatio,
+          isNull,
+        );
+      });
+    });
+
     group('adoptCapturedChromaKeyBakes', () {
       test('keys the raw take in every entry without adding one', () {
         final take = _clip('take').copyWith(captureChromaKey: _key);

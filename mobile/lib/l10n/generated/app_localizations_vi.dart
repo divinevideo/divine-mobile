@@ -15523,6 +15523,26 @@ class AppLocalizationsVi extends AppLocalizations {
       'Sắp xếp clip theo kiểu chia màn hình';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Vuông';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Dọc';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel =>
+      'Chuyển video sang khung vuông';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel =>
+      'Chuyển video sang khung dọc';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'Video giờ là khung vuông';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => 'Video giờ là khung dọc';
+
+  @override
   String get videoEditorLayoutTitle => 'Bố cục';
 
   @override

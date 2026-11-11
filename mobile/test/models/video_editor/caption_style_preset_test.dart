@@ -124,7 +124,7 @@ void main() {
     test('buildLayer marks the layer as a caption cue with its id', () {
       final layer = classic.buildLayer(
         cue,
-        bodySize: const Size(400, 800),
+        frameSize: const Size(400, 800),
       );
 
       expect(layer.meta?[VideoEditorConstants.captionCueMetaKey], isTrue);
@@ -137,7 +137,7 @@ void main() {
     test('buildLayer carries the cue timing and text', () {
       final layer = classic.buildLayer(
         cue,
-        bodySize: const Size(400, 800),
+        frameSize: const Size(400, 800),
       );
 
       expect(layer.text, equals('Hello world.'));
@@ -147,24 +147,11 @@ void main() {
     });
 
     test(
-      'buildLayer positions square captions against render height',
+      'buildLayer places captions in the lower third of a 9:16 frame',
       () {
         final layer = classic.buildLayer(
           cue,
-          bodySize: const Size(411, 800),
-        );
-
-        expect(layer.offset.dx, equals(0));
-        expect(layer.offset.dy, closeTo(411 * 0.32, 0.001));
-      },
-    );
-
-    test(
-      'buildLayer positions vertical captions against render height',
-      () {
-        final layer = classic.buildLayer(
-          cue,
-          bodySize: const Size(400, 800),
+          frameSize: const Size(225, 400),
         );
 
         expect(layer.offset.dx, equals(0));
@@ -172,10 +159,26 @@ void main() {
       },
     );
 
+    test(
+      'buildLayer places captions inside a square frame cut from a 9:16 '
+      'canvas',
+      () {
+        final layer = classic.buildLayer(
+          cue,
+          frameSize: const Size(225, 225),
+        );
+
+        expect(layer.offset.dx, equals(0));
+        expect(layer.offset.dy, closeTo(225 * 0.32, 0.001));
+        // Below the centre, but above the frame's bottom edge.
+        expect(layer.offset.dy, lessThan(225 / 2));
+      },
+    );
+
     test('buildLayer applies the preset font, colors, and animations', () {
       final layer = classic.buildLayer(
         cue,
-        bodySize: const Size(400, 800),
+        frameSize: const Size(400, 800),
       );
 
       expect(layer.textStyle?.fontFamily, equals(classic.font().fontFamily));
@@ -210,7 +213,7 @@ void main() {
 
       final layer = outlined.buildLayer(
         cue,
-        bodySize: const Size(400, 800),
+        frameSize: const Size(400, 800),
       );
 
       expect(layer.outlineWidth, equals(TextEffects.maxOutlineWidth / 2));

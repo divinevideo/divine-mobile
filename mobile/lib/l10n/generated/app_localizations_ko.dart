@@ -14858,6 +14858,24 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorOpenLayoutSemanticLabel => '클립을 분할 화면으로 배치';
 
   @override
+  String get videoEditorMakeSquareLabel => '정사각형';
+
+  @override
+  String get videoEditorMakeVerticalLabel => '세로';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => '동영상을 정사각형으로 바꾸기';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => '동영상을 세로로 바꾸기';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => '이제 동영상이 정사각형이에요';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => '이제 동영상이 세로예요';
+
+  @override
   String get videoEditorLayoutTitle => '레이아웃';
 
   @override

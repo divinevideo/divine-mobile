@@ -15834,6 +15834,27 @@ class AppLocalizationsFr extends AppLocalizations {
       'Disposer des clips en écran partagé';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Carré';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Vertical';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'Passer la vidéo en carré';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel =>
+      'Passer la vidéo en vertical';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement =>
+      'La vidéo est maintenant carrée';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement =>
+      'La vidéo est maintenant verticale';
+
+  @override
   String get videoEditorLayoutTitle => 'Disposition';
 
   @override

@@ -31,6 +31,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/di/loop_alignment_dependencies.dart';
 import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/extensions/clip_keyframes.dart';
+import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
@@ -248,6 +249,18 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     _clip?.originalAspectRatio ?? 9 / 16,
     targetAspectRatio: _clip?.targetAspectRatio.value,
   );
+
+  /// The part of the editor canvas the export keeps, in the canvas's pixels.
+  Size get _keptFrameSize {
+    final originalAspectRatio = _clip?.originalAspectRatio ?? 9 / 16;
+    return ExportLayerMapping.keptRect(
+      VideoEditorCanvasGeometry.renderSizeFor(
+        _bodySizeNotifier.value,
+        originalAspectRatio,
+      ),
+      _clip?.targetAspectRatio.value ?? originalAspectRatio,
+    ).size;
+  }
 
   @override
   void initState() {
@@ -1239,7 +1252,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         final style =
             track.customStyle?.resolve() ??
             CaptionStylePreset.byId(track.presetId).style;
-        final bodySize = _bodySizeNotifier.value;
+        final frameSize = _keptFrameSize;
         // Preserve any on-canvas position/rotation/scale the user already
         // applied to a cue's layer, keyed by cue id, so re-editing captions
         // doesn't reset their manual adjustments.
@@ -1254,7 +1267,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               preserveCaptionLayerTransform(
                 style.buildLayer(
                   cue,
-                  bodySize: bodySize,
+                  frameSize: frameSize,
                 ),
                 existingByCueId[cue.id],
               ),

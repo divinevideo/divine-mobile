@@ -15506,6 +15506,24 @@ class AppLocalizationsTr extends AppLocalizations {
       'Klipleri bölünmüş ekranda düzenle';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Kare';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Dikey';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'Videoyu kare yap';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => 'Videoyu dikey yap';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'Video artık kare';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => 'Video artık dikey';
+
+  @override
   String get videoEditorLayoutTitle => 'Düzen';
 
   @override
