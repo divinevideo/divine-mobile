@@ -23,6 +23,10 @@ void main() {
   late bool rejectWrites;
   late bool corruptWrites;
   late bool rejectBackupReadback;
+  late bool rejectReadAll;
+  late Set<String> unreadableKeys;
+  late Set<String> refusedDeleteKeys;
+  late List<({String method, String? key})> storageCalls;
   String? pausedReadKey;
   Completer<void>? readStarted;
   Completer<void>? releaseRead;
@@ -47,6 +51,10 @@ void main() {
     rejectWrites = false;
     corruptWrites = false;
     rejectBackupReadback = false;
+    rejectReadAll = false;
+    unreadableKeys = {};
+    refusedDeleteKeys = {};
+    storageCalls = [];
     pausedReadKey = null;
     readStarted = null;
     releaseRead = null;
@@ -56,9 +64,11 @@ void main() {
       (call) async {
         final args = call.arguments as Map;
         final key = args['key'] as String?;
+        storageCalls.add((method: call.method, key: key));
         switch (call.method) {
           case 'read':
             if (rejectReads ||
+                (unreadableKeys.contains(key) && values.containsKey(key)) ||
                 (rejectBackupReadback &&
                     key!.startsWith('curated_list_draft_quarantine_v1:') &&
                     values.containsKey(key))) {
@@ -72,8 +82,13 @@ void main() {
             }
             return before;
           case 'readAll':
-            if (rejectReads) throw PlatformException(code: 'read_failed');
+            if (rejectReads || rejectReadAll) {
+              throw PlatformException(code: 'read_failed');
+            }
             return Map<String, String>.of(values);
+          case 'containsKey':
+            if (rejectReads) throw PlatformException(code: 'read_failed');
+            return values.containsKey(key);
           case 'write':
             if (rejectWrites) throw PlatformException(code: 'write_failed');
             if (!refuseWrites) {
@@ -83,7 +98,9 @@ void main() {
             }
             return null;
           case 'delete':
-            if (!refuseDeletes) values.remove(key);
+            if (!refuseDeletes && !refusedDeleteKeys.contains(key)) {
+              values.remove(key);
+            }
             return null;
         }
         throw StateError('Unexpected secure-storage operation');
@@ -93,6 +110,105 @@ void main() {
   });
 
   group('owner-private draft archive', () {
+    String quarantineKey(String pubkey, int slot) =>
+        'curated_list_draft_quarantine_v1:$pubkey:$slot';
+
+    test(
+      'owner removal never decrypts or enumerates unrelated storage',
+      () async {
+        await archive.replaceOwner(owner, [draft(owner)]);
+        await archive.replaceOwner(other, [draft(other)]);
+        values[quarantineKey(owner, 4)] = '{unreadable-owner-evidence';
+        values['unrelated-key'] = '{unreadable-unrelated-evidence';
+        final retained = Map<String, String>.of(values)
+          ..remove(SecureCuratedListDraftArchive.storageKey(owner))
+          ..remove(quarantineKey(owner, 4));
+        rejectReadAll = true;
+        unreadableKeys = {'unrelated-key', quarantineKey(owner, 4)};
+        storageCalls.clear();
+
+        await archive.removeOwner(owner);
+
+        expect(values, retained);
+        expect(storageCalls.where((call) => call.method == 'readAll'), isEmpty);
+        expect(
+          storageCalls.where((call) => call.key == 'unrelated-key'),
+          isEmpty,
+        );
+        expect(
+          storageCalls.where((call) => call.method == 'containsKey'),
+          isNotEmpty,
+        );
+      },
+    );
+
+    test(
+      'sparse quarantine slots survive partial removal and are all retried',
+      () async {
+        final liveKey = SecureCuratedListDraftArchive.storageKey(owner);
+        values.addAll({
+          liveKey: '{live-owner-evidence',
+          quarantineKey(owner, 0): '{first-evidence',
+          quarantineKey(owner, 4): '{middle-evidence',
+          quarantineKey(owner, 255): '{last-evidence',
+          quarantineKey(other, 4): '{other-evidence',
+        });
+        refusedDeleteKeys.add(quarantineKey(owner, 4));
+        rejectReadAll = true;
+
+        await expectLater(
+          archive.removeOwner(owner),
+          throwsA(isA<CuratedListDraftArchiveException>()),
+        );
+        expect(values[quarantineKey(owner, 4)], '{middle-evidence');
+        expect(values[quarantineKey(other, 4)], '{other-evidence');
+        refusedDeleteKeys.clear();
+        await archive.removeOwner(owner);
+
+        expect(values, {quarantineKey(other, 4): '{other-evidence'});
+      },
+    );
+
+    test(
+      'a full quarantine retains every backup and the unchanged live source',
+      () async {
+        final liveKey = SecureCuratedListDraftArchive.storageKey(owner);
+        values[liveKey] = '{new-unreadable-source';
+        for (var slot = 0; slot < 256; slot++) {
+          values[quarantineKey(owner, slot)] = '{prior-evidence-$slot';
+        }
+        final before = Map<String, String>.of(values);
+        storageCalls.clear();
+
+        await expectLater(
+          archive.readOwner(owner),
+          throwsA(isA<CuratedListDraftArchiveException>()),
+        );
+
+        expect(values, before);
+        expect(
+          storageCalls.where(
+            (call) => call.method == 'write' || call.method == 'delete',
+          ),
+          isEmpty,
+        );
+        // Explicit destruction can still remove a full quarantine.
+        await archive.removeOwner(owner);
+        expect(values, isEmpty);
+      },
+    );
+
+    test('reuses a verified source beyond a quarantine hole without duplicating it', () async {
+      final liveKey = SecureCuratedListDraftArchive.storageKey(owner);
+      const raw = '{preserved-source';
+      values[liveKey] = raw;
+      values[quarantineKey(owner, 255)] = raw;
+
+      expect(await archive.readOwner(owner), isNull);
+
+      expect(values, {quarantineKey(owner, 255): raw});
+    });
+
     test(
       'round trips private rows and rejects foreign or duplicate coordinates',
       () async {
