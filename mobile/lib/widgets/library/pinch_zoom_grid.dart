@@ -456,9 +456,9 @@ class _PinchZoomGridState extends State<PinchZoomGrid>
       columns: _columns,
       layoutColumns: _renderColumns.toDouble(),
       role: liveIsMagnified ? _LayerRole.solid : _LayerRole.arriving,
-      // Captured from here, so the raster holds the plain layout at the size
-      // it is laid out for — backing and all — and both layers scale by the
-      // same rule.
+      // Captured from here, so the raster holds the layout at the size it is
+      // laid out for — backing and all — and both layers scale by the same
+      // rule. Overlays in a PinchZoomUnscaled keep that frame's counter-scale.
       child: RepaintBoundary(
         key: _liveLayoutKey,
         child: ColoredBox(color: widget.backgroundColor, child: grid),
@@ -590,8 +590,9 @@ class _LayerScaleScope extends InheritedWidget {
 /// child of a `Stack(fit: StackFit.expand)` over a tile. Outside a
 /// [PinchZoomGrid] it is a plain pass-through.
 ///
-/// The outgoing layout of a crossfade is a frozen raster, so its overlays
-/// scale with it as one picture until it has faded.
+/// During a crossfade the step it runs from is a frozen raster, so its
+/// overlays scale with it as one picture while it is on screen, including
+/// when a pinch settles back onto that step.
 class PinchZoomUnscaled extends StatelessWidget {
   const PinchZoomUnscaled({required this.child, super.key});
 
@@ -632,8 +633,8 @@ class _Unscaled extends SingleChildRenderObjectWidget {
   }
 }
 
-/// Lays its child out at its own size times the layer scale and paints it
-/// scaled back down, which cancels the layer's transform.
+/// Lays its child out at its own size times the layer scale and paints it at
+/// the inverse scale, which cancels the layer's transform.
 ///
 /// Listens to the fractional column count itself rather than being rebuilt
 /// for it, so a pinch frame relayouts the overlays without rebuilding every
