@@ -321,9 +321,12 @@ void main() {
     });
   });
 
+  // The patterns themselves are covered in secret_redaction_test.dart; these
+  // prove the sink applies them before anything is stored.
   group('secret redaction at the sink (#10385)', () {
-    // NIP-19's published test vectors; they control no real account.
-    const nsec =
+    // NIP-19's published nsec test vector, standing in for a key pasted into
+    // a link; it controls no real account.
+    const untrustedLinkSegment =
         'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
     const npub =
         'npub10elfcs4fr0l0r8af98jlmgdh9c8tcxjvz9qkw038js35mp4dma8qzvjptg';
@@ -334,44 +337,27 @@ void main() {
       await LogCaptureService().clearAllLogs();
     });
 
-    test('redacts an nsec from a captured message', () {
-      Log.info('opened /profile/$nsec', name: 'Test');
+    test('stores a message with the key redacted', () {
+      Log.info('opened /profile/$untrustedLinkSegment', name: 'Test');
 
       final entry = LogCaptureService().getRecentLogs().last;
       expect(entry.message, equals('opened /profile/[REDACTED]'));
     });
 
-    test('redacts an uppercase ncryptsec from a captured message', () {
-      Log.info('key NCRYPTSEC1QGQEYAFQWZ here', name: 'Test');
-
-      final entry = LogCaptureService().getRecentLogs().last;
-      expect(entry.message.toLowerCase(), isNot(contains('ncryptsec1')));
-    });
-
-    test('redacts an nsec from a captured error and stack trace', () {
+    test('stores an error and stack trace with the key redacted', () {
       Log.error(
         'failed',
         name: 'Test',
-        error: const FormatException('bad link $nsec'),
-        stackTrace: StackTrace.fromString('#0 open ($nsec)'),
+        error: const FormatException('bad link $untrustedLinkSegment'),
+        stackTrace: StackTrace.fromString('#0 open ($untrustedLinkSegment)'),
       );
 
       final entry = LogCaptureService().getRecentLogs().last;
-      expect(entry.error, isNot(contains('nsec1')));
-      expect(entry.stackTrace, isNot(contains('nsec1')));
       expect(entry.error, contains('bad link [REDACTED]'));
+      expect(entry.stackTrace, isNot(contains('nsec1')));
     });
 
-    // The 52 data characters already hold the whole key; the last six are
-    // checksum, so a paste cut short is still the secret.
-    test('redacts an nsec missing its checksum', () {
-      Log.info('opened /profile/${nsec.substring(0, 57)}', name: 'Test');
-
-      final entry = LogCaptureService().getRecentLogs().last;
-      expect(entry.message, equals('opened /profile/[REDACTED]'));
-    });
-
-    test('logs public ids whole', () {
+    test('stores public ids whole', () {
       Log.info('author $npub ($hex)', name: 'Test');
 
       final entry = LogCaptureService().getRecentLogs().last;
