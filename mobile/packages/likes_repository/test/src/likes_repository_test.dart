@@ -7905,6 +7905,100 @@ void main() {
         expect(counts.upvotes[editedId], equals(0));
       });
 
+      test('getVoteCounts counts one vote per account', () async {
+        // Kind 7 is a regular event, so a relay keeps every reaction an
+        // account publishes. Counting events would let one account cast any
+        // number of votes and bury a comment in the Top order.
+        const brigader = 'brigading_voter_pubkey_1234567890abcdef';
+        const honest = 'honest_voter_pubkey_1234567890abcdef';
+        mockQueryEventsSequence([
+          [
+            for (var i = 0; i < 3; i++)
+              createMockReaction(
+                id: 'repeat_downvote_$i',
+                targetEventId: editedId,
+                authorPubkey: brigader,
+                content: '-',
+                createdAt: defaultTimestamp + i,
+              ),
+            createMockReaction(
+              id: 'honest_upvote',
+              targetEventId: editedId,
+              authorPubkey: honest,
+            ),
+          ],
+          <Event>[],
+          <Event>[],
+        ]);
+
+        repository = createRepository(withLocalStorage: false);
+
+        final counts = await repository.getVoteCounts([editedId]);
+
+        expect(counts.downvotes[editedId], equals(1));
+        expect(counts.upvotes[editedId], equals(1));
+      });
+
+      test("getVoteCounts takes an account's newest vote", () async {
+        // A voter who switched from up to down without the retraction
+        // reaching this relay still holds one vote: the newer one.
+        const voter = 'some_voter_pubkey_1234567890abcdef';
+        mockQueryEventsSequence([
+          [
+            createMockReaction(
+              id: 'newer_downvote',
+              targetEventId: editedId,
+              authorPubkey: voter,
+              content: '-',
+              createdAt: defaultTimestamp + 1,
+            ),
+            createMockReaction(
+              id: 'older_upvote',
+              targetEventId: editedId,
+              authorPubkey: voter,
+            ),
+          ],
+          <Event>[],
+          <Event>[],
+        ]);
+
+        repository = createRepository(withLocalStorage: false);
+
+        final counts = await repository.getVoteCounts([editedId]);
+
+        expect(counts.upvotes[editedId], equals(0));
+        expect(counts.downvotes[editedId], equals(1));
+      });
+
+      test('getVoteCounts keeps the same vote from one second in any relay '
+          'order', () async {
+        const voter = 'some_voter_pubkey_1234567890abcdef';
+        final upvote = createMockReaction(
+          id: 'reaction_a',
+          targetEventId: editedId,
+          authorPubkey: voter,
+        );
+        final downvote = createMockReaction(
+          id: 'reaction_b',
+          targetEventId: editedId,
+          authorPubkey: voter,
+          content: '-',
+        );
+
+        for (final order in [
+          [upvote, downvote],
+          [downvote, upvote],
+        ]) {
+          mockQueryEventsSequence([order, <Event>[], <Event>[]]);
+          repository = createRepository(withLocalStorage: false);
+
+          final counts = await repository.getVoteCounts([editedId]);
+
+          expect(counts.upvotes[editedId], equals(0));
+          expect(counts.downvotes[editedId], equals(1));
+        }
+      });
+
       test('deleting an older revision keeps the newer coordinate downvote '
           'indexed (#6124)', () async {
         const coordinate = '34236:$testAuthorPubkey:reply-d-tag';
