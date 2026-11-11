@@ -457,15 +457,15 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     if (!context.mounted) return false;
 
     _pushRoute(
-      context.push<void>(
-        VideoDetailScreen.pathForId(routeId),
-        extra: shouldAutoOpenComments || fallbackVideoIds.isNotEmpty
+      VideoDetailRouteData(
+        id: routeId,
+        $extra: shouldAutoOpenComments || fallbackVideoIds.isNotEmpty
             ? VideoDetailRouteExtra(
                 autoOpenComments: shouldAutoOpenComments,
                 fallbackVideoIds: fallbackVideoIds,
               )
             : null,
-      ),
+      ).push<void>(context),
     );
     return true;
   }

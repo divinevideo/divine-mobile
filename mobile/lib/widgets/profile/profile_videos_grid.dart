@@ -22,8 +22,8 @@ import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
-import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/video_identity.dart';
 import 'package:openvine/widgets/owner_video_actions_sheet.dart';
@@ -224,10 +224,10 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
         context: context,
         video: video,
         cubit: _ownerVideoActionsCubit,
-        onEditRequested: () => context.push(
-          VideoMetadataEditScreen.pathFor(video.id),
-          extra: video,
-        ),
+        onEditRequested: () => VideoMetadataEditRouteData(
+          videoId: video.id,
+          $extra: video,
+        ).push<void>(context),
         onDeleted: () async {
           final feedCubit = context.read<ProfileFeedCubit>();
           // The service marks the video locally deleted; a refresh drops the
@@ -282,16 +282,16 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
     prefetchAroundIndex(resolvedIndex, videos);
 
     runDetached(
-      context.push<void>(
-        PooledFullscreenVideoFeedScreen.pathForVideoId(tappedVideo.id),
-        extra: ProfilePooledFullscreenVideoFeedArgs(
+      PooledFullscreenVideoFeedRouteData(
+        video: tappedVideo.id,
+        $extra: ProfilePooledFullscreenVideoFeedArgs(
           userIdHex: widget.userIdHex,
           initialIndex: resolvedIndex,
           seedVideos: videos,
           initialVideoId: tappedVideo.id,
           initialStableId: tappedVideo.stableId,
         ),
-      ),
+      ).push<void>(context),
       'open profile video',
       logName: 'ProfileVideosGrid',
       category: LogCategory.ui,

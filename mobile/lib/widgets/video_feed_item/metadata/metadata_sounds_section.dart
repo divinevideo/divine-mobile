@@ -11,6 +11,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
@@ -320,7 +321,7 @@ class _OriginalSoundSection extends ConsumerWidget {
       if (!hostContext.mounted) return;
       runDetached(
         hostContext.pushWithVideoPause(
-          SoundDetailScreen.pathForId(syntheticAudio.id),
+          SoundDetailRouteData(id: syntheticAudio.id).location,
           extra: <String, dynamic>{
             'sound': syntheticAudio,
             'sourceVideo': video,
@@ -569,7 +570,7 @@ class _SoundListItem extends ConsumerWidget {
       // "Sound not found".
       runDetached(
         hostContext.pushWithVideoPause(
-          SoundDetailScreen.pathForId(audio.id),
+          SoundDetailRouteData(id: audio.id).location,
           extra: <String, dynamic>{'sound': audio, 'sourceVideo': sourceVideo},
         ),
         'open sound detail',

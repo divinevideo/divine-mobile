@@ -7,13 +7,12 @@ import 'dart:async';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/profile_comments/profile_comments_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/mixins/scroll_pagination_mixin.dart';
-import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_tab_bottom_inset_sliver.dart';
@@ -189,8 +188,9 @@ class _VideoReplyTile extends StatelessWidget {
       label: context.l10n.profileVideoThumbnailLabel(index + 1),
       button: true,
       child: GestureDetector(
-        onTap: () =>
-            context.push(VideoDetailScreen.pathForId(comment.rootEventId)),
+        onTap: () => VideoDetailRouteData(
+          id: comment.rootEventId,
+        ).push<void>(context),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: DecoratedBox(
@@ -239,8 +239,9 @@ class _ProfileCommentCard extends StatelessWidget {
     return Semantics(
       button: true,
       child: GestureDetector(
-        onTap: () =>
-            context.push(VideoDetailScreen.pathForId(comment.rootEventId)),
+        onTap: () => VideoDetailRouteData(
+          id: comment.rootEventId,
+        ).push<void>(context),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(

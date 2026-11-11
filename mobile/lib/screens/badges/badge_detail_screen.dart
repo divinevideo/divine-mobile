@@ -23,6 +23,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_delete_confirmation_sheet.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
@@ -742,11 +743,9 @@ class _BadgeVideoGrid extends ConsumerWidget {
                         button: true,
                         child: GestureDetector(
                           onTap: () => unawaited(
-                            context.push(
-                              PooledFullscreenVideoFeedScreen.pathForVideoId(
-                                video.id,
-                              ),
-                              extra: PooledFullscreenVideoFeedArgs(
+                            PooledFullscreenVideoFeedRouteData(
+                              video: video.id,
+                              $extra: PooledFullscreenVideoFeedArgs(
                                 source: VideoListViewSource(videos),
                                 feedRepository: ref.read(
                                   feedRepositoryProvider,
@@ -757,7 +756,7 @@ class _BadgeVideoGrid extends ConsumerWidget {
                                     ViewTrafficSource.discoveryBadges,
                                 sourceDetail: coordinate.value,
                               ),
-                            ),
+                            ).push<void>(context),
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(4),

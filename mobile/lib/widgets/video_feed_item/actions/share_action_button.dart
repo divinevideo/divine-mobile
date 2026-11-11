@@ -35,8 +35,8 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
-import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/utils/delete_result_localization.dart';
@@ -561,10 +561,10 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     }
     _runShareDetached(
       _presentAfterDismiss<void>((hostContext) {
-        return hostContext.push<void>(
-          VideoMetadataEditScreen.pathFor(widget.video.id),
-          extra: widget.video,
-        );
+        return VideoMetadataEditRouteData(
+          videoId: widget.video.id,
+          $extra: widget.video,
+        ).push<void>(hostContext);
       }),
       'open video metadata editor',
     );

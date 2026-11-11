@@ -8,6 +8,7 @@ import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
@@ -127,7 +128,7 @@ class _ClassicOriginalSoundAttribution extends ConsumerWidget {
       return;
     }
     await context.pushWithVideoPause(
-      SoundDetailScreen.pathForId(sound.id),
+      SoundDetailRouteData(id: sound.id).location,
       extra: <String, dynamic>{'sound': sound, 'sourceVideo': video},
     );
   }
@@ -197,7 +198,7 @@ class _AudioAttributionContent extends ConsumerWidget {
 
     runDetached(
       context.pushWithVideoPause(
-        SoundDetailScreen.pathForId(audio.id),
+        SoundDetailRouteData(id: audio.id).location,
         extra: <String, dynamic>{'sound': audio, 'sourceVideo': sourceVideo},
       ),
       'open sound detail',

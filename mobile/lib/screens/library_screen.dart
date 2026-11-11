@@ -25,6 +25,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/gallery_clip_import/gallery_clip_import_page.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
@@ -520,7 +521,9 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
       context.pop(newClips);
     } else {
       if (!context.mounted) return;
-      await context.push(VideoEditorScreen.pathFor(fromLibrary: true));
+      await const VideoEditorRouteData(
+        from: VideoEditorScreen.libraryOrigin,
+      ).push<void>(context);
       // Re-sync selection with ClipManager after returning from editor.
       if (!context.mounted) return;
       final currentClipIds = ref

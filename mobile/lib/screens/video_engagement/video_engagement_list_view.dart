@@ -9,7 +9,7 @@ import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/nav_extensions.dart';
-import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 
 /// Inner View for the video engagement list screen.
@@ -51,9 +51,9 @@ class VideoEngagementListView extends StatelessWidget {
         // coordinate link the latter is a bare d tag, which the detail route
         // would resolve without the author the link carried.
         onBackPressed: () => context.safePop(
-          fallback: RoutePaths.videoDetailForId(
-            context.read<VideoEngagementBloc>().videoRouteId,
-          ),
+          fallback: VideoDetailRouteData(
+            id: context.read<VideoEngagementBloc>().videoRouteId,
+          ).location,
         ),
         backButtonSemanticLabel: context.l10n.commonBack,
       ),

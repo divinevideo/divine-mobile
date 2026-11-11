@@ -7,7 +7,6 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
@@ -16,7 +15,7 @@ import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
-import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_refresh_control.dart';
@@ -393,10 +392,10 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
         context: context,
         video: video,
         cubit: _ownerVideoActionsCubit,
-        onEditRequested: () => context.push(
-          VideoMetadataEditScreen.pathFor(video.id),
-          extra: video,
-        ),
+        onEditRequested: () => VideoMetadataEditRouteData(
+          videoId: video.id,
+          $extra: video,
+        ).push<void>(context),
       );
 }
 

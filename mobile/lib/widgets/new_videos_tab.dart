@@ -5,7 +5,6 @@ import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
@@ -14,6 +13,7 @@ import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/new_videos_feed_provider.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -236,9 +236,9 @@ class _NewVideosContentState extends ConsumerState<_NewVideosContent> {
           category: LogCategory.video,
         );
         runDetached(
-          context.push<void>(
-            PooledFullscreenVideoFeedScreen.pathForVideoId(videoList[index].id),
-            extra: PooledFullscreenVideoFeedArgs(
+          PooledFullscreenVideoFeedRouteData(
+            video: videoList[index].id,
+            $extra: PooledFullscreenVideoFeedArgs(
               source: const NewVideosViewSource(),
               feedRepository: ref.read(feedRepositoryProvider),
               initialIndex: index,
@@ -246,7 +246,7 @@ class _NewVideosContentState extends ConsumerState<_NewVideosContent> {
               contextTitle: 'New Videos',
               trafficSource: ViewTrafficSource.discoveryNew,
             ),
-          ),
+          ).push<void>(context),
           'open new video',
           logName: 'NewVideosTab',
           category: LogCategory.ui,

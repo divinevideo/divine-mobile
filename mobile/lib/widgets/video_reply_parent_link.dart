@@ -7,7 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/video_reply_parent_provider.dart';
-import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -57,7 +57,7 @@ class VideoReplyParentLink extends ConsumerWidget {
           onInteracted?.call();
           runDetached(
             context.pushWithVideoPause<void>(
-              VideoDetailScreen.pathForId(routeId),
+              VideoDetailRouteData(id: routeId).location,
             ),
             'open reply parent video',
             logName: 'VideoReplyParentLink',

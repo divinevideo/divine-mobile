@@ -67,8 +67,8 @@ void main() {
       mockBloc = _MockProfileCommentsBloc();
       mockGoRouter = MockGoRouter();
       when(
-        () => mockGoRouter.push<Object?>(any()),
-      ).thenAnswer((_) async => null);
+        () => mockGoRouter.push<void>(any()),
+      ).thenAnswer((_) async {});
     });
 
     Widget buildSubject({
@@ -405,7 +405,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => mockGoRouter.push<Object?>('/video/$_testRootEventId'),
+          () => mockGoRouter.push<void>('/video/$_testRootEventId'),
         ).called(1);
       });
 
@@ -425,7 +425,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => mockGoRouter.push<Object?>('/video/$_testRootEventId'),
+          () => mockGoRouter.push<void>('/video/$_testRootEventId'),
         ).called(1);
       });
     });

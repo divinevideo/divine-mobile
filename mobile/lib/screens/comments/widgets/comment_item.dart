@@ -11,7 +11,6 @@ import 'package:count_formatter/count_formatter.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show UserProfile;
 import 'package:openvine/blocs/comments/comment_composer/comment_composer_bloc.dart';
@@ -24,6 +23,7 @@ import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/comments/comment_synthetic_video_event.dart';
 import 'package:openvine/screens/comments/widgets/comment_options_modal.dart';
 import 'package:openvine/screens/comments/widgets/pending_video_reply_tile.dart';
@@ -237,15 +237,13 @@ class _CommentItemState extends ConsumerState<CommentItem> {
                                 thumbnailUrl: widget.comment.thumbnailUrl,
                                 blurhash: widget.comment.videoBlurhash,
                                 borderRadius: BorderRadius.circular(12),
-                                onOpenVideo: () => context.push(
-                                  VideoDetailScreen.pathForId(
-                                    widget.comment.id,
-                                  ),
-                                  extra: VideoDetailRouteExtra(
+                                onOpenVideo: () => VideoDetailRouteData(
+                                  id: widget.comment.id,
+                                  $extra: VideoDetailRouteExtra(
                                     initialVideo: widget.comment
                                         .toSyntheticVideoEvent(),
                                   ),
-                                ),
+                                ).push<void>(context),
                               ),
                             ),
                           ),

@@ -7,7 +7,6 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/badges/badge_videos_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
@@ -17,6 +16,7 @@ import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -161,11 +161,9 @@ class BadgeVideosView extends ConsumerWidget {
               child: Text(context.l10n.exploreNoVideosAvailable),
             ),
             onVideoTap: (videos, index) => unawaited(
-              context.push(
-                PooledFullscreenVideoFeedScreen.pathForVideoId(
-                  videos[index].id,
-                ),
-                extra: PooledFullscreenVideoFeedArgs(
+              PooledFullscreenVideoFeedRouteData(
+                video: videos[index].id,
+                $extra: PooledFullscreenVideoFeedArgs(
                   source: VideoListViewSource(videos),
                   feedRepository: ref.read(feedRepositoryProvider),
                   initialIndex: index,
@@ -173,7 +171,7 @@ class BadgeVideosView extends ConsumerWidget {
                   trafficSource: ViewTrafficSource.discoveryBadges,
                   sourceDetail: coordinate.value,
                 ),
-              ),
+              ).push<void>(context),
             ),
           ),
         },

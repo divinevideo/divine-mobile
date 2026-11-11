@@ -7,7 +7,6 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/profile_saved_videos/profile_saved_videos_bloc.dart';
@@ -15,6 +14,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/models/view_traffic_source.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
@@ -188,29 +188,27 @@ class _SavedGridTile extends ConsumerWidget {
         final bloc = context.read<ProfileSavedVideosBloc>();
         final releaseFeedLease = acquireFeedLease?.call();
         runDetached(
-          context
-              .push<void>(
-                PooledFullscreenVideoFeedScreen.pathForVideoId(videoEvent.id),
-                extra: PooledFullscreenVideoFeedArgs(
-                  source: SavedViewSource(userIdHex),
-                  feedRepository: StreamFeedRepository(
-                    videos: bloc.stream
-                        .map((state) => state.videos)
-                        .startWith(allVideos)
-                        // go() can drop the route without completing push.
-                        .doOnCancel(() => releaseFeedLease?.call()),
-                    hasMore: bloc.stream
-                        .map((state) => state.hasMoreContent)
-                        .startWith(bloc.state.hasMoreContent),
-                    onLoadMore: () async =>
-                        bloc.add(const ProfileSavedVideosLoadMoreRequested()),
-                  ),
-                  initialIndex: index,
-                  initialVideoId: videoEvent.id,
-                  trafficSource: ViewTrafficSource.profile,
-                ),
-              )
-              .whenComplete(() => releaseFeedLease?.call()),
+          PooledFullscreenVideoFeedRouteData(
+            video: videoEvent.id,
+            $extra: PooledFullscreenVideoFeedArgs(
+              source: SavedViewSource(userIdHex),
+              feedRepository: StreamFeedRepository(
+                videos: bloc.stream
+                    .map((state) => state.videos)
+                    .startWith(allVideos)
+                    // go() can drop the route without completing push.
+                    .doOnCancel(() => releaseFeedLease?.call()),
+                hasMore: bloc.stream
+                    .map((state) => state.hasMoreContent)
+                    .startWith(bloc.state.hasMoreContent),
+                onLoadMore: () async =>
+                    bloc.add(const ProfileSavedVideosLoadMoreRequested()),
+              ),
+              initialIndex: index,
+              initialVideoId: videoEvent.id,
+              trafficSource: ViewTrafficSource.profile,
+            ),
+          ).push<void>(context).whenComplete(() => releaseFeedLease?.call()),
           'open saved video',
           logName: 'ProfileSavedGrid',
           category: LogCategory.ui,

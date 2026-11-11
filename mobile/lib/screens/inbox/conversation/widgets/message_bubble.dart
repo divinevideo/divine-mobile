@@ -8,7 +8,6 @@ import 'dart:async';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
@@ -17,6 +16,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/router/routes/search_routes.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart';
@@ -1040,12 +1040,12 @@ class _MessageTextState extends ConsumerState<_MessageText> {
   void _navigateToVideo(String routeReference) {
     final dmReplyContext = widget.dmReplyContext;
     runDetached(
-      context.push(
-        VideoDetailScreen.pathForId(routeReference),
-        extra: dmReplyContext != null
+      VideoDetailRouteData(
+        id: routeReference,
+        $extra: dmReplyContext != null
             ? VideoDetailRouteExtra(dmReplyContext: dmReplyContext)
             : null,
-      ),
+      ).push<void>(context),
       'open video from DM',
       logName: 'MessageBubble',
       category: LogCategory.ui,
@@ -1397,13 +1397,13 @@ class _QuotedVideoCard extends ConsumerWidget {
           ? context.l10n.dmMessageBubbleVideoReplyHint
           : null,
       onTap: enableTap
-          ? () => context.push(
-              VideoDetailScreen.pathForId(video.id),
-              extra: VideoDetailRouteExtra(
+          ? () => VideoDetailRouteData(
+              id: video.id,
+              $extra: VideoDetailRouteExtra(
                 initialVideo: video,
                 dmReplyContext: dmReplyContext,
               ),
-            )
+            ).push<void>(context)
           : null,
       child: Row(
         spacing: 8,
@@ -1595,13 +1595,13 @@ class _VideoCard extends ConsumerWidget {
       label: enableTap ? context.l10n.videoPlayerPlayVideo : null,
       child: GestureDetector(
         onTap: enableTap
-            ? () => context.push(
-                VideoDetailScreen.pathForId(video.id),
-                extra: VideoDetailRouteExtra(
+            ? () => VideoDetailRouteData(
+                id: video.id,
+                $extra: VideoDetailRouteExtra(
                   initialVideo: video,
                   dmReplyContext: dmReplyContext,
                 ),
-              )
+              ).push<void>(context)
             : null,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(_videoCardRadius),

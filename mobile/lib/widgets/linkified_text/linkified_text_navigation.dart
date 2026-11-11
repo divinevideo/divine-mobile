@@ -3,7 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/router/routes/search_routes.dart';
-import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -68,7 +68,7 @@ final class LinkifiedTextNavigation {
     beforeNavigate?.call();
     _pushDetached(
       context,
-      VideoDetailScreen.pathForId(routeReference),
+      VideoDetailRouteData(id: routeReference).location,
       description: 'navigate to video',
     );
   }
@@ -80,7 +80,7 @@ final class LinkifiedTextNavigation {
   }) {
     _pushAfterModalPop(
       context,
-      VideoDetailScreen.pathForId(routeReference),
+      VideoDetailRouteData(id: routeReference).location,
       beforeNavigate: beforeNavigate,
     );
   }

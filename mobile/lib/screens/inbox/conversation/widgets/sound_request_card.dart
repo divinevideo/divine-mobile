@@ -11,8 +11,8 @@ import 'package:openvine/blocs/sound_requests/sound_requests_cubit.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/recorder_sound_selection.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/comments/widgets/video_comment_player.dart';
-import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -292,7 +292,7 @@ class _ReadyActions extends StatelessWidget {
                               actions.use((sound) async {
                                 if (!context.mounted) return;
                                 await context.pushWithVideoPause(
-                                  VideoRecorderScreen.path,
+                                  const VideoRecorderRouteData().location,
                                   extra: RecorderSoundSelection(
                                     sound: sound,
                                     ownerPubkey: owner,

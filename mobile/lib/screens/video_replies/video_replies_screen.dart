@@ -14,6 +14,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/open_video_responses_feed.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -95,9 +96,9 @@ class VideoRepliesView extends StatelessWidget {
           title: l10n.videoStickerRepliesManageTitle,
           showBackButton: true,
           onBackPressed: () => context.safePop(
-            fallback: RoutePaths.videoDetailForId(
-              context.read<VideoRepliesCubit>().videoId,
-            ),
+            fallback: VideoDetailRouteData(
+              id: context.read<VideoRepliesCubit>().videoId,
+            ).location,
           ),
         ),
         body: switch (status) {
