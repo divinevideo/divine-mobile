@@ -23,6 +23,7 @@ import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/minor_account_review_routes.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/utils/validators.dart';
 import 'package:openvine/widgets/minor_account_review_checklist_card.dart';
@@ -197,7 +198,7 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView>
     if (context.canPop()) {
       context.pop();
     } else {
-      context.pushReplacement(MinorAccountReviewParentConsentScreen.path);
+      const MinorAccountReviewParentConsentRouteData().pushReplacement(context);
     }
   }
 

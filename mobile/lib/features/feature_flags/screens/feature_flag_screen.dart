@@ -3,7 +3,6 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
@@ -11,7 +10,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/environment_provider.dart';
-import 'package:openvine/screens/minor_account_review_screen.dart';
+import 'package:openvine/router/routes/minor_account_review_routes.dart';
 
 class FeatureFlagScreen extends ConsumerWidget {
   const FeatureFlagScreen({super.key});
@@ -116,7 +115,8 @@ class FeatureFlagScreen extends ConsumerWidget {
                         label: context.l10n.minorAccountReviewTitle,
                         expanded: true,
                         onPressed: () =>
-                            context.push(MinorAccountReviewScreen.welcomePath),
+                            const MinorAccountReviewWelcomeRouteData()
+                                .push<void>(context),
                       ),
                     ),
                 ],

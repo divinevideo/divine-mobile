@@ -2,12 +2,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
 
 import '../helpers/finders.dart';
+import '../helpers/go_router.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -142,6 +144,59 @@ void main() {
       // anchor, so the screen has to resolve one (#7506).
       expect(sentOrigin, isNotNull);
       expect(sentOrigin!.isEmpty, isFalse);
+    });
+
+    testWidgets('back to review goes to the review screen', (tester) async {
+      // See the surface-size note above.
+      await tester.binding.setSurfaceSize(const Size(800, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final goRouter = MockGoRouter();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentMinorAccountReviewStatusProvider.overrideWith((ref) async {
+              return const MinorAccountReviewStatus(
+                restrictionStatus:
+                    AccountRestrictionStatus.restrictedMinorReview,
+                currentCase: MinorReviewCase(
+                  id: 'case-under13',
+                  state: MinorReviewCaseState.restrictedPendingSupportEmail,
+                  suspectedAgeBand: SuspectedAgeBand.under13,
+                  allowedResolution: MinorReviewResolutionType.supportEmailOnly,
+                  instructions: MinorReviewInstructions(
+                    title: 'Under-13 review',
+                    body: 'Parent support is required.',
+                  ),
+                  supportEmail: 'support@divine.video',
+                ),
+              );
+            }),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: MockGoRouterProvider(
+              goRouter: goRouter,
+              child: const MinorAccountReviewUnder13SupportScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final backLabel = lookupAppLocalizations(
+        const Locale('en'),
+      ).minorAccountReviewBackToReview;
+      await tester.ensureVisible(find.text(backLabel));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(backLabel));
+      await tester.pump();
+
+      verify(
+        () => goRouter.go('/account-review', extra: any(named: 'extra')),
+      ).called(1);
+      verifyNoMoreInteractions(goRouter);
     });
   });
 }
