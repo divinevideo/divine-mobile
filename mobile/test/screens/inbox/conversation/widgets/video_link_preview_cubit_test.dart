@@ -166,6 +166,50 @@ void main() {
           emits(isA<VideoLinkPreviewNotFound>()),
         );
       });
+
+      test('emits $VideoLinkPreviewNotFound rather than a video whose d tag '
+          'reuses the cited event id', () async {
+        // A kind 22 citation routes by its event id, which is also looked up
+        // as a d tag: anyone can publish a video under that d tag.
+        const citedEventId =
+            'c3c3f6b60119d9521934a691347d9f78'
+            'e8770b56da16bb255ee77ac112b4c1f6';
+        final nostrClient = _MockNostrClient();
+        answerQueriesFromStoredEvents(nostrClient, [
+          Event.fromJson({
+            'id': otherEventId,
+            'pubkey': otherAuthor,
+            'created_at': 1739350100,
+            'kind': 34236,
+            'tags': [
+              ['d', citedEventId],
+              ['url', 'https://example.com/other.mp4'],
+            ],
+            'content': '',
+            'sig': '',
+          }),
+        ]);
+        final repository = VideosRepository(nostrClient: nostrClient);
+
+        // Positive control: an unattributed lookup of the id finds it.
+        final bare = await repository.fetchVideoWithStatsForRouteId(
+          citedEventId,
+        );
+        expect(bare?.id, equals(otherEventId));
+
+        final cubit = VideoLinkPreviewCubit(
+          videoStableId: citedEventId,
+          authorPubkey: author,
+          videoKind: 22,
+          videosRepository: repository,
+        );
+        addTearDown(cubit.close);
+
+        await expectLater(
+          cubit.stream,
+          emits(isA<VideoLinkPreviewNotFound>()),
+        );
+      });
     });
 
     group('not found', () {

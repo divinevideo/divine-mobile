@@ -22,6 +22,7 @@ void main() {
       expect(target.authorPubkey, isNull);
       expect(target.videoKind, isNull);
       expect(target.routeId, 'skate-loop');
+      expect(target.routeAuthor, isNull);
       expect(target.fallbackRouteIds, isEmpty);
       expect(
         target.canonicalUrl,
@@ -44,6 +45,8 @@ void main() {
       expect(target.authorPubkey, author);
       expect(target.videoKind, 22);
       expect(target.routeId, eventId);
+      // A hex route is also looked up as a d tag, so the author travels with it.
+      expect(target.routeAuthor, author);
       expect(target.fallbackRouteIds, ['22:$author:$eventId']);
       expect(
         target.canonicalUrl,
@@ -67,6 +70,7 @@ void main() {
       // The bare d tag names no author, and another account's video can
       // share it, so an author-named share resolves by its coordinate alone.
       expect(target.routeId, '34236:$author:skate-loop');
+      expect(target.routeAuthor, isNull);
       expect(target.fallbackRouteIds, isEmpty);
       expect(
         target.canonicalUrl,
@@ -131,6 +135,7 @@ void main() {
       expect(target, isNotNull);
       expect(target!.stableId, 'skate-loop');
       expect(target.routeId, 'skate-loop');
+      expect(target.routeAuthor, isNull);
       expect(target.fallbackRouteIds, isEmpty);
     });
 

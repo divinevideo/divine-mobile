@@ -33,6 +33,12 @@ class DmVideoTarget {
   /// share it (#10384).
   String get routeId => _authorScopedCoordinate ?? stableId;
 
+  /// The author a lookup of [routeId] is held to, when [routeId] does not
+  /// already name one: a regular-event share routes by its event id, which
+  /// the repository also looks up as a `d` tag anyone can publish under.
+  String? get routeAuthor =>
+      _authorScopedCoordinate == null ? _routingAuthor : null;
+
   /// Repository routes tried after [routeId].
   List<String> get fallbackRouteIds {
     if (_authorScopedCoordinate != null) return const [];

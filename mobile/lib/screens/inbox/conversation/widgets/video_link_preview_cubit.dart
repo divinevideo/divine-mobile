@@ -80,6 +80,7 @@ class VideoLinkPreviewCubit extends Cubit<VideoLinkPreviewState> {
       final video = await _videosRepository.fetchVideoWithStatsForRouteId(
         target.routeId,
         fallbackRouteIds: target.fallbackRouteIds,
+        expectedAuthor: target.routeAuthor,
       );
       if (isClosed) return;
       if (video != null) {

@@ -221,5 +221,56 @@ void main() {
 
       expect(cubit.state.status, SharedVideoSaveStatus.unavailable);
     });
+
+    test('reports unavailable rather than saving a video whose d tag reuses '
+        'the cited event id', () async {
+      // A kind 22 citation routes by its event id, which is also looked up as
+      // a d tag: anyone can publish a video under that d tag.
+      const citedEventId =
+          'c3c3f6b60119d9521934a691347d9f78'
+          'e8770b56da16bb255ee77ac112b4c1f6';
+      const squatterEventId =
+          'b2b2f6b60119d9521934a691347d9f78'
+          'e8770b56da16bb255ee77ac112b4c1f6';
+      final nostrClient = _MockNostrClient();
+      answerQueriesFromStoredEvents(nostrClient, [
+        Event.fromJson({
+          'id': squatterEventId,
+          'pubkey': currentPubkey,
+          'created_at': 1739350100,
+          'kind': 34236,
+          'tags': [
+            ['d', citedEventId],
+            ['url', 'https://example.com/other.mp4'],
+          ],
+          'content': '',
+          'sig': '',
+        }),
+      ]);
+      final repository = VideosRepository(nostrClient: nostrClient);
+
+      // Positive control: an unattributed lookup of the id finds it.
+      final bare = await repository.fetchVideoWithStatsForRouteId(
+        citedEventId,
+      );
+      expect(bare?.id, equals(squatterEventId));
+
+      final cubit = SharedVideoSaveCubit(
+        videosRepository: repository,
+        profileRepository: profileRepository,
+        currentPubkey: currentPubkey,
+      );
+      addTearDown(cubit.close);
+
+      await cubit.save(
+        const DmVideoTarget(
+          stableId: citedEventId,
+          authorPubkey: otherPubkey,
+          videoKind: 22,
+        ),
+      );
+
+      expect(cubit.state.status, SharedVideoSaveStatus.unavailable);
+    });
   });
 }
