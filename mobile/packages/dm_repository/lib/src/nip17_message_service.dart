@@ -21,6 +21,7 @@ import 'package:nostr_sdk/nip59/gift_wrap_batch_wrap.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/nostr.dart';
 import 'package:nostr_sdk/relay/relay.dart';
+import 'package:nostr_sdk/relay/relay_diagnostics.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:nostr_sdk/signer/signer_failure.dart';
@@ -674,12 +675,13 @@ class NIP17MessageService {
   static const Duration _recipientOkConfirmTimeout =
       DmSendBudget.recipientOkConfirm;
 
-  /// Refusals a later attempt with the same wrap can get past (#8441).
-  static const _retryableRefusalPrefixes = [
-    'rate-limited:',
-    'error:',
-    'auth-required:',
-  ];
+  /// Refusal categories a later attempt with the same wrap can get past
+  /// (#8441), as [relayRefusalCategoryForDiagnostics] names them.
+  static const _retryableRefusalCategories = {
+    'rate-limited',
+    'error',
+    'auth-required',
+  };
 
   /// Hard bound on the self-wrap publish. `publishEvent` is frame-accept
   /// with no timeout of its own, so a stalled socket would otherwise hang
@@ -1020,7 +1022,9 @@ class NIP17MessageService {
           retryablePending: softUnconfirmed,
           unconfirmedRecipientWrap: softUnconfirmed ? giftWrapEvent : null,
           recipientWrapRefused: outcome.rejectedBy.values.any(
-            (reason) => !_retryableRefusalPrefixes.any(reason.startsWith),
+            (reason) => !_retryableRefusalCategories.contains(
+              relayRefusalCategoryForDiagnostics(reason),
+            ),
           ),
           // Retry sweeps leave an attempt that reached no relay uncounted, as
           // an outage on our side. Inbox relays the recipient names that

@@ -1338,6 +1338,31 @@ void main() {
           );
         });
 
+        for (final (reason, refused) in [
+          ('invalid: created_at too old', true),
+          ('Blocked: you are banned', true),
+          ('RATE-LIMITED: slow down', false),
+          (' error: could not connect to the database', false),
+          ('ERROR: auth-required: authenticate first', false),
+        ]) {
+          test('reads "$reason" as a refusal the same wrap '
+              '${refused ? 'cannot' : 'can'} get past', () async {
+            answerRecipientWith(
+              (event) => PublishOutcome(
+                eventId: event.id,
+                acceptedBy: const [],
+                rejectedBy: {'wss://relay.example.com': reason},
+                noResponseFrom: const [],
+              ),
+            );
+
+            final result = await send();
+
+            expect(result.success, isFalse);
+            expect(result.recipientWrapRefused, refused);
+          });
+        }
+
         test('sends the given wrap again instead of building a new one, and '
             'publishes the sender copy once it is confirmed', () async {
           answerRecipientWith(unanswered);
