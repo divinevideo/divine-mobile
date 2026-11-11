@@ -784,20 +784,19 @@ class SoundsRepository {
   Future<AudioEvent?> _fetchVideoOriginalSound(String soundId) async {
     final videoId = soundId.substring('video_'.length).split('-').first;
     if (!NostrHexUtils.isValidEventId(videoId)) return null;
-    Event? source;
     final api = _funnelcakeApiClient;
-    if (api != null && api.isAvailable) {
-      try {
-        source = await api.getVideoEvent(videoId);
-      } on Exception catch (error) {
-        Log.warning(
-          'Current original-sound source lookup failed for $videoId: $error',
-          name: 'SoundsRepository',
-          category: LogCategory.api,
-        );
-      }
+    if (api == null || !api.isAvailable) return null;
+    final Event? source;
+    try {
+      source = await api.getVideoEvent(videoId);
+    } on Exception catch (error) {
+      Log.warning(
+        'Current original-sound source lookup failed for $videoId: $error',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      return null;
     }
-    source ??= await _nostrClient.fetchEventById(videoId);
     if (source == null || !NIP71VideoKinds.isVideoKind(source.kind)) {
       return null;
     }

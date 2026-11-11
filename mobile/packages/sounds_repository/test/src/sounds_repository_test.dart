@@ -709,6 +709,46 @@ void main() {
       },
     );
 
+    for (final failure in ['missing', 'offline', 'unconfigured']) {
+      test(
+        'legacy link stays closed when its current source is $failure',
+        () async {
+          final api = _MockFunnelcakeApiClient();
+          when(() => api.isAvailable).thenReturn(failure != 'unconfigured');
+          when(() => api.getVideoEvent(testVideoEventId)).thenAnswer((_) async {
+            if (failure == 'offline') throw Exception('offline');
+            return null;
+          });
+          final oldVideo = Event.fromJson({
+            'id': testVideoEventId,
+            'pubkey': testPubkey1,
+            'kind': 34236,
+            'created_at': 1000,
+            'content': 'An obsolete caption',
+            'tags': [
+              ['d', 'puppet-show'],
+              ['platform', 'vine'],
+            ],
+            'sig': '',
+          });
+          when(
+            () => mockNostrClient.fetchEventById(testVideoEventId),
+          ).thenAnswer((_) async => oldVideo);
+          final sounds = SoundsRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: api,
+          );
+          addTearDown(sounds.dispose);
+
+          expect(
+            await sounds.fetchSoundById('video_$testVideoEventId'),
+            isNull,
+          );
+          verifyNever(() => mockNostrClient.fetchEventById(testVideoEventId));
+        },
+      );
+    }
+
     group('fetchPopularSounds', () {
       late _MockFunnelcakeApiClient funnelcake;
 
