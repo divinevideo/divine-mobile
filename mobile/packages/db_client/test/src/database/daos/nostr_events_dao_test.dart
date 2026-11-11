@@ -2252,6 +2252,27 @@ void main() {
           (id: event.id, sig: event.sig),
         ]);
       });
+
+      for (final kind in [EventKind.metadata, EventKind.longForm]) {
+        test('repairs a different cached signature for kind $kind', () async {
+          final verified = createEvent(
+            kind: kind,
+            tags: [
+              ['d', 'article'],
+            ],
+          )..markSignatureVerified();
+          final cached = Event.fromJson(verified.toJson())
+            ..sig = 'unchecked signature';
+          await dao.upsertEvent(cached);
+
+          await dao.upsertEventsBatch([verified]);
+
+          expect((await dao.getEventById(verified.id))?.sig, verified.sig);
+          expect(await dao.getRecentVerifiedEventIdSigs(), [
+            (id: verified.id, sig: verified.sig),
+          ]);
+        });
+      }
     });
   });
 }

@@ -10,8 +10,8 @@
 - Published by GitHub Actions through npm trusted publishing, approved by
   the maintainer.
 
-It is served from our own origin rather than a CDN, so a third party cannot
-change the code that decides whether a Nostr event's signature is valid.
+The app serves the vendored verifier from its own origin. Its delivery does
+not depend on a third-party CDN.
 
 `../../nostr_crypto.js` imports it and exposes `globalThis.divineNostrCrypto`,
 which the web build's relay pool uses to check event signatures. BIP-340

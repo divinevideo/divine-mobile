@@ -290,18 +290,25 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     }
   }
 
-  /// Promotes an already-cached pair after a verified replay. Replaceable
-  /// upserts otherwise leave rows at the same timestamp untouched.
+  /// Saves the verified signature for the same cached event ID. This repairs
+  /// an unchecked signature without replacing a different event at the same
+  /// timestamp.
   Future<void> _recordVerifiedSignature(Event event) async {
     if (!event.hasVerifiedSignature) return;
-    await customUpdate(
-      'UPDATE event SET signature_verified = 1 '
-      'WHERE id = ? AND sig = ? AND signature_verified = 0',
+    final updated = await customUpdate(
+      'UPDATE event SET sig = ?, signature_verified = 1 '
+      'WHERE id = ? AND (sig != ? OR signature_verified = 0)',
       variables: [
+        Variable.withString(event.sig),
         Variable.withString(event.id),
         Variable.withString(event.sig),
       ],
     );
+    if (updated != 0) {
+      notifyUpdates({
+        TableUpdate.onTable(nostrEvents, kind: UpdateKind.update),
+      });
+    }
   }
 
   /// Batch insert or replace multiple events in a single transaction.
