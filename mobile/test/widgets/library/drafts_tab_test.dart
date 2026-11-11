@@ -160,6 +160,46 @@ void main() {
         expect(find.byType(DraftListTile), findsNWidgets(2));
       });
 
+      testWidgets('keeps the last draft above the system navigation bar', (
+        tester,
+      ) async {
+        const navigationBarHeight = 48.0;
+        final devicePixelRatio = tester.view.devicePixelRatio;
+        tester.view.viewPadding = FakeViewPadding(
+          bottom: navigationBarHeight * devicePixelRatio,
+        );
+        tester.view.padding = FakeViewPadding(
+          bottom: navigationBarHeight * devicePixelRatio,
+        );
+        addTearDown(tester.view.resetViewPadding);
+        addTearDown(tester.view.resetPadding);
+        when(() => mockBloc.state).thenReturn(
+          DraftsLibraryLoaded(
+            drafts: [
+              for (var i = 0; i < 20; i++)
+                createDraft(id: 'draft$i', title: 'Draft $i'),
+            ],
+          ),
+        );
+
+        await tester.pumpWidget(buildWidget());
+        await tester.drag(
+          find.byType(CustomScrollView),
+          const Offset(0, -10000),
+        );
+        await tester.pumpAndSettle();
+
+        final lastTile = find.ancestor(
+          of: find.text('Draft 19'),
+          matching: find.byType(DraftListTile),
+        );
+        final screenHeight = tester.view.physicalSize.height / devicePixelRatio;
+        expect(
+          tester.getRect(lastTile).bottom,
+          lessThanOrEqualTo(screenHeight - navigationBarHeight),
+        );
+      });
+
       testWidgets('shows autosaved draft with in-progress badge', (
         tester,
       ) async {
