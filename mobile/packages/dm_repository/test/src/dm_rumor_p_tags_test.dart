@@ -48,6 +48,7 @@ class _WireRecordingMessageService extends NIP17MessageService {
     Duration? recipientWrapBuildTimeout,
     Duration? selfWrapBuildTimeout,
     void Function(Event? prebuiltSelfWrap)? onSelfWrapDue,
+    Event? recipientWrap,
   }) async {
     wire.add((rumor: rumorEvent, recipient: recipientPubkey));
     return NIP17SendResult.success(

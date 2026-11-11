@@ -3,6 +3,8 @@
 // ABOUTME: self-wrap dropped) and its durable recovery queue handle.
 
 import 'package:models/models.dart';
+import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/event_kind.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -165,6 +167,57 @@ void main() {
         expect(success.reachedNoRelay, isFalse);
         expect(blocked.reachedNoRelay, isFalse);
         expect(tooLong.reachedNoRelay, isFalse);
+      });
+
+      test('carries the recipient wrap an unconfirmed attempt left with a '
+          'relay, so a retry can send that same event again (#8441)', () {
+        final wrap = Event(
+          recipientPubkey,
+          EventKind.giftWrap,
+          [
+            ['p', recipientPubkey],
+          ],
+          'ciphertext',
+          createdAt: 1700000000,
+        );
+        final unconfirmed = NIP17SendResult.failure(
+          'recipient OK unconfirmed',
+          retryablePending: true,
+          unconfirmedRecipientWrap: wrap,
+        );
+        const withoutWrap = NIP17SendResult.failure(
+          'recipient OK unconfirmed',
+          retryablePending: true,
+        );
+
+        expect(
+          (unconfirmed as NIP17SendFailure).unconfirmedRecipientWrap,
+          same(wrap),
+        );
+        expect(unconfirmed, isNot(equals(withoutWrap)));
+        expect(unconfirmed.toString(), contains(wrap.id));
+        expect(
+          (withoutWrap as NIP17SendFailure).unconfirmedRecipientWrap,
+          isNull,
+        );
+      });
+
+      test('tells a relay that refused the recipient wrap apart from any '
+          'other failure (#8441)', () {
+        const refused = NIP17SendResult.failure(
+          'recipient wrap refused',
+          recipientWrapRefused: true,
+        );
+        const unreachable = NIP17SendResult.failure('recipient wrap refused');
+
+        expect(refused.recipientWrapRefused, isTrue);
+        expect(unreachable.recipientWrapRefused, isFalse);
+        expect(refused, isNot(equals(unreachable)));
+        expect(refused.toString(), contains('recipientWrapRefused: true'));
+        expect(
+          const NIP17SendResult.blocked('policy').recipientWrapRefused,
+          isFalse,
+        );
       });
     });
 

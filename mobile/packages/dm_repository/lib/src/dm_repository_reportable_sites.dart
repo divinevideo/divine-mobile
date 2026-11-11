@@ -56,6 +56,12 @@ abstract class DmRepositoryReportableSites {
   /// recipients, as it did before #10012.
   static const String recordHeldPoolWrap = 'recordHeldPoolWrap';
 
+  /// `_keepUnconfirmedWrap`: keeping the recipient wrap an attempt wrote
+  /// without hearing its `OK` threw (#8441). The attempt's result stands; the
+  /// next attempt builds a new wrap instead of sending that one again.
+  static const String keepUnconfirmedRecipientWrap =
+      'keepUnconfirmedRecipientWrap';
+
   /// `_chargeFailedReplay`: bumping the retry count for a failed
   /// `recoverFullSend` / `recoverSelfWrap` attempt threw. The caller already
   /// has the failure result; a missed bump only means one extra retry.
