@@ -183,13 +183,20 @@ class VideoRecorderScreen extends ConsumerWidget {
   /// See [VideoRecorderView.autoRecord].
   static const autoRecordQueryParameter = 'auto_record';
 
+  /// Query parameter carrying the [CreationEntryPoint] the recorder was
+  /// opened from.
+  static const entryPointQueryParameter = 'entry_point';
+
+  /// Query parameter carrying the id of the challenge a take is recorded for.
+  static const challengeRecordingQueryParameter = 'challenge_recording';
+
   static String pathForEntryPoint(
     String entryPoint, {
     bool autoRecord = false,
   }) => Uri(
     path: path,
     queryParameters: {
-      'entry_point': entryPoint,
+      entryPointQueryParameter: entryPoint,
       if (autoRecord) autoRecordQueryParameter: 'true',
     },
   ).toString();

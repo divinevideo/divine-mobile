@@ -45,6 +45,9 @@ class SubtitleEditorScreen extends ConsumerStatefulWidget {
   /// Base route path.
   static const String path = RoutePaths.subtitleEditor;
 
+  /// Route pattern, with the video id as its `videoId` parameter.
+  static const pathWithId = '$path/:videoId';
+
   /// GoRouter route name.
   static const routeName = 'subtitle-edit';
 

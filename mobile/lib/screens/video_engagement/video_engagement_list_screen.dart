@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_view.dart';
 
 /// Page widget for the video engagement (likers / reposters) list.
@@ -31,11 +32,16 @@ class VideoEngagementListScreen extends ConsumerWidget {
     this.addressableId,
   });
 
-  /// Path under the video route. Concrete child paths are
-  /// `likers` and `reposters`.
-  static const path = ':eventId';
-  static const likersSubPath = 'likers';
-  static const repostersSubPath = 'reposters';
+  /// Route pattern for the likers list. It sits beside the video route
+  /// rather than under it, so a cold entry leaves a one-entry stack.
+  static const likersPath = '${RoutePaths.videoDetailBase}/:eventId/likers';
+
+  /// Route pattern for the reposters list, registered like [likersPath].
+  static const repostersPath =
+      '${RoutePaths.videoDetailBase}/:eventId/reposters';
+
+  /// Query parameter carrying [addressableId], named after the Nostr `a` tag.
+  static const coordinateQueryParameter = 'a';
 
   /// Route name used for the likers list.
   static const likersRouteName = 'videoLikers';
