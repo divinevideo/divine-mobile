@@ -9,7 +9,6 @@ import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_collaborator_status/video_collaborator_status_cubit.dart';
@@ -17,7 +16,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
-import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
@@ -604,17 +603,15 @@ class _MoreRepostersChip extends StatelessWidget {
   }
 
   void _openRepostersList(BuildContext context) {
-    final addressableId = video.addressableId;
     // Dismiss the sheet first, then navigate from the root navigator context
-    // — the same handoff every other destination in this sheet uses. Both the
-    // router lookup and the push run against the host context, which is
-    // outside the modal's widget tree.
+    // — the same handoff every other destination in this sheet uses. The push
+    // runs against the host context, which is outside the modal's widget
+    // tree.
     final hostContext = Navigator.of(context, rootNavigator: true).context;
-    final location = GoRouter.of(hostContext).namedLocation(
-      VideoEngagementListScreen.repostersRouteName,
-      pathParameters: {'eventId': video.id},
-      queryParameters: addressableId == null ? const {} : {'a': addressableId},
-    );
+    final location = VideoRepostersRouteData(
+      eventId: video.id,
+      a: video.addressableId,
+    ).location;
     Navigator.of(context).pop();
     // Defer to the next frame so the modal route's pop has settled in the
     // route stack before we push the destination route.
