@@ -33,6 +33,69 @@ void main() {
     });
   });
 
+  group('secrets pasted into a link (#10385)', () {
+    // NIP-19's published test vector; it controls no real account.
+    const nsec =
+        'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
+    group('parseDeepLink', () {
+      for (final (route, parsedLine) in const [
+        ('video', 'Parsed video deep link ref'),
+        ('hashtag', 'Parsed hashtag deep link'),
+        ('search', 'Parsed search deep link'),
+        ('list', 'Parsed list deep link id'),
+      ]) {
+        test('does not log an nsec carried by a /$route link', () async {
+          await LogCaptureService().clearAllLogs();
+
+          DeepLinkService.parseDeepLink('https://divine.video/$route/$nsec');
+
+          final logged = [
+            for (final entry in LogCaptureService().getRecentLogs())
+              entry.message,
+          ].join('\n');
+          expect(logged, contains(parsedLine));
+          expect(logged.toLowerCase(), isNot(contains('nsec1')));
+        });
+      }
+    });
+
+    group('$DeepLink toString', () {
+      for (final link in const [
+        DeepLink(type: DeepLinkType.profile, npub: nsec),
+        DeepLink(type: DeepLinkType.video, videoRef: nsec),
+        DeepLink(type: DeepLinkType.hashtag, hashtag: nsec),
+        DeepLink(type: DeepLinkType.search, searchTerm: nsec),
+        DeepLink(type: DeepLinkType.list, listId: nsec),
+        DeepLink(type: DeepLinkType.shortLink, shortCode: nsec),
+        DeepLink(type: DeepLinkType.challenge, challengeNaddr: nsec),
+      ]) {
+        test('does not render an nsec in a ${link.type.name} link', () {
+          expect(link.toString().toLowerCase(), isNot(contains('nsec1')));
+        });
+      }
+
+      test('renders an uppercase nsec in a profile link as redacted', () {
+        final link = DeepLink(
+          type: DeepLinkType.profile,
+          npub: nsec.toUpperCase(),
+        );
+
+        expect(link.toString(), contains('<redacted>'));
+      });
+
+      test('renders a profile npub with its hex, as other logs do', () {
+        const npub =
+            'npub10elfcs4fr0l0r8af98jlmgdh9c8tcxjvz9qkw038js35mp4dma8qzvjptg';
+        const hex =
+            '7e7e9c42a91bfef19fa929e5fda1b72e0ebc1a4c1141673e2794234d86addf4e';
+        const link = DeepLink(type: DeepLinkType.profile, npub: npub);
+
+        expect(link.toString(), contains('$npub ($hex)'));
+      });
+    });
+  });
+
   group('DeepLinkService URL Parsing', () {
     group('Video URL Parsing', () {
       test('parses valid video URL correctly', () {
