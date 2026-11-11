@@ -1345,6 +1345,21 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     _ = try invoke("seekTo", ["positionMs": 0], on: "divine_video_player/player_\(bareId)")
   }
 
+  func testStuckSeekRecoveryIgnoresAnInvalidTime() throws {
+    let instance = try XCTUnwrap(PlayerRegistry.shared.get(Self.playerId))
+    let player = try XCTUnwrap(instance.getPlayer())
+    let item = try XCTUnwrap(player.currentItem)
+    let recover = try XCTUnwrap(instance.textureOutput?.onSeekStuck)
+
+    // What an empty queue's clock reads. `AVPlayerItem` raises
+    // `NSInvalidArgumentException` on a seek to it, which ends the app.
+    recover(.invalid)
+    RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+
+    XCTAssertTrue(player.currentItem === item, "the loaded clip must stay loaded")
+    XCTAssertEqual(latestState()?["status"] as? String, "paused")
+  }
+
   /// Calls [method] the way the Dart controller does and waits for its answer.
   @discardableResult
   private func invoke(
@@ -1503,6 +1518,89 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     ADIAAAAwAAAAMgAAADAAAAAyAAAAMAAAADIAAAAwAAAAMgAAADAAAAAyAAAAMAAAADIAAAAwAAAA
     MgAAADAAAAAyAAAAFHN0Y28AAAAAAAAAAQAAACw=
     """
+}
+
+/// After a seek, `VideoTextureOutput` gives the frame 600 ms to arrive and
+/// otherwise reports the seek as stuck, so the player retries it with
+/// tolerance at the time the queue reads. `stop` empties the queue while that
+/// window can still be open, and an empty queue reads an invalid time: once a
+/// reload had put an item back before the report ran, `AVPlayerItem` raised
+/// `NSInvalidArgumentException` on the retry and the app ended.
+final class VideoTextureOutputStuckSeekTests: XCTestCase {
+  private var audioURL: URL!
+
+  override func setUpWithError() throws {
+    try super.setUpWithError()
+    audioURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("stuck_seek_\(UUID().uuidString).wav")
+    try Self.silentWav(seconds: 1).write(to: audioURL)
+  }
+
+  override func tearDown() {
+    if let audioURL { try? FileManager.default.removeItem(at: audioURL) }
+    super.tearDown()
+  }
+
+  func testWindowWhoseQueueEmptiesReportsNoStuckSeek() throws {
+    // Sound alone never hands the video output a frame, so a window on it
+    // runs out without one.
+    let item = AVPlayerItem(url: audioURL)
+    let player = AVQueuePlayer(items: [item])
+    let output = VideoTextureOutput(registry: FakeTextureRegistry())
+    defer { output.dispose() }
+    var reports: [CMTime] = []
+    output.onSeekStuck = { reports.append($0) }
+    output.attach(to: item)
+    output.attachPlayer(player)
+
+    // A window reports only after a display-link tick inside it, and a
+    // freshly launched simulator can leave more than its 600 ms between two.
+    var windows = 0
+    let deadline = Date().addingTimeInterval(60)
+    while reports.isEmpty {
+      guard Date() < deadline else {
+        return XCTFail("no window on the queued item was reported stuck")
+      }
+      windows += 1
+      openWindowAndLetItRunOut(output)
+    }
+    let queuedReports = reports
+    XCTAssertTrue(queuedReports.allSatisfy(\.isNumeric), "a queued item reports where it stands")
+
+    // What `stop` does to a window it interrupts, then windows opened on the
+    // empty queue: as many as the queued item needed, and more.
+    output.forceRefresh(for: .zero)
+    player.removeAllItems()
+    RunLoop.main.run(until: Date().addingTimeInterval(Self.windowRunOut))
+    for _ in 0..<max(windows * 2, 3) { openWindowAndLetItRunOut(output) }
+
+    XCTAssertEqual(reports, queuedReports, "an empty queue has no seek to retry")
+  }
+
+  /// Longer than the output's 600 ms window, so a tick after it can report.
+  private static let windowRunOut: TimeInterval = 0.8
+
+  private func openWindowAndLetItRunOut(_ output: VideoTextureOutput) {
+    output.forceRefresh(for: .zero)
+    RunLoop.main.run(until: Date().addingTimeInterval(Self.windowRunOut))
+  }
+
+  /// [seconds] of mono 16-bit silence at 8 kHz, as a WAV file.
+  private static func silentWav(seconds: Double) -> Data {
+    let sampleRate: UInt32 = 8000
+    let dataSize = UInt32(Double(sampleRate) * seconds) * 2
+    var wav = Data()
+    func append(_ text: String) { wav.append(contentsOf: Array(text.utf8)) }
+    func append<T: FixedWidthInteger>(_ value: T) {
+      withUnsafeBytes(of: value.littleEndian) { wav.append(contentsOf: $0) }
+    }
+    append("RIFF"); append(UInt32(36) + dataSize); append("WAVE")
+    append("fmt "); append(UInt32(16)); append(UInt16(1)); append(UInt16(1))
+    append(sampleRate); append(sampleRate * 2); append(UInt16(2)); append(UInt16(16))
+    append("data"); append(dataSize)
+    wav.append(Data(count: Int(dataSize)))
+    return wav
+  }
 }
 
 /// The registry iOS hands this plugin *is* the `FlutterEngine`, and the plugin
