@@ -217,6 +217,122 @@ void main() {
         );
       }
 
+      test('drops a viewer-vote read that a vote overtook', () async {
+        final id = validId('c1');
+        final staleViewerVote =
+            Completer<({Set<String> upvotedIds, Set<String> downvotedIds})>();
+        var reads = 0;
+        when(() => mockLikesRepository.getVoteCounts([id])).thenAnswer(
+          (_) async =>
+              (upvotes: {id: ++reads == 1 ? 3 : 4}, downvotes: {id: 0}),
+        );
+        when(
+          () => mockLikesRepository.getUserVoteStatuses([id]),
+        ).thenAnswer((_) => staleViewerVote.future);
+        when(
+          () => mockLikesRepository.likeEvent(
+            eventId: any(named: 'eventId'),
+            authorPubkey: any(named: 'authorPubkey'),
+            targetKind: any(named: 'targetKind'),
+          ),
+        ).thenAnswer((_) async => validId('vote'));
+
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(CommentVoteCountsFetchRequested([id]));
+        await pumpEventQueue();
+        bloc.add(
+          CommentVoteToggled(
+            commentId: id,
+            authorPubkey: validId('author1'),
+            vote: Vote.up,
+          ),
+        );
+        await pumpEventQueue();
+        expect(bloc.state.upvotedCommentIds, {id});
+
+        // The relay snapshot predates the vote, so it says "not upvoted".
+        staleViewerVote.complete(
+          (upvotedIds: <String>{}, downvotedIds: <String>{}),
+        );
+        await pumpEventQueue();
+
+        expect(bloc.state.upvotedCommentIds, {id});
+        expect(bloc.state.commentUpvoteCounts[id], 4);
+        verify(() => mockLikesRepository.getUserVoteStatuses([id])).called(1);
+      });
+
+      test(
+        'a read that starts while the vote publishes is not applied',
+        () async {
+          final id = validId('c1');
+          final publish = Completer<String>();
+          final served = [3, 3, 4];
+          var reads = 0;
+          when(() => mockLikesRepository.getVoteCounts([id])).thenAnswer(
+            (_) async => (upvotes: {id: served[reads++]}, downvotes: {id: 0}),
+          );
+          when(
+            () => mockLikesRepository.likeEvent(
+              eventId: any(named: 'eventId'),
+              authorPubkey: any(named: 'authorPubkey'),
+              targetKind: any(named: 'targetKind'),
+            ),
+          ).thenAnswer((_) => publish.future);
+
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+          bloc.add(CommentVoteCountsFetchRequested([id]));
+          await pumpEventQueue();
+          bloc.add(
+            CommentVoteToggled(
+              commentId: id,
+              authorPubkey: validId('author1'),
+              vote: Vote.up,
+            ),
+          );
+          await pumpEventQueue();
+          expect(bloc.state.commentUpvoteCounts[id], 4);
+
+          // A second batch asks for the comment before the vote has landed.
+          bloc.add(CommentVoteCountsFetchRequested([id]));
+          await pumpEventQueue();
+          expect(reads, 2);
+          expect(bloc.state.commentUpvoteCounts[id], 4);
+          expect(bloc.state.upvotedCommentIds, {id});
+
+          publish.complete(validId('vote'));
+          await pumpEventQueue();
+
+          expect(reads, 3);
+          expect(bloc.state.commentUpvoteCounts[id], 4);
+        },
+      );
+
+      test('a later viewer-vote read replaces the earlier one', () async {
+        final id = validId('c1');
+        var reads = 0;
+        when(() => mockLikesRepository.getUserVoteStatuses([id])).thenAnswer(
+          (_) async => (
+            upvotedIds: ++reads == 1 ? {id} : <String>{},
+            downvotedIds: <String>{},
+          ),
+        );
+
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(CommentVoteCountsFetchRequested([id]));
+        await pumpEventQueue();
+        expect(bloc.state.upvotedCommentIds, {id});
+
+        // The viewer took the vote back on another device.
+        bloc.add(CommentVoteCountsFetchRequested([id]));
+        await pumpEventQueue();
+
+        expect(reads, 2);
+        expect(bloc.state.upvotedCommentIds, isEmpty);
+      });
+
       blocTest<CommentReactionsBloc, CommentReactionsState>(
         'populates counts and statuses from likes repo',
         setUp: () {
