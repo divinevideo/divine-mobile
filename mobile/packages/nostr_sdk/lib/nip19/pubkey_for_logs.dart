@@ -34,8 +34,11 @@ const _secretPrefixes = <String>['nsec1', 'ncryptsec1'];
 String pubkeyForLogs(String? pubkey, {String whenNull = '<null>'}) {
   if (pubkey == null) return whenNull;
   if (pubkey.isEmpty) return '<empty>';
-  // Bech32 is case-insensitive, so an all-uppercase NSEC1 is the same secret.
-  if (_secretPrefixes.any(pubkey.toLowerCase().startsWith)) return _redacted;
+  // Bech32 is case-insensitive, and a link can carry the key behind `nostr:`
+  // or stray text. No public id contains these: bech32 data has no `1` and
+  // hex has no `n` or `s`.
+  final lower = pubkey.toLowerCase();
+  if (_secretPrefixes.any(lower.contains)) return _redacted;
   if (keyIsValid(pubkey)) {
     try {
       return '${Nip19.encodePubKey(pubkey)} ($pubkey)';

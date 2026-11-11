@@ -73,6 +73,23 @@ void main() {
       test('redacts an uppercase ncryptsec whole', () {
         expect(pubkeyForLogs('NCRYPTSEC1ABCDEF'), equals('<redacted>'));
       });
+
+      // A link can carry the key behind a NIP-21 prefix or stray text.
+      for (final (label, wrapped) in const [
+        (
+          'an nsec behind nostr:',
+          'nostr:nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5',
+        ),
+        (
+          'an nsec behind a space',
+          ' nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5',
+        ),
+        ('an ncryptsec behind nostr:', 'nostr:ncryptsec1abcdef'),
+      ]) {
+        test('redacts $label', () {
+          expect(pubkeyForLogs(wrapped), equals('<redacted>'));
+        });
+      }
     });
 
     group('values that cannot be encoded', () {
