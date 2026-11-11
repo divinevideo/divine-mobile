@@ -10,6 +10,11 @@ import 'package:openvine/utils/async_utils.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_image_editor/pro_image_editor.dart'
     show EditorAudio, EditorAudioType;
+import 'package:sound_service/sound_service.dart'
+    show
+        audioContainerSniffLength,
+        audioFileExtensionFor,
+        isClearlyNotAudioBody;
 import 'package:unified_logger/unified_logger.dart';
 
 /// Thrown when a network audio source could not be fetched for the render.
@@ -189,7 +194,7 @@ class RenderAudioFetcher {
               permanent: true,
             );
           }
-          if (head.length < _sniffLength) head.add(chunk);
+          if (head.length < audioContainerSniffLength) head.add(chunk);
           sink.add(chunk);
         }
       } on RenderAudioFetchException {
@@ -211,7 +216,7 @@ class RenderAudioFetcher {
 
       final headBytes = head.takeBytes();
       final contentType = response.headers[HttpHeaders.contentTypeHeader];
-      if (_isClearlyNotAudioBody(headBytes, contentType)) {
+      if (isClearlyNotAudioBody(headBytes, contentType)) {
         throw RenderAudioFetchException(
           url,
           cause: 'text response for an audio request',
@@ -260,68 +265,3 @@ class RenderAudioFetcher {
     }
   }
 }
-
-/// Bytes read from the start of the body to identify its container.
-const _sniffLength = 12;
-
-/// The file extension that matches an audio body, so the native renderer
-/// opens it with the right demuxer.
-///
-/// The container is read off the first bytes of [head] (RIFF/WAVE, ISO
-/// BMFF `ftyp`, Ogg, FLAC, ID3 or a bare MPEG/ADTS frame). When those say
-/// nothing, the server's [contentType] decides, then the [url]'s own
-/// extension, and finally `.mp3` — the guess `EditorAudio.safeFilePath`
-/// always made.
-String audioFileExtensionFor(
-  Uint8List head, {
-  required Uri url,
-  String? contentType,
-}) {
-  final sniffed = _sniffContainer(head);
-  if (sniffed != null) return sniffed;
-
-  final mime = contentType?.split(';').first.trim().toLowerCase();
-  final fromMime = switch (mime) {
-    'audio/wav' || 'audio/x-wav' || 'audio/wave' || 'audio/vnd.wave' => '.wav',
-    'audio/mp4' || 'audio/x-m4a' || 'video/mp4' => '.mp4',
-    'audio/mpeg' || 'audio/mp3' => '.mp3',
-    'audio/aac' || 'audio/aacp' => '.aac',
-    'audio/ogg' || 'application/ogg' => '.ogg',
-    'audio/flac' || 'audio/x-flac' => '.flac',
-    _ => null,
-  };
-  if (fromMime != null) return fromMime;
-
-  final fromUrl = p.extension(url.path);
-  if (fromUrl.length > 1 && fromUrl.length <= 5) return fromUrl;
-  return '.mp3';
-}
-
-String? _sniffContainer(Uint8List head) {
-  bool ascii(int offset, String text) {
-    if (head.length < offset + text.length) return false;
-    for (var i = 0; i < text.length; i++) {
-      if (head[offset + i] != text.codeUnitAt(i)) return false;
-    }
-    return true;
-  }
-
-  if (ascii(0, 'RIFF') && ascii(8, 'WAVE')) return '.wav';
-  if (ascii(4, 'ftyp')) return '.mp4';
-  if (ascii(0, 'OggS')) return '.ogg';
-  if (ascii(0, 'fLaC')) return '.flac';
-  if (ascii(0, 'ID3')) return '.mp3';
-  if (head.length >= 2 && head[0] == 0xFF && (head[1] & 0xE0) == 0xE0) {
-    // A frame sync with the layer bits clear is ADTS (raw AAC); any other
-    // layer is an MPEG audio frame.
-    return (head[1] & 0x06) == 0 ? '.aac' : '.mp3';
-  }
-  return null;
-}
-
-/// A text response cannot be muxed as audio, unless its bytes identify an
-/// audio container despite an incorrect content type.
-bool _isClearlyNotAudioBody(Uint8List head, String? contentType) =>
-    contentType?.split(';').first.trim().toLowerCase().startsWith('text/') ==
-        true &&
-    _sniffContainer(head) == null;

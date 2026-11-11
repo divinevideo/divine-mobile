@@ -12,9 +12,11 @@ environment:
 
 dependencies:
   audio_session: ^0.2.1
+  crypto: ^3.0.7
   flutter:
     sdk: flutter
   just_audio: ^0.10.5
+  path: ^1.9.1
   rxdart: ^0.28.0
   unified_logger:
     path: ../unified_logger

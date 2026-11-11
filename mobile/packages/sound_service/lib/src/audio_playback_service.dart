@@ -15,6 +15,7 @@ import 'package:rxdart/rxdart.dart';
 import 'package:sound_service/src/audio_session_service.dart';
 import 'package:sound_service/src/audio_session_wrapper.dart';
 import 'package:sound_service/src/audio_source_config.dart';
+import 'package:sound_service/src/remote_audio_cache.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Service for managing audio playback during lip sync recording mode.
@@ -28,10 +29,12 @@ class AudioPlaybackService {
   ///
   /// The [audioPlayer] parameter allows for dependency injection in tests.
   /// The [audioSessionWrapper] parameter allows for mocking audio session.
+  /// The [remoteAudioCache] downloads and keeps http(s) sounds.
   // coverage:ignore-start
   AudioPlaybackService({
     AudioPlayer? audioPlayer,
     AudioSessionWrapper? audioSessionWrapper,
+    RemoteAudioCache? remoteAudioCache,
     bool handleAudioSessionActivation = true,
   }) : _audioPlayer =
            audioPlayer ??
@@ -39,7 +42,8 @@ class AudioPlaybackService {
              handleAudioSessionActivation: handleAudioSessionActivation,
            ),
        _audioSessionWrapper =
-           audioSessionWrapper ?? DefaultAudioSessionWrapper() {
+           audioSessionWrapper ?? DefaultAudioSessionWrapper(),
+       _remoteAudioCache = remoteAudioCache ?? RemoteAudioCache() {
     _audioSessionService = AudioSessionService(
       audioSessionWrapper: _audioSessionWrapper,
     );
@@ -49,6 +53,7 @@ class AudioPlaybackService {
 
   final AudioPlayer _audioPlayer;
   final AudioSessionWrapper _audioSessionWrapper;
+  final RemoteAudioCache _remoteAudioCache;
   late final AudioSessionService _audioSessionService;
 
   /// BehaviorSubject for headphone connection state.
@@ -63,6 +68,10 @@ class AudioPlaybackService {
   /// When non-null, a load operation is in progress. [seek] and [play]
   /// will await this completer before forwarding to the player.
   Completer<void>? _loadCompleter;
+
+  /// Counts load requests, so a load whose download finishes after a later
+  /// load started gives way instead of replacing the later one's audio.
+  int _loadGeneration = 0;
 
   /// The last successfully loaded audio source identifier.
   /// Used to reload the source when a "Loading interrupted" error occurs.
@@ -181,13 +190,23 @@ class AudioPlaybackService {
   /// Loads audio from a URL or asset path.
   ///
   /// Supports:
-  /// - HTTP/HTTPS URLs for remote audio
+  /// - HTTP/HTTPS URLs for remote audio, downloaded before playback and kept,
+  ///   so loading the same sound again needs no network
   /// - `asset://` URLs for bundled sounds (e.g., "asset://assets/sounds/bruh.mp3")
   ///
-  /// Returns the duration of the loaded audio.
+  /// Returns the duration of the loaded audio, or `null` when the service
+  /// was disposed while the audio loaded.
+  ///
+  /// Throws:
+  ///
+  /// * [RemoteAudioDownloadException] if a remote sound cannot be downloaded.
+  /// * [PlayerInterruptedException] if a later load started before this
+  ///   one's download finished.
+  /// * Whatever the player throws for audio it cannot open.
   Future<Duration?> loadAudio(String url) async {
     if (_isDisposed) return null;
-    _loadCompleter = Completer<void>();
+    final generation = ++_loadGeneration;
+    final completer = _loadCompleter = Completer<void>();
     try {
       Duration? loadedDuration;
 
@@ -201,9 +220,9 @@ class AudioPlaybackService {
           category: LogCategory.video,
         );
       } else {
-        loadedDuration = await _audioPlayer.setAudioSource(
-          _networkAudioSource(url),
-        );
+        final source = await _uriSource(url, generation);
+        if (source == null) return null;
+        loadedDuration = await _audioPlayer.setAudioSource(source);
         Log.debug('Loaded audio from URL: $url', name: 'AudioPlaybackService');
       }
 
@@ -217,8 +236,7 @@ class AudioPlaybackService {
       );
       rethrow;
     } finally {
-      _loadCompleter?.complete();
-      _loadCompleter = null;
+      _finishLoad(completer);
     }
   }
 
@@ -227,7 +245,8 @@ class AudioPlaybackService {
   /// Returns the duration of the loaded audio.
   Future<Duration?> loadAudioFromFile(String filePath) async {
     if (_isDisposed) return null;
-    _loadCompleter = Completer<void>();
+    ++_loadGeneration;
+    final completer = _loadCompleter = Completer<void>();
     try {
       final loadedDuration = await _audioPlayer.setFilePath(filePath);
       Log.debug(
@@ -244,8 +263,7 @@ class AudioPlaybackService {
       );
       rethrow;
     } finally {
-      _loadCompleter?.complete();
-      _loadCompleter = null;
+      _finishLoad(completer);
     }
   }
 
@@ -253,40 +271,33 @@ class AudioPlaybackService {
   ///
   /// Converts the config into the appropriate player-specific source type.
   /// If [AudioSourceConfig.isClipped], wraps the source in a
-  /// [ClippingAudioSource].
+  /// [ClippingAudioSource]. An http(s) source is downloaded first, as in
+  /// [loadAudio], and throws the same errors.
+  ///
+  /// Returns the duration of the loaded audio, or `null` when the service
+  /// was disposed while the audio loaded.
   Future<Duration?> setAudioSource(AudioSourceConfig config) async {
     if (_isDisposed) return null;
-    _loadCompleter = Completer<void>();
+    final generation = ++_loadGeneration;
+    final completer = _loadCompleter = Completer<void>();
     try {
-      final AudioSource source;
+      final UriAudioSource child;
       if (config.isAsset) {
-        final child = AudioSource.asset(config.uri);
-        source = config.isClipped
-            ? ClippingAudioSource(
-                child: child,
-                start: config.start,
-                end: config.end,
-              )
-            : child;
+        child = AudioSource.asset(config.uri);
       } else if (config.isFile) {
-        final child = AudioSource.file(config.uri);
-        source = config.isClipped
-            ? ClippingAudioSource(
-                child: child,
-                start: config.start,
-                end: config.end,
-              )
-            : child;
-      } else if (config.isClipped) {
-        final child = AudioSource.uri(Uri.parse(config.uri));
-        source = ClippingAudioSource(
-          child: child,
-          start: config.start,
-          end: config.end,
-        );
+        child = AudioSource.file(config.uri);
       } else {
-        source = _networkAudioSource(config.uri);
+        final remote = await _uriSource(config.uri, generation);
+        if (remote == null) return null;
+        child = remote;
       }
+      final source = config.isClipped
+          ? ClippingAudioSource(
+              child: child,
+              start: config.start,
+              end: config.end,
+            )
+          : child;
 
       final loadedDuration = await _audioPlayer.setAudioSource(source);
       Log.debug(
@@ -304,18 +315,42 @@ class AudioPlaybackService {
       );
       rethrow;
     } finally {
-      _loadCompleter?.complete();
-      _loadCompleter = null;
+      _finishLoad(completer);
     }
   }
 
-  AudioSource _networkAudioSource(String uri) {
+  /// The player source for a network [uri].
+  ///
+  /// An http(s) sound is downloaded to a local file first. just_audio's
+  /// `LockCachingAudioSource` downloaded inside the player instead, where a
+  /// server error escaped as an unhandled error no caller could catch.
+  ///
+  /// Returns `null` when the service was disposed during the download.
+  /// Throws [PlayerInterruptedException] when a load started after the one
+  /// numbered [generation] while the sound downloaded, so the later load
+  /// keeps the player, as it would if the player itself had been loading.
+  Future<UriAudioSource?> _uriSource(String uri, int generation) async {
     final parsedUri = Uri.parse(uri);
-    if (parsedUri.scheme == 'http' || parsedUri.scheme == 'https') {
-      return LockCachingAudioSource(parsedUri);
+    if (parsedUri.scheme != 'http' && parsedUri.scheme != 'https') {
+      return AudioSource.uri(parsedUri);
     }
 
-    return AudioSource.uri(parsedUri);
+    final file = await _remoteAudioCache.fileFor(parsedUri);
+    if (_isDisposed) return null;
+    if (generation != _loadGeneration) {
+      throw PlayerInterruptedException('Loading interrupted');
+    }
+    return AudioSource.file(file.path);
+  }
+
+  /// Releases whatever waits on the load that [completer] belongs to.
+  ///
+  /// Overlapping loads each complete their own completer, so a [play] or
+  /// [seek] waiting on an earlier load is not left waiting forever after a
+  /// later load replaced [_loadCompleter].
+  void _finishLoad(Completer<void> completer) {
+    completer.complete();
+    if (identical(_loadCompleter, completer)) _loadCompleter = null;
   }
 
   /// Starts audio playback.
