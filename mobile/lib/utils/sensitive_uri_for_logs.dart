@@ -24,7 +24,16 @@ String redactUriStringForLogs(String uriString) {
   if (uri == null || trimmed.isEmpty) {
     return '[invalid-uri]';
   }
+  try {
+    return _redactParsedUri(uri);
+  } on FormatException {
+    // tryParse accepts an undecodable escape such as %C3%28; decoding the
+    // path or query throws later. Logging must never throw.
+    return '[invalid-uri]';
+  }
+}
 
+String _redactParsedUri(Uri uri) {
   var pathSegments = uri.pathSegments.map(_redactSecretSegment).toList();
   if (pathSegments.length >= 2 &&
       pathSegments.first.toLowerCase() == 'invite') {

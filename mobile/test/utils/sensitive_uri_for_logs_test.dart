@@ -15,6 +15,19 @@ void main() {
       expect(redactUriStringForLogs('   '), '[invalid-uri]');
     });
 
+    // Uri.tryParse accepts these, but decoding the segment or query throws.
+    // At cold start that throw used to skip the deep-link subscription.
+    test('returns invalid placeholder for an undecodable escape', () {
+      expect(
+        redactUriStringForLogs('https://divine.video/x/%C3%28'),
+        '[invalid-uri]',
+      );
+      expect(
+        redactUriStringForLogs('https://divine.video/x?q=%C3%28'),
+        '[invalid-uri]',
+      );
+    });
+
     group('AC #3360 — sensitive query keys', () {
       test('redacts values for token, code, deviceCode, verifier, secret (and any other query)', () {
         const raw =
