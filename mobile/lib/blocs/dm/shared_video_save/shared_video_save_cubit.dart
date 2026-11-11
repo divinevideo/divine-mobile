@@ -55,7 +55,6 @@ class SharedVideoSaveCubit extends Cubit<SharedVideoSaveState> {
     try {
       final video = await _videosRepository.fetchVideoWithStatsForRouteId(
         target.routeId,
-        fallbackRouteIds: target.fallbackRouteIds,
         expectedAuthor: target.routeAuthor,
       );
       if (isClosed) return;

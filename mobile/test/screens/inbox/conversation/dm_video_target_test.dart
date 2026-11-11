@@ -23,7 +23,6 @@ void main() {
       expect(target.videoKind, isNull);
       expect(target.routeId, 'skate-loop');
       expect(target.routeAuthor, isNull);
-      expect(target.fallbackRouteIds, isEmpty);
       expect(
         target.canonicalUrl,
         'https://divine.video/video/skate-loop',
@@ -47,7 +46,6 @@ void main() {
       expect(target.routeId, eventId);
       // A hex route is also looked up as a d tag, so the author travels with it.
       expect(target.routeAuthor, author);
-      expect(target.fallbackRouteIds, ['22:$author:$eventId']);
       expect(
         target.canonicalUrl,
         'https://divine.video/video/$eventId',
@@ -71,7 +69,6 @@ void main() {
       // share it, so an author-named share resolves by its coordinate alone.
       expect(target.routeId, '34236:$author:skate-loop');
       expect(target.routeAuthor, isNull);
-      expect(target.fallbackRouteIds, isEmpty);
       expect(
         target.canonicalUrl,
         'https://divine.video/video/skate-loop',
@@ -116,7 +113,6 @@ void main() {
         expect(target.authorPubkey, isNull);
         expect(target.videoKind, isNull);
         expect(target.routeId, 'url-stable-id');
-        expect(target.fallbackRouteIds, isEmpty);
       },
     );
 
@@ -136,7 +132,6 @@ void main() {
       expect(target!.stableId, 'skate-loop');
       expect(target.routeId, 'skate-loop');
       expect(target.routeAuthor, isNull);
-      expect(target.fallbackRouteIds, isEmpty);
     });
 
     test('rejects a malformed addressable reference without a URL', () {
@@ -164,7 +159,6 @@ void main() {
       expect(target!.stableId, 'url-stable-id');
       expect(target.authorPubkey, isNull);
       expect(target.videoKind, isNull);
-      expect(target.fallbackRouteIds, isEmpty);
     });
   });
 
@@ -234,7 +228,6 @@ void main() {
       expect(target.authorPubkey, equals(author));
       expect(target.videoKind, equals(34236));
       expect(target.routeId, equals('34236:$author:$dTag'));
-      expect(target.fallbackRouteIds, isEmpty);
       expect(
         target.canonicalUrl,
         equals('https://divine.video/video/$dTag'),

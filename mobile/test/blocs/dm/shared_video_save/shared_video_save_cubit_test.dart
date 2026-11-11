@@ -66,7 +66,6 @@ void main() {
         when(
           () => videosRepository.fetchVideoWithStatsForRouteId(
             target.routeId,
-            fallbackRouteIds: target.fallbackRouteIds,
           ),
         ).thenAnswer((_) async => video);
         return createCubit();
@@ -94,7 +93,6 @@ void main() {
         when(
           () => videosRepository.fetchVideoWithStatsForRouteId(
             target.routeId,
-            fallbackRouteIds: target.fallbackRouteIds,
           ),
         ).thenAnswer((_) async => video);
         when(
@@ -134,7 +132,6 @@ void main() {
         when(
           () => videosRepository.fetchVideoWithStatsForRouteId(
             target.routeId,
-            fallbackRouteIds: target.fallbackRouteIds,
           ),
         ).thenThrow(StateError('closed'));
         return createCubit();
@@ -151,7 +148,6 @@ void main() {
       when(
         () => videosRepository.fetchVideoWithStatsForRouteId(
           target.routeId,
-          fallbackRouteIds: target.fallbackRouteIds,
         ),
       ).thenAnswer((_) => completer.future);
 
@@ -164,7 +160,6 @@ void main() {
       verify(
         () => videosRepository.fetchVideoWithStatsForRouteId(
           target.routeId,
-          fallbackRouteIds: target.fallbackRouteIds,
         ),
       ).called(1);
 

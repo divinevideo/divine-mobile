@@ -14,10 +14,12 @@ class DmVideoTarget {
   });
 
   /// Stable id used by Divine video URLs. Repository lookups go through
-  /// [routeId], which is this id unless the share names an author.
+  /// [routeId], which is this id unless the share is addressable and names a
+  /// hex author.
   final String stableId;
 
-  /// Full author pubkey when supplied by a structured NIP-18 reference.
+  /// Author as a structured NIP-18 reference carried it. Routing uses it only
+  /// when it is a hex pubkey.
   final String? authorPubkey;
 
   /// NIP-71 video event kind when supplied by a structured reference.
@@ -38,15 +40,6 @@ class DmVideoTarget {
   /// the repository also looks up as a `d` tag anyone can publish under.
   String? get routeAuthor =>
       _authorScopedCoordinate == null ? _routingAuthor : null;
-
-  /// Repository routes tried after [routeId].
-  List<String> get fallbackRouteIds {
-    if (_authorScopedCoordinate != null) return const [];
-    final author = _routingAuthor;
-    final kind = videoKind;
-    if (author == null || kind == null) return const [];
-    return ['$kind:$author:$stableId'];
-  }
 
   String? get _authorScopedCoordinate {
     final author = _routingAuthor;
