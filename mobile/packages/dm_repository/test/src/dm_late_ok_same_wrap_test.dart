@@ -42,9 +42,16 @@ const _secondPeerKey =
     '1f2e3d4c5b6a7980f1e2d3c4b5a69788f9e0d1c2b3a4958677f8e9d0c1b2a3c4';
 
 const _poolRelay = 'wss://relay.divine.video';
+const _otherRelay = 'wss://relay.example.com';
 
 /// How the pool relay answers a recipient wrap.
-enum _Relay { accepts, staysSilent, refuses, rateLimits }
+enum _Relay {
+  accepts,
+  staysSilent,
+  refuses,
+  rateLimits,
+  rateLimitsBesideSilent,
+}
 
 void main() {
   setUpAll(() {
@@ -141,11 +148,16 @@ void main() {
           rejectedBy: switch (relay) {
             _Relay.refuses => const {_poolRelay: 'invalid: created_at too old'},
             _Relay.rateLimits => const {_poolRelay: 'rate-limited: slow down'},
+            _Relay.rateLimitsBesideSilent => const {
+              _otherRelay: 'rate-limited: slow down',
+            },
             _ => const <String, String>{},
           },
-          noResponseFrom: relay == _Relay.staysSilent
-              ? const [_poolRelay]
-              : const [],
+          noResponseFrom: switch (relay) {
+            _Relay.staysSilent ||
+            _Relay.rateLimitsBesideSilent => const [_poolRelay],
+            _ => const <String>[],
+          },
         );
       });
       when(
@@ -204,6 +216,31 @@ void main() {
         expect(
           (sent as NIP17SendFailure).unconfirmedRecipientWrap?.id,
           equals(wrapsTo(peer).single.id),
+        );
+      });
+
+      test('keeps the wrap when one relay stays silent and another asks it '
+          'to slow down, and the retry sends that same wrap', () async {
+        relay = _Relay.rateLimitsBesideSilent;
+        final sent = await repository.sendMessage(
+          recipientPubkey: peer,
+          content: 'held by the silent relay',
+        );
+        expect(sent.success, isFalse);
+        expect(sent.retryablePending, isFalse, reason: 'a relay refused it');
+        final wrap = wrapsTo(peer).single;
+        final rowId = sent.queuedRumorId!;
+        final row = await outgoingDao.getById(rowId);
+        expect(row!.recipientWrapStatus, OutgoingWrapStatus.failed);
+        expect(row.unconfirmedRecipientWrapJson, isNotNull);
+
+        relay = _Relay.accepts;
+        final retried = await repository.recoverFullSend(rumorId: rowId);
+
+        expect(retried.success, isTrue);
+        expect(
+          wrapsTo(peer).map((sent) => sent.id).toSet(),
+          equals({wrap.id}),
         );
       });
 

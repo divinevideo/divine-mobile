@@ -7852,6 +7852,7 @@ class DmRepository {
         errorMessage: result.error ?? 'Unknown publish failure',
         reachedNoRelay: result.reachedNoRelay,
         wrapRefused: result.recipientWrapRefused,
+        unconfirmedWrap: _unconfirmedWrapOf(result),
       );
       // Make a brand-new thread visible so the user can find the red bubble
       // to retry or delete it. A blocked result is handled terminally above
@@ -8809,6 +8810,7 @@ class DmRepository {
         errorMessage: result.error ?? 'Unknown publish failure',
         reachedNoRelay: result.reachedNoRelay,
         wrapRefused: result.recipientWrapRefused,
+        unconfirmedWrap: _unconfirmedWrapOf(result),
       );
       // An attempt that reached no relay is an outage on our side, not a
       // failed attempt, so it stays free (#8516).
@@ -9394,7 +9396,15 @@ class DmRepository {
     required String errorMessage,
     bool reachedNoRelay = false,
     bool wrapRefused = false,
+    Event? unconfirmedWrap,
   }) async {
+    // A relay that stayed silent beside a refusal a retry can get past may
+    // hold this attempt's wrap (#8441).
+    await _keepUnconfirmedWrap(
+      outgoingDao: outgoingDao,
+      rumorId: rumorId,
+      wrap: unconfirmedWrap,
+    );
     try {
       await outgoingDao.markRecipientWrapStatus(
         id: rumorId,

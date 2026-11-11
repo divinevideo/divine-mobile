@@ -353,8 +353,8 @@ final class NIP17SendFailure extends NIP17SendResult {
 
   /// The signed recipient gift wrap this attempt wrote to a relay without
   /// hearing an `OK` in time (#8441). The relay may still have accepted it,
-  /// so a retry sends this same event again rather than a new wrap. Null for
-  /// every other failure.
+  /// so a retry sends this same event again rather than a new wrap. Null when
+  /// every relay answered, or when one refused the wrap for good.
   final Event? unconfirmedRecipientWrap;
 
   @override

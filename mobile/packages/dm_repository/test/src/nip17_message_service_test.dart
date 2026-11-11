@@ -1338,6 +1338,50 @@ void main() {
           );
         });
 
+        test('hands back the wrap when one relay stays silent beside a '
+            'refusal a retry can get past', () async {
+          answerRecipientWith(
+            (event) => PublishOutcome(
+              eventId: event.id,
+              acceptedBy: const [],
+              rejectedBy: const {
+                'wss://other.example.com': 'rate-limited: slow down',
+              },
+              noResponseFrom: const ['wss://relay.example.com'],
+            ),
+          );
+
+          final result = await send();
+
+          expect(result.retryablePending, isFalse);
+          expect(
+            (result as NIP17SendFailure).unconfirmedRecipientWrap?.id,
+            equals(published.single.id),
+          );
+        });
+
+        test('hands back no wrap when one relay stays silent beside a '
+            'refusal for good', () async {
+          answerRecipientWith(
+            (event) => PublishOutcome(
+              eventId: event.id,
+              acceptedBy: const [],
+              rejectedBy: const {
+                'wss://other.example.com': 'invalid: created_at too old',
+              },
+              noResponseFrom: const ['wss://relay.example.com'],
+            ),
+          );
+
+          final result = await send();
+
+          expect(result.recipientWrapRefused, isTrue);
+          expect(
+            (result as NIP17SendFailure).unconfirmedRecipientWrap,
+            isNull,
+          );
+        });
+
         for (final (reason, refused) in [
           ('invalid: created_at too old', true),
           ('Blocked: you are banned', true),

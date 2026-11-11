@@ -772,8 +772,8 @@ class NIP17MessageService {
   /// addressed to [recipientPubkey] it is sent again instead of a new wrap,
   /// and a relay that holds it confirms it rather than storing a second copy
   /// (#8441). Anything else is ignored and a new wrap is built. An attempt
-  /// that ends unconfirmed reports its wrap in
-  /// `NIP17SendFailure.unconfirmedRecipientWrap`.
+  /// that a relay left unanswered, with no relay refusing the wrap for good,
+  /// reports its wrap in `NIP17SendFailure.unconfirmedRecipientWrap`.
   @useResult
   Future<NIP17SendResult> sendRumor({
     required Event rumorEvent,
@@ -1017,15 +1017,21 @@ class NIP17MessageService {
           '${outcome.summary}); selfWrapPublished=$selfWrapPublished',
           category: LogCategory.system,
         );
+        final recipientWrapRefused = outcome.rejectedBy.values.any(
+          (reason) => !_retryableRefusalCategories.contains(
+            relayRefusalCategoryForDiagnostics(reason),
+          ),
+        );
         return NIP17SendResult.failure(
           errorMsg,
           retryablePending: softUnconfirmed,
-          unconfirmedRecipientWrap: softUnconfirmed ? giftWrapEvent : null,
-          recipientWrapRefused: outcome.rejectedBy.values.any(
-            (reason) => !_retryableRefusalCategories.contains(
-              relayRefusalCategoryForDiagnostics(reason),
-            ),
-          ),
+          // A relay that never answered may hold the wrap, also beside a
+          // refusal a retry can get past (#8441).
+          unconfirmedRecipientWrap:
+              outcome.noResponseFrom.isNotEmpty && !recipientWrapRefused
+              ? giftWrapEvent
+              : null,
+          recipientWrapRefused: recipientWrapRefused,
           // Retry sweeps leave an attempt that reached no relay uncounted, as
           // an outage on our side. Inbox relays the recipient names that
           // cannot be reached while our own relays are connected are not
