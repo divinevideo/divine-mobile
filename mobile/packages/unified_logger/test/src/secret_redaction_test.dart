@@ -45,6 +45,19 @@ void main() {
       );
     });
 
+    // A cut further in still leaves only a few bits to guess, and the same
+    // logs carry the account's pubkey to check guesses against.
+    for (final kept in const [51, 40]) {
+      test('redacts an nsec cut to $kept data characters', () {
+        expect(
+          redactNostrPrivateKeys(
+            'opened /profile/${nsec.substring(0, 5 + kept)}',
+          ),
+          'opened /profile/[REDACTED]',
+        );
+      });
+    }
+
     test('leaves public ids whole', () {
       expect(
         redactNostrPrivateKeys('author $npub ($hex)'),

@@ -3,13 +3,13 @@
 
 /// Nostr private keys: bech32 `nsec` and NIP-49 `ncryptsec`, in any case.
 ///
-/// An nsec carries the whole key in its first 52 data characters (the last
-/// six are checksum), so a paste cut short of the checksum still matches.
+/// Any length matches: an nsec cut short is still most of the key, and the
+/// same logs carry the account's pubkey to check guesses against.
 ///
 /// Neither can match a public id: bech32 data has no `1` and hex has no `n`
 /// or `s`, so `nsec1` and `ncryptsec1` never occur inside one.
 final List<RegExp> nostrPrivateKeyPatterns = List.unmodifiable([
-  RegExp('nsec1[a-z0-9]{52,}', caseSensitive: false),
+  RegExp('nsec1[a-z0-9]+', caseSensitive: false),
   RegExp('ncryptsec1[a-z0-9]+', caseSensitive: false),
 ]);
 

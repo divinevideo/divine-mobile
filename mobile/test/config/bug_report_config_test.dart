@@ -37,9 +37,9 @@ void main() {
       expect(sanitizeDiagnosticText('key $nsec'), 'key [REDACTED]');
     });
 
-    // 52 data characters hold the whole key; the checksum is the last six.
-    test('the full sanitizer redacts a key cut short of its checksum', () {
-      final truncated = 'nsec1${'q' * 52}';
+    // Any prefix of a key is still most of the secret.
+    test('the full sanitizer redacts a key cut short', () {
+      final truncated = 'nsec1${'q' * 40}';
 
       expect(sanitizeDiagnosticText('key $truncated'), 'key [REDACTED]');
     });
