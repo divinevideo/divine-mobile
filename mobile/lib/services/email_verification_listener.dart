@@ -37,14 +37,23 @@ class EmailVerificationListener {
     );
 
     // Handle links while app is running in background
-    _subscription = _appLinks.uriLinkStream.listen((uri) {
-      runDetached(
-        handleUri(uri),
-        'handle an email-verification link',
-        logName: '$EmailVerificationListener',
+    _subscription = _appLinks.uriLinkStream.listen(
+      (uri) {
+        runDetached(
+          handleUri(uri),
+          'handle an email-verification link',
+          logName: '$EmailVerificationListener',
+          category: LogCategory.auth,
+        );
+      },
+      // app_links throws while parsing a malformed link, and the error's text
+      // carries the raw link. Unhandled, it reached the crash reporter.
+      onError: (Object error) => Log.warning(
+        'Email verification link stream error: ${error.runtimeType}',
+        name: '$EmailVerificationListener',
         category: LogCategory.auth,
-      );
-    });
+      ),
+    );
   }
 
   Future<void> _handleInitialLink() async {

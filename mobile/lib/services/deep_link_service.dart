@@ -167,8 +167,9 @@ class DeepLinkService {
           _controller.add(deepLink);
         },
         onError: (Object error, StackTrace stackTrace) {
+          // The error's text can carry the raw link; its type is enough.
           Log.error(
-            'Deep link stream error: $error',
+            'Deep link stream error: ${error.runtimeType}',
             name: 'DeepLinkService',
             category: LogCategory.ui,
           );

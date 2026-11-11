@@ -1,6 +1,7 @@
 // ABOUTME: Unit tests for DeepLinkService URL parsing and deep link handling
 // ABOUTME: Tests video URLs, profile URLs, and unknown URL patterns
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/services/deep_link_service.dart';
@@ -58,6 +59,50 @@ void main() {
           expect(logged.toLowerCase(), isNot(contains('nsec1')));
         });
       }
+    });
+
+    // app_links throws while parsing a malformed link, and the error's text
+    // carries the raw link.
+    group('a link the platform cannot parse', () {
+      const events = EventChannel('com.llfbandit.app_links/events');
+      const messages = MethodChannel('com.llfbandit.app_links/messages');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      late DeepLinkService service;
+
+      setUp(() {
+        messenger
+          ..setMockMethodCallHandler(messages, (_) async => null)
+          ..setMockStreamHandler(
+            events,
+            MockStreamHandler.inline(
+              onListen: (_, sink) =>
+                  sink.success('divine://[x]/verify?token=SECRETTOKEN'),
+            ),
+          );
+        service = DeepLinkService();
+      });
+
+      tearDown(() {
+        service.dispose();
+        messenger
+          ..setMockMethodCallHandler(messages, null)
+          ..setMockStreamHandler(events, null);
+      });
+
+      test('logs the stream error without the link', () async {
+        await LogCaptureService().clearAllLogs();
+
+        await service.initialize();
+        await pumpEventQueue();
+
+        final logged = [
+          for (final entry in LogCaptureService().getRecentLogs())
+            '${entry.message} ${entry.error ?? ''}',
+        ].join('\n');
+        expect(logged, contains('Deep link stream error'));
+        expect(logged, isNot(contains('SECRETTOKEN')));
+      });
     });
 
     group('$DeepLink toString', () {

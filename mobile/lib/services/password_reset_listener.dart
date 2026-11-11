@@ -33,14 +33,23 @@ class PasswordResetListener {
     );
 
     // Handle links while app is running in background
-    _subscription = _appLinks.uriLinkStream.listen((uri) {
-      runDetached(
-        handleUri(uri),
-        'handle a password-reset link',
-        logName: '$PasswordResetListener',
+    _subscription = _appLinks.uriLinkStream.listen(
+      (uri) {
+        runDetached(
+          handleUri(uri),
+          'handle a password-reset link',
+          logName: '$PasswordResetListener',
+          category: LogCategory.auth,
+        );
+      },
+      // app_links throws while parsing a malformed link, and the error's text
+      // carries the raw link. Unhandled, it reached the crash reporter.
+      onError: (Object error) => Log.warning(
+        'Password reset link stream error: ${error.runtimeType}',
+        name: '$PasswordResetListener',
         category: LogCategory.auth,
-      );
-    });
+      ),
+    );
   }
 
   Future<void> _handleInitialLink() async {
