@@ -169,9 +169,10 @@ class OutgoingDmRetryService {
   /// own offline fail-fast, and five backgrounded/foregrounded cycles in
   /// airplane mode would otherwise exhaust a row into a terminal red bubble
   /// before the network ever came back. The pass instead surfaces aged
-  /// unconfirmed `pending` rows as failed ([_surfaceOfflinePendingRows]) so
-  /// they stop rendering as delivered, and the connectivity trigger stream
-  /// re-fires the sweep the moment the network returns.
+  /// `pending` rows as failed ([_surfaceOfflinePendingRows]) so they stop
+  /// rendering as delivered, except a row whose wrap a relay may already
+  /// hold, and the connectivity trigger stream re-fires the sweep the moment
+  /// the network returns.
   final OfflineProbe? _isOffline;
 
   final OutgoingDmRetryConfig _retryConfig;
@@ -1120,7 +1121,10 @@ class OutgoingDmRetryService {
   /// legitimately in-flight `sendMessage` row out of this pass; its own
   /// offline fail-fast marks it failed within the publish window anyway.
   /// Rows whose recipient wrap already landed are left alone — the message
-  /// was delivered; only the invisible self-wrap sync is outstanding.
+  /// was delivered; only the invisible self-wrap sync is outstanding. So are
+  /// rows that still keep a wrap an attempt wrote to a relay that never
+  /// answered: the relay may hold it, and the retry once the network returns
+  /// sends it again and settles the row either way (#8441).
   ///
   /// Returns whether unfinished work remains: pending rows still younger
   /// than the min-age guard (they need a later pass to flip), or a failed
@@ -1129,6 +1133,7 @@ class OutgoingDmRetryService {
   Future<bool> _surfaceOfflinePendingRows() async {
     var flipped = 0;
     var youngRemaining = 0;
+    var awaitingAnswer = 0;
     try {
       final pending = await _dao.getStillPendingForOwner(
         _userPubkey,
@@ -1136,6 +1141,14 @@ class OutgoingDmRetryService {
       );
       for (final row in pending) {
         if (row.recipientWrapStatus != OutgoingWrapStatus.pending) continue;
+        // An attempt wrote this row's wrap to a relay that never answered,
+        // and a relay can store a wrap without its OK reaching us. It stays
+        // pending until a retry hears an answer once the network is back
+        // (#8441).
+        if (row.unconfirmedRecipientWrapJson != null) {
+          awaitingAnswer++;
+          continue;
+        }
         final age = _now().difference(row.queuedAt);
         if (age < _interruptedMinAge) {
           youngRemaining++;
@@ -1158,7 +1171,8 @@ class OutgoingDmRetryService {
     Log.debug(
       'device offline, skipping sweep pass '
       '(unconfirmed rows surfaced as failed: $flipped, '
-      'still too young: $youngRemaining)',
+      'still too young: $youngRemaining, '
+      'awaiting a relay answer: $awaitingAnswer)',
       name: 'OutgoingDmRetryService',
       category: LogCategory.system,
     );

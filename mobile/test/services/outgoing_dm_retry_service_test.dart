@@ -42,6 +42,7 @@ OutgoingDm _row({
   DateTime? queuedAt,
   String? recipientWrapEventId,
   String? conversationId,
+  String? unconfirmedRecipientWrapJson,
 }) {
   return OutgoingDm(
     id: id,
@@ -55,6 +56,7 @@ OutgoingDm _row({
     queuedAt: queuedAt ?? DateTime.utc(2026),
     ownerPubkey: ownerPubkey,
     retryCount: retryCount,
+    unconfirmedRecipientWrapJson: unconfirmedRecipientWrapJson,
     lastAttemptAt: lastAttemptAt,
     recipientWrapEventId: recipientWrapEventId,
   );
@@ -3335,6 +3337,48 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
               maxRetries: any(named: 'maxRetries'),
             ),
+          );
+        },
+      );
+
+      test(
+        'leaves an aged pending row that a relay may already hold pending — '
+        'its wrap went out unconfirmed, so it is not shown as failed (#8441)',
+        () async {
+          final now = DateTime.utc(2026, 5, 10, 12);
+          final unconfirmed = _row(
+            id: 'offline-unconfirmed',
+            recipient: OutgoingWrapStatus.pending,
+            self: OutgoingWrapStatus.pending,
+            retryCount: 1,
+            queuedAt: now.subtract(const Duration(minutes: 5)),
+            unconfirmedRecipientWrapJson: '{"id":"wrap","kind":1059}',
+          );
+          when(
+            () => dao.getStillPendingForOwner(any()),
+          ).thenAnswer((_) async => [unconfirmed]);
+
+          await buildService(
+            now: () => now,
+            isOffline: () async => true,
+          ).sweep();
+
+          verifyNever(
+            () => dao.markRecipientWrapStatus(
+              id: any(named: 'id'),
+              status: any(named: 'status'),
+              lastError: any(named: 'lastError'),
+            ),
+          );
+          verifyNever(
+            () => dao.markSelfWrapStatus(
+              id: any(named: 'id'),
+              status: any(named: 'status'),
+              lastError: any(named: 'lastError'),
+            ),
+          );
+          verifyNever(
+            () => dmRepository.recoverFullSend(rumorId: any(named: 'rumorId')),
           );
         },
       );
