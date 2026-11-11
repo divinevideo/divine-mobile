@@ -13,7 +13,8 @@ class DmVideoTarget {
     this.videoKind,
   });
 
-  /// Stable route ID used by Divine video URLs and repository lookups.
+  /// Stable id used by Divine video URLs. Repository lookups go through
+  /// [routeId], which is this id unless the share names an author.
   final String stableId;
 
   /// Full author pubkey when supplied by a structured NIP-18 reference.
@@ -65,7 +66,9 @@ class DmVideoTarget {
 ///
 /// Canonical Divine URLs remain the primary stable identity for compatibility
 /// with older messages. A valid NIP-18 `q` reference contributes author/kind
-/// routing metadata, or supplies the identity when no URL is present.
+/// routing metadata when it cites the URL's video (a regular-event reference,
+/// or an addressable one naming the same d tag), or supplies the identity when
+/// no URL is present.
 ///
 /// When [contentIsTruncated] is true, [content] is a bounded prefix of the
 /// full body and a URL match that runs to its end is ignored: the URL capture
