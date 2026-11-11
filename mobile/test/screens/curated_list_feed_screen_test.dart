@@ -1168,12 +1168,12 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        // The error view replaces the header, so there is nothing to manage.
+        // The header stays above the error view, with Manage disabled: there
+        // are no loaded posts to manage.
+        expect(manageVideosButton(), findsOneWidget);
         expect(
-          tester
-              .widgetList<DivineButton>(manageVideosButton())
-              .every((button) => button.onPressed == null),
-          isTrue,
+          tester.widget<DivineButton>(manageVideosButton()).onPressed,
+          isNull,
         );
         expect(find.text(l10n.listRemoveVideosButton(0)), findsNothing);
       });
@@ -1714,6 +1714,42 @@ void main() {
           tester.widget<DivineButton>(manageVideosButton()).onPressed,
           isNull,
         );
+        expect(find.byType(ShareListButton), findsOneWidget);
+      });
+
+      testWidgets('shows the error, not the earlier grid, when a reload '
+          'fails after the videos loaded', (tester) async {
+        stubFollowedList();
+        final videos = StreamController<List<VideoEvent>>();
+        addTearDown(videos.close);
+
+        await tester.pumpWidget(
+          buildSubject(
+            authorPubkey: author,
+            videoIds: null,
+            overrideVideoEvents: false,
+            extraOverrides: [
+              curatedListVideoEventsProvider(
+                'external-list',
+              ).overrideWith((ref) => videos.stream),
+            ],
+          ),
+        );
+        videos.add([_videoEvent()]);
+        await tester.pump();
+        await tester.pump();
+        expect(
+          find.bySemanticsIdentifier('video_thumbnail_0'),
+          findsOneWidget,
+        );
+
+        videos.addError(Exception('relay unavailable'));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text(l10n.curatedListFailedToLoad), findsOneWidget);
+        expect(find.bySemanticsIdentifier('video_thumbnail_0'), findsNothing);
+        expect(find.text(l10n.listFollowingButton), findsOneWidget);
         expect(find.byType(ShareListButton), findsOneWidget);
       });
     });
