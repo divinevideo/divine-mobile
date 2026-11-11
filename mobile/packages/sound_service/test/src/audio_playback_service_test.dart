@@ -8,7 +8,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_session/audio_session.dart' as audio_session;
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:mocktail/mocktail.dart';
@@ -30,28 +29,46 @@ class _FakeAudioDevice extends Fake implements audio_session.AudioDevice {
   final audio_session.AudioDeviceType type;
 }
 
-void main() {
-  const pathProviderChannel = MethodChannel('plugins.flutter.io/path_provider');
+/// The local file [_FakeRemoteAudioCache] hands out for [url].
+File _cachedFileFor(String url) =>
+    File('/cache/${Uri.parse(url).pathSegments.last}');
 
+/// Hands out a local file for every sound URL without touching the network,
+/// or throws [error] when one is given.
+class _FakeRemoteAudioCache extends Fake implements RemoteAudioCache {
+  _FakeRemoteAudioCache({this.error});
+
+  final Exception? error;
+  final requested = <Uri>[];
+
+  @override
+  Future<File> fileFor(Uri uri) async {
+    requested.add(uri);
+    final error = this.error;
+    if (error != null) throw error;
+    return _cachedFileFor(uri.toString());
+  }
+}
+
+/// Holds every download until the test finishes it.
+class _HeldRemoteAudioCache extends Fake implements RemoteAudioCache {
+  final _downloads = <Uri, Completer<File>>{};
+
+  @override
+  Future<File> fileFor(Uri uri) => (_downloads[uri] = Completer<File>()).future;
+
+  void finish(String url) =>
+      _downloads[Uri.parse(url)]!.complete(_cachedFileFor(url));
+}
+
+void main() {
   setUpAll(() {
     TestWidgetsFlutterBinding.ensureInitialized();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(pathProviderChannel, (call) async {
-          if (call.method == 'getTemporaryDirectory') {
-            return Directory.systemTemp.path;
-          }
-          return null;
-        });
     registerFallbackValue(_FakeAudioSource());
     registerFallbackValue(Duration.zero);
     registerFallbackValue('');
     registerFallbackValue(0.0);
     registerFallbackValue(_FakeAudioSessionConfig());
-  });
-
-  tearDownAll(() {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(pathProviderChannel, null);
   });
 
   group(AudioPlaybackService, () {
@@ -99,22 +116,25 @@ void main() {
       expect(service, isNotNull);
     });
 
-    test('loadAudio loads audio from URL', () async {
+    test('loadAudio plays a remote sound from its downloaded file', () async {
       const testUrl = 'https://example.com/audio.aac';
       when(
         () => mockPlayer.setAudioSource(any()),
       ).thenAnswer((_) async => const Duration(seconds: 10));
+      final cache = _FakeRemoteAudioCache();
 
       service = AudioPlaybackService(
         audioPlayer: mockPlayer,
         audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: cache,
       );
       final duration = await service.loadAudio(testUrl);
 
       final capturedSource =
           verify(() => mockPlayer.setAudioSource(captureAny())).captured.single
-              as AudioSource;
-      expect(capturedSource, isA<LockCachingAudioSource>());
+              as UriAudioSource;
+      expect(cache.requested, [Uri.parse(testUrl)]);
+      expect(capturedSource.uri, Uri.file(_cachedFileFor(testUrl).path));
       expect(duration, const Duration(seconds: 10));
     });
 
@@ -151,25 +171,34 @@ void main() {
       expect(duration, const Duration(seconds: 15));
     });
 
-    test('setAudioSource sets audio source from URI', () async {
-      when(
-        () => mockPlayer.setAudioSource(any()),
-      ).thenAnswer((_) async => const Duration(seconds: 20));
+    test(
+      'setAudioSource plays a remote sound from its downloaded file',
+      () async {
+        const testUrl = 'https://example.com/audio.mp3';
+        when(
+          () => mockPlayer.setAudioSource(any()),
+        ).thenAnswer((_) async => const Duration(seconds: 20));
+        final cache = _FakeRemoteAudioCache();
 
-      service = AudioPlaybackService(
-        audioPlayer: mockPlayer,
-        audioSessionWrapper: mockSessionWrapper,
-      );
-      final duration = await service.setAudioSource(
-        const AudioSourceConfig.network('https://example.com/audio.mp3'),
-      );
+        service = AudioPlaybackService(
+          audioPlayer: mockPlayer,
+          audioSessionWrapper: mockSessionWrapper,
+          remoteAudioCache: cache,
+        );
+        final duration = await service.setAudioSource(
+          const AudioSourceConfig.network(testUrl),
+        );
 
-      final capturedSource =
-          verify(() => mockPlayer.setAudioSource(captureAny())).captured.single
-              as AudioSource;
-      expect(capturedSource, isA<LockCachingAudioSource>());
-      expect(duration, const Duration(seconds: 20));
-    });
+        final capturedSource =
+            verify(
+                  () => mockPlayer.setAudioSource(captureAny()),
+                ).captured.single
+                as UriAudioSource;
+        expect(cache.requested, [Uri.parse(testUrl)]);
+        expect(capturedSource.uri, Uri.file(_cachedFileFor(testUrl).path));
+        expect(duration, const Duration(seconds: 20));
+      },
+    );
 
     test(
       'setAudioSource creates clipped source when boundaries given',
@@ -240,10 +269,12 @@ void main() {
       when(
         () => mockPlayer.setAudioSource(any()),
       ).thenAnswer((_) async => const Duration(seconds: 7));
+      final cache = _FakeRemoteAudioCache();
 
       service = AudioPlaybackService(
         audioPlayer: mockPlayer,
         audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: cache,
       );
       final duration = await service.setAudioSource(
         const AudioSourceConfig.network('ftp://example.com/audio.mp3'),
@@ -252,34 +283,46 @@ void main() {
       final capturedSource =
           verify(() => mockPlayer.setAudioSource(captureAny())).captured.single
               as UriAudioSource;
-      expect(capturedSource, isNot(isA<LockCachingAudioSource>()));
+      expect(cache.requested, isEmpty);
       expect(capturedSource.uri.scheme, 'ftp');
       expect(duration, const Duration(seconds: 7));
     });
 
-    test('setAudioSource creates clipped source from network URI', () async {
-      when(
-        () => mockPlayer.setAudioSource(any()),
-      ).thenAnswer((_) async => const Duration(seconds: 6));
+    test(
+      'setAudioSource clips a remote sound from its downloaded file',
+      () async {
+        const testUrl = 'https://example.com/audio.mp3';
+        when(
+          () => mockPlayer.setAudioSource(any()),
+        ).thenAnswer((_) async => const Duration(seconds: 6));
 
-      service = AudioPlaybackService(
-        audioPlayer: mockPlayer,
-        audioSessionWrapper: mockSessionWrapper,
-      );
-      final duration = await service.setAudioSource(
-        const AudioSourceConfig.network(
-          'https://example.com/audio.mp3',
-          start: Duration(seconds: 1),
-          end: Duration(seconds: 4),
-        ),
-      );
+        service = AudioPlaybackService(
+          audioPlayer: mockPlayer,
+          audioSessionWrapper: mockSessionWrapper,
+          remoteAudioCache: _FakeRemoteAudioCache(),
+        );
+        final duration = await service.setAudioSource(
+          const AudioSourceConfig.network(
+            testUrl,
+            start: Duration(seconds: 1),
+            end: Duration(seconds: 4),
+          ),
+        );
 
-      final capturedSource =
-          verify(() => mockPlayer.setAudioSource(captureAny())).captured.single
-              as ClippingAudioSource;
-      expect(capturedSource.child.uri.scheme, 'https');
-      expect(duration, const Duration(seconds: 6));
-    });
+        final capturedSource =
+            verify(
+                  () => mockPlayer.setAudioSource(captureAny()),
+                ).captured.single
+                as ClippingAudioSource;
+        expect(
+          capturedSource.child.uri,
+          Uri.file(_cachedFileFor(testUrl).path),
+        );
+        expect(capturedSource.start, const Duration(seconds: 1));
+        expect(capturedSource.end, const Duration(seconds: 4));
+        expect(duration, const Duration(seconds: 6));
+      },
+    );
 
     test('play starts playback', () async {
       when(() => mockPlayer.play()).thenAnswer((_) async {});
@@ -587,6 +630,7 @@ void main() {
       service = AudioPlaybackService(
         audioPlayer: mockPlayer,
         audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: _FakeRemoteAudioCache(),
       );
 
       expect(
@@ -619,6 +663,7 @@ void main() {
       service = AudioPlaybackService(
         audioPlayer: mockPlayer,
         audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: _FakeRemoteAudioCache(),
       );
 
       expect(
@@ -755,6 +800,7 @@ void main() {
         service = AudioPlaybackService(
           audioPlayer: mockPlayer,
           audioSessionWrapper: mockSessionWrapper,
+          remoteAudioCache: _FakeRemoteAudioCache(),
         );
         await service.loadAudio('https://example.com/audio.mp3');
         await service.play();
@@ -783,6 +829,7 @@ void main() {
         service = AudioPlaybackService(
           audioPlayer: mockPlayer,
           audioSessionWrapper: mockSessionWrapper,
+          remoteAudioCache: _FakeRemoteAudioCache(),
         );
         await service.loadAudio('https://example.com/audio.mp3');
 
@@ -832,6 +879,7 @@ void main() {
         service = AudioPlaybackService(
           audioPlayer: mockPlayer,
           audioSessionWrapper: mockSessionWrapper,
+          remoteAudioCache: _FakeRemoteAudioCache(),
         );
         await service.setAudioSource(
           const AudioSourceConfig.network('https://example.com/audio.mp3'),
@@ -857,12 +905,169 @@ void main() {
       service = AudioPlaybackService(
         audioPlayer: mockPlayer,
         audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: _FakeRemoteAudioCache(),
       );
       await service.loadAudio('https://example.com/audio.mp3');
       await service.seek(const Duration(seconds: 5));
 
       verify(() => mockPlayer.seek(any())).called(2);
     });
+  });
+
+  group('$AudioPlaybackService remote sounds', () {
+    const soundUrl = 'https://example.com/sound';
+    late _MockAudioPlayer mockPlayer;
+    late _MockAudioSessionWrapper mockSessionWrapper;
+
+    setUp(() {
+      mockPlayer = _MockAudioPlayer();
+      mockSessionWrapper = _MockAudioSessionWrapper();
+      when(() => mockPlayer.dispose()).thenAnswer((_) async {});
+      when(
+        () => mockSessionWrapper.getDevices(),
+      ).thenAnswer((_) async => <audio_session.AudioDevice>{});
+      when(
+        () => mockSessionWrapper.devicesChangedEventStream,
+      ).thenAnswer((_) => const Stream.empty());
+    });
+
+    AudioPlaybackService serviceWith(RemoteAudioCache cache) {
+      final service = AudioPlaybackService(
+        audioPlayer: mockPlayer,
+        audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: cache,
+      );
+      addTearDown(service.dispose);
+      return service;
+    }
+
+    // Regression for the HTTP 502/404 crash: just_audio's
+    // LockCachingAudioSource downloaded inside the player, so a server error
+    // escaped as an unhandled error instead of failing loadAudio.
+    test('loadAudio throws a failed download to its caller', () async {
+      final error = RemoteAudioDownloadException(
+        Uri.parse(soundUrl),
+        statusCode: 502,
+      );
+      final service = serviceWith(_FakeRemoteAudioCache(error: error));
+
+      await expectLater(
+        service.loadAudio(soundUrl),
+        throwsA(
+          isA<RemoteAudioDownloadException>().having(
+            (e) => e.statusCode,
+            'statusCode',
+            502,
+          ),
+        ),
+      );
+      verifyNever(() => mockPlayer.setAudioSource(any()));
+    });
+
+    test('setAudioSource throws a failed download to its caller', () async {
+      final error = RemoteAudioDownloadException(
+        Uri.parse(soundUrl),
+        statusCode: 404,
+      );
+      final service = serviceWith(_FakeRemoteAudioCache(error: error));
+
+      await expectLater(
+        service.setAudioSource(const AudioSourceConfig.network(soundUrl)),
+        throwsA(isA<RemoteAudioDownloadException>()),
+      );
+      verifyNever(() => mockPlayer.setAudioSource(any()));
+    });
+
+    test(
+      'a sound that finishes downloading after a later load gives way',
+      () async {
+        when(
+          () => mockPlayer.setFilePath(any()),
+        ).thenAnswer((_) async => const Duration(seconds: 3));
+        final cache = _HeldRemoteAudioCache();
+        final service = serviceWith(cache);
+
+        final first = service.loadAudio(soundUrl);
+        await service.loadAudioFromFile('/imported.m4a');
+        cache.finish(soundUrl);
+
+        await expectLater(first, throwsA(isA<PlayerInterruptedException>()));
+        verify(() => mockPlayer.setFilePath('/imported.m4a')).called(1);
+        verifyNever(() => mockPlayer.setAudioSource(any()));
+      },
+    );
+
+    test('play waiting on a load that gave way is released', () async {
+      when(
+        () => mockPlayer.setFilePath(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 3));
+      when(() => mockPlayer.play()).thenAnswer((_) async {});
+      final cache = _HeldRemoteAudioCache();
+      final service = serviceWith(cache);
+
+      final first = service.loadAudio(soundUrl);
+      var played = false;
+      final playing = service.play().then((_) => played = true);
+      await service.loadAudioFromFile('/imported.m4a');
+      cache.finish(soundUrl);
+      await expectLater(first, throwsA(isA<PlayerInterruptedException>()));
+      await pumpEventQueue();
+
+      expect(played, isTrue);
+      await playing;
+      verify(() => mockPlayer.play()).called(1);
+    });
+
+    test('plays a remote URL directly when downloads are off', () async {
+      when(
+        () => mockPlayer.setAudioSource(any()),
+      ).thenAnswer((_) async => const Duration(seconds: 2));
+      final cache = _FakeRemoteAudioCache();
+      final service = AudioPlaybackService(
+        audioPlayer: mockPlayer,
+        audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: cache,
+        downloadRemoteAudio: false,
+      );
+      addTearDown(service.dispose);
+
+      await service.loadAudio(soundUrl);
+
+      final capturedSource =
+          verify(() => mockPlayer.setAudioSource(captureAny())).captured.single
+              as UriAudioSource;
+      expect(capturedSource.uri, Uri.parse(soundUrl));
+      expect(cache.requested, isEmpty);
+    });
+
+    test('loadAudio returns null when disposed during the download', () async {
+      final cache = _HeldRemoteAudioCache();
+      final service = serviceWith(cache);
+
+      final loading = service.loadAudio(soundUrl);
+      await service.dispose();
+      cache.finish(soundUrl);
+
+      expect(await loading, isNull);
+      verifyNever(() => mockPlayer.setAudioSource(any()));
+    });
+
+    test(
+      'setAudioSource returns null when disposed during the download',
+      () async {
+        final cache = _HeldRemoteAudioCache();
+        final service = serviceWith(cache);
+
+        final loading = service.setAudioSource(
+          const AudioSourceConfig.network(soundUrl),
+        );
+        await service.dispose();
+        cache.finish(soundUrl);
+
+        expect(await loading, isNull);
+        verifyNever(() => mockPlayer.setAudioSource(any()));
+      },
+    );
   });
 
   group('AudioPlaybackService headphone detection', () {
@@ -1343,6 +1548,7 @@ void main() {
       service = AudioPlaybackService(
         audioPlayer: mockPlayer,
         audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: _FakeRemoteAudioCache(),
       );
       await service.dispose();
 
@@ -1369,6 +1575,7 @@ void main() {
       service = AudioPlaybackService(
         audioPlayer: mockPlayer,
         audioSessionWrapper: mockSessionWrapper,
+        remoteAudioCache: _FakeRemoteAudioCache(),
       );
       await service.dispose();
 
