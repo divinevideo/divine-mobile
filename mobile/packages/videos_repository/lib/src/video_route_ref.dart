@@ -46,7 +46,8 @@ class VideoRouteRef {
   ///
   /// Accepts a hex event id, a NIP-19 `note1` / `nevent1` / `naddr1`, a raw
   /// NIP-33 coordinate, or a first-party stable id, and returns null for a
-  /// bech32 string that does not decode.
+  /// bech32 string that does not decode or a video coordinate whose author is
+  /// not a hex pubkey.
   static VideoRouteRef? parse(String routeId) {
     final trimmed = routeId.trim();
     if (trimmed.isEmpty) return null;
@@ -116,9 +117,17 @@ class VideoRouteRef {
     // lookup.
     final aid = AId.fromString(trimmed);
     if (aid != null && NIP71VideoKinds.isAcceptableVideoKind(aid.kind)) {
+      // Validated and lowercased like the naddr1 author: every author check
+      // downstream compares exactly, and NIP-01 filters take lowercase hex.
+      if (!NostrHexUtils.isValidPubkey(aid.pubkey)) return null;
+      final pubkey = aid.pubkey.toLowerCase();
       return VideoRouteRef(
-        addressableId: trimmed,
-        addressablePubkey: aid.pubkey,
+        addressableId: AId(
+          kind: aid.kind,
+          pubkey: pubkey,
+          dTag: aid.dTag,
+        ).toAString(),
+        addressablePubkey: pubkey,
         stableId: aid.dTag,
       );
     }

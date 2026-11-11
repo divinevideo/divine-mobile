@@ -14475,6 +14475,31 @@ void main() {
           expect(result?.id, equals(authorEventId));
         });
 
+        test('resolves an upper-case raw coordinate pubkey to the named '
+            'author, not a newer same-d-tag video by another author', () async {
+          final authorsVideo = _createVideoEventWithDTag(
+            id: authorEventId,
+            pubkey: author,
+            dTag: dTag,
+            videoUrl: 'https://example.com/author.mp4',
+            createdAt: 1739350000,
+          );
+          _answerQueriesFrom(mockNostrClient, [
+            authorsVideo,
+            otherAuthorsVideo,
+          ]);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          final result = await repo.fetchVideoWithStatsForRouteId(
+            '34236:${author.toUpperCase()}:$dTag',
+          );
+
+          expect(result?.id, equals(authorEventId));
+        });
+
         test("rejects another author's same-d-tag REST answer when no relay "
             "holds the named author's video", () async {
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
