@@ -14384,6 +14384,137 @@ void main() {
         },
       );
 
+      group('when the route names an author', () {
+        const author =
+            '4bf0c63fcb93463407af97a5e5ee64fa'
+            '883d107ef9e558472c4eb9aaaefa459d';
+        const otherAuthor =
+            '5bf0c63fcb93463407af97a5e5ee64fa'
+            '883d107ef9e558472c4eb9aaaefa459d';
+        // Divine's d tag is the sha256 of the uploaded file, so two accounts
+        // that upload the same bytes share one.
+        const dTag =
+            'ea331e1d9e63bb0bb35ff888f142a888'
+            '4fd0859ce2428ea3ec33613fa7629478';
+        const authorEventId =
+            'a1a1f6b60119d9521934a691347d9f78'
+            'e8770b56da16bb255ee77ac112b4c1f6';
+        const otherEventId =
+            'b2b2f6b60119d9521934a691347d9f78'
+            'e8770b56da16bb255ee77ac112b4c1f6';
+
+        final otherAuthorsVideo = _createVideoEventWithDTag(
+          id: otherEventId,
+          pubkey: otherAuthor,
+          dTag: dTag,
+          videoUrl: 'https://example.com/other.mp4',
+          createdAt: 1739350100,
+        );
+
+        test("returns null instead of another author's same-d-tag video "
+            "when the named author's naddr1 video is missing", () async {
+          _answerQueriesFrom(mockNostrClient, [otherAuthorsVideo]);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+          final naddr = NIP19Tlv.encodeNaddr(
+            Naddr(id: dTag, author: author, kind: EventKind.videoVertical),
+          );
+
+          // Positive control: the relay does hold a video under this d tag,
+          // and a bare d-tag link, which names no author, still opens it.
+          final bare = await repo.fetchVideoWithStatsForRouteId(dTag);
+          expect(bare?.id, equals(otherEventId));
+
+          expect(await repo.fetchVideoWithStatsForRouteId(naddr), isNull);
+        });
+
+        test(
+          "returns null instead of another author's same-d-tag video "
+          "when the named author's raw coordinate video is missing",
+          () async {
+            _answerQueriesFrom(mockNostrClient, [otherAuthorsVideo]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            expect(
+              await repo.fetchVideoWithStatsForRouteId('34236:$author:$dTag'),
+              isNull,
+            );
+          },
+        );
+
+        test("resolves a 34236 coordinate to the named author's Kind 34235 "
+            'video, not a newer same-d-tag video by another author', () async {
+          // Before #10776 Divine wrote 34236 coordinates for 34235 videos, so
+          // the kind-exact addressable query misses these links.
+          final authorsHorizontalVideo = _createVideoEventWithDTag(
+            id: authorEventId,
+            pubkey: author,
+            dTag: dTag,
+            videoUrl: 'https://example.com/author.mp4',
+            createdAt: 1739350000,
+            kind: EventKind.videoHorizontal,
+          );
+          _answerQueriesFrom(mockNostrClient, [
+            authorsHorizontalVideo,
+            otherAuthorsVideo,
+          ]);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          final result = await repo.fetchVideoWithStatsForRouteId(
+            '34236:$author:$dTag',
+          );
+
+          expect(result?.id, equals(authorEventId));
+        });
+
+        test("rejects another author's same-d-tag REST answer when no relay "
+            "holds the named author's video", () async {
+          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+          when(
+            () => mockFunnelcakeClient.getVideoEvent(dTag),
+          ).thenAnswer((_) async => otherAuthorsVideo);
+          _answerQueriesFrom(mockNostrClient, const []);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          expect(
+            await repo.fetchVideoWithStatsForRouteId('34236:$author:$dTag'),
+            isNull,
+          );
+          verify(() => mockFunnelcakeClient.getVideoEvent(dTag)).called(1);
+        });
+
+        test("rejects another author's same-d-tag cache hit when no relay "
+            "holds the named author's video", () async {
+          final mockLocalStorage = MockVideoLocalStorage();
+          when(
+            () => mockLocalStorage.getEventsByDTag(dTag),
+          ).thenAnswer((_) async => [otherAuthorsVideo]);
+          _answerQueriesFrom(mockNostrClient, const []);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            localStorage: mockLocalStorage,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          expect(
+            await repo.fetchVideoWithStatsForRouteId('34236:$author:$dTag'),
+            isNull,
+          );
+          verify(() => mockLocalStorage.getEventsByDTag(dTag)).called(1);
+        });
+      });
+
       test(
         'resolves plain stable IDs from local storage before relay',
         () async {
@@ -17019,6 +17150,19 @@ Event _createVideoEventWithDTag({
     'tags': tags,
     'content': '',
     'sig': '',
+  });
+}
+
+/// Answers [NostrClient.queryEvents] the way a relay holding [stored] would:
+/// each filter is applied with [Filter.checkEvent], so an `authors` list is
+/// matched exactly and a filter without one matches every author.
+void _answerQueriesFrom(MockNostrClient client, List<Event> stored) {
+  when(() => client.queryEvents(any())).thenAnswer((invocation) async {
+    final filters = invocation.positionalArguments.single as List<Filter>;
+    return [
+      for (final event in stored)
+        if (filters.any((filter) => filter.checkEvent(event))) event,
+    ];
   });
 }
 

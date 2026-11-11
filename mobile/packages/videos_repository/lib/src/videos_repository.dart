@@ -3544,6 +3544,7 @@ class VideosRepository {
     if (candidate.stableId != null) {
       final byStableId = await _fetchVideoByStableIdFromRelay(
         candidate.stableId!,
+        author: candidate.addressablePubkey,
         onContentFiltered: onContentFiltered,
       );
       if (byStableId != null) return resolved('relayStableId', byStableId);
@@ -4019,16 +4020,26 @@ class VideosRepository {
     );
   }
 
+  /// Fetches a video by its `d` tag from relay only, limited to [author] when
+  /// the route named one.
+  ///
+  /// A `d` tag is unique only per author, and Divine's is the sha256 of the
+  /// uploaded file, so without [author] another account's video can answer
+  /// an author-named link (#10384).
   Future<VideoEvent?> _fetchVideoByStableIdFromRelay(
     String stableId, {
+    String? author,
     void Function(VideoEvent video)? onContentFiltered,
   }) async {
     final events = await _nostrClient
         .queryEvents([
           Filter(
             // Route-specific lookups accept all supported NIP-71 video kinds so
-            // older shared links still resolve instead of failing as not found.
+            // older shared links still resolve instead of failing as not found,
+            // including the 34236 coordinates Divine wrote for 34235 videos
+            // before #10776.
             kinds: NIP71VideoKinds.getAllAcceptableVideoKinds(),
+            authors: author == null ? null : [author],
             d: [stableId],
             limit: 10,
           ),
