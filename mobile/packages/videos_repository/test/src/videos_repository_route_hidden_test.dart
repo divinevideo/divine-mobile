@@ -83,6 +83,31 @@ void main() {
       expect((result as VideoRouteHiddenByFilter).video.id, equals(_eventId));
     });
 
+    test('reports a route as missing, not hidden, when only another '
+        "author's same-d-tag video is filtered", () async {
+      const otherPubkey =
+          'e95aa8fc0eff8e488952495b8064991d27fb96ed8652f12cdedc5a4e8b5ae540';
+      const otherEventId =
+          'b2440ed755f6a4ccabf91adaa28e90a3940fdabd2537110ad945f8d41b2e22e1';
+      final othersVideo = Event.fromJson({
+        ..._offHostVideo().toJson(),
+        'id': otherEventId,
+        'pubkey': otherPubkey,
+      });
+      when(() => funnelcake.isAvailable).thenReturn(true);
+      when(
+        () => funnelcake.getVideoEvent(_dTag),
+      ).thenAnswer((_) async => othersVideo);
+
+      // Hides every video, so only the author check can keep the other
+      // author's video out of the hidden-by-filter result.
+      final repo = build(contentFilter: (_) => true);
+
+      final result = await repo.lookupVideoForRouteId('34236:$_pubkey:$_dTag');
+
+      expect(result, isA<VideoRouteMissing>());
+    });
+
     test('reports a genuinely absent video as missing', () async {
       final repo = build();
 
