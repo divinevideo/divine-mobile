@@ -251,6 +251,11 @@ class _OriginalSoundSection extends ConsumerWidget {
         children: [
           _OriginalSoundRow(
             creatorName: creatorName,
+            soundName:
+                !video.hasAudioReference &&
+                    (video.isVerifiedArchive || video.isOriginalVine)
+                ? AudioEvent.fromVideoOriginalSound(video).title
+                : null,
             onTap: _canReuseSound(ref)
                 ? () => _navigateToSoundDetail(context, creatorName)
                 : null,
@@ -336,9 +341,14 @@ class _OriginalSoundSection extends ConsumerWidget {
 /// attribution — the sound may not be reused, so viewers see the credit but no
 /// affordance to adopt it.
 class _OriginalSoundRow extends StatelessWidget {
-  const _OriginalSoundRow({required this.creatorName, required this.onTap});
+  const _OriginalSoundRow({
+    required this.creatorName,
+    required this.onTap,
+    this.soundName,
+  });
 
   final String creatorName;
+  final String? soundName;
   final VoidCallback? onTap;
 
   @override
@@ -356,7 +366,7 @@ class _OriginalSoundRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                context.l10n.metadataOriginalSound,
+                soundName ?? context.l10n.metadataOriginalSound,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: VineTheme.titleMediumFont(

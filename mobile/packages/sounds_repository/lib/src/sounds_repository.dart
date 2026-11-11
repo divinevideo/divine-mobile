@@ -8,7 +8,13 @@ import 'dart:async';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:meta/meta.dart';
 import 'package:models/models.dart'
-    show AudioEvent, NIP71VideoKinds, VideoEvent, audioEventKind, searchTermsOf;
+    show
+        AudioEvent,
+        NIP71VideoKinds,
+        NostrHexUtils,
+        VideoEvent,
+        audioEventKind,
+        searchTermsOf;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:rxdart/rxdart.dart';
@@ -632,9 +638,15 @@ class SoundsRepository {
 
     var relayAnswered = true;
     try {
-      // The same read as queryEvents, which reports a timeout or an empty
-      // relay set only through these flags rather than by throwing.
+      // Full-text gets its own limit: a capped OR-of-tags page can omit
+      // the only sound matching all words, even before local narrowing.
       final read = await _nostrClient.queryEventsDetailed([
+        Filter(
+          kinds: const [audioEventKind],
+          m: audioMimeTypes,
+          search: terms.join(' '),
+          limit: limit,
+        ),
         Filter(
           kinds: const [audioEventKind],
           m: audioMimeTypes,
@@ -684,6 +696,10 @@ class SoundsRepository {
         category: LogCategory.api,
       );
       return null;
+    }
+
+    if (eventId.startsWith('video_')) {
+      return _fetchVideoOriginalSound(eventId);
     }
 
     // Check cache first
@@ -763,6 +779,41 @@ class SoundsRepository {
       );
       rethrow;
     }
+  }
+
+  Future<AudioEvent?> _fetchVideoOriginalSound(String soundId) async {
+    final videoId = soundId.substring('video_'.length).split('-').first;
+    if (!NostrHexUtils.isValidEventId(videoId)) return null;
+    Event? source;
+    final api = _funnelcakeApiClient;
+    if (api != null && api.isAvailable) {
+      try {
+        source = await api.getVideoEvent(videoId);
+      } on Exception catch (error) {
+        Log.warning(
+          'Current original-sound source lookup failed for $videoId: $error',
+          name: 'SoundsRepository',
+          category: LogCategory.api,
+        );
+      }
+    }
+    source ??= await _nostrClient.fetchEventById(videoId);
+    if (source == null || !NIP71VideoKinds.isVideoKind(source.kind)) {
+      return null;
+    }
+    final video = VideoEvent.fromNostrEvent(source);
+    if (video.audioEventId case final audioId?) {
+      // Never reinterpret an unresolved shared sound as the video's own audio.
+      final audio = await _nostrClient.fetchEventById(audioId);
+      if (audio == null || audio.kind != audioEventKind) return null;
+      final sound = AudioEvent.fromNostrEvent(audio);
+      _cacheSound(sound);
+      return sound;
+    }
+    return AudioEvent.fromVideoOriginalSound(
+      video,
+      creatorName: video.authorName,
+    );
   }
 
   /// Get a sound from the cache without making a network request.

@@ -8,7 +8,6 @@ import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/screens/original_sound_detail_screen.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
@@ -19,8 +18,7 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// Three display modes:
 /// - **Shared audio**: `♪ Sound name · Creator` → taps to [SoundDetailScreen]
-/// - **Original sound**: `♪ Original sound - @creator` → taps to
-///   [OriginalSoundDetailScreen]
+/// - **Classic original**: named sound → [SoundDetailScreen], when reusable
 /// - **Unresolved reference**: `♪ Sound unavailable · Creator`, display-only —
 ///   the video reuses a sound whose event can't be fetched (#6185)
 /// - **Content credit**: `♪ Title – Creator · CC BY 4.0 · edited`,
@@ -42,12 +40,13 @@ class AudioAttributionRow extends ConsumerWidget {
     // lists them all.
     final contentCredit = video.soundCredits.firstOrNull;
 
-    // Only show for videos with shared/bundled audio, not original sounds.
-    // Original sound info is available in the metadata "more info" sheet.
     if (!video.hasAudioReference || video.audioEventId == null) {
-      return contentCredit == null
-          ? const SizedBox.shrink()
-          : _ContentCreditAttribution(credit: contentCredit);
+      if (contentCredit != null) {
+        return _ContentCreditAttribution(credit: contentCredit);
+      }
+      return video.isVerifiedArchive || video.isOriginalVine
+          ? _ClassicOriginalSoundAttribution(video: video)
+          : const SizedBox.shrink();
     }
 
     // Watch the shared audio event asynchronously
@@ -67,6 +66,49 @@ class AudioAttributionRow extends ConsumerWidget {
       error: (error, stack) => contentCredit == null
           ? _UnresolvedAudioAttribution(video: video)
           : _ContentCreditAttribution(credit: contentCredit),
+    );
+  }
+}
+
+/// A classic awaiting its separately published audio keeps a named entry point.
+class _ClassicOriginalSoundAttribution extends ConsumerWidget {
+  const _ClassicOriginalSoundAttribution({required this.video});
+
+  final VideoEvent video;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final creatorName =
+        video.displayAuthorName ??
+        ref
+            .watch(userProfileReactiveProvider(video.pubkey))
+            .value
+            ?.bestDisplayName ??
+        UserProfile.generatedNameFor(video.pubkey);
+    final sound = AudioEvent.fromVideoOriginalSound(
+      video,
+      creatorName: creatorName,
+    );
+    final soundName = sound.title ?? context.l10n.audioAttributionOriginalSound;
+    final canReuse = ref.watch(audioReuseConsentProvider(sound)).value ?? false;
+    return _AudioAttributionPill(
+      soundName: soundName,
+      creatorName: creatorName,
+      semanticLabel: context.l10n.audioAttributionRowSemanticLabel(
+        soundName,
+        creatorName,
+      ),
+      onTap: canReuse
+          ? () => runDetached(
+              context.pushWithVideoPause(
+                SoundDetailScreen.pathForId(sound.id),
+                extra: <String, dynamic>{'sound': sound, 'sourceVideo': video},
+              ),
+              'open classic sound detail',
+              logName: 'AudioAttributionRow',
+              category: LogCategory.ui,
+            )
+          : null,
     );
   }
 }

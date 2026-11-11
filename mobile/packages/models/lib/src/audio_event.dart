@@ -69,6 +69,7 @@ class AudioEvent {
     this.fileSize,
     this.duration,
     String? title,
+    String? description,
     String? source,
     this.sourceVideoReference,
     this.sourceVideoRelay,
@@ -118,6 +119,7 @@ class AudioEvent {
          'duckingVolume must be between 0 and 1',
        ),
        title = sanitizeUtf16OrNull(title),
+       description = sanitizeUtf16OrNull(description),
        source = sanitizeUtf16OrNull(source),
        creatorName = sanitizeUtf16OrNull(creatorName),
        licenseName = sanitizeUtf16OrNull(licenseName),
@@ -232,6 +234,7 @@ class AudioEvent {
       fileSize: fileSize,
       duration: duration,
       title: title,
+      description: event.content,
       source: source,
       sourceVideoReference: sourceVideoReference,
       sourceVideoRelay: sourceVideoRelay,
@@ -295,17 +298,25 @@ class AudioEvent {
   /// the audio track from video files. The ID is prefixed with `video_`
   /// to distinguish from real Kind 1063 events.
   ///
-  /// When [creatorName] is provided the [title] reads
-  /// `Original sound - $creatorName`; when omitted the [title] is left null so
-  /// the display can
-  /// resolve the creator from [pubkey] and localize the "Original sound"
-  /// label itself (used when synthesizing attribution for a reused original
-  /// sound, where the reader owns the localization).
+  /// Classics use their original title/caption as a recognizable sound name.
+  /// Other videos retain the localized original-sound fallback.
   factory AudioEvent.fromVideoOriginalSound(
     VideoEvent video, {
     String? creatorName,
   }) {
     final reuseTerms = originalSoundReuseTerms(video);
+    final isClassic = video.isVerifiedArchive || video.isOriginalVine;
+    final classicTitle = video.displayTitle?.trim();
+    final classicCaption = video.displayContent.trim();
+    final title = isClassic
+        ? (classicTitle != null &&
+                  classicTitle.isNotEmpty &&
+                  classicTitle != 'Vine video'
+              ? classicTitle
+              : classicCaption.isNotEmpty
+              ? classicCaption
+              : null)
+        : null;
     return AudioEvent(
       id: 'video_${video.id}',
       pubkey: video.pubkey,
@@ -313,7 +324,11 @@ class AudioEvent {
       url: video.videoUrl,
       sha256: video.sha256,
       duration: video.duration?.toDouble(),
-      title: creatorName == null ? null : 'Original sound - $creatorName',
+      title:
+          title ??
+          (creatorName == null ? null : 'Original sound - $creatorName'),
+      description: isClassic ? video.displayContent : null,
+      creatorName: isClassic ? creatorName : null,
       source: 'Original Sound',
       sourceVideoReference: video.addressableId,
       allowsReuse: reuseTerms ?? false,
@@ -359,6 +374,7 @@ class AudioEvent {
       fileSize: json['fileSize'] as int?,
       duration: json['duration'] as double?,
       title: json['title'] as String?,
+      description: json['description'] as String?,
       source: json['source'] as String?,
       sourceVideoReference: json['sourceVideoReference'] as String?,
       sourceVideoRelay: json['sourceVideoRelay'] as String?,
@@ -546,6 +562,7 @@ class AudioEvent {
   Iterable<String> get searchableValues sync* {
     yield* [
       title,
+      description,
       creatorName,
       source,
       externalSource?.creatorName,
@@ -776,6 +793,10 @@ class AudioEvent {
 
   /// Audio title (e.g., "Original sound - @username").
   final String? title;
+
+  /// Public sound description, including source captions and search aliases.
+  /// This is the Kind 1063 event content, separate from displayed hashtags.
+  final String? description;
 
   /// Source attribution (e.g., "Original Sound", "Spotify", "SoundCloud").
   final String? source;
@@ -1123,6 +1144,7 @@ class AudioEvent {
     int? fileSize,
     double? duration,
     String? title,
+    String? description,
     String? source,
     String? sourceVideoReference,
     String? sourceVideoRelay,
@@ -1173,6 +1195,7 @@ class AudioEvent {
       fileSize: fileSize ?? this.fileSize,
       duration: duration ?? this.duration,
       title: title ?? this.title,
+      description: description ?? this.description,
       source: source ?? this.source,
       sourceVideoReference: sourceVideoReference ?? this.sourceVideoReference,
       sourceVideoRelay: sourceVideoRelay ?? this.sourceVideoRelay,
@@ -1281,6 +1304,7 @@ class AudioEvent {
     'fileSize': ?fileSize,
     'duration': ?duration,
     'title': ?title,
+    'description': ?description,
     'source': ?source,
     'sourceVideoReference': ?sourceVideoReference,
     'sourceVideoRelay': ?sourceVideoRelay,
