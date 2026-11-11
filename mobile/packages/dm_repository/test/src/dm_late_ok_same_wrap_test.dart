@@ -256,6 +256,60 @@ void main() {
     });
 
     group('sendGroupMessage', () {
+      test('reuses the wrap a recovery sent before the group loop reaches '
+          'that sibling', () async {
+        final secondPeer = getPublicKey(_secondPeerKey);
+        final firstStarted = Completer<void>();
+        final releaseFirst = Completer<void>();
+        when(
+          () => nostrClient.publishEventAwaitOk(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+            timeout: any(named: 'timeout'),
+            diagnosticTag: any(named: 'diagnosticTag'),
+          ),
+        ).thenAnswer((invocation) async {
+          final event = invocation.positionalArguments.first as Event;
+          published.add(event);
+          final toFirst = event.tags.any(
+            (tag) => tag.length >= 2 && tag[0] == 'p' && tag[1] == peer,
+          );
+          if (toFirst && !firstStarted.isCompleted) {
+            firstStarted.complete();
+            await releaseFirst.future;
+          }
+          return PublishOutcome(
+            eventId: event.id,
+            acceptedBy: const [],
+            rejectedBy: const {},
+            noResponseFrom: const [_poolRelay],
+          );
+        });
+
+        final batch = repository.sendGroupMessage(
+          recipientPubkeys: [peer, secondPeer],
+          content: 'recovery reached the sibling first',
+        );
+        await firstStarted.future;
+        final secondRow = (await outgoingDao.getAllForOwner(
+          owner,
+        )).singleWhere((row) => row.recipientPubkey == secondPeer);
+        try {
+          final recovered = await repository.recoverFullSend(
+            rumorId: secondRow.id,
+          );
+          expect(recovered.retryablePending, isTrue);
+          expect(wrapsTo(secondPeer), hasLength(1));
+        } finally {
+          releaseFirst.complete();
+          await batch;
+        }
+
+        final wraps = wrapsTo(secondPeer);
+        expect(wraps, hasLength(2));
+        expect(wraps.last.id, wraps.first.id);
+      });
+
       test('keeps a sibling wrap before the next sibling publishes, so a '
           'retry in between sends that same wrap again', () async {
         final secondPeer = getPublicKey(_secondPeerKey);
