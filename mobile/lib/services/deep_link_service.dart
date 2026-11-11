@@ -5,7 +5,6 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
-import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/features/challenges/challenge_link.dart';
 import 'package:openvine/features/challenges/challenge_test_build.dart';
 import 'package:openvine/utils/detached_future.dart';

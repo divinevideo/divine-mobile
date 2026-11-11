@@ -3,7 +3,7 @@
 // ABOUTME: are handled here; Nostr key stripping for crash reports lives in
 // ABOUTME: lib/observability/reportable_error.dart).
 
-import 'package:openvine/config/bug_report_config.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Placeholder for secrets in free-form log text or HTTP headers.
 const redactedSensitiveLogPlaceholder = '[REDACTED]';
@@ -66,7 +66,7 @@ String redactUriStringForLogs(String uriString) {
 
 // A link can carry a pasted nsec where a public id belongs (#10385).
 String _redactSecretSegment(String segment) =>
-    BugReportConfig.nostrPrivateKeyPatterns.any((p) => p.hasMatch(segment))
+    nostrPrivateKeyPatterns.any((p) => p.hasMatch(segment))
     ? redactedUriComponentForLogs
     : segment;
 

@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:logging_types/logging_types.dart'
     show LogCategory, LogEntry, LogLevel;
 import 'package:unified_logger/src/log_capture_service.dart';
+import 'package:unified_logger/src/secret_redaction.dart';
 
 // Re-export logging values so existing unified_logger consumers keep their
 // public imports while the types remain owned by the pure-Dart leaf package.
@@ -141,6 +142,16 @@ class UnifiedLogger {
     Object? error,
     StackTrace? stackTrace,
   }) {
+    // Last line of defence: a key can reach a Log call through an untrusted
+    // value such as a link, and neither sink may ever store one (#10385).
+    final safeMessage = redactNostrPrivateKeys(message);
+    final errorText = error == null
+        ? null
+        : redactNostrPrivateKeys(error.toString());
+    final stackText = stackTrace == null
+        ? null
+        : redactNostrPrivateKeys(stackTrace.toString());
+
     // Console output — entirely tree-shaken from release builds.
     // Timestamp formatting, debugPrint, and developer.log only serve the
     // developer console; nobody reads them in production.
@@ -157,7 +168,7 @@ class UnifiedLogger {
         final ms = now.millisecond.toString().padLeft(3, '0');
         final timestamp = '$h:$m:$s.$ms';
         final categoryPrefix = category != null ? '[${category.name}] ' : '';
-        final timestampedMessage = '[$timestamp] $categoryPrefix$message';
+        final timestampedMessage = '[$timestamp] $categoryPrefix$safeMessage';
 
         debugPrint(timestampedMessage);
 
@@ -166,8 +177,10 @@ class UnifiedLogger {
             timestampedMessage,
             name: name ?? 'divine',
             level: level.value,
-            error: error,
-            stackTrace: stackTrace,
+            error: errorText,
+            stackTrace: stackText == null
+                ? null
+                : StackTrace.fromString(stackText),
           );
         }
       }
@@ -182,11 +195,11 @@ class UnifiedLogger {
         // ClickHouse rows without guessing the reporter's timezone.
         timestamp: DateTime.now().toUtc(),
         level: level,
-        message: message,
+        message: safeMessage,
         category: category,
         name: name,
-        error: error?.toString(),
-        stackTrace: stackTrace?.toString(),
+        error: errorText,
+        stackTrace: stackText,
       );
       LogCaptureService().captureLog(logEntry);
     } on Exception catch (e) {

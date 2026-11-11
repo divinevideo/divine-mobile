@@ -320,4 +320,53 @@ void main() {
       );
     });
   });
+
+  group('secret redaction at the sink (#10385)', () {
+    // NIP-19's published test vectors; they control no real account.
+    const nsec =
+        'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+    const npub =
+        'npub10elfcs4fr0l0r8af98jlmgdh9c8tcxjvz9qkw038js35mp4dma8qzvjptg';
+    const hex =
+        '7e7e9c42a91bfef19fa929e5fda1b72e0ebc1a4c1141673e2794234d86addf4e';
+
+    setUp(() async {
+      await LogCaptureService().clearAllLogs();
+    });
+
+    test('redacts an nsec from a captured message', () {
+      Log.info('opened /profile/$nsec', name: 'Test');
+
+      final entry = LogCaptureService().getRecentLogs().last;
+      expect(entry.message, equals('opened /profile/[REDACTED]'));
+    });
+
+    test('redacts an uppercase ncryptsec from a captured message', () {
+      Log.info('key NCRYPTSEC1QGQEYAFQWZ here', name: 'Test');
+
+      final entry = LogCaptureService().getRecentLogs().last;
+      expect(entry.message.toLowerCase(), isNot(contains('ncryptsec1')));
+    });
+
+    test('redacts an nsec from a captured error and stack trace', () {
+      Log.error(
+        'failed',
+        name: 'Test',
+        error: const FormatException('bad link $nsec'),
+        stackTrace: StackTrace.fromString('#0 open ($nsec)'),
+      );
+
+      final entry = LogCaptureService().getRecentLogs().last;
+      expect(entry.error, isNot(contains('nsec1')));
+      expect(entry.stackTrace, isNot(contains('nsec1')));
+      expect(entry.error, contains('bad link [REDACTED]'));
+    });
+
+    test('logs public ids whole', () {
+      Log.info('author $npub ($hex)', name: 'Test');
+
+      final entry = LogCaptureService().getRecentLogs().last;
+      expect(entry.message, equals('author $npub ($hex)'));
+    });
+  });
 }

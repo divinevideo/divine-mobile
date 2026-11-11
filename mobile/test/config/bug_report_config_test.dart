@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/config/bug_report_config.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Fragments that must never survive sanitization. Asserting on these rather
 /// than only on the presence of `[REDACTED]` is what catches *partial*
