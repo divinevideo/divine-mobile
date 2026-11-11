@@ -967,6 +967,37 @@ void main() {
         expect(ClipLibraryService.needsAssetRecovery(clip), isFalse);
       });
 
+      test(
+        'counts attempts on a clip only the autosave draft holds',
+        () async {
+          final draftService = DraftStorageService(
+            draftsDao: database.draftsDao,
+            clipsDao: database.clipsDao,
+          );
+          await draftService.saveDraft(
+            DivineVideoDraft.create(
+              id: VideoEditorConstants.autoSaveId,
+              clips: [clipWithoutAssets('just-recorded')],
+              title: '',
+              description: '',
+              hashtags: const {},
+              selectedApproach: '',
+            ),
+          );
+
+          for (var load = 0; load < 5; load++) {
+            await service.recoverMissingAssets(await service.getAllClips());
+          }
+
+          final clip = (await service.getAllClips()).single;
+          expect(
+            clip.assetRecoveryAttempts,
+            ClipLibraryConstants.maxAssetRecoveryAttempts,
+          );
+          expect(ClipLibraryService.needsAssetRecovery(clip), isFalse);
+        },
+      );
+
       test('leaves a stop-motion clip without a ghost frame alone', () {
         final clip = DivineVideoClip(
           id: 'sm_clip',
