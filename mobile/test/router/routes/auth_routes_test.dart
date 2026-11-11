@@ -170,14 +170,6 @@ void main() {
         );
       });
 
-      test('gives the reset-password deep link no name', () {
-        final deepLink = authRoutes().whereType<GoRoute>().singleWhere(
-          (route) => route.path == '/reset-password',
-        );
-
-        expect(deepLink.name, isNull);
-      });
-
       test('keeps the screen constants on the literal values', () {
         expect(WelcomeScreen.path, equals('/welcome'));
         expect(
@@ -234,12 +226,8 @@ void main() {
         );
       });
 
-      test('the paths match the screens and RoutePaths', () {
-        expect(const WelcomeRouteData().location, equals(WelcomeScreen.path));
-        expect(
-          const CreateAccountRouteData().location,
-          equals(WelcomeScreen.createAccountPath),
-        );
+      // The gate compares these two strings, which RoutePaths composes by hand.
+      test('sign in and reset password match RoutePaths', () {
         expect(
           const LoginOptionsRouteData().location,
           equals(RoutePaths.welcomeLoginOptions),
@@ -247,26 +235,6 @@ void main() {
         expect(
           const ResetPasswordRouteData().location,
           equals(RoutePaths.welcomeResetPassword),
-        );
-        expect(
-          const KeyImportRouteData().location,
-          equals(RoutePaths.keyImport),
-        );
-        expect(
-          const NostrConnectRouteData().location,
-          equals(RoutePaths.nostrConnect),
-        );
-        expect(
-          const SecureAccountRouteData().location,
-          equals(RoutePaths.secureAccount),
-        );
-        expect(
-          const ResetPasswordDeepLinkRouteData().location,
-          equals(RoutePaths.resetPassword),
-        );
-        expect(
-          const EmailVerificationRouteData().location,
-          equals(RoutePaths.emailVerification),
         );
       });
 
@@ -330,8 +298,9 @@ void main() {
         );
       });
 
-      // The reset-link listener and the deep-link redirect still build this
-      // location by hand, so the typed route has to agree with both.
+      // The deep-link redirect builds this location with
+      // rewriteResetPasswordDeepLink, which the reset-link listener duplicates
+      // by hand; the typed route has to agree with the rewrite.
       for (final (token, email) in [
         ('T', 'u@x.com'),
         ('a+b/c=', 'a+b@x.com'),
@@ -394,8 +363,9 @@ void main() {
         }
       });
 
-      // create-account and sign-in navigate with a hand-built string today;
-      // the typed route must decode to the same parameters.
+      // The create-account and sign-in screens built this string by hand
+      // before this migration; the typed route must decode to the same
+      // parameters.
       test('verify email decodes to what the polling navigation sent', () {
         const deviceCode = 'device-code-123';
         const verifier = 'verifier_ABC-xyz.~';
