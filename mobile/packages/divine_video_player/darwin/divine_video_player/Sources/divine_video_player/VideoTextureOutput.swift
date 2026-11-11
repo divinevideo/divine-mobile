@@ -140,7 +140,8 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
     private var isDisposed = false
 
     /// Fired when the force window expires without a frame; caller should
-    /// retry the seek with tolerance. Suppressed for retry windows.
+    /// retry the seek with tolerance. Suppressed for retry windows, and when
+    /// the queue holds no item to retry it on. Always a numeric time.
     var onSeekStuck: ((CMTime) -> Void)?
 
     init(
@@ -591,9 +592,15 @@ final class VideoTextureOutput: NSObject, FlutterTexture, AVPlayerItemOutputPull
             let wasRetry = forceWindowIsRetry
             forceWindowFailCount = 0
             forceWindowIsRetry = false
-            if !wasRetry {
-                DispatchQueue.main.async { [weak self] in
-                    self?.onSeekStuck?(stuckTime)
+            // Only a queued item has a seek to retry. `stop` empties the
+            // queue while a window can still be open, and an empty queue
+            // reads an invalid time, which `AVPlayerItem` raises on.
+            if !wasRetry, let stuckItem = player.currentItem, stuckTime.isNumeric {
+                DispatchQueue.main.async { [weak self, weak stuckItem] in
+                    // A reload in between replaces the item the time is for.
+                    guard let self, let stuckItem,
+                          self.player?.currentItem === stuckItem else { return }
+                    self.onSeekStuck?(stuckTime)
                 }
             }
         }

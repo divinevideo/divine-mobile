@@ -52,7 +52,9 @@ class TrendingHashtagsSection extends StatelessWidget {
                 ),
               Expanded(
                 child: hashtags.isEmpty
-                    ? const _HashtagLoadingPlaceholder()
+                    ? (isLoading
+                          ? const _HashtagLoadingPlaceholder()
+                          : const SizedBox.shrink())
                     : _HashtagChipList(
                         hashtags: hashtags,
                         leadingInset: leading == null ? 16 : 0,

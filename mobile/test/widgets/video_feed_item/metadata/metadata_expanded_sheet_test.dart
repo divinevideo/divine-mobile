@@ -501,7 +501,13 @@ void main() {
           DateTime.fromMillisecondsSinceEpoch(importedAt * 1000, isUtc: true),
         );
         expect(find.text(importedDate), findsNothing);
-        expect(find.text('From the archive'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.text('From the archive'),
+          ),
+          findsOneWidget,
+        );
       },
     );
 
@@ -518,7 +524,13 @@ void main() {
         buildSubject(child: MetadataExpandedSheet(video: video)),
       );
 
-      expect(find.text('Same caption'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(LinkifiedText),
+          matching: find.text('Same caption'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgetsWithSurfaceSize(
@@ -536,7 +548,13 @@ void main() {
         );
 
         // Exact match: only a separate headline renders the bare caption.
-        expect(find.text('Same caption'), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.text('Same caption'),
+          ),
+          findsNothing,
+        );
         expect(
           find.text('Same caption\n\nOriginal stats: 3 loops - 2 likes'),
           findsOneWidget,
@@ -560,8 +578,20 @@ void main() {
           buildSubject(child: MetadataExpandedSheet(video: video)),
         );
 
-        expect(find.text('Original stats: 3 loops - 2 likes'), findsOneWidget);
-        expect(find.textContaining('#windowsxp'), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.text('Original stats: 3 loops - 2 likes'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.textContaining('#windowsxp'),
+          ),
+          findsNothing,
+        );
         expect(find.text('windowsxp'), findsOneWidget);
       },
     );
@@ -591,7 +621,13 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(find.textContaining('#windowsxp'), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.textContaining('#windowsxp'),
+          ),
+          findsNothing,
+        );
         expect(find.text('windowsxp'), findsOneWidget);
         expect(find.text('outoftune'), findsOneWidget);
       },
@@ -629,7 +665,13 @@ void main() {
         buildSubject(child: MetadataExpandedSheet(video: video)),
       );
 
-      expect(find.text('Original stats: 3 loops - 2 likes'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(LinkifiedText),
+          matching: find.text('Original stats: 3 loops - 2 likes'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgetsWithSurfaceSize('omits a whitespace-only description', (
@@ -1864,6 +1906,107 @@ void main() {
 
         expect(find.text(_l10n(tester).metadataRepostedByLabel), findsNothing);
         expect(_skeletonChips(), findsNothing);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'keeps the row with a retry notice when the read stopped early with '
+      'nobody and the feed counts reposts (#10846)',
+      (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            repostersState: const VideoRepostersState(
+              isLoading: false,
+              isComplete: false,
+            ),
+            child: MetadataRepostedBySection(
+              video: _makeVideo(nostrRepostCount: 3),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = _l10n(tester);
+        expect(find.text(l10n.metadataRepostedByLabel), findsOneWidget);
+        expect(find.text(l10n.videoEngagementListIncomplete), findsOneWidget);
+        expect(find.text(l10n.commonRetry), findsOneWidget);
+        expect(_skeletonChips(), findsNothing);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'collapses the row when the read stopped early with nobody and the '
+      'feed counts no reposts (#10846)',
+      (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            repostersState: const VideoRepostersState(
+              isLoading: false,
+              isComplete: false,
+            ),
+            child: MetadataRepostedBySection(
+              video: _makeVideo(nostrRepostCount: 0),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = _l10n(tester);
+        expect(find.text(l10n.metadataRepostedByLabel), findsNothing);
+        expect(find.text(l10n.videoEngagementListIncomplete), findsNothing);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'shows the reposters a read found before it stopped, without the '
+      'notice (#10846)',
+      (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            repostersState: const VideoRepostersState(
+              pubkeys: [_reposterPubkey],
+              isLoading: false,
+              isComplete: false,
+            ),
+            providerOverrides: [
+              fetchUserProfileProvider(_reposterPubkey).overrideWith(
+                (ref) async => _makeProfile(_reposterPubkey, 'Improvising'),
+              ),
+            ],
+            child: MetadataRepostedBySection(
+              video: _makeVideo(nostrRepostCount: 3),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Improvising'), findsOneWidget);
+        expect(
+          find.text(_l10n(tester).videoEngagementListIncomplete),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'reads the reposters again when Retry is tapped (#10846)',
+      (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            repostersState: const VideoRepostersState(
+              isLoading: false,
+              isComplete: false,
+            ),
+            child: MetadataRepostedBySection(
+              video: _makeVideo(nostrRepostCount: 3),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(_l10n(tester).commonRetry));
+
+        verify(() => mockRepostersCubit.retry()).called(1);
       },
     );
 

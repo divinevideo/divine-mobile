@@ -9,6 +9,7 @@ import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:categories_repository/categories_repository.dart';
 import 'package:challenge_protocol/challenge_protocol.dart' as challenge;
 import 'package:comments_repository/comments_repository.dart';
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:curation_repository/curation_repository.dart';
@@ -20,6 +21,8 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart'
+    show LatestAddressableEvents, NostrClient;
 import 'package:nostr_sdk/event.dart' as nostr;
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/config/official_accounts.dart';
@@ -154,8 +157,36 @@ final videoResponsesRepositoryProvider = Provider<VideoResponsesRepository>((
     nostrClient: ref.watch(nostrServiceProvider),
     signEvent: authService.createAndSignEvent,
     funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
+    latestEvents: ref.watch(latestAddressableEventsProvider),
   );
 });
+
+/// The newest version of each addressable event the app read or published,
+/// shared by the replies writer of [videoResponsesRepositoryProvider] and the
+/// comment moderation writer of [commentModerationRepositoryProvider]: both
+/// replace a video's `divine:replies:` event, and the relay may not serve
+/// one's publish back before the other builds on it.
+final latestAddressableEventsProvider = Provider<LatestAddressableEvents>((
+  ref,
+) {
+  final events = LatestAddressableEvents();
+  ref.onDispose(
+    () => runProviderDetached(
+      events.dispose(),
+      'close addressable event revisions',
+      logName: 'LatestAddressableEvents',
+    ),
+  );
+  return events;
+});
+
+/// Invalidates consumers only for the requested video's moderation scope.
+final StreamProviderFamily<int, String> commentModerationRevisionProvider =
+    StreamProvider.autoDispose.family<int, String>(
+      (ref, coordinate) => ref
+          .watch(commentModerationRepositoryProvider)
+          .watchModeration(rootAddressableId: coordinate),
+    );
 
 final FutureProviderFamily<List<ProfileBadgeViewData>, String>
 profileAcceptedBadgesProvider = FutureProvider.autoDispose
@@ -1215,23 +1246,71 @@ CommentsRepository commentsRepository(Ref ref) {
   final funnelcakeClient = ref.watch(funnelcakeApiClientProvider);
   final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
 
-  final engine = ref.watch(contentPolicyEngineProvider);
-  bool blockFilter(String pubkey) {
-    final decision = engine.evaluate(
-      PolicyInput(pubkey: pubkey),
-      blocklistRepository.currentState,
-    );
-    return decision is Block;
-  }
-
   final repository = CommentsRepository(
     nostrClient: nostrClient,
     funnelcakeApiClient: funnelcakeClient,
-    blockFilter: blockFilter,
+    blockFilter: commentBlockFilter(
+      nostrClient: nostrClient,
+      blocklistRepository: blocklistRepository,
+      engine: ref.watch(contentPolicyEngineProvider),
+    ),
   );
   ref.onDispose(repository.clearCommentCountCache);
   return repository;
 }
+
+/// The comments filter: drops the authors [engine] blocks for the signed-in
+/// account of [nostrClient], except that account's own blocks on its own
+/// video, see [isOwnBlockOnOwnVideo].
+BlockedCommentFilter commentBlockFilter({
+  required NostrClient nostrClient,
+  required ContentBlocklistRepository blocklistRepository,
+  required ContentPolicyEngine engine,
+}) => (pubkey, {rootAuthorPubkey}) {
+  if (isOwnBlockOnOwnVideo(
+    authorPubkey: pubkey,
+    rootAuthorPubkey: rootAuthorPubkey,
+    viewerPubkey: nostrClient.publicKey,
+    blocklistRepository: blocklistRepository,
+  )) {
+    // On their own video the owner's block is comment moderation: the
+    // comment stays, hidden by default, so they can review and restore it.
+    // The other account's policy still applies independently.
+    return blocklistRepository.currentState.isBlockedBy(pubkey);
+  }
+  final decision = engine.evaluate(
+    PolicyInput(pubkey: pubkey),
+    blocklistRepository.currentState,
+  );
+  return decision is Block;
+};
+
+/// Whether [viewerPubkey] owns the video and has blocked [authorPubkey].
+///
+/// Such a comment is the owner's own moderation, so the comments surfaces
+/// keep it, hidden by default, instead of dropping it like other blocks.
+/// [rootAuthorPubkey] must come from the video coordinate, not from the
+/// comment, which its author writes.
+bool isOwnBlockOnOwnVideo({
+  required String authorPubkey,
+  required String? rootAuthorPubkey,
+  required String viewerPubkey,
+  required ContentBlocklistRepository blocklistRepository,
+}) =>
+    viewerPubkey.isNotEmpty &&
+    rootAuthorPubkey == viewerPubkey &&
+    blocklistRepository
+        .blockedPubkeysForAccount(viewerPubkey)
+        .contains(authorPubkey);
+
+/// Provider for [CommentModerationRepository]: the moderation video owners
+/// publish for the comments on their videos (NIP-78 kind 30078).
+@Riverpod(keepAlive: true)
+CommentModerationRepository commentModerationRepository(Ref ref) =>
+    CommentModerationRepository(
+      nostrClient: ref.watch(nostrServiceProvider),
+      latestEvents: ref.watch(latestAddressableEventsProvider),
+    );
 
 /// Dormant until an explicit challenge flow requests it. No Explore/global
 /// discovery route is enabled, and no unshipped API DTO is consumed.

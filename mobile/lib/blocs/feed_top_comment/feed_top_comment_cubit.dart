@@ -15,12 +15,12 @@ import 'package:unified_logger/unified_logger.dart';
 part 'feed_top_comment_state.dart';
 
 /// Loads one video's comments and their vote counts, and selects the one with
-/// the highest [commentEngagementScore], the score behind the comments sheet's
-/// Top ordering. Ties go to the newer comment, so the most recent one wins
-/// when none has an upvote or a reply. Text replies are ranked too, unlike
-/// the sheet, which nests them under their parent. The creator's own comments,
-/// video replies, blank comments, pending placeholders and comments dated more
-/// than [maxFutureSkew] ahead are not candidates.
+/// the highest net vote score, using the comments sheet's Top comparator:
+/// ties go to the newer comment, then the lower id. Text replies are also
+/// candidates for the overlay. The creator's own comments, video replies,
+/// blank comments, pending placeholders and comments dated more than
+/// [maxFutureSkew] ahead are excluded. Creator-hidden comments are excluded
+/// using the same author-view exception as the comments sheet.
 ///
 /// The overlay shows once the video has finished its first loop and the top
 /// comment is known, whichever happens last, and stays hidden after the
@@ -30,20 +30,33 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
   FeedTopCommentCubit({
     required CommentsRepository commentsRepository,
     required LikesRepository likesRepository,
+    required CommentModerationRepository commentModerationRepository,
     required String rootEventId,
     required int rootEventKind,
     required String rootAuthorPubkey,
     required Stream<void> loopCompletions,
     String? rootAddressableId,
+    String? viewerPubkey,
+    Set<String> viewerBlockedAuthors = const {},
+    bool initialHasCompletedLoop = false,
+    bool initiallyDismissed = false,
     DateTime Function()? now,
   }) : _commentsRepository = commentsRepository,
        _likesRepository = likesRepository,
+       _commentModerationRepository = commentModerationRepository,
        _rootEventId = rootEventId,
        _rootEventKind = rootEventKind,
        _rootAuthorPubkey = rootAuthorPubkey,
        _rootAddressableId = rootAddressableId,
+       _viewerPubkey = viewerPubkey,
+       _viewerBlockedAuthors = Set.unmodifiable(viewerBlockedAuthors),
        _now = now ?? DateTime.now,
-       super(const FeedTopCommentState()) {
+       super(
+         FeedTopCommentState(
+           hasCompletedLoop: initialHasCompletedLoop,
+           isDismissed: initiallyDismissed,
+         ),
+       ) {
     _loopSubscription = loopCompletions.listen((_) => _onLoopCompleted());
   }
 
@@ -51,12 +64,14 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
   static const commentPageSize = 50;
 
   /// Tolerated author clock skew. `created_at` is author-signed, so a comment
-  /// dated further ahead is implausible: it would rank as the newest comment
-  /// for as long as it stays ahead, and past two hours its score breaks.
+  /// dated further ahead could win a tie until its timestamp catches up.
   static const maxFutureSkew = Duration(minutes: 5);
 
   final CommentsRepository _commentsRepository;
   final LikesRepository _likesRepository;
+  final CommentModerationRepository _commentModerationRepository;
+  final String? _viewerPubkey;
+  final Set<String> _viewerBlockedAuthors;
   final String _rootEventId;
   final int _rootEventKind;
 
@@ -76,13 +91,17 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
 
     final List<Comment> comments;
     try {
-      final thread = await _commentsRepository.loadComments(
-        rootEventId: _rootEventId,
-        rootEventKind: _rootEventKind,
-        rootAddressableId: _rootAddressableId,
-        limit: commentPageSize,
-      );
+      final results = await Future.wait<Object>([
+        _commentsRepository.loadComments(
+          rootEventId: _rootEventId,
+          rootEventKind: _rootEventKind,
+          rootAddressableId: _rootAddressableId,
+          limit: commentPageSize,
+        ),
+        _loadModeration(),
+      ]);
       if (isClosed) return;
+      final thread = results[0] as CommentThread;
       // Read sources can still serve author-deleted comments. The repository
       // validates NIP-09 requests and fails open when the relay cannot answer.
       final deleted = await _commentsRepository.findAuthorDeletedComments(
@@ -111,22 +130,85 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
               !comment.createdAt.isAfter(latestPlausible),
         )
         .toList();
-    if (candidates.isEmpty) {
-      emitIfOpen(state.copyWith(status: FeedTopCommentStatus.empty));
+    final beforeCounts = _knownModeration();
+    final effectiveBeforeCounts = _effectiveModeration(beforeCounts.moderation);
+    if (candidates.every(
+      (comment) => !_isVisible(comment, effectiveBeforeCounts),
+    )) {
+      emitIfOpen(
+        state.copyWith(
+          status: FeedTopCommentStatus.empty,
+          appliedModeration: beforeCounts.moderation,
+          moderationRevision: beforeCounts.revision,
+        ),
+      );
       return;
     }
 
-    final upvotes = await _upvoteCounts(candidates);
+    final votes = await _voteCounts(candidates);
     if (isClosed) return;
 
-    final top = _topComment(candidates, comments, upvotes);
+    // A relevant cache change while the network reads were in flight is
+    // already applied here; it must not cause the host to load the page again.
+    final current = _knownModeration();
+    final moderation = _effectiveModeration(current.moderation);
+    final visibleCandidates = candidates
+        .where((comment) => _isVisible(comment, moderation))
+        .toList();
+    if (visibleCandidates.isEmpty) {
+      emitIfOpen(
+        state.copyWith(
+          status: FeedTopCommentStatus.empty,
+          appliedModeration: current.moderation,
+          moderationRevision: current.revision,
+        ),
+      );
+      return;
+    }
+    final compare = commentVoteComparator(
+      upvoteCounts: votes.upvotes,
+      downvoteCounts: votes.downvotes,
+    );
+    final top = visibleCandidates.reduce(
+      (best, comment) => compare(comment, best) < 0 ? comment : best,
+    );
     emitIfOpen(
       state.copyWith(
         status: FeedTopCommentStatus.ready,
         topComment: top,
+        appliedModeration: current.moderation,
+        moderationRevision: current.revision,
       ),
     );
   }
+
+  /// Populates the authenticated cache alongside the page read. Selection uses
+  /// its newest snapshot after vote counts settle, plus local owner blocks.
+  Future<CommentModeration> _loadModeration() async {
+    final coordinate = _rootAddressableId;
+    return coordinate == null || coordinate.isEmpty
+        ? CommentModeration.empty
+        : await _commentModerationRepository.loadModeration(
+            rootAddressableId: coordinate,
+          );
+  }
+
+  ({CommentModeration moderation, int revision}) _knownModeration() {
+    final coordinate = _rootAddressableId;
+    return coordinate == null || coordinate.isEmpty
+        ? const (moderation: CommentModeration.empty, revision: 0)
+        : _commentModerationRepository.knownModeration(
+            rootAddressableId: coordinate,
+          );
+  }
+
+  CommentModeration _effectiveModeration(CommentModeration moderation) =>
+      moderation.withAutoHiddenAuthors(
+        _viewerPubkey == _rootAuthorPubkey ? _viewerBlockedAuthors : const {},
+      );
+
+  bool _isVisible(Comment comment, CommentModeration moderation) =>
+      comment.authorPubkey == _viewerPubkey || !moderation.hides(comment);
 
   /// Hides the overlay for the rest of this video's time on screen.
   void dismiss() {
@@ -139,17 +221,17 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
     emitIfOpen(state.copyWith(hasCompletedLoop: true));
   }
 
-  /// Upvote counts per comment id. A failed fetch ranks by replies and age
-  /// alone rather than hiding the reaction.
-  Future<Map<String, int>> _upvoteCounts(List<Comment> comments) async {
+  /// A failed fetch gives every comment zero votes, so recency decides.
+  Future<({Map<String, int> upvotes, Map<String, int> downvotes})> _voteCounts(
+    List<Comment> comments,
+  ) async {
     try {
-      final counts = await _likesRepository.getVoteCounts(
+      return await _likesRepository.getVoteCounts(
         [for (final comment in comments) comment.id],
         addressableIds: {
           for (final comment in comments) comment.id: ?comment.addressableId,
         },
       );
-      return counts.upvotes;
     } on LikesRepositoryException catch (error, stackTrace) {
       addError(error, stackTrace);
       Log.warning(
@@ -159,42 +241,14 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
         error: error,
         stackTrace: stackTrace,
       );
-      return const {};
+      return const (upvotes: <String, int>{}, downvotes: <String, int>{});
     } catch (error, stackTrace) {
       addError(
-        Reportable(error, context: 'FeedTopCommentCubit._upvoteCounts'),
+        Reportable(error, context: 'FeedTopCommentCubit._voteCounts'),
         stackTrace,
       );
-      return const {};
+      return const (upvotes: <String, int>{}, downvotes: <String, int>{});
     }
-  }
-
-  /// The candidate with the highest [commentEngagementScore]; equal scores go
-  /// to the newer comment, so a lone comment is always shown.
-  Comment _topComment(
-    List<Comment> candidates,
-    List<Comment> allComments,
-    Map<String, int> upvotes,
-  ) {
-    final now = _now();
-    final replyCounts = computeReplyCounts({
-      for (final comment in allComments) comment.id: comment,
-    });
-    double score(Comment comment) => commentEngagementScore(
-      comment: comment,
-      now: now,
-      likeCounts: upvotes,
-      replyCounts: replyCounts,
-    );
-
-    return candidates.reduce((best, comment) {
-      final bestScore = score(best);
-      final commentScore = score(comment);
-      if (commentScore != bestScore) {
-        return commentScore > bestScore ? comment : best;
-      }
-      return comment.createdAt.isAfter(best.createdAt) ? comment : best;
-    });
   }
 
   void _fail(Object error, StackTrace stackTrace, {required bool isExpected}) {

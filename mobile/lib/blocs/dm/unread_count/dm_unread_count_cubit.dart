@@ -33,8 +33,12 @@ import 'package:unified_logger/unified_logger.dart';
 /// cannot drift from the list. It
 /// intentionally does NOT replicate one list-only concern:
 ///
-/// * **Pagination** — the list renders one page; the badge counts the full
-///   accepted set (unpaginated) so it reflects total unread, not the page.
+/// * **Read rows** — the list needs every conversation; the badge reads only
+///   the unread ones, so a DM write does not re-read the whole inbox on every
+///   screen (#7923). Counting only unread rows gives the number the full set
+///   would: every helper named above and the protected-minor gate decide row
+///   by row, and the hidden-member pass only ever turns a row read, never
+///   unread.
 ///
 /// The pinned support row (#6283) IS counted, because the inbox renders it
 /// with an unread dot. That pulls one conversation out of the requests bucket
@@ -76,9 +80,9 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
 
   /// Window over which bursty conversation writes are coalesced into a single
   /// recompute. This cubit is always mounted (app-shell scope) and re-runs the
-  /// full follow-aware, blocklist-filtered list composition on every
-  /// conversations-table write; a relay delivery, the mark-read fan-out, or the
-  /// post-reinstall history drain can fire dozens of writes in a burst.
+  /// follow-aware, blocklist-filtered composition over the unread rows on
+  /// every conversations-table write; a relay delivery, the mark-read fan-out,
+  /// or the post-reinstall history drain can fire dozens of writes in a burst.
   /// Collapsing each burst into one classify+sort+filter pass removes redundant
   /// main-isolate CPU. The count is not latency-critical, so the small delay is
   /// invisible and the coalesced result is identical. Overridable in tests.
@@ -195,8 +199,8 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
               Object?,
               (List<DmConversation>, List<DmConversation>, String)
             >(
-              dmRepository.watchAcceptedConversations(),
-              dmRepository.watchPotentialRequests(),
+              dmRepository.watchAcceptedConversations(unreadOnly: true),
+              dmRepository.watchPotentialRequests(unreadOnly: true),
               followRepository.followingStream.startWith(const <String>[]),
               blocklistTicks,
               // Identity stream (#5374): the DAO streams emit cached rows before
@@ -242,7 +246,7 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
   }
 
   /// [conversations] read as the viewer sees them, through the same pass the
-  /// Messages list runs over the same two lists, so a group whose only unread
+  /// Messages list runs over its own two lists, so a group whose only unread
   /// messages are from members the viewer hides is not counted (#10150).
   ///
   /// Takes the repositories the current subscription was built with, so a
@@ -283,9 +287,9 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
     }
   }
 
-  /// Composes the visible Messages list (accepted ∪ followed-but-unreplied,
-  /// blocklist-filtered) and counts the unread ones — the same set the inbox
-  /// renders an unread dot for.
+  /// Composes the unread rows of the visible Messages list (accepted ∪
+  /// followed-but-unreplied, blocklist-filtered) and counts them — the same
+  /// set the inbox renders an unread dot for.
   int _countUnread({
     required List<DmConversation> accepted,
     required List<DmConversation> potentialRequests,
@@ -314,9 +318,7 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
     // request, because the inbox renders it as the pin, unread dot and all —
     // and counting `pin.inbox` alone would silently drop it. A retired-key
     // thread needs nothing special; the partition leaves it in `pin.inbox`,
-    // which is where the list renders it too. The bloc's synthetic stand-in is
-    // deliberately NOT reproduced here: it is always read, so it can only ever
-    // add zero and one more gate pass.
+    // which is where the list renders it too.
     final pin = DmRepository.extractPinnedSupport(
       userPubkey: userPubkey,
       supportPubkey: _supportRowPubkey,
@@ -337,8 +339,30 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
     // Filtering the union in one pass rather than the pin separately keeps this
     // to a single gate call — `filter` can kick a receive-time revalidation, so
     // each extra call site is another revalidation trigger.
+    //
+    // The unread-only watches leave out a read support thread, so a read
+    // stand-in for the pin, built like the bloc's synthetic row, keeps the
+    // support account in this pass and its verdict re-checked while the inbox
+    // is closed. It is never rendered, and being read it counts for nothing
+    // (#7923).
+    final supportConversationId = pin.supportConversationId;
+    final supportPubkey = _supportRowPubkey;
+    final standIn =
+        adopted == null &&
+            supportConversationId != null &&
+            supportPubkey != null
+        ? DmConversation(
+            id: supportConversationId,
+            participantPubkeys: [userPubkey, supportPubkey],
+            isGroup: false,
+            createdAt: 0,
+          )
+        : null;
     final visible =
-        _protectedMinorInboxGate?.filter(blocklisted, userPubkey: userPubkey) ??
+        _protectedMinorInboxGate?.filter([
+          ...blocklisted,
+          ?standIn,
+        ], userPubkey: userPubkey) ??
         blocklisted;
     return visible.where((c) => !c.isRead).length;
   }

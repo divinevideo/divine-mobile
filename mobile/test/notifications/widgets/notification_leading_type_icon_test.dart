@@ -3,6 +3,7 @@
 // ABOUTME: for use in both row variants.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
@@ -15,12 +16,13 @@ Future<void> _pump(
   WidgetTester tester, {
   required NotificationKind type,
   required bool isRead,
+  ThemeData? theme,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      theme: VineTheme.theme,
+      theme: theme ?? VineTheme.theme,
       home: Scaffold(
         body: NotificationLeadingTypeIcon(type: type, isRead: isRead),
       ),
@@ -30,6 +32,33 @@ Future<void> _pump(
 
 void main() {
   group(NotificationLeadingTypeIcon, () {
+    for (final appearance in ['dark', 'light']) {
+      testWidgets('loads every notification icon as a compiled vector in '
+          '$appearance mode', (tester) async {
+        for (final kind in NotificationKind.values) {
+          await _pump(
+            tester,
+            type: kind,
+            isRead: false,
+            theme: appearance == 'dark'
+                ? VineTheme.theme
+                : VineTheme.lightTheme,
+          );
+          final picture = tester.widget<SvgPicture>(find.byType(SvgPicture));
+          expect(picture.bytesLoader, isNot(isA<SvgAssetLoader>()));
+          final context = tester.element(find.byType(SvgPicture));
+          final decoded = await tester.runAsync(
+            () => vg.loadPicture(picture.bytesLoader, context),
+          );
+          expect(decoded, isNotNull, reason: kind.name);
+          expect(decoded!.size.isEmpty, isFalse, reason: kind.name);
+          decoded.picture.dispose();
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull, reason: kind.name);
+        }
+      });
+    }
+
     testWidgets('renders the underlying $NotificationTypeIcon', (tester) async {
       await _pump(tester, type: NotificationKind.follow, isRead: false);
 

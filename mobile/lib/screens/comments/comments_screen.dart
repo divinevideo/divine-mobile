@@ -9,14 +9,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' hide NIP71VideoKinds;
+import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/comments/comment_composer/comment_composer_bloc.dart';
 import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/blocs/comments/comments_surface_performance_telemetry.dart';
-import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -30,6 +29,7 @@ import 'package:openvine/screens/comments/widgets/widgets.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 
 /// Maps any of the three per-bloc errors to a localized user-facing string.
 ///
@@ -39,6 +39,7 @@ import 'package:openvine/utils/pause_aware_modals.dart';
 String _listErrorToString(AppLocalizations l10n, CommentsListError error) {
   return switch (error) {
     CommentsListError.loadFailed => l10n.commentsErrorLoadFailed,
+    CommentsListError.moderationFailed => l10n.commentsErrorModerationFailed,
   };
 }
 
@@ -93,10 +94,14 @@ bool isDuplicatePendingReplySubmission({
 /// Dynamic title widget that shows comment count and a "# new" pill
 /// when real-time comments arrive.
 /// Initially shows the count from video metadata, then updates to loaded count.
-class _CommentsTitle extends StatelessWidget {
-  const _CommentsTitle({
+///
+/// Public-by-test only: production callers should use [CommentsScreen.show].
+@visibleForTesting
+class CommentsTitle extends StatelessWidget {
+  const CommentsTitle({
     required this.initialCount,
     required this.onNewCommentsPillTap,
+    super.key,
   });
 
   final int initialCount;
@@ -108,13 +113,15 @@ class _CommentsTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<CommentsListBloc, CommentsListState>(
       buildWhen: (prev, next) =>
-          prev.commentsById.length != next.commentsById.length ||
+          prev.shownCommentsById.length != next.shownCommentsById.length ||
           prev.status != next.status ||
           prev.newCommentCount != next.newCommentCount,
       builder: (context, state) {
-        // Use loaded count if available, otherwise use initial count.
+        // Use loaded count if available, otherwise use initial count. The
+        // comments the owner hid are not counted until the viewer shows them,
+        // so the header gives none of them away (#5044).
         final count = state.status == CommentsStatus.success
-            ? state.commentsById.length
+            ? state.shownCommentsById.length
             : initialCount;
 
         return Semantics(
@@ -143,10 +150,12 @@ class _CommentsTitle extends StatelessWidget {
                 NewCommentsPill(
                   count: state.newCommentCount,
                   onTap: () {
-                    onNewCommentsPillTap();
-                    context.read<CommentsListBloc>().add(
-                      const NewCommentsAcknowledged(),
+                    final bloc = context.read<CommentsListBloc>();
+                    bloc.add(
+                      const CommentsSortModeChanged(CommentsSortMode.newest),
                     );
+                    onNewCommentsPillTap();
+                    bloc.add(const NewCommentsAcknowledged());
                   },
                 ),
             ],
@@ -188,6 +197,10 @@ abstract final class CommentsScreen {
     );
     final profileRepository = container.read(profileRepositoryProvider);
     final followRepository = container.read(followRepositoryProvider);
+    final commentModerationRepository = container.read(
+      commentModerationRepositoryProvider,
+    );
+    final viewerPubkey = authService.currentPublicKeyHex;
     final showVideoReplies = container.read(
       isFeatureEnabledProvider(FeatureFlag.videoReplies),
     );
@@ -224,12 +237,25 @@ abstract final class CommentsScreen {
                 create: (_) => CommentsListBloc(
                   commentsRepository: commentsRepository,
                   rootEventId: video.id,
-                  rootEventKind: NIP71VideoKinds.addressableShortVideo,
+                  rootEventKind: video.referenceKind,
                   rootAuthorPubkey: video.pubkey,
                   rootAddressableId: video.addressableId,
                   initialTotalCount: seedCommentCount,
                   includeVideoReplies: showVideoReplies,
                   focusCommentId: focusCommentId,
+                  commentModerationRepository: commentModerationRepository,
+                  viewerPubkey: viewerPubkey,
+                  viewerBlockedAuthorsChanges: viewerPubkey == null
+                      ? null
+                      : contentBlocklistRepository.stateStream.map(
+                          (_) => contentBlocklistRepository
+                              .blockedPubkeysForAccount(viewerPubkey),
+                        ),
+                  viewerBlockedAuthors: viewerPubkey == null
+                      ? const {}
+                      : contentBlocklistRepository.blockedPubkeysForAccount(
+                          viewerPubkey,
+                        ),
                 )..add(const CommentsLoadRequested()),
               ),
               BlocProvider<CommentComposerBloc>(
@@ -244,7 +270,7 @@ abstract final class CommentsScreen {
                     commentsRepository: commentsRepository,
                     authService: authService,
                     rootEventId: video.id,
-                    rootEventKind: NIP71VideoKinds.addressableShortVideo,
+                    rootEventKind: video.referenceKind,
                     rootAuthorPubkey: video.pubkey,
                     rootAddressableId: video.addressableId,
                     consumptionAnalytics: container.read(
@@ -252,11 +278,8 @@ abstract final class CommentsScreen {
                     ),
                     profileRepository: profileRepository,
                     mentionCandidatePubkeysProvider: () => <String>[
-                      // Thread participants first — restored after the split
-                      // (pre-split CommentsBloc seeded these from state.commentsById).
-                      ...listBloc.state.commentsById.values.map(
-                        (c) => c.authorPubkey,
-                      ),
+                      // Thread participants first, as the list shows them.
+                      ...listBloc.state.shownAuthorPubkeys,
                       ...followRepository.followingPubkeys,
                     ],
                     // Live duplicate check against the canonical store so a
@@ -291,10 +314,18 @@ abstract final class CommentsScreen {
             child: OutboxBridges(
               onCommentCountChanged: onCommentCountChanged,
               currentUserPubkey: authService.currentPublicKeyHex,
-              child: child,
+              // The sheet's own messenger: its error snackbars would
+              // otherwise land on the page underneath the sheet.
+              child: ScaffoldMessenger(
+                child: Scaffold(
+                  backgroundColor: VineTheme.transparent,
+                  resizeToAvoidBottomInset: false,
+                  body: child,
+                ),
+              ),
             ),
           ),
-          title: _CommentsTitle(
+          title: CommentsTitle(
             initialCount: seedCommentCount ?? 0,
             onNewCommentsPillTap: () {
               final controller = activeScrollController;
@@ -307,7 +338,8 @@ abstract final class CommentsScreen {
               }
             },
           ),
-          trailing: const _CommentsSortToggle(),
+          leading: const HiddenCommentsToggle(),
+          trailing: const CommentsSortToggle(),
           // Wrap the input so the keyboard is dropped the instant the sheet
           // starts dismissing (drag / scrim / back), otherwise iOS leaves it
           // stranded over the feed below (#5604).
@@ -407,12 +439,8 @@ class OutboxBridges extends StatelessWidget {
             onCommentCountChanged?.call(state.commentsById.length);
           },
         ),
-        // When new non-placeholder ids appear in the store, fetch their vote
-        // counts. Only the DIFF is requested (not the whole set) so a
-        // viral-video feed doesn't redundantly hammer the relay with the
-        // same N-1 already-known ids on every emit. The handler is
-        // restartable, so a slower in-flight fetch can't clobber a fresher
-        // one — see CommentReactionsBloc.on<CommentVoteCountsFetchRequested>.
+        // Ask for votes on non-placeholder ids whose counts are missing.
+        // CommentReactionsBloc deduplicates ids that are still loading.
         BlocListener<CommentsListBloc, CommentsListState>(
           listenWhen: (prev, next) =>
               !_idSetsEqual(prev.commentsById, next.commentsById),
@@ -1103,9 +1131,94 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
   }
 }
 
-/// Sort toggle button that cycles: New → Top → Old → New.
-class _CommentsSortToggle extends StatelessWidget {
-  const _CommentsSortToggle();
+/// Header pill shown while the video owner hid comments in this thread: shows
+/// them, and hides them again (#5044).
+///
+/// Turning it on announces that the owner hid them on purpose, the same note
+/// the list then shows above them.
+///
+/// Public-by-test only: production callers should use [CommentsScreen.show].
+@visibleForTesting
+class HiddenCommentsToggle extends StatelessWidget {
+  const HiddenCommentsToggle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final (hiddenCount, showHidden, viewerOwnsVideo) = context.select(
+      (CommentsListBloc bloc) => (
+        bloc.state.hiddenCommentCount,
+        bloc.state.showHiddenComments,
+        bloc.state.isViewerRootAuthor,
+      ),
+    );
+    if (hiddenCount == 0) return const SizedBox.shrink();
+
+    final l10n = context.l10n;
+    // Reads as an applied filter while the hidden comments are shown.
+    final color = showHidden
+        ? context.vineColors.onSurface
+        : context.vineColors.onSurfaceVariant;
+    void toggle() {
+      context.read<CommentsListBloc>().add(
+        const HiddenCommentsVisibilityToggled(),
+      );
+      if (showHidden) return;
+      announceDetached(
+        context,
+        viewerOwnsVideo
+            ? l10n.commentsHiddenNoticeOwner
+            : l10n.commentsHiddenNotice,
+        description: 'announce shown hidden comments',
+        logName: 'CommentsScreen',
+      );
+    }
+
+    return Semantics(
+      identifier: 'comments_hidden_toggle',
+      button: true,
+      toggled: showHidden,
+      label: l10n.commentsHiddenToggleSemanticLabel,
+      value: '$hiddenCount',
+      onTap: toggle,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: toggle,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: showHidden
+                ? context.vineColors.primaryContainer
+                : context.vineColors.containerLow,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 4,
+            children: [
+              DivineIcon(
+                icon: showHidden ? DivineIconName.eye : DivineIconName.eyeSlash,
+                size: 14,
+                color: color,
+              ),
+              // The count alone, no word beside it: the header centers its
+              // title, so a wider pill squeezed the title away on narrow
+              // phones. The semantics label above says what it counts.
+              Text(
+                '$hiddenCount',
+                style: VineTheme.labelMediumFont(color: color),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Switches the comments sheet between Top and Recent.
+@visibleForTesting
+class CommentsSortToggle extends StatelessWidget {
+  const CommentsSortToggle({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1114,12 +1227,11 @@ class _CommentsSortToggle extends StatelessWidget {
       builder: (context, sortMode) {
         final l10n = context.l10n;
         final (icon, label) = switch (sortMode) {
-          CommentsSortMode.newest => (Icons.schedule, l10n.commentsSortNew),
+          CommentsSortMode.newest => (Icons.schedule, l10n.commentsSortRecent),
           CommentsSortMode.topEngagement => (
             Icons.local_fire_department,
             l10n.commentsSortTop,
           ),
-          CommentsSortMode.oldest => (Icons.history, l10n.commentsSortOld),
         };
 
         return Semantics(
@@ -1130,8 +1242,7 @@ class _CommentsSortToggle extends StatelessWidget {
             onTap: () {
               final nextMode = switch (sortMode) {
                 CommentsSortMode.newest => CommentsSortMode.topEngagement,
-                CommentsSortMode.topEngagement => CommentsSortMode.oldest,
-                CommentsSortMode.oldest => CommentsSortMode.newest,
+                CommentsSortMode.topEngagement => CommentsSortMode.newest,
               };
               context.read<CommentsListBloc>().add(
                 CommentsSortModeChanged(nextMode),

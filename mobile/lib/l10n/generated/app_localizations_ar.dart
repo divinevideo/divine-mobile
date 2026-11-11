@@ -1996,6 +1996,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEngagementLoadFailed => 'تعذّر تحميل القائمة';
 
   @override
+  String get videoEngagementListIncomplete => 'تعذّر تحميل الجميع';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'فتح تفاصيل الفيديو';
 
   @override
@@ -5121,6 +5124,26 @@ class AppLocalizationsAr extends AppLocalizations {
       'ستتصرف Divine بشأن بلاغات المحتوى خلال 24 ساعة بإزالة المحتوى وإخراج المستخدم الذي قدَّم المحتوى المخالف.';
 
   @override
+  String get reportPrivateNotice =>
+      'يُرسَل هذا البلاغ بشكل خاص إلى فريق الإشراف في Divine، ولا يُنشر علنًا.';
+
+  @override
+  String get reportIncludeMessageTitle => 'تضمين هذه الرسالة';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'سيطّلع عليها فريق الإشراف في Divine. تبقى خاصة ولا تُنشر علنًا.';
+
+  @override
+  String reportMessageTooLong(String optionTitle) {
+    return 'هذه الرسالة طويلة جدًا ولا يمكن تضمينها. يرجى إلغاء تحديد «$optionTitle» ثم المحاولة مرة أخرى.';
+  }
+
+  @override
+  String get reportDetailsTooLong =>
+      'التفاصيل طويلة جدًا ولا يمكن إرسالها. يرجى اختصارها ثم المحاولة مرة أخرى.';
+
+  @override
   String get reportBlockUser => 'حظر هذا المستخدم';
 
   @override
@@ -6409,10 +6432,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String dmReactionChipPendingA11yLabel(String emoji) {
     return 'جارٍ إرسال التفاعل: $emoji';
   }
-
-  @override
-  String get dmReactionChipFailedA11yLabel =>
-      'فشل التفاعل، انقر مرتين لإعادة المحاولة';
 
   @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
@@ -8740,16 +8759,54 @@ class AppLocalizationsAr extends AppLocalizations {
   String get commentsVideoReplyPendingSemanticLabel => 'يتم نشر ردك بالفيديو';
 
   @override
-  String get commentsSortNew => 'الأحدث';
+  String get commentsSortRecent => 'الأحدث';
 
   @override
   String get commentsSortTop => 'الأفضل';
 
   @override
-  String get commentsSortOld => 'الأقدم';
+  String get commentsSortSemanticLabel => 'ترتيب التعليقات';
 
   @override
-  String get commentsSortSemanticLabel => 'ترتيب التعليقات';
+  String get commentsHiddenToggleSemanticLabel => 'عرض التعليقات المخفية';
+
+  @override
+  String get commentsHiddenNotice =>
+      'أُخفيت هذه التعليقات عمدًا من قِبل الصانع.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'أخفيت هذه التعليقات في Divine. قد تظل التطبيقات والمواقع الأخرى تعرضها، لذا أبلغ عن أي محتوى ضار.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'هل تريد الإبلاغ عن هذا التعليق أيضًا؟';
+
+  @override
+  String get commentHiddenReportAction => 'إبلاغ';
+
+  @override
+  String get commentHiddenByCreator => 'مخفي من قِبل الصانع';
+
+  @override
+  String get commentHiddenByYou => 'مخفي من قِبلك';
+
+  @override
+  String get commentOptionsHideLabel => 'إخفاء التعليق';
+
+  @override
+  String get commentOptionsHideSemanticLabel => 'إخفاء هذا التعليق على الفيديو';
+
+  @override
+  String get commentOptionsShowLabel => 'إظهار التعليق';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'إظهار هذا التعليق على الفيديو مجددًا';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'تعذّر تحديث التعليقات المخفية. يُرجى المحاولة مرة أخرى.';
 
   @override
   String get commentReply => 'رد';
@@ -10693,6 +10750,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'منحنى';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'حركة بطيئة سلسة';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'مزج الإطارات لتنساب الحركة البطيئة. قد تترك الحركات السريعة أطيافًا.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'يعمل عند إبطاء المقطع إلى أقل من 1×.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'مخصص';
 
   @override
@@ -11125,6 +11193,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationWordByWord => 'كلمة بكلمة';
+
+  @override
+  String get videoEditorLayerAnimationDrawOn => 'خطًا بخط';
 
   @override
   String get videoEditorLayerAnimationPulse => 'نبض';
@@ -11938,6 +12009,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorConfirmColorSemanticLabel => 'تأكيد اللون';
+
+  @override
+  String get videoEditorEyedropperSemanticLabel => 'اختيار لون من الفيديو';
+
+  @override
+  String get videoEditorEyedropperHint => 'اختيار لون باللمس والسحب';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => 'إيقاف اختيار اللون';
 
   @override
   String get videoEditorSaturationBrightnessSemanticLabel => 'التشبع والسطوع';
@@ -12863,12 +12943,80 @@ class AppLocalizationsAr extends AppLocalizations {
   String get minorAccountReviewParentConsentEmailCta => 'راسل دعم Divine';
 
   @override
+  String get minorAccountReviewParentConsentRecordCta => 'Record consent video';
+
+  @override
   String get minorAccountReviewParentConsentEmailSubject =>
       'مساعدة بشأن مراجعة Divine Greenlight (من 13 إلى 15 عامًا)';
 
   @override
   String get minorAccountReviewParentConsentEmailBody =>
       'مرحبًا فريق دعم Divine،\n\nأتواصل معكم بشأن Divine Greenlight لمراهق يتراوح عمره بين 13 و15.\n\nأرفقت فيديو قصيرًا خاصًا يُظهر:\n- المراهق\n- أحد الوالدين أو الوصي يتحدث أمام الكاميرا\n- أن المراهق لديه إذن باستخدام Divine\n- أن أحد الوالدين أو الوصي يعلم بالحساب وسيشرف على استخدامه\n\nبلد/بلدان الإقامة:\n\nسياق مفيد:\n\nشكرًا لكم.';
+
+  @override
+  String get minorAccountReviewRecordConsentTitle => 'Record consent video';
+
+  @override
+  String get minorAccountReviewRecordConsentBody =>
+      'Record a short private video with the teen and a parent or guardian on camera. It stays on this device until you submit it.';
+
+  @override
+  String get minorAccountReviewRecordConsentPromptTitle => 'Say this on camera';
+
+  @override
+  String get minorAccountReviewRecordConsentRecordCta => 'Record';
+
+  @override
+  String get minorAccountReviewRecordConsentStopCta => 'Stop';
+
+  @override
+  String get minorAccountReviewRecordConsentPreviewLabel => 'Camera preview';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewTitle => 'Review your video';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewBody =>
+      'Watch it back. Retake if anything is missing, or use it if it shows everything above.';
+
+  @override
+  String get minorAccountReviewRecordConsentRetakeCta => 'Retake';
+
+  @override
+  String get minorAccountReviewRecordConsentUseVideoCta => 'Use this video';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedTitle =>
+      'We can\'t use the camera';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedBody =>
+      'Divine could not start the camera. You can still email a private video to Divine support instead.';
+
+  @override
+  String get minorAccountReviewRecordConsentEmailInsteadCta =>
+      'Use email instead';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorTitle => 'Recording failed';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorBody =>
+      'Something went wrong while recording. Please try again.';
+
+  @override
+  String get minorAccountReviewRecordConsentTryAgainCta => 'Try again';
+
+  @override
+  String get minorAccountReviewRecordConsentConfirmEmailTitle =>
+      'Confirm your email';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitCta => 'Submit video';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitError =>
+      'Could not submit your video. Please try again.';
 
   @override
   String get minorAccountReviewParentSupportInstructions =>
@@ -15911,4 +16059,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get messagesRoomDiscardDraft => 'Discard draft';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'تم إرسال الفيديو للمراجعة.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'تم إرسال الفيديو';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'يُرسل الفيديو بشكل خاص إلى فريقي الدعم والثقة والسلامة في Divine لمراجعته. لن يُنشر أو يُشارك مع مستخدمين آخرين.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'لم يُقبل الإرسال. تحقق من بريدك الإلكتروني أو أعد تسجيل الفيديو أو استخدم البريد الإلكتروني بدلاً من ذلك.';
 }

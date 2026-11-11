@@ -111,6 +111,9 @@ class _MockLikesRepository extends Mock implements LikesRepository {}
 
 class _MockCommentsRepository extends Mock implements CommentsRepository {}
 
+class _MockCommentModerationRepository extends Mock
+    implements CommentModerationRepository {}
+
 class _MockRepostsRepository extends Mock implements RepostsRepository {}
 
 class _MockFeatureFlagService extends Mock implements FeatureFlagService {}
@@ -295,6 +298,22 @@ List _buildOverrides({
   RepostsRepository? repostsRepository,
   MockAuthService? authService,
 }) {
+  final commentModeration = _MockCommentModerationRepository();
+  when(
+    () => commentModeration.loadModeration(
+      rootAddressableId: any(named: 'rootAddressableId'),
+    ),
+  ).thenAnswer((_) async => CommentModeration.empty);
+  when(
+    () => commentModeration.knownModeration(
+      rootAddressableId: any(named: 'rootAddressableId'),
+    ),
+  ).thenReturn((moderation: CommentModeration.empty, revision: 0));
+  when(
+    () => commentModeration.watchModeration(
+      rootAddressableId: any(named: 'rootAddressableId'),
+    ),
+  ).thenAnswer((_) => Stream.value(0));
   return [
     ...getStandardTestOverrides(
       mockAuthService: authService ?? createMockAuthService(),
@@ -316,6 +335,7 @@ List _buildOverrides({
     commentsRepositoryProvider.overrideWithValue(
       commentsRepository ?? (_MockCommentsRepository()..stubAll()),
     ),
+    commentModerationRepositoryProvider.overrideWithValue(commentModeration),
     repostsRepositoryProvider.overrideWithValue(
       repostsRepository ?? (_MockRepostsRepository()..stubAll()),
     ),

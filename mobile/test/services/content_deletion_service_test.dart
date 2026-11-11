@@ -163,10 +163,11 @@ void main() {
     VideoEvent createTestVideoEvent(
       String pubkey, {
       String? dTag = 'test-vine-id',
+      int kind = 34236,
     }) {
       final event = Event(
         pubkey,
-        34236,
+        kind,
         [
           ['title', 'Test Video'],
           if (dTag != null) ['d', dTag],
@@ -177,7 +178,7 @@ void main() {
       );
       event.id = 'test_event_id_${DateTime.now().millisecondsSinceEpoch}';
       event.sig = 'test_signature';
-      return VideoEvent.fromNostrEvent(event);
+      return VideoEvent.fromNostrEvent(event, permissive: true);
     }
 
     VideoEvent createRestShapedVideoEvent(String pubkey) {
@@ -632,6 +633,53 @@ void main() {
 
           expect(kTag, isNotEmpty);
           expect(kTag[1], equals('34236'));
+        },
+      );
+
+      test(
+        'names the coordinate and kind of a Kind 34235 video per NIP-09',
+        () async {
+          final video = createTestVideoEvent(testPublicKey, kind: 34235);
+          final deleteEvent = createTestEvent(
+            pubkey: testPublicKey,
+            kind: 5,
+            tags: [
+              ['e', video.id],
+            ],
+            content: 'CONTENT DELETION',
+          );
+
+          when(
+            () => mockAuthService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+            ),
+          ).thenAnswer((_) async => deleteEvent);
+
+          when(
+            () => mockNostrService.publishEventAwaitOk(
+              any(),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) async => accepted(deleteEvent.id));
+
+          await service.deleteContent(video: video, reason: 'Personal choice');
+
+          final captured = verify(
+            () => mockAuthService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: captureAny(named: 'tags'),
+            ),
+          ).captured;
+
+          final tags = captured.first as List<List<String>>;
+          expect(
+            tags,
+            contains(equals(['a', '34235:$testPublicKey:test-vine-id'])),
+          );
+          expect(tags, contains(equals(['k', '34235'])));
         },
       );
 

@@ -129,7 +129,7 @@ class ProfileFeedState extends Equatable {
 
   /// Whether [video] is on the author's pin list.
   bool isPinned(VideoEvent video) {
-    final coordinate = video.addressableId;
+    final coordinate = video.divineAddress;
     return coordinate != null && pinnedCoordinates.contains(coordinate);
   }
 

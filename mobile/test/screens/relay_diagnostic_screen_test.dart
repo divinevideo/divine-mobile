@@ -1,22 +1,29 @@
 // ABOUTME: Tests for RelayDiagnosticScreen's retry-connection flow (#6934).
-// ABOUTME: Pins that the connected count is reported without a wall-clock wait.
+// ABOUTME: Pins the retry count wait and the API origin the REST check tests.
 
 import 'dart:async';
 
+import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/environment_config.dart';
+import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/screens/relay_diagnostic_screen.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+import '../helpers/scroll.dart';
 import '../helpers/test_provider_overrides.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockVideoEventService extends Mock implements VideoEventService {}
+
+class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
 
 void main() {
   group(RelayDiagnosticScreen, () {
@@ -174,6 +181,126 @@ void main() {
           reason: 'the count settled by the retry is the one reported',
         );
       });
+    });
+
+    group('REST endpoints', () {
+      testWidgets(
+        'tests the environment API rather than the first configured relay',
+        (tester) async {
+          stubScreenDependencies();
+          // Divine's relay removed, an unrelated relay first (#10841).
+          when(
+            () => nostrClient.configuredRelays,
+          ).thenReturn(const ['wss://relay.example']);
+          final blossomService = _MockBlossomUploadService();
+          when(blossomService.testServerConnection).thenAnswer(
+            (_) async =>
+                const BlossomHealthCheckResult(isReachable: true, latencyMs: 1),
+          );
+
+          await tester.pumpWidget(
+            testMaterialApp(
+              home: const RelayDiagnosticScreen(),
+              mockNostrService: nostrClient,
+              mockVideoEventService: videoEventService,
+              additionalOverrides: [
+                blossomUploadServiceProvider.overrideWithValue(blossomService),
+                currentEnvironmentProvider.overrideWithValue(
+                  EnvironmentConfig.production,
+                ),
+              ],
+            ),
+          );
+          await tester.pump();
+
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          // The FunnelCake section's title is unique; its test button is the
+          // last of the two that run this check.
+          await scrollUntilTappable(
+            tester,
+            find.text(l10n.relayDiagnosticFunnelCakeApi),
+            300,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await tester.tap(
+            find.text(l10n.relayDiagnosticTestAllEndpoints).last,
+          );
+          // Each endpoint request completes on its own turn of the stubbed
+          // HTTP client, so pump until the sequential checks have all reported.
+          for (var i = 0; i < 30; i++) {
+            await tester.pump();
+          }
+
+          expect(
+            find.text(EnvironmentConfig.production.apiBaseUrl),
+            findsOneWidget,
+          );
+          expect(find.text('https://relay.example'), findsNothing);
+        },
+      );
+
+      for (final outcome in ['succeeds', 'fails']) {
+        testWidgets(
+          'leaves a closed screen alone when the Blossom check $outcome',
+          (tester) async {
+            stubScreenDependencies();
+            final logCapture = LogCaptureService();
+            await logCapture.clearAllLogs();
+            addTearDown(logCapture.clearAllLogs);
+            final blossomCheck = Completer<BlossomHealthCheckResult>();
+            final blossomService = _MockBlossomUploadService();
+            when(
+              blossomService.testServerConnection,
+            ).thenAnswer((_) => blossomCheck.future);
+
+            await tester.pumpWidget(
+              testMaterialApp(
+                home: const RelayDiagnosticScreen(),
+                mockNostrService: nostrClient,
+                mockVideoEventService: videoEventService,
+                additionalOverrides: [
+                  blossomUploadServiceProvider.overrideWithValue(
+                    blossomService,
+                  ),
+                ],
+              ),
+            );
+            await tester.pump();
+            final l10n = lookupAppLocalizations(const Locale('en'));
+            await scrollUntilTappable(
+              tester,
+              find.text(l10n.relayDiagnosticBlossomServer),
+              300,
+              scrollable: find.byType(Scrollable).first,
+            );
+            await tester.tap(
+              find.text(l10n.relayDiagnosticTestAllEndpoints).first,
+            );
+            await tester.pump();
+
+            await tester.pumpWidget(const SizedBox());
+            if (outcome == 'succeeds') {
+              blossomCheck.complete(
+                const BlossomHealthCheckResult(isReachable: true, latencyMs: 1),
+              );
+            } else {
+              blossomCheck.completeError(Exception('connection reset'));
+            }
+            await tester.pump();
+
+            expect(tester.takeException(), isNull);
+            // A setState on the disposed screen would surface here as a
+            // logged check failure rather than as an exception.
+            final setStateFailures = logCapture.getRecentLogs().where(
+              (entry) =>
+                  entry.name == 'RelayDiagnostic' &&
+                  entry.level == LogLevel.error &&
+                  entry.message.contains('setState'),
+            );
+            expect(setStateFailures, isEmpty);
+          },
+        );
+      }
     });
   });
 }

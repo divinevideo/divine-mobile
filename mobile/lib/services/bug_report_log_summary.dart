@@ -30,8 +30,9 @@ Future<String?> buildLogsSummaryOffMain(List<LogEntry> logs) async {
 /// Returns null if logs are empty. Takes up to 200 most recent error/warning
 /// entries, the 20 most recent notification REST outcomes, plus the last 50
 /// entries of any level, deduplicates, and sorts chronologically. Individual
-/// entries are truncated to
-/// [BugReportConfig.maxLogEntryLength] characters and the total summary is
+/// entries are truncated to [BugReportConfig.maxLogEntryLength] characters,
+/// except interrupted-render summaries, whose trailing draft diagnostics must
+/// survive intact. All entries are sanitized and the total summary is
 /// capped at [BugReportConfig.maxLogSummaryLength] characters.
 String? buildLogsSummary(List<LogEntry> logs) {
   if (logs.isEmpty) return null;
@@ -75,7 +76,13 @@ String? buildLogsSummary(List<LogEntry> logs) {
     // capped the entry at 500 characters before the closing delimiter was
     // reachable. Losing part of one entry beats losing the entries after it.
     var line = sanitizeDiagnosticText(merged[i].toFormattedString());
-    if (line.length > BugReportConfig.maxLogEntryLength) {
+    final isInterruptedRender =
+        merged[i].name == 'InterruptedRenderMonitor' &&
+        merged[i].message.startsWith(
+          'Previous session ended during a render: ',
+        );
+    if (!isInterruptedRender &&
+        line.length > BugReportConfig.maxLogEntryLength) {
       line =
           '${line.substring(0, BugReportConfig.maxLogEntryLength)}... [truncated]';
     }

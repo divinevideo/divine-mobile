@@ -266,6 +266,22 @@ final class VideoRecorderRecordingLockedForNavigation
   const VideoRecorderRecordingLockedForNavigation();
 }
 
+/// Marks the recorder's way to the editor (or the metadata screen, in modes
+/// without one) as started, so a second request is ignored until it ends.
+///
+/// Dispatched when the request is made, before the auth wait and analytics it
+/// runs through, because that is the window a second tap on "next" lands in.
+/// Ended by [VideoRecorderEditorNavigationEnded].
+final class VideoRecorderEditorNavigationStarted extends VideoRecorderEvent {
+  const VideoRecorderEditorNavigationStarted();
+}
+
+/// Ends what [VideoRecorderEditorNavigationStarted] started: the pushed route
+/// has returned, or the attempt stopped before pushing one.
+final class VideoRecorderEditorNavigationEnded extends VideoRecorderEvent {
+  const VideoRecorderEditorNavigationEnded();
+}
+
 /// Sets the recorder mode. Switching between recording modes clears
 /// recorded clips and resets the editor, also when
 /// [VideoRecorderMode.upload] sits in between; only leaving Upload for the

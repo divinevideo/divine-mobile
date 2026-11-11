@@ -91,26 +91,29 @@ class _VideoTextEditorScreenState extends State<VideoTextEditorScreen> {
         Positioned.fill(
           child: VideoTextEditorScope(
             editorKey: _textEditorKey,
-            child: Column(
-              children: [
-                Expanded(
-                  child: _TextEditor(
-                    editorKey: _textEditorKey,
-                    layer: widget.layer,
+            child: LayoutBuilder(
+              builder: (context, constraints) => Column(
+                children: [
+                  Expanded(
+                    child: _TextEditor(
+                      editorKey: _textEditorKey,
+                      layer: widget.layer,
+                    ),
                   ),
-                ),
-                _DismissibleBottomSheet(
-                  onDismissed: () {
-                    if (mounted) context.pop();
-                  },
-                  child: _BottomPanel(
-                    editorKey: _textEditorKey,
-                    onKeyboardClosedWithoutPanel: () {
+                  _DismissibleBottomSheet(
+                    onDismissed: () {
                       if (mounted) context.pop();
                     },
+                    child: _BottomPanel(
+                      editorKey: _textEditorKey,
+                      screenHeight: constraints.maxHeight,
+                      onKeyboardClosedWithoutPanel: () {
+                        if (mounted) context.pop();
+                      },
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -122,10 +125,20 @@ class _VideoTextEditorScreenState extends State<VideoTextEditorScreen> {
 class _BottomPanel extends StatelessWidget {
   const _BottomPanel({
     required this.editorKey,
+    required this.screenHeight,
     this.onKeyboardClosedWithoutPanel,
   });
 
+  /// The height a panel in place of the keyboard leaves above it: the close
+  /// and done buttons, and the first line of the text being edited below
+  /// them.
+  static const double _minTextAreaHeight = 136;
+
   final GlobalKey<TextEditorState> editorKey;
+
+  /// The height of the editor, panel included.
+  final double screenHeight;
+
   final VoidCallback? onKeyboardClosedWithoutPanel;
 
   @override
@@ -139,44 +152,57 @@ class _BottomPanel extends StatelessWidget {
           ),
         );
 
-    return Container(
-      decoration: BoxDecoration(
-        color: context.vineColors.surface,
-        borderRadius: const .vertical(
-          top: .circular(VineTheme.bottomSheetBorderRadius),
+    // A panel shown in place of the keyboard scrolls rather than growing over
+    // the text at a large text size. The keyboard spacer keeps its height:
+    // the keyboard under it does not shrink.
+    final maxHeight = showBottomPanel
+        ? max(0.0, screenHeight - _minTextAreaHeight)
+        : screenHeight;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.vineColors.surface,
+          borderRadius: const .vertical(
+            top: .circular(VineTheme.bottomSheetBorderRadius),
+          ),
         ),
-      ),
-      child: Column(
-        children: [
-          const VineBottomSheetHeader(),
-          const Padding(
-            padding: .symmetric(vertical: 16),
-            child: VideoEditorTextStyleBar(),
-          ),
-          Divider(height: 2, color: context.vineColors.surfaceContainer),
-          _KeyboardHeightPanel(
-            showBottomPanel: showBottomPanel,
-            backgroundColor: context.vineColors.surface,
-            onKeyboardClosedWithoutPanel: onKeyboardClosedWithoutPanel,
-            child: showFontSelector
-                ? VideoEditorTextFontSelector(
-                    onFontSelected: (textStyle) {
-                      // The font's style carries no shadows; keep the ones
-                      // the text already has.
-                      final effects = context
-                          .read<VideoEditorTextBloc>()
-                          .state
-                          .effects;
-                      editorKey.currentState?.setTextStyle(
-                        effects.applyToStyle(textStyle),
-                      );
-                    },
-                  )
-                : showEffectsPanel
-                ? const VideoEditorTextEffectsPanel()
-                : const VideoEditorTextColorPanel(),
-          ),
-        ],
+        child: Column(
+          mainAxisSize: .min,
+          children: [
+            const VineBottomSheetHeader(),
+            const Padding(
+              padding: .symmetric(vertical: 16),
+              child: VideoEditorTextStyleBar(),
+            ),
+            Divider(height: 2, color: context.vineColors.surfaceContainer),
+            Flexible(
+              child: _KeyboardHeightPanel(
+                showBottomPanel: showBottomPanel,
+                backgroundColor: context.vineColors.surface,
+                onKeyboardClosedWithoutPanel: onKeyboardClosedWithoutPanel,
+                child: showFontSelector
+                    ? VideoEditorTextFontSelector(
+                        onFontSelected: (textStyle) {
+                          // The font's style carries no shadows; keep the ones
+                          // the text already has.
+                          final effects = context
+                              .read<VideoEditorTextBloc>()
+                              .state
+                              .effects;
+                          editorKey.currentState?.setTextStyle(
+                            effects.applyToStyle(textStyle),
+                          );
+                        },
+                      )
+                    : showEffectsPanel
+                    ? const VideoEditorTextEffectsPanel()
+                    : const VideoEditorTextColorPanel(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

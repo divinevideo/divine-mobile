@@ -182,9 +182,9 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         enforcementRepository: () =>
             ref.read(creatorDeleteEnforcementRepositoryProvider),
       );
-      // Capture this owner's client now, but do not request signing until tap.
+      // Capture this owner's repository now; signing still waits for a tap.
       _crosspostCubit = VideoCrosspostCubit(
-        client: ref.read(crosspostingApiClientProvider),
+        repository: ref.read(crosspostingRepositoryProvider),
         eventId: widget.video.id,
       );
     }
@@ -680,7 +680,6 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     await _presentAfterDismiss<void>((hostContext) {
       return showSaveOriginalSheet(
         context: hostContext,
-        ref: ref,
         video: widget.video,
       );
     });
@@ -699,7 +698,6 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     await _presentAfterDismiss<void>((hostContext) {
       return showWatermarkDownloadSheet(
         context: hostContext,
-        ref: ref,
         video: widget.video,
         watermarkText: watermarkText,
       );

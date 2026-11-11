@@ -7,6 +7,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
@@ -51,7 +52,8 @@ final class EmailTokenVerificationResult extends Equatable {
 /// - Code exchange and authentication on success
 /// - Transient network error handling (continues polling)
 /// - Auth errors (stops polling with error state)
-class EmailVerificationCubit extends Cubit<EmailVerificationState> {
+class EmailVerificationCubit extends Cubit<EmailVerificationState>
+    with CloseGuardedEmit<EmailVerificationState> {
   EmailVerificationCubit({
     required KeycastOAuth oauthClient,
     required AuthService authService,
@@ -227,9 +229,12 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
   ///
   /// Callers must pass a reason code — state never carries English strings;
   /// the UI layer is responsible for mapping the code to localized copy.
+  ///
+  /// A no-op once the cubit is closed: token verification reaches here after
+  /// its network awaits, which `close()` does not cancel.
   void emitFailure(EmailVerificationError errorCode, {String? pendingEmail}) {
     _cleanup();
-    emit(
+    emitIfOpen(
       EmailVerificationState(
         status: EmailVerificationStatus.failure,
         pendingEmail: pendingEmail,
@@ -366,8 +371,17 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
       category: LogCategory.auth,
     );
 
+    // close() cancels neither the request nor the retry wait. Stop here
+    // instead of retrying through a cubit (and oauth client) already torn down.
+    if (isClosed) {
+      return const EmailTokenVerificationResult.transientFailure();
+    }
+
     if (!isLastAttempt) {
       await Future<void>.delayed(_verifyRetryDelay);
+      if (isClosed) {
+        return const EmailTokenVerificationResult.transientFailure();
+      }
       return null;
     }
 
@@ -452,7 +466,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
     // below (which resets resend fields to idle/0).
     _resendTimer?.cancel();
     _resendTimer = null;
-    emit(
+    emitIfOpen(
       EmailVerificationState(
         status: EmailVerificationStatus.pollingTimedOut,
         pendingEmail: state.pendingEmail,
@@ -578,7 +592,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
           name: 'EmailVerificationCubit',
           category: LogCategory.auth,
         );
-        emit(
+        emitIfOpen(
           state.copyWith(
             pinStatus: PinSubmissionStatus.idle,
             pinErrorCode: null,
@@ -610,7 +624,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
       );
       if (result.errorCode == VerifyPinError.emailAlreadyRegistered) {
         _stopPollTimers();
-        emit(
+        emitIfOpen(
           state.copyWith(
             status: EmailVerificationStatus.failure,
             errorCode: EmailVerificationError.emailAlreadyRegistered,
@@ -620,7 +634,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
         );
         return;
       }
-      emit(
+      emitIfOpen(
         state.copyWith(
           pinStatus: PinSubmissionStatus.failure,
           pinErrorCode: _pinErrorFor(result.errorCode),
@@ -641,7 +655,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
         category: LogCategory.auth,
       );
       addError(e, stackTrace);
-      emit(
+      emitIfOpen(
         state.copyWith(
           pinStatus: PinSubmissionStatus.failure,
           pinErrorCode: EmailVerificationError.pinFailed,
@@ -705,7 +719,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
         name: 'EmailVerificationCubit',
         category: LogCategory.auth,
       );
-      emit(state.copyWith(resendStatus: status));
+      emitIfOpen(state.copyWith(resendStatus: status));
     } catch (e, stackTrace) {
       if (!_matchesActiveVerification(
         generation: generation,
@@ -722,14 +736,14 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
         category: LogCategory.auth,
       );
       addError(e, stackTrace);
-      emit(state.copyWith(resendStatus: ResendStatus.failure));
+      emitIfOpen(state.copyWith(resendStatus: ResendStatus.failure));
     }
   }
 
   void _startResendCooldown() {
     _resendTimer?.cancel();
     var remaining = resendCooldown.inSeconds;
-    emit(
+    emitIfOpen(
       state.copyWith(
         resendStatus: ResendStatus.cooldown,
         resendCooldownSeconds: remaining,
@@ -899,7 +913,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
               category: LogCategory.auth,
             );
             _cleanup();
-            emit(
+            emitIfOpen(
               const EmailVerificationState(
                 status: EmailVerificationStatus.failure,
                 errorCode: EmailVerificationError.missingAuthCode,
@@ -972,7 +986,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
               category: LogCategory.auth,
             );
             _cleanup();
-            emit(
+            emitIfOpen(
               EmailVerificationState(
                 status: EmailVerificationStatus.failure,
                 pendingEmail:
@@ -1060,7 +1074,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
         // to the home screen immediately. By emitting first, the UI can
         // display "Email Verified!" before the redirect occurs.
         _cleanup();
-        emit(
+        emitIfOpen(
           const EmailVerificationState(status: EmailVerificationStatus.success),
         );
 
@@ -1078,8 +1092,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
             name: 'EmailVerificationCubit',
             category: LogCategory.auth,
           );
-          if (isClosed) return;
-          emit(
+          emitIfOpen(
             const EmailVerificationState(
               status: EmailVerificationStatus.failure,
               errorCode: EmailVerificationError.signInFailed,
@@ -1096,7 +1109,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
             name: 'EmailVerificationCubit',
             category: LogCategory.auth,
           );
-          emit(
+          emitIfOpen(
             const EmailVerificationState(
               status: EmailVerificationStatus.failure,
               errorCode: EmailVerificationError.signInFailed,
@@ -1116,7 +1129,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
           category: LogCategory.auth,
         );
         _cleanup();
-        emit(
+        emitIfOpen(
           const EmailVerificationState(
             status: EmailVerificationStatus.failure,
             errorCode: EmailVerificationError.oauthExchange,
@@ -1142,7 +1155,7 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
             category: LogCategory.auth,
           );
           _cleanup();
-          emit(
+          emitIfOpen(
             const EmailVerificationState(
               status: EmailVerificationStatus.failure,
               errorCode: EmailVerificationError.networkExchange,

@@ -1,6 +1,8 @@
 // ABOUTME: Aggregates crossposter platform, connection, and preference data
 // ABOUTME: Exposes immutable settings values and crossposting mutations
 
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
 
@@ -51,10 +53,63 @@ class CrosspostingRepository {
 
   final CrosspostingApiClient _apiClient;
 
+  Future<List<CrosspostingConnection>> getConnections() =>
+      _apiClient.getConnections();
+
+  Future<List<CrosspostJob>> getCrossposts({required String eventId}) =>
+      _apiClient.getCrossposts(eventId: eventId);
+
+  /// Submits a crosspost once its newly published source is indexed.
+  ///
+  /// Relay acceptance can precede the crossposter's source lookup. Only an
+  /// explicit video-not-found response is retried: that response creates no
+  /// jobs. Transport failures and other rejections are never replayed here.
+  /// Waits at most 30 seconds between 16 attempts. Each attempt uses a fresh
+  /// account-bound signature. Stops retries when [cancelled] completes and
+  /// returns null after cancelling any pending retry timer.
+  ///
+  /// Throws [CrosspostingApiException] if submission fails or the source is
+  /// still unavailable after the last attempt.
+  Future<List<CrosspostJob>?> createCrossposts({
+    required String eventId,
+    required List<String> platforms,
+    required Future<void> cancelled,
+  }) async {
+    var isCancelled = false;
+    unawaited(cancelled.then<void>((_) => isCancelled = true));
+    // Capture the consented destinations before the first await.
+    final destinations = List<String>.unmodifiable(platforms);
+    for (var attempt = 0; ; attempt++) {
+      if (isCancelled) return null;
+      try {
+        return await _apiClient.createCrossposts(
+          eventId: eventId,
+          platforms: destinations,
+        );
+      } on CrosspostingApiException catch (error) {
+        if (isCancelled) return null;
+        if (error.statusCode != 404 ||
+            error.code != 'not_found' ||
+            attempt >= 15) {
+          rethrow;
+        }
+      }
+
+      final retryReady = Completer<void>();
+      // Poll the explicit source-not-found condition rather than delaying all
+      // posts. The sheet owns cancellation, including its time between retries.
+      final timer = Timer(const Duration(seconds: 2), retryReady.complete);
+      try {
+        await Future.any([retryReady.future, cancelled]);
+      } finally {
+        timer.cancel();
+      }
+    }
+  }
+
   /// Loads all settings data in strict sequence.
   ///
-  /// Each request can refresh the same rotating Keycast token, so these calls
-  /// must never run concurrently.
+  /// Keep remote-signer approval requests from overlapping.
   Future<List<CrosspostingPlatformSettings>> loadSettings() async {
     final platforms = await _apiClient.getPlatforms();
     final connections = await _apiClient.getConnections();

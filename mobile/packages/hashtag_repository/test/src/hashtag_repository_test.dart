@@ -550,26 +550,24 @@ void main() {
         verify(() => mockClient.fetchTrendingHashtags(limit: 50)).called(1);
       });
 
-      test('returns default hashtags when API is not configured', () async {
+      test('returns no trends when API is not configured', () async {
         when(
           () => mockClient.fetchTrendingHashtags(limit: any(named: 'limit')),
         ).thenThrow(const FunnelcakeNotConfiguredException());
 
         final results = await cachingRepository.getTrendingHashtags();
 
-        expect(results, isNotEmpty);
-        expect(results.first, isA<TrendingHashtag>());
-        // Does not throw — callers always get a usable list.
+        expect(results, isEmpty);
       });
 
-      test('default hashtags respect the limit parameter', () async {
+      test('does not invent trends for a custom limit', () async {
         when(
           () => mockClient.fetchTrendingHashtags(limit: any(named: 'limit')),
         ).thenThrow(const FunnelcakeNotConfiguredException());
 
         final results = await cachingRepository.getTrendingHashtags(limit: 5);
 
-        expect(results, hasLength(5));
+        expect(results, isEmpty);
       });
 
       test('propagates FunnelcakeApiException', () {
@@ -595,15 +593,25 @@ void main() {
         );
       });
 
-      test('propagates FunnelcakeTimeoutException', () {
+      test('propagates timeouts and permits a subsequent refresh', () async {
         when(
           () => mockClient.fetchTrendingHashtags(limit: any(named: 'limit')),
         ).thenThrow(const FunnelcakeTimeoutException());
 
-        expect(
-          () => cachingRepository.getTrendingHashtags(),
+        await expectLater(
+          cachingRepository.getTrendingHashtags(),
           throwsA(isA<FunnelcakeTimeoutException>()),
         );
+        when(
+          () => mockClient.fetchTrendingHashtags(limit: any(named: 'limit')),
+        ).thenAnswer(
+          (_) async => [TrendingHashtag(tag: 'recovered', videoCount: 2)],
+        );
+
+        final recovered = await cachingRepository.getTrendingHashtags(
+          forceRefresh: true,
+        );
+        expect(recovered.map((h) => h.tag), ['recovered']);
       });
     });
   });

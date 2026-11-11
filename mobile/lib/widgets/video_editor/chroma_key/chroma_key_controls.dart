@@ -8,6 +8,7 @@ import 'package:openvine/blocs/video_editor/chroma_key/chroma_key_editor_cubit.d
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_detect_row.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKey;
@@ -157,7 +158,7 @@ class ChromaKeyControlsPanel extends StatelessWidget {
           ),
           if (notice != null) _Gutter(child: _InfoRow(text: notice)),
           _Gutter(
-            child: _DetectRow(
+            child: ChromaKeyDetectRow(
               isDetecting: isDetecting,
               onDetect: onDetect,
               onGreenPreset: onGreenPreset,
@@ -324,57 +325,6 @@ class _InfoRow extends StatelessWidget {
             padding: EdgeInsets.only(top: overhang > 0 ? overhang : 0),
             child: Text(text, style: style),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Auto-detect plus the two screen presets.
-///
-/// Only Auto-detect waits for a wanted measurement. The presets stay live,
-/// like the swatch and the sliders below: someone who shot on blue should not
-/// have to sit out the green measurement the panel started on its own. A
-/// preset tapped while one runs writes it off instead — see
-/// [ChromaKeyEditorState.isDetecting].
-class _DetectRow extends StatelessWidget {
-  const _DetectRow({
-    required this.isDetecting,
-    required this.onDetect,
-    required this.onGreenPreset,
-    required this.onBluePreset,
-  });
-
-  final bool isDetecting;
-  final VoidCallback onDetect;
-  final VoidCallback onGreenPreset;
-  final VoidCallback onBluePreset;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      spacing: 8,
-      children: [
-        Expanded(
-          child: DivineButton(
-            label: context.l10n.videoEditorChromaKeyAutoDetect,
-            leadingIcon: .sparkle,
-            size: .small,
-            isLoading: isDetecting,
-            onPressed: isDetecting ? null : onDetect,
-          ),
-        ),
-        DivineButton(
-          label: context.l10n.videoEditorChromaKeyPresetGreen,
-          type: .secondary,
-          size: .small,
-          onPressed: onGreenPreset,
-        ),
-        DivineButton(
-          label: context.l10n.videoEditorChromaKeyPresetBlue,
-          type: .secondary,
-          size: .small,
-          onPressed: onBluePreset,
         ),
       ],
     );

@@ -1,5 +1,5 @@
 // ABOUTME: Helpers for resolving API base URLs from Nostr relay WebSocket URLs.
-// ABOUTME: Keeps REST endpoints aligned with active relay configuration.
+// ABOUTME: Includes pinned notification endpoint and relay identity helpers.
 
 import 'package:nostr_client/nostr_client.dart' as nostr_client;
 import 'package:nostr_sdk/nostr_sdk.dart' as nostr_sdk;
@@ -22,7 +22,6 @@ export 'package:nostr_sdk/nostr_sdk.dart'
         isSignerCallbackRelayUrlAllowed;
 
 const _divineRelayHost = 'relay.divine.video';
-const _divineApiBaseUrl = 'https://api.divine.video';
 
 /// Relay hosts operated by Divine across all environments.
 ///
@@ -103,40 +102,10 @@ String relayWsToHttpBase(String relayUrl) {
   return relayUrl;
 }
 
-/// Resolve the REST API base URL from configured relays with fallback.
-///
-/// Selection order:
-/// 1) `preferredRelayHost` if present in configured relays (default: relay.divine.video)
-/// 2) first configured relay
-/// 3) provided `fallbackBaseUrl` (usually environment config)
-String resolveApiBaseUrlFromRelays({
-  required List<String> configuredRelays,
-  required String fallbackBaseUrl,
-  String preferredRelayHost = _divineRelayHost,
-}) {
-  if (configuredRelays.isEmpty) return fallbackBaseUrl;
-
-  final preferred = configuredRelays.where((url) {
-    final host = Uri.tryParse(url)?.host.toLowerCase();
-    return host == preferredRelayHost.toLowerCase();
-  });
-
-  final selectedRelay = preferred.isNotEmpty
-      ? preferred.first
-      : configuredRelays.first;
-
-  final selectedHost = Uri.tryParse(selectedRelay)?.host.toLowerCase();
-  if (selectedHost == _divineRelayHost) {
-    return _divineApiBaseUrl;
-  }
-
-  return relayWsToHttpBase(selectedRelay);
-}
-
 /// Resolve a pinned REST API base URL from configured relays.
 ///
-/// Unlike [resolveApiBaseUrlFromRelays], this never falls through to an
-/// arbitrary configured relay. If the environment fallback host is configured,
+/// This never falls through to an arbitrary configured relay.
+/// If the environment fallback host is configured,
 /// that host wins first so staging/local builds do not drift to a persisted
 /// production relay. If neither the fallback host nor pinned relay host is
 /// configured, it returns the provided environment fallback instead.

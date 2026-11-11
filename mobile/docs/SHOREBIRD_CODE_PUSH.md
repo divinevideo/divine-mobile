@@ -108,7 +108,7 @@ The bundled texts were copied from `shorebirdtech/updater` at commit
 to each local text asset (upstream license blob ids
 `6802bc4b80c0f8df1413d55b16267c0969e352c9` and
 `a7e77cb28d386ec6eddeaabf441f91473ddefa1e`). The store engine paired with the
-current Flutter 3.47.2 pin is `315ff242617023c1c5549878bf17fad51ffec6f3`.
+current Flutter 3.47.9 pin is `38855c84ca367c58165b8e3844dd7d6a99dec844`.
 
 When Flutter or Shorebird changes, re-check attribution without producing a
 store artifact:
@@ -134,8 +134,8 @@ first — Shorebird supports a subset.
 
 The Codemagic installer also pins the Shorebird CLI version and its full source
 revision. That CLI must be the release that introduced support for the selected
-Flutter version or newer. Flutter 3.47.2 is paired with Shorebird 1.6.120 at
-revision `5ac7f9a9a5c4a5e66a958e608da0f73e34a3d6bb`; update the pin and its
+Flutter version or newer. Flutter 3.47.9 is paired with Shorebird 1.6.138 at
+revision `86b9685a87ba8945ddca2d1dfcd20b6828233f59`; update the pin and its
 configuration test together when either side moves.
 
 The pin moves as one unit across the repo, every CI workflow, and every
@@ -240,6 +240,48 @@ platform and complete release version to the build commit, source tree, patch
 baseline, Flutter version, exact Shorebird CLI revision, and keyed fingerprints
 of every dart-define. The record contains no dart-define values. If recording
 fails, treat the release build as incomplete and do not patch that release.
+
+### Release identity ledger
+
+The release identity ledger lives in the `allocations/` tree of
+`divinevideo/divine-release-provenance`:
+
+- `allocations/builds/<platform>/<n>.json` reserves build number `n` for a platform.
+- `allocations/keys/...` is the key index for those reservations.
+- `allocations/claims/<version>/<channel>.json` claims a version for a channel.
+- `allocations/bootstrap.json` marks that the ledger has been seeded.
+
+The allocator makes create-only writes: it never overwrites an existing file.
+That arbitrates reservations made under different keys. A retry under the same
+key intentionally reuses its unspent number, so callers must ensure only one
+build runs under that key at a time. These are application guarantees, not
+credential restrictions: the token may still have update and delete permission.
+`mobile/scripts/release_train/ledger.py` defines these paths.
+
+Before builds start allocating from the ledger (a later pull request), seed it
+once from the live store data with the manual Codemagic workflow
+`release-identity-bootstrap`. It defaults to `DRY_RUN=YES`, which writes
+nothing. Run it as a dry run first, check the output, then run it again with
+`DRY_RUN=NO` from `main`; a write run from any other branch is refused before
+store lookups. It fails closed if either store lookup (App Store Connect
+versions, Google Play production track) errors or Play has no submitted codes.
+iOS claims include waiting, in-review and rejected versions; only
+`PREPARE_FOR_SUBMISSION` and `READY_FOR_REVIEW` are excluded. Once claimed,
+a version stays claimed even if its submission is rejected. Play drafts do not
+claim a marketing version.
+
+The dry run lists the ledger files a real run would create (`would create:`);
+the real run prints the same list under `created:`. `ledger already
+bootstrapped; nothing to create` means nothing is missing. If a Play
+production version code cannot be mapped to a version, the run stops before
+writing anything and names the code; add
+`allocations/builds/android/<code>.json` with a verified `"version"` string,
+then rerun. Never manufacture or edit patch provenance under `releases/` to
+repair an allocation mapping.
+
+Before builds use this allocator, add conflict backoff, atomic output writes,
+and enforcement of one active builder per scheduled platform/source key, as
+tracked in the allocator implementation plan's review corrections.
 
 ## Shipping a patch
 

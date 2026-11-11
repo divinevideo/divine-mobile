@@ -7,6 +7,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:comments_repository/src/blocked_comment_filter.dart';
+import 'package:comments_repository/src/comment_moderation_repository.dart';
 import 'package:comments_repository/src/exceptions.dart';
 import 'package:comments_repository/src/models/models.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -320,7 +321,10 @@ class CommentsRepository {
                 rootAddressableId: rootAddressableId,
               );
             }
-            return _filterThread(thread);
+            return _filterThread(
+              thread,
+              rootAddressableId: rootAddressableId,
+            );
           }
         } on FunnelcakeException {
           // Fall back to the relay query when REST is unavailable.
@@ -404,7 +408,7 @@ class CommentsRepository {
         );
       }
 
-      return _filterThread(thread);
+      return _filterThread(thread, rootAddressableId: rootAddressableId);
     } on Exception catch (e) {
       throw LoadCommentsFailedException('Failed to load comments: $e');
     }
@@ -1120,13 +1124,21 @@ class CommentsRepository {
       final seenIds = <String>{};
 
       final filter = _blockFilter;
+      final rootAuthorPubkey = _rootAuthorOf(rootAddressableId);
       return eventStream
           .where((event) => !_isDeleted(event.id, event.pubkey))
           .where((event) => seenIds.add(event.id))
           .map((event) => _eventToComment(event, rootEventId, rootEventKind))
           .where((comment) => comment != null)
           .cast<Comment>()
-          .where((c) => !(filter?.call(c.authorPubkey) ?? false));
+          .where(
+            (c) =>
+                !(filter?.call(
+                      c.authorPubkey,
+                      rootAuthorPubkey: rootAuthorPubkey,
+                    ) ??
+                    false),
+          );
     } on Exception catch (e) {
       throw WatchCommentsFailedException('Failed to watch comments: $e');
     }
@@ -1293,11 +1305,17 @@ class CommentsRepository {
   /// views already treat orphaned replies (missing parent) as root-level items.
   /// The original [CommentThread.totalCount] (server-authoritative) is
   /// preserved so pagination logic remains correct.
-  CommentThread _filterThread(CommentThread thread) {
+  CommentThread _filterThread(
+    CommentThread thread, {
+    required String? rootAddressableId,
+  }) {
     final filter = _blockFilter;
     if (filter == null) return thread;
+    final rootAuthorPubkey = _rootAuthorOf(rootAddressableId);
     final filtered = thread.comments
-        .where((c) => !filter(c.authorPubkey))
+        .where(
+          (c) => !filter(c.authorPubkey, rootAuthorPubkey: rootAuthorPubkey),
+        )
         .toList();
     if (filtered.length == thread.comments.length) return thread;
     return thread.copyWith(
@@ -1307,6 +1325,13 @@ class CommentsRepository {
       }),
     );
   }
+
+  /// The owner named in [rootAddressableId], which the caller asked for, so
+  /// unlike a comment's own `P` tag a commenter cannot forge it.
+  static String? _rootAuthorOf(String? rootAddressableId) =>
+      rootAddressableId == null
+      ? null
+      : CommentModerationRepository.ownerOf(rootAddressableId);
 
   /// Returns the ids of [comments] whose own author published a NIP-09
   /// deletion request naming them, including ones found earlier, and hides

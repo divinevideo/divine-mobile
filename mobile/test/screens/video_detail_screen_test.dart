@@ -22,6 +22,7 @@ import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
+import 'package:openvine/services/video_source_visibility_policy.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:videos_repository/videos_repository.dart';
@@ -374,6 +375,14 @@ void main() {
       );
 
       void stubHidden(VideoEvent video) {
+        when(() => mockVideoEventService.isHiddenByHostingPreference(any()))
+            .thenAnswer(
+              (i) => VideoSourceVisibilityPolicy.isHiddenByHostingPreference(
+                i.positionalArguments[0] as VideoEvent,
+                divineHostedOnly: true,
+                viewerPubkey: mockNostrClient.publicKey,
+              ),
+            );
         when(
           () => mockVideosRepository.lookupVideoForRouteId(
             any(),
@@ -413,6 +422,38 @@ void main() {
             ),
           ),
           findsOneWidget,
+        );
+      });
+
+      testWidgets('does not blame hosting for an owner hidden by provenance', (
+        tester,
+      ) async {
+        final video = offHostVideo().copyWith(pubkey: 'a' * 64);
+        when(() => mockNostrClient.publicKey).thenReturn(video.pubkey);
+        stubHidden(video);
+        final provenance = _MockVideoProvenanceFilterService();
+        when(() => provenance.showVerifiedOnly).thenReturn(true);
+        await tester.pumpWidget(
+          buildSubject(
+            extraOverrides: [
+              videoProvenanceFilterServiceProvider.overrideWithValue(
+                provenance,
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        expect(
+          find.text(l10n.videoDetailHiddenByProvenanceFilterBody),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            l10n.videoDetailHiddenByHostFilterBody(
+              'separately-robust-roughy.edgecompute.app',
+            ),
+          ),
+          findsNothing,
         );
       });
 

@@ -4,21 +4,24 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/draft_summary.dart';
 
 void main() {
   group('DraftsLibraryState', () {
-    DivineVideoDraft createDraft({String? id}) {
-      return DivineVideoDraft(
-        id: id ?? 'draft-${DateTime.now().millisecondsSinceEpoch}',
-        clips: const [],
-        title: 'Test Draft',
-        description: 'Test Description',
-        hashtags: const {},
-        selectedApproach: 'default',
-        createdAt: DateTime(2026),
-        lastModified: DateTime(2026),
-        publishStatus: PublishStatus.draft,
-        publishAttempts: 0,
+    DraftSummary createDraft({String? id}) {
+      return DraftSummary.fromDraft(
+        DivineVideoDraft(
+          id: id ?? 'draft-${DateTime.now().millisecondsSinceEpoch}',
+          clips: const [],
+          title: 'Test Draft',
+          description: 'Test Description',
+          hashtags: const {},
+          selectedApproach: 'default',
+          createdAt: DateTime(2026),
+          lastModified: DateTime(2026),
+          publishStatus: PublishStatus.draft,
+          publishAttempts: 0,
+        ),
       );
     }
 

@@ -8,6 +8,7 @@ import 'package:openvine/blocs/video_editor/social_sticker/social_sticker_cubit.
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_sheet_controls.dart';
+import 'package:openvine/widgets/whole_word_button_text_scale.dart';
 import 'package:poll_repository/poll_repository.dart' show Poll;
 
 /// The question a poll, quiz or slider asks.
@@ -123,6 +124,10 @@ class _SocialStickerPollFieldsState extends State<SocialStickerPollFields> {
     final l10n = context.l10n;
     final cubit = context.read<SocialStickerCubit>();
     final isQuiz = kind == SocialStickerKind.quiz;
+    final labels = [
+      for (var index = 0; index < _controllers.length; index++)
+        l10n.videoEditorSocialStickerPollOptionHint('${index + 1}'),
+    ];
     return Column(
       crossAxisAlignment: .stretch,
       spacing: 8,
@@ -133,70 +138,74 @@ class _SocialStickerPollFieldsState extends State<SocialStickerPollFields> {
         ),
         for (final (index, controller) in _controllers.indexed)
           Padding(
+            // Keyed by the controller, so removing an answer above does not
+            // hand this one's text to another field.
+            key: ObjectKey(controller),
             padding: const .symmetric(horizontal: 16),
-            child: Row(
-              spacing: 8,
-              children: [
-                if (isQuiz)
-                  DivineIconButton(
-                    icon: .check,
-                    type: quizAnswer == index
-                        ? DivineIconButtonType.primary
-                        : DivineIconButtonType.ghostSecondary,
-                    size: DivineIconButtonSize.small,
-                    showShadow: false,
-                    semanticLabel: l10n.videoEditorSocialStickerQuizMarkRight(
-                      '${index + 1}',
-                    ),
-                    semanticToggled: quizAnswer == index,
-                    onPressed: () => cubit.quizAnswerPicked(index),
-                  ),
-                Expanded(
-                  child: DivineTextField(
-                    // Keyed by the controller, so removing an answer above
-                    // does not hand this one's text to another field.
-                    key: ObjectKey(controller),
-                    controller: controller,
-                    focusNode: _focusNodes[index],
-                    filled: true,
-                    labelText: l10n.videoEditorSocialStickerPollOptionHint(
-                      '${index + 1}',
-                    ),
-                    maxLines: 1,
-                    maxLength: SocialStickerData.maxPollOptionLength,
-                    textInputAction: index == _controllers.length - 1
-                        ? .done
-                        : .next,
-                    onEditingComplete: index == _controllers.length - 1
-                        ? null
-                        : _focusNodes[index + 1].requestFocus,
-                    onChanged: (text) => cubit.pollOptionChanged(index, text),
-                  ),
-                ),
-                if (_controllers.length > Poll.minOptions)
-                  DivineIconButton(
-                    icon: .x,
-                    type: DivineIconButtonType.ghostSecondary,
-                    size: DivineIconButtonSize.small,
-                    showShadow: false,
-                    semanticLabel: l10n
-                        .videoEditorSocialStickerPollRemoveOption(
-                          '${index + 1}',
-                        ),
-                    onPressed: () => _remove(index),
-                  ),
-              ],
+            child: _AnswerRow(
+              labels: labels,
+              field: DivineTextField(
+                // Keep the input connection when the responsive layout
+                // moves this field between a Row and a Column.
+                key: GlobalObjectKey(controller),
+                controller: controller,
+                focusNode: _focusNodes[index],
+                filled: true,
+                labelText: labels[index],
+                maxLines: 1,
+                maxLength: SocialStickerData.maxPollOptionLength,
+                textInputAction: index == _controllers.length - 1
+                    ? .done
+                    : .next,
+                onEditingComplete: index == _controllers.length - 1
+                    ? null
+                    : _focusNodes[index + 1].requestFocus,
+                onChanged: (text) => cubit.pollOptionChanged(index, text),
+              ),
+              leading: isQuiz
+                  ? DivineIconButton(
+                      icon: .check,
+                      type: quizAnswer == index
+                          ? DivineIconButtonType.primary
+                          : DivineIconButtonType.ghostSecondary,
+                      size: DivineIconButtonSize.small,
+                      showShadow: false,
+                      semanticLabel: l10n.videoEditorSocialStickerQuizMarkRight(
+                        '${index + 1}',
+                      ),
+                      semanticToggled: quizAnswer == index,
+                      onPressed: () => cubit.quizAnswerPicked(index),
+                    )
+                  : null,
+              trailing: _controllers.length > Poll.minOptions
+                  ? DivineIconButton(
+                      icon: .x,
+                      type: DivineIconButtonType.ghostSecondary,
+                      size: DivineIconButtonSize.small,
+                      showShadow: false,
+                      semanticLabel: l10n
+                          .videoEditorSocialStickerPollRemoveOption(
+                            '${index + 1}',
+                          ),
+                      onPressed: () => _remove(index),
+                    )
+                  : null,
             ),
           ),
         if (_controllers.length < Poll.maxOptions)
           Padding(
             padding: const .symmetric(horizontal: 16),
-            child: DivineButton(
+            child: WholeWordButtonTextScale(
               label: l10n.videoEditorSocialStickerPollAddOption,
-              type: DivineButtonType.secondary,
-              leadingIcon: .plus,
-              expanded: true,
-              onPressed: _add,
+              hasLeadingIcon: true,
+              child: DivineButton(
+                label: l10n.videoEditorSocialStickerPollAddOption,
+                type: DivineButtonType.secondary,
+                leadingIcon: .plus,
+                expanded: true,
+                maxLines: 2,
+                onPressed: _add,
+              ),
             ),
           ),
         StickerSheetNote(
@@ -205,6 +214,76 @@ class _SocialStickerPollFieldsState extends State<SocialStickerPollFields> {
               : l10n.videoEditorSocialStickerPollNote,
         ),
       ],
+    );
+  }
+}
+
+/// An answer's [field] between a quiz's check, [leading], and the button
+/// that removes the answer, [trailing], each when there is one.
+///
+/// With large text a field's label would be cut beside the buttons, so they
+/// move to a row under the field, which then takes the full width. Every
+/// answer does so once one of the [labels] would be cut, so they line up.
+class _AnswerRow extends StatelessWidget {
+  const _AnswerRow({
+    required this.labels,
+    required this.field,
+    this.leading,
+    this.trailing,
+  });
+
+  /// The gap between the field and a button.
+  static const double _gap = 8;
+
+  /// How wide a small [DivineIconButton] is, before text scaling.
+  static const double _buttonSize = 48;
+
+  /// The labels of every answer's field.
+  final List<String> labels;
+  final Widget field;
+  final Widget? leading;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final leading = this.leading;
+    final trailing = this.trailing;
+    // A row even without buttons, so the field keeps its state as a remove
+    // button comes and goes.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final buttons = [?leading, ?trailing].length;
+        final buttonsWidth =
+            buttons * (DivineIcon.scaleSize(context, _buttonSize) + _gap);
+        final fieldWidth = constraints.maxWidth - buttonsWidth;
+        final fitsBeside =
+            buttons == 0 ||
+            labels.every(
+              (label) => stickerFieldWidthFor(context, label) <= fieldWidth,
+            );
+        if (fitsBeside) {
+          return Row(
+            spacing: _gap,
+            children: [
+              ?leading,
+              Expanded(child: field),
+              ?trailing,
+            ],
+          );
+        }
+        // Close under their field's counter and clear of the next answer,
+        // so they read as this answer's.
+        return Column(
+          crossAxisAlignment: .stretch,
+          children: [
+            field,
+            Padding(
+              padding: const .only(bottom: _gap),
+              child: Row(children: [?leading, const Spacer(), ?trailing]),
+            ),
+          ],
+        );
+      },
     );
   }
 }

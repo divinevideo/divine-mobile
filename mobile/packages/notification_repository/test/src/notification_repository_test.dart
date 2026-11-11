@@ -6645,6 +6645,49 @@ void main() {
         await expectLater(staleRefresh, completion(isFalse));
       });
 
+      group('when close() lands while the fetch is in flight', () {
+        late Completer<NotificationResponse> fetchGate;
+
+        setUp(() {
+          stubProfiles({});
+          fetchGate = Completer<NotificationResponse>();
+          when(
+            () => funnelcakeApiClient.getNotifications(
+              pubkey: any(named: 'pubkey'),
+              cursor: any(named: 'cursor'),
+              cursorId: any(named: 'cursorId'),
+              requestUri: any(named: 'requestUri'),
+              authHeaders: any(named: 'authHeaders'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer((_) => fetchGate.future);
+        });
+
+        test('a failed fetch completes without an error', () async {
+          final pending = repository.refresh();
+          await repository.close();
+
+          fetchGate.completeError(const FunnelcakeException('offline'));
+
+          await expectLater(pending, completion(NotificationPage.empty));
+        });
+
+        test('a successful fetch completes as not applied', () async {
+          final pending = repository.refreshApplied();
+          await repository.close();
+
+          fetchGate.complete(
+            NotificationResponse(
+              notifications: [makeNotification()],
+              unreadCount: 1,
+              hasMore: false,
+            ),
+          );
+
+          await expectLater(pending, completion(isFalse));
+        });
+      });
+
       test('refreshApplied leaves a deep-scrolled feed intact', () async {
         stubProfiles({});
         stubNotifications(

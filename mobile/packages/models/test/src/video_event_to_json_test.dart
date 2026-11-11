@@ -201,6 +201,8 @@ const _excludedDerivedGetters = <String>{
   'stableId',
   'hasAddressableDTag',
   'addressableId',
+  'divineAddress',
+  'referenceKind',
   'effectiveThumbnailUrl',
   'displayPubkey',
   'displayContent',

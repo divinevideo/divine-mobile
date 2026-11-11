@@ -699,6 +699,71 @@ void main() {
           expect(fake.pendingTimers, isEmpty);
         });
       });
+
+      // The app-level cubit is re-created when its keyed dependencies change,
+      // which closes it while a token verification is still retrying.
+      test('stops retrying token verification once closed', () {
+        when(() => mockOAuth.verifyEmail(token: 'verify-token')).thenAnswer(
+          (_) async => VerifyEmailResult.error(
+            'Temporary verification failure',
+            statusCode: 503,
+            failure: KeycastAuthFailure.temporary,
+          ),
+        );
+
+        fakeAsync((fake) {
+          final cubit = buildCubit();
+          EmailTokenVerificationResult? result;
+          Object? error;
+          unawaited(
+            cubit
+                .verifyEmailToken(token: 'verify-token')
+                .then(
+                  (value) {
+                    result = value;
+                  },
+                  onError: (Object e) {
+                    error = e;
+                  },
+                ),
+          );
+          // The first attempt fails and the retry wait starts.
+          fake.flushMicrotasks();
+
+          unawaited(cubit.close());
+          fake.elapse(const Duration(seconds: 10));
+          fake.flushMicrotasks();
+
+          expect(error, isNull);
+          expect(result?.status, EmailTokenVerificationStatus.transientFailure);
+          verify(() => mockOAuth.verifyEmail(token: 'verify-token')).called(1);
+        });
+      });
+
+      test(
+        'drops a token verification failure that lands after close',
+        () async {
+          final verification = Completer<VerifyEmailResult>();
+          when(
+            () => mockOAuth.verifyEmail(token: 'verify-token'),
+          ).thenAnswer((_) => verification.future);
+          final cubit = buildCubit();
+
+          final pending = cubit.verifyEmailToken(token: 'verify-token');
+          await cubit.close();
+          verification.complete(
+            VerifyEmailResult.error(
+              'Invalid or expired verification token',
+              statusCode: 401,
+              failure: KeycastAuthFailure.expiredVerification,
+            ),
+          );
+
+          final result = await pending;
+          expect(result.status, EmailTokenVerificationStatus.terminalFailure);
+          expect(cubit.state, const EmailVerificationState());
+        },
+      );
     });
 
     group('bounded backoff schedule', () {

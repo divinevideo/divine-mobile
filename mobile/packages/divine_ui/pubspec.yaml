@@ -17,9 +17,15 @@ dependencies:
   intl: ">=0.19.0 <1.0.0"
   material_ui: ^1.2.0
   skeletonizer: ^3.0.0
+  vector_graphics: ^1.1.19
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   mocktail: ^1.0.4
+  vector_graphics_compiler: ^1.1.19
   very_good_analysis: ^10.0.0
+
+flutter:
+  assets:
+    - assets/icons/

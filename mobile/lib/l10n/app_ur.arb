@@ -1010,6 +1010,7 @@
     "description": "Empty-state message on the reposters list screen when no one has reposted the video yet."
   },
   "videoEngagementLoadFailed": "وہ فہرست لوڈ نہیں ہو سکی",
+  "videoEngagementListIncomplete": "سب کو لوڈ نہیں کیا جا سکا",
   "@videoEngagementLoadFailed": {
     "description": "Error-state heading on the engagement list screen when the relay query fails."
   },
@@ -2488,6 +2489,11 @@
   },
   "reportWhyReporting": "آپ یہ مواد کیوں رپورٹ کر رہے ہیں؟",
   "reportPolicyNotice": "Divine مواد کی رپورٹس پر 24 گھنٹوں کے اندر کارروائی کرے گا: مواد ہٹا کر اور قاعدہ توڑنے والا مواد دینے والے صارف کو نکال کر۔",
+  "reportPrivateNotice": "یہ رپورٹ نجی طور پر Divine کی موڈریشن ٹیم کو جاتی ہے۔ اسے عوامی طور پر پوسٹ نہیں کیا جاتا۔",
+  "reportIncludeMessageTitle": "یہ پیغام شامل کریں",
+  "reportIncludeMessageDescription": "Divine کی موڈریشن ٹیم اسے دیکھے گی۔ یہ نجی رہے گا اور عوامی طور پر پوسٹ نہیں کیا جائے گا۔",
+  "reportMessageTooLong": "یہ پیغام شامل کرنے کے لیے بہت لمبا ہے۔ «{optionTitle}» کا نشان ہٹائیں اور دوبارہ کوشش کریں۔",
+  "reportDetailsTooLong": "آپ کی تفصیلات بھیجنے کے لیے بہت لمبی ہیں۔ انہیں مختصر کریں اور دوبارہ کوشش کریں۔",
   "reportBlockUser": "اس صارف کو بلاک کریں",
   "reportCancel": "منسوخ کریں",
   "reportSubmit": "رپورٹ کریں",
@@ -3174,10 +3180,6 @@
         "type": "String"
       }
     }
-  },
-  "dmReactionChipFailedA11yLabel": "ردعمل ناکام، دوبارہ کوشش کے لیے ڈبل ٹیپ کریں",
-  "@dmReactionChipFailedA11yLabel": {
-    "description": "Screen-reader label for a reaction chip whose publish failed."
   },
   "dmReactionChipUnconfirmedA11yLabel": "آپ کا {emoji} ردعمل نہیں بھیجا جا سکا۔ دوبارہ کوشش کے لیے ڈبل ٹیپ کریں",
   "dmReactionChipRetryAnnouncement": "ردعمل دوبارہ کوشش ہو رہی ہے",
@@ -4498,22 +4500,30 @@
   },
   "commentsVideoReplyPending": "پوسٹ ہو رہا ہے…",
   "commentsVideoReplyPendingSemanticLabel": "آپ کا ویڈیو جواب پوسٹ ہو رہا ہے",
-  "commentsSortNew": "نئے",
-  "@commentsSortNew": {
+  "commentsSortRecent": "تازہ ترین",
+  "@commentsSortRecent": {
     "description": "Comments-sort toggle label for newest-first order."
   },
   "commentsSortTop": "بہترین",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
-  },
-  "commentsSortOld": "پرانے",
-  "@commentsSortOld": {
-    "description": "Comments-sort toggle label for oldest-first order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortSemanticLabel": "تبصروں کی ترتیب",
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
+  "commentsHiddenToggleSemanticLabel": "چھپے ہوئے تبصرے دکھائیں",
+  "commentsHiddenNotice": "کریئیٹر نے یہ تبصرے جان بوجھ کر چھپائے ہیں۔",
+  "commentsHiddenNoticeOwner": "آپ نے یہ تبصرے Divine میں چھپائے ہیں۔ دوسری ایپس اور سائٹس انہیں اب بھی دکھا سکتی ہیں، اس لیے کوئی بھی نقصان دہ چیز رپورٹ کریں۔",
+  "commentHiddenReportPrompt": "کیا آپ اس تبصرے کو رپورٹ بھی کرنا چاہتے ہیں؟",
+  "commentHiddenReportAction": "رپورٹ کریں",
+  "commentHiddenByCreator": "کریئیٹر نے چھپایا",
+  "commentHiddenByYou": "آپ نے چھپایا",
+  "commentOptionsHideLabel": "تبصرہ چھپائیں",
+  "commentOptionsHideSemanticLabel": "اپنی ویڈیو پر یہ تبصرہ چھپائیں",
+  "commentOptionsShowLabel": "تبصرہ دکھائیں",
+  "commentOptionsShowSemanticLabel": "اپنی ویڈیو پر یہ تبصرہ دوبارہ دکھائیں",
+  "commentsErrorModerationFailed": "چھپے ہوئے تبصرے اپ ڈیٹ نہیں ہو سکے۔ دوبارہ کوشش کریں۔",
   "commentReply": "جواب",
   "@commentReply": {
     "description": "Button label under a comment that opens the reply composer."
@@ -5347,6 +5357,9 @@
   "videoEditorSpeedPresetSemanticLabel": "رفتار {speed}×",
   "videoEditorSpeedModeConstant": "مستقل",
   "videoEditorSpeedModeCurve": "خم",
+  "videoEditorSpeedSmoothTitle": "ہموار سلو موشن",
+  "videoEditorSpeedSmoothDescription": "فریمز کو ملاتا ہے تاکہ سلو موشن رواں رہے۔ تیز حرکت سائے چھوڑ سکتی ہے۔",
+  "videoEditorSpeedSmoothUnavailable": "کلپ کو 1× سے آہستہ کرنے پر یہ کام کرتا ہے۔",
   "videoEditorSpeedCurveCustom": "حسبِ منشا",
   "videoEditorSpeedCurveMontage": "مونتاج",
   "videoEditorSpeedCurveHero": "ہیرو",
@@ -5568,6 +5581,7 @@
   "videoEditorLayerAnimationBounce": "اچھلنا",
   "videoEditorLayerAnimationTypewriter": "ٹائپ رائٹر",
   "videoEditorLayerAnimationWordByWord": "لفظ بہ لفظ",
+  "videoEditorLayerAnimationDrawOn": "لکیر بہ لکیر",
   "videoEditorLayerAnimationPulse": "دھڑکن",
   "videoEditorLayerAnimationPulseTo": "یہاں تک چھوٹا کریں",
   "videoEditorLayerAnimationWiggleAngle": "جھکاؤ",
@@ -5884,6 +5898,9 @@
   "videoEditorCloseColorPickerSemanticLabel": "رنگ چننے والا بند کریں",
   "videoEditorPickColorTitle": "رنگ منتخب کریں",
   "videoEditorConfirmColorSemanticLabel": "رنگ کی تصدیق کریں",
+  "videoEditorEyedropperSemanticLabel": "ویڈیو سے رنگ چنیں",
+  "videoEditorEyedropperHint": "رنگ چننے کے لیے چھوئیں اور گھسیٹیں",
+  "videoEditorEyedropperCancelSemanticLabel": "رنگ چننا بند کریں",
   "videoEditorSaturationBrightnessSemanticLabel": "سیچوریشن اور چمک",
   "videoEditorSaturationBrightnessValue": "سیچوریشن {saturation}%، چمک {brightness}%",
   "@videoEditorSaturationBrightnessValue": {
@@ -7620,5 +7637,9 @@
   "creatorHighlightAnalytics": "اپنے اعداد و شمار دیکھیں",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "minorAccountReviewVideoSubmittedBody": "آپ کی ویڈیو جائزے کے لیے جمع ہو گئی ہے۔",
+  "minorAccountReviewVideoSubmittedTitle": "ویڈیو جمع ہو گئی",
+  "minorAccountReviewRecordConsentPrivacyBody": "آپ کی ویڈیو جائزے کے لیے نجی طور پر Divine کی سپورٹ اور اعتماد و حفاظت کی ٹیموں کو بھیجی جاتی ہے۔ اسے شائع نہیں کیا جاتا اور نہ ہی دوسرے صارفین کے ساتھ شیئر کیا جاتا ہے۔",
+  "minorAccountReviewRecordConsentRejected": "آپ کی جمع کرائی گئی معلومات قبول نہیں ہوئیں۔ اپنا ای میل پتہ چیک کریں، ویڈیو دوبارہ ریکارڈ کریں، یا ای میل استعمال کریں۔"
 }

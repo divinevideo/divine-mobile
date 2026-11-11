@@ -14,9 +14,10 @@ import 'package:pro_image_editor/pro_image_editor.dart' show Layer;
 /// Puts the detached clip on [layer] back onto the timeline.
 ///
 /// Everything the bloc needs is read off the layer here, because the bloc
-/// cannot reach the editor: the clip, the stretch of it the layer shows, and
-/// the placeholder that holds its slot. The bloc changes the clip list and the
-/// scaffold removes the layer once that lands, as one history entry.
+/// cannot reach the editor: the clip, the stretch of it the layer shows, the
+/// placeholder that holds its slot, and its live and baked green screens. The
+/// bloc changes the clip list and the scaffold removes the layer once that
+/// lands, as one history entry.
 ///
 /// The stretch is the length of the bar [item], not of the layer: the timeline
 /// clamps the bar to the composition, so after the composition has shrunk the
@@ -59,6 +60,8 @@ Future<void> reattachDetachedClip(
       sourceOffset: data.sourceOffset,
       window: item.endTime - item.startTime,
       placeholderClipId: data.placeholderClipId,
+      chromaKey: data.chromaKey,
+      bakedChromaKey: data.bakedChromaKey,
     ),
   );
 }

@@ -24,8 +24,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// Two modes:
 /// - **Shared audio**: Video has a Kind 1063 audio event — shows sound name,
 ///   artist, and tapping navigates to [SoundDetailScreen].
-/// - **Original sound**: No audio event — shows "Original sound - @creator"
-///   as display-only info.
+/// - **Original sound**: No audio event — shows the classic's name or
+///   "Original sound", tappable when current policy permits reuse.
 class MetadataSoundsSection extends ConsumerWidget {
   const MetadataSoundsSection({required this.video, super.key});
 
@@ -251,6 +251,11 @@ class _OriginalSoundSection extends ConsumerWidget {
         children: [
           _OriginalSoundRow(
             creatorName: creatorName,
+            soundName:
+                !video.hasAudioReference &&
+                    (video.isVerifiedArchive || video.isOriginalVine)
+                ? AudioEvent.fromVideoOriginalSound(video).title
+                : null,
             onTap: _canReuseSound(ref)
                 ? () => _navigateToSoundDetail(context, creatorName)
                 : null,
@@ -336,9 +341,14 @@ class _OriginalSoundSection extends ConsumerWidget {
 /// attribution — the sound may not be reused, so viewers see the credit but no
 /// affordance to adopt it.
 class _OriginalSoundRow extends StatelessWidget {
-  const _OriginalSoundRow({required this.creatorName, required this.onTap});
+  const _OriginalSoundRow({
+    required this.creatorName,
+    required this.onTap,
+    this.soundName,
+  });
 
   final String creatorName;
+  final String? soundName;
   final VoidCallback? onTap;
 
   @override
@@ -356,7 +366,7 @@ class _OriginalSoundRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                context.l10n.metadataOriginalSound,
+                soundName ?? context.l10n.metadataOriginalSound,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: VineTheme.titleMediumFont(

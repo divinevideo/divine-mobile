@@ -278,6 +278,34 @@ void main() {
         verify(() => mockNostr.publishEvent(any())).called(1);
       });
 
+      test('addresses a Kind 34235 video by its own coordinate', () async {
+        final video = createTestVideoEvent(
+          id: 'event_id_normal',
+          pubkey: creatorPubkey,
+          vineId: 'normal_d_tag',
+          eventKind: 34235,
+        );
+
+        await publisher.publishViewEvent(
+          video: video,
+          startSeconds: 0,
+          endSeconds: 10,
+          source: ViewTrafficSource.home,
+        );
+
+        final captured = verify(
+          () => mockAuth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: captureAny(named: 'tags'),
+          ),
+        ).captured;
+
+        final tags = captured.single as List<List<String>>;
+        final aTag = tags.firstWhere((t) => t[0] == 'a');
+        expect(aTag[1], equals('34235:$creatorPubkey:normal_d_tag'));
+      });
+
       test('includes correct tags with vineId', () async {
         final video = createTestVideoEvent(
           id: 'event_id_abc',

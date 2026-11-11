@@ -14,6 +14,9 @@ import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/draft_summary.dart';
+import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
+import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/widgets/library/drafts_tab.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -21,6 +24,19 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 class _MockDraftsLibraryBloc
     extends MockBloc<DraftsLibraryEvent, DraftsLibraryState>
     implements DraftsLibraryBloc {}
+
+class _RecordingPublisher extends VideoPublishNotifier {
+  final published = <DivineVideoDraft>[];
+  @override
+  VideoPublishProviderState build() => const VideoPublishProviderState();
+  @override
+  Future<void> publishVideo(
+    BuildContext context,
+    DivineVideoDraft draft,
+  ) async {
+    published.add(draft);
+  }
+}
 
 DivineVideoClip _createTestClip([String id = 'clip_1']) => DivineVideoClip(
   id: id,
@@ -37,7 +53,7 @@ void main() {
   group(DraftsTab, () {
     late _MockDraftsLibraryBloc mockBloc;
 
-    DivineVideoDraft createDraft({
+    DraftSummary createDraft({
       String? id,
       String title = 'Test Draft',
       // Defaults to one clip because a draft without any is not a state the
@@ -46,18 +62,20 @@ void main() {
       List<DivineVideoClip>? clips,
       DivineVideoClip? finalRenderedClip,
     }) {
-      return DivineVideoDraft(
-        id: id ?? 'draft-${DateTime.now().millisecondsSinceEpoch}',
-        clips: clips ?? [_createTestClip()],
-        title: title,
-        description: 'Test Description',
-        hashtags: const {},
-        selectedApproach: 'default',
-        createdAt: DateTime(2026),
-        lastModified: DateTime(2026),
-        publishStatus: PublishStatus.draft,
-        publishAttempts: 0,
-        finalRenderedClip: finalRenderedClip,
+      return DraftSummary.fromDraft(
+        DivineVideoDraft(
+          id: id ?? 'draft-${DateTime.now().millisecondsSinceEpoch}',
+          clips: clips ?? [_createTestClip()],
+          title: title,
+          description: 'Test Description',
+          hashtags: const {},
+          selectedApproach: 'default',
+          createdAt: DateTime(2026),
+          lastModified: DateTime(2026),
+          publishStatus: PublishStatus.draft,
+          publishAttempts: 0,
+          finalRenderedClip: finalRenderedClip,
+        ),
       );
     }
 
@@ -65,8 +83,15 @@ void main() {
       mockBloc = _MockDraftsLibraryBloc();
     });
 
-    Widget buildWidget({bool isSelectionMode = true}) {
+    Widget buildWidget({
+      bool isSelectionMode = true,
+      _RecordingPublisher? publisher,
+    }) {
       return ProviderScope(
+        overrides: [
+          if (publisher != null)
+            videoPublishProvider.overrideWith(() => publisher),
+        ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -195,6 +220,54 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(en.libraryDraftActionPost), findsOneWidget);
+      });
+
+      testWidgets('loads a full draft only after Post is selected', (
+        tester,
+      ) async {
+        final publisher = _RecordingPublisher();
+        final full = DivineVideoDraft.create(
+          id: 'draft1',
+          clips: [_createTestClip()],
+          title: 'Latest saved title',
+          description: '',
+          hashtags: {},
+          selectedApproach: 'video',
+          editorStateHistory: {
+            'history': ['saved undo state'],
+          },
+        );
+        when(
+          () => mockBloc.state,
+        ).thenReturn(DraftsLibraryLoaded(drafts: [createDraft(id: 'draft1')]));
+        when(() => mockBloc.loadDraftForPost('draft1'))
+            .thenAnswer((_) async => full);
+        await tester.pumpWidget(buildWidget(publisher: publisher));
+        await tester.tap(find.byType(IconButton));
+        await tester.pumpAndSettle();
+        verifyNever(() => mockBloc.loadDraftForPost(any()));
+        await tester.tap(find.text(en.libraryDraftActionPost));
+        await tester.pumpAndSettle();
+        verify(() => mockBloc.loadDraftForPost('draft1')).called(1);
+        expect(publisher.published, [same(full)]);
+      });
+
+      testWidgets('reports a draft removed before Post without publishing', (
+        tester,
+      ) async {
+        final publisher = _RecordingPublisher();
+        when(
+          () => mockBloc.state,
+        ).thenReturn(DraftsLibraryLoaded(drafts: [createDraft(id: 'draft1')]));
+        when(() => mockBloc.loadDraftForPost('draft1'))
+            .thenAnswer((_) async => null);
+        await tester.pumpWidget(buildWidget(publisher: publisher));
+        await tester.tap(find.byType(IconButton));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(en.libraryDraftActionPost));
+        await tester.pumpAndSettle();
+        expect(publisher.published, isEmpty);
+        expect(find.text(en.commonSomethingWentWrong), findsOneWidget);
       });
     });
 
@@ -351,27 +424,29 @@ void main() {
   });
 
   group(DraftListTile, () {
-    DivineVideoDraft createDraft({
+    DraftSummary createDraft({
       String? id,
       String title = 'Test Draft',
       DateTime? lastModified,
     }) {
-      return DivineVideoDraft(
-        id: id ?? 'draft-${DateTime.now().millisecondsSinceEpoch}',
-        clips: const [],
-        title: title,
-        description: 'Test Description',
-        hashtags: const {},
-        selectedApproach: 'default',
-        createdAt: DateTime(2026),
-        lastModified: lastModified ?? DateTime(2026),
-        publishStatus: PublishStatus.draft,
-        publishAttempts: 0,
+      return DraftSummary.fromDraft(
+        DivineVideoDraft(
+          id: id ?? 'draft-${DateTime.now().millisecondsSinceEpoch}',
+          clips: const [],
+          title: title,
+          description: 'Test Description',
+          hashtags: const {},
+          selectedApproach: 'default',
+          createdAt: DateTime(2026),
+          lastModified: lastModified ?? DateTime(2026),
+          publishStatus: PublishStatus.draft,
+          publishAttempts: 0,
+        ),
       );
     }
 
     Widget buildWidget({
-      required DivineVideoDraft draft,
+      required DraftSummary draft,
       VoidCallback? onTap,
       VoidCallback? onOpenMore,
       bool enableShrink = false,

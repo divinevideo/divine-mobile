@@ -22,11 +22,12 @@ VideoEvent _videoEvent({
   required String pubkey,
   required String dTag,
   int createdAt = 1000,
+  int kind = 34236,
 }) {
   final event =
       Event(
           pubkey,
-          34236,
+          kind,
           [
             ['d', dTag],
             ['url', 'https://example.com/$id.mp4'],
@@ -36,7 +37,7 @@ VideoEvent _videoEvent({
         )
         ..id = id
         ..sig = 'sig-$id';
-  return VideoEvent.fromNostrEvent(event);
+  return VideoEvent.fromNostrEvent(event, permissive: true);
 }
 
 void main() {
@@ -199,6 +200,26 @@ void main() {
       expect(
         videoEventService.isVideoEventLocallyDeleted(unrelatedVideo),
         isFalse,
+      );
+    });
+
+    test('seedLocalDeletionTombstones keeps a Kind 34235 coordinate', () {
+      const pubkey =
+          'c3dd74d68e414f0305db9f7dc96ec32e616502e6ccf5bbf5739de19a96b67f3e';
+      final replacementVersion = _videoEvent(
+        id: 'normal-video-after-restart',
+        pubkey: pubkey,
+        dTag: 'normal-video',
+        kind: 34235,
+      );
+
+      videoEventService.seedLocalDeletionTombstones(
+        addressableDeletedAt: const {'34235:$pubkey:normal-video': 2000},
+      );
+
+      expect(
+        videoEventService.isVideoEventLocallyDeleted(replacementVersion),
+        isTrue,
       );
     });
 

@@ -65,9 +65,20 @@ class SafeCacheInfoRepository implements CacheInfoRepository {
   @visibleForTesting
   CacheInfoRepository get repository => _repository;
 
+  /// The index check for the open the wrapped repository reads the file on.
+  ///
+  /// Upstream reads the index only when its open count goes from 0 to 1, and
+  /// `CacheStore` holds its open for the manager's lifetime, so the sweep's
+  /// and the manifest's opens never read it. Checking the file on those opens
+  /// raced upstream's save, which truncates the file before writing it: a
+  /// read in that window parsed an empty or partial index and deleted the
+  /// live one. Every open awaits this one check instead, and a close that
+  /// fully closes the repository clears it for the next read.
+  Future<void>? _indexCheck;
+
   @override
   Future<bool> open() async {
-    await _deleteCacheFileIfUnreadable();
+    await (_indexCheck ??= _deleteCacheFileIfUnreadable());
 
     // Kept for repositories that raise instead of reporting. The upstream
     // JSON repository is handled above, before it can swallow the error.
@@ -125,20 +136,34 @@ class SafeCacheInfoRepository implements CacheInfoRepository {
   ///
   /// This is called internally when the cache file is corrupted.
   /// Exposed as a visible method for testing purposes.
+  ///
+  /// A file that is already gone counts as deleted. `CacheStore`'s
+  /// constructor and `MediaCacheManager.initialize` open this repository
+  /// concurrently, so both can validate the same corrupt index and both
+  /// delete it; an existence check first still leaves the losing delete to
+  /// fail. The store keeps that `open()` future without a listener, so the
+  /// failure went unhandled and every later store operation rethrew it.
+  ///
+  /// Throws a [FileSystemException] for any other failure to delete.
   @visibleForTesting
   Future<void> deleteCacheFile() async {
     final directory = await _directoryProvider();
-    final filePath = path.join(directory.path, '$_databaseName.json');
-    final file = File(filePath);
-    if (file.existsSync()) {
+    final file = File(path.join(directory.path, '$_databaseName.json'));
+    try {
       await file.delete();
+    } on PathNotFoundException {
+      // Already deleted, by the other open or by the OS: the intended state.
     }
   }
 
   // Delegate all CacheInfoRepository methods to the wrapped repository.
 
   @override
-  Future<bool> close() => _repository.close();
+  Future<bool> close() async {
+    final closed = await _repository.close();
+    if (closed) _indexCheck = null;
+    return closed;
+  }
 
   @override
   Future<int> delete(int id) => _repository.delete(id);

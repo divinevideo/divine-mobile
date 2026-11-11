@@ -109,7 +109,7 @@ jobs:
       - name: Setup Flutter for configuration tests
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: "stable"
           cache: true
       - name: Install dependencies for configuration tests
@@ -133,7 +133,7 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: "stable"
           cache: true
       - name: 📦 Install dependencies
@@ -194,7 +194,7 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: "stable"
           cache: true
       - name: 📦 Install dependencies
@@ -240,7 +240,7 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: "stable"
           cache: true
       - name: 📦 Install dependencies
@@ -264,7 +264,7 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: "stable"
           cache: true
       - name: 📦 Install dependencies
@@ -295,7 +295,7 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: "stable"
           cache: true
       - name: 📦 Install dependencies
@@ -504,7 +504,7 @@ jobs:
       - name: 🐦 Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: "stable"
           cache: true
       - name: 📦 Install dependencies
@@ -564,7 +564,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: stable
           cache: true
       - name: Install dependencies
@@ -623,7 +623,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: stable
           cache: true
       - name: Install dependencies

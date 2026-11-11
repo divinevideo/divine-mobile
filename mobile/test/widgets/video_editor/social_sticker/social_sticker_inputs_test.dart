@@ -14,7 +14,10 @@ import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
 import 'package:openvine/blocs/video_editor/social_sticker/social_sticker_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/sticker_sheet_controls.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_inputs.dart';
+
+import '../../../helpers/text_lines.dart';
 
 class _MockHashtagRepository extends Mock implements HashtagRepository {}
 
@@ -187,6 +190,47 @@ void main() {
         final title = tester.widget<EditableText>(find.byType(EditableText));
 
         expect(title.textCapitalization, equals(TextCapitalization.words));
+      });
+    });
+  });
+
+  group(SocialStickerStylePicker, () {
+    group('renders', () {
+      testWidgets('the names of the looks without splitting a word at the '
+          'largest text size', (tester) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 3.12;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        // Without a hashtag yet there is no sticker to show in each look,
+        // so the looks show their names.
+        final cubit = SocialStickerCubit(
+          initial: const SocialStickerData(kind: SocialStickerKind.hashtag),
+          blocklistRepository: _MockContentBlocklistRepository(),
+        );
+        addTearDown(cubit.close);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: VineTheme.theme,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: BlocProvider.value(
+                value: cubit,
+                child: const SocialStickerStylePicker(),
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          wordsSplitAcrossLines(
+            tester,
+            find.descendant(
+              of: find.byType(StickerChoiceTile),
+              matching: find.byType(RichText),
+            ),
+          ),
+          isEmpty,
+        );
       });
     });
   });

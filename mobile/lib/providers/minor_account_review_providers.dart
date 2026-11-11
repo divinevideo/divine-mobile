@@ -1,6 +1,7 @@
 // ABOUTME: Minor-account review Riverpod providers for auth restriction gating
 // ABOUTME: Wires API-backed status, last-known cache, repository and overrides
 
+import 'dart:async';
 import 'dart:ui' show Rect;
 
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -12,9 +13,15 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/consent_file_store.dart';
 import 'package:openvine/services/minor_account_review_override_service.dart';
 import 'package:openvine/services/minor_account_review_status_store.dart';
+import 'package:openvine/services/minor_consent_recorder.dart';
 import 'package:openvine/services/support_email_composer.dart';
+import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
+import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 typedef MinorAccountReviewComposeEmail = Future<void> Function({
   required String toEmail,
@@ -35,7 +42,11 @@ final minorAccountReviewSupportEmailComposerProvider =
 final minorAccountReviewRepositoryProvider =
     Provider<MinorAccountReviewRepository>((ref) {
       final apiService = ref.watch(apiServiceProvider);
-      return MinorAccountReviewRepository(apiService: apiService);
+      return MinorAccountReviewRepository(
+        apiService: apiService,
+        allowLocalOverrides: kDebugMode,
+        overrideService: ref.watch(minorAccountReviewOverrideServiceProvider),
+      );
     });
 
 /// Developer-only local override service for simulating minor-account review
@@ -92,3 +103,53 @@ final minorAccountReviewStatusStoreProvider =
         prefs: ref.watch(sharedPreferencesProvider),
       );
     });
+
+/// Recorder used by the in-app parent-consent capture flow.
+///
+/// Auto-disposed so leaving the capture screen releases the camera and the next
+/// visit opens a fresh recorder. The capture cubit stops an in-flight recording
+/// and disposes the recorder in its own `close()`; this onDispose is the
+/// container-teardown backstop, and disposal is idempotent.
+final Provider<MinorConsentRecorder> minorConsentRecorderProvider =
+    Provider.autoDispose<MinorConsentRecorder>((ref) {
+      late final CameraMinorConsentRecorder recorder;
+      // The platform camera calls back with an `EditorVideo?`; forward its path
+      // to whatever auto-stop listener the capture cubit has attached.
+      final camera = CameraService.create(
+        onUpdateState: ({bool? forceCameraRebuild}) {},
+        onAutoStopped: (EditorVideo? video) => recorder.onAutoStopped?.call(
+          minorConsentAutoStoppedPath(video),
+        ),
+      );
+      recorder = CameraMinorConsentRecorder(camera: camera);
+      ref.onDispose(() {
+        unawaited(
+          recorder.dispose().catchError((Object error, StackTrace stack) {
+            Log.warning(
+              'Consent camera disposal failed',
+              name: 'MinorAccountReviewProviders',
+            );
+          }),
+        );
+      });
+      return recorder;
+    });
+
+/// Keeps the display awake only while a consent recording is active.
+final minorConsentWakelockProvider = Provider<Future<void> Function(bool)>((
+  ref,
+) {
+  return (enabled) => WakelockPlus.toggle(enable: enabled);
+});
+
+/// Clip deletion supplied to consent cubits by the platform file owner.
+final minorConsentDeleteClipProvider = Provider<Future<void> Function(String)>(
+  (ref) => ConsentFileStore.instance.deleteClip,
+);
+
+/// Private recording directory allocated by the platform file owner.
+final minorConsentOutputDirectoryProvider = Provider<Future<String> Function()>(
+  (ref) {
+    return ConsentFileStore.instance.createRecordingDirectory;
+  },
+);

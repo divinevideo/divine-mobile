@@ -244,7 +244,7 @@ void main() {
               eventId: testEventId,
               addressableId: testAddressableId,
             ),
-          ).thenAnswer((_) async => const [reposter1]);
+          ).thenAnswer((_) async => const RepostersPage(pubkeys: [reposter1]));
         },
         build: () => createBloc(type: VideoEngagementType.reposters),
         act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
@@ -316,6 +316,61 @@ void main() {
         errors: () => [isA<FetchLikersFailedException>()],
       );
 
+      // #10846: an unfinished relay read that found nobody is not "nobody".
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'emits [loading, failure] when an unfinished read found nobody',
+        setUp: () {
+          when(
+            () => likesRepository.fetchEventLikers(
+              eventId: testEventId,
+              addressableId: testAddressableId,
+            ),
+          ).thenAnswer(
+            (_) async => const LikersPage(pubkeys: [], isComplete: false),
+          );
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
+        expect: () => [
+          const VideoEngagementState(
+            type: VideoEngagementType.likers,
+            status: VideoEngagementStatus.loading,
+          ),
+          const VideoEngagementState(
+            type: VideoEngagementType.likers,
+            status: VideoEngagementStatus.failure,
+          ),
+        ],
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'shows the people an unfinished read found, marked incomplete',
+        setUp: () {
+          when(
+            () => likesRepository.fetchEventLikers(
+              eventId: testEventId,
+              addressableId: testAddressableId,
+            ),
+          ).thenAnswer(
+            (_) async => const LikersPage(pubkeys: [liker1], isComplete: false),
+          );
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
+        expect: () => [
+          const VideoEngagementState(
+            type: VideoEngagementType.likers,
+            status: VideoEngagementStatus.loading,
+          ),
+          const VideoEngagementState(
+            type: VideoEngagementType.likers,
+            status: VideoEngagementStatus.success,
+            pubkeys: [liker1],
+            isComplete: false,
+          ),
+        ],
+      );
+
       blocTest<VideoEngagementBloc, VideoEngagementState>(
         'forwards null addressableId when none was provided',
         setUp: () {
@@ -354,7 +409,7 @@ void main() {
               eventId: testEventId,
               addressableId: testAddressableId,
             ),
-          ).thenAnswer((_) async => const [reposter1]);
+          ).thenAnswer((_) async => const RepostersPage(pubkeys: [reposter1]));
         },
         build: () => createBloc(type: VideoEngagementType.reposters),
         act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
@@ -377,6 +432,32 @@ void main() {
             ),
           );
         },
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'emits [loading, failure] when an unfinished read found nobody',
+        setUp: () {
+          when(
+            () => repostsRepository.fetchEventReposters(
+              eventId: testEventId,
+              addressableId: testAddressableId,
+            ),
+          ).thenAnswer(
+            (_) async => const RepostersPage(pubkeys: [], isComplete: false),
+          );
+        },
+        build: () => createBloc(type: VideoEngagementType.reposters),
+        act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
+        expect: () => [
+          const VideoEngagementState(
+            type: VideoEngagementType.reposters,
+            status: VideoEngagementStatus.loading,
+          ),
+          const VideoEngagementState(
+            type: VideoEngagementType.reposters,
+            status: VideoEngagementStatus.failure,
+          ),
+        ],
       );
 
       blocTest<VideoEngagementBloc, VideoEngagementState>(

@@ -98,6 +98,18 @@ class VideoEngagementBloc
         category: LogCategory.video,
       );
       final page = await _fetchPage();
+      if (!page.isComplete && page.pubkeys.isEmpty) {
+        // A relay read that stopped before finishing and found nobody says
+        // nothing about who liked or reposted, so it is not "nobody" (#10846).
+        Log.warning(
+          'Video engagement read did not finish and found nobody: '
+          'type=${type.name}, eventId=$eventId',
+          name: 'VideoEngagementBloc',
+          category: LogCategory.video,
+        );
+        emit(state.copyWith(status: VideoEngagementStatus.failure));
+        return;
+      }
       await _prewarmProfiles(page.pubkeys);
 
       emit(
@@ -106,6 +118,7 @@ class VideoEngagementBloc
           pubkeys: page.pubkeys,
           loadMoreStatus: VideoEngagementLoadMoreStatus.idle,
           nextCursor: page.nextCursor,
+          isComplete: page.isComplete,
         ),
       );
     } catch (e, stackTrace) {
@@ -187,9 +200,8 @@ class VideoEngagementBloc
   /// Reposters carry no cursor: they are served from relays in a single
   /// page holding at most the newest 500 reposts, so
   /// [VideoEngagementState.hasMore] stays false for that type.
-  Future<({List<String> pubkeys, String? nextCursor})> _fetchPage({
-    String? cursor,
-  }) async {
+  Future<({List<String> pubkeys, String? nextCursor, bool isComplete})>
+  _fetchPage({String? cursor}) async {
     switch (type) {
       case VideoEngagementType.likers:
         final page = await _likesRepository.fetchEventLikers(
@@ -197,13 +209,21 @@ class VideoEngagementBloc
           addressableId: addressableId,
           cursor: cursor,
         );
-        return (pubkeys: page.pubkeys, nextCursor: page.nextCursor);
+        return (
+          pubkeys: page.pubkeys,
+          nextCursor: page.nextCursor,
+          isComplete: page.isComplete,
+        );
       case VideoEngagementType.reposters:
-        final pubkeys = await _repostsRepository.fetchEventReposters(
+        final page = await _repostsRepository.fetchEventReposters(
           eventId: eventId,
           addressableId: addressableId,
         );
-        return (pubkeys: pubkeys, nextCursor: null);
+        return (
+          pubkeys: page.pubkeys,
+          nextCursor: null,
+          isComplete: page.isComplete,
+        );
     }
   }
 }

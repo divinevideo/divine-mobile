@@ -5,6 +5,9 @@ import 'dart:math' as math;
 import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -141,6 +144,10 @@ class _AudioSelectionBottomSheetState
   Timer? _searchDebounce;
   bool _isLoadingAudio = false;
 
+  /// How tall the card of the picked sound is, so the lists can scroll
+  /// their last rows clear of it.
+  final _selectionCardHeight = ValueNotifier<double>(0);
+
   /// How long the field must be quiet before the relay is asked.
   static const _searchDebounceDelay = Duration(milliseconds: 350);
 
@@ -173,6 +180,7 @@ class _AudioSelectionBottomSheetState
     );
     _searchDebounce?.cancel();
     _searchController.dispose();
+    _selectionCardHeight.dispose();
     super.dispose();
   }
 
@@ -810,6 +818,7 @@ class _AudioSelectionBottomSheetState
           if (forYouAsync.hasValue || forYouAsync.hasError)
             _SoundsContent(
               scrollController: listScrollController,
+              selectionCardHeight: _selectionCardHeight,
               // A search orders by fit instead, with no daily mix.
               sounds: _searchQuery.isEmpty
                   ? _rankedForYou(followedPages, divineSounds)
@@ -831,6 +840,7 @@ class _AudioSelectionBottomSheetState
           popularAsync.when(
             data: (popular) => _SoundsContent(
               scrollController: listScrollController,
+              selectionCardHeight: _selectionCardHeight,
               sounds: _soundsBySearchFit(
                 _filterAudioEvents(popular.sounds)
                     .where((sound) => !_cannotBeReused(sound, popularLookup))
@@ -858,6 +868,7 @@ class _AudioSelectionBottomSheetState
               final newest = {for (final sound in nostrSounds) sound.id};
               return _SoundsContent(
                 scrollController: listScrollController,
+                selectionCardHeight: _selectionCardHeight,
                 // A search result's video is looked up with the search.
                 sounds: _soundsBySearchFit(
                   _communitySounds(nostrSounds, searchResults)
@@ -896,6 +907,7 @@ class _AudioSelectionBottomSheetState
           // stays its first row.
           _SoundsContent(
             scrollController: listScrollController,
+            selectionCardHeight: _selectionCardHeight,
             leading: _ImportAudioAction(onTap: _importAudio),
             sounds: matchingSavedSounds
                 .map((sound) => sound.audio)
@@ -985,44 +997,47 @@ class _AudioSelectionBottomSheetState
           // bottom edge, its safe-area padding included, and unpicking it runs
           // the same way back. Switching to another sound keeps the card, as
           // both are the same widget.
-          child: AnimatedSwitcher(
-            duration: const Duration(
-              milliseconds: 220,
-            ).autoReduceMotion(context),
-            switchInCurve: Curves.easeOutCubic,
-            // An outgoing child runs this curve backwards, so an ease-out
-            // here leaves the card slowly and speeds it away. An ease-in
-            // would drop half of it in the first few frames.
-            switchOutCurve: Curves.easeOutCubic,
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween(
-                  begin: const Offset(0, 1),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
+          child: _HeightReporter(
+            height: _selectionCardHeight,
+            child: AnimatedSwitcher(
+              duration: const Duration(
+                milliseconds: 220,
+              ).autoReduceMotion(context),
+              switchInCurve: Curves.easeOutCubic,
+              // An outgoing child runs this curve backwards, so an ease-out
+              // here leaves the card slowly and speeds it away. An ease-in
+              // would drop half of it in the first few frames.
+              switchOutCurve: Curves.easeOutCubic,
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween(
+                    begin: const Offset(0, 1),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                ),
               ),
+              child: _selectedItem != null
+                  ? AudioEditorSelectionOverlay(
+                      audio: _selectedItem!,
+                      cover: _selectedCover(
+                        savedSounds: savedSoundsState.sounds,
+                        savedSourceCovers: savedSourceCovers,
+                        coversBySourceVideo: [
+                          forYouCovers,
+                          popularCovers,
+                          trendingCovers,
+                          searchCovers,
+                        ],
+                      ),
+                      audioService: _audioService,
+                      isLoading: _isLoadingAudio,
+                      onTapDone: _handleDoneSelection,
+                      onTogglePlayState: _togglePlayPause,
+                    )
+                  : const SizedBox.shrink(),
             ),
-            child: _selectedItem != null
-                ? AudioEditorSelectionOverlay(
-                    audio: _selectedItem!,
-                    cover: _selectedCover(
-                      savedSounds: savedSoundsState.sounds,
-                      savedSourceCovers: savedSourceCovers,
-                      coversBySourceVideo: [
-                        forYouCovers,
-                        popularCovers,
-                        trendingCovers,
-                        searchCovers,
-                      ],
-                    ),
-                    audioService: _audioService,
-                    isLoading: _isLoadingAudio,
-                    onTapDone: _handleDoneSelection,
-                    onTogglePlayState: _togglePlayPause,
-                  )
-                : const SizedBox.shrink(),
           ),
         ),
       ],
@@ -1188,6 +1203,7 @@ class _PickerSearchInput extends StatelessWidget {
 class _SoundsContent extends ConsumerWidget {
   const _SoundsContent({
     required this.scrollController,
+    required this.selectionCardHeight,
     required this.sounds,
     required this.selectedSound,
     required this.audioService,
@@ -1207,6 +1223,9 @@ class _SoundsContent extends ConsumerWidget {
   /// Drives the list, or `null` to use the primary scroll controller, as
   /// inside a [NestedScrollView].
   final ScrollController? scrollController;
+
+  /// How tall the card of the picked sound over the list's end is.
+  final ValueListenable<double> selectionCardHeight;
   final List<AudioEvent> sounds;
   final AudioEvent? selectedSound;
   final AudioPlaybackService audioService;
@@ -1276,8 +1295,6 @@ class _SoundsContent extends ConsumerWidget {
     return covers == null ||
         (isLookingUpCovers && !covers.containsKey(reference));
   }
-
-  static const _bottomSpace = 120.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1351,10 +1368,75 @@ class _SoundsContent extends ConsumerWidget {
             );
           },
         ),
-        const SliverToBoxAdapter(child: SizedBox(height: _bottomSpace)),
+        SliverToBoxAdapter(
+          child: _ListEndSpace(selectionCardHeight: selectionCardHeight),
+        ),
         const SliverBottomSafeArea(),
       ],
     );
+  }
+}
+
+/// The space after a list's last row, so it scrolls clear of the card of the
+/// picked sound.
+class _ListEndSpace extends StatelessWidget {
+  const _ListEndSpace({required this.selectionCardHeight});
+
+  final ValueListenable<double> selectionCardHeight;
+
+  /// The space when the card fits in it, as it does at the normal text size.
+  static const _minHeight = 120.0;
+
+  /// Left between the last row and the card.
+  static const _gap = 16.0;
+
+  @override
+  Widget build(BuildContext context) {
+    // The card pads its bottom for the safe area, which the list adds after
+    // this space too.
+    final safeArea = MediaQuery.paddingOf(context).bottom;
+    return ValueListenableBuilder<double>(
+      valueListenable: selectionCardHeight,
+      builder: (context, cardHeight, _) => SizedBox(
+        height: math.max(_minHeight, cardHeight - safeArea + _gap),
+      ),
+    );
+  }
+}
+
+/// Writes how tall [child] is laid out into [height], after each frame it
+/// changes in.
+class _HeightReporter extends SingleChildRenderObjectWidget {
+  const _HeightReporter({required this.height, super.child});
+
+  final ValueNotifier<double> height;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderHeightReporter(height);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderHeightReporter renderObject,
+  ) {
+    renderObject.height = height;
+  }
+}
+
+class _RenderHeightReporter extends RenderProxyBox {
+  _RenderHeightReporter(this.height);
+
+  ValueNotifier<double> height;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    if (size.height == height.value) return;
+    // Listeners rebuild, which cannot happen while the tree lays out.
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (attached && hasSize) height.value = size.height;
+    });
   }
 }
 
@@ -1422,6 +1504,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _CenteredScrollable(
+      padding: _emptyStatePadding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1433,6 +1516,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             title ?? context.l10n.videoEditorAudioNoSoundsAvailableTitle,
+            textAlign: TextAlign.center,
             style: VineTheme.bodyLargeFont(
               color: context.vineColors.primaryText,
             ),
@@ -1464,6 +1548,7 @@ class _SearchEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _CenteredScrollable(
+      padding: _emptyStatePadding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1475,6 +1560,7 @@ class _SearchEmptyState extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             context.l10n.soundsNoSoundsFound,
+            textAlign: TextAlign.center,
             style: VineTheme.bodyLargeFont(
               color: context.vineColors.primaryText,
             ),
@@ -1506,17 +1592,22 @@ class _SearchEmptyState extends StatelessWidget {
   }
 }
 
+/// Keeps an empty state's lines off the screen's edges when they wrap.
+const _emptyStatePadding = EdgeInsets.symmetric(horizontal: 24);
+
 /// Centres [child] in the space it is given, and lets it scroll once that
 /// space is shorter than it, as above a raised keyboard on a small phone.
 class _CenteredScrollable extends StatelessWidget {
-  const _CenteredScrollable({required this.child});
+  const _CenteredScrollable({required this.child, this.padding});
 
   final Widget child;
+  final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
+        padding: padding,
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
           child: Center(child: child),

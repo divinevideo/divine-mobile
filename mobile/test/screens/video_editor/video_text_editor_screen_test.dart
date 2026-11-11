@@ -631,6 +631,36 @@ void main() {
         );
       });
     });
+
+    group('Large text', () {
+      testWidgets('keeps the text being edited above the gradient controls '
+          'on a small phone at the largest text size', (tester) async {
+        tester.view
+          ..physicalSize = const Size(375, 667)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        tester.platformDispatcher.textScaleFactorTestValue = 3.12;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+        await tester.pumpWidget(
+          buildWidget(
+            layer: TextLayer(text: 'Sommer'),
+            state: VideoEditorTextState(
+              text: 'Sommer',
+              showColorPicker: true,
+              gradient: TextGradientPreset.sunset.withAngle(0),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // The panel grew over the whole editor and hid the text.
+        final editorArea = tester.getRect(find.byType(TextEditor));
+        final text = tester.getRect(find.byType(EditableText));
+        expect(text.bottom, lessThanOrEqualTo(editorArea.bottom));
+        expect(tester.takeException(), isNull);
+      });
+    });
   });
 
   group('Input alignment', () {

@@ -5,21 +5,26 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show VideoSpeedRamp, VideoSpeedRampPoint;
 
-/// What the clip speed sheet hands back: a constant speed or a speed ramp.
+/// What the clip speed sheet hands back: a constant speed or a speed ramp,
+/// and for a clip whether its slow motion is smoothed.
 sealed class ClipSpeedChoice {
-  const ClipSpeedChoice();
+  const ClipSpeedChoice({this.smoothSlowMotion = false});
+
+  /// Whether the clip's slowed-down stretches blend their frames; always
+  /// `false` from the sheet of a sound, which has no frames.
+  final bool smoothSlowMotion;
 }
 
 /// The clip plays at one [speed] throughout.
 final class ConstantClipSpeed extends ClipSpeedChoice {
-  const ConstantClipSpeed(this.speed);
+  const ConstantClipSpeed(this.speed, {super.smoothSlowMotion});
 
   final double speed;
 }
 
 /// The clip speeds up and slows down along [ramp].
 final class RampClipSpeed extends ClipSpeedChoice {
-  const RampClipSpeed(this.ramp);
+  const RampClipSpeed(this.ramp, {super.smoothSlowMotion});
 
   final VideoSpeedRamp ramp;
 }

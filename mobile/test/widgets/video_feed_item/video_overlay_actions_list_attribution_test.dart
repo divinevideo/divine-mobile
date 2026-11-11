@@ -75,7 +75,7 @@ void main() {
           eventId: any(named: 'eventId'),
           addressableId: any(named: 'addressableId'),
         ),
-      ).thenAnswer((_) async => const <String>[]);
+      ).thenAnswer((_) async => const RepostersPage(pubkeys: []));
       when(() => _service!.getListById('skate')).thenReturn(skate);
       video = VideoEvent(
         id: _videoId,

@@ -21,7 +21,7 @@ List<VideoEvent> overlayPinnedVideos({
 
   final byCoordinate = <String, VideoEvent>{};
   for (final video in base) {
-    final coordinate = video.addressableId;
+    final coordinate = video.divineAddress;
     if (coordinate != null) byCoordinate.putIfAbsent(coordinate, () => video);
   }
 
@@ -35,6 +35,6 @@ List<VideoEvent> overlayPinnedVideos({
 
   return [
     ...pinned,
-    ...base.where((video) => !pinnedSet.contains(video.addressableId)),
+    ...base.where((video) => !pinnedSet.contains(video.divineAddress)),
   ];
 }

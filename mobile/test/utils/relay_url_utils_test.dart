@@ -1,5 +1,5 @@
-// ABOUTME: Tests REST URL resolution from configured relay URLs.
-// ABOUTME: Covers both Funnelcake (api.divine.video) and notification (relay.divine.video) paths.
+// ABOUTME: Tests relay URL admission, identity and Divine-host classification.
+// ABOUTME: Also pins the notification REST base resolved from relays.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/utils/relay_url_utils.dart';
@@ -197,28 +197,6 @@ void main() {
         );
       },
     );
-  });
-
-  group('resolveApiBaseUrlFromRelays', () {
-    test('maps relay.divine.video to api.divine.video for REST', () {
-      expect(
-        resolveApiBaseUrlFromRelays(
-          configuredRelays: const ['wss://relay.divine.video'],
-          fallbackBaseUrl: 'https://api.divine.video',
-        ),
-        'https://api.divine.video',
-      );
-    });
-
-    test('uses the first configured non-divine relay when needed', () {
-      expect(
-        resolveApiBaseUrlFromRelays(
-          configuredRelays: const ['wss://relay.staging.divine.video'],
-          fallbackBaseUrl: 'https://relay.staging.divine.video',
-        ),
-        'https://relay.staging.divine.video',
-      );
-    });
   });
 
   group('isDivineHostedRelayUrl', () {

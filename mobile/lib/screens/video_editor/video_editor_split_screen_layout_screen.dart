@@ -9,6 +9,7 @@ import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_lay
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
+import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_controls.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_preview.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
@@ -137,30 +138,66 @@ class VideoEditorSplitScreenLayoutView extends StatelessWidget {
                           context.l10n.videoEditorLayoutCloseSemanticLabel,
                       doneSemanticLabel:
                           context.l10n.videoEditorLayoutDoneSemanticLabel,
-                      center: Text(
-                        context.l10n.videoEditorLayoutTitle,
-                        style: VineTheme.titleMediumFont(
-                          color: context.vineColors.onSurface,
+                      // Flexible, so a large text size wraps the title
+                      // instead of pushing Done off the screen.
+                      center: Flexible(
+                        child: DivineWordFitText(
+                          context.l10n.videoEditorLayoutTitle,
+                          textAlign: TextAlign.center,
+                          style: VineTheme.titleMediumFont(
+                            color: context.vineColors.onSurface,
+                          ),
                         ),
                       ),
                     ),
-                    const Expanded(
-                      child: Padding(
-                        padding: .all(16),
-                        child: SplitScreenLayoutPreview(),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) => Column(
+                          children: [
+                            const Expanded(
+                              child: Padding(
+                                padding: .all(16),
+                                // What the border color's eyedropper picks
+                                // from.
+                                child: EyedropperSourceRegion(
+                                  child: SplitScreenLayoutPreview(),
+                                ),
+                              ),
+                            ),
+                            // At large text sizes the controls scroll rather
+                            // than squeeze the preview below half the room.
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxHeight: constraints.maxHeight / 2,
+                              ),
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  children: [
+                                    SplitScreenCellActions(
+                                      onPickFromLibrary: () =>
+                                          _fillSelectedCell(
+                                            context,
+                                            pickFromLibrary,
+                                          ),
+                                      onRecordWithCamera: () =>
+                                          _fillSelectedCell(
+                                            context,
+                                            recordWithCamera,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    const SplitScreenPresetPicker(),
+                                    const SizedBox(height: 16),
+                                    const SplitScreenBorderControls(),
+                                    const SizedBox(height: 16),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    SplitScreenCellActions(
-                      onPickFromLibrary: () =>
-                          _fillSelectedCell(context, pickFromLibrary),
-                      onRecordWithCamera: () =>
-                          _fillSelectedCell(context, recordWithCamera),
-                    ),
-                    const SizedBox(height: 16),
-                    const SplitScreenPresetPicker(),
-                    const SizedBox(height: 16),
-                    const SplitScreenBorderControls(),
-                    const SizedBox(height: 16),
                   ],
                 ),
                 if (isApplying) const _ApplyingOverlay(),

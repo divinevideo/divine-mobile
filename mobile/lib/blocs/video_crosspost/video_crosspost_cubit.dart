@@ -5,17 +5,18 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
+import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
   VideoCrosspostCubit({
-    required CrosspostingApiClient client,
+    required CrosspostingRepository repository,
     required String eventId,
     List<CrosspostingConnection>? initialConnections,
     Duration pollInterval = const Duration(seconds: 3),
     Duration pollTimeout = const Duration(minutes: 5),
-  }) : _client = client,
+  }) : _repository = repository,
        _eventId = eventId,
        _pollInterval = pollInterval,
        _pollTimeout = pollTimeout,
@@ -32,19 +33,20 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
                ),
        );
 
-  final CrosspostingApiClient _client;
+  final CrosspostingRepository _repository;
   final String _eventId;
   final Duration _pollInterval;
   final Duration _pollTimeout;
 
   Timer? _pollTimer;
   bool _pollInFlight = false;
+  final _submissionCancelled = Completer<void>();
 
   Future<void> loadConnections() async {
     emit(state.copyWith(status: VideoCrosspostStatus.loadingConnections));
     try {
       final connections = [
-        for (final connection in await _client.getConnections())
+        for (final connection in await _repository.getConnections())
           if (connection.platform.isVisibleInApp) connection,
       ];
       if (isClosed) return;
@@ -81,15 +83,21 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
   /// Fire the crosspost request, then poll until every job reaches a
   /// terminal state. Safe to call again after a failure.
   Future<void> submit() async {
+    if (isClosed ||
+        (state.status != VideoCrosspostStatus.ready &&
+            state.status != VideoCrosspostStatus.submitFailed)) {
+      return;
+    }
     final platforms = state.selectedPlatforms.toList();
     if (platforms.isEmpty) return;
     emit(state.copyWith(status: VideoCrosspostStatus.submitting));
     try {
-      final jobs = await _client.createCrossposts(
+      final jobs = await _repository.createCrossposts(
         eventId: _eventId,
         platforms: platforms,
+        cancelled: _submissionCancelled.future,
       );
-      if (isClosed) return;
+      if (isClosed || jobs == null) return;
       _onJobsUpdated(jobs);
     } on CrosspostingApiException catch (e, stackTrace) {
       Log.error(
@@ -153,7 +161,7 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
       if (_pollInFlight) return;
       _pollInFlight = true;
       try {
-        final jobs = await _client.getCrossposts(eventId: _eventId);
+        final jobs = await _repository.getCrossposts(eventId: _eventId);
         if (isClosed || _pollTimer == null) return;
         final pending = jobs.any((j) => j.status.isPending);
         emit(
@@ -195,6 +203,7 @@ class VideoCrosspostCubit extends Cubit<VideoCrosspostState> {
 
   @override
   Future<void> close() {
+    if (!_submissionCancelled.isCompleted) _submissionCancelled.complete();
     _stopPolling();
     return super.close();
   }

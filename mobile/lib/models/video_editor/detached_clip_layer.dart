@@ -6,6 +6,8 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/utils/json_tree_rewrite.dart';
+import 'package:openvine/utils/path_resolver.dart';
+import 'package:path/path.dart' as p;
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Marks a [WidgetLayer]'s export meta as a clip that was detached from the
@@ -69,6 +71,111 @@ const String detachedClipLayerOpacityKey = 'opacity';
 /// id, and nothing else ties it to the layer that left it.
 const String detachedClipLayerPlaceholderIdKey = 'placeholderClipId';
 
+/// Key under which the green screen the clip had baked into its file when it
+/// was detached is written, as [DetachedClipBakedChromaKey.toJson]. Absent
+/// when the clip carried no baked key or kept it in its file, and once a crop
+/// replaced the footage it was baked from — see
+/// [DetachedClipLayerData.withClip].
+const String detachedClipLayerBakedChromaKeyKey = 'bakedChromaKey';
+
+/// The green screen a timeline clip had baked into its file when it was
+/// detached, kept so putting the clip back can restore it.
+///
+/// Detaching takes a baked key off the file: the layer plays the footage the
+/// key was applied to and applies the same key live. A transparent key then
+/// shows the track where the bake left black, a colour or image fill still
+/// shows the fill, and a later change to the key starts from the clean
+/// footage instead of keying a fill already blended into the edges. A
+/// timeline clip can only carry a key baked in, so the way back swaps the
+/// baked file in again instead of rendering it a second time.
+class DetachedClipBakedChromaKey {
+  const DetachedClipBakedChromaKey({
+    required this.videoPath,
+    required this.sourcePath,
+    required this.chromaKey,
+    this.thumbnailPath,
+  });
+
+  /// The clip's file with the key baked in.
+  final String videoPath;
+
+  /// The footage the key was baked from, which is the file the layer plays.
+  ///
+  /// The baked file only matches the layer while the layer still plays this
+  /// file; a crop on the canvas renders a new one.
+  final String sourcePath;
+
+  /// The settings the key was baked with.
+  final ClipChromaKey chromaKey;
+
+  /// The poster the keyed clip showed, which a key baked right after the take
+  /// moved onto the keyed footage.
+  final String? thumbnailPath;
+
+  /// Every file putting the clip back needs, including the footage the layer
+  /// plays.
+  Iterable<String?> get ownedFilePaths => [
+    videoPath,
+    sourcePath,
+    thumbnailPath,
+    chromaKey.backgroundImagePath,
+  ];
+
+  /// Serializes the record with file paths as basenames, like
+  /// [DivineVideoClip.toJson], so it survives an iOS container-path change.
+  Map<String, dynamic> toJson() => {
+    'video': p.basename(videoPath),
+    'source': p.basename(sourcePath),
+    'chromaKey': chromaKey.toJson(),
+    if (thumbnailPath case final path?) 'thumbnail': p.basename(path),
+  };
+
+  /// Rebuilds the record from [json], re-anchoring its file paths under
+  /// [documentsPath], or returns `null` when it cannot be read.
+  ///
+  /// An unreadable record only costs the way back its key, so it is dropped
+  /// rather than taking the layer down with it.
+  static DetachedClipBakedChromaKey? fromJson(
+    Object? json,
+    String documentsPath, {
+    bool useOriginalPath = false,
+  }) {
+    if (json is! Map) return null;
+    final video = json['video'];
+    final source = json['source'];
+    final key = json['chromaKey'];
+    final thumbnail = json['thumbnail'];
+    if (video is! String || source is! String || key is! Map) return null;
+    try {
+      return DetachedClipBakedChromaKey(
+        videoPath: resolvePath(
+          video,
+          documentsPath,
+          useOriginalPath: useOriginalPath,
+        )!,
+        sourcePath: resolvePath(
+          source,
+          documentsPath,
+          useOriginalPath: useOriginalPath,
+        )!,
+        chromaKey: ClipChromaKey.fromJson(
+          Map<String, dynamic>.from(key),
+          documentsPath,
+          useOriginalPath: useOriginalPath,
+        ),
+        thumbnailPath: resolvePath(
+          thumbnail is String ? thumbnail : null,
+          documentsPath,
+          useOriginalPath: useOriginalPath,
+        ),
+      );
+    } catch (_) {
+      // A malformed key payload is dropped for the reason given above.
+      return null;
+    }
+  }
+}
+
 /// A clip lifted out of the timeline and turned into a freely placeable layer
 /// on the editor canvas.
 ///
@@ -85,6 +192,7 @@ class DetachedClipLayerData {
     this.chromaKey,
     this.opacity = 1,
     this.placeholderClipId,
+    this.bakedChromaKey,
   });
 
   /// The detached clip.
@@ -110,6 +218,11 @@ class DetachedClipLayerData {
   /// when the gap was closed — see [detachedClipLayerPlaceholderIdKey].
   final String? placeholderClipId;
 
+  /// The key the clip had baked into its file before it was detached, which
+  /// the layer started out applying live as [chromaKey]; `null` when it had
+  /// none, kept it, or a crop replaced the footage it was baked from.
+  final DetachedClipBakedChromaKey? bakedChromaKey;
+
   /// Serializes to the map stored in `WidgetLayer.exportConfigs.meta`.
   ///
   /// Paths inside are basenames — [DivineVideoClip.toJson]'s contract — so the
@@ -123,6 +236,8 @@ class DetachedClipLayerData {
     if (chromaKey case final key?) detachedClipLayerChromaKeyKey: key.toJson(),
     if (opacity < 1) detachedClipLayerOpacityKey: opacity,
     detachedClipLayerPlaceholderIdKey: ?placeholderClipId,
+    if (bakedChromaKey case final baked?)
+      detachedClipLayerBakedChromaKeyKey: baked.toJson(),
   };
 
   /// Whether [meta] describes a detached clip rather than a sticker.
@@ -160,6 +275,11 @@ class DetachedClipLayerData {
         ),
         opacity: opacityOf(meta),
         placeholderClipId: placeholderClipIdOf(meta),
+        bakedChromaKey: DetachedClipBakedChromaKey.fromJson(
+          meta[detachedClipLayerBakedChromaKeyKey],
+          documentsPath,
+          useOriginalPath: useOriginalPath,
+        ),
       );
     } on FormatException {
       return null;
@@ -293,6 +413,9 @@ class DetachedClipLayerData {
   /// screen all stay as they were. Rebuilding the meta from the clip alone
   /// would silently reset a split tail to the clip's first frame and drop the
   /// key the user set.
+  ///
+  /// The baked key the clip was detached with goes, though: it was baked from
+  /// the footage this replaces, so putting the clip back could not use it.
   static Map<String, dynamic>? withClip(
     Map<String, dynamic>? meta,
     DivineVideoClip clip,
@@ -302,7 +425,7 @@ class DetachedClipLayerData {
       ...meta!,
       detachedClipLayerClipKey: clip.toJson(),
       detachedClipLayerDurationKey: clip.playbackDuration.inMicroseconds,
-    };
+    }..remove(detachedClipLayerBakedChromaKeyKey);
   }
 
   /// How long the clip plays, read straight from [meta].
@@ -427,6 +550,8 @@ class DetachedClipLayerData {
                   // The layer's own key can point at a backdrop photo that no
                   // clip references — it belongs to the layer, not the clip.
                   data.chromaKey?.backgroundImagePath,
+                  // Kept so putting the clip back restores its baked key.
+                  ...?data.bakedChromaKey?.ownedFilePaths,
                 ].whereType<String>().where((path) => path.isNotEmpty),
               );
             }

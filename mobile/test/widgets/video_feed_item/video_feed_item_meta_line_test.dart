@@ -93,7 +93,7 @@ void main() {
         eventId: any(named: 'eventId'),
         addressableId: any(named: 'addressableId'),
       ),
-    ).thenAnswer((_) async => const <String>[]);
+    ).thenAnswer((_) async => const RepostersPage(pubkeys: []));
     when(() => mockAuthService.currentPublicKeyHex).thenReturn(_strangerPubkey);
     when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
     when(() => mockAuthService.authStateStream)

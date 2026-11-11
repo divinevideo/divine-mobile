@@ -2,6 +2,8 @@
 // ABOUTME: Page builds the cubit from Riverpod; View renders a cue timeline
 // ABOUTME: for the timing and a list of text fields for the wording.
 
+import 'dart:math' as math;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/subtitle_editor/subtitle_editor_cubit.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -23,6 +26,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/captions/caption_cue_row.dart';
 import 'package:openvine/widgets/subtitle_editor/subtitle_editor_stage.dart';
+import 'package:openvine/widgets/whole_word_button_text_scale.dart';
 
 /// Full-screen subtitle editor page.
 ///
@@ -250,34 +254,58 @@ class _NoCues extends StatelessWidget {
   final String message;
   final bool canWriteOwn;
 
+  static const _padding = 24.0;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        spacing: 16,
-        children: [
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: VineTheme.bodyMediumFont(
-              color: context.vineColors.secondaryText,
-            ),
+    // Centred while it fits, scrolling once a large text size makes it taller
+    // than the screen, so the buttons below the message stay reachable.
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.all(_padding),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: math.max(0, constraints.maxHeight - _padding * 2),
           ),
-          if (canWriteOwn)
-            DivineButton(
-              label: l10n.subtitleEditorWriteOwn,
-              leadingIcon: DivineIconName.plus,
-              onPressed: () => context.read<SubtitleEditorCubit>().addCue(),
-            ),
-          DivineButton(
-            label: l10n.subtitleEditorRetry,
-            type: DivineButtonType.link,
-            onPressed: () => context.read<SubtitleEditorCubit>().load(),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            // Stretched, so a long label wraps across the full width. At the
+            // largest size a three-word label can take a line per word.
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 16,
+            children: [
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.secondaryText,
+                ),
+              ),
+              if (canWriteOwn)
+                WholeWordButtonTextScale(
+                  label: l10n.subtitleEditorWriteOwn,
+                  hasLeadingIcon: true,
+                  child: DivineButton(
+                    label: l10n.subtitleEditorWriteOwn,
+                    leadingIcon: DivineIconName.plus,
+                    maxLines: 3,
+                    onPressed: () =>
+                        context.read<SubtitleEditorCubit>().addCue(),
+                  ),
+                ),
+              WholeWordButtonTextScale(
+                label: l10n.subtitleEditorRetry,
+                child: DivineButton(
+                  label: l10n.subtitleEditorRetry,
+                  type: DivineButtonType.link,
+                  maxLines: 3,
+                  onPressed: () => context.read<SubtitleEditorCubit>().load(),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -364,7 +392,7 @@ class _CueBody extends StatelessWidget {
 ///
 /// Draggable so the creator can trade picture for rows, but never dismissible:
 /// it is the editor, not an overlay on it.
-class _CueSheet extends StatelessWidget {
+class _CueSheet extends StatefulWidget {
   const _CueSheet({required this.state});
 
   final SubtitleEditorState state;
@@ -385,11 +413,73 @@ class _CueSheet extends StatelessWidget {
   static double get _initialSize => _minSize;
 
   @override
+  State<_CueSheet> createState() => _CueSheetState();
+}
+
+class _CueSheetState extends State<_CueSheet> {
+  final _controller = DraggableScrollableController();
+
+  /// Whether the keyboard is up.
+  ///
+  /// The keyboard leaves the sheet so little room that at its resting size the
+  /// field being typed in would sit under the save button, all the more at a
+  /// large text size. So the sheet opens to its full height and the save
+  /// button steps aside until the keyboard closes.
+  bool _keyboardOpen = false;
+
+  /// The size the sheet rested at before the keyboard came up, which it goes
+  /// back to once the keyboard closes.
+  double _restingSize = _CueSheet._minSize;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    if (keyboardOpen == _keyboardOpen) return;
+    _keyboardOpen = keyboardOpen;
+    if (keyboardOpen && _controller.isAttached) {
+      const midway = (_CueSheet._minSize + _CueSheet._maxSize) / 2;
+      _restingSize = _controller.size > midway
+          ? _CueSheet._maxSize
+          : _CueSheet._minSize;
+    }
+    // The size can only change once this frame has laid the sheet out.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _followKeyboard());
+  }
+
+  void _followKeyboard() {
+    if (!mounted || !_controller.isAttached) return;
+    final target = _keyboardOpen ? _CueSheet._maxSize : _restingSize;
+    if ((_controller.size - target).abs() < 0.001) return;
+    if (_keyboardOpen || MediaQuery.disableAnimationsOf(context)) {
+      _controller.jumpTo(target);
+    } else {
+      runDetached(
+        _controller.animateTo(
+          target,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+        ),
+        'settle the subtitle sheet after the keyboard closed',
+        logName: 'SubtitleEditorScreen',
+        category: LogCategory.ui,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: _initialSize,
-      minChildSize: _minSize,
-      maxChildSize: _maxSize,
+      controller: _controller,
+      initialChildSize: _CueSheet._initialSize,
+      minChildSize: _CueSheet._minSize,
+      maxChildSize: _CueSheet._maxSize,
       snap: true,
       builder: (context, scrollController) => DecoratedBox(
         decoration: BoxDecoration(
@@ -412,12 +502,12 @@ class _CueSheet extends StatelessWidget {
               ),
               Expanded(
                 child: _CueRows(
-                  state: state,
+                  state: widget.state,
                   scrollController: scrollController,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 ),
               ),
-              _SaveBar(state: state),
+              if (!_keyboardOpen) _SaveBar(state: widget.state),
             ],
           ),
         ),
@@ -444,25 +534,51 @@ class _CueRows extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final saving = state.status == SubtitleEditorStatus.saving;
+    // In the list rather than pinned above the save button, where it took the
+    // room of the rows it is about.
+    final showInvalidHint = state.isDirty && !state.isValid;
     return ListView.builder(
       controller: scrollController,
       padding: padding,
       // One trailing slot for the add action, so authoring a caption stays
       // reachable from the bottom of a long list.
-      itemCount: state.cues.length + 1,
-      itemBuilder: (context, index) => index == state.cues.length
-          ? _AddCueButton(enabled: state.canAddCue && !saving)
-          : _CueRow(
-              index: index,
-              cue: state.cues[index],
-              totalDuration: Duration(milliseconds: state.timelineDurationMs),
-              isSelected: state.selectedCueIndex == index,
-            ),
+      itemCount: state.cues.length + (showInvalidHint ? 2 : 1),
+      itemBuilder: (context, index) {
+        if (index < state.cues.length) {
+          return _CueRow(
+            index: index,
+            cue: state.cues[index],
+            totalDuration: Duration(milliseconds: state.timelineDurationMs),
+            isSelected: state.selectedCueIndex == index,
+          );
+        }
+        if (showInvalidHint && index == state.cues.length) {
+          return const _InvalidHint();
+        }
+        return _AddCueButton(enabled: state.canAddCue && !saving);
+      },
     );
   }
 }
 
-/// Pinned foot of the sheet: why saving is blocked, and the save button.
+/// Why the save button is off: a cue is empty or ends before it starts.
+class _InvalidHint extends StatelessWidget {
+  const _InvalidHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        context.l10n.subtitleEditorInvalidHint,
+        textAlign: TextAlign.center,
+        style: VineTheme.bodySmallFont(color: context.vineColors.secondaryText),
+      ),
+    );
+  }
+}
+
+/// Pinned foot of the sheet: the save button.
 class _SaveBar extends StatelessWidget {
   const _SaveBar({required this.state});
 
@@ -475,23 +591,13 @@ class _SaveBar extends StatelessWidget {
       top: false,
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 8,
-          children: [
-            if (state.isDirty && !state.isValid)
-              Text(
-                context.l10n.subtitleEditorInvalidHint,
-                textAlign: TextAlign.center,
-                style: VineTheme.bodySmallFont(
-                  color: context.vineColors.secondaryText,
-                ),
-              ),
-            _SaveButton(
-              enabled: state.isDirty && state.isValid && !saving,
-              busy: saving,
-            ),
-          ],
+        // Every point the pinned bar grows is taken from the rows above it.
+        child: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: chipLabelTextScaleLimit,
+          child: _SaveButton(
+            enabled: state.isDirty && state.isValid && !saving,
+            busy: saving,
+          ),
         ),
       ),
     );
@@ -509,12 +615,18 @@ class _AddCueButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
+    final label = context.l10n.subtitleEditorAddCue;
+    // Stretched across the list, so a long label wraps whole words: at the
+    // largest size a three-word label can take a line per word.
+    return WholeWordButtonTextScale(
+      label: label,
+      hasLeadingIcon: true,
       child: DivineButton(
-        label: context.l10n.subtitleEditorAddCue,
+        label: label,
         type: DivineButtonType.secondary,
         leadingIcon: DivineIconName.plus,
+        expanded: true,
+        maxLines: 3,
         onPressed: enabled
             ? () => context.read<SubtitleEditorCubit>().addCue()
             : null,

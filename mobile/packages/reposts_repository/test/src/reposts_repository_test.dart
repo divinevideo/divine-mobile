@@ -671,6 +671,27 @@ void main() {
     });
 
     group('repostVideo', () {
+      test('names the kind of a Kind 34235 video in the repost', () async {
+        const normalVideoCoordinate = '34235:author_pubkey:test-dtag';
+        final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+        await repository.repostVideo(
+          addressableId: normalVideoCoordinate,
+          originalAuthorPubkey: testAuthorPubkey,
+        );
+
+        verify(
+          () => mockNostrClient.sendGenericRepost(
+            addressableId: normalVideoCoordinate,
+            targetKind: 34235,
+            authorPubkey: testAuthorPubkey,
+            content: any(named: 'content'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).called(1);
+      });
+
       test('creates and publishes Kind 16 event', () async {
         final repository = RepostsRepository(nostrClient: mockNostrClient);
 
@@ -1978,16 +1999,17 @@ void main() {
         return event;
       }
 
-      // Intercept queryEvents based on the filter shape so e-tag, a-tag
-      // and kind-5 deletion queries can return different fixtures.
+      // Intercept reads based on the filter shape so e-tag, a-tag and kind-5
+      // deletion queries can return different fixtures. The repost reads are
+      // settled reads (#10846), finished unless [repostReadsFinish] is false.
       void wireQueryEvents({
         List<Event> eFilterEvents = const [],
         List<Event> aFilterEvents = const [],
         List<Event> deletionEvents = const [],
+        bool repostReadsFinish = true,
+        bool repostReadsReachNoRelay = false,
       }) {
-        when(() => mockNostrClient.queryEvents(any())).thenAnswer((
-          invocation,
-        ) async {
+        List<Event> answer(Invocation invocation) {
           final filters = invocation.positionalArguments[0] as List<Filter>;
           final filter = filters.first;
           if (filter.kinds?.contains(EventKind.eventDeletion) ?? false) {
@@ -1997,7 +2019,26 @@ void main() {
             return aFilterEvents;
           }
           return eFilterEvents;
-        });
+        }
+
+        when(
+          () => mockNostrClient.queryEvents(any()),
+        ).thenAnswer((invocation) async => answer(invocation));
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
+          ),
+        ).thenAnswer(
+          (invocation) async => (
+            events: answer(invocation),
+            timedOut: !repostReadsFinish,
+            noRelays: repostReadsReachNoRelay,
+          ),
+        );
       }
 
       test('queries only the coordinate for an addressable target', () async {
@@ -2015,7 +2056,11 @@ void main() {
         );
 
         final sent = verify(
-          () => mockNostrClient.queryEvents(captureAny()),
+          () => mockNostrClient.queryEventsDetailed(
+            captureAny(),
+            requireAllRelaysSettled: true,
+            acceptRelayClosedWhenOthersAnswered: true,
+          ),
         ).captured.cast<List<Filter>>();
 
         expect(sent, hasLength(1));
@@ -2067,7 +2112,11 @@ void main() {
           );
 
           final repostFilters = verify(
-            () => mockNostrClient.queryEvents(captureAny()),
+            () => mockNostrClient.queryEventsDetailed(
+              captureAny(),
+              requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
+            ),
           ).captured.cast<List<Filter>>().map((sent) => sent.single).toList();
 
           expect(repostFilters, hasLength(2));
@@ -2130,7 +2179,9 @@ void main() {
             addressableId: testAddressableId,
           );
 
-          expect(result, [for (var i = 0; i < 500; i++) reposterPubkey(i)]);
+          expect(result.pubkeys, [
+            for (var i = 0; i < 500; i++) reposterPubkey(i),
+          ]);
         });
 
         test('breaks ties at the cut by lowest id, whatever order the relay '
@@ -2159,7 +2210,9 @@ void main() {
             eventId: testEventId,
           );
 
-          expect(result, [for (var i = 0; i < 500; i++) reposterPubkey(i)]);
+          expect(result.pubkeys, [
+            for (var i = 0; i < 500; i++) reposterPubkey(i),
+          ]);
         });
 
         test('counts the cap before deletions, so a deleted repost is not '
@@ -2189,7 +2242,7 @@ void main() {
             addressableId: testAddressableId,
           );
 
-          expect(result, [
+          expect(result.pubkeys, [
             for (var i = 0; i < 500; i++)
               if (i != 3) reposterPubkey(i),
           ]);
@@ -2205,7 +2258,7 @@ void main() {
           eventId: testEventId,
         );
 
-        expect(result, isEmpty);
+        expect(result.pubkeys, isEmpty);
       });
 
       test('excludes reposters hidden by the block filter', () async {
@@ -2238,9 +2291,12 @@ void main() {
           blockFilter: (pubkey) => pubkey == 'blocked_reposter',
         );
 
-        expect(await repository.fetchEventReposters(eventId: testEventId), [
-          'allowed_reposter',
-        ]);
+        expect(
+          (await repository.fetchEventReposters(eventId: testEventId)).pubkeys,
+          [
+            'allowed_reposter',
+          ],
+        );
       });
 
       test('returns reposter pubkeys ordered by recency', () async {
@@ -2283,7 +2339,7 @@ void main() {
           eventId: testEventId,
         );
 
-        expect(result, equals(['reposter2', 'reposter3', 'reposter1']));
+        expect(result.pubkeys, equals(['reposter2', 'reposter3', 'reposter1']));
       });
 
       test('deduplicates pubkeys across e and a query results when '
@@ -2330,8 +2386,8 @@ void main() {
           addressableId: testAddressableId,
         );
 
-        expect(result, hasLength(2));
-        expect(result, equals(['sharedReposter', 'otherReposter']));
+        expect(result.pubkeys, hasLength(2));
+        expect(result.pubkeys, equals(['sharedReposter', 'otherReposter']));
       });
 
       test('excludes reposts deleted via kind 5', () async {
@@ -2376,7 +2432,7 @@ void main() {
           eventId: testEventId,
         );
 
-        expect(result, equals(['liveReposter']));
+        expect(result.pubkeys, equals(['liveReposter']));
       });
 
       test(
@@ -2423,7 +2479,7 @@ void main() {
             eventId: testEventId,
           );
 
-          expect(result, equals(['churningReposter']));
+          expect(result.pubkeys, equals(['churningReposter']));
         },
       );
 
@@ -2478,7 +2534,7 @@ void main() {
             eventId: testEventId,
           );
 
-          expect(result, equals([author, otherReposter]));
+          expect(result.pubkeys, equals([author, otherReposter]));
         },
       );
 
@@ -2518,7 +2574,7 @@ void main() {
             eventId: testEventId,
           );
 
-          expect(result, equals(['authorA']));
+          expect(result.pubkeys, equals(['authorA']));
         },
       );
 
@@ -2553,14 +2609,20 @@ void main() {
           eventId: testEventId,
         );
 
-        expect(result, equals(['kind6Reposter', 'kind16Reposter']));
+        expect(result.pubkeys, equals(['kind6Reposter', 'kind16Reposter']));
       });
 
       test(
         'throws FetchRepostersFailedException when relay query throws',
         () async {
           when(
-            () => mockNostrClient.queryEvents(any()),
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
           ).thenThrow(Exception('relay unreachable'));
 
           final repository = RepostsRepository(nostrClient: mockNostrClient);
@@ -2572,19 +2634,105 @@ void main() {
         },
       );
 
+      // #10846: these reads used queryEvents, which cannot say whether the
+      // relays finished, so a read cut short looked like nobody reposted.
+      group('a repost read that does not finish', () {
+        Event repostBy(String pubkey) => createReposterEvent(
+          id: 'repost_by_$pubkey',
+          pubkey: pubkey,
+          kind: EventKind.repost,
+          createdAt: 1700000000,
+          tags: [
+            ['e', testEventId],
+          ],
+        );
+
+        test('marks an empty answer', () async {
+          wireQueryEvents(repostReadsFinish: false);
+          final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+          final page = await repository.fetchEventReposters(
+            eventId: testEventId,
+          );
+
+          expect(page.pubkeys, isEmpty);
+          expect(page.isComplete, isFalse);
+        });
+
+        test('keeps the reposters it found, marked', () async {
+          wireQueryEvents(
+            eFilterEvents: [repostBy('reposterA')],
+            repostReadsFinish: false,
+          );
+          final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+          final page = await repository.fetchEventReposters(
+            eventId: testEventId,
+          );
+
+          expect(page.pubkeys, equals(['reposterA']));
+          expect(page.isComplete, isFalse);
+        });
+
+        test('treats a read no relay took as unfinished', () async {
+          wireQueryEvents(repostReadsReachNoRelay: true);
+          final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+          final page = await repository.fetchEventReposters(
+            eventId: testEventId,
+          );
+
+          expect(page.isComplete, isFalse);
+        });
+
+        test('marks a read every relay finished as complete', () async {
+          wireQueryEvents(eFilterEvents: [repostBy('reposterA')]);
+          final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+          final page = await repository.fetchEventReposters(
+            eventId: testEventId,
+          );
+
+          expect(page.pubkeys, equals(['reposterA']));
+          expect(page.isComplete, isTrue);
+        });
+
+        test('waits for every relay, settling on refusals once another '
+            'relay answered', () async {
+          wireQueryEvents();
+          final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+          await repository.fetchEventReposters(
+            eventId: testEventId,
+            addressableId: testAddressableId,
+          );
+
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
+            ),
+          ).called(2);
+        });
+      });
+
       test(
         'treats empty addressableId the same as null (no a-tag query)',
         () async {
           var aFilterCalls = 0;
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer((
-            invocation,
-          ) async {
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).thenAnswer((invocation) async {
             final filters = invocation.positionalArguments[0] as List<Filter>;
-            final filter = filters.first;
-            if (filter.a?.isNotEmpty ?? false) {
-              aFilterCalls++;
-            }
-            return <Event>[];
+            if (filters.first.a?.isNotEmpty ?? false) aFilterCalls++;
+            return (events: <Event>[], timedOut: false, noRelays: false);
           });
 
           final repository = RepostsRepository(nostrClient: mockNostrClient);
@@ -3168,7 +3316,212 @@ void main() {
       });
     });
 
+    group('legacy 34236 key of a Kind 34235 video (#10776)', () {
+      const normalVideoCoordinate = '34235:author_pubkey:test-dtag';
+      const legacyCoordinate = '34236:author_pubkey:test-dtag';
+      const legacyRepostEventId =
+          'legacy_repost_event_id_64_chars_'
+          '00000000000000000000000000000000';
+
+      Future<RepostsRepository> repositoryWithLegacyRecord() async {
+        when(() => mockLocalStorage.getAllRepostRecords()).thenAnswer(
+          (_) async => [
+            RepostRecord(
+              addressableId: legacyCoordinate,
+              repostEventId: legacyRepostEventId,
+              originalAuthorPubkey: testAuthorPubkey,
+              createdAt: DateTime.now(),
+            ),
+          ],
+        );
+        final repository = RepostsRepository(
+          nostrClient: mockNostrClient,
+          localStorage: mockLocalStorage,
+        );
+        await repository.initialize();
+        return repository;
+      }
+
+      void stubDeletion() {
+        when(() => mockNostrClient.deleteEvent(any())).thenAnswer(
+          (_) async => createMockEvent(
+            id: 'deletion_event_id',
+            kind: EventKind.eventDeletion,
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          ),
+        );
+      }
+
+      test('isReposted reads the repost stored under the legacy key', () async {
+        final repository = await repositoryWithLegacyRecord();
+
+        expect(await repository.isReposted(normalVideoCoordinate), isTrue);
+      });
+
+      test('isRepostedSync reads the legacy key', () async {
+        final repository = await repositoryWithLegacyRecord();
+
+        expect(repository.isRepostedSync(normalVideoCoordinate), isTrue);
+      });
+
+      test(
+        'getRepostRecord returns the record stored under the legacy key',
+        () {
+          return repositoryWithLegacyRecord().then((repository) async {
+            final record = await repository.getRepostRecord(
+              normalVideoCoordinate,
+            );
+            expect(record?.repostEventId, equals(legacyRepostEventId));
+          });
+        },
+      );
+
+      test('repostVideo throws AlreadyRepostedException', () async {
+        final repository = await repositoryWithLegacyRecord();
+
+        await expectLater(
+          repository.repostVideo(
+            addressableId: normalVideoCoordinate,
+            originalAuthorPubkey: testAuthorPubkey,
+          ),
+          throwsA(isA<AlreadyRepostedException>()),
+        );
+      });
+
+      test('toggleRepost removes the legacy repost', () async {
+        stubDeletion();
+        when(
+          () => mockLocalStorage.isReposted(legacyCoordinate),
+        ).thenAnswer((_) async => true);
+        final repository = await repositoryWithLegacyRecord();
+
+        final isNowReposted = await repository.toggleRepost(
+          addressableId: normalVideoCoordinate,
+          originalAuthorPubkey: testAuthorPubkey,
+        );
+
+        expect(isNowReposted, isFalse);
+        verify(
+          () => mockNostrClient.deleteEvent(legacyRepostEventId),
+        ).called(1);
+        expect(repository.isRepostedSync(normalVideoCoordinate), isFalse);
+      });
+
+      test(
+        'toggleRepost of a legacy repost lowers the count cached for the '
+        "video's own coordinate",
+        () async {
+          stubDeletion();
+          when(
+            () => mockNostrClient.countEvents(any()),
+          ).thenAnswer((_) async => const CountResult(count: 3));
+          when(
+            () => mockLocalStorage.isReposted(legacyCoordinate),
+          ).thenAnswer((_) async => true);
+          final repository = await repositoryWithLegacyRecord();
+          expect(
+            await repository.getRepostCount(normalVideoCoordinate),
+            equals(3),
+          );
+
+          await repository.toggleRepost(
+            addressableId: normalVideoCoordinate,
+            originalAuthorPubkey: testAuthorPubkey,
+          );
+
+          expect(
+            await repository.getRepostCount(normalVideoCoordinate),
+            equals(2),
+          );
+        },
+      );
+
+      test('executeUnrepostAction removes the legacy repost', () async {
+        stubDeletion();
+        final repository = await repositoryWithLegacyRecord();
+
+        await repository.executeUnrepostAction(normalVideoCoordinate);
+
+        verify(
+          () => mockNostrClient.deleteEvent(legacyRepostEventId),
+        ).called(1);
+      });
+
+      test('getRepostCount also counts reposts tagged with the legacy key', () {
+        when(
+          () => mockNostrClient.countEvents(any()),
+        ).thenAnswer((_) async => const CountResult(count: 3));
+        final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+        return repository.getRepostCount(normalVideoCoordinate).then((_) {
+          final filters =
+              verify(
+                    () => mockNostrClient.countEvents(captureAny()),
+                  ).captured.single
+                  as List<Filter>;
+          expect(
+            filters.single.a,
+            equals([normalVideoCoordinate, legacyCoordinate]),
+          );
+        });
+      });
+
+      test('fetchEventReposters also asks for the legacy key', () async {
+        final aFilters = <List<String>>[];
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
+          ),
+        ).thenAnswer((invocation) async {
+          final filters = invocation.positionalArguments[0] as List<Filter>;
+          for (final filter in filters) {
+            if (filter.a case final a?) aFilters.add(a);
+          }
+          return (events: const <Event>[], timedOut: false, noRelays: false);
+        });
+        final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+        await repository.fetchEventReposters(
+          eventId: testEventId,
+          addressableId: normalVideoCoordinate,
+        );
+
+        expect(
+          aFilters,
+          contains(equals([normalVideoCoordinate, legacyCoordinate])),
+        );
+      });
+    });
+
     group('executeRepostAction', () {
+      test('names the kind of a queued Kind 34235 repost', () async {
+        const normalVideoCoordinate = '34235:author_pubkey:test-dtag';
+        final repository = RepostsRepository(
+          nostrClient: mockNostrClient,
+          localStorage: mockLocalStorage,
+        );
+
+        await repository.executeRepostAction(
+          addressableId: normalVideoCoordinate,
+          originalAuthorPubkey: testAuthorPubkey,
+        );
+
+        verify(
+          () => mockNostrClient.sendGenericRepost(
+            addressableId: normalVideoCoordinate,
+            targetKind: 34235,
+            authorPubkey: testAuthorPubkey,
+            content: any(named: 'content'),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).called(1);
+      });
+
       test('publishes repost directly to relays', () async {
         final repository = RepostsRepository(
           nostrClient: mockNostrClient,

@@ -3,6 +3,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// A vertical slider with a custom design matching the Figma specs.
@@ -323,13 +324,19 @@ class _Thumb extends StatelessWidget {
               top: 0,
               bottom: 0,
               child: Center(
-                child: Text(
-                  (value * 100).toStringAsFixed(0),
-                  style: VineTheme.labelMediumFont(
-                    // Was inheriting the ambient bodyMedium, i.e. exactly this
-                    // token — spelled out so it follows the palette in light.
-                    color: context.vineColors.secondaryText,
-                    fontFeatures: [const .tabularFigures()],
+                // A numeral over the video, kept within the thumb's height;
+                // screen readers get the value from the slider itself.
+                child: MediaQuery.withClampedTextScaling(
+                  maxScaleFactor: overlayNumeralTextScaleLimit,
+                  child: Text(
+                    (value * 100).toStringAsFixed(0),
+                    style: VineTheme.labelMediumFont(
+                      // Was inheriting the ambient bodyMedium, i.e. exactly
+                      // this token — spelled out so it follows the palette in
+                      // light.
+                      color: context.vineColors.secondaryText,
+                      fontFeatures: [const .tabularFigures()],
+                    ),
                   ),
                 ),
               ),

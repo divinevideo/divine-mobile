@@ -7,6 +7,7 @@ import 'package:badge_repository/badge_repository.dart';
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 
 part 'badge_editor_state.dart';
 
@@ -14,7 +15,8 @@ part 'badge_editor_state.dart';
 ///
 /// Editing keeps the definition's `d` identifier, which is what makes the
 /// published event replace the existing badge instead of adding a second one.
-class BadgeEditorCubit extends Cubit<BadgeEditorState> {
+class BadgeEditorCubit extends Cubit<BadgeEditorState>
+    with CloseGuardedEmit<BadgeEditorState> {
   /// Creates the cubit.
   ///
   /// [coordinate] is null when creating a badge and set when editing one.
@@ -39,8 +41,7 @@ class BadgeEditorCubit extends Cubit<BadgeEditorState> {
     final coordinate = _coordinate;
     if (coordinate == null) {
       emit(state.copyWith(status: BadgeEditorStatus.ready));
-      await _loadTakenIdentifiers();
-      return;
+      return _loadTakenIdentifiers();
     }
 
     emit(state.copyWith(status: BadgeEditorStatus.loading));
@@ -48,10 +49,10 @@ class BadgeEditorCubit extends Cubit<BadgeEditorState> {
       final detail = await _repository.loadBadgeDetail(coordinate);
       final definition = detail.definition;
       if (definition == null) {
-        emit(state.copyWith(status: BadgeEditorStatus.loadFailure));
+        emitIfOpen(state.copyWith(status: BadgeEditorStatus.loadFailure));
         return;
       }
-      emit(
+      emitIfOpen(
         state.copyWith(
           status: BadgeEditorStatus.ready,
           name: definition.name ?? '',
@@ -65,7 +66,7 @@ class BadgeEditorCubit extends Cubit<BadgeEditorState> {
       );
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emit(state.copyWith(status: BadgeEditorStatus.loadFailure));
+      emitIfOpen(state.copyWith(status: BadgeEditorStatus.loadFailure));
     }
   }
 
@@ -77,11 +78,9 @@ class BadgeEditorCubit extends Cubit<BadgeEditorState> {
   /// because a relay was unreachable would be the worse outcome.
   Future<void> _loadTakenIdentifiers() async {
     try {
-      emit(
-        state.copyWith(
-          takenIdentifiers: await _repository.loadCreatedIdentifiers(),
-        ),
-      );
+      final takenIdentifiers = await _repository.loadCreatedIdentifiers();
+      // Read state only now: the user may have typed while the lookup ran.
+      emitIfOpen(state.copyWith(takenIdentifiers: takenIdentifiers));
     } catch (error, stackTrace) {
       addError(error, stackTrace);
     }
@@ -139,17 +138,17 @@ class BadgeEditorCubit extends Cubit<BadgeEditorState> {
       // Classification: Network/IO — not reportable. Surfaced as a failure
       // status the editor renders inline.
       addError(error, stackTrace);
-      emit(state.copyWith(artworkStatus: BadgeArtworkStatus.failure));
+      emitIfOpen(state.copyWith(artworkStatus: BadgeArtworkStatus.failure));
       return;
     }
 
     final url = result.url;
     if (!result.success || url == null || url.isEmpty) {
-      emit(state.copyWith(artworkStatus: BadgeArtworkStatus.failure));
+      emitIfOpen(state.copyWith(artworkStatus: BadgeArtworkStatus.failure));
       return;
     }
 
-    emit(
+    emitIfOpen(
       state.copyWith(
         artworkStatus: BadgeArtworkStatus.idle,
         imageUrl: url,
@@ -193,7 +192,7 @@ class BadgeEditorCubit extends Cubit<BadgeEditorState> {
           thumbnailUrl: state.thumbnailUrl,
         ),
       );
-      emit(
+      emitIfOpen(
         state.copyWith(
           status: BadgeEditorStatus.saved,
           savedCoordinate: BadgeCoordinate(
@@ -204,7 +203,7 @@ class BadgeEditorCubit extends Cubit<BadgeEditorState> {
       );
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emit(state.copyWith(status: BadgeEditorStatus.saveFailure));
+      emitIfOpen(state.copyWith(status: BadgeEditorStatus.saveFailure));
     }
   }
 }

@@ -173,7 +173,10 @@ class _NostrAppSandboxScreenState extends ConsumerState<NostrAppSandboxScreen> {
       return true;
     }
 
-    if (!mounted) return false;
+    // No http(s) origin: about:blank/srcdoc frames, blob:/data: pages, and
+    // mailto:/intent:/custom-scheme links. Refuse them without the safety
+    // card, which would cover a page that is still on an allowed origin.
+    if (webOriginOf(uri) == null || !mounted) return false;
     setState(() {
       _blockedUri = uri;
       _isLoading = false;
@@ -182,21 +185,14 @@ class _NostrAppSandboxScreenState extends ConsumerState<NostrAppSandboxScreen> {
   }
 
   bool _isAllowedNavigationOrigin(Uri uri) {
-    return _isAllowedOrigin(uri, [
+    return isAllowedSandboxOrigin(uri, [
       ...widget.app.allowedOrigins,
       ...widget.app.allowedNavigationOrigins,
     ]);
   }
 
   bool _isAllowedBridgeOrigin(Uri uri) {
-    return _isAllowedOrigin(uri, widget.app.allowedOrigins);
-  }
-
-  bool _isAllowedOrigin(Uri uri, List<String> allowedOrigins) {
-    return allowedOrigins.any((allowedOrigin) {
-      final parsedAllowed = Uri.tryParse(allowedOrigin);
-      return parsedAllowed != null && parsedAllowed.origin == uri.origin;
-    });
+    return isAllowedSandboxOrigin(uri, widget.app.allowedOrigins);
   }
 
   static String _generateBridgeNonce() {

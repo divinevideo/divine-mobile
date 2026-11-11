@@ -22,6 +22,7 @@ import 'package:openvine/models/clip_category.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/draft_summary.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_state.dart';
 import 'package:openvine/observability/crash_reporter.dart';
@@ -205,7 +206,7 @@ void main() {
         () => mockClipLibraryService.getCategories(),
       ).thenAnswer((_) async => []);
       when(
-        () => mockDraftStorageService.getAllDrafts(),
+        () => mockDraftStorageService.getDraftSummaries(),
       ).thenAnswer((_) async => []);
       // The screen's providers build the account cleanup, which clears the
       // copies an unfinished gallery save left, at launch.
@@ -337,8 +338,8 @@ void main() {
       // "ListTile background color or ink splashes may be invisible".
       testWidgets('draft rows keep a visible ink surface', (tester) async {
         when(
-          () => mockDraftStorageService.getAllDrafts(),
-        ).thenAnswer((_) async => [_createTestDraft()]);
+          () => mockDraftStorageService.getDraftSummaries(),
+        ).thenAnswer((_) async => [DraftSummary.fromDraft(_createTestDraft())]);
 
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();

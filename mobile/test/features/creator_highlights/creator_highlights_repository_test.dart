@@ -27,10 +27,11 @@ Map<String, Object?> video({
   DateTime? published,
   String dTag = 'one',
   bool archive = false,
+  int kind = 34236,
 }) => {
   'id': id,
   'pubkey': pubkey,
-  'kind': 34236,
+  'kind': kind,
   'created_at': (published ?? now).millisecondsSinceEpoch ~/ 1000,
   'tags': [
     ['d', dTag],
@@ -248,6 +249,19 @@ void main() {
       expect(
         await repository(
           [video(id: other)],
+          deleted: {videoId},
+          deletedAddresses: {
+            '34236:$owner:one': now.millisecondsSinceEpoch ~/ 1000,
+          },
+        ).load(owner),
+        isNull,
+      );
+    });
+    test('a deletion saved under the old 34236 key also removes a Kind 34235 '
+        'video (#10776)', () async {
+      expect(
+        await repository(
+          [video(id: other, kind: 34235)],
           deleted: {videoId},
           deletedAddresses: {
             '34236:$owner:one': now.millisecondsSinceEpoch ~/ 1000,

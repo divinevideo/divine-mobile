@@ -1,5 +1,5 @@
 // ABOUTME: Individual comment widget for flat list display
-// ABOUTME: Renders a single comment with author info, content, like button,
+// ABOUTME: Renders a single comment with author info, content, voting controls,
 // ABOUTME: and reply indicator. Long-press shows options (edit/delete or
 // ABOUTME: flag/block).
 
@@ -16,6 +16,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show UserProfile;
 import 'package:openvine/blocs/comments/comment_composer/comment_composer_bloc.dart';
 import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc.dart';
+import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -28,29 +29,59 @@ import 'package:openvine/screens/comments/widgets/comment_options_modal.dart';
 import 'package:openvine/screens/comments/widgets/pending_video_reply_tile.dart';
 import 'package:openvine/screens/comments/widgets/video_comment_player.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_name.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Widget that renders a single comment in a flat list.
 ///
-/// Replies are distinguished by a 16px left padding and "Re: npub..." indicator.
+/// A reply nested under its parent is indented; one shown at the top level,
+/// as every reply is in Top, names its parent's author on a "Re:" line
+/// instead, unless the owner hid that parent.
 /// Shows author avatar, name, timestamp, and content.
-/// Includes a reply button and like button in the actions row.
+/// Includes reply and vote buttons in the actions row.
 /// Long press opens options menu for any comment:
 /// - Own comments: Edit, Delete
-/// - Other users' comments: Flag Content, Block User
+/// - Other users' comments: Flag Content, Block User, and for the video
+///   owner Hide or Show comment
 ///
 /// Uses [Comment] from the comments_repository package,
 /// following clean architecture separation of UI and repository layers.
 class CommentItem extends ConsumerStatefulWidget {
-  const CommentItem({required this.comment, this.depth = 0, super.key});
+  const CommentItem({
+    required this.comment,
+    this.depth = 0,
+    this.isHiddenByOwner = false,
+    this.viewerOwnsVideo = false,
+    this.supportsModeration = true,
+    this.repliesToHiddenComment = false,
+    super.key,
+  });
 
   /// The comment to display.
   final Comment comment;
 
   /// Nesting depth (0 = top-level, 1+ = reply).
   final int depth;
+
+  /// Whether the video owner hid this comment; it is then only shown because
+  /// the viewer chose to see hidden comments, and says so.
+  final bool isHiddenByOwner;
+
+  /// Whether the viewer owns the video. Creator Hide/Show also requires
+  /// [supportsModeration]; ownership labels do not.
+  final bool viewerOwnsVideo;
+
+  /// Whether the root has the coordinate required to save creator moderation.
+  /// Ownership labels still apply when this is false, but Hide/Show does not.
+  final bool supportsModeration;
+
+  /// Whether the comment answers one the video owner hid, whose author the
+  /// reply line then leaves out.
+  final bool repliesToHiddenComment;
 
   @override
   ConsumerState<CommentItem> createState() => _CommentItemState();
@@ -161,11 +192,17 @@ class _CommentItemState extends ConsumerState<CommentItem> {
                               ),
                           avatarSize: widget.depth >= 2 ? 28.0 : 36.0,
                         ),
+                        if (widget.isHiddenByOwner) ...[
+                          const SizedBox(height: 8),
+                          _HiddenByOwnerLabel(
+                            viewerOwnsVideo: widget.viewerOwnsVideo,
+                          ),
+                        ],
                         const SizedBox(height: 12),
-                        // Show reply indicator only for orphaned
-                        // replies at depth 0
+                        // Name the parent when this reply is shown on its own.
                         if (widget.depth == 0 &&
-                            widget.comment.replyToAuthorPubkey != null)
+                            widget.comment.replyToAuthorPubkey != null &&
+                            !widget.repliesToHiddenComment)
                           _ReplyIndicator(
                             parentAuthorPubkey:
                                 widget.comment.replyToAuthorPubkey!,
@@ -264,6 +301,14 @@ class _CommentItemState extends ConsumerState<CommentItem> {
     // after the widget may have been unmounted.
     final reactionsBloc = context.read<CommentReactionsBloc>();
     final composerBloc = context.read<CommentComposerBloc>();
+    final listBloc = widget.viewerOwnsVideo
+        ? context.read<CommentsListBloc>()
+        : null;
+    // The sheet's messenger and the root navigator outlive this row, which a
+    // hide removes.
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final l10n = context.l10n;
 
     final CommentOptionResult? result;
 
@@ -278,6 +323,8 @@ class _CommentItemState extends ConsumerState<CommentItem> {
         context,
         commentId: widget.comment.id,
         authorPubkey: widget.comment.authorPubkey,
+        viewerOwnsVideo: listBloc != null && widget.supportsModeration,
+        isHidden: widget.isHiddenByOwner,
       );
     }
 
@@ -291,6 +338,13 @@ class _CommentItemState extends ConsumerState<CommentItem> {
         reactionsBloc.add(CommentDeleteRequested(widget.comment.id));
       case CommentBlockUserResult(:final authorPubkey):
         reactionsBloc.add(CommentBlockUserRequested(authorPubkey));
+      case CommentModerationResult(:final hide):
+        listBloc?.add(CommentModerationRequested(widget.comment, hide: hide));
+        // Hiding keeps a comment out of Divine only; moderators never see it
+        // unless it is reported too.
+        if (hide && messenger != null) {
+          _offerReport(messenger, navigator, l10n);
+        }
       case CommentEditResult(:final commentId, :final content):
         // Editing a comment whose row is gone has nothing to edit.
         if (!mounted) return;
@@ -304,6 +358,63 @@ class _CommentItemState extends ConsumerState<CommentItem> {
           ),
         );
     }
+  }
+
+  void _offerReport(
+    ScaffoldMessengerState messenger,
+    NavigatorState navigator,
+    AppLocalizations l10n,
+  ) {
+    final comment = widget.comment;
+    messenger.showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        l10n.commentHiddenReportPrompt,
+        actionLabel: l10n.commentHiddenReportAction,
+        duration: const Duration(seconds: 6),
+        onActionPressed: () {
+          // A plain button: unlike a SnackBarAction it does not dismiss the
+          // banner itself.
+          messenger.hideCurrentSnackBar();
+          runDetached(
+            ReportContentDialog.showForComment(
+              navigator.context,
+              commentId: comment.id,
+              authorPubkey: comment.authorPubkey,
+            ),
+            'report a comment the owner hid',
+            logName: 'CommentItem',
+            category: LogCategory.ui,
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Says that the video owner hid the comment: "Hidden by you" to the owner,
+/// "Hidden by the creator" to everyone else.
+class _HiddenByOwnerLabel extends StatelessWidget {
+  const _HiddenByOwnerLabel({required this.viewerOwnsVideo});
+
+  final bool viewerOwnsVideo;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.vineColors.onSurfaceVariant;
+    return Row(
+      spacing: 4,
+      children: [
+        DivineIcon(icon: DivineIconName.eyeSlash, size: 14, color: color),
+        Flexible(
+          child: Text(
+            viewerOwnsVideo
+                ? context.l10n.commentHiddenByYou
+                : context.l10n.commentHiddenByCreator,
+            style: VineTheme.labelSmallFont(color: color),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -516,7 +627,10 @@ class _ActionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
+      spacing: 20,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         Semantics(
           identifier: 'reply_button',
@@ -565,7 +679,6 @@ class _ActionsRow extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 20),
         _CommentVoteButtons(
           commentId: commentId,
           authorPubkey: authorPubkey,
@@ -577,10 +690,7 @@ class _ActionsRow extends StatelessWidget {
   }
 }
 
-/// Upvote/downvote buttons for a comment, using BlocSelector for efficient
-/// rebuilds.
-///
-/// Layout: [↑ arrow] [net_score] [↓ arrow]
+/// Upvote and downvote buttons with their respective counts.
 class _CommentVoteButtons extends StatelessWidget {
   const _CommentVoteButtons({
     required this.commentId,
@@ -599,102 +709,42 @@ class _CommentVoteButtons extends StatelessWidget {
     return BlocSelector<
       CommentReactionsBloc,
       CommentReactionsState,
-      ({bool isUpvoted, bool isDownvoted, int upvotes, int downvotes})
+      ({bool isUpvoted, bool isDownvoted, int? upvotes, int? downvotes})
     >(
       selector: (state) => (
         isUpvoted: state.upvotedCommentIds.contains(commentId),
         isDownvoted: state.downvotedCommentIds.contains(commentId),
-        upvotes: state.commentUpvoteCounts[commentId] ?? 0,
-        downvotes: state.commentDownvoteCounts[commentId] ?? 0,
+        upvotes: state.commentUpvoteCounts[commentId],
+        downvotes: state.commentDownvoteCounts[commentId],
       ),
       builder: (context, voteState) {
-        final netScore = voteState.upvotes - voteState.downvotes;
+        void toggle(Vote vote) {
+          context.read<CommentReactionsBloc>().add(
+            CommentVoteToggled(
+              commentId: commentId,
+              authorPubkey: authorPubkey,
+              addressableId: addressableId,
+              targetKind: targetKind,
+              vote: vote,
+            ),
+          );
+        }
 
         return Row(
           mainAxisSize: MainAxisSize.min,
+          spacing: 4,
           children: [
-            // Upvote arrow
-            Semantics(
-              identifier: 'upvote_button',
-              button: true,
-              label: voteState.isUpvoted
-                  ? context.l10n.commentRemoveUpvoteLabel
-                  : context.l10n.commentUpvoteLabel,
-              child: InkWell(
-                onTap: () {
-                  context.read<CommentReactionsBloc>().add(
-                    CommentVoteToggled(
-                      commentId: commentId,
-                      authorPubkey: authorPubkey,
-                      addressableId: addressableId,
-                      targetKind: targetKind,
-                      vote: Vote.up,
-                    ),
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  child: DivineIcon(
-                    icon: DivineIconName.arrowFatUp,
-                    size: 16,
-                    color: voteState.isUpvoted
-                        ? context.vineColors.accentPositive
-                        : context.vineColors.onSurfaceMuted,
-                  ),
-                ),
-              ),
+            _CommentVoteButton(
+              vote: Vote.up,
+              count: voteState.upvotes,
+              isSelected: voteState.isUpvoted,
+              onTap: () => toggle(Vote.up),
             ),
-            // Net score
-            if (netScore != 0)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Text(
-                  netScore.formatScore,
-                  style: VineTheme.labelMediumFont(
-                    color: voteState.isUpvoted
-                        ? context.vineColors.accentPositive
-                        : voteState.isDownvoted
-                        ? VineTheme.likeRed
-                        : context.vineColors.onSurfaceMuted,
-                  ),
-                ),
-              ),
-            // Downvote arrow
-            Semantics(
-              identifier: 'downvote_button',
-              button: true,
-              label: voteState.isDownvoted
-                  ? context.l10n.commentRemoveDownvoteLabel
-                  : context.l10n.commentDownvoteLabel,
-              child: InkWell(
-                onTap: () {
-                  context.read<CommentReactionsBloc>().add(
-                    CommentVoteToggled(
-                      commentId: commentId,
-                      authorPubkey: authorPubkey,
-                      addressableId: addressableId,
-                      targetKind: targetKind,
-                      vote: Vote.down,
-                    ),
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  child: DivineIcon(
-                    icon: DivineIconName.arrowFatDown,
-                    size: 16,
-                    color: voteState.isDownvoted
-                        ? VineTheme.likeRed
-                        : context.vineColors.onSurfaceMuted,
-                  ),
-                ),
-              ),
+            _CommentVoteButton(
+              vote: Vote.down,
+              count: voteState.downvotes,
+              isSelected: voteState.isDownvoted,
+              onTap: () => toggle(Vote.down),
             ),
           ],
         );
@@ -703,15 +753,71 @@ class _CommentVoteButtons extends StatelessWidget {
   }
 }
 
-/// Formats an [int] score with locale-aware compact suffixes.
-extension _ScoreFormatting on int {
-  String get formatScore {
-    final abs = this.abs();
-    final prefix = this < 0 ? '-' : '';
-    if (abs >= 1000) {
-      return '$prefix${CountFormatter.formatCompact(abs)}';
-    }
-    return '$this';
+class _CommentVoteButton extends StatelessWidget {
+  const _CommentVoteButton({
+    required this.vote,
+    required this.count,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final Vote vote;
+  final int? count;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final (id, icon, label, selectedColor) = switch (vote) {
+      Vote.up => (
+        'upvote_button',
+        DivineIconName.arrowFatUp,
+        isSelected ? l10n.commentRemoveUpvoteLabel : l10n.commentUpvoteLabel,
+        context.vineColors.accentPositive,
+      ),
+      Vote.down => (
+        'downvote_button',
+        DivineIconName.arrowFatDown,
+        isSelected
+            ? l10n.commentRemoveDownvoteLabel
+            : l10n.commentDownvoteLabel,
+        VineTheme.likeRed,
+      ),
+    };
+    final color = isSelected
+        ? selectedColor
+        : context.vineColors.onSurfaceMuted;
+
+    return Semantics(
+      identifier: id,
+      button: true,
+      label: label,
+      value: count?.toString(),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: ExcludeSemantics(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: 4,
+              children: [
+                DivineIcon(icon: icon, size: 16, color: color),
+                if (count case final value?)
+                  Text(
+                    CountFormatter.formatCompact(
+                      value,
+                      locale: l10n.localeName,
+                    ),
+                    style: VineTheme.labelMediumFont(color: color),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

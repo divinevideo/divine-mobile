@@ -803,10 +803,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_cache_manager
-      sha256: "400b6592f16a4409a7f2bb929a9a7e38c72cceb8ffb99ee57bbf2cb2cecf8386"
+      sha256: a42024cf8bbb7e1f4d2875301660f62543601a4c3b20119ea9a683e4d191d0f4
       url: "https://pub.dev"
     source: hosted
-    version: "3.4.1"
+    version: "3.5.0"
   flutter_driver:
     dependency: transitive
     description: flutter
@@ -1881,18 +1881,18 @@ packages:
     dependency: "direct main"
     description:
       name: pro_image_editor
-      sha256: ed7c3eba5d9cd352b12120418ac6f7904bdac2aa75318e398b0ff083da495419
+      sha256: "94302cc9a78636aa9c5ace54fc5e07592622fce0bd92cb3e488b6b2417a99656"
       url: "https://pub.dev"
     source: hosted
-    version: "14.25.1"
+    version: "14.26.0"
   pro_video_editor:
     dependency: "direct main"
     description:
       name: pro_video_editor
-      sha256: "9804e6b77d7b256d7b52eaf83c16aef567429b06e3383eb352ad225ea05dcf7a"
+      sha256: dc28dcd64373fec541283d63cdbf4a74e664dbb474796b5623fe10314f0cd0da
       url: "https://pub.dev"
     source: hosted
-    version: "2.51.2"
+    version: "2.53.0"
   process:
     dependency: transitive
     description:
@@ -2614,10 +2614,10 @@ packages:
     dependency: "direct main"
     description:
       name: uuid
-      sha256: a11b666489b1954e01d992f3d601b1804a33937b5a8fe677bd26b8a9f96f96e8
+      sha256: "9b129329f58692f6e6578329498a8fe9fbe98f090beb764ffbb8ee2eadd01dcd"
       url: "https://pub.dev"
     source: hosted
-    version: "4.5.2"
+    version: "4.6.0"
   vector_graphics:
     dependency: transitive
     description:

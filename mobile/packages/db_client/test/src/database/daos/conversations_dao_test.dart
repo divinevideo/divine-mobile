@@ -792,6 +792,133 @@ void main() {
       });
     });
 
+    // Read and unread rows in both buckets, and unread rows another owner
+    // holds, for the `unreadOnly` watches (#7923).
+    const unreadOnlyOwner = 'owner';
+
+    Future<void> seedRow(
+      String id, {
+      required bool sent,
+      required bool isRead,
+      String ownerPubkey = unreadOnlyOwner,
+      int timestamp = 1700000100,
+    }) => dao.upsertConversation(
+      id: id,
+      participantPubkeys: '["$ownerPubkey","peer_$id"]',
+      isGroup: false,
+      createdAt: 1700000000,
+      lastMessageTimestamp: timestamp,
+      isRead: isRead,
+      currentUserHasSent: sent,
+      ownerPubkey: ownerPubkey,
+    );
+
+    Future<void> seedReadAndUnreadRows() async {
+      await seedRow('accepted_read', sent: true, isRead: true);
+      await seedRow('accepted_unread', sent: true, isRead: false);
+      await seedRow('request_read', sent: false, isRead: true);
+      await seedRow('request_unread', sent: false, isRead: false);
+      await seedRow(
+        'other_owner_accepted_unread',
+        sent: true,
+        isRead: false,
+        ownerPubkey: 'someone_else',
+      );
+      await seedRow(
+        'other_owner_request_unread',
+        sent: false,
+        isRead: false,
+        ownerPubkey: 'someone_else',
+      );
+    }
+
+    group('watchAcceptedConversations', () {
+      setUp(seedReadAndUnreadRows);
+
+      test('returns every owned row by default', () async {
+        final rows = await dao
+            .watchAcceptedConversations(ownerPubkey: unreadOnlyOwner)
+            .first;
+
+        expect(
+          rows.map((r) => r.id),
+          unorderedEquals(['accepted_read', 'accepted_unread']),
+        );
+      });
+
+      test('returns only unread owned rows with unreadOnly (#7923)', () async {
+        final rows = await dao
+            .watchAcceptedConversations(
+              ownerPubkey: unreadOnlyOwner,
+              unreadOnly: true,
+            )
+            .first;
+
+        expect(rows.map((r) => r.id), equals(['accepted_unread']));
+      });
+
+      test(
+        'with unreadOnly, a row leaves when read and returns on a new message '
+        '(#7923)',
+        () async {
+          final emissions = <List<String>>[];
+          final subscription = dao
+              .watchAcceptedConversations(
+                ownerPubkey: unreadOnlyOwner,
+                unreadOnly: true,
+              )
+              .listen((rows) => emissions.add(rows.map((r) => r.id).toList()));
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
+
+          await dao.markAsRead('accepted_unread', ownerPubkey: unreadOnlyOwner);
+          await pumpEventQueue();
+          await seedRow(
+            'accepted_read',
+            sent: true,
+            isRead: false,
+            timestamp: 1700000200,
+          );
+          await pumpEventQueue();
+
+          expect(
+            emissions,
+            equals([
+              ['accepted_unread'],
+              <String>[],
+              ['accepted_read'],
+            ]),
+          );
+        },
+      );
+    });
+
+    group('watchPotentialRequestConversations', () {
+      setUp(seedReadAndUnreadRows);
+
+      test('returns every owned row by default', () async {
+        final rows = await dao
+            .watchPotentialRequestConversations(ownerPubkey: unreadOnlyOwner)
+            .first;
+
+        expect(
+          rows.map((r) => r.id),
+          unorderedEquals(['request_read', 'request_unread']),
+        );
+      });
+
+      test('returns only unread owned rows with unreadOnly (#7923)', () async {
+        final rows = await dao
+            .watchPotentialRequestConversations(
+              ownerPubkey: unreadOnlyOwner,
+              unreadOnly: true,
+            )
+            .first;
+
+        expect(rows.map((r) => r.id), equals(['request_unread']));
+      });
+    });
+
     group('watchConversation', () {
       test('emits conversation when found', () async {
         await dao.upsertConversation(

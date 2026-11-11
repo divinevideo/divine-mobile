@@ -62,6 +62,10 @@ const double _followTargetOffset = 16;
 /// caption starts rather than reaching into it.
 const double _authorRowBottomGap = _followTargetOffset;
 
+/// Gap between a [VideoOverlayActions.subtitleLayer] caption pill and the
+/// author row below it.
+const double videoOverlaySubtitleGap = 24;
+
 class VideoOverlayPreviewData {
   const VideoOverlayPreviewData({
     required this.pubkey,
@@ -92,6 +96,7 @@ class VideoOverlayActions extends ConsumerWidget {
     this.showTopGradient = false,
     this.topOffset = 8.0,
     this.onInteracted,
+    this.showSoundRowPlaceholder = false,
   }) : previewData = null;
 
   const VideoOverlayActions.preview({
@@ -110,6 +115,7 @@ class VideoOverlayActions extends ConsumerWidget {
     this.showTopGradient = false,
     this.topOffset = 8.0,
     this.onInteracted,
+    this.showSoundRowPlaceholder = false,
   }) : video = null;
 
   final Widget? subtitleLayer;
@@ -145,6 +151,13 @@ class VideoOverlayActions extends ConsumerWidget {
   final bool showTopGradient;
 
   final VoidCallback? onInteracted;
+
+  /// Whether to show [AudioAttributionPlaceholder] when the video has no sound
+  /// row of its own.
+  ///
+  /// For previews of a video whose sound is only settled when it is
+  /// published, such as the editor's feed preview.
+  final bool showSoundRowPlaceholder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -327,12 +340,18 @@ class VideoOverlayActions extends ConsumerWidget {
           onInteracted: onInteracted,
         ),
       ],
-      // The row renders nothing without an audio reference or a sound
-      // credit line, so the gap above it is gated on the same check.
+      // Keep the gap in sync with the row's shared, credited, and classic
+      // original-sound branches.
       if (video != null &&
-          (video.hasAudioReference || video.soundCredits.isNotEmpty)) ...[
+          (video.hasAudioReference ||
+              video.soundCredits.isNotEmpty ||
+              video.isVerifiedArchive ||
+              video.isOriginalVine)) ...[
         const SizedBox(height: 4),
         AudioAttributionRow(video: video),
+      ] else if (showSoundRowPlaceholder) ...[
+        const SizedBox(height: 4),
+        const AudioAttributionPlaceholder(),
       ],
     ];
 

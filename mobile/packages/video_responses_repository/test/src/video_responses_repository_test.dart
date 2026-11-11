@@ -114,6 +114,23 @@ Event _curationEvent({
   createdAt: createdAt,
 )..sign(pubkey == _viewer ? _hex(2) : _hex(1));
 
+/// The creator's list of the accounts whose replies they hide on all their
+/// videos.
+Event _hiddenAuthorsEvent({
+  required int createdAt,
+  required List<String> authors,
+  String? pubkey,
+  int kind = RepliesCuration.kind,
+}) => _curationEvent(
+  createdAt: createdAt,
+  pubkey: pubkey,
+  kind: kind,
+  sourceTags: [
+    ['d', RepliesCuration.hiddenAuthorsDTag],
+    for (final author in authors) ['p', author],
+  ],
+);
+
 Event _ineligibleCuration(String reason, int createdAt) {
   final event = _curationEvent(
     createdAt: createdAt,
@@ -904,7 +921,13 @@ void main() {
                     as List<Filter>)
                 .single;
         expect(filter.authors, equals([_creator]));
-        expect(filter.d, equals(['divine:replies:$_rootAddress']));
+        expect(
+          filter.d,
+          equals([
+            'divine:replies:$_rootAddress',
+            'divine:hidden-commenters',
+          ]),
+        );
       });
 
       test('reads none when the creator curated nothing', () async {
@@ -968,6 +991,76 @@ void main() {
             videoAddress: _rootAddress,
           ),
           equals(RepliesCuration(hiddenIds: {_hex(201)})),
+        );
+      });
+
+      test(
+        'reads the accounts the creator hides on all their videos',
+        () async {
+          final blocked = _hex(301);
+          curationAnswers([
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(201), '', 'hidden'],
+              ],
+            ),
+            _hiddenAuthorsEvent(createdAt: 900, authors: [_hex(302)]),
+            _hiddenAuthorsEvent(createdAt: 2000, authors: [blocked]),
+            // Someone else cannot hide accounts on the creator's videos.
+            _hiddenAuthorsEvent(
+              createdAt: 3000,
+              authors: [_hex(303)],
+              pubkey: _viewer,
+            ),
+          ]);
+
+          expect(
+            await repository().fetchCuration(
+              creatorPubkey: _creator,
+              videoAddress: _rootAddress,
+            ),
+            RepliesCuration(hiddenIds: {_hex(201)}, hiddenAuthors: {blocked}),
+          );
+        },
+      );
+
+      test('keeps the hidden accounts when a later read finds an older '
+          'list', () async {
+        final responses = repository();
+        curationAnswers([
+          _hiddenAuthorsEvent(createdAt: 2000, authors: [_hex(301)]),
+        ]);
+        await responses.fetchCuration(
+          creatorPubkey: _creator,
+          videoAddress: _rootAddress,
+        );
+        curationAnswers([
+          _hiddenAuthorsEvent(createdAt: 1000, authors: [_hex(302)]),
+        ]);
+
+        expect(
+          (await responses.fetchCuration(
+            creatorPubkey: _creator,
+            videoAddress: _rootAddress,
+          )).hiddenAuthors,
+          equals({_hex(301)}),
+        );
+      });
+
+      test('fails when the read timed out with only the hidden '
+          'accounts', () async {
+        curationAnswers([
+          _hiddenAuthorsEvent(createdAt: 1000, authors: [_hex(301)]),
+        ], timedOut: true);
+
+        // Read as "nothing curated", the video's hidden replies would show.
+        await expectLater(
+          repository().fetchCuration(
+            creatorPubkey: _creator,
+            videoAddress: _rootAddress,
+          ),
+          throwsA(isA<RepliesCurationUnavailableException>()),
         );
       });
     });
@@ -2002,6 +2095,163 @@ void main() {
         expect(reconciled, RepliesCuration(hiddenIds: {_hex(202), _hex(203)}));
       });
 
+      test('showing the reply of a blocked author marks it restored over a '
+          'remote hide', () async {
+        final key = '34236:$_viewer:reply-201';
+        curationAnswers([
+          _curationEvent(
+            createdAt: 1000,
+            tags: [
+              ['a', key, '', 'hidden'],
+              ['e', _hex(202), '', 'restored'],
+            ],
+          ),
+        ]);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        final previous = RepliesCuration(hiddenAuthors: {_viewer});
+
+        final reconciled = await repository().saveCuration(
+          previous.shown(key, restoredEventId: _hex(201)),
+          videoAddress: _rootAddress,
+          previous: previous,
+        );
+
+        // The restore names the version shown, so it wins over the hide of
+        // the address only until the reply is replaced.
+        expect(
+          reconciled,
+          RepliesCuration(
+            hiddenIds: {key},
+            restoredIds: {_hex(201), _hex(202)},
+            hiddenAuthors: {_viewer},
+          ),
+        );
+        expect(signed.single.tags, [
+          ['d', RepliesCuration.dTagFor(_rootAddress)],
+          ['a', _rootAddress],
+          ['a', key, '', 'hidden'],
+          ['e', _hex(202), '', 'restored'],
+          ['e', _hex(201), '', 'restored'],
+        ]);
+      });
+
+      test('builds on what the comment writer sharing its store just '
+          'published', () async {
+        // The comments sheet hid a comment; the relay does not serve it back
+        // yet.
+        final shared = LatestAddressableEvents()
+          ..remember(
+            _curationEvent(
+              createdAt: NostrTimestamp.now(driftTolerance: 0),
+              tags: [
+                ['a', _rootAddress],
+                ['e', _hex(401), '', 'hidden'],
+              ],
+            ),
+          );
+        curationAnswers([_curationEvent(createdAt: 1000)]);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        final responses = VideoResponsesRepository(
+          nostrClient: nostrClient,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                signed.add((
+                  kind: kind,
+                  content: content,
+                  tags: tags,
+                  createdAt: createdAt,
+                ));
+                return signedEvent;
+              },
+          latestEvents: shared,
+        );
+        const previous = RepliesCuration();
+
+        await responses.saveCuration(
+          previous.hidden(_hex(202)),
+          videoAddress: _rootAddress,
+          previous: previous,
+        );
+
+        expect(signed.single.tags, [
+          ['d', RepliesCuration.dTagFor(_rootAddress)],
+          ['a', _rootAddress],
+          ['e', _hex(401), '', 'hidden'],
+          ['e', _hex(202), '', 'hidden'],
+        ]);
+      });
+
+      test('hiding a reply takes back a remote restored mark', () async {
+        curationAnswers([
+          _curationEvent(
+            createdAt: 1000,
+            tags: [
+              ['e', _hex(201), '', 'restored'],
+            ],
+          ),
+        ]);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        const previous = RepliesCuration();
+
+        final reconciled = await repository().saveCuration(
+          previous.hidden(_hex(201)),
+          videoAddress: _rootAddress,
+          previous: previous,
+        );
+
+        expect(reconciled, RepliesCuration(hiddenIds: {_hex(201)}));
+        expect(signed.single.tags, [
+          ['d', RepliesCuration.dTagFor(_rootAddress)],
+          ['a', _rootAddress],
+          ['e', _hex(201), '', 'hidden'],
+        ]);
+      });
+
+      test(
+        'hiding an addressable reply takes back a remote restore of its '
+        'version',
+        () async {
+          final address = '34236:${_hex(3)}:reply-d';
+          curationAnswers([
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(202), '', 'restored'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+          const previous = RepliesCuration();
+
+          final reconciled = await repository().saveCuration(
+            previous.hidden(address, eventId: _hex(202)),
+            videoAddress: _rootAddress,
+            previous: previous,
+            takenBackRestores: {_hex(202)},
+          );
+
+          expect(reconciled.restoredIds, isEmpty);
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['a', _rootAddress],
+            ['a', address, '', 'hidden'],
+          ]);
+        },
+      );
+
       group('queued saves', () {
         late VideoResponsesRepository responses;
 
@@ -2296,6 +2546,182 @@ void main() {
           ['e', _hex(202), '', 'hidden'],
         ]),
       );
+    });
+
+    test('reads restored marks, and shows a reply marked both ways', () {
+      final address = '34236:$_viewer:reply-201';
+      expect(
+        RepliesCuration.fromEvent(
+          _curationEvent(
+            createdAt: 1,
+            tags: [
+              ['a', address, '', 'restored'],
+              ['e', _hex(202), '', 'hidden'],
+              ['e', _hex(202), '', 'restored'],
+              ['e', _hex(203), '', 'hidden'],
+            ],
+          ),
+        ),
+        equals(
+          RepliesCuration(
+            hiddenIds: {_hex(203)},
+            restoredIds: {address, _hex(202)},
+          ),
+        ),
+      );
+    });
+
+    test('leaves out the replies of hidden authors it did not show '
+        'again', () {
+      final blocked = VideoEvent.fromNostrEvent(_reply(201, createdAt: 900));
+      final restored = VideoEvent.fromNostrEvent(_reply(202, createdAt: 800));
+      final other = VideoEvent.fromNostrEvent(
+        _video(id: 203, createdAt: 700, pubkey: _hex(5)),
+      );
+      final curation = RepliesCuration(
+        restoredIds: {restored.id},
+        hiddenAuthors: {_viewer},
+      );
+
+      expect(curation.hides(blocked), isTrue);
+      expect(curation.hides(restored), isFalse);
+      expect(
+        curation.apply([blocked, restored, other]).map((v) => v.id),
+        equals([_hex(202), _hex(203)]),
+      );
+      // Hiding one hides it whoever posted it.
+      expect(curation.hidden(_hex(203)).hides(other), isTrue);
+    });
+
+    test('hides again a shown reply its author replaced', () {
+      final shownVersion = VideoEvent.fromNostrEvent(
+        _video(id: 201, createdAt: 900, dTag: 'reply-201'),
+      );
+      final replacement = VideoEvent.fromNostrEvent(
+        _video(id: 301, createdAt: 1200, dTag: 'reply-201'),
+      );
+      final curation =
+          RepliesCuration(
+            hiddenAuthors: {_viewer},
+          ).shown(
+            RepliesCuration.keyOf(shownVersion),
+            restoredEventId: shownVersion.id,
+          );
+
+      expect(curation.hides(shownVersion), isFalse);
+      expect(curation.hides(replacement), isTrue);
+    });
+
+    test('hides and shows a reply of a hidden author', () {
+      final curation = RepliesCuration(
+        pinnedId: _hex(201),
+        hiddenAuthors: {_viewer},
+      );
+
+      final address = '34236:$_viewer:reply-202';
+      final shown = curation.shown(address, restoredEventId: _hex(202));
+      expect(shown.restoredIds, equals({_hex(202)}));
+      expect(shown.hiddenAuthors, equals({_viewer}));
+      final hidden = shown.hidden(address, eventId: _hex(202));
+      expect(hidden.restoredIds, isEmpty);
+      expect(hidden.hiddenIds, equals({address}));
+      expect(hidden.shown(address).restoredIds, isEmpty);
+      expect(hidden.pinned(address).hiddenAuthors, equals({_viewer}));
+      expect(hidden.pinned(address).restoredIds, isEmpty);
+      // Pinning shows the reply, also one whose author is hidden.
+      final pinned = curation.pinned(_hex(203), restoredEventId: _hex(203));
+      expect(pinned.pinnedId, equals(_hex(203)));
+      expect(pinned.restoredIds, equals({_hex(203)}));
+      expect(pinned.pinned(null).restoredIds, {_hex(203)});
+      expect(
+        const RepliesCuration().withHiddenAuthors({_viewer}).hiddenAuthors,
+        equals({_viewer}),
+      );
+    });
+
+    test('reads the accounts only from a hidden-authors list', () {
+      expect(
+        RepliesCuration.hiddenAuthorsIn(
+          _hiddenAuthorsEvent(createdAt: 1, authors: [_hex(301)], kind: 1),
+        ),
+        isEmpty,
+      );
+      expect(
+        RepliesCuration.hiddenAuthorsIn(
+          _curationEvent(
+            createdAt: 1,
+            tags: [
+              ['p', _hex(301)],
+            ],
+          ),
+        ),
+        isEmpty,
+      );
+      expect(
+        RepliesCuration.hiddenAuthorsIn(
+          _hiddenAuthorsEvent(
+            createdAt: 1,
+            authors: [_hex(301), _creator, _hex(302).toUpperCase(), 'nope'],
+          ),
+        ),
+        equals({_hex(301)}),
+      );
+    });
+
+    test('publishes restored marks and never the hidden authors', () {
+      final curation = RepliesCuration(
+        restoredIds: {_hex(201)},
+        hiddenAuthors: {_viewer},
+      );
+
+      expect(curation.toTags(_rootAddress), [
+        ['d', 'divine:replies:$_rootAddress'],
+        ['a', _rootAddress],
+        ['e', _hex(201), '', 'restored'],
+      ]);
+      expect(
+        curation.toTags(
+          _rootAddress,
+          sourceTags: [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['e', _hex(201), 'wss://relay.example', 'restored'],
+            ['e', _hex(202), '', 'restored'],
+          ],
+        ),
+        [
+          ['d', 'divine:replies:$_rootAddress'],
+          ['a', _rootAddress],
+          ['e', _hex(201), 'wss://relay.example', 'restored'],
+        ],
+      );
+    });
+
+    group('a Kind 34235 video (#10776)', () {
+      VideoEvent normalReply() => VideoEvent.fromNostrEvent(
+        _video(id: 401, createdAt: 900, dTag: 'reply-401', kind: 34235),
+        permissive: true,
+      );
+
+      test('names a reply by the 34236 key marks were saved under', () {
+        expect(
+          RepliesCuration.keyOf(normalReply()),
+          equals('34236:$_viewer:reply-401'),
+        );
+      });
+
+      test('keeps a reply hidden under the key saved before', () {
+        final curation = RepliesCuration(
+          hiddenIds: {'34236:$_viewer:reply-401'},
+        );
+        expect(curation.apply([normalReply()]), isEmpty);
+      });
+
+      test('files the curation of the video under its 34236 d tag', () {
+        expect(
+          RepliesCuration.dTagFor('34235:$_creator:root-d'),
+          equals(RepliesCuration.dTagFor(_rootAddress)),
+        );
+      });
     });
   });
 }

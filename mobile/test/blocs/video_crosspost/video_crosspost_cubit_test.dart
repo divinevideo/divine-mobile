@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
+import 'package:openvine/repositories/crossposting_repository.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
 
 class _MockCrosspostingApiClient extends Mock
@@ -53,7 +54,7 @@ void main() {
       Duration pollTimeout = const Duration(milliseconds: 100),
     }) {
       return VideoCrosspostCubit(
-        client: client,
+        repository: CrosspostingRepository(client),
         eventId: eventId,
         initialConnections: initialConnections,
         pollInterval: pollInterval,
@@ -159,6 +160,134 @@ void main() {
     });
 
     group('submit', () {
+      test('waits for a newly published video to become available', () {
+        fakeAsync((async) {
+          var attempts = 0;
+          when(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+          ).thenAnswer((_) async {
+            if (attempts++ == 0) {
+              throw const CrosspostingApiException(
+                'video event not found',
+                statusCode: 404,
+                code: 'not_found',
+              );
+            }
+            return [postedJob];
+          });
+          final cubit = buildCubit(initialConnections: [instagramConnection]);
+          unawaited(cubit.submit());
+          async.flushMicrotasks();
+
+          expect(cubit.state.status, VideoCrosspostStatus.submitting);
+          async.elapse(const Duration(seconds: 2));
+          async.flushMicrotasks();
+
+          expect(cubit.state.status, VideoCrosspostStatus.finished);
+          expect(
+            cubit.state.jobs.single.externalPostUrl,
+            postedJob.externalPostUrl,
+          );
+          expect(attempts, 2);
+          unawaited(cubit.close());
+          async.flushMicrotasks();
+          expect(async.pendingTimers, isEmpty);
+        });
+      });
+
+      test('closing the sheet cancels source retries', () {
+        fakeAsync((async) {
+          when(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+          ).thenThrow(
+            const CrosspostingApiException(
+              'video event not found',
+              statusCode: 404,
+              code: 'not_found',
+            ),
+          );
+          final cubit = buildCubit(initialConnections: [instagramConnection]);
+          unawaited(cubit.submit());
+          async.flushMicrotasks();
+          expect(cubit.state.status, VideoCrosspostStatus.submitting);
+
+          unawaited(cubit.close());
+          async.flushMicrotasks();
+          expect(async.pendingTimers, isEmpty);
+          async.elapse(const Duration(minutes: 1));
+          verify(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+          ).called(1);
+        });
+      });
+
+      test('source retries end when the video remains unavailable', () {
+        fakeAsync((async) {
+          when(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+          ).thenThrow(
+            const CrosspostingApiException(
+              'video event not found',
+              statusCode: 404,
+              code: 'not_found',
+            ),
+          );
+          final cubit = buildCubit(initialConnections: [instagramConnection]);
+          unawaited(cubit.submit());
+          async.flushMicrotasks();
+          async.elapse(const Duration(minutes: 1));
+          async.flushMicrotasks();
+
+          expect(cubit.state.status, VideoCrosspostStatus.submitFailed);
+          expect(async.pendingTimers, isEmpty);
+          unawaited(cubit.close());
+          async.flushMicrotasks();
+        });
+      });
+
+      test('a second tap cannot start another submission while waiting', () {
+        fakeAsync((async) {
+          final response = Completer<List<CrosspostJob>>();
+          when(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+          ).thenAnswer((_) => response.future);
+          final cubit = buildCubit(initialConnections: [instagramConnection]);
+          unawaited(cubit.submit());
+          unawaited(cubit.submit());
+          async.flushMicrotasks();
+          verify(
+            () => client.createCrossposts(
+              eventId: eventId,
+              platforms: ['instagram'],
+            ),
+          ).called(1);
+          response.complete([postedJob]);
+          async.flushMicrotasks();
+          expect(
+            cubit.state.jobs.single.externalPostUrl,
+            postedJob.externalPostUrl,
+          );
+          unawaited(cubit.close());
+          async.flushMicrotasks();
+          expect(async.pendingTimers, isEmpty);
+        });
+      });
+
       test('emits finished immediately when jobs come back '
           'terminal', () async {
         when(

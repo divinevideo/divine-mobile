@@ -15,15 +15,17 @@ String _hex(int n) => n.toRadixString(16).padLeft(64, '0');
 
 final String _creator = _hex(1);
 
-VideoEvent _video(int id, {String? pubkey, String? dTag}) => VideoEvent(
-  id: _hex(id),
-  pubkey: pubkey ?? _hex(1000 + id),
-  createdAt: 1000 - id,
-  content: '',
-  timestamp: DateTime.fromMillisecondsSinceEpoch(0),
-  vineId: dTag,
-  addressableDTag: dTag,
-);
+VideoEvent _video(int id, {String? pubkey, String? dTag, int? eventKind}) =>
+    VideoEvent(
+      id: _hex(id),
+      pubkey: pubkey ?? _hex(1000 + id),
+      createdAt: 1000 - id,
+      content: '',
+      timestamp: DateTime.fromMillisecondsSinceEpoch(0),
+      vineId: dTag,
+      addressableDTag: dTag,
+      eventKind: eventKind,
+    );
 
 VideoStickerRegion _region(VideoStickerKind kind, {String target = ''}) =>
     VideoStickerRegion(
@@ -108,6 +110,57 @@ void main() {
             limit: StickerResponsesCubit.feedLimit,
           ),
         ).called(1),
+      );
+
+      blocTest<StickerResponsesCubit, StickerResponsesState>(
+        'leaves out the replies of the accounts the creator blocked, but '
+        'one they showed again, and counts them out',
+        setUp: () {
+          when(
+            () => repository.fetchReplies(
+              videoId: any(named: 'videoId'),
+              videoAddress: any(named: 'videoAddress'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer(
+            (_) async => VideoResponses(
+              total: 5,
+              videos: [
+                _video(1),
+                _video(2),
+                _video(3, pubkey: _hex(1002)),
+              ],
+            ),
+          );
+          when(
+            () => repository.fetchCuration(
+              creatorPubkey: _creator,
+              videoAddress: rootAddress,
+            ),
+          ).thenAnswer(
+            (_) async => RepliesCuration(
+              restoredIds: {_hex(3)},
+              hiddenAuthors: {_hex(1002)},
+            ),
+          );
+        },
+        build: () => build(_region(VideoStickerKind.replies)),
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        expect: () => [
+          StickerResponsesState(
+            status: StickerResponsesStatus.loaded,
+            total: 4,
+            videos: [
+              _video(1),
+              _video(3, pubkey: _hex(1002)),
+            ],
+            curation: RepliesCuration(
+              restoredIds: {_hex(3)},
+              hiddenAuthors: {_hex(1002)},
+            ),
+          ),
+        ],
       );
 
       group('with a pin older than the replies read', () {
@@ -290,6 +343,44 @@ void main() {
             videoAddress: any(named: 'videoAddress'),
           ),
         ),
+      );
+
+      blocTest<StickerResponsesCubit, StickerResponsesState>(
+        'reads and joins the chain of a Kind 34235 video under the 34236 key '
+        'answers already cite (#10776)',
+        setUp: () =>
+            when(
+              () => repository.fetchJoined(
+                chainRoot: any(named: 'chainRoot'),
+                hashtag: any(named: 'hashtag'),
+                limit: any(named: 'limit'),
+                filter: any(named: 'filter'),
+              ),
+            ).thenAnswer(
+              (_) async => VideoResponses(total: 1, videos: [_video(5)]),
+            ),
+        build: () => build(
+          _region(VideoStickerKind.prompt),
+          on: _video(100, pubkey: _creator, dTag: 'normal-d', eventKind: 34235),
+        ),
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        expect: () => [
+          StickerResponsesState(
+            status: StickerResponsesStatus.loaded,
+            total: 1,
+            videos: [_video(5)],
+            chainRoot: '34236:$_creator:normal-d',
+          ),
+        ],
+        verify: (_) => verify(
+          () => repository.fetchJoined(
+            chainRoot: '34236:$_creator:normal-d',
+            hashtag: 'desksetup',
+            limit: StickerResponsesCubit.feedLimit,
+            filter: any(named: 'filter'),
+          ),
+        ).called(1),
       );
 
       blocTest<StickerResponsesCubit, StickerResponsesState>(

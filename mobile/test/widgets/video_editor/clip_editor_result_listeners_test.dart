@@ -12,12 +12,14 @@ import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bl
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/video_editor/clip_editor_result_listeners.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ChromaKey, EditorVideo;
 
 class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
     implements ClipEditorBloc {}
@@ -147,6 +149,55 @@ void main() {
 
         expect(find.byType(SnackBar), findsNothing);
       });
+    });
+
+    testWidgets('a key taken off the clip plays live on its layer', (
+      tester,
+    ) async {
+      const key = ClipChromaKey(key: ChromaKey.greenScreen());
+      final unkeyed = _clip('b').copyWith(
+        video: EditorVideo.file('/documents/b_unkeyed.mp4'),
+      );
+      whenListen(
+        clipBloc,
+        Stream.value(
+          ClipEditorState(
+            clips: [_clip('a')],
+            lastDetachResult: ClipDetachSuccess(
+              previousClips: [_clip('a'), _clip('b')],
+              detachedClip: unkeyed,
+              bakedChromaKey: const DetachedClipBakedChromaKey(
+                videoPath: '/documents/b.mp4',
+                sourcePath: '/documents/b_unkeyed.mp4',
+                chromaKey: key,
+              ),
+            ),
+          ),
+        ),
+        initialState: const ClipEditorState(),
+      );
+
+      await tester.pumpWidget(build());
+      await tester.pump();
+
+      final layer =
+          verify(
+                () => editor.addHistory(
+                  newLayer: captureAny(named: 'newLayer'),
+                  meta: any(named: 'meta'),
+                ),
+              ).captured.single
+              as Layer;
+      final data = DetachedClipLayerData.fromMeta(
+        DetachedClipLayerData.metaOf(layer),
+        '/documents',
+      )!;
+      // The layer plays the footage the key came off and applies it live, so
+      // the removed area shows the track underneath.
+      expect(data.clip.video?.file?.path, '/documents/b_unkeyed.mp4');
+      expect(data.chromaKey, key);
+      // And keeps the baked file for putting the clip back.
+      expect(data.bakedChromaKey?.videoPath, '/documents/b.mp4');
     });
 
     testWidgets('a detach records the placeholder that took the slot', (

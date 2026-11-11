@@ -1244,6 +1244,7 @@
     "description": "Empty-state message on the reposters list screen when no one has reposted the video yet."
   },
   "videoEngagementLoadFailed": "ఆ జాబితాను లోడ్ చేయడం సాధ్యపడలేదు",
+  "videoEngagementListIncomplete": "అందరినీ లోడ్ చేయడం సాధ్యపడలేదు",
   "@videoEngagementLoadFailed": {
     "description": "Error-state heading on the engagement list screen when the relay query fails."
   },
@@ -2907,6 +2908,11 @@
   },
   "reportWhyReporting": "మీరు ఈ కంటెంట్‌ను ఎందుకు నివేదిస్తున్నారు?",
   "reportPolicyNotice": "Divine కంటెంట్‌ని తీసివేసి, ఆక్షేపణీయ కంటెంట్‌ని అందించిన వినియోగదారుని ఎజెక్ట్ చేయడం ద్వారా 24 గంటలలోపు కంటెంట్ నివేదికలపై పని చేస్తుంది.",
+  "reportPrivateNotice": "ఈ నివేదిక ప్రైవేట్‌గా Divine మోడరేషన్ బృందానికి వెళ్తుంది. ఇది పబ్లిక్‌గా పోస్ట్ చేయబడదు.",
+  "reportIncludeMessageTitle": "ఈ సందేశాన్ని చేర్చండి",
+  "reportIncludeMessageDescription": "Divine మోడరేషన్ బృందం దీన్ని చూస్తుంది. ఇది ప్రైవేట్‌గా ఉంటుంది, పబ్లిక్‌గా పోస్ట్ చేయబడదు.",
+  "reportMessageTooLong": "ఈ సందేశం చేర్చడానికి చాలా పొడవుగా ఉంది. “{optionTitle}” ఎంపికను తీసివేసి, మళ్లీ ప్రయత్నించండి.",
+  "reportDetailsTooLong": "మీ వివరాలు పంపడానికి చాలా పొడవుగా ఉన్నాయి. వాటిని కుదించి, మళ్లీ ప్రయత్నించండి.",
   "reportBlockUser": "ఈ వినియోగదారుని బ్లాక్ చేయండి",
   "reportCancel": "రద్దు",
   "reportSubmit": "నివేదిక",
@@ -3695,10 +3701,6 @@
         "type": "String"
       }
     }
-  },
-  "dmReactionChipFailedA11yLabel": "ప్రతిచర్య విఫలమైంది, మళ్లీ ప్రయత్నించడానికి రెండుసార్లు నొక్కండి",
-  "@dmReactionChipFailedA11yLabel": {
-    "description": "Screen-reader label for a reaction chip whose publish failed."
   },
   "dmReactionChipUnconfirmedA11yLabel": "మీ {emoji} ప్రతిచర్యను పంపడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించడానికి రెండుసార్లు నొక్కండి",
   "dmReactionChipRetryAnnouncement": "ప్రతిచర్యను మళ్లీ ప్రయత్నిస్తోంది",
@@ -5234,22 +5236,30 @@
   "@commentsVideoReplyPendingSemanticLabel": {
     "description": "Screen-reader label for the pending video-reply row in the comments sheet."
   },
-  "commentsSortNew": "కొత్తది",
-  "@commentsSortNew": {
+  "commentsSortRecent": "ఇటీవలిది",
+  "@commentsSortRecent": {
     "description": "Comments-sort toggle label for newest-first order."
   },
   "commentsSortTop": "టాప్",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
-  },
-  "commentsSortOld": "పాతది",
-  "@commentsSortOld": {
-    "description": "Comments-sort toggle label for oldest-first order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortSemanticLabel": "వ్యాఖ్యల క్రమబద్ధీకరణ",
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
+  "commentsHiddenToggleSemanticLabel": "దాచిన వ్యాఖ్యలను చూపించండి",
+  "commentsHiddenNotice": "సృష్టికర్త ఈ వ్యాఖ్యలను ఉద్దేశపూర్వకంగా దాచారు.",
+  "commentsHiddenNoticeOwner": "మీరు ఈ వ్యాఖ్యలను Divineలో దాచారు. ఇతర యాప్‌లు, సైట్‌లు వాటిని ఇంకా చూపించవచ్చు, కాబట్టి హానికరమైనదేదైనా నివేదించండి.",
+  "commentHiddenReportPrompt": "ఈ వ్యాఖ్యను కూడా నివేదించాలనుకుంటున్నారా?",
+  "commentHiddenReportAction": "నివేదించు",
+  "commentHiddenByCreator": "సృష్టికర్త దాచారు",
+  "commentHiddenByYou": "మీరు దాచారు",
+  "commentOptionsHideLabel": "వ్యాఖ్యను దాచండి",
+  "commentOptionsHideSemanticLabel": "మీ వీడియోలో ఈ వ్యాఖ్యను దాచండి",
+  "commentOptionsShowLabel": "వ్యాఖ్యను చూపించండి",
+  "commentOptionsShowSemanticLabel": "మీ వీడియోలో ఈ వ్యాఖ్యను మళ్లీ చూపించండి",
+  "commentsErrorModerationFailed": "దాచిన వ్యాఖ్యలను అప్‌డేట్ చేయడం విఫలమైంది. మళ్లీ ప్రయత్నించండి.",
   "commentReply": "ప్రత్యుత్తరం ఇవ్వండి",
   "@commentReply": {
     "description": "Button label under a comment that opens the reply composer."
@@ -6143,6 +6153,9 @@
   "videoEditorSpeedPresetSemanticLabel": "వేగం {speed}×",
   "videoEditorSpeedModeConstant": "స్థిరం",
   "videoEditorSpeedModeCurve": "వక్రం",
+  "videoEditorSpeedSmoothTitle": "మృదువైన స్లో-మో",
+  "videoEditorSpeedSmoothDescription": "స్లో మోషన్ సాఫీగా సాగేలా ఫ్రేమ్‌లను కలుపుతుంది. వేగవంతమైన కదలికలు నీడలను వదలవచ్చు.",
+  "videoEditorSpeedSmoothUnavailable": "క్లిప్‌ను 1× కంటే నెమ్మదిగా చేసినప్పుడు ఇది పనిచేస్తుంది.",
   "videoEditorSpeedCurveCustom": "అనుకూలం",
   "videoEditorSpeedCurveMontage": "మాంటేజ్",
   "videoEditorSpeedCurveHero": "హీరో",
@@ -6364,6 +6377,7 @@
   "videoEditorLayerAnimationBounce": "ఎగరడం",
   "videoEditorLayerAnimationTypewriter": "టైప్‌రైటర్",
   "videoEditorLayerAnimationWordByWord": "పదం పదంగా",
+  "videoEditorLayerAnimationDrawOn": "గీత గీతగా",
   "videoEditorLayerAnimationPulse": "పల్స్",
   "videoEditorLayerAnimationPulseTo": "ఇంతవరకు కుదించు",
   "videoEditorLayerAnimationWiggleAngle": "వంపు",
@@ -6680,6 +6694,9 @@
   "videoEditorCloseColorPickerSemanticLabel": "రంగు ఎంపికను మూసివేయండి",
   "videoEditorPickColorTitle": "రంగును ఎంచుకోండి",
   "videoEditorConfirmColorSemanticLabel": "రంగును నిర్ధారించండి",
+  "videoEditorEyedropperSemanticLabel": "వీడియో నుండి రంగును ఎంచుకోండి",
+  "videoEditorEyedropperHint": "రంగును ఎంచుకోవడానికి తాకి లాగండి",
+  "videoEditorEyedropperCancelSemanticLabel": "రంగు ఎంపికను ఆపండి",
   "videoEditorSaturationBrightnessSemanticLabel": "సంతృప్తత మరియు ప్రకాశం",
   "videoEditorSaturationBrightnessValue": "సంతృప్తత {saturation}%, ప్రకాశం {brightness}%",
   "@videoEditorSaturationBrightnessValue": {
@@ -9243,5 +9260,9 @@
   "creatorHighlightAnalytics": "మీ గణాంకాలను చూడండి",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "minorAccountReviewVideoSubmittedBody": "మీ వీడియో సమీక్ష కోసం సమర్పించబడింది.",
+  "minorAccountReviewVideoSubmittedTitle": "వీడియో సమర్పించబడింది",
+  "minorAccountReviewRecordConsentPrivacyBody": "మీ వీడియో సమీక్ష కోసం Divine మద్దతు మరియు నమ్మకం, భద్రత బృందాలకు ప్రైవేట్‌గా పంపబడుతుంది. ఇది ప్రచురించబడదు లేదా ఇతర వినియోగదారులతో పంచుకోబడదు.",
+  "minorAccountReviewRecordConsentRejected": "మీ సమర్పణ అంగీకరించబడలేదు. మీ ఇమెయిల్ చిరునామాను తనిఖీ చేయండి, వీడియోను మళ్లీ రికార్డ్ చేయండి లేదా ఇమెయిల్ ఉపయోగించండి."
 }

@@ -13,6 +13,7 @@ import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_emoji.da
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_format.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/rec_timer_painter.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/sticker_text_scope.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 
 /// An info sticker as it shows on the video.
@@ -29,37 +30,39 @@ class InfoStickerView extends StatelessWidget {
     return Semantics(
       label: InfoStickerFormat.semanticLabel(data),
       excludeSemantics: true,
-      // The headless draft rasterizer mounts the sticker without a Material
-      // above it, whose fallback text style underlines everything in yellow.
-      child: DefaultTextStyle(
-        style: VineTheme.bodyMediumFont(color: VineTheme.whiteText),
-        child: switch (data.style) {
-          _ when data.kind == InfoStickerKind.recTimer => _RecTimer(
-            style: data.style,
-          ),
-          InfoStickerStyle.analog => _AnalogClock(time: data.dateTime),
-          InfoStickerStyle.digital => _DigitalClock(
-            text: InfoStickerFormat.text(data),
-          ),
-          InfoStickerStyle.film => _FilmStamp(
-            text: InfoStickerFormat.text(data),
-          ),
-          InfoStickerStyle.camcorder => _Camcorder(
-            text: InfoStickerFormat.upperCase(
-              data,
-              InfoStickerFormat.text(data),
+      child: StickerTextScope(
+        // The headless draft rasterizer mounts the sticker without a Material
+        // above it, whose fallback text style underlines everything in yellow.
+        child: DefaultTextStyle(
+          style: VineTheme.bodyMediumFont(color: VineTheme.whiteText),
+          child: switch (data.style) {
+            _ when data.kind == InfoStickerKind.recTimer => _RecTimer(
+              style: data.style,
             ),
-          ),
-          _ => Builder(
-            builder: (context) {
-              final palette = StickerPillPalette.of(data.style);
-              return StickerPill(
-                palette: palette,
-                child: _LineContent(data: data, palette: palette),
-              );
-            },
-          ),
-        },
+            InfoStickerStyle.analog => _AnalogClock(time: data.dateTime),
+            InfoStickerStyle.digital => _DigitalClock(
+              text: InfoStickerFormat.text(data),
+            ),
+            InfoStickerStyle.film => _FilmStamp(
+              text: InfoStickerFormat.text(data),
+            ),
+            InfoStickerStyle.camcorder => _Camcorder(
+              text: InfoStickerFormat.upperCase(
+                data,
+                InfoStickerFormat.text(data),
+              ),
+            ),
+            _ => Builder(
+              builder: (context) {
+                final palette = StickerPillPalette.of(data.style);
+                return StickerPill(
+                  palette: palette,
+                  child: _LineContent(data: data, palette: palette),
+                );
+              },
+            ),
+          },
+        ),
       ),
     );
   }

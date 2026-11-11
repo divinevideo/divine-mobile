@@ -306,8 +306,25 @@ void main() {
       });
     }
 
-    test('current schema version is 32', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 32);
+    test('current schema version is 33', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 33);
+    });
+
+    test('v32 cached events survive without a verification record', () async {
+      final schema = await verifier.schemaAt(32);
+      final id = 'a' * 64;
+      schema.rawDatabase.execute(
+        'INSERT INTO event (id, pubkey, created_at, kind, tags, content, sig, '
+        'expire_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, 'b' * 64, 100, 1, '[]', 'cached', 'c' * 128, 4102444800],
+      );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+
+      await verifier.migrateAndValidate(db, 33);
+
+      expect(await db.nostrEventsDao.getEventCount(), 1);
+      expect(await db.nostrEventsDao.getRecentVerifiedEventIdSigs(), isEmpty);
     });
 
     test(

@@ -2,6 +2,7 @@
 // ABOUTME: states, and editing interactions using a mocked cubit.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +30,9 @@ import 'package:openvine/widgets/subtitle_editor/subtitle_editor_stage.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 import '../../helpers/go_router.dart';
+import '../../helpers/scroll.dart';
 import '../../helpers/test_helpers.dart';
+import '../../helpers/text_lines.dart';
 
 class _MockCubit extends MockCubit<SubtitleEditorState>
     implements SubtitleEditorCubit {}
@@ -141,7 +144,8 @@ void main() {
   /// Pumps the view for a video with no playable URL, so the tests below
   /// exercise the cue list without standing up a native player. The stage's
   /// own behaviour is covered by its widget test.
-  Widget pump({String? videoUrl}) => MaterialApp(
+  Widget pump({String? videoUrl, Locale? locale}) => MaterialApp(
+    locale: locale,
     localizationsDelegates: appLocalizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: BlocProvider<SubtitleEditorCubit>.value(
@@ -271,6 +275,50 @@ void main() {
       verify(cubit.addCue).called(1);
     });
 
+    for (final locale in const [Locale('en'), Locale('de')]) {
+      testWidgets('keeps the no-speech actions whole and reachable on a small '
+          'phone at the largest text size in ${locale.languageCode}', (
+        tester,
+      ) async {
+        tester.view
+          ..physicalSize = const Size(375, 667)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        tester.platformDispatcher.textScaleFactorTestValue = 3.12;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        when(
+          () => cubit.state,
+        ).thenReturn(
+          const SubtitleEditorState(status: SubtitleEditorStatus.empty),
+        );
+        when(cubit.load).thenAnswer((_) async {});
+        await tester.pumpWidget(pump(locale: locale));
+
+        // The column overflowed and pushed Retry off the screen, and the
+        // labels were cut short.
+        expect(tester.takeException(), isNull);
+        final l10n = lookupAppLocalizations(locale);
+        for (final label in [
+          l10n.subtitleEditorWriteOwn,
+          l10n.subtitleEditorRetry,
+        ]) {
+          final text = find.text(label);
+          expect(
+            tester.renderObject<RenderParagraph>(text).didExceedMaxLines,
+            isFalse,
+          );
+          expect(wordsSplitAcrossLines(tester, text), isEmpty);
+        }
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.subtitleEditorRetry),
+          100,
+        );
+        await tester.tap(find.text(l10n.subtitleEditorRetry));
+        verify(cubit.load).called(1);
+      });
+    }
+
     testWidgets('does not offer authoring while transcription runs', (
       tester,
     ) async {
@@ -299,6 +347,35 @@ void main() {
       await revealInList(tester, find.text(l10n.subtitleEditorAddCue));
       await tester.tap(find.text(l10n.subtitleEditorAddCue));
       verify(cubit.addCue).called(1);
+    });
+
+    testWidgets('add-a-line keeps its words whole on a small phone at a '
+        'large text size', (tester) async {
+      tester.view
+        ..physicalSize = const Size(360, 640)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      const german = Locale('de');
+      when(() => cubit.state).thenReturn(
+        const SubtitleEditorState(
+          status: SubtitleEditorStatus.ready,
+          cues: [EditableCue(start: 0, end: 1000, text: 'one')],
+        ),
+      );
+      await tester.pumpWidget(pump(locale: german));
+
+      // "Zeile hinzufügen" was cut to "Zeile hinzufü…".
+      final label = find.text(
+        lookupAppLocalizations(german).subtitleEditorAddCue,
+      );
+      await revealInList(tester, label);
+      expect(
+        tester.renderObject<RenderParagraph>(label).didExceedMaxLines,
+        isFalse,
+      );
+      expect(wordsSplitAcrossLines(tester, label), isEmpty);
     });
 
     testWidgets('add-a-line is disabled once the cues fill the video', (
@@ -501,6 +578,68 @@ void main() {
         );
       },
     );
+
+    testWidgets('the keyboard opens the cue sheet to its full height, and '
+        'closing it settles the sheet back on the stage', (tester) async {
+      tester.view
+        ..physicalSize = const Size(375, 667)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = 1.65;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      when(() => cubit.state).thenReturn(
+        const SubtitleEditorState(
+          status: SubtitleEditorStatus.ready,
+          videoDurationMs: 6000,
+          isDirty: true,
+          cues: [
+            EditableCue(start: 0, end: 1000, text: 'one'),
+            EditableCue(start: 1000, end: 2000, text: ''),
+          ],
+        ),
+      );
+      when(() => cubit.selectCue(any())).thenReturn(null);
+      await tester.pumpWidget(pump(videoUrl: 'https://example.com/video.mp4'));
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final save = find.text(l10n.subtitleEditorSave);
+      double sheetTop() => tester
+          .getRect(
+            find
+                .descendant(
+                  of: find.byType(DraggableScrollableSheet),
+                  matching: find.byType(DecoratedBox),
+                )
+                .first,
+          )
+          .top;
+      final restingTop = sheetTop();
+
+      // Focus first, then the inset arrives, the way a phone opens it.
+      await tester.tap(cueTextFields(l10n).first);
+      await tester.pump();
+      tester.view.viewInsets = const FakeViewPadding(bottom: 260);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // A quarter of the field showed above the save button.
+      final field = tester.getRect(
+        find.byWidgetPredicate(
+          (widget) => widget is EditableText && widget.focusNode.hasFocus,
+        ),
+      );
+      final list = tester.getRect(find.byType(ListView));
+      expect(field.top, greaterThanOrEqualTo(list.top));
+      expect(field.bottom, lessThanOrEqualTo(list.bottom));
+      expect(save, findsNothing);
+
+      tester.view.viewInsets = FakeViewPadding.zero;
+      await tester.pumpAndSettle();
+
+      expect(sheetTop(), closeTo(restingTop, 0.5));
+      expect(save, findsOneWidget);
+    });
 
     testWidgets('the stage plays the renditions the feed would pick', (
       tester,

@@ -62,8 +62,10 @@ void main() {
       VoidCallback? onTapDone,
       SoundCover? cover,
       bool isLoading = false,
+      Locale? locale,
     }) {
       return MaterialApp(
+        locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
@@ -171,6 +173,66 @@ void main() {
         await tester.pump();
 
         expect(find.textContaining('Artist X'), findsOneWidget);
+      });
+    });
+
+    group('on a small phone', () {
+      Future<void> pumpAt(
+        WidgetTester tester, {
+        required double textScale,
+        Locale locale = const Locale('en'),
+      }) async {
+        tester.view
+          ..physicalSize = const Size(375, 667)
+          ..devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = textScale;
+        addTearDown(() {
+          tester.view.reset();
+          tester.platformDispatcher.clearAllTestValues();
+        });
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudio(title: 'Sommerabend am See'),
+            locale: locale,
+          ),
+        );
+        await tester.pump();
+      }
+
+      Rect useButton(WidgetTester tester) =>
+          tester.getRect(find.byType(DivineButton));
+      Rect playButton(WidgetTester tester) =>
+          tester.getRect(find.byType(DivineIconButton));
+
+      testWidgets('keeps Use beside the sound at the normal text size', (
+        tester,
+      ) async {
+        await pumpAt(tester, textScale: 1);
+
+        expect(
+          useButton(tester).center.dy,
+          moreOrLessEquals(playButton(tester).center.dy),
+        );
+        expect(useButton(tester).left, greaterThan(playButton(tester).right));
+      });
+
+      testWidgets('moves a long Use label to a row of its own at a large '
+          'text size', (tester) async {
+        await pumpAt(tester, textScale: 2, locale: const Locale('de'));
+
+        expect(
+          useButton(tester).top,
+          greaterThan(playButton(tester).bottom),
+        );
+        // Across the card, from the cover to the play button.
+        expect(
+          useButton(tester).left,
+          moreOrLessEquals(tester.getRect(find.byType(SoundCoverImage)).left),
+        );
+        expect(
+          useButton(tester).right,
+          moreOrLessEquals(playButton(tester).right),
+        );
       });
     });
 

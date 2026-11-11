@@ -24,6 +24,8 @@ void main() {
     VideoEvent buildVideo({
       String id = 'video-id',
       String pubkey = 'author-pubkey',
+      int? eventKind,
+      String? dTag,
     }) {
       final now = DateTime.now();
       return VideoEvent(
@@ -33,6 +35,9 @@ void main() {
         timestamp: now,
         content: 'caption',
         videoUrl: 'https://example.com/v.mp4',
+        eventKind: eventKind,
+        vineId: dTag,
+        addressableDTag: dTag,
       );
     }
 
@@ -67,6 +72,40 @@ void main() {
     });
 
     group('submit', () {
+      blocTest<InlineCommentComposerCubit, InlineCommentComposerState>(
+        'names a Kind 34235 video as the root kind and coordinate',
+        setUp: () {
+          when(
+            () => commentsRepository.postComment(
+              content: any(named: 'content'),
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootEventAuthorPubkey: any(named: 'rootEventAuthorPubkey'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+            ),
+          ).thenAnswer((_) async => buildComment());
+        },
+        build: () => InlineCommentComposerCubit(
+          commentsRepository: commentsRepository,
+          consumptionAnalytics: consumptionAnalytics,
+        ),
+        act: (cubit) => cubit.submit(
+          video: buildVideo(eventKind: 34235, dTag: 'reel'),
+          content: 'hello world',
+        ),
+        verify: (_) {
+          verify(
+            () => commentsRepository.postComment(
+              content: 'hello world',
+              rootEventId: 'video-id',
+              rootEventKind: 34235,
+              rootEventAuthorPubkey: 'author-pubkey',
+              rootAddressableId: '34235:author-pubkey:reel',
+            ),
+          ).called(1);
+        },
+      );
+
       blocTest<InlineCommentComposerCubit, InlineCommentComposerState>(
         'emits [submitting, submitted] on successful publish',
         setUp: () {

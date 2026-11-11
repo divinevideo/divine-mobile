@@ -21,8 +21,10 @@ import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dar
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_clip_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_controls.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
+import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
+import 'package:openvine/widgets/whole_word_button_text_scale.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo, ProVideoEditor, ProgressModel;
 import 'package:unified_logger/unified_logger.dart';
@@ -424,10 +426,15 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
                           doneSemanticLabel: context
                               .l10n
                               .videoEditorChromaKeyDoneSemanticLabel,
-                          center: Text(
-                            context.l10n.videoEditorChromaKeyTitle,
-                            style: VineTheme.titleMediumFont(
-                              color: context.vineColors.onSurface,
+                          // Flexible, so a large text size wraps the title
+                          // instead of pushing Done off the screen.
+                          center: Flexible(
+                            child: DivineWordFitText(
+                              context.l10n.videoEditorChromaKeyTitle,
+                              textAlign: TextAlign.center,
+                              style: VineTheme.titleMediumFont(
+                                color: context.vineColors.onSurface,
+                              ),
                             ),
                           ),
                         ),
@@ -447,12 +454,18 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
                       if (_canRemove)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: DivineButton(
+                          child: WholeWordButtonTextScale(
                             label: context.l10n.videoEditorChromaKeyRemove,
-                            type: .ghost,
-                            size: .small,
-                            expanded: true,
-                            onPressed: isBaking ? null : () => _remove(context),
+                            child: DivineButton(
+                              label: context.l10n.videoEditorChromaKeyRemove,
+                              type: .ghost,
+                              size: .small,
+                              expanded: true,
+                              maxLines: 2,
+                              onPressed: isBaking
+                                  ? null
+                                  : () => _remove(context),
+                            ),
                           ),
                         ),
                       Flexible(
@@ -610,6 +623,8 @@ class _Preview extends StatelessWidget {
   /// Keeps a video backdrop aligned with the clip. See [ChromaKeyBackdropSync].
   final ChromaKeyBackdropSync? backdropSync;
 
+  static const _borderRadius = BorderRadius.all(Radius.circular(16));
+
   @override
   Widget build(BuildContext context) {
     final controller = player;
@@ -627,11 +642,16 @@ class _Preview extends StatelessWidget {
         child: AspectRatio(
           aspectRatio: aspectRatio,
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: _borderRadius,
             child: ChromaKeyedVideo(
               chromaKey: chromaKey,
               backdropSync: backdropSync,
-              child: DivineVideoPlayer(controller: controller),
+              // Below the key's filter, so the eyedropper picks the footage
+              // — the screen color included — rather than what the key left.
+              child: EyedropperSourceRegion(
+                borderRadius: _borderRadius,
+                child: DivineVideoPlayer(controller: controller),
+              ),
             ),
           ),
         ),

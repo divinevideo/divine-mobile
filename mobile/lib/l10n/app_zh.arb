@@ -1010,6 +1010,7 @@
     "description": "Empty-state message on the reposters list screen when no one has reposted the video yet."
   },
   "videoEngagementLoadFailed": "列表加载失败",
+  "videoEngagementListIncomplete": "未能加载全部",
   "@videoEngagementLoadFailed": {
     "description": "Error-state heading on the engagement list screen when the relay query fails."
   },
@@ -2488,6 +2489,11 @@
   },
   "reportWhyReporting": "你为什么要举报该内容？",
   "reportPolicyNotice": "Divine 会在 24 小时内处理内容举报：移除违规内容，并将发布违规内容的用户清出平台。",
+  "reportPrivateNotice": "这条举报会私下发给 Divine 审核团队，不会公开发布。",
+  "reportIncludeMessageTitle": "附上这条消息",
+  "reportIncludeMessageDescription": "Divine 审核团队会看到这条消息。它会保持私密，不会公开发布。",
+  "reportMessageTooLong": "这条消息太长，无法附上。请取消勾选“{optionTitle}”后重试。",
+  "reportDetailsTooLong": "你填写的详情太长，无法发送。请精简后重试。",
   "reportBlockUser": "屏蔽该用户",
   "reportCancel": "取消",
   "reportSubmit": "举报",
@@ -3174,10 +3180,6 @@
         "type": "String"
       }
     }
-  },
-  "dmReactionChipFailedA11yLabel": "回应失败，双击重试",
-  "@dmReactionChipFailedA11yLabel": {
-    "description": "Screen-reader label for a reaction chip whose publish failed."
   },
   "dmReactionChipUnconfirmedA11yLabel": "无法发送你的 {emoji} 回应，双击重试",
   "dmReactionChipRetryAnnouncement": "正在重试回应",
@@ -4498,22 +4500,30 @@
   },
   "commentsVideoReplyPending": "发布中…",
   "commentsVideoReplyPendingSemanticLabel": "正在发布你的视频回复",
-  "commentsSortNew": "最新",
-  "@commentsSortNew": {
+  "commentsSortRecent": "最新",
+  "@commentsSortRecent": {
     "description": "Comments-sort toggle label for newest-first order."
   },
   "commentsSortTop": "最热",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
-  },
-  "commentsSortOld": "最早",
-  "@commentsSortOld": {
-    "description": "Comments-sort toggle label for oldest-first order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortSemanticLabel": "评论排序",
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
+  "commentsHiddenToggleSemanticLabel": "显示已隐藏的评论",
+  "commentsHiddenNotice": "创作者有意隐藏了这些评论。",
+  "commentsHiddenNoticeOwner": "这些评论是你在 Divine 中隐藏的。其他应用和网站仍可能显示它们，如有有害内容请举报。",
+  "commentHiddenReportPrompt": "要同时举报这条评论吗？",
+  "commentHiddenReportAction": "举报",
+  "commentHiddenByCreator": "已被创作者隐藏",
+  "commentHiddenByYou": "已被你隐藏",
+  "commentOptionsHideLabel": "隐藏评论",
+  "commentOptionsHideSemanticLabel": "在你的视频上隐藏这条评论",
+  "commentOptionsShowLabel": "显示评论",
+  "commentOptionsShowSemanticLabel": "在你的视频上重新显示这条评论",
+  "commentsErrorModerationFailed": "无法更新已隐藏的评论。请重试。",
   "commentReply": "回复",
   "@commentReply": {
     "description": "Button label under a comment that opens the reply composer."
@@ -5347,6 +5357,9 @@
   "videoEditorSpeedPresetSemanticLabel": "速度 {speed}×",
   "videoEditorSpeedModeConstant": "恒定",
   "videoEditorSpeedModeCurve": "曲线",
+  "videoEditorSpeedSmoothTitle": "流畅慢动作",
+  "videoEditorSpeedSmoothDescription": "混合相邻画面，让慢动作更流畅。快速动作可能留下重影。",
+  "videoEditorSpeedSmoothUnavailable": "把片段调到 1× 以下即可使用。",
   "videoEditorSpeedCurveCustom": "自定义",
   "videoEditorSpeedCurveMontage": "蒙太奇",
   "videoEditorSpeedCurveHero": "英雄",
@@ -5568,6 +5581,7 @@
   "videoEditorLayerAnimationBounce": "弹跳",
   "videoEditorLayerAnimationTypewriter": "打字机",
   "videoEditorLayerAnimationWordByWord": "逐词",
+  "videoEditorLayerAnimationDrawOn": "逐笔",
   "videoEditorLayerAnimationPulse": "脉动",
   "videoEditorLayerAnimationPulseTo": "缩小至",
   "videoEditorLayerAnimationWiggleAngle": "倾斜度",
@@ -5884,6 +5898,9 @@
   "videoEditorCloseColorPickerSemanticLabel": "关闭取色器",
   "videoEditorPickColorTitle": "选取颜色",
   "videoEditorConfirmColorSemanticLabel": "确认颜色",
+  "videoEditorEyedropperSemanticLabel": "从视频中取色",
+  "videoEditorEyedropperHint": "按住并拖动来取色",
+  "videoEditorEyedropperCancelSemanticLabel": "停止取色",
   "videoEditorSaturationBrightnessSemanticLabel": "饱和度和亮度",
   "videoEditorSaturationBrightnessValue": "饱和度 {saturation}%，亮度 {brightness}%",
   "@videoEditorSaturationBrightnessValue": {
@@ -7620,5 +7637,9 @@
   "creatorHighlightAnalytics": "查看你的数据",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "minorAccountReviewVideoSubmittedBody": "你的视频已提交审核。",
+  "minorAccountReviewVideoSubmittedTitle": "视频已提交",
+  "minorAccountReviewRecordConsentPrivacyBody": "你的视频将私下发送给 Divine 支持及信任与安全团队审核，不会公开发布或与其他用户分享。",
+  "minorAccountReviewRecordConsentRejected": "提交未被接受。请检查邮箱地址、重新录制视频，或改用电子邮件。"
 }

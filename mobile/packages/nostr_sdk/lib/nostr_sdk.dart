@@ -49,6 +49,8 @@ export 'nip94/file_metadata.dart';
 export 'nostr.dart';
 export 'relay/event_filter.dart';
 export 'relay/event_verify_isolate.dart';
+export 'relay/native_event_verify_worker.dart';
+export 'relay/native_schnorr_verify.dart';
 export 'relay/publish_outcome.dart';
 export 'relay/query_outcome.dart';
 export 'relay/query_result.dart';

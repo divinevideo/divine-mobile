@@ -11,7 +11,11 @@ import 'package:reposts_repository/reposts_repository.dart';
 
 /// State for [VideoRepostersCubit].
 class VideoRepostersState extends Equatable {
-  const VideoRepostersState({this.pubkeys = const [], this.isLoading = true});
+  const VideoRepostersState({
+    this.pubkeys = const [],
+    this.isLoading = true,
+    this.isComplete = true,
+  });
 
   /// Pubkeys of users who reposted this video.
   final List<String> pubkeys;
@@ -19,8 +23,15 @@ class VideoRepostersState extends Equatable {
   /// Whether the relay query is still in progress.
   final bool isLoading;
 
+  /// Whether the relays finished the read behind [pubkeys].
+  ///
+  /// `false` when the read stopped before every relay answered, or failed:
+  /// [pubkeys] then holds only the people found so far, and an empty list
+  /// does not mean nobody reposted (#10846).
+  final bool isComplete;
+
   @override
-  List<Object?> get props => [pubkeys, isLoading];
+  List<Object?> get props => [pubkeys, isLoading, isComplete];
 }
 
 /// Fetches the pubkeys of users who reposted a video.
@@ -46,6 +57,15 @@ class VideoRepostersCubit extends Cubit<VideoRepostersState> {
   final String _videoId;
   final String? _addressableId;
 
+  /// Reads the reposters again, for a row whose last read did not finish.
+  ///
+  /// Ignored while a read is in flight.
+  void retry() {
+    if (isClosed || state.isLoading) return;
+    emit(const VideoRepostersState());
+    unawaited(_fetch());
+  }
+
   Future<void> _fetch() async {
     if (_videoId.isEmpty) {
       if (isClosed) return;
@@ -53,16 +73,22 @@ class VideoRepostersCubit extends Cubit<VideoRepostersState> {
       return;
     }
     try {
-      final pubkeys = await _repostsRepository.fetchEventReposters(
+      final page = await _repostsRepository.fetchEventReposters(
         eventId: _videoId,
         addressableId: _addressableId,
       );
       if (isClosed) return;
-      emit(VideoRepostersState(pubkeys: pubkeys, isLoading: false));
+      emit(
+        VideoRepostersState(
+          pubkeys: page.pubkeys,
+          isLoading: false,
+          isComplete: page.isComplete,
+        ),
+      );
     } catch (e, stackTrace) {
       if (isClosed) return;
       addError(e, stackTrace);
-      emit(const VideoRepostersState(isLoading: false));
+      emit(const VideoRepostersState(isLoading: false, isComplete: false));
     }
   }
 }

@@ -1010,6 +1010,7 @@
     "description": "Empty-state message on the reposters list screen when no one has reposted the video yet."
   },
   "videoEngagementLoadFailed": "Tidak dapat memuatkan senarai itu",
+  "videoEngagementListIncomplete": "Tidak dapat memuatkan semua orang",
   "@videoEngagementLoadFailed": {
     "description": "Error-state heading on the engagement list screen when the relay query fails."
   },
@@ -2488,6 +2489,11 @@
   },
   "reportWhyReporting": "Mengapa anda melaporkan kandungan ini?",
   "reportPolicyNotice": "Divine akan mengambil tindakan terhadap laporan kandungan dalam masa 24 jam dengan mengalih keluar kandungan itu dan mengeluarkan pengguna yang menyediakan kandungan yang melanggar.",
+  "reportPrivateNotice": "Laporan ini dihantar secara peribadi kepada pasukan pemantauan Divine. Laporan ini tidak disiarkan kepada umum.",
+  "reportIncludeMessageTitle": "Sertakan mesej ini",
+  "reportIncludeMessageDescription": "Pasukan pemantauan Divine akan melihatnya. Mesej ini kekal peribadi dan tidak disiarkan kepada umum.",
+  "reportMessageTooLong": "Mesej ini terlalu panjang untuk disertakan. Nyahtanda “{optionTitle}” dan cuba lagi.",
+  "reportDetailsTooLong": "Butiran anda terlalu panjang untuk dihantar. Pendekkan dan cuba lagi.",
   "reportBlockUser": "Sekat pengguna ini",
   "reportCancel": "Batal",
   "reportSubmit": "Laporkan",
@@ -3174,10 +3180,6 @@
         "type": "String"
       }
     }
-  },
-  "dmReactionChipFailedA11yLabel": "Tindak balas gagal, ketik dua kali untuk cuba semula",
-  "@dmReactionChipFailedA11yLabel": {
-    "description": "Screen-reader label for a reaction chip whose publish failed."
   },
   "dmReactionChipUnconfirmedA11yLabel": "Tindak balas {emoji} anda tidak dapat dihantar. Ketik dua kali untuk cuba semula",
   "dmReactionChipRetryAnnouncement": "Mencuba semula tindak balas",
@@ -4498,22 +4500,30 @@
   },
   "commentsVideoReplyPending": "Menyiarkan…",
   "commentsVideoReplyPendingSemanticLabel": "Balasan video anda sedang disiarkan",
-  "commentsSortNew": "Baharu",
-  "@commentsSortNew": {
+  "commentsSortRecent": "Terkini",
+  "@commentsSortRecent": {
     "description": "Comments-sort toggle label for newest-first order."
   },
   "commentsSortTop": "Teratas",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
-  },
-  "commentsSortOld": "Lama",
-  "@commentsSortOld": {
-    "description": "Comments-sort toggle label for oldest-first order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortSemanticLabel": "Isihan komen",
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
+  "commentsHiddenToggleSemanticLabel": "Tunjuk komen yang disembunyikan",
+  "commentsHiddenNotice": "Pencipta sengaja menyembunyikan komen ini.",
+  "commentsHiddenNoticeOwner": "Anda menyembunyikan komen ini dalam Divine. Aplikasi dan laman lain mungkin masih memaparkannya, jadi laporkan apa-apa yang berbahaya.",
+  "commentHiddenReportPrompt": "Mahu laporkan komen ini juga?",
+  "commentHiddenReportAction": "Laporkan",
+  "commentHiddenByCreator": "Disembunyikan oleh pencipta",
+  "commentHiddenByYou": "Disembunyikan oleh anda",
+  "commentOptionsHideLabel": "Sembunyikan komen",
+  "commentOptionsHideSemanticLabel": "Sembunyikan komen ini pada video anda",
+  "commentOptionsShowLabel": "Tunjuk komen",
+  "commentOptionsShowSemanticLabel": "Tunjuk semula komen ini pada video anda",
+  "commentsErrorModerationFailed": "Gagal mengemas kini komen yang disembunyikan. Cuba lagi.",
   "commentReply": "Balas",
   "@commentReply": {
     "description": "Button label under a comment that opens the reply composer."
@@ -5347,6 +5357,9 @@
   "videoEditorSpeedPresetSemanticLabel": "Kelajuan {speed}×",
   "videoEditorSpeedModeConstant": "Malar",
   "videoEditorSpeedModeCurve": "Lengkung",
+  "videoEditorSpeedSmoothTitle": "Gerak perlahan lancar",
+  "videoEditorSpeedSmoothDescription": "Menggabungkan bingkai supaya gerak perlahan mengalir. Gerakan pantas boleh meninggalkan bayang.",
+  "videoEditorSpeedSmoothUnavailable": "Perlahankan klip di bawah 1× untuk melancarkannya.",
   "videoEditorSpeedCurveCustom": "Tersuai",
   "videoEditorSpeedCurveMontage": "Montaj",
   "videoEditorSpeedCurveHero": "Wira",
@@ -5568,6 +5581,7 @@
   "videoEditorLayerAnimationBounce": "Lantun",
   "videoEditorLayerAnimationTypewriter": "Mesin taip",
   "videoEditorLayerAnimationWordByWord": "Perkataan demi perkataan",
+  "videoEditorLayerAnimationDrawOn": "Garisan demi garisan",
   "videoEditorLayerAnimationPulse": "Denyut",
   "videoEditorLayerAnimationPulseTo": "Kecut ke",
   "videoEditorLayerAnimationWiggleAngle": "Kecondongan",
@@ -5884,6 +5898,9 @@
   "videoEditorCloseColorPickerSemanticLabel": "Tutup pemilih warna",
   "videoEditorPickColorTitle": "Pilih warna",
   "videoEditorConfirmColorSemanticLabel": "Sahkan warna",
+  "videoEditorEyedropperSemanticLabel": "Pilih warna daripada video",
+  "videoEditorEyedropperHint": "Sentuh dan seret untuk memilih warna",
+  "videoEditorEyedropperCancelSemanticLabel": "Berhenti memilih warna",
   "videoEditorSaturationBrightnessSemanticLabel": "Ketepuan dan kecerahan",
   "videoEditorSaturationBrightnessValue": "Ketepuan {saturation}%, Kecerahan {brightness}%",
   "@videoEditorSaturationBrightnessValue": {
@@ -7620,5 +7637,9 @@
   "creatorHighlightAnalytics": "Lihat statistik anda",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "minorAccountReviewVideoSubmittedBody": "Video anda telah dihantar untuk semakan.",
+  "minorAccountReviewVideoSubmittedTitle": "Video dihantar",
+  "minorAccountReviewRecordConsentPrivacyBody": "Video anda dihantar secara peribadi kepada pasukan Sokongan serta Kepercayaan dan Keselamatan Divine untuk semakan. Video tidak diterbitkan atau dikongsi dengan pengguna lain.",
+  "minorAccountReviewRecordConsentRejected": "Penyerahan anda tidak diterima. Semak alamat e-mel anda, rakam semula video atau gunakan e-mel."
 }

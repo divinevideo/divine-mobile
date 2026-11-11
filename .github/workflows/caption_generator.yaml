@@ -25,7 +25,7 @@ jobs:
     with:
       run_bloc_lint: true
       working_directory: "mobile/packages/caption_generator"
-      flutter_version: "3.47.2"
+      flutter_version: "3.47.9"
 
   # The Dart workflow above never compiles the native Kotlin, so a compile
   # error would pass green until the package is wired into an app build.
@@ -46,7 +46,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: "stable"
           cache: true
       - name: Setup Gradle

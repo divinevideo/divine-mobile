@@ -1,5 +1,5 @@
 // ABOUTME: Tests persistence and SDK mapping for Nostr signature policy prefs.
-// ABOUTME: Covers default, invalid stored values, and round-trip storage.
+// ABOUTME: Covers platform defaults, invalid values, and round-trip storage.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' as nostr_sdk;
@@ -13,9 +13,40 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    test('defaults to verifying all relays', () async {
+    test('defaults to verifying all relays on native builds', () async {
       final prefs = await SharedPreferences.getInstance();
-      final service = NostrSignatureVerificationPreferenceService(prefs);
+      final service = NostrSignatureVerificationPreferenceService(
+        prefs,
+        isWeb: false,
+      );
+
+      expect(
+        service.currentPolicy,
+        NostrSignatureVerificationPolicy.all,
+      );
+    });
+
+    test('defaults to trusting Divine relays on the web', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final service = NostrSignatureVerificationPreferenceService(
+        prefs,
+        isWeb: true,
+      );
+
+      expect(
+        service.currentPolicy,
+        NostrSignatureVerificationPolicy.nonDivineRelays,
+      );
+    });
+
+    test('keeps an explicit choice of all relays on the web', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final service = NostrSignatureVerificationPreferenceService(
+        prefs,
+        isWeb: true,
+      );
+
+      await service.setPolicy(NostrSignatureVerificationPolicy.all);
 
       expect(
         service.currentPolicy,
@@ -37,16 +68,25 @@ void main() {
       }
     });
 
-    test('falls back to default for unknown stored values', () async {
+    test('falls back to the platform default for unknown values', () async {
       SharedPreferences.setMockInitialValues({
         NostrSignatureVerificationPreferenceService.prefsKey: 'mystery',
       });
       final prefs = await SharedPreferences.getInstance();
-      final service = NostrSignatureVerificationPreferenceService(prefs);
 
       expect(
-        service.currentPolicy,
+        NostrSignatureVerificationPreferenceService(
+          prefs,
+          isWeb: false,
+        ).currentPolicy,
         NostrSignatureVerificationPolicy.all,
+      );
+      expect(
+        NostrSignatureVerificationPreferenceService(
+          prefs,
+          isWeb: true,
+        ).currentPolicy,
+        NostrSignatureVerificationPolicy.nonDivineRelays,
       );
     });
 

@@ -249,6 +249,7 @@ void main() {
         count,
         (i) => createTestVideo(
           '$idPrefix-$i',
+          pubkey: (i + 1).toRadixString(16).padLeft(64, '0'),
           createdAt: baseTimestamp - i, // Decreasing timestamps
         ),
       );
@@ -271,6 +272,445 @@ void main() {
 
     /// Page size constant must match the one in video_feed_bloc.dart
     const pageSize = 5;
+
+    group('New feed creator limit', () {
+      test('keeps two videos per creator in chronological order', () async {
+        final videos = [
+          createTestVideo('1' * 64, createdAt: 600),
+          createTestVideo('2' * 64, createdAt: 500, pubkey: '1' * 64),
+          createTestVideo('3' * 64, createdAt: 400),
+          createTestVideo('4' * 64, createdAt: 300),
+          createTestVideo('5' * 64, createdAt: 200, pubkey: '2' * 64),
+        ];
+        when(
+          () => mockVideosRepository.getNewVideos(
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer(
+          (_) async => HomeFeedResult(videos: videos, hasMore: false),
+        );
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+
+        bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+        await pumpEventQueue();
+
+        expect(bloc.state.videos, [videos[0], videos[1], videos[2], videos[4]]);
+      });
+
+      test('skips capped pages using unfiltered timestamps', () async {
+        final first = [
+          createTestVideo('1' * 64, createdAt: 600),
+          createTestVideo('2' * 64, createdAt: 500),
+          createTestVideo('3' * 64, createdAt: 400),
+        ];
+        final hidden = [createTestVideo('4' * 64, createdAt: 300)];
+        final next = createTestVideo(
+          '5' * 64,
+          createdAt: 200,
+          pubkey: '1' * 64,
+        );
+        when(
+          () => mockVideosRepository.getNewVideos(
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((call) async {
+          return switch (call.namedArguments[#until]) {
+            null => HomeFeedResult(videos: first, hasMore: true),
+            400 => HomeFeedResult(videos: hidden, hasMore: true),
+            300 => HomeFeedResult(videos: [next], hasMore: false),
+            _ => throw StateError('Unexpected pagination timestamp'),
+          };
+        });
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+        await pumpEventQueue();
+
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+
+        expect(bloc.state.videos, [first[0], first[1], next]);
+        expect(bloc.state.hasMore, isFalse);
+        expect(bloc.state.isLoadingMore, isFalse);
+      });
+
+      test('retries a failed page after the pages it skipped', () async {
+        final first = [
+          createTestVideo('1' * 64, createdAt: 600),
+          createTestVideo('2' * 64, createdAt: 500),
+        ];
+        final hidden = createTestVideo('3' * 64, createdAt: 400);
+        final next = createTestVideo(
+          '4' * 64,
+          createdAt: 300,
+          pubkey: '1' * 64,
+        );
+        final requested = <String?>[];
+        var failThirdPage = true;
+        when(
+          () => mockVideosRepository.getNewVideos(
+            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((call) async {
+          final cursor = call.namedArguments[#cursor] as String?;
+          requested.add(cursor);
+          switch (cursor) {
+            case null:
+              return HomeFeedResult(
+                videos: first,
+                hasMore: true,
+                paginationCursor: 'page-2',
+              );
+            case 'page-2':
+              return HomeFeedResult(
+                videos: [hidden],
+                hasMore: true,
+                paginationCursor: 'page-3',
+              );
+            case 'page-3' when failThirdPage:
+              failThirdPage = false;
+              throw Exception('Temporary network failure');
+            case 'page-3':
+              return HomeFeedResult(videos: [next], hasMore: false);
+          }
+          throw StateError('Unexpected cursor $cursor');
+        });
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+        await pumpEventQueue();
+
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+        expect(bloc.state.videos, first);
+        expect(bloc.state.hasMore, isTrue);
+        expect(bloc.state.isLoadingMore, isFalse);
+
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+
+        expect(requested, [null, 'page-2', 'page-3', 'page-3']);
+        expect(bloc.state.videos, [...first, next]);
+      });
+
+      test('retries a failed until page after the pages it skipped', () async {
+        final first = [
+          createTestVideo('1' * 64, createdAt: 600),
+          createTestVideo('2' * 64, createdAt: 500),
+          createTestVideo('3' * 64, createdAt: 400),
+        ];
+        final hidden = createTestVideo('4' * 64, createdAt: 300);
+        final next = createTestVideo(
+          '5' * 64,
+          createdAt: 200,
+          pubkey: '1' * 64,
+        );
+        final requested = <int?>[];
+        var failOlderPage = true;
+        when(
+          () => mockVideosRepository.getNewVideos(
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((call) async {
+          final until = call.namedArguments[#until] as int?;
+          requested.add(until);
+          switch (until) {
+            case null:
+              return HomeFeedResult(videos: first, hasMore: true);
+            case 400:
+              return HomeFeedResult(videos: [hidden], hasMore: true);
+            case 300 when failOlderPage:
+              failOlderPage = false;
+              throw Exception('Temporary network failure');
+            case 300:
+              return HomeFeedResult(videos: [next], hasMore: false);
+          }
+          throw StateError('Unexpected request until $until');
+        });
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+        await pumpEventQueue();
+
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+
+        expect(requested, [null, 400, 300, 300]);
+        expect(bloc.state.videos, [first[0], first[1], next]);
+      });
+
+      test('retries by until when a skipped page ends the cursors', () async {
+        final first = [
+          createTestVideo('1' * 64, createdAt: 600),
+          createTestVideo('2' * 64, createdAt: 500),
+        ];
+        final hidden = createTestVideo('3' * 64, createdAt: 400);
+        final next = createTestVideo(
+          '4' * 64,
+          createdAt: 300,
+          pubkey: '1' * 64,
+        );
+        final requested = <String>[];
+        var failUntilPage = true;
+        when(
+          () => mockVideosRepository.getNewVideos(
+            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((call) async {
+          final cursor = call.namedArguments[#cursor] as String?;
+          final until = call.namedArguments[#until] as int?;
+          requested.add(cursor ?? 'until:$until');
+          if (cursor == null && until == null) {
+            return HomeFeedResult(
+              videos: first,
+              hasMore: true,
+              paginationCursor: 'page-2',
+            );
+          }
+          if (cursor == 'page-2') {
+            return HomeFeedResult(videos: [hidden], hasMore: true);
+          }
+          if (until == 400 && failUntilPage) {
+            failUntilPage = false;
+            throw Exception('Temporary network failure');
+          }
+          if (until == 400) {
+            return HomeFeedResult(videos: [next], hasMore: false);
+          }
+          throw StateError('Unexpected request $cursor $until');
+        });
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+        await pumpEventQueue();
+
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+
+        expect(requested, ['until:null', 'page-2', 'until:400', 'until:400']);
+        expect(bloc.state.videos, [...first, next]);
+      });
+
+      test('ends on an until page that brings no older row', () async {
+        final first = [
+          createTestVideo('1' * 64, createdAt: 600),
+          createTestVideo('2' * 64, createdAt: 500),
+          createTestVideo('3' * 64, createdAt: 400),
+        ];
+        final sameSecond = createTestVideo('4' * 64, createdAt: 400);
+        var untilRequests = 0;
+        when(
+          () => mockVideosRepository.getNewVideos(
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((call) async {
+          final until = call.namedArguments[#until] as int?;
+          if (until == null) {
+            return HomeFeedResult(videos: first, hasMore: true);
+          }
+          if (until == 400 && untilRequests++ == 0) {
+            return HomeFeedResult(videos: [sameSecond], hasMore: true);
+          }
+          throw StateError('Unexpected request until $until');
+        });
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+        await pumpEventQueue();
+
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+
+        expect(untilRequests, equals(1));
+        expect(bloc.state.videos, [first[0], first[1]]);
+        expect(bloc.state.hasMore, isFalse);
+        expect(bloc.state.isLoadingMore, isFalse);
+      });
+
+      test('drops a skipped walk that a refresh replaced', () async {
+        final first = [
+          createTestVideo('1' * 64, createdAt: 600),
+          createTestVideo('2' * 64, createdAt: 500),
+        ];
+        final hidden = createTestVideo('3' * 64, createdAt: 400);
+        final refreshed = [
+          createTestVideo('5' * 64, createdAt: 900, pubkey: '1' * 64),
+          createTestVideo('6' * 64, createdAt: 800, pubkey: '2' * 64),
+        ];
+        final stale = createTestVideo(
+          '4' * 64,
+          createdAt: 300,
+          pubkey: '3' * 64,
+        );
+        final heldPage = Completer<HomeFeedResult>();
+        when(
+          () => mockVideosRepository.getNewVideos(
+            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((call) {
+          final cursor = call.namedArguments[#cursor] as String?;
+          final refreshing = call.namedArguments[#skipCache] == true;
+          return switch (cursor) {
+            null when refreshing => Future.value(
+              HomeFeedResult(videos: refreshed, hasMore: false),
+            ),
+            null => Future.value(
+              HomeFeedResult(
+                videos: first,
+                hasMore: true,
+                paginationCursor: 'page-2',
+              ),
+            ),
+            'page-2' => Future.value(
+              HomeFeedResult(
+                videos: [hidden],
+                hasMore: true,
+                paginationCursor: 'page-3',
+              ),
+            ),
+            'page-3' => heldPage.future,
+            _ => throw StateError('Unexpected cursor $cursor'),
+          };
+        });
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+        await pumpEventQueue();
+
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+        bloc.add(const VideoFeedRefreshRequested());
+        await pumpEventQueue();
+        expect(bloc.state.videos, refreshed);
+
+        heldPage.complete(HomeFeedResult(videos: [stale], hasMore: false));
+        await pumpEventQueue();
+
+        expect(bloc.state.videos, refreshed);
+      });
+
+      test('does not count a repeated video as a new one', () async {
+        final shown = [
+          createTestVideo('1' * 64, createdAt: 600, pubkey: '1' * 64),
+          createTestVideo('2' * 64, createdAt: 500),
+          createTestVideo('3' * 64, createdAt: 400),
+        ];
+        final capped = createTestVideo('4' * 64, createdAt: 300);
+        final next = createTestVideo(
+          '5' * 64,
+          createdAt: 200,
+          pubkey: '2' * 64,
+        );
+        when(
+          () => mockVideosRepository.getNewVideos(
+            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer(
+          (call) async => switch (call.namedArguments[#cursor]) {
+            null => HomeFeedResult(
+              videos: shown,
+              hasMore: true,
+              paginationCursor: 'page-2',
+            ),
+            'page-2' => HomeFeedResult(
+              videos: [shown.first, capped],
+              hasMore: true,
+              paginationCursor: 'page-3',
+            ),
+            'page-3' => HomeFeedResult(videos: [next], hasMore: false),
+            _ => throw StateError('Unexpected cursor'),
+          },
+        );
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+        await pumpEventQueue();
+
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+
+        expect(bloc.state.videos, [...shown, next]);
+        expect(bloc.state.hasMore, isFalse);
+      });
+    });
+
+    for (final repeatsCursor in [false, true]) {
+      test(
+        'New caps opaque pages without looping: repeated cursor $repeatsCursor',
+        () async {
+          final first = [createTestVideo('1' * 64), createTestVideo('2' * 64)];
+          final hidden = createTestVideo('3' * 64);
+          final next = createTestVideo('4' * 64, pubkey: '1' * 64);
+          var secondPageRequests = 0;
+          when(
+            () => mockVideosRepository.getNewVideos(
+              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
+              skipCache: any(named: 'skipCache'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer((call) async {
+            final cursor = call.namedArguments[#cursor];
+            // A walk that never stops would starve the test's timers and hang
+            // it, so fail on the first repeated request instead.
+            if (cursor == 'page-2' && secondPageRequests++ > 0) {
+              throw StateError('page-2 requested twice');
+            }
+            return switch (cursor) {
+              null => HomeFeedResult(
+                videos: first,
+                hasMore: true,
+                paginationCursor: 'page-2',
+              ),
+              'page-2' => HomeFeedResult(
+                videos: [hidden],
+                hasMore: true,
+                paginationCursor: repeatsCursor ? 'page-2' : 'page-3',
+              ),
+              'page-3' => HomeFeedResult(videos: [next], hasMore: false),
+              _ => throw StateError('Unexpected cursor'),
+            };
+          });
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+          bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+          await pumpEventQueue();
+
+          bloc.add(const VideoFeedLoadMoreRequested());
+          await pumpEventQueue();
+
+          expect(bloc.state.videos, repeatsCursor ? first : [...first, next]);
+          expect(bloc.state.hasMore, isFalse);
+          expect(bloc.state.isLoadingMore, isFalse);
+          expect(secondPageRequests, equals(1));
+        },
+      );
+    }
 
     test('initial state is correct', () {
       final bloc = createBloc();
@@ -7377,6 +7817,36 @@ void main() {
             ),
           ).called(1);
         },
+      );
+
+      feedBlocTest(
+        'serves a cached Following window without the New-feed creator limit',
+        setUp: () {
+          when(
+            () => mockCache.readVideos(
+              pubkey: any(named: 'pubkey'),
+              mode: any(named: 'mode'),
+            ),
+          ).thenAnswer(
+            (_) async => createTestVideos(
+              3,
+              idPrefix: 'cached',
+            ).map((video) => video.copyWith(pubkey: '1' * 64)).toList(),
+          );
+          stubFollowingFetch(createTestVideos(3, idPrefix: 'fresh'));
+        },
+        build: createBlocWithCache,
+        act: (bloc) =>
+            bloc.add(const VideoFeedStarted(mode: FeedMode.following)),
+        expect: () => [
+          const VideoFeedBlocState(mode: FeedMode.following),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.status, 'status', VideoFeedStatus.success)
+              .having((s) => s.videos.length, 'cached count', 3),
+          isA<VideoFeedBlocState>()
+              .having((s) => s.status, 'status', VideoFeedStatus.success)
+              .having((s) => s.videos.length, 'spliced count', 5),
+        ],
       );
 
       feedBlocTest(

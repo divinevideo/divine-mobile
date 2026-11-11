@@ -166,9 +166,11 @@ Future<MaskEditorResult?> _runMaskEditor(
   // the panel takes from the start.
   final panelHeight = scope.canvasToolPanelHeightNotifier;
   final withBackground = initialBackgroundColor != null;
+  final textScaler = MediaQuery.textScalerOf(context);
   panelHeight?.value = videoEditorMaskPanelHeight(
     initialMask,
     withBackground: withBackground,
+    textScaler: textScaler,
   );
   mainBloc.add(const VideoEditorMaskEditingChanged(isEditing: true));
 
@@ -199,6 +201,7 @@ Future<MaskEditorResult?> _runMaskEditor(
           panelHeight?.value = videoEditorMaskPanelHeight(
             result.mask,
             withBackground: withBackground,
+            textScaler: textScaler,
           );
           onChanged(result);
         },

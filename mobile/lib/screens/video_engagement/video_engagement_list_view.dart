@@ -70,6 +70,7 @@ class VideoEngagementListView extends StatelessWidget {
               pubkeys: state.pubkeys,
               hasMore: state.hasMore,
               loadMoreStatus: state.loadMoreStatus,
+              isComplete: state.isComplete,
             ),
             VideoEngagementStatus.failure => const _EngagementErrorBody(),
           };
@@ -84,6 +85,7 @@ class _EngagementListBody extends StatelessWidget {
     required this.pubkeys,
     required this.hasMore,
     required this.loadMoreStatus,
+    required this.isComplete,
   });
 
   /// How far from the end to ask for the next page, so it is already in
@@ -93,9 +95,11 @@ class _EngagementListBody extends StatelessWidget {
   final List<String> pubkeys;
   final bool hasMore;
   final VideoEngagementLoadMoreStatus loadMoreStatus;
+  final bool isComplete;
 
   @override
   Widget build(BuildContext context) {
+    final trailingRows = (hasMore ? 1 : 0) + (isComplete ? 0 : 1);
     return RefreshIndicator(
       color: VineTheme.onPrimary,
       backgroundColor: VineTheme.vineGreen,
@@ -105,10 +109,12 @@ class _EngagementListBody extends StatelessWidget {
         );
       },
       child: ListView.builder(
-        itemCount: pubkeys.length + (hasMore ? 1 : 0),
+        itemCount: pubkeys.length + trailingRows,
         itemBuilder: (context, index) {
           if (index >= pubkeys.length) {
-            return _LoadMoreTrailer(status: loadMoreStatus);
+            return hasMore && index == pubkeys.length
+                ? _LoadMoreTrailer(status: loadMoreStatus)
+                : const _IncompleteListTrailer();
           }
 
           if (hasMore &&
@@ -162,6 +168,39 @@ class _LoadMoreTrailer extends StatelessWidget {
     return const Padding(
       padding: EdgeInsets.symmetric(vertical: 16),
       child: Center(child: DivineCircularProgressIndicator()),
+    );
+  }
+}
+
+/// Row below a list whose relay read did not finish, so the people shown may
+/// not be everyone (#10846). Retry reloads the whole list.
+class _IncompleteListTrailer extends StatelessWidget {
+  const _IncompleteListTrailer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+      child: Column(
+        spacing: 8,
+        children: [
+          Text(
+            context.l10n.videoEngagementListIncomplete,
+            textAlign: TextAlign.center,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.secondaryText,
+            ),
+          ),
+          DivineButton(
+            label: context.l10n.commonRetry,
+            type: DivineButtonType.link,
+            size: DivineButtonSize.small,
+            onPressed: () => context.read<VideoEngagementBloc>().add(
+              const VideoEngagementLoadRequested(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

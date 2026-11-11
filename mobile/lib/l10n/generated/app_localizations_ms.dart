@@ -1972,6 +1972,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Tidak dapat memuatkan senarai itu';
 
   @override
+  String get videoEngagementListIncomplete =>
+      'Tidak dapat memuatkan semua orang';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'Buka butiran video';
 
   @override
@@ -5119,6 +5123,26 @@ class AppLocalizationsMs extends AppLocalizations {
       'Divine akan mengambil tindakan terhadap laporan kandungan dalam masa 24 jam dengan mengalih keluar kandungan itu dan mengeluarkan pengguna yang menyediakan kandungan yang melanggar.';
 
   @override
+  String get reportPrivateNotice =>
+      'Laporan ini dihantar secara peribadi kepada pasukan pemantauan Divine. Laporan ini tidak disiarkan kepada umum.';
+
+  @override
+  String get reportIncludeMessageTitle => 'Sertakan mesej ini';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Pasukan pemantauan Divine akan melihatnya. Mesej ini kekal peribadi dan tidak disiarkan kepada umum.';
+
+  @override
+  String reportMessageTooLong(String optionTitle) {
+    return 'Mesej ini terlalu panjang untuk disertakan. Nyahtanda “$optionTitle” dan cuba lagi.';
+  }
+
+  @override
+  String get reportDetailsTooLong =>
+      'Butiran anda terlalu panjang untuk dihantar. Pendekkan dan cuba lagi.';
+
+  @override
   String get reportBlockUser => 'Sekat pengguna ini';
 
   @override
@@ -6413,10 +6437,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String dmReactionChipPendingA11yLabel(String emoji) {
     return 'Menghantar tindak balas: $emoji';
   }
-
-  @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Tindak balas gagal, ketik dua kali untuk cuba semula';
 
   @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
@@ -8729,16 +8749,55 @@ class AppLocalizationsMs extends AppLocalizations {
       'Balasan video anda sedang disiarkan';
 
   @override
-  String get commentsSortNew => 'Baharu';
+  String get commentsSortRecent => 'Terkini';
 
   @override
   String get commentsSortTop => 'Teratas';
 
   @override
-  String get commentsSortOld => 'Lama';
+  String get commentsSortSemanticLabel => 'Isihan komen';
 
   @override
-  String get commentsSortSemanticLabel => 'Isihan komen';
+  String get commentsHiddenToggleSemanticLabel =>
+      'Tunjuk komen yang disembunyikan';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Pencipta sengaja menyembunyikan komen ini.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Anda menyembunyikan komen ini dalam Divine. Aplikasi dan laman lain mungkin masih memaparkannya, jadi laporkan apa-apa yang berbahaya.';
+
+  @override
+  String get commentHiddenReportPrompt => 'Mahu laporkan komen ini juga?';
+
+  @override
+  String get commentHiddenReportAction => 'Laporkan';
+
+  @override
+  String get commentHiddenByCreator => 'Disembunyikan oleh pencipta';
+
+  @override
+  String get commentHiddenByYou => 'Disembunyikan oleh anda';
+
+  @override
+  String get commentOptionsHideLabel => 'Sembunyikan komen';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Sembunyikan komen ini pada video anda';
+
+  @override
+  String get commentOptionsShowLabel => 'Tunjuk komen';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Tunjuk semula komen ini pada video anda';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Gagal mengemas kini komen yang disembunyikan. Cuba lagi.';
 
   @override
   String get commentReply => 'Balas';
@@ -10688,6 +10747,17 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Lengkung';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Gerak perlahan lancar';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Menggabungkan bingkai supaya gerak perlahan mengalir. Gerakan pantas boleh meninggalkan bayang.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Perlahankan klip di bawah 1× untuk melancarkannya.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Tersuai';
 
   @override
@@ -11124,6 +11194,9 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationWordByWord => 'Perkataan demi perkataan';
+
+  @override
+  String get videoEditorLayerAnimationDrawOn => 'Garisan demi garisan';
 
   @override
   String get videoEditorLayerAnimationPulse => 'Denyut';
@@ -11931,6 +12004,17 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorConfirmColorSemanticLabel => 'Sahkan warna';
+
+  @override
+  String get videoEditorEyedropperSemanticLabel => 'Pilih warna daripada video';
+
+  @override
+  String get videoEditorEyedropperHint =>
+      'Sentuh dan seret untuk memilih warna';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel =>
+      'Berhenti memilih warna';
 
   @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
@@ -12867,12 +12951,80 @@ class AppLocalizationsMs extends AppLocalizations {
   String get minorAccountReviewParentConsentEmailCta => 'E-mel sokongan Divine';
 
   @override
+  String get minorAccountReviewParentConsentRecordCta => 'Record consent video';
+
+  @override
   String get minorAccountReviewParentConsentEmailSubject =>
       'Bantuan semakan Divine Greenlight (umur 13-15)';
 
   @override
   String get minorAccountReviewParentConsentEmailBody =>
       'Hai sokongan Divine,\n\nSaya menghubungi Divine tentang Divine Greenlight untuk remaja berumur 13-15 tahun.\n\nSaya telah melampirkan video peribadi ringkas yang menunjukkan:\n- remaja itu\n- ibu bapa atau penjaga bercakap di depan kamera\n- bahawa remaja itu mempunyai kebenaran untuk menggunakan Divine\n- bahawa ibu bapa atau penjaga mengetahui tentang akaun itu dan akan mengawasi penggunaannya\n\nNegara tempat tinggal:\n\nKonteks berguna:\n\nTerima kasih.';
+
+  @override
+  String get minorAccountReviewRecordConsentTitle => 'Record consent video';
+
+  @override
+  String get minorAccountReviewRecordConsentBody =>
+      'Record a short private video with the teen and a parent or guardian on camera. It stays on this device until you submit it.';
+
+  @override
+  String get minorAccountReviewRecordConsentPromptTitle => 'Say this on camera';
+
+  @override
+  String get minorAccountReviewRecordConsentRecordCta => 'Record';
+
+  @override
+  String get minorAccountReviewRecordConsentStopCta => 'Stop';
+
+  @override
+  String get minorAccountReviewRecordConsentPreviewLabel => 'Camera preview';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewTitle => 'Review your video';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewBody =>
+      'Watch it back. Retake if anything is missing, or use it if it shows everything above.';
+
+  @override
+  String get minorAccountReviewRecordConsentRetakeCta => 'Retake';
+
+  @override
+  String get minorAccountReviewRecordConsentUseVideoCta => 'Use this video';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedTitle =>
+      'We can\'t use the camera';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedBody =>
+      'Divine could not start the camera. You can still email a private video to Divine support instead.';
+
+  @override
+  String get minorAccountReviewRecordConsentEmailInsteadCta =>
+      'Use email instead';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorTitle => 'Recording failed';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorBody =>
+      'Something went wrong while recording. Please try again.';
+
+  @override
+  String get minorAccountReviewRecordConsentTryAgainCta => 'Try again';
+
+  @override
+  String get minorAccountReviewRecordConsentConfirmEmailTitle =>
+      'Confirm your email';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitCta => 'Submit video';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitError =>
+      'Could not submit your video. Please try again.';
 
   @override
   String get minorAccountReviewParentSupportInstructions =>
@@ -15861,4 +16013,19 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get messagesRoomDiscardDraft => 'Discard draft';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Video anda telah dihantar untuk semakan.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Video dihantar';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Video anda dihantar secara peribadi kepada pasukan Sokongan serta Kepercayaan dan Keselamatan Divine untuk semakan. Video tidak diterbitkan atau dikongsi dengan pengguna lain.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Penyerahan anda tidak diterima. Semak alamat e-mel anda, rakam semula video atau gunakan e-mel.';
 }

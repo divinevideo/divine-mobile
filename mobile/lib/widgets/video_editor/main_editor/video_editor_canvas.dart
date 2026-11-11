@@ -72,6 +72,7 @@ import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player_registry.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/paint_editor_stroke_width.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_preview.dart';
+import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:openvine/widgets/video_editor/main_editor/hit_test_expander.dart';
 import 'package:openvine/widgets/video_editor/main_editor/interactive_card_safe_area_guide.dart';
 import 'package:openvine/widgets/video_editor/main_editor/playhead_interpolator.dart';
@@ -280,6 +281,7 @@ class VideoEditorCanvas extends StatelessWidget {
           a.equalizer != b.equalizer ||
           a.playbackSpeed != b.playbackSpeed ||
           a.speedRamp != b.speedRamp ||
+          a.smoothSlowMotion != b.smoothSlowMotion ||
           a.reversed != b.reversed ||
           a.sourceStartOffset != b.sourceStartOffset ||
           a.transition != b.transition) {
@@ -579,6 +581,7 @@ class VideoEditorCanvas extends StatelessWidget {
           a.equalizer != b.equalizer ||
           a.playbackSpeed != b.playbackSpeed ||
           a.speedRamp != b.speedRamp ||
+          a.smoothSlowMotion != b.smoothSlowMotion ||
           a.transition != b.transition ||
           a.mask != b.mask ||
           a.maskBackgroundColor != b.maskBackgroundColor ||
@@ -2948,11 +2951,14 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
 
     // Update native player speeds when any clip's playback speed or speed
-    // ramp changes. VideoSpeedRamp overrides `==`, so the record comparison
-    // detects a reshaped curve.
-    ref.listen<List<(double?, VideoSpeedRamp?)>>(
+    // ramp changes, and swap in a blended or plain speed body when smooth
+    // slow motion is switched. VideoSpeedRamp overrides `==`, so the record
+    // comparison detects a reshaped curve.
+    ref.listen<List<(double?, VideoSpeedRamp?, bool)>>(
       clipManagerProvider.select(
-        (s) => s.clips.map((c) => (c.playbackSpeed, c.speedRamp)).toList(),
+        (s) => s.clips
+            .map((c) => (c.playbackSpeed, c.speedRamp, c.blendsFrames))
+            .toList(),
       ),
       (previous, current) {
         if (listEquals(previous, current)) return;
@@ -4050,16 +4056,21 @@ class _CanvasFitter extends ConsumerWidget {
           // Marks this box — the canvas body — so a tool laid over the editor
           // can map a touch back into layer coordinates.
           key: scope.canvasBodyKey,
-          child: VideoEditorCutAreaOverlay(
-            child: HitTestExpander(
-              visibleSize: geometry.targetSize,
-              child: VideoEditorCanvasFit(
-                geometry: geometry,
-                child: Navigator(
-                  clipBehavior: Clip.none,
-                  onGenerateRoute: (_) => PageRouteBuilder(
-                    pageBuilder: (_, _, _) =>
-                        builder(bodySize, geometry.renderSize),
+          // What a color sheet's eyedropper picks from anywhere in the
+          // editor: the video, its layers and drawings, not the controls
+          // drawn over them.
+          child: EyedropperSourceRegion(
+            child: VideoEditorCutAreaOverlay(
+              child: HitTestExpander(
+                visibleSize: geometry.targetSize,
+                child: VideoEditorCanvasFit(
+                  geometry: geometry,
+                  child: Navigator(
+                    clipBehavior: Clip.none,
+                    onGenerateRoute: (_) => PageRouteBuilder(
+                      pageBuilder: (_, _, _) =>
+                          builder(bodySize, geometry.renderSize),
+                    ),
                   ),
                 ),
               ),

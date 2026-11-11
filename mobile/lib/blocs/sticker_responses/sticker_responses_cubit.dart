@@ -22,8 +22,8 @@ typedef StickerResponsesFilter = List<VideoEvent> Function(
 ///
 /// They pass through [StickerResponsesFilter], the feeds' blocks, mutes and
 /// content filters, since they show on someone else's video and open in a
-/// feed; the replies the video's creator hid are left out too, and the reply
-/// they pinned comes first.
+/// feed; the replies the video's creator hid, and those of the accounts they
+/// blocked, are left out too, and the reply they pinned comes first.
 class StickerResponsesCubit extends Cubit<StickerResponsesState>
     with CloseGuardedEmit<StickerResponsesState> {
   StickerResponsesCubit({
@@ -71,9 +71,11 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
         responses = await _withPinned(replies, curation);
       } else {
         final hashtag = _region.promptHashtag;
-        final chain = address == null || hashtag == null
+        // Answers cite the chain by the key Divine always gave it.
+        final chainAddress = _video.divineAddress;
+        final chain = chainAddress == null || hashtag == null
             ? null
-            : await _chain(address, hashtag);
+            : await _chain(chainAddress, hashtag);
         chainRoot = chain?.join;
         responses = chain == null || hashtag == null
             ? const VideoResponses()

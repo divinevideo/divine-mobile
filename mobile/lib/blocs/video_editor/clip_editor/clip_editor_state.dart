@@ -1188,6 +1188,7 @@ final class ClipDetachSuccess extends ClipDetachResult {
     required this.previousClips,
     required this.detachedClip,
     this.placeholder,
+    this.bakedChromaKey,
   });
 
   final List<DivineVideoClip> previousClips;
@@ -1195,6 +1196,12 @@ final class ClipDetachSuccess extends ClipDetachResult {
 
   /// The still that took the clip's place, or `null` when the gap was closed.
   final DivineVideoClip? placeholder;
+
+  /// The key taken off the clip's file, or `null` when it had none or kept it.
+  ///
+  /// [detachedClip] then plays the footage the key was baked from, and the
+  /// layer applies [DetachedClipBakedChromaKey.chromaKey] live.
+  final DetachedClipBakedChromaKey? bakedChromaKey;
 }
 
 /// The placeholder render failed, so nothing was detached — the timeline is

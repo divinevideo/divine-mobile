@@ -3,6 +3,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -108,6 +109,33 @@ void main() {
         );
 
         expect(find.text('Allow camera access'), findsOneWidget);
+      });
+
+      testWidgets('keeps a long title word on one line at large text sizes', (
+        tester,
+      ) async {
+        tester.view
+          ..physicalSize = const Size(375, 667)
+          ..devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 3;
+        addTearDown(() {
+          tester.view
+            ..resetPhysicalSize()
+            ..resetDevicePixelRatio();
+          tester.platformDispatcher.clearAllTestValues();
+        });
+        const title = 'Spontaneously';
+
+        await tester.pumpWidget(buildSubject(title: title));
+
+        final lineTops = tester
+            .renderObject<RenderParagraph>(find.text(title))
+            .getBoxesForSelection(
+              const TextSelection(baseOffset: 0, extentOffset: title.length),
+            )
+            .map((box) => box.top)
+            .toSet();
+        expect(lineTops, hasLength(1));
       });
 
       testWidgets('subtitle text', (tester) async {

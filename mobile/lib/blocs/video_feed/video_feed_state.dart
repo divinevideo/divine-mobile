@@ -543,6 +543,7 @@ final class VideoFeedCoordination extends Equatable {
     this.pendingRestoredCuratedList,
     this.paginationGeneration = 0,
     this.loadGeneration = 0,
+    this.newVideosUntil,
   });
 
   final int sourceSelectionSequence;
@@ -560,6 +561,11 @@ final class VideoFeedCoordination extends Equatable {
   /// Refreshing the same source invalidates its previous first page.
   final int loadGeneration;
 
+  /// The next New-feed page's `until`: the oldest row of the last page or
+  /// cached window read, counted before the creator limit, or null when that
+  /// read was empty. Only meaningful while the source is New.
+  final int? newVideosUntil;
+
   VideoFeedCoordination copyWith({
     int? sourceSelectionSequence,
     Object? activeSourceSelection = _unchanged,
@@ -571,6 +577,7 @@ final class VideoFeedCoordination extends Equatable {
     Object? pendingRestoredCuratedList = _unchanged,
     int? paginationGeneration,
     int? loadGeneration,
+    Object? newVideosUntil = _unchanged,
   }) => VideoFeedCoordination(
     sourceSelectionSequence:
         sourceSelectionSequence ?? this.sourceSelectionSequence,
@@ -595,6 +602,9 @@ final class VideoFeedCoordination extends Equatable {
         : pendingRestoredCuratedList as String?,
     paginationGeneration: paginationGeneration ?? this.paginationGeneration,
     loadGeneration: loadGeneration ?? this.loadGeneration,
+    newVideosUntil: identical(newVideosUntil, _unchanged)
+        ? this.newVideosUntil
+        : newVideosUntil as int?,
   );
 
   static const _unchanged = Object();
@@ -611,5 +621,6 @@ final class VideoFeedCoordination extends Equatable {
     pendingRestoredCuratedList,
     paginationGeneration,
     loadGeneration,
+    newVideosUntil,
   ];
 }

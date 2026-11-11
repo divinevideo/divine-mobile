@@ -860,6 +860,97 @@ void main() {
       expect(container.exists(videoCardAuthorStatsProvider(pubkey)), isFalse);
       await updates.close();
     });
+
+    test(
+      'reports no error when disposed in the same event-loop turn',
+      () async {
+        when(
+          () => profileRepository.getCachedProfileStats(pubkey: pubkey),
+        ).thenAnswer((_) async => _stats(pubkey));
+        when(
+          () => profileRepository.watchProfileStats(pubkey: pubkey),
+        ).thenAnswer((_) => const Stream<ProfileStats?>.empty());
+        final uncaught = <Object>[];
+
+        runZonedGuarded(() {
+          container
+            ..listen(videoCardAuthorStatsProvider(pubkey), (_, _) {})
+            ..dispose();
+        }, (error, _) => uncaught.add(error));
+        await pumpEventQueue();
+
+        expect(uncaught, isEmpty);
+        verifyNever(
+          () => profileRepository.getCachedProfileStats(pubkey: pubkey),
+        );
+        verifyNever(() => profileRepository.fetchFreshProfile(pubkey: pubkey));
+        verifyNever(() => profileRepository.watchProfileStats(pubkey: pubkey));
+      },
+    );
+
+    test('rebuilds before the first cache read starts', () async {
+      when(
+        () => profileRepository.getCachedProfileStats(pubkey: pubkey),
+      ).thenAnswer((_) async => _stats(pubkey));
+      when(
+        () => profileRepository.watchProfileStats(pubkey: pubkey),
+      ).thenAnswer((_) => Stream.value(_stats(pubkey)));
+      final provider = videoCardAuthorStatsProvider(pubkey);
+      final uncaught = <Object>[];
+
+      runZonedGuarded(() {
+        final subscription = container.listen(provider, (_, _) {});
+        addTearDown(subscription.close);
+        container.refresh(provider);
+      }, (error, _) => uncaught.add(error));
+      await pumpEventQueue();
+
+      expect(uncaught, isEmpty);
+      expect(container.read(provider).value, _stats(pubkey));
+      verify(
+        () => profileRepository.getCachedProfileStats(pubkey: pubkey),
+      ).called(1);
+      verifyNever(() => profileRepository.fetchFreshProfile(pubkey: pubkey));
+    });
+
+    for (final readFails in [false, true]) {
+      test(
+        'cancellation during a cache read consumes its '
+        '${readFails ? 'error' : 'cache miss'} without fetching',
+        () async {
+          late Completer<ProfileStats?> read;
+          when(
+            () => profileRepository.getCachedProfileStats(pubkey: pubkey),
+          ).thenAnswer((_) => read.future);
+          final uncaught = <Object>[];
+
+          runZonedGuarded(() {
+            read = Completer<ProfileStats?>();
+            container.listen(videoCardAuthorStatsProvider(pubkey), (_, _) {});
+          }, (error, _) => uncaught.add(error));
+          await pumpEventQueue();
+          verify(
+            () => profileRepository.getCachedProfileStats(pubkey: pubkey),
+          ).called(1);
+
+          container.dispose();
+          if (readFails) {
+            read.completeError(StateError('cache read failed'));
+          } else {
+            read.complete(null);
+          }
+          await pumpEventQueue();
+
+          expect(uncaught, isEmpty);
+          verifyNever(
+            () => profileRepository.fetchFreshProfile(pubkey: pubkey),
+          );
+          verifyNever(
+            () => profileRepository.watchProfileStats(pubkey: pubkey),
+          );
+        },
+      );
+    }
   });
 
   group('read/write split (#6423)', () {

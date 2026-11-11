@@ -194,10 +194,11 @@ class ConversationListBloc
     // filter client-side, so a limited window would make them answer about the
     // loaded page rather than the inbox: with an unread chat ranked below the
     // window the list said "You're all caught up" while the Messages badge —
-    // which counts the full accepted set — showed unread, and search reported
-    // "No matches" for conversations the user could not scroll to. Pagination
-    // is now a render window applied in [_computeVisible], not a fetch bound.
-    // This is the same query `DmUnreadCountCubit` already runs app-shell-wide.
+    // which counts unread across the whole inbox — showed unread, and search
+    // reported "No matches" for conversations the user could not scroll to.
+    // Pagination is now a render window applied in [_computeVisible], not a
+    // fetch bound. `DmUnreadCountCubit` watches only the unread rows (#7923),
+    // so these queries are the list's own.
     await emit.forEach(
       Rx.combineLatest6(
         _dmRepository.watchAcceptedConversations(),
@@ -685,10 +686,11 @@ class ConversationListBloc
   /// [data] with every row read as the viewer sees it, so a hidden member's
   /// messages neither mark a group unread nor move it up (#10150).
   ///
-  /// The same pass [DmUnreadCountCubit] runs over the same two lists, so the
-  /// badge counts exactly the unread rows the list renders. A list whose read
-  /// fails stays as stored, as it does in the badge, rather than failing the
-  /// whole inbox while the badge keeps counting.
+  /// The same pass [DmUnreadCountCubit] runs over its unread-only watches of
+  /// the same two lists, so the badge counts exactly the unread rows the list
+  /// renders. A list whose read fails stays as stored, as it does in the
+  /// badge, rather than failing the whole inbox while the badge keeps
+  /// counting.
   Future<_ConversationListInputs> _asSeenByViewer(
     _ConversationListInputs data,
   ) async {

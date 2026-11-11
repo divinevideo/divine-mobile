@@ -8,6 +8,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/draft_summary.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -64,14 +65,29 @@ class DraftsLibraryBloc extends Bloc<DraftsLibraryEvent, DraftsLibraryState> {
   /// Drops published, publishing and scheduled drafts (the last belong to
   /// the Scheduled tab), plus the autosave when it holds nothing yet or
   /// [includeAutosaveDraft] is off.
-  bool _isListable(DivineVideoDraft draft) {
+  bool _isListable(DraftSummary draft) {
     if (draft.id == VideoEditorConstants.autoSaveId &&
-        (!includeAutosaveDraft || draft.clips.isEmpty)) {
+        (!includeAutosaveDraft || draft.clipCount == 0)) {
       return false;
     }
     return draft.publishStatus != PublishStatus.published &&
         draft.publishStatus != PublishStatus.publishing &&
         draft.publishStatus != PublishStatus.scheduled;
+  }
+
+  /// Fetch current content only when Post is selected; never retain it in state.
+  Future<DivineVideoDraft?> loadDraftForPost(String id) async {
+    try {
+      final draft = await _draftStorageService.getValidatedDraftById(id);
+      return draft != null &&
+              draft.canPost &&
+              _isListable(DraftSummary.fromDraft(draft))
+          ? draft
+          : null;
+    } on Object catch (error, stack) {
+      addError(error, stack);
+      return null;
+    }
   }
 
   Future<void> _onMutation(
@@ -91,7 +107,7 @@ class DraftsLibraryBloc extends Bloc<DraftsLibraryEvent, DraftsLibraryState> {
     emit(const DraftsLibraryLoading());
 
     try {
-      final allDrafts = await _draftStorageService.getAllDrafts();
+      final allDrafts = await _draftStorageService.getDraftSummaries();
 
       final filteredDrafts = allDrafts.where(_isListable).toList()
         ..sort((a, b) => b.lastModified.compareTo(a.lastModified));
@@ -128,14 +144,14 @@ class DraftsLibraryBloc extends Bloc<DraftsLibraryEvent, DraftsLibraryState> {
     };
     if (currentDrafts == null) return;
 
-    DivineVideoDraft? source;
+    DraftSummary? summary;
     for (final draft in currentDrafts) {
       if (draft.id == event.draftId) {
-        source = draft;
+        summary = draft;
         break;
       }
     }
-    if (source == null) return;
+    if (summary == null) return;
 
     try {
       Log.info(
@@ -144,10 +160,25 @@ class DraftsLibraryBloc extends Bloc<DraftsLibraryEvent, DraftsLibraryState> {
         category: LogCategory.video,
       );
 
+      final source = await _draftStorageService.getValidatedDraftById(
+        event.draftId,
+      );
+      // Deleted, emptied of media or unreadable since the list loaded: an
+      // expected outcome, so it must not reach the observer as a StateError.
+      if (source == null) {
+        Log.warning(
+          '📚 Draft ${event.draftId} is no longer available to duplicate',
+          name: 'DraftsLibraryBloc',
+          category: LogCategory.video,
+        );
+        emit(DraftsLibraryDuplicateFailed(drafts: currentDrafts));
+        emit(DraftsLibraryLoaded(drafts: currentDrafts));
+        return;
+      }
       final copy = source.duplicate(title: event.newTitle);
       await _draftStorageService.saveDraft(copy);
 
-      final updatedDrafts = [...currentDrafts, copy]
+      final updatedDrafts = [...currentDrafts, DraftSummary.fromDraft(copy)]
         ..sort((a, b) => b.lastModified.compareTo(a.lastModified));
 
       emit(DraftsLibraryDraftDuplicated(drafts: updatedDrafts));

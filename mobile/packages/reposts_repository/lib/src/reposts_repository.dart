@@ -12,6 +12,7 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:reposts_repository/src/blocked_reposter_filter.dart';
 import 'package:reposts_repository/src/exceptions.dart';
 import 'package:reposts_repository/src/models/repost_record.dart';
+import 'package:reposts_repository/src/models/reposters_page.dart';
 import 'package:reposts_repository/src/models/reposts_sync_result.dart';
 import 'package:reposts_repository/src/reposts_local_storage.dart';
 import 'package:reposts_repository/src/reposts_repository_reportable_sites.dart';
@@ -216,7 +217,7 @@ class RepostsRepository {
   /// Returns `true` if the user has reposted the video, `false` otherwise.
   Future<bool> isReposted(String addressableId) async {
     await _ensureInitialized();
-    return _repostRecords.containsKey(addressableId);
+    return _repostRecords.containsKey(_storedRepostKey(addressableId));
   }
 
   /// Check if a video is reposted (synchronous, from cache only).
@@ -224,8 +225,25 @@ class RepostsRepository {
   /// This is useful for UI components that need immediate feedback.
   /// Note: May return stale data if cache hasn't been initialized.
   bool isRepostedSync(String addressableId) {
-    return _repostRecords.containsKey(addressableId);
+    return _repostRecords.containsKey(_storedRepostKey(addressableId));
   }
+
+  /// The key the repost of [addressableId] is stored under: its own, or the
+  /// legacy `34236:` key Divine stored reposts of a Kind 34235 video under
+  /// before #10776. [addressableId] itself when neither holds a record.
+  String _storedRepostKey(String addressableId) {
+    final legacy = legacyVideoCoordinateFor(addressableId);
+    return legacy != null &&
+            !_repostRecords.containsKey(addressableId) &&
+            _repostRecords.containsKey(legacy)
+        ? legacy
+        : addressableId;
+  }
+
+  /// The kind a repost of [addressableId] names in its `k` tag: the
+  /// coordinate's own kind (#10776), or 34236 when it does not parse.
+  static int _targetKindOf(String addressableId) =>
+      AId.fromString(addressableId)?.kind ?? EventKind.videoVertical;
 
   /// Cache a locally-adjusted repost count for a video.
   ///
@@ -257,7 +275,7 @@ class RepostsRepository {
     // Query relays for count of Kind 16 reposts referencing this addressable ID
     final filter = Filter(
       kinds: const [EventKind.genericRepost],
-      a: [addressableId],
+      a: [addressableId, ?legacyVideoCoordinateFor(addressableId)],
     );
 
     return _countAndCache(addressableId, filter);
@@ -330,7 +348,7 @@ class RepostsRepository {
     await _ensureInitialized();
 
     // Check if already reposted
-    if (_repostRecords.containsKey(addressableId)) {
+    if (_repostRecords.containsKey(_storedRepostKey(addressableId))) {
       throw AlreadyRepostedException(addressableId);
     }
 
@@ -382,7 +400,7 @@ class RepostsRepository {
     try {
       final sentEvent = await _nostrClient.sendGenericRepost(
         addressableId: addressableId,
-        targetKind: EventKind.videoVertical,
+        targetKind: _targetKindOf(addressableId),
         authorPubkey: originalAuthorPubkey,
         eventId: eventId,
       );
@@ -448,7 +466,7 @@ class RepostsRepository {
     // Create and publish Kind 16 generic repost event
     final sentEvent = await _nostrClient.sendGenericRepost(
       addressableId: addressableId,
-      targetKind: EventKind.videoVertical,
+      targetKind: _targetKindOf(addressableId),
       authorPubkey: originalAuthorPubkey,
       eventId: eventId,
     );
@@ -484,8 +502,9 @@ class RepostsRepository {
   ///
   /// Throws `UnrepostFailedException` if the operation fails.
   /// Throws `NotRepostedException` if the video is not currently reposted.
-  Future<void> unrepostVideo(String addressableId) async {
+  Future<void> unrepostVideo(String coordinate) async {
     await _ensureInitialized();
+    final addressableId = _storedRepostKey(coordinate);
 
     // Try in-memory cache first, then fall back to database.
     // This handles the case where the cache hasn't been populated yet.
@@ -511,7 +530,9 @@ class RepostsRepository {
 
     // Snapshot for rollback if the network publish fails
     final snapshotRecord = record;
-    final previousCount = _localCountCache[addressableId];
+    // The count is cached under the video's own coordinate, which is not the
+    // stored key when the repost predates #10776.
+    final previousCount = _localCountCache[coordinate];
 
     // 1. Optimistic-first: remove from memory + local storage and tick the
     // watchRepostedAddressableIds stream BEFORE any network I/O (mirror of
@@ -523,7 +544,7 @@ class RepostsRepository {
       site: RepostsRepositoryReportableSites.unrepostVideoDeleteRecord,
     );
     if (previousCount != null) {
-      _cacheRepostCount(addressableId, previousCount - 1);
+      _cacheRepostCount(coordinate, previousCount - 1);
     }
     _emitRepostedIds();
 
@@ -579,7 +600,7 @@ class RepostsRepository {
         site: RepostsRepositoryReportableSites.unrepostVideoRestoreRecord,
       );
       if (previousCount != null) {
-        _cacheRepostCount(addressableId, previousCount);
+        _cacheRepostCount(coordinate, previousCount);
       }
       _emitRepostedIds();
       if (e is SocialPublishException) {
@@ -605,7 +626,8 @@ class RepostsRepository {
   ///
   /// This method bypasses offline queuing and directly publishes to relays.
   /// Used by PendingActionService to execute queued actions.
-  Future<void> executeUnrepostAction(String addressableId) async {
+  Future<void> executeUnrepostAction(String coordinate) async {
+    final addressableId = _storedRepostKey(coordinate);
     // Try to get the record - it may not exist if the repost was also offline
     var record = _repostRecords[addressableId];
     if (record == null && _localStorage != null) {
@@ -676,6 +698,7 @@ class RepostsRepository {
     String? eventId,
   }) async {
     await _ensureInitialized();
+    final storedKey = _storedRepostKey(addressableId);
 
     // Query the database directly as source of truth to avoid cache/db
     // inconsistency after app restart. Best-effort for the same reason
@@ -685,11 +708,11 @@ class RepostsRepository {
     // exactly what the null-storage branch of the `??` already does.
     final isCurrentlyReposted =
         await _bestEffortLocalStorage<bool?>(
-          () async => _localStorage?.isReposted(addressableId),
+          () async => _localStorage?.isReposted(storedKey),
           description: 'checking the repost state',
           site: RepostsRepositoryReportableSites.toggleRepostReadState,
         ) ??
-        _repostRecords.containsKey(addressableId);
+        _repostRecords.containsKey(storedKey);
 
     if (isCurrentlyReposted) {
       await unrepostVideo(addressableId);
@@ -710,7 +733,7 @@ class RepostsRepository {
   /// or `null` if the video is not reposted.
   Future<RepostRecord?> getRepostRecord(String addressableId) async {
     await _ensureInitialized();
-    return _repostRecords[addressableId];
+    return _repostRecords[_storedRepostKey(addressableId)];
   }
 
   /// Sync all user's reposts from relays.
@@ -936,8 +959,14 @@ class RepostsRepository {
   /// - [addressableId]: Optional `kind:pubkey:d-tag` for Kind 30000+
   ///   events.
   ///
+  /// The repost reads wait for every relay, and the page says whether they
+  /// all finished, so a read cut short is not mistaken for nobody (#10846).
+  /// A relay's terminal refusal counts as finished once another relay
+  /// answered. The deletion read does not affect completeness: a deletion it
+  /// misses leaves someone listed, never anyone missing.
+  ///
   /// Throws [FetchRepostersFailedException] if relay queries fail.
-  Future<List<String>> fetchEventReposters({
+  Future<RepostersPage> fetchEventReposters({
     required String eventId,
     String? addressableId,
   }) async {
@@ -959,23 +988,31 @@ class RepostsRepository {
         if (addressableId != null && addressableId.isNotEmpty)
           Filter(
             kinds: repostKinds,
-            a: [addressableId],
+            a: [addressableId, ?legacyVideoCoordinateFor(addressableId)],
             limit: _defaultRepostFetchLimit,
           ),
       ];
       final results = await Future.wait([
-        for (final filter in filters) _nostrClient.queryEvents([filter]),
+        for (final filter in filters)
+          _nostrClient.queryEventsDetailed(
+            [filter],
+            requireAllRelaysSettled: true,
+            acceptRelayClosedWhenOthersAnswered: true,
+          ),
       ]);
+      final isComplete = results.every(
+        (result) => !result.timedOut && !result.noRelays,
+      );
 
       final repostsById = <String, Event>{};
-      for (final batch in results) {
-        for (final event in batch) {
+      for (final result in results) {
+        for (final event in result.events) {
           repostsById[event.id] = event;
         }
       }
 
       if (repostsById.isEmpty) {
-        return <String>[];
+        return RepostersPage(pubkeys: const [], isComplete: isComplete);
       }
 
       // The newest 500 overall lie within the union of each filter's newest
@@ -1022,7 +1059,7 @@ class RepostsRepository {
           orderedPubkeys.add(event.pubkey);
         }
       }
-      return orderedPubkeys;
+      return RepostersPage(pubkeys: orderedPubkeys, isComplete: isComplete);
     } catch (e) {
       throw FetchRepostersFailedException(
         'Failed to fetch reposters for event $eventId: $e',

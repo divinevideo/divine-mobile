@@ -151,7 +151,9 @@ class _MaskEditorPanelSpace extends StatelessWidget {
     )?.canvasToolPanelHeightNotifier;
     if (panelHeight == null) {
       return _MaskEditorPanelSpaceBox(
-        height: isEditingMask ? videoEditorMaskPanelMaxHeight : 0,
+        height: isEditingMask
+            ? videoEditorMaskPanelMaxHeight(MediaQuery.textScalerOf(context))
+            : 0,
       );
     }
     return ValueListenableBuilder<double>(

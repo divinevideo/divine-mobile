@@ -301,22 +301,33 @@ class ProfilePinsRepository {
 
   /// The [candidates] the relays report deleted: a kind-5 by [owner] names
   /// the coordinate and no kind-34236 version by [owner] under the same `d`
-  /// is stamped later than the newest such request. Settled on every relay
-  /// so a slow relay cannot hide the version that outlives the request; an
-  /// inconclusive read reports nothing deleted.
+  /// is stamped later than the newest such request. A pin of a Kind 34235
+  /// video keeps the 34236 key while its deletion names the 34235 coordinate
+  /// (#10776), so that form counts too, unless a Kind 34236 video holds the
+  /// pin's own address. Settled on every relay so a slow relay cannot hide
+  /// the version that outlives the request; an inconclusive read reports
+  /// nothing deleted.
   Future<Set<String>> _knownDeleted(
     String owner,
     Set<String> candidates,
   ) async {
+    final normalForms = {
+      for (final coordinate in candidates)
+        AId(
+          kind: EventKind.videoHorizontal,
+          pubkey: owner,
+          dTag: AId.fromString(coordinate)!.dTag,
+        ).toAString(): coordinate,
+    };
     final result = await _nostrClient.queryEventsDetailed(
       [
         Filter(
           kinds: const [EventKind.eventDeletion],
           authors: [owner],
-          a: candidates.toList(),
+          a: [...candidates, ...normalForms.keys],
         ),
         Filter(
-          kinds: const [EventKind.videoVertical],
+          kinds: const [EventKind.videoVertical, EventKind.videoHorizontal],
           authors: [owner],
           d: [
             for (final coordinate in candidates)
@@ -344,29 +355,43 @@ class ProfilePinsRepository {
       if (event.kind == EventKind.eventDeletion) {
         for (final tag in event.tags) {
           if (tag.length < 2 || tag[0] != 'a') continue;
-          if (!candidates.contains(tag[1])) continue;
-          deletedAt.update(
-            tag[1],
-            (known) => max(known, event.createdAt),
-            ifAbsent: () => event.createdAt,
-          );
+          if (!candidates.contains(tag[1]) &&
+              !normalForms.containsKey(tag[1])) {
+            continue;
+          }
+          _keepLatest(deletedAt, tag[1], event.createdAt);
         }
-      } else if (event.kind == EventKind.videoVertical) {
+      } else if (event.kind == EventKind.videoVertical ||
+          event.kind == EventKind.videoHorizontal) {
         final coordinate = '${event.kind}:${event.pubkey}:${event.dTagValue}';
-        if (!candidates.contains(coordinate)) continue;
-        liveAt.update(
-          coordinate,
-          (known) => max(known, event.createdAt),
-          ifAbsent: () => event.createdAt,
-        );
+        if (!candidates.contains(coordinate) &&
+            !normalForms.containsKey(coordinate)) {
+          continue;
+        }
+        _keepLatest(liveAt, coordinate, event.createdAt);
       }
     }
+    bool deleted(String coordinate) {
+      final requestedAt = deletedAt[coordinate];
+      return requestedAt != null &&
+          (liveAt[coordinate] ?? requestedAt) <= requestedAt;
+    }
+
     return {
-      for (final MapEntry(key: coordinate, value: requestedAt)
-          in deletedAt.entries)
-        if ((liveAt[coordinate] ?? requestedAt) <= requestedAt) coordinate,
+      for (final coordinate in candidates)
+        if (deleted(coordinate)) coordinate,
+      for (final MapEntry(key: normalForm, value: coordinate)
+          in normalForms.entries)
+        if (!liveAt.containsKey(coordinate) && deleted(normalForm)) coordinate,
     };
   }
+
+  static void _keepLatest(Map<String, int> times, String key, int createdAt) =>
+      times.update(
+        key,
+        (known) => max(known, createdAt),
+        ifAbsent: () => createdAt,
+      );
 
   Future<T> _serialized<T>(Future<T> Function() operation) {
     final completer = Completer<T>();

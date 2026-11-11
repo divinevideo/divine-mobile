@@ -261,6 +261,12 @@ const double _kBottomExtraTapHeight = 12;
 const double _kTabSlotHeight =
     kMinInteractiveDimension + _kTopExtraTapHeight + _kBottomExtraTapHeight;
 
+/// Height of the bottom nav above the bottom safe-area inset.
+///
+/// The feed's video ends this far above the inset, so the editor's feed
+/// preview frames the video with it.
+const double vineBottomNavBarHeight = _kTabSlotHeight;
+
 /// Lateral inset between the screen edge and the visible position of the
 /// outermost icons (Home / Profile). Folded into Home's and Profile's hit
 /// targets so taps inside the 16 px strip on the screen edge still route

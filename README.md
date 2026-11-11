@@ -36,7 +36,7 @@ Generated code (Riverpod, JSON serialization, Drift, Hive, mocks) is produced by
 
 ## Getting started
 
-Requirements: Flutter `^3.47.0` and the Dart SDK `^3.13.0`. The pinned toolchain version is in `mobile/mise.toml` (Flutter 3.47.2). All Flutter commands run from `mobile/`.
+Requirements: Flutter `^3.47.0` and the Dart SDK `^3.13.0`. The pinned toolchain version is in `mobile/mise.toml` (Flutter 3.47.9). All Flutter commands run from `mobile/`.
 
 ```bash
 cd mobile

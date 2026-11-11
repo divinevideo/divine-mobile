@@ -15,6 +15,9 @@ class _MockCommentsRepository extends Mock implements CommentsRepository {}
 
 class _MockLikesRepository extends Mock implements LikesRepository {}
 
+class _MockCommentModerationRepository extends Mock
+    implements CommentModerationRepository {}
+
 const _rootId =
     '1111111111111111111111111111111111111111111111111111111111111111';
 const _creator =
@@ -51,11 +54,27 @@ void main() {
   group(FeedTopCommentCubit, () {
     late _MockCommentsRepository commentsRepository;
     late _MockLikesRepository likesRepository;
+    late _MockCommentModerationRepository moderationRepository;
     late StreamController<void> loops;
+
+    void stubModeration(CommentModeration moderation, {int revision = 0}) {
+      when(
+        () => moderationRepository.loadModeration(
+          rootAddressableId: any(named: 'rootAddressableId'),
+        ),
+      ).thenAnswer((_) async => moderation);
+      when(
+        () => moderationRepository.knownModeration(
+          rootAddressableId: any(named: 'rootAddressableId'),
+        ),
+      ).thenReturn((moderation: moderation, revision: revision));
+    }
 
     setUp(() {
       commentsRepository = _MockCommentsRepository();
       likesRepository = _MockLikesRepository();
+      moderationRepository = _MockCommentModerationRepository();
+      stubModeration(CommentModeration.empty);
       loops = StreamController<void>.broadcast();
     });
 
@@ -77,30 +96,171 @@ void main() {
       );
     }
 
-    void stubUpvotes(Map<String, int> upvotes) {
+    void stubUpvotes(
+      Map<String, int> upvotes, {
+      Map<String, int> downvotes = const {},
+    }) {
       when(
         () => likesRepository.getVoteCounts(
           any(),
           addressableIds: any(named: 'addressableIds'),
         ),
-      ).thenAnswer(
-        (_) async => (upvotes: upvotes, downvotes: const <String, int>{}),
-      );
+      ).thenAnswer((_) async => (upvotes: upvotes, downvotes: downvotes));
     }
 
-    FeedTopCommentCubit buildCubit({String? rootAddressableId}) =>
-        FeedTopCommentCubit(
-          commentsRepository: commentsRepository,
-          likesRepository: likesRepository,
-          rootEventId: _rootId,
-          rootEventKind: 34236,
-          rootAuthorPubkey: _creator,
-          rootAddressableId: rootAddressableId,
-          loopCompletions: loops.stream,
-          now: () => _now,
-        );
+    FeedTopCommentCubit buildCubit({
+      String? rootAddressableId,
+      String? viewerPubkey,
+      Set<String> viewerBlockedAuthors = const {},
+    }) => FeedTopCommentCubit(
+      commentsRepository: commentsRepository,
+      likesRepository: likesRepository,
+      commentModerationRepository: moderationRepository,
+      viewerPubkey: viewerPubkey,
+      viewerBlockedAuthors: viewerBlockedAuthors,
+      rootEventId: _rootId,
+      rootEventKind: 34236,
+      rootAuthorPubkey: _creator,
+      rootAddressableId: rootAddressableId,
+      loopCompletions: loops.stream,
+      now: () => _now,
+    );
 
     group('load', () {
+      group('creator moderation', () {
+        const root = '34236:$_creator:root';
+
+        test('ranks only the default-visible comments', () async {
+          stubComments([_comment(_alice), _comment(_bob, author: _bob)]);
+          stubUpvotes({_alice: 20, _bob: 1});
+          stubModeration(const CommentModeration(hiddenCommentIds: {_alice}));
+          final cubit = buildCubit(rootAddressableId: root);
+          addTearDown(cubit.close);
+          await cubit.load();
+          expect(cubit.state.topComment?.id, _bob);
+          verify(
+            () => likesRepository.getVoteCounts([
+              _alice,
+              _bob,
+            ], addressableIds: any(named: 'addressableIds')),
+          ).called(1);
+        });
+
+        test('keeps an explicitly restored comment eligible', () async {
+          stubComments([_comment(_alice), _comment(_bob, author: _bob)]);
+          stubUpvotes({_alice: 20, _bob: 1});
+          stubModeration(
+            const CommentModeration(
+              autoHiddenAuthors: {_alice},
+              restoredCommentIds: {_alice},
+            ),
+          );
+          final cubit = buildCubit(rootAddressableId: root);
+          addTearDown(cubit.close);
+          await cubit.load();
+          expect(cubit.state.topComment?.id, _alice);
+        });
+
+        test(
+          'keeps the author view consistent with the comment sheet',
+          () async {
+            stubComments([_comment(_alice)]);
+            stubUpvotes({_alice: 20});
+            stubModeration(const CommentModeration(hiddenCommentIds: {_alice}));
+            final cubit = buildCubit(
+              rootAddressableId: root,
+              viewerPubkey: _alice,
+            );
+            addTearDown(cubit.close);
+            await cubit.load();
+            expect(cubit.state.topComment?.id, _alice);
+          },
+        );
+
+        test(
+          'applies a scoped change received while vote counts are loading',
+          () async {
+            stubComments([_comment(_alice), _comment(_bob, author: _bob)]);
+            final started = Completer<void>();
+            final counts =
+                Completer<
+                  ({Map<String, int> upvotes, Map<String, int> downvotes})
+                >();
+            when(
+              () => likesRepository.getVoteCounts(
+                any(),
+                addressableIds: any(named: 'addressableIds'),
+              ),
+            ).thenAnswer((_) {
+              started.complete();
+              return counts.future;
+            });
+            final cubit = buildCubit(rootAddressableId: root);
+            addTearDown(cubit.close);
+            final loading = cubit.load();
+            await started.future;
+            when(
+              () =>
+                  moderationRepository.knownModeration(rootAddressableId: root),
+            ).thenReturn((
+              moderation: const CommentModeration(hiddenCommentIds: {_alice}),
+              revision: 1,
+            ));
+            counts.complete((
+              upvotes: {_alice: 20, _bob: 1},
+              downvotes: <String, int>{},
+            ));
+            await loading;
+            expect(cubit.state.topComment?.id, _bob);
+            expect(cubit.state.moderationRevision, 1);
+          },
+        );
+
+        test(
+          'skips vote lookup when every eligible comment is hidden',
+          () async {
+            stubComments([_comment(_alice)]);
+            stubModeration(
+              const CommentModeration(hiddenCommentIds: {_alice}),
+              revision: 1,
+            );
+            final cubit = buildCubit(rootAddressableId: root);
+            addTearDown(cubit.close);
+            await cubit.load();
+            expect(cubit.state.status, FeedTopCommentStatus.empty);
+            expect(cubit.state.moderationRevision, 1);
+            verifyNever(
+              () => likesRepository.getVoteCounts(
+                any(),
+                addressableIds: any(named: 'addressableIds'),
+              ),
+            );
+          },
+        );
+
+        test('stops loading after close during the moderation read', () async {
+          final read = Completer<CommentModeration>();
+          stubComments([_comment(_alice)]);
+          stubUpvotes({_alice: 20});
+          when(
+            () => moderationRepository.loadModeration(rootAddressableId: root),
+          ).thenAnswer((_) => read.future);
+          final cubit = buildCubit(rootAddressableId: root);
+          final loading = cubit.load();
+          await pumpEventQueue();
+          await cubit.close();
+          read.complete(CommentModeration.empty);
+          await loading;
+          verifyNever(
+            () => likesRepository.getVoteCounts(
+              any(),
+              addressableIds: any(named: 'addressableIds'),
+            ),
+          );
+          expect(cubit.state.status, FeedTopCommentStatus.loading);
+        });
+      });
+
       group('author deletions', () {
         const deletedId =
             '5555555555555555555555555555555555555555555555555555555555555555';
@@ -142,35 +302,6 @@ void main() {
             isA<FeedTopCommentState>()
                 .having((s) => s.status, 'status', FeedTopCommentStatus.empty)
                 .having((s) => s.topComment, 'topComment', isNull),
-          ],
-        );
-
-        blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-          'does not count an author-deleted reply toward engagement',
-          setUp: () {
-            stubComments([
-              _comment(keptId),
-              _comment(
-                deletedId,
-                content: '',
-                replyToEventId: keptId,
-              ),
-              _comment(_bob),
-            ]);
-            stubUpvotes({_bob: 1});
-            when(
-              () => commentsRepository.findAuthorDeletedComments(any()),
-            ).thenAnswer((_) async => {deletedId});
-          },
-          build: buildCubit,
-          act: (cubit) => cubit.load(),
-          skip: 1,
-          expect: () => [
-            isA<FeedTopCommentState>().having(
-              (s) => s.topComment?.id,
-              'topComment',
-              _bob,
-            ),
           ],
         );
 
@@ -304,19 +435,19 @@ void main() {
       );
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-        'counts replies toward a comment like the Top ordering does',
+        'uses net votes without weighting replies',
         setUp: () {
           stubComments([
-            _comment('quiet'),
-            _comment('discussed'),
+            _comment(_alice, age: const Duration(days: 1)),
+            _comment(_bob),
             _comment(
-              'answer',
+              'e' * 64,
               content: '',
-              replyToEventId: 'discussed',
+              replyToEventId: _bob,
               replyToAuthorPubkey: _alice,
             ),
           ]);
-          stubUpvotes({'quiet': 1});
+          stubUpvotes({_alice: 1, _bob: 5}, downvotes: {_bob: 5});
         },
         build: buildCubit,
         act: (cubit) => cubit.load(),
@@ -325,19 +456,17 @@ void main() {
           isA<FeedTopCommentState>().having(
             (s) => s.topComment?.id,
             'topComment',
-            'discussed',
+            _alice,
           ),
         ],
       );
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
         'breaks a tie in favour of the newer comment',
-        // Age is scored in whole minutes, so equal votes within one minute
-        // tie and only the tie-break orders them.
         setUp: () {
           stubComments([
-            _comment('older', age: const Duration(hours: 2, seconds: 40)),
-            _comment('newer', age: const Duration(hours: 2, seconds: 10)),
+            _comment('older', age: const Duration(days: 2)),
+            _comment('newer', age: const Duration(hours: 2)),
           ]);
           stubUpvotes({'older': 1, 'newer': 1});
         },
@@ -452,7 +581,7 @@ void main() {
       );
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-        'shows the most recent comment when none has an upvote or a reply',
+        'shows the most recent comment when scores are zero',
         setUp: () {
           stubComments([
             _comment('older', age: const Duration(hours: 5)),
@@ -524,16 +653,10 @@ void main() {
       );
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-        'still ranks by replies when vote counts fail',
+        'shows the most recent comment when vote counts fail',
         setUp: () {
           stubComments([
-            _comment('discussed', age: const Duration(hours: 2)),
-            _comment(
-              'answer',
-              content: '',
-              replyToEventId: 'discussed',
-              replyToAuthorPubkey: _alice,
-            ),
+            _comment('older', age: const Duration(hours: 2)),
             _comment('newer', age: const Duration(minutes: 5)),
           ]);
           when(
@@ -550,7 +673,7 @@ void main() {
         expect: () => [
           isA<FeedTopCommentState>()
               .having((s) => s.status, 'status', FeedTopCommentStatus.ready)
-              .having((s) => s.topComment?.id, 'topComment', 'discussed'),
+              .having((s) => s.topComment?.id, 'topComment', 'newer'),
         ],
       );
 

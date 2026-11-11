@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:clock/clock.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/utils/path_resolver.dart';
@@ -19,13 +20,20 @@ class VideoEditorReverseService {
   /// file and keeping metadata trims would expose the sibling's frames because
   /// the split half's `duration` no longer equals the real file length. For an
   /// untrimmed clip the window is the whole file, so the output is unchanged.
+  ///
+  /// Every render writes a new file. A trimmed clip keeps no forward copy
+  /// after its reverse, so reversing it again renders from the file the first
+  /// reverse wrote, and undo history still plays earlier renders.
   static Future<EditorVideo> reverseClip({
     required DivineVideoClip sourceClip,
     required String renderId,
   }) async {
     final documentsPath = await getDocumentsPath();
     final inputPath = await sourceClip.requireVideo.safeFilePath();
-    final outputPath = p.join(documentsPath, '${sourceClip.id}_reversed.mp4');
+    final outputPath = p.join(
+      documentsPath,
+      '${sourceClip.id}_reversed_${clock.now().microsecondsSinceEpoch}.mp4',
+    );
 
     // Defensive: refuse to render when the input path collides with the
     // output path. We delete the output file before rendering, so a collision

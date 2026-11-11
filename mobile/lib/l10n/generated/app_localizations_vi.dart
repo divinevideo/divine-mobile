@@ -1963,6 +1963,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEngagementLoadFailed => 'Không tải được danh sách đó';
 
   @override
+  String get videoEngagementListIncomplete => 'Không tải được tất cả mọi người';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => 'Mở chi tiết video';
 
   @override
@@ -5085,6 +5088,26 @@ class AppLocalizationsVi extends AppLocalizations {
       'Divine sẽ xử lý báo cáo nội dung trong vòng 24 giờ bằng cách gỡ nội dung và loại người dùng đăng nội dung vi phạm.';
 
   @override
+  String get reportPrivateNotice =>
+      'Báo cáo này được gửi riêng tư đến đội kiểm duyệt của Divine. Báo cáo không được đăng công khai.';
+
+  @override
+  String get reportIncludeMessageTitle => 'Gửi kèm tin nhắn này';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Đội kiểm duyệt của Divine sẽ xem tin nhắn này. Tin nhắn vẫn được giữ riêng tư và không được đăng công khai.';
+
+  @override
+  String reportMessageTooLong(String optionTitle) {
+    return 'Tin nhắn này quá dài để gửi kèm. Bỏ chọn “$optionTitle” rồi thử lại.';
+  }
+
+  @override
+  String get reportDetailsTooLong =>
+      'Phần chi tiết của bạn quá dài để gửi. Rút ngắn rồi thử lại.';
+
+  @override
   String get reportBlockUser => 'Chặn người dùng này';
 
   @override
@@ -6371,10 +6394,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String dmReactionChipPendingA11yLabel(String emoji) {
     return 'Đang gửi cảm xúc: $emoji';
   }
-
-  @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Cảm xúc thất bại, chạm hai lần để thử lại';
 
   @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
@@ -8685,16 +8704,55 @@ class AppLocalizationsVi extends AppLocalizations {
       'Câu trả lời video của bạn đang được đăng';
 
   @override
-  String get commentsSortNew => 'Mới';
+  String get commentsSortRecent => 'Gần đây';
 
   @override
   String get commentsSortTop => 'Nổi bật';
 
   @override
-  String get commentsSortOld => 'Cũ';
+  String get commentsSortSemanticLabel => 'Sắp xếp bình luận';
 
   @override
-  String get commentsSortSemanticLabel => 'Sắp xếp bình luận';
+  String get commentsHiddenToggleSemanticLabel => 'Hiện bình luận đã ẩn';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Nhà sáng tạo đã cố ý ẩn những bình luận này.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Bạn đã ẩn những bình luận này trên Divine. Ứng dụng và trang web khác vẫn có thể hiển thị chúng, nên hãy báo cáo bất cứ điều gì gây hại.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Bạn có muốn báo cáo bình luận này luôn không?';
+
+  @override
+  String get commentHiddenReportAction => 'Báo cáo';
+
+  @override
+  String get commentHiddenByCreator => 'Nhà sáng tạo đã ẩn';
+
+  @override
+  String get commentHiddenByYou => 'Bạn đã ẩn';
+
+  @override
+  String get commentOptionsHideLabel => 'Ẩn bình luận';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Ẩn bình luận này trên video của bạn';
+
+  @override
+  String get commentOptionsShowLabel => 'Hiện bình luận';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Hiện lại bình luận này trên video của bạn';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Không cập nhật được các bình luận đã ẩn. Hãy thử lại.';
 
   @override
   String get commentReply => 'Trả lời';
@@ -10636,6 +10694,17 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorSpeedModeCurve => 'Đường cong';
 
   @override
+  String get videoEditorSpeedSmoothTitle => 'Quay chậm mượt';
+
+  @override
+  String get videoEditorSpeedSmoothDescription =>
+      'Trộn các khung hình để quay chậm mượt mà. Chuyển động nhanh có thể để lại bóng mờ.';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable =>
+      'Làm clip chậm hơn 1× để làm mượt.';
+
+  @override
   String get videoEditorSpeedCurveCustom => 'Tùy chỉnh';
 
   @override
@@ -11070,6 +11139,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationWordByWord => 'Từng từ';
+
+  @override
+  String get videoEditorLayerAnimationDrawOn => 'Từng nét';
 
   @override
   String get videoEditorLayerAnimationPulse => 'Nhịp đập';
@@ -11882,6 +11954,15 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorConfirmColorSemanticLabel => 'Xác nhận màu';
+
+  @override
+  String get videoEditorEyedropperSemanticLabel => 'Chọn màu từ video';
+
+  @override
+  String get videoEditorEyedropperHint => 'Chạm và kéo để chọn màu';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => 'Dừng chọn màu';
 
   @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
@@ -12817,12 +12898,80 @@ class AppLocalizationsVi extends AppLocalizations {
   String get minorAccountReviewParentConsentEmailCta => 'Email hỗ trợ Divine';
 
   @override
+  String get minorAccountReviewParentConsentRecordCta => 'Record consent video';
+
+  @override
   String get minorAccountReviewParentConsentEmailSubject =>
       'Trợ giúp xem xét Divine Greenlight (13-15 tuổi)';
 
   @override
   String get minorAccountReviewParentConsentEmailBody =>
       'Chào đội hỗ trợ Divine,\n\nTôi liên hệ Divine về Divine Greenlight cho một bạn teen 13-15 tuổi.\n\nTôi đã đính kèm một video riêng tư ngắn thể hiện:\n- bạn teen\n- cha mẹ hoặc người giám hộ nói trên camera\n- rằng bạn teen được phép dùng Divine\n- rằng cha mẹ hoặc người giám hộ biết về tài khoản này và sẽ giám sát việc sử dụng\n\nQuốc gia cư trú:\n\nBối cảnh hữu ích:\n\nCảm ơn.';
+
+  @override
+  String get minorAccountReviewRecordConsentTitle => 'Record consent video';
+
+  @override
+  String get minorAccountReviewRecordConsentBody =>
+      'Record a short private video with the teen and a parent or guardian on camera. It stays on this device until you submit it.';
+
+  @override
+  String get minorAccountReviewRecordConsentPromptTitle => 'Say this on camera';
+
+  @override
+  String get minorAccountReviewRecordConsentRecordCta => 'Record';
+
+  @override
+  String get minorAccountReviewRecordConsentStopCta => 'Stop';
+
+  @override
+  String get minorAccountReviewRecordConsentPreviewLabel => 'Camera preview';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewTitle => 'Review your video';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewBody =>
+      'Watch it back. Retake if anything is missing, or use it if it shows everything above.';
+
+  @override
+  String get minorAccountReviewRecordConsentRetakeCta => 'Retake';
+
+  @override
+  String get minorAccountReviewRecordConsentUseVideoCta => 'Use this video';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedTitle =>
+      'We can\'t use the camera';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedBody =>
+      'Divine could not start the camera. You can still email a private video to Divine support instead.';
+
+  @override
+  String get minorAccountReviewRecordConsentEmailInsteadCta =>
+      'Use email instead';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorTitle => 'Recording failed';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorBody =>
+      'Something went wrong while recording. Please try again.';
+
+  @override
+  String get minorAccountReviewRecordConsentTryAgainCta => 'Try again';
+
+  @override
+  String get minorAccountReviewRecordConsentConfirmEmailTitle =>
+      'Confirm your email';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitCta => 'Submit video';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitError =>
+      'Could not submit your video. Please try again.';
 
   @override
   String get minorAccountReviewParentSupportInstructions =>
@@ -15809,4 +15958,19 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get messagesRoomDiscardDraft => 'Discard draft';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody =>
+      'Video của bạn đã được gửi để xem xét.';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => 'Đã gửi video';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      'Video của bạn được gửi riêng tư đến các nhóm Hỗ trợ và Tin cậy và An toàn của Divine để xem xét. Video không được đăng công khai hoặc chia sẻ với người dùng khác.';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      'Nội dung gửi chưa được chấp nhận. Hãy kiểm tra địa chỉ email, quay lại video hoặc dùng email.';
 }

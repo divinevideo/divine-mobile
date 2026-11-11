@@ -1,6 +1,8 @@
 // ABOUTME: Repository for searching hashtags via Funnelcake API with local
 // ABOUTME: fallback. Owns source-selection and fallback strategy.
 
+import 'dart:async';
+
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:hashtag_repository/src/hashtag_extractor.dart';
 import 'package:models/models.dart';
@@ -15,8 +17,8 @@ const maxLocalHashtagCount = 1000;
 /// Repository for searching hashtags.
 ///
 /// Provides a clean abstraction over the Funnelcake API for hashtag search.
-/// This layer owns caching for trending hashtags and falls back to
-/// [HashtagExtractor.suggestedHashtags] when the API is unavailable.
+/// This layer owns caching for trending hashtags. An unconfigured API
+/// returns no trends rather than presenting suggestions as current activity.
 class HashtagRepository {
   /// Creates a new [HashtagRepository] instance.
   HashtagRepository({
@@ -33,6 +35,7 @@ class HashtagRepository {
 
   List<TrendingHashtag> _trendingHashtagsCache = [];
   DateTime? _lastTrendingHashtagsFetch;
+  Future<void> _trendingFetchQueue = Future<void>.value();
 
   /// Searches for hashtags matching [query].
   ///
@@ -105,7 +108,7 @@ class HashtagRepository {
 
   /// Fetches trending hashtags.
   ///
-  /// Returns a list of [TrendingHashtag] sorted by popularity.
+  /// Returns a list of [TrendingHashtag] ranked by recent activity.
   /// [limit] defaults to 20.
   ///
   /// Throws:
@@ -127,8 +130,7 @@ class HashtagRepository {
   /// is made. On success the cache is updated.
   ///
   /// If the API is not configured ([FunnelcakeNotConfiguredException]), returns
-  /// a built-in list of default hashtags so callers always get a usable result
-  /// without needing to handle that exception themselves.
+  /// no trends. Static suggestions are not evidence of current activity.
   ///
   /// Throws:
   /// - [FunnelcakeApiException] on server error.
@@ -137,6 +139,25 @@ class HashtagRepository {
   Future<List<TrendingHashtag>> getTrendingHashtags({
     bool forceRefresh = false,
     int limit = 20,
+  }) async {
+    // Finish earlier reads before a refresh can replace their ranking/cache.
+    final previous = _trendingFetchQueue;
+    final finished = Completer<void>();
+    _trendingFetchQueue = finished.future;
+    await previous;
+    try {
+      return await _loadTrendingHashtags(
+        forceRefresh: forceRefresh,
+        limit: limit,
+      );
+    } finally {
+      finished.complete();
+    }
+  }
+
+  Future<List<TrendingHashtag>> _loadTrendingHashtags({
+    required bool forceRefresh,
+    required int limit,
   }) async {
     if (!forceRefresh &&
         _lastTrendingHashtagsFetch != null &&
@@ -154,15 +175,7 @@ class HashtagRepository {
       _lastTrendingHashtagsFetch = DateTime.now();
       return results;
     } on FunnelcakeNotConfiguredException {
-      return _buildDefaultHashtags(limit);
+      return const [];
     }
-  }
-
-  List<TrendingHashtag> _buildDefaultHashtags(int limit) {
-    final tags = HashtagExtractor.suggestedHashtags.take(limit).toList();
-    return [
-      for (var i = 0; i < tags.length; i++)
-        TrendingHashtag(tag: tags[i], videoCount: 50 - (i * 2)),
-    ];
   }
 }

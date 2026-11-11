@@ -6,7 +6,7 @@ import 'package:divine_ui/src/icon/divine_icon.dart';
 import 'package:divine_ui/src/theme/vine_theme.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:vector_graphics/vector_graphics.dart';
 
 /// One glyph-shaped drop shadow behind a [ShadowedDivineIcon].
 ///
@@ -325,7 +325,7 @@ class ShadowedIconRasterCache {
 
   /// The default loader: the same asset lookup [DivineIcon] renders through.
   static BytesLoader assetLoaderFor(DivineIconName icon) =>
-      SvgAssetLoader(icon.assetPath);
+      AssetBytesLoader(icon.vectorAssetPath, packageName: 'divine_ui');
 
   final DivineIconLoader _loaderFor;
   final Map<ShadowedIconRasterKey, ui.Image> _images = {};

@@ -8,6 +8,7 @@ import 'package:http/testing.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:openvine/config/zendesk_config.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 
@@ -947,6 +948,177 @@ void main() {
         expect(setUserIdentityCalled, isTrue);
       },
     );
+  });
+
+  group('ZendeskSupportService.createTicket native failure', () {
+    late CrashReporter originalCrashReporter;
+    late _RecordingCrashReporter crashReporter;
+    late List<MethodCall> calls;
+
+    // Answers every `createTicket` with [failures] in order, then success.
+    Future<void> initializeWithCreateTicketFailures(
+      List<PlatformException> failures,
+    ) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall call) async {
+            calls.add(call);
+            if (call.method == 'createTicket') {
+              final attempt = calls
+                  .where((c) => c.method == 'createTicket')
+                  .length;
+              if (attempt <= failures.length) throw failures[attempt - 1];
+            }
+            return true;
+          });
+      await ZendeskSupportService.initialize(
+        appId: 'test',
+        clientId: 'test',
+        zendeskUrl: 'https://test.zendesk.com',
+      );
+      ZendeskSupportService.setUserIdentity(
+        npub: 'npub1test1234567890abcdef1234567890abcdef1234567890abcdef1234',
+        displayName: 'Test User',
+      );
+    }
+
+    int createTicketCalls() =>
+        calls.where((c) => c.method == 'createTicket').length;
+
+    setUp(() {
+      calls = [];
+      crashReporter = _RecordingCrashReporter();
+      originalCrashReporter = ZendeskSupportService.crashlytics;
+      ZendeskSupportService.crashlytics = crashReporter;
+      // Without a REST API token the SDK is the only delivery path, which is
+      // the release-build case these tests pin.
+      expect(
+        ZendeskConfig.isRestApiConfigured,
+        isFalse,
+        reason:
+            'ZENDESK_API_TOKEN is defined, so the REST fallback would run '
+            'instead of the report these tests pin; run without it.',
+      );
+    });
+
+    tearDown(() => ZendeskSupportService.crashlytics = originalCrashReporter);
+
+    test('retries with anonymous identity when Android reports an '
+        'authentication failure', () async {
+      await initializeWithCreateTicketFailures([
+        PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Response body was null, failed to auth user.',
+          details: {'status': 400, 'networkError': false, 'authFailed': true},
+        ),
+      ]);
+
+      final result = await ZendeskSupportService.createTicket(
+        subject: 'Content Report',
+        description: 'Test report',
+      );
+
+      expect(result, isTrue);
+      expect(createTicketCalls(), 2);
+      expect(
+        calls.map((c) => c.method),
+        ['initialize', 'createTicket', 'setUserIdentity', 'createTicket'],
+      );
+      expect(crashReporter.reasons, isEmpty);
+    });
+
+    test('reports a rejected ticket with its code and status', () async {
+      await initializeWithCreateTicketFailures([
+        PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Unprocessable Entity',
+          details: {'status': 422, 'networkError': false, 'authFailed': false},
+        ),
+      ]);
+
+      final result = await ZendeskSupportService.createTicket(
+        subject: 'Content Report',
+        description: 'Test report',
+      );
+
+      expect(result, isFalse);
+      expect(createTicketCalls(), 1);
+      expect(crashReporter.reasons, ['zendesk_sdk_create_failed']);
+      expect(
+        crashReporter.errors.single.toString(),
+        contains('CREATE_FAILED (HTTP 422)'),
+      );
+      expect(crashReporter.logs.single, contains('Unprocessable Entity'));
+    });
+
+    test('reports the anonymous retry failure, not the authentication '
+        'failure that led to it', () async {
+      await initializeWithCreateTicketFailures([
+        PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Response body was null, failed to auth user.',
+          details: {'status': 400, 'networkError': false, 'authFailed': true},
+        ),
+        PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Unprocessable Entity',
+          details: {'status': 422, 'networkError': false, 'authFailed': false},
+        ),
+      ]);
+
+      final result = await ZendeskSupportService.createTicket(
+        subject: 'Content Report',
+        description: 'Test report',
+      );
+
+      expect(result, isFalse);
+      expect(createTicketCalls(), 2);
+      expect(crashReporter.reasons, ['zendesk_sdk_create_failed']);
+      expect(
+        crashReporter.errors.single.toString(),
+        contains('CREATE_FAILED (HTTP 422)'),
+      );
+      expect(crashReporter.logs.single, contains('Unprocessable Entity'));
+      expect(crashReporter.logs.single, isNot(contains('failed to auth user')));
+    });
+
+    test('keeps a network failure out of crash reports', () async {
+      await initializeWithCreateTicketFailures([
+        PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Unable to resolve host',
+          details: {'status': -1, 'networkError': true, 'authFailed': false},
+        ),
+      ]);
+
+      final result = await ZendeskSupportService.createTicket(
+        subject: 'Content Report',
+        description: 'Test report',
+      );
+
+      expect(result, isFalse);
+      expect(createTicketCalls(), 1);
+      expect(crashReporter.reasons, isEmpty);
+    });
+
+    test('redacts an email from the reported SDK reason', () async {
+      await initializeWithCreateTicketFailures([
+        PlatformException(
+          code: 'CREATE_FAILED',
+          message: 'Requester reporter@example.com is invalid',
+        ),
+      ]);
+
+      await ZendeskSupportService.createTicket(
+        subject: 'Content Report',
+        description: 'Test report',
+      );
+
+      expect(crashReporter.logs.single, contains('is invalid'));
+      expect(
+        crashReporter.logs.single,
+        isNot(contains('reporter@example.com')),
+      );
+    });
   });
 
   group('ZendeskSupportService identity consistency', () {
@@ -2049,6 +2221,7 @@ class _RecordingUrlNip98AuthService implements Nip98AuthService {
     required String url,
     required HttpMethod method,
     String? payload,
+    String? payloadHash,
     bool reuseCached = true,
     bool allowUserInteraction = true,
   }) async {
@@ -2073,4 +2246,26 @@ class _RecordingUrlNip98AuthService implements Nip98AuthService {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final logs = <String>[];
+  final errors = <Object>[];
+  final reasons = <String?>[];
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  void log(String message) => logs.add(message);
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    errors.add(error);
+    reasons.add(reason);
+  }
 }

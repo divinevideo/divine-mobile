@@ -50,6 +50,33 @@ void main() {
           expect(large, equals(regular), reason: data.kind.name);
         }
       });
+
+      testWidgets("a reply's comment in its own weight with Bold Text", (
+        tester,
+      ) async {
+        const reply = SocialStickerData(
+          kind: SocialStickerKind.reply,
+          name: 'divine',
+          replyText: 'comment',
+        );
+        await tester.pumpWidget(
+          const MediaQuery(
+            data: MediaQueryData(boldText: true),
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Center(child: SocialStickerView(data: reply)),
+            ),
+          ),
+        );
+
+        final comment = tester.widget<RichText>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is RichText && widget.text.toPlainText() == 'comment',
+          ),
+        );
+        expect(comment.text.style?.fontWeight, equals(FontWeight.w400));
+      });
     });
   });
 

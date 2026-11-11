@@ -252,8 +252,8 @@ abstract class _$TrendingSounds extends $AsyncNotifier<PagedSounds> {
 
 /// Community sounds matching a free-text [query].
 ///
-/// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
-/// for reach plus the in-memory cache for partial and title matches, and a
+/// [SoundsRepository.searchSounds] owns the composition — full-text and tag
+/// queries plus the in-memory cache for partial matches, and a
 /// reuse lookup that ranks unnamed sounds last — so this is a thin
 /// pass-through. Blank queries resolve to an empty list without a round
 /// trip; the caller shows the trending list instead of searching.
@@ -273,8 +273,8 @@ final soundSearchResultsProvider = SoundSearchResultsFamily._();
 
 /// Community sounds matching a free-text [query].
 ///
-/// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
-/// for reach plus the in-memory cache for partial and title matches, and a
+/// [SoundsRepository.searchSounds] owns the composition — full-text and tag
+/// queries plus the in-memory cache for partial matches, and a
 /// reuse lookup that ranks unnamed sounds last — so this is a thin
 /// pass-through. Blank queries resolve to an empty list without a round
 /// trip; the caller shows the trending list instead of searching.
@@ -299,8 +299,8 @@ final class SoundSearchResultsProvider
     with $FutureModifier<List<AudioEvent>>, $FutureProvider<List<AudioEvent>> {
   /// Community sounds matching a free-text [query].
   ///
-  /// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
-  /// for reach plus the in-memory cache for partial and title matches, and a
+  /// [SoundsRepository.searchSounds] owns the composition — full-text and tag
+  /// queries plus the in-memory cache for partial matches, and a
   /// reuse lookup that ranks unnamed sounds last — so this is a thin
   /// pass-through. Blank queries resolve to an empty list without a round
   /// trip; the caller shows the trending list instead of searching.
@@ -363,8 +363,8 @@ String _$soundSearchResultsHash() =>
 
 /// Community sounds matching a free-text [query].
 ///
-/// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
-/// for reach plus the in-memory cache for partial and title matches, and a
+/// [SoundsRepository.searchSounds] owns the composition — full-text and tag
+/// queries plus the in-memory cache for partial matches, and a
 /// reuse lookup that ranks unnamed sounds last — so this is a thin
 /// pass-through. Blank queries resolve to an empty list without a round
 /// trip; the caller shows the trending list instead of searching.
@@ -392,8 +392,8 @@ final class SoundSearchResultsFamily extends $Family
 
   /// Community sounds matching a free-text [query].
   ///
-  /// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
-  /// for reach plus the in-memory cache for partial and title matches, and a
+  /// [SoundsRepository.searchSounds] owns the composition — full-text and tag
+  /// queries plus the in-memory cache for partial matches, and a
   /// reuse lookup that ranks unnamed sounds last — so this is a thin
   /// pass-through. Blank queries resolve to an empty list without a round
   /// trip; the caller shows the trending list instead of searching.

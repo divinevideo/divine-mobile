@@ -6,9 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Persists the user's preference for only showing Divine-hosted videos.
 ///
-/// Defaults to `true` so new installs only see videos served from
-/// `*.divine.video` hosts that we can moderate. Users opt in to the
-/// wider Nostr media-host space by toggling this off in Safety settings.
+/// Defaults to `true` so new installs only see other creators' videos served
+/// from `*.divine.video` hosts that we can moderate. Creators retain access to
+/// their own uploads. Users opt in to other creators' externally hosted media
+/// by toggling this off in Safety settings.
 class DivineHostFilterService extends ChangeNotifier {
   DivineHostFilterService(
     this._prefs, {

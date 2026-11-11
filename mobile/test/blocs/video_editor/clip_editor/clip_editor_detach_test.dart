@@ -1,14 +1,23 @@
 // ABOUTME: Tests for detaching a clip from the timeline onto the canvas —
-// ABOUTME: slot removal, placeholder fill, and the failure paths
+// ABOUTME: slot removal, placeholder fill, a baked color mask moving onto
+// ABOUTME: the layer, and the failure paths
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart'
+    show ExtractPosterFn;
+import 'package:openvine/services/video_thumbnail_service.dart'
+    show ThumbnailFileResult;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ChromaKey, EditorVideo;
 
 DivineVideoClip _clip(String id, {Duration? duration}) => DivineVideoClip(
   id: id,
@@ -40,6 +49,7 @@ void main() {
     ClipEditorBloc buildBloc({
       RenderClipPlaceholderFn? renderClipPlaceholder,
       void Function()? onFinalClipInvalidated,
+      ExtractPosterFn? extractPoster,
     }) => ClipEditorBloc(
       onFinalClipInvalidated: onFinalClipInvalidated ?? () {},
       saveClipToLibrary: ({required clip}) async => false,
@@ -48,16 +58,19 @@ void main() {
       renderClipPlaceholder:
           renderClipPlaceholder ??
           ({required fill, required source, taskId}) async => null,
+      extractPoster: extractPoster,
     );
 
     ClipEditorBloc seeded({
       RenderClipPlaceholderFn? renderClipPlaceholder,
       void Function()? onFinalClipInvalidated,
       List<DivineVideoClip>? withClips,
+      ExtractPosterFn? extractPoster,
     }) {
       final bloc = buildBloc(
         renderClipPlaceholder: renderClipPlaceholder,
         onFinalClipInvalidated: onFinalClipInvalidated,
+        extractPoster: extractPoster,
       );
       addTearDown(bloc.close);
       return bloc..add(ClipEditorInitialized(withClips ?? clips));
@@ -348,6 +361,148 @@ void main() {
         // The composition still has a track, so there is nothing to refuse.
         expect(state.lastDetachResult, isA<ClipDetachSuccess>());
         expect(state.clips.map((c) => c.id), ['placeholder-1']);
+      });
+    });
+
+    group('with a baked color mask', () {
+      late Directory tempDir;
+      late String sourcePath;
+
+      setUp(() async {
+        tempDir = await Directory.systemTemp.createTemp('detach_chroma_test');
+        sourcePath = '${tempDir.path}/b_unkeyed.mp4';
+        await File(sourcePath).writeAsBytes(const [0]);
+      });
+
+      tearDown(() async {
+        if (tempDir.existsSync()) await tempDir.delete(recursive: true);
+      });
+
+      Future<ThumbnailFileResult?> poster({
+        required String videoPath,
+        required Duration timestamp,
+      }) async => ThumbnailFileResult(
+        path: videoPath.replaceAll('.mp4', '_poster.jpg'),
+        timestamp: timestamp,
+      );
+
+      DivineVideoClip keyed({
+        ClipChromaKey key = const ClipChromaKey(key: ChromaKey.greenScreen()),
+        String? source,
+      }) => _clip('b').copyWith(
+        video: EditorVideo.file('/documents/b_keyed.mp4'),
+        thumbnailPath: '/documents/b_keyed_poster.jpg',
+        chromaKey: key,
+        chromaKeySourcePath: source ?? sourcePath,
+        derivedFrom: [C2paEditSource(path: source ?? sourcePath)],
+      );
+
+      Future<ClipDetachSuccess> detach(ClipEditorBloc bloc) async {
+        await bloc.stream.first;
+        bloc.add(const ClipEditorClipDetachRequested(clipId: 'b'));
+        final state = await bloc.stream.firstWhere(
+          (s) => s.lastDetachResult != null,
+        );
+        return state.lastDetachResult! as ClipDetachSuccess;
+      }
+
+      test('puts the unkeyed footage on the layer', () async {
+        final bloc = seeded(
+          withClips: [_clip('a'), keyed(), _clip('c')],
+          extractPoster: poster,
+        );
+
+        final result = await detach(bloc);
+
+        // The layer applies the key live, so it has to play the footage the
+        // key was applied to: keying the baked file again is what left a
+        // fringe of the fill around the subject.
+        final clip = result.detachedClip;
+        expect(clip.video?.file?.path, sourcePath);
+        expect(clip.chromaKey, isNull);
+        expect(clip.chromaKeySourcePath, isNull);
+        expect(clip.derivedFrom, [C2paEditSource(path: sourcePath)]);
+        expect(clip.thumbnailPath, '${tempDir.path}/b_unkeyed_poster.jpg');
+      });
+
+      test('hands the baked key to the layer and remembers the file', () async {
+        final bloc = seeded(
+          withClips: [_clip('a'), keyed(), _clip('c')],
+          extractPoster: poster,
+        );
+
+        final result = await detach(bloc);
+
+        final baked = result.bakedChromaKey!;
+        expect(
+          baked.chromaKey,
+          const ClipChromaKey(key: ChromaKey.greenScreen()),
+        );
+        // Kept for the way back, which swaps the baked file in again.
+        expect(baked.videoPath, '/documents/b_keyed.mp4');
+        expect(baked.sourcePath, sourcePath);
+        expect(baked.thumbnailPath, '/documents/b_keyed_poster.jpg');
+      });
+
+      test('moves a color fill along with the key', () async {
+        const fill = Color(0xFF3366FF);
+        final bloc = seeded(
+          withClips: [
+            _clip('a'),
+            keyed(
+              key: const ClipChromaKey(
+                key: ChromaKey.greenScreen(),
+              ).withColorBackground(fill),
+            ),
+          ],
+          extractPoster: poster,
+        );
+
+        final result = await detach(bloc);
+
+        expect(result.detachedClip.video?.file?.path, sourcePath);
+        expect(
+          result.bakedChromaKey?.chromaKey.backgroundType,
+          ClipChromaKeyBackgroundType.color,
+        );
+        expect(result.bakedChromaKey?.chromaKey.key.backgroundColor, fill);
+      });
+
+      test('keeps a library clip behind the subject baked', () async {
+        final bloc = seeded(
+          withClips: [
+            _clip('a'),
+            keyed(
+              key: const ClipChromaKey(
+                key: ChromaKey.greenScreen(),
+              ).withVideoBackground('/documents/backdrop.mp4'),
+            ),
+          ],
+          extractPoster: poster,
+        );
+
+        final result = await detach(bloc);
+
+        // A layer has no second track to play the backdrop on, so lifting the
+        // key would drop the clip the user put behind the subject.
+        expect(result.detachedClip.video?.file?.path, '/documents/b_keyed.mp4');
+        expect(result.detachedClip.chromaKey, isNotNull);
+        expect(result.bakedChromaKey, isNull);
+      });
+
+      test('keeps the key baked when its footage is gone', () async {
+        final bloc = seeded(
+          withClips: [
+            _clip('a'),
+            keyed(source: '${tempDir.path}/gone.mp4'),
+          ],
+          extractPoster: poster,
+        );
+
+        final result = await detach(bloc);
+
+        expect(result.detachedClip.video?.file?.path, '/documents/b_keyed.mp4');
+        expect(result.bakedChromaKey, isNull);
       });
     });
 

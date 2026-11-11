@@ -8,7 +8,7 @@ import 'package:openvine/blocs/profile_feed/profile_feed_pin_overlay.dart';
 const _author =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-VideoEvent _video(String id, {String? dTag}) => VideoEvent(
+VideoEvent _video(String id, {String? dTag, int? eventKind}) => VideoEvent(
   id: id,
   pubkey: _author,
   createdAt: 1000,
@@ -16,12 +16,28 @@ VideoEvent _video(String id, {String? dTag}) => VideoEvent(
   timestamp: DateTime.fromMillisecondsSinceEpoch(1000 * 1000),
   videoUrl: 'https://example.com/$id.mp4',
   addressableDTag: dTag,
+  eventKind: eventKind,
 );
 
 String _coordinate(String dTag) => '34236:$_author:$dTag';
 
 void main() {
   group('overlayPinnedVideos', () {
+    test('matches a Kind 34235 video to its pin under the 34236 key', () {
+      final base = [
+        _video('a', dTag: 'a'),
+        _video('normal', dTag: 'normal', eventKind: 34235),
+      ];
+
+      final result = overlayPinnedVideos(
+        base: base,
+        pinnedCoordinates: [_coordinate('normal')],
+        resolved: const {},
+      );
+
+      expect(result.map((v) => v.id), ['normal', 'a']);
+    });
+
     test('leads with the pins in stored order, then the rest of the base in '
         'its own order', () {
       final base = [

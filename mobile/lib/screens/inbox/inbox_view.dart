@@ -1232,11 +1232,12 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
         case ConversationAction.report:
           // The same report form Report opens from inside the conversation:
           // the reporter picks a reason and can add a note, and the form
-          // shows its own outcome (#10003). A user report, so what gets
-          // published is unchanged.
+          // shows its own outcome (#10003). Made from the inbox, so it stays
+          // private, as it does inside the conversation (#7340).
           await ReportContentDialog.showForUser(
             context,
             userPubkey: otherPubkey,
+            fromDirectMessages: true,
           );
 
         case ConversationAction.block:

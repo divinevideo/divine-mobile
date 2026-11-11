@@ -1374,4 +1374,61 @@ final class CommentsRepositoryProvider
 }
 
 String _$commentsRepositoryHash() =>
-    r'21b8d5931408335180c18406e3aa033c6f15b448';
+    r'c5ea8d0d00a706aedca839f4fd1526bce76fdffd';
+
+/// Provider for [CommentModerationRepository]: the moderation video owners
+/// publish for the comments on their videos (NIP-78 kind 30078).
+
+@ProviderFor(commentModerationRepository)
+final commentModerationRepositoryProvider =
+    CommentModerationRepositoryProvider._();
+
+/// Provider for [CommentModerationRepository]: the moderation video owners
+/// publish for the comments on their videos (NIP-78 kind 30078).
+
+final class CommentModerationRepositoryProvider
+    extends
+        $FunctionalProvider<
+          CommentModerationRepository,
+          CommentModerationRepository,
+          CommentModerationRepository
+        >
+    with $Provider<CommentModerationRepository> {
+  /// Provider for [CommentModerationRepository]: the moderation video owners
+  /// publish for the comments on their videos (NIP-78 kind 30078).
+  CommentModerationRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'commentModerationRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$commentModerationRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<CommentModerationRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CommentModerationRepository create(Ref ref) {
+    return commentModerationRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CommentModerationRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CommentModerationRepository>(value),
+    );
+  }
+}
+
+String _$commentModerationRepositoryHash() =>
+    r'66ef904879c052c9b3521638c59041d878cda103';

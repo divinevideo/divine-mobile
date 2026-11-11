@@ -1,8 +1,11 @@
 // ABOUTME: The split-screen layout screen's controls: what to put in the
 // ABOUTME: selected cell, which layout, the gap and the border colour
 
+import 'dart:math' as math;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_layout_cubit.dart';
@@ -10,15 +13,24 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_row.dart';
+import 'package:openvine/widgets/whole_word_button_text_scale.dart';
 
 /// The actions for the selected cell: fill it from the library or the camera,
 /// or empty it again.
+///
+/// Library and Camera split one row while both fit there on one line;
+/// otherwise each gets a full-width row, the remove button beside Camera.
+/// Halved, German "Mediathek" was already cut at the normal text size once
+/// the remove button took its share of a 360-wide row.
 class SplitScreenCellActions extends StatelessWidget {
   const SplitScreenCellActions({
     required this.onPickFromLibrary,
     required this.onRecordWithCamera,
     super.key,
   });
+
+  /// Lines a label may wrap onto once it has a row of its own.
+  static const int _maxLabelLines = 2;
 
   final VoidCallback onPickFromLibrary;
   final VoidCallback onRecordWithCamera;
@@ -28,44 +40,249 @@ class SplitScreenCellActions extends StatelessWidget {
     final isFilled = context.select(
       (SplitScreenLayoutCubit cubit) => cubit.state.selectedCell != null,
     );
+    final libraryLabel = context.l10n.videoEditorLibraryLabel;
+    final cameraLabel = context.l10n.videoEditorCameraLabel;
     return Padding(
       padding: const .symmetric(horizontal: 16),
-      child: Row(
-        spacing: 8,
-        children: [
-          Expanded(
-            child: DivineButton(
-              label: context.l10n.videoEditorLibraryLabel,
-              leadingIcon: .images,
-              type: .secondary,
-              size: .small,
-              expanded: true,
-              onPressed: onPickFromLibrary,
-            ),
-          ),
-          Expanded(
-            child: DivineButton(
-              label: context.l10n.videoEditorCameraLabel,
-              leadingIcon: .camera,
-              type: .secondary,
-              size: .small,
-              expanded: true,
-              onPressed: onRecordWithCamera,
-            ),
-          ),
-          if (isFilled)
-            DivineIconButton(
-              icon: .trash,
-              type: .ghostSecondary,
-              size: .small,
-              semanticLabel: context.l10n.videoEditorLayoutRemoveClipLabel,
-              onPressed: () =>
-                  context.read<SplitScreenLayoutCubit>().selectedCellCleared(),
-            ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Camera's row also holds the remove button when they stack.
+          final cameraWidth = isFilled
+              ? constraints.maxWidth -
+                    DivineIcon.scaleSize(context, kMinInteractiveDimension) -
+                    _CellActionsLayout.spacing
+              : constraints.maxWidth;
+          return _CellActionsLayout(
+            children: [
+              WholeWordButtonTextScale(
+                label: libraryLabel,
+                width: constraints.maxWidth,
+                hasLeadingIcon: true,
+                child: DivineButton(
+                  label: libraryLabel,
+                  leadingIcon: .images,
+                  type: .secondary,
+                  size: .small,
+                  expanded: true,
+                  maxLines: _maxLabelLines,
+                  onPressed: onPickFromLibrary,
+                ),
+              ),
+              WholeWordButtonTextScale(
+                label: cameraLabel,
+                width: cameraWidth,
+                hasLeadingIcon: true,
+                child: DivineButton(
+                  label: cameraLabel,
+                  leadingIcon: .camera,
+                  type: .secondary,
+                  size: .small,
+                  expanded: true,
+                  maxLines: _maxLabelLines,
+                  onPressed: onRecordWithCamera,
+                ),
+              ),
+              if (isFilled)
+                DivineIconButton(
+                  icon: .trash,
+                  type: .ghostSecondary,
+                  size: .small,
+                  semanticLabel: context.l10n.videoEditorLayoutRemoveClipLabel,
+                  onPressed: () => context
+                      .read<SplitScreenLayoutCubit>()
+                      .selectedCellCleared(),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
+}
+
+/// Lays out Library, Camera and the optional remove button as described on
+/// [SplitScreenCellActions].
+///
+/// A render object because the choice turns on the buttons' natural widths,
+/// which a widget cannot read.
+class _CellActionsLayout extends MultiChildRenderObjectWidget {
+  const _CellActionsLayout({required super.children})
+    : assert(
+        children.length == 2 || children.length == 3,
+        'Library, Camera and the optional remove button',
+      );
+
+  /// Gap between the buttons, across a row and between rows.
+  static const double spacing = 8;
+
+  @override
+  _RenderCellActions createRenderObject(BuildContext context) {
+    return _RenderCellActions(textDirection: Directionality.of(context));
+  }
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderCellActions renderObject,
+  ) {
+    renderObject.textDirection = Directionality.of(context);
+  }
+}
+
+class _CellActionsParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderCellActions extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _CellActionsParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _CellActionsParentData> {
+  _RenderCellActions({required TextDirection textDirection})
+    : _textDirection = textDirection;
+
+  static const double _spacing = _CellActionsLayout.spacing;
+
+  TextDirection get textDirection => _textDirection;
+  TextDirection _textDirection;
+  set textDirection(TextDirection value) {
+    if (_textDirection == value) return;
+    _textDirection = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _CellActionsParentData) {
+      child.parentData = _CellActionsParentData();
+    }
+  }
+
+  /// Sizes and, unless [dry], positions the children.
+  Size _layout(BoxConstraints constraints, {required bool dry}) {
+    final [library, camera, ...rest] = getChildrenAsList();
+    final remove = rest.firstOrNull;
+    final libraryWidth = library.getMaxIntrinsicWidth(double.infinity);
+    final cameraWidth = camera.getMaxIntrinsicWidth(double.infinity);
+    final removeWidth = remove?.getMaxIntrinsicWidth(double.infinity) ?? 0;
+    final removeSlot = remove == null ? 0.0 : removeWidth + _spacing;
+    final maxWidth = constraints.maxWidth.isFinite
+        ? constraints.maxWidth
+        : math.max(libraryWidth, cameraWidth) * 2 + _spacing + removeSlot;
+
+    Size place(RenderBox child, BoxConstraints childConstraints) {
+      if (dry) return child.getDryLayout(childConstraints);
+      child.layout(childConstraints, parentUsesSize: true);
+      return child.size;
+    }
+
+    BoxConstraints tight(double width) =>
+        BoxConstraints.tightFor(width: math.max(0, width));
+
+    // Left-to-right, mirrored for right-to-left once the width is known.
+    final rects = <Rect>[];
+    final double height;
+    final half = (maxWidth - _spacing - removeSlot) / 2;
+    final removeSize = remove == null
+        ? Size.zero
+        : place(remove, BoxConstraints(maxWidth: maxWidth));
+    if (libraryWidth <= half && cameraWidth <= half) {
+      final sizes = [
+        place(library, tight(half)),
+        place(camera, tight(half)),
+        if (remove != null) removeSize,
+      ];
+      height = sizes.map((size) => size.height).reduce(math.max);
+      var x = 0.0;
+      for (final size in sizes) {
+        rects.add(Offset(x, (height - size.height) / 2) & size);
+        x += size.width + _spacing;
+      }
+    } else {
+      final librarySize = place(library, tight(maxWidth));
+      final cameraSize = place(camera, tight(maxWidth - removeSlot));
+      final top = librarySize.height + _spacing;
+      final rowHeight = math.max(cameraSize.height, removeSize.height);
+      rects.addAll([
+        Offset.zero & librarySize,
+        Offset(0, top + (rowHeight - cameraSize.height) / 2) & cameraSize,
+        if (remove != null)
+          Offset(
+                maxWidth - removeSize.width,
+                top + (rowHeight - removeSize.height) / 2,
+              ) &
+              removeSize,
+      ]);
+      height = top + rowHeight;
+    }
+
+    final size = constraints.constrain(Size(maxWidth, height));
+    if (!dry) {
+      for (final (index, child) in getChildrenAsList().indexed) {
+        final rect = rects[index];
+        (child.parentData! as _CellActionsParentData).offset =
+            switch (textDirection) {
+              TextDirection.ltr => rect.topLeft,
+              TextDirection.rtl => Offset(size.width - rect.right, rect.top),
+            };
+      }
+    }
+    return size;
+  }
+
+  @override
+  void performLayout() {
+    size = _layout(constraints, dry: false);
+  }
+
+  @override
+  Size computeDryLayout(covariant BoxConstraints constraints) =>
+      _layout(constraints, dry: true);
+
+  /// Narrowest when stacked, widest when the buttons share a row.
+  @override
+  double computeMinIntrinsicWidth(double height) {
+    final [library, camera, ...rest] = getChildrenAsList();
+    final removeSlot = rest.isEmpty
+        ? 0.0
+        : rest.first.getMinIntrinsicWidth(double.infinity) + _spacing;
+    return math.max(
+      library.getMinIntrinsicWidth(double.infinity),
+      camera.getMinIntrinsicWidth(double.infinity) + removeSlot,
+    );
+  }
+
+  @override
+  double computeMaxIntrinsicWidth(double height) {
+    final [library, camera, ...rest] = getChildrenAsList();
+    final removeSlot = rest.isEmpty
+        ? 0.0
+        : rest.first.getMaxIntrinsicWidth(double.infinity) + _spacing;
+    return math.max(
+              library.getMaxIntrinsicWidth(double.infinity),
+              camera.getMaxIntrinsicWidth(double.infinity),
+            ) *
+            2 +
+        _spacing +
+        removeSlot;
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      _layout(BoxConstraints(maxWidth: width), dry: true).height;
+
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      computeMinIntrinsicHeight(width);
+
+  @override
+  double? computeDistanceToActualBaseline(TextBaseline baseline) =>
+      defaultComputeDistanceToFirstActualBaseline(baseline);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
+
+  @override
+  void paint(PaintingContext context, Offset offset) =>
+      defaultPaint(context, offset);
 }
 
 /// One tile per layout, each a small drawing of its cells.

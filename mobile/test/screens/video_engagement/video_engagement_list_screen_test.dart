@@ -134,6 +134,64 @@ void main() {
       },
     );
 
+    // #10846: a relay read that did not finish is not "No likes yet".
+    group('relay read that did not finish', () {
+      testWidgets(
+        'shows the error, not the empty state, when it found nobody',
+        (
+          tester,
+        ) async {
+          when(
+            () => likesRepository.fetchEventLikers(eventId: testEventId),
+          ).thenAnswer(
+            (_) async => const LikersPage(pubkeys: [], isComplete: false),
+          );
+
+          await tester.pumpWidget(buildSubject());
+          await tester.pumpAndSettle();
+
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(find.text(l10n.videoEngagementLoadFailed), findsOneWidget);
+          expect(find.text(l10n.videoEngagementLikersEmpty), findsNothing);
+        },
+      );
+
+      testWidgets('says the list may be missing people', (tester) async {
+        when(
+          () => likesRepository.fetchEventLikers(eventId: testEventId),
+        ).thenAnswer(
+          (_) async =>
+              const LikersPage(pubkeys: [testPubkey1], isComplete: false),
+        );
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.videoEngagementListIncomplete), findsOneWidget);
+      });
+
+      testWidgets('retry on that row reloads the list', (tester) async {
+        var calls = 0;
+        when(
+          () => likesRepository.fetchEventLikers(eventId: testEventId),
+        ).thenAnswer(
+          (_) async => ++calls == 1
+              ? const LikersPage(pubkeys: [testPubkey1], isComplete: false)
+              : const LikersPage(pubkeys: [testPubkey1, testPubkey2]),
+        );
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.commonRetry));
+        await tester.pumpAndSettle();
+
+        expect(calls, equals(2));
+        expect(find.text(l10n.videoEngagementListIncomplete), findsNothing);
+      });
+    });
+
     testWidgets(
       'shows likers title in app bar for VideoEngagementType.likers',
       (tester) async {
@@ -156,7 +214,7 @@ void main() {
       (tester) async {
         when(
           () => repostsRepository.fetchEventReposters(eventId: testEventId),
-        ).thenAnswer((_) async => const []);
+        ).thenAnswer((_) async => const RepostersPage(pubkeys: []));
 
         await tester.pumpWidget(
           buildSubject(type: VideoEngagementType.reposters),

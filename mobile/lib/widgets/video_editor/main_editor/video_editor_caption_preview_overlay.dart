@@ -7,7 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
-import 'package:openvine/widgets/caption_pill.dart';
+import 'package:openvine/widgets/fitted_caption_pill.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 
 /// Previews CC-overlay caption cues on the editor canvas.
@@ -42,14 +42,11 @@ class VideoEditorCaptionPreviewOverlay extends StatelessWidget {
 
     return Positioned.fill(
       child: IgnorePointer(
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 48),
-            child: _ActiveCuePill(
-              items: items,
-              playTime: scope.playTimeNotifier,
-            ),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 48),
+          child: _ActiveCuePill(
+            items: items,
+            playTime: scope.playTimeNotifier,
           ),
         ),
       ),
@@ -124,7 +121,7 @@ class _ActiveCuePillState extends State<_ActiveCuePill> {
       listener: (context, state) => _onPlayTime(),
       child: text == null || text.isEmpty
           ? const SizedBox.shrink()
-          : CaptionPill(text: text),
+          : FittedCaptionPill(text: text),
     );
   }
 

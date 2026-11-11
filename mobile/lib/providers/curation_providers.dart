@@ -8,13 +8,11 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/feed_refresh_helpers.dart';
-import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/state/curation_state.dart';
-import 'package:openvine/utils/relay_url_utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -24,12 +22,7 @@ part 'curation_providers.g.dart';
 @riverpod
 FunnelcakeApiClient funnelcakeApiClient(Ref ref) {
   final environmentConfig = ref.watch(currentEnvironmentProvider);
-  final nostrService = ref.watch(nostrServiceProvider);
-  final baseUrl = resolveApiBaseUrlFromRelays(
-    configuredRelays: nostrService.configuredRelays,
-    fallbackBaseUrl: environmentConfig.apiBaseUrl,
-  );
-  return _createFunnelcakeClient(ref, baseUrl);
+  return _createFunnelcakeClient(ref, environmentConfig.apiBaseUrl);
 }
 
 /// Badge catalogues rely on this trusted API's server-side signature checks.
@@ -60,7 +53,7 @@ FunnelcakeApiClient _createFunnelcakeClient(Ref ref, String baseUrl) {
 /// Single source of truth for Funnelcake REST API availability.
 ///
 /// Uses capability detection - actually probes the API to verify it works.
-/// Re-checks when environment or relay configuration changes.
+/// Re-checks when the environment's API client changes.
 ///
 /// All feed providers should watch this instead of checking
 /// `client.isAvailable` directly.
@@ -80,32 +73,22 @@ class FunnelcakeAvailable extends _$FunnelcakeAvailable {
       return false;
     }
 
-    // Watch relay changes to re-probe when relays change
-    final nostrService = ref.watch(nostrServiceProvider);
-    // Access relayStatuses to establish dependency (triggers rebuild on change)
-    final relayCount = nostrService.relayStatuses.length;
-
-    // Fast path: our relay is always Funnelcake - skip the network probe
-    final environmentConfig = ref.watch(currentEnvironmentProvider);
-    final baseUrl = resolveApiBaseUrlFromRelays(
-      configuredRelays: nostrService.configuredRelays,
-      fallbackBaseUrl: environmentConfig.apiBaseUrl,
-    );
-
-    if (baseUrl.contains('divine.video')) {
+    // Same origin the client uses; *.divine.video APIs skip the probe.
+    final baseUrl = ref.watch(currentEnvironmentProvider).apiBaseUrl;
+    final host = Uri.parse(baseUrl).host;
+    if (host.endsWith('.divine.video')) {
       Log.debug(
-        '🔌 Funnelcake: Known Divine relay - skipping probe '
-        '(relays: $relayCount)',
+        '🔌 Funnelcake: Known Divine API - skipping probe ($baseUrl)',
         name: 'FunnelcakeAvailable',
         category: LogCategory.system,
       );
       return true;
     }
 
-    // Fallback: probe unknown relays to check Funnelcake compatibility
+    // Local and POC APIs are checked before enabling REST-dependent features.
     try {
       Log.debug(
-        '🔌 Funnelcake: Probing API availability (relays: $relayCount)',
+        '🔌 Funnelcake: Probing API availability ($baseUrl)',
         name: 'FunnelcakeAvailable',
         category: LogCategory.system,
       );
@@ -477,7 +460,21 @@ class TrendingHashtags extends _$TrendingHashtags {
   /// Refresh trending hashtags from REST API, bypassing the repository cache.
   Future<void> refresh() async {
     final repo = ref.read(hashtagRepositoryProvider);
-    final hashtags = await repo.getTrendingHashtags(forceRefresh: true);
-    state = AsyncData(hashtags);
+    try {
+      final hashtags = await repo.getTrendingHashtags(forceRefresh: true);
+      if (!ref.mounted) return;
+      state = AsyncData(hashtags);
+    } catch (error, stackTrace) {
+      if (!ref.mounted) return;
+      Log.warning(
+        'Failed to refresh trending hashtags',
+        name: 'TrendingHashtags',
+        category: LogCategory.api,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      // Retain the last real ranking when a refresh fails.
+      if (!state.hasValue) state = AsyncError(error, stackTrace);
+    }
   }
 }

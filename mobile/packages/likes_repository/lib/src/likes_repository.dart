@@ -70,9 +70,17 @@ const _queuedLikeCheckTimeout = Duration(seconds: 15);
 /// attempt publishes, so the like is not lost.
 const _queuedLikeCheckAttempts = 3;
 
-/// What a relay read returned, and whether that answer was complete (see
-/// `LikesRepository._provesAbsence`).
+/// What a relay read returned, and whether that answer was complete by the
+/// rule of the reader that built it: `_readChunked` requires proof of absence
+/// (`LikesRepository._provesAbsence`), `_queryChunkedDetailed` only that no
+/// chunk ran out of time or reached no relay.
 typedef _RelayRead = ({List<Event> events, bool isComplete});
+
+/// One page from Funnelcake after the retraction check. `listedAnyone` says
+/// whether the API listed someone before that check removed anyone.
+typedef _ApiLikers = ({LikersPage page, bool listedAnyone});
+
+final _eventIdPattern = RegExp(r'^[0-9a-f]{64}$');
 
 /// What this account's deletions say about some of its reactions, by id: the
 /// ones a deletion names, and the ones a short read leaves unknown.
@@ -323,6 +331,9 @@ class LikesRepository {
   /// subscription, load-from-storage) stays consistent — mirrors the
   /// `_writeCachedCommentCount` helper from #4478.
   void _indexLikeRecord(LikeRecord record) {
+    // Retire a canonical placeholder's index when sync replaces it with a
+    // reaction carrying the legacy coordinate.
+    _deindexLikeRecord(record.targetEventId);
     _likeRecords[record.targetEventId] = record;
     final addressableId = record.addressableId;
     if (addressableId != null && addressableId.isNotEmpty) {
@@ -380,7 +391,34 @@ class LikesRepository {
     final byId = _downvoteRecords[eventId];
     if (byId != null) return byId;
     if (addressableId == null || addressableId.isEmpty) return null;
-    return _downvoteRecordsByAddressableId[addressableId];
+    return _recordForCoordinate(_downvoteRecordsByAddressableId, addressableId);
+  }
+
+  /// The like record for [addressableId], or for its legacy `34236:` key
+  /// (#10776): Divine stored likes of a Kind 34235 video under that key.
+  LikeRecord? _likeRecordForCoordinate(String addressableId) =>
+      _recordForCoordinate(_likeRecordsByAddressableId, addressableId);
+
+  static LikeRecord? _recordForCoordinate(
+    Map<String, LikeRecord> byCoordinate,
+    String addressableId,
+  ) {
+    final legacy = legacyVideoCoordinateFor(addressableId);
+    return byCoordinate[addressableId] ??
+        (legacy == null ? null : byCoordinate[legacy]);
+  }
+
+  /// The stored like record for [addressableId], or for its legacy key.
+  static Future<LikeRecord?> _storedLikeRecordForCoordinate(
+    LikesLocalStorage localStorage,
+    String addressableId,
+  ) async {
+    final stored = await localStorage.getLikeRecordByAddressableId(
+      addressableId,
+    );
+    final legacy = legacyVideoCoordinateFor(addressableId);
+    if (stored != null || legacy == null) return stored;
+    return localStorage.getLikeRecordByAddressableId(legacy);
   }
 
   /// Emits the current liked event IDs ordered by recency (most recent
@@ -478,7 +516,7 @@ class LikesRepository {
   /// the edit, even though [isLiked] with the new event id would miss.
   Future<LikeRecord?> getLikeRecordByCoordinate(String addressableId) async {
     await _ensureInitialized();
-    return _likeRecordsByAddressableId[addressableId];
+    return _likeRecordForCoordinate(addressableId);
   }
 
   /// Check if a specific addressable coordinate is liked.
@@ -728,7 +766,7 @@ class LikesRepository {
     final alreadyLikedByCoordinate =
         addressableId != null &&
         addressableId.isNotEmpty &&
-        _likeRecordsByAddressableId.containsKey(addressableId);
+        _likeRecordForCoordinate(addressableId) != null;
     if (_likeRecords.containsKey(eventId) || alreadyLikedByCoordinate) {
       throw AlreadyLikedException(eventId);
     }
@@ -1145,7 +1183,7 @@ class LikesRepository {
     final unconfirmed = _unconfirmedLikeReplays.remove(eventId);
 
     if (addressableId != null && addressableId.isNotEmpty) {
-      final byCoordinate = _likeRecordsByAddressableId[addressableId];
+      final byCoordinate = _likeRecordForCoordinate(addressableId);
       final ownReactionEventId = _likeRecords[eventId]?.reactionEventId;
       if (byCoordinate != null &&
           byCoordinate.reactionEventId != ownReactionEventId) {
@@ -1369,7 +1407,7 @@ class LikesRepository {
     // different (pre-edit) event id than the one the caller passed in.
     var record = _likeRecords[eventId];
     if (record == null && addressableId != null && addressableId.isNotEmpty) {
-      record = _likeRecordsByAddressableId[addressableId];
+      record = _likeRecordForCoordinate(addressableId);
     }
     final localStorage = _localStorage;
     if (record == null && localStorage != null) {
@@ -1378,7 +1416,7 @@ class LikesRepository {
           final stored = await localStorage.getLikeRecord(eventId);
           if (stored != null) return stored;
           if (addressableId == null || addressableId.isEmpty) return null;
-          return localStorage.getLikeRecordByAddressableId(addressableId);
+          return _storedLikeRecordForCoordinate(localStorage, addressableId);
         },
         description: 'reading the like record',
         site: LikesRepositoryReportableSites.unlikeEventReadRecord,
@@ -1564,12 +1602,13 @@ class LikesRepository {
     // Try to get the record - it may not exist if the like was also offline
     var record = _likeRecords[eventId];
     if (record == null && addressableId != null && addressableId.isNotEmpty) {
-      record = _likeRecordsByAddressableId[addressableId];
+      record = _likeRecordForCoordinate(addressableId);
     }
     if (record == null && _localStorage != null) {
       record = await _localStorage.getLikeRecord(eventId);
       if (record == null && addressableId != null && addressableId.isNotEmpty) {
-        record = await _localStorage.getLikeRecordByAddressableId(
+        record = await _storedLikeRecordForCoordinate(
+          _localStorage,
           addressableId,
         );
       }
@@ -1668,7 +1707,7 @@ class LikesRepository {
     final likedByCoordinate =
         addressableId != null &&
         addressableId.isNotEmpty &&
-        _likeRecordsByAddressableId.containsKey(addressableId);
+        _likeRecordForCoordinate(addressableId) != null;
     final isCurrentlyLiked = likedByEventId || likedByCoordinate;
 
     if (isCurrentlyLiked) {
@@ -1699,8 +1738,9 @@ class LikesRepository {
   /// (#6021). The two denominators are reconciled in divine-funnelcake#626.
   ///
   /// Returns `null` when the COUNT for a non-addressable event gets no
-  /// answer from any relay. Nothing is cached then, so the next call asks
-  /// again.
+  /// answer from any relay, or when the read for an addressable one runs out
+  /// of time or reaches no relay (#10846). Nothing is cached then, so the
+  /// next call asks again.
   ///
   /// Note: This counts all likes, not just the current user's.
   Future<int?> getLikeCount(String eventId, {String? addressableId}) async {
@@ -1712,13 +1752,16 @@ class LikesRepository {
     if (addressableId != null && addressableId.isNotEmpty) {
       // Resolve the count from a filtered event fetch rather than NIP-45
       // COUNT, so downvotes and retracted reactions are excluded. Trade-off:
-      // it shares the relay cap and query timeout, so a video with more
-      // reactions than the relay returns is capped below the true total.
-      final likersByEvent = await _fetchResolvedLikersByEvent(
+      // it shares the relay cap, and it settles once the first relays answer
+      // rather than waiting for every relay (#10846), so the count can fall
+      // below the true total.
+      final resolved = await _fetchResolvedLikersByEvent(
         [eventId],
         addressableIds: {eventId: addressableId},
+        waitForEveryRelay: false,
       );
-      count = likersByEvent[eventId]?.length ?? 0;
+      if (!resolved.isComplete) return null;
+      count = resolved.likersByEvent[eventId]?.length ?? 0;
     } else {
       // Query relays for the count of Kind 7 reactions on this event.
       final filterByE = Filter(kinds: const [EventKind.reaction], e: [eventId]);
@@ -1755,7 +1798,11 @@ class LikesRepository {
   /// session.
   ///
   /// Returns a map of event ID to like count. Events with zero likes
-  /// are included with a count of 0.
+  /// are included with a count of 0. When the resolved distinct-liker read
+  /// runs out of time or reaches no relay, the ids it was asked about are
+  /// left out and nothing is cached for them, so the next call asks again
+  /// (#10846). That read does not wait for every relay, so like
+  /// [getLikeCount] it can fall below the true total.
   ///
   /// Note: This counts all likes, not just the current user's.
   Future<Map<String, int>> getLikeCounts(
@@ -1792,12 +1839,14 @@ class LikesRepository {
     }
 
     if (uncachedAddressableIds.isNotEmpty) {
-      final likersByEvent = await _fetchResolvedLikersByEvent(
+      final resolved = await _fetchResolvedLikersByEvent(
         uncachedIds,
         addressableIds: uncachedAddressableIds,
+        waitForEveryRelay: false,
       );
+      if (!resolved.isComplete) return counts;
       for (final id in uncachedIds) {
-        final count = likersByEvent[id]?.length ?? 0;
+        final count = resolved.likersByEvent[id]?.length ?? 0;
         counts[id] = count;
         _writeCachedLikeCount(
           id,
@@ -1875,12 +1924,17 @@ class LikesRepository {
     // [getUserVoteStatuses]. The coordinate leg reaches reactions cast against
     // every earlier revision of the target, including ones their author has
     // since deleted — switching an upvote to a downvote on an edited reply
-    // publishes exactly that pair, and counting both leaves netScore 0, which
-    // `comment_item.dart` renders by hiding the score outright (#6124).
+    // publishes exactly that pair. Counting both inflates the visible totals
+    // and incorrectly gives the reply a net score of zero (#6124).
     final reactionsById = {for (final event in events) event.id: event};
     final deletedReactionIds = await _deletedReactionIds(reactionsById);
 
+    // One vote per account per target, decided by the account's newest
+    // surviving reaction. Kind 7 is a regular event, so a relay keeps every
+    // reaction an account publishes; counting events would let one account
+    // cast any number of votes and set a comment's place in the Top order.
     final knownEventIds = eventIds.toSet();
+    final newestVoteByVoter = <(String, String), Event>{};
     for (final event in reactionsById.values) {
       if (deletedReactionIds.contains(event.id)) continue;
       final targetId = _resolveVoteTarget(
@@ -1889,7 +1943,15 @@ class LikesRepository {
         eventIdByCoordinate,
       );
       if (targetId == null) continue;
+      final key = (targetId, event.pubkey);
+      final current = newestVoteByVoter[key];
+      if (current == null || _isNewerReaction(event, current)) {
+        newestVoteByVoter[key] = event;
+      }
+    }
 
+    for (final MapEntry(key: (targetId, _), value: event)
+        in newestVoteByVoter.entries) {
       if (event.content == _downvoteContent) {
         downvotes[targetId] = downvotes[targetId]! + 1;
       } else {
@@ -2010,6 +2072,10 @@ class LikesRepository {
       final coordinate = addressableIds[eventId];
       if (coordinate != null && coordinate.isNotEmpty) {
         byCoordinate[coordinate] = eventId;
+        // Divine tagged votes on a Kind 34235 video with this key (#10776).
+        // A real coordinate keeps its entry over an alias.
+        final legacy = legacyVideoCoordinateFor(coordinate);
+        if (legacy != null) byCoordinate.putIfAbsent(legacy, () => eventId);
       }
     }
     return byCoordinate;
@@ -2565,6 +2631,12 @@ class LikesRepository {
   /// relay filter below (#6021). It also drops accounts the server has
   /// moderated, which the relay path cannot know about.
   ///
+  /// The API list is checked against the relays for one thing: a liker whose
+  /// reaction a kind 5 from the same key retracts on a relay the API never
+  /// read is removed (#9357). The check never adds anyone — people only other
+  /// relays know about, and accounts the server hides, stay the API's call —
+  /// and an unfinished or failed read leaves the list as the API sent it.
+  ///
   /// The relay fallback queries kind 7 (NIP-25) reactions referencing the
   /// target via the `e` tag and (when [addressableId] is provided) the `a`
   /// tag. Both filters are queried because clients may reference addressable
@@ -2585,6 +2657,11 @@ class LikesRepository {
   /// popular video spans several pages: pass the previous
   /// [LikersPage.nextCursor] back as [cursor] until it is null. The relay
   /// fallback is not paginated and always answers with a cursorless page.
+  ///
+  /// The relay fallback waits for every relay, and a page it builds from a
+  /// read the relays did not finish carries [LikersPage.isComplete] `false`,
+  /// so a short answer is not mistaken for everyone (#10846). An API that
+  /// listed nobody is trusted over such a read when it found nobody either.
   ///
   /// Parameters:
   /// - [eventId]: Hex event ID of the target event, or — for an addressable
@@ -2609,7 +2686,7 @@ class LikesRepository {
         cursor: cursor,
         isContinuation: continuing,
       );
-      if (fromApi != null && fromApi.pubkeys.isNotEmpty) return fromApi;
+      if (fromApi != null && fromApi.listedAnyone) return fromApi.page;
 
       // A cursor is a Funnelcake concept: relays cannot continue someone
       // else's page, and re-running the relay query would replay the likers
@@ -2619,15 +2696,21 @@ class LikesRepository {
       // LikersPage.empty would end the list with pages still to come. A
       // failed continuation throws from _fetchLikersFromApi instead, so
       // the caller can offer a retry.
-      if (continuing) return fromApi ?? LikersPage.empty;
+      if (continuing) return fromApi?.page ?? LikersPage.empty;
 
-      final likersByEvent = await _fetchResolvedLikersByEvent(
+      final resolved = await _fetchResolvedLikersByEvent(
         [eventId],
         addressableIds: addressableId == null || addressableId.isEmpty
             ? null
             : {eventId: addressableId},
+        waitForEveryRelay: true,
       );
-      return LikersPage(pubkeys: likersByEvent[eventId] ?? const <String>[]);
+      final pubkeys = resolved.likersByEvent[eventId] ?? const <String>[];
+      return LikersPage(
+        pubkeys: pubkeys,
+        // Reaching here with an API answer means it listed nobody.
+        isComplete: resolved.isComplete || (fromApi != null && pubkeys.isEmpty),
+      );
     } catch (e) {
       throw FetchLikersFailedException(
         'Failed to fetch likers for event $eventId: $e',
@@ -2645,7 +2728,7 @@ class LikesRepository {
   /// fix (#9358).
   ///
   /// One page only: the caller follows [LikersPage.nextCursor] for the rest.
-  Future<LikersPage?> _fetchLikersFromApi({
+  Future<_ApiLikers?> _fetchLikersFromApi({
     required String eventId,
     String? addressableId,
     String? cursor,
@@ -2666,9 +2749,17 @@ class LikesRepository {
           : page.pubkeys.where((pubkey) => !blockFilter(pubkey));
       // Dedupe defensively so the documented per-liker guarantee holds even
       // if the endpoint ever repeats a pubkey; mirrors the relay path.
-      return LikersPage(
-        pubkeys: {...filtered}.toList(),
-        nextCursor: page.nextCursor,
+      final listed = {...filtered}.toList();
+      final retracted = await _retractedLikers(page.eventIdByPubkey, listed);
+      return (
+        page: LikersPage(
+          pubkeys: [
+            for (final pubkey in listed)
+              if (!retracted.contains(pubkey)) pubkey,
+          ],
+          nextCursor: page.nextCursor,
+        ),
+        listedAnyone: listed.isNotEmpty,
       );
     } on FunnelcakeException catch (e) {
       if (isContinuation) rethrow;
@@ -2682,30 +2773,113 @@ class LikesRepository {
     }
   }
 
-  Future<Map<String, List<String>>> _fetchResolvedLikersByEvent(
+  /// The likers in [listed] whose own reaction a kind 5 from the same key
+  /// retracts on the relays (#9357).
+  ///
+  /// [reactionByLiker] is the reaction each API row reports: the newest one
+  /// the server still counts as live. A person with another live reaction it
+  /// does not report is dropped when that one is retracted. Only a kind 5 this
+  /// read returned removes anyone; a read that is short, unanswered or failed
+  /// leaves everyone listed. Waits at most [_settledReadTimeout], and asks
+  /// about at most one chunk of well-formed ids, since they come from a REST
+  /// body.
+  Future<Set<String>> _retractedLikers(
+    Map<String, String> reactionByLiker,
+    Iterable<String> listed,
+  ) async {
+    final likerByReaction = <String, String>{
+      for (final pubkey in listed.take(_reqEidChunkSize))
+        if (reactionByLiker[pubkey] case final reactionId?
+            when _eventIdPattern.hasMatch(reactionId))
+          reactionId: pubkey,
+    };
+    if (likerByReaction.isEmpty) return const {};
+
+    try {
+      final read = await _readChunked(
+        likerByReaction.keys.toList(),
+        (chunk) => Filter(
+          kinds: const [EventKind.eventDeletion],
+          e: chunk,
+          limit: _defaultReactionFetchLimit,
+        ),
+      );
+      final retracted = <String>{};
+      for (final deletion in read.events) {
+        for (final tag in deletion.tags) {
+          if (tag.length > 1 &&
+              tag[0] == 'e' &&
+              likerByReaction[tag[1]] == deletion.pubkey) {
+            retracted.add(deletion.pubkey);
+          }
+        }
+      }
+      return retracted;
+    } on Exception catch (e) {
+      Log.warning(
+        'Retraction check for the likers list failed, listing everyone '
+        'the API returned: $e',
+        name: 'LikesRepository',
+        category: LogCategory.relay,
+      );
+      return const {};
+    }
+  }
+
+  /// The active likers of each of [eventIds], read from the relays, and
+  /// whether the reaction reads finished.
+  ///
+  /// With [waitForEveryRelay] a read finishes only once every relay settled;
+  /// without it, a settle window after the first relays answered, so only a
+  /// read that runs out of time or reaches no relay is unfinished.
+  ///
+  /// The deletion read that follows does not affect completeness: a
+  /// retraction it misses leaves someone listed, never anyone missing.
+  Future<({Map<String, List<String>> likersByEvent, bool isComplete})>
+  _fetchResolvedLikersByEvent(
     List<String> eventIds, {
+    required bool waitForEveryRelay,
     Map<String, String>? addressableIds,
   }) async {
-    if (eventIds.isEmpty) return const {};
+    if (eventIds.isEmpty) {
+      return (
+        likersByEvent: const <String, List<String>>{},
+        isComplete: true,
+      );
+    }
 
     final eventIdSet = eventIds.toSet();
-    final aTagToEventId = <String, String>{
+    final coordinates = {
       for (final entry in (addressableIds ?? const <String, String>{}).entries)
-        if (entry.value.isNotEmpty) entry.value: entry.key,
+        if (entry.value.isNotEmpty) entry.key: entry.value,
+    };
+    final aTagToEventId = <String, String>{
+      // Divine tagged likes of a Kind 34235 video with its legacy key
+      // (#10776). Real coordinates come after, so one wins over an alias.
+      for (final entry in coordinates.entries)
+        ?legacyVideoCoordinateFor(entry.value): entry.key,
+      for (final entry in coordinates.entries) entry.value: entry.key,
     };
 
-    final eEventsFuture = _queryReactionsByEventIds(eventIds);
-    final aEventsFuture = _queryChunked(
-      aTagToEventId.keys.toList(),
-      (chunk) => Filter(kinds: const [EventKind.reaction], a: chunk),
-    );
-    final queryResults = await Future.wait([eEventsFuture, aEventsFuture]);
+    final reads = await Future.wait([
+      _queryChunkedDetailed(
+        eventIds,
+        (chunk) => Filter(kinds: const [EventKind.reaction], e: chunk),
+        waitForEveryRelay: waitForEveryRelay,
+      ),
+      _queryChunkedDetailed(
+        aTagToEventId.keys.toList(),
+        (chunk) => Filter(kinds: const [EventKind.reaction], a: chunk),
+        waitForEveryRelay: waitForEveryRelay,
+      ),
+    ]);
+    final isComplete = reads.every((read) => read.isComplete);
 
     final reactionsByTarget = {
       for (final eventId in eventIds) eventId: <String, Event>{},
     };
     final allReactionsById = <String, Event>{};
-    for (final event in [...queryResults[0], ...queryResults[1]]) {
+    for (final event in [...reads[0].events, ...reads[1].events]) {
       allReactionsById[event.id] = event;
       final targetIds = _reactionTargetEventIds(
         event,
@@ -2718,18 +2892,24 @@ class LikesRepository {
     }
 
     if (allReactionsById.isEmpty) {
-      return {for (final eventId in eventIds) eventId: <String>[]};
+      return (
+        likersByEvent: {for (final eventId in eventIds) eventId: <String>[]},
+        isComplete: isComplete,
+      );
     }
 
     final deletedReactionIds = await _deletedReactionIds(allReactionsById);
 
-    return {
-      for (final entry in reactionsByTarget.entries)
-        entry.key: _activeLikerPubkeys(
-          entry.value.values,
-          deletedReactionIds: deletedReactionIds,
-        ),
-    };
+    return (
+      likersByEvent: {
+        for (final entry in reactionsByTarget.entries)
+          entry.key: _activeLikerPubkeys(
+            entry.value.values,
+            deletedReactionIds: deletedReactionIds,
+          ),
+      },
+      isComplete: isComplete,
+    );
   }
 
   /// Resolves which of [reactionsById] their own author has since retracted.
@@ -2808,6 +2988,42 @@ class LikesRepository {
       for (final chunk in results)
         for (final event in chunk) event.id: event,
     }.values.toList();
+  }
+
+  /// [_queryChunked] that also says whether every chunk's read finished.
+  ///
+  /// With [waitForEveryRelay] every chunk waits for every relay, so a list
+  /// read does not pass a short answer off as the whole one (#10846): a slow
+  /// relay is not cut off a settle window after a faster one answers, and a
+  /// relay's terminal refusal counts as settled once another relay answered.
+  /// Without it a chunk settles a window after the first relays answer.
+  /// Either way the read is complete only when no chunk ran out of time and
+  /// each asked at least one relay. Unlike [_readChunked], a relay that may
+  /// have stopped at its result-size limit still counts as finished.
+  Future<_RelayRead> _queryChunkedDetailed(
+    List<String> values,
+    Filter Function(List<String> chunk) buildFilter, {
+    required bool waitForEveryRelay,
+  }) async {
+    if (values.isEmpty) return (events: const <Event>[], isComplete: true);
+
+    final results = await Future.wait([
+      for (final chunk in _chunkStrings(values, _reqEidChunkSize))
+        _nostrClient.queryEventsDetailed(
+          [buildFilter(chunk)],
+          requireAllRelaysSettled: waitForEveryRelay,
+          acceptRelayClosedWhenOthersAnswered: waitForEveryRelay,
+        ),
+    ]);
+    return (
+      events: {
+        for (final result in results)
+          for (final event in result.events) event.id: event,
+      }.values.toList(),
+      isComplete: results.every(
+        (result) => !result.timedOut && !result.noRelays,
+      ),
+    );
   }
 
   /// [_queryChunked] that also says whether the relays' answer was complete.
@@ -3391,6 +3607,13 @@ class LikesRepository {
   static bool _isLikeReaction(Event event) =>
       event.content == _likeContent || event.content.isEmpty;
 
+  /// Whether [event] supersedes [other] as one account's vote. Reactions
+  /// from the same second are ordered by id, so every reader keeps the same
+  /// one regardless of the order relays return them in.
+  static bool _isNewerReaction(Event event, Event other) =>
+      event.createdAt > other.createdAt ||
+      (event.createdAt == other.createdAt && event.id.compareTo(other.id) > 0);
+
   /// The live reaction that startup reconciliation or the live subscription
   /// has already indexed for [eventId] or its coordinate, shaped exactly as
   /// [_checkRelayForLiveLike] would return it: keyed under [eventId], so
@@ -3407,16 +3630,22 @@ class LikesRepository {
     required String? addressableId,
   }) {
     final hasCoordinate = addressableId != null && addressableId.isNotEmpty;
-    final byEventId = _likeRecords[eventId];
-    final indexed =
-        byEventId != null && !_isPlaceholderId(byEventId.reactionEventId)
-        ? byEventId
-        : hasCoordinate
-        ? _likeRecordsByAddressableId[addressableId]
-        : null;
-    if (indexed == null || _isPlaceholderId(indexed.reactionEventId)) {
-      return null;
+    LikeRecord? indexed;
+    // Reconciliation needs a real reaction even when this tap's canonical
+    // placeholder is indexed ahead of a legacy reaction on an earlier revision.
+    for (final candidate in [
+      _likeRecords[eventId],
+      if (hasCoordinate) ...[
+        _likeRecordsByAddressableId[addressableId],
+        _likeRecordsByAddressableId[legacyVideoCoordinateFor(addressableId)],
+      ],
+    ]) {
+      if (candidate != null && !_isPlaceholderId(candidate.reactionEventId)) {
+        indexed = candidate;
+        break;
+      }
     }
+    if (indexed == null) return null;
     final indexedCoordinate = indexed.addressableId;
     return LikeRecord(
       targetEventId: eventId,
@@ -3448,6 +3677,8 @@ class LikesRepository {
         site: LikesRepositoryReportableSites.adoptRemoteLikeDeleteAlias,
       );
     }
+    // Also retires the placeholder this reaction replaces, under either
+    // coordinate form (see _indexLikeRecord).
     _indexLikeRecord(record);
     await _bestEffortLocalStorage(
       () async => _localStorage?.saveLikeRecord(record),
@@ -3530,7 +3761,7 @@ class LikesRepository {
       _readChunked([eventId], (ids) => likesOf(ids, null), timeout: timeout),
       if (hasCoordinate)
         _readChunked(
-          [addressableId],
+          [addressableId, ?legacyVideoCoordinateFor(addressableId)],
           (coordinates) => likesOf(null, coordinates),
           timeout: timeout,
         ),
@@ -3567,13 +3798,16 @@ class LikesRepository {
     );
   }
 
-  /// Whether [reaction] targets [eventId], or the coordinate [addressableId]
-  /// when one is given.
-  bool _isReactionOn(Event reaction, String eventId, String? addressableId) =>
-      _extractTargetEventId(reaction) == eventId ||
-      (addressableId != null &&
-          addressableId.isNotEmpty &&
-          _extractAddressableId(reaction) == addressableId);
+  /// Whether [reaction] targets [eventId], or [addressableId] or its legacy
+  /// key when a coordinate is given.
+  bool _isReactionOn(Event reaction, String eventId, String? addressableId) {
+    if (_extractTargetEventId(reaction) == eventId) return true;
+    if (addressableId == null || addressableId.isEmpty) return false;
+    final coordinate = _extractAddressableId(reaction);
+    final legacy = legacyVideoCoordinateFor(addressableId);
+    return coordinate == addressableId ||
+        (legacy != null && coordinate == legacy);
+  }
 
   /// The newest of [reactions] as the record for [eventId], carrying
   /// [addressableId] when the reaction itself has no `a` tag.
@@ -3606,12 +3840,14 @@ class LikesRepository {
     final pubkey = await _currentUserPubkey();
     if (pubkey == null) return null;
 
-    final hasCoordinate = addressableId != null && addressableId.isNotEmpty;
+    // Includes the legacy 34236 key of a Kind 34235 video (#10776).
+    final coordinates = _voteTargetsByCoordinate(
+      [eventId],
+      {eventId: ?addressableId},
+    );
     final reactions = await _queryVoteTargetReactions(
       eventIds: [eventId],
-      eventIdByCoordinate: hasCoordinate
-          ? {addressableId: eventId}
-          : const <String, String>{},
+      eventIdByCoordinate: coordinates,
       authors: [pubkey],
     );
 

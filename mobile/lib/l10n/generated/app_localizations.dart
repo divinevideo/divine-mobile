@@ -3397,6 +3397,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load that list'**
   String get videoEngagementLoadFailed;
 
+  /// Shown when a read of who liked or reposted a video stopped before every relay answered, so people may be missing: below the Liked by or Reposted by list, or in place of the Reposted by row in a video's details. A Retry button sits with it.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load everyone.'**
+  String get videoEngagementListIncomplete;
+
   /// Screen-reader label for the tappable title row on the video overlay. Action-oriented: describes what tapping does (opens the metadata sheet), not the title text itself — that's already read aloud by the underlying Text widget.
   ///
   /// In en, this message translates to:
@@ -8629,6 +8635,36 @@ abstract class AppLocalizations {
   /// **'Divine will act on content reports within 24 hours by removing the content and ejecting the user who provided the offending content.'**
   String get reportPolicyNotice;
 
+  /// Shown under the report policy notice when the report is made from a direct message. Such a report is sent only to Divine's moderation team and nothing about it is published.
+  ///
+  /// In en, this message translates to:
+  /// **'This report goes privately to Divine’s moderation team. It isn’t posted publicly.'**
+  String get reportPrivateNotice;
+
+  /// Title of the opt-in checkbox on the sheet for reporting a received direct message. Ticking it sends that message's text privately to Divine's moderation team.
+  ///
+  /// In en, this message translates to:
+  /// **'Include this message'**
+  String get reportIncludeMessageTitle;
+
+  /// Consent line under the reportIncludeMessageTitle checkbox. 'it' is the reported message.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine’s moderation team will see it. It stays private and isn’t posted publicly.'**
+  String get reportIncludeMessageDescription;
+
+  /// Error on the direct-message report sheet when the included message is too large to send to moderators.
+  ///
+  /// In en, this message translates to:
+  /// **'This message is too long to include. Uncheck “{optionTitle}” and try again.'**
+  String reportMessageTooLong(String optionTitle);
+
+  /// Error on a private report sheet (one opened from direct messages) when the text typed into the report's details field is too large to send to moderators. 'Details' is that field, labelled by reportDetailsOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Your details are too long to send. Shorten them and try again.'**
+  String get reportDetailsTooLong;
+
   /// No description provided for @reportBlockUser.
   ///
   /// In en, this message translates to:
@@ -10854,12 +10890,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sending reaction: {emoji}'**
   String dmReactionChipPendingA11yLabel(String emoji);
-
-  /// Screen-reader label for a reaction chip whose publish failed.
-  ///
-  /// In en, this message translates to:
-  /// **'Reaction failed, double tap to retry'**
-  String get dmReactionChipFailedA11yLabel;
 
   /// Screen-reader label for the current account's reaction whose automatic retries ran out without a relay confirming it. Double-tapping retries sending it.
   ///
@@ -14606,26 +14636,92 @@ abstract class AppLocalizations {
   /// Comments-sort toggle label for newest-first order.
   ///
   /// In en, this message translates to:
-  /// **'New'**
-  String get commentsSortNew;
+  /// **'Recent'**
+  String get commentsSortRecent;
 
-  /// Comments-sort toggle label for engagement-weighted order.
+  /// Comments-sort toggle label for highest net vote score first.
   ///
   /// In en, this message translates to:
   /// **'Top'**
   String get commentsSortTop;
-
-  /// Comments-sort toggle label for oldest-first order.
-  ///
-  /// In en, this message translates to:
-  /// **'Old'**
-  String get commentsSortOld;
 
   /// Accessibility label for the comments-sort toggle group.
   ///
   /// In en, this message translates to:
   /// **'Comments sorting'**
   String get commentsSortSemanticLabel;
+
+  /// Accessibility label of the header toggle that shows the comments the video owner hid. Screen readers add the on/off state and the count.
+  ///
+  /// In en, this message translates to:
+  /// **'Show hidden comments'**
+  String get commentsHiddenToggleSemanticLabel;
+
+  /// Short notice above the comments while a viewer has chosen to see the ones the video owner hid on purpose.
+  ///
+  /// In en, this message translates to:
+  /// **'The creator hid these comments on purpose.'**
+  String get commentsHiddenNotice;
+
+  /// Short notice above the comments while the video owner looks at the comments they hid. Divine leaves them out for its viewers, but other apps and sites may still show them, so it points the owner to reporting what is harmful.
+  ///
+  /// In en, this message translates to:
+  /// **'You hid these in Divine. Other apps and sites may still show them, so report anything harmful.'**
+  String get commentsHiddenNoticeOwner;
+
+  /// Snackbar right after the video owner hid a comment, offering to report it as well, since hiding does not reach moderators.
+  ///
+  /// In en, this message translates to:
+  /// **'Want to report this comment too?'**
+  String get commentHiddenReportPrompt;
+
+  /// Action of that snackbar: opens the report form for the comment.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get commentHiddenReportAction;
+
+  /// Small label on a comment the video owner hid, shown while a viewer has chosen to see hidden comments.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden by the creator'**
+  String get commentHiddenByCreator;
+
+  /// Small label on a comment the video owner hid, shown to that owner on their own video.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden by you'**
+  String get commentHiddenByYou;
+
+  /// Comment menu action for the video owner: hide someone else's comment on their own video without blocking that person.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide comment'**
+  String get commentOptionsHideLabel;
+
+  /// Accessibility label of the video owner's hide-comment action.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide this comment on your video'**
+  String get commentOptionsHideSemanticLabel;
+
+  /// Comment menu action for the video owner: show a comment they hid on their own video again.
+  ///
+  /// In en, this message translates to:
+  /// **'Show comment'**
+  String get commentOptionsShowLabel;
+
+  /// Accessibility label of the video owner's show-comment-again action.
+  ///
+  /// In en, this message translates to:
+  /// **'Show this comment on your video again'**
+  String get commentOptionsShowSemanticLabel;
+
+  /// Snackbar shown when hiding or showing a comment on the owner's own video could not be saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update the hidden comments. Try again.'**
+  String get commentsErrorModerationFailed;
 
   /// Button label under a comment that opens the reply composer.
   ///
@@ -18077,6 +18173,24 @@ abstract class AppLocalizations {
   /// **'Curve'**
   String get videoEditorSpeedModeCurve;
 
+  /// Title of the switch in the clip speed sheet that blends neighbouring frames of a slowed-down clip, so slow motion looks continuous instead of stepping.
+  ///
+  /// In en, this message translates to:
+  /// **'Smooth slow-mo'**
+  String get videoEditorSpeedSmoothTitle;
+
+  /// Subtitle of the smooth slow-motion switch while the clip is slowed down: what it does, and that fast movement can show ghosts of both frames.
+  ///
+  /// In en, this message translates to:
+  /// **'Blends frames so slow motion flows. Fast moves can leave ghosts.'**
+  String get videoEditorSpeedSmoothDescription;
+
+  /// Subtitle of the smooth slow-motion switch while the clip plays at 1x or faster everywhere, so the switch is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Slow the clip below 1× to smooth it.'**
+  String get videoEditorSpeedSmoothUnavailable;
+
   /// Speed curve preset chip for a curve the user shapes by dragging points.
   ///
   /// In en, this message translates to:
@@ -18856,6 +18970,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Word by word'**
   String get videoEditorLayerAnimationWordByWord;
+
+  /// Layer animation type, drawing layers only: the drawing draws itself stroke by stroke, in the order and direction it was drawn (Enter), or takes itself away in reverse (Leave).
+  ///
+  /// In en, this message translates to:
+  /// **'Draw on'**
+  String get videoEditorLayerAnimationDrawOn;
 
   /// Label of the scale animation in the Loop tab: the layer keeps shrinking a little and growing back while visible.
   ///
@@ -20186,6 +20306,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Confirm color'**
   String get videoEditorConfirmColorSemanticLabel;
+
+  /// Accessibility label of the eyedropper button in the video editor's Pick color sheet (videoEditorPickColorTitle), beside the confirm button. Opens a picker that takes a color straight off the video on screen; the sheet offers it wherever a color is chosen in the editor — drawing, text, the color mask and the rest.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a color from the video'**
+  String get videoEditorEyedropperSemanticLabel;
+
+  /// Instruction shown at the top of the eyedropper while it is open: the user touches the video, drags the magnifier onto the color they want and lifts the finger to pick it. Keep it short — it sits on one line between the close button and the screen edge.
+  ///
+  /// In en, this message translates to:
+  /// **'Touch and drag to pick a color'**
+  String get videoEditorEyedropperHint;
+
+  /// Accessibility label of the button that closes the eyedropper without picking a color, which goes back to the Pick color sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop picking a color'**
+  String get videoEditorEyedropperCancelSemanticLabel;
 
   /// No description provided for @videoEditorSaturationBrightnessSemanticLabel.
   ///
@@ -21645,6 +21783,12 @@ abstract class AppLocalizations {
   /// **'Email Divine support'**
   String get minorAccountReviewParentConsentEmailCta;
 
+  /// No description provided for @minorAccountReviewParentConsentRecordCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Record consent video'**
+  String get minorAccountReviewParentConsentRecordCta;
+
   /// No description provided for @minorAccountReviewParentConsentEmailSubject.
   ///
   /// In en, this message translates to:
@@ -21656,6 +21800,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hi Divine support,\n\nI am contacting Divine about Divine Greenlight for a teen who is 13-15.\n\nI have attached a short private video that shows:\n- the teen\n- a parent or guardian speaking on camera\n- that the teen has permission to use Divine\n- that the parent or guardian knows about the account and will supervise its use\n\nCountry/ies of residence:\n\nHelpful context:\n\nThanks.'**
   String get minorAccountReviewParentConsentEmailBody;
+
+  /// No description provided for @minorAccountReviewRecordConsentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Record consent video'**
+  String get minorAccountReviewRecordConsentTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a short private video with the teen and a parent or guardian on camera. It stays on this device until you submit it.'**
+  String get minorAccountReviewRecordConsentBody;
+
+  /// No description provided for @minorAccountReviewRecordConsentPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Say this on camera'**
+  String get minorAccountReviewRecordConsentPromptTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentRecordCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get minorAccountReviewRecordConsentRecordCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentStopCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get minorAccountReviewRecordConsentStopCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentPreviewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera preview'**
+  String get minorAccountReviewRecordConsentPreviewLabel;
+
+  /// No description provided for @minorAccountReviewRecordConsentReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review your video'**
+  String get minorAccountReviewRecordConsentReviewTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentReviewBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch it back. Retake if anything is missing, or use it if it shows everything above.'**
+  String get minorAccountReviewRecordConsentReviewBody;
+
+  /// No description provided for @minorAccountReviewRecordConsentRetakeCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Retake'**
+  String get minorAccountReviewRecordConsentRetakeCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentUseVideoCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this video'**
+  String get minorAccountReviewRecordConsentUseVideoCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentDeniedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We can\'t use the camera'**
+  String get minorAccountReviewRecordConsentDeniedTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentDeniedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine could not start the camera. You can still email a private video to Divine support instead.'**
+  String get minorAccountReviewRecordConsentDeniedBody;
+
+  /// No description provided for @minorAccountReviewRecordConsentEmailInsteadCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Use email instead'**
+  String get minorAccountReviewRecordConsentEmailInsteadCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording failed'**
+  String get minorAccountReviewRecordConsentErrorTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentErrorBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong while recording. Please try again.'**
+  String get minorAccountReviewRecordConsentErrorBody;
+
+  /// No description provided for @minorAccountReviewRecordConsentTryAgainCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get minorAccountReviewRecordConsentTryAgainCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentConfirmEmailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your email'**
+  String get minorAccountReviewRecordConsentConfirmEmailTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentSubmitCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit video'**
+  String get minorAccountReviewRecordConsentSubmitCta;
+
+  /// No description provided for @minorAccountReviewRecordConsentSubmitError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not submit your video. Please try again.'**
+  String get minorAccountReviewRecordConsentSubmitError;
 
   /// No description provided for @minorAccountReviewParentSupportInstructions.
   ///
@@ -26432,6 +26690,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Discard draft'**
   String get messagesRoomDiscardDraft;
+
+  /// No description provided for @minorAccountReviewVideoSubmittedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your video has been submitted for review.'**
+  String get minorAccountReviewVideoSubmittedBody;
+
+  /// No description provided for @minorAccountReviewVideoSubmittedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Video submitted'**
+  String get minorAccountReviewVideoSubmittedTitle;
+
+  /// No description provided for @minorAccountReviewRecordConsentPrivacyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your video goes privately to Divine Support and Trust & Safety for review. It is not published or shared with other users.'**
+  String get minorAccountReviewRecordConsentPrivacyBody;
+
+  /// No description provided for @minorAccountReviewRecordConsentRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Your submission wasn\'t accepted. Check your email, retake the video, or use email instead.'**
+  String get minorAccountReviewRecordConsentRejected;
 }
 
 class _AppLocalizationsDelegate

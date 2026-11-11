@@ -1010,6 +1010,7 @@
     "description": "Empty-state message on the reposters list screen when no one has reposted the video yet."
   },
   "videoEngagementLoadFailed": "Không tải được danh sách đó",
+  "videoEngagementListIncomplete": "Không tải được tất cả mọi người",
   "@videoEngagementLoadFailed": {
     "description": "Error-state heading on the engagement list screen when the relay query fails."
   },
@@ -2488,6 +2489,11 @@
   },
   "reportWhyReporting": "Tại sao bạn báo cáo nội dung này?",
   "reportPolicyNotice": "Divine sẽ xử lý báo cáo nội dung trong vòng 24 giờ bằng cách gỡ nội dung và loại người dùng đăng nội dung vi phạm.",
+  "reportPrivateNotice": "Báo cáo này được gửi riêng tư đến đội kiểm duyệt của Divine. Báo cáo không được đăng công khai.",
+  "reportIncludeMessageTitle": "Gửi kèm tin nhắn này",
+  "reportIncludeMessageDescription": "Đội kiểm duyệt của Divine sẽ xem tin nhắn này. Tin nhắn vẫn được giữ riêng tư và không được đăng công khai.",
+  "reportMessageTooLong": "Tin nhắn này quá dài để gửi kèm. Bỏ chọn “{optionTitle}” rồi thử lại.",
+  "reportDetailsTooLong": "Phần chi tiết của bạn quá dài để gửi. Rút ngắn rồi thử lại.",
   "reportBlockUser": "Chặn người dùng này",
   "reportCancel": "Hủy",
   "reportSubmit": "Báo cáo",
@@ -3174,10 +3180,6 @@
         "type": "String"
       }
     }
-  },
-  "dmReactionChipFailedA11yLabel": "Cảm xúc thất bại, chạm hai lần để thử lại",
-  "@dmReactionChipFailedA11yLabel": {
-    "description": "Screen-reader label for a reaction chip whose publish failed."
   },
   "dmReactionChipUnconfirmedA11yLabel": "Không gửi được cảm xúc {emoji} của bạn. Chạm hai lần để thử lại",
   "dmReactionChipRetryAnnouncement": "Đang thử lại cảm xúc",
@@ -4498,22 +4500,30 @@
   },
   "commentsVideoReplyPending": "Đang đăng…",
   "commentsVideoReplyPendingSemanticLabel": "Câu trả lời video của bạn đang được đăng",
-  "commentsSortNew": "Mới",
-  "@commentsSortNew": {
+  "commentsSortRecent": "Gần đây",
+  "@commentsSortRecent": {
     "description": "Comments-sort toggle label for newest-first order."
   },
   "commentsSortTop": "Nổi bật",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
-  },
-  "commentsSortOld": "Cũ",
-  "@commentsSortOld": {
-    "description": "Comments-sort toggle label for oldest-first order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortSemanticLabel": "Sắp xếp bình luận",
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
+  "commentsHiddenToggleSemanticLabel": "Hiện bình luận đã ẩn",
+  "commentsHiddenNotice": "Nhà sáng tạo đã cố ý ẩn những bình luận này.",
+  "commentsHiddenNoticeOwner": "Bạn đã ẩn những bình luận này trên Divine. Ứng dụng và trang web khác vẫn có thể hiển thị chúng, nên hãy báo cáo bất cứ điều gì gây hại.",
+  "commentHiddenReportPrompt": "Bạn có muốn báo cáo bình luận này luôn không?",
+  "commentHiddenReportAction": "Báo cáo",
+  "commentHiddenByCreator": "Nhà sáng tạo đã ẩn",
+  "commentHiddenByYou": "Bạn đã ẩn",
+  "commentOptionsHideLabel": "Ẩn bình luận",
+  "commentOptionsHideSemanticLabel": "Ẩn bình luận này trên video của bạn",
+  "commentOptionsShowLabel": "Hiện bình luận",
+  "commentOptionsShowSemanticLabel": "Hiện lại bình luận này trên video của bạn",
+  "commentsErrorModerationFailed": "Không cập nhật được các bình luận đã ẩn. Hãy thử lại.",
   "commentReply": "Trả lời",
   "@commentReply": {
     "description": "Button label under a comment that opens the reply composer."
@@ -5347,6 +5357,9 @@
   "videoEditorSpeedPresetSemanticLabel": "Tốc độ {speed}×",
   "videoEditorSpeedModeConstant": "Cố định",
   "videoEditorSpeedModeCurve": "Đường cong",
+  "videoEditorSpeedSmoothTitle": "Quay chậm mượt",
+  "videoEditorSpeedSmoothDescription": "Trộn các khung hình để quay chậm mượt mà. Chuyển động nhanh có thể để lại bóng mờ.",
+  "videoEditorSpeedSmoothUnavailable": "Làm clip chậm hơn 1× để làm mượt.",
   "videoEditorSpeedCurveCustom": "Tùy chỉnh",
   "videoEditorSpeedCurveMontage": "Montage",
   "videoEditorSpeedCurveHero": "Anh hùng",
@@ -5568,6 +5581,7 @@
   "videoEditorLayerAnimationBounce": "Nảy",
   "videoEditorLayerAnimationTypewriter": "Máy đánh chữ",
   "videoEditorLayerAnimationWordByWord": "Từng từ",
+  "videoEditorLayerAnimationDrawOn": "Từng nét",
   "videoEditorLayerAnimationPulse": "Nhịp đập",
   "videoEditorLayerAnimationPulseTo": "Thu nhỏ đến",
   "videoEditorLayerAnimationWiggleAngle": "Độ nghiêng",
@@ -5884,6 +5898,9 @@
   "videoEditorCloseColorPickerSemanticLabel": "Đóng bộ chọn màu",
   "videoEditorPickColorTitle": "Chọn màu",
   "videoEditorConfirmColorSemanticLabel": "Xác nhận màu",
+  "videoEditorEyedropperSemanticLabel": "Chọn màu từ video",
+  "videoEditorEyedropperHint": "Chạm và kéo để chọn màu",
+  "videoEditorEyedropperCancelSemanticLabel": "Dừng chọn màu",
   "videoEditorSaturationBrightnessSemanticLabel": "Độ bão hòa và độ sáng",
   "videoEditorSaturationBrightnessValue": "Độ bão hòa {saturation}%, Độ sáng {brightness}%",
   "@videoEditorSaturationBrightnessValue": {
@@ -7620,5 +7637,9 @@
   "creatorHighlightAnalytics": "Xem số liệu của bạn",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "minorAccountReviewVideoSubmittedBody": "Video của bạn đã được gửi để xem xét.",
+  "minorAccountReviewVideoSubmittedTitle": "Đã gửi video",
+  "minorAccountReviewRecordConsentPrivacyBody": "Video của bạn được gửi riêng tư đến các nhóm Hỗ trợ và Tin cậy và An toàn của Divine để xem xét. Video không được đăng công khai hoặc chia sẻ với người dùng khác.",
+  "minorAccountReviewRecordConsentRejected": "Nội dung gửi chưa được chấp nhận. Hãy kiểm tra địa chỉ email, quay lại video hoặc dùng email."
 }

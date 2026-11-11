@@ -989,15 +989,43 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
   private static let playerId = Int.max - 50
   private static let channel = "divine_video_player/player_\(playerId)"
   private static let codec = FlutterStandardMethodCodec.sharedInstance()
-  /// How long a wait may take when AVFoundation prepares an item for it. On a
-  /// starved CI simulator one step of that preparation, about 1 ms otherwise,
-  /// has stalled for 7 to 19 s, holding up the main thread with it.
+  /// How long a wait may watch for what it waits for. `pollUntil` counts only
+  /// the time the main thread was free to look; the seek answers, which
+  /// XCTest waits for, count wall-clock time.
   private static let mediaTimeout: TimeInterval = 60
+  /// How long one wait puts up with the main thread being held elsewhere,
+  /// about three times the longest hold seen on CI (see `setUpWithError`).
+  private static let heldMainThreadAllowance: TimeInterval = 300
+  /// How long each poll runs the main run loop.
+  private static let pollInterval: TimeInterval = 0.05
+  /// A poll that returns later than this past its slice spent the extra time
+  /// with the main thread held elsewhere.
+  private static let heldPollThreshold: TimeInterval = 1
 
   private var registrar: FakePluginRegistrar!
   private var plugin: DivineVideoPlayerPlugin!
   private var clipURL: URL!
 
+  /// Loads the 1 s clip, paused, as every test starts.
+  ///
+  /// On a starved CI simulator AVFoundation has stalled for up to 99 s while
+  /// preparing this load, in building the clip's decoder, a step that takes
+  /// about 1 ms otherwise. Until it finishes the item is not ready and the
+  /// player reports `buffering`. The main thread is held for the whole stall,
+  /// so the test can neither look nor give up meanwhile: a deadline that
+  /// passes during it is only noticed when it ends, and every such failure so
+  /// far threw within half a second of that, with the item turning ready.
+  ///
+  /// Re-sending `setClips` would not help. It could only go out once the
+  /// stall is over, when the first load is about to finish, and its new item
+  /// needs a decoder of its own. Preparing the asset beforehand would not
+  /// either: loading it is not the step that stalls.
+  ///
+  /// So a wait counts only the time it could watch, and charges the time the
+  /// main thread was held to a separate allowance (`pollUntil`). Neither
+  /// hides a broken load: one the player reports as failed throws at once
+  /// (`waitForLoad`), and one that never turns ready still runs out of
+  /// watched time.
   override func setUpWithError() throws {
     try super.setUpWithError()
     registrar = FakePluginRegistrar()
@@ -1019,7 +1047,7 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     )
     try clip.write(to: clipURL)
     _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
-    try waitForState("the clip loads") { $0["status"] as? String == "paused" }
+    try waitForLoad("the clip loads")
   }
 
   override func tearDown() {
@@ -1180,7 +1208,7 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     // A stopped player reports nothing more, so a resume the cancelled seek
     // left behind only shows once media is loaded again: it plays at once.
     _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
-    try waitForState("the next media loads paused") { $0["status"] as? String == "paused" }
+    try waitForLoad("the next media loads paused")
   }
 
   func testReplacementDuringSeekFromTheEndStaysPaused() throws {
@@ -1193,7 +1221,7 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     ))) { _ in sought.fulfill() }
     _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
     wait(for: [sought], timeout: Self.mediaTimeout)
-    try waitForState("replacement loads paused") { $0["status"] as? String == "paused" }
+    try waitForLoad("replacement loads paused")
     let loadedPosition = try XCTUnwrap(latestState()?["positionMs"] as? Int)
     RunLoop.main.run(until: Date().addingTimeInterval(0.5))
     let state = try XCTUnwrap(latestState())
@@ -1269,7 +1297,7 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     XCTAssertEqual(state["status"] as? String, "idle", "a stopped player must stay stopped")
     // A resume that outlived stop only shows once media is loaded again: it plays at once.
     _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
-    try waitForState("the next media loads paused") { $0["status"] as? String == "paused" }
+    try waitForLoad("the next media loads paused")
   }
 
   func testReplacementWhileInactiveCancelsDeferredSeekResume() throws {
@@ -1317,6 +1345,21 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     _ = try invoke("seekTo", ["positionMs": 0], on: "divine_video_player/player_\(bareId)")
   }
 
+  func testStuckSeekRecoveryIgnoresAnInvalidTime() throws {
+    let instance = try XCTUnwrap(PlayerRegistry.shared.get(Self.playerId))
+    let player = try XCTUnwrap(instance.getPlayer())
+    let item = try XCTUnwrap(player.currentItem)
+    let recover = try XCTUnwrap(instance.textureOutput?.onSeekStuck)
+
+    // What an empty queue's clock reads. `AVPlayerItem` raises
+    // `NSInvalidArgumentException` on a seek to it, which ends the app.
+    recover(.invalid)
+    RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+
+    XCTAssertTrue(player.currentItem === item, "the loaded clip must stay loaded")
+    XCTAssertEqual(latestState()?["status"] as? String, "paused")
+  }
+
   /// Calls [method] the way the Dart controller does and waits for its answer.
   @discardableResult
   private func invoke(
@@ -1325,13 +1368,14 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     on channel: String = DivineVideoPlayerPlaybackEndTests.channel
   ) throws -> Any? {
     let handler = try XCTUnwrap(registrar.fakeMessenger.handlers[channel], "no handler on \(channel)")
-    let answered = expectation(description: "\(method) answered")
+    var answered = false
     var answer: Any?
     handler(Self.codec.encode(FlutterMethodCall(methodName: method, arguments: arguments))) { reply in
+      XCTAssertFalse(answered, "\(method) answered twice")
       answer = reply.flatMap { Self.codec.decodeEnvelope($0) }
-      answered.fulfill()
+      answered = true
     }
-    wait(for: [answered], timeout: Self.mediaTimeout)
+    try pollUntil("\(method) is answered") { answered }
     if let error = answer as? FlutterError {
       XCTFail("\(method) failed: \(error.code) \(error.message ?? "")")
     }
@@ -1362,21 +1406,62 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     _ description: String,
     since firstMessage: Int? = nil,
     timeout: TimeInterval = DivineVideoPlayerPlaybackEndTests.mediaTimeout,
-    _ matches: ([String: Any]) -> Bool
+    _ matches: ([String: Any]) throws -> Bool
   ) throws {
-    let deadline = Date().addingTimeInterval(timeout)
-    while Date() < deadline {
-      if let firstMessage {
-        if states(since: firstMessage).contains(where: matches) { return }
-      } else if let state = latestState(), matches(state) {
-        return
-      }
-      RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+    try pollUntil(
+      description, timeout: timeout, context: "; last state: \(latestState() ?? [:])"
+    ) {
+      if let firstMessage { return try states(since: firstMessage).contains(where: matches) }
+      return try latestState().map(matches) ?? false
     }
-    throw StateTimeout(description: "timed out waiting until \(description); last state: \(latestState() ?? [:])")
   }
 
-  private struct StateTimeout: Error, CustomStringConvertible {
+  /// Waits until a load leaves the player paused. A load the player reports
+  /// as failed throws at once with its error, rather than once the wait runs
+  /// out.
+  private func waitForLoad(_ description: String) throws {
+    try waitForState(description) { state in
+      if state["status"] as? String == "error" {
+        throw WaitFailure(description: "\(description) failed: \(state)")
+      }
+      return state["status"] as? String == "paused"
+    }
+  }
+
+  /// Runs the main run loop until [condition] holds, for up to [timeout] of
+  /// time it could watch.
+  ///
+  /// A poll that returns seconds late spent them with the main thread held
+  /// elsewhere, typically by AVFoundation (see `setUpWithError`), when
+  /// nothing could be watched. That time is charged to
+  /// `heldMainThreadAllowance` instead, so a hold that ends with the very
+  /// step being waited for does not fail the wait, while a main thread held
+  /// over and over still ends it.
+  private func pollUntil(
+    _ description: String,
+    timeout: TimeInterval = DivineVideoPlayerPlaybackEndTests.mediaTimeout,
+    context: @autoclosure () -> String = "",
+    _ condition: () throws -> Bool
+  ) throws {
+    let start = Date()
+    var held: TimeInterval = 0
+    while try !condition() {
+      let watched = Date().timeIntervalSince(start) - held
+      if watched >= timeout || held >= Self.heldMainThreadAllowance {
+        throw WaitFailure(
+          description: "timed out waiting until \(description) after watching for "
+            + "\(Int(watched)) s, with the main thread held for another \(Int(held)) s"
+            + context()
+        )
+      }
+      let pollStart = Date()
+      RunLoop.main.run(until: pollStart.addingTimeInterval(Self.pollInterval))
+      let overrun = Date().timeIntervalSince(pollStart) - Self.pollInterval
+      if overrun > Self.heldPollThreshold { held += overrun }
+    }
+  }
+
+  private struct WaitFailure: Error, CustomStringConvertible {
     let description: String
   }
 
@@ -1433,6 +1518,89 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     ADIAAAAwAAAAMgAAADAAAAAyAAAAMAAAADIAAAAwAAAAMgAAADAAAAAyAAAAMAAAADIAAAAwAAAA
     MgAAADAAAAAyAAAAFHN0Y28AAAAAAAAAAQAAACw=
     """
+}
+
+/// After a seek, `VideoTextureOutput` gives the frame 600 ms to arrive and
+/// otherwise reports the seek as stuck, so the player retries it with
+/// tolerance at the time the queue reads. `stop` empties the queue while that
+/// window can still be open, and an empty queue reads an invalid time: once a
+/// reload had put an item back before the report ran, `AVPlayerItem` raised
+/// `NSInvalidArgumentException` on the retry and the app ended.
+final class VideoTextureOutputStuckSeekTests: XCTestCase {
+  private var audioURL: URL!
+
+  override func setUpWithError() throws {
+    try super.setUpWithError()
+    audioURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("stuck_seek_\(UUID().uuidString).wav")
+    try Self.silentWav(seconds: 1).write(to: audioURL)
+  }
+
+  override func tearDown() {
+    if let audioURL { try? FileManager.default.removeItem(at: audioURL) }
+    super.tearDown()
+  }
+
+  func testWindowWhoseQueueEmptiesReportsNoStuckSeek() throws {
+    // Sound alone never hands the video output a frame, so a window on it
+    // runs out without one.
+    let item = AVPlayerItem(url: audioURL)
+    let player = AVQueuePlayer(items: [item])
+    let output = VideoTextureOutput(registry: FakeTextureRegistry())
+    defer { output.dispose() }
+    var reports: [CMTime] = []
+    output.onSeekStuck = { reports.append($0) }
+    output.attach(to: item)
+    output.attachPlayer(player)
+
+    // A window reports only after a display-link tick inside it, and a
+    // freshly launched simulator can leave more than its 600 ms between two.
+    var windows = 0
+    let deadline = Date().addingTimeInterval(60)
+    while reports.isEmpty {
+      guard Date() < deadline else {
+        return XCTFail("no window on the queued item was reported stuck")
+      }
+      windows += 1
+      openWindowAndLetItRunOut(output)
+    }
+    let queuedReports = reports
+    XCTAssertTrue(queuedReports.allSatisfy(\.isNumeric), "a queued item reports where it stands")
+
+    // What `stop` does to a window it interrupts, then windows opened on the
+    // empty queue: as many as the queued item needed, and more.
+    output.forceRefresh(for: .zero)
+    player.removeAllItems()
+    RunLoop.main.run(until: Date().addingTimeInterval(Self.windowRunOut))
+    for _ in 0..<max(windows * 2, 3) { openWindowAndLetItRunOut(output) }
+
+    XCTAssertEqual(reports, queuedReports, "an empty queue has no seek to retry")
+  }
+
+  /// Longer than the output's 600 ms window, so a tick after it can report.
+  private static let windowRunOut: TimeInterval = 0.8
+
+  private func openWindowAndLetItRunOut(_ output: VideoTextureOutput) {
+    output.forceRefresh(for: .zero)
+    RunLoop.main.run(until: Date().addingTimeInterval(Self.windowRunOut))
+  }
+
+  /// [seconds] of mono 16-bit silence at 8 kHz, as a WAV file.
+  private static func silentWav(seconds: Double) -> Data {
+    let sampleRate: UInt32 = 8000
+    let dataSize = UInt32(Double(sampleRate) * seconds) * 2
+    var wav = Data()
+    func append(_ text: String) { wav.append(contentsOf: Array(text.utf8)) }
+    func append<T: FixedWidthInteger>(_ value: T) {
+      withUnsafeBytes(of: value.littleEndian) { wav.append(contentsOf: $0) }
+    }
+    append("RIFF"); append(UInt32(36) + dataSize); append("WAVE")
+    append("fmt "); append(UInt32(16)); append(UInt16(1)); append(UInt16(1))
+    append(sampleRate); append(sampleRate * 2); append(UInt16(2)); append(UInt16(16))
+    append("data"); append(dataSize)
+    wav.append(Data(count: Int(dataSize)))
+    return wav
+  }
 }
 
 /// The registry iOS hands this plugin *is* the `FlutterEngine`, and the plugin

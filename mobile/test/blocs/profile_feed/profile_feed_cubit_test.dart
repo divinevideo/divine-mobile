@@ -17,6 +17,7 @@ import 'package:openvine/blocs/profile_shared/profile_video_offset_snapshot.dart
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/repositories/profile_pins_repository.dart';
+import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -85,6 +86,7 @@ VideoEvent _video(
   String? vineId,
   String? dTag,
   String? dimensions,
+  int? eventKind,
 }) {
   return VideoEvent(
     id: id,
@@ -97,6 +99,7 @@ VideoEvent _video(
     vineId: vineId,
     addressableDTag: dTag,
     dimensions: dimensions,
+    eventKind: eventKind,
   );
 }
 
@@ -279,6 +282,34 @@ void main() {
           key: cacheKey,
           fromJson: ProfileVideoOffsetSnapshot.fromJson,
         );
+
+    test('keeps own externally hosted video in the profile feed', () async {
+      SharedPreferences.setMockInitialValues({});
+      final hosting = DivineHostFilterService(
+        await SharedPreferences.getInstance(),
+      );
+      final client = _MockNostrClient();
+      when(() => client.publicKey).thenReturn(_author);
+      final service = VideoEventService(
+        client,
+        crashReporter: const SilentCrashReporter(),
+      )..setDivineHostFilterService(hosting);
+      addTearDown(service.dispose);
+      addTearDown(hosting.dispose);
+      final video = _video('own-external');
+      when(() => h.ves.filterVideoList(any(), includeFeedShape: false))
+          .thenAnswer(
+            (i) => service.filterVideoList(
+              i.positionalArguments[0] as List<VideoEvent>,
+              includeFeedShape: false,
+            ),
+          );
+      h.stubAuthorFeed(_result([video], hasMore: false));
+      final cubit = h.build();
+      addTearDown(cubit.close);
+      await pumpEventQueue();
+      expect(cubit.state.videos, [video]);
+    });
 
     for (final source in ['REST', 'relay', 'pin']) {
       test('square-only keeps portrait profile videos from $source', () async {
@@ -1724,6 +1755,35 @@ void main() {
           () => h.ves.queryHistoricalUserVideos(_author, until: 3000),
         ).called(1);
       });
+
+      test(
+        'pin: names a Kind 34235 video by the 34236 key pins have used',
+        () async {
+          final normal = _video(
+            'normal',
+            createdAt: 2000,
+            dTag: 'normal',
+            eventKind: 34235,
+          );
+          when(() => h.pins.pin(_coordinate('normal'))).thenAnswer(
+            (_) async => ProfilePinMutation.succeeded([_coordinate('normal')]),
+          );
+          final cubit = await buildReady(
+            _result([
+              _video('a', createdAt: 3000, dTag: 'a'),
+              normal,
+            ], hasMore: false),
+          );
+          addTearDown(cubit.close);
+
+          cubit.add(ProfileFeedPinRequested(normal));
+          await pumpEventQueue();
+
+          verify(() => h.pins.pin(_coordinate('normal'))).called(1);
+          expect(cubit.state.videos.map((v) => v.id), ['normal', 'a']);
+          expect(cubit.state.isPinned(normal), isTrue);
+        },
+      );
 
       test(
         'pin: publishes, adopts the accepted list, reports pinned',

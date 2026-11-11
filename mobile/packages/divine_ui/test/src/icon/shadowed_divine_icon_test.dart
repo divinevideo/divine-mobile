@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vector_graphics/vector_graphics.dart';
 
 const _squareSvg =
     '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" '
@@ -356,11 +357,12 @@ void main() {
           DivineIconName.heart,
         );
 
-        expect(loader, isA<SvgAssetLoader>());
+        expect(loader, isA<AssetBytesLoader>());
         expect(
-          (loader as SvgAssetLoader).assetName,
-          equals(DivineIconName.heart.assetPath),
+          (loader as AssetBytesLoader).assetName,
+          equals('assets/icons/heart.vec'),
         );
+        expect(loader.packageName, 'divine_ui');
         expect(ShadowedIconRasterCache.instance, isNotNull);
       },
     );

@@ -50,6 +50,11 @@ class NIP71VideoKinds {
     return getAllAcceptableVideoKinds().contains(kind);
   }
 
+  /// Whether [kind] is an addressable video kind (34235 or 34236), the kinds
+  /// a `kind:pubkey:d` coordinate can name.
+  static bool isAddressableVideoKind(int kind) =>
+      kind == addressableShortVideo || kind == addressableNormalVideo;
+
   /// Get the preferred addressable kind for new events
   static int getPreferredAddressableKind() {
     return addressableShortVideo; // Kind 34236 for addressable short videos

@@ -54,26 +54,31 @@ class _CommentsListState extends State<CommentsList> {
   }
 
   void _onScroll() {
-    // Auto-acknowledge new comments when user scrolls to the top.
+    // Scrolling to the top of Recent reveals the latest comments.
     if (!widget.scrollController.hasClients) return;
     final bloc = context.read<CommentsListBloc>();
-    if (widget.scrollController.offset <= 0 && bloc.state.newCommentCount > 0) {
+    if (widget.scrollController.offset <= 0 &&
+        bloc.state.sortMode == CommentsSortMode.newest &&
+        bloc.state.newCommentCount > 0) {
       bloc.add(const NewCommentsAcknowledged());
     }
   }
 
   /// Scrolls the flagged comment into view after the next frame (so the target
-  /// item is laid out), then acks the one-shot signal. A target the list has
-  /// not built yet, such as a comment far down that the list was opened on,
-  /// is jumped towards first, [_maxJumpsTowardsTarget] times at most.
-  void _scrollToTarget([int jumps = 0]) {
+  /// item is laid out), then acks the one-shot signal, unless a newer target
+  /// has replaced [commentId]. A target the list has not built yet, such as a
+  /// comment far down that the list was opened on, is jumped towards first,
+  /// [_maxJumpsTowardsTarget] times at most.
+  void _scrollToTarget(String commentId, [int jumps = 0]) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final bloc = context.read<CommentsListBloc>();
+      if (bloc.state.scrollToCommentId != commentId) return;
       final targetContext = _scrollTargetKey.currentContext;
       if (targetContext == null &&
           jumps < _maxJumpsTowardsTarget &&
-          _jumpTowardsTarget()) {
-        _scrollToTarget(jumps + 1);
+          _jumpTowardsTarget(commentId)) {
+        _scrollToTarget(commentId, jumps + 1);
         return;
       }
       if (targetContext != null) {
@@ -87,15 +92,14 @@ class _CommentsListState extends State<CommentsList> {
           curve: Curves.easeOut,
         );
       }
-      context.read<CommentsListBloc>().add(const CommentsScrollHandled());
+      bloc.add(CommentsScrollHandled(commentId));
     });
   }
 
   /// Jumps to where the scroll target should lie, estimated from its place
   /// among [_shownIds]; `false` when the list does not show it.
-  bool _jumpTowardsTarget() {
-    final target = context.read<CommentsListBloc>().state.scrollToCommentId;
-    final index = _shownIds.indexOf(target ?? '');
+  bool _jumpTowardsTarget(String commentId) {
+    final index = _shownIds.indexOf(commentId);
     if (index < 0 || !widget.scrollController.hasClients) return false;
     final position = widget.scrollController.position;
     final share = _shownIds.length < 2 ? 0.0 : index / (_shownIds.length - 1);
@@ -125,7 +129,7 @@ class _CommentsListState extends State<CommentsList> {
       listenWhen: (prev, next) =>
           prev.scrollToCommentId != next.scrollToCommentId &&
           next.scrollToCommentId != null,
-      listener: (_, _) => _scrollToTarget(),
+      listener: (_, state) => _scrollToTarget(state.scrollToCommentId!),
       child: Listener(
         behavior: HitTestBehavior.translucent,
         onPointerDown: (_) => FocusManager.instance.primaryFocus?.unfocus(),
@@ -139,45 +143,69 @@ class _CommentsListState extends State<CommentsList> {
               return const _ErrorState();
             }
 
-            // Engagement sort consumes upvote counts from
-            // CommentReactionsBloc, so cross-bloc the threaded list build via
-            // a nested BlocSelector.
             return BlocSelector<
               CommentReactionsBloc,
               CommentReactionsState,
-              Map<String, int>
+              ({Map<String, int> upvotes, Map<String, int> downvotes})
             >(
-              selector: (s) => s.commentUpvoteCounts,
-              builder: (context, upvoteCounts) {
-                final all = state.threadedCommentsWith(
-                  upvoteCounts: upvoteCounts,
+              selector: (s) => (
+                upvotes: s.commentUpvoteCounts,
+                downvotes: s.commentDownvoteCounts,
+              ),
+              builder: (context, votes) {
+                final all = state.displayCommentsWith(
+                  upvoteCounts: votes.upvotes,
+                  downvoteCounts: votes.downvotes,
                 );
-                final threaded = widget.showVideoReplies
+                final displayed = widget.showVideoReplies
                     ? all
                     : all.where((node) => !node.comment.hasVideo).toList();
 
-                _shownIds = [for (final node in threaded) node.comment.id];
-                if (threaded.isEmpty) {
+                _shownIds = [for (final node in displayed) node.comment.id];
+                if (displayed.isEmpty) {
                   return CommentsEmptyState(
                     isClassicVine: widget.showClassicVineNotice,
                   );
                 }
 
+                // While the viewer chose to see what the owner hid, say so
+                // once above the list.
+                final showNotice =
+                    state.showHiddenComments && state.hiddenCommentCount > 0;
+                final offset = showNotice ? 1 : 0;
+                Key rowKey(String id) => id == state.scrollToCommentId
+                    ? _scrollTargetKey
+                    : ValueKey('comment_$id');
+                final indexByKey = <Key, int>{
+                  for (final (i, node) in displayed.indexed)
+                    rowKey(node.comment.id): i + offset,
+                };
                 return ListView.builder(
                   controller: widget.scrollController,
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  itemCount: threaded.length,
+                  itemCount: displayed.length + offset,
+                  // Top re-ranks rows as votes change. Without this a moved
+                  // row is rebuilt from scratch, stopping an inline video
+                  // reply and dropping screen-reader focus.
+                  findChildIndexCallback: (key) => indexByKey[key],
                   itemBuilder: (context, index) {
-                    final node = threaded[index];
-                    final isScrollTarget =
-                        node.comment.id == state.scrollToCommentId;
+                    if (index < offset) {
+                      return HiddenCommentsNotice(
+                        viewerOwnsVideo: state.isViewerRootAuthor,
+                      );
+                    }
+                    final node = displayed[index - offset];
                     return CommentItem(
-                      key: isScrollTarget
-                          ? _scrollTargetKey
-                          : ValueKey('comment_${node.comment.id}'),
+                      key: rowKey(node.comment.id),
                       comment: node.comment,
                       depth: node.depth,
+                      isHiddenByOwner: state.isHiddenByOwner(node.comment),
+                      viewerOwnsVideo: state.isViewerRootAuthor,
+                      supportsModeration: state.supportsModeration,
+                      repliesToHiddenComment: state.repliesToHiddenComment(
+                        node.comment,
+                      ),
                     );
                   },
                 );
@@ -185,6 +213,38 @@ class _CommentsListState extends State<CommentsList> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Tells the viewer that the comments the owner hid are shown because they
+/// chose to see them: "You hid these comments…" to the owner, "The creator
+/// hid these comments on purpose." to everyone else.
+@visibleForTesting
+class HiddenCommentsNotice extends StatelessWidget {
+  const HiddenCommentsNotice({required this.viewerOwnsVideo, super.key});
+
+  final bool viewerOwnsVideo;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.vineColors.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Row(
+        spacing: 8,
+        children: [
+          DivineIcon(icon: DivineIconName.info, size: 16, color: color),
+          Expanded(
+            child: Text(
+              viewerOwnsVideo
+                  ? context.l10n.commentsHiddenNoticeOwner
+                  : context.l10n.commentsHiddenNotice,
+              style: VineTheme.bodySmallFont(color: color),
+            ),
+          ),
+        ],
       ),
     );
   }

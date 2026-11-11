@@ -1,23 +1,20 @@
-import 'dart:math';
-
 import 'package:comments_repository/comments_repository.dart';
 
-/// Computes an engagement score for ranking comments.
-///
-/// Score = (max(0, netScore) + replies*2) / (ageHours + 2)^1.2
-/// where netScore = upvotes - downvotes.
-/// Higher scores indicate more engaging, recent content.
-double commentEngagementScore({
-  required Comment comment,
-  required DateTime now,
-  required Map<String, int> likeCounts,
-  required Map<String, int> replyCounts,
+/// Orders comments by upvotes minus downvotes, then by newest first, then by
+/// id, so the sheet and the feed overlay agree on a tie.
+Comparator<Comment> commentVoteComparator({
+  required Map<String, int> upvoteCounts,
+  required Map<String, int> downvoteCounts,
 }) {
-  final netScore = likeCounts[comment.id] ?? 0;
-  final replies = replyCounts[comment.id] ?? 0;
-  final engagement = max(0, netScore) + (replies * 2);
-  final ageHours = now.difference(comment.createdAt).inMinutes / 60.0;
-  return engagement / pow(ageHours + 2, 1.2);
+  int netVotes(String id) =>
+      (upvoteCounts[id] ?? 0) - (downvoteCounts[id] ?? 0);
+
+  return (a, b) {
+    final byVotes = netVotes(b.id).compareTo(netVotes(a.id));
+    if (byVotes != 0) return byVotes;
+    final byAge = b.createdAt.compareTo(a.createdAt);
+    return byAge != 0 ? byAge : a.id.compareTo(b.id);
+  };
 }
 
 /// Prefix shared by every optimistic placeholder in the comments store.
@@ -47,16 +44,3 @@ String? draftIdFromPendingVideoReplyId(String commentId) =>
     isPendingVideoReplyId(commentId)
     ? commentId.substring(_pendingVideoReplyIdPrefix.length)
     : null;
-
-/// Computes reply counts per comment ID from a comments map.
-/// Returns a map of comment ID → number of replies targeting it.
-Map<String, int> computeReplyCounts(Map<String, Comment> commentsById) {
-  final counts = <String, int>{};
-  for (final comment in commentsById.values) {
-    final parentId = comment.replyToEventId;
-    if (parentId != null && parentId.isNotEmpty) {
-      counts[parentId] = (counts[parentId] ?? 0) + 1;
-    }
-  }
-  return counts;
-}

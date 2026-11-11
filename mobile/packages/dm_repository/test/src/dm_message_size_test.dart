@@ -262,4 +262,22 @@ void main() {
       ).called(1);
     });
   });
+
+  group('dmRumorBytes', () {
+    test('counts UTF-8 bytes of the serialized rumor, not characters', () {
+      Event rumor(String content) => Event(
+        _ownerPubkey,
+        EventKind.privateDirectMessage,
+        [
+          ['p', _recipientPubkey],
+          [dmSendBatchTagKey, 'key'],
+        ],
+        content,
+        createdAt: 1700000000,
+      );
+
+      // One emoji against one ASCII letter: four UTF-8 bytes against one.
+      expect(dmRumorBytes(rumor('\u{1F600}')) - dmRumorBytes(rumor('a')), 3);
+    });
+  });
 }

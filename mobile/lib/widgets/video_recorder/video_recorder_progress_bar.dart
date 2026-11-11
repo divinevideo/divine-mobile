@@ -46,10 +46,6 @@ class VideoRecorderProgressBar extends StatelessWidget {
   /// given center line has to mirror this gap on the bar's other side.
   final double labelSpacing;
 
-  /// Style of the label. Public so a mirrored spacer measures the same text.
-  static TextStyle get labelStyle =>
-      VineTheme.titleSmallFont(color: VineTheme.whiteText);
-
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
@@ -57,7 +53,7 @@ class VideoRecorderProgressBar extends StatelessWidget {
         mainAxisSize: .min,
         spacing: labelSpacing,
         children: [
-          if (labelAbove) Text(label, style: labelStyle),
+          if (labelAbove) VideoRecorderProgressBarLabel(label),
           Container(
             height: 4,
             decoration: BoxDecoration(
@@ -85,8 +81,33 @@ class VideoRecorderProgressBar extends StatelessWidget {
               ],
             ),
           ),
-          if (!labelAbove) Text(label, style: labelStyle),
+          if (!labelAbove) VideoRecorderProgressBarLabel(label),
         ],
+      ),
+    );
+  }
+}
+
+/// The label of a [VideoRecorderProgressBar], kept to one line.
+///
+/// Shrinks to fit when the label is wider than the bar: a second line would
+/// push the bar off the line of the top-bar buttons around it, and a word
+/// split across lines is hard to read. Public so a caller mirroring the label
+/// as a spacer measures the same text.
+class VideoRecorderProgressBarLabel extends StatelessWidget {
+  const VideoRecorderProgressBarLabel(this.label, {super.key});
+
+  /// Text shown next to the bar.
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(
+        label,
+        maxLines: 1,
+        style: VineTheme.titleSmallFont(color: VineTheme.whiteText),
       ),
     );
   }

@@ -28,6 +28,26 @@ const _deepLinkLogLine =
     'segments=2, queryKeys=[code, state]';
 
 void main() {
+  group('redactNostrPrivateKeys', () {
+    test('removes private keys and keeps every other word as written', () {
+      final nsec = 'nsec1${'q' * 58}';
+      final ncryptsec = 'ncryptsec1${'p' * 40}';
+
+      expect(
+        redactNostrPrivateKeys(
+          'mail someone@example.com, api_key=abc, $nsec and $ncryptsec',
+        ),
+        'mail someone@example.com, api_key=abc, [REDACTED] and [REDACTED]',
+      );
+    });
+
+    test('the full sanitizer still redacts the same keys', () {
+      final nsec = 'nsec1${'q' * 58}';
+
+      expect(sanitizeDiagnosticText('key $nsec'), 'key [REDACTED]');
+    });
+  });
+
   group('redactFilesystemPaths', () {
     test('redacts a sandbox path and leaves everything else', () {
       final redacted = redactFilesystemPaths(

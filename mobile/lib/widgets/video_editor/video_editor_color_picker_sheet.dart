@@ -11,6 +11,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/color_swatch_button.dart';
+import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -18,6 +19,10 @@ import 'package:unified_logger/unified_logger.dart';
 /// picked color, or `null` when dismissed.
 ///
 /// Reuses the same picker the text editor's custom-color flow opens.
+///
+/// While something an eyedropper can pick from is on screen (see
+/// [EyedropperSources]), the sheet also offers the eyedropper; a color picked
+/// with it resolves the sheet like a confirmed one.
 Future<Color?> showFullColorPicker(
   BuildContext context, {
   required Color initialColor,
@@ -31,12 +36,17 @@ Future<Color?> showFullColorPicker(
     body: _FullColorPickerSheet(
       initialColor: initialColor,
       onColorSelected: (color) => picked = color,
+      eyedropperSource: EyedropperSources.visibleOf(context),
     ),
   );
   return picked;
 }
 
 /// Bottom sheet for color selection in the video editor.
+///
+/// Its custom color sheet offers the eyedropper while something it can pick
+/// from is on screen (see [showFullColorPicker]); a color picked there joins
+/// the recent colors like any custom one.
 class VideoEditorColorPickerSheet extends ConsumerStatefulWidget {
   const VideoEditorColorPickerSheet({
     required this.selectedColor,
@@ -116,6 +126,7 @@ class _VideoEditorColorPickerSheetState
             _saveRecentColor(color);
             widget.onColorSelected(color);
           },
+          eyedropperSource: EyedropperSources.visibleOf(context),
         ),
       ),
       'show editor color picker',
@@ -270,10 +281,14 @@ class _FullColorPickerSheet extends StatefulWidget {
   const _FullColorPickerSheet({
     required this.initialColor,
     required this.onColorSelected,
+    this.eyedropperSource,
   });
 
   final Color initialColor;
   final ValueChanged<Color> onColorSelected;
+
+  /// What the eyedropper picks from, or `null` for no eyedropper.
+  final EyedropperSource? eyedropperSource;
 
   @override
   State<_FullColorPickerSheet> createState() => _FullColorPickerSheetState();
@@ -286,6 +301,15 @@ class _FullColorPickerSheetState extends State<_FullColorPickerSheet> {
   void initState() {
     super.initState();
     _hsvColor = HSVColor.fromColor(widget.initialColor);
+  }
+
+  /// Picks with the eyedropper over this sheet; a picked color is taken like
+  /// a confirmed one, while closing the eyedropper comes back here.
+  Future<void> _pickFromScreen(EyedropperSource source) async {
+    final color = await source.pick(context);
+    if (color == null || !mounted) return;
+    widget.onColorSelected(color);
+    Navigator.of(context).pop();
   }
 
   @override
@@ -311,23 +335,45 @@ class _FullColorPickerSheetState extends State<_FullColorPickerSheet> {
                   onPressed: context.pop,
                 ),
                 Flexible(
-                  child: Text(
+                  // Between the buttons a large text size leaves the title
+                  // too little width for a long word such as "auswählen".
+                  child: DivineWordFitText(
                     context.l10n.videoEditorPickColorTitle,
                     style: VineTheme.titleMediumFont(
                       color: context.vineColors.primaryText,
                     ),
                   ),
                 ),
-                DivineIconButton(
-                  icon: .check,
-                  size: .small,
-                  semanticLabel:
-                      context.l10n.videoEditorConfirmColorSemanticLabel,
+                Row(
+                  mainAxisSize: .min,
+                  spacing: 8,
+                  children: [
+                    if (widget.eyedropperSource case final source?)
+                      DivineIconButton(
+                        icon: .eyedropper,
+                        type: .secondary,
+                        size: .small,
+                        semanticLabel:
+                            context.l10n.videoEditorEyedropperSemanticLabel,
+                        onPressed: () => runDetached(
+                          _pickFromScreen(source),
+                          'pick a color from the screen',
+                          logName: 'VideoEditorColorPickerSheet',
+                          category: LogCategory.ui,
+                        ),
+                      ),
+                    DivineIconButton(
+                      icon: .check,
+                      size: .small,
+                      semanticLabel:
+                          context.l10n.videoEditorConfirmColorSemanticLabel,
 
-                  onPressed: () {
-                    widget.onColorSelected(_hsvColor.toColor());
-                    context.pop();
-                  },
+                      onPressed: () {
+                        widget.onColorSelected(_hsvColor.toColor());
+                        context.pop();
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),

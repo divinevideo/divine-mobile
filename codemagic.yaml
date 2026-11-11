@@ -184,8 +184,8 @@ definitions:
       script: |
         set -euo pipefail
         SHOREBIRD_BIN="$HOME/.shorebird/bin/shorebird"
-        EXPECTED_SHOREBIRD_VERSION="Shorebird 1.6.120"
-        EXPECTED_SHOREBIRD_REVISION="5ac7f9a9a5c4a5e66a958e608da0f73e34a3d6bb"
+        EXPECTED_SHOREBIRD_VERSION="Shorebird 1.6.138"
+        EXPECTED_SHOREBIRD_REVISION="86b9685a87ba8945ddca2d1dfcd20b6828233f59"
         SHOREBIRD_VERSION_OUTPUT=""
         SHOREBIRD_REVISION=""
         if [ -x "$SHOREBIRD_BIN" ]; then
@@ -683,14 +683,24 @@ definitions:
         # zapstore.yaml lives at the repo root and points its icon at
         # ./mobile/assets/icon/app_icon.png, so zsp must run from there.
         cd "$CM_BUILD_DIR"
+        # zsp can fall back to an older release with an APK. Restrict both
+        # fetches to this exact tag, even if GitHub Latest changes mid-run.
+        # Keep the config beside the original so relative media paths work.
+        ZAPSTORE_CONFIG=$(mktemp "$CM_BUILD_DIR/.zapstore-publish.XXXXXX")
+        trap 'rm -f "$ZAPSTORE_CONFIG"' EXIT
+        ruby -ryaml -e '
+          config = YAML.safe_load(File.read(ARGV.fetch(0)))
+          config["release_filter"] = "^#{Regexp.escape(ARGV.fetch(1))}$"
+          File.write(ARGV.fetch(2), YAML.dump(config))
+        ' zapstore.yaml "$TAG" "$ZAPSTORE_CONFIG"
         # --check proves the arm64 asset resolves before anything is signed.
-        "$ZSP_BIN" publish --check zapstore.yaml
+        "$ZSP_BIN" publish --check "$ZAPSTORE_CONFIG"
         # Only stable GitHub releases are eligible for Zapstore.
         # --skip-certificate-linking: linking the keystore to the identity is a
         # one-time proof, not a per-release step; run `zsp identity --link-key`
         # separately.
         SIGN_WITH="$ZAPSTORE_NSEC" GITHUB_TOKEN="$GITHUB_TOKEN" \
-          "$ZSP_BIN" publish zapstore.yaml --quiet --skip-preview \
+          "$ZSP_BIN" publish "$ZAPSTORE_CONFIG" --quiet --skip-preview \
           --skip-certificate-linking
     - &build_ios
       name: Build and sign iOS (Shorebird release)
@@ -1060,7 +1070,7 @@ workflows:
           - "NO"
           - "YES"
     environment:
-      flutter: 3.47.2
+      flutter: 3.47.9
       xcode: latest
       cocoapods: default
       groups:
@@ -1072,7 +1082,7 @@ workflows:
         # Must match `flutter:` above. Shorebird ships its own Flutter, so the
         # release is only reproducible if we pin it to the same version
         # Codemagic provisioned.
-        FLUTTER_VERSION: 3.47.2
+        FLUTTER_VERSION: 3.47.9
         SHOREBIRD_PLATFORM: ios
         BUNDLE_ID: co.openvine.app
         IOS_EXTENSION_BUNDLE_IDS: >-
@@ -1142,7 +1152,7 @@ workflows:
           - STAGING
           - POC
     environment:
-      flutter: 3.47.2
+      flutter: 3.47.9
       xcode: latest
       cocoapods: default
       groups:
@@ -1200,7 +1210,7 @@ workflows:
           - "NO"
           - "YES"
     environment:
-      flutter: 3.47.2
+      flutter: 3.47.9
       java: 17
       groups:
         - zendesk_credentials
@@ -1211,7 +1221,7 @@ workflows:
         - zapstore_credentials
       vars:
         # Must match `flutter:` above — see the iOS workflow for why.
-        FLUTTER_VERSION: 3.47.2
+        FLUTTER_VERSION: 3.47.9
         SHOREBIRD_PLATFORM: android
       android_signing:
         - divine_keystore
@@ -1253,6 +1263,42 @@ workflows:
         # Promote this same Play artifact manually after testing; do not rebuild
         # it for broader testing or production.
         track: internal
+
+  # Publish a promoted GitHub release with the existing Codemagic signer.
+  # No APK rebuild, GitHub upload, or Play submission runs in this workflow.
+  zapstore-publish:
+    name: Publish existing release to Zapstore
+    working_directory: mobile
+    max_build_duration: 15
+    instance_type: mac_mini_m4
+    inputs:
+      PUBLISH_TO_GITHUB:
+        description: Enables the shared Zapstore publisher; this workflow does not upload to GitHub.
+        type: choice
+        default: "YES"
+        options:
+          - "YES"
+      RELEASE_CHANNEL:
+        description: Publish only the existing stable GitHub release matching mobile/pubspec.yaml.
+        type: choice
+        default: PRODUCTION
+        options:
+          - PRODUCTION
+    environment:
+      groups:
+        - github_credentials
+        - zapstore_credentials
+    triggering:
+      events: []
+    scripts:
+      - name: Verify publication branch
+        script: |
+          set -euo pipefail
+          if [ "${CM_BRANCH:-}" != "main" ]; then
+            echo "ERROR: Zapstore publication must run from main."
+            exit 1
+          fi
+      - *publish_zapstore
 
   # Patch workflows ship a Dart-only fix to an already-released build over the
   # air. They publish to Shorebird, not to Play or the App Store, and are
@@ -1310,7 +1356,7 @@ workflows:
           - STAGING
           - POC
     environment:
-      flutter: 3.47.2
+      flutter: 3.47.9
       xcode: latest
       cocoapods: default
       groups:
@@ -1321,7 +1367,7 @@ workflows:
       vars:
         # Must match `flutter:` above. Provenance verification compares this
         # against the Flutter version recorded for the target release.
-        FLUTTER_VERSION: 3.47.2
+        FLUTTER_VERSION: 3.47.9
         SHOREBIRD_PLATFORM: ios
         BUNDLE_ID: co.openvine.app
         IOS_EXTENSION_BUNDLE_IDS: >-
@@ -1405,7 +1451,7 @@ workflows:
           - STAGING
           - POC
     environment:
-      flutter: 3.47.2
+      flutter: 3.47.9
       java: 17
       groups:
         - zendesk_credentials
@@ -1415,7 +1461,7 @@ workflows:
       vars:
         # Must match `flutter:` above. Provenance verification compares this
         # against the Flutter version recorded for the target release.
-        FLUTTER_VERSION: 3.47.2
+        FLUTTER_VERSION: 3.47.9
         SHOREBIRD_PLATFORM: android
       android_signing:
         - divine_keystore
@@ -1472,7 +1518,7 @@ workflows:
           - "NO"
           - "YES"
     environment:
-      flutter: 3.47.2
+      flutter: 3.47.9
       xcode: latest
       cocoapods: default
       groups:
@@ -1516,7 +1562,7 @@ workflows:
     max_build_duration: 25
     instance_type: mac_mini_m2
     environment:
-      flutter: 3.47.2
+      flutter: 3.47.9
       # Pinned alongside MAESTRO_VERSION. The compatibility contract has two
       # sides: 2.1.0 cannot drive Xcode 26.x, and `latest` floating means a
       # Codemagic image bump can break the suite with no commit on our side —
@@ -1599,7 +1645,7 @@ workflows:
     max_build_duration: 20
     instance_type: linux_x2
     environment:
-      flutter: 3.47.2
+      flutter: 3.47.9
       java: 17
       vars:
         # Debug builds render with Impeller, which kills x86_64 Linux emulators
@@ -1697,7 +1743,7 @@ workflows:
     max_build_duration: 20
     instance_type: linux_x2
     environment:
-      flutter: 3.47.2
+      flutter: 3.47.9
       java: 17
       vars:
         # Debug builds render with Impeller, which kills x86_64 Linux emulators
@@ -1798,7 +1844,7 @@ workflows:
     max_build_duration: 60
     instance_type: linux_x2
     environment:
-      flutter: 3.47.2
+      flutter: 3.47.9
       java: 17
       groups:
         - zendesk_credentials
@@ -1839,3 +1885,78 @@ workflows:
       - ~/.maestro/tests/**/screen-hierarchy/**
       - ~/.maestro/tests/**/logs/maestro.log
       - ~/.maestro/tests/**/commands.json
+
+  # Manual, run once (dry run first) before builds allocate identities from the
+  # release ledger. Reads live store data and writes only to the provenance
+  # repository's allocations/ tree, create-only.
+  release-identity-bootstrap:
+    name: Release identity bootstrap
+    working_directory: mobile
+    max_build_duration: 15
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: API key for Codemagic # Setup in Codemagic UI
+    inputs:
+      DRY_RUN:
+        description: YES prints what would be recorded and writes nothing. Run YES first, then NO.
+        type: choice
+        default: "YES"
+        options:
+          - "YES"
+          - "NO"
+    environment:
+      groups:
+        - google_play_credentials
+        - github_credentials
+    triggering:
+      events: []
+    scripts:
+      - name: Bootstrap release identity ledger
+        script: |
+          set -euo pipefail
+          APP_STORE_APP_ID=6747959501 # co.openvine.app
+          # Fail closed: only an exact NO writes to the ledger.
+          DRY_RUN_FLAG=
+          if [ "${{ inputs.DRY_RUN }}" = "YES" ]; then
+            DRY_RUN_FLAG=--dry-run
+          elif [ "${{ inputs.DRY_RUN }}" = "NO" ]; then
+            DRY_RUN_FLAG=
+            # Ledger claims are create-only and permanent, so only main's
+            # code may write them, like every other provenance writer.
+            if [ "${CM_BRANCH:-}" != "main" ]; then
+              echo "ERROR: DRY_RUN=NO writes the release ledger and must run from main, got branch '${CM_BRANCH:-}'."
+              exit 1
+            fi
+          else
+            echo "ERROR: DRY_RUN must be YES or NO, got '${{ inputs.DRY_RUN }}'."
+            exit 1
+          fi
+          LOOKUP_LOG=$(mktemp)
+          ASC_VERSIONS_JSON=$(mktemp)
+          PLAY_TRACK_JSON=$(mktemp)
+          trap 'rm -f "$LOOKUP_LOG" "$ASC_VERSIONS_JSON" "$PLAY_TRACK_JSON"' EXIT
+          # Fail closed: a partial store view would seed the ledger below the
+          # versions the stores already hold.
+          if ! app-store-connect apps app-store-versions "$APP_STORE_APP_ID" \
+            --platform IOS --json > "$ASC_VERSIONS_JSON" 2>"$LOOKUP_LOG"; then
+            echo "ERROR: could not read the App Store versions."
+            if [ -s "$LOOKUP_LOG" ]; then
+              echo "       App Store Connect lookup output:"
+              sed 's/^/       /' "$LOOKUP_LOG"
+            fi
+            exit 1
+          fi
+          : > "$LOOKUP_LOG"
+          if ! google-play tracks get --package-name co.openvine.app \
+            --track production --json > "$PLAY_TRACK_JSON" 2>"$LOOKUP_LOG"; then
+            echo "ERROR: could not read the Google Play production track."
+            if [ -s "$LOOKUP_LOG" ]; then
+              echo "       Google Play lookup output:"
+              sed 's/^/       /' "$LOOKUP_LOG"
+            fi
+            exit 1
+          fi
+          python3 scripts/release_identity.py bootstrap \
+            --app-store-versions "$ASC_VERSIONS_JSON" \
+            --play-production-track "$PLAY_TRACK_JSON" \
+            $DRY_RUN_FLAG

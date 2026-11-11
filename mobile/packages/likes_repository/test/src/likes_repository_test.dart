@@ -81,12 +81,29 @@ void main() {
       return event;
     }
 
-    // Helper to mock queryEvents with sequential responses
+    /// Stubs relay reads with sequential [responses] in call order, shared by
+    /// queryEvents and the settled reads a likers list makes (#10846), each
+    /// of those settling in full.
     void mockQueryEventsSequence(List<List<Event>> responses) {
       var callCount = 0;
       when(() => mockNostrClient.queryEvents(any())).thenAnswer((_) async {
         return responses[callCount++ % responses.length];
       });
+      when(
+        () => mockNostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          acceptRelayClosedWhenOthersAnswered: any(
+            named: 'acceptRelayClosedWhenOthersAnswered',
+          ),
+        ),
+      ).thenAnswer(
+        (_) async => (
+          events: responses[callCount++ % responses.length],
+          timedOut: false,
+          noRelays: false,
+        ),
+      );
     }
 
     /// Stubs the reads that must tell a complete answer from a short one —
@@ -105,6 +122,42 @@ void main() {
           events: responses[callCount++ % responses.length],
           endedBy: QueryEnd.complete,
         ),
+      );
+    }
+
+    /// Asserts no relay list read ran, through queryEvents or the settled read
+    /// the likers fallback now makes (#10846). It does not cover readEvents,
+    /// which the sync and retraction reads use.
+    void verifyNoFallbackReads() {
+      verifyNever(() => mockNostrClient.queryEvents(any()));
+      verifyNever(
+        () => mockNostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          acceptRelayClosedWhenOthersAnswered: any(
+            named: 'acceptRelayClosedWhenOthersAnswered',
+          ),
+        ),
+      );
+    }
+
+    /// Stubs the reads a likers list waits on every relay for (#10846)
+    /// with [events], each ending unfinished unless [finished].
+    void stubSettledReads(
+      List<Event> events, {
+      bool finished = true,
+      bool noRelays = false,
+    }) {
+      when(
+        () => mockNostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          acceptRelayClosedWhenOthersAnswered: any(
+            named: 'acceptRelayClosedWhenOthersAnswered',
+          ),
+        ),
+      ).thenAnswer(
+        (_) async => (events: events, timedOut: !finished, noRelays: noRelays),
       );
     }
 
@@ -2878,7 +2931,16 @@ void main() {
           );
 
           expect(count, equals(2));
-          verify(() => mockNostrClient.queryEvents(any())).called(3);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
+          verify(() => mockNostrClient.queryEvents(any())).called(1);
         },
       );
 
@@ -2949,6 +3011,94 @@ void main() {
 
           expect(count, equals(likers.pubkeys.length));
           expect(likers.pubkeys, [likerC]);
+        },
+      );
+
+      test(
+        'returns null and caches nothing when the addressable read runs out '
+        'of time (#10846)',
+        () async {
+          const testAddressableId = '34236:$testAuthorPubkey:test-d-tag';
+          final reaction = createMockReaction(
+            id: 'reaction_e',
+            targetEventId: testEventId,
+            authorPubkey: 'liker_a_pubkey_1234567890abcdef',
+          );
+          final laterReaction = createMockReaction(
+            id: 'reaction_later',
+            targetEventId: testEventId,
+            authorPubkey: 'liker_b_pubkey_1234567890abcdef',
+          );
+          var finished = false;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: <Event>[reaction, if (finished) laterReaction],
+              timedOut: !finished,
+              noRelays: false,
+            ),
+          );
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          repository = createRepository();
+          final whileUnfinished = await repository.getLikeCount(
+            testEventId,
+            addressableId: testAddressableId,
+          );
+          finished = true;
+          final onceFinished = await repository.getLikeCount(
+            testEventId,
+            addressableId: testAddressableId,
+          );
+
+          expect(whileUnfinished, isNull);
+          expect(onceFinished, equals(2));
+        },
+      );
+
+      test(
+        'reads an addressable count without waiting for every relay (#10846)',
+        () async {
+          const testAddressableId = '34236:$testAuthorPubkey:test-d-tag';
+          stubSettledReads([
+            createMockReaction(
+              id: 'reaction_e',
+              targetEventId: testEventId,
+              authorPubkey: 'liker_a_pubkey_1234567890abcdef',
+            ),
+          ]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          repository = createRepository();
+          final count = await repository.getLikeCount(
+            testEventId,
+            addressableId: testAddressableId,
+          );
+
+          expect(count, equals(1));
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(
+                named: 'requireAllRelaysSettled',
+                that: isFalse,
+              ),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
         },
       );
 
@@ -3112,7 +3262,7 @@ void main() {
       test('returns empty map for empty input', () async {
         repository = createRepository();
         expect(await repository.getLikeCounts([]), isEmpty);
-        verifyNever(() => mockNostrClient.queryEvents(any()));
+        verifyNoFallbackReads();
       });
 
       test('queries relay for multiple event counts', () async {
@@ -3185,9 +3335,7 @@ void main() {
           // The addressable branch resolves through a different call site, so
           // it needs its own guard against an oversized `#e` frame.
           final eventIds = [for (var i = 0; i < 600; i++) 'event_id_$i'];
-          when(
-            () => mockNostrClient.queryEvents(any()),
-          ).thenAnswer((_) async => <Event>[]);
+          stubSettledReads(<Event>[]);
 
           repository = createRepository();
           await repository.getLikeCounts(
@@ -3198,7 +3346,17 @@ void main() {
           );
 
           final reactionFilters =
-              verify(() => mockNostrClient.queryEvents(captureAny())).captured
+              verify(
+                    () => mockNostrClient.queryEventsDetailed(
+                      captureAny(),
+                      requireAllRelaysSettled: any(
+                        named: 'requireAllRelaysSettled',
+                      ),
+                      acceptRelayClosedWhenOthersAnswered: any(
+                        named: 'acceptRelayClosedWhenOthersAnswered',
+                      ),
+                    ),
+                  ).captured
                   .cast<List<Filter>>()
                   .map((filters) => filters.single)
                   .where(
@@ -3332,13 +3490,11 @@ void main() {
             ],
           );
 
-          var callCount = 0;
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer((_) async {
-            callCount++;
-            if (callCount == 1) return [mockReactionByE];
-            if (callCount == 2) return [mockReactionByA1, mockReactionByA2];
-            return <Event>[];
-          });
+          mockQueryEventsSequence([
+            [mockReactionByE],
+            [mockReactionByA1, mockReactionByA2],
+            <Event>[],
+          ]);
 
           repository = createRepository();
           final counts = await repository.getLikeCounts(
@@ -3348,7 +3504,16 @@ void main() {
 
           // event1 has 1 from e-tag, event2 has 2 from a-tag
           expect(counts, {eventId1: 1, eventId2: 2});
-          verify(() => mockNostrClient.queryEvents(any())).called(3);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
+          verify(() => mockNostrClient.queryEvents(any())).called(1);
         },
       );
 
@@ -3394,15 +3559,11 @@ void main() {
           ],
         );
 
-        var callCount = 0;
-        when(() => mockNostrClient.queryEvents(any())).thenAnswer((_) async {
-          callCount++;
-          if (callCount == 1) {
-            return [mockReactionByE1, mockReactionByE2, mockReactionByE3];
-          }
-          if (callCount == 2) return [mockReactionByA1, mockReactionByA2];
-          return <Event>[];
-        });
+        mockQueryEventsSequence([
+          [mockReactionByE1, mockReactionByE2, mockReactionByE3],
+          [mockReactionByA1, mockReactionByA2],
+          <Event>[],
+        ]);
 
         repository = createRepository();
         final counts = await repository.getLikeCounts(
@@ -3481,7 +3642,16 @@ void main() {
 
           expect(counts[plainEvent], equals(1));
           expect(counts[addrEvent], equals(2));
-          verify(() => mockNostrClient.queryEvents(any())).called(3);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
+          verify(() => mockNostrClient.queryEvents(any())).called(1);
         },
       );
 
@@ -3518,7 +3688,106 @@ void main() {
           expect(second[eventId], equals(1));
           // First batch: e + a + deletion = 3 queries; the second is served
           // from _likeCountCache with no further relay calls.
-          verify(() => mockNostrClient.queryEvents(any())).called(3);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
+          verify(() => mockNostrClient.queryEvents(any())).called(1);
+        },
+      );
+
+      test(
+        'leaves out ids whose addressable read ran out of time, and asks '
+        'again next time (#10846)',
+        () async {
+          const eventId = 'unfinished_addr_event_1234567890abcdef0123';
+          const aTag = '34236:author:d-tag';
+          final reaction = createMockReaction(
+            id: 'reaction_e',
+            targetEventId: eventId,
+            authorPubkey: 'liker_a_pubkey_1234567890abcdef',
+          );
+          final laterReaction = createMockReaction(
+            id: 'reaction_later',
+            targetEventId: eventId,
+            authorPubkey: 'liker_b_pubkey_1234567890abcdef',
+          );
+          var finished = false;
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: <Event>[reaction, if (finished) laterReaction],
+              timedOut: !finished,
+              noRelays: false,
+            ),
+          );
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          repository = createRepository();
+          final whileUnfinished = await repository.getLikeCounts(
+            [eventId],
+            addressableIds: {eventId: aTag},
+          );
+          finished = true;
+          final onceFinished = await repository.getLikeCounts(
+            [eventId],
+            addressableIds: {eventId: aTag},
+          );
+
+          expect(whileUnfinished, isEmpty);
+          expect(onceFinished, equals({eventId: 2}));
+        },
+      );
+
+      test(
+        'reads addressable counts without waiting for every relay (#10846)',
+        () async {
+          const eventId = 'settle_window_event_1234567890abcdef012345';
+          const aTag = '34236:author:d-tag';
+          stubSettledReads([
+            createMockReaction(
+              id: 'reaction_e',
+              targetEventId: eventId,
+              authorPubkey: 'liker_a_pubkey_1234567890abcdef',
+            ),
+          ]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+
+          repository = createRepository();
+          final counts = await repository.getLikeCounts(
+            [eventId],
+            addressableIds: {eventId: aTag},
+          );
+
+          expect(counts, equals({eventId: 1}));
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(
+                named: 'requireAllRelaysSettled',
+                that: isFalse,
+              ),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
         },
       );
 
@@ -3597,7 +3866,14 @@ void main() {
           repository = createRepository();
           final result = await repository.syncUserReactions();
 
-          verifyNever(() => mockNostrClient.queryEvents(any()));
+          verifyNoFallbackReads();
+          verifyNever(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          );
           expect(result.orderedEventIds, contains(testEventId));
         },
       );
@@ -3615,7 +3891,14 @@ void main() {
           repository = createRepository();
           final result = await repository.syncUserReactions();
 
-          verifyNever(() => mockNostrClient.queryEvents(any()));
+          verifyNoFallbackReads();
+          verifyNever(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          );
           expect(result.orderedEventIds, contains(testEventId));
         },
       );
@@ -3630,7 +3913,7 @@ void main() {
           repository = createRepository();
           final statuses = await repository.getUserVoteStatuses([testEventId]);
 
-          verifyNever(() => mockNostrClient.queryEvents(any()));
+          verifyNoFallbackReads();
           expect(statuses.upvotedIds, isEmpty);
           expect(statuses.downvotedIds, isEmpty);
         },
@@ -4208,9 +4491,7 @@ void main() {
       }
 
       test('returns empty list when no reactions exist', () async {
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => <Event>[]);
+        stubSettledReads(<Event>[]);
 
         repository = createRepository();
         expect(
@@ -4327,8 +4608,9 @@ void main() {
           final calls = verify(
             () => mockNostrClient.queryEvents(captureAny()),
           ).captured.cast<List<Filter>>();
-          // 1 reaction (e) query + 2 chunked deletion queries.
-          expect(calls, hasLength(3));
+          // The reaction read is a settled read (#10846), so queryEvents sees
+          // only the 2 chunked deletion queries.
+          expect(calls, hasLength(2));
 
           final deletionFilters = calls
               .map((filters) => filters.single)
@@ -4523,14 +4805,26 @@ void main() {
 
       test('throws FetchLikersFailedException when relay query fails', () {
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
+          ),
         ).thenThrow(Exception('Network error'));
 
         repository = createRepository();
 
         expect(
           () => repository.fetchEventLikers(eventId: targetEventId),
-          throwsA(isA<FetchLikersFailedException>()),
+          throwsA(
+            isA<FetchLikersFailedException>().having(
+              (e) => e.message,
+              'message',
+              contains('Network error'),
+            ),
+          ),
         );
       });
 
@@ -4638,7 +4932,7 @@ void main() {
                 ),
                 throwsA(isA<FetchLikersFailedException>()),
               );
-              verifyNever(() => mockNostrClient.queryEvents(any()));
+              verifyNoFallbackReads();
             },
           );
 
@@ -4654,9 +4948,7 @@ void main() {
                   cursor: any(named: 'cursor'),
                 ),
               ).thenThrow(const FunnelcakeException('boom'));
-              when(
-                () => mockNostrClient.queryEvents(any()),
-              ).thenAnswer((_) async => <Event>[]);
+              stubSettledReads(<Event>[]);
 
               repository = createRepository(
                 funnelcakeApiClient: mockFunnelcake,
@@ -4666,9 +4958,13 @@ void main() {
               );
 
               expect(page.pubkeys, isEmpty);
-              verify(() => mockNostrClient.queryEvents(any())).called(
-                greaterThan(0),
-              );
+              verify(
+                () => mockNostrClient.queryEventsDetailed(
+                  any(),
+                  requireAllRelaysSettled: true,
+                  acceptRelayClosedWhenOthersAnswered: true,
+                ),
+              ).called(greaterThan(0));
             },
           );
 
@@ -4686,7 +4982,7 @@ void main() {
 
             expect(page.pubkeys, isEmpty);
             expect(page.hasMore, isFalse);
-            verifyNever(() => mockNostrClient.queryEvents(any()));
+            verifyNoFallbackReads();
           });
 
           // A full page whose every row the block filter removed still
@@ -4709,7 +5005,7 @@ void main() {
               expect(page.pubkeys, isEmpty);
               expect(page.nextCursor, equals('cursor_page_3'));
               expect(page.hasMore, isTrue);
-              verifyNever(() => mockNostrClient.queryEvents(any()));
+              verifyNoFallbackReads();
             },
           );
         });
@@ -4726,7 +5022,7 @@ void main() {
             )).pubkeys,
             equals([likerC, likerA]),
           );
-          verifyNever(() => mockNostrClient.queryEvents(any()));
+          verifyNoFallbackReads();
         });
 
         test('forwards the addressable coordinate to the API', () async {
@@ -4778,11 +5074,12 @@ void main() {
               addressableId: any(named: 'addressableId'),
             ),
           ).thenThrow(const FunnelcakeException('boom'));
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-            (_) async => [
-              createReaction(id: 'reaction_a', authorPubkey: likerA),
-            ],
-          );
+          stubSettledReads([
+            createReaction(id: 'reaction_a', authorPubkey: likerA),
+          ]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
 
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
 
@@ -4794,11 +5091,12 @@ void main() {
 
         test('falls back to relays when the API returns nobody', () async {
           stubLikers([]);
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-            (_) async => [
-              createReaction(id: 'reaction_a', authorPubkey: likerA),
-            ],
-          );
+          stubSettledReads([
+            createReaction(id: 'reaction_a', authorPubkey: likerA),
+          ]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
 
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
 
@@ -4810,11 +5108,12 @@ void main() {
 
         test('falls back to relays when the API is unconfigured', () async {
           when(() => mockFunnelcake.isAvailable).thenReturn(false);
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-            (_) async => [
-              createReaction(id: 'reaction_a', authorPubkey: likerA),
-            ],
-          );
+          stubSettledReads([
+            createReaction(id: 'reaction_a', authorPubkey: likerA),
+          ]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
 
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
 
@@ -4830,13 +5129,551 @@ void main() {
           );
         });
 
+        // #10846: the relay fallback used to read through queryEvents, which
+        // cannot say whether the relays finished, so a read cut short looked
+        // exactly like a video nobody liked.
+        group('relay fallback that does not finish', () {
+          void apiFails() {
+            when(
+              () => mockFunnelcake.getVideoLikers(
+                any(),
+                addressableId: any(named: 'addressableId'),
+              ),
+            ).thenThrow(const FunnelcakeException('boom'));
+          }
+
+          setUp(() {
+            when(
+              () => mockNostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => <Event>[]);
+          });
+
+          test('marks an empty answer from an unfinished read', () async {
+            apiFails();
+            stubSettledReads(<Event>[], finished: false);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, isEmpty);
+            expect(page.isComplete, isFalse);
+          });
+
+          test('keeps the likers an unfinished read found, marked', () async {
+            apiFails();
+            stubSettledReads([
+              createReaction(id: 'reaction_a', authorPubkey: likerA),
+            ], finished: false);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, equals([likerA]));
+            expect(page.isComplete, isFalse);
+          });
+
+          test('marks a read every relay finished as complete', () async {
+            apiFails();
+            stubSettledReads([
+              createReaction(id: 'reaction_a', authorPubkey: likerA),
+            ]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, equals([likerA]));
+            expect(page.isComplete, isTrue);
+          });
+
+          test('treats a read no relay took as unfinished', () async {
+            apiFails();
+            stubSettledReads(<Event>[], noRelays: true);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.isComplete, isFalse);
+          });
+
+          test('trusts an API that listed nobody over an unfinished read '
+              'that found nobody', () async {
+            stubLikers([]);
+            stubSettledReads(<Event>[], finished: false);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, isEmpty);
+            expect(page.isComplete, isTrue);
+          });
+
+          test('marks people an unfinished read found after the API listed '
+              'nobody', () async {
+            stubLikers([]);
+            stubSettledReads([
+              createReaction(id: 'reaction_a', authorPubkey: likerA),
+            ], finished: false);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, equals([likerA]));
+            expect(page.isComplete, isFalse);
+          });
+
+          test('waits for every relay, settling on refusals once another '
+              'relay answered', () async {
+            apiFails();
+            stubSettledReads(<Event>[]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            await repository.fetchEventLikers(
+              eventId: targetEventId,
+              addressableId: addressableId,
+            );
+
+            verify(
+              () => mockNostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
+              ),
+            ).called(2);
+          });
+        });
+
+        // #9357: /likers is built from what reached Funnelcake's own relay,
+        // so a like retracted with a kind 5 published only to another relay is
+        // still listed. Each row names the reaction it reports; a kind 5 from
+        // the same key naming it, found on the relays, removes that person.
+        // Who the API lists is still the API's call.
+        group('retractions the API never saw', () {
+          const reactionA =
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+          const reactionB =
+              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+
+          void stubLikersWithReactions(Map<String, String> reactionByLiker) {
+            when(
+              () => mockFunnelcake.getVideoLikers(
+                any(),
+                addressableId: any(named: 'addressableId'),
+              ),
+            ).thenAnswer(
+              (_) async => PaginatedPubkeys(
+                pubkeys: reactionByLiker.keys.toList(),
+                eventIdByPubkey: reactionByLiker,
+              ),
+            );
+          }
+
+          void stubRetractionRead(
+            List<Event> events, {
+            QueryEnd endedBy = QueryEnd.complete,
+          }) {
+            when(
+              () => mockNostrClient.readEvents(
+                any(),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer(
+              (_) async => QueryResult(events: events, endedBy: endedBy),
+            );
+          }
+
+          test('drops an API liker whose reaction the same key retracted '
+              'on a relay', () async {
+            stubLikersWithReactions({likerA: reactionA, likerB: reactionB});
+            stubRetractionRead([
+              createMockDeletion([reactionB], authorPubkey: likerB),
+            ]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+
+            expect(
+              (await repository.fetchEventLikers(
+                eventId: targetEventId,
+              )).pubkeys,
+              equals([likerA]),
+            );
+          });
+
+          test('asks the relays for kind 5s naming the reactions it lists, '
+              'and only those', () async {
+            stubLikersWithReactions({likerA: reactionA, likerB: reactionB});
+            stubRetractionRead(const <Event>[]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            await repository.fetchEventLikers(eventId: targetEventId);
+
+            final filters =
+                verify(
+                      () => mockNostrClient.readEvents(
+                        captureAny(),
+                        requireAllRelaysSettled: any(
+                          named: 'requireAllRelaysSettled',
+                        ),
+                        timeout: any(named: 'timeout'),
+                      ),
+                    ).captured.single
+                    as List<Filter>;
+            expect(filters, hasLength(1));
+            expect(filters.single.kinds, equals(const [5]));
+            expect(
+              filters.single.e,
+              unorderedEquals(const [reactionA, reactionB]),
+            );
+            verifyNoFallbackReads();
+          });
+
+          test('keeps a liker when somebody else signed the kind 5 naming '
+              'their reaction', () async {
+            stubLikersWithReactions({likerA: reactionA, likerB: reactionB});
+            stubRetractionRead([
+              createMockDeletion([reactionB], authorPubkey: likerC),
+            ]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+
+            expect(
+              (await repository.fetchEventLikers(
+                eventId: targetEventId,
+              )).pubkeys,
+              equals([likerA, likerB]),
+            );
+          });
+
+          // The signer must own the reaction it names: a listed liker's kind
+          // 5 naming another listed liker's reaction retracts neither.
+          test('keeps both likers when one signed a kind 5 naming the '
+              "other's reaction", () async {
+            stubLikersWithReactions({likerA: reactionA, likerB: reactionB});
+            stubRetractionRead([
+              createMockDeletion([reactionB], authorPubkey: likerA),
+            ]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+
+            expect(
+              (await repository.fetchEventLikers(
+                eventId: targetEventId,
+              )).pubkeys,
+              equals([likerA, likerB]),
+            );
+          });
+
+          test('keeps everyone when the relays found no retraction and did '
+              'not all answer', () async {
+            stubLikersWithReactions({likerA: reactionA, likerB: reactionB});
+            stubRetractionRead(const <Event>[], endedBy: QueryEnd.settledEarly);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+
+            expect(
+              (await repository.fetchEventLikers(
+                eventId: targetEventId,
+              )).pubkeys,
+              equals([likerA, likerB]),
+            );
+          });
+
+          test('still drops a retraction found by a read that did not '
+              'finish', () async {
+            stubLikersWithReactions({likerA: reactionA, likerB: reactionB});
+            stubRetractionRead([
+              createMockDeletion([reactionB], authorPubkey: likerB),
+            ], endedBy: QueryEnd.settledEarly);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+
+            expect(
+              (await repository.fetchEventLikers(
+                eventId: targetEventId,
+              )).pubkeys,
+              equals([likerA]),
+            );
+          });
+
+          test('keeps everyone when the retraction read throws', () async {
+            stubLikersWithReactions({likerA: reactionA, likerB: reactionB});
+            when(
+              () => mockNostrClient.readEvents(
+                any(),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenThrow(Exception('relay pool unavailable'));
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+
+            expect(
+              (await repository.fetchEventLikers(
+                eventId: targetEventId,
+              )).pubkeys,
+              equals([likerA, likerB]),
+            );
+          });
+
+          test(
+            'does not read the relays for rows that name no reaction',
+            () async {
+              stubLikers([likerA, likerB]);
+
+              repository = createRepository(
+                funnelcakeApiClient: mockFunnelcake,
+              );
+
+              expect(
+                (await repository.fetchEventLikers(
+                  eventId: targetEventId,
+                )).pubkeys,
+                equals([likerA, likerB]),
+              );
+              verifyNever(
+                () => mockNostrClient.readEvents(
+                  any(),
+                  requireAllRelaysSettled: any(
+                    named: 'requireAllRelaysSettled',
+                  ),
+                  timeout: any(named: 'timeout'),
+                ),
+              );
+            },
+          );
+
+          // The API listed people, so it answered. Emptying that list with
+          // confirmed retractions must not read as "the API had nobody":
+          // the relay union would add people the API chose not to list.
+          test('returns an empty page, not the relay union, when every '
+              'listed liker was retracted', () async {
+            when(
+              () => mockFunnelcake.getVideoLikers(
+                any(),
+                addressableId: any(named: 'addressableId'),
+              ),
+            ).thenAnswer(
+              (_) async => const PaginatedPubkeys(
+                pubkeys: [likerA],
+                eventIdByPubkey: {likerA: reactionA},
+                nextCursor: 'cursor_page_2',
+              ),
+            );
+            stubRetractionRead([
+              createMockDeletion([reactionA], authorPubkey: likerA),
+            ]);
+            when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+              (_) async => [
+                createReaction(id: 'reaction_hidden', authorPubkey: likerC),
+              ],
+            );
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, isEmpty);
+            expect(page.nextCursor, equals('cursor_page_2'));
+            verifyNoFallbackReads();
+          });
+
+          test('checks only the rows that name a reaction and keeps the '
+              'rest listed', () async {
+            when(
+              () => mockFunnelcake.getVideoLikers(
+                any(),
+                addressableId: any(named: 'addressableId'),
+              ),
+            ).thenAnswer(
+              (_) async => const PaginatedPubkeys(
+                pubkeys: [likerA, likerB, likerC],
+                eventIdByPubkey: {likerA: reactionA, likerB: reactionB},
+              ),
+            );
+            stubRetractionRead([
+              createMockDeletion([reactionB], authorPubkey: likerB),
+            ]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, equals([likerA, likerC]));
+            final filters =
+                verify(
+                      () => mockNostrClient.readEvents(
+                        captureAny(),
+                        requireAllRelaysSettled: any(
+                          named: 'requireAllRelaysSettled',
+                        ),
+                        timeout: any(named: 'timeout'),
+                      ),
+                    ).captured.single
+                    as List<Filter>;
+            expect(
+              filters.single.e,
+              unorderedEquals(const [reactionA, reactionB]),
+            );
+          });
+
+          test('does not ask the relays about a blocked liker', () async {
+            stubLikersWithReactions({likerA: reactionA, likerB: reactionB});
+            stubRetractionRead(const <Event>[]);
+
+            repository = createRepository(
+              funnelcakeApiClient: mockFunnelcake,
+              blockFilter: (pubkey) => pubkey == likerB,
+            );
+            await repository.fetchEventLikers(eventId: targetEventId);
+
+            final filters =
+                verify(
+                      () => mockNostrClient.readEvents(
+                        captureAny(),
+                        requireAllRelaysSettled: any(
+                          named: 'requireAllRelaysSettled',
+                        ),
+                        timeout: any(named: 'timeout'),
+                      ),
+                    ).captured.single
+                    as List<Filter>;
+            expect(filters.single.e, equals(const [reactionA]));
+          });
+
+          // Rows come from a REST body, and what they name goes into a relay
+          // filter. Only a real event id may.
+          test('sends only well-formed event ids to the relays', () async {
+            stubLikersWithReactions({
+              likerA: 'not-an-event-id',
+              likerB: reactionB,
+            });
+            stubRetractionRead(const <Event>[]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, equals([likerA, likerB]));
+            final filters =
+                verify(
+                      () => mockNostrClient.readEvents(
+                        captureAny(),
+                        requireAllRelaysSettled: any(
+                          named: 'requireAllRelaysSettled',
+                        ),
+                        timeout: any(named: 'timeout'),
+                      ),
+                    ).captured.single
+                    as List<Filter>;
+            expect(filters.single.e, equals(const [reactionB]));
+          });
+
+          test('does not read the relays when no row names a well-formed '
+              'event id', () async {
+            stubLikersWithReactions({likerA: 'not-an-event-id'});
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, equals([likerA]));
+            verifyNever(
+              () => mockNostrClient.readEvents(
+                any(),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+              ),
+            );
+          });
+
+          test('asks about at most one chunk of reactions per page', () async {
+            final likers = [for (var i = 0; i < 501; i++) 'liker_$i'];
+            stubLikersWithReactions({
+              for (var i = 0; i < likers.length; i++)
+                likers[i]: i.toRadixString(16).padLeft(64, '0'),
+            });
+            stubRetractionRead(const <Event>[]);
+
+            repository = createRepository(funnelcakeApiClient: mockFunnelcake);
+            final page = await repository.fetchEventLikers(
+              eventId: targetEventId,
+            );
+
+            expect(page.pubkeys, hasLength(501));
+            final filters =
+                verify(
+                      () => mockNostrClient.readEvents(
+                        captureAny(),
+                        requireAllRelaysSettled: any(
+                          named: 'requireAllRelaysSettled',
+                        ),
+                        timeout: any(named: 'timeout'),
+                      ),
+                    ).captured.single
+                    as List<Filter>;
+            expect(filters.single.e, hasLength(500));
+          });
+
+          test(
+            'drops a retracted liker from a continuation page too',
+            () async {
+              when(
+                () => mockFunnelcake.getVideoLikers(
+                  any(),
+                  addressableId: any(named: 'addressableId'),
+                  cursor: 'cursor_page_2',
+                ),
+              ).thenAnswer(
+                (_) async => const PaginatedPubkeys(
+                  pubkeys: [likerA, likerB],
+                  eventIdByPubkey: {likerA: reactionA, likerB: reactionB},
+                  nextCursor: 'cursor_page_3',
+                ),
+              );
+              stubRetractionRead([
+                createMockDeletion([reactionB], authorPubkey: likerB),
+              ]);
+
+              repository = createRepository(
+                funnelcakeApiClient: mockFunnelcake,
+              );
+              final page = await repository.fetchEventLikers(
+                eventId: targetEventId,
+                cursor: 'cursor_page_2',
+              );
+
+              expect(page.pubkeys, equals([likerA]));
+              expect(page.nextCursor, equals('cursor_page_3'));
+            },
+          );
+        });
+
         test('leaves getLikeCount on the relay resolver', () async {
           stubLikers([likerA, likerB, likerC]);
-          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
-            (_) async => [
-              createReaction(id: 'reaction_a', authorPubkey: likerA),
-            ],
-          );
+          stubSettledReads([
+            createReaction(id: 'reaction_a', authorPubkey: likerA),
+          ]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
 
           repository = createRepository(funnelcakeApiClient: mockFunnelcake);
 
@@ -6288,6 +7125,264 @@ void main() {
       );
     });
 
+    group('legacy 34236 key of a Kind 34235 video (#10776)', () {
+      const oldEventId = 'old_event_id_1234567890abcdef';
+      const newEventId = 'new_event_id_1234567890abcdef';
+      const coordinate = '34235:$testAuthorPubkey:test-d-tag';
+      const legacyCoordinate = '34236:$testAuthorPubkey:test-d-tag';
+
+      void stubLegacyRecord() {
+        when(() => mockLocalStorage.getAllLikeRecords()).thenAnswer(
+          (_) async => [
+            createLikeRecord(
+              targetEventId: oldEventId,
+              addressableId: legacyCoordinate,
+            ),
+          ],
+        );
+      }
+
+      group('on the relays after a cold start', () {
+        test('likeEvent adopts the like left under the legacy key instead of '
+            'sending another', () async {
+          final reaction = createMockReaction(
+            id: testReactionEventId,
+            targetEventId: oldEventId,
+            authorPubkey: testUserPubkey,
+            tags: [
+              ['e', oldEventId],
+              ['a', legacyCoordinate],
+            ],
+          );
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) async {
+            final filters = invocation.positionalArguments[0] as List<Filter>;
+            return QueryResult(
+              events:
+                  filters.any(
+                    (filter) => filter.a?.contains(legacyCoordinate) ?? false,
+                  )
+                  ? [reaction]
+                  : <Event>[],
+              endedBy: QueryEnd.complete,
+            );
+          });
+          repository = createRepository(withLocalStorage: false);
+
+          await expectLater(
+            repository.likeEvent(
+              eventId: newEventId,
+              authorPubkey: testAuthorPubkey,
+              addressableId: coordinate,
+              targetKind: 34235,
+            ),
+            throwsA(isA<AlreadyLikedException>()),
+          );
+
+          expect(
+            (await repository.getLikeRecordByCoordinate(
+              coordinate,
+            ))?.reactionEventId,
+            testReactionEventId,
+          );
+          verifyNever(
+            () => mockNostrClient.sendLike(
+              any(),
+              content: any(named: 'content'),
+              addressableId: any(named: 'addressableId'),
+              targetAuthorPubkey: any(named: 'targetAuthorPubkey'),
+              targetKind: any(named: 'targetKind'),
+            ),
+          );
+          when(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).thenAnswer((_) async => MockEvent());
+
+          await repository.unlikeEvent(
+            newEventId,
+            addressableId: coordinate,
+          );
+
+          expect(
+            await repository.getLikeRecordByCoordinate(coordinate),
+            isNull,
+          );
+          verify(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).called(1);
+        });
+
+        Event legacyDownvote() => createMockReaction(
+          id: testReactionEventId,
+          targetEventId: oldEventId,
+          authorPubkey: testUserPubkey,
+          content: '-',
+          tags: [
+            ['e', oldEventId],
+            ['a', legacyCoordinate],
+          ],
+        );
+
+        test('downvoteEvent finds the downvote left under the legacy key '
+            'instead of sending another', () async {
+          mockQueryEventsSequence([
+            <Event>[],
+            [legacyDownvote()],
+            <Event>[],
+          ]);
+          repository = createRepository(withLocalStorage: false);
+
+          await expectLater(
+            repository.downvoteEvent(
+              eventId: newEventId,
+              authorPubkey: testAuthorPubkey,
+              addressableId: coordinate,
+              targetKind: 34235,
+            ),
+            throwsA(isA<AlreadyDownvotedException>()),
+          );
+          verifyNever(
+            () => mockNostrClient.sendLike(
+              any(),
+              content: any(named: 'content'),
+              addressableId: any(named: 'addressableId'),
+              targetAuthorPubkey: any(named: 'targetAuthorPubkey'),
+              targetKind: any(named: 'targetKind'),
+            ),
+          );
+        });
+
+        test('removeDownvote deletes the downvote left under the legacy '
+            'key', () async {
+          mockQueryEventsSequence([
+            <Event>[],
+            [legacyDownvote()],
+            <Event>[],
+          ]);
+          when(
+            () => mockNostrClient.deleteEvent(any()),
+          ).thenAnswer((_) async => MockEvent());
+          repository = createRepository(withLocalStorage: false);
+
+          await repository.removeDownvote(
+            newEventId,
+            addressableId: coordinate,
+          );
+
+          verify(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).called(1);
+        });
+      });
+
+      test('resolves the like stored under the legacy key', () async {
+        stubLegacyRecord();
+        repository = createRepository();
+        await repository.initialize();
+
+        expect(
+          await repository.isLikedResolvingCoordinate(
+            eventId: newEventId,
+            addressableId: coordinate,
+          ),
+          isTrue,
+        );
+      });
+
+      test(
+        'toggleLike unlikes the legacy reaction rather than creating a '
+        'duplicate',
+        () async {
+          stubLegacyRecord();
+          when(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).thenAnswer((_) async => MockEvent());
+          when(
+            () => mockLocalStorage.deleteLikeRecord(oldEventId),
+          ).thenAnswer((_) async => true);
+          repository = createRepository();
+          await repository.initialize();
+
+          final isNowLiked = await repository.toggleLike(
+            eventId: newEventId,
+            authorPubkey: testAuthorPubkey,
+            addressableId: coordinate,
+            targetKind: 34235,
+          );
+
+          expect(isNowLiked, isFalse);
+          verify(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).called(1);
+        },
+      );
+
+      test(
+        'getLikeCounts credits a 34236 coordinate to the real Kind 34236 '
+        'video, not to the alias of a 34235 video in the same batch',
+        () async {
+          const shortVideoId = 'short_video_id_1234567890abcdef';
+          const normalVideoId = 'normal_video_id_1234567890abcdef';
+          final reactionOnOlderShortVersion = createMockReaction(
+            id: 'reaction_short',
+            targetEventId: oldEventId,
+            authorPubkey: 'liker_a_pubkey_1234567890abcdef',
+            tags: [
+              ['e', oldEventId],
+              ['a', legacyCoordinate],
+            ],
+          );
+          mockQueryEventsSequence([
+            <Event>[],
+            [reactionOnOlderShortVersion],
+            <Event>[],
+          ]);
+
+          repository = createRepository();
+          final counts = await repository.getLikeCounts(
+            [shortVideoId, normalVideoId],
+            addressableIds: {
+              shortVideoId: legacyCoordinate,
+              normalVideoId: coordinate,
+            },
+          );
+
+          expect(counts, equals({shortVideoId: 1, normalVideoId: 0}));
+        },
+      );
+
+      test('getLikeCount counts a like tagged with the legacy key', () async {
+        const liker = 'liker_a_pubkey_1234567890abcdef';
+        final legacyTaggedReaction = createMockReaction(
+          id: 'reaction_legacy',
+          targetEventId: oldEventId,
+          authorPubkey: liker,
+          tags: [
+            ['e', oldEventId],
+            ['a', legacyCoordinate],
+          ],
+        );
+        mockQueryEventsSequence([
+          <Event>[],
+          [legacyTaggedReaction],
+          <Event>[],
+        ]);
+
+        repository = createRepository();
+        final count = await repository.getLikeCount(
+          newEventId,
+          addressableId: coordinate,
+        );
+
+        expect(count, equals(1));
+      });
+    });
+
     group('unlikeEvent resolves by coordinate (#6020)', () {
       const oldEventId = 'old_event_id_1234567890abcdef';
       const newEventId = 'new_event_id_1234567890abcdef';
@@ -6400,7 +7495,16 @@ void main() {
           );
           expect(secondCount, equals(1));
 
-          verify(() => mockNostrClient.queryEvents(any())).called(3);
+          verify(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              acceptRelayClosedWhenOthersAnswered: any(
+                named: 'acceptRelayClosedWhenOthersAnswered',
+              ),
+            ),
+          ).called(2);
+          verify(() => mockNostrClient.queryEvents(any())).called(1);
         },
       );
     });
@@ -6701,8 +7805,8 @@ void main() {
         // Switching an upvote to a downvote on an edited reply publishes a
         // Kind 5 for the pre-edit reaction and a new downvote on the current
         // one. The coordinate leg reaches both, so counting the retracted
-        // upvote would leave netScore 0 — which comment_item renders by
-        // hiding the score entirely.
+        // upvote would inflate the upvote total and zero the net score that
+        // Top ranks by.
         const voter = 'some_voter_pubkey_1234567890abcdef';
         final retractedUpvote = createMockReaction(
           id: 'retracted_upvote',
@@ -6799,6 +7903,100 @@ void main() {
         );
 
         expect(counts.upvotes[editedId], equals(0));
+      });
+
+      test('getVoteCounts counts one vote per account', () async {
+        // Kind 7 is a regular event, so a relay keeps every reaction an
+        // account publishes. Counting events would let one account cast any
+        // number of votes and bury a comment in the Top order.
+        const brigader = 'brigading_voter_pubkey_1234567890abcdef';
+        const honest = 'honest_voter_pubkey_1234567890abcdef';
+        mockQueryEventsSequence([
+          [
+            for (var i = 0; i < 3; i++)
+              createMockReaction(
+                id: 'repeat_downvote_$i',
+                targetEventId: editedId,
+                authorPubkey: brigader,
+                content: '-',
+                createdAt: defaultTimestamp + i,
+              ),
+            createMockReaction(
+              id: 'honest_upvote',
+              targetEventId: editedId,
+              authorPubkey: honest,
+            ),
+          ],
+          <Event>[],
+          <Event>[],
+        ]);
+
+        repository = createRepository(withLocalStorage: false);
+
+        final counts = await repository.getVoteCounts([editedId]);
+
+        expect(counts.downvotes[editedId], equals(1));
+        expect(counts.upvotes[editedId], equals(1));
+      });
+
+      test("getVoteCounts takes an account's newest vote", () async {
+        // A voter who switched from up to down without the retraction
+        // reaching this relay still holds one vote: the newer one.
+        const voter = 'some_voter_pubkey_1234567890abcdef';
+        mockQueryEventsSequence([
+          [
+            createMockReaction(
+              id: 'newer_downvote',
+              targetEventId: editedId,
+              authorPubkey: voter,
+              content: '-',
+              createdAt: defaultTimestamp + 1,
+            ),
+            createMockReaction(
+              id: 'older_upvote',
+              targetEventId: editedId,
+              authorPubkey: voter,
+            ),
+          ],
+          <Event>[],
+          <Event>[],
+        ]);
+
+        repository = createRepository(withLocalStorage: false);
+
+        final counts = await repository.getVoteCounts([editedId]);
+
+        expect(counts.upvotes[editedId], equals(0));
+        expect(counts.downvotes[editedId], equals(1));
+      });
+
+      test('getVoteCounts keeps the same vote from one second in any relay '
+          'order', () async {
+        const voter = 'some_voter_pubkey_1234567890abcdef';
+        final upvote = createMockReaction(
+          id: 'reaction_a',
+          targetEventId: editedId,
+          authorPubkey: voter,
+        );
+        final downvote = createMockReaction(
+          id: 'reaction_b',
+          targetEventId: editedId,
+          authorPubkey: voter,
+          content: '-',
+        );
+
+        for (final order in [
+          [upvote, downvote],
+          [downvote, upvote],
+        ]) {
+          mockQueryEventsSequence([order, <Event>[], <Event>[]]);
+          repository = createRepository(withLocalStorage: false);
+
+          final counts = await repository.getVoteCounts([editedId]);
+
+          expect(counts.upvotes[editedId], equals(0));
+          expect(counts.downvotes[editedId], equals(1));
+        }
       });
 
       test('deleting an older revision keeps the newer coordinate downvote '

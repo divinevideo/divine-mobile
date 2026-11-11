@@ -1856,6 +1856,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEngagementLoadFailed => '列表加载失败';
 
   @override
+  String get videoEngagementListIncomplete => '未能加载全部';
+
+  @override
   String get videoOverlayOpenMetadataFromTitle => '打开视频详情';
 
   @override
@@ -4797,6 +4800,24 @@ class AppLocalizationsZh extends AppLocalizations {
       'Divine 会在 24 小时内处理内容举报：移除违规内容，并将发布违规内容的用户清出平台。';
 
   @override
+  String get reportPrivateNotice => '这条举报会私下发给 Divine 审核团队，不会公开发布。';
+
+  @override
+  String get reportIncludeMessageTitle => '附上这条消息';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Divine 审核团队会看到这条消息。它会保持私密，不会公开发布。';
+
+  @override
+  String reportMessageTooLong(String optionTitle) {
+    return '这条消息太长，无法附上。请取消勾选“$optionTitle”后重试。';
+  }
+
+  @override
+  String get reportDetailsTooLong => '你填写的详情太长，无法发送。请精简后重试。';
+
+  @override
   String get reportBlockUser => '屏蔽该用户';
 
   @override
@@ -6031,9 +6052,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String dmReactionChipPendingA11yLabel(String emoji) {
     return '正在发送回应：$emoji';
   }
-
-  @override
-  String get dmReactionChipFailedA11yLabel => '回应失败，双击重试';
 
   @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
@@ -8215,16 +8233,50 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commentsVideoReplyPendingSemanticLabel => '正在发布你的视频回复';
 
   @override
-  String get commentsSortNew => '最新';
+  String get commentsSortRecent => '最新';
 
   @override
   String get commentsSortTop => '最热';
 
   @override
-  String get commentsSortOld => '最早';
+  String get commentsSortSemanticLabel => '评论排序';
 
   @override
-  String get commentsSortSemanticLabel => '评论排序';
+  String get commentsHiddenToggleSemanticLabel => '显示已隐藏的评论';
+
+  @override
+  String get commentsHiddenNotice => '创作者有意隐藏了这些评论。';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      '这些评论是你在 Divine 中隐藏的。其他应用和网站仍可能显示它们，如有有害内容请举报。';
+
+  @override
+  String get commentHiddenReportPrompt => '要同时举报这条评论吗？';
+
+  @override
+  String get commentHiddenReportAction => '举报';
+
+  @override
+  String get commentHiddenByCreator => '已被创作者隐藏';
+
+  @override
+  String get commentHiddenByYou => '已被你隐藏';
+
+  @override
+  String get commentOptionsHideLabel => '隐藏评论';
+
+  @override
+  String get commentOptionsHideSemanticLabel => '在你的视频上隐藏这条评论';
+
+  @override
+  String get commentOptionsShowLabel => '显示评论';
+
+  @override
+  String get commentOptionsShowSemanticLabel => '在你的视频上重新显示这条评论';
+
+  @override
+  String get commentsErrorModerationFailed => '无法更新已隐藏的评论。请重试。';
 
   @override
   String get commentReply => '回复';
@@ -10065,6 +10117,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorSpeedModeCurve => '曲线';
 
   @override
+  String get videoEditorSpeedSmoothTitle => '流畅慢动作';
+
+  @override
+  String get videoEditorSpeedSmoothDescription => '混合相邻画面，让慢动作更流畅。快速动作可能留下重影。';
+
+  @override
+  String get videoEditorSpeedSmoothUnavailable => '把片段调到 1× 以下即可使用。';
+
+  @override
   String get videoEditorSpeedCurveCustom => '自定义';
 
   @override
@@ -10478,6 +10539,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationWordByWord => '逐词';
+
+  @override
+  String get videoEditorLayerAnimationDrawOn => '逐笔';
 
   @override
   String get videoEditorLayerAnimationPulse => '脉动';
@@ -11228,6 +11292,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorConfirmColorSemanticLabel => '确认颜色';
+
+  @override
+  String get videoEditorEyedropperSemanticLabel => '从视频中取色';
+
+  @override
+  String get videoEditorEyedropperHint => '按住并拖动来取色';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => '停止取色';
 
   @override
   String get videoEditorSaturationBrightnessSemanticLabel => '饱和度和亮度';
@@ -12103,12 +12176,80 @@ class AppLocalizationsZh extends AppLocalizations {
   String get minorAccountReviewParentConsentEmailCta => '发邮件给 Divine 客服';
 
   @override
+  String get minorAccountReviewParentConsentRecordCta => 'Record consent video';
+
+  @override
   String get minorAccountReviewParentConsentEmailSubject =>
       'Divine Greenlight 审核协助（13-15 岁）';
 
   @override
   String get minorAccountReviewParentConsentEmailBody =>
       'Divine 客服团队，你们好：\n\n我就 Divine Greenlight 联系你们，对象是一位 13-15 岁的青少年。\n\n我附上了一段简短的私密视频，视频中包含：\n- 青少年本人\n- 家长或监护人在镜头前讲话\n- 该青少年获准使用 Divine\n- 家长或监护人知晓该账号，并将监督其使用\n\n居住国家/地区：\n\n其他有帮助的背景信息：\n\n谢谢。';
+
+  @override
+  String get minorAccountReviewRecordConsentTitle => 'Record consent video';
+
+  @override
+  String get minorAccountReviewRecordConsentBody =>
+      'Record a short private video with the teen and a parent or guardian on camera. It stays on this device until you submit it.';
+
+  @override
+  String get minorAccountReviewRecordConsentPromptTitle => 'Say this on camera';
+
+  @override
+  String get minorAccountReviewRecordConsentRecordCta => 'Record';
+
+  @override
+  String get minorAccountReviewRecordConsentStopCta => 'Stop';
+
+  @override
+  String get minorAccountReviewRecordConsentPreviewLabel => 'Camera preview';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewTitle => 'Review your video';
+
+  @override
+  String get minorAccountReviewRecordConsentReviewBody =>
+      'Watch it back. Retake if anything is missing, or use it if it shows everything above.';
+
+  @override
+  String get minorAccountReviewRecordConsentRetakeCta => 'Retake';
+
+  @override
+  String get minorAccountReviewRecordConsentUseVideoCta => 'Use this video';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedTitle =>
+      'We can\'t use the camera';
+
+  @override
+  String get minorAccountReviewRecordConsentDeniedBody =>
+      'Divine could not start the camera. You can still email a private video to Divine support instead.';
+
+  @override
+  String get minorAccountReviewRecordConsentEmailInsteadCta =>
+      'Use email instead';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorTitle => 'Recording failed';
+
+  @override
+  String get minorAccountReviewRecordConsentErrorBody =>
+      'Something went wrong while recording. Please try again.';
+
+  @override
+  String get minorAccountReviewRecordConsentTryAgainCta => 'Try again';
+
+  @override
+  String get minorAccountReviewRecordConsentConfirmEmailTitle =>
+      'Confirm your email';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitCta => 'Submit video';
+
+  @override
+  String get minorAccountReviewRecordConsentSubmitError =>
+      'Could not submit your video. Please try again.';
 
   @override
   String get minorAccountReviewParentSupportInstructions => '家长协助指引';
@@ -14937,4 +15078,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get messagesRoomDiscardDraft => 'Discard draft';
+
+  @override
+  String get minorAccountReviewVideoSubmittedBody => '你的视频已提交审核。';
+
+  @override
+  String get minorAccountReviewVideoSubmittedTitle => '视频已提交';
+
+  @override
+  String get minorAccountReviewRecordConsentPrivacyBody =>
+      '你的视频将私下发送给 Divine 支持及信任与安全团队审核，不会公开发布或与其他用户分享。';
+
+  @override
+  String get minorAccountReviewRecordConsentRejected =>
+      '提交未被接受。请检查邮箱地址、重新录制视频，或改用电子邮件。';
 }

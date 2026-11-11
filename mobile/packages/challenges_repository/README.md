@@ -79,7 +79,7 @@ persists simultaneous indexing and relay evidence independently.
 
 ## Verification
 
-Run from this package with the workspace's pinned Flutter 3.47.2:
+Run from this package with the workspace's pinned Flutter 3.47.9:
 
 - `flutter pub get --enforce-lockfile` from the app workspace.
 - `dart format --output=none --set-exit-if-changed lib test`

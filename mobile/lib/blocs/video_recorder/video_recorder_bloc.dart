@@ -288,6 +288,8 @@ class VideoRecorderBloc
       _onRecordingLockedForNavigation,
     );
     on<VideoRecorderCameraPausedForNavigation>(_onCameraPausedForNavigation);
+    on<VideoRecorderEditorNavigationStarted>(_onEditorNavigationStarted);
+    on<VideoRecorderEditorNavigationEnded>(_onEditorNavigationEnded);
     on<VideoRecorderRecorderModeSet>(_onRecorderModeSet);
     on<VideoRecorderTimerCycled>(_onTimerCycled);
     on<VideoRecorderResetRequested>(_onResetRequested);
@@ -1791,6 +1793,20 @@ class VideoRecorderBloc
     _lockRecordingForNavigation(emit);
   }
 
+  void _onEditorNavigationStarted(
+    VideoRecorderEditorNavigationStarted event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) {
+    emit(state.copyWith(editorNavigationInProgress: true));
+  }
+
+  void _onEditorNavigationEnded(
+    VideoRecorderEditorNavigationEnded event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) {
+    emit(state.copyWith(editorNavigationInProgress: false));
+  }
+
   Future<void> _onCameraPausedForNavigation(
     VideoRecorderCameraPausedForNavigation event,
     Emitter<VideoRecorderBlocState> emit,
@@ -2559,9 +2575,10 @@ class VideoRecorderBloc
   ///
   /// Only the rebuild count, aspect ratio, recorder mode (with the mode Upload
   /// was entered from), overlay and grid toggles, the timer setting, the take
-  /// in flight, the navigation lock, the stop-motion session and interval loop,
-  /// the chroma-key setup and (while initialized) the screen flash carry over;
-  /// flash resets to `off` and every other field to its default.
+  /// in flight, the navigation lock and the editor navigation in progress, the
+  /// stop-motion session and interval loop, the chroma-key setup and (while
+  /// initialized) the screen flash carry over; flash resets to `off` and every
+  /// other field to its default.
   ///
   /// A wall measurement survives a re-sync on the same side of the phone, but
   /// not a flip to the other one: its still shows the wall behind the lens it
@@ -2614,6 +2631,9 @@ class VideoRecorderBloc
         // Only the next initialize releases the lock. The camera's own dispose
         // reports through here, right after the lock is set.
         recordingLockedForNavigation: state.recordingLockedForNavigation,
+        // The camera is released while the editor is open, and that dispose
+        // re-syncs here; the editor navigation only ends when its route returns.
+        editorNavigationInProgress: state.editorNavigationInProgress,
         // Preserve the in-progress stop-motion capture session: a camera-field
         // re-sync must not wipe already-captured frames, or the session would
         // split into several one-frame recordings (and lose frames on

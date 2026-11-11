@@ -244,6 +244,28 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
   }
 
   Future<void> _saveSoundToLibrary() async {
+    final viewer = ref.read(authServiceProvider).currentPublicKeyHex;
+    var permitted = false;
+    try {
+      ref.invalidate(audioReuseTermsProvider(widget.sound));
+      ref.invalidate(audioReuseConsentProvider(widget.sound));
+      permitted = await ref.read(
+        audioReuseConsentProvider(widget.sound).future,
+      );
+    } on Exception catch (_) {
+      permitted = false;
+    }
+    if (!mounted) return;
+    if (!permitted ||
+        ref.read(authServiceProvider).currentPublicKeyHex != viewer) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        DivineSnackbarContainer.snackBar(
+          context.l10n.soundReuseUnavailable,
+          error: true,
+        ),
+      );
+      return;
+    }
     if (_isPlayingPreview && _audioService != null) {
       await _audioService!.stop();
       if (!mounted) return;
@@ -254,6 +276,7 @@ class _SoundDetailScreenState extends ConsumerState<SoundDetailScreen> {
 
     SavedSoundSaveResult? result;
     try {
+      if (ref.read(authServiceProvider).currentPublicKeyHex != viewer) return;
       result = await context.read<SavedSoundsBloc>().saveSound(
         widget.sound,
         sourceContext: widget.sourceVideo == null

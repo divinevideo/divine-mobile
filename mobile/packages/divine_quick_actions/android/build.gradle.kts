@@ -74,4 +74,8 @@ kotlin {
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.mockito:mockito-core:5.0.0")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("junit:junit:4.13.2")
+    // Robolectric runs on JUnit 4; the vintage engine runs it on the platform.
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.10.1")
 }

@@ -2,6 +2,7 @@
 
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:vector_graphics/vector_graphics.dart';
 
 /// Icon names from the Divine design system icon set.
 ///
@@ -102,6 +103,9 @@ enum DivineIconName {
   equalizer('equalizer'),
   eye('eye'),
   eyeSlash('eye_slash'),
+
+  /// A pipette, for picking a color off what is on screen.
+  eyedropper('eyedropper'),
   faders('faders'),
   fadersHorizontal('faders_horizontal'),
   filmSlate('FilmSlate'),
@@ -261,12 +265,15 @@ enum DivineIconName {
 
   /// The full asset path for this icon.
   String get assetPath => 'assets/icon/$fileName.svg';
+
+  /// Precompiled artwork bundled by the `divine_ui` package.
+  String get vectorAssetPath => 'assets/icons/$fileName.vec';
 }
 
 /// An icon widget that renders SVG icons from the Divine design system.
 ///
-/// [DivineIcon] loads an SVG asset by name and renders it at the specified
-/// [size] with an optional [color] tint.
+/// [DivineIcon] loads precompiled vector artwork at the specified [size],
+/// with an optional [color] tint.
 ///
 /// Example usage:
 /// ```dart
@@ -329,8 +336,10 @@ class DivineIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final dimension = scaleSize(context, size);
 
-    return SvgPicture.asset(
-      icon.assetPath,
+    // Bundled icons must not enter SvgAssetLoader's worker-isolate UTF-8
+    // decoder: that path can terminate the process with EXC_BAD_ACCESS.
+    return SvgPicture(
+      AssetBytesLoader(icon.vectorAssetPath, packageName: 'divine_ui'),
       width: dimension,
       height: dimension,
       fit: fit,

@@ -24,6 +24,8 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
+import '../../../helpers/text_lines.dart';
+
 class _MockVideoEditorMainBloc
     extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
     implements VideoEditorMainBloc {}
@@ -153,6 +155,72 @@ void main() {
         },
       );
     }
+
+    for (final textScale in const [1.0, 3.12]) {
+      testWidgets('keeps every word of the de labels whole on a small phone '
+          'at text scale $textScale', (tester) async {
+        tester.view.physicalSize = const Size(375, 667);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = textScale;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await tester.pumpWidget(
+          _buildShowHost(
+            mainBloc: mainBloc,
+            clipBloc: clipBloc,
+            timelineOverlayBloc: timelineOverlayBloc,
+            tuneBloc: tuneBloc,
+            drawBloc: drawBloc,
+            locale: const Locale('de'),
+          ),
+        );
+        await tester.tap(find.byKey(const Key('open-sheet')));
+        await tester.pumpAndSettle();
+
+        expect(
+          wordsSplitAcrossLines(
+            tester,
+            find.descendant(
+              of: find.byType(VideoEditorMainActionsSheet),
+              matching: find.byType(RichText),
+            ),
+          ),
+          isEmpty,
+        );
+      });
+    }
+
+    testWidgets('keeps four columns for the English labels on a small phone', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        _buildShowHost(
+          mainBloc: mainBloc,
+          clipBloc: clipBloc,
+          timelineOverlayBloc: timelineOverlayBloc,
+          tuneBloc: tuneBloc,
+          drawBloc: drawBloc,
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.tap(find.byKey(const Key('open-sheet')));
+      await tester.pumpAndSettle();
+
+      final grid = tester.widget<GridView>(
+        find.descendant(
+          of: find.byType(VideoEditorMainActionsSheet),
+          matching: find.byType(GridView),
+        ),
+      );
+      final delegate =
+          grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
+      expect(delegate.crossAxisCount, equals(4));
+    });
 
     testWidgets(
       'keeps a two-line de label inside its row when the grid widens columns',

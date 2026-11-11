@@ -76,7 +76,7 @@ passes the feed frame-timing and time-to-first-frame integration tests.
 It is not known to work everywhere. flutter/flutter#192736 reports the host
 emulator process dying about a second after Impeller selects OpenGLES on x86_64
 Linux hosts that render with a software GL stack, from Flutter 3.44 on, which
-includes the 3.47.2 this repo pins. If feed video renders black on an emulator,
+includes the 3.47.9 this repo pins. If feed video renders black on an emulator,
 see the OpenGLES note in `main/AndroidManifest.xml`.
 
 If an emulator vanishes, renders black or fails to render, turn Impeller off for

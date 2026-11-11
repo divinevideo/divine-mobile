@@ -374,12 +374,55 @@ void main() {
                   ),
                 ).captured.single
                 as List<Filter>;
-        expect(filters, hasLength(1));
-        expect(filters.single.kinds, equals(const [audioEventKind]));
-        expect(filters.single.t, equals(const ['horses', 'hooves']));
-        expect(filters.single.m, equals(SoundsRepository.audioMimeTypes));
-        expect(filters.single.limit, SoundsRepository.maxSearchResults);
+        final tagged = filters.singleWhere((filter) => filter.t != null);
+        expect(tagged.kinds, equals(const [audioEventKind]));
+        expect(tagged.t, equals(const ['horses', 'hooves']));
+        expect(tagged.m, equals(SoundsRepository.audioMimeTypes));
+        expect(tagged.limit, SoundsRepository.maxSearchResults);
       });
+
+      test(
+        'cold full-text search finds untagged classic captions and aliases',
+        () async {
+          final classic = Event.fromJson({
+            'id': testEventId1,
+            'pubkey': testPubkey1,
+            'kind': audioEventKind,
+            'tags': [
+              ['title', 'The tiny puppet show'],
+              ['url', 'https://example.com/puppet.m4a'],
+              ['m', 'audio/mp4'],
+              ['creator', 'Alex'],
+            ],
+            'content':
+                'Original caption: lunchtime\nAlso known as: still got snacks',
+            'created_at': 1000,
+            'sig': '',
+          });
+          when(
+            () => mockNostrClient.queryEventsDetailed(any(that: isTagQuery)),
+          ).thenAnswer((invocation) async {
+            final filters =
+                invocation.positionalArguments.single as List<Filter>;
+            final fullText = filters.where((filter) => filter.search != null);
+            // A full tag page can contain only partial matches; full-text must
+            // independently ask for all words rather than filter that page.
+            return (
+              events: fullText.any((filter) => filter.search == 'still snacks')
+                  ? [classic]
+                  : <Event>[],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          expect(repository.cachedSoundCount, 0);
+          final sounds = await repository.searchSounds('still snacks');
+
+          expect(sounds.map((sound) => sound.id), [testEventId1]);
+          expect(sounds.single.publicTags, isEmpty);
+        },
+      );
 
       test('returns and caches a tagged sound the cache never held', () async {
         answerTagQuery([
@@ -618,9 +661,134 @@ void main() {
                   ),
                 ).captured.single
                 as List<Filter>;
-        expect(filters.single.limit, 7);
+        expect(filters.every((filter) => filter.limit == 7), isTrue);
       });
     });
+
+    test(
+      'legacy original sound links resolve the current published audio',
+      () async {
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        final revision = Event.fromJson({
+          'id': testEventId2,
+          'pubkey': testPubkey1,
+          'kind': 34236,
+          'created_at': 2000,
+          'content': 'The tiny puppet show',
+          'tags': [
+            ['d', 'puppet-show'],
+            ['platform', 'vine'],
+            ['e', testEventId1, '', 'audio'],
+          ],
+          'sig': '',
+        });
+        when(
+          () => api.getVideoEvent(testVideoEventId),
+        ).thenAnswer((_) async => revision);
+        when(() => mockNostrClient.fetchEventById(testEventId1)).thenAnswer(
+          (_) async => createAudioEvent(
+            id: testEventId1,
+            pubkey: testPubkey1,
+            title: 'The tiny puppet show',
+          ),
+        );
+        final sounds = SoundsRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: api,
+        );
+        addTearDown(sounds.dispose);
+
+        final sound = await sounds.fetchSoundById('video_$testVideoEventId');
+
+        expect(sound?.id, testEventId1);
+        expect(sound?.title, 'The tiny puppet show');
+        verifyNever(
+          () => mockNostrClient.fetchEventById('video_$testVideoEventId'),
+        );
+      },
+    );
+
+    for (final failure in ['missing', 'offline', 'unconfigured']) {
+      test(
+        'legacy link stays closed when its current source is $failure',
+        () async {
+          final api = _MockFunnelcakeApiClient();
+          when(() => api.isAvailable).thenReturn(failure != 'unconfigured');
+          when(() => api.getVideoEvent(testVideoEventId)).thenAnswer((_) async {
+            if (failure == 'offline') throw Exception('offline');
+            return null;
+          });
+          final oldVideo = Event.fromJson({
+            'id': testVideoEventId,
+            'pubkey': testPubkey1,
+            'kind': 34236,
+            'created_at': 1000,
+            'content': 'An obsolete caption',
+            'tags': [
+              ['d', 'puppet-show'],
+              ['platform', 'vine'],
+            ],
+            'sig': '',
+          });
+          when(
+            () => mockNostrClient.fetchEventById(testVideoEventId),
+          ).thenAnswer((_) async => oldVideo);
+          final sounds = SoundsRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: api,
+          );
+          addTearDown(sounds.dispose);
+
+          expect(
+            await sounds.fetchSoundById('video_$testVideoEventId'),
+            isNull,
+          );
+          verifyNever(() => mockNostrClient.fetchEventById(testVideoEventId));
+        },
+      );
+    }
+
+    test(
+      'a current classic awaiting backfill resolves its named original sound',
+      () async {
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        when(() => api.getVideoEvent(testVideoEventId)).thenAnswer(
+          (_) async => Event.fromJson({
+            'id': testEventId2,
+            'pubkey': testPubkey1,
+            'kind': 34236,
+            'created_at': 2000,
+            'content': 'A tiny puppet show',
+            'tags': [
+              ['d', 'puppet-show'],
+              ['platform', 'vine'],
+              ['author', 'Alex'],
+              ['imeta', 'url https://example.com/classic.mp4', 'm video/mp4'],
+            ],
+            'sig': '',
+          }),
+        );
+        final sounds = SoundsRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: api,
+        );
+        addTearDown(sounds.dispose);
+
+        final sound = await sounds.fetchSoundById('video_$testVideoEventId');
+
+        expect(sound?.id, 'video_$testEventId2');
+        expect(sound?.title, 'A tiny puppet show');
+        expect(sound?.sourceVideoReference, '34236:$testPubkey1:puppet-show');
+        expect(sound?.url, 'https://example.com/classic.mp4');
+        expect(
+          sound?.allowsReuse,
+          isFalse,
+          reason: 'reuse requires separate current server policy',
+        );
+      },
+    );
 
     group('fetchPopularSounds', () {
       late _MockFunnelcakeApiClient funnelcake;

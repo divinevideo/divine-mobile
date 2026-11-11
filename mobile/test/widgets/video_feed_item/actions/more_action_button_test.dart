@@ -34,7 +34,7 @@ void main() {
         eventId: any(named: 'eventId'),
         addressableId: any(named: 'addressableId'),
       ),
-    ).thenAnswer((_) async => const <String>[]);
+    ).thenAnswer((_) async => const RepostersPage(pubkeys: []));
     testVideo = VideoEvent(
       id: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
       pubkey:

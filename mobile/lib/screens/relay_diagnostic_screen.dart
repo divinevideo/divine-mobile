@@ -16,6 +16,7 @@ import 'package:nostr_sdk/filter.dart' as nostr;
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -216,6 +217,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
     try {
       final blossomService = ref.read(blossomUploadServiceProvider);
       final blossomResult = await blossomService.testServerConnection();
+      if (!mounted) return;
       setState(() {
         _blossomResult = blossomResult;
       });
@@ -226,6 +228,7 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
       );
     } catch (e) {
       Log.error('Blossom test error: $e', name: 'RelayDiagnostic');
+      if (!mounted) return;
       setState(() {
         _blossomResult = BlossomHealthCheckResult(
           isReachable: false,
@@ -234,33 +237,14 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
       });
     }
 
-    // Test FunnelCake API - comprehensive endpoint testing
-    final nostrService = ref.read(nostrServiceProvider);
-    final relays = nostrService.configuredRelays;
-    if (relays.isNotEmpty) {
-      final relayUrl = relays.first;
-      final apiBaseUrl = relayUrl
-          .replaceFirst('wss://', 'https://')
-          .replaceFirst('ws://', 'http://');
-
-      final results = await _testAllFunnelCakeEndpoints(apiBaseUrl);
-      setState(() {
-        _funnelCakeResults = results;
-      });
-    } else {
-      setState(() {
-        _funnelCakeResults = FunnelCakeTestResults(
-          apiBaseUrl: 'N/A',
-          endpoints: [
-            FunnelCakeEndpointResult(
-              endpoint: 'N/A',
-              isSuccess: false,
-              errorMessage: 'No relays configured',
-            ),
-          ],
-        );
-      });
-    }
+    // Test the FunnelCake API the app's REST client uses: the environment's
+    // API origin, never a configured relay.
+    final apiBaseUrl = ref.read(currentEnvironmentProvider).apiBaseUrl;
+    final results = await _testAllFunnelCakeEndpoints(apiBaseUrl);
+    if (!mounted) return;
+    setState(() {
+      _funnelCakeResults = results;
+    });
 
     setState(() {
       _isTestingRestEndpoints = false;

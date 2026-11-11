@@ -33,6 +33,7 @@ class VideoEditorClipSpeedSheet extends StatefulWidget {
     this.title,
     this.initialRamp,
     this.sourceDuration,
+    this.initialSmoothSlowMotion,
   });
 
   final double initialSpeed;
@@ -48,6 +49,10 @@ class VideoEditorClipSpeedSheet extends StatefulWidget {
   /// resulting length shown under the controls; hidden when null.
   final Duration? sourceDuration;
 
+  /// Whether the clip's slow motion is smoothed, for the switch that sets it;
+  /// the switch is hidden when null, as for a sound.
+  final bool? initialSmoothSlowMotion;
+
   @override
   State<VideoEditorClipSpeedSheet> createState() =>
       _VideoEditorClipSpeedSheetState();
@@ -57,6 +62,7 @@ class _VideoEditorClipSpeedSheetState extends State<VideoEditorClipSpeedSheet> {
   late final ValueNotifier<double> _speed;
   late final ValueNotifier<VideoSpeedRamp> _ramp;
   late final ValueNotifier<bool> _curveMode;
+  late final ValueNotifier<bool> _smoothSlowMotion;
 
   /// The last curve the user shaped by hand, which the custom chip returns to.
   VideoSpeedRamp? _customRamp;
@@ -76,6 +82,7 @@ class _VideoEditorClipSpeedSheetState extends State<VideoEditorClipSpeedSheet> {
       _customRamp = initialRamp;
     }
     _curveMode = ValueNotifier(initialRamp != null);
+    _smoothSlowMotion = ValueNotifier(widget.initialSmoothSlowMotion ?? false);
   }
 
   @override
@@ -83,17 +90,32 @@ class _VideoEditorClipSpeedSheetState extends State<VideoEditorClipSpeedSheet> {
     _speed.dispose();
     _ramp.dispose();
     _curveMode.dispose();
+    _smoothSlowMotion.dispose();
     super.dispose();
   }
 
   /// A curve whose points all share one speed plays like that constant speed,
   /// so it comes back as one and the clip is not re-rendered for nothing.
   ClipSpeedChoice get _choice {
-    if (!_curveMode.value) return ConstantClipSpeed(_speed.value);
+    final smooth = _smoothSlowMotion.value;
+    if (!_curveMode.value) {
+      return ConstantClipSpeed(_speed.value, smoothSlowMotion: smooth);
+    }
     final ramp = _ramp.value;
-    if (ramp.isConstant) return ConstantClipSpeed(ramp.points.first.speed);
-    return RampClipSpeed(ramp);
+    if (ramp.isConstant) {
+      return ConstantClipSpeed(
+        ramp.points.first.speed,
+        smoothSlowMotion: smooth,
+      );
+    }
+    return RampClipSpeed(ramp, smoothSlowMotion: smooth);
   }
+
+  /// Whether the speed chosen so far slows the clip down somewhere, the only
+  /// place smoothing changes anything.
+  bool get _slowsDown => _curveMode.value
+      ? _ramp.value.points.any((point) => point.speed < 1)
+      : _speed.value < 1;
 
   void _shapeCurve(VideoSpeedRamp ramp) {
     _customRamp = ramp;
@@ -178,8 +200,52 @@ class _VideoEditorClipSpeedSheetState extends State<VideoEditorClipSpeedSheet> {
             ),
           ),
         ),
+        if (widget.initialSmoothSlowMotion != null) ...[
+          const SizedBox(height: 8),
+          ListenableBuilder(
+            listenable: Listenable.merge([
+              _speed,
+              _ramp,
+              _curveMode,
+              _smoothSlowMotion,
+            ]),
+            builder: (context, _) => _SmoothSlowMotionSwitch(
+              value: _smoothSlowMotion.value,
+              onChanged: _slowsDown
+                  ? (value) => _smoothSlowMotion.value = value
+                  : null,
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
       ],
+    );
+  }
+}
+
+/// Switches the clip's frame blending on slowed-down stretches; disabled
+/// while the clip plays at 1× or faster throughout.
+class _SmoothSlowMotionSwitch extends StatelessWidget {
+  const _SmoothSlowMotionSwitch({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    // The sheet body sits on a ColoredBox, which would hide the tile's ink; a
+    // transparent Material gives it a surface of its own.
+    return Material(
+      type: MaterialType.transparency,
+      child: DivineSwitchTile(
+        title: l10n.videoEditorSpeedSmoothTitle,
+        subtitle: onChanged == null
+            ? l10n.videoEditorSpeedSmoothUnavailable
+            : l10n.videoEditorSpeedSmoothDescription,
+        value: value,
+        onChanged: onChanged,
+      ),
     );
   }
 }

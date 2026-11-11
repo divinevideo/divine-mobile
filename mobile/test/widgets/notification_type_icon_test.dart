@@ -7,7 +7,14 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/notification_type_icon.dart';
 
+import '../../packages/divine_ui/test/src/icon/compiled_icon_assets_test.dart'
+    as compiled_icons;
+
 void main() {
+  // Canonical SVG edits trigger Mobile CI even when divine_ui is unchanged.
+  // Keep the packaged vectors in sync in that app-only CI path as well.
+  compiled_icons.main();
+
   group(NotificationTypeIcon, () {
     Widget buildSubject({required bool showUnreadDot}) {
       return MaterialApp(

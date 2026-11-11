@@ -349,7 +349,7 @@ void main() {
       test('wires the pool lookup from persisted (id, sig) pairs', () async {
         final dao = _MockNostrEventsDao();
         when(
-          dao.getRecentEventIdSigs,
+          dao.getRecentVerifiedEventIdSigs,
         ).thenAnswer((_) async => [(id: 'idA', sig: 'sigA')]);
         final clientWithDb = buildClientWithDao(dao);
 
@@ -377,7 +377,7 @@ void main() {
 
       test('initialize still completes when seeding fails', () async {
         final dao = _MockNostrEventsDao();
-        when(dao.getRecentEventIdSigs).thenThrow(Exception('boom'));
+        when(dao.getRecentVerifiedEventIdSigs).thenThrow(Exception('boom'));
         final clientWithDb = buildClientWithDao(dao);
 
         await expectLater(clientWithDb.initialize(), completes);

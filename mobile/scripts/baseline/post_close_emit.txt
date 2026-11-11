@@ -10,9 +10,7 @@
 # throwing, and is never counted. Regenerate after guarding sites:
 #   UPDATE_BASELINE=1 bash scripts/check_post_close_emit_ceiling.sh
 lib/blocs/apps_permissions/apps_permissions_cubit.dart	1
-lib/blocs/badges/badge_editor_cubit.dart	9
 lib/blocs/dm/reactions/conversation_reactions_cubit.dart	1
-lib/blocs/email_verification/email_verification_cubit.dart	13
 lib/blocs/notifications/badge/notification_badge_cubit.dart	1
 lib/blocs/signature_verification_policy/signature_verification_policy_cubit.dart	1
 lib/blocs/storage/storage_cubit.dart	12

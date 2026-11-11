@@ -87,7 +87,7 @@ class ClipRecoveryService {
   ///
   /// An allowlist rather than a blacklist of known artefacts, because the
   /// documents directory is full of derived mp4s and they cannot be
-  /// enumerated: alongside `c2pa_signed_*`, `<clipId>_reversed`, `trimmed_`,
+  /// enumerated: alongside `c2pa_signed_*`, `<clipId>_reversed_*`, `trimmed_`,
   /// `cropped_`, `normalized_`, `divine_`, `stop_motion_`, `merged_` and
   /// `watermarked_`, the chroma-key bake and transform services write a bare
   /// `<microseconds>.mp4` with no prefix at all. A blacklist misses those and

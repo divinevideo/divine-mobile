@@ -107,6 +107,21 @@ class $NostrEventsTable extends NostrEvents
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _signatureVerifiedMeta = const VerificationMeta(
+    'signatureVerified',
+  );
+  @override
+  late final GeneratedColumn<bool> signatureVerified = GeneratedColumn<bool>(
+    'signature_verified',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("signature_verified" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -119,6 +134,7 @@ class $NostrEventsTable extends NostrEvents
     sources,
     expireAt,
     dTag,
+    signatureVerified,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -203,6 +219,15 @@ class $NostrEventsTable extends NostrEvents
         dTag.isAcceptableOrUnknown(data['d_tag']!, _dTagMeta),
       );
     }
+    if (data.containsKey('signature_verified')) {
+      context.handle(
+        _signatureVerifiedMeta,
+        signatureVerified.isAcceptableOrUnknown(
+          data['signature_verified']!,
+          _signatureVerifiedMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -252,6 +277,10 @@ class $NostrEventsTable extends NostrEvents
         DriftSqlType.string,
         data['${effectivePrefix}d_tag'],
       ),
+      signatureVerified: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}signature_verified'],
+      )!,
     );
   }
 
@@ -281,6 +310,9 @@ class NostrEventRow extends DataClass implements Insertable<NostrEventRow> {
   /// find the existing version with an indexed lookup instead of decoding
   /// the tags JSON of every (pubkey, kind) row.
   final String? dTag;
+
+  /// Whether the exact signature in this row was verified on the client.
+  final bool signatureVerified;
   const NostrEventRow({
     required this.id,
     required this.pubkey,
@@ -292,6 +324,7 @@ class NostrEventRow extends DataClass implements Insertable<NostrEventRow> {
     this.sources,
     this.expireAt,
     this.dTag,
+    required this.signatureVerified,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -312,6 +345,7 @@ class NostrEventRow extends DataClass implements Insertable<NostrEventRow> {
     if (!nullToAbsent || dTag != null) {
       map['d_tag'] = Variable<String>(dTag);
     }
+    map['signature_verified'] = Variable<bool>(signatureVerified);
     return map;
   }
 
@@ -331,6 +365,7 @@ class NostrEventRow extends DataClass implements Insertable<NostrEventRow> {
           ? const Value.absent()
           : Value(expireAt),
       dTag: dTag == null && nullToAbsent ? const Value.absent() : Value(dTag),
+      signatureVerified: Value(signatureVerified),
     );
   }
 
@@ -350,6 +385,7 @@ class NostrEventRow extends DataClass implements Insertable<NostrEventRow> {
       sources: serializer.fromJson<String?>(json['sources']),
       expireAt: serializer.fromJson<int?>(json['expireAt']),
       dTag: serializer.fromJson<String?>(json['dTag']),
+      signatureVerified: serializer.fromJson<bool>(json['signatureVerified']),
     );
   }
   @override
@@ -366,6 +402,7 @@ class NostrEventRow extends DataClass implements Insertable<NostrEventRow> {
       'sources': serializer.toJson<String?>(sources),
       'expireAt': serializer.toJson<int?>(expireAt),
       'dTag': serializer.toJson<String?>(dTag),
+      'signatureVerified': serializer.toJson<bool>(signatureVerified),
     };
   }
 
@@ -380,6 +417,7 @@ class NostrEventRow extends DataClass implements Insertable<NostrEventRow> {
     Value<String?> sources = const Value.absent(),
     Value<int?> expireAt = const Value.absent(),
     Value<String?> dTag = const Value.absent(),
+    bool? signatureVerified,
   }) => NostrEventRow(
     id: id ?? this.id,
     pubkey: pubkey ?? this.pubkey,
@@ -391,6 +429,7 @@ class NostrEventRow extends DataClass implements Insertable<NostrEventRow> {
     sources: sources.present ? sources.value : this.sources,
     expireAt: expireAt.present ? expireAt.value : this.expireAt,
     dTag: dTag.present ? dTag.value : this.dTag,
+    signatureVerified: signatureVerified ?? this.signatureVerified,
   );
   NostrEventRow copyWithCompanion(NostrEventsCompanion data) {
     return NostrEventRow(
@@ -404,6 +443,9 @@ class NostrEventRow extends DataClass implements Insertable<NostrEventRow> {
       sources: data.sources.present ? data.sources.value : this.sources,
       expireAt: data.expireAt.present ? data.expireAt.value : this.expireAt,
       dTag: data.dTag.present ? data.dTag.value : this.dTag,
+      signatureVerified: data.signatureVerified.present
+          ? data.signatureVerified.value
+          : this.signatureVerified,
     );
   }
 
@@ -419,7 +461,8 @@ class NostrEventRow extends DataClass implements Insertable<NostrEventRow> {
           ..write('sig: $sig, ')
           ..write('sources: $sources, ')
           ..write('expireAt: $expireAt, ')
-          ..write('dTag: $dTag')
+          ..write('dTag: $dTag, ')
+          ..write('signatureVerified: $signatureVerified')
           ..write(')'))
         .toString();
   }
@@ -436,6 +479,7 @@ class NostrEventRow extends DataClass implements Insertable<NostrEventRow> {
     sources,
     expireAt,
     dTag,
+    signatureVerified,
   );
   @override
   bool operator ==(Object other) =>
@@ -450,7 +494,8 @@ class NostrEventRow extends DataClass implements Insertable<NostrEventRow> {
           other.sig == this.sig &&
           other.sources == this.sources &&
           other.expireAt == this.expireAt &&
-          other.dTag == this.dTag);
+          other.dTag == this.dTag &&
+          other.signatureVerified == this.signatureVerified);
 }
 
 class NostrEventsCompanion extends UpdateCompanion<NostrEventRow> {
@@ -464,6 +509,7 @@ class NostrEventsCompanion extends UpdateCompanion<NostrEventRow> {
   final Value<String?> sources;
   final Value<int?> expireAt;
   final Value<String?> dTag;
+  final Value<bool> signatureVerified;
   final Value<int> rowid;
   const NostrEventsCompanion({
     this.id = const Value.absent(),
@@ -476,6 +522,7 @@ class NostrEventsCompanion extends UpdateCompanion<NostrEventRow> {
     this.sources = const Value.absent(),
     this.expireAt = const Value.absent(),
     this.dTag = const Value.absent(),
+    this.signatureVerified = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   NostrEventsCompanion.insert({
@@ -489,6 +536,7 @@ class NostrEventsCompanion extends UpdateCompanion<NostrEventRow> {
     this.sources = const Value.absent(),
     this.expireAt = const Value.absent(),
     this.dTag = const Value.absent(),
+    this.signatureVerified = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        pubkey = Value(pubkey),
@@ -508,6 +556,7 @@ class NostrEventsCompanion extends UpdateCompanion<NostrEventRow> {
     Expression<String>? sources,
     Expression<int>? expireAt,
     Expression<String>? dTag,
+    Expression<bool>? signatureVerified,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -521,6 +570,7 @@ class NostrEventsCompanion extends UpdateCompanion<NostrEventRow> {
       if (sources != null) 'sources': sources,
       if (expireAt != null) 'expire_at': expireAt,
       if (dTag != null) 'd_tag': dTag,
+      if (signatureVerified != null) 'signature_verified': signatureVerified,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -536,6 +586,7 @@ class NostrEventsCompanion extends UpdateCompanion<NostrEventRow> {
     Value<String?>? sources,
     Value<int?>? expireAt,
     Value<String?>? dTag,
+    Value<bool>? signatureVerified,
     Value<int>? rowid,
   }) {
     return NostrEventsCompanion(
@@ -549,6 +600,7 @@ class NostrEventsCompanion extends UpdateCompanion<NostrEventRow> {
       sources: sources ?? this.sources,
       expireAt: expireAt ?? this.expireAt,
       dTag: dTag ?? this.dTag,
+      signatureVerified: signatureVerified ?? this.signatureVerified,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -586,6 +638,9 @@ class NostrEventsCompanion extends UpdateCompanion<NostrEventRow> {
     if (dTag.present) {
       map['d_tag'] = Variable<String>(dTag.value);
     }
+    if (signatureVerified.present) {
+      map['signature_verified'] = Variable<bool>(signatureVerified.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -605,6 +660,7 @@ class NostrEventsCompanion extends UpdateCompanion<NostrEventRow> {
           ..write('sources: $sources, ')
           ..write('expireAt: $expireAt, ')
           ..write('dTag: $dTag, ')
+          ..write('signatureVerified: $signatureVerified, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -16125,12 +16181,15 @@ class PendingReportRow extends DataClass
 
   /// Serialized kind-1984 intent, initially unsigned for offline acceptance.
   /// Delivery saves its signature before publishing and reuses it on retries.
+  /// Empty for a private report, which has no relay channel to drive.
   final String eventJson;
 
-  /// JSON list of target relays for the report, or null for the default set.
+  /// JSON list of target relays for the report, or null for the default set
+  /// (and for a private report, which publishes nothing).
   final String? targetRelays;
 
   /// JSON of the Zendesk ticket fields, already redacted at enqueue time.
+  /// Empty for a private report, which files no ticket.
   final String zendeskPayload;
 
   /// Private moderation-DM intent, redacted before storage.
@@ -24993,6 +25052,7 @@ typedef $$NostrEventsTableCreateCompanionBuilder =
       Value<String?> sources,
       Value<int?> expireAt,
       Value<String?> dTag,
+      Value<bool> signatureVerified,
       Value<int> rowid,
     });
 typedef $$NostrEventsTableUpdateCompanionBuilder =
@@ -25007,6 +25067,7 @@ typedef $$NostrEventsTableUpdateCompanionBuilder =
       Value<String?> sources,
       Value<int?> expireAt,
       Value<String?> dTag,
+      Value<bool> signatureVerified,
       Value<int> rowid,
     });
 
@@ -25066,6 +25127,11 @@ class $$NostrEventsTableFilterComposer
 
   ColumnFilters<String> get dTag => $composableBuilder(
     column: $table.dTag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get signatureVerified => $composableBuilder(
+    column: $table.signatureVerified,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -25128,6 +25194,11 @@ class $$NostrEventsTableOrderingComposer
     column: $table.dTag,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get signatureVerified => $composableBuilder(
+    column: $table.signatureVerified,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$NostrEventsTableAnnotationComposer
@@ -25168,6 +25239,11 @@ class $$NostrEventsTableAnnotationComposer
 
   GeneratedColumn<String> get dTag =>
       $composableBuilder(column: $table.dTag, builder: (column) => column);
+
+  GeneratedColumn<bool> get signatureVerified => $composableBuilder(
+    column: $table.signatureVerified,
+    builder: (column) => column,
+  );
 }
 
 class $$NostrEventsTableTableManager
@@ -25211,6 +25287,7 @@ class $$NostrEventsTableTableManager
                 Value<String?> sources = const Value.absent(),
                 Value<int?> expireAt = const Value.absent(),
                 Value<String?> dTag = const Value.absent(),
+                Value<bool> signatureVerified = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => NostrEventsCompanion(
                 id: id,
@@ -25223,6 +25300,7 @@ class $$NostrEventsTableTableManager
                 sources: sources,
                 expireAt: expireAt,
                 dTag: dTag,
+                signatureVerified: signatureVerified,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -25237,6 +25315,7 @@ class $$NostrEventsTableTableManager
                 Value<String?> sources = const Value.absent(),
                 Value<int?> expireAt = const Value.absent(),
                 Value<String?> dTag = const Value.absent(),
+                Value<bool> signatureVerified = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => NostrEventsCompanion.insert(
                 id: id,
@@ -25249,6 +25328,7 @@ class $$NostrEventsTableTableManager
                 sources: sources,
                 expireAt: expireAt,
                 dTag: dTag,
+                signatureVerified: signatureVerified,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

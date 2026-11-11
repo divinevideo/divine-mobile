@@ -25,7 +25,9 @@ void main() {
       setUp: () {
         when(
           () => repostsRepository.fetchEventReposters(eventId: 'video-id'),
-        ).thenAnswer((_) async => ['pubkey-a', 'pubkey-b']);
+        ).thenAnswer(
+          (_) async => const RepostersPage(pubkeys: ['pubkey-a', 'pubkey-b']),
+        );
       },
       build: () => VideoRepostersCubit(
         repostsRepository: repostsRepository,
@@ -47,7 +49,7 @@ void main() {
             eventId: 'video-id',
             addressableId: '34236:author:d-tag',
           ),
-        ).thenAnswer((_) async => ['pubkey-a']);
+        ).thenAnswer((_) async => const RepostersPage(pubkeys: ['pubkey-a']));
       },
       build: () => VideoRepostersCubit(
         repostsRepository: repostsRepository,
@@ -86,7 +88,25 @@ void main() {
     });
 
     blocTest<VideoRepostersCubit, VideoRepostersState>(
-      'emits loading=false and reports addError on relay failure',
+      'reports a reposters read that stopped early as unfinished (#10846)',
+      setUp: () {
+        when(
+          () => repostsRepository.fetchEventReposters(eventId: 'video-id'),
+        ).thenAnswer(
+          (_) async => const RepostersPage(pubkeys: [], isComplete: false),
+        );
+      },
+      build: () => VideoRepostersCubit(
+        repostsRepository: repostsRepository,
+        videoId: 'video-id',
+      ),
+      expect: () => const [
+        VideoRepostersState(isLoading: false, isComplete: false),
+      ],
+    );
+
+    blocTest<VideoRepostersCubit, VideoRepostersState>(
+      'reports a failed relay read as unfinished and adds the error',
       setUp: () {
         when(
           () => repostsRepository.fetchEventReposters(eventId: 'video-id'),
@@ -96,15 +116,65 @@ void main() {
         repostsRepository: repostsRepository,
         videoId: 'video-id',
       ),
-      expect: () => const [VideoRepostersState(isLoading: false)],
+      expect: () => const [
+        VideoRepostersState(isLoading: false, isComplete: false),
+      ],
       errors: () => [isA<StateError>()],
     );
+
+    group('retry', () {
+      blocTest<VideoRepostersCubit, VideoRepostersState>(
+        'reads the reposters again and replaces an unfinished answer (#10846)',
+        setUp: () {
+          var reads = 0;
+          when(
+            () => repostsRepository.fetchEventReposters(eventId: 'video-id'),
+          ).thenAnswer(
+            (_) async => ++reads == 1
+                ? const RepostersPage(pubkeys: [], isComplete: false)
+                : const RepostersPage(pubkeys: ['pubkey-a']),
+          );
+        },
+        build: () => VideoRepostersCubit(
+          repostsRepository: repostsRepository,
+          videoId: 'video-id',
+        ),
+        act: (cubit) async {
+          await pumpEventQueue();
+          cubit.retry();
+          await pumpEventQueue();
+        },
+        expect: () => const [
+          VideoRepostersState(isLoading: false, isComplete: false),
+          VideoRepostersState(),
+          VideoRepostersState(pubkeys: ['pubkey-a'], isLoading: false),
+        ],
+      );
+
+      test('does nothing while a read is in flight (#10846)', () async {
+        final completer = Completer<RepostersPage>();
+        when(
+          () => repostsRepository.fetchEventReposters(eventId: 'video-id'),
+        ).thenAnswer((_) => completer.future);
+        final cubit = VideoRepostersCubit(
+          repostsRepository: repostsRepository,
+          videoId: 'video-id',
+        );
+
+        cubit.retry();
+
+        verify(
+          () => repostsRepository.fetchEventReposters(eventId: 'video-id'),
+        ).called(1);
+        await cubit.close();
+      });
+    });
 
     test(
       'does not emit (or throw) when closed before in-flight fetch resolves '
       '— regression for #3734 emit-after-close race',
       () async {
-        final completer = Completer<List<String>>();
+        final completer = Completer<RepostersPage>();
         when(
           () => repostsRepository.fetchEventReposters(eventId: 'video-id'),
         ).thenAnswer((_) => completer.future);
@@ -118,7 +188,7 @@ void main() {
         final subscription = cubit.stream.listen(emissions.add);
 
         await cubit.close();
-        completer.complete(['pubkey-late']);
+        completer.complete(const RepostersPage(pubkeys: ['pubkey-late']));
         await pumpEventQueue();
 
         expect(emissions, isEmpty);
@@ -129,7 +199,7 @@ void main() {
     test(
       'does not emit (or addError) when closed before in-flight fetch errors',
       () async {
-        final completer = Completer<List<String>>();
+        final completer = Completer<RepostersPage>();
         when(
           () => repostsRepository.fetchEventReposters(eventId: 'video-id'),
         ).thenAnswer((_) => completer.future);

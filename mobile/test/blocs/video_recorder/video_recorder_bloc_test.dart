@@ -2510,6 +2510,24 @@ void main() {
         ],
       );
 
+      // The camera is released while the editor is open, and that dispose
+      // reports through here: the editor navigation only ends when its route
+      // returns.
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'keeps an editor navigation in progress',
+        build: buildBlocCapturingUpdateState,
+        seed: () =>
+            const VideoRecorderBlocState(editorNavigationInProgress: true),
+        act: (_) => updateStateCallback(),
+        expect: () => [
+          isA<VideoRecorderBlocState>().having(
+            (s) => s.editorNavigationInProgress,
+            'editorNavigationInProgress',
+            isTrue,
+          ),
+        ],
+      );
+
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'keeps a take that is being finalized',
         build: buildBlocCapturingUpdateState,
@@ -3569,6 +3587,25 @@ void main() {
             AppLifecycleState.resumed,
           ),
         ).called(1),
+      );
+    });
+
+    group('VideoRecorderEditorNavigationStarted', () {
+      setUp(stubRecorderDefaults);
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'marks the editor navigation in progress until '
+        '$VideoRecorderEditorNavigationEnded',
+        build: buildBloc,
+        act: (bloc) async {
+          bloc.add(const VideoRecorderEditorNavigationStarted());
+          await pumpEventQueue();
+          bloc.add(const VideoRecorderEditorNavigationEnded());
+        },
+        expect: () => const [
+          VideoRecorderBlocState(editorNavigationInProgress: true),
+          VideoRecorderBlocState(),
+        ],
       );
     });
 

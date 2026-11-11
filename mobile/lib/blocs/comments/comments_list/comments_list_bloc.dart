@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,8 +21,13 @@ part 'comments_list_state.dart';
 /// video. Mutations from [CommentComposerBloc] and [CommentReactionsBloc]
 /// flow in through UI [BlocListener]s as Optimistic*/CommentReplacedInStore /
 /// CommentRemovedFromStore / CommentsRemovedByAuthorFromStore events.
-/// Engagement sort needs upvote counts from [CommentReactionsBloc] — see
-/// [CommentsListState.threadedCommentsWith].
+/// Top sort needs vote counts from [CommentReactionsBloc]; see
+/// [CommentsListState.displayCommentsWith].
+///
+/// With a [CommentModerationRepository] it also loads what the video owner
+/// hid from the thread (#5044), and lets the owner hide and restore comments.
+/// [viewerBlockedAuthors] are the accounts the viewer blocked; on the
+/// viewer's own video their comments count as hidden by the owner.
 class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   CommentsListBloc({
     required CommentsRepository commentsRepository,
@@ -32,7 +38,12 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     int? initialTotalCount,
     bool includeVideoReplies = false,
     String? focusCommentId,
+    CommentModerationRepository? commentModerationRepository,
+    String? viewerPubkey,
+    Set<String> viewerBlockedAuthors = const {},
+    Stream<Set<String>>? viewerBlockedAuthorsChanges,
   }) : _commentsRepository = commentsRepository,
+       _commentModerationRepository = commentModerationRepository,
        _initialTotalCount = initialTotalCount,
        _includeVideoReplies = includeVideoReplies,
        super(
@@ -42,6 +53,8 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
            rootAuthorPubkey: rootAuthorPubkey,
            rootAddressableId: rootAddressableId,
            pendingFocusCommentId: focusCommentId,
+           viewerPubkey: viewerPubkey,
+           viewerBlockedAuthors: viewerBlockedAuthors,
          ),
        ) {
     on<CommentsLoadRequested>(_onLoadRequested);
@@ -59,6 +72,27 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     on<CommentRemovedFromStore>(_onCommentRemovedFromStore);
     on<CommentsRemovedByAuthorFromStore>(_onCommentsRemovedByAuthorFromStore);
     on<CommentDeletionReceived>(_onCommentDeletionReceived);
+    on<HiddenCommentsVisibilityToggled>(_onHiddenCommentsVisibilityToggled);
+    on<_ViewerBlockedAuthorsChanged>((event, emit) {
+      if (!state.isViewerRootAuthor) return;
+      final removed = state.viewerBlockedAuthors.difference(event.authors);
+      final next = state.copyWith(
+        viewerBlockedAuthors: event.authors,
+        moderation: _withoutAutoHiddenAuthors(state.moderation, removed),
+      );
+      emit(
+        next.hiddenCommentCount == 0
+            ? next.copyWith(showHiddenComments: false)
+            : next,
+      );
+    });
+    on<CommentModerationRequested>(
+      _onCommentModerationRequested,
+      transformer: sequential(),
+    );
+    _viewerBlocksSubscription = viewerBlockedAuthorsChanges?.listen(
+      (authors) => addIfOpen(_ViewerBlockedAuthorsChanged(Set.of(authors))),
+    );
   }
 
   /// Page size for comment loading.
@@ -79,6 +113,8 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   final int? _initialTotalCount;
 
   final CommentsRepository _commentsRepository;
+  final CommentModerationRepository? _commentModerationRepository;
+  StreamSubscription<Set<String>>? _viewerBlocksSubscription;
   final bool _includeVideoReplies;
   BatchedSubscription<Comment>? _commentStreamSubscription;
   StreamSubscription<CommentDeletion>? _commentDeletionSubscription;
@@ -124,6 +160,10 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       ),
     );
 
+    // Read alongside the first page, so a hidden comment is never painted
+    // before the owner's moderation arrives. Never throws.
+    final moderation = _loadModeration();
+
     try {
       final thread = await _commentsRepository.loadComments(
         rootEventId: state.rootEventId,
@@ -132,6 +172,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         limit: _pageSize,
         includeVideoReplies: _includeVideoReplies,
       );
+      final loadedModeration = await moderation;
 
       final commentsById = {
         ...state.commentsById,
@@ -150,7 +191,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           commentsById: commentsById,
           hasMoreContent: hasMore,
           nextOffset: thread.nextOffset,
-          replyCountsByCommentId: computeReplyCounts(commentsById),
+          moderation: loadedModeration,
         ),
       );
       _focusWhenLoaded(emit, pageAddedComments: thread.comments.isNotEmpty);
@@ -200,8 +241,8 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       return;
     }
 
-    // Cursor = min createdAt across non-placeholder comments. Sort-mode
-    // agnostic so `oldest` / `topEngagement` don't fold to the wrong cursor.
+    // Cursor = min createdAt across non-placeholder comments, whatever the
+    // sort mode, so Top's vote ranking never moves the paging cursor.
     // Returns early if every comment is an optimistic placeholder.
     final realCreatedAts = state.commentsById.values
         .where((c) => !c.id.startsWith(commentPlaceholderIdPrefix))
@@ -245,7 +286,6 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
             threadTotalCount: thread.totalCount,
             threadHasMore: thread.hasMore,
           ),
-          replyCountsByCommentId: computeReplyCounts(allCommentsById),
         ),
       );
       _focusWhenLoaded(
@@ -326,7 +366,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     CommentsScrollHandled event,
     Emitter<CommentsListState> emit,
   ) {
-    if (state.scrollToCommentId == null) return;
+    if (state.scrollToCommentId != event.commentId) return;
     emit(state.copyWith(clearScrollTo: true));
   }
 
@@ -347,6 +387,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         if (entry.key.startsWith(commentPlaceholderIdPrefix)) entry.value,
     ];
     final newIds = <String>{};
+    var scrollToCommentId = state.scrollToCommentId;
     var changed = false;
     var added = false;
 
@@ -355,8 +396,9 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       // unless the echo carries video metadata missing from the REST bootstrap
       // copy. In that case, upgrade in place so a REST-loaded video reply can
       // render as soon as the relay echo arrives.
-      // Blocked/muted authors are already filtered by the repository's
-      // watchComments stream, so no additional check is needed here.
+      // The repository's watchComments stream already drops blocked and
+      // muted authors, except the owner's own blocks on their video, which
+      // stay as comments the owner hid.
       final existingComment = store[comment.id];
       if (existingComment != null) {
         if (!existingComment.hasVideo && comment.hasVideo) {
@@ -389,9 +431,13 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       if (placeholder != null) {
         store.remove(placeholder.id);
         placeholders.remove(placeholder);
+        if (scrollToCommentId == placeholder.id) scrollToCommentId = comment.id;
       }
       store[comment.id] = comment;
-      if (state.isBackfillComplete && placeholder == null) {
+      // A comment the owner hid does not announce itself in the pill.
+      if (state.isBackfillComplete &&
+          placeholder == null &&
+          (state.showHiddenComments || !state.isHiddenByOwner(comment))) {
         newIds.add(comment.id);
       }
       changed = true;
@@ -403,7 +449,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       state.copyWith(
         status: added ? CommentsStatus.success : state.status,
         commentsById: store,
-        replyCountsByCommentId: computeReplyCounts(store),
+        scrollToCommentId: scrollToCommentId,
         // The pill counts only new comments that are still listed.
         newCommentIds: {
           ...state.newCommentIds,
@@ -440,15 +486,21 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
 
   void _emitStore(
     Emitter<CommentsListState> emit,
-    Map<String, Comment> updated,
-  ) {
+    Map<String, Comment> updated, {
+    String? scrollToCommentId,
+  }) {
+    final next = state.copyWith(
+      commentsById: updated,
+      scrollToCommentId: scrollToCommentId,
+      // The pill counts only new comments that are still listed.
+      newCommentIds: state.newCommentIds.where(updated.containsKey).toSet(),
+    );
+    // The last hidden comment left the store, say its author was blocked or
+    // deleted it: a later hidden one must not arrive already revealed.
     emit(
-      state.copyWith(
-        commentsById: updated,
-        replyCountsByCommentId: computeReplyCounts(updated),
-        // The pill counts only new comments that are still listed.
-        newCommentIds: state.newCommentIds.where(updated.containsKey).toSet(),
-      ),
+      next.showHiddenComments && next.hiddenCommentCount == 0
+          ? next.copyWith(showHiddenComments: false)
+          : next,
     );
   }
 
@@ -456,22 +508,20 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     OptimisticCommentInserted event,
     Emitter<CommentsListState> emit,
   ) {
-    // Flag the just-inserted comment for scroll-into-view only when it is a
-    // reply: a reply nests under an (often older) parent and would otherwise
-    // render off-screen, so the poster thinks the post failed and retries
-    // (#5854). A new top-level comment already lands at the visible top, so it
-    // needs no scroll. The UI scrolls to the flagged id then acks via
-    // [CommentsScrollHandled].
+    // A post can rank below other comments in Top. In Recent a new
+    // top-level post lands at the top, while replies can nest off-screen
+    // under an older parent (#5854).
     final updated = {
       ...state.commentsById,
       event.placeholder.id: event.placeholder,
     };
-    final isReply = event.placeholder.replyToEventId != null;
+    final shouldReveal =
+        event.placeholder.replyToEventId != null ||
+        state.sortMode != CommentsSortMode.newest;
     emit(
       state.copyWith(
         commentsById: updated,
-        replyCountsByCommentId: computeReplyCounts(updated),
-        scrollToCommentId: isReply ? event.placeholder.id : null,
+        scrollToCommentId: shouldReveal ? event.placeholder.id : null,
       ),
     );
   }
@@ -480,24 +530,18 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     OptimisticCommentConfirmed event,
     Emitter<CommentsListState> emit,
   ) {
-    // Race-safe: if the relay echo arrived first via NewCommentsBatchReceived,
-    // the confirmed id is already present in the store and the placeholder has
-    // been swapped out. Just clean up any leftover placeholder.
-    if (state.commentsById.containsKey(event.confirmed.id)) {
-      if (!state.commentsById.containsKey(event.placeholderId)) return;
-      _emitStore(
-        emit,
-        Map<String, Comment>.from(state.commentsById)
-          ..remove(event.placeholderId),
-      );
-      return;
-    }
-
+    // A relay echo can arrive first. Keep its canonical comment, and transfer
+    // any outstanding reveal request when replacing the placeholder.
+    final updated = Map<String, Comment>.from(state.commentsById);
+    final placeholder = updated.remove(event.placeholderId);
+    if (placeholder == null && updated.containsKey(event.confirmed.id)) return;
+    updated.putIfAbsent(event.confirmed.id, () => event.confirmed);
     _emitStore(
       emit,
-      Map<String, Comment>.from(state.commentsById)
-        ..remove(event.placeholderId)
-        ..[event.confirmed.id] = event.confirmed,
+      updated,
+      scrollToCommentId: state.scrollToCommentId == event.placeholderId
+          ? event.confirmed.id
+          : null,
     );
   }
 
@@ -540,6 +584,18 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     CommentsRemovedByAuthorFromStore event,
     Emitter<CommentsListState> emit,
   ) {
+    if (state.isViewerRootAuthor) {
+      emit(
+        state.copyWith(
+          viewerBlockedAuthors: {
+            ...state.viewerBlockedAuthors,
+            event.authorPubkey,
+          },
+          showHiddenComments: false,
+        ),
+      );
+      return;
+    }
     _emitStore(
       emit,
       Map<String, Comment>.from(state.commentsById)
@@ -558,6 +614,129 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       Map<String, Comment>.from(state.commentsById)..remove(comment.id),
     );
   }
+
+  /// The video owner's published moderation. Local owner block snapshots
+  /// remain separate so they cannot be lost behind this asynchronous read.
+  Future<CommentModeration> _loadModeration() async {
+    final repository = _commentModerationRepository;
+    final coordinate = state.rootAddressableId;
+    if (repository == null || coordinate == null || coordinate.isEmpty) {
+      return CommentModeration.empty;
+    }
+    return repository.loadModeration(
+      rootAddressableId: coordinate,
+    );
+  }
+
+  /// [state] with [moderation] applied.
+  ///
+  /// [closeHidden] — the owner just hid something — puts the hidden comments
+  /// away, so the thread is clean at once. With nothing hidden any more the
+  /// toggle resets too, so a later hide does not show up already revealed.
+  CommentsListState _withModeration(
+    CommentModeration moderation, {
+    bool closeHidden = false,
+  }) {
+    final next = state.copyWith(moderation: moderation);
+    if (!next.showHiddenComments) return next;
+    if (closeHidden || next.hiddenCommentCount == 0) {
+      return next.copyWith(showHiddenComments: false);
+    }
+    return next;
+  }
+
+  void _onHiddenCommentsVisibilityToggled(
+    HiddenCommentsVisibilityToggled event,
+    Emitter<CommentsListState> emit,
+  ) {
+    emit(state.copyWith(showHiddenComments: !state.showHiddenComments));
+  }
+
+  /// Applies the owner's hide or restore at once and publishes it; a failed
+  /// publish takes the change back and reports
+  /// [CommentsListError.moderationFailed].
+  Future<void> _onCommentModerationRequested(
+    CommentModerationRequested event,
+    Emitter<CommentsListState> emit,
+  ) async {
+    final repository = _commentModerationRepository;
+    final coordinate = state.rootAddressableId;
+    final comment = event.comment;
+    if (repository == null ||
+        coordinate == null ||
+        coordinate.isEmpty ||
+        !state.isViewerRootAuthor ||
+        comment.authorPubkey == state.viewerPubkey) {
+      return;
+    }
+
+    final previous = state.moderation;
+    final ownBlocksBefore = state.viewerBlockedAuthors;
+    final effectivePrevious = state.effectiveModeration;
+    final edited = event.hide
+        ? effectivePrevious.hide(comment)
+        : effectivePrevious.restore(comment);
+    emit(
+      _withModeration(
+        CommentModeration(
+          hiddenCommentIds: edited.hiddenCommentIds,
+          restoredCommentIds: edited.restoredCommentIds,
+          autoHiddenAuthors: previous.autoHiddenAuthors,
+        ),
+        closeHidden: event.hide,
+      ),
+    );
+    try {
+      if (event.hide) {
+        await repository.hideComment(
+          rootAddressableId: coordinate,
+          comment: comment,
+        );
+      } else {
+        await repository.restoreComment(
+          rootAddressableId: coordinate,
+          comment: comment,
+          authorAutoHidden: effectivePrevious.autoHiddenAuthors.contains(
+            comment.authorPubkey,
+          ),
+        );
+      }
+    } on CommentsRepositoryException catch (e, stackTrace) {
+      _logRepoFailure(e, stackTrace, 'Error saving comment moderation');
+      emit(_moderationReverted(previous, ownBlocksBefore));
+    } catch (e, stackTrace) {
+      // A defect, such as a signer error the repository does not wrap; the
+      // unsaved change still has to go back.
+      _logUnexpectedFailure(
+        e,
+        stackTrace,
+        CommentsListBlocReportableSites.onCommentModerationRequested,
+        'Error saving comment moderation',
+      );
+      emit(_moderationReverted(previous, ownBlocksBefore));
+    }
+  }
+
+  /// [state] with the moderation back at [previous] and the failure
+  /// reported.
+  CommentsListState _moderationReverted(
+    CommentModeration previous,
+    Set<String> ownBlocksBefore,
+  ) => _withModeration(
+    _withoutAutoHiddenAuthors(
+      previous.withAutoHiddenAuthors(state.moderation.autoHiddenAuthors),
+      ownBlocksBefore.difference(state.viewerBlockedAuthors),
+    ),
+  ).copyWith(error: CommentsListError.moderationFailed);
+
+  static CommentModeration _withoutAutoHiddenAuthors(
+    CommentModeration moderation,
+    Set<String> removed,
+  ) => CommentModeration(
+    hiddenCommentIds: moderation.hiddenCommentIds,
+    restoredCommentIds: moderation.restoredCommentIds,
+    autoHiddenAuthors: moderation.autoHiddenAuthors.difference(removed),
+  );
 
   /// Removes the [comments] whose author asked for their deletion.
   ///
@@ -671,6 +850,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   Future<void> close() async {
     await _commentStreamSubscription?.cancel();
     await _commentDeletionSubscription?.cancel();
+    await _viewerBlocksSubscription?.cancel();
     await _commentsRepository.stopWatchingComments();
     return super.close();
   }

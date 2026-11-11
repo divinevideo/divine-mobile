@@ -25,7 +25,7 @@ jobs:
     with:
       run_bloc_lint: true
       working_directory: "mobile/packages/divine_camera"
-      flutter_version: "3.47.2"
+      flutter_version: "3.47.9"
 
   android-unit-tests:
     name: Android Unit Tests
@@ -43,7 +43,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.47.2"
+          flutter-version: "3.47.9"
           channel: "stable"
           cache: true
       - name: Setup Gradle

@@ -20,6 +20,8 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
+import '../../../helpers/text_lines.dart';
+
 class _MockProImageEditorState extends Mock implements ProImageEditorState {
   @override
   String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
@@ -331,6 +333,34 @@ void main() {
         () =>
             mainBloc.add(const VideoEditorSeekRequested(Duration(seconds: 2))),
       ).called(1);
+    });
+  });
+
+  group(LayerOpacitySheet, () {
+    testWidgets('keeps every word of its title whole at the largest text '
+        'size', (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = 3.12;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final l10n = lookupAppLocalizations(const Locale('de'));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('de'),
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: LayerOpacitySheet(initialOpacity: 1, onChanged: (_) {}),
+          ),
+        ),
+      );
+
+      expect(
+        wordsSplitAcrossLines(tester, find.text(l10n.videoEditorOpacityLabel)),
+        isEmpty,
+      );
     });
   });
 }

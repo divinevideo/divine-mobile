@@ -1,6 +1,7 @@
 // ABOUTME: Tests the interactive sticker row of the sticker sheet: it offers the
 // ABOUTME: question, Add yours and replies, and no second interactive card.
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -64,6 +65,41 @@ void main() {
     }
 
     group('renders', () {
+      testWidgets('at its usual height while every name fits on a line', (
+        tester,
+      ) async {
+        await pump(tester);
+
+        expect(
+          tester.getSize(find.byType(InteractiveStickerKindRow)).height,
+          equals(112),
+        );
+      });
+
+      testWidgets('each name whole on a small phone with large text', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(360, 640);
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pump(tester);
+
+        for (final label in [
+          l10n.videoEditorSocialStickerCountdown,
+          l10n.videoEditorSocialStickerReplies,
+        ]) {
+          final paragraph = tester.renderObject<RenderParagraph>(
+            find.descendant(
+              of: find.widgetWithText(StickerKindTile, label),
+              matching: find.text(label),
+            ),
+          );
+          expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+        }
+      });
+
       testWidgets('the question, Add yours and replies beside the polls', (
         tester,
       ) async {

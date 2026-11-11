@@ -93,6 +93,27 @@ void main() {
       await relay.deliver(['EVENT', subId, signedEventJson()]);
 
       expect(received, hasLength(1));
+      expect(received.single.hasVerifiedSignature, isTrue);
+    });
+
+    test('checks a policy-skipped pair when verification is enabled', () async {
+      final pool = nostr.relayPool;
+      pool.signatureVerificationPolicy =
+          SignatureVerificationPolicy.nonDivineRelays;
+      final relay = _FakeRelay('wss://relay.divine.video');
+      await pool.add(relay);
+
+      final unchecked = signedEventJson()
+        ..['sig'] = badSig
+        ..['signature_verified'] = true;
+      await relay.deliver(['EVENT', subId, unchecked]);
+
+      expect(received.single.hasVerifiedSignature, isFalse);
+
+      pool.signatureVerificationPolicy = SignatureVerificationPolicy.all;
+      await relay.deliver(['EVENT', subId, unchecked]);
+
+      expect(received, hasLength(1));
     });
 
     test('drops a network event with an invalid signature', () async {
