@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/router/restoration_safe_router_config.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _RecordingCrashReporter implements CrashReporter {
   final List<({Object error, String? reason})> recorded = [];
@@ -136,6 +137,62 @@ void main() {
           reporter.recorded.single.reason,
           'RestorationSafeRouter.parseRouteInformation',
         );
+      });
+
+      // The dropped location can be a reset or verification link, whose query
+      // carries a token and the account email (#10385).
+      testWidgets('logs the dropped state without its query values', (
+        tester,
+      ) async {
+        final previousPolicy = GoRouter.optionURLReflectsImperativeAPIs;
+        GoRouter.optionURLReflectsImperativeAPIs = true;
+        addTearDown(
+          () => GoRouter.optionURLReflectsImperativeAPIs = previousPolicy,
+        );
+        final saved = await _savedStateFromRetiredLocation(tester);
+        final withCredentials = RouteInformation(
+          uri: saved.uri.replace(
+            queryParameters: const {
+              'token': 'SECRETTOKEN',
+              'email': 'someone@example.com',
+            },
+          ),
+          state: saved.state,
+        );
+
+        final router = _buildRouter(withRetiredRoute: false);
+        addTearDown(router.dispose);
+        final reporter = _RecordingCrashReporter();
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: restorationSafeRouterConfig(
+              router,
+              crashReporter: reporter,
+            ),
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final context = tester.element(find.byType(Navigator).first);
+        final parser = RestorationSafeRouteInformationParser(
+          router.routeInformationParser,
+          crashReporter: reporter,
+        );
+        await LogCaptureService().clearAllLogs();
+
+        await parser.parseRouteInformationWithDependencies(
+          withCredentials,
+          context,
+        );
+
+        final logged = [
+          for (final entry in LogCaptureService().getRecentLogs())
+            entry.message,
+        ].join('\n');
+        expect(logged, contains('Dropping undecodable saved route state'));
+        expect(logged, isNot(contains('SECRETTOKEN')));
+        expect(logged, isNot(contains('someone')));
       });
 
       testWidgets('the unguarded parser throws on that same state', (
