@@ -646,6 +646,59 @@ void main() {
       },
     );
 
+    for (final mode in CommentsSortMode.values) {
+      final acknowledges = mode == CommentsSortMode.newest;
+      testWidgets(
+        'scrolling back to the top '
+        '${acknowledges ? 'acknowledges' : 'keeps'} new comments in '
+        '${mode.name}',
+        (tester) async {
+          final comments = [
+            for (var i = 0; i < 30; i++)
+              CommentBuilder()
+                  .withId('$i'.padLeft(64, 'a'))
+                  .withContent('comment number $i')
+                  .withCreatedAt(DateTime(2026).add(Duration(minutes: 30 - i)))
+                  .build(),
+          ];
+          final sc = ScrollController();
+          addTearDown(sc.dispose);
+          await tester.pumpWidget(
+            buildTestWidget(
+              scrollController: sc,
+              listState: CommentsListState(
+                rootEventId: testVideoEventId,
+                rootAuthorPubkey: testVideoAuthorPubkey,
+                status: CommentsStatus.success,
+                sortMode: mode,
+                commentsById: {for (final c in comments) c.id: c},
+                newCommentIds: {comments.first.id},
+              ),
+            ),
+          );
+          await tester.pump();
+
+          sc.jumpTo(200);
+          await tester.pump();
+          expect(sc.offset, 200);
+          sc.jumpTo(0);
+          await tester.pump();
+
+          // In Top the new comments rank further down, so the top of the
+          // list has not shown them.
+          if (acknowledges) {
+            verify(
+              () => mockListBloc.add(const NewCommentsAcknowledged()),
+            ).called(1);
+          } else {
+            verifyNever(
+              () => mockListBloc.add(const NewCommentsAcknowledged()),
+            );
+          }
+        },
+      );
+    }
+
     testWidgets(
       'ListView declares onDrag keyboard-dismiss behavior',
       (tester) async {
