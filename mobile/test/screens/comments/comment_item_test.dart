@@ -423,6 +423,68 @@ void main() {
       expect(event.commentId, comment.id);
     });
 
+    testWidgets('shows no count on either arrow before the totals load', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      final comment = CommentBuilder().withId('1' * 64).build();
+      whenListen(
+        mocks.reactions,
+        const Stream<CommentReactionsState>.empty(),
+        initialState: const CommentReactionsState(),
+      );
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          comment.content,
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          comment: comment,
+        ),
+      );
+
+      // An unloaded total is unknown, not zero: a "0" here would be a guess.
+      for (final id in ['upvote_button', 'downvote_button']) {
+        final button = find.bySemanticsIdentifier(id);
+        expect(
+          find.descendant(of: button, matching: find.byType(Text)),
+          findsNothing,
+        );
+        expect(tester.getSemantics(button).value, isEmpty);
+      }
+    });
+
+    testWidgets('shows a large total compactly and announces it exactly', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      final comment = CommentBuilder().withId('1' * 64).build();
+      whenListen(
+        mocks.reactions,
+        const Stream<CommentReactionsState>.empty(),
+        initialState: CommentReactionsState(
+          commentUpvoteCounts: {comment.id: 1200},
+          commentDownvoteCounts: {comment.id: 0},
+        ),
+      );
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          comment.content,
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          comment: comment,
+        ),
+      );
+
+      final upvote = find.bySemanticsIdentifier('upvote_button');
+      expect(
+        find.descendant(of: upvote, matching: find.text('1.2K')),
+        findsOneWidget,
+      );
+      expect(tester.getSemantics(upvote).value, '1200');
+    });
+
     testWidgets('votes a video reply with its own coordinate and kind, not the '
         "parent video's (#6124)", (tester) async {
       // The reply's own coordinate is deliberate: funnelcake's
