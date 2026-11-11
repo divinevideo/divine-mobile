@@ -15903,6 +15903,28 @@ class AppLocalizationsTe extends AppLocalizations {
       'క్లిప్‌లను స్ప్లిట్ స్క్రీన్‌లో అమర్చండి';
 
   @override
+  String get videoEditorMakeSquareLabel => 'స్క్వేర్';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'నిలువు';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel =>
+      'వీడియోను స్క్వేర్‌గా మార్చండి';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel =>
+      'వీడియోను నిలువుగా మార్చండి';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement =>
+      'వీడియో ఇప్పుడు స్క్వేర్‌గా ఉంది';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement =>
+      'వీడియో ఇప్పుడు నిలువుగా ఉంది';
+
+  @override
   String get videoEditorLayoutTitle => 'లేఅవుట్';
 
   @override

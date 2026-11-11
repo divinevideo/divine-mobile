@@ -15533,6 +15533,24 @@ class AppLocalizationsUr extends AppLocalizations {
       'کلپس کو اسپلٹ اسکرین میں ترتیب دیں';
 
   @override
+  String get videoEditorMakeSquareLabel => 'مربع';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'عمودی';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'ویڈیو کو مربع بنائیں';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => 'ویڈیو کو عمودی بنائیں';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'ویڈیو اب مربع ہے';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => 'ویڈیو اب عمودی ہے';
+
+  @override
   String get videoEditorLayoutTitle => 'لے آؤٹ';
 
   @override

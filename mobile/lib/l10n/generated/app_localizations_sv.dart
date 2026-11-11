@@ -15549,6 +15549,24 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorOpenLayoutSemanticLabel => 'Ordna klipp i delad skärm';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Kvadratisk';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Stående';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'Gör videon kvadratisk';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => 'Gör videon stående';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'Videon är nu kvadratisk';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => 'Videon är nu stående';
+
+  @override
   String get videoEditorLayoutTitle => 'Layout';
 
   @override

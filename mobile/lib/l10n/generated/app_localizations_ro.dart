@@ -15854,6 +15854,25 @@ class AppLocalizationsRo extends AppLocalizations {
       'Aranjează clipuri pe ecran împărțit';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Pătrat';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Vertical';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'Fă videoclipul pătrat';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => 'Fă videoclipul vertical';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'Videoclipul e acum pătrat';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement =>
+      'Videoclipul e acum vertical';
+
+  @override
   String get videoEditorLayoutTitle => 'Aranjament';
 
   @override

@@ -15680,6 +15680,25 @@ class AppLocalizationsBg extends AppLocalizations {
       'Подреди клипове на разделен екран';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Квадратно';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Вертикално';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'Направи видеото квадратно';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel =>
+      'Направи видеото вертикално';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'Видеото вече е квадратно';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => 'Видеото вече е вертикално';
+
+  @override
   String get videoEditorLayoutTitle => 'Оформление';
 
   @override

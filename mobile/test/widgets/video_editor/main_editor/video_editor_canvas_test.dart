@@ -297,6 +297,30 @@ void main() {
       );
     });
 
+    test('syncs a switch between square and 9:16 that also moves a mask, '
+        'so the transition seams are rendered at the new shape', () {
+      final clip = _createClip(id: 'end')
+          .copyWith(mask: const LayerMask(shape: LayerMaskShape.heart));
+
+      expect(
+        VideoEditorCanvas.shouldSyncPlayerForClipStateChange(
+          previous: ClipEditorState(clips: [clip]),
+          current: ClipEditorState(
+            clips: [
+              clip.copyWith(
+                targetAspectRatio: model.AspectRatio.square,
+                mask: const LayerMask(
+                  shape: LayerMaskShape.heart,
+                  size: Size(0.6, 0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
+        isTrue,
+      );
+    });
+
     test('skips a keyframe change, which moves the drawn frame', () {
       final clip = _createClip(id: 'end');
 
@@ -1031,6 +1055,14 @@ void main() {
       final a = _createStopMotionClip(id: 'sm', holds: [hold2]);
 
       expect(VideoEditorCanvas.clipsChanged([a], []), isTrue);
+    });
+
+    test('detects a switch between square and 9:16, so the canvas, the '
+        'export, undo and redo see it', () {
+      final a = _createClip(id: 'c');
+      final b = a.copyWith(targetAspectRatio: model.AspectRatio.square);
+
+      expect(VideoEditorCanvas.clipsChanged([a], [b]), isTrue);
     });
   });
 

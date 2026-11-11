@@ -15725,6 +15725,25 @@ class AppLocalizationsEs extends AppLocalizations {
       'Acomodar clips en pantalla dividida';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Cuadrado';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Vertical';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'Hacer el video cuadrado';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => 'Hacer el video vertical';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'El video ahora es cuadrado';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement =>
+      'El video ahora es vertical';
+
+  @override
   String get videoEditorLayoutTitle => 'Diseño';
 
   @override

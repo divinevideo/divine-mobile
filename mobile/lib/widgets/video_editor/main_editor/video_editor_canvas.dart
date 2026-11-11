@@ -284,7 +284,10 @@ class VideoEditorCanvas extends StatelessWidget {
           a.smoothSlowMotion != b.smoothSlowMotion ||
           a.reversed != b.reversed ||
           a.sourceStartOffset != b.sourceStartOffset ||
-          a.transition != b.transition) {
+          a.transition != b.transition ||
+          // Transition seams are rendered at the video's shape, so a switch
+          // between square and 9:16 has to render them again.
+          a.targetAspectRatio != b.targetAspectRatio) {
         return false;
       }
       if (a.thumbnailPath != b.thumbnailPath ||
@@ -585,6 +588,10 @@ class VideoEditorCanvas extends StatelessWidget {
           a.transition != b.transition ||
           a.mask != b.mask ||
           a.maskBackgroundColor != b.maskBackgroundColor ||
+          // A switch between square and 9:16 can change nothing else, and
+          // without this neither it nor its undo reaches the clip manager the
+          // canvas, the export and the draft read the video's shape from.
+          a.targetAspectRatio != b.targetAspectRatio ||
           // Frame edits (hold changes, delete, reorder) are the whole edit
           // surface of a stop-motion clip — without this the clip manager
           // (publish render, autosave, metadata preview) and undo/redo never
@@ -719,11 +726,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       if (!mounted || editor == null || _isLayerBeingTransformed) return;
       keepInteractiveCardInPlace(
         editor,
-        targetAspectRatio: ref
-            .read(clipManagerProvider)
-            .firstClipOrNull
-            ?.targetAspectRatio
-            .value,
+        // The entry's own shape: the clip manager takes a switch between
+        // square and 9:16, and its undo, only after this frame.
+        targetAspectRatio:
+            (editor.stateManager.compositionAspectRatio ??
+                    ref
+                        .read(clipManagerProvider)
+                        .firstClipOrNull
+                        ?.targetAspectRatio)
+                ?.value,
         onChanged: () => _runDetached(
           _onStateHistoryChange(scope, bloc),
           'persist interactive card placement',

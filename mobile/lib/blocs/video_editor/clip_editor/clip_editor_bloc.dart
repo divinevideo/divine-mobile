@@ -3340,6 +3340,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       originalAspectRatio: index == 0 && currentClips.isNotEmpty
           ? currentClips.first.originalAspectRatio
           : null,
+      // The layer keeps the shape the video had when the clip left the
+      // timeline, which a switch between square and 9:16 can have changed
+      // since; put back first, the old one would switch the video back.
+      targetAspectRatio: currentClips.firstOrNull?.targetAspectRatio,
     );
 
     final newClips = List<DivineVideoClip>.of(currentClips);

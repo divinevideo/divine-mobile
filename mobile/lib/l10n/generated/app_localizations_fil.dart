@@ -15669,6 +15669,24 @@ class AppLocalizationsFil extends AppLocalizations {
       'Ayusin ang mga clip sa split screen';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Parisukat';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Patayo';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'Gawing parisukat ang video';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => 'Gawing patayo ang video';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'Parisukat na ang video';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => 'Patayo na ang video';
+
+  @override
   String get videoEditorLayoutTitle => 'Layout';
 
   @override

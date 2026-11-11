@@ -628,6 +628,21 @@ extension VideoEditorExtensions on ProImageEditorState {
     setState(() {});
   }
 
+  /// Persists a clip-list change and the canvas [layers] as **one** history
+  /// entry.
+  ///
+  /// Switching the video between square and 9:16 crops every clip differently
+  /// and moves the layers the new frame would cut off; one undo puts both
+  /// back. [layers] must be copies the entry before does not share (see
+  /// `LayerCopyManager`).
+  void setClipStateWithLayers({
+    required List<DivineVideoClip> clips,
+    required List<Layer> layers,
+  }) {
+    addHistory(layers: layers, meta: _clipHistoryMeta(clips));
+    setState(() {});
+  }
+
   /// Removes the layer [layerId] and persists a clip-list change as **one**
   /// history entry — the reverse of [setClipStateWithNewLayer], for putting a
   /// detached clip back onto the timeline.

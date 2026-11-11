@@ -15874,6 +15874,24 @@ class AppLocalizationsPl extends AppLocalizations {
       'Ułóż klipy na podzielonym ekranie';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Kwadratowy';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Pionowy';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'Zmień wideo na kwadratowe';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => 'Zmień wideo na pionowe';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'Wideo jest teraz kwadratowe';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => 'Wideo jest teraz pionowe';
+
+  @override
   String get videoEditorLayoutTitle => 'Układ';
 
   @override

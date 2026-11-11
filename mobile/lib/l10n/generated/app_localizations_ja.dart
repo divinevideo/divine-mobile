@@ -14793,6 +14793,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorOpenLayoutSemanticLabel => 'クリップを分割画面に並べる';
 
   @override
+  String get videoEditorMakeSquareLabel => '正方形';
+
+  @override
+  String get videoEditorMakeVerticalLabel => '縦型';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => '動画を正方形にする';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => '動画を縦型にする';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => '動画が正方形になりました';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => '動画が縦型になりました';
+
+  @override
   String get videoEditorLayoutTitle => 'レイアウト';
 
   @override

@@ -565,6 +565,7 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
   /// `finalRenderedClip`, mutating a draft the user only opened to watch.
   void replaceClips(List<DivineVideoClip> clips, {bool autosave = true}) {
     final previousCount = _clips.length;
+    final previousShape = _clips.firstOrNull?.targetAspectRatio;
     _clips
       ..clear()
       ..addAll(clips);
@@ -576,6 +577,15 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     );
 
     state = state.copyWith(clips: List.unmodifiable(_clips));
+    // The video switched between square and 9:16 (or its undo): a cover cut
+    // from the old shape no longer fits it.
+    final shape = _clips.firstOrNull?.targetAspectRatio;
+    if (autosave &&
+        previousShape != null &&
+        shape != null &&
+        shape != previousShape) {
+      ref.read(videoEditorProvider.notifier).releaseCoverImageForNewShape();
+    }
     if (autosave) _triggerAutosave();
   }
 

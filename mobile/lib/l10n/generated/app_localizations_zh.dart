@@ -14617,6 +14617,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorOpenLayoutSemanticLabel => '把片段排成分屏';
 
   @override
+  String get videoEditorMakeSquareLabel => '正方形';
+
+  @override
+  String get videoEditorMakeVerticalLabel => '竖屏';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => '把视频改成正方形';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => '把视频改成竖屏';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => '视频现在是正方形';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => '视频现在是竖屏';
+
+  @override
   String get videoEditorLayoutTitle => '布局';
 
   @override

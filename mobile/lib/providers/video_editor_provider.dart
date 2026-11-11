@@ -1555,6 +1555,22 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     );
   }
 
+  /// Lets the cover follow the video to its new shape after a switch between
+  /// square and 9:16.
+  ///
+  /// The picked cover image was cut from a render of the old shape, so it is
+  /// dropped; the moment it was picked at stays, and the next render takes
+  /// its cover there (see [startRenderVideo]).
+  void releaseCoverImageForNewShape() {
+    if (state.customThumbnailPath == null) return;
+    state = state.copyWith(clearCustomThumbnailPath: true);
+    Log.debug(
+      '🖼️  Cover image dropped: the video changed shape',
+      name: 'VideoEditorNotifier',
+      category: .video,
+    );
+  }
+
   /// Set the processing state.
   ///
   /// Use this to mark that video processing has started before calling
@@ -1635,6 +1651,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
         parameters: renderParameters,
         editorStateHistory: state.editorStateHistory,
         taskId: draftId,
+        // A picked cover whose image was dropped, as a switch between square
+        // and 9:16 does, is taken again at the same moment.
+        coverTimestamp: state.customThumbnailPath == null
+            ? state.thumbnailTimestamp
+            : null,
       );
 
       // A newer render was started or the user cancelled while this one was

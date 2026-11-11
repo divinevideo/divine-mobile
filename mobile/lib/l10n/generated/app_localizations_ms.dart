@@ -15529,6 +15529,25 @@ class AppLocalizationsMs extends AppLocalizations {
       'Susun klip dalam skrin terbahagi';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Segi empat sama';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Menegak';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel =>
+      'Jadikan video segi empat sama';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => 'Jadikan video menegak';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'Video kini segi empat sama';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => 'Video kini menegak';
+
+  @override
   String get videoEditorLayoutTitle => 'Susun atur';
 
   @override

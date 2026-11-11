@@ -179,6 +179,107 @@ void main() {
       });
     });
 
+    group('aspect ratio switch', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      Future<void> pumpSwitch(
+        WidgetTester tester, {
+        required VoidCallback onSwitchAspectRatio,
+        bool isSquareVideo = false,
+        bool isAspectRatioSwitchDisabled = false,
+      }) => tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: VideoEditorTimelineControls(
+              onMultiSelect: () {},
+              onSwitchAspectRatio: onSwitchAspectRatio,
+              isSquareVideo: isSquareVideo,
+              isAspectRatioSwitchDisabled: isAspectRatioSwitchDisabled,
+              onDone: () {},
+            ),
+          ),
+        ),
+      );
+
+      testWidgets('sits right before Done and makes a 9:16 video square', (
+        tester,
+      ) async {
+        var switched = 0;
+        await pumpSwitch(tester, onSwitchAspectRatio: () => switched++);
+
+        final labels = [
+          for (final button in tester.widgetList<TimelineActionButton>(
+            find.byType(TimelineActionButton),
+          ))
+            button.label,
+        ];
+        expect(labels, [
+          l10n.videoEditorMultiSelectLabel,
+          l10n.videoEditorMakeSquareLabel,
+          l10n.videoEditorDoneLabel,
+        ]);
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorMakeSquareSemanticLabel),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text(l10n.videoEditorMakeSquareLabel));
+        expect(switched, 1);
+      });
+
+      testWidgets('offers 9:16 while the video is square', (tester) async {
+        await pumpSwitch(
+          tester,
+          onSwitchAspectRatio: () {},
+          isSquareVideo: true,
+        );
+
+        expect(find.text(l10n.videoEditorMakeVerticalLabel), findsOneWidget);
+        expect(find.text(l10n.videoEditorMakeSquareLabel), findsNothing);
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorMakeVerticalSemanticLabel),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('stays in place but inert while disabled', (tester) async {
+        var switched = 0;
+        await pumpSwitch(
+          tester,
+          onSwitchAspectRatio: () => switched++,
+          isAspectRatioSwitchDisabled: true,
+        );
+
+        final button = tester.widget<TimelineActionButton>(
+          find.widgetWithText(
+            TimelineActionButton,
+            l10n.videoEditorMakeSquareLabel,
+          ),
+        );
+        expect(button.onPressed, isNull);
+        await tester.tap(
+          find.text(l10n.videoEditorMakeSquareLabel),
+          warnIfMissed: false,
+        );
+        expect(switched, 0);
+      });
+
+      testWidgets('is left out without a handler', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: VideoEditorTimelineControls(onDone: () {})),
+          ),
+        );
+
+        expect(find.text(l10n.videoEditorMakeSquareLabel), findsNothing);
+        expect(find.text(l10n.videoEditorMakeVerticalLabel), findsNothing);
+      });
+    });
+
     testWidgets('triggers button callbacks', (tester) async {
       var doneCount = 0;
       var deleteCount = 0;

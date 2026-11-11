@@ -25893,6 +25893,42 @@ abstract class AppLocalizations {
   /// **'Arrange clips in a split screen'**
   String get videoEditorOpenLayoutSemanticLabel;
 
+  /// Label of the button in the selected clip's action bar that crops the whole video to 1:1. Shown while the video is 9:16.
+  ///
+  /// In en, this message translates to:
+  /// **'Square'**
+  String get videoEditorMakeSquareLabel;
+
+  /// Label of the button in the selected clip's action bar that turns the whole video into 9:16. Shown while the video is square.
+  ///
+  /// In en, this message translates to:
+  /// **'Vertical'**
+  String get videoEditorMakeVerticalLabel;
+
+  /// Screen reader label for the button in the selected clip's action bar that crops the whole video to 1:1.
+  ///
+  /// In en, this message translates to:
+  /// **'Make the video square'**
+  String get videoEditorMakeSquareSemanticLabel;
+
+  /// Screen reader label for the button in the selected clip's action bar that turns the whole video into 9:16.
+  ///
+  /// In en, this message translates to:
+  /// **'Make the video vertical'**
+  String get videoEditorMakeVerticalSemanticLabel;
+
+  /// Screen reader announcement after the whole video was switched to 1:1 in the editor.
+  ///
+  /// In en, this message translates to:
+  /// **'The video is square now'**
+  String get videoEditorMadeSquareAnnouncement;
+
+  /// Screen reader announcement after the whole video was switched to 9:16 in the editor.
+  ///
+  /// In en, this message translates to:
+  /// **'The video is vertical now'**
+  String get videoEditorMadeVerticalAnnouncement;
+
   /// Title of the split-screen layout screen, where several clips are arranged side by side, stacked or in a grid.
   ///
   /// In en, this message translates to:

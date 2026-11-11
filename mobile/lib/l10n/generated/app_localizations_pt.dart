@@ -15695,6 +15695,24 @@ class AppLocalizationsPt extends AppLocalizations {
       'Organizar clipes em tela dividida';
 
   @override
+  String get videoEditorMakeSquareLabel => 'Quadrado';
+
+  @override
+  String get videoEditorMakeVerticalLabel => 'Vertical';
+
+  @override
+  String get videoEditorMakeSquareSemanticLabel => 'Deixar o vídeo quadrado';
+
+  @override
+  String get videoEditorMakeVerticalSemanticLabel => 'Deixar o vídeo vertical';
+
+  @override
+  String get videoEditorMadeSquareAnnouncement => 'O vídeo agora é quadrado';
+
+  @override
+  String get videoEditorMadeVerticalAnnouncement => 'O vídeo agora é vertical';
+
+  @override
   String get videoEditorLayoutTitle => 'Layout';
 
   @override

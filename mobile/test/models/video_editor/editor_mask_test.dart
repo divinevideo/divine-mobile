@@ -71,6 +71,145 @@ void main() {
     });
   });
 
+  group('maskForAspectRatioSwitch', () {
+    // A 9:16 picture: its square frame is its middle, from 0.21875 to
+    // 0.78125 of its height.
+    const picture = 9 / 16;
+    const square = 1.0;
+    const vertical = 9 / 16;
+
+    void expectOffset(Offset actual, Offset expected) {
+      expect(actual.dx, closeTo(expected.dx, 1e-9));
+      expect(actual.dy, closeTo(expected.dy, 1e-9));
+    }
+
+    void expectSize(Size actual, Size expected) {
+      expect(actual.width, closeTo(expected.width, 1e-9));
+      expect(actual.height, closeTo(expected.height, 1e-9));
+    }
+
+    test('keeps a circle round and on the same spot of the picture when the '
+        'frame grows to 9:16', () {
+      // Half as wide and high as the square frame.
+      const mask = LayerMask(
+        shape: LayerMaskShape.ellipse,
+        center: Offset(0.5, 0.25),
+        feather: 0.1,
+      );
+
+      final switched = maskForAspectRatioSwitch(
+        mask,
+        videoAspectRatio: picture,
+        from: square,
+        to: vertical,
+      )!;
+
+      expectOffset(switched.center, const Offset(0.5, 0.359375));
+      expectSize(switched.size, const Size(0.5, 0.28125));
+      // Both frames are as wide, so the edge stays as soft.
+      expect(switched.feather, closeTo(0.1, 1e-9));
+      expect(switched.shape, mask.shape);
+    });
+
+    test('comes back to where it was when switched back', () {
+      const mask = LayerMask(
+        shape: LayerMaskShape.heart,
+        center: Offset(0.4, 0.6),
+        size: Size(0.3, 0.3),
+        rotation: 0.3,
+      );
+
+      final back = maskForAspectRatioSwitch(
+        maskForAspectRatioSwitch(
+          mask,
+          videoAspectRatio: picture,
+          from: square,
+          to: vertical,
+        ),
+        videoAspectRatio: picture,
+        from: vertical,
+        to: square,
+      )!;
+
+      expectOffset(back.center, mask.center);
+      expectSize(back.size, mask.size);
+      expect(back.rotation, mask.rotation);
+    });
+
+    test('moves a shape the square frame would cut off back onto it', () {
+      // Round on the 9:16 frame, near its top.
+      const mask = LayerMask(
+        shape: LayerMaskShape.ellipse,
+        center: Offset(0.5, 0.1),
+        size: Size(0.4, 0.225),
+      );
+
+      final switched = maskForAspectRatioSwitch(
+        mask,
+        videoAspectRatio: picture,
+        from: vertical,
+        to: square,
+      )!;
+
+      expectSize(switched.size, const Size(0.4, 0.4));
+      expectOffset(switched.center, const Offset(0.5, 0.2));
+    });
+
+    test('moves every keyframe the same way', () {
+      final mask = const LayerMask(shape: LayerMaskShape.ellipse).withKeyframes(
+        const [
+          // Centred, and half as wide and high as the square frame.
+          LayerMaskKeyframe(time: Duration.zero),
+          LayerMaskKeyframe(
+            time: Duration(seconds: 1),
+            center: Offset(0.5, 0.25),
+          ),
+        ],
+      );
+
+      final switched = maskForAspectRatioSwitch(
+        mask,
+        videoAspectRatio: picture,
+        from: square,
+        to: vertical,
+      )!;
+
+      expect(switched.keyframes.map((k) => k.time), [
+        Duration.zero,
+        const Duration(seconds: 1),
+      ]);
+      expectOffset(switched.keyframes.first.center, const Offset(0.5, 0.5));
+      expectOffset(
+        switched.keyframes.last.center,
+        const Offset(0.5, 0.359375),
+      );
+      expectSize(switched.keyframes.last.size, const Size(0.5, 0.28125));
+    });
+
+    test('leaves no mask, and a mask on an unchanged frame, as they are', () {
+      const mask = LayerMask(shape: LayerMaskShape.star);
+
+      expect(
+        maskForAspectRatioSwitch(
+          null,
+          videoAspectRatio: picture,
+          from: square,
+          to: vertical,
+        ),
+        isNull,
+      );
+      expect(
+        maskForAspectRatioSwitch(
+          mask,
+          videoAspectRatio: picture,
+          from: square,
+          to: square,
+        ),
+        same(mask),
+      );
+    });
+  });
+
   group('canMaskLayer', () {
     test('lets text, stickers and drawings take a mask', () {
       expect(canMaskLayer(TextLayer(text: 'Hi')), isTrue);
