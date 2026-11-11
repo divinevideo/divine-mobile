@@ -3379,8 +3379,8 @@ class VideosRepository {
   /// a confirmed absence, an unparseable route ID, or relay-only lookups that
   /// returned nothing. Callers may render "not found" on `null`.
   ///
-  /// [expectedAuthor] holds every candidate to that author; see
-  /// [lookupVideoForRouteId].
+  /// [expectedAuthor] holds the lookup to that author; see
+  /// [lookupVideoForRouteId] for the candidates it applies to.
   ///
   /// Throws:
   ///
@@ -3579,7 +3579,9 @@ class VideosRepository {
       'Route lookup exhausted every source for $routeId '
       '(eventId=${candidate.eventId}, '
       'addressableId=${candidate.addressableId}, '
-      'stableId=${candidate.stableId}); missed: ${missed.join(', ')}',
+      'stableId=${candidate.stableId}, '
+      'heldToAuthor=${pubkeyForLogs(author, whenNull: 'none')}); '
+      'missed: ${missed.join(', ')}',
       name: 'VideosRepository',
       category: LogCategory.video,
     );
