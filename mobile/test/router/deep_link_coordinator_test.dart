@@ -272,8 +272,17 @@ void main() {
               entry.message,
           ].join('\n');
           expect(logged, contains(navigatingLine));
-          // Unbracketed: the coordinator's own redaction, not the sink's.
-          expect(logged, contains('/REDACTED'));
+          // Unbracketed: each navigation line's own redaction, not the
+          // sink's. Checked per line, since either line's redaction would
+          // satisfy a check over both.
+          final navigationLines = [
+            for (final line in logged.split('\n'))
+              if (line.contains('Navigat')) line,
+          ];
+          expect(navigationLines, hasLength(2));
+          for (final line in navigationLines) {
+            expect(line, contains('/REDACTED'));
+          }
           expect(logged.toLowerCase(), isNot(contains('nsec1')));
         });
       }

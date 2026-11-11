@@ -422,16 +422,27 @@ void main() {
       ].join('\n');
     }
 
+    // The redirect logs several redacted lines into one capture, so each
+    // assertion reads only its own line: any other line's redaction would
+    // satisfy a check over all of them.
+    String loggedLine(String logged, String marker) =>
+        logged.split('\n').singleWhere((line) => line.contains(marker));
+
     test('does not log the nsec of a signed-out profile location', () async {
       final logged = await loggedWhileRedirecting(
         authState: AuthState.unauthenticated,
         location: '/profile/$nsec',
       );
 
-      expect(logged, contains('Router redirect: location='));
-      expect(logged, contains('unauthenticated on'));
-      // Unbracketed: the redirect's own redaction, not the sink's.
-      expect(logged, contains('/profile/REDACTED'));
+      // Unbracketed: each line's own redaction, not the sink's.
+      expect(
+        loggedLine(logged, 'Router redirect: location='),
+        contains('/profile/REDACTED'),
+      );
+      expect(
+        loggedLine(logged, 'unauthenticated on'),
+        contains('/profile/REDACTED'),
+      );
       expect(logged.toLowerCase(), isNot(contains('nsec1')));
     });
 
@@ -441,9 +452,12 @@ void main() {
         location: 'https://divine.video/profile/$nsec',
       );
 
-      expect(logged, contains('Router redirect: universal link'));
-      // Unbracketed: the redirect's own redaction, not the sink's.
-      expect(logged, contains('/profile/REDACTED'));
+      // Unbracketed: the redirect target's own redaction, not the sink's.
+      // The link before the arrow is redacted too, so read only the target.
+      expect(
+        loggedLine(logged, 'Router redirect: universal link').split(' → ').last,
+        contains('/profile/REDACTED'),
+      );
       expect(logged.toLowerCase(), isNot(contains('nsec1')));
     });
 
@@ -453,9 +467,12 @@ void main() {
         location: 'divine:///profile/$nsec',
       );
 
-      expect(logged, contains('Router redirect: divine scheme'));
-      // Unbracketed: the redirect's own redaction, not the sink's.
-      expect(logged, contains('/profile/REDACTED'));
+      // Unbracketed: the redirect target's own redaction, not the sink's.
+      // The link before the arrow is redacted too, so read only the target.
+      expect(
+        loggedLine(logged, 'Router redirect: divine scheme').split(' -> ').last,
+        contains('/profile/REDACTED'),
+      );
       expect(logged.toLowerCase(), isNot(contains('nsec1')));
     });
 
@@ -468,9 +485,11 @@ void main() {
         ),
       );
 
-      expect(logged, contains('restricted account on'));
-      // Unbracketed: the redirect's own redaction, not the sink's.
-      expect(logged, contains('/profile/REDACTED'));
+      // Unbracketed: the line's own redaction, not the sink's.
+      expect(
+        loggedLine(logged, 'restricted account on'),
+        contains('/profile/REDACTED'),
+      );
       expect(logged.toLowerCase(), isNot(contains('nsec1')));
     });
   });
