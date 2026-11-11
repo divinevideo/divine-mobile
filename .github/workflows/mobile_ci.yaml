@@ -695,6 +695,12 @@ jobs:
           # the GET). The hook re-hashes the file it left behind and fetches
           # again, and DerivedData makes the second build incremental. A test
           # failure or any other build error is never retried.
+          #
+          # Parallel testing stays off here, though the scheme marks
+          # RunnerTests parallelizable for local runs. On this runner it
+          # boots a second simulator clone that never receives a test, and
+          # that clone failing to boot failed two merge-queue runs whose
+          # 90 tests had all passed on the first.
           set +e
           for attempt in 1 2; do
             rm -rf "${RUNNER_TEMP}/RunnerTests.xcresult"
@@ -702,6 +708,7 @@ jobs:
               -workspace Runner.xcworkspace \
               -scheme Runner \
               -destination "platform=iOS Simulator,id=${SIMULATOR_UDID}" \
+              -parallel-testing-enabled NO \
               -only-testing:RunnerTests \
               -resultBundlePath "${RUNNER_TEMP}/RunnerTests.xcresult" \
               -clonedSourcePackagesDirPath "${GITHUB_WORKSPACE}/mobile/build/ios/SourcePackages" \
