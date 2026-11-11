@@ -60,6 +60,19 @@ void main() {
       test('redacts an ncryptsec whole', () {
         expect(pubkeyForLogs('ncryptsec1abcdef'), equals('<redacted>'));
       });
+
+      // Bech32 also accepts the all-uppercase form, so a pasted NSEC1 is
+      // the same secret.
+      test('redacts an uppercase nsec whole', () {
+        const nsec =
+            'NSEC1VL029MGPSPEDVA04G90VLTKH6FVH240ZQTV9K0T9AF8935KE9LAQSNLFE5';
+
+        expect(pubkeyForLogs(nsec), equals('<redacted>'));
+      });
+
+      test('redacts an uppercase ncryptsec whole', () {
+        expect(pubkeyForLogs('NCRYPTSEC1ABCDEF'), equals('<redacted>'));
+      });
     });
 
     group('values that cannot be encoded', () {
