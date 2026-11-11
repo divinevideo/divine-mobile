@@ -430,6 +430,8 @@ void main() {
 
       expect(logged, contains('Router redirect: location='));
       expect(logged, contains('unauthenticated on'));
+      // Unbracketed: the redirect's own redaction, not the sink's.
+      expect(logged, contains('/profile/REDACTED'));
       expect(logged.toLowerCase(), isNot(contains('nsec1')));
     });
 
@@ -440,6 +442,8 @@ void main() {
       );
 
       expect(logged, contains('Router redirect: universal link'));
+      // Unbracketed: the redirect's own redaction, not the sink's.
+      expect(logged, contains('/profile/REDACTED'));
       expect(logged.toLowerCase(), isNot(contains('nsec1')));
     });
 
@@ -450,6 +454,8 @@ void main() {
       );
 
       expect(logged, contains('Router redirect: divine scheme'));
+      // Unbracketed: the redirect's own redaction, not the sink's.
+      expect(logged, contains('/profile/REDACTED'));
       expect(logged.toLowerCase(), isNot(contains('nsec1')));
     });
 
@@ -463,6 +469,8 @@ void main() {
       );
 
       expect(logged, contains('restricted account on'));
+      // Unbracketed: the redirect's own redaction, not the sink's.
+      expect(logged, contains('/profile/REDACTED'));
       expect(logged.toLowerCase(), isNot(contains('nsec1')));
     });
   });

@@ -158,6 +158,8 @@ void main() {
             entry.message,
         ].join('\n');
         expect(logged, contains('callback from '));
+        // Unbracketed: the listener's own redaction, not the sink's.
+        expect(logged, contains('/profile/REDACTED'));
         expect(logged.toLowerCase(), isNot(contains('nsec1')));
       });
 
