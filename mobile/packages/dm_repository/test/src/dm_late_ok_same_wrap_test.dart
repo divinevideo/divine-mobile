@@ -22,6 +22,35 @@ class _MockNostrClient extends Mock implements NostrClient {}
 
 class _FakeEvent extends Fake implements Event {}
 
+/// A queue that holds one read of a row: it reads the row, then hands that
+/// copy back only once the test releases it.
+class _HeldReadOutgoingDmsDao extends OutgoingDmsDao {
+  _HeldReadOutgoingDmsDao(super.attachedDatabase);
+
+  String? _heldId;
+  final _taken = Completer<void>();
+  final _released = Completer<void>();
+
+  /// Holds the next [getById] of [id]; completes once that read has the row.
+  Future<void> holdNextRead(String id) {
+    _heldId = id;
+    return _taken.future;
+  }
+
+  void release() => _released.complete();
+
+  @override
+  Future<OutgoingDm?> getById(String id) async {
+    final row = await super.getById(id);
+    if (id == _heldId) {
+      _heldId = null;
+      _taken.complete();
+      await _released.future;
+    }
+    return row;
+  }
+}
+
 /// A queue whose write of an unconfirmed attempt's wrap fails.
 class _UnkeepableOutgoingDmsDao extends OutgoingDmsDao {
   _UnkeepableOutgoingDmsDao(super.attachedDatabase);
@@ -369,6 +398,66 @@ void main() {
           wrapsTo(peer).map((wrap) => wrap.id).toSet(),
           equals({firstWrap.id}),
         );
+      });
+
+      test('reuses the wrap a recovery kept while the group loop was reading '
+          'that sibling', () async {
+        final secondPeer = getPublicKey(_secondPeerKey);
+        final heldReads = _HeldReadOutgoingDmsDao(db);
+        outgoingDao = heldReads;
+        repository = buildRepository();
+        final firstStarted = Completer<void>();
+        final releaseFirst = Completer<void>();
+        when(
+          () => nostrClient.publishEventAwaitOk(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+            timeout: any(named: 'timeout'),
+            diagnosticTag: any(named: 'diagnosticTag'),
+          ),
+        ).thenAnswer((invocation) async {
+          final event = invocation.positionalArguments.first as Event;
+          published.add(event);
+          final toFirst = event.tags.any(
+            (tag) => tag.length >= 2 && tag[0] == 'p' && tag[1] == peer,
+          );
+          if (toFirst && !firstStarted.isCompleted) {
+            firstStarted.complete();
+            await releaseFirst.future;
+          }
+          return PublishOutcome(
+            eventId: event.id,
+            acceptedBy: const [],
+            rejectedBy: const {},
+            noResponseFrom: const [_poolRelay],
+          );
+        });
+
+        final batch = repository.sendGroupMessage(
+          recipientPubkeys: [peer, secondPeer],
+          content: 'recovery finished while the loop read the row',
+        );
+        await firstStarted.future;
+        final secondRow = (await heldReads.getAllForOwner(
+          owner,
+        )).singleWhere((row) => row.recipientPubkey == secondPeer);
+        final loopRead = heldReads.holdNextRead(secondRow.id);
+        releaseFirst.complete();
+        try {
+          await loopRead;
+          final recovered = await repository.recoverFullSend(
+            rumorId: secondRow.id,
+          );
+          expect(recovered.retryablePending, isTrue);
+          expect(wrapsTo(secondPeer), hasLength(1));
+        } finally {
+          heldReads.release();
+          await batch;
+        }
+
+        final wraps = wrapsTo(secondPeer);
+        expect(wraps, hasLength(2));
+        expect(wraps.last.id, wraps.first.id);
       });
 
       test(

@@ -10303,8 +10303,8 @@ class DmRepository {
       // to the sender and unretractable, since no local row survives to build
       // a kind-5 from. The currently-publishing sibling's inherent TOCTOU is
       // accepted, the same trade-off as recoverFullSend.
-      final queuedRow = await outgoingDao?.getById(queueIds[i]);
-      if (outgoingDao != null && !_isLiveDelivery(queuedRow)) {
+      if (outgoingDao != null &&
+          !_isLiveDelivery(await outgoingDao.getById(queueIds[i]))) {
         cancelledBeforePublish.add(i);
         results.add(
           const NIP17SendResult.failure('send cancelled before publish'),
@@ -10338,15 +10338,16 @@ class DmRepository {
           if (_disposed || _resetGeneration != generation) {
             return _queuedForDelivery(queueIds[i]);
           }
+          // A sweep may have finished an unconfirmed attempt on this row
+          // before this loop reached it. Read its wrap under the row's key: a
+          // recovery can finish after the cancel check above read the row.
+          final keptRow = await outgoingDao?.getById(queueIds[i]);
           final published = await _sendRumorWithTimeout(
             rumor: groupRumor,
             recipientPubkey: pubkey,
-            // A sweep may have finished an unconfirmed attempt before this
-            // loop reached the sibling. Reuse its wrap too, not just wraps
-            // from attempts that this loop started.
-            recipientWrap: queuedRow == null
+            recipientWrap: keptRow == null
                 ? null
-                : _storedUnconfirmedWrap(queuedRow),
+                : _storedUnconfirmedWrap(keptRow),
             targetRelays: inbox?.relays,
             selfWrapTargetRelays: selfWrapRelays,
             awaitRecipientOk: true,
