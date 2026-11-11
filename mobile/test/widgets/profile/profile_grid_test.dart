@@ -1384,6 +1384,14 @@ void main() {
       expect(scrollController.position.hasViewportDimension, isTrue);
       expect(find.byType(NestedScrollView), findsOneWidget);
       expect(tester.takeException(), isNull);
+
+      // The skipped measurement runs once the grid is laid out, so the short
+      // tab still stops at its last row.
+      await scrollAllTheWayUp(tester);
+      expect(
+        scrollController.offset,
+        lessThan(scrollController.position.maxScrollExtent),
+      );
     });
 
     testWidgets('flings toward the end under a status bar without errors', (
