@@ -14500,13 +14500,13 @@ void main() {
           expect(result?.id, equals(authorEventId));
         });
 
-        test("rejects another author's same-d-tag REST answer when no relay "
-            "holds the named author's video", () async {
+        test('returns null when Funnelcake and the relay hold only another '
+            "author's same-d-tag video", () async {
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
           when(
             () => mockFunnelcakeClient.getVideoEvent(dTag),
           ).thenAnswer((_) async => otherAuthorsVideo);
-          _answerQueriesFrom(mockNostrClient, const []);
+          _answerQueriesFrom(mockNostrClient, [otherAuthorsVideo]);
           final repo = VideosRepository(
             nostrClient: mockNostrClient,
             funnelcakeApiClient: mockFunnelcakeClient,
@@ -14519,13 +14519,13 @@ void main() {
           verify(() => mockFunnelcakeClient.getVideoEvent(dTag)).called(1);
         });
 
-        test("rejects another author's same-d-tag cache hit when no relay "
-            "holds the named author's video", () async {
+        test('returns null when the cache and the relay hold only another '
+            "author's same-d-tag video", () async {
           final mockLocalStorage = MockVideoLocalStorage();
           when(
             () => mockLocalStorage.getEventsByDTag(dTag),
           ).thenAnswer((_) async => [otherAuthorsVideo]);
-          _answerQueriesFrom(mockNostrClient, const []);
+          _answerQueriesFrom(mockNostrClient, [otherAuthorsVideo]);
           final repo = VideosRepository(
             nostrClient: mockNostrClient,
             localStorage: mockLocalStorage,
