@@ -10,7 +10,6 @@ import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
-import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/apps_routes.dart';
 import 'package:openvine/router/widgets/resolved_app_route_screen.dart';
 import 'package:openvine/screens/apps/app_detail_screen.dart';
@@ -117,18 +116,14 @@ void main() {
     );
 
     group('locations', () {
+      // Redirects and the gates compare these exact strings, so they are
+      // written out rather than read back from the constants the annotations
+      // use, which could not fail on an edit to one of them.
       test('the directory and permissions routes keep their paths', () {
-        expect(
-          const AppsDirectoryRouteData().location,
-          equals(AppsDirectoryScreen.path),
-        );
-        expect(
-          const AppsDirectoryRouteData().location,
-          equals(RoutePaths.appsDirectory),
-        );
+        expect(const AppsDirectoryRouteData().location, equals('/apps'));
         expect(
           const AppsPermissionsRouteData().location,
-          equals(AppsPermissionsScreen.path),
+          equals('/apps/permissions'),
         );
       });
 
@@ -155,7 +150,7 @@ void main() {
         test('the detail location encodes the slug "$id"', () {
           expect(
             AppDetailRouteData(slug: id).location,
-            equals('${RoutePaths.appsDirectory}/${Uri.encodeComponent(id)}'),
+            equals('/apps/${Uri.encodeComponent(id)}'),
           );
         });
       }
@@ -170,25 +165,44 @@ void main() {
       }
     });
 
-    group('names', () {
-      test('every route keeps the name callers and tests know it by', () {
+    group('declarations', () {
+      // The gates, deep links and callers know the routes by these exact
+      // strings, so they are written out here rather than read back from the
+      // constants the annotations use.
+      test('every route keeps its name, in declaration order', () {
         expect(
           appsRoutes().whereType<GoRoute>().map((route) => route.name),
           equals([
-            AppsDirectoryScreen.routeName,
-            AppsPermissionsScreen.routeName,
-            NostrAppSandboxScreen.routeName,
-            WebIframeSandboxScreen.routeName,
-            AppDetailScreen.routeName,
+            'apps-directory',
+            'apps-permissions',
+            'nostr-app-sandbox',
+            'web-iframe-sandbox',
+            'app-detail',
           ]),
         );
       });
 
-      test('the permissions route keeps its name and path values', () {
-        final route = routeNamed(AppsPermissionsScreen.routeName);
+      test('every route keeps its path template, in declaration order', () {
+        expect(
+          appsRoutes().whereType<GoRoute>().map((route) => route.path),
+          equals([
+            '/apps',
+            '/apps/permissions',
+            '/apps/:appId/sandbox',
+            '/apps/:appId/web-sandbox',
+            '/apps/:slug',
+          ]),
+        );
+      });
+    });
 
-        expect(route.name, equals('apps-permissions'));
-        expect(route.path, equals('/apps/permissions'));
+    group('directory', () {
+      testWidgets('builds the apps directory screen', (tester) async {
+        await captureContext(tester);
+
+        final screen = build(AppsDirectoryScreen.routeName, '/apps');
+
+        expect(screen, isA<AppsDirectoryScreen>());
       });
     });
 
