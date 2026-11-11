@@ -451,7 +451,8 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
     Log.info(
       'Router redirect: divine scheme '
       '${redactUriStringForLogs(state.uri.toString())} -> '
-      '${divineScheme.path}${divineScheme.gated ? '' : ' (ungated)'}',
+      '${redactUriStringForLogs(divineScheme.path)}'
+      '${divineScheme.gated ? '' : ' (ungated)'}',
       name: 'AppRouter',
       category: LogCategory.auth,
     );
@@ -475,7 +476,8 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
   if (universalRedirect != null) {
     Log.info(
       'Router redirect: universal link '
-      '${redactUriStringForLogs(state.uri.toString())} → $universalRedirect',
+      '${redactUriStringForLogs(state.uri.toString())} → '
+      '${redactUriStringForLogs(universalRedirect)}',
       name: 'AppRouter',
       category: LogCategory.ui,
     );
@@ -551,7 +553,7 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
       location == ConversationPage.pathForId(moderationConversationId);
 
   Log.debug(
-    'Router redirect: location=$location, '
+    'Router redirect: location=${redactUriStringForLogs(location)}, '
     'authState=${authState.name}',
     name: 'AppRouter',
     category: LogCategory.auth,
@@ -656,7 +658,8 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
         !isPublicParentConsentRoute &&
         !isPublicUnder13Route) {
       Log.info(
-        'Router redirect: restricted account on $location — '
+        'Router redirect: restricted account on '
+        '${redactUriStringForLogs(location)} — '
         'redirecting to ${MinorAccountReviewScreen.path}',
         name: 'AppRouter',
         category: LogCategory.auth,
@@ -740,7 +743,8 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
           authState == AuthState.awaitingTosAcceptance)) {
     _hasNavigated = false;
     Log.info(
-      'Router redirect: ${authState.name} on $location — '
+      'Router redirect: ${authState.name} on '
+      '${redactUriStringForLogs(location)} — '
       'redirecting to ${WelcomeScreen.path}',
       name: 'AppRouter',
       category: LogCategory.auth,
