@@ -981,6 +981,72 @@ void main() {
         expect(draft.fromLibrary, isTrue);
       });
 
+      // The typed field is the single source of the origin: built against a
+      // state whose URL disagrees with it, the editor still follows the field.
+      test('the editor routes take their origin from the typed field', () {
+        final router = _videoRouter();
+        GoRouterState stateAt(String location) =>
+            _resolve(router, location).state;
+        VideoEditorScreen editorFor(GoRouteData route, GoRouterState state) =>
+            (route.build(
+                  _FakeBuildContext(),
+                  state,
+                ) as ReleaseCachedImagesOnDispose).child
+                as VideoEditorScreen;
+        final bare = stateAt(const VideoEditorRouteData().location);
+        final fromLibrary = stateAt(
+          const VideoEditorRouteData(
+            from: VideoEditorScreen.libraryOrigin,
+          ).location,
+        );
+        final bareDraft = stateAt(
+          const VideoEditorDraftRouteData(draftId: _draftId).location,
+        );
+        final draftFromLibrary = stateAt(
+          const VideoEditorDraftRouteData(
+            draftId: _draftId,
+            from: VideoEditorScreen.libraryOrigin,
+          ).location,
+        );
+
+        expect(
+          editorFor(
+            const VideoEditorRouteData(from: VideoEditorScreen.libraryOrigin),
+            bare,
+          ).fromLibrary,
+          isTrue,
+        );
+        expect(
+          editorFor(const VideoEditorRouteData(), fromLibrary).fromLibrary,
+          isFalse,
+        );
+        // Only the library origin counts, as `from=library` did in the URL.
+        expect(
+          editorFor(
+            const VideoEditorRouteData(from: 'recorder'),
+            fromLibrary,
+          ).fromLibrary,
+          isFalse,
+        );
+        expect(
+          editorFor(
+            const VideoEditorDraftRouteData(
+              draftId: _draftId,
+              from: VideoEditorScreen.libraryOrigin,
+            ),
+            bareDraft,
+          ).fromLibrary,
+          isTrue,
+        );
+        expect(
+          editorFor(
+            const VideoEditorDraftRouteData(draftId: _draftId),
+            draftFromLibrary,
+          ).fromLibrary,
+          isFalse,
+        );
+      });
+
       test('the metadata screen reads the draft mode from the URL', () {
         VideoMetadataScreen metadataAt(String location) =>
             _build(_videoRouter(), location) as VideoMetadataScreen;

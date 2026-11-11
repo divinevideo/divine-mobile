@@ -226,14 +226,15 @@ class VideoEditorRouteData extends GoRouteData with $VideoEditorRouteData {
     this.from,
   });
 
-  /// [VideoEditorScreen.libraryOrigin] when the Library opened the editor.
+  /// [VideoEditorScreen.libraryOrigin] when the Library opened the editor;
+  /// the only value that changes how the editor exits.
   final String? from;
 
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       ReleaseCachedImagesOnDispose(
         child: VideoEditorScreen(
-          fromLibrary: VideoEditorScreen.fromLibraryForRoute(state.uri),
+          fromLibrary: from == VideoEditorScreen.libraryOrigin,
         ),
       );
 }
@@ -261,7 +262,7 @@ class VideoEditorDraftRouteData extends GoRouteData
       ReleaseCachedImagesOnDispose(
         child: VideoEditorScreen(
           draftId: draftId.isEmpty ? null : draftId,
-          fromLibrary: VideoEditorScreen.fromLibraryForRoute(state.uri),
+          fromLibrary: from == VideoEditorScreen.libraryOrigin,
         ),
       );
 }
