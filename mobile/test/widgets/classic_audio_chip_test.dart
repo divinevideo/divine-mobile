@@ -65,43 +65,48 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('classic sound is named and opens the existing library flow', (
-    tester,
-  ) async {
-    await showChip(tester, classic(), permission: Future.value(true));
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('The tiny puppet show'), findsOneWidget);
-    await tester.tap(find.textContaining('The tiny puppet show'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('The tiny puppet show library page'), findsOneWidget);
-  });
-
-  testWidgets('pending or denied policy retains credit without reuse action', (
-    tester,
-  ) async {
-    final permission = Completer<bool>();
-    await showChip(tester, classic(), permission: permission.future);
-
-    expect(find.textContaining('The tiny puppet show'), findsOneWidget);
-    expect(find.byType(GestureDetector), findsNothing);
-    permission.complete(false);
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('The tiny puppet show'), findsOneWidget);
-    expect(find.byType(GestureDetector), findsNothing);
-  });
-
-  testWidgets('platform tag alone does not grant reuse', (tester) async {
-    await showChip(
+  group('Classic audio chip', () {
+    testWidgets('classic sound is named and opens the existing library flow', (
       tester,
-      classic(verified: false),
-      permission: Future.value(false),
-    );
-    await tester.pumpAndSettle();
+    ) async {
+      await showChip(tester, classic(), permission: Future.value(true));
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('The tiny puppet show'), findsOneWidget);
-    expect(find.byType(GestureDetector), findsNothing);
+      expect(find.textContaining('The tiny puppet show'), findsOneWidget);
+      await tester.tap(find.textContaining('The tiny puppet show'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('The tiny puppet show library page'), findsOneWidget);
+    });
+
+    testWidgets(
+      'pending or denied policy retains credit without reuse action',
+      (
+        tester,
+      ) async {
+        final permission = Completer<bool>();
+        await showChip(tester, classic(), permission: permission.future);
+
+        expect(find.textContaining('The tiny puppet show'), findsOneWidget);
+        expect(find.byType(GestureDetector), findsNothing);
+        permission.complete(false);
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('The tiny puppet show'), findsOneWidget);
+        expect(find.byType(GestureDetector), findsNothing);
+      },
+    );
+
+    testWidgets('platform tag alone does not grant reuse', (tester) async {
+      await showChip(
+        tester,
+        classic(verified: false),
+        permission: Future.value(false),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('The tiny puppet show'), findsOneWidget);
+      expect(find.byType(GestureDetector), findsNothing);
+    });
   });
 }

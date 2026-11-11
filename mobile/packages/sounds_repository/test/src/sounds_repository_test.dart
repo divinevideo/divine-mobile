@@ -749,6 +749,47 @@ void main() {
       );
     }
 
+    test(
+      'a current classic awaiting backfill resolves its named original sound',
+      () async {
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        when(() => api.getVideoEvent(testVideoEventId)).thenAnswer(
+          (_) async => Event.fromJson({
+            'id': testEventId2,
+            'pubkey': testPubkey1,
+            'kind': 34236,
+            'created_at': 2000,
+            'content': 'A tiny puppet show',
+            'tags': [
+              ['d', 'puppet-show'],
+              ['platform', 'vine'],
+              ['author', 'Alex'],
+              ['imeta', 'url https://example.com/classic.mp4', 'm video/mp4'],
+            ],
+            'sig': '',
+          }),
+        );
+        final sounds = SoundsRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: api,
+        );
+        addTearDown(sounds.dispose);
+
+        final sound = await sounds.fetchSoundById('video_$testVideoEventId');
+
+        expect(sound?.id, 'video_$testEventId2');
+        expect(sound?.title, 'A tiny puppet show');
+        expect(sound?.sourceVideoReference, '34236:$testPubkey1:puppet-show');
+        expect(sound?.url, 'https://example.com/classic.mp4');
+        expect(
+          sound?.allowsReuse,
+          isFalse,
+          reason: 'reuse requires separate current server policy',
+        );
+      },
+    );
+
     group('fetchPopularSounds', () {
       late _MockFunnelcakeApiClient funnelcake;
 

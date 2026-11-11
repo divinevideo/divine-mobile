@@ -501,7 +501,13 @@ void main() {
           DateTime.fromMillisecondsSinceEpoch(importedAt * 1000, isUtc: true),
         );
         expect(find.text(importedDate), findsNothing);
-        expect(find.text('From the archive'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.text('From the archive'),
+          ),
+          findsOneWidget,
+        );
       },
     );
 
@@ -518,7 +524,13 @@ void main() {
         buildSubject(child: MetadataExpandedSheet(video: video)),
       );
 
-      expect(find.text('Same caption'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(LinkifiedText),
+          matching: find.text('Same caption'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgetsWithSurfaceSize(
@@ -536,7 +548,13 @@ void main() {
         );
 
         // Exact match: only a separate headline renders the bare caption.
-        expect(find.text('Same caption'), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.text('Same caption'),
+          ),
+          findsNothing,
+        );
         expect(
           find.text('Same caption\n\nOriginal stats: 3 loops - 2 likes'),
           findsOneWidget,
@@ -560,8 +578,20 @@ void main() {
           buildSubject(child: MetadataExpandedSheet(video: video)),
         );
 
-        expect(find.text('Original stats: 3 loops - 2 likes'), findsOneWidget);
-        expect(find.textContaining('#windowsxp'), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.text('Original stats: 3 loops - 2 likes'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.textContaining('#windowsxp'),
+          ),
+          findsNothing,
+        );
         expect(find.text('windowsxp'), findsOneWidget);
       },
     );
@@ -591,7 +621,13 @@ void main() {
           ),
           findsOneWidget,
         );
-        expect(find.textContaining('#windowsxp'), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.textContaining('#windowsxp'),
+          ),
+          findsNothing,
+        );
         expect(find.text('windowsxp'), findsOneWidget);
         expect(find.text('outoftune'), findsOneWidget);
       },
@@ -629,7 +665,13 @@ void main() {
         buildSubject(child: MetadataExpandedSheet(video: video)),
       );
 
-      expect(find.text('Original stats: 3 loops - 2 likes'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(LinkifiedText),
+          matching: find.text('Original stats: 3 loops - 2 likes'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgetsWithSurfaceSize('omits a whitespace-only description', (

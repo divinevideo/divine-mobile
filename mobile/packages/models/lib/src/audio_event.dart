@@ -307,7 +307,11 @@ class AudioEvent {
     final reuseTerms = originalSoundReuseTerms(video);
     final isClassic = video.isVerifiedArchive || video.isOriginalVine;
     final classicTitle = video.displayTitle?.trim();
-    final classicCaption = video.displayContent.trim();
+    // Importer statistics are metadata, not part of the original caption.
+    final classicCaption = video.displayContent
+        .split(RegExp('^Original stats:', multiLine: true))
+        .first
+        .trim();
     final title = isClassic
         ? (classicTitle != null &&
                   classicTitle.isNotEmpty &&

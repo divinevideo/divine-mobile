@@ -8,13 +8,7 @@ import 'dart:async';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:meta/meta.dart';
 import 'package:models/models.dart'
-    show
-        AudioEvent,
-        NIP71VideoKinds,
-        NostrHexUtils,
-        VideoEvent,
-        audioEventKind,
-        searchTermsOf;
+    show AudioEvent, NIP71VideoKinds, VideoEvent, audioEventKind, searchTermsOf;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:rxdart/rxdart.dart';
@@ -780,8 +774,11 @@ class SoundsRepository {
   }
 
   Future<AudioEvent?> _fetchVideoOriginalSound(String soundId) async {
-    final videoId = soundId.substring('video_'.length).split('-').first;
-    if (!NostrHexUtils.isValidEventId(videoId)) return null;
+    final match = RegExp(r'^video_([0-9a-fA-F]{64})(?:-.*)?$').firstMatch(
+      soundId,
+    );
+    if (match == null) return null;
+    final videoId = match.group(1)!;
     final api = _funnelcakeApiClient;
     if (api == null || !api.isAvailable) return null;
     final Event? source;
