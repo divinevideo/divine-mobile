@@ -15,6 +15,7 @@ import 'package:profile_repository/profile_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../builders/video_event_builder.dart';
+import '../../../helpers/stored_relay_events.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
@@ -183,7 +184,7 @@ void main() {
           'ea331e1d9e63bb0bb35ff888f142a888'
           '4fd0859ce2428ea3ec33613fa7629478';
       final nostrClient = _MockNostrClient();
-      _answerQueriesFrom(nostrClient, [
+      answerQueriesFromStoredEvents(nostrClient, [
         Event.fromJson({
           'id': otherEventId,
           'pubkey': currentPubkey,
@@ -220,17 +221,5 @@ void main() {
 
       expect(cubit.state.status, SharedVideoSaveStatus.unavailable);
     });
-  });
-}
-
-/// Answers [NostrClient.queryEvents] the way a relay holding [stored] would,
-/// applying each filter with [Filter.checkEvent].
-void _answerQueriesFrom(_MockNostrClient client, List<Event> stored) {
-  when(() => client.queryEvents(any())).thenAnswer((invocation) async {
-    final filters = invocation.positionalArguments.single as List<Filter>;
-    return [
-      for (final event in stored)
-        if (filters.any((filter) => filter.checkEvent(event))) event,
-    ];
   });
 }

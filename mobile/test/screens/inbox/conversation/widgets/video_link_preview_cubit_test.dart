@@ -12,6 +12,8 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/video_link_preview_cubit.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../../../../helpers/stored_relay_events.dart';
+
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -131,7 +133,7 @@ void main() {
       test("emits $VideoLinkPreviewNotFound rather than another author's "
           'video under the same d tag', () async {
         final nostrClient = _MockNostrClient();
-        _answerQueriesFrom(nostrClient, [
+        answerQueriesFromStoredEvents(nostrClient, [
           Event.fromJson({
             'id': otherEventId,
             'pubkey': otherAuthor,
@@ -214,17 +216,5 @@ void main() {
         expect(cubit.state, isA<VideoLinkPreviewLoading>());
       });
     });
-  });
-}
-
-/// Answers [NostrClient.queryEvents] the way a relay holding [stored] would,
-/// applying each filter with [Filter.checkEvent].
-void _answerQueriesFrom(_MockNostrClient client, List<Event> stored) {
-  when(() => client.queryEvents(any())).thenAnswer((invocation) async {
-    final filters = invocation.positionalArguments.single as List<Filter>;
-    return [
-      for (final event in stored)
-        if (filters.any((filter) => filter.checkEvent(event))) event,
-    ];
   });
 }
