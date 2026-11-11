@@ -148,24 +148,24 @@ class _VideoClipThumbnailCardState extends State<VideoClipThumbnailCard> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    /// Thumbnail or placeholder
+                    // Thumbnail or placeholder
                     _Thumbnail(clip: widget.clip),
 
-                    /// The part of the frame a picker above will keep
+                    // The part of the frame a picker above will keep
                     if (ClipCropGuide.maybeOf(context) case final guide?)
                       ClipCropGuideOverlay(
                         aspectRatio: guide.aspectRatio,
                         contentAspectRatio: widget.clip.videoAspectRatio,
                       ),
 
-                    /// The badges keep their size while a pinch on the clip
-                    /// grid scales the thumbnail under them.
+                    // The badges keep their size while a pinch on the clip
+                    // grid scales the thumbnail under them.
                     PinchZoomUnscaled(
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          /// Stop-motion marker + still count and the
-                          /// archived marker - top left
+                          // Stop-motion, archived and gallery backup markers -
+                          // top left
                           if (widget.clip.isStopMotion ||
                               widget.showArchivedBadge ||
                               backupStatus != null)
@@ -177,11 +177,11 @@ class _VideoClipThumbnailCardState extends State<VideoClipThumbnailCard> {
                               backupStatus: backupStatus,
                             ),
 
-                          /// Duration badge - bottom left. Hidden for
-                          /// stop-motion recordings: their playback length
-                          /// (frame count / 12fps) is a tiny, misleading
-                          /// value, so they read as a still image marked only
-                          /// by the stop-motion badge.
+                          // Duration badge - bottom left. Hidden for
+                          // stop-motion recordings: their length (the sum of
+                          // each still's hold) is a misleading value, so they
+                          // read as a still image marked only by the
+                          // stop-motion badge.
                           if (showDurationBadge)
                             _DurationBadge(clip: widget.clip),
 
@@ -191,7 +191,7 @@ class _VideoClipThumbnailCardState extends State<VideoClipThumbnailCard> {
                               bottomOffset: showDurationBadge ? 32 : 8,
                             ),
 
-                          /// Selection check circle - top right
+                          // Selection circle with the pick order - top right
                           if (widget.showSelectionIndicator)
                             _SelectionOverlay(
                               selectionIndex: widget.selectionIndex,
