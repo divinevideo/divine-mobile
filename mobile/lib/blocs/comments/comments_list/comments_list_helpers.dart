@@ -1,6 +1,7 @@
 import 'package:comments_repository/comments_repository.dart';
 
-/// Orders comments by upvotes minus downvotes, then by newest first.
+/// Orders comments by upvotes minus downvotes, then by newest first, then by
+/// id, so the sheet and the feed overlay agree on a tie.
 Comparator<Comment> commentVoteComparator({
   required Map<String, int> upvoteCounts,
   required Map<String, int> downvoteCounts,
@@ -10,7 +11,9 @@ Comparator<Comment> commentVoteComparator({
 
   return (a, b) {
     final byVotes = netVotes(b.id).compareTo(netVotes(a.id));
-    return byVotes == 0 ? b.createdAt.compareTo(a.createdAt) : byVotes;
+    if (byVotes != 0) return byVotes;
+    final byAge = b.createdAt.compareTo(a.createdAt);
+    return byAge != 0 ? byAge : a.id.compareTo(b.id);
   };
 }
 
