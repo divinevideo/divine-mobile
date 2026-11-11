@@ -80,7 +80,7 @@ void main() {
         context: 'runDetached rotate $nsec',
       );
 
-      expect(wrapped.toString(), contains('nsec1<redacted>'));
+      expect(wrapped.toString(), contains('[REDACTED]'));
       expect(wrapped.toString(), isNot(contains(nsec)));
     });
 
@@ -91,7 +91,7 @@ void main() {
         StateError('Signer leaked $nsec to logs'),
       );
 
-      expect(wrapped.toString(), contains('nsec1<redacted>'));
+      expect(wrapped.toString(), contains('[REDACTED]'));
       expect(wrapped.toString(), isNot(contains(nsec)));
     });
   });
@@ -148,7 +148,24 @@ void main() {
     test('replaces a single nsec with the redaction marker', () {
       const input = 'leaked nsec1qwertyuiopasdfghjklzxcvbnm0123456789abcdef';
 
-      expect(sanitizeForCrashReport(input), 'leaked nsec1<redacted>');
+      expect(sanitizeForCrashReport(input), 'leaked [REDACTED]');
+    });
+
+    // Bech32 is case-insensitive, and an ncryptsec is the same key encrypted;
+    // both share the log sink's patterns (#10385).
+    test('redacts an uppercase nsec', () {
+      const input = 'leaked NSEC1QWERTYUIOPASDFGHJKLZXCVBNM0123456789ABCDEF';
+
+      expect(
+        sanitizeForCrashReport(input).toLowerCase(),
+        isNot(contains('nsec1')),
+      );
+    });
+
+    test('redacts an ncryptsec', () {
+      const input = 'leaked ncryptsec1qgqeyafqwzabcdef';
+
+      expect(sanitizeForCrashReport(input), isNot(contains('ncryptsec1')));
     });
 
     test('replaces multiple identifiers in the same string', () {
@@ -157,7 +174,7 @@ void main() {
       final out = sanitizeForCrashReport(input);
 
       expect(out, contains('npub1<redacted>'));
-      expect(out, contains('nsec1<redacted>'));
+      expect(out, contains('[REDACTED]'));
       expect(out, isNot(contains('npub1aaa')));
       expect(out, isNot(contains('nsec1bbb')));
     });
@@ -203,7 +220,7 @@ void main() {
       final out = sanitizeForCrashReport(input);
 
       expect(out, contains('u***@example.com'));
-      expect(out, contains('nsec1<redacted>'));
+      expect(out, contains('[REDACTED]'));
       expect(out, contains('npub1<redacted>'));
       expect(out, isNot(contains('user@example.com')));
     });
