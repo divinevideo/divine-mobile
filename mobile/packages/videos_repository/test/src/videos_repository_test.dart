@@ -14539,7 +14539,7 @@ void main() {
           verify(() => mockLocalStorage.getEventsByDTag(dTag)).called(1);
         });
 
-        group('on a bare event-id route', () {
+        group('when an event id is a candidate', () {
           // A hex route is looked up as an event id and as a d tag, so anyone
           // can answer it by publishing a video whose d tag is that id.
           final squattingVideo = _createVideoEventWithDTag(
@@ -14565,6 +14565,12 @@ void main() {
               nostrClient: mockNostrClient,
               funnelcakeApiClient: mockFunnelcakeClient,
             );
+
+            // Positive control: an unattributed lookup finds the squatter.
+            final bare = await repo.fetchVideoWithStatsForRouteId(
+              authorEventId,
+            );
+            expect(bare?.id, equals(otherEventId));
 
             expect(
               await repo.fetchVideoWithStatsForRouteId(
@@ -14656,7 +14662,6 @@ void main() {
           test('resolves the route by an upper-case expectedAuthor', () async {
             _answerQueriesFrom(mockNostrClient, [
               authorsRegularVideo,
-              squattingVideo,
             ]);
             final repo = VideosRepository(
               nostrClient: mockNostrClient,
