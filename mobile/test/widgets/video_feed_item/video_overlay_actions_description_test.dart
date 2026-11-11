@@ -162,6 +162,25 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    testWidgets('shows named classic sound in the real feed overlay', (
+      tester,
+    ) async {
+      testVideo = testVideo.copyWith(
+        title: 'A recognizable classic',
+        rawTags: const {'platform': 'vine'},
+      );
+      await pumpOverlay(tester);
+
+      expect(find.byType(AudioAttributionRow), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AudioAttributionRow),
+          matching: find.textContaining('A recognizable classic'),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('shows title and description for a non-classic video', (
       tester,
     ) async {

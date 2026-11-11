@@ -2073,6 +2073,45 @@ void main() {
         expect(find.text('Already in Sounds'), findsOneWidget);
       });
 
+      testWidgets('rechecks permission before adding a sound to the library', (
+        tester,
+      ) async {
+        final sound = createTestAudioEvent(id: 'sound1');
+        SharedPreferences.setMockInitialValues({});
+        final preferences = await SharedPreferences.getInstance();
+        final service = SavedSoundsService(preferences);
+        var checks = 0;
+        await tester.pumpWidget(
+          SavedSoundsScope(
+            service: service,
+            mediaProbe: _NoopSavedSoundMediaProbe(),
+            child: createTestWidget(
+              overrides: [
+                audioReuseConsentProvider(sound).overrideWith(
+                  (ref) async => ++checks == 1,
+                ),
+                soundUsageCountProvider(sound.id)
+                    .overrideWith((ref) async => 0),
+                videosUsingSoundProvider(sound.id)
+                    .overrideWith((ref) async => <String>[]),
+                audioPlaybackServiceProvider.overrideWithValue(
+                  mockAudioService,
+                ),
+              ],
+              child: SoundDetailScreen(sound: sound),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Use Sound'), findsOneWidget);
+
+        await tester.tap(find.text('Use Sound'));
+        await tester.pumpAndSettle();
+
+        expect(service.loadSounds(), isEmpty);
+        expect(checks, 2);
+      });
+
       testWidgets('back button stops preview if playing', (tester) async {
         final testSound = createTestAudioEvent(id: 'sound1');
 

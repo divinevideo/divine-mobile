@@ -136,8 +136,8 @@ class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
 
 /// Community sounds matching a free-text [query].
 ///
-/// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
-/// for reach plus the in-memory cache for partial and title matches, and a
+/// [SoundsRepository.searchSounds] owns the composition — full-text and tag
+/// queries plus the in-memory cache for partial matches, and a
 /// reuse lookup that ranks unnamed sounds last — so this is a thin
 /// pass-through. Blank queries resolve to an empty list without a round
 /// trip; the caller shows the trending list instead of searching.

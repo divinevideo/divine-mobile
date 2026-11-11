@@ -340,10 +340,13 @@ class VideoOverlayActions extends ConsumerWidget {
           onInteracted: onInteracted,
         ),
       ],
-      // The row renders nothing without an audio reference or a sound
-      // credit line, so the gap above it is gated on the same check.
+      // Keep the gap in sync with the row's shared, credited, and classic
+      // original-sound branches.
       if (video != null &&
-          (video.hasAudioReference || video.soundCredits.isNotEmpty)) ...[
+          (video.hasAudioReference ||
+              video.soundCredits.isNotEmpty ||
+              video.isVerifiedArchive ||
+              video.isOriginalVine)) ...[
         const SizedBox(height: 4),
         AudioAttributionRow(video: video),
       ] else if (showSoundRowPlaceholder) ...[

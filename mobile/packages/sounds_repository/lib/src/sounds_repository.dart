@@ -590,11 +590,9 @@ class SoundsRepository {
   /// those and the union is what the caller sees. Composing them here rather
   /// than in a bloc is what keeps the caller from having to know that.
   ///
-  /// A multi-word query is split by [searchTermsOf] and every term must match
-  /// something on the sound — the relay is asked for *any* of them, which is
-  /// how candidates are found, and [AudioEvent.matchesSearch] then narrows
-  /// them. Returns an empty list without querying when [query] holds no
-  /// searchable term.
+  /// Full-text search finds names and descriptions without a warm cache.
+  /// Tag search also finds relays' hashtag matches; [AudioEvent.matchesSearch]
+  /// requires every query term across the sound's searchable fields.
   ///
   /// Newest first, except that a video's own audio left untitled and
   /// uncredited that no other account used follows the rest
@@ -632,9 +630,15 @@ class SoundsRepository {
 
     var relayAnswered = true;
     try {
-      // The same read as queryEvents, which reports a timeout or an empty
-      // relay set only through these flags rather than by throwing.
+      // Full-text gets its own limit: a capped OR-of-tags page can omit
+      // the only sound matching all words, even before local narrowing.
       final read = await _nostrClient.queryEventsDetailed([
+        Filter(
+          kinds: const [audioEventKind],
+          m: audioMimeTypes,
+          search: terms.join(' '),
+          limit: limit,
+        ),
         Filter(
           kinds: const [audioEventKind],
           m: audioMimeTypes,
@@ -684,6 +688,10 @@ class SoundsRepository {
         category: LogCategory.api,
       );
       return null;
+    }
+
+    if (eventId.startsWith('video_')) {
+      return _fetchVideoOriginalSound(eventId);
     }
 
     // Check cache first
@@ -763,6 +771,43 @@ class SoundsRepository {
       );
       rethrow;
     }
+  }
+
+  Future<AudioEvent?> _fetchVideoOriginalSound(String soundId) async {
+    final match = RegExp(r'^video_([0-9a-fA-F]{64})(?:-.*)?$').firstMatch(
+      soundId,
+    );
+    if (match == null) return null;
+    final videoId = match.group(1)!;
+    final api = _funnelcakeApiClient;
+    if (api == null || !api.isAvailable) return null;
+    final Event? source;
+    try {
+      source = await api.getVideoEvent(videoId);
+    } on Exception catch (error) {
+      Log.warning(
+        'Current original-sound source lookup failed for $videoId: $error',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      return null;
+    }
+    if (source == null || !NIP71VideoKinds.isVideoKind(source.kind)) {
+      return null;
+    }
+    final video = VideoEvent.fromNostrEvent(source);
+    if (video.audioEventId case final audioId?) {
+      // Never reinterpret an unresolved shared sound as the video's own audio.
+      final audio = await _nostrClient.fetchEventById(audioId);
+      if (audio == null || audio.kind != audioEventKind) return null;
+      final sound = AudioEvent.fromNostrEvent(audio);
+      _cacheSound(sound);
+      return sound;
+    }
+    return AudioEvent.fromVideoOriginalSound(
+      video,
+      creatorName: video.authorName,
+    );
   }
 
   /// Get a sound from the cache without making a network request.
