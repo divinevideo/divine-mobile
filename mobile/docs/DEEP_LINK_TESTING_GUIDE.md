@@ -109,10 +109,11 @@ adb shell pm verify-app-links --re-verify co.openvine.app
    A link is untrusted input, so these lines never carry a private key or a
    query value (#10385). In a logged URL, every query value reads `REDACTED`,
    and so does a host, path segment or query key that carries an `nsec` or
-   `ncryptsec` (a host prints as `redacted`, because URIs lowercase hosts). In a field the parser extracted, a key reads `[REDACTED]`, or
-   `<redacted>` where it stood in for a pubkey. The log sink itself also
-   replaces any key that still reaches it with `[REDACTED]`. Public ids such
-   as an npub, a hex pubkey or a note id are logged whole.
+   `ncryptsec` (a host prints as `redacted`, because URIs lowercase hosts).
+   In a field the parser extracted, a key reads `[REDACTED]`, or `<redacted>`
+   where it stood in for a pubkey. The log sink itself also replaces any key
+   that still reaches it, at any length, with `[REDACTED]`. Public ids such as
+   an npub, a hex pubkey or a note id are logged whole.
 
 ### ❌ Failure Indicators
 
