@@ -8829,13 +8829,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Вашият видео отговор се публикува';
 
   @override
-  String get commentsSortNew => 'Нови';
+  String get commentsSortRecent => 'Скорошни';
 
   @override
   String get commentsSortTop => 'Топ';
-
-  @override
-  String get commentsSortOld => 'Стари';
 
   @override
   String get commentsSortSemanticLabel => 'Подреждане на коментарите';

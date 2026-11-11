@@ -8788,13 +8788,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Je videoreactie wordt geplaatst';
 
   @override
-  String get commentsSortNew => 'Nieuw';
+  String get commentsSortRecent => 'Recent';
 
   @override
   String get commentsSortTop => 'Top';
-
-  @override
-  String get commentsSortOld => 'Oud';
 
   @override
   String get commentsSortSemanticLabel => 'Sortering van reacties';

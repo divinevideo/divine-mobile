@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for CommentItem with the split CommentComposerBloc +
 // ABOUTME: CommentReactionsBloc provider tree.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -374,6 +376,115 @@ void main() {
   });
 
   group('interactions', () {
+    testWidgets('shows and updates the two vote counts independently', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      final comment = CommentBuilder().withId('1' * 64).build();
+      final initial = CommentReactionsState(
+        commentUpvoteCounts: {comment.id: 3},
+        commentDownvoteCounts: {comment.id: 3},
+      );
+      final updates = StreamController<CommentReactionsState>();
+      addTearDown(updates.close);
+      whenListen(mocks.reactions, updates.stream, initialState: initial);
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          comment.content,
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          comment: comment,
+        ),
+      );
+
+      final upvote = find.bySemanticsIdentifier('upvote_button');
+      final downvote = find.bySemanticsIdentifier('downvote_button');
+      Finder countInside(Finder button, String count) =>
+          find.descendant(of: button, matching: find.text(count));
+
+      expect(countInside(upvote, '3'), findsOneWidget);
+      expect(countInside(downvote, '3'), findsOneWidget);
+      expect(tester.getSemantics(upvote).value, '3');
+      expect(tester.getSemantics(downvote).value, '3');
+
+      updates.add(initial.copyWith(commentDownvoteCounts: {comment.id: 0}));
+      await tester.pump();
+
+      expect(countInside(upvote, '3'), findsOneWidget);
+      expect(countInside(downvote, '0'), findsOneWidget);
+      expect(tester.getSemantics(downvote).value, '0');
+
+      await tester.tap(countInside(downvote, '0'));
+      final event = verify(
+        () => mocks.reactions.add(captureAny()),
+      ).captured.whereType<CommentVoteToggled>().single;
+      expect(event.vote, Vote.down);
+      expect(event.commentId, comment.id);
+    });
+
+    testWidgets('shows no count on either arrow before the totals load', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      final comment = CommentBuilder().withId('1' * 64).build();
+      whenListen(
+        mocks.reactions,
+        const Stream<CommentReactionsState>.empty(),
+        initialState: const CommentReactionsState(),
+      );
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          comment.content,
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          comment: comment,
+        ),
+      );
+
+      // An unloaded total is unknown, not zero: a "0" here would be a guess.
+      for (final id in ['upvote_button', 'downvote_button']) {
+        final button = find.bySemanticsIdentifier(id);
+        expect(
+          find.descendant(of: button, matching: find.byType(Text)),
+          findsNothing,
+        );
+        expect(tester.getSemantics(button).value, isEmpty);
+      }
+    });
+
+    testWidgets('shows a large total compactly and announces it exactly', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      final comment = CommentBuilder().withId('1' * 64).build();
+      whenListen(
+        mocks.reactions,
+        const Stream<CommentReactionsState>.empty(),
+        initialState: CommentReactionsState(
+          commentUpvoteCounts: {comment.id: 1200},
+          commentDownvoteCounts: {comment.id: 0},
+        ),
+      );
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          comment.content,
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          comment: comment,
+        ),
+      );
+
+      final upvote = find.bySemanticsIdentifier('upvote_button');
+      expect(
+        find.descendant(of: upvote, matching: find.text('1.2K')),
+        findsOneWidget,
+      );
+      expect(tester.getSemantics(upvote).value, '1200');
+    });
+
     testWidgets('votes a video reply with its own coordinate and kind, not the '
         "parent video's (#6124)", (tester) async {
       // The reply's own coordinate is deliberate: funnelcake's

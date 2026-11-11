@@ -4500,17 +4500,13 @@
   },
   "commentsVideoReplyPending": "发布中…",
   "commentsVideoReplyPendingSemanticLabel": "正在发布你的视频回复",
-  "commentsSortNew": "最新",
-  "@commentsSortNew": {
+  "commentsSortRecent": "最新",
+  "@commentsSortRecent": {
     "description": "Comments-sort toggle label for newest-first order."
   },
   "commentsSortTop": "最热",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
-  },
-  "commentsSortOld": "最早",
-  "@commentsSortOld": {
-    "description": "Comments-sort toggle label for oldest-first order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortSemanticLabel": "评论排序",
   "@commentsSortSemanticLabel": {

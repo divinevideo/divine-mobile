@@ -5236,17 +5236,13 @@
   "@commentsVideoReplyPendingSemanticLabel": {
     "description": "Screen-reader label for the pending video-reply row in the comments sheet."
   },
-  "commentsSortNew": "కొత్తది",
-  "@commentsSortNew": {
+  "commentsSortRecent": "ఇటీవలిది",
+  "@commentsSortRecent": {
     "description": "Comments-sort toggle label for newest-first order."
   },
   "commentsSortTop": "టాప్",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
-  },
-  "commentsSortOld": "పాతది",
-  "@commentsSortOld": {
-    "description": "Comments-sort toggle label for oldest-first order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortSemanticLabel": "వ్యాఖ్యల క్రమబద్ధీకరణ",
   "@commentsSortSemanticLabel": {

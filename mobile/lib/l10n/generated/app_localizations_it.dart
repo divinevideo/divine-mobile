@@ -8857,13 +8857,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'La tua risposta video è in pubblicazione';
 
   @override
-  String get commentsSortNew => 'Nuovi';
+  String get commentsSortRecent => 'Recenti';
 
   @override
   String get commentsSortTop => 'Migliori';
-
-  @override
-  String get commentsSortOld => 'Vecchi';
 
   @override
   String get commentsSortSemanticLabel => 'Ordinamento dei commenti';

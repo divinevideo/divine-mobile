@@ -4500,17 +4500,13 @@
   },
   "commentsVideoReplyPending": "پوسٹ ہو رہا ہے…",
   "commentsVideoReplyPendingSemanticLabel": "آپ کا ویڈیو جواب پوسٹ ہو رہا ہے",
-  "commentsSortNew": "نئے",
-  "@commentsSortNew": {
+  "commentsSortRecent": "تازہ ترین",
+  "@commentsSortRecent": {
     "description": "Comments-sort toggle label for newest-first order."
   },
   "commentsSortTop": "بہترین",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
-  },
-  "commentsSortOld": "پرانے",
-  "@commentsSortOld": {
-    "description": "Comments-sort toggle label for oldest-first order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortSemanticLabel": "تبصروں کی ترتیب",
   "@commentsSortSemanticLabel": {

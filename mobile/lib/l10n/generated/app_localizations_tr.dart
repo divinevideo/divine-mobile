@@ -8665,13 +8665,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Video yanıtınız gönderiliyor';
 
   @override
-  String get commentsSortNew => 'Yeni';
+  String get commentsSortRecent => 'En yeni';
 
   @override
   String get commentsSortTop => 'En iyi';
-
-  @override
-  String get commentsSortOld => 'Eski';
 
   @override
   String get commentsSortSemanticLabel => 'Yorum sıralaması';

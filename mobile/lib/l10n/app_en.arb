@@ -6250,17 +6250,13 @@
   "@commentsVideoReplyPendingSemanticLabel": {
     "description": "Screen-reader label for the pending video-reply row in the comments sheet."
   },
-  "commentsSortNew": "New",
-  "@commentsSortNew": {
+  "commentsSortRecent": "Recent",
+  "@commentsSortRecent": {
     "description": "Comments-sort toggle label for newest-first order."
   },
   "commentsSortTop": "Top",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
-  },
-  "commentsSortOld": "Old",
-  "@commentsSortOld": {
-    "description": "Comments-sort toggle label for oldest-first order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortSemanticLabel": "Comments sorting",
   "@commentsSortSemanticLabel": {

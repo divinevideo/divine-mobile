@@ -1924,12 +1924,17 @@ class LikesRepository {
     // [getUserVoteStatuses]. The coordinate leg reaches reactions cast against
     // every earlier revision of the target, including ones their author has
     // since deleted — switching an upvote to a downvote on an edited reply
-    // publishes exactly that pair, and counting both leaves netScore 0, which
-    // `comment_item.dart` renders by hiding the score outright (#6124).
+    // publishes exactly that pair. Counting both inflates the visible totals
+    // and incorrectly gives the reply a net score of zero (#6124).
     final reactionsById = {for (final event in events) event.id: event};
     final deletedReactionIds = await _deletedReactionIds(reactionsById);
 
+    // One vote per account per target, decided by the account's newest
+    // surviving reaction. Kind 7 is a regular event, so a relay keeps every
+    // reaction an account publishes; counting events would let one account
+    // cast any number of votes and set a comment's place in the Top order.
     final knownEventIds = eventIds.toSet();
+    final newestVoteByVoter = <(String, String), Event>{};
     for (final event in reactionsById.values) {
       if (deletedReactionIds.contains(event.id)) continue;
       final targetId = _resolveVoteTarget(
@@ -1938,7 +1943,15 @@ class LikesRepository {
         eventIdByCoordinate,
       );
       if (targetId == null) continue;
+      final key = (targetId, event.pubkey);
+      final current = newestVoteByVoter[key];
+      if (current == null || _isNewerReaction(event, current)) {
+        newestVoteByVoter[key] = event;
+      }
+    }
 
+    for (final MapEntry(key: (targetId, _), value: event)
+        in newestVoteByVoter.entries) {
       if (event.content == _downvoteContent) {
         downvotes[targetId] = downvotes[targetId]! + 1;
       } else {
@@ -3593,6 +3606,13 @@ class LikesRepository {
   /// empty form.
   static bool _isLikeReaction(Event event) =>
       event.content == _likeContent || event.content.isEmpty;
+
+  /// Whether [event] supersedes [other] as one account's vote. Reactions
+  /// from the same second are ordered by id, so every reader keeps the same
+  /// one regardless of the order relays return them in.
+  static bool _isNewerReaction(Event event, Event other) =>
+      event.createdAt > other.createdAt ||
+      (event.createdAt == other.createdAt && event.id.compareTo(other.id) > 0);
 
   /// The live reaction that startup reconciliation or the live subscription
   /// has already indexed for [eventId] or its coordinate, shaped exactly as

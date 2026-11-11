@@ -8546,13 +8546,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get commentsVideoReplyPendingSemanticLabel => 'የቪዲዮ ምላሽዎ በመለጠፍ ላይ ነው';
 
   @override
-  String get commentsSortNew => 'አዲስ';
+  String get commentsSortRecent => 'የቅርብ ጊዜ';
 
   @override
   String get commentsSortTop => 'ከፍተኛ';
-
-  @override
-  String get commentsSortOld => 'አሮጌ';
 
   @override
   String get commentsSortSemanticLabel => 'የአስተያየቶች ቅደም ተከተል';

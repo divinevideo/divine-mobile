@@ -8880,13 +8880,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Votre réponse vidéo est en cours de publication';
 
   @override
-  String get commentsSortNew => 'Récents';
+  String get commentsSortRecent => 'Récents';
 
   @override
   String get commentsSortTop => 'Top';
-
-  @override
-  String get commentsSortOld => 'Anciens';
 
   @override
   String get commentsSortSemanticLabel => 'Tri des commentaires';

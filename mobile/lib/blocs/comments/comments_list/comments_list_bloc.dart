@@ -21,8 +21,8 @@ part 'comments_list_state.dart';
 /// video. Mutations from [CommentComposerBloc] and [CommentReactionsBloc]
 /// flow in through UI [BlocListener]s as Optimistic*/CommentReplacedInStore /
 /// CommentRemovedFromStore / CommentsRemovedByAuthorFromStore events.
-/// Engagement sort needs upvote counts from [CommentReactionsBloc] — see
-/// [CommentsListState.threadedCommentsWith].
+/// Top sort needs vote counts from [CommentReactionsBloc]; see
+/// [CommentsListState.displayCommentsWith].
 ///
 /// With a [CommentModerationRepository] it also loads what the video owner
 /// hid from the thread (#5044), and lets the owner hide and restore comments.
@@ -191,7 +191,6 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           commentsById: commentsById,
           hasMoreContent: hasMore,
           nextOffset: thread.nextOffset,
-          replyCountsByCommentId: computeReplyCounts(commentsById),
           moderation: loadedModeration,
         ),
       );
@@ -242,8 +241,8 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       return;
     }
 
-    // Cursor = min createdAt across non-placeholder comments. Sort-mode
-    // agnostic so `oldest` / `topEngagement` don't fold to the wrong cursor.
+    // Cursor = min createdAt across non-placeholder comments, whatever the
+    // sort mode, so Top's vote ranking never moves the paging cursor.
     // Returns early if every comment is an optimistic placeholder.
     final realCreatedAts = state.commentsById.values
         .where((c) => !c.id.startsWith(commentPlaceholderIdPrefix))
@@ -287,7 +286,6 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
             threadTotalCount: thread.totalCount,
             threadHasMore: thread.hasMore,
           ),
-          replyCountsByCommentId: computeReplyCounts(allCommentsById),
         ),
       );
       _focusWhenLoaded(
@@ -368,7 +366,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     CommentsScrollHandled event,
     Emitter<CommentsListState> emit,
   ) {
-    if (state.scrollToCommentId == null) return;
+    if (state.scrollToCommentId != event.commentId) return;
     emit(state.copyWith(clearScrollTo: true));
   }
 
@@ -389,6 +387,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         if (entry.key.startsWith(commentPlaceholderIdPrefix)) entry.value,
     ];
     final newIds = <String>{};
+    var scrollToCommentId = state.scrollToCommentId;
     var changed = false;
     var added = false;
 
@@ -432,6 +431,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       if (placeholder != null) {
         store.remove(placeholder.id);
         placeholders.remove(placeholder);
+        if (scrollToCommentId == placeholder.id) scrollToCommentId = comment.id;
       }
       store[comment.id] = comment;
       // A comment the owner hid does not announce itself in the pill.
@@ -449,7 +449,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       state.copyWith(
         status: added ? CommentsStatus.success : state.status,
         commentsById: store,
-        replyCountsByCommentId: computeReplyCounts(store),
+        scrollToCommentId: scrollToCommentId,
         // The pill counts only new comments that are still listed.
         newCommentIds: {
           ...state.newCommentIds,
@@ -486,11 +486,12 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
 
   void _emitStore(
     Emitter<CommentsListState> emit,
-    Map<String, Comment> updated,
-  ) {
+    Map<String, Comment> updated, {
+    String? scrollToCommentId,
+  }) {
     final next = state.copyWith(
       commentsById: updated,
-      replyCountsByCommentId: computeReplyCounts(updated),
+      scrollToCommentId: scrollToCommentId,
       // The pill counts only new comments that are still listed.
       newCommentIds: state.newCommentIds.where(updated.containsKey).toSet(),
     );
@@ -507,22 +508,20 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     OptimisticCommentInserted event,
     Emitter<CommentsListState> emit,
   ) {
-    // Flag the just-inserted comment for scroll-into-view only when it is a
-    // reply: a reply nests under an (often older) parent and would otherwise
-    // render off-screen, so the poster thinks the post failed and retries
-    // (#5854). A new top-level comment already lands at the visible top, so it
-    // needs no scroll. The UI scrolls to the flagged id then acks via
-    // [CommentsScrollHandled].
+    // A post can rank below other comments in Top. In Recent a new
+    // top-level post lands at the top, while replies can nest off-screen
+    // under an older parent (#5854).
     final updated = {
       ...state.commentsById,
       event.placeholder.id: event.placeholder,
     };
-    final isReply = event.placeholder.replyToEventId != null;
+    final shouldReveal =
+        event.placeholder.replyToEventId != null ||
+        state.sortMode != CommentsSortMode.newest;
     emit(
       state.copyWith(
         commentsById: updated,
-        replyCountsByCommentId: computeReplyCounts(updated),
-        scrollToCommentId: isReply ? event.placeholder.id : null,
+        scrollToCommentId: shouldReveal ? event.placeholder.id : null,
       ),
     );
   }
@@ -531,24 +530,18 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     OptimisticCommentConfirmed event,
     Emitter<CommentsListState> emit,
   ) {
-    // Race-safe: if the relay echo arrived first via NewCommentsBatchReceived,
-    // the confirmed id is already present in the store and the placeholder has
-    // been swapped out. Just clean up any leftover placeholder.
-    if (state.commentsById.containsKey(event.confirmed.id)) {
-      if (!state.commentsById.containsKey(event.placeholderId)) return;
-      _emitStore(
-        emit,
-        Map<String, Comment>.from(state.commentsById)
-          ..remove(event.placeholderId),
-      );
-      return;
-    }
-
+    // A relay echo can arrive first. Keep its canonical comment, and transfer
+    // any outstanding reveal request when replacing the placeholder.
+    final updated = Map<String, Comment>.from(state.commentsById);
+    final placeholder = updated.remove(event.placeholderId);
+    if (placeholder == null && updated.containsKey(event.confirmed.id)) return;
+    updated.putIfAbsent(event.confirmed.id, () => event.confirmed);
     _emitStore(
       emit,
-      Map<String, Comment>.from(state.commentsById)
-        ..remove(event.placeholderId)
-        ..[event.confirmed.id] = event.confirmed,
+      updated,
+      scrollToCommentId: state.scrollToCommentId == event.placeholderId
+          ? event.confirmed.id
+          : null,
     );
   }
 

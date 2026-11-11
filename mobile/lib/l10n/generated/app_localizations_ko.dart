@@ -8329,13 +8329,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get commentsVideoReplyPendingSemanticLabel => '동영상 답글을 게시하는 중입니다';
 
   @override
-  String get commentsSortNew => '최신순';
+  String get commentsSortRecent => '최신순';
 
   @override
   String get commentsSortTop => '인기순';
-
-  @override
-  String get commentsSortOld => '오래된순';
 
   @override
   String get commentsSortSemanticLabel => '댓글 정렬';

@@ -150,10 +150,12 @@ class CommentsTitle extends StatelessWidget {
                 NewCommentsPill(
                   count: state.newCommentCount,
                   onTap: () {
-                    onNewCommentsPillTap();
-                    context.read<CommentsListBloc>().add(
-                      const NewCommentsAcknowledged(),
+                    final bloc = context.read<CommentsListBloc>();
+                    bloc.add(
+                      const CommentsSortModeChanged(CommentsSortMode.newest),
                     );
+                    onNewCommentsPillTap();
+                    bloc.add(const NewCommentsAcknowledged());
                   },
                 ),
             ],
@@ -337,7 +339,7 @@ abstract final class CommentsScreen {
             },
           ),
           leading: const HiddenCommentsToggle(),
-          trailing: const _CommentsSortToggle(),
+          trailing: const CommentsSortToggle(),
           // Wrap the input so the keyboard is dropped the instant the sheet
           // starts dismissing (drag / scrim / back), otherwise iOS leaves it
           // stranded over the feed below (#5604).
@@ -437,12 +439,8 @@ class OutboxBridges extends StatelessWidget {
             onCommentCountChanged?.call(state.commentsById.length);
           },
         ),
-        // When new non-placeholder ids appear in the store, fetch their vote
-        // counts. Only the DIFF is requested (not the whole set) so a
-        // viral-video feed doesn't redundantly hammer the relay with the
-        // same N-1 already-known ids on every emit. The handler is
-        // restartable, so a slower in-flight fetch can't clobber a fresher
-        // one — see CommentReactionsBloc.on<CommentVoteCountsFetchRequested>.
+        // Ask for votes on non-placeholder ids whose counts are missing.
+        // CommentReactionsBloc deduplicates ids that are still loading.
         BlocListener<CommentsListBloc, CommentsListState>(
           listenWhen: (prev, next) =>
               !_idSetsEqual(prev.commentsById, next.commentsById),
@@ -1217,9 +1215,10 @@ class HiddenCommentsToggle extends StatelessWidget {
   }
 }
 
-/// Sort toggle button that cycles: New → Top → Old → New.
-class _CommentsSortToggle extends StatelessWidget {
-  const _CommentsSortToggle();
+/// Switches the comments sheet between Top and Recent.
+@visibleForTesting
+class CommentsSortToggle extends StatelessWidget {
+  const CommentsSortToggle({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1228,12 +1227,11 @@ class _CommentsSortToggle extends StatelessWidget {
       builder: (context, sortMode) {
         final l10n = context.l10n;
         final (icon, label) = switch (sortMode) {
-          CommentsSortMode.newest => (Icons.schedule, l10n.commentsSortNew),
+          CommentsSortMode.newest => (Icons.schedule, l10n.commentsSortRecent),
           CommentsSortMode.topEngagement => (
             Icons.local_fire_department,
             l10n.commentsSortTop,
           ),
-          CommentsSortMode.oldest => (Icons.history, l10n.commentsSortOld),
         };
 
         return Semantics(
@@ -1244,8 +1242,7 @@ class _CommentsSortToggle extends StatelessWidget {
             onTap: () {
               final nextMode = switch (sortMode) {
                 CommentsSortMode.newest => CommentsSortMode.topEngagement,
-                CommentsSortMode.topEngagement => CommentsSortMode.oldest,
-                CommentsSortMode.oldest => CommentsSortMode.newest,
+                CommentsSortMode.topEngagement => CommentsSortMode.newest,
               };
               context.read<CommentsListBloc>().add(
                 CommentsSortModeChanged(nextMode),

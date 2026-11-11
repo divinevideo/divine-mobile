@@ -51,13 +51,8 @@ class CommentReactionsBloc
       _onVoteToggled,
       transformer: sequentialByKey((event) => event.commentId),
     );
-    // restartable(): on a fast comment stream the UI bridge dispatches a
-    // fetch for each new id batch. Without this, a slow earlier fetch
-    // returning after a newer one could clobber the fresher counts.
-    on<CommentVoteCountsFetchRequested>(
-      _onVoteCountsFetchRequested,
-      transformer: restartable(),
-    );
+    // Disjoint batches load concurrently. The handler deduplicates pending ids.
+    on<CommentVoteCountsFetchRequested>(_onVoteCountsFetchRequested);
     // sequential(): every block republishes the whole kind 10000 mute list,
     // so two at once would race to replace it; each block still runs (#8168).
     on<CommentBlockUserRequested>(
@@ -80,6 +75,23 @@ class CommentReactionsBloc
   final ContentBlocklistRepository _contentBlocklistRepository;
   final String _rootEventId;
   final String? _rootAddressableId;
+
+  /// Vote reads in flight. A vote on the comment marks its read stale: the
+  /// entry stays so the id is not read twice, the result is dropped, and the
+  /// comment is read again once the read and any publish finish.
+  final _voteReads = <String, _VoteRead>{};
+
+  /// Comments with a vote publishing. A set is enough because
+  /// [sequentialByKey] runs one vote per comment at a time.
+  final _publishingVotes = <String>{};
+
+  /// Comments whose viewer vote this sheet confirmed. The relay's copy of
+  /// that vote is older, so it is not read again.
+  final _confirmedLocalVotes = <String>{};
+
+  /// Reads to send when a comment's publish finishes. An entry exists only
+  /// while the comment is in [_publishingVotes].
+  final _voteRefreshAfterPublish = <String, CommentVoteCountsFetchRequested>{};
 
   /// Logs [error] to the unified log and forwards through [addError]. Wraps
   /// with [Reportable] (matrix-YES → Crashlytics) when [error] is not one of
@@ -139,61 +151,119 @@ class CommentReactionsBloc
     CommentVoteCountsFetchRequested event,
     Emitter<CommentReactionsState> emit,
   ) async {
-    if (event.commentIds.isEmpty) return;
+    final commentIds = <String>[];
+    for (final id in event.commentIds) {
+      if (_voteReads.containsKey(id)) continue;
+      _voteReads[id] = _publishingVotes.contains(id)
+          ? _VoteRead.stale
+          : _VoteRead.current;
+      commentIds.add(id);
+    }
+    if (commentIds.isEmpty) return;
 
-    try {
-      final results = await Future.wait([
-        _likesRepository.getVoteCounts(
-          event.commentIds,
-          addressableIds: event.addressableIdsByCommentId,
-        ),
-        _likesRepository.getUserVoteStatuses(
-          event.commentIds,
-          addressableIds: event.addressableIdsByCommentId,
-        ),
-      ]);
+    bool canApply(String id) => _voteReads[id] == _VoteRead.current;
 
-      final voteCounts =
-          results[0]
-              as ({Map<String, int> upvotes, Map<String, int> downvotes});
-      final voteStatuses =
-          results[1] as ({Set<String> upvotedIds, Set<String> downvotedIds});
+    Future<void> loadCounts() async {
+      final counts = await _likesRepository.getVoteCounts(
+        commentIds,
+        addressableIds: event.addressableIdsByCommentId,
+      );
+      if (emit.isDone) return;
 
-      // Merge into existing maps/sets rather than replacing — keep
-      // previously-fetched counts for ids not in this batch so an
-      // incremental fetch (only newly-loaded comments) doesn't lose
-      // already-known counts.
       emit(
         state.copyWith(
           commentUpvoteCounts: {
             ...state.commentUpvoteCounts,
-            ...voteCounts.upvotes,
+            for (final entry in counts.upvotes.entries)
+              if (canApply(entry.key)) entry.key: entry.value,
           },
           commentDownvoteCounts: {
             ...state.commentDownvoteCounts,
-            ...voteCounts.downvotes,
-          },
-          upvotedCommentIds: {
-            ...state.upvotedCommentIds,
-            ...voteStatuses.upvotedIds,
-          },
-          downvotedCommentIds: {
-            ...state.downvotedCommentIds,
-            ...voteStatuses.downvotedIds,
+            for (final entry in counts.downvotes.entries)
+              if (canApply(entry.key)) entry.key: entry.value,
           },
         ),
       );
-    } catch (e, stackTrace) {
-      // LikesRepository fetch IO — matrix-NO (Network/IO). UI silently
-      // misses vote counts but the rest of the screen is unaffected.
-      _logFailure(
-        e,
-        stackTrace,
-        CommentReactionsBlocReportableSites.onVoteCountsFetchRequested,
-        'Error fetching comment vote counts',
+    }
+
+    Future<void> loadViewerVotes() async {
+      // A confirmed local action is newer than the viewer's relay snapshot.
+      final viewerIds = commentIds
+          .where((id) => !_confirmedLocalVotes.contains(id))
+          .toList();
+      if (viewerIds.isEmpty) return;
+
+      final votes = await _likesRepository.getUserVoteStatuses(
+        viewerIds,
+        addressableIds: event.addressableIdsByCommentId,
+      );
+      if (emit.isDone) return;
+
+      final refreshed = viewerIds.where(canApply).toSet();
+      emit(
+        state.copyWith(
+          upvotedCommentIds: {
+            ...state.upvotedCommentIds.difference(refreshed),
+            ...votes.upvotedIds.where(refreshed.contains),
+          },
+          downvotedCommentIds: {
+            ...state.downvotedCommentIds.difference(refreshed),
+            ...votes.downvotedIds.where(refreshed.contains),
+          },
+        ),
       );
     }
+
+    // Each read reports its own failure: Future.wait surfaces only the first
+    // error, so a second, reportable one would never reach Crashlytics.
+    Future<void> reportingFailure(
+      Future<void> Function() read,
+      String operation,
+    ) async {
+      try {
+        await read();
+      } catch (e, stackTrace) {
+        _logFailure(
+          e,
+          stackTrace,
+          CommentReactionsBlocReportableSites.onVoteCountsFetchRequested,
+          operation,
+        );
+      }
+    }
+
+    try {
+      await Future.wait([
+        reportingFailure(loadCounts, 'Error fetching comment vote counts'),
+        reportingFailure(loadViewerVotes, 'Error fetching viewer votes'),
+      ]);
+    } finally {
+      for (final id in commentIds) {
+        final invalidated = _voteReads.remove(id) == _VoteRead.stale;
+        if (invalidated && !isClosed) {
+          final refresh = CommentVoteCountsFetchRequested(
+            [id],
+            addressableIdsByCommentId: {
+              id: ?event.addressableIdsByCommentId[id],
+            },
+          );
+          if (_publishingVotes.contains(id)) {
+            _voteRefreshAfterPublish[id] = refresh;
+          } else {
+            add(refresh);
+          }
+        }
+      }
+    }
   }
+
+  /// [counts] with [id] set back to [count], or without [id] when it was
+  /// never loaded.
+  static Map<String, int> _restoreCount(
+    Map<String, int> counts,
+    String id,
+    int? count,
+  ) => count == null ? ({...counts}..remove(id)) : {...counts, id: count};
 
   Future<void> _onVoteToggled(
     CommentVoteToggled event,
@@ -205,14 +275,26 @@ class CommentReactionsBloc
     }
 
     final commentId = event.commentId;
+    _publishingVotes.add(commentId);
+    if (_voteReads.containsKey(commentId)) {
+      _voteReads[commentId] = _VoteRead.stale;
+    }
     final isUpvote = event.vote == Vote.up;
 
     final wasUpvoted = state.upvotedCommentIds.contains(commentId);
     final wasDownvoted = state.downvotedCommentIds.contains(commentId);
     final hadSameVote = isUpvote ? wasUpvoted : wasDownvoted;
     final hadOppositeVote = isUpvote ? wasDownvoted : wasUpvoted;
-    final prevUpCount = state.commentUpvoteCounts[commentId] ?? 0;
-    final prevDownCount = state.commentDownvoteCounts[commentId] ?? 0;
+    // Null means the total never loaded. Adjusting it would show a guess as
+    // a real count, so leave it unknown and read both once the vote settles.
+    final prevUpCount = state.commentUpvoteCounts[commentId];
+    final prevDownCount = state.commentDownvoteCounts[commentId];
+    if (prevUpCount == null || prevDownCount == null) {
+      _voteRefreshAfterPublish[commentId] ??= CommentVoteCountsFetchRequested(
+        [commentId],
+        addressableIdsByCommentId: {commentId: ?event.addressableId},
+      );
+    }
 
     // Optimistic update.
     final upIds = Set<String>.from(state.upvotedCommentIds);
@@ -227,15 +309,19 @@ class CommentReactionsBloc
     final oppositeCounts = isUpvote ? downCounts : upCounts;
     final prevOppositeCount = isUpvote ? prevDownCount : prevUpCount;
 
+    void adjust(Map<String, int> counts, int? previous, int delta) {
+      if (previous != null) counts[commentId] = max(0, previous + delta);
+    }
+
     if (hadSameVote) {
       sameIds.remove(commentId);
-      sameCounts[commentId] = max(0, prevSameCount - 1);
+      adjust(sameCounts, prevSameCount, -1);
     } else {
       sameIds.add(commentId);
-      sameCounts[commentId] = prevSameCount + 1;
+      adjust(sameCounts, prevSameCount, 1);
       if (hadOppositeVote) {
         oppositeIds.remove(commentId);
-        oppositeCounts[commentId] = max(0, prevOppositeCount - 1);
+        adjust(oppositeCounts, prevOppositeCount, -1);
       }
     }
 
@@ -300,7 +386,9 @@ class CommentReactionsBloc
           );
         }
       }
+      _confirmedLocalVotes.add(commentId);
     } on AlreadyLikedException {
+      _confirmedLocalVotes.add(commentId);
       // State-sync sentinel (silent): repo already had the upvote, the
       // pre-tap baseline was wrong. Reconcile and continue.
       emit(
@@ -312,6 +400,7 @@ class CommentReactionsBloc
         ),
       );
     } on AlreadyDownvotedException {
+      _confirmedLocalVotes.add(commentId);
       // State-sync sentinel (silent): repo already had the downvote.
       emit(
         state.copyWith(
@@ -338,14 +427,23 @@ class CommentReactionsBloc
           downvotedCommentIds: Set<String>.from(state.downvotedCommentIds)
             ..addAll(wasDownvoted ? {commentId} : {})
             ..removeAll(wasDownvoted ? {} : {commentId}),
-          commentUpvoteCounts: Map<String, int>.from(state.commentUpvoteCounts)
-            ..[commentId] = prevUpCount,
-          commentDownvoteCounts: Map<String, int>.from(
+          commentUpvoteCounts: _restoreCount(
+            state.commentUpvoteCounts,
+            commentId,
+            prevUpCount,
+          ),
+          commentDownvoteCounts: _restoreCount(
             state.commentDownvoteCounts,
-          )..[commentId] = prevDownCount,
+            commentId,
+            prevDownCount,
+          ),
           error: ReactionsError.voteFailed,
         ),
       );
+    } finally {
+      _publishingVotes.remove(commentId);
+      final refresh = _voteRefreshAfterPublish.remove(commentId);
+      if (refresh != null && !isClosed) add(refresh);
     }
   }
 
@@ -411,3 +509,6 @@ class CommentReactionsBloc
     }
   }
 }
+
+/// Whether an in-flight vote read may still be applied.
+enum _VoteRead { current, stale }

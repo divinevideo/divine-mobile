@@ -4500,17 +4500,13 @@
   },
   "commentsVideoReplyPending": "Đang đăng…",
   "commentsVideoReplyPendingSemanticLabel": "Câu trả lời video của bạn đang được đăng",
-  "commentsSortNew": "Mới",
-  "@commentsSortNew": {
+  "commentsSortRecent": "Gần đây",
+  "@commentsSortRecent": {
     "description": "Comments-sort toggle label for newest-first order."
   },
   "commentsSortTop": "Nổi bật",
   "@commentsSortTop": {
-    "description": "Comments-sort toggle label for engagement-weighted order."
-  },
-  "commentsSortOld": "Cũ",
-  "@commentsSortOld": {
-    "description": "Comments-sort toggle label for oldest-first order."
+    "description": "Comments-sort toggle label for highest net vote score first."
   },
   "commentsSortSemanticLabel": "Sắp xếp bình luận",
   "@commentsSortSemanticLabel": {

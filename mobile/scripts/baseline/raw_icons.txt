@@ -5,7 +5,7 @@
 # or an unlocked shrink fails CI vs origin/main.
 # Issues: #4803 (migration), #4339 (epic). Full-line comments are not counted.
 # Regenerate after migrating: UPDATE_BASELINE=1 bash scripts/check_raw_icons_ceiling.sh
-lib/screens/comments/comments_screen.dart	3
+lib/screens/comments/comments_screen.dart	2
 lib/screens/comments/widgets/comments_empty_state.dart	1
 lib/screens/creator_analytics_screen.dart	3
 lib/screens/hashtag_feed_screen.dart	1

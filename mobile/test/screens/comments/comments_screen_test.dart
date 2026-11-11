@@ -3,6 +3,8 @@
 // ABOUTME: via MultiBlocProvider and exercises a content widget that mirrors
 // ABOUTME: the production screen.
 
+import 'dart:async';
+
 import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
@@ -231,6 +233,40 @@ void main() {
       );
 
       expect(find.text(l10n.commentsHeaderCount(1)), findsOneWidget);
+    });
+
+    testWidgets('new comments pill switches from Top to Recent', (
+      tester,
+    ) async {
+      when(() => listBloc.state).thenReturn(
+        CommentsListState(newCommentIds: {'1' * 64}),
+      );
+      var scrolled = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: BlocProvider<CommentsListBloc>.value(
+              value: listBloc,
+              child: CommentsTitle(
+                initialCount: 1,
+                onNewCommentsPillTap: () => scrolled = true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(NewCommentsPill));
+
+      expect(scrolled, isTrue);
+      verifyInOrder([
+        () => listBloc.add(
+          const CommentsSortModeChanged(CommentsSortMode.newest),
+        ),
+        () => listBloc.add(const NewCommentsAcknowledged()),
+      ]);
     });
 
     testWidgets('stays away while the owner hid nothing', (tester) async {
@@ -532,7 +568,6 @@ void main() {
             status: CommentsStatus.success,
             commentsById: {comment.id: comment},
             hasMoreContent: false,
-            sortMode: CommentsSortMode.topEngagement,
           );
           whenListen(
             mockListBloc,
@@ -577,7 +612,7 @@ void main() {
           rootEventId: testVideoEventId,
           rootAuthorPubkey: testVideoAuthorPubkey,
           status: CommentsStatus.success,
-          sortMode: CommentsSortMode.oldest,
+          sortMode: CommentsSortMode.newest,
         );
         whenListen(
           mockListBloc,
@@ -607,7 +642,7 @@ void main() {
         );
         expect(
           sink.events.single.parameters,
-          containsPair(AnalyticsParam.sortMode, 'oldest'),
+          containsPair(AnalyticsParam.sortMode, 'newest'),
         );
       });
 
@@ -649,6 +684,59 @@ void main() {
         find.bySemanticsIdentifier(SemanticIds.commentsSheetTitle),
         findsOneWidget,
       );
+    });
+
+    testWidgets('sort toggle switches between Top and Recent', (tester) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final updates = StreamController<CommentsListState>();
+      addTearDown(updates.close);
+      const top = CommentsListState();
+      const recent = CommentsListState(sortMode: CommentsSortMode.newest);
+      whenListen(mockListBloc, updates.stream, initialState: top);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: BlocProvider<CommentsListBloc>.value(
+              value: mockListBloc,
+              child: const CommentsSortToggle(),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text(l10n.commentsSortTop), findsOneWidget);
+      await tester.tap(find.text(l10n.commentsSortTop));
+      verify(
+        () => mockListBloc.add(
+          any(
+            that: isA<CommentsSortModeChanged>().having(
+              (event) => event.sortMode,
+              'sortMode',
+              CommentsSortMode.newest,
+            ),
+          ),
+        ),
+      ).called(1);
+
+      updates.add(recent);
+      await tester.pump();
+
+      expect(find.text(l10n.commentsSortRecent), findsOneWidget);
+      await tester.tap(find.text(l10n.commentsSortRecent));
+      verify(
+        () => mockListBloc.add(
+          any(
+            that: isA<CommentsSortModeChanged>().having(
+              (event) => event.sortMode,
+              'sortMode',
+              CommentsSortMode.topEngagement,
+            ),
+          ),
+        ),
+      ).called(1);
     });
 
     group('widget structure', () {
@@ -974,7 +1062,7 @@ void main() {
     });
 
     group('threaded comments', () {
-      testWidgets('renders nested reply with indentation', (tester) async {
+      testWidgets('nests a reply under its parent in Recent', (tester) async {
         final parent = CommentBuilder()
             .withId(TestCommentIds.comment1Id)
             .withAuthorPubkey(TestCommentIds.author1Pubkey)
@@ -994,6 +1082,7 @@ void main() {
           rootEventId: testVideoEventId,
           rootAuthorPubkey: testVideoAuthorPubkey,
           status: CommentsStatus.success,
+          sortMode: CommentsSortMode.newest,
           commentsById: {parent.id: parent, reply.id: reply},
         );
 
@@ -1001,8 +1090,14 @@ void main() {
         await tester.pump();
 
         expect(find.text('Parent comment'), findsOneWidget);
-        expect(find.text('Reply comment'), findsOneWidget);
         expect(find.byType(CommentItem), findsNWidgets(2));
+        final replyItem = tester.widget<CommentItem>(
+          find.ancestor(
+            of: find.text('Reply comment'),
+            matching: find.byType(CommentItem),
+          ),
+        );
+        expect(replyItem.depth, 1);
       });
     });
 

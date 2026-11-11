@@ -8233,13 +8233,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commentsVideoReplyPendingSemanticLabel => '正在发布你的视频回复';
 
   @override
-  String get commentsSortNew => '最新';
+  String get commentsSortRecent => '最新';
 
   @override
   String get commentsSortTop => '最热';
-
-  @override
-  String get commentsSortOld => '最早';
 
   @override
   String get commentsSortSemanticLabel => '评论排序';

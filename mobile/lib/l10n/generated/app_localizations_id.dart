@@ -8656,13 +8656,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Balasan video Anda sedang diposting';
 
   @override
-  String get commentsSortNew => 'Terbaru';
+  String get commentsSortRecent => 'Terbaru';
 
   @override
   String get commentsSortTop => 'Teratas';
-
-  @override
-  String get commentsSortOld => 'Terlama';
 
   @override
   String get commentsSortSemanticLabel => 'Urutan komentar';

@@ -488,7 +488,7 @@ void main() {
           );
           return CommentsListState(
             status: CommentsStatus.success,
-            sortMode: CommentsSortMode.oldest,
+            sortMode: CommentsSortMode.newest,
             commentsById: {
               newer.id: newer,
               older.id: older,
@@ -674,6 +674,7 @@ void main() {
           return CommentsListState(
             status: CommentsStatus.success,
             commentsById: {placeholder.id: placeholder},
+            scrollToCommentId: placeholder.id,
           );
         },
         act: (b) {
@@ -697,6 +698,7 @@ void main() {
             b.state.commentsById.containsKey(validId('confirmed')),
             isTrue,
           );
+          expect(b.state.scrollToCommentId, validId('confirmed'));
           // newCommentCount does NOT bump because this is a placeholder swap.
           expect(b.state.newCommentCount, 0);
         },
@@ -801,12 +803,12 @@ void main() {
         'updates sortMode',
         build: createBloc,
         act: (b) =>
-            b.add(const CommentsSortModeChanged(CommentsSortMode.oldest)),
+            b.add(const CommentsSortModeChanged(CommentsSortMode.newest)),
         expect: () => [
           isA<CommentsListState>().having(
             (s) => s.sortMode,
             'sortMode',
-            CommentsSortMode.oldest,
+            CommentsSortMode.newest,
           ),
         ],
       );
@@ -832,9 +834,10 @@ void main() {
 
     group('Cross-bloc store mutation events', () {
       blocTest<CommentsListBloc, CommentsListState>(
-        'OptimisticCommentInserted adds a top-level placeholder without '
-        'flagging it for scroll (#5854)',
+        'OptimisticCommentInserted adds a top-level placeholder in Recent '
+        'without flagging it for scroll (#5854)',
         build: createBloc,
+        seed: () => const CommentsListState(sortMode: CommentsSortMode.newest),
         act: (b) {
           final placeholder = Comment(
             id: 'pending_comment_1',
@@ -848,9 +851,19 @@ void main() {
         },
         verify: (b) {
           expect(b.state.commentsById.containsKey('pending_comment_1'), isTrue);
-          // A new top-level comment lands at the visible top, so it must not
-          // trigger a scroll — only replies (which nest off-screen) do.
+          // In Recent, a top-level comment already lands at the top.
           expect(b.state.scrollToCommentId, isNull);
+        },
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'OptimisticCommentInserted flags a top-level comment for reveal in Top',
+        build: createBloc,
+        act: (b) => b.add(
+          OptimisticCommentInserted(makeComment('pending_comment_1')),
+        ),
+        verify: (b) {
+          expect(b.state.scrollToCommentId, 'pending_comment_1');
         },
       );
 
@@ -883,10 +896,18 @@ void main() {
         build: createBloc,
         seed: () =>
             const CommentsListState(scrollToCommentId: 'pending_comment_1'),
-        act: (b) => b.add(const CommentsScrollHandled()),
+        act: (b) => b.add(const CommentsScrollHandled('pending_comment_1')),
         verify: (b) {
           expect(b.state.scrollToCommentId, isNull);
         },
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'CommentsScrollHandled leaves a newer target alone',
+        build: createBloc,
+        seed: () => CommentsListState(scrollToCommentId: validId('confirmed')),
+        act: (b) => b.add(const CommentsScrollHandled('pending_comment_1')),
+        expect: () => isEmpty,
       );
 
       blocTest<CommentsListBloc, CommentsListState>(
@@ -901,7 +922,10 @@ void main() {
             rootEventId: validId('root'),
             rootAuthorPubkey: validId('author'),
           );
-          return CommentsListState(commentsById: {placeholder.id: placeholder});
+          return CommentsListState(
+            commentsById: {placeholder.id: placeholder},
+            scrollToCommentId: placeholder.id,
+          );
         },
         act: (b) => b.add(
           OptimisticCommentConfirmed(
@@ -918,6 +942,7 @@ void main() {
             b.state.commentsById.containsKey(validId('confirmed')),
             isTrue,
           );
+          expect(b.state.scrollToCommentId, validId('confirmed'));
         },
       );
 
@@ -935,6 +960,7 @@ void main() {
           );
           final confirmed = makeComment(validId('confirmed'));
           return CommentsListState(
+            scrollToCommentId: placeholder.id,
             commentsById: {
               placeholder.id: placeholder,
               confirmed.id: confirmed,
@@ -956,6 +982,7 @@ void main() {
             b.state.commentsById.containsKey(validId('confirmed')),
             isTrue,
           );
+          expect(b.state.scrollToCommentId, validId('confirmed'));
           expect(b.state.commentsById.length, 1);
         },
       );
@@ -1064,8 +1091,8 @@ void main() {
       );
     });
 
-    group('threadedCommentsWith', () {
-      test('sorts newest first by default', () {
+    group('displayCommentsWith', () {
+      test('sorts newest first when Recent is selected', () {
         final older = makeComment(
           validId('c1'),
           createdAt: DateTime.fromMillisecondsSinceEpoch(1000),
@@ -1076,21 +1103,22 @@ void main() {
         );
         final state = CommentsListState(
           commentsById: {older.id: older, newer.id: newer},
+          sortMode: CommentsSortMode.newest,
         );
-        final threaded = state.threadedCommentsWith();
+        final threaded = state.displayCommentsWith();
         expect(threaded.first.comment.id, validId('c2'));
         expect(threaded.last.comment.id, validId('c1'));
       });
 
-      test('engagement sort uses provided upvote counts', () {
+      test('Top sorts by net votes', () {
         final low = makeComment(validId('c1'), createdAt: DateTime.now());
         final high = makeComment(validId('c2'), createdAt: DateTime.now());
         final state = CommentsListState(
           commentsById: {low.id: low, high.id: high},
-          sortMode: CommentsSortMode.topEngagement,
         );
-        final threaded = state.threadedCommentsWith(
-          upvoteCounts: {validId('c1'): 0, validId('c2'): 100},
+        final threaded = state.displayCommentsWith(
+          upvoteCounts: {low.id: 10, high.id: 3},
+          downvoteCounts: {low.id: 8},
         );
         expect(threaded.first.comment.id, validId('c2'));
       });
@@ -1105,38 +1133,12 @@ void main() {
         );
         final state = CommentsListState(
           commentsById: {parent.id: parent, reply.id: reply},
+          sortMode: CommentsSortMode.newest,
         );
-        final threaded = state.threadedCommentsWith();
+        final threaded = state.displayCommentsWith();
         expect(threaded.length, 2);
         expect(threaded[0].depth, 0);
         expect(threaded[1].depth, 1);
-      });
-    });
-
-    group('engagementScore', () {
-      test('newer + more upvoted scores higher', () {
-        final now = DateTime.now();
-        final hot = makeComment(
-          validId('hot'),
-          createdAt: now.subtract(const Duration(minutes: 5)),
-        );
-        final cold = makeComment(
-          validId('cold'),
-          createdAt: now.subtract(const Duration(hours: 50)),
-        );
-        final scoreHot = commentEngagementScore(
-          comment: hot,
-          now: now,
-          likeCounts: {hot.id: 20},
-          replyCounts: const {},
-        );
-        final scoreCold = commentEngagementScore(
-          comment: cold,
-          now: now,
-          likeCounts: {cold.id: 20},
-          replyCounts: const {},
-        );
-        expect(scoreHot > scoreCold, isTrue);
       });
     });
 

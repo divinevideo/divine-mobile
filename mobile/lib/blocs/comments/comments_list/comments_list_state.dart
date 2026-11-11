@@ -1,9 +1,9 @@
 part of 'comments_list_bloc.dart';
 
-/// A node in the comment tree, used for threaded display.
+/// A comment row and its thread depth in the current sort mode.
 ///
 /// Not part of bloc state — produced by
-/// [CommentsListState.threadedCommentsWith] on demand.
+/// [CommentsListState.displayCommentsWith] on demand.
 @immutable
 final class CommentNode {
   const CommentNode({
@@ -15,10 +15,10 @@ final class CommentNode {
   /// The comment this node represents.
   final Comment comment;
 
-  /// Child replies to this comment.
+  /// Replies nested under this comment in Recent; empty in Top.
   final List<CommentNode> replies;
 
-  /// Nesting depth (0 = root, 1 = reply, etc.).
+  /// Nesting depth: 0 for a top-level row, which every row is in Top.
   final int depth;
 }
 
@@ -50,13 +50,10 @@ enum CommentsListError {
 
 /// Sort mode for the comments list.
 enum CommentsSortMode {
-  /// Newest comments first (default).
+  /// Recent threads first, with replies nested under their parent.
   newest,
 
-  /// Oldest comments first.
-  oldest,
-
-  /// Top engagement: scored by likes + replies with time decay.
+  /// All visible comments ranked by net votes (default).
   topEngagement,
 }
 
@@ -76,8 +73,7 @@ final class CommentsListState extends Equatable {
     this.isLoadingMore = false,
     this.hasMoreContent = true,
     this.nextOffset,
-    this.sortMode = CommentsSortMode.newest,
-    this.replyCountsByCommentId = const {},
+    this.sortMode = CommentsSortMode.topEngagement,
     this.newCommentIds = const {},
     this.isBackfillComplete = false,
     this.scrollToCommentId,
@@ -111,15 +107,11 @@ final class CommentsListState extends Equatable {
   /// Uses [Comment] from the repository layer.
   final Map<String, Comment> commentsById;
 
-  /// Pre-computed reply counts per comment ID.
-  /// Updated whenever [commentsById] changes to avoid O(n^2) in getters.
-  final Map<String, int> replyCountsByCommentId;
-
   /// Current sort mode for the comments list.
   final CommentsSortMode sortMode;
 
   /// Comments received from the real-time subscription that the user has not
-  /// yet acknowledged (scrolled to top / tapped the pill).
+  /// yet acknowledged by scrolling to the top of Recent or tapping the pill.
   final Set<String> newCommentIds;
 
   /// How many new comments the pill shows; see [newCommentIds].
@@ -151,11 +143,9 @@ final class CommentsListState extends Equatable {
   final bool hasMoreContent;
 
   /// Transient one-shot signal: the id of a comment the UI should scroll into
-  /// view (e.g. the local user's just-inserted reply, which nests under an
-  /// older parent and would otherwise render off-screen — #5854). Set by the
-  /// optimistic-insert handler, and by the load once [pendingFocusCommentId]
-  /// is in the list; cleared by [CommentsScrollHandled] after the UI performs
-  /// the scroll.
+  /// view, such as a just-posted comment that sorted off-screen. Set on
+  /// optimistic insertion or when the requested [pendingFocusCommentId] loads.
+  /// Cleared by [CommentsScrollHandled] for the matching comment.
   final String? scrollToCommentId;
 
   /// The comment the list was opened on, such as the one a tapped reply
@@ -237,64 +227,28 @@ final class CommentsListState extends Equatable {
     };
   }
 
-  /// Returns a comparator for sorting comments based on [sortMode].
+  /// Visible comments in display order.
   ///
-  /// For [CommentsSortMode.topEngagement] the caller must provide
-  /// [upvoteCounts] from [CommentReactionsBloc] — engagement sort spans two
-  /// blocs and is reconciled in the UI builder rather than via cross-bloc
-  /// dependency.
-  Comparator<Comment> _commentComparator({
+  /// Top ranks every comment by net votes. Recent orders threads by recency
+  /// and nests replies under visible parents.
+  List<CommentNode> displayCommentsWith({
     Map<String, int> upvoteCounts = const {},
+    Map<String, int> downvoteCounts = const {},
   }) {
-    switch (sortMode) {
-      case CommentsSortMode.newest:
-        return (a, b) => b.createdAt.compareTo(a.createdAt);
-      case CommentsSortMode.oldest:
-        return (a, b) => a.createdAt.compareTo(b.createdAt);
-      case CommentsSortMode.topEngagement:
-        final now = DateTime.now();
-        return (a, b) {
-          final scoreA = commentEngagementScore(
-            comment: a,
-            now: now,
-            likeCounts: upvoteCounts,
-            replyCounts: replyCountsByCommentId,
-          );
-          final scoreB = commentEngagementScore(
-            comment: b,
-            now: now,
-            likeCounts: upvoteCounts,
-            replyCounts: replyCountsByCommentId,
-          );
-          return scoreB.compareTo(scoreA);
-        };
+    final shown = shownCommentsById;
+    if (sortMode == CommentsSortMode.topEngagement) {
+      final ranked = shown.values.toList()
+        ..sort(
+          commentVoteComparator(
+            upvoteCounts: upvoteCounts,
+            downvoteCounts: downvoteCounts,
+          ),
+        );
+      return [for (final comment in ranked) CommentNode(comment: comment)];
     }
-  }
 
-  /// All comments sorted according to [sortMode].
-  ///
-  /// For [CommentsSortMode.topEngagement] pass [upvoteCounts] from
-  /// [CommentReactionsBloc].
-  List<Comment> commentsSortedWith({Map<String, int> upvoteCounts = const {}}) {
-    return commentsById.values.toList()
-      ..sort(_commentComparator(upvoteCounts: upvoteCounts));
-  }
-
-  /// The comments the list shows ([shownCommentsById]), threaded as a flat
-  /// display list with depth info.
-  ///
-  /// Root comments and orphaned replies appear at depth 0; a reply to a
-  /// comment the owner hid is such an orphan. For
-  /// [CommentsSortMode.topEngagement] pass [upvoteCounts] from
-  /// [CommentReactionsBloc] so the engagement scoring can complete.
-  List<CommentNode> threadedCommentsWith({
-    Map<String, int> upvoteCounts = const {},
-  }) {
-    // Build children map: parentId -> list of child comments.
     final childrenMap = <String, List<Comment>>{};
     final rootComments = <Comment>[];
-    final shown = shownCommentsById;
-
     for (final comment in shown.values) {
       final parentId = comment.replyToEventId;
       if (parentId == null ||
@@ -306,11 +260,10 @@ final class CommentsListState extends Equatable {
       }
     }
 
-    final sorter = _commentComparator(upvoteCounts: upvoteCounts);
-
-    // Build tree recursively.
+    // Build the Recent tree recursively.
     List<CommentNode> buildNodes(List<Comment> comments, int depth) {
-      final sorted = List<Comment>.from(comments)..sort(sorter);
+      final sorted = List<Comment>.from(comments)
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return sorted.map((comment) {
         final children = childrenMap[comment.id] ?? [];
         return CommentNode(
@@ -348,7 +301,6 @@ final class CommentsListState extends Equatable {
     bool? hasMoreContent,
     int? nextOffset,
     CommentsSortMode? sortMode,
-    Map<String, int>? replyCountsByCommentId,
     Set<String>? newCommentIds,
     bool? isBackfillComplete,
     String? scrollToCommentId,
@@ -375,8 +327,6 @@ final class CommentsListState extends Equatable {
       hasMoreContent: hasMoreContent ?? this.hasMoreContent,
       nextOffset: nextOffset ?? this.nextOffset,
       sortMode: sortMode ?? this.sortMode,
-      replyCountsByCommentId:
-          replyCountsByCommentId ?? this.replyCountsByCommentId,
       newCommentIds: newCommentIds ?? this.newCommentIds,
       isBackfillComplete: isBackfillComplete ?? this.isBackfillComplete,
       scrollToCommentId: clearScrollTo
@@ -404,7 +354,6 @@ final class CommentsListState extends Equatable {
     hasMoreContent,
     nextOffset,
     sortMode,
-    replyCountsByCommentId,
     newCommentIds,
     isBackfillComplete,
     scrollToCommentId,
