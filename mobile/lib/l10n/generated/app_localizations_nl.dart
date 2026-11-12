@@ -770,6 +770,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Fout bij laden van bewaarde video\'s';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Je privébladwijzers konden niet worden ontgrendeld, dus er kunnen er een paar ontbreken. Trek omlaag om het nog eens te proberen.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Nog geen reacties';
 
   @override
@@ -1905,6 +1909,10 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get shareFailedToRemoveBookmark =>
       'Verwijderen uit bladwijzers mislukt';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Je privébladwijzers konden niet worden ontgrendeld, dus er is niets veranderd. Probeer het zo nog eens.';
 
   @override
   String get shareActionFailed => 'Actie mislukt';

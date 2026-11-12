@@ -442,6 +442,7 @@
   "profileNoSavedVideosTitle": "እስካሁን ምንም አልተቀመጠም።",
   "profileSavedOwnEmpty": "ቪዲዮዎችን ከማጋሪያ ሉህ ላይ ዕልባት አድርግ እና እዚህ ይታያሉ።",
   "profileErrorLoadingSaved": "የተቀመጡ ቪዲዮዎችን መጫን ላይ ስህተት",
+  "profileSavedPrivateItemsLocked": "የግል ዕልባቶችዎን መክፈት አልተቻለም፣ ስለዚህ አንዳንዶቹ ላይታዩ ይችላሉ። እንደገና ለመሞከር ወደ ታች ይጎትቱ።",
   "profileNoCommentsOwnTitle": "እስካሁን ምንም አስተያየት የለም።",
   "profileNoCommentsOtherTitle": "እስካሁን ምንም አስተያየት የለም።",
   "profileCommentsOwnEmpty": "የእርስዎ አስተያየቶች እና ምላሾች እዚህ ይታያሉ።",
@@ -832,6 +833,7 @@
   "@shareFailedToRemoveBookmark": {
     "description": "Snackbar when toggling Save off (remove from bookmarks) fails."
   },
+  "shareBookmarkPrivateItemsLocked": "የግል ዕልባቶችዎን መክፈት አልተቻለም፣ ስለዚህ ምንም አልተለወጠም። ትንሽ ቆይተው እንደገና ይሞክሩ።",
   "shareActionFailed": "እርምጃ አልተሳካም።",
   "shareWithTitle": "ሼር በማድረግ ያካፍሉ።",
   "shareFindPeople": "ሰዎችን ያግኙ",

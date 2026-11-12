@@ -788,6 +788,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'సేవ్ చేసిన వీడియోలను లోడ్ చేయడంలో లోపం';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'మీ ప్రైవేట్ బుక్‌మార్క్‌లను అన్‌లాక్ చేయడం సాధ్యపడలేదు, కాబట్టి కొన్ని కనిపించకపోవచ్చు. మళ్లీ ప్రయత్నించడానికి కిందికి లాగండి.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'ఇంకా వ్యాఖ్యలు లేవు';
 
   @override
@@ -1937,6 +1941,10 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get shareFailedToRemoveBookmark =>
       'బుక్‌మార్క్‌ని తీసివేయడంలో విఫలమైంది';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'మీ ప్రైవేట్ బుక్‌మార్క్‌లను అన్‌లాక్ చేయడం సాధ్యపడలేదు, కాబట్టి ఏమీ మారలేదు. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.';
 
   @override
   String get shareActionFailed => 'చర్య విఫలమైంది';

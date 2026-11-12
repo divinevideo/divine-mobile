@@ -1273,6 +1273,12 @@ abstract class AppLocalizations {
   /// **'Error loading saved videos'**
   String get profileErrorLoadingSaved;
 
+  /// Shown on the Bookmarks tab when the encrypted (private) part of the user's bookmark list could not be decrypted. Replaces the empty state when nothing else is saved, and sits above the grid otherwise. Pulling down re-syncs and decrypts again.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t unlock your private bookmarks, so some may be missing. Pull down to try again.'**
+  String get profileSavedPrivateItemsLocked;
+
   /// No description provided for @profileNoCommentsOwnTitle.
   ///
   /// In en, this message translates to:
@@ -3204,6 +3210,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to remove bookmark'**
   String get shareFailedToRemoveBookmark;
+
+  /// Snackbar when Save is refused because the encrypted (private) part of the user's bookmark list could not be decrypted. Neither adding nor removing happened, so it must not name either. A retry can work when the signer was only briefly unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t unlock your private bookmarks, so nothing changed. Try again in a moment.'**
+  String get shareBookmarkPrivateItemsLocked;
 
   /// No description provided for @shareActionFailed.
   ///

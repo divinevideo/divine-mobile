@@ -676,6 +676,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get profileErrorLoadingSaved => '저장한 영상을 불러오지 못했어요';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      '비공개 북마크를 열 수 없어서 일부가 빠져 있을 수 있어요. 아래로 당겨서 다시 시도해 주세요.';
+
+  @override
   String get profileNoCommentsOwnTitle => '아직 댓글 없음';
 
   @override
@@ -1747,6 +1751,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get shareFailedToRemoveBookmark => '북마크를 지우지 못했어요';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      '비공개 북마크를 열 수 없어서 아무것도 바뀌지 않았어요. 잠시 후 다시 시도해 주세요.';
 
   @override
   String get shareActionFailed => '작업에 실패했어요';

@@ -2016,6 +2016,62 @@ void main() {
 
           expect(service.hasUnreadablePrivateItems, isFalse);
         });
+
+        test('reads the list again when the signer answers a retry', () async {
+          // A remote signer (Keycast RPC, a NIP-46 bunker) can fail one
+          // decrypt and answer the next. The UI promises a retry can work, so
+          // the refusal must not outlive the failure that caused it.
+          stubRelay(
+            events: [
+              bookmarkListEvent(
+                [],
+                content: await encryptToSelf([
+                  ['e', privateVideo],
+                ]),
+              ),
+            ],
+          );
+          final flaky = _MockNostrSigner();
+          var decryptAttempts = 0;
+          when(() => flaky.nip44Decrypt(any(), any())).thenAnswer((call) {
+            decryptAttempts++;
+            if (decryptAttempts == 1) {
+              throw TimeoutException('signer did not answer');
+            }
+            return identity.nip44Decrypt(
+              call.positionalArguments[0] as String,
+              call.positionalArguments[1] as String,
+            );
+          });
+          when(() => flaky.nip44Encrypt(any(), any())).thenAnswer(
+            (call) => identity.nip44Encrypt(
+              call.positionalArguments[0] as String,
+              call.positionalArguments[1] as String,
+            ),
+          );
+          when(() => signer.currentIdentity).thenReturn(flaky);
+          final service = createService();
+
+          final refused = await service.toggleVideoInGlobalBookmarks('wanted');
+          expect(
+            refused.failure,
+            equals(BookmarkToggleFailure.privateItemsUnreadable),
+          );
+          expect(signedTags, isNull, reason: 'the refusal publishes nothing');
+
+          final retried = await service.toggleVideoInGlobalBookmarks('wanted');
+
+          expect(retried.succeeded, isTrue);
+          expect(retried.failure, isNull);
+          expect(signedEventIds(), contains('wanted'));
+          expect(
+            await decryptToSelf(signedContent!),
+            equals([
+              ['e', privateVideo],
+            ]),
+            reason: 'the private item read on the retry is carried through',
+          );
+        });
       });
     });
 

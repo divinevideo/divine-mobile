@@ -708,6 +708,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Gagal memuat video tersimpan';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Tidak bisa membuka bookmark pribadimu, jadi mungkin ada yang hilang. Tarik ke bawah untuk mencoba lagi.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Belum Ada Komentar';
 
   @override
@@ -1826,6 +1830,10 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get shareFailedToRemoveBookmark => 'Gagal menghapus bookmark';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Tidak bisa membuka bookmark pribadimu, jadi tidak ada yang berubah. Coba lagi sebentar lagi.';
 
   @override
   String get shareActionFailed => 'Aksi gagal';

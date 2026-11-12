@@ -34,9 +34,16 @@ final class ProfileSavedVideosLoadMoreRequested
 /// [savedEventIds] is the new list in reverse repository order.
 final class ProfileSavedVideosReconcileRequested
     extends ProfileSavedVideosEvent {
-  const ProfileSavedVideosReconcileRequested(this.savedEventIds);
+  const ProfileSavedVideosReconcileRequested(
+    this.savedEventIds, {
+    required this.privateBookmarksLocked,
+  });
 
   final List<String> savedEventIds;
+
+  /// Whether the list these ids came from had a private section the
+  /// repository could not unlock, read at the same moment as the ids.
+  final bool privateBookmarksLocked;
 }
 
 /// Internal: drop a video after the deletion bus reports it removed.

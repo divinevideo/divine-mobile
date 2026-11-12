@@ -777,6 +777,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Грешка при зареждане на запазените видеа';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Не успяхме да отключим личните ти отметки, затова някои може да липсват. Дръпни надолу, за да опиташ пак.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Още няма коментари';
 
   @override
@@ -1919,6 +1923,10 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get shareFailedToRemoveBookmark => 'Не успяхме да премахнем отметката';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Не успяхме да отключим личните ти отметки, затова нищо не се промени. Опитай пак след малко.';
 
   @override
   String get shareActionFailed => 'Действието не мина';

@@ -737,6 +737,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Lỗi khi tải video đã lưu';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Không thể mở khoá dấu trang riêng tư của bạn nên có thể thiếu một vài mục. Kéo xuống để thử lại.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Chưa có bình luận nào';
 
   @override
@@ -1863,6 +1867,10 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get shareFailedToRemoveBookmark => 'Không xóa được dấu trang';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Không thể mở khoá dấu trang riêng tư của bạn nên chưa có gì thay đổi. Hãy thử lại sau giây lát.';
 
   @override
   String get shareActionFailed => 'Thao tác thất bại';

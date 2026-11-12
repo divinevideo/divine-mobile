@@ -773,6 +773,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Error al cargar los videos guardados';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'No pudimos desbloquear tus marcadores privados, así que puede que falten algunos. Deslizá hacia abajo para probar de nuevo.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Todavía no hay comentarios';
 
   @override
@@ -1916,6 +1920,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get shareFailedToRemoveBookmark => 'No se pudo quitar el marcador';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'No pudimos desbloquear tus marcadores privados, así que no cambió nada. Probá de nuevo en un momento.';
 
   @override
   String get shareActionFailed => 'Falló la acción';

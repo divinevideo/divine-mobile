@@ -406,6 +406,7 @@
   "profileNoSavedVideosTitle": "Още нищо не е запазено",
   "profileSavedOwnEmpty": "Запази видеа от менюто за споделяне и ще се появят тук.",
   "profileErrorLoadingSaved": "Грешка при зареждане на запазените видеа",
+  "profileSavedPrivateItemsLocked": "Не успяхме да отключим личните ти отметки, затова някои може да липсват. Дръпни надолу, за да опиташ пак.",
   "profileNoCommentsOwnTitle": "Още няма коментари",
   "profileNoCommentsOtherTitle": "Още няма коментари",
   "profileCommentsOwnEmpty": "Твоите коментари и отговори ще се появят тук.",
@@ -766,6 +767,7 @@
   "@shareFailedToRemoveBookmark": {
     "description": "Snackbar when toggling Save off (remove from bookmarks) fails."
   },
+  "shareBookmarkPrivateItemsLocked": "Не успяхме да отключим личните ти отметки, затова нищо не се промени. Опитай пак след малко.",
   "shareActionFailed": "Действието не мина",
   "shareWithTitle": "Сподели с",
   "shareFindPeople": "Намери хора",

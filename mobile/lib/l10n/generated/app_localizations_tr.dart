@@ -707,6 +707,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Kaydedilen videolar yüklenirken hata';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Gizli yer imlerinin kilidini açamadık, bu yüzden bazıları eksik olabilir. Tekrar denemek için aşağı çek.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Henüz Yorum Yok';
 
   @override
@@ -1830,6 +1834,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get shareFailedToRemoveBookmark => 'Yer imi kaldırılamadı';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Gizli yer imlerinin kilidini açamadık, bu yüzden hiçbir şey değişmedi. Biraz sonra tekrar dene.';
 
   @override
   String get shareActionFailed => 'İşlem başarısız';

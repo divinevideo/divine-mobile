@@ -769,6 +769,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get profileErrorLoadingSaved => 'محفوظ ویڈیوز لوڈ کرنے میں خرابی';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'آپ کے نجی بک مارکس کھولے نہیں جا سکے، اس لیے کچھ غائب ہو سکتے ہیں۔ دوبارہ کوشش کرنے کے لیے نیچے کھینچیں۔';
+
+  @override
   String get profileNoCommentsOwnTitle => 'ابھی کوئی تبصرہ نہیں';
 
   @override
@@ -1896,6 +1900,10 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get shareFailedToRemoveBookmark => 'بک مارک نہیں ہٹایا جا سکا';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'آپ کے نجی بک مارکس کھولے نہیں جا سکے، اس لیے کچھ نہیں بدلا۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
 
   @override
   String get shareActionFailed => 'کارروائی ناکام';

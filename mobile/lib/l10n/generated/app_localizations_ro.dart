@@ -802,6 +802,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Eroare la încărcarea videoclipurilor salvate';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Nu ți-am putut debloca semnele de carte private, așa că unele ar putea lipsi. Trage în jos ca să încerci din nou.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Încă niciun comentariu';
 
   @override
@@ -1949,6 +1953,10 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get shareFailedToRemoveBookmark =>
       'N-am putut elimina semnul de carte';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Nu ți-am putut debloca semnele de carte private, așa că nu s-a schimbat nimic. Încearcă din nou peste câteva momente.';
 
   @override
   String get shareActionFailed => 'Acțiunea a eșuat';

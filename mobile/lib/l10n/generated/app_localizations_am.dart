@@ -755,6 +755,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get profileErrorLoadingSaved => 'የተቀመጡ ቪዲዮዎችን መጫን ላይ ስህተት';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'የግል ዕልባቶችዎን መክፈት አልተቻለም፣ ስለዚህ አንዳንዶቹ ላይታዩ ይችላሉ። እንደገና ለመሞከር ወደ ታች ይጎትቱ።';
+
+  @override
   String get profileNoCommentsOwnTitle => 'እስካሁን ምንም አስተያየት የለም።';
 
   @override
@@ -1851,6 +1855,10 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get shareFailedToRemoveBookmark => 'ዕልባትን ማስወገድ አልተሳካም።';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'የግል ዕልባቶችዎን መክፈት አልተቻለም፣ ስለዚህ ምንም አልተለወጠም። ትንሽ ቆይተው እንደገና ይሞክሩ።';
 
   @override
   String get shareActionFailed => 'እርምጃ አልተሳካም።';

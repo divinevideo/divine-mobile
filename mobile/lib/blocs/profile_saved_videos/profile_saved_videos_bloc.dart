@@ -59,7 +59,12 @@ class ProfileSavedVideosBloc
       items,
     ) {
       if (isClosed) return;
-      add(ProfileSavedVideosReconcileRequested(_savedVideoIds(items)));
+      add(
+        ProfileSavedVideosReconcileRequested(
+          _savedVideoIds(items),
+          privateBookmarksLocked: bookmarksRepository.hasUnreadablePrivateItems,
+        ),
+      );
     });
   }
 
@@ -174,13 +179,21 @@ class ProfileSavedVideosBloc
     }
 
     try {
-      final freshIds = await _resolveSavedIds();
+      final (:ids, :privateBookmarksLocked) = await _resolveSavedIds();
       if (isClosed) return;
 
       if (state.videos.isEmpty) {
-        await _coldLoad(freshIds, emit);
+        await _coldLoad(
+          ids,
+          emit,
+          privateBookmarksLocked: privateBookmarksLocked,
+        );
       } else {
-        await _warmRevalidate(freshIds, emit);
+        await _warmRevalidate(
+          ids,
+          emit,
+          privateBookmarksLocked: privateBookmarksLocked,
+        );
       }
     } catch (e, stackTrace) {
       Log.error(
@@ -216,16 +229,24 @@ class ProfileSavedVideosBloc
   /// A failed sync is not fatal here: the cached list is still worth showing,
   /// and the caller is only reading. (The write path treats the same failure
   /// as fatal, because republishing an unreconciled list destroys bookmarks.)
-  Future<List<String>> _resolveSavedIds() async {
+  ///
+  /// The lock flag is read with the ids: when the private section stayed
+  /// encrypted, the ids are only the public part of the viewer's list.
+  Future<({List<String> ids, bool privateBookmarksLocked})>
+  _resolveSavedIds() async {
     await _bookmarksRepository.syncGlobalBookmarks();
-    return _savedVideoIds(_bookmarksRepository.globalBookmarks);
+    return (
+      ids: _savedVideoIds(_bookmarksRepository.globalBookmarks),
+      privateBookmarksLocked: _bookmarksRepository.hasUnreadablePrivateItems,
+    );
   }
 
   /// Cold path: nothing cached. Fetch the first page for [savedEventIds].
   Future<void> _coldLoad(
     List<String> savedEventIds,
-    Emitter<ProfileSavedVideosState> emit,
-  ) async {
+    Emitter<ProfileSavedVideosState> emit, {
+    required bool privateBookmarksLocked,
+  }) async {
     if (savedEventIds.isEmpty) {
       emit(
         state.copyWith(
@@ -235,6 +256,7 @@ class ProfileSavedVideosBloc
           nextPageOffset: 0,
           hasMoreContent: false,
           isRefreshing: false,
+          privateBookmarksLocked: privateBookmarksLocked,
           clearError: true,
         ),
       );
@@ -266,6 +288,7 @@ class ProfileSavedVideosBloc
         lastFetchResolvedVideoCount: videos.isEmpty
             ? fetchResult.resolvedVideoCount
             : null,
+        privateBookmarksLocked: privateBookmarksLocked,
         clearError: true,
       ),
     );
@@ -276,12 +299,18 @@ class ProfileSavedVideosBloc
   /// fresh bookmark list (drop unsaved, fetch newly-saved in the window).
   Future<void> _warmRevalidate(
     List<String> freshIds,
-    Emitter<ProfileSavedVideosState> emit,
-  ) async {
+    Emitter<ProfileSavedVideosState> emit, {
+    required bool privateBookmarksLocked,
+  }) async {
     if (listEquals(freshIds, state.savedEventIds) &&
         !_isWindowUnderfilled(freshIds) &&
         !state.videos.any(_deletedVideoFilter)) {
-      emit(state.copyWith(isRefreshing: false));
+      emit(
+        state.copyWith(
+          isRefreshing: false,
+          privateBookmarksLocked: privateBookmarksLocked,
+        ),
+      );
       return;
     }
 
@@ -296,6 +325,7 @@ class ProfileSavedVideosBloc
         hasMoreContent: reconciled.hasMoreContent,
         isRefreshing: false,
         lastFetchResolvedVideoCount: reconciled.resolvedVideoCount,
+        privateBookmarksLocked: privateBookmarksLocked,
         clearError: true,
       ),
     );
@@ -321,7 +351,13 @@ class ProfileSavedVideosBloc
       return;
     }
     final freshIds = event.savedEventIds;
-    if (listEquals(freshIds, state.savedEventIds)) return;
+    if (listEquals(freshIds, state.savedEventIds)) {
+      // The private section can lock or unlock without moving a video id.
+      emit(
+        state.copyWith(privateBookmarksLocked: event.privateBookmarksLocked),
+      );
+      return;
+    }
 
     try {
       final reconciled = await _reconcile(freshIds);
@@ -334,6 +370,7 @@ class ProfileSavedVideosBloc
           nextPageOffset: reconciled.nextPageOffset,
           hasMoreContent: reconciled.hasMoreContent,
           lastFetchResolvedVideoCount: reconciled.resolvedVideoCount,
+          privateBookmarksLocked: event.privateBookmarksLocked,
           clearError: true,
         ),
       );

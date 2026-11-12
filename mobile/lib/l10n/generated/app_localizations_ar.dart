@@ -761,6 +761,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileErrorLoadingSaved => 'خطأ في تحميل الفيديوهات المحفوظة';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'تعذّر فتح إشاراتك المرجعية الخاصة، لذا قد يكون بعضها مفقودًا. يمكن السحب للأسفل لإعادة المحاولة.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'لا توجد تعليقات بعد';
 
   @override
@@ -1896,6 +1900,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get shareFailedToRemoveBookmark => 'فشل إزالة الإشارة المرجعية';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'تعذّر فتح إشاراتك المرجعية الخاصة، لذا لم يتغيّر شيء. يُرجى المحاولة مرة أخرى بعد قليل.';
 
   @override
   String get shareActionFailed => 'فشل الإجراء';

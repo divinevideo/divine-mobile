@@ -567,6 +567,7 @@
   "profileNoSavedVideosTitle": "ఇంకా ఏదీ సేవ్ చేయబడలేదు",
   "profileSavedOwnEmpty": "షేర్ షీట్ నుండి వీడియోలను బుక్‌మార్క్ చేయండి మరియు అవి ఇక్కడ చూపబడతాయి.",
   "profileErrorLoadingSaved": "సేవ్ చేసిన వీడియోలను లోడ్ చేయడంలో లోపం",
+  "profileSavedPrivateItemsLocked": "మీ ప్రైవేట్ బుక్‌మార్క్‌లను అన్‌లాక్ చేయడం సాధ్యపడలేదు, కాబట్టి కొన్ని కనిపించకపోవచ్చు. మళ్లీ ప్రయత్నించడానికి కిందికి లాగండి.",
   "profileNoCommentsOwnTitle": "ఇంకా వ్యాఖ్యలు లేవు",
   "profileNoCommentsOtherTitle": "ఇంకా వ్యాఖ్యలు లేవు",
   "profileCommentsOwnEmpty": "మీ వ్యాఖ్యలు మరియు ప్రత్యుత్తరాలు ఇక్కడ కనిపిస్తాయి.",
@@ -1180,6 +1181,7 @@
   "@shareFailedToRemoveBookmark": {
     "description": "Snackbar when toggling Save off (remove from bookmarks) fails."
   },
+  "shareBookmarkPrivateItemsLocked": "మీ ప్రైవేట్ బుక్‌మార్క్‌లను అన్‌లాక్ చేయడం సాధ్యపడలేదు, కాబట్టి ఏమీ మారలేదు. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.",
   "shareActionFailed": "చర్య విఫలమైంది",
   "shareWithTitle": "వీరితో భాగస్వామ్యం చేయండి",
   "shareFindPeople": "వ్యక్తులను కనుగొనండి",

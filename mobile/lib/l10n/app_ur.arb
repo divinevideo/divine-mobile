@@ -438,6 +438,7 @@
   "profileNoSavedVideosTitle": "ابھی کچھ محفوظ نہیں",
   "profileSavedOwnEmpty": "شیئر شیٹ سے ویڈیوز بک مارک کریں اور وہ یہاں نظر آئیں گی۔",
   "profileErrorLoadingSaved": "محفوظ ویڈیوز لوڈ کرنے میں خرابی",
+  "profileSavedPrivateItemsLocked": "آپ کے نجی بک مارکس کھولے نہیں جا سکے، اس لیے کچھ غائب ہو سکتے ہیں۔ دوبارہ کوشش کرنے کے لیے نیچے کھینچیں۔",
   "profileNoCommentsOwnTitle": "ابھی کوئی تبصرہ نہیں",
   "profileNoCommentsOtherTitle": "ابھی کوئی تبصرہ نہیں",
   "profileCommentsOwnEmpty": "آپ کے تبصرے اور جوابات یہاں نظر آئیں گے۔",
@@ -946,6 +947,7 @@
   "@shareFailedToRemoveBookmark": {
     "description": "Snackbar when toggling Save off (remove from bookmarks) fails."
   },
+  "shareBookmarkPrivateItemsLocked": "آپ کے نجی بک مارکس کھولے نہیں جا سکے، اس لیے کچھ نہیں بدلا۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
   "shareActionFailed": "کارروائی ناکام",
   "shareWithTitle": "کس کے ساتھ شیئر کریں",
   "shareFindPeople": "لوگ تلاش کریں",

@@ -541,6 +541,10 @@
   "profileNoSavedVideosTitle": "Nothing saved yet",
   "profileSavedOwnEmpty": "Bookmark videos from the share sheet and they'll show up here.",
   "profileErrorLoadingSaved": "Error loading saved videos",
+  "profileSavedPrivateItemsLocked": "Couldn't unlock your private bookmarks, so some may be missing. Pull down to try again.",
+  "@profileSavedPrivateItemsLocked": {
+    "description": "Shown on the Bookmarks tab when the encrypted (private) part of the user's bookmark list could not be decrypted. Replaces the empty state when nothing else is saved, and sits above the grid otherwise. Pulling down re-syncs and decrypts again."
+  },
   "profileNoCommentsOwnTitle": "No comments yet",
   "profileNoCommentsOtherTitle": "No comments yet",
   "profileCommentsOwnEmpty": "Your comments and replies will appear here.",
@@ -1260,6 +1264,10 @@
   "shareFailedToRemoveBookmark": "Failed to remove bookmark",
   "@shareFailedToRemoveBookmark": {
     "description": "Snackbar when toggling Save off (remove from bookmarks) fails."
+  },
+  "shareBookmarkPrivateItemsLocked": "Couldn't unlock your private bookmarks, so nothing changed. Try again in a moment.",
+  "@shareBookmarkPrivateItemsLocked": {
+    "description": "Snackbar when Save is refused because the encrypted (private) part of the user's bookmark list could not be decrypted. Neither adding nor removing happened, so it must not name either. A retry can work when the signer was only briefly unavailable."
   },
   "shareActionFailed": "Action failed",
   "shareWithTitle": "Share with",

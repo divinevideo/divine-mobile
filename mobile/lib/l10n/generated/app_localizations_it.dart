@@ -779,6 +779,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Errore nel caricamento dei video salvati';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Impossibile sbloccare i tuoi segnalibri privati, quindi potrebbe mancarne qualcuno. Trascina verso il basso per riprovare.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Ancora nessun commento';
 
   @override
@@ -1927,6 +1931,10 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get shareFailedToRemoveBookmark =>
       'Impossibile rimuovere dai segnalibri';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Impossibile sbloccare i tuoi segnalibri privati, quindi non è cambiato nulla. Riprova tra un attimo.';
 
   @override
   String get shareActionFailed => 'Azione fallita';

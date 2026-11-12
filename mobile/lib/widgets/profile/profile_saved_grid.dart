@@ -124,6 +124,14 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
         final savedVideos = state.videos;
 
         if (savedVideos.isEmpty) {
+          // Nothing readable is not nothing saved: the locked part may hold
+          // every bookmark the viewer has.
+          if (state.privateBookmarksLocked) {
+            return ProfileTabErrorState(
+              message: context.l10n.profileSavedPrivateItemsLocked,
+              physics: widget.physics,
+            );
+          }
           return ProfileTabEmptyState(
             title: context.l10n.profileNoSavedVideosTitle,
             subtitle: context.l10n.profileSavedOwnEmpty,
@@ -134,6 +142,8 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
         return CustomScrollView(
           physics: widget.physics,
           slivers: [
+            if (state.privateBookmarksLocked)
+              const SliverToBoxAdapter(child: _PrivateBookmarksLockedNotice()),
             ProfileMasonryGrid(
               childCount: savedVideos.length,
               aspectRatioOf: (index) =>
@@ -155,6 +165,22 @@ class _ProfileSavedGridState extends State<ProfileSavedGrid>
       },
     );
   }
+}
+
+/// Says the grid may be missing saves while the private section is locked.
+class _PrivateBookmarksLockedNotice extends StatelessWidget {
+  const _PrivateBookmarksLockedNotice();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+    child: DivineInfoCard(
+      message: context.l10n.profileSavedPrivateItemsLocked,
+      icon: DivineIconName.warningCircle,
+      tone: DivineInfoCardTone.warning,
+      compact: true,
+    ),
+  );
 }
 
 /// Individual saved video tile in the grid.

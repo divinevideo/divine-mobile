@@ -736,6 +736,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Ralat memuatkan video disimpan';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Tidak dapat membuka penanda buku peribadi anda, jadi sesetengahnya mungkin tiada. Tarik ke bawah untuk cuba lagi.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Belum ada komen';
 
   @override
@@ -1872,6 +1876,10 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get shareFailedToRemoveBookmark =>
       'Gagal mengalih keluar penanda buku';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Tidak dapat membuka penanda buku peribadi anda, jadi tiada apa-apa yang berubah. Cuba lagi sebentar nanti.';
 
   @override
   String get shareActionFailed => 'Tindakan gagal';

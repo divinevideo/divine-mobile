@@ -777,6 +777,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Error loading saved videos';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Couldn\'t unlock your private bookmarks, so some may be missing. Pull down to try again.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'No comments yet';
 
   @override
@@ -1900,6 +1904,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareFailedToRemoveBookmark => 'Failed to remove bookmark';
+
+  @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Couldn\'t unlock your private bookmarks, so nothing changed. Try again in a moment.';
 
   @override
   String get shareActionFailed => 'Action failed';
