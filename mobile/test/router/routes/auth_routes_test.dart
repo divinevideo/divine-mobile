@@ -243,10 +243,6 @@ void main() {
           const WelcomeRouteData(selectedPubkey: syntheticTestPubkey).location,
           equals('/welcome?selectedPubkey=$syntheticTestPubkey'),
         );
-        expect(
-          const WelcomeRouteData(selectedPubkey: syntheticTestPubkey).location,
-          equals(WelcomeScreen.pathWithSelectedPubkey(syntheticTestPubkey)),
-        );
       });
 
       test('sign in keeps the email and error query keys', () {
