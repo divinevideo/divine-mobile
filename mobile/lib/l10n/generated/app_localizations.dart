@@ -8113,7 +8113,7 @@ abstract class AppLocalizations {
   /// **'Search by name...'**
   String get userPickerSearchByNameHint;
 
-  /// Semantic label for the button that clears the text in the user picker search field.
+  /// Semantic label for a button that clears the text in a search field: the user picker search and the video editor sticker search.
   ///
   /// In en, this message translates to:
   /// **'Clear search'**

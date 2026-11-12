@@ -3363,7 +3363,7 @@
   "userPickerSearchByNameHint": "Search by name...",
   "userPickerClearSearchSemantics": "Clear search",
   "@userPickerClearSearchSemantics": {
-    "description": "Semantic label for the button that clears the text in the user picker search field."
+    "description": "Semantic label for a button that clears the text in a search field: the user picker search and the video editor sticker search."
   },
   "userPickerAlreadyAddedSemantics": "{name} already added",
   "@userPickerAlreadyAddedSemantics": {
