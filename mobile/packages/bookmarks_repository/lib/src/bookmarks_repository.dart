@@ -500,12 +500,15 @@ class BookmarksRepository {
   /// it — for a public item, a sync on an earlier instance counts too — so an
   /// item saved before an edit and one saved after it are one video, placed
   /// where the later item is. `a` items for anything but a NIP-71
-  /// addressable video, and `t` and `r` items, are not videos.
+  /// addressable video, and `t` and `r` items, are not videos, and neither is
+  /// an `e` item that is not a well-formed event id: fetched by id, one would
+  /// close the relay query for every other video with it.
   List<String> get bookmarkedVideoReferences {
     final references = <String>{};
     for (final item in globalBookmarks) {
       final reference = switch (item.type) {
-        'e' => _videoAddressByEventId[item.id] ?? item.id,
+        'e' when _eventIdPattern.hasMatch(item.id) =>
+          _videoAddressByEventId[item.id] ?? item.id,
         'a' when _isVideoAddress(item.id) => item.id,
         _ => null,
       };

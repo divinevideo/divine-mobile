@@ -1756,6 +1756,46 @@ void main() {
           expect(service.bookmarkedVideoReferences, equals([originalId]));
         });
 
+        // The Saved tab fetches event-id references by id, and one a relay
+        // cannot parse closes that whole query.
+        test(
+          'leaves out an event-id item that is not a well-formed id',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEventWithTags([
+                  ['e', 'not-an-event-id'],
+                  ['e', 'A' * 64],
+                  ['e', originalId],
+                  ['a', coordinate],
+                ]),
+              ],
+            );
+            final service = createService();
+            final announced = <List<String>>[];
+            final subscription = service
+                .watchBookmarkedVideoReferences()
+                .listen(
+                  announced.add,
+                );
+            addTearDown(subscription.cancel);
+
+            await service.syncGlobalBookmarks();
+            await pumpEventQueue();
+
+            expect(
+              service.bookmarkedVideoReferences,
+              equals([originalId, coordinate]),
+            );
+            expect(
+              announced,
+              equals([
+                [originalId, coordinate],
+              ]),
+            );
+          },
+        );
+
         test('announces the references each time the list changes', () async {
           stubRelay(
             events: [
