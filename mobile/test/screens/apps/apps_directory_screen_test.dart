@@ -194,8 +194,8 @@ void main() {
     testWidgets('tapping an app opens its integration route', (tester) async {
       final mockGoRouter = MockGoRouter();
       when(
-        () => mockGoRouter.push(any(), extra: any(named: 'extra')),
-      ).thenAnswer((_) async => null);
+        () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+      ).thenAnswer((_) async {});
       when(
         () => mockDirectoryService.fetchApprovedApps(),
       ).thenAnswer((_) async => [_fixture()]);
@@ -207,7 +207,7 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(
-        () => mockGoRouter.push(
+        () => mockGoRouter.push<void>(
           NostrAppSandboxScreen.pathForAppId('app-primal'),
           extra: any(named: 'extra'),
         ),
@@ -224,8 +224,8 @@ void main() {
 
         final mockGoRouter = MockGoRouter();
         when(
-          () => mockGoRouter.push(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async => null);
+          () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
         when(
           () => mockDirectoryService.fetchApprovedApps(),
         ).thenAnswer((_) async => [_verifierFixture()]);
@@ -242,7 +242,9 @@ void main() {
           'https://verifier.divine.video/',
         );
         expect(launcher.launched.single.useExternalApplication, isTrue);
-        verifyNever(() => mockGoRouter.push(any(), extra: any(named: 'extra')));
+        verifyNever(
+          () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+        );
       },
     );
 

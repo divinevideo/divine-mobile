@@ -2,11 +2,10 @@
 // ABOUTME: in-app sandbox, and launches it accordingly.
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/screens/apps/nostr_app_sandbox_screen.dart';
+import 'package:openvine/router/routes/apps_routes.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -70,9 +69,8 @@ Future<void> launchNostrApp(
   NostrAppDirectoryEntry app,
 ) async {
   if (!appRequiresSystemBrowser(app)) {
-    await context.push(
-      NostrAppSandboxScreen.pathForAppId(app.id),
-      extra: app,
+    await NostrAppSandboxRouteData(appId: app.id, $extra: app).push<void>(
+      context,
     );
     return;
   }

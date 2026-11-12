@@ -114,7 +114,7 @@ List<RouteBase> appRoutes(Ref ref) => [
   ...minorAccountReviewRoutes(),
   ...listsRoutes(),
   ...authRoutes(ref),
-  ...appsRoutes(ref),
+  ...appsRoutes(),
   ...settingsRoutes(ref),
   ...profileRoutes(),
   ...libraryRoutes(),
