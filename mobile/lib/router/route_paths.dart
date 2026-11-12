@@ -214,10 +214,10 @@ abstract final class RoutePaths {
 
 /// Query-parameter keys the authentication routes read and write.
 ///
-/// Reset and verification emails link with `token` and `email`, so change
-/// those only together with the backend that sends them. They live here
-/// because the deep-link services may import this file and nothing else in
-/// `router/`.
+/// Reset emails link with `token` and `email`, and verification emails with
+/// `token`, so change those only together with the backend that sends them.
+/// They live here because the deep-link services may import this file and
+/// nothing else in `router/`.
 abstract final class AuthQueryParameters {
   static const selectedPubkey = 'selectedPubkey';
   static const email = 'email';
