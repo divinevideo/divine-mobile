@@ -55,6 +55,15 @@ class BookmarkItem {
   int get hashCode => Object.hash(type, id);
 }
 
+/// Maps video event ids to the `kind:pubkey:d-tag` coordinate of the video
+/// each one is a version of. Ids that are not addressable videos, or that
+/// cannot be found, are left out of the result.
+///
+/// Lets [BookmarksRepository] recognise an `e` item saved before #7135 as the
+/// same video as its edited version.
+typedef BookmarkVideoAddressResolver =
+    Future<Map<String, String>> Function(List<String> eventIds);
+
 /// Outcome of [BookmarksRepository.toggleVideoInGlobalBookmarks].
 ///
 /// Carries the state observed *after* reconciling with the relay, so callers
@@ -152,10 +161,12 @@ class BookmarksRepository {
     required BookmarkSigner signer,
     required SharedPreferences prefs,
     DateTime Function() now = DateTime.now,
+    BookmarkVideoAddressResolver? resolveVideoAddresses,
   }) : _nostrClient = nostrClient,
        _signer = signer,
        _prefs = prefs,
-       _now = now {
+       _now = now,
+       _resolveVideoAddresses = resolveVideoAddresses {
     _loadBookmarksFromSharedPreferences();
   }
 
@@ -163,6 +174,31 @@ class BookmarksRepository {
   final BookmarkSigner _signer;
   final SharedPreferences _prefs;
   final DateTime Function() _now;
+  final BookmarkVideoAddressResolver? _resolveVideoAddresses;
+
+  /// The coordinate of each `e` item's video, as [_resolveVideoAddresses]
+  /// reported it. Lives as long as the instance: a version keeps its address.
+  final Map<String, String> _videoAddressByEventId = {};
+
+  /// How long an event id a completed lookup found nothing for waits before
+  /// it is looked up again. A relay that times out answers with nothing
+  /// rather than an error, so a miss is not taken as final.
+  static const videoAddressRetryInterval = Duration(minutes: 10);
+
+  /// When a completed [_resolveVideoAddresses] call last found nothing for
+  /// each event id, so an id that never resolves is not looked up on every
+  /// sync.
+  final Map<String, DateTime> _videoAddressMissedAt = {};
+
+  /// Set by [dispose]. An operation still in flight then stops writing the
+  /// device snapshot, whose keys the next account reuses.
+  bool _disposed = false;
+
+  /// The addressable video kinds NIP-71 defines (34235 and 34236).
+  static const Set<int> _addressableVideoKinds = {
+    EventKind.videoHorizontal,
+    EventKind.videoVertical,
+  };
 
   /// Storage key for the cached public-item snapshot.
   ///
@@ -301,9 +337,10 @@ class BookmarksRepository {
   /// Tail of the serialized operation queue. See [_serialized].
   ///
   /// Depth is not capped. Every leg is individually bounded — a 5 s relay
-  /// query, a 20 s Keycast `sign_event`, a 15 s publish — so a caller cannot
-  /// wait on a hung operation, but it does wait for each one queued ahead of
-  /// it. Bounded is not the same as short.
+  /// query, a video lookup for event ids not looked up yet (whatever bounds
+  /// [_resolveVideoAddresses] has), a 20 s Keycast `sign_event`, a 15 s
+  /// publish — so a caller cannot wait on a hung operation, but it does wait
+  /// for each one queued ahead of it. Bounded is not the same as short.
   Future<void> _queue = Future<void>.value();
 
   /// Runs [operation] only after every operation queued before it.
@@ -441,6 +478,37 @@ class BookmarksRepository {
   Stream<List<BookmarkItem>> watchGlobalBookmarks() =>
       _globalBookmarksController.stream;
 
+  /// The bookmarked videos, one reference each, in list order: a video's
+  /// `kind:pubkey:d-tag` coordinate when it has one, or its event id.
+  ///
+  /// An `e` item counts under its video's coordinate once a sync has resolved
+  /// it, so an item saved before an edit and one saved after it are one video,
+  /// placed where the later item is. `a` items for anything but a NIP-71
+  /// addressable video, and `t` and `r` items, are not videos.
+  List<String> get bookmarkedVideoReferences {
+    final references = <String>{};
+    for (final item in globalBookmarks) {
+      final reference = switch (item.type) {
+        'e' => _videoAddressByEventId[item.id] ?? item.id,
+        'a' when _isVideoAddress(item.id) => item.id,
+        _ => null,
+      };
+      if (reference == null) continue;
+      references
+        ..remove(reference)
+        ..add(reference);
+    }
+    return List.unmodifiable(references);
+  }
+
+  /// [bookmarkedVideoReferences], each time [watchGlobalBookmarks] announces a
+  /// new list.
+  Stream<List<String>> watchBookmarkedVideoReferences() =>
+      watchGlobalBookmarks().map((_) => bookmarkedVideoReferences);
+
+  static bool _isVideoAddress(String coordinate) =>
+      _addressableVideoKinds.contains(AId.fromString(coordinate)?.kind);
+
   /// Guarded because an operation already in flight can finish after
   /// [dispose] — an account switch tears the instance down mid-publish.
   void _emitGlobalBookmarks() {
@@ -449,8 +517,9 @@ class BookmarksRepository {
   }
 
   /// Closes [watchGlobalBookmarks]. Operations still in flight finish; they
-  /// just stop announcing.
+  /// just stop announcing, and stop writing the device snapshot.
   void dispose() {
+    _disposed = true;
     unawaited(_globalBookmarksController.close());
   }
 
@@ -617,6 +686,7 @@ class BookmarksRepository {
             ..clear()
             ..addAll(_itemsFromTags(private.tags));
           _privateItemsState = private.state;
+          await _resolveEventItemAddresses();
           _emitGlobalBookmarks();
           Log.info(
             'Ignoring kind 10003 ${newest.id} - older than the revision this '
@@ -630,6 +700,7 @@ class BookmarksRepository {
         _localPublishRevision = null;
       }
 
+      await _resolveEventItemAddresses();
       await _saveBookmarksToSharedPreferences();
       _emitGlobalBookmarks();
 
@@ -647,6 +718,47 @@ class BookmarksRepository {
         category: LogCategory.system,
       );
       return BookmarkToggleFailure.unknown;
+    }
+  }
+
+  /// Learns the video coordinate of each `e` item not resolved yet, so
+  /// [isVideoBookmarkedGlobally] and [bookmarkedVideoReferences] can match it
+  /// to the video's edited versions.
+  ///
+  /// Best effort: an item that does not resolve is still matched by its event
+  /// id. A coordinate, once found, is kept; an id the lookup found nothing for
+  /// is asked about again after [videoAddressRetryInterval], and one whose
+  /// lookup threw on the next sync.
+  Future<void> _resolveEventItemAddresses() async {
+    final resolve = _resolveVideoAddresses;
+    if (resolve == null) return;
+    final now = _now();
+    bool due(String eventId) {
+      if (_videoAddressByEventId.containsKey(eventId)) return false;
+      final missedAt = _videoAddressMissedAt[eventId];
+      return missedAt == null ||
+          now.difference(missedAt) >= videoAddressRetryInterval;
+    }
+
+    final unresolved = [
+      for (final item in globalBookmarks)
+        if (item.type == 'e' && due(item.id)) item.id,
+    ];
+    if (unresolved.isEmpty) return;
+
+    try {
+      final found = await resolve(unresolved);
+      _videoAddressByEventId.addAll(found);
+      for (final eventId in unresolved) {
+        if (!found.containsKey(eventId)) _videoAddressMissedAt[eventId] = now;
+      }
+    } on Object catch (e) {
+      Log.warning(
+        'Could not resolve the videos of ${unresolved.length} bookmarked '
+        'event ids: $e',
+        name: 'BookmarksRepository',
+        category: LogCategory.system,
+      );
     }
   }
 
@@ -699,7 +811,13 @@ class BookmarksRepository {
     );
   }
 
-  /// If [videoEventId] is globally bookmarked, removes it; otherwise adds it.
+  /// If the video is globally bookmarked, removes it; otherwise adds it.
+  ///
+  /// Pass the video's [addressableId] when it has one. An addressable video
+  /// is saved as that coordinate, because an edit republishes it under a new
+  /// event id, and removing it drops every item that names it: the
+  /// coordinate, [videoEventId], and an event id saved for an earlier version
+  /// (#7135).
   ///
   /// The direction is decided *after* reconciling with the relay, so a video
   /// bookmarked on another device is removed rather than added a second time.
@@ -711,14 +829,19 @@ class BookmarksRepository {
   /// no other read can land between the direction being decided and the new
   /// list being published.
   Future<BookmarkToggleResult> toggleVideoInGlobalBookmarks(
-    String videoEventId,
-  ) => _serialized(() => _toggleVideoInGlobalBookmarks(videoEventId));
+    String videoEventId, {
+    String? addressableId,
+  }) => _serialized(
+    () => _toggleVideoInGlobalBookmarks(videoEventId, addressableId),
+  );
 
   Future<BookmarkToggleResult> _toggleVideoInGlobalBookmarks(
     String videoEventId,
+    String? addressableId,
   ) async {
     final failure = await _syncGlobalBookmarks(requireAuthoritative: true);
-    final wasBookmarked = isVideoBookmarkedGlobally(videoEventId);
+    final namingItems = _itemsNamingVideo(videoEventId, addressableId);
+    final wasBookmarked = namingItems.isNotEmpty;
 
     if (failure != null) {
       return BookmarkToggleResult(
@@ -743,11 +866,13 @@ class BookmarksRepository {
 
     final succeeded = wasBookmarked
         ? await _removeFromGlobalBookmarks(
-            BookmarkItem(type: 'e', id: videoEventId),
+            namingItems,
             alreadyReconciled: true,
           )
         : await _addToGlobalBookmarks(
-            BookmarkItem(type: 'e', id: videoEventId),
+            addressableId == null
+                ? BookmarkItem(type: 'e', id: videoEventId)
+                : BookmarkItem(type: 'a', id: addressableId),
             alreadyReconciled: true,
           );
 
@@ -857,14 +982,17 @@ class BookmarksRepository {
     BookmarkItem item, {
     bool alreadyReconciled = false,
   }) => _serialized(
-    () =>
-        _removeFromGlobalBookmarks(item, alreadyReconciled: alreadyReconciled),
+    () => _removeFromGlobalBookmarks({
+      item,
+    }, alreadyReconciled: alreadyReconciled),
   );
 
+  /// Removes every one of [items] in a single publish.
   Future<bool> _removeFromGlobalBookmarks(
-    BookmarkItem item, {
+    Set<BookmarkItem> items, {
     required bool alreadyReconciled,
   }) async {
+    final removedIds = items.map((item) => item.id).join(', ');
     try {
       if (!alreadyReconciled &&
           await _syncGlobalBookmarks(requireAuthoritative: true) != null) {
@@ -891,20 +1019,21 @@ class BookmarksRepository {
       // shows it bookmarked (#7136) — and the reverse is just as untrue, so an
       // item the pre-fix leak left in *both* halves loses both. `removeWhere`
       // rather than `remove`, which drops only the first of a duplicate pair.
-      if (_privateBookmarks.contains(item)) {
+      if (_privateBookmarks.any(items.contains)) {
         final privateCandidate = [..._privateTags]
           ..removeWhere(
             (tag) =>
-                tag.length >= 2 && tag[0] == item.type && tag[1] == item.id,
+                tag.length >= 2 &&
+                items.contains(BookmarkItem(type: tag[0], id: tag[1])),
           );
         final published = await _publishGlobalBookmarks(
-          [..._globalBookmarks]..removeWhere((candidate) => candidate == item),
+          [..._globalBookmarks]..removeWhere(items.contains),
           privateCandidate: privateCandidate,
         );
         if (!published) return false;
 
         Log.info(
-          'Removed private item from global bookmarks: ${item.id}',
+          'Removed private item from global bookmarks: $removedIds',
           name: 'BookmarksRepository',
           category: LogCategory.system,
         );
@@ -914,11 +1043,10 @@ class BookmarksRepository {
       // `removeWhere` for the same reason the private path uses it: another
       // client is free to write the same tag twice, and `List.remove` would
       // drop one copy and republish the other while reporting "Removed".
-      final candidate = [..._globalBookmarks]
-        ..removeWhere((existing) => existing == item);
+      final candidate = [..._globalBookmarks]..removeWhere(items.contains);
       if (candidate.length == _globalBookmarks.length) {
         Log.warning(
-          'Item not found in global bookmarks: ${item.id}',
+          'Item not found in global bookmarks: $removedIds',
           name: 'BookmarksRepository',
           category: LogCategory.system,
         );
@@ -929,7 +1057,7 @@ class BookmarksRepository {
       if (!published) return false;
 
       Log.info(
-        'Removed item from global bookmarks: ${item.id}',
+        'Removed item from global bookmarks: $removedIds',
         name: 'BookmarksRepository',
         category: LogCategory.system,
       );
@@ -945,19 +1073,39 @@ class BookmarksRepository {
     }
   }
 
-  /// Check if an item is in global bookmarks, public or private.
+  /// Every item, public or private, that names the video [videoEventId] is a
+  /// version of: that event id, the video's [addressableId], or an event id a
+  /// sync resolved to that coordinate.
   ///
   /// Consulting only the public tags is what made a privately-bookmarked video
   /// read as unsaved, and then let a save publish it in the clear (#7136).
-  bool _isInGlobalBookmarks(String itemId, String type) {
-    bool matches(BookmarkItem item) => item.id == itemId && item.type == type;
-    return _globalBookmarks.any(matches) || _privateBookmarks.any(matches);
+  Set<BookmarkItem> _itemsNamingVideo(
+    String videoEventId,
+    String? addressableId,
+  ) {
+    bool names(BookmarkItem item) => switch (item.type) {
+      'e' =>
+        item.id == videoEventId ||
+            (addressableId != null &&
+                _videoAddressByEventId[item.id] == addressableId),
+      'a' => item.id == addressableId,
+      _ => false,
+    };
+    return {
+      ..._globalBookmarks.where(names),
+      ..._privateBookmarks.where(names),
+    };
   }
 
-  /// Check if a video event is bookmarked globally
-  bool isVideoBookmarkedGlobally(String videoEventId) {
-    return _isInGlobalBookmarks(videoEventId, 'e');
-  }
+  /// Whether the video [videoEventId] is a version of is bookmarked, publicly
+  /// or privately.
+  ///
+  /// Pass the video's [addressableId] when it has one, so the edited version
+  /// of a bookmarked video reads as saved.
+  bool isVideoBookmarkedGlobally(
+    String videoEventId, {
+    String? addressableId,
+  }) => _itemsNamingVideo(videoEventId, addressableId).isNotEmpty;
 
   // === NOSTR PUBLISHING ===
 
@@ -1347,8 +1495,13 @@ class BookmarksRepository {
     }
   }
 
-  /// Save bookmarks to SharedPreferences cache
+  /// Save bookmarks to SharedPreferences cache.
+  ///
+  /// Skipped once [dispose] has run: an account switch disposes this
+  /// instance and clears the keys for the next account, and an operation
+  /// still in flight would otherwise refill them with this account's list.
   Future<void> _saveBookmarksToSharedPreferences() async {
+    if (_disposed) return;
     try {
       // Save global bookmarks
       final globalBookmarksJson = _globalBookmarks
@@ -1358,6 +1511,9 @@ class BookmarksRepository {
         globalBookmarksStorageKey,
         jsonEncode(globalBookmarksJson),
       );
+      // The revision record carries this account's watermark and ciphertext,
+      // the half the next account must never inherit.
+      if (_disposed) return;
 
       final revision = _revision;
       if (revision == null) {

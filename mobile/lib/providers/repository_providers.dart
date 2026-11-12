@@ -51,6 +51,7 @@ import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
+import 'package:openvine/providers/video_address_lookup.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/repositories/profile_pins_repository.dart';
 import 'package:openvine/services/challenges/challenge_app_session.dart';
@@ -961,6 +962,10 @@ notifySubscriptionsUnfollowCleanupProvider = Provider.autoDispose((ref) {
 /// Synchronous because every dependency is: the `async` it carried out of the
 /// #6969 extraction awaited nothing, and only forced both consumers to hold a
 /// `Future` they could not read at build time.
+///
+/// The videos repository is read when a lookup runs rather than watched: it
+/// rebuilds on every content-filter change, and watching it would rebuild this
+/// repository with it.
 @Riverpod(keepAlive: true)
 BookmarksRepository bookmarksRepository(Ref ref) {
   final nostrService = ref.watch(nostrServiceProvider);
@@ -971,6 +976,8 @@ BookmarksRepository bookmarksRepository(Ref ref) {
     nostrClient: nostrService,
     signer: BookmarkSignerAdapter(authService),
     prefs: prefs,
+    resolveVideoAddresses: (eventIds) =>
+        lookUpVideoAddresses(ref.read(videosRepositoryProvider), eventIds),
   );
   ref.onDispose(repository.dispose);
   return repository;
