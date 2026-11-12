@@ -1,6 +1,7 @@
 // ABOUTME: Pure router helper functions shared between route modules and tests
 // ABOUTME: Kept dependency-free of app_router.dart so route modules import them cycle-free
 
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -15,14 +16,14 @@ import 'package:openvine/utils/pending_verification_restore_policy.dart';
 /// regression test so both paths produce the same output for the same
 /// input. See issue #3156.
 String rewriteResetPasswordDeepLink(Uri uri) {
-  final token = uri.queryParameters['token'] ?? '';
-  final email = uri.queryParameters['email'];
+  final token = uri.queryParameters[AuthQueryParameters.token] ?? '';
+  final email = uri.queryParameters[AuthQueryParameters.email];
   final buffer = StringBuffer(WelcomeScreen.resetPasswordPath)
-    ..write('?token=')
+    ..write('?${AuthQueryParameters.token}=')
     ..write(Uri.encodeQueryComponent(token));
   if (email != null && email.isNotEmpty) {
     buffer
-      ..write('&email=')
+      ..write('&${AuthQueryParameters.email}=')
       ..write(Uri.encodeQueryComponent(email));
   }
   return buffer.toString();
@@ -50,7 +51,8 @@ String? pendingEmailVerificationRestoreLocation(PendingVerification? pending) {
 /// record. OAuth credentials deliberately never travel in this location.
 String pendingEmailVerificationLocation({required String email}) {
   final encodedEmail = Uri.encodeQueryComponent(email);
-  return '${EmailVerificationScreen.path}?email=$encodedEmail&restored=true';
+  return '${EmailVerificationScreen.path}?${AuthQueryParameters.email}='
+      '$encodedEmail&${AuthQueryParameters.restored}=true';
 }
 
 /// Returns the secret-free verification location when a pending transaction

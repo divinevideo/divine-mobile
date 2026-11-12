@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/router_guards.dart';
 import 'package:openvine/screens/auth/create_account_screen.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
@@ -47,7 +48,7 @@ List<RouteBase> authRoutes() => $appRoutes;
 )
 class WelcomeRouteData extends GoRouteData with $WelcomeRouteData {
   const WelcomeRouteData({
-    @TypedQueryParameter(name: WelcomeScreen.selectedPubkeyParam)
+    @TypedQueryParameter(name: AuthQueryParameters.selectedPubkey)
     this.selectedPubkey,
   });
 
@@ -73,8 +74,8 @@ class CreateAccountRouteData extends GoRouteData with $CreateAccountRouteData {
 
 class LoginOptionsRouteData extends GoRouteData with $LoginOptionsRouteData {
   const LoginOptionsRouteData({
-    @TypedQueryParameter(name: 'email') this.email,
-    @TypedQueryParameter(name: 'error') this.error,
+    @TypedQueryParameter(name: AuthQueryParameters.email) this.email,
+    @TypedQueryParameter(name: AuthQueryParameters.error) this.error,
   });
 
   /// An email to prefill, from create-account recovery.
@@ -91,8 +92,8 @@ class LoginOptionsRouteData extends GoRouteData with $LoginOptionsRouteData {
 /// The password-reset form a reset link lands on.
 class ResetPasswordRouteData extends GoRouteData with $ResetPasswordRouteData {
   const ResetPasswordRouteData({
-    @TypedQueryParameter(name: 'token') this.token,
-    @TypedQueryParameter(name: 'email') this.email,
+    @TypedQueryParameter(name: AuthQueryParameters.token) this.token,
+    @TypedQueryParameter(name: AuthQueryParameters.email) this.email,
   });
 
   /// The reset token; the screen opens with an empty one when it is absent.
@@ -165,11 +166,11 @@ class ResetPasswordDeepLinkRouteData extends GoRouteData
 class EmailVerificationRouteData extends GoRouteData
     with $EmailVerificationRouteData {
   const EmailVerificationRouteData({
-    @TypedQueryParameter(name: 'token') this.token,
-    @TypedQueryParameter(name: 'deviceCode') this.deviceCode,
-    @TypedQueryParameter(name: 'verifier') this.verifier,
-    @TypedQueryParameter(name: 'email') this.email,
-    @TypedQueryParameter(name: 'restored') this.restored,
+    @TypedQueryParameter(name: AuthQueryParameters.token) this.token,
+    @TypedQueryParameter(name: AuthQueryParameters.deviceCode) this.deviceCode,
+    @TypedQueryParameter(name: AuthQueryParameters.verifier) this.verifier,
+    @TypedQueryParameter(name: AuthQueryParameters.email) this.email,
+    @TypedQueryParameter(name: AuthQueryParameters.restored) this.restored,
   });
 
   final String? token;

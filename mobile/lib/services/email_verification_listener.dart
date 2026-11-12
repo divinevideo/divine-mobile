@@ -83,8 +83,8 @@ class EmailVerificationListener {
 
     final params = uri.queryParameters;
 
-    if (params.containsKey('token')) {
-      final token = params['token']!;
+    if (params.containsKey(AuthQueryParameters.token)) {
+      final token = params[AuthQueryParameters.token]!;
 
       // Navigate to the verification screen which handles verifyEmail()
       // and shows appropriate feedback (success, error, expired).
@@ -93,7 +93,9 @@ class EmailVerificationListener {
       // If the screen is freshly opened (standalone deep link), initState()
       // starts either auto-login or standard token verification.
       final router = ref.read(goRouterProvider);
-      router.go('${RoutePaths.emailVerification}?token=$token');
+      router.go(
+        '${RoutePaths.emailVerification}?${AuthQueryParameters.token}=$token',
+      );
     }
   }
 

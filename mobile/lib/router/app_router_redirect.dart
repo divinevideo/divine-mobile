@@ -700,7 +700,7 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
     // recovery affordance would dead-end.
     if (authService.isAnonymous &&
         location == WelcomeScreen.loginOptionsPath &&
-        state.uri.queryParameters.containsKey('email')) {
+        state.uri.queryParameters.containsKey(AuthQueryParameters.email)) {
       return deepLinkRewrite;
     }
     if (_suppressNextAuthenticatedAuthRouteRedirect) {

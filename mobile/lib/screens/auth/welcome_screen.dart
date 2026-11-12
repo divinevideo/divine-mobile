@@ -54,13 +54,10 @@ class WelcomeScreen extends ConsumerWidget {
   /// Path for reset password route.
   static const String resetPasswordPath = RoutePaths.welcomeResetPassword;
 
-  /// Query parameter key for pre-selecting an account on the welcome screen.
-  static const selectedPubkeyParam = 'selectedPubkey';
-
   /// Build a welcome path with a pre-selected account pubkey.
   static String pathWithSelectedPubkey(String pubkeyHex) => Uri(
     path: path,
-    queryParameters: {selectedPubkeyParam: pubkeyHex},
+    queryParameters: {AuthQueryParameters.selectedPubkey: pubkeyHex},
   ).toString();
 
   /// Build a login-options path with optional recovery context prefilled.
@@ -68,10 +65,10 @@ class WelcomeScreen extends ConsumerWidget {
     final queryParameters = <String, String>{};
 
     if (email != null && email.isNotEmpty) {
-      queryParameters['email'] = email;
+      queryParameters[AuthQueryParameters.email] = email;
     }
     if (error != null && error.isNotEmpty) {
-      queryParameters['error'] = error;
+      queryParameters[AuthQueryParameters.error] = error;
     }
 
     return Uri(

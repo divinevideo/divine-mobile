@@ -1,3 +1,4 @@
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/nostr_connect_screen.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 
@@ -34,7 +35,7 @@ bool authenticatedRedirectsFromAuthEntry(
   }
   if (isAnonymous &&
       path == WelcomeScreen.loginOptionsPath &&
-      uri.queryParameters.containsKey('email')) {
+      uri.queryParameters.containsKey(AuthQueryParameters.email)) {
     return false;
   }
   return path == WelcomeScreen.path ||
