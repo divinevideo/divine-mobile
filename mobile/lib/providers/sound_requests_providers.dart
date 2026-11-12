@@ -100,9 +100,14 @@ final soundRequestsRepositoryProvider = Provider<SoundRequestsRepository?>((
     },
     fetchSound: sounds.fetchSoundById,
   );
-  String link(String address) => VideoSharingService.shareUrlForStableId(
-    Uri.encodeComponent(address.split(':').sublist(2).join(':')),
-  );
+  String link(String address) {
+    final parts = address.split(':');
+    return VideoSharingService.shareUrlForStableId(
+      Uri.encodeComponent(parts.sublist(2).join(':')),
+      authorPubkey: parts[1],
+    );
+  }
+
   final repository = SoundRequestsRepository(
     ownerPubkey: owner,
     transport: SoundRequestDmClient(repository: dm, ownerPubkey: owner),

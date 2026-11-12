@@ -26,7 +26,12 @@ class DmVideoTarget {
   final int? videoKind;
 
   /// Canonical web URL for copying or sharing this video.
-  String get canonicalUrl => 'https://divine.video/video/$stableId';
+  ///
+  /// Names the author when one is known, so the link opens this account's
+  /// video rather than whichever account posted last under the same `d` tag
+  /// (#10929).
+  String get canonicalUrl =>
+      divineVideoShareUrl(stableId, authorPubkey: _routingAuthor);
 
   /// The repository route this video resolves by.
   ///
@@ -86,10 +91,11 @@ DmVideoTarget? resolveDmVideoTarget({
   DmSharedVideoRef? sharedVideoRef,
   bool contentIsTruncated = false,
 }) {
-  final urlStableId = firstCompleteDivineVideoUrlMatch(
+  final urlMatch = firstCompleteDivineVideoUrlMatch(
     content,
     contentIsTruncated: contentIsTruncated,
-  )?.group(1);
+  );
+  final urlStableId = urlMatch?.group(1);
   final structuredTarget = _targetFromRef(sharedVideoRef);
 
   if (urlStableId != null) {
@@ -99,9 +105,13 @@ DmVideoTarget? resolveDmVideoTarget({
         structuredTarget != null &&
         (sharedVideoRef?.isAddressable != true ||
             structuredTarget.stableId == urlStableId);
+    // The URL's own `?author=` scopes it when no citation does.
+    final urlAuthor = urlMatch?.group(2);
     return DmVideoTarget(
       stableId: urlStableId,
-      authorPubkey: citesUrl ? structuredTarget.authorPubkey : null,
+      authorPubkey: citesUrl
+          ? structuredTarget.authorPubkey ?? urlAuthor
+          : urlAuthor,
       videoKind: citesUrl ? structuredTarget.videoKind : null,
     );
   }

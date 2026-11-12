@@ -496,6 +496,41 @@ void main() {
       );
 
       testWidgets(
+        'strips a shared-video URL that names its author',
+        (tester) async {
+          const author =
+              'e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3';
+          final testConversation = createTestConversation(
+            lastMessageContent:
+                '"Skate loop"\n\n'
+                'https://divine.video/video/abc123?author=$author',
+            lastMessageTimestamp: nowUnix,
+          );
+
+          await tester.pumpWidget(
+            testMaterialApp(
+              additionalOverrides: [
+                fetchUserProfileProvider(otherPubkey).overrideWith(
+                  (ref) async => createTestProfile(displayName: 'Alice'),
+                ),
+              ],
+              home: Scaffold(
+                body: ConversationTile(
+                  conversation: testConversation,
+                  currentUserPubkey: currentPubkey,
+                  onTap: () {},
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.textContaining('"Skate loop"'), findsOneWidget);
+          expect(find.textContaining('https://divine.video'), findsNothing);
+        },
+      );
+
+      testWidgets(
         'plain-text preview does not include the camera icon',
         (tester) async {
           final testProfile = createTestProfile(displayName: 'Alice');

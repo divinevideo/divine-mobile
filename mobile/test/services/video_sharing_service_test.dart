@@ -817,7 +817,8 @@ void main() {
     test(
       'external shortening preserves the canonical URL in DM messages',
       () async {
-        const canonical = 'https://divine.video/video/synthetic-video';
+        const canonical =
+            'https://divine.video/video/synthetic-video?author=$_testPubkey';
         const shortened = 'https://divine.video/l/Abc12345';
         final httpClient = MockClient(
           (_) async => http.Response(
@@ -861,7 +862,7 @@ void main() {
         httpClient.close();
       },
     );
-    test('generateShareUrl uses stableId when video has a d tag', () {
+    test('generateShareUrl uses stableId and names the author', () {
       final now = DateTime.now();
       final video = VideoEvent(
         id: _testVideoId,
@@ -875,7 +876,11 @@ void main() {
 
       final url = service.generateShareUrl(video);
 
-      expect(url, equals('https://divine.video/video/my-vine-id'));
+      // The d tag alone can name another account's video (#10929).
+      expect(
+        url,
+        equals('https://divine.video/video/my-vine-id?author=$_testPubkey'),
+      );
     });
 
     test('generateShareUrl falls back to event id when d tag is missing', () {
@@ -895,7 +900,10 @@ void main() {
 
       // Always emits an https URL — never a nostr: URI. The route
       // handler accepts raw event IDs as well as d-tags / NIP-19 refs.
-      expect(url, equals('https://divine.video/video/$eventId'));
+      expect(
+        url,
+        equals('https://divine.video/video/$eventId?author=$_testPubkey'),
+      );
     });
 
     test('shareUrlForStableId agrees with generateShareUrl', () {
@@ -915,7 +923,10 @@ void main() {
       );
 
       expect(
-        VideoSharingService.shareUrlForStableId('my-vine-id'),
+        VideoSharingService.shareUrlForStableId(
+          'my-vine-id',
+          authorPubkey: _testPubkey,
+        ),
         equals(service.generateShareUrl(video)),
       );
     });

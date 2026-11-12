@@ -87,6 +87,11 @@ void main() {
             'Nostr clients can preview the video and verify the invite '
             'matches a real video before accepting (#3942).',
       );
+      // The d tag alone can name another account's video (#10929).
+      expect(
+        content,
+        contains('https://divine.video/video/video-id?author=$creatorPubkey'),
+      );
       expect(_containsTag(tags, const ['divine', 'collab-invite']), isTrue);
       expect(
         _containsTag(tags, const [
