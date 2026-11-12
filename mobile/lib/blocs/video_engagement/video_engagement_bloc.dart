@@ -122,6 +122,13 @@ class VideoEngagementBloc
 
   static const _profilePrefetchTimeout = Duration(seconds: 2);
 
+  /// How long a coordinate lookup may hold the list before it is queried by
+  /// the link's `d` tag instead.
+  ///
+  /// The lookup runs before the list is fetched, so an unbounded one would
+  /// add a full API timeout to the spinner whenever the API is slow.
+  static const _coordinateLookupTimeout = Duration(seconds: 5);
+
   Future<void> _onLoadRequested(
     VideoEngagementLoadRequested event,
     Emitter<VideoEngagementState> emit,
@@ -134,7 +141,9 @@ class VideoEngagementBloc
         name: 'VideoEngagementBloc',
         category: LogCategory.video,
       );
-      final resolvedEventId = await _resolveEventId();
+      // A refresh keeps the event this list already resolved, so every page
+      // still queries the event its cursor came from.
+      final resolvedEventId = state.resolvedEventId ?? await _resolveEventId();
       final page = await _fetchPage(queryEventId: resolvedEventId ?? eventId);
       if (!page.isComplete && page.pubkeys.isEmpty) {
         // A relay read that stopped before finishing and found nobody says
@@ -240,14 +249,18 @@ class VideoEngagementBloc
   /// The event id of the video the link's coordinate names, or null when the
   /// link named an exact event or the coordinate could not be resolved.
   ///
-  /// A failed or empty lookup falls back to querying by [eventId] and
-  /// [addressableId] as the link gave them.
+  /// When no video answers for the coordinate, the API cannot be reached, or
+  /// the lookup outlasts [_coordinateLookupTimeout], the lists are queried by
+  /// [eventId] and [addressableId] as the link gave them. Any other failure
+  /// fails the load like a failed list fetch.
   Future<String?> _resolveEventId() async {
     final coordinate = _authorCoordinate;
     if (coordinate == null || !_eventIdIsDTag) return null;
     final routeId = coordinate.addressableId!;
     try {
-      final lookup = await _videosRepository.lookupVideoForRouteId(routeId);
+      final lookup = await _videosRepository
+          .lookupVideoForRouteId(routeId)
+          .timeout(_coordinateLookupTimeout);
       final resolved = switch (lookup) {
         VideoRouteFound(:final video) => video.id,
         VideoRouteHiddenByFilter(:final video) => video.id,
@@ -265,17 +278,14 @@ class VideoEngagementBloc
     } on FunnelcakeException catch (e) {
       _logUnresolved(routeId, e);
       return null;
-    } on RelayReadUnavailableException catch (e) {
-      _logUnresolved(routeId, e);
-      return null;
     } on TimeoutException catch (e) {
       _logUnresolved(routeId, e);
       return null;
     }
   }
 
-  /// Logs a coordinate lookup that could not reach any source; the caller
-  /// then queries by [eventId] as the link gave it.
+  /// Logs a coordinate lookup that could not finish; the caller then queries
+  /// by [eventId] as the link gave it.
   void _logUnresolved(String routeId, Exception error) {
     Log.warning(
       'Could not resolve engagement coordinate $routeId ($error); '

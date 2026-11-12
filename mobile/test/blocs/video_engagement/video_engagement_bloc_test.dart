@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:likes_repository/likes_repository.dart';
@@ -753,18 +754,83 @@ void main() {
       );
 
       blocTest<VideoEngagementBloc, VideoEngagementState>(
-        'does not resolve a coordinate that names no valid author',
-        setUp: () =>
-            stubLikers(hexDTag, '34236:not-a-pubkey:$hexDTag', [liker1]),
-        // The route lookup would read it as a bare d tag: the unscoped
-        // lookup this resolution exists to avoid.
-        build: () => blocFor(addressableId: '34236:not-a-pubkey:$hexDTag'),
+        'does not resolve a coordinate that names no video author',
+        setUp: () => stubLikers(
+          'ip1dd9tAlmw',
+          '30023:$authorPubkey:ip1dd9tAlmw',
+          [liker1],
+        ),
+        // A long-form article coordinate parses as no video at all, and the
+        // route lookup would read it as a bare d tag: the unscoped lookup
+        // this resolution exists to avoid.
+        build: () => blocFor(
+          eventId: 'ip1dd9tAlmw',
+          addressableId: '30023:$authorPubkey:ip1dd9tAlmw',
+        ),
         act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
         verify: (bloc) {
+          expect(bloc.state.status, equals(VideoEngagementStatus.success));
           expect(bloc.state.pubkeys, equals([liker1]));
           verifyNever(() => videosRepository.lookupVideoForRouteId(any()));
         },
       );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        "resolves a video the viewer's filters hide",
+        setUp: () {
+          stubLookup(
+            hexCoordinate,
+            VideoRouteHiddenByFilter(videoWithId(resolvedEventId)),
+          );
+          stubLikers(resolvedEventId, hexCoordinate, [liker1]);
+          stubLikers(hexDTag, hexCoordinate, [liker2]);
+        },
+        build: blocFor,
+        act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
+        verify: (bloc) {
+          expect(bloc.state.pubkeys, equals([liker1]));
+          expect(bloc.state.resolvedEventId, equals(resolvedEventId));
+        },
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'a refresh keeps the event it resolved without looking it up again',
+        setUp: () => stubLikers(resolvedEventId, hexCoordinate, [liker2]),
+        build: blocFor,
+        seed: () => const VideoEngagementState(
+          type: VideoEngagementType.likers,
+          status: VideoEngagementStatus.success,
+          pubkeys: [liker1],
+          resolvedEventId: resolvedEventId,
+        ),
+        act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
+        verify: (bloc) {
+          expect(bloc.state.pubkeys, equals([liker2]));
+          expect(bloc.state.resolvedEventId, equals(resolvedEventId));
+          verifyNever(() => videosRepository.lookupVideoForRouteId(any()));
+        },
+      );
+
+      test('falls back to the d tag when the lookup outlasts its budget', () {
+        fakeAsync((async) {
+          when(
+            () => videosRepository.lookupVideoForRouteId(hexCoordinate),
+          ).thenAnswer((_) => Completer<VideoRouteLookupResult>().future);
+          stubLikers(hexDTag, hexCoordinate, [liker1]);
+          final bloc = blocFor()..add(const VideoEngagementLoadRequested());
+
+          async.elapse(const Duration(seconds: 4));
+          expect(bloc.state.status, equals(VideoEngagementStatus.loading));
+
+          async.elapse(const Duration(seconds: 2));
+          expect(bloc.state.status, equals(VideoEngagementStatus.success));
+          expect(bloc.state.pubkeys, equals([liker1]));
+          expect(bloc.state.resolvedEventId, isNull);
+
+          unawaited(bloc.close());
+          async.flushMicrotasks();
+        });
+      });
     });
 
     group('videoRouteId', () {
