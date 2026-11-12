@@ -226,6 +226,31 @@ void main() {
       expect(target?.stableId, 'abc123');
     });
 
+    // #10929: the id ends at `?`, so a cut inside the author query would
+    // otherwise resolve the bare d tag, unscoped.
+    test('ignores a URL whose author query the prefix cut through', () {
+      for (final cut in ['?', '?auth', '?author=', '?author=${'e' * 63}']) {
+        expect(
+          resolveDmVideoTarget(
+            content: 'note\n$url$cut',
+            contentIsTruncated: true,
+          ),
+          isNull,
+          reason: cut,
+        );
+      }
+    });
+
+    test('keeps a URL whose author query is complete in the prefix', () {
+      final target = resolveDmVideoTarget(
+        content: 'note\n$url?author=$author\nmore',
+        contentIsTruncated: true,
+      );
+
+      expect(target?.stableId, 'abc123');
+      expect(target?.routeAuthor, author);
+    });
+
     test('falls back to the citation when the URL is cut', () {
       final target = resolveDmVideoTarget(
         content: 'note\nhttps://divine.video/video/ab',
