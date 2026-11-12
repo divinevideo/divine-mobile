@@ -40,7 +40,7 @@ Crée des vidéos de six secondes plus audacieuses.
 - Ralenti plus fluide et stop motion mains libres.
 - Masque les commentaires sur tes propres vidéos.
 
-Plus des correctifs de vitesse et de stabilité.
+Et des correctifs de vitesse et de stabilité.
 </fr-FR>
 <de-DE>
 Mach kühnere Sechs-Sekunden-Videos.
