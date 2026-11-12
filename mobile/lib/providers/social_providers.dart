@@ -1165,16 +1165,21 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
   // Finishes a failed plain sign-out's DM cleanup at a later sign-in. It only
   // touches [owner]'s rows, never a listener, a shared store or a legacy
   // unowned row, so it is safe beside whichever session is live (#8587).
-  service.onDepartedAccountDmCleanup = (owner) => db.transaction(() async {
-    await db.conversationsDao.retainMessageIdsForAccountSwitch(owner);
-    await db.directMessagesDao.deleteAllForOwner(owner);
-    await db.conversationsDao.pinReadCursorsToLatestMessage(
-      owner,
-      nowSeconds: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    );
-    await db.pendingGiftWrapsDao.deleteAllForOwner(owner);
-    await db.processedGiftWrapsDao.deleteAllForOwner(owner);
-  });
+  // The sync cursors go first: rows deleted under a kept cursor would never
+  // download again.
+  service.onDepartedAccountDmCleanup = (owner) async {
+    await DmSyncState(prefs).clear(owner);
+    await db.transaction(() async {
+      await db.conversationsDao.retainMessageIdsForAccountSwitch(owner);
+      await db.directMessagesDao.deleteAllForOwner(owner);
+      await db.conversationsDao.pinReadCursorsToLatestMessage(
+        owner,
+        nowSeconds: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      );
+      await db.pendingGiftWrapsDao.deleteAllForOwner(owner);
+      await db.processedGiftWrapsDao.deleteAllForOwner(owner);
+    });
+  };
 
   // Wire legacy row claim callback so session setup can attribute
   // pre-multi-account drafts/clips to the current user.

@@ -3364,8 +3364,9 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   /// Throws [AccountStorageException], [AccountActivationRetiredException],
   /// [SecureKeyStorageException], or [UserDataCleanupException]; callers must
   /// surface incomplete sign-out and retain recovery evidence for retry.
-  /// A non-destructive sign-out's failed DM cleanup is not thrown: a later
-  /// sign-in by another account deletes that account's rows (#8587).
+  /// A non-destructive sign-out does not throw for its database cleanup: on
+  /// failure the shared stores are still cleared, and another account's next
+  /// sign-in deletes the departed account's DM rows (#8587).
   /// [abortOnKeyDeletionFailure] keeps the session active on key deletion failure.
   Future<void> signOut({
     bool deleteKeys = false,

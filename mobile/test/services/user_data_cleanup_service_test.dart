@@ -1771,7 +1771,7 @@ void main() {
         expect(retriedOwners, [departing]);
       });
 
-      test('an unreadable record does not throw', () async {
+      test('an unreadable record does not throw and is replaced', () async {
         await prefs.setString(
           UserDataCleanupService.unfinishedSignOutCleanupKey,
           'not a list',
@@ -1782,6 +1782,12 @@ void main() {
           completes,
         );
         expect(retriedOwners, isEmpty);
+
+        await failedSignOut();
+        await service.retryUnfinishedSignOutCleanup(
+          incomingPubkey: incoming,
+        );
+        expect(retriedOwners, [departing]);
       });
 
       test('a failed account switch is left to its pending cleanup', () async {

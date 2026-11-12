@@ -762,6 +762,37 @@ void main() {
       );
     });
 
+    test('onSharedStoresCleanup tries every store and reports the first '
+        'failure (#8587)', () async {
+      var preferenceResets = 0;
+      final failing = ProviderContainer(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          dmRepositoryProvider.overrideWithValue(dmRepository),
+          openVineImageCacheClearProvider.overrideWithValue(() async {}),
+          seenVideosClearProvider.overrideWithValue(
+            () async => throw StateError('watch history unavailable'),
+          ),
+          accountScopedPreferenceServicesResetProvider.overrideWithValue(
+            () async => preferenceResets++,
+          ),
+        ],
+      );
+      addTearDown(failing.dispose);
+      final subscription = failing.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+
+      await expectLater(
+        subscription.read().onSharedStoresCleanup!(),
+        throwsA(isA<StateError>()),
+      );
+      expect(preferenceResets, 1);
+    });
+
     group('onDepartedAccountDmCleanup (#8587)', () {
       test("deletes only the departed account's DM rows", () async {
         for (final (id, owner) in [
@@ -779,6 +810,15 @@ void main() {
           );
           expect(inserted, isTrue);
         }
+        await db.conversationsDao.upsertConversation(
+          id: _dmConversationId,
+          participantPubkeys: _pubkeyB,
+          isGroup: false,
+          createdAt: 1700000000,
+          ownerPubkey: _pubkeyA,
+        );
+        await DmSyncState(prefs).markHistoryDrainComplete(_pubkeyA);
+        expect(DmSyncState(prefs).historyDrainComplete(_pubkeyA), isTrue);
         final now = DateTime.now().millisecondsSinceEpoch;
         await db.seenVideosDao.markSeenBatch([
           SeenVideoRow(
@@ -801,6 +841,16 @@ void main() {
             row.ownerPubkey,
         ];
         expect(owners, [_pubkeyB]);
+        // Deleted rows under a kept cursor would never download again.
+        expect(DmSyncState(prefs).historyDrainComplete(_pubkeyA), isFalse);
+        // Its conversations keep their read state, as on any sign-out.
+        expect(
+          [
+            for (final c in await db.select(db.conversations).get())
+              c.ownerPubkey,
+          ],
+          [_pubkeyA],
+        );
         expect(await db.seenVideosDao.getAll(), hasLength(1));
         verifyNever(() => dmRepository.stopListening());
       });

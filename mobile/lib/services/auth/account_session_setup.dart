@@ -220,8 +220,9 @@ extension _AccountSessionSetup on AuthService {
         );
       }
       ensureCurrent();
-      // A plain sign-out never blocks on its database cleanup, so finish one
-      // it left behind before this session starts using the shared stores.
+      // A plain sign-out never blocks on its database cleanup; delete the DM
+      // rows one left behind for another account. Owner-scoped only, so this
+      // is safe on a restore or a refresh too.
       await coordinator.runGuardedStorage(
         activation,
         () => _userDataCleanupService.retryUnfinishedSignOutCleanup(

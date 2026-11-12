@@ -888,7 +888,13 @@ class UserDataCleanupService {
   ];
 
   Future<void> _rememberUnfinishedSignOut(String owner) async {
-    final owners = _prefs.getStringList(unfinishedSignOutCleanupKey) ?? [];
+    List<String> owners;
+    try {
+      owners = _prefs.getStringList(unfinishedSignOutCleanupKey) ?? [];
+    } on Object {
+      // An unreadable record is replaced, or every sign-out would fail here.
+      owners = [];
+    }
     if (owners.contains(owner)) return;
     final stored = await _prefs.setStringList(unfinishedSignOutCleanupKey, [
       ...owners,
