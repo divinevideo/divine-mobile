@@ -102,31 +102,40 @@ class _ShutterGestureDetectorState extends State<ShutterGestureDetector> {
     final usePressDownRecording =
         widget.isEnabled && widget.startsRecordingOnPressDown;
 
-    return GestureDetector(
-      behavior: widget.behavior,
-      onTapDown: usePressDownRecording ? _handleTapDown : null,
-      onTapUp: usePressDownRecording ? (_) => _handlePressEnd() : null,
-      onTapCancel: usePressDownRecording ? _handlePressEnd : null,
-      onTap: widget.isEnabled && !widget.startsRecordingOnPressDown
-          ? _handleTap
-          : null,
-      onLongPressStart:
-          widget.isEnabled &&
-              widget.isLongPressSupported &&
-              !widget.startsRecordingOnPressDown
-          ? _handleLongPressStart
-          : null,
-      onLongPressMoveUpdate:
-          widget.isRecording &&
-              widget.isLongPressSupported &&
-              !widget.startsRecordingOnPressDown
-          ? widget.onLongPressMoveUpdate
-          : null,
-      onLongPressUp:
-          widget.isLongPressSupported && !widget.startsRecordingOnPressDown
-          ? _handleLongPressUp
-          : null,
-      child: widget.child,
+    // A screen reader activates a control with one synthetic tap, which the
+    // detector would replay as press-down and release in the same instant:
+    // in press-down mode the take starts and stops at once. Activation
+    // toggles instead, and the long-press action is left out — it would also
+    // start and stop in one go.
+    return Semantics(
+      onTap: widget.isEnabled ? _handleTap : null,
+      child: GestureDetector(
+        excludeFromSemantics: true,
+        behavior: widget.behavior,
+        onTapDown: usePressDownRecording ? _handleTapDown : null,
+        onTapUp: usePressDownRecording ? (_) => _handlePressEnd() : null,
+        onTapCancel: usePressDownRecording ? _handlePressEnd : null,
+        onTap: widget.isEnabled && !widget.startsRecordingOnPressDown
+            ? _handleTap
+            : null,
+        onLongPressStart:
+            widget.isEnabled &&
+                widget.isLongPressSupported &&
+                !widget.startsRecordingOnPressDown
+            ? _handleLongPressStart
+            : null,
+        onLongPressMoveUpdate:
+            widget.isRecording &&
+                widget.isLongPressSupported &&
+                !widget.startsRecordingOnPressDown
+            ? widget.onLongPressMoveUpdate
+            : null,
+        onLongPressUp:
+            widget.isLongPressSupported && !widget.startsRecordingOnPressDown
+            ? _handleLongPressUp
+            : null,
+        child: widget.child,
+      ),
     );
   }
 }
