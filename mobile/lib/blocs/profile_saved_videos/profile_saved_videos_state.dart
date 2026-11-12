@@ -49,7 +49,8 @@ final class ProfileSavedVideosState extends Equatable {
   /// followed by reversed public entries, not a global chronological merge.
   final List<VideoEvent> videos;
 
-  /// The bookmark event IDs backing the current video list.
+  /// The bookmarked video references backing the current video list: each a
+  /// video's `kind:pubkey:d-tag` address where known, else its event id.
   final List<String> savedEventIds;
 
   /// Error that occurred during loading, if any.

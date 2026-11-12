@@ -1043,10 +1043,11 @@ void main() {
     // distance (#8399). Each test calls [stubBookmarks] itself instead, so the
     // stubs it depends on are visible where it runs.
     late _MockBookmarksRepository bookmarksRepository;
-    late StreamController<List<BookmarkItem>> bookmarkChanges;
+    late StreamController<List<String>> bookmarkChanges;
 
-    /// What the repository currently holds, oldest-first as NIP-51 keeps it.
-    late List<BookmarkItem> heldBookmarks;
+    /// The video references the repository currently holds, oldest-first as
+    /// NIP-51 keeps them.
+    late List<String> heldBookmarks;
 
     VideoEvent savedVideo(String id) => VideoEvent(
       id: id,
@@ -1058,19 +1059,19 @@ void main() {
       videoUrl: 'https://example.com/$id.mp4',
     );
 
-    void stubBookmarks({List<BookmarkItem> held = const []}) {
+    void stubBookmarks({List<String> held = const []}) {
       bookmarksRepository = _MockBookmarksRepository();
-      bookmarkChanges = StreamController<List<BookmarkItem>>.broadcast();
+      bookmarkChanges = StreamController<List<String>>.broadcast();
       addTearDown(bookmarkChanges.close);
       heldBookmarks = held;
       when(
-        bookmarksRepository.watchGlobalBookmarks,
+        bookmarksRepository.watchBookmarkedVideoReferences,
       ).thenAnswer((_) => bookmarkChanges.stream);
       when(
         bookmarksRepository.syncGlobalBookmarks,
       ).thenAnswer((_) async => true);
       when(
-        () => bookmarksRepository.globalBookmarks,
+        () => bookmarksRepository.bookmarkedVideoReferences,
       ).thenAnswer((_) => heldBookmarks);
       when(
         () => bookmarksRepository.hasUnreadablePrivateItems,
@@ -1168,7 +1169,7 @@ void main() {
       tester,
     ) async {
       stubBookmarks(
-        held: const [BookmarkItem(type: 'e', id: 'video-1')],
+        held: const ['video-1'],
       );
       await openBookmarksTab(tester);
       expect(
@@ -1182,10 +1183,7 @@ void main() {
 
       // The share sheet publishes through the same repository, which
       // announces the new list; nothing here asks for a refresh.
-      bookmarkChanges.add(const [
-        BookmarkItem(type: 'e', id: 'video-1'),
-        BookmarkItem(type: 'e', id: 'video-2'),
-      ]);
+      bookmarkChanges.add(const ['video-1', 'video-2']);
       await tester.pumpAndSettle();
 
       expect(
@@ -1239,7 +1237,7 @@ void main() {
       );
       expect(find.byType(Tab), findsNWidgets(5));
       // The viewer's own list is not opened while looking at someone else.
-      verifyNever(bookmarksRepository.watchGlobalBookmarks);
+      verifyNever(bookmarksRepository.watchBookmarkedVideoReferences);
     });
 
     List<VideoEvent> videos(int count) => [
