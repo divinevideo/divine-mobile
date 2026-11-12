@@ -453,6 +453,7 @@ void main() {
         () async {
           final other = DivineVideoPlayerController();
           await other.initialize();
+          final pauseReceived = Completer<void>();
           final pauseGate = Completer<void>();
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
               .setMockMethodCallHandler(
@@ -460,23 +461,34 @@ void main() {
                   'divine_video_player/player_${controller.playerId}',
                 ),
                 (call) async {
-                  if (call.method == 'pause') await pauseGate.future;
+                  if (call.method == 'pause') {
+                    pauseReceived.complete();
+                    await pauseGate.future;
+                  }
                   return null;
                 },
               );
 
           final play = other.play();
+          // The dispose has to land while play() is still held on the
+          // sibling's pause, or the test passes without exercising the race.
+          await pauseReceived.future;
           await other.dispose();
           // The native dispose removes the player's method channel, so any
           // later call on it finds no handler.
+          final callsAfterDispose = <MethodCall>[];
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
               .setMockMethodCallHandler(
                 MethodChannel('divine_video_player/player_${other.playerId}'),
-                (call) async => throw MissingPluginException(),
+                (call) async {
+                  callsAfterDispose.add(call);
+                  throw MissingPluginException();
+                },
               );
           pauseGate.complete();
 
           await expectLater(play, completes);
+          expect(callsAfterDispose, isEmpty);
         },
       );
 
