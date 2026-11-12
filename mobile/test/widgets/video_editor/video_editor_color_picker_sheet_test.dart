@@ -1,6 +1,7 @@
 // ABOUTME: Tests for VideoEditorColorPickerSheet widget.
 // ABOUTME: Validates color grid rendering, selection, and callbacks.
 
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -387,20 +388,38 @@ void main() {
         final l10n = lookupAppLocalizations(const Locale('en'));
 
         // A screen reader's tap is replayed at the control's top-left corner,
-        // which picked white on the panel and red on the hue bar.
-        testWidgets('offers no tap that would reset the color', (
+        // which picked white on the panel and red on the hue bar, and its
+        // scroll actions dragged the panel to grey. The whole subtree is
+        // checked: the panel's gestures would otherwise sit in an unlabelled
+        // node under the group, beside the two axis sliders.
+        testWidgets('offers no tap or scroll that would reset the color', (
           tester,
         ) async {
           await pumpOpener(tester, onResult: (_) {});
 
+          const resetting = {
+            SemanticsAction.tap,
+            SemanticsAction.scrollLeft,
+            SemanticsAction.scrollRight,
+            SemanticsAction.scrollUp,
+            SemanticsAction.scrollDown,
+          };
           for (final label in [
             l10n.videoEditorSaturationBrightnessSemanticLabel,
             l10n.videoEditorHueSemanticLabel,
           ]) {
-            expect(
-              tester.getSemantics(find.bySemanticsLabel(label)),
-              isSemantics(hasTapAction: false),
-            );
+            final offered = <SemanticsAction>{};
+            void collect(SemanticsNode node) {
+              final data = node.getSemanticsData();
+              offered.addAll(resetting.where(data.hasAction));
+              node.visitChildren((child) {
+                collect(child);
+                return true;
+              });
+            }
+
+            collect(tester.getSemantics(find.bySemanticsLabel(label)));
+            expect(offered, isEmpty, reason: label);
           }
         });
 
