@@ -467,11 +467,12 @@ void main() {
 
           final play = other.play();
           await other.dispose();
-          // The native dispose removes the player's method channel.
+          // The native dispose removes the player's method channel, so any
+          // later call on it finds no handler.
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
               .setMockMethodCallHandler(
                 MethodChannel('divine_video_player/player_${other.playerId}'),
-                null,
+                (call) async => throw MissingPluginException(),
               );
           pauseGate.complete();
 
