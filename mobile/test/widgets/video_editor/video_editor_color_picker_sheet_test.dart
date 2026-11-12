@@ -387,11 +387,10 @@ void main() {
       group('screen reader', () {
         final l10n = lookupAppLocalizations(const Locale('en'));
 
-        // A screen reader's tap is replayed at the control's top-left corner,
-        // which picked white on the panel and red on the hue bar, and its
-        // scroll actions dragged the panel to grey. The whole subtree is
-        // checked: the panel's gestures would otherwise sit in an unlabelled
-        // node under the group, beside the two axis sliders.
+        // A screen reader replays its tap or scroll at a point the SDK picks,
+        // so either would move the color. The whole subtree is checked: the
+        // panel's gestures would otherwise sit in an unlabelled node under
+        // the group, beside the two axis sliders.
         testWidgets('offers no tap or scroll that would reset the color', (
           tester,
         ) async {

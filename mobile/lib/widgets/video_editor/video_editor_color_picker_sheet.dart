@@ -440,9 +440,9 @@ class _SaturationBrightnessPanel extends StatelessWidget {
             (hsvColor.value * 100).round(),
           ),
           child: GestureDetector(
-            // A screen reader's tap or scroll is replayed at the panel's
-            // corner or middle, which would silently pick white or grey. The
-            // two axis sliders below are the screen-reader way to adjust it.
+            // A screen reader replays its tap or scroll at a point the SDK
+            // picks, so either would silently move the color. The two axis
+            // sliders below are the screen-reader way to adjust it.
             excludeFromSemantics: true,
             onPanStart: (d) => _handleInteraction(d.localPosition, size),
             onPanUpdate: (d) => _handleInteraction(d.localPosition, size),
@@ -465,7 +465,8 @@ class _SaturationBrightnessPanel extends StatelessWidget {
                     top: (1 - hsvColor.value) * size.height - _thumbSize / 2,
                     child: const _ColorThumb(),
                   ),
-                  // Never hit-tested, so touches still reach the panel.
+                  // Semantics only: a gesture recognizer added here would
+                  // take touches from the panel.
                   Positioned.fill(
                     child: Row(
                       children: [
@@ -593,8 +594,9 @@ class _HueBar extends StatelessWidget {
           onIncrease: () => onChanged((hue + 10).clamp(0.0, 360.0)),
           onDecrease: () => onChanged((hue - 10).clamp(0.0, 360.0)),
           child: GestureDetector(
-            // A screen reader's tap is replayed at the bar's left edge and
-            // would reset the hue to red; the slider actions above adjust it.
+            // A screen reader replays its tap or scroll at a point the SDK
+            // picks, so either would move the hue; the slider actions above
+            // adjust it.
             excludeFromSemantics: true,
             onPanStart: (d) => _handleInteraction(d.localPosition, width),
             onPanUpdate: (d) => _handleInteraction(d.localPosition, width),
