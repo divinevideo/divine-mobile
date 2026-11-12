@@ -430,13 +430,20 @@ class _SaturationBrightnessPanel extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, _height);
+        final l10n = context.l10n;
         return Semantics(
-          label: context.l10n.videoEditorSaturationBrightnessSemanticLabel,
-          value: context.l10n.videoEditorSaturationBrightnessValue(
+          container: true,
+          explicitChildNodes: true,
+          label: l10n.videoEditorSaturationBrightnessSemanticLabel,
+          value: l10n.videoEditorSaturationBrightnessValue(
             (hsvColor.saturation * 100).round(),
             (hsvColor.value * 100).round(),
           ),
           child: GestureDetector(
+            // A screen reader's tap or scroll is replayed at the panel's
+            // corner or middle, which would silently pick white or grey. The
+            // two axis sliders below are the screen-reader way to adjust it.
+            excludeFromSemantics: true,
             onPanStart: (d) => _handleInteraction(d.localPosition, size),
             onPanUpdate: (d) => _handleInteraction(d.localPosition, size),
             onTapDown: (d) => _handleInteraction(d.localPosition, size),
@@ -458,12 +465,69 @@ class _SaturationBrightnessPanel extends StatelessWidget {
                     top: (1 - hsvColor.value) * size.height - _thumbSize / 2,
                     child: const _ColorThumb(),
                   ),
+                  // Never hit-tested, so touches still reach the panel.
+                  Positioned.fill(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _PanelAxisSlider(
+                            label: l10n.videoEditorTuneSaturation,
+                            value: hsvColor.saturation,
+                            onChanged: (saturation) => onChanged(
+                              hsvColor.withSaturation(saturation),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: _PanelAxisSlider(
+                            label: l10n.videoEditorTuneBrightness,
+                            value: hsvColor.value,
+                            onChanged: (brightness) =>
+                                onChanged(hsvColor.withValue(brightness)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// One axis of the saturation/brightness panel as a screen-reader slider.
+class _PanelAxisSlider extends StatelessWidget {
+  const _PanelAxisSlider({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final double value;
+  final ValueChanged<double> onChanged;
+
+  static const double _step = 0.05;
+
+  static String _percent(double value) => '${(value * 100).round()}%';
+
+  @override
+  Widget build(BuildContext context) {
+    final increased = (value + _step).clamp(0.0, 1.0);
+    final decreased = (value - _step).clamp(0.0, 1.0);
+    return Semantics(
+      slider: true,
+      label: label,
+      value: _percent(value),
+      increasedValue: _percent(increased),
+      decreasedValue: _percent(decreased),
+      onIncrease: () => onChanged(increased),
+      onDecrease: () => onChanged(decreased),
+      child: const SizedBox.expand(),
     );
   }
 }
@@ -529,6 +593,9 @@ class _HueBar extends StatelessWidget {
           onIncrease: () => onChanged((hue + 10).clamp(0.0, 360.0)),
           onDecrease: () => onChanged((hue - 10).clamp(0.0, 360.0)),
           child: GestureDetector(
+            // A screen reader's tap is replayed at the bar's left edge and
+            // would reset the hue to red; the slider actions above adjust it.
+            excludeFromSemantics: true,
             onPanStart: (d) => _handleInteraction(d.localPosition, width),
             onPanUpdate: (d) => _handleInteraction(d.localPosition, width),
             onTapDown: (d) => _handleInteraction(d.localPosition, width),

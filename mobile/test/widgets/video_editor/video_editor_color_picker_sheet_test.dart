@@ -382,6 +382,55 @@ void main() {
           findsNothing,
         );
       });
+
+      group('screen reader', () {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        // A screen reader's tap is replayed at the control's top-left corner,
+        // which picked white on the panel and red on the hue bar.
+        testWidgets('offers no tap that would reset the color', (
+          tester,
+        ) async {
+          await pumpOpener(tester, onResult: (_) {});
+
+          for (final label in [
+            l10n.videoEditorSaturationBrightnessSemanticLabel,
+            l10n.videoEditorHueSemanticLabel,
+          ]) {
+            expect(
+              tester.getSemantics(find.bySemanticsLabel(label)),
+              isSemantics(hasTapAction: false),
+            );
+          }
+        });
+
+        testWidgets('adjusts saturation and brightness in steps', (
+          tester,
+        ) async {
+          // Opens on white: no saturation, full brightness.
+          await pumpOpener(tester, onResult: (_) {});
+
+          tester.semantics.increase(
+            find.semantics.byLabel(l10n.videoEditorTuneSaturation),
+          );
+          await tester.pump();
+          tester.semantics.decrease(
+            find.semantics.byLabel(l10n.videoEditorTuneBrightness),
+          );
+          await tester.pump();
+
+          expect(
+            tester.getSemantics(
+              find.bySemanticsLabel(
+                l10n.videoEditorSaturationBrightnessSemanticLabel,
+              ),
+            ),
+            isSemantics(
+              value: l10n.videoEditorSaturationBrightnessValue(5, 95),
+            ),
+          );
+        });
+      });
     });
   });
 }
