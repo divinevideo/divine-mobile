@@ -43,7 +43,7 @@ void refreshMinorAccountState(WidgetRef ref) {
 class MinorAccountReviewScreen extends ConsumerWidget {
   static const routeName = 'minor-account-review';
   static const String path = RoutePaths.minorAccountReview;
-  static const welcomePath = '/account-review/welcome';
+  static const String welcomePath = RoutePaths.minorAccountReviewWelcome;
   static const welcomeRouteName = '$routeName-welcome';
 
   static String pathFor({

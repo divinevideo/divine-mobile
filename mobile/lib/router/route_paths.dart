@@ -65,6 +65,7 @@ abstract final class RoutePaths {
   static const minorAccountReview = '/account-review';
   static const minorAccountReviewConsentRecord =
       '/account-review/parent-consent/record';
+  static const minorAccountReviewWelcome = '/account-review/welcome';
   static const monetizationLinksSettings = '/settings/monetization-links';
   static const monetizationLinksSettingsSubpath = 'monetization-links';
   static const nip05Settings = '/nostr-settings/$nip05SettingsSubpath';
