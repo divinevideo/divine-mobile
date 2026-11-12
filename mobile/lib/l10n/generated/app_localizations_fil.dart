@@ -15935,6 +15935,21 @@ class AppLocalizationsFil extends AppLocalizations {
   String get listRetrySync => 'I-sync ngayon';
 
   @override
+  String get listConflictNotice =>
+      'Nabago ang listahang ito sa ibang lugar. Naka-save pa rin dito ang mga lokal mong pagbabago.';
+
+  @override
+  String get listUseLatestVersion =>
+      'Gamitin ang pinakabagong naka-sync na listahan';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'Aalisin nito ang mga lokal mong pagbabago at papalitan ng pinakabagong naka-sync na listahan.';
+
+  @override
+  String get listDiscardLocalEdits => 'Alisin ang mga lokal na pagbabago';
+
+  @override
   String get listPermissionsUnconfirmed =>
       'Hindi makumpirma ang pagbabagong ito. Subukan ulit.';
 

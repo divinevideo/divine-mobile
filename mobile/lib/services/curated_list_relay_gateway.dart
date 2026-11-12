@@ -103,6 +103,21 @@ class CuratedListRelayGateway {
     );
   }
 
+  /// Fetches a complete source before an existing owned list is replaced.
+  Future<CuratedListRelaySnapshot> readOwnedListForMutation(
+    String ownerPubkey,
+    String listId, {
+    required Duration timeout,
+    required Future<void> cancelled,
+  }) =>
+      CuratedListRelaySnapshotReader(nostrClient: _nostrService)
+          .readForMutation(
+            ownerPubkey: ownerPubkey,
+            listId: listId,
+            timeout: timeout,
+            cancelled: cancelled,
+          );
+
   /// NIP-44 encrypts [list]'s item tags to their owner.
   ///
   /// Encrypting to our own pubkey is what makes a list readable on our other

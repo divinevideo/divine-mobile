@@ -704,7 +704,12 @@ extension _AccountSignOut on AuthService {
 
       await _relayDiscoveryService.clearCache(_currentKeyContainer?.npub ?? '');
 
-      await prefs.remove('current_user_pubkey_hex');
+      // Failed ordinary cleanup can leave drafts awaiting archival. Keep their
+      // attribution so a later account sweep retries instead of orphaning them.
+      // This marker does not keep the in-memory session or credentials alive.
+      if (userDataCleanupError == null || deleteKeys || deleteLocalUserData) {
+        await prefs.remove('current_user_pubkey_hex');
+      }
 
       if (currentPubkey != null) {
         try {

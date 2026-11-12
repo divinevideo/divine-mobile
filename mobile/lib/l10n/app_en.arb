@@ -12867,6 +12867,22 @@
   },
   "listVideoPendingSync": "Your list and video are saved here. The video is waiting to sync.",
   "listRetrySync": "Sync now",
+  "listConflictNotice": "This list changed elsewhere. Your local edits are still saved here.",
+  "listUseLatestVersion": "Use latest synced list",
+  "listDiscardDraftConfirmation": "This discards your local edits and replaces them with the latest synced list.",
+  "listDiscardLocalEdits": "Discard local edits",
+  "@listConflictNotice": {
+    "description": "Curated list conflict recovery: listConflictNotice"
+  },
+  "@listUseLatestVersion": {
+    "description": "Curated list conflict recovery: listUseLatestVersion"
+  },
+  "@listDiscardDraftConfirmation": {
+    "description": "Curated list conflict recovery: listDiscardDraftConfirmation"
+  },
+  "@listDiscardLocalEdits": {
+    "description": "Curated list conflict recovery: listDiscardLocalEdits"
+  },
   "@listPermissionsUnconfirmed": {
     "description": "Shown when a requested list visibility or collaborator change has no confirmed relay outcome. Does not claim the remote change failed or was reversed."
   },

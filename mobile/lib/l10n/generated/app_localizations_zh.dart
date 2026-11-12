@@ -14867,6 +14867,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listRetrySync => '立即同步';
 
   @override
+  String get listConflictNotice => '此列表已在其他地方更改。你在此设备上的编辑仍保存在这里。';
+
+  @override
+  String get listUseLatestVersion => '使用最新同步的列表';
+
+  @override
+  String get listDiscardDraftConfirmation => '这会舍弃你在此设备上的编辑，并替换为最新同步的列表。';
+
+  @override
+  String get listDiscardLocalEdits => '舍弃本地编辑';
+
+  @override
   String get listPermissionsUnconfirmed => '无法确认此更改。请重试。';
 
   @override

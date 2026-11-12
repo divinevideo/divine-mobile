@@ -16139,6 +16139,20 @@ class AppLocalizationsPl extends AppLocalizations {
   String get listRetrySync => 'Synchronizuj teraz';
 
   @override
+  String get listConflictNotice =>
+      'Ta lista została zmieniona gdzie indziej. Twoje lokalne zmiany są nadal tutaj zapisane.';
+
+  @override
+  String get listUseLatestVersion => 'Użyj najnowszej zsynchronizowanej listy';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'Twoje lokalne zmiany zostaną odrzucone i zastąpione najnowszą zsynchronizowaną listą.';
+
+  @override
+  String get listDiscardLocalEdits => 'Odrzuć lokalne zmiany';
+
+  @override
   String get listPermissionsUnconfirmed =>
       'Nie udało się potwierdzić tej zmiany. Spróbuj ponownie.';
 

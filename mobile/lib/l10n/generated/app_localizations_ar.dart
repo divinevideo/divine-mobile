@@ -15843,6 +15843,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listRetrySync => 'زامن الآن';
 
   @override
+  String get listConflictNotice =>
+      'تغيّرت هذه القائمة في مكان آخر. تعديلاتك المحلية ما زالت محفوظة هنا.';
+
+  @override
+  String get listUseLatestVersion => 'استخدام أحدث قائمة متزامنة';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'سيؤدي هذا إلى حذف تعديلاتك المحلية واستبدالها بأحدث قائمة متزامنة.';
+
+  @override
+  String get listDiscardLocalEdits => 'حذف التعديلات المحلية';
+
+  @override
   String get listPermissionsUnconfirmed =>
       'تعذّر تأكيد هذا التغيير. حاول مرة أخرى.';
 

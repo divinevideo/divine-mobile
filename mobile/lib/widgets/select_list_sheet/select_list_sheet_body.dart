@@ -215,7 +215,10 @@ class _ListRow extends StatelessWidget {
           meta:
               '${l10n.listVideoCount(list.videoEventIds.length)} • $visibility',
           isSelected: isSelected,
-          onTap: !canEdit || list.hasPendingPermissionRecovery
+          onTap:
+              !canEdit ||
+                  list.hasPendingPermissionRecovery ||
+                  list.hasPendingPermissionDraft
               ? null
               : () => context.read<SelectListCubit>().toggled(list.id),
         ),
@@ -247,9 +250,18 @@ class _ListRow extends StatelessWidget {
                   )
                 else
                   DivineButton(
-                    label: l10n.listRetrySync,
+                    label: list.hasPendingPermissionDraft
+                        ? l10n.listEditTitle
+                        : l10n.listRetrySync,
                     onPressed: !canEdit
                         ? null
+                        : list.hasPendingPermissionDraft
+                        ? () => runDetached(
+                            showListInfoSheet(context, existingList: list),
+                            'review saved list changes',
+                            logName: 'SelectListSheet',
+                            category: LogCategory.ui,
+                          )
                         : () => runDetached(
                             context.read<SelectListCubit>().syncRequested(
                               list.id,

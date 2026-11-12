@@ -15418,6 +15418,20 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listRetrySync => 'አሁን አመሳስል';
 
   @override
+  String get listConflictNotice =>
+      'ይህ ዝርዝር በሌላ ቦታ ተቀይሯል። የእርስዎ አርትዖቶች አሁንም እዚህ ተቀምጠዋል።';
+
+  @override
+  String get listUseLatestVersion => 'የቅርብ ጊዜውን የተመሳሰለ ዝርዝር ይጠቀሙ';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'ይህ በመሣሪያዎ ላይ ያሉትን አርትዖቶች ሰርዞ በቅርብ ጊዜው የተመሳሰለ ዝርዝር ይተካቸዋል።';
+
+  @override
+  String get listDiscardLocalEdits => 'በመሣሪያዎ ላይ ያሉትን አርትዖቶች ይሰርዙ';
+
+  @override
   String get listPermissionsUnconfirmed => 'ይህን ለውጥ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።';
 
   @override

@@ -1075,6 +1075,26 @@ void main() {
     });
 
     group('permission and deletion recovery', () {
+      test(
+        'membership sync never submits an offline permission proposal',
+        () async {
+          final baseline = _list('proposal', isPublic: false);
+          final proposal = baseline.copyWith(
+            localEditDraft: CuratedListEditDraft(
+              baseline: baseline,
+              desired: baseline.copyWith(isPublic: true),
+            ),
+          );
+          stubLists([proposal]);
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+          cubit.toggled('proposal');
+          expect(cubit.state.selectedListIds, isEmpty);
+          await cubit.syncRequested('proposal');
+          verifyNever(() => service.retryListSync(any()));
+        },
+      );
+
       CuratedList recovery({bool member = false}) =>
           _list(
             'recovering',

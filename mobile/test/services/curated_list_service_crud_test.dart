@@ -122,6 +122,7 @@ void main() {
     });
 
     void stubPrivateListEncryption() {
+      stubAuthoritativeListRead(mockNostr);
       when(
         () => mockSigner.nip44Encrypt(any(), any()),
       ).thenAnswer((i) async => _seal(i.positionalArguments[1] as String));
@@ -132,6 +133,7 @@ void main() {
 
     setUp(() async {
       mockNostr = _MockNostrClient();
+      stubAuthoritativeListRead(mockNostr);
       mockAuth = _MockAuthService();
       mockSigner = _MockNostrSigner();
       SharedPreferences.setMockInitialValues({});
@@ -1487,6 +1489,7 @@ void main() {
       test('publishes again when a video is added', () async {
         final list = await service.createList(name: 'Public List');
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.publishEvent(any())).thenAnswer(
           (invocation) async =>
               PublishSuccess(event: invocation.positionalArguments[0] as Event),
@@ -1790,7 +1793,8 @@ void main() {
       test('publishes update to Nostr for public list with videos', () async {
         final list = await service.createList(name: 'Test List');
         await service.addVideoToList(list!.id, 'test_video_id');
-        reset(mockNostr); // Clear previous invocations
+        reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr); // Clear previous invocations
 
         // Re-setup mocks after reset
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer((
@@ -1809,7 +1813,8 @@ void main() {
           name: 'Test List',
           isPublic: false,
         );
-        reset(mockNostr); // Clear previous invocations
+        reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr); // Clear previous invocations
         when(() => mockNostr.signer).thenReturn(mockSigner);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
           (invocation) async =>
@@ -1834,6 +1839,7 @@ void main() {
         expect(originalEventId, isNotNull);
 
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.signer).thenReturn(mockSigner);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
           (invocation) async =>
@@ -1863,6 +1869,7 @@ void main() {
           expect(plaintextEventId, isNotNull);
 
           reset(mockNostr);
+          stubAuthoritativeListRead(mockNostr);
           when(() => mockNostr.signer).thenReturn(mockSigner);
           when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
             (invocation) async =>
@@ -1943,6 +1950,7 @@ void main() {
         final list = await service.createList(name: 'Public List');
         await service.addVideoToList(list!.id, 'video_event_id');
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.signer).thenReturn(mockSigner);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
           (invocation) async =>
@@ -1986,6 +1994,7 @@ void main() {
         final plaintextEventId = service.getListById(list!.id)!.nostrEventId;
         expect(plaintextEventId, isNotNull);
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.signer).thenReturn(mockSigner);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
           (invocation) async =>
@@ -2021,6 +2030,7 @@ void main() {
       test('commits privacy when only some relays accept it', () async {
         final list = await service.createList(name: 'Public List');
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.signer).thenReturn(mockSigner);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
           (invocation) async =>
@@ -2047,6 +2057,7 @@ void main() {
       test('keeps a list private when its redaction fails', () async {
         final list = await service.createList(name: 'Public List');
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.signer).thenReturn(mockSigner);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
           (invocation) async {
@@ -2105,6 +2116,7 @@ void main() {
         final list = await service.createList(name: 'Public List');
         expect(service.getListById(list!.id)!.nostrEventId, isNotNull);
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.signer).thenReturn(mockSigner);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
           (invocation) async =>
@@ -2124,6 +2136,7 @@ void main() {
         () async {
           final list = await service.createList(name: 'Public List');
           reset(mockNostr);
+          stubAuthoritativeListRead(mockNostr);
           when(() => mockNostr.signer).thenReturn(mockSigner);
           when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
             (invocation) async =>
@@ -2257,6 +2270,7 @@ void main() {
         // the relays still receive. The confirmed path must be used instead.
         final list = await service.createList(name: 'Public List');
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
           (invocation) async =>
               _accepted(invocation.positionalArguments[0] as Event),
@@ -2283,6 +2297,7 @@ void main() {
       test('keeps a video added while the update was publishing', () async {
         final list = await service.createList(name: 'Public List');
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
 
         // Held open so the add lands inside the update's publish, which under
         // publishEventAwaitOk runs to a 15s deadline rather than a socket
@@ -2320,6 +2335,7 @@ void main() {
       test('serializes an add behind a private transition', () async {
         final list = await service.createList(name: 'Public List');
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.signer).thenReturn(mockSigner);
 
         final privacyGate = Completer<void>();
@@ -2375,6 +2391,7 @@ void main() {
         // Creation publishes the kind 30005 event; reset so the capture
         // below only sees the deletion event.
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
           (invocation) async =>
               _accepted(invocation.positionalArguments[0] as Event),
@@ -2405,6 +2422,7 @@ void main() {
           final list = await service.createList(name: 'Doomed List');
           final listId = list!.id;
           reset(mockNostr);
+          stubAuthoritativeListRead(mockNostr);
           when(() => mockNostr.signer).thenReturn(mockSigner);
           when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
             (invocation) async =>
@@ -2438,6 +2456,7 @@ void main() {
         final list = await service.createList(name: 'Doomed List');
         final listId = list!.id;
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
           (invocation) async =>
               _accepted(invocation.positionalArguments[0] as Event),
@@ -2465,6 +2484,7 @@ void main() {
           final list = await service.createList(name: 'Doomed List');
           final listId = list!.id;
           reset(mockNostr);
+          stubAuthoritativeListRead(mockNostr);
           when(() => mockNostr.signer).thenReturn(mockSigner);
           when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
             (invocation) async =>
@@ -2547,6 +2567,7 @@ void main() {
           final list = await service.createList(name: 'Doomed List');
           final listId = list!.id;
           reset(mockNostr);
+          stubAuthoritativeListRead(mockNostr);
           when(() => mockNostr.signer).thenReturn(mockSigner);
           when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
             (invocation) async =>
@@ -2600,6 +2621,7 @@ void main() {
       test('keeps local list when publish fails', () async {
         final list = await service.createList(name: 'Owned Public List');
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
           (invocation) => Future<PublishOutcome>.value(
             _rejected(invocation.positionalArguments[0] as Event),
@@ -2618,6 +2640,7 @@ void main() {
           isPublic: false,
         );
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.signer).thenReturn(mockSigner);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
           (invocation) async =>
@@ -2656,6 +2679,7 @@ void main() {
             isPublic: false,
           );
           reset(mockNostr);
+          stubAuthoritativeListRead(mockNostr);
 
           // Held open so the second delete lands inside the deletion publish,
           // which under publishEventAwaitOk can run to a 15s deadline.
@@ -2723,6 +2747,7 @@ void main() {
         expect(originalEventId, isNotNull);
 
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
         when(() => mockNostr.signer).thenReturn(mockSigner);
         when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
           (invocation) async =>

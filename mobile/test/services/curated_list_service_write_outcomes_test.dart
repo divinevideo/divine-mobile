@@ -174,6 +174,48 @@ void main() {
     }
 
     test(
+      'rejected explicit adoption preserves the pending draft across restart',
+      () async {
+        final baseline = _list().copyWith(nostrEventId: 'a' * 64);
+        final draft = baseline.copyWith(
+          name: 'Local draft',
+          pendingRepublish: true,
+          localEditDraft: CuratedListEditDraft(
+            baseline: baseline,
+            desired: baseline.copyWith(name: 'Local draft'),
+          ),
+        );
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([draft.toJson()]),
+        );
+        final remote = await signedCuratedListFixture(
+          baseline.copyWith(
+            name: 'Remote title',
+            updatedAt: DateTime.utc(2026, 2),
+          ),
+          LocalNostrSigner('1'.padLeft(64, '0')),
+        );
+        stubAuthoritativeListRead(client, events: () => [remote]);
+        final service = open();
+        expect(await service.retryListSync('crew'), isFalse);
+        final before = prefs.getString(CuratedListService.listsStorageKey);
+        prefs.rejectLists = true;
+        expect(await service.discardLocalEditsAndAdoptRelay('crew'), isFalse);
+        expect(prefs.getString(CuratedListService.listsStorageKey), before);
+        expect(service.getListById('crew')!.name, 'Local draft');
+        prefs.rejectLists = false;
+        final restarted = open();
+        expect(
+          restarted.getListById('crew')!.localEditDraft!.desired.name,
+          'Local draft',
+        );
+        expect(restarted.getListById('crew')!.hasRelayConflict, isTrue);
+        verifyNever(() => client.publishEventAwaitOk(any()));
+      },
+    );
+
+    test(
       'rejected creation returns null and never signs or publishes',
       () async {
         final service = open();

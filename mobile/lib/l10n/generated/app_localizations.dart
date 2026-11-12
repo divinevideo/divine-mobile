@@ -26361,6 +26361,30 @@ abstract class AppLocalizations {
   /// **'Sync now'**
   String get listRetrySync;
 
+  /// Curated list conflict recovery: listConflictNotice
+  ///
+  /// In en, this message translates to:
+  /// **'This list changed elsewhere. Your local edits are still saved here.'**
+  String get listConflictNotice;
+
+  /// Curated list conflict recovery: listUseLatestVersion
+  ///
+  /// In en, this message translates to:
+  /// **'Use latest synced list'**
+  String get listUseLatestVersion;
+
+  /// Curated list conflict recovery: listDiscardDraftConfirmation
+  ///
+  /// In en, this message translates to:
+  /// **'This discards your local edits and replaces them with the latest synced list.'**
+  String get listDiscardDraftConfirmation;
+
+  /// Curated list conflict recovery: listDiscardLocalEdits
+  ///
+  /// In en, this message translates to:
+  /// **'Discard local edits'**
+  String get listDiscardLocalEdits;
+
   /// Shown when a requested list visibility or collaborator change has no confirmed relay outcome. Does not claim the remote change failed or was reversed.
   ///
   /// In en, this message translates to:

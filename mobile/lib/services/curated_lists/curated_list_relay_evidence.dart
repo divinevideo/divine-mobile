@@ -268,7 +268,12 @@ class CuratedListRelayEvidence {
   }
 
   /// No permissive decoder may silently drop unknown or malformed item records.
-  bool decoded(Event event, UnsealedItemTags items) {
+  /// A validation probe leaves the retained source held until a successful merge.
+  bool decoded(
+    Event event,
+    UnsealedItemTags items, {
+    bool recordDecoding = true,
+  }) {
     final owner = _currentOwner();
     if (owner == null || !_authentic(event, owner)) {
       final id = CuratedListConverter.extractDTag(event);
@@ -310,7 +315,7 @@ class CuratedListRelayEvidence {
             null) {
       return false;
     }
-    record!.decoded = true;
+    if (recordDecoding) record!.decoded = true;
     return true;
   }
 

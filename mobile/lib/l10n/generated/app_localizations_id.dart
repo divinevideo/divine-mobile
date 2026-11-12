@@ -15691,6 +15691,20 @@ class AppLocalizationsId extends AppLocalizations {
   String get listRetrySync => 'Sinkronkan sekarang';
 
   @override
+  String get listConflictNotice =>
+      'Daftar ini berubah di tempat lain. Perubahan lokalmu masih tersimpan di sini.';
+
+  @override
+  String get listUseLatestVersion => 'Gunakan daftar tersinkron terbaru';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'Ini akan membuang perubahan lokalmu dan menggantinya dengan daftar tersinkron terbaru.';
+
+  @override
+  String get listDiscardLocalEdits => 'Buang perubahan lokal';
+
+  @override
   String get listPermissionsUnconfirmed =>
       'Perubahan ini belum bisa dikonfirmasi. Coba lagi.';
 

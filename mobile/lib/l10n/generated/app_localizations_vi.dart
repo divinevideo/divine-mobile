@@ -15744,6 +15744,20 @@ class AppLocalizationsVi extends AppLocalizations {
   String get listRetrySync => 'Đồng bộ ngay';
 
   @override
+  String get listConflictNotice =>
+      'Danh sách này đã thay đổi ở nơi khác. Các chỉnh sửa cục bộ của bạn vẫn được lưu ở đây.';
+
+  @override
+  String get listUseLatestVersion => 'Dùng danh sách đã đồng bộ mới nhất';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'Thao tác này sẽ bỏ các chỉnh sửa cục bộ của bạn và thay bằng danh sách đã đồng bộ mới nhất.';
+
+  @override
+  String get listDiscardLocalEdits => 'Bỏ các chỉnh sửa cục bộ';
+
+  @override
   String get listPermissionsUnconfirmed =>
       'Không thể xác nhận thay đổi này. Hãy thử lại.';
 

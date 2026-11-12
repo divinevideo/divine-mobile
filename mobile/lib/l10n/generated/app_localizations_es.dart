@@ -15993,6 +15993,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get listRetrySync => 'Sincronizar ahora';
 
   @override
+  String get listConflictNotice =>
+      'Esta lista cambió en otro lugar. Tus cambios locales siguen guardados acá.';
+
+  @override
+  String get listUseLatestVersion => 'Usar la última lista sincronizada';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'Esto descarta tus cambios locales y los reemplaza con la última lista sincronizada.';
+
+  @override
+  String get listDiscardLocalEdits => 'Descartar cambios locales';
+
+  @override
   String get listPermissionsUnconfirmed =>
       'No se pudo confirmar este cambio. Probá de nuevo.';
 

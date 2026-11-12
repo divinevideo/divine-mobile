@@ -15798,6 +15798,20 @@ class AppLocalizationsUr extends AppLocalizations {
   String get listRetrySync => 'اب ہم آہنگ کریں';
 
   @override
+  String get listConflictNotice =>
+      'یہ فہرست کسی اور جگہ تبدیل ہوئی ہے۔ آپ کی مقامی تبدیلیاں اب بھی یہاں محفوظ ہیں۔';
+
+  @override
+  String get listUseLatestVersion => 'تازہ ترین ہم وقت کردہ فہرست استعمال کریں';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'اس سے آپ کی مقامی تبدیلیاں حذف ہو جائیں گی اور ان کی جگہ تازہ ترین ہم وقت کردہ فہرست آ جائے گی۔';
+
+  @override
+  String get listDiscardLocalEdits => 'مقامی تبدیلیاں حذف کریں';
+
+  @override
   String get listPermissionsUnconfirmed =>
       'اس تبدیلی کی تصدیق نہیں ہو سکی۔ دوبارہ کوشش کریں۔';
 

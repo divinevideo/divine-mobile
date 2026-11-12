@@ -9,6 +9,7 @@ environment:
 
 dependencies:
   clock: ^1.1.2
+  collection: ^1.19.1
   funnelcake_api_client:
   models:
   nostr_client:

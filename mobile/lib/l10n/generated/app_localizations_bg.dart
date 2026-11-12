@@ -15948,6 +15948,20 @@ class AppLocalizationsBg extends AppLocalizations {
   String get listRetrySync => 'Синхронизирай сега';
 
   @override
+  String get listConflictNotice =>
+      'Този списък е променен другаде. Локалните ти промени все още са запазени тук.';
+
+  @override
+  String get listUseLatestVersion => 'Използвай последния синхронизиран списък';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'Това отхвърля локалните ти промени и ги заменя с последния синхронизиран списък.';
+
+  @override
+  String get listDiscardLocalEdits => 'Отхвърли локалните промени';
+
+  @override
   String get listPermissionsUnconfirmed =>
       'Не можахме да потвърдим тази промяна. Опитай отново.';
 

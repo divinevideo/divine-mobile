@@ -15067,6 +15067,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String get listRetrySync => '지금 동기화';
 
   @override
+  String get listConflictNotice =>
+      '다른 곳에서 이 목록이 변경되었어요. 이 기기에서 수정한 내용은 여기에 그대로 저장되어 있어요.';
+
+  @override
+  String get listUseLatestVersion => '최신 동기화 목록 사용';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      '이 기기에서 수정한 내용을 버리고 최신 동기화 목록으로 바꿔요.';
+
+  @override
+  String get listDiscardLocalEdits => '이 기기의 수정 내용 버리기';
+
+  @override
   String get listPermissionsUnconfirmed => '이 변경 사항을 확인하지 못했어요. 다시 시도해 주세요.';
 
   @override

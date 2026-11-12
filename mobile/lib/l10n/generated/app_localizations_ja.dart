@@ -15051,6 +15051,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listRetrySync => '今すぐ同期';
 
   @override
+  String get listConflictNotice =>
+      'このリストは別の場所で変更されました。この端末での編集内容は引き続きここに保存されています。';
+
+  @override
+  String get listUseLatestVersion => '最新の同期済みリストを使う';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'この端末での編集内容を破棄し、最新の同期済みリストに置き換えます。';
+
+  @override
+  String get listDiscardLocalEdits => 'この端末での編集内容を破棄';
+
+  @override
   String get listPermissionsUnconfirmed => 'この変更を確認できませんでした。もう一度お試しください。';
 
   @override

@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
@@ -35,6 +36,40 @@ final class CuratedListRelaySnapshotReader {
     : _nostrClient = nostrClient;
 
   final NostrClient _nostrClient;
+
+  /// Reads one replacement source directly from every serving relay.
+  /// Incomplete answers and cancellation never grant mutation authority.
+  Future<CuratedListRelaySnapshot> readForMutation({
+    required String ownerPubkey,
+    required String listId,
+    required Duration timeout,
+    required Future<void> cancelled,
+  }) async {
+    final result = await Future.any([
+      _nostrClient.queryEventsDetailed(
+        [
+          Filter(authors: [ownerPubkey], kinds: const [30005], d: [listId]),
+        ],
+        useCache: false,
+        requireAllRelaysSettled: true,
+        timeout: timeout,
+      ),
+      cancelled.then((_) => null),
+    ]);
+    return CuratedListRelaySnapshot(
+      events: result == null
+          ? const []
+          : result.events
+                .where(
+                  (event) =>
+                      event.kind == 30005 &&
+                      event.pubkey == ownerPubkey &&
+                      CuratedListConverter.extractDTag(event) == listId,
+                )
+                .toList(),
+      completedNormally: result != null && !result.timedOut && !result.noRelays,
+    );
+  }
 
   /// Cancels the subscription on every exit and retains partial events.
   Future<CuratedListRelaySnapshot> read({

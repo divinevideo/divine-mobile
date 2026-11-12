@@ -15724,6 +15724,20 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listRetrySync => 'Şimdi eşitle';
 
   @override
+  String get listConflictNotice =>
+      'Bu liste başka bir yerde değişti. Yerel düzenlemelerin hâlâ burada kayıtlı.';
+
+  @override
+  String get listUseLatestVersion => 'Son eşitlenen listeyi kullan';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'Bu işlem yerel düzenlemelerini siler ve en son eşitlenen listeyle değiştirir.';
+
+  @override
+  String get listDiscardLocalEdits => 'Yerel düzenlemeleri sil';
+
+  @override
   String get listPermissionsUnconfirmed =>
       'Bu değişiklik doğrulanamadı. Tekrar dene.';
 

@@ -16174,6 +16174,20 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listRetrySync => 'ఇప్పుడే సింక్ చేయండి';
 
   @override
+  String get listConflictNotice =>
+      'ఈ జాబితా మరోచోట మార్చబడింది. ఈ పరికరంలో మీరు చేసిన మార్పులు ఇంకా ఇక్కడ భద్రంగా ఉన్నాయి.';
+
+  @override
+  String get listUseLatestVersion => 'తాజాగా సమకాలీకరించిన జాబితాను వాడండి';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'ఇది ఈ పరికరంలో మీరు చేసిన మార్పులను తొలగించి, తాజాగా సమకాలీకరించిన జాబితాతో భర్తీ చేస్తుంది.';
+
+  @override
+  String get listDiscardLocalEdits => 'ఈ పరికరంలోని మార్పులను తొలగించండి';
+
+  @override
   String get listPermissionsUnconfirmed =>
       'ఈ మార్పును నిర్ధారించలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
 

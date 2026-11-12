@@ -15883,6 +15883,21 @@ class AppLocalizationsNl extends AppLocalizations {
   String get listRetrySync => 'Nu synchroniseren';
 
   @override
+  String get listConflictNotice =>
+      'Deze lijst is ergens anders gewijzigd. Je lokale wijzigingen zijn hier nog opgeslagen.';
+
+  @override
+  String get listUseLatestVersion =>
+      'Nieuwste gesynchroniseerde lijst gebruiken';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'Hiermee worden je lokale wijzigingen verworpen en vervangen door de nieuwste gesynchroniseerde lijst.';
+
+  @override
+  String get listDiscardLocalEdits => 'Lokale wijzigingen verwerpen';
+
+  @override
   String get listPermissionsUnconfirmed =>
       'Deze wijziging kon niet worden bevestigd. Probeer het opnieuw.';
 

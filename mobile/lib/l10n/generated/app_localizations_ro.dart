@@ -16121,6 +16121,21 @@ class AppLocalizationsRo extends AppLocalizations {
   String get listRetrySync => 'Sincronizează acum';
 
   @override
+  String get listConflictNotice =>
+      'Această listă a fost modificată în altă parte. Modificările tale locale sunt încă salvate aici.';
+
+  @override
+  String get listUseLatestVersion =>
+      'Folosește cea mai recentă listă sincronizată';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'Modificările tale locale vor fi eliminate și înlocuite cu cea mai recentă listă sincronizată.';
+
+  @override
+  String get listDiscardLocalEdits => 'Renunță la modificările locale';
+
+  @override
   String get listPermissionsUnconfirmed =>
       'Nu am putut confirma această schimbare. Încearcă din nou.';
 

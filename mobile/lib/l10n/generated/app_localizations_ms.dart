@@ -15798,6 +15798,20 @@ class AppLocalizationsMs extends AppLocalizations {
   String get listRetrySync => 'Segerakkan sekarang';
 
   @override
+  String get listConflictNotice =>
+      'Senarai ini telah berubah di tempat lain. Suntingan setempat anda masih disimpan di sini.';
+
+  @override
+  String get listUseLatestVersion => 'Guna senarai disegerakkan terkini';
+
+  @override
+  String get listDiscardDraftConfirmation =>
+      'Ini akan membuang suntingan setempat anda dan menggantikannya dengan senarai disegerakkan terkini.';
+
+  @override
+  String get listDiscardLocalEdits => 'Buang suntingan setempat';
+
+  @override
   String get listPermissionsUnconfirmed =>
       'Perubahan ini tidak dapat disahkan. Cuba lagi.';
 
