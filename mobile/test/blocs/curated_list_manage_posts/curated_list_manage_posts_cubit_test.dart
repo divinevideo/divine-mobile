@@ -333,6 +333,29 @@ void main() {
           );
         });
 
+        test('removes each name once when two versions of the post are '
+            'selected', () async {
+          final items = stubListHolding([olderEventId, address]);
+          when(() => service.removeVideoFromList('list-1', any())).thenAnswer(
+            (invocation) async =>
+                items.remove(invocation.positionalArguments[1]),
+          );
+          final cubit = buildResolvingCubit((_) async => const {})
+            ..togglePost(olderEventId, videoAddress: address)
+            ..togglePost(eventId, videoAddress: address);
+          addTearDown(cubit.close);
+
+          await cubit.removeSelected();
+
+          expect(cubit.state.status, CuratedListManagePostsStatus.success);
+          verify(
+            () => service.removeVideoFromList('list-1', olderEventId),
+          ).called(1);
+          verify(
+            () => service.removeVideoFromList('list-1', address),
+          ).called(1);
+        });
+
         test('counts the post as failed while the list still holds the older '
             'version', () async {
           stubListHolding([olderEventId]);

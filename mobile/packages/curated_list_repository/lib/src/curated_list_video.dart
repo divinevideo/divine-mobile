@@ -33,9 +33,9 @@ class CuratedListVideo {
   /// so the item outlives an edit, otherwise [eventId].
   String get reference => address ?? eventId;
 
-  /// The items of [list] that name this video, in list order. A Kind 34235
-  /// video is also found under the `34236:` coordinate Divine wrote for it
-  /// before #10776.
+  /// The items of [list] that name this video, each once, in list order. A
+  /// Kind 34235 video is also found under the `34236:` coordinate Divine
+  /// wrote for it before #10776.
   ///
   /// [addressByEventId] holds the coordinates a
   /// [CuratedListVideoAddressResolver] reported: an event-id item mapped to
@@ -49,13 +49,13 @@ class CuratedListVideo {
       ?address,
       if (address != null) ?legacyVideoCoordinateFor(address),
     };
-    return [
+    return {
       for (final item in list.videoEventIds)
         if (item == eventId ||
             addresses.contains(item) ||
             addresses.contains(addressByEventId[item]))
           item,
-    ];
+    }.toList();
   }
 
   /// Whether [list] holds this video under any name; see [referencesIn].

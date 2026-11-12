@@ -83,11 +83,13 @@ class CuratedListManagePostsCubit extends Cubit<CuratedListManagePostsState>
     ];
     final addressByEventId = await _lookUpOlderVersions(selected);
     final list = _service.getListById(_listId);
-    final references = [
+    // Two selected tiles can be versions of one video, which the list holds
+    // under the same names; each name is removed once.
+    final references = {
       if (list != null)
         for (final video in selected)
           ...video.referencesIn(list, addressByEventId: addressByEventId),
-    ];
+    };
     for (final reference in references) {
       try {
         await _service.removeVideoFromList(_listId, reference);

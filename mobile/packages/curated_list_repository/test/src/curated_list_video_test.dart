@@ -85,6 +85,17 @@ void main() {
         expect(video.isIn(_listWith([alias])), isTrue);
       });
 
+      // Removing an item drops every copy of it, so a second name for the
+      // same item would only publish the list again.
+      test('names an item the list holds twice once', () {
+        const video = CuratedListVideo(eventId: _eventId, address: _address);
+
+        expect(
+          video.referencesIn(_listWith([_address, _eventId, _address])),
+          equals([_address, _eventId]),
+        );
+      });
+
       test('finds nothing in a list that holds other videos', () {
         const video = CuratedListVideo(eventId: _eventId, address: _address);
 
