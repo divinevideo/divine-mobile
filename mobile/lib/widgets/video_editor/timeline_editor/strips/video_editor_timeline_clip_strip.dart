@@ -761,133 +761,134 @@ class _VideoEditorTimelineClipStripState
           },
         ),
       ],
-      child: Semantics(
-        label: context.l10n.videoEditorTimelineLongPressToDragHint,
-        button: true,
-        child: GestureDetector(
-          onLongPressStart: isVolumeEditMode || widget.isMultiSelectMode
-              ? null
-              : _onLongPressStart,
-          onLongPressMoveUpdate: _isReordering ? _onLongPressMoveUpdate : null,
-          onLongPressEnd: _isReordering ? _onLongPressEnd : null,
-          onLongPressCancel: _isReordering ? _onLongPressCancel : null,
-          child: AnimatedContainer(
-            duration: shouldAnimate || volumeAnimating ? animDuration : .zero,
-            curve: animCurve,
-            width: totalWidth + loopSlotWidth,
-            height: containerHeight,
-            child: Stack(
-              clipBehavior:
-                  shouldAnimate ||
-                      widget.trimmingClipId != null ||
-                      volumeAnimating
-                  ? .none
-                  : .hardEdge,
-              children: [
-                /// Non-dragged, non-trimming clips.
-                _NonTrimmingClipPositions(
+      child: GestureDetector(
+        // A screen reader's long press replays start and end in one go, but
+        // the end handler only exists once a reorder runs — the strip would
+        // enter reorder mode and stay there. The tiles' move actions are
+        // the screen-reader path to reorder.
+        excludeFromSemantics: true,
+        onLongPressStart: isVolumeEditMode || widget.isMultiSelectMode
+            ? null
+            : _onLongPressStart,
+        onLongPressMoveUpdate: _isReordering ? _onLongPressMoveUpdate : null,
+        onLongPressEnd: _isReordering ? _onLongPressEnd : null,
+        onLongPressCancel: _isReordering ? _onLongPressCancel : null,
+        child: AnimatedContainer(
+          duration: shouldAnimate || volumeAnimating ? animDuration : .zero,
+          curve: animCurve,
+          width: totalWidth + loopSlotWidth,
+          height: containerHeight,
+          child: Stack(
+            clipBehavior:
+                shouldAnimate ||
+                    widget.trimmingClipId != null ||
+                    volumeAnimating
+                ? .none
+                : .hardEdge,
+            children: [
+              /// Non-dragged, non-trimming clips.
+              _NonTrimmingClipPositions(
+                orderedClips: _orderedClips,
+                thumbnails: _thumbnails,
+                waveforms: _waveforms,
+                layout: layout,
+                wrap: wrap,
+                dragIndex: _dragIndex,
+                trimmingClipId: widget.trimmingClipId,
+                shouldAnimate: shouldAnimate || volumeAnimating,
+                animDuration: animDuration,
+                animCurve: animCurve,
+                isReordering: _isReordering,
+                rowOffset: _rowOffset,
+                reorderSlotStep: reorderSlotStep,
+                pixelsPerSecond: widget.pixelsPerSecond,
+                onReorder: _reorderClip,
+                onClipTapped: widget.onClipTapped,
+                rowOffsetSize: _reorderSize,
+                isVolumeEditMode: isVolumeEditMode,
+                volumeRowStep: volumeRowStep,
+                isMultiSelectMode: widget.isMultiSelectMode,
+                selectedClipIds: widget.selectedClipIds,
+              ),
+
+              /// Trimming clip — rendered last so handles stay on top.
+              // AnimatedPositioned is expanded by trimExpand on each side
+              // so the handle hit-areas fall within its bounds.
+              _TrimmingClipPositions(
+                orderedClips: _orderedClips,
+                thumbnails: _thumbnails,
+                waveforms: _waveforms,
+                layout: layout,
+                dragIndex: _dragIndex,
+                trimmingClipId: widget.trimmingClipId,
+                shouldAnimate: shouldAnimate || volumeAnimating,
+                animDuration: animDuration,
+                animCurve: animCurve,
+                isReordering: _isReordering,
+                rowOffset: _rowOffset,
+                reorderSlotStep: reorderSlotStep,
+                trimExpand: trimExpand,
+                pixelsPerSecond: widget.pixelsPerSecond,
+                onTrimChanged: widget.onTrimChanged,
+                playheadPosition: widget.playheadPosition,
+                onTrimDragChanged: _handleTrimDragChanged,
+                onClipTapped: widget.onClipTapped,
+                reorderSize: _reorderSize,
+                isVolumeEditMode: isVolumeEditMode,
+                volumeRowStep: volumeRowStep,
+              ),
+
+              /// Dragged clip — AnimatedPositioned so left+width animate
+              // together during shrink, then Duration.zero for instant
+              // finger-following after the animation completes.
+              if (_dragIndex != null)
+                _DraggedClipPosition(
                   orderedClips: _orderedClips,
                   thumbnails: _thumbnails,
-                  waveforms: _waveforms,
-                  layout: layout,
-                  wrap: wrap,
-                  dragIndex: _dragIndex,
-                  trimmingClipId: widget.trimmingClipId,
-                  shouldAnimate: shouldAnimate || volumeAnimating,
-                  animDuration: animDuration,
-                  animCurve: animCurve,
-                  isReordering: _isReordering,
-                  rowOffset: _rowOffset,
-                  reorderSlotStep: reorderSlotStep,
-                  pixelsPerSecond: widget.pixelsPerSecond,
-                  onReorder: _reorderClip,
-                  onClipTapped: widget.onClipTapped,
-                  rowOffsetSize: _reorderSize,
-                  isVolumeEditMode: isVolumeEditMode,
-                  volumeRowStep: volumeRowStep,
-                  isMultiSelectMode: widget.isMultiSelectMode,
-                  selectedClipIds: widget.selectedClipIds,
-                ),
-
-                /// Trimming clip — rendered last so handles stay on top.
-                // AnimatedPositioned is expanded by trimExpand on each side
-                // so the handle hit-areas fall within its bounds.
-                _TrimmingClipPositions(
-                  orderedClips: _orderedClips,
-                  thumbnails: _thumbnails,
-                  waveforms: _waveforms,
                   layout: layout,
                   dragIndex: _dragIndex,
-                  trimmingClipId: widget.trimmingClipId,
-                  shouldAnimate: shouldAnimate || volumeAnimating,
+                  dragAnimating: _dragAnimating,
                   animDuration: animDuration,
                   animCurve: animCurve,
-                  isReordering: _isReordering,
-                  rowOffset: _rowOffset,
-                  reorderSlotStep: reorderSlotStep,
-                  trimExpand: trimExpand,
+                  dragStartClipCenter: _dragStartClipCenter,
+                  dragClipWidth: _dragClipWidth,
+                  effectiveLocalX: _effectiveLocalX,
+                  dragFingerRatio: _dragFingerRatio,
                   pixelsPerSecond: widget.pixelsPerSecond,
-                  onTrimChanged: widget.onTrimChanged,
-                  playheadPosition: widget.playheadPosition,
-                  onTrimDragChanged: _handleTrimDragChanged,
-                  onClipTapped: widget.onClipTapped,
-                  reorderSize: _reorderSize,
-                  isVolumeEditMode: isVolumeEditMode,
-                  volumeRowStep: volumeRowStep,
                 ),
 
-                /// Dragged clip — AnimatedPositioned so left+width animate
-                // together during shrink, then Duration.zero for instant
-                // finger-following after the animation completes.
-                if (_dragIndex != null)
-                  _DraggedClipPosition(
-                    orderedClips: _orderedClips,
-                    thumbnails: _thumbnails,
-                    layout: layout,
-                    dragIndex: _dragIndex,
-                    dragAnimating: _dragAnimating,
-                    animDuration: animDuration,
-                    animCurve: animCurve,
-                    dragStartClipCenter: _dragStartClipCenter,
-                    dragClipWidth: _dragClipWidth,
-                    effectiveLocalX: _effectiveLocalX,
-                    dragFingerRatio: _dragFingerRatio,
-                    pixelsPerSecond: widget.pixelsPerSecond,
-                  ),
-
-                /// Transition buttons on each internal clip boundary, plus the
-                /// loop-blend seam region and the loop-restart button at the
-                /// very end (last clip's tail into the first clip's head).
-                /// Hidden during reorder/trim/volume/multi-select so they never
-                /// overlap those interactions.
-                if (!shouldAnimate &&
-                    widget.trimmingClipId == null &&
-                    !isVolumeEditMode &&
-                    !widget.isMultiSelectMode &&
-                    _orderedClips.isNotEmpty) ...[
-                  if (_orderedClips.length >= 2)
-                    TimelineTransitionButtonsLayer(
-                      clips: _orderedClips,
-                      layout: layout,
-                    ),
-                  if (seamRegionWidth > 0)
-                    TimelineLoopSeamRegion(
-                      left: layout.totalWidth - seamRegionWidth,
-                      width: seamRegionWidth,
-                      // The same frames the transition picker previews: the
-                      // last clip's tail into the first clip's head.
-                      tailFramePath:
-                          _orderedClips.last.ghostFramePath ??
-                          _orderedClips.last.thumbnailPath,
-                      headFramePath: _orderedClips.first.thumbnailPath,
-                    ),
-                  TimelineLoopTransitionButton(
-                    hasTransition: _orderedClips.last.transition != null,
+              /// Transition buttons on each internal clip boundary, plus the
+              /// loop-blend seam region and the loop-restart button at the
+              /// very end (last clip's tail into the first clip's head).
+              /// Hidden during reorder/trim/volume/multi-select so they never
+              /// overlap those interactions.
+              if (!shouldAnimate &&
+                  widget.trimmingClipId == null &&
+                  !isVolumeEditMode &&
+                  !widget.isMultiSelectMode &&
+                  _orderedClips.isNotEmpty) ...[
+                if (_orderedClips.length >= 2)
+                  TimelineTransitionButtonsLayer(
+                    clips: _orderedClips,
                     layout: layout,
                   ),
-                ],
+                if (seamRegionWidth > 0)
+                  TimelineLoopSeamRegion(
+                    left: layout.totalWidth - seamRegionWidth,
+                    width: seamRegionWidth,
+                    // The same frames the transition picker previews: the
+                    // last clip's tail into the first clip's head.
+                    tailFramePath:
+                        _orderedClips.last.ghostFramePath ??
+                        _orderedClips.last.thumbnailPath,
+                    headFramePath: _orderedClips.first.thumbnailPath,
+                  ),
+                TimelineLoopTransitionButton(
+                  hasTransition: _orderedClips.last.transition != null,
+                  layout: layout,
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
@@ -422,6 +423,10 @@ class _VideoEditorStopMotionFrameStripState
     final tileKeys = _tileKeys();
 
     return GestureDetector(
+      // A screen reader's long press replays start and end in one go, but the
+      // end handler only exists once a reorder runs — the strip would enter
+      // reorder mode and stay there. The tiles' move actions reorder instead.
+      excludeFromSemantics: true,
       onLongPressStart: _onLongPressStart,
       onLongPressMoveUpdate: _isReordering ? _onLongPressMoveUpdate : null,
       onLongPressEnd: _isReordering ? (_) => _endReorder() : null,
@@ -457,6 +462,16 @@ class _VideoEditorStopMotionFrameStripState
                     isLifted:
                         _isBlockDrag && widget.selectedFrameIndexes.contains(i),
                     onTap: _isReordering ? null : () => widget.onFrameTapped(i),
+                    onMoveLeft:
+                        _isReordering || widget.isMultiSelectMode || i == 0
+                        ? null
+                        : () => widget.onReorder(i, i - 1),
+                    onMoveRight:
+                        _isReordering ||
+                            widget.isMultiSelectMode ||
+                            i == _orderedFrames.length - 1
+                        ? null
+                        : () => widget.onReorder(i, i + 1),
                   ),
                 ),
             if (_dragIndex != null)
@@ -552,6 +567,8 @@ class _FrameTile extends StatelessWidget {
     required this.total,
     required this.isSelected,
     this.onTap,
+    this.onMoveLeft,
+    this.onMoveRight,
     this.isDragging = false,
     this.isLifted = false,
   });
@@ -561,6 +578,10 @@ class _FrameTile extends StatelessWidget {
   final int total;
   final bool isSelected;
   final VoidCallback? onTap;
+
+  /// Screen-reader moves, the counterpart of the long-press drag.
+  final VoidCallback? onMoveLeft;
+  final VoidCallback? onMoveRight;
   final bool isDragging;
 
   /// Whether this still is part of the block currently travelling with the
@@ -577,13 +598,19 @@ class _FrameTile extends StatelessWidget {
         (TimelineConstants.thumbnailStripHeight *
                 MediaQuery.devicePixelRatioOf(context))
             .round();
+    final l10n = context.l10n;
+    final moveActions = {
+      CustomSemanticsAction(label: l10n.videoEditorTimelineClipMoveLeft):
+          ?onMoveLeft,
+      CustomSemanticsAction(label: l10n.videoEditorTimelineClipMoveRight):
+          ?onMoveRight,
+    };
     return Semantics(
       button: true,
       selected: isSelected,
-      label: context.l10n.videoEditorStopMotionFrameSemanticLabel(
-        index + 1,
-        total,
-      ),
+      label: l10n.videoEditorStopMotionFrameSemanticLabel(index + 1, total),
+      // Even an empty map announces a custom-action menu.
+      customSemanticsActions: moveActions.isEmpty ? null : moveActions,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
