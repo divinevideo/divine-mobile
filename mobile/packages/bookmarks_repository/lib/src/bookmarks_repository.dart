@@ -817,7 +817,7 @@ class BookmarksRepository {
   /// is saved as that coordinate, because an edit republishes it under a new
   /// event id, and removing it drops every item that names it: the
   /// coordinate, [videoEventId], and an event id saved for an earlier version
-  /// (#7135).
+  /// once a sync has matched it to the coordinate (#7135).
   ///
   /// The direction is decided *after* reconciling with the relay, so a video
   /// bookmarked on another device is removed rather than added a second time.
