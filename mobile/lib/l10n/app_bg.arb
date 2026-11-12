@@ -620,8 +620,6 @@
   "featuredTabLoadFailed": "Тази колекция не можа да се зареди.",
   "featuredTabRetry": "Опитай пак",
   "exploreNoVideosAvailable": "Няма налични видеа",
-  "explorePeopleLists": "Списъци с хора",
-  "exploreVideoLists": "Видео списъци",
   "exploreErrorLoadingLists": "Грешка при зареждане на списъците. Опитай пак.",
   "exploreNewVideosCount": "{count, plural, =1{1 ново видео} other{{count} нови видеа}}",
   "@exploreNewVideosCount": {
@@ -1987,6 +1985,9 @@
   "listDone": "Готово",
   "listErrorLoading": "Грешка при зареждане на списъците",
   "listCreateNewList": "Създаване на нов списък",
+  "listTypeSheetTitle": "Нов списък",
+  "listTypeVideoList": "Списък с видеа",
+  "listTypePeopleList": "Списък с хора",
   "listNewPeopleList": "Нов списък с хора",
   "listNameLabel": "Име на списък",
   "listDescriptionLabel": "Описание (по избор)",
@@ -1995,7 +1996,9 @@
   "listVisibilityPrivate": "Частен",
   "profileListsEmpty": "Още няма списъци. Направи един за луповете, които искаш да държиш заедно.",
   "listEditTitle": "Редактирай списъка",
-  "listShareAction": "Сподели списъка",
+  "listShareButton": "Сподели",
+  "listManageButton": "Управление",
+  "peopleListsManagePeopleButton": "Управление на хората",
   "listShareFailed": "Списъкът не можа да бъде споделен. Опитай пак.",
   "listSave": "Запази",
   "listContinue": "Продължи",
@@ -3983,7 +3986,7 @@
   "nostrSettingsCouldNotRemoveKeys": "Не успяхме да махнем този акаунт от това устройство. Опитай пак.",
   "nostrSettingsDeleteAccount": "Изтрий акаунта и данните",
   "nostrSettingsDeleteAccountSubtitle": "Изпраща заявки за изтриване на съдържанието ти и те отписва на това устройство. Релетата, клиентите, индексите за търсене и другите устройства с вход може да запазят копия.",
-  "listByAuthorPrefix": "От ",
+  "listByAuthor": "от {name}",
   "keyManagementYourPublicKeyLabel": "Твоят публичен ключ (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

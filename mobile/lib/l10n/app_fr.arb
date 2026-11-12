@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "Impossible de charger cette collection.",
   "featuredTabRetry": "Réessayer",
   "exploreNoVideosAvailable": "Aucune vidéo disponible",
-  "explorePeopleLists": "Listes de personnes",
-  "exploreVideoLists": "Listes de vidéos",
   "exploreErrorLoadingLists": "Erreur de chargement des listes. Réessaie.",
   "exploreNewVideosCount": "{count, plural, one{{count} nouvelle vidéo} other{{count} nouvelles vidéos}}",
   "@exploreNewVideosCount": {
@@ -1795,6 +1793,9 @@
   "listDone": "Terminé",
   "listErrorLoading": "Erreur de chargement des listes",
   "listCreateNewList": "Créer une nouvelle liste",
+  "listTypeSheetTitle": "Nouvelle liste",
+  "listTypeVideoList": "Liste de vidéos",
+  "listTypePeopleList": "Liste de personnes",
   "listNewPeopleList": "Nouvelle liste de personnes",
   "listNameLabel": "Nom de la liste",
   "listDescriptionLabel": "Description (facultatif)",
@@ -1803,7 +1804,9 @@
   "listVisibilityPrivate": "Privée",
   "profileListsEmpty": "Pas encore de liste. Crée-en une pour les loops que tu veux garder ensemble.",
   "listEditTitle": "Modifier la liste",
-  "listShareAction": "Partager la liste",
+  "listShareButton": "Partager",
+  "listManageButton": "Gérer",
+  "peopleListsManagePeopleButton": "Gérer les personnes",
   "listShareFailed": "Impossible de partager cette liste. Réessaie.",
   "listSave": "Enregistrer",
   "listContinue": "Continuer",
@@ -3873,7 +3876,7 @@
   "nostrSettingsCouldNotRemoveKeys": "Impossible de retirer ce compte de cet appareil. Réessaie.",
   "nostrSettingsDeleteAccount": "Supprimer le compte et les données",
   "nostrSettingsDeleteAccountSubtitle": "Envoie des demandes de suppression pour ton contenu et te déconnecte sur cet appareil. Les relays, clients, index de recherche et autres appareils connectés peuvent garder des copies.",
-  "listByAuthorPrefix": "Par ",
+  "listByAuthor": "par {name}",
   "keyManagementYourPublicKeyLabel": "Ta clé publique (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

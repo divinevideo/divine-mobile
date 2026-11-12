@@ -24,17 +24,18 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/share_list_link.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_action_buttons.dart';
+import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:openvine/widgets/list_owner_action_tile.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:openvine/widgets/share_list_button.dart';
-import 'package:openvine/widgets/user_name.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owner actions offered by the `...` bottom sheet.
-enum _CuratedListAction { editInfo, managePosts, share, delete, report }
+enum _CuratedListAction { editInfo, delete, report }
 
 class CuratedListFeedScreen extends ConsumerStatefulWidget {
   /// Route name for this screen.
@@ -173,8 +174,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
           if (isOwned)
             DiVineAppBarAction(
               icon: SvgIconSource(DivineIconName.dotsThree.assetPath),
-              onPressed: () =>
-                  _showOwnerActions(canManagePosts: canManagePosts),
+              onPressed: _showOwnerActions,
               tooltip: context.l10n.curatedListActionsTooltip,
             )
           else if (reportTarget != null)
@@ -187,20 +187,36 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
               tooltip: context.l10n.curatedListActionsTooltip,
             ),
         ],
-        customActions: [
-          // Not owned in the store does not mean someone else's: a link can
-          // run ahead of sync, and Search opens an unclaimed draft under the
-          // viewer's own pubkey.
-          if (!isOwned && !_isViewer(widget.authorPubkey))
-            FollowListButton(
-              isFollowing: isSubscribed,
-              isBusy: _isTogglingSubscription,
-              onPressed: _toggleSubscription,
-            ),
-          if (!isOwned && isShareable) ShareListButton(onPressed: _shareList),
-        ],
       );
     }
+
+    // Someone else's private list opens only from a raw address and its
+    // videos are sealed to its author, so there is nothing to follow or share.
+    final isOthersPrivateList = !isOwned && list != null && !list.isPublic;
+    final headerButtons = <Widget>[
+      if (isOwned)
+        DivineButton(
+          label: context.l10n.listManageButton,
+          semanticLabel: context.l10n.listManageVideosAction,
+          type: DivineButtonType.secondary,
+          leadingIcon: DivineIconName.play,
+          expanded: true,
+          onPressed: canManagePosts ? _enterManageMode : null,
+        ),
+      // Not owned in the store does not mean someone else's: a link can
+      // run ahead of sync, and Search opens an unclaimed draft under the
+      // viewer's own pubkey. A list followed before its author made it
+      // private keeps Following, so the follower can still unfollow it.
+      if (!isOwned &&
+          !_isViewer(widget.authorPubkey) &&
+          (!isOthersPrivateList || isSubscribed))
+        FollowListButton(
+          isFollowing: isSubscribed,
+          isBusy: _isTogglingSubscription,
+          onPressed: _toggleSubscription,
+        ),
+      if (isShareable) ShareListButton(onPressed: _shareList),
+    ];
 
     final scaffold = Scaffold(
       // One surface for app bar, hero, and grid — the design renders the
@@ -208,110 +224,32 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       // screen background.
       backgroundColor: context.vineColors.nav,
       appBar: appBar,
-      body: videosAsync.when(
-        // Keep the current grid on screen while the provider re-runs after a
-        // blocklist version bump, instead of flashing the spinner and resetting
-        // scroll (#5104).
-        skipLoadingOnReload: true,
-        data: (videos) {
-          ref
-              .read(screenAnalyticsServiceProvider)
-              .markDataLoaded(
-                'curated_list',
-                dataMetrics: {'video_count': videos.length},
-              );
-
-          // If in video mode, show fullscreen video player
-          if (_activeVideoIndex != null) {
-            return ListVideoPlayerMode(
-              videos: videos,
-              activeIndex: _activeVideoIndex!,
-              listName: widget.listName,
-              onExit: _exitVideoMode,
-              unavailableMessage: context.l10n.curatedListVideoNotAvailable,
-              trafficSource: ViewTrafficSource.search,
-            );
-          }
-
-          if (_manageCubit case final cubit?) {
-            return BlocSelector<
-              CuratedListManagePostsCubit,
-              CuratedListManagePostsState,
-              Set<String>
-            >(
-              bloc: cubit,
-              selector: (state) => state.selectedVideoIds,
-              builder: (context, selectedVideoIds) => RoundedGridViewport(
-                child: ComposableVideoGrid(
-                  videos: videos,
-                  useMasonryLayout: true,
-                  // Edge-to-edge like the Explore grids: the 4px column gap
-                  // comes from the grid's spacing, not outer side padding.
-                  // No top padding, so the first row sits flush on the
-                  // panel's rounded top edge.
-                  padding: const EdgeInsets.only(bottom: 4),
-                  topOuterRadius: VineTheme.shellInnerCornerRadius,
-                  backgroundColor: context.vineColors.surfaceContainerHigh,
-                  showSubscribedListBadge: false,
-                  selectedVideoIds: selectedVideoIds,
-                  onVideoTap: (videoList, index) =>
-                      cubit.togglePost(videoList[index].id),
-                  emptyBuilder: () => const _EmptyListMessage(),
-                ),
-              ),
-            );
-          }
-
-          return RoundedGridViewport(
-            child: ComposableVideoGrid(
-              videos: videos,
-              useMasonryLayout: true,
-              // Edge-to-edge like the Explore grids: the 4px column gap comes
-              // from the grid's spacing, not outer side padding. No top
-              // padding, so the first row sits flush on the panel's rounded
-              // top edge.
-              padding: const EdgeInsets.only(bottom: 4),
-              topOuterRadius: VineTheme.shellInnerCornerRadius,
-              backgroundColor: context.vineColors.surfaceContainerHigh,
-              showSubscribedListBadge: false,
-              headerSlivers: [
-                SliverToBoxAdapter(
-                  child: _ListHeroHeader(
-                    name: list?.name ?? widget.listName,
-                    videoCount:
-                        list?.videoEventIds.length ??
-                        widget.videoIds?.length ??
-                        0,
-                    description: list?.description,
-                    authorPubkey: isOwned
-                        ? null
-                        : widget.authorPubkey ?? list?.pubkey,
-                    isPublic: list?.isPublic,
-                    onAuthorTap: _openAuthorProfile,
-                  ),
-                ),
-              ],
-              onVideoTap: (videoList, index) {
-                Log.info(
-                  'Tapped video in curated list: ${videoList[index].id}',
-                  category: LogCategory.ui,
-                );
-                setState(() {
-                  _activeVideoIndex = index;
-                });
-              },
-              onRefresh: () async {
-                _refreshListVideos();
-              },
-              emptyBuilder: () => const _EmptyListMessage(),
-            ),
-          );
-        },
-        loading: () => const _ListLoadingView(),
-        error: (error, stack) => _ListErrorView(
-          error: error,
-          onRetry: _refreshListVideos,
+      body: _ListBody(
+        videosAsync: videosAsync,
+        activeVideoIndex: _activeVideoIndex,
+        manageCubit: _manageCubit,
+        listName: widget.listName,
+        header: _ListHeroHeader(
+          name: list?.name ?? widget.listName,
+          videoCount:
+              list?.videoEventIds.length ?? widget.videoIds?.length ?? 0,
+          description: list?.description,
+          authorPubkey: isOwned ? null : widget.authorPubkey ?? list?.pubkey,
+          isPublic: list?.isPublic,
+          onAuthorTap: _openAuthorProfile,
+          actions: headerButtons,
         ),
+        onExitVideoMode: _exitVideoMode,
+        onVideoTap: (videoList, index) {
+          Log.info(
+            'Tapped video in curated list: ${videoList[index].id}',
+            category: LogCategory.ui,
+          );
+          setState(() {
+            _activeVideoIndex = index;
+          });
+        },
+        onRefresh: _refreshListVideos,
       ),
       bottomNavigationBar: _manageCubit == null
           ? null
@@ -520,12 +458,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       .service
       ?.getListById(_cacheListId);
 
-  Future<void> _showOwnerActions({required bool canManagePosts}) async {
-    final list = _localList();
-    // Sharing needs an author pubkey for the canonical URL, so a public
-    // list without one must not offer a no-op sheet entry.
-    final isShareable = (list?.isPublic ?? false) && list?.pubkey != null;
-
+  Future<void> _showOwnerActions() async {
     final action = await VineBottomSheet.show<_CuratedListAction>(
       context: context,
       expanded: false,
@@ -537,20 +470,6 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
           icon: DivineIconName.info,
           action: _CuratedListAction.editInfo,
         ),
-        ListOwnerActionTile(
-          identifier: 'list_manage_posts_option',
-          label: context.l10n.listManageVideosAction,
-          icon: DivineIconName.pencilSimple,
-          action: _CuratedListAction.managePosts,
-          enabled: canManagePosts,
-        ),
-        if (isShareable)
-          ListOwnerActionTile(
-            identifier: 'list_share_option',
-            label: context.l10n.listShareAction,
-            icon: DivineIconName.share,
-            action: _CuratedListAction.share,
-          ),
         ListOwnerActionTile(
           identifier: 'list_delete_option',
           label: context.l10n.listDeleteAction,
@@ -567,10 +486,6 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     switch (action) {
       case _CuratedListAction.editInfo:
         await _editList();
-      case _CuratedListAction.managePosts:
-        _enterManageMode();
-      case _CuratedListAction.share:
-        await _shareList();
       case _CuratedListAction.delete:
         await _confirmDeleteList();
       case _CuratedListAction.report:
@@ -757,8 +672,124 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   }
 }
 
-/// Hero block scrolled with the grid: list title, video count, description
-/// and the creator/visibility attribution.
+/// The list page below the app bar: the grid with the hero header, or
+/// fullscreen playback once a video is tapped.
+///
+/// The header stays mounted whatever state the videos are in, so Follow and
+/// Share remain usable while they load or after they fail; only the area
+/// under the header switches between the grid, a spinner and the error.
+class _ListBody extends ConsumerWidget {
+  const _ListBody({
+    required this.videosAsync,
+    required this.activeVideoIndex,
+    required this.manageCubit,
+    required this.listName,
+    required this.header,
+    required this.onExitVideoMode,
+    required this.onVideoTap,
+    required this.onRefresh,
+  });
+
+  final AsyncValue<List<VideoEvent>> videosAsync;
+  final int? activeVideoIndex;
+  final CuratedListManagePostsCubit? manageCubit;
+  final String listName;
+  final Widget header;
+  final VoidCallback onExitVideoMode;
+  final void Function(List<VideoEvent> videoList, int index) onVideoTap;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // An error routes to the error view even when a previous value is kept,
+    // while a reload keeps the current grid on screen instead of flashing
+    // the spinner and resetting scroll (#5104).
+    final videos = videosAsync.hasError ? null : videosAsync.value;
+    if (videos != null) {
+      ref
+          .read(screenAnalyticsServiceProvider)
+          .markDataLoaded(
+            'curated_list',
+            dataMetrics: {'video_count': videos.length},
+          );
+    }
+
+    final activeVideoIndex = this.activeVideoIndex;
+    if (activeVideoIndex != null && videos != null) {
+      return ListVideoPlayerMode(
+        videos: videos,
+        activeIndex: activeVideoIndex,
+        listName: listName,
+        onExit: onExitVideoMode,
+        unavailableMessage: context.l10n.curatedListVideoNotAvailable,
+        trafficSource: ViewTrafficSource.search,
+      );
+    }
+
+    final cubit = manageCubit;
+    if (cubit != null && videos != null) {
+      return BlocSelector<
+        CuratedListManagePostsCubit,
+        CuratedListManagePostsState,
+        Set<String>
+      >(
+        bloc: cubit,
+        selector: (state) => state.selectedVideoIds,
+        builder: (context, selectedVideoIds) => RoundedGridViewport(
+          child: ComposableVideoGrid(
+            videos: videos,
+            useMasonryLayout: true,
+            // Edge-to-edge like the Explore grids: the 4px column gap comes
+            // from the grid's spacing, not outer side padding. No top
+            // padding, so the first row sits flush on the panel's rounded
+            // top edge.
+            padding: const EdgeInsets.only(bottom: 4),
+            topOuterRadius: VineTheme.shellInnerCornerRadius,
+            backgroundColor: context.vineColors.surfaceContainerHigh,
+            showSubscribedListBadge: false,
+            selectedVideoIds: selectedVideoIds,
+            onVideoTap: (videoList, index) =>
+                cubit.togglePost(videoList[index].id),
+            emptyBuilder: () => const _EmptyListMessage(),
+          ),
+        ),
+      );
+    }
+
+    return RoundedGridViewport(
+      child: ComposableVideoGrid(
+        videos: videos ?? const <VideoEvent>[],
+        useMasonryLayout: true,
+        // Edge-to-edge like the Explore grids: the 4px column gap comes from
+        // the grid's spacing, not outer side padding. No top padding, so the
+        // first row sits flush on the panel's rounded top edge.
+        padding: const EdgeInsets.only(bottom: 4),
+        topOuterRadius: VineTheme.shellInnerCornerRadius,
+        backgroundColor: context.vineColors.surfaceContainerHigh,
+        showSubscribedListBadge: false,
+        headerSlivers: [SliverToBoxAdapter(child: header)],
+        onVideoTap: onVideoTap,
+        onRefresh: () async => onRefresh(),
+        emptyBuilder: () {
+          // hasError rather than an AsyncError match: while the provider
+          // retries, the failure rides on a loading value.
+          if (videosAsync.hasError) {
+            return _ListErrorView(
+              error: videosAsync.error!,
+              onRetry: onRefresh,
+            );
+          }
+          if (videos == null) return const _ListLoadingView();
+          return const _EmptyListMessage();
+        },
+      ),
+    );
+  }
+}
+
+/// Hero block scrolled with the grid: list title, the creator's byline,
+/// video count, description, for an owned list its visibility, and the
+/// list's action buttons.
 class _ListHeroHeader extends StatelessWidget {
   const _ListHeroHeader({
     required this.name,
@@ -767,6 +798,7 @@ class _ListHeroHeader extends StatelessWidget {
     this.authorPubkey,
     this.isPublic,
     this.onAuthorTap,
+    this.actions = const [],
   });
 
   final String name;
@@ -781,13 +813,16 @@ class _ListHeroHeader extends StatelessWidget {
 
   final ValueChanged<String>? onAuthorTap;
 
+  /// Buttons sharing the header's last row, right above the grid.
+  final List<Widget> actions;
+
   @override
   Widget build(BuildContext context) {
     final description = this.description;
     final authorPubkey = this.authorPubkey;
     final isPublic = this.isPublic;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, kListHeroBottomPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 8,
@@ -798,6 +833,11 @@ class _ListHeroHeader extends StatelessWidget {
               color: context.vineColors.primaryText,
             ),
           ),
+          if (authorPubkey != null)
+            ListAuthorByline(
+              authorPubkey: authorPubkey,
+              onTap: () => onAuthorTap?.call(authorPubkey),
+            ),
           Text(
             context.l10n.listVideoCount(videoCount),
             style: VineTheme.labelLargeFont(
@@ -811,12 +851,7 @@ class _ListHeroHeader extends StatelessWidget {
                 color: context.vineColors.secondaryText,
               ),
             ),
-          if (authorPubkey != null)
-            _ListAuthorAttribution(
-              authorPubkey: authorPubkey,
-              onTap: () => onAuthorTap?.call(authorPubkey),
-            )
-          else if (isPublic != null)
+          if (authorPubkey == null && isPublic != null)
             Text(
               isPublic
                   ? context.l10n.listVisibilityPublic
@@ -825,49 +860,12 @@ class _ListHeroHeader extends StatelessWidget {
                 color: context.vineColors.secondaryText,
               ),
             ),
+          if (actions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: ListActionButtons(buttons: actions),
+            ),
         ],
-      ),
-    );
-  }
-}
-
-/// Tappable "By {creator}" row for a list the viewer does not own.
-class _ListAuthorAttribution extends StatelessWidget {
-  const _ListAuthorAttribution({
-    required this.authorPubkey,
-    required this.onTap,
-  });
-
-  final String authorPubkey;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              context.l10n.listByAuthorPrefix,
-              style: VineTheme.bodySmallFont(
-                color: context.vineColors.secondaryText,
-              ),
-            ),
-            Flexible(
-              child: UserName.fromPubKey(
-                authorPubkey,
-                style: VineTheme.bodySmallFont(
-                  color: context.vineColors.primaryText,
-                ).copyWith(fontWeight: FontWeight.w500),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

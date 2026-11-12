@@ -2455,18 +2455,6 @@ abstract class AppLocalizations {
   /// **'No videos available'**
   String get exploreNoVideosAvailable;
 
-  /// No description provided for @explorePeopleLists.
-  ///
-  /// In en, this message translates to:
-  /// **'People Lists'**
-  String get explorePeopleLists;
-
-  /// No description provided for @exploreVideoLists.
-  ///
-  /// In en, this message translates to:
-  /// **'Video Lists'**
-  String get exploreVideoLists;
-
   /// No description provided for @exploreErrorLoadingLists.
   ///
   /// In en, this message translates to:
@@ -8917,11 +8905,11 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{{count} video} other{{count} videos}}'**
   String listVideoCount(int count);
 
-  /// No description provided for @listByAuthorPrefix.
+  /// Credits the author under a list's title. The name is shown as a link to their profile.
   ///
   /// In en, this message translates to:
-  /// **'By '**
-  String get listByAuthorPrefix;
+  /// **'by {name}'**
+  String listByAuthor(String name);
 
   /// No description provided for @listDone.
   ///
@@ -8940,6 +8928,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create New List'**
   String get listCreateNewList;
+
+  /// Title of the sheet that asks which kind of list to create from the profile Lists tab.
+  ///
+  /// In en, this message translates to:
+  /// **'New list'**
+  String get listTypeSheetTitle;
+
+  /// Option in the new-list sheet that creates a list of videos.
+  ///
+  /// In en, this message translates to:
+  /// **'Video list'**
+  String get listTypeVideoList;
+
+  /// Option in the new-list sheet that creates a list of people.
+  ///
+  /// In en, this message translates to:
+  /// **'People list'**
+  String get listTypePeopleList;
 
   /// No description provided for @listNewPeopleList.
   ///
@@ -9031,11 +9037,23 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{Couldn\'t remove 1 video. Try again.} other{Couldn\'t remove {count} videos. Try again.}}'**
   String listRemoveVideosFailure(int count);
 
-  /// No description provided for @listShareAction.
+  /// Button in a list's header that shares the list's web address.
   ///
   /// In en, this message translates to:
-  /// **'Share list'**
-  String get listShareAction;
+  /// **'Share'**
+  String get listShareButton;
+
+  /// Short label of the owner's Manage button in a list header; its icon and screen-reader label say whether it manages videos or people.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage'**
+  String get listManageButton;
+
+  /// Screen-reader label of the owner's Manage button in a people-list header, which opens the members screen to add or remove people.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage people'**
+  String get peopleListsManagePeopleButton;
 
   /// No description provided for @listShareFailed.
   ///

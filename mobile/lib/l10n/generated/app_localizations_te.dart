@@ -1469,12 +1469,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get exploreNoVideosAvailable => 'వీడియోలు అందుబాటులో లేవు';
 
   @override
-  String get explorePeopleLists => 'వ్యక్తుల జాబితాలు';
-
-  @override
-  String get exploreVideoLists => 'వీడియో జాబితాలు';
-
-  @override
   String get exploreErrorLoadingLists =>
       'జాబితాలను లోడ్ చేయడంలో లోపం. దయచేసి మళ్లీ ప్రయత్నించండి.';
 
@@ -5473,7 +5467,9 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'ద్వారా ';
+  String listByAuthor(String name) {
+    return '$name ద్వారా';
+  }
 
   @override
   String get listDone => 'పూర్తయింది';
@@ -5483,6 +5479,15 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'కొత్త జాబితాను సృష్టించండి';
+
+  @override
+  String get listTypeSheetTitle => 'కొత్త జాబితా';
+
+  @override
+  String get listTypeVideoList => 'వీడియో జాబితా';
+
+  @override
+  String get listTypePeopleList => 'వ్యక్తుల జాబితా';
 
   @override
   String get listNewPeopleList => 'కొత్త వ్యక్తుల జాబితా';
@@ -5557,7 +5562,13 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'షేర్ జాబితా';
+  String get listShareButton => 'భాగస్వామ్యం చేయండి';
+
+  @override
+  String get listManageButton => 'నిర్వహించండి';
+
+  @override
+  String get peopleListsManagePeopleButton => 'వ్యక్తులను నిర్వహించండి';
 
   @override
   String get listShareFailed =>

@@ -1419,12 +1419,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Walang available na video';
 
   @override
-  String get explorePeopleLists => 'Mga People List';
-
-  @override
-  String get exploreVideoLists => 'Mga Video List';
-
-  @override
   String get exploreErrorLoadingLists =>
       'May error sa pag-load ng mga list. Subukan ulit.';
 
@@ -5327,7 +5321,9 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'Ni ';
+  String listByAuthor(String name) {
+    return 'ni $name';
+  }
 
   @override
   String get listDone => 'Tapos na';
@@ -5337,6 +5333,15 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'Gumawa ng Bagong Listahan';
+
+  @override
+  String get listTypeSheetTitle => 'Bagong listahan';
+
+  @override
+  String get listTypeVideoList => 'Listahan ng video';
+
+  @override
+  String get listTypePeopleList => 'People list';
 
   @override
   String get listNewPeopleList => 'Bagong people list';
@@ -5411,7 +5416,13 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'I-share ang list';
+  String get listShareButton => 'I-share';
+
+  @override
+  String get listManageButton => 'Pamahalaan';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Pamahalaan ang mga tao';
 
   @override
   String get listShareFailed => 'Hindi na-share ang list na ito. Subukan ulit.';

@@ -913,8 +913,6 @@
     "description": "Retry button on the featured Explore tab's failure state."
   },
   "exploreNoVideosAvailable": "No videos available",
-  "explorePeopleLists": "People Lists",
-  "exploreVideoLists": "Video Lists",
   "exploreErrorLoadingLists": "Error loading lists. Please try again.",
   "exploreNewVideosCount": "{count, plural, =1{1 new video} other{{count} new videos}}",
   "@exploreNewVideosCount": {
@@ -3623,10 +3621,30 @@
       }
     }
   },
-  "listByAuthorPrefix": "By ",
+  "listByAuthor": "by {name}",
+  "@listByAuthor": {
+    "description": "Credits the author under a list's title. The name is shown as a link to their profile.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "listDone": "Done",
   "listErrorLoading": "Error loading lists",
   "listCreateNewList": "Create New List",
+  "listTypeSheetTitle": "New list",
+  "@listTypeSheetTitle": {
+    "description": "Title of the sheet that asks which kind of list to create from the profile Lists tab."
+  },
+  "listTypeVideoList": "Video list",
+  "@listTypeVideoList": {
+    "description": "Option in the new-list sheet that creates a list of videos."
+  },
+  "listTypePeopleList": "People list",
+  "@listTypePeopleList": {
+    "description": "Option in the new-list sheet that creates a list of people."
+  },
   "listNewPeopleList": "New people list",
   "listNameLabel": "List Name",
   "listDescriptionLabel": "Description (optional)",
@@ -3672,7 +3690,18 @@
       }
     }
   },
-  "listShareAction": "Share list",
+  "listShareButton": "Share",
+  "listManageButton": "Manage",
+  "@listManageButton": {
+    "description": "Short label of the owner's Manage button in a list header; its icon and screen-reader label say whether it manages videos or people."
+  },
+  "@listShareButton": {
+    "description": "Button in a list's header that shares the list's web address."
+  },
+  "peopleListsManagePeopleButton": "Manage people",
+  "@peopleListsManagePeopleButton": {
+    "description": "Screen-reader label of the owner's Manage button in a people-list header, which opens the members screen to add or remove people."
+  },
   "listShareFailed": "Couldn't share this list. Try again.",
   "listSave": "Save",
   "listContinue": "Continue",

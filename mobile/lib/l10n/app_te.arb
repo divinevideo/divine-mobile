@@ -888,8 +888,6 @@
     "description": "Retry button on the featured Explore tab's failure state."
   },
   "exploreNoVideosAvailable": "వీడియోలు అందుబాటులో లేవు",
-  "explorePeopleLists": "వ్యక్తుల జాబితాలు",
-  "exploreVideoLists": "వీడియో జాబితాలు",
   "exploreErrorLoadingLists": "జాబితాలను లోడ్ చేయడంలో లోపం. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "exploreNewVideosCount": "{count, plural, =1{1 కొత్త వీడియో} other{{count}కొత్త వీడియోలు}}",
   "@exploreNewVideosCount": {
@@ -2964,10 +2962,13 @@
       }
     }
   },
-  "listByAuthorPrefix": "ద్వారా ",
+  "listByAuthor": "{name} ద్వారా",
   "listDone": "పూర్తయింది",
   "listErrorLoading": "జాబితాలను లోడ్ చేయడంలో లోపం",
   "listCreateNewList": "కొత్త జాబితాను సృష్టించండి",
+  "listTypeSheetTitle": "కొత్త జాబితా",
+  "listTypeVideoList": "వీడియో జాబితా",
+  "listTypePeopleList": "వ్యక్తుల జాబితా",
   "listNewPeopleList": "కొత్త వ్యక్తుల జాబితా",
   "listNameLabel": "జాబితా పేరు",
   "listDescriptionLabel": "వివరణ (ఐచ్ఛికం)",
@@ -2976,7 +2977,9 @@
   "listVisibilityPrivate": "ప్రైవేట్",
   "profileListsEmpty": "ఇంకా జాబితాలు లేవు. మీరు కలిసి ఉంచాలనుకుంటున్న లూప్‌ల కోసం ఒకదాన్ని తయారు చేయండి.",
   "listEditTitle": "జాబితాను సవరించండి",
-  "listShareAction": "షేర్ జాబితా",
+  "listShareButton": "భాగస్వామ్యం చేయండి",
+  "listManageButton": "నిర్వహించండి",
+  "peopleListsManagePeopleButton": "వ్యక్తులను నిర్వహించండి",
   "listShareFailed": "ఈ జాబితాను భాగస్వామ్యం చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.",
   "listSave": "సేవ్ చేయండి",
   "listContinue": "కొనసాగించండి",

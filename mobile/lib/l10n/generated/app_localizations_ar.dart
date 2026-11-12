@@ -1422,12 +1422,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'لا توجد فيديوهات متاحة';
 
   @override
-  String get explorePeopleLists => 'قوائم الأشخاص';
-
-  @override
-  String get exploreVideoLists => 'قوائم الفيديو';
-
-  @override
   String get exploreErrorLoadingLists =>
       'خطأ في تحميل القوائم. يرجى المحاولة مرّة أخرى.';
 
@@ -5285,7 +5279,9 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'بقلم ';
+  String listByAuthor(String name) {
+    return 'بقلم $name';
+  }
 
   @override
   String get listDone => 'تم';
@@ -5295,6 +5291,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'إنشاء قائمة جديدة';
+
+  @override
+  String get listTypeSheetTitle => 'قائمة جديدة';
+
+  @override
+  String get listTypeVideoList => 'قائمة فيديوهات';
+
+  @override
+  String get listTypePeopleList => 'قائمة أشخاص';
 
   @override
   String get listNewPeopleList => 'قائمة أشخاص جديدة';
@@ -5369,7 +5374,13 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'مشاركة القائمة';
+  String get listShareButton => 'مشاركة';
+
+  @override
+  String get listManageButton => 'إدارة';
+
+  @override
+  String get peopleListsManagePeopleButton => 'إدارة الأشخاص';
 
   @override
   String get listShareFailed => 'تعذّرت مشاركة هذه القائمة. حاول مرة أخرى.';

@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "Nie udało się wczytać tej kolekcji.",
   "featuredTabRetry": "Spróbuj ponownie",
   "exploreNoVideosAvailable": "Brak dostępnych filmów",
-  "explorePeopleLists": "Listy osób",
-  "exploreVideoLists": "Listy filmów",
   "exploreErrorLoadingLists": "Błąd wczytywania list. Spróbuj ponownie.",
   "exploreNewVideosCount": "{count, plural, =1{1 nowy film} few{{count} nowe filmy} many{{count} nowych filmów} other{{count} nowego filmu}}",
   "@exploreNewVideosCount": {
@@ -1795,6 +1793,9 @@
   "listDone": "Gotowe",
   "listErrorLoading": "Błąd wczytywania list",
   "listCreateNewList": "Utwórz nową listę",
+  "listTypeSheetTitle": "Nowa lista",
+  "listTypeVideoList": "Lista filmów",
+  "listTypePeopleList": "Lista osób",
   "listNewPeopleList": "Nowa lista osób",
   "listNameLabel": "Nazwa listy",
   "listDescriptionLabel": "Opis (opcjonalnie)",
@@ -1803,7 +1804,9 @@
   "listVisibilityPrivate": "Prywatna",
   "profileListsEmpty": "Nie masz jeszcze list. Stwórz jedną dla pętli, które chcesz trzymać razem.",
   "listEditTitle": "Edytuj listę",
-  "listShareAction": "Udostępnij listę",
+  "listShareButton": "Udostępnij",
+  "listManageButton": "Zarządzaj",
+  "peopleListsManagePeopleButton": "Zarządzaj osobami",
   "listShareFailed": "Nie udało się udostępnić tej listy. Spróbuj ponownie.",
   "listSave": "Zapisz",
   "listContinue": "Dalej",
@@ -3873,7 +3876,7 @@
   "nostrSettingsCouldNotRemoveKeys": "Nie udało się usunąć tego konta z tego urządzenia. Spróbuj ponownie.",
   "nostrSettingsDeleteAccount": "Usuń konto i dane",
   "nostrSettingsDeleteAccountSubtitle": "Wysyła żądania usunięcia twoich treści i wylogowuje cię na tym urządzeniu. Przekaźniki, klienty, indeksy wyszukiwania i inne zalogowane urządzenia mogą zachować kopie.",
-  "listByAuthorPrefix": "Autor: ",
+  "listByAuthor": "autor: {name}",
   "keyManagementYourPublicKeyLabel": "Twój klucz publiczny (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

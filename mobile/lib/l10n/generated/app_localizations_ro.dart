@@ -1478,12 +1478,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Niciun videoclip disponibil';
 
   @override
-  String get explorePeopleLists => 'Liste de oameni';
-
-  @override
-  String get exploreVideoLists => 'Liste de videoclipuri';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Eroare la încărcarea listelor. Încearcă din nou.';
 
@@ -5448,7 +5442,9 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'De ';
+  String listByAuthor(String name) {
+    return 'de $name';
+  }
 
   @override
   String get listDone => 'Gata';
@@ -5458,6 +5454,15 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'Creează o listă nouă';
+
+  @override
+  String get listTypeSheetTitle => 'Listă nouă';
+
+  @override
+  String get listTypeVideoList => 'Listă de videoclipuri';
+
+  @override
+  String get listTypePeopleList => 'Listă de persoane';
 
   @override
   String get listNewPeopleList => 'Listă nouă de persoane';
@@ -5532,7 +5537,13 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Distribuie lista';
+  String get listShareButton => 'Partajează';
+
+  @override
+  String get listManageButton => 'Gestionează';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Gestionează persoanele';
 
   @override
   String get listShareFailed => 'N-am putut distribui lista. Mai încearcă.';

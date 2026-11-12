@@ -1,3 +1,4 @@
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
@@ -5,6 +6,8 @@ import 'package:openvine/features/people_lists/view/people_list_hero_header.dart
 import 'package:openvine/features/people_lists/view/people_list_member_avatar.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/widgets/list_action_buttons.dart';
+import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:riverpod/misc.dart' show Override;
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -22,6 +25,9 @@ Future<void> _pumpHeader(
   String? description,
   int? totalVideos,
   double? totalLoops,
+  String? authorPubkey,
+  VoidCallback? onAuthorTap,
+  List<Widget> actions = const [],
   double textScale = 1,
   TextDirection textDirection = TextDirection.ltr,
   List<Override> overrides = const [],
@@ -49,6 +55,9 @@ Future<void> _pumpHeader(
                 description: description,
                 totalVideos: totalVideos,
                 totalLoops: totalLoops,
+                authorPubkey: authorPubkey,
+                onAuthorTap: onAuthorTap,
+                actions: actions,
               ),
             ),
           ),
@@ -284,6 +293,109 @@ void main() {
           ),
           findsNothing,
         );
+      });
+    });
+
+    testWidgets("View all's chevron is the brand accent, its label is not", (
+      tester,
+    ) async {
+      await _pumpHeader(tester, previewPubkeys: _members(3), onViewAll: () {});
+
+      final colors = tester
+          .element(find.byType(PeopleListHeroHeader))
+          .vineColors;
+      final caret = tester.widget<DivineIcon>(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is DivineIcon && widget.icon == DivineIconName.caretRight,
+        ),
+      );
+      expect(caret.color, colors.accentBrand);
+      final label = tester.widget<Text>(
+        find.text(l10n.peopleListsViewAllMembers),
+      );
+      expect(label.style?.color, colors.primaryText);
+    });
+
+    group('action buttons', () {
+      testWidgets('sit in the last row, under the members preview', (
+        tester,
+      ) async {
+        await _pumpHeader(
+          tester,
+          previewPubkeys: _members(3),
+          onViewAll: () {},
+          actions: const [SizedBox(key: Key('action'), height: 48)],
+        );
+
+        expect(find.byType(ListActionButtons), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.byKey(const Key('action'))).dy,
+          greaterThan(
+            tester.getBottomLeft(find.byType(PeopleListMembersPreview)).dy,
+          ),
+        );
+      });
+
+      testWidgets('leave no row when there are none', (tester) async {
+        await _pumpHeader(
+          tester,
+          previewPubkeys: _members(3),
+          onViewAll: () {},
+        );
+
+        expect(find.byType(ListActionButtons), findsNothing);
+      });
+    });
+
+    group('author byline', () {
+      testWidgets("credits the author right under the list's name", (
+        tester,
+      ) async {
+        await _pumpHeader(
+          tester,
+          previewPubkeys: _members(3),
+          onViewAll: () {},
+          authorPubkey: 'b' * 64,
+        );
+
+        expect(find.byType(ListAuthorByline), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.byType(ListAuthorByline)).dy,
+          greaterThan(tester.getBottomLeft(find.text('Approved')).dy),
+        );
+        expect(
+          tester.getTopLeft(find.byType(ListAuthorByline)).dy,
+          lessThan(
+            tester.getTopLeft(find.text(l10n.listMemberCount(3))).dy,
+          ),
+        );
+      });
+
+      testWidgets('leaves it out for a list with no author to credit', (
+        tester,
+      ) async {
+        await _pumpHeader(
+          tester,
+          previewPubkeys: _members(3),
+          onViewAll: () {},
+        );
+
+        expect(find.byType(ListAuthorByline), findsNothing);
+      });
+
+      testWidgets("tapping it opens the author's profile", (tester) async {
+        var opened = 0;
+        await _pumpHeader(
+          tester,
+          previewPubkeys: _members(3),
+          onViewAll: () {},
+          authorPubkey: 'b' * 64,
+          onAuthorTap: () => opened++,
+        );
+
+        await tester.tap(find.byType(ListAuthorByline));
+        expect(opened, 1);
       });
     });
 

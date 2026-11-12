@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "Diese Sammlung konnte nicht geladen werden.",
   "featuredTabRetry": "Erneut versuchen",
   "exploreNoVideosAvailable": "Keine Videos verfügbar",
-  "explorePeopleLists": "Personen-Listen",
-  "exploreVideoLists": "Video-Listen",
   "exploreErrorLoadingLists": "Fehler beim Laden der Listen. Bitte versuch es nochmal.",
   "exploreNewVideosCount": "{count, plural, one{1 neues Video} other{{count} neue Videos}}",
   "@exploreNewVideosCount": {
@@ -1795,6 +1793,9 @@
   "listDone": "Fertig",
   "listErrorLoading": "Fehler beim Laden der Listen",
   "listCreateNewList": "Neue Liste erstellen",
+  "listTypeSheetTitle": "Neue Liste",
+  "listTypeVideoList": "Videoliste",
+  "listTypePeopleList": "Personenliste",
   "listNewPeopleList": "Neue Personenliste",
   "listNameLabel": "Listenname",
   "listDescriptionLabel": "Beschreibung (optional)",
@@ -1803,7 +1804,9 @@
   "listVisibilityPrivate": "Privat",
   "profileListsEmpty": "Noch keine Listen. Leg eine an für die Loops, die zusammengehören.",
   "listEditTitle": "Liste bearbeiten",
-  "listShareAction": "Liste teilen",
+  "listShareButton": "Teilen",
+  "listManageButton": "Verwalten",
+  "peopleListsManagePeopleButton": "Personen verwalten",
   "listShareFailed": "Liste konnte nicht geteilt werden. Versuch es nochmal.",
   "listSave": "Speichern",
   "listContinue": "Weiter",
@@ -3873,7 +3876,7 @@
   "nostrSettingsCouldNotRemoveKeys": "Dieses Konto konnte nicht von diesem Gerät entfernt werden. Versuch es nochmal.",
   "nostrSettingsDeleteAccount": "Konto und Daten löschen",
   "nostrSettingsDeleteAccountSubtitle": "Sendet Löschanfragen für deine Inhalte und meldet dich auf diesem Gerät ab. Relays, Clients, Suchindizes und andere angemeldete Geräte behalten möglicherweise Kopien.",
-  "listByAuthorPrefix": "Von ",
+  "listByAuthor": "von {name}",
   "keyManagementYourPublicKeyLabel": "Dein Public Key (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

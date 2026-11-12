@@ -1312,12 +1312,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exploreNoVideosAvailable => '이용 가능한 영상이 없어요';
 
   @override
-  String get explorePeopleLists => '사람 리스트';
-
-  @override
-  String get exploreVideoLists => '영상 리스트';
-
-  @override
   String get exploreErrorLoadingLists => '리스트를 불러오지 못했어요. 다시 시도해보세요.';
 
   @override
@@ -4995,7 +4989,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => '작성자: ';
+  String listByAuthor(String name) {
+    return '작성자: $name';
+  }
 
   @override
   String get listDone => '완료';
@@ -5005,6 +5001,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get listCreateNewList => '새 목록 만들기';
+
+  @override
+  String get listTypeSheetTitle => '새 목록';
+
+  @override
+  String get listTypeVideoList => '동영상 목록';
+
+  @override
+  String get listTypePeopleList => '사람 목록';
 
   @override
   String get listNewPeopleList => '새 사람 목록';
@@ -5078,7 +5083,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => '목록 공유';
+  String get listShareButton => '공유';
+
+  @override
+  String get listManageButton => '관리';
+
+  @override
+  String get peopleListsManagePeopleButton => '사람 관리';
 
   @override
   String get listShareFailed => '이 목록을 공유하지 못했어요. 다시 시도해 주세요.';

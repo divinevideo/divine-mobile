@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "このコレクションを読み込めませんでした。",
   "featuredTabRetry": "もう一度試す",
   "exploreNoVideosAvailable": "動画がないよ",
-  "explorePeopleLists": "ピープルリスト",
-  "exploreVideoLists": "ビデオリスト",
   "exploreErrorLoadingLists": "リストの読み込みに失敗。もう一回試してみて。",
   "exploreNewVideosCount": "{count, plural, other{{count}本の新着動画}}",
   "@exploreNewVideosCount": {
@@ -1785,6 +1783,9 @@
   "listDone": "完了",
   "listErrorLoading": "リストの読み込みに失敗",
   "listCreateNewList": "新しいリストを作る",
+  "listTypeSheetTitle": "新しいリスト",
+  "listTypeVideoList": "動画リスト",
+  "listTypePeopleList": "人リスト",
   "listNewPeopleList": "新しい人リスト",
   "listNameLabel": "リスト名",
   "listDescriptionLabel": "説明 (任意)",
@@ -1793,7 +1794,9 @@
   "listVisibilityPrivate": "非公開",
   "profileListsEmpty": "まだリストがないよ。まとめておきたいループでひとつ作ってみて。",
   "listEditTitle": "リストを編集",
-  "listShareAction": "リストを共有",
+  "listShareButton": "シェア",
+  "listManageButton": "管理",
+  "peopleListsManagePeopleButton": "ユーザーを管理",
   "listShareFailed": "リストを共有できなかった。もう一度試してね。",
   "listSave": "保存",
   "listContinue": "続ける",
@@ -3873,7 +3876,7 @@
   "authConfirmPasswordRequired": "パスワードを確認してね",
   "authPasswordsDoNotMatch": "パスワードが一致しないよ",
   "authConfirmNewPasswordLabel": "新しいパスワードの確認",
-  "listByAuthorPrefix": "作成者: ",
+  "listByAuthor": "作成者: {name}",
   "keyManagementYourPublicKeyLabel": "あなたの公開鍵 (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

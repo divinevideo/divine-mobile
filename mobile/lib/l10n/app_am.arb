@@ -678,8 +678,6 @@
       }
     }
   },
-  "explorePeopleLists": "የሰዎች ዝርዝሮች",
-  "exploreVideoLists": "የቪዲዮ ዝርዝሮች",
   "exploreErrorLoadingLists": "ዝርዝሮችን መጫን ላይ ስህተት። እባክህ እንደገና ሞክር።",
   "exploreNewVideosCount": "{count, plural, =1{{count} አዲስ ቪዲዮ} other{{count} አዳዲስ ቪዲዮዎች}}",
   "@exploreNewVideosCount": {
@@ -2226,10 +2224,13 @@
       }
     }
   },
-  "listByAuthorPrefix": "በ",
+  "listByAuthor": "በ{name}",
   "listDone": "ተከናውኗል",
   "listErrorLoading": "ዝርዝሮችን መጫን ላይ ስህተት",
   "listCreateNewList": "አዲስ ዝርዝር ይፍጠሩ",
+  "listTypeSheetTitle": "አዲስ ዝርዝር",
+  "listTypeVideoList": "የቪዲዮ ዝርዝር",
+  "listTypePeopleList": "የሰዎች ዝርዝር",
   "listNewPeopleList": "አዲስ ሰዎች ዝርዝር",
   "listNameLabel": "የዝርዝር ስም",
   "listDescriptionLabel": "መግለጫ (አማራጭ)",
@@ -2238,7 +2239,9 @@
   "listVisibilityPrivate": "የግል",
   "profileListsEmpty": "እስካሁን ዝርዝር የለም። አብረው እንዲቆዩ የሚፈልጓቸውን ሉፖች የሚያሰባስብ ዝርዝር ይፍጠሩ።",
   "listEditTitle": "ዝርዝር አርትዕ",
-  "listShareAction": "ዝርዝር አጋራ",
+  "listShareButton": "አጋራ",
+  "listManageButton": "አስተዳድር",
+  "peopleListsManagePeopleButton": "ሰዎችን አስተዳድር",
   "listShareFailed": "ይህን ዝርዝር ማጋራት አልተቻለም። እንደገና ይሞክሩ።",
   "listSave": "አስቀምጥ",
   "listContinue": "ቀጥል",

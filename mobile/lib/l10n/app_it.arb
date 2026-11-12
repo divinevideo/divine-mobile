@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "Non è stato possibile caricare questa raccolta.",
   "featuredTabRetry": "Riprova",
   "exploreNoVideosAvailable": "Nessun video disponibile",
-  "explorePeopleLists": "Liste di persone",
-  "exploreVideoLists": "Liste di video",
   "exploreErrorLoadingLists": "Errore nel caricamento delle liste. Riprova.",
   "exploreNewVideosCount": "{count, plural, one{1 nuovo video} other{{count} nuovi video}}",
   "@exploreNewVideosCount": {
@@ -1795,6 +1793,9 @@
   "listDone": "Fatto",
   "listErrorLoading": "Errore nel caricamento delle liste",
   "listCreateNewList": "Crea nuova lista",
+  "listTypeSheetTitle": "Nuova lista",
+  "listTypeVideoList": "Lista di video",
+  "listTypePeopleList": "Lista di persone",
   "listNewPeopleList": "Nuova lista persone",
   "listNameLabel": "Nome lista",
   "listDescriptionLabel": "Descrizione (opzionale)",
@@ -1803,7 +1804,9 @@
   "listVisibilityPrivate": "Privata",
   "profileListsEmpty": "Ancora nessuna lista. Creane una per i loop che vuoi tenere insieme.",
   "listEditTitle": "Modifica lista",
-  "listShareAction": "Condividi lista",
+  "listShareButton": "Condividi",
+  "listManageButton": "Gestisci",
+  "peopleListsManagePeopleButton": "Gestisci persone",
   "listShareFailed": "Impossibile condividere questa lista. Riprova.",
   "listSave": "Salva",
   "listContinue": "Continua",
@@ -3873,7 +3876,7 @@
   "nostrSettingsCouldNotRemoveKeys": "Impossibile rimuovere questo account da questo dispositivo. Riprova.",
   "nostrSettingsDeleteAccount": "Elimina account e dati",
   "nostrSettingsDeleteAccountSubtitle": "Invia richieste di eliminazione per i tuoi contenuti e ti disconnette su questo dispositivo. Relay, client, indici di ricerca e altri dispositivi con l'accesso effettuato potrebbero conservare copie.",
-  "listByAuthorPrefix": "Di ",
+  "listByAuthor": "di {name}",
   "keyManagementYourPublicKeyLabel": "La tua chiave pubblica (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

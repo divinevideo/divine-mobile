@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "Nu am putut încărca această colecție.",
   "featuredTabRetry": "Încearcă din nou",
   "exploreNoVideosAvailable": "Niciun videoclip disponibil",
-  "explorePeopleLists": "Liste de oameni",
-  "exploreVideoLists": "Liste de videoclipuri",
   "exploreErrorLoadingLists": "Eroare la încărcarea listelor. Încearcă din nou.",
   "exploreNewVideosCount": "{count, plural, =1{1 videoclip nou} other{{count} videoclipuri noi}}",
   "@exploreNewVideosCount": {
@@ -1795,6 +1793,9 @@
   "listDone": "Gata",
   "listErrorLoading": "Eroare la încărcarea listelor",
   "listCreateNewList": "Creează o listă nouă",
+  "listTypeSheetTitle": "Listă nouă",
+  "listTypeVideoList": "Listă de videoclipuri",
+  "listTypePeopleList": "Listă de persoane",
   "listNewPeopleList": "Listă nouă de persoane",
   "listNameLabel": "Numele listei",
   "listDescriptionLabel": "Descriere (opțional)",
@@ -1803,7 +1804,9 @@
   "listVisibilityPrivate": "Privată",
   "profileListsEmpty": "Încă n-ai liste. Fă una pentru buclele pe care vrei să le ții împreună.",
   "listEditTitle": "Editează lista",
-  "listShareAction": "Distribuie lista",
+  "listShareButton": "Partajează",
+  "listManageButton": "Gestionează",
+  "peopleListsManagePeopleButton": "Gestionează persoanele",
   "listShareFailed": "N-am putut distribui lista. Mai încearcă.",
   "listSave": "Salvează",
   "listContinue": "Continuă",
@@ -3873,7 +3876,7 @@
   "nostrSettingsCouldNotRemoveKeys": "N-am putut elimina acest cont de pe acest dispozitiv. Încearcă din nou.",
   "nostrSettingsDeleteAccount": "Șterge contul și datele",
   "nostrSettingsDeleteAccountSubtitle": "Trimite cereri de ștergere pentru conținutul tău și te deconectează pe acest dispozitiv. Relay-urile, clienții, indexurile de căutare și alte dispozitive conectate pot păstra copii.",
-  "listByAuthorPrefix": "De ",
+  "listByAuthor": "de {name}",
   "keyManagementYourPublicKeyLabel": "Cheia ta publică (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

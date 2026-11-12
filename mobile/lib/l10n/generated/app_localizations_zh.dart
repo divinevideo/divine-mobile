@@ -1318,12 +1318,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exploreNoVideosAvailable => '暂无视频';
 
   @override
-  String get explorePeopleLists => '人物列表';
-
-  @override
-  String get exploreVideoLists => '视频列表';
-
-  @override
   String get exploreErrorLoadingLists => '加载列表出错，请重试。';
 
   @override
@@ -4950,7 +4944,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => '来自 ';
+  String listByAuthor(String name) {
+    return '来自 $name';
+  }
 
   @override
   String get listDone => '完成';
@@ -4960,6 +4956,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listCreateNewList => '创建新列表';
+
+  @override
+  String get listTypeSheetTitle => '新列表';
+
+  @override
+  String get listTypeVideoList => '视频列表';
+
+  @override
+  String get listTypePeopleList => '人物列表';
 
   @override
   String get listNewPeopleList => '新人物列表';
@@ -5032,7 +5037,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => '分享列表';
+  String get listShareButton => '分享';
+
+  @override
+  String get listManageButton => '管理';
+
+  @override
+  String get peopleListsManagePeopleButton => '管理成员';
 
   @override
   String get listShareFailed => '无法分享此列表，请重试。';

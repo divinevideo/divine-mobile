@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "Deze collectie kon niet worden geladen.",
   "featuredTabRetry": "Probeer opnieuw",
   "exploreNoVideosAvailable": "Geen video's beschikbaar",
-  "explorePeopleLists": "Personenlijsten",
-  "exploreVideoLists": "Videolijsten",
   "exploreErrorLoadingLists": "Fout bij laden van lijsten. Probeer het opnieuw.",
   "exploreNewVideosCount": "{count, plural, one{1 nieuwe video} other{{count} nieuwe video''s}}",
   "@exploreNewVideosCount": {
@@ -1795,6 +1793,9 @@
   "listDone": "Klaar",
   "listErrorLoading": "Fout bij laden van lijsten",
   "listCreateNewList": "Nieuwe lijst maken",
+  "listTypeSheetTitle": "Nieuwe lijst",
+  "listTypeVideoList": "Videolijst",
+  "listTypePeopleList": "Personenlijst",
   "listNewPeopleList": "Nieuwe personenlijst",
   "listNameLabel": "Lijstnaam",
   "listDescriptionLabel": "Beschrijving (optioneel)",
@@ -1803,7 +1804,9 @@
   "listVisibilityPrivate": "Privé",
   "profileListsEmpty": "Nog geen lijsten. Maak er een voor de loops die je bij elkaar wilt houden.",
   "listEditTitle": "Lijst bewerken",
-  "listShareAction": "Lijst delen",
+  "listShareButton": "Delen",
+  "listManageButton": "Beheren",
+  "peopleListsManagePeopleButton": "Mensen beheren",
   "listShareFailed": "Kon deze lijst niet delen. Probeer het opnieuw.",
   "listSave": "Opslaan",
   "listContinue": "Doorgaan",
@@ -3873,7 +3876,7 @@
   "nostrSettingsCouldNotRemoveKeys": "Dit account kon niet van dit apparaat verwijderd worden. Probeer het opnieuw.",
   "nostrSettingsDeleteAccount": "Account en data verwijderen",
   "nostrSettingsDeleteAccountSubtitle": "Stuurt verwijderverzoeken voor je content en meldt je op dit apparaat af. Relays, clients, zoekindexen en andere aangemelde apparaten kunnen kopieën bewaren.",
-  "listByAuthorPrefix": "Door ",
+  "listByAuthor": "door {name}",
   "keyManagementYourPublicKeyLabel": "Je publieke sleutel (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

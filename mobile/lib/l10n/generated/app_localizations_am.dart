@@ -1403,12 +1403,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get exploreNoVideosAvailable => 'ምንም ቪዲዮዎች የሉም';
 
   @override
-  String get explorePeopleLists => 'የሰዎች ዝርዝሮች';
-
-  @override
-  String get exploreVideoLists => 'የቪዲዮ ዝርዝሮች';
-
-  @override
   String get exploreErrorLoadingLists => 'ዝርዝሮችን መጫን ላይ ስህተት። እባክህ እንደገና ሞክር።';
 
   @override
@@ -5160,7 +5154,9 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'በ';
+  String listByAuthor(String name) {
+    return 'በ$name';
+  }
 
   @override
   String get listDone => 'ተከናውኗል';
@@ -5170,6 +5166,15 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'አዲስ ዝርዝር ይፍጠሩ';
+
+  @override
+  String get listTypeSheetTitle => 'አዲስ ዝርዝር';
+
+  @override
+  String get listTypeVideoList => 'የቪዲዮ ዝርዝር';
+
+  @override
+  String get listTypePeopleList => 'የሰዎች ዝርዝር';
 
   @override
   String get listNewPeopleList => 'አዲስ ሰዎች ዝርዝር';
@@ -5244,7 +5249,13 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'ዝርዝር አጋራ';
+  String get listShareButton => 'አጋራ';
+
+  @override
+  String get listManageButton => 'አስተዳድር';
+
+  @override
+  String get peopleListsManagePeopleButton => 'ሰዎችን አስተዳድር';
 
   @override
   String get listShareFailed => 'ይህን ዝርዝር ማጋራት አልተቻለም። እንደገና ይሞክሩ።';

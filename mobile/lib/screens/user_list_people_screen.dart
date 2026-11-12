@@ -21,7 +21,9 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/lists_routes.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/share_list_link.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -35,7 +37,7 @@ import 'package:openvine/widgets/share_list_button.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owner actions offered by the `...` bottom sheet.
-enum _PeopleListAction { editInfo, addPeople, delete, report }
+enum _PeopleListAction { editInfo, delete, report }
 
 /// Screen that renders a single NIP-51 kind 30000 people list.
 ///
@@ -188,9 +190,12 @@ class _DiscoveredPeopleListLoader extends ConsumerWidget {
     final listAsync = ref.watch(
       publicPeopleListProvider(ownerPubkey: ownerPubkey, listId: listId),
     );
+    // Before the list resolves there is no header, so Follow waits in the
+    // app bar as a compact pill.
     final followAction = _FollowPeopleListAction(
       ownerPubkey: ownerPubkey,
       listId: listId,
+      compact: true,
     );
     return listAsync.when(
       skipLoadingOnRefresh: false,
@@ -408,12 +413,59 @@ class _UserListPeopleView extends ConsumerStatefulWidget {
 class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
   int? _activeVideoIndex;
 
-  void _navigateToAddPeople(String listId) {
+  void _openMembers(UserList userList) {
     runDetached(
-      AddPeopleToListRouteData(listId: listId).push<void>(context),
-      'open add-people picker',
+      PeopleListMembersRouteData(
+        listId: userList.id,
+        owner: widget.ownerPubkey,
+      ).push<void>(context),
+      'open people list members',
       logName: 'UserListPeopleScreen',
       category: LogCategory.ui,
+    );
+  }
+
+  void _shareList(UserList userList, String ownerPubkey) {
+    runDetached(
+      shareListLink(
+        context,
+        name: userList.name,
+        path: RoutePaths.peopleListByAuthorFor(
+          pubkey: ownerPubkey,
+          listId: userList.id,
+        ),
+      ),
+      'share people list',
+      logName: 'UserListPeopleScreen',
+      category: LogCategory.ui,
+    );
+  }
+
+  Future<void> _showViewerActions(
+    UserList userList,
+    ({String eventId, String owner}) target,
+  ) async {
+    final action = await VineBottomSheet.show<_PeopleListAction>(
+      context: context,
+      expanded: false,
+      scrollable: false,
+      children: [
+        ListOwnerActionTile(
+          identifier: 'people_list_report_option',
+          label: context.l10n.listReportAction,
+          icon: DivineIconName.flag,
+          action: _PeopleListAction.report,
+        ),
+      ],
+    );
+    if (!mounted || action != _PeopleListAction.report) return;
+    await ReportContentDialog.showForList(
+      context,
+      kind: ReportedListKind.people,
+      eventId: target.eventId,
+      authorPubkey: target.owner,
+      dTag: userList.id,
+      title: userList.name,
     );
   }
 
@@ -430,13 +482,6 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
           action: _PeopleListAction.editInfo,
         ),
         ListOwnerActionTile(
-          identifier: 'people_list_add_people_option',
-          label: context.l10n.peopleListsAddPeopleTooltip,
-          icon: DivineIconName.userPlus,
-          action: _PeopleListAction.addPeople,
-        ),
-
-        ListOwnerActionTile(
           identifier: 'people_list_delete_option',
           label: context.l10n.listDeleteAction,
           icon: DivineIconName.trash,
@@ -452,9 +497,6 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
     switch (action) {
       case _PeopleListAction.editInfo:
         await showPeopleListInfoSheet(context, list: userList);
-      case _PeopleListAction.addPeople:
-        _navigateToAddPeople(userList.id);
-
       case _PeopleListAction.delete:
         await _confirmDeleteList(userList);
       case _PeopleListAction.report:
@@ -522,6 +564,32 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
     final userList = widget.userList;
     final profileRepository = ref.watch(profileRepositoryProvider);
     final blocklist = ref.watch(contentBlocklistRepositoryProvider);
+    final viewerPubkey = context.select(
+      (PeopleListsBloc bloc) => bloc.state.activeOwnerPubkey,
+    );
+    final shareOwner = userList.isEditable ? viewerPubkey : widget.ownerPubkey;
+    final headerButtons = <Widget>[
+      if (userList.isEditable)
+        DivineButton(
+          label: context.l10n.listManageButton,
+          semanticLabel: context.l10n.peopleListsManagePeopleButton,
+          type: DivineButtonType.secondary,
+          leadingIcon: DivineIconName.users,
+          expanded: true,
+          onPressed: () => _openMembers(userList),
+        ),
+      // Follows are kept per viewer, so signed out there is nobody to follow
+      // as and Share takes the whole row.
+      if (widget.ownerPubkey case final owner?
+          when !userList.isEditable && viewerPubkey != null)
+        _FollowPeopleListAction(
+          ownerPubkey: owner,
+          listId: userList.id,
+          userList: userList,
+        ),
+      if (shareOwner != null && (!userList.isEditable || userList.isPublic))
+        ShareListButton(onPressed: () => _shareList(userList, shareOwner)),
+    ];
     // Fullscreen playback draws its own chrome over the whole screen.
     final PreferredSizeWidget? appBar;
     final Widget body;
@@ -539,67 +607,14 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
               icon: SvgIconSource(DivineIconName.dotsThree.assetPath),
               tooltip: context.l10n.peopleListsActionsTooltip,
               onPressed: () => _showOwnerActions(userList),
-            ),
-        ],
-        customActions: [
-          if (_reportTarget(userList) != null)
-            _PeopleListActionsMenu(
-              actions: const [_PeopleListAction.report],
-              onSelected: (action) {
-                switch (action) {
-                  case _PeopleListAction.addPeople:
-                    _navigateToAddPeople(userList.id);
-                  case _PeopleListAction.editInfo:
-                    runDetached(
-                      showPeopleListInfoSheet(context, list: userList),
-                      'edit people list',
-                      logName: 'UserListPeopleScreen',
-                      category: LogCategory.ui,
-                    );
-                  case _PeopleListAction.delete:
-                    runDetached(
-                      _confirmDeleteList(userList),
-                      'confirm people list deletion',
-                      logName: 'UserListPeopleScreen',
-                      category: LogCategory.ui,
-                    );
-                  case _PeopleListAction.report:
-                    final target = _reportTarget(userList);
-                    if (target == null) return;
-                    runDetached(
-                      ReportContentDialog.showForList(
-                        context,
-                        kind: ReportedListKind.people,
-                        eventId: target.eventId,
-                        authorPubkey: target.owner,
-                        dTag: userList.id,
-                        title: userList.name,
-                      ),
-                      'report people list',
-                      logName: 'UserListPeopleScreen',
-                      category: LogCategory.ui,
-                    );
-                }
-              },
-            ),
-          if (widget.ownerPubkey case final owner? when !userList.isEditable)
-            _FollowPeopleListAction(
-              ownerPubkey: owner,
-              listId: userList.id,
-              userList: userList,
-            ),
-          if (widget.ownerPubkey case final owner? when !userList.isEditable)
-            ShareListButton(
+            )
+          else if (_reportTarget(userList) case final target?)
+            DiVineAppBarAction(
+              icon: SvgIconSource(DivineIconName.dotsThree.assetPath),
+              tooltip: context.l10n.peopleListsActionsTooltip,
               onPressed: () => runDetached(
-                shareListLink(
-                  context,
-                  name: userList.name,
-                  path: RoutePaths.peopleListByAuthorFor(
-                    pubkey: owner,
-                    listId: userList.id,
-                  ),
-                ),
-                'share people list',
+                _showViewerActions(userList, target),
+                'open people list viewer actions',
                 logName: 'UserListPeopleScreen',
                 category: LogCategory.ui,
               ),
@@ -609,6 +624,7 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
       body = _MemberVideos(
         userList: userList,
         ownerPubkey: widget.ownerPubkey,
+        actions: headerButtons,
         onVideoTap: (index) => setState(() => _activeVideoIndex = index),
       );
     } else {
@@ -653,11 +669,15 @@ class _MemberVideos extends ConsumerWidget {
   const _MemberVideos({
     required this.userList,
     required this.ownerPubkey,
+    required this.actions,
     required this.onVideoTap,
   });
 
   final UserList userList;
   final String? ownerPubkey;
+
+  /// Buttons for the last row of the hero header, right above the grid.
+  final List<Widget> actions;
   final ValueChanged<int> onVideoTap;
 
   @override
@@ -679,7 +699,11 @@ class _MemberVideos extends ConsumerWidget {
         showSubscribedListBadge: false,
         headerSlivers: [
           SliverToBoxAdapter(
-            child: _RosterHero(userList: userList, ownerPubkey: ownerPubkey),
+            child: _RosterHero(
+              userList: userList,
+              ownerPubkey: ownerPubkey,
+              actions: actions,
+            ),
           ),
         ],
         onVideoTap: (videoList, index) {
@@ -720,11 +744,15 @@ class _FollowPeopleListAction extends ConsumerWidget {
     required this.ownerPubkey,
     required this.listId,
     this.userList,
+    this.compact = false,
   });
 
   final String ownerPubkey;
   final String listId;
   final UserList? userList;
+
+  /// See [FollowListButton.compact].
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -752,15 +780,19 @@ class _FollowPeopleListAction extends ConsumerWidget {
         );
         return cubit;
       },
-      child: _FollowPeopleListButton(userList: userList),
+      child: _FollowPeopleListButton(userList: userList, compact: compact),
     );
   }
 }
 
 class _FollowPeopleListButton extends StatelessWidget {
-  const _FollowPeopleListButton({required this.userList});
+  const _FollowPeopleListButton({
+    required this.userList,
+    required this.compact,
+  });
 
   final UserList? userList;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -807,6 +839,7 @@ class _FollowPeopleListButton extends StatelessWidget {
           return const SizedBox.shrink();
         }
         return FollowListButton(
+          compact: compact,
           isFollowing: state.isFollowing,
           isBusy: state.status == PeopleListFollowStatus.updating,
           onPressed: () => runDetached(
@@ -826,10 +859,15 @@ class _FollowPeopleListButton extends StatelessWidget {
 /// The hero header fed by the roster cubit: ranked members in the preview,
 /// totals in the stats line, "View all" into the roster route.
 class _RosterHero extends StatelessWidget {
-  const _RosterHero({required this.userList, required this.ownerPubkey});
+  const _RosterHero({
+    required this.userList,
+    required this.ownerPubkey,
+    required this.actions,
+  });
 
   final UserList userList;
   final String? ownerPubkey;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
@@ -841,6 +879,9 @@ class _RosterHero extends StatelessWidget {
         previewPubkeys: [for (final member in state.members) member.pubkey],
         totalVideos: state.totalVideos,
         totalLoops: state.totalLoops,
+        authorPubkey: userList.isEditable ? null : ownerPubkey,
+        onAuthorTap: () => _openAuthorProfile(context),
+        actions: actions,
         onViewAll: () => runDetached(
           PeopleListMembersRouteData(
             listId: userList.id,
@@ -851,6 +892,19 @@ class _RosterHero extends StatelessWidget {
           category: LogCategory.ui,
         ),
       ),
+    );
+  }
+
+  void _openAuthorProfile(BuildContext context) {
+    final owner = ownerPubkey;
+    if (owner == null) return;
+    runDetached(
+      OtherProfileRouteData(
+        npub: NostrKeyUtils.encodePubKey(owner),
+      ).push<void>(context),
+      'open people list author profile',
+      logName: 'RosterHero',
+      category: LogCategory.ui,
     );
   }
 }
@@ -942,8 +996,8 @@ class _MemberVideosFailedView extends StatelessWidget {
   }
 }
 
-/// Empty state of a list with no members yet; the owner adds people from
-/// the app bar.
+/// Empty state of a list with no members yet; the owner adds people through
+/// Manage in the header above it.
 class _NoPeopleView extends StatelessWidget {
   const _NoPeopleView();
 
@@ -979,48 +1033,6 @@ class _NoPeopleView extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _PeopleListActionsMenu extends StatelessWidget {
-  const _PeopleListActionsMenu({
-    required this.actions,
-    required this.onSelected,
-  });
-
-  final List<_PeopleListAction> actions;
-  final ValueChanged<_PeopleListAction> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<_PeopleListAction>(
-      tooltip: context.l10n.peopleListsActionsTooltip,
-      color: context.vineColors.surfaceContainer,
-      icon: DivineIcon(
-        icon: DivineIconName.dotsThreeVertical,
-        color: context.vineColors.primaryText,
-      ),
-      onSelected: onSelected,
-      itemBuilder: (context) => [
-        for (final action in actions)
-          PopupMenuItem(
-            value: action,
-            child: switch (action) {
-              _PeopleListAction.addPeople => Text(
-                context.l10n.peopleListsAddPeopleTooltip,
-              ),
-              _PeopleListAction.editInfo => Text(
-                context.l10n.listEditInfoAction,
-              ),
-              _PeopleListAction.delete => Text(
-                context.l10n.listDeleteAction,
-                style: TextStyle(color: context.vineColors.primaryText),
-              ),
-              _PeopleListAction.report => Text(context.l10n.listReportAction),
-            },
-          ),
-      ],
     );
   }
 }

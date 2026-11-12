@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "Kunde inte läsa in den här samlingen.",
   "featuredTabRetry": "Försök igen",
   "exploreNoVideosAvailable": "Inga videor tillgängliga",
-  "explorePeopleLists": "Personlistor",
-  "exploreVideoLists": "Videolistor",
   "exploreErrorLoadingLists": "Fel vid inläsning av listor. Försök igen.",
   "exploreNewVideosCount": "{count, plural, one{1 ny video} other{{count} nya videor}}",
   "@exploreNewVideosCount": {
@@ -1795,6 +1793,9 @@
   "listDone": "Klar",
   "listErrorLoading": "Fel vid inläsning av listor",
   "listCreateNewList": "Skapa ny lista",
+  "listTypeSheetTitle": "Ny lista",
+  "listTypeVideoList": "Videolista",
+  "listTypePeopleList": "Personlista",
   "listNewPeopleList": "Ny personlista",
   "listNameLabel": "Listnamn",
   "listDescriptionLabel": "Beskrivning (valfritt)",
@@ -1803,7 +1804,9 @@
   "listVisibilityPrivate": "Privat",
   "profileListsEmpty": "Inga listor än. Skapa en för looparna du vill hålla ihop.",
   "listEditTitle": "Redigera lista",
-  "listShareAction": "Dela lista",
+  "listShareButton": "Dela",
+  "listManageButton": "Hantera",
+  "peopleListsManagePeopleButton": "Hantera personer",
   "listShareFailed": "Kunde inte dela listan. Försök igen.",
   "listSave": "Spara",
   "listContinue": "Fortsätt",
@@ -3873,7 +3876,7 @@
   "nostrSettingsCouldNotRemoveKeys": "Kunde inte ta bort det här kontot från enheten. Försök igen.",
   "nostrSettingsDeleteAccount": "Radera konto och data",
   "nostrSettingsDeleteAccountSubtitle": "Skickar raderingsförfrågningar för ditt innehåll och loggar ut dig på den här enheten. Reläer, klienter, sökindex och andra inloggade enheter kan behålla kopior.",
-  "listByAuthorPrefix": "Av ",
+  "listByAuthor": "av {name}",
   "keyManagementYourPublicKeyLabel": "Din publika nyckel (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."
