@@ -708,6 +708,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Gagal memuat video tersimpan';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Tidak bisa membuka bookmark pribadimu, jadi mungkin ada yang hilang. Tarik ke bawah untuk mencoba lagi.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Belum Ada Komentar';
 
   @override

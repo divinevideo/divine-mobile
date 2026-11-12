@@ -3613,6 +3613,7 @@
   "profileNoSavedVideosTitle": "Ancora niente di salvato",
   "profileSavedOwnEmpty": "Aggiungi i video ai segnalibri dal menu di condivisione e li troverai qui.",
   "profileErrorLoadingSaved": "Errore nel caricamento dei video salvati",
+  "profileSavedPrivateItemsLocked": "Impossibile sbloccare i tuoi segnalibri privati, quindi potrebbe mancarne qualcuno. Trascina verso il basso per riprovare.",
   "profileMaybeLaterLabel": "Forse più tardi",
   "profileSecurePrimaryButton": "Aggiungi email e password",
   "profileCompletePrimaryButton": "Aggiorna il tuo profilo",

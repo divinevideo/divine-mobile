@@ -1273,6 +1273,12 @@ abstract class AppLocalizations {
   /// **'Error loading saved videos'**
   String get profileErrorLoadingSaved;
 
+  /// Shown on the Bookmarks tab when the encrypted (private) part of the user's bookmark list could not be decrypted. Replaces the empty state when nothing else is saved, and sits above the grid otherwise. Pulling down re-syncs and decrypts again.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t unlock your private bookmarks, so some may be missing. Pull down to try again.'**
+  String get profileSavedPrivateItemsLocked;
+
   /// No description provided for @profileNoCommentsOwnTitle.
   ///
   /// In en, this message translates to:

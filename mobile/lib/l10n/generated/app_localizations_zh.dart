@@ -697,6 +697,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileErrorLoadingSaved => '加载收藏视频出错';
 
   @override
+  String get profileSavedPrivateItemsLocked => '无法解锁你的私密收藏，所以可能缺了一些。下拉即可重试。';
+
+  @override
   String get profileNoCommentsOwnTitle => '还没有评论';
 
   @override

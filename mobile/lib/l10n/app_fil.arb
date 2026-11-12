@@ -3231,6 +3231,7 @@
   "profileNoSavedVideosTitle": "Wala pang naka-save",
   "profileSavedOwnEmpty": "Mag-bookmark ng video mula sa share sheet at lalabas dito.",
   "profileErrorLoadingSaved": "May error sa pag-load ng saved videos",
+  "profileSavedPrivateItemsLocked": "Hindi ma-unlock ang mga private bookmark mo, kaya baka may kulang. Hilahin pababa para subukan ulit.",
   "profileMaybeLaterLabel": "Sa Susunod Na Lang",
   "profileSecurePrimaryButton": "Magdagdag ng Email at Password",
   "profileCompletePrimaryButton": "I-update ang Profile Mo",

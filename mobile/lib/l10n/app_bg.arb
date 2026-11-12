@@ -406,6 +406,7 @@
   "profileNoSavedVideosTitle": "Още нищо не е запазено",
   "profileSavedOwnEmpty": "Запази видеа от менюто за споделяне и ще се появят тук.",
   "profileErrorLoadingSaved": "Грешка при зареждане на запазените видеа",
+  "profileSavedPrivateItemsLocked": "Не успяхме да отключим личните ти отметки, затова някои може да липсват. Дръпни надолу, за да опиташ пак.",
   "profileNoCommentsOwnTitle": "Още няма коментари",
   "profileNoCommentsOtherTitle": "Още няма коментари",
   "profileCommentsOwnEmpty": "Твоите коментари и отговори ще се появят тук.",

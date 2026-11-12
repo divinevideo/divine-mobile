@@ -779,6 +779,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Errore nel caricamento dei video salvati';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Impossibile sbloccare i tuoi segnalibri privati, quindi potrebbe mancarne qualcuno. Trascina verso il basso per riprovare.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Ancora nessun commento';
 
   @override

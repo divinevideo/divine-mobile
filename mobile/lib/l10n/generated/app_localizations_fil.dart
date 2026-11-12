@@ -743,6 +743,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'May error sa pag-load ng saved videos';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Hindi ma-unlock ang mga private bookmark mo, kaya baka may kulang. Hilahin pababa para subukan ulit.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Wala pang komento';
 
   @override

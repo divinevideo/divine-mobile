@@ -737,6 +737,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Lỗi khi tải video đã lưu';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Không thể mở khoá dấu trang riêng tư của bạn nên có thể thiếu một vài mục. Kéo xuống để thử lại.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Chưa có bình luận nào';
 
   @override

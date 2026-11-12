@@ -755,6 +755,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get profileErrorLoadingSaved => 'የተቀመጡ ቪዲዮዎችን መጫን ላይ ስህተት';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'የግል ዕልባቶችዎን መክፈት አልተቻለም፣ ስለዚህ አንዳንዶቹ ላይታዩ ይችላሉ። እንደገና ለመሞከር ወደ ታች ይጎትቱ።';
+
+  @override
   String get profileNoCommentsOwnTitle => 'እስካሁን ምንም አስተያየት የለም።';
 
   @override

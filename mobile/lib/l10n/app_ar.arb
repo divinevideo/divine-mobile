@@ -3606,6 +3606,7 @@
   "profileNoSavedVideosTitle": "لا شيء محفوظ بعد",
   "profileSavedOwnEmpty": "احفظ الفيديوهات من قائمة المشاركة وستظهر هنا.",
   "profileErrorLoadingSaved": "خطأ في تحميل الفيديوهات المحفوظة",
+  "profileSavedPrivateItemsLocked": "تعذّر فتح إشاراتك المرجعية الخاصة، لذا قد يكون بعضها مفقودًا. يمكن السحب للأسفل لإعادة المحاولة.",
   "profileMaybeLaterLabel": "ربما لاحقًا",
   "profileSecurePrimaryButton": "أضف بريدًا وكلمة مرور",
   "profileCompletePrimaryButton": "حدّث ملفك الشخصي",

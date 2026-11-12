@@ -3613,6 +3613,7 @@
   "profileNoSavedVideosTitle": "Nog niets bewaard",
   "profileSavedOwnEmpty": "Bookmark video's vanuit het deelmenu en ze duiken hier op.",
   "profileErrorLoadingSaved": "Fout bij laden van bewaarde video's",
+  "profileSavedPrivateItemsLocked": "Je privébladwijzers konden niet worden ontgrendeld, dus er kunnen er een paar ontbreken. Trek omlaag om het nog eens te proberen.",
   "profileMaybeLaterLabel": "Misschien later",
   "profileSecurePrimaryButton": "E-mail & wachtwoord toevoegen",
   "profileCompletePrimaryButton": "Werk je profiel bij",

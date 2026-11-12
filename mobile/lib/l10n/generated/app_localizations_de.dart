@@ -777,6 +777,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Fehler beim Laden gespeicherter Videos';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Deine privaten Lesezeichen lassen sich nicht entsperren, deshalb fehlen vielleicht ein paar. Zieh nach unten, um es noch mal zu versuchen.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Noch keine Kommentare';
 
   @override

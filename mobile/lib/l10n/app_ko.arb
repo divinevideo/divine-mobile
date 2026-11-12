@@ -3152,6 +3152,7 @@
   "profileNoSavedVideosTitle": "아직 저장한 게 없어요",
   "profileSavedOwnEmpty": "공유 시트에서 영상을 북마크하면 여기에 표시돼요.",
   "profileErrorLoadingSaved": "저장한 영상을 불러오지 못했어요",
+  "profileSavedPrivateItemsLocked": "비공개 북마크를 열 수 없어서 일부가 빠져 있을 수 있어요. 아래로 당겨서 다시 시도해 주세요.",
   "profileMaybeLaterLabel": "나중에",
   "profileSecurePrimaryButton": "이메일과 비밀번호 추가",
   "profileCompletePrimaryButton": "프로필 업데이트",

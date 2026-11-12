@@ -3613,6 +3613,7 @@
   "profileNoSavedVideosTitle": "Inget sparat än",
   "profileSavedOwnEmpty": "Bokmärk videor från dela-menyn så dyker de upp här.",
   "profileErrorLoadingSaved": "Kunde inte ladda sparade videor",
+  "profileSavedPrivateItemsLocked": "Det gick inte att låsa upp dina privata bokmärken, så några kan saknas. Dra nedåt för att försöka igen.",
   "profileMaybeLaterLabel": "Kanske senare",
   "profileSecurePrimaryButton": "Lägg till e-post och lösenord",
   "profileCompletePrimaryButton": "Uppdatera din profil",

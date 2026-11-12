@@ -92,6 +92,9 @@ void main() {
       when(
         () => mockBookmarksRepository.watchGlobalBookmarks(),
       ).thenAnswer((_) => const Stream<List<BookmarkItem>>.empty());
+      when(
+        () => mockBookmarksRepository.hasUnreadablePrivateItems,
+      ).thenReturn(false);
     });
 
     ProfileSavedVideosBloc createBloc({
@@ -298,6 +301,80 @@ void main() {
     });
 
     group('ProfileSavedVideosSyncRequested', () {
+      group('with a private list it could not unlock', () {
+        blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+          'flags it rather than settling as nothing saved',
+          setUp: () {
+            when(
+              () => mockBookmarksRepository.globalBookmarks,
+            ).thenReturn(const []);
+            when(
+              () => mockBookmarksRepository.hasUnreadablePrivateItems,
+            ).thenReturn(true);
+          },
+          build: createBloc,
+          act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
+          wait: const Duration(milliseconds: 50),
+          expect: () => [
+            const ProfileSavedVideosState(
+              status: ProfileSavedVideosStatus.success,
+              hasMoreContent: false,
+              privateBookmarksLocked: true,
+            ),
+          ],
+        );
+
+        test('clears the flag once a later sync unlocks the list', () async {
+          var locked = true;
+          when(
+            () => mockBookmarksRepository.globalBookmarks,
+          ).thenReturn(const []);
+          when(
+            () => mockBookmarksRepository.hasUnreadablePrivateItems,
+          ).thenAnswer((_) => locked);
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+
+          final first = Completer<void>();
+          bloc.add(ProfileSavedVideosSyncRequested(completer: first));
+          await first.future.timeout(const Duration(seconds: 5));
+          expect(bloc.state.privateBookmarksLocked, isTrue);
+
+          locked = false;
+          final second = Completer<void>();
+          bloc.add(ProfileSavedVideosSyncRequested(completer: second));
+          await second.future.timeout(const Duration(seconds: 5));
+
+          expect(bloc.state.privateBookmarksLocked, isFalse);
+        });
+
+        blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+          'flags it on a re-sync of videos already showing',
+          setUp: () {
+            when(
+              () => mockBookmarksRepository.globalBookmarks,
+            ).thenReturn(repositoryListShownAs(['video-1']));
+            when(
+              () => mockBookmarksRepository.hasUnreadablePrivateItems,
+            ).thenReturn(true);
+          },
+          build: createBloc,
+          seed: () => ProfileSavedVideosState(
+            status: ProfileSavedVideosStatus.success,
+            videos: [createTestVideo('video-1')],
+            savedEventIds: const ['video-1'],
+            nextPageOffset: 1,
+            hasMoreContent: false,
+          ),
+          act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
+          wait: const Duration(milliseconds: 50),
+          verify: (bloc) {
+            expect(bloc.state.isRefreshing, isFalse);
+            expect(bloc.state.privateBookmarksLocked, isTrue);
+          },
+        );
+      });
+
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
         'emits success with empty list when there are no bookmarks',
         setUp: () {
@@ -1031,6 +1108,41 @@ void main() {
             nextPageOffset: ids.length,
             hasMoreContent: false,
           );
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'a change that locks the private list is flagged when no video moved',
+        setUp: () {
+          when(
+            () => mockBookmarksRepository.hasUnreadablePrivateItems,
+          ).thenReturn(true);
+        },
+        build: createBloc,
+        seed: () => showing(['video-1']),
+        act: (_) => bookmarkChanges.add(repositoryListShownAs(['video-1'])),
+        wait: const Duration(milliseconds: 50),
+        expect: () => [
+          showing(['video-1']).copyWith(privateBookmarksLocked: true),
+        ],
+      );
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'a save landing while the private list is locked keeps the flag',
+        setUp: () {
+          when(
+            () => mockBookmarksRepository.hasUnreadablePrivateItems,
+          ).thenReturn(true);
+        },
+        build: createBloc,
+        seed: () => showing(['video-1']),
+        act: (_) => bookmarkChanges.add(
+          repositoryListShownAs(['video-2', 'video-1']),
+        ),
+        wait: const Duration(milliseconds: 50),
+        verify: (bloc) {
+          expect(bloc.state.savedEventIds, equals(['video-2', 'video-1']));
+          expect(bloc.state.privateBookmarksLocked, isTrue);
+        },
+      );
 
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
         'a save made from the share sheet lands at the top',

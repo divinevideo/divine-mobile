@@ -39,6 +39,7 @@ final class ProfileSavedVideosState extends Equatable {
     this.hasMoreContent = true,
     this.nextPageOffset = 0,
     this.lastFetchResolvedVideoCount = 0,
+    this.privateBookmarksLocked = false,
   });
 
   /// The current loading status.
@@ -74,6 +75,10 @@ final class ProfileSavedVideosState extends Equatable {
   /// the last fetch that produced the current empty rendered list.
   final int lastFetchResolvedVideoCount;
 
+  /// Whether the bookmark list has a private section this device could not
+  /// unlock, so [savedEventIds] may be missing some of the viewer's saves.
+  final bool privateBookmarksLocked;
+
   /// Whether the viewer has bookmarks that the repository did not resolve.
   ///
   /// `videos.isEmpty` on its own conflates "you have no bookmarks" with "we
@@ -104,6 +109,7 @@ final class ProfileSavedVideosState extends Equatable {
     bool? hasMoreContent,
     int? nextPageOffset,
     int? lastFetchResolvedVideoCount,
+    bool? privateBookmarksLocked,
   }) {
     return ProfileSavedVideosState(
       status: status ?? this.status,
@@ -116,6 +122,8 @@ final class ProfileSavedVideosState extends Equatable {
       nextPageOffset: nextPageOffset ?? this.nextPageOffset,
       lastFetchResolvedVideoCount:
           lastFetchResolvedVideoCount ?? this.lastFetchResolvedVideoCount,
+      privateBookmarksLocked:
+          privateBookmarksLocked ?? this.privateBookmarksLocked,
     );
   }
 
@@ -130,5 +138,6 @@ final class ProfileSavedVideosState extends Equatable {
     hasMoreContent,
     nextPageOffset,
     lastFetchResolvedVideoCount,
+    privateBookmarksLocked,
   ];
 }

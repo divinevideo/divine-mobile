@@ -438,6 +438,7 @@
   "profileNoSavedVideosTitle": "Chưa lưu gì cả",
   "profileSavedOwnEmpty": "Lưu video từ bảng chia sẻ và chúng sẽ xuất hiện ở đây.",
   "profileErrorLoadingSaved": "Lỗi khi tải video đã lưu",
+  "profileSavedPrivateItemsLocked": "Không thể mở khoá dấu trang riêng tư của bạn nên có thể thiếu một vài mục. Kéo xuống để thử lại.",
   "profileNoCommentsOwnTitle": "Chưa có bình luận nào",
   "profileNoCommentsOtherTitle": "Chưa có bình luận nào",
   "profileCommentsOwnEmpty": "Bình luận và câu trả lời của bạn sẽ xuất hiện ở đây.",

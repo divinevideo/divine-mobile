@@ -794,6 +794,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Błąd wczytywania zapisanych filmów';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Nie udało się odblokować twoich prywatnych zakładek, więc niektórych może brakować. Przeciągnij w dół, aby spróbować ponownie.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Brak komentarzy';
 
   @override

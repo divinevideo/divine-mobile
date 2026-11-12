@@ -785,6 +785,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Erreur de chargement des vidéos enregistrées';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Impossible de déverrouiller tes favoris privés, il se peut donc qu\'il en manque. Tire vers le bas pour réessayer.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Pas encore de commentaires';
 
   @override

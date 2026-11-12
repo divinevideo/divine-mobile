@@ -755,6 +755,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Kunde inte ladda sparade videor';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Det gick inte att låsa upp dina privata bokmärken, så några kan saknas. Dra nedåt för att försöka igen.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Inga kommentarer än';
 
   @override

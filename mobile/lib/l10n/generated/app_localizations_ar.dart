@@ -761,6 +761,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileErrorLoadingSaved => 'خطأ في تحميل الفيديوهات المحفوظة';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'تعذّر فتح إشاراتك المرجعية الخاصة، لذا قد يكون بعضها مفقودًا. يمكن السحب للأسفل لإعادة المحاولة.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'لا توجد تعليقات بعد';
 
   @override

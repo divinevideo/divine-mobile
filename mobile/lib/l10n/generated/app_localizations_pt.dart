@@ -779,6 +779,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Erro ao carregar vídeos salvos';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Não deu para desbloquear seus favoritos privados, então alguns podem estar faltando. Puxe para baixo para tentar de novo.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Nenhum comentário ainda';
 
   @override

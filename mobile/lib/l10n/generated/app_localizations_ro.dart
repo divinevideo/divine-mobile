@@ -802,6 +802,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Eroare la încărcarea videoclipurilor salvate';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Nu ți-am putut debloca semnele de carte private, așa că unele ar putea lipsi. Trage în jos ca să încerci din nou.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Încă niciun comentariu';
 
   @override

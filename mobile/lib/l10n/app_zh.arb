@@ -438,6 +438,7 @@
   "profileNoSavedVideosTitle": "还没有收藏",
   "profileSavedOwnEmpty": "在分享面板里收藏视频，就会显示在这里。",
   "profileErrorLoadingSaved": "加载收藏视频出错",
+  "profileSavedPrivateItemsLocked": "无法解锁你的私密收藏，所以可能缺了一些。下拉即可重试。",
   "profileNoCommentsOwnTitle": "还没有评论",
   "profileNoCommentsOtherTitle": "还没有评论",
   "profileCommentsOwnEmpty": "你的评论和回复会显示在这里。",

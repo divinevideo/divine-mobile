@@ -707,6 +707,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Kaydedilen videolar yüklenirken hata';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Gizli yer imlerinin kilidini açamadık, bu yüzden bazıları eksik olabilir. Tekrar denemek için aşağı çek.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Henüz Yorum Yok';
 
   @override

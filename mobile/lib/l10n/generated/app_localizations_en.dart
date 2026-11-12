@@ -777,6 +777,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Error loading saved videos';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Couldn\'t unlock your private bookmarks, so some may be missing. Pull down to try again.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'No comments yet';
 
   @override

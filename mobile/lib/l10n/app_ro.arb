@@ -3613,6 +3613,7 @@
   "profileNoSavedVideosTitle": "Încă nimic salvat",
   "profileSavedOwnEmpty": "Salvează videoclipuri din meniul de partajare și vor apărea aici.",
   "profileErrorLoadingSaved": "Eroare la încărcarea videoclipurilor salvate",
+  "profileSavedPrivateItemsLocked": "Nu ți-am putut debloca semnele de carte private, așa că unele ar putea lipsi. Trage în jos ca să încerci din nou.",
   "profileMaybeLaterLabel": "Poate mai târziu",
   "profileSecurePrimaryButton": "Adaugă email și parolă",
   "profileCompletePrimaryButton": "Actualizează-ți profilul",

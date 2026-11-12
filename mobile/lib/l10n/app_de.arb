@@ -3613,6 +3613,7 @@
   "profileNoSavedVideosTitle": "Noch nichts gespeichert",
   "profileSavedOwnEmpty": "Setz im Teilen-Menü ein Lesezeichen für Videos und sie tauchen hier auf.",
   "profileErrorLoadingSaved": "Fehler beim Laden gespeicherter Videos",
+  "profileSavedPrivateItemsLocked": "Deine privaten Lesezeichen lassen sich nicht entsperren, deshalb fehlen vielleicht ein paar. Zieh nach unten, um es noch mal zu versuchen.",
   "profileMaybeLaterLabel": "Vielleicht später",
   "profileSecurePrimaryButton": "E-Mail & Passwort hinzufügen",
   "profileCompletePrimaryButton": "Profil aktualisieren",

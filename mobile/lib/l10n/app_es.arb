@@ -3621,6 +3621,7 @@
   "profileNoSavedVideosTitle": "Todavía no guardaste nada",
   "profileSavedOwnEmpty": "Marcá videos como favoritos desde el menú de compartir y van a aparecer acá.",
   "profileErrorLoadingSaved": "Error al cargar los videos guardados",
+  "profileSavedPrivateItemsLocked": "No pudimos desbloquear tus marcadores privados, así que puede que falten algunos. Deslizá hacia abajo para probar de nuevo.",
   "profileMaybeLaterLabel": "Quizás más tarde",
   "profileSecurePrimaryButton": "Agregar email y contraseña",
   "profileCompletePrimaryButton": "Actualizar tu perfil",

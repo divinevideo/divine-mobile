@@ -788,6 +788,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'సేవ్ చేసిన వీడియోలను లోడ్ చేయడంలో లోపం';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'మీ ప్రైవేట్ బుక్‌మార్క్‌లను అన్‌లాక్ చేయడం సాధ్యపడలేదు, కాబట్టి కొన్ని కనిపించకపోవచ్చు. మళ్లీ ప్రయత్నించడానికి కిందికి లాగండి.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'ఇంకా వ్యాఖ్యలు లేవు';
 
   @override

@@ -220,6 +220,42 @@ void main() {
         expect(find.byType(ProfileMasonryGrid), findsOneWidget);
       });
 
+      // An empty list with a locked private section is not "nothing saved":
+      // telling that viewer to go bookmark something is wrong, so the tab says
+      // what happened and how to retry.
+      testWidgets('locked notice instead of the empty state', (tester) async {
+        when(() => mockBloc.state).thenReturn(
+          const ProfileSavedVideosState(
+            status: ProfileSavedVideosStatus.success,
+            privateBookmarksLocked: true,
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject());
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.profileSavedPrivateItemsLocked), findsOneWidget);
+        expect(find.text(l10n.profileNoSavedVideosTitle), findsNothing);
+      });
+
+      testWidgets('locked notice above the videos it could read', (
+        tester,
+      ) async {
+        when(() => mockBloc.state).thenReturn(
+          ProfileSavedVideosState(
+            status: ProfileSavedVideosStatus.success,
+            videos: _createTestVideos(),
+            privateBookmarksLocked: true,
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject());
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.profileSavedPrivateItemsLocked), findsOneWidget);
+        expect(find.byType(ProfileMasonryGrid), findsOneWidget);
+      });
+
       testWidgets('sizes each tile from its video dimensions', (tester) async {
         final videos = _createTestVideos();
         when(() => mockBloc.state).thenReturn(

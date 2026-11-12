@@ -1073,6 +1073,9 @@ void main() {
         () => bookmarksRepository.globalBookmarks,
       ).thenAnswer((_) => heldBookmarks);
       when(
+        () => bookmarksRepository.hasUnreadablePrivateItems,
+      ).thenReturn(false);
+      when(
         () => videosRepository.getVideosByIds(
           any(),
           cacheResults: any(named: 'cacheResults'),

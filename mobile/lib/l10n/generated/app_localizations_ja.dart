@@ -674,6 +674,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profileErrorLoadingSaved => '保存した動画の読み込みに失敗';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      '非公開のブックマークのロックを解除できなかったため、一部が表示されていない可能性があります。下に引っ張ってもう一度お試しください。';
+
+  @override
   String get profileNoCommentsOwnTitle => 'コメントはまだないよ';
 
   @override

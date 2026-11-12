@@ -770,6 +770,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Fout bij laden van bewaarde video\'s';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Je privébladwijzers konden niet worden ontgrendeld, dus er kunnen er een paar ontbreken. Trek omlaag om het nog eens te proberen.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Nog geen reacties';
 
   @override

@@ -736,6 +736,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get profileErrorLoadingSaved => 'Ralat memuatkan video disimpan';
 
   @override
+  String get profileSavedPrivateItemsLocked =>
+      'Tidak dapat membuka penanda buku peribadi anda, jadi sesetengahnya mungkin tiada. Tarik ke bawah untuk cuba lagi.';
+
+  @override
   String get profileNoCommentsOwnTitle => 'Belum ada komen';
 
   @override
