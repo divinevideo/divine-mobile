@@ -70,6 +70,7 @@ final _locations = <String, List<String>>{
   'minorAccountReviewConsentRecord': [
     RoutePaths.minorAccountReviewConsentRecord,
   ],
+  'minorAccountReviewWelcome': [RoutePaths.minorAccountReviewWelcome],
   'monetizationLinksSettings': [RoutePaths.monetizationLinksSettings],
   'nip05Settings': [RoutePaths.nip05Settings],
   'nostrConnect': [RoutePaths.nostrConnect],
