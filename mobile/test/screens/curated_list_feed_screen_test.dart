@@ -23,10 +23,13 @@ import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/share_list_button.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/finders.dart';
 import '../helpers/go_router.dart';
 import '../helpers/test_provider_overrides.dart';
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
 
 class _MockCuratedListService extends Mock implements CuratedListService {
   @override
@@ -1377,6 +1380,68 @@ void main() {
         await tester.pumpAndSettle();
       }
 
+      /// Stubs the owned list holding [item] until a removal drops it; the
+      /// removal then answers with [removal].
+      void stubOwnedListHolding(
+        String item, {
+        Future<bool> Function()? removal,
+      }) {
+        stubOwnedList();
+        var items = [item];
+        when(() => mockService.getListById('owned-list')).thenAnswer(
+          (_) => CuratedList(
+            id: 'owned-list',
+            name: 'Owned List',
+            pubkey: 'owned-pubkey',
+            videoEventIds: items,
+            createdAt: DateTime(2026),
+            updatedAt: DateTime(2026),
+          ),
+        );
+        when(
+          () => mockService.removeVideoFromList('owned-list', any()),
+        ).thenAnswer((invocation) {
+          items = [
+            for (final held in items)
+              if (held != invocation.positionalArguments[1]) held,
+          ];
+          return removal?.call() ?? Future.value(true);
+        });
+      }
+
+      testWidgets('removes an addressable post the list holds by its '
+          'coordinate (#7135)', (tester) async {
+        final video = _videoEvent(
+          id: 'a' * 64,
+        ).copyWith(addressableDTag: 'clip');
+        final address = '34236:${'b' * 64}:clip';
+        stubOwnedListHolding(address);
+
+        await tester.pumpWidget(
+          buildSubject(
+            listId: 'owned-list',
+            listName: 'Owned List',
+            videoEvents: [video],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        await enterManageMode(tester);
+
+        await tester.tap(find.text('A cat video'));
+        await tester.pump();
+        await tester.tap(find.text(l10n.listRemoveVideosButton(1)));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockService.removeVideoFromList('owned-list', address),
+        ).called(1);
+        verifyNever(
+          () => mockService.removeVideoFromList('owned-list', video.id),
+        );
+        expect(find.text(l10n.listRemoveVideosSuccess(1)), findsOneWidget);
+      });
+
       testWidgets('entering shows the inline title and disabled remove bar', (
         tester,
       ) async {
@@ -1416,13 +1481,51 @@ void main() {
         );
       });
 
+      testWidgets('removing an addressable post drops an older version the '
+          'list holds by event id (#7135)', (tester) async {
+        final video = _videoEvent(
+          id: 'a' * 64,
+        ).copyWith(addressableDTag: 'clip');
+        final olderVideoId = 'c' * 64;
+        stubOwnedListHolding(olderVideoId);
+        final videosRepository = _MockVideosRepository();
+        when(
+          () => videosRepository.getVideosByIds(
+            [olderVideoId],
+            hydrateBulkStats: false,
+            includeFeedShape: false,
+          ),
+        ).thenAnswer((_) async => [video.copyWith(id: olderVideoId)]);
+
+        await tester.pumpWidget(
+          buildSubject(
+            listId: 'owned-list',
+            listName: 'Owned List',
+            videoEvents: [video],
+            extraOverrides: [
+              videosRepositoryProvider.overrideWithValue(videosRepository),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        await enterManageMode(tester);
+
+        await tester.tap(find.text('A cat video'));
+        await tester.pump();
+        await tester.tap(find.text(l10n.listRemoveVideosButton(1)));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockService.removeVideoFromList('owned-list', olderVideoId),
+        ).called(1);
+        expect(find.text(l10n.listRemoveVideosSuccess(1)), findsOneWidget);
+      });
+
       testWidgets('removal refreshes the id provider so the tile disappears', (
         tester,
       ) async {
-        stubOwnedList();
-        when(
-          () => mockService.removeVideoFromList('owned-list', any()),
-        ).thenAnswer((_) async => true);
+        stubOwnedListHolding('a' * 64);
 
         final video = VideoEvent(
           id: 'a' * 64,
@@ -1486,10 +1589,7 @@ void main() {
       testWidgets(
         'removal refreshes the grid when navigated with frozen ids (feed chip)',
         (tester) async {
-          stubOwnedList();
-          when(
-            () => mockService.removeVideoFromList('owned-list', any()),
-          ).thenAnswer((_) async => true);
+          stubOwnedListHolding('a' * 64);
 
           final video = _videoEvent(id: 'a' * 64);
 
@@ -1544,13 +1644,10 @@ void main() {
       testWidgets('back is held while a removal is in flight', (
         tester,
       ) async {
-        stubOwnedList();
         // Completer-gated so the test holds the racer at the race instead of
         // depending on wall-clock timing.
         final removal = Completer<bool>();
-        when(
-          () => mockService.removeVideoFromList('owned-list', any()),
-        ).thenAnswer((_) => removal.future);
+        stubOwnedListHolding('video-one', removal: () => removal.future);
 
         await tester.pumpWidget(
           buildSubject(

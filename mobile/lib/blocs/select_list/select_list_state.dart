@@ -60,6 +60,7 @@ class SelectListState extends Equatable {
     this.failedSyncListIds = const {},
     this.recoveryReadOnly = false,
     this.serviceAvailable = true,
+    this.addressByEventId = const {},
   });
 
   /// The lists the viewer can put the video in.
@@ -84,6 +85,11 @@ class SelectListState extends Equatable {
 
   /// Whether this picker is bound to the current initialized service.
   final bool serviceAvailable;
+
+  /// The coordinate of the video each event-id item in the lists is a
+  /// version of, as far as a lookup has reported: an item naming an older
+  /// version of this video counts as holding it (#7135).
+  final Map<String, String> addressByEventId;
 
   bool get canEdit => serviceAvailable && !recoveryReadOnly && !isSaving;
 
@@ -141,6 +147,7 @@ class SelectListState extends Equatable {
     Set<String>? failedSyncListIds,
     bool? recoveryReadOnly,
     bool? serviceAvailable,
+    Map<String, String>? addressByEventId,
   }) {
     return SelectListState(
       lists: lists ?? this.lists,
@@ -151,6 +158,7 @@ class SelectListState extends Equatable {
       failedSyncListIds: failedSyncListIds ?? this.failedSyncListIds,
       recoveryReadOnly: recoveryReadOnly ?? this.recoveryReadOnly,
       serviceAvailable: serviceAvailable ?? this.serviceAvailable,
+      addressByEventId: addressByEventId ?? this.addressByEventId,
     );
   }
 
@@ -164,5 +172,6 @@ class SelectListState extends Equatable {
     failedSyncListIds,
     recoveryReadOnly,
     serviceAvailable,
+    addressByEventId,
   ];
 }

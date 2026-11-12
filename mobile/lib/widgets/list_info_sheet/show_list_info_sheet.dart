@@ -62,6 +62,7 @@ Future<ListInfoSheetOutcome> showListInfoSheet(
     currentOwnerPubkey: () => session.currentOwnerPubkey,
     existingList: existingList,
     videoEventId: video?.id,
+    videoAddress: video?.addressableId,
   );
   final formKey = GlobalKey();
   final recoverySubscription = container.listen(

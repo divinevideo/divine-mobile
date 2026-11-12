@@ -12,6 +12,7 @@ import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curated_list_editor_session_provider.dart';
+import 'package:openvine/providers/video_address_lookup.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
@@ -97,7 +98,12 @@ Future<void> showSelectListSheet(
       create: (_) => SelectListCubit(
         service: service,
         videoEventId: video.id,
+        videoAddress: video.addressableId,
         currentOwnerPubkey: currentOwner,
+        resolveVideoAddresses: (eventIds) => lookUpVideoAddresses(
+          container.read(videosRepositoryProvider),
+          eventIds,
+        ),
       ),
       child: _SelectListServiceBinding(child: sheet),
     ),
