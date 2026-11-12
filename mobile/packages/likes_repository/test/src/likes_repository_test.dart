@@ -8018,7 +8018,6 @@ void main() {
             ),
           ],
           <Event>[],
-          <Event>[],
         ]);
 
         repository = createRepository(withLocalStorage: false);
@@ -8048,7 +8047,6 @@ void main() {
               content: '-',
             ),
           ],
-          <Event>[],
           <Event>[],
         ]);
 
