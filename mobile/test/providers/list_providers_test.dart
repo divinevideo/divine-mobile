@@ -723,6 +723,87 @@ void main() {
       ).called(1);
     });
 
+    // relay.divine.video closes a REQ carrying more than ten filters, and
+    // lists name videos by coordinate since #7135.
+    test('asks for eleven addresses in a request the relay accepts', () async {
+      registerFallbackValue(<Filter>[]);
+      final videoEventService = _MockVideoEventService();
+      final nostrClient = _MockNostrClient();
+      when(() => videoEventService.discoveryVideos).thenReturn(const []);
+      when(() => videoEventService.homeFeedVideos).thenReturn(const []);
+      when(() => videoEventService.profileVideos).thenReturn(const []);
+      when(
+        () => nostrClient.subscribe(any(), closeOnEose: true),
+      ).thenAnswer((_) => const Stream.empty());
+
+      final container = ProviderContainer(
+        overrides: [
+          videoEventServiceProvider.overrideWithValue(videoEventService),
+          nostrServiceProvider.overrideWithValue(nostrClient),
+        ],
+      );
+      addTearDown(container.dispose);
+      final provider = videoEventsByIdsProvider([
+        for (var i = 0; i < 11; i++) '34236:$_ownerA:clip-$i',
+      ]);
+      final subscription = container.listen(provider, (_, _) {});
+      addTearDown(subscription.close);
+
+      await container.read(provider.future);
+
+      final filters =
+          verify(
+                () => nostrClient.subscribe(captureAny(), closeOnEose: true),
+              ).captured.single
+              as List<Filter>;
+      expect(filters, hasLength(lessThanOrEqualTo(10)));
+      expect(filters.expand((filter) => filter.d!), hasLength(11));
+    });
+
+    test('keeps only the videos it asked for from a shared filter', () async {
+      registerFallbackValue(_video(id: 'fallback', pubkey: _ownerA));
+      Event videoAt(String author, String dTag) => Event(author, 34236, [
+        ['d', dTag],
+        ['url', 'https://example.com/$dTag.mp4'],
+      ], '');
+      final asked = videoAt(_ownerA, 'clip-1');
+      // The shared filter lists both authors and both d-tags, so a relay
+      // also answers with the first author's video at the other d-tag.
+      final notAsked = videoAt(_ownerA, 'clip-2');
+      final videoEventService = _MockVideoEventService();
+      final nostrClient = _MockNostrClient();
+      when(() => videoEventService.discoveryVideos).thenReturn(const []);
+      when(() => videoEventService.homeFeedVideos).thenReturn(const []);
+      when(() => videoEventService.profileVideos).thenReturn(const []);
+      when(() => videoEventService.shouldHideVideo(any())).thenReturn(false);
+      when(
+        () => nostrClient.subscribe(any(), closeOnEose: true),
+      ).thenAnswer((_) => Stream.fromIterable([asked, notAsked]));
+
+      final container = ProviderContainer(
+        overrides: [
+          videoEventServiceProvider.overrideWithValue(videoEventService),
+          nostrServiceProvider.overrideWithValue(nostrClient),
+        ],
+      );
+      addTearDown(container.dispose);
+      final provider = videoEventsByIdsProvider([
+        '34236:$_ownerA:clip-1',
+        '34236:$_ownerB:clip-2',
+      ]);
+      final states = <AsyncValue<List<VideoEvent>>>[];
+      final subscription = container.listen(
+        provider,
+        (_, next) => states.add(next),
+      );
+      addTearDown(subscription.close);
+
+      await container.read(provider.future);
+      await pumpEventQueue();
+
+      expect(states.last.value?.map((video) => video.id), [asked.id]);
+    });
+
     test('keeps cached videos when every relay refuses the read', () async {
       final cachedVideo = _video(id: _allowedVideoId, pubkey: _ownerA);
       final videoEventService = _MockVideoEventService();

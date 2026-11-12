@@ -175,9 +175,6 @@ void main() {
       );
 
       test('fetches missing videos from relays', () async {
-        const missingVideoId =
-            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
-
         // Video not in cache
         when(() => mockVideoEventService.getVideoById(any())).thenReturn(null);
 
@@ -209,7 +206,9 @@ void main() {
           return controller.stream;
         });
 
-        await cache.syncList('list1', [missingVideoId]);
+        // The list names the event the relay answers with: a relay answers
+        // an ids filter with that event, and anything else is dropped.
+        await cache.syncList('list1', [mockEvent.id]);
 
         // Verify subscribe was called
         verify(
