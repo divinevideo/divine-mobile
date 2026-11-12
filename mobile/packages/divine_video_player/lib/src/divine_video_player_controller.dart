@@ -548,6 +548,9 @@ class DivineVideoPlayerController {
   }
 
   /// Starts or resumes playback.
+  ///
+  /// Does nothing if the controller is disposed while the other players are
+  /// being paused.
   Future<void> play() async {
     _ensureInitialized();
     Log.debug(
@@ -555,7 +558,11 @@ class DivineVideoPlayerController {
       name: _logName,
       category: LogCategory.video,
     );
-    if (exclusivePlayback) await _pauseOtherLiveControllers();
+    if (exclusivePlayback) {
+      await _pauseOtherLiveControllers();
+      // Disposed during that await; don't start a player being torn down.
+      if (_disposed) return;
+    }
     if (_isWebBackend) return _webBackend!.play();
     if (_isLinuxBackend) return _linuxBackend!.play();
     await _methodChannel.invokeMethod<void>('play');
