@@ -1613,6 +1613,78 @@ void main() {
         },
       );
 
+      group('when a bookmark saved by event id resolves to its address', () {
+        // The first sync timed out, so the grid fetched the revision the
+        // event id names; a later sync matched that id to the address.
+        ProfileSavedVideosState showingOriginalRevisionByEventId() =>
+            ProfileSavedVideosState(
+              status: ProfileSavedVideosStatus.success,
+              videos: [
+                createTestVideo(originalRevisionId, addressableDTag: 'clip'),
+              ],
+              savedEventIds: [originalRevisionId],
+              nextPageOffset: 1,
+              hasMoreContent: false,
+            );
+
+        blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+          'shows the latest revision at that address',
+          setUp: stubLatestRevisionAtClipAddress,
+          build: createBloc,
+          seed: showingOriginalRevisionByEventId,
+          act: (_) => bookmarkChanges.add([coordinateFor('clip')]),
+          wait: const Duration(milliseconds: 50),
+          expect: () => [
+            isA<ProfileSavedVideosState>()
+                .having((s) => s.videos.map((v) => v.id), 'videos', [
+                  editedRevisionId,
+                ])
+                .having((s) => s.savedEventIds, 'savedEventIds', [
+                  coordinateFor('clip'),
+                ]),
+          ],
+          verify: (_) {
+            verify(
+              () => mockVideosRepository.getVideosByAddressableIds([
+                coordinateFor('clip'),
+              ], cacheResults: true),
+            ).called(1);
+          },
+        );
+
+        blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+          'keeps the tile when the address comes back empty',
+          setUp: () {
+            when(
+              () => mockVideosRepository.getVideosByAddressableIds(
+                any(),
+                cacheResults: any(named: 'cacheResults'),
+              ),
+            ).thenAnswer((_) async => []);
+          },
+          build: createBloc,
+          seed: showingOriginalRevisionByEventId,
+          act: (_) => bookmarkChanges.add([coordinateFor('clip')]),
+          wait: const Duration(milliseconds: 50),
+          expect: () => [
+            isA<ProfileSavedVideosState>()
+                .having((s) => s.videos.map((v) => v.id), 'videos', [
+                  originalRevisionId,
+                ])
+                .having((s) => s.savedEventIds, 'savedEventIds', [
+                  coordinateFor('clip'),
+                ]),
+          ],
+          verify: (_) {
+            verify(
+              () => mockVideosRepository.getVideosByAddressableIds([
+                coordinateFor('clip'),
+              ], cacheResults: true),
+            ).called(1);
+          },
+        );
+      });
+
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
         'a save does not refetch a video already showing under its address',
         setUp: stubLatestRevisionAtClipAddress,

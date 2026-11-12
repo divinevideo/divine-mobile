@@ -440,12 +440,17 @@ class ProfileSavedVideosBloc
           for (final reference in _referencesTo(video)) reference: video,
     };
     final windowIds = _reconcileWindow(freshIds);
+    // An address new to the list may name a tile fetched under its event id
+    // (a bookmark the repository has just matched to its address), which can
+    // be a revision from before an edit.
+    final previousIds = state.savedEventIds.toSet();
 
     final idsToFetch = windowIds
         .where(
           (id) =>
               !byReference.containsKey(id) ||
-              (refreshAddresses && _isAddress(id)),
+              (_isAddress(id) &&
+                  (refreshAddresses || !previousIds.contains(id))),
         )
         .toList();
     // Counts this window's fetch only. A video carried over in [byReference]
