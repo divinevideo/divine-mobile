@@ -8060,27 +8060,46 @@ void main() {
         expect(counts.downvotes[editedId], equals(1));
       });
 
-      test('getUserVoteStatuses does not read an own emoji reaction as an '
-          'upvote', () async {
+      test('getUserVoteStatuses skips an own emoji reaction and keeps own '
+          'votes', () async {
+        // The empty-content like on a second target is the positive
+        // control: a skip that dropped upvotes too would still leave the
+        // emoji target out of upvotedIds.
+        const otherId = 'other_reply_id_1234567890abcdef';
         mockQueryEventsSequence([
           [
             createMockReaction(
-              id: 'own_emoji',
+              id: 'own_downvote',
+              targetEventId: editedId,
+              authorPubkey: testUserPubkey,
+              content: '-',
+            ),
+            createMockReaction(
+              id: 'own_newer_emoji',
               targetEventId: editedId,
               authorPubkey: testUserPubkey,
               content: '🔥',
+              createdAt: defaultTimestamp + 1,
+            ),
+            createMockReaction(
+              id: 'own_empty_upvote',
+              targetEventId: otherId,
+              authorPubkey: testUserPubkey,
+              content: '',
             ),
           ],
-          <Event>[],
           <Event>[],
         ]);
 
         repository = createRepository(withLocalStorage: false);
 
-        final statuses = await repository.getUserVoteStatuses([editedId]);
+        final statuses = await repository.getUserVoteStatuses([
+          editedId,
+          otherId,
+        ]);
 
-        expect(statuses.upvotedIds, isEmpty);
-        expect(statuses.downvotedIds, isEmpty);
+        expect(statuses.upvotedIds, equals({otherId}));
+        expect(statuses.downvotedIds, equals({editedId}));
       });
 
       test('deleting an older revision keeps the newer coordinate downvote '
