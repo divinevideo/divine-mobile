@@ -1973,7 +1973,7 @@ class LikesRepository {
   /// [getVoteCounts] needs it: without the coordinate the voter's own arrow
   /// silently un-fills after the target is edited (#6124).
   ///
-  /// Returns maps of event IDs the user has upvoted or downvoted.
+  /// Returns the sets of event IDs the user has upvoted or downvoted.
   Future<({Set<String> upvotedIds, Set<String> downvotedIds})>
   getUserVoteStatuses(
     List<String> eventIds, {
