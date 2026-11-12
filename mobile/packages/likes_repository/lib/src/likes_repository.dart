@@ -1927,7 +1927,11 @@ class LikesRepository {
     // since deleted — switching an upvote to a downvote on an edited reply
     // publishes exactly that pair. Counting both inflates the visible totals
     // and incorrectly gives the reply a net score of zero (#6124).
-    final reactionsById = {for (final event in events) event.id: event};
+    // Emoji reactions are dropped before the deletion lookup, since a
+    // retracted emoji can't change a vote.
+    final reactionsById = {
+      for (final event in events.where(_isVoteReaction)) event.id: event,
+    };
     final deletedReactionIds = await _deletedReactionIds(reactionsById);
 
     // One vote per account per target, decided by the account's newest
@@ -1938,7 +1942,6 @@ class LikesRepository {
     final newestVoteByVoter = <(String, String), Event>{};
     for (final event in reactionsById.values) {
       if (deletedReactionIds.contains(event.id)) continue;
-      if (!_isVoteReaction(event)) continue;
       final targetId = _resolveVoteTarget(
         event,
         knownEventIds,
