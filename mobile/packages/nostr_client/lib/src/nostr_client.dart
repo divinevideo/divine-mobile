@@ -297,14 +297,71 @@ class NostrClient {
 
   /// Helper to cache an event with default expiry.
   ///
-  /// Fire-and-forget pattern - errors are silently ignored since caching
-  /// failures should not affect the send operation's success.
+  /// Caching failures do not affect the send operation's success.
   void _cacheEvent(Event event) {
+    _writeCacheInBackground(
+      'cache sent event',
+      () => _nostrEventsDao?.upsertEvent(event),
+    );
+  }
+
+  /// Whether the last background cache write failed. A full disk fails every
+  /// write, so a run of failures logs one warning instead of one per event.
+  bool _cacheWritesFailing = false;
+
+  /// Runs a best-effort write to the local event cache without awaiting it.
+  ///
+  /// A failed write is logged and dropped, unless it failed with a programming
+  /// error, which is logged and still reported. The cache only saves a later
+  /// network read, and its failures are not ones this client can fix: a full
+  /// disk, or iOS data protection closing the database file while the device
+  /// is locked. A `try` around `unawaited(write)` does not catch them, because
+  /// the write fails after the `try` has returned, and the error then reached
+  /// the zone as an unhandled crash.
+  void _writeCacheInBackground(
+    String operation,
+    Future<Object?>? Function() write,
+  ) {
+    final Future<Object?>? pending;
     try {
-      unawaited(_nostrEventsDao?.upsertEvent(event));
-    } on Object {
-      // Ignore cache errors
+      pending = write();
+    } on Object catch (error) {
+      _logCacheWriteFailure(operation, error);
+      return;
     }
+    if (pending == null) return;
+    unawaited(
+      pending.then<void>(
+        (_) {
+          _cacheWritesFailing = false;
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          _logCacheWriteFailure(operation, error);
+          // A StateError, TypeError or RangeError is a defect, not a disk
+          // condition, and detached work must not silence it
+          // (.claude/rules/error_handling.md), so it still reaches the
+          // uncaught-error reporter as before.
+          if (error is StateError ||
+              error is TypeError ||
+              error is RangeError) {
+            Error.throwWithStackTrace(error, stackTrace);
+          }
+        },
+      ),
+    );
+  }
+
+  void _logCacheWriteFailure(String operation, Object error) {
+    if (_cacheWritesFailing) return;
+    _cacheWritesFailing = true;
+    // First line only: a SqliteException goes on to quote the whole statement
+    // with every bound parameter, which is the event itself.
+    final summary = '$error'.split('\n').first;
+    Log.warning(
+      'Local event cache write failed ($operation): $summary',
+      name: 'NostrClient',
+      category: LogCategory.relay,
+    );
   }
 
   /// Checks if an event kind supports safe optimistic caching.
@@ -325,14 +382,12 @@ class NostrClient {
 
   /// Removes an optimistically cached event on send failure.
   ///
-  /// Fire-and-forget pattern - errors are silently ignored since rollback
-  /// failures should not affect the operation's result.
+  /// Rollback failures do not affect the operation's result.
   void _rollbackCachedEvent(String eventId) {
-    try {
-      unawaited(_nostrEventsDao?.deleteEventsByIds([eventId]));
-    } on Object {
-      // Ignore rollback errors
-    }
+    _writeCacheInBackground(
+      'roll back unsent event',
+      () => _nostrEventsDao?.deleteEventsByIds([eventId]),
+    );
   }
 
   /// Handles a NIP-09 deletion event (Kind 5) by removing target events
@@ -1416,11 +1471,10 @@ class NostrClient {
 
     // Cache websocket results (fire-and-forget)
     if (websocketEvents.isNotEmpty) {
-      try {
-        unawaited(_nostrEventsDao?.upsertEventsBatch(websocketEvents));
-      } on Object {
-        // Ignore cache errors
-      }
+      _writeCacheInBackground(
+        'cache query results',
+        () => _nostrEventsDao?.upsertEventsBatch(websocketEvents),
+      );
     }
 
     // Merge cache + websocket and return (respecting original limit)
@@ -1821,11 +1875,10 @@ class NostrClient {
     );
     if (events.isNotEmpty) {
       // Cache websocket result (fire-and-forget)
-      try {
-        unawaited(_nostrEventsDao?.upsertEvent(events.first));
-      } on Object {
-        // Ignore cache errors
-      }
+      _writeCacheInBackground(
+        'cache fetched event',
+        () => _nostrEventsDao?.upsertEvent(events.first),
+      );
 
       return events.first;
     }
@@ -1860,11 +1913,10 @@ class NostrClient {
     );
     if (events.isNotEmpty) {
       // Cache websocket result (fire-and-forget)
-      try {
-        unawaited(_nostrEventsDao?.upsertEvent(events.first));
-      } on Object {
-        // Ignore cache errors
-      }
+      _writeCacheInBackground(
+        'cache fetched profile',
+        () => _nostrEventsDao?.upsertEvent(events.first),
+      );
       return events.first;
     }
     return null;
@@ -1962,11 +2014,10 @@ class NostrClient {
           }
         } else if (!_shouldSkipAutoCache(event)) {
           // Auto-cache non-deletion events (fire-and-forget)
-          try {
-            unawaited(_nostrEventsDao?.upsertEvent(event));
-          } on Object {
-            // Ignore sync cache errors
-          }
+          _writeCacheInBackground(
+            'cache subscription event',
+            () => _nostrEventsDao?.upsertEvent(event),
+          );
         }
 
         if (!controller.isClosed) {

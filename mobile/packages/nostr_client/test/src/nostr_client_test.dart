@@ -11,6 +11,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/utils/hash_util.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockNostr extends Mock implements Nostr {
   /// What is left of [deadline], never negative — the budget a real read
@@ -992,6 +993,181 @@ void main() {
           verify(() => mockNostrEventsDao.upsertEvent(deleteEvent)).called(1);
         });
       });
+    });
+
+    group('local cache write failures', () {
+      late _MockAppDbClient mockDbClient;
+      late _MockAppDatabase mockDatabase;
+      late _MockNostrEventsDao mockNostrEventsDao;
+      late NostrClient clientWithCache;
+
+      // What SQLite reports on a full disk; the write fails after the call
+      // that started it has returned.
+      final diskFull = Exception('database or disk is full');
+
+      List<LogEntry> cacheWriteWarnings() => LogCaptureService()
+          .getRecentLogs()
+          .where(
+            (entry) => entry.message.contains('Local event cache write failed'),
+          )
+          .toList();
+
+      setUp(() async {
+        await LogCaptureService().clearAllLogs();
+        mockDbClient = _MockAppDbClient();
+        mockDatabase = _MockAppDatabase();
+        mockNostrEventsDao = _MockNostrEventsDao();
+        when(() => mockDbClient.database).thenReturn(mockDatabase);
+        when(() => mockDatabase.nostrEventsDao).thenReturn(mockNostrEventsDao);
+        clientWithCache = NostrClient.forTesting(
+          nostr: mockNostr,
+          relayManager: mockRelayManager,
+          dbClient: mockDbClient,
+        );
+      });
+
+      test('a sent event whose cache write fails still publishes', () async {
+        final event = _createTestEvent(kind: EventKind.textNote);
+        when(
+          () => mockNostr.sendEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => event);
+        when(
+          () => mockNostrEventsDao.upsertEvent(any()),
+        ).thenAnswer((_) => Future<void>.error(diskFull));
+
+        final result = await clientWithCache.publishEvent(event);
+        // Let the failed write settle: unhandled, it would fail this test.
+        await pumpEventQueue();
+
+        expect(result, isA<PublishSuccess>());
+        verify(() => mockNostrEventsDao.upsertEvent(event)).called(1);
+        expect(cacheWriteWarnings(), hasLength(1));
+      });
+
+      test(
+        'query results whose cache write fails are still returned, '
+        'and repeated failures log once',
+        () async {
+          final events = [
+            _createTestEvent(id: 'one', kind: 1059),
+            _createTestEvent(id: 'two', kind: 1059),
+          ];
+          when(
+            () => mockNostr.queryEvents(
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) async => events);
+          when(
+            () => mockNostrEventsDao.upsertEventsBatch(any()),
+          ).thenAnswer((_) => Future<void>.error(diskFull));
+
+          for (var i = 0; i < 2; i++) {
+            final result = await clientWithCache.queryEvents(
+              [
+                Filter(kinds: const [1059]),
+              ],
+              useCache: false,
+            );
+            await pumpEventQueue();
+            expect(result.map((e) => e.id), equals(['one', 'two']));
+          }
+
+          verify(
+            () => mockNostrEventsDao.upsertEventsBatch(any()),
+          ).called(2);
+          expect(cacheWriteWarnings(), hasLength(1));
+        },
+      );
+
+      test('a failure after a successful write logs again', () async {
+        final event = _createTestEvent(kind: EventKind.textNote);
+        when(
+          () => mockNostr.sendEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => event);
+        // Built per call: a failed future made up front is already unhandled.
+        final outcomes = <Future<void> Function()>[
+          () => Future<void>.error(diskFull),
+          Future<void>.value,
+          () => Future<void>.error(diskFull),
+        ];
+        var call = 0;
+        when(
+          () => mockNostrEventsDao.upsertEvent(any()),
+        ).thenAnswer((_) => outcomes[call++]());
+
+        for (var i = 0; i < outcomes.length; i++) {
+          await clientWithCache.publishEvent(event);
+          await pumpEventQueue();
+        }
+
+        // Once the cache recovers, the next run of failures is a new incident.
+        expect(cacheWriteWarnings(), hasLength(2));
+      });
+
+      test(
+        'a cache write that throws before returning still publishes',
+        () async {
+          final event = _createTestEvent(kind: EventKind.textNote);
+          when(
+            () => mockNostr.sendEvent(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+            ),
+          ).thenAnswer((_) async => event);
+          when(() => mockNostrEventsDao.upsertEvent(any())).thenThrow(diskFull);
+
+          final result = await clientWithCache.publishEvent(event);
+
+          expect(result, isA<PublishSuccess>());
+          expect(cacheWriteWarnings(), hasLength(1));
+        },
+      );
+
+      test(
+        'a cache write that fails with a programming error is still reported',
+        () async {
+          // StateError, TypeError and RangeError are defects, not disk
+          // conditions: error_handling.md keeps them reportable even when the
+          // work is detached, so they must still reach the uncaught handler.
+          final event = _createTestEvent(kind: EventKind.textNote);
+          when(
+            () => mockNostr.sendEvent(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+            ),
+          ).thenAnswer((_) async => event);
+          final defect = StateError('cache invariant broken');
+          when(
+            () => mockNostrEventsDao.upsertEvent(any()),
+          ).thenAnswer((_) => Future<void>.error(defect));
+
+          final uncaught = <Object>[];
+          PublishResult? result;
+          await runZonedGuarded(() async {
+            result = await clientWithCache.publishEvent(event);
+            await pumpEventQueue();
+          }, (error, _) => uncaught.add(error));
+
+          expect(result, isA<PublishSuccess>());
+          expect(uncaught, equals([defect]));
+          expect(cacheWriteWarnings(), hasLength(1));
+        },
+      );
     });
 
     group('publishEventAwaitOk', () {
