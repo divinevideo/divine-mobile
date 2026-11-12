@@ -1248,6 +1248,43 @@ void main() {
             );
           },
         );
+
+        test(
+          'removes every private item naming the video from the encrypted '
+          'array, and keeps the others',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEventWithTags(
+                  [],
+                  content: await encryptToSelf([
+                    ['e', originalId],
+                    ['e', unrelatedId],
+                    ['a', coordinate],
+                  ]),
+                ),
+              ],
+            );
+            final service = createService(
+              resolveVideoAddresses: (ids) async => {originalId: coordinate},
+            );
+
+            final result = await service.toggleVideoInGlobalBookmarks(
+              editedId,
+              addressableId: coordinate,
+            );
+
+            expect(result.wasBookmarked, isTrue);
+            expect(result.isBookmarked, isFalse);
+            expect(itemTags(), isEmpty);
+            expect(
+              await decryptToSelf(signedContent!),
+              equals([
+                ['e', unrelatedId],
+              ]),
+            );
+          },
+        );
       });
 
       group('isVideoBookmarkedGlobally', () {
