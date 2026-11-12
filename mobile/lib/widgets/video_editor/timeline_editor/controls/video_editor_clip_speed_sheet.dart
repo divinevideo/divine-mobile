@@ -137,6 +137,7 @@ class _VideoEditorClipSpeedSheetState extends State<VideoEditorClipSpeedSheet> {
                 icon: DivineIconName.x,
                 type: DivineIconButtonType.secondary,
                 size: DivineIconButtonSize.small,
+                semanticLabel: context.l10n.commonCancel,
                 onPressed: () => context.pop<ClipSpeedChoice>(),
               ),
               Flexible(
@@ -150,6 +151,7 @@ class _VideoEditorClipSpeedSheetState extends State<VideoEditorClipSpeedSheet> {
               DivineIconButton(
                 icon: DivineIconName.check,
                 size: DivineIconButtonSize.small,
+                semanticLabel: context.l10n.videoEditorDoneLabel,
                 onPressed: () => context.pop<ClipSpeedChoice>(_choice),
               ),
             ],

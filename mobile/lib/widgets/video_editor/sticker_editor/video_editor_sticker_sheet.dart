@@ -284,6 +284,8 @@ class _SearchBarState extends State<_SearchBar> {
                   builder: (context, hasSearchQuery) {
                     return hasSearchQuery
                         ? IconButton(
+                            tooltip:
+                                context.l10n.userPickerClearSearchSemantics,
                             icon: DivineIcon(
                               icon: .x,
                               color: context.vineColors.onSurfaceMuted,
