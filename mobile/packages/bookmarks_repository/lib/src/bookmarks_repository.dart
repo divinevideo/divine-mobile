@@ -178,6 +178,9 @@ class BookmarksRepository {
 
   /// The coordinate of each `e` item's video, as [_resolveVideoAddresses]
   /// reported it. Lives as long as the instance: a version keeps its address.
+  /// The public items' entries are also kept on the device, under
+  /// [globalBookmarksVideoAddressesStorageKey], so the next instance starts
+  /// with them.
   final Map<String, String> _videoAddressByEventId = {};
 
   /// How long an event id a completed lookup found nothing for waits before
@@ -219,6 +222,15 @@ class BookmarksRepository {
   /// `UserDataCleanupService.userSpecificKeys`.
   static const String globalBookmarksRevisionStorageKey =
       'global_bookmarks_revision';
+
+  /// Storage key for the coordinates of the public `e` items' videos.
+  ///
+  /// An event id's coordinate never changes, and a lookup a slow relay leaves
+  /// unanswered finds nothing, so a launch that had to ask again would name an
+  /// edited video by its old event id. Cleared with the snapshot on identity
+  /// change — see `UserDataCleanupService.userSpecificKeys`.
+  static const String globalBookmarksVideoAddressesStorageKey =
+      'global_bookmarks_video_addresses';
 
   /// NIP-51 kind for the uncategorized ("global") bookmark list.
   static const int globalBookmarksKind = 10003;
@@ -482,8 +494,9 @@ class BookmarksRepository {
   /// `kind:pubkey:d-tag` coordinate when it has one, or its event id.
   ///
   /// An `e` item counts under its video's coordinate once a sync has resolved
-  /// it, so an item saved before an edit and one saved after it are one video,
-  /// placed where the later item is. `a` items for anything but a NIP-71
+  /// it — for a public item, a sync on an earlier instance counts too — so an
+  /// item saved before an edit and one saved after it are one video, placed
+  /// where the later item is. `a` items for anything but a NIP-71
   /// addressable video, and `t` and `r` items, are not videos.
   List<String> get bookmarkedVideoReferences {
     final references = <String>{};
@@ -687,6 +700,7 @@ class BookmarksRepository {
             ..addAll(_itemsFromTags(private.tags));
           _privateItemsState = private.state;
           await _resolveEventItemAddresses();
+          await _saveVideoAddresses();
           _emitGlobalBookmarks();
           Log.info(
             'Ignoring kind 10003 ${newest.id} - older than the revision this '
@@ -1493,6 +1507,27 @@ class BookmarksRepository {
         );
       }
     }
+
+    _loadVideoAddresses();
+  }
+
+  void _loadVideoAddresses() {
+    final json = _prefs.getString(globalBookmarksVideoAddressesStorageKey);
+    if (json == null) return;
+    try {
+      final stored = jsonDecode(json) as Map<String, dynamic>;
+      _videoAddressByEventId.addAll({
+        for (final MapEntry(:key, :value) in stored.entries)
+          key: value as String,
+      });
+    } on Object catch (e) {
+      // Losing them only means asking the relay again on the next sync.
+      Log.error(
+        'Failed to load bookmarked video coordinates: $e',
+        name: 'BookmarksRepository',
+        category: LogCategory.system,
+      );
+    }
   }
 
   /// Save bookmarks to SharedPreferences cache.
@@ -1534,6 +1569,41 @@ class BookmarksRepository {
     } on Object catch (e) {
       Log.error(
         'Failed to save bookmarks to SharedPreferences: $e',
+        name: 'BookmarksRepository',
+        category: LogCategory.system,
+      );
+    }
+    await _saveVideoAddresses();
+  }
+
+  /// Saves the coordinates of the public `e` items only. Storing a private
+  /// item's coordinate would put the fact that it is bookmarked into
+  /// unencrypted storage, which is why [_privateBookmarks] is never persisted
+  /// either.
+  ///
+  /// Skipped once [dispose] has run, as the snapshot is.
+  Future<void> _saveVideoAddresses() async {
+    if (_disposed) return;
+    final eventIds = {
+      for (final item in _globalBookmarks)
+        if (item.type == 'e') item.id,
+    };
+    final addresses = {
+      for (final MapEntry(:key, :value) in _videoAddressByEventId.entries)
+        if (eventIds.contains(key)) key: value,
+    };
+    try {
+      if (addresses.isEmpty) {
+        await _prefs.remove(globalBookmarksVideoAddressesStorageKey);
+        return;
+      }
+      await _prefs.setString(
+        globalBookmarksVideoAddressesStorageKey,
+        jsonEncode(addresses),
+      );
+    } on Object catch (e) {
+      Log.error(
+        'Failed to save bookmarked video coordinates: $e',
         name: 'BookmarksRepository',
         category: LogCategory.system,
       );

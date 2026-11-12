@@ -1562,6 +1562,70 @@ void main() {
               ),
               isNull,
             );
+            expect(
+              prefs.getString(
+                BookmarksRepository.globalBookmarksVideoAddressesStorageKey,
+              ),
+              isNull,
+            );
+          },
+        );
+
+        test(
+          'saves no video coordinates when disposed while the revision is '
+          'being written',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent([originalId]),
+              ],
+            );
+            final suspendedPrefs = _MockPrefs();
+            final revisionWrite = Completer<bool>();
+            when(() => suspendedPrefs.getString(any())).thenReturn(null);
+            when(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksStorageKey,
+                any(),
+              ),
+            ).thenAnswer((_) async => true);
+            when(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksRevisionStorageKey,
+                any(),
+              ),
+            ).thenAnswer((_) => revisionWrite.future);
+            when(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksVideoAddressesStorageKey,
+                any(),
+              ),
+            ).thenAnswer((_) async => true);
+            final service = BookmarksRepository(
+              nostrClient: nostrClient,
+              signer: signer,
+              prefs: suspendedPrefs,
+              resolveVideoAddresses: (ids) async => {originalId: coordinate},
+            );
+
+            final sync = service.syncGlobalBookmarks();
+            await pumpEventQueue();
+            service.dispose();
+            revisionWrite.complete(true);
+            await sync;
+
+            verify(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksRevisionStorageKey,
+                any(),
+              ),
+            ).called(1);
+            verifyNever(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksVideoAddressesStorageKey,
+                any(),
+              ),
+            );
           },
         );
 
@@ -1684,6 +1748,214 @@ void main() {
           expect(announced.first, equals([coordinate]));
           expect(announced.last, equals([coordinate, otherCoordinate]));
         });
+      });
+
+      // A lookup a slow relay leaves unanswered finds nothing, so a launch
+      // that had to ask again would name an edited video by its old event id.
+      group('coordinates kept on the device', () {
+        Map<String, dynamic>? storedVideoAddresses() {
+          final json = prefs.getString(
+            BookmarksRepository.globalBookmarksVideoAddressesStorageKey,
+          );
+          return json == null ? null : jsonDecode(json) as Map<String, dynamic>;
+        }
+
+        test(
+          'keeps only the coordinates of event ids still on the public list',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent([originalId, unrelatedId], createdAt: 100),
+              ],
+            );
+            final service = createService(
+              resolveVideoAddresses: (ids) async => {
+                originalId: coordinate,
+                unrelatedId: otherCoordinate,
+              },
+            );
+            await service.syncGlobalBookmarks();
+            expect(
+              storedVideoAddresses(),
+              equals({originalId: coordinate, unrelatedId: otherCoordinate}),
+            );
+
+            stubRelay(
+              events: [
+                bookmarkListEvent([unrelatedId], createdAt: 200),
+              ],
+            );
+            await service.syncGlobalBookmarks();
+
+            expect(
+              storedVideoAddresses(),
+              equals({unrelatedId: otherCoordinate}),
+            );
+          },
+        );
+
+        test(
+          'stores nothing once no public event-id item needs a coordinate',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent([originalId], createdAt: 100),
+              ],
+            );
+            final service = createService(
+              resolveVideoAddresses: (ids) async => {originalId: coordinate},
+            );
+            await service.syncGlobalBookmarks();
+            expect(storedVideoAddresses(), equals({originalId: coordinate}));
+
+            stubRelay(
+              events: [
+                bookmarkListEventWithTags([
+                  ['a', coordinate],
+                ], createdAt: 200),
+              ],
+            );
+            await service.syncGlobalBookmarks();
+
+            expect(
+              prefs.containsKey(
+                BookmarksRepository.globalBookmarksVideoAddressesStorageKey,
+              ),
+              isFalse,
+            );
+          },
+        );
+
+        test('never stores the coordinate of a private item', () async {
+          stubRelay(
+            events: [
+              bookmarkListEventWithTags(
+                [
+                  ['e', unrelatedId],
+                ],
+                content: await encryptToSelf([
+                  ['e', originalId],
+                ]),
+              ),
+            ],
+          );
+          final service = createService(
+            resolveVideoAddresses: (ids) async => {
+              originalId: coordinate,
+              unrelatedId: otherCoordinate,
+            },
+          );
+
+          await service.syncGlobalBookmarks();
+
+          expect(
+            service.isVideoBookmarkedGlobally(
+              editedId,
+              addressableId: coordinate,
+            ),
+            isTrue,
+          );
+          expect(
+            storedVideoAddresses(),
+            equals({unrelatedId: otherCoordinate}),
+            reason:
+                'SharedPreferences is unencrypted, so storing a private '
+                "item's coordinate would disclose that it is bookmarked",
+          );
+        });
+
+        for (final (shape, stored) in [
+          ('not JSON', 'not json at all'),
+          ('not a map', jsonEncode([originalId])),
+          ('a map with a non-string coordinate', jsonEncode({originalId: 7})),
+        ]) {
+          test('ignores a stored value that is $shape', () async {
+            SharedPreferences.setMockInitialValues({
+              BookmarksRepository.globalBookmarksStorageKey: jsonEncode([
+                {'type': 'e', 'id': originalId},
+              ]),
+              BookmarksRepository.globalBookmarksVideoAddressesStorageKey:
+                  stored,
+            });
+            prefs = await SharedPreferences.getInstance();
+
+            final service = createService();
+
+            expect(service.bookmarkedVideoReferences, equals([originalId]));
+          });
+        }
+
+        test(
+          'a new instance names an older event-id item by the coordinate an '
+          'earlier sync found, when its own lookup finds nothing',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent([originalId]),
+              ],
+            );
+            await createService(
+              resolveVideoAddresses: (ids) async => {originalId: coordinate},
+            ).syncGlobalBookmarks();
+
+            final asked = <List<String>>[];
+            final relaunched = createService(
+              resolveVideoAddresses: (ids) async {
+                asked.add(ids);
+                return {};
+              },
+            );
+
+            expect(relaunched.bookmarkedVideoReferences, equals([coordinate]));
+            await relaunched.syncGlobalBookmarks();
+            expect(relaunched.bookmarkedVideoReferences, equals([coordinate]));
+            expect(
+              relaunched.isVideoBookmarkedGlobally(
+                editedId,
+                addressableId: coordinate,
+              ),
+              isTrue,
+            );
+            expect(asked, isEmpty);
+          },
+        );
+
+        test(
+          'keeps a coordinate found while the relay still answers with the '
+          'revision this device replaced',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent(
+                  [originalId],
+                  createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60,
+                ),
+              ],
+            );
+            var lookups = 0;
+            final service = createService(
+              resolveVideoAddresses: (ids) async {
+                if (++lookups == 1) throw StateError('relay gone');
+                return {originalId: coordinate};
+              },
+            );
+            final save = await service.toggleVideoInGlobalBookmarks(
+              unrelatedId,
+            );
+            expect(save.succeeded, isTrue);
+
+            await service.syncGlobalBookmarks();
+            expect(lookups, equals(2));
+
+            final relaunched = createService(
+              resolveVideoAddresses: (ids) async => {},
+            );
+            expect(
+              relaunched.bookmarkedVideoReferences,
+              equals([coordinate, unrelatedId]),
+            );
+          },
+        );
       });
     });
 

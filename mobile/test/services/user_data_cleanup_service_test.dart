@@ -469,11 +469,13 @@ void main() {
       test('clears bookmark-related keys', () async {
         await prefs.setString('global_bookmarks', 'bookmark_data');
         await prefs.setInt('global_bookmarks_revision', 3);
+        await prefs.setString('global_bookmarks_video_addresses', '{}');
 
         await service.clearUserSpecificData();
 
         expect(prefs.containsKey('global_bookmarks'), isFalse);
         expect(prefs.containsKey('global_bookmarks_revision'), isFalse);
+        expect(prefs.containsKey('global_bookmarks_video_addresses'), isFalse);
       });
 
       // Each entry is a key a live service writes that the account-switch
