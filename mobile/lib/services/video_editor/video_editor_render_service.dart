@@ -1427,8 +1427,14 @@ class VideoEditorRenderService {
     }
   }
 
-  /// Cancels any existing native render with [task]'s id, tracks this render
-  /// instance, then renders to [outputPath].
+  /// Cancels any existing native render with [task]'s id and waits until it
+  /// has let go of the id, tracks this render instance, then renders to
+  /// [outputPath].
+  ///
+  /// Renders sharing an id, such as two exports of the same draft, therefore
+  /// reach the plugin one at a time: the newest one renders and an older one
+  /// still waiting for the id throws [RenderCanceledException], see
+  /// [NativeRenderTaskRegistry.trackExclusively].
   ///
   /// All app-owned `pro_video_editor` render entry points should use this
   /// helper so teardown cancellation has a complete view of native work.
@@ -1439,15 +1445,14 @@ class VideoEditorRenderService {
     // #4801 diagnostics while clean renders stay quiet.
     NativeLogLevel? nativeLogLevel = NativeLogLevel.warning,
     bool reuseActiveCancellation = false,
-  }) async {
+  }) {
     final renderGeneration = reuseActiveCancellation
         ? RenderCancellationRegistry.startIfIdle(task.id)
         : (token: RenderCancellationRegistry.start(task.id), started: true);
-    if (NativeRenderTaskRegistry.activeTaskIds.contains(task.id)) {
-      await _cancelNativeTaskOnly(task.id);
-    }
-    return NativeRenderTaskRegistry.track(task.id, () {
-      return Future.sync(() {
+    final render = NativeRenderTaskRegistry.trackExclusively(
+      task.id,
+      cancel: _cancelNativeTaskOnly,
+      () => Future.sync(() {
         RenderCancellationRegistry.throwIfRequested(task.id);
         return InterruptedRenderMonitor.track(
           taskId: task.id,
@@ -1459,12 +1464,14 @@ class VideoEditorRenderService {
             nativeLogLevel: nativeLogLevel,
           ),
         );
-      }).whenComplete(() {
-        if (renderGeneration.started) {
-          RenderCancellationRegistry.finish(task.id, renderGeneration.token);
-        }
-      });
-    });
+      }),
+    );
+    // Outside the tracked operation, which a render overtaken while it waits
+    // for the id never runs: its generation has to end all the same.
+    if (!renderGeneration.started) return render;
+    return render.whenComplete(
+      () => RenderCancellationRegistry.finish(task.id, renderGeneration.token),
+    );
   }
 
   /// Cancels native `pro_video_editor` render tasks started by this app.
