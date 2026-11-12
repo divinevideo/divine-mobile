@@ -69,9 +69,14 @@ class SelectListCubit extends Cubit<SelectListState>
   final CuratedListVideo _video;
 
   /// The lookup of older versions started with the sheet; already complete
-  /// when none runs. A save waits for it before removing, so it removes an
-  /// older version the lookup is still placing.
+  /// when none runs. A save waits for it before writing, so it neither adds
+  /// the video to a list holding an older version nor leaves that version
+  /// behind when removing.
   late final Future<void> _olderVersionsLookup;
+
+  /// Whether [_olderVersionsLookup] has finished, so a save only waits on one
+  /// still running.
+  bool _olderVersionsSettled = true;
   final String? Function() _currentOwnerPubkey;
   final String? _openingOwnerPubkey;
 
@@ -193,25 +198,30 @@ class SelectListCubit extends Cubit<SelectListState>
       except: {_video.eventId},
     );
     if (eventIds.isEmpty) return;
-    final Map<String, String> addresses;
+    _olderVersionsSettled = false;
     try {
-      addresses = await resolve(eventIds);
-    } on Object catch (error) {
-      Log.warning(
-        'Could not look up the videos of ${eventIds.length} list items: '
-        '$error',
-        name: 'SelectListCubit',
-        category: LogCategory.ui,
+      final Map<String, String> addresses;
+      try {
+        addresses = await resolve(eventIds);
+      } on Object catch (error) {
+        Log.warning(
+          'Could not look up the videos of ${eventIds.length} list items: '
+          '$error',
+          name: 'SelectListCubit',
+          category: LogCategory.ui,
+        );
+        return;
+      }
+      if (isClosed) return;
+      emitIfOpen(
+        state.copyWith(
+          addressByEventId: {...state.addressByEventId, ...addresses},
+        ),
       );
-      return;
+      _listsChanged();
+    } finally {
+      _olderVersionsSettled = true;
     }
-    if (isClosed) return;
-    emitIfOpen(
-      state.copyWith(
-        addressByEventId: {...state.addressByEventId, ...addresses},
-      ),
-    );
-    _listsChanged();
   }
 
   /// Follows the provider's current service without carrying staged picks
@@ -338,7 +348,18 @@ class SelectListCubit extends Cubit<SelectListState>
     var failed = 0;
     var full = 0;
     try {
-      for (final listId in toAdd) {
+      // The lookup can show that a list already holds the video by an older
+      // version's event id, so the picks are read again once it answers: a
+      // quick save then neither adds the video to that list a second time nor
+      // leaves the older item behind when removing.
+      if (!_olderVersionsSettled) {
+        await _olderVersionsLookup;
+        if (!isSessionCurrent) return _sessionFailure();
+        if (_writeInterrupted(epoch)) return null;
+      }
+      final adds = state.listIdsToAdd;
+      final removes = state.listIdsToRemove;
+      for (final listId in adds) {
         if (_writeInterrupted(epoch)) return null;
         if (!_canMutate(listId)) return _sessionFailure();
         if (_permissionRecoveryBlocks({listId})) return _recoveryRequired();
@@ -361,12 +382,7 @@ class SelectListCubit extends Cubit<SelectListState>
           full++;
         }
       }
-      if (toRemove.isNotEmpty) {
-        await _olderVersionsLookup;
-        if (!isSessionCurrent) return _sessionFailure();
-        if (_writeInterrupted(epoch)) return null;
-      }
-      for (final listId in toRemove) {
+      for (final listId in removes) {
         if (_writeInterrupted(epoch)) return null;
         if (!_canMutate(listId)) return _sessionFailure();
         if (_permissionRecoveryBlocks({listId})) return _recoveryRequired();

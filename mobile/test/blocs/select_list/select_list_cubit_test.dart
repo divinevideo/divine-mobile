@@ -1475,6 +1475,28 @@ void main() {
         ).called(1);
       });
 
+      test('a save made before the lookup answers does not add the video '
+          'again to a list that holds an older version', () async {
+        stubLists([
+          _list('older', videoEventIds: [olderVideoId]),
+        ]);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
+        final lookup = Completer<Map<String, String>>();
+        final cubit = buildResolvingCubit((_) => lookup.future);
+        addTearDown(cubit.close);
+        expect(cubit.state.memberListIds, isEmpty);
+
+        cubit.toggled('older');
+        final save = cubit.submitted();
+        lookup.complete({olderVideoId: address});
+
+        expect(await save, SelectListStatus.saved);
+        verifyNever(() => service.addVideoToList(any(), any()));
+        expect(cubit.state.memberListIds, {'older'});
+      });
+
       test('asks nothing for a video without a coordinate', () async {
         stubLists([
           _list('older', videoEventIds: [olderVideoId]),
