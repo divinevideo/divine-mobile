@@ -4,6 +4,7 @@
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter/widgets.dart';
 import 'package:models/models.dart' show VideoEvent;
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 
@@ -24,7 +25,7 @@ Future<void> openVideoResponsesFeed(
   if (videos.isEmpty) return;
   final start = index.clamp(0, videos.length - 1);
   await context.pushWithVideoPause<void>(
-    PooledFullscreenVideoFeedScreen.pathForVideoId(videos[start].id),
+    PooledFullscreenVideoFeedRouteData(video: videos[start].id).location,
     extra: PooledFullscreenVideoFeedArgs(
       source: VideoListViewSource(videos),
       feedRepository: feedRepository,

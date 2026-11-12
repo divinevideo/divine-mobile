@@ -15,7 +15,7 @@ import 'package:openvine/models/video_metadata_update_error.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
-import 'package:openvine/screens/subtitle_editor/subtitle_editor_screen.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/services/video_metadata_update_service.dart';
 import 'package:openvine/utils/delete_result_localization.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -77,10 +77,10 @@ class _VideoMetadataEditBottomBarState
   bool get _isBusy => _isUpdating || _isDeleting;
 
   Future<void> _editSubtitles() async {
-    final updatedVideo = await context.push<VideoEvent>(
-      SubtitleEditorScreen.pathFor(widget.video.id),
-      extra: widget.video,
-    );
+    final updatedVideo = await SubtitleEditorRouteData(
+      videoId: widget.video.id,
+      $extra: widget.video,
+    ).push<VideoEvent>(context);
     if (!mounted || updatedVideo == null) return;
     widget.onVideoUpdated?.call(updatedVideo);
   }

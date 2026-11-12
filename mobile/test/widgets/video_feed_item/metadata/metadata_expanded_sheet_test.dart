@@ -22,6 +22,7 @@ import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
@@ -2094,6 +2095,10 @@ void main() {
     testWidgetsWithSurfaceSize(
       'the more-reposters button dismisses the sheet before navigating',
       (tester) async {
+        // Addressable, so the pushed location has to carry its coordinate.
+        final video = _makeVideo(addressableDTag: 'reposted-clip');
+        expect(video.addressableId, isNotNull);
+        String? pushedLocation;
         final pubkeys = List<String>.generate(
           12,
           (index) => (index + 1).toRadixString(16).padLeft(64, '0'),
@@ -2134,7 +2139,7 @@ void main() {
                             value: mockRepostersCubit,
                           ),
                         ],
-                        child: MetadataRepostedBySection(video: _makeVideo()),
+                        child: MetadataRepostedBySection(video: video),
                       ),
                     ),
                     child: const Text('open sheet'),
@@ -2142,11 +2147,14 @@ void main() {
                 ),
               ),
             ),
+            // The real pattern with no name: the chip must push the typed
+            // route's location, recorded whole.
             GoRoute(
-              path: '/video/:eventId/reposters',
-              name: VideoEngagementListScreen.repostersRouteName,
-              builder: (context, state) =>
-                  const Scaffold(body: Text('reposters list')),
+              path: VideoEngagementListScreen.repostersPath,
+              builder: (context, state) {
+                pushedLocation = state.uri.toString();
+                return const Scaffold(body: Text('reposters list'));
+              },
             ),
           ],
         );
@@ -2175,6 +2183,15 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('reposters list'), findsOneWidget);
+        expect(
+          pushedLocation,
+          equals(
+            VideoRepostersRouteData(
+              eventId: video.id,
+              a: video.addressableId,
+            ).location,
+          ),
+        );
 
         // Every other destination in this sheet hands off the same way:
         // dismiss, then push from the root navigator. Pushing with the sheet

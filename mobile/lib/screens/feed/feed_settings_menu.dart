@@ -7,14 +7,13 @@ import 'dart:async';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
-import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/utils/delete_result_localization.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/owner_video_cleanup_feedback.dart';
@@ -102,7 +101,10 @@ class _FeedSettingsMenuState extends ConsumerState<FeedSettingsMenu> {
     if (_ownerVideoActionsCubit.isDeleteInProgress(video.id)) return;
     _close();
     runDetached(
-      context.push(VideoMetadataEditScreen.pathFor(video.id), extra: video),
+      VideoMetadataEditRouteData(
+        videoId: video.id,
+        $extra: video,
+      ).push<void>(context),
       'open video metadata editor',
       logName: 'FeedSettingsMenu',
       category: LogCategory.ui,

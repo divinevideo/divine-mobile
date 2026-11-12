@@ -15,6 +15,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_view.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
@@ -383,6 +385,12 @@ void main() {
   });
 
   group('back navigation', () {
+    // The app's own likers route, so the screen is built from the location
+    // exactly as a link or a push reaches it.
+    GoRoute likersRoute() => videoRoutes().whereType<GoRoute>().singleWhere(
+      (route) => route.name == VideoEngagementListScreen.likersRouteName,
+    );
+
     testWidgets(
       'cold entry back lands on the video instead of emptying the stack',
       (tester) async {
@@ -390,23 +398,19 @@ void main() {
           () => likesRepository.fetchEventLikers(eventId: testEventId),
         ).thenAnswer((_) async => const LikersPage(pubkeys: [testPubkey1]));
 
-        // `/video/:eventId/likers` is registered flat and top-level, so a
-        // deep link into it leaves a one-entry stack: popping it removes the
-        // last page and leaves nothing on screen (#9359).
+        // The likers route is registered flat and top-level, so a deep link
+        // into it leaves a one-entry stack: popping it removes the last page
+        // and leaves nothing on screen (#9359).
         final router = GoRouter(
-          initialLocation: '/video/$testEventId/likers',
+          initialLocation: const VideoLikersRouteData(
+            eventId: testEventId,
+          ).location,
           routes: [
             GoRoute(
-              path: '/video/:id',
+              path: VideoDetailScreen.path,
               builder: (_, _) => const Scaffold(body: Text('video detail')),
             ),
-            GoRoute(
-              path: '/video/:eventId/likers',
-              builder: (_, state) => VideoEngagementListScreen(
-                eventId: state.pathParameters['eventId']!,
-                type: VideoEngagementType.likers,
-              ),
-            ),
+            likersRoute(),
           ],
         );
         addTearDown(router.dispose);
@@ -459,21 +463,17 @@ void main() {
         ).thenAnswer((_) async => const LikersPage(pubkeys: [testPubkey1]));
 
         final router = GoRouter(
-          initialLocation: '/video/$dTag/likers?a=$coordinate',
+          initialLocation: const VideoLikersRouteData(
+            eventId: dTag,
+            a: coordinate,
+          ).location,
           routes: [
             GoRoute(
-              path: '/video/:id',
+              path: VideoDetailScreen.path,
               builder: (_, state) =>
                   Scaffold(body: Text('detail ${state.pathParameters['id']}')),
             ),
-            GoRoute(
-              path: '/video/:eventId/likers',
-              builder: (_, state) => VideoEngagementListScreen(
-                eventId: state.pathParameters['eventId']!,
-                type: VideoEngagementType.likers,
-                addressableId: state.uri.queryParameters['a'],
-              ),
-            ),
+            likersRoute(),
           ],
         );
         addTearDown(router.dispose);

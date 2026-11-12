@@ -210,7 +210,7 @@ void main() {
       expect(draft.fromLibrary, isTrue);
     });
 
-    test('video editor locations round-trip the origin through the URL', () {
+    test('video editor locations carry the origin in the URL', () {
       expect(VideoEditorScreen.pathFor(), VideoEditorScreen.path);
       expect(
         VideoEditorScreen.pathFor(fromLibrary: true),
@@ -219,12 +219,6 @@ void main() {
       expect(
         VideoEditorScreen.pathFor(draftId: 'draft-1', fromLibrary: true),
         '${VideoEditorScreen.path}/draft-1?from=library',
-      );
-      expect(
-        VideoEditorScreen.fromLibraryForRoute(
-          Uri.parse(VideoEditorScreen.pathFor(fromLibrary: true)),
-        ),
-        isTrue,
       );
     });
 

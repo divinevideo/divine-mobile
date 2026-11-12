@@ -4,7 +4,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
     show
@@ -18,6 +17,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/video_link_preview_cubit.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
@@ -213,13 +213,9 @@ class _QuestionAnswerLabel extends ConsumerWidget {
     final notifier = ref.read(videoReplyContextProvider.notifier)
       ..set(replyContext);
     runDetached(
-      context
-          .push(
-            VideoRecorderScreen.pathForEntryPoint(
-              CreationEntryPoint.videoReply,
-            ),
-          )
-          .whenComplete(notifier.clear),
+      const VideoRecorderRouteData(
+        entryPoint: CreationEntryPoint.videoReply,
+      ).push<void>(context).whenComplete(notifier.clear),
       'answer a question with a video',
       logName: 'DmQuestionAnswerHeader',
       category: LogCategory.ui,

@@ -21,16 +21,19 @@ import 'package:unified_logger/unified_logger.dart';
 /// for safe republishing; otherwise the screen resolves the id via the
 /// [videoEventResolverProvider] (in-memory → personal cache → relay).
 ///
-/// Navigate to this screen with [pathFor]:
+/// Navigate to this screen through its typed route:
 /// ```dart
-/// context.push(
-///   VideoMetadataEditScreen.pathFor(video.id),
-///   extra: video, // optional fast-path
-/// );
+/// VideoMetadataEditRouteData(
+///   videoId: video.id,
+///   $extra: video, // optional fast-path
+/// ).push<void>(context);
 /// ```
 class VideoMetadataEditScreen extends ConsumerStatefulWidget {
   static const routeName = 'video-edit';
   static const String path = RoutePaths.videoMetadataEdit;
+
+  /// Route pattern, with the video id as its `videoId` parameter.
+  static const pathWithId = '$path/:videoId';
 
   /// Build a concrete `/video-edit/:videoId` path for [videoId].
   static String pathFor(String videoId) =>

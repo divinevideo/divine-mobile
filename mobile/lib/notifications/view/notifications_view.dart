@@ -24,8 +24,8 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
-import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/services/notification_target_resolver.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -363,20 +363,17 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     required String? addressableId,
     required VideoEngagementType type,
   }) {
-    final routeName = switch (type) {
-      VideoEngagementType.likers => VideoEngagementListScreen.likersRouteName,
-      VideoEngagementType.reposters =>
-        VideoEngagementListScreen.repostersRouteName,
-    };
-    _pushRoute(
-      context.pushNamed<void>(
-        routeName,
-        pathParameters: {'eventId': eventId},
-        queryParameters: addressableId == null
-            ? const {}
-            : {'a': addressableId},
+    final GoRouteData route = switch (type) {
+      VideoEngagementType.likers => VideoLikersRouteData(
+        eventId: eventId,
+        a: addressableId,
       ),
-    );
+      VideoEngagementType.reposters => VideoRepostersRouteData(
+        eventId: eventId,
+        a: addressableId,
+      ),
+    };
+    _pushRoute(route.push<void>(context));
   }
 
   void _navigateToList(
@@ -460,15 +457,15 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     if (!context.mounted) return false;
 
     _pushRoute(
-      context.push<void>(
-        VideoDetailScreen.pathForId(routeId),
-        extra: shouldAutoOpenComments || fallbackVideoIds.isNotEmpty
+      VideoDetailRouteData(
+        id: routeId,
+        $extra: shouldAutoOpenComments || fallbackVideoIds.isNotEmpty
             ? VideoDetailRouteExtra(
                 autoOpenComments: shouldAutoOpenComments,
                 fallbackVideoIds: fallbackVideoIds,
               )
             : null,
-      ),
+      ).push<void>(context),
     );
     return true;
   }

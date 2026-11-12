@@ -25,6 +25,7 @@ import 'package:openvine/notifications/widgets/notification_list_item.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
@@ -67,8 +68,7 @@ Future<void> _pumpView(WidgetTester tester, NotificationFeedBloc bloc) async {
 typedef _RoutedViewResult = ({
   List<PooledFullscreenVideoFeedArgs> videoArgs,
   List<({String videoId, VideoDetailRouteExtra? extra})> videoDetailRoutes,
-  List<({String routeName, String eventId, String? addressableId})>
-  engagementRoutes,
+  List<({String routeName, String location})> engagementRoutes,
   List<String> profileNpubs,
   List<({String pubkey, String listId})> listRoutes,
   List<Map<String, String>> chatRoutes,
@@ -85,8 +85,7 @@ Future<_RoutedViewResult> _pumpRoutedViewFull(
   final capturedVideoArgs = <PooledFullscreenVideoFeedArgs>[];
   final capturedVideoDetailRoutes =
       <({String videoId, VideoDetailRouteExtra? extra})>[];
-  final capturedEngagementRoutes =
-      <({String routeName, String eventId, String? addressableId})>[];
+  final capturedEngagementRoutes = <({String routeName, String location})>[];
   final capturedProfileNpubs = <String>[];
   final capturedListRoutes = <({String pubkey, String listId})>[];
   final capturedChatRoutes = <Map<String, String>>[];
@@ -114,26 +113,24 @@ Future<_RoutedViewResult> _pumpRoutedViewFull(
           return const Scaffold(body: SizedBox.shrink());
         },
       ),
+      // Mounted at the real patterns with no names: the view must push the
+      // typed routes' locations, which these stubs record whole.
       GoRoute(
-        path: '/video/:eventId/likers',
-        name: VideoEngagementListScreen.likersRouteName,
+        path: VideoEngagementListScreen.likersPath,
         builder: (context, state) {
           capturedEngagementRoutes.add((
             routeName: VideoEngagementListScreen.likersRouteName,
-            eventId: state.pathParameters['eventId']!,
-            addressableId: state.uri.queryParameters['a'],
+            location: state.uri.toString(),
           ));
           return const Scaffold(body: SizedBox.shrink());
         },
       ),
       GoRoute(
-        path: '/video/:eventId/reposters',
-        name: VideoEngagementListScreen.repostersRouteName,
+        path: VideoEngagementListScreen.repostersPath,
         builder: (context, state) {
           capturedEngagementRoutes.add((
             routeName: VideoEngagementListScreen.repostersRouteName,
-            eventId: state.pathParameters['eventId']!,
-            addressableId: state.uri.queryParameters['a'],
+            location: state.uri.toString(),
           ));
           return const Scaffold(body: SizedBox.shrink());
         },
@@ -1537,10 +1534,12 @@ void main() {
           VideoEngagementListScreen.likersRouteName,
         );
         expect(
-          result.engagementRoutes.single.eventId,
-          'grouped_like_video_event',
+          result.engagementRoutes.single.location,
+          const VideoLikersRouteData(
+            eventId: 'grouped_like_video_event',
+            a: addressableId,
+          ).location,
         );
-        expect(result.engagementRoutes.single.addressableId, addressableId);
       });
 
       testWidgets('grouped repost avatar stack opens the reposters list', (
@@ -1596,10 +1595,12 @@ void main() {
           VideoEngagementListScreen.repostersRouteName,
         );
         expect(
-          result.engagementRoutes.single.eventId,
-          'grouped_repost_video_event',
+          result.engagementRoutes.single.location,
+          const VideoRepostersRouteData(
+            eventId: 'grouped_repost_video_event',
+            a: addressableId,
+          ).location,
         );
-        expect(result.engagementRoutes.single.addressableId, addressableId);
       });
 
       testWidgets('single like avatar stack still opens the actor profile', (

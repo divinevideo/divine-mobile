@@ -158,10 +158,6 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
     ).toString();
   }
 
-  /// Whether [uri] entered the editor from the Library screen.
-  static bool fromLibraryForRoute(Uri uri) =>
-      uri.queryParameters[originQueryParameter] == libraryOrigin;
-
   @override
   ConsumerState<VideoEditorScreen> createState() => _VideoEditorScreenState();
 }

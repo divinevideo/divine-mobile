@@ -6,7 +6,6 @@ import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/featured_tabs/featured_tab_surface_telemetry.dart';
 import 'package:openvine/blocs/featured_tabs/featured_tab_videos_cubit.dart';
@@ -16,6 +15,7 @@ import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/featured_tabs_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/explore/explore_tab_labels.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -233,9 +233,9 @@ class _FeaturedGrid extends ConsumerWidget {
       onLoadMore: context.read<FeaturedTabVideosCubit>().loadMore,
       onRefresh: context.read<FeaturedTabVideosCubit>().load,
       emptyBuilder: () => const _FeaturedEmpty(),
-      onVideoTap: (videos, index) => context.push(
-        PooledFullscreenVideoFeedScreen.pathForVideoId(videos[index].id),
-        extra: PooledFullscreenVideoFeedArgs(
+      onVideoTap: (videos, index) => PooledFullscreenVideoFeedRouteData(
+        video: videos[index].id,
+        $extra: PooledFullscreenVideoFeedArgs(
           source: VideoListViewSource(videos),
           feedRepository: ref.read(feedRepositoryProvider),
           initialIndex: index,
@@ -244,7 +244,7 @@ class _FeaturedGrid extends ConsumerWidget {
           trafficSource: ViewTrafficSource.discoveryFeatured,
           sourceDetail: config.id,
         ),
-      ),
+      ).push<void>(context),
     );
   }
 }

@@ -15,7 +15,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shell_obscured_provider.dart';
-import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -147,8 +147,8 @@ class _HighlightsInboxBodyState extends State<_HighlightsInboxBody>
     );
   }
 
-  void _open(String path, {Object? extra}) => runDetached(
-    context.push<void>(path, extra: extra),
+  void _open(GoRouteData route) => runDetached(
+    route.push<void>(context),
     'open creator highlight action',
     logName: 'CreatorHighlights',
     category: LogCategory.ui,
@@ -179,13 +179,15 @@ class _HighlightsInboxBodyState extends State<_HighlightsInboxBody>
                     logName: 'CreatorHighlights',
                     category: LogCategory.ui,
                   ),
-                  onAnalytics: () => _open(RoutePaths.creatorAnalytics),
+                  onAnalytics: () => _open(const CreatorAnalyticsRouteData()),
                   onWatch: () {
                     final video = state.card?.topVideo;
                     if (video != null) {
                       _open(
-                        RoutePaths.videoDetailForId(video.id),
-                        extra: VideoDetailRouteExtra(initialVideo: video),
+                        VideoDetailRouteData(
+                          id: video.id,
+                          $extra: VideoDetailRouteExtra(initialVideo: video),
+                        ),
                       );
                     }
                   },

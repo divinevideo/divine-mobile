@@ -7,7 +7,6 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent, NostrHexUtils;
 import 'package:openvine/blocs/creator_sync/sound_sync_cubit.dart';
@@ -21,7 +20,7 @@ import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/router/routes/library_routes.dart';
-import 'package:openvine/screens/sound_detail_screen.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/sounds/add_sound_page.dart';
 import 'package:openvine/utils/delete_result_localization.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -402,7 +401,9 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
   Future<void> _onOpenDetails(SavedSound sound) async {
     await _stopPreview();
     if (!mounted) return;
-    await context.push<void>(SoundDetailScreen.pathForId(sound.audio.id));
+    await SoundDetailRouteData(
+      id: sound.audio.id,
+    ).push<void>(context);
   }
 
   Future<void> _onEditTap(SavedSound sound) async {

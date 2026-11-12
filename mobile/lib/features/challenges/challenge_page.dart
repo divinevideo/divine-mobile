@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:nostr_client/nostr_client.dart' show Nip89ClientTag;
 import 'package:openvine/features/challenges/challenge_link.dart';
@@ -14,7 +13,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
-import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:uuid/uuid.dart';
 
@@ -137,12 +136,9 @@ class ChallengePage extends ConsumerWidget {
                     .value
                     ?.bestDisplayName,
                 onRecord: (context, id) async {
-                  await context.push<void>(
-                    Uri(
-                      path: VideoRecorderScreen.path,
-                      queryParameters: {'challenge_recording': id},
-                    ).toString(),
-                  );
+                  await VideoRecorderRouteData(
+                    challengeRecording: id,
+                  ).push<void>(context);
                   if (context.mounted) {
                     await context.read<ChallengeParticipationCubit>().load();
                   }

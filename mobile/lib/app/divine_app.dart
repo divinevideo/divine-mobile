@@ -29,6 +29,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/deep_link_coordinator.dart';
 import 'package:openvine/router/providers/deep_link_listeners.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/services/back_button_handler.dart';
@@ -64,7 +65,9 @@ class _AppQuickActionsNavigator implements QuickActionsNavigator {
   @override
   void openCamera() {
     _router.go(
-      VideoRecorderScreen.pathForEntryPoint(CreationEntryPoint.quickAction),
+      const VideoRecorderRouteData(
+        entryPoint: CreationEntryPoint.quickAction,
+      ).location,
     );
   }
 

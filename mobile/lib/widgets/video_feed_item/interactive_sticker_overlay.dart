@@ -19,6 +19,7 @@ import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/interactive_sticker_routes.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/open_video_responses_feed.dart';
@@ -225,7 +226,9 @@ class _ResponsesSticker extends ConsumerWidget {
     runDetached(
       context
           .pushWithVideoPause<void>(
-            VideoRecorderScreen.pathForEntryPoint(CreationEntryPoint.addYours),
+            const VideoRecorderRouteData(
+              entryPoint: CreationEntryPoint.addYours,
+            ).location,
           )
           .whenComplete(notifier.clear),
       'open the camera to add yours',

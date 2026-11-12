@@ -104,8 +104,8 @@ void main() {
             FeaturedTabVideosPage(videos: [_video('first'), _video('second')]),
       );
       when(
-        () => router.push<Object?>(any(), extra: any(named: 'extra')),
-      ).thenAnswer((_) async => null);
+        () => router.push<void>(any(), extra: any(named: 'extra')),
+      ).thenAnswer((_) async {});
     });
 
     Widget buildSubject({FeaturedTabConfig? config, Locale? locale}) {
@@ -150,7 +150,7 @@ void main() {
           await tester.pump();
           final args =
               verify(
-                    () => router.push<Object?>(
+                    () => router.push<void>(
                       any(),
                       extra: captureAny(named: 'extra'),
                     ),
@@ -173,7 +173,7 @@ void main() {
       await tester.pump();
 
       final captured = verify(
-        () => router.push<Object?>(any(), extra: captureAny(named: 'extra')),
+        () => router.push<void>(any(), extra: captureAny(named: 'extra')),
       ).captured.single;
       final args = captured as PooledFullscreenVideoFeedArgs;
 
@@ -199,7 +199,7 @@ void main() {
       await tester.pump();
 
       final captured = verify(
-        () => router.push<Object?>(any(), extra: captureAny(named: 'extra')),
+        () => router.push<void>(any(), extra: captureAny(named: 'extra')),
       ).captured.single;
       final args = captured as PooledFullscreenVideoFeedArgs;
 
@@ -224,7 +224,7 @@ void main() {
       await tester.pump();
 
       final captured = verify(
-        () => router.push<Object?>(any(), extra: captureAny(named: 'extra')),
+        () => router.push<void>(any(), extra: captureAny(named: 'extra')),
       ).captured.single;
       final args = captured as PooledFullscreenVideoFeedArgs;
 

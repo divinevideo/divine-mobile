@@ -5,7 +5,6 @@ import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -13,6 +12,7 @@ import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/for_you_provider.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/state/video_feed_state.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -216,11 +216,9 @@ class _ForYouContentState extends ConsumerState<_ForYouContent>
                   category: LogCategory.video,
                 );
                 runDetached(
-                  context.push<void>(
-                    PooledFullscreenVideoFeedScreen.pathForVideoId(
-                      videoList[index].id,
-                    ),
-                    extra: PooledFullscreenVideoFeedArgs(
+                  PooledFullscreenVideoFeedRouteData(
+                    video: videoList[index].id,
+                    $extra: PooledFullscreenVideoFeedArgs(
                       source: const ForYouViewSource(),
                       feedRepository: ref.read(feedRepositoryProvider),
                       initialIndex: index,
@@ -228,7 +226,7 @@ class _ForYouContentState extends ConsumerState<_ForYouContent>
                       contextTitle: context.l10n.feedModeForYou,
                       trafficSource: ViewTrafficSource.discoveryForYou,
                     ),
-                  ),
+                  ).push<void>(context),
                   'open For You video',
                   logName: 'ForYouTab',
                   category: LogCategory.ui,

@@ -10,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/widgets/video_feed_item/actions/like_action_button.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_button.dart';
@@ -96,13 +97,12 @@ void main() {
             ),
           ),
         ),
+        // The real pattern with no name: the button must push the typed
+        // route's location, recorded whole.
         GoRoute(
-          path: '/video/:eventId/likers',
-          name: VideoEngagementListScreen.likersRouteName,
+          path: VideoEngagementListScreen.likersPath,
           builder: (context, state) {
-            final addressableId = state.uri.queryParameters['a'];
-            final query = addressableId == null ? '' : '?a=$addressableId';
-            visited.add('${state.uri.path}$query');
+            visited.add(state.uri.toString());
             return const Scaffold(body: Text('likers-stub'));
           },
         ),
@@ -312,8 +312,48 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(visited, hasLength(1));
-        expect(visited.single, equals('/video/${testVideo.id}/likers'));
+        expect(
+          visited.single,
+          equals(VideoLikersRouteData(eventId: testVideo.id).location),
+        );
         expect(find.text('likers-stub'), findsOneWidget);
+      });
+
+      testWidgets("carries an addressable video's coordinate as ?a=", (
+        tester,
+      ) async {
+        final addressable = VideoEvent(
+          id: testVideo.id,
+          pubkey: testPubkey,
+          createdAt: 1757385263,
+          content: 'Test video',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
+          addressableDTag: 'clip-d-tag',
+        );
+        expect(addressable.addressableId, isNotNull);
+        final visited = <String>[];
+        final router = buildRouterCapturingNav(
+          video: addressable,
+          isOwnVideo: true,
+          bloc: mockBloc,
+          visited: visited,
+        );
+
+        await tester.pumpWidget(
+          buildSubject(video: addressable, router: router),
+        );
+        await tester.tap(find.byType(GestureDetector));
+        await tester.pumpAndSettle();
+
+        expect(
+          visited.single,
+          equals(
+            VideoLikersRouteData(
+              eventId: addressable.id,
+              a: addressable.addressableId,
+            ).location,
+          ),
+        );
       });
     });
 
@@ -349,7 +389,10 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(visited, hasLength(1));
-          expect(visited.single, equals('/video/${testVideo.id}/likers'));
+          expect(
+            visited.single,
+            equals(VideoLikersRouteData(eventId: testVideo.id).location),
+          );
           verifyNever(
             () => mockBloc.add(const VideoInteractionsLikeToggled()),
           );

@@ -5,7 +5,6 @@ import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
@@ -16,10 +15,10 @@ import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_analytics_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/creator_analytics/analytics_widgets.dart';
 import 'package:openvine/screens/creator_analytics/creator_sounds_card.dart';
 import 'package:openvine/screens/creator_analytics/social_counts_info_sheet.dart';
-import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -81,10 +80,10 @@ class _CreatorAnalyticsScreenState
 
   void _openPostAnalytics(VideoPerformance performance) {
     runDetached(
-      context.push<void>(
-        PostAnalyticsDetailScreen.pathForId(performance.video.id),
-        extra: performance,
-      ),
+      PostAnalyticsDetailRouteData(
+        videoId: performance.video.id,
+        $extra: performance,
+      ).push<void>(context),
       'open post analytics',
       logName: 'CreatorAnalyticsScreen',
       category: LogCategory.ui,
@@ -1264,11 +1263,9 @@ class _PostAnalyticsDetailView extends StatelessWidget {
                       onPressed: performance.video.id.isEmpty
                           ? null
                           : () => runDetached(
-                              context.push<void>(
-                                VideoDetailScreen.pathForId(
-                                  performance.video.id,
-                                ),
-                              ),
+                              VideoDetailRouteData(
+                                id: performance.video.id,
+                              ).push<void>(context),
                               'open post video',
                               logName: 'CreatorAnalyticsScreen',
                               category: LogCategory.ui,

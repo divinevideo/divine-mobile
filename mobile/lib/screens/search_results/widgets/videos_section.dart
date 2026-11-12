@@ -3,13 +3,13 @@ import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
@@ -92,9 +92,9 @@ class _VideosContentState extends ConsumerState<_VideosContent> {
   void _onVideoTap(List<VideoEvent> videos, int index) {
     final bloc = context.read<VideoSearchBloc>();
     runDetached(
-      context.push<void>(
-        PooledFullscreenVideoFeedScreen.pathForVideoId(videos[index].id),
-        extra: PooledFullscreenVideoFeedArgs(
+      PooledFullscreenVideoFeedRouteData(
+        video: videos[index].id,
+        $extra: PooledFullscreenVideoFeedArgs(
           source: SearchViewSource(bloc.state.query),
           feedRepository: StreamFeedRepository(
             videos: bloc.stream.map((state) => state.videos).startWith(videos),
@@ -109,7 +109,7 @@ class _VideosContentState extends ConsumerState<_VideosContent> {
           trafficSource: ViewTrafficSource.search,
           sourceDetail: bloc.state.query,
         ),
-      ),
+      ).push<void>(context),
       'open search video result',
       logName: 'VideosSection',
       category: LogCategory.ui,

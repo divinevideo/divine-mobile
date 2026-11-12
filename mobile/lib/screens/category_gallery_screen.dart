@@ -16,6 +16,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_category_name.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/categories/category_glyph.dart';
@@ -101,11 +102,9 @@ class _CategoryGalleryScreenState extends ConsumerState<CategoryGalleryScreen> {
             },
             onVideoTap: (videos, index) {
               runDetached(
-                context.push<void>(
-                  PooledFullscreenVideoFeedScreen.pathForVideoId(
-                    videos[index].id,
-                  ),
-                  extra: PooledFullscreenVideoFeedArgs(
+                PooledFullscreenVideoFeedRouteData(
+                  video: videos[index].id,
+                  $extra: PooledFullscreenVideoFeedArgs(
                     source: CategoryViewSource(widget.category.name),
                     feedRepository: StreamFeedRepository(
                       videos: _bloc.stream
@@ -124,7 +123,7 @@ class _CategoryGalleryScreenState extends ConsumerState<CategoryGalleryScreen> {
                       widget.category.name,
                     ),
                   ),
-                ),
+                ).push<void>(context),
                 'open category video',
                 logName: 'CategoryGalleryScreen',
                 category: LogCategory.ui,

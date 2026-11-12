@@ -11,4 +11,3 @@ lib/router/routes/auth_routes.dart	9
 lib/router/routes/chat_routes.dart	1
 lib/router/routes/settings_routes.dart	43
 lib/router/routes/shell.dart	1
-lib/router/routes/video_routes.dart	14

@@ -6,7 +6,6 @@ import 'dart:async';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/drafts_library/drafts_library_bloc.dart';
@@ -15,6 +14,7 @@ import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/draft_summary.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/utils/draft_copy_naming.dart';
 import 'package:openvine/widgets/library/draft_status_badge.dart';
@@ -303,9 +303,10 @@ class _DraftsList extends ConsumerWidget {
 
     if (!context.mounted) return;
 
-    await context.push(
-      VideoEditorScreen.pathFor(draftId: draft.id, fromLibrary: true),
-    );
+    await VideoEditorDraftRouteData(
+      draftId: draft.id,
+      from: VideoEditorScreen.libraryOrigin,
+    ).push<void>(context);
 
     await ref
         .read(videoPublishProvider.notifier)

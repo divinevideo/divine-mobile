@@ -4,7 +4,6 @@ import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
@@ -16,9 +15,9 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/search_results/view/search_results_view.dart';
 import 'package:openvine/screens/search_results/widgets/search_results_app_bar.dart';
-import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_search_query.dart';
 import 'package:openvine/widgets/retained_bloc_provider.dart';
@@ -312,7 +311,9 @@ class _NostrIdAutoOpenScopeState extends State<_NostrIdAutoOpenScope> {
             context.pushOtherProfile(hexPubkey);
           case OpenVideoAction(:final routeId):
             runDetached(
-              context.push<void>(VideoDetailScreen.pathForId(routeId)),
+              VideoDetailRouteData(
+                id: routeId,
+              ).push<void>(context),
               'open video from search',
               logName: 'SearchResultsPage',
               category: LogCategory.ui,

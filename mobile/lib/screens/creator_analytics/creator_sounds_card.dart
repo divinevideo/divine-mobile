@@ -6,15 +6,14 @@ import 'dart:async';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/creator_sounds/creator_sounds_cubit.dart';
 import 'package:openvine/features/creator_analytics/creator_analytics_repository.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/providers/creator_analytics_providers.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/creator_analytics/analytics_widgets.dart';
-import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -193,7 +192,9 @@ class _CreatorSoundRow extends StatelessWidget {
     );
 
     void openSound() => runDetached(
-      context.push<void>(SoundDetailScreen.pathForId(sound.id)),
+      SoundDetailRouteData(
+        id: sound.id,
+      ).push<void>(context),
       'open sound',
       logName: 'CreatorSoundsCard',
       category: LogCategory.ui,

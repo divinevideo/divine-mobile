@@ -15,7 +15,7 @@ import 'package:models/models.dart'
 import 'package:openvine/blocs/countdown_reminder/countdown_reminder_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
-import 'package:openvine/screens/sound_detail_screen.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/map_search_launcher.dart';
@@ -66,7 +66,7 @@ void openVideoSticker(
       if (soundId == null) return;
       runDetached(
         context.pushWithVideoPause(
-          SoundDetailScreen.pathForId(soundId),
+          SoundDetailRouteData(id: soundId).location,
           extra: <String, dynamic>{'sourceVideo': video},
         ),
         'open the sound of a sound sticker',
@@ -101,7 +101,7 @@ void openVideoSticker(
           rootId != null && region.target != video.replyRootEventId;
       runDetached(
         context.pushWithVideoPause<void>(
-          VideoDetailScreen.pathForId(rootId ?? region.target),
+          VideoDetailRouteData(id: rootId ?? region.target).location,
           extra: VideoDetailRouteExtra(
             autoOpenComments: repliesToComment,
             focusCommentId: repliesToComment ? region.target : null,

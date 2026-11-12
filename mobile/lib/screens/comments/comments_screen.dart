@@ -7,7 +7,6 @@ import 'package:comments_repository/comments_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
@@ -25,6 +24,7 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/comments/widgets/widgets.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -1120,13 +1120,9 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
       ),
     );
     unawaited(
-      context
-          .push(
-            VideoRecorderScreen.pathForEntryPoint(
-              CreationEntryPoint.videoReply,
-            ),
-          )
-          .then((_) => replyContextNotifier.clear()),
+      const VideoRecorderRouteData(
+        entryPoint: CreationEntryPoint.videoReply,
+      ).push<void>(context).then((_) => replyContextNotifier.clear()),
     );
   }
 }

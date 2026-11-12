@@ -22,10 +22,9 @@ import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/routes/library_routes.dart';
+import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
-import 'package:openvine/screens/video_editor/video_editor_screen.dart';
-import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
 import 'package:openvine/utils/await_push_transition.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -166,8 +165,8 @@ Future<void> _openVideoEditorFromRecorder(
   bloc.add(const VideoRecorderRecordingLockedForNavigation());
 
   final navigation = recorderMode.hasVideoEditor
-      ? context.push(VideoEditorScreen.path)
-      : context.push(VideoMetadataScreen.path);
+      ? const VideoEditorRouteData().push<void>(context)
+      : const VideoMetadataRouteData().push<void>(context);
 
   // A route popped during its entrance animation never covers the recorder, so
   // the transition wait alone would never resolve: the camera would never come
