@@ -1,23 +1,23 @@
 // ABOUTME: Guards the DivineSticker artwork bundled with the app: every
 // ABOUTME: variant has a file, every file is a lossless-format WebP within
 // ABOUTME: 512 px that decodes and keeps its alpha, and the directory holds
-// ABOUTME: nothing the catalog does not name.
+// ABOUTME: nothing but that artwork, its licence and a provenance record
+// ABOUTME: that names every file's hash.
 
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:crypto/crypto.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _directory = 'assets/divine_stickers';
 const _maxLongEdge = 512;
 
-/// Stickers whose artwork has no transparent pixel at all, so the encoder
-/// stores them without an alpha channel. The Polaroid is a rectangular print.
-/// Anything else arriving here has been flattened onto a background.
-const Set<DivineStickerName> _opaqueStickers = {DivineStickerName.polaroid};
+/// Files in the artwork directory that are documentation, not artwork.
+const _documents = {'LICENSE', 'PROVENANCE.md'};
 
 /// What the RIFF container of a WebP file declares about its image.
 typedef _WebpHeader = ({
@@ -127,7 +127,7 @@ int _uint24(ByteData data, int offset) =>
 
 void main() {
   // Tests run with the package root as the working directory.
-  final figmaBacked = DivineStickerName.values
+  final webpBacked = DivineStickerName.values
       .where((sticker) => !sticker.isLegacySvg)
       .toList();
 
@@ -142,23 +142,27 @@ void main() {
       }
     });
 
-    test('the artwork directory holds exactly the Figma-backed variants', () {
-      final onDisk = Directory(_directory)
-          .listSync()
-          .whereType<File>()
-          .map((file) => file.uri.pathSegments.last)
-          // Finder writes a gitignored .DS_Store into folders it opens.
-          .where((name) => !name.startsWith('.'))
-          .toSet();
-      final expected = figmaBacked
-          .map((sticker) => '${sticker.fileName}.webp')
-          .toSet();
+    test(
+      'the artwork directory holds the WebP variants and their documents',
+      () {
+        final onDisk = Directory(_directory)
+            .listSync()
+            .whereType<File>()
+            .map((file) => file.uri.pathSegments.last)
+            // Finder writes a gitignored .DS_Store into folders it opens.
+            .where((name) => !name.startsWith('.'))
+            .toSet();
+        final expected = {
+          ...webpBacked.map((sticker) => '${sticker.fileName}.webp'),
+          ..._documents,
+        };
 
-      expect(onDisk, equals(expected));
-    });
+        expect(onDisk, equals(expected));
+      },
+    );
 
     test('every artwork file is a lossless WebP', () {
-      for (final sticker in figmaBacked) {
+      for (final sticker in webpBacked) {
         final header = _readWebpHeader(sticker.assetPath);
 
         expect(
@@ -170,15 +174,17 @@ void main() {
     });
 
     test('every artwork file keeps its transparency', () {
-      final withoutAlpha = figmaBacked
+      final withoutAlpha = webpBacked
           .where((sticker) => !_readWebpHeader(sticker.assetPath).alpha)
           .toSet();
 
-      expect(withoutAlpha, equals(_opaqueStickers));
+      // Every sticker is a cutout; one without alpha was flattened onto a
+      // background.
+      expect(withoutAlpha, isEmpty);
     });
 
     test('no artwork file exceeds $_maxLongEdge px on its long edge', () {
-      for (final sticker in figmaBacked) {
+      for (final sticker in webpBacked) {
         final header = _readWebpHeader(sticker.assetPath);
         final longEdge = header.width > header.height
             ? header.width
@@ -194,11 +200,32 @@ void main() {
 
     test('every artwork file decodes', () async {
       final undecodable = [
-        for (final sticker in figmaBacked)
+        for (final sticker in webpBacked)
           if (!await _decodes(sticker.assetPath)) sticker.assetPath,
       ];
 
       expect(undecodable, isEmpty);
+    });
+
+    test('the provenance record lists every artwork file by its hash', () {
+      final record = File('$_directory/PROVENANCE.md').readAsStringSync();
+      final sections = {
+        for (final section in record.split('\n### `').skip(1))
+          section.substring(0, section.indexOf('`')): section,
+      };
+
+      expect(
+        sections.keys.toSet(),
+        equals(webpBacked.map((s) => '${s.fileName}.webp').toSet()),
+      );
+      for (final sticker in webpBacked) {
+        final hash = sha256.convert(File(sticker.assetPath).readAsBytesSync());
+        expect(
+          sections['${sticker.fileName}.webp'],
+          contains('sha256 `$hash`'),
+          reason: '${sticker.assetPath} changed without its provenance.',
+        );
+      }
     });
 
     group('stickers that must stay separate do not share artwork', () {
@@ -210,6 +237,10 @@ void main() {
         (DivineStickerName.hangLoose, DivineStickerName.ceramicHands),
         (DivineStickerName.unicornFloat, DivineStickerName.inflatableFlamingo),
         (DivineStickerName.unicornFloat, DivineStickerName.floatingLilo),
+        (DivineStickerName.bomb, DivineStickerName.boom),
+        (DivineStickerName.biohazardSign, DivineStickerName.hazardSign),
+        (DivineStickerName.emptyToiletRoll, DivineStickerName.toiletPaper),
+        (DivineStickerName.tvRemote, DivineStickerName.acRemote),
       ];
 
       for (final (first, second) in pairs) {

@@ -51,11 +51,11 @@ String _snakeCase(String identifier) => identifier.replaceAllMapped(
 
 void main() {
   group(DivineStickerName, () {
-    test('has 134 variants', () {
-      expect(DivineStickerName.values.length, equals(134));
+    test('has 181 variants', () {
+      expect(DivineStickerName.values.length, equals(181));
     });
 
-    test('assetPath points Figma artwork at the WebP directory', () {
+    test('assetPath points WebP artwork at the WebP directory', () {
       expect(
         DivineStickerName.boom.assetPath,
         equals('assets/divine_stickers/boom.webp'),
@@ -109,6 +109,13 @@ void main() {
         DivineStickerName.unicornFloat: 'unicorn_float',
         DivineStickerName.inflatableFlamingo: 'inflatable_flamingo',
         DivineStickerName.floatingLilo: 'floating_lilo',
+        DivineStickerName.bomb: 'bomb',
+        DivineStickerName.boom: 'boom',
+        DivineStickerName.biohazardSign: 'biohazard_sign',
+        DivineStickerName.emptyToiletRoll: 'empty_toilet_roll',
+        DivineStickerName.toiletPaper: 'toilet_paper',
+        DivineStickerName.tvRemote: 'tv_remote',
+        DivineStickerName.acRemote: 'ac_remote',
       };
 
       for (final MapEntry(key: sticker, value: fileName) in dedicated.entries) {
@@ -152,7 +159,7 @@ void main() {
       );
     }
 
-    testWidgets('renders Figma artwork as an $Image, not an $SvgPicture', (
+    testWidgets('renders WebP artwork as an $Image, not an $SvgPicture', (
       tester,
     ) async {
       await tester.pumpWidget(buildSubject());

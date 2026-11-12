@@ -5,39 +5,53 @@ import 'package:material_ui/material_ui.dart';
 
 /// Sticker names from the Divine design system sticker set.
 ///
-/// The `DivineSticker` collection in Figma is the source of truth for the
-/// catalog, the names and the artwork. Each value maps to a photographic
-/// cutout exported from its Figma component into `assets/divine_stickers/`: a
-/// near-lossless WebP, at most 512 px on its long edge, in its original
-/// proportions. Every file has transparency except [polaroid], a rectangular
-/// print with no transparent pixel.
+/// Each value maps to a photographic cutout in `assets/divine_stickers/`: a
+/// near-lossless WebP with transparency, at most 512 px on its long edge, in
+/// its original proportions. The artwork was generated from text prompts and
+/// is dedicated to the public domain. `assets/divine_stickers/PROVENANCE.md`
+/// records each sticker's prompt and file hashes, and
+/// `tools/process_divine_sticker.dart` turns a generator original into the
+/// shipped file.
 ///
 /// The OpenMoji SVGs in `assets/stickers/` are a separate set. The video
 /// editor's sticker picker draws from them, and some auth, account and upload
 /// screens still load them by path. [grandfather] is the only variant still
 /// drawn from them.
-///
-/// Figma's `bobRoss` component is deliberately left out because it depicts a
-/// real person.
 enum DivineStickerName {
+  acRemote('ac_remote'),
+
   /// The warning triangle. [policeSiren] and [hazardSign] are separate
   /// stickers.
   alert('alert'),
 
-  art('art'),
+  ashtray('ashtray'),
   avocado('avocado'),
+  babyBottle('baby_bottle'),
+  babyCarSeat('baby_car_seat'),
   balloonDog('balloon_dog'),
   banana('banana'),
+  baseballBat('baseball_bat'),
+  basketball('basketball'),
   beachBall('beach_ball'),
+  beerCan('beer_can'),
   bicep('bicep'),
   binoculars('binoculars'),
+
+  /// The biohazard plate. Not a variant of [hazardSign].
+  biohazardSign('biohazard_sign'),
 
   /// The stop-hand sign. [raisedHand] and [stopSign] are separate stickers.
   blocked('blocked'),
 
+  /// The round bomb with a lit fuse. Not a variant of [boom].
+  bomb('bomb'),
+
+  /// The comic "BOOM!" burst. [bomb] is a separate sticker.
   boom('boom'),
+
   brokenHeart('broken_heart'),
   cactusVase('cactus_vase'),
+  carKeys('car_keys'),
   cassetteTape('cassette_tape'),
   cat('cat'),
   cd('cd'),
@@ -49,28 +63,39 @@ enum DivineStickerName {
   chiliPepper('chili_pepper'),
   clover('clover'),
   confetti('confetti'),
+  cordlessVacuum('cordless_vacuum'),
   crackedPhoneScreen('cracked_phone_screen'),
+  creditCard('credit_card'),
   crtMonitor('crt_monitor'),
-
-  /// Named `d&d` in Figma, which is not a valid Dart identifier.
-  dAndD('d_and_d'),
-
-  dealWithItGlasses('deal_with_it_glasses'),
+  d20Die('d20_die'),
+  deliveryBackpack('delivery_backpack'),
   detergentPod('detergent_pod'),
   devilHornsHand('devil_horns_hand'),
+  digitalPet('digital_pet'),
   discoBall('disco_ball'),
   discoHelmet('disco_helmet'),
+  djController('dj_controller'),
   dogCorgi('dog_corgi'),
   dogInHoodie('dog_in_hoodie'),
+  dogLeash('dog_leash'),
   dogShibaInu('dog_shiba_inu'),
   donut('donut'),
   doubleCheeseburger('double_cheeseburger'),
   ear('ear'),
   earthGlobe('earth_globe'),
   eggplant('eggplant'),
+  electricScooter('electric_scooter'),
   email('email'),
+
+  /// The bare cardboard tube. Not a variant of [toiletPaper].
+  emptyToiletRoll('empty_toilet_roll'),
+
   espressoMartini('espresso_martini'),
+  faceMask('face_mask'),
+  fidgetSpinner('fidget_spinner'),
   fingerPointing('finger_pointing'),
+  flatTire('flat_tire'),
+  flipFlops('flip_flops'),
 
   /// The pool mattress. Not a variant of [unicornFloat].
   floatingLilo('floating_lilo'),
@@ -79,8 +104,8 @@ enum DivineStickerName {
   forest('forest'),
   forgotPassword('forgot_password'),
   fortuneCookie('fortune_cookie'),
+  fountainSoda('fountain_soda'),
   frenchBulldog('french_bulldog'),
-  gameBoy('game_boy'),
   gameController('game_controller'),
   glitterLips('glitter_lips'),
 
@@ -91,7 +116,11 @@ enum DivineStickerName {
   // purpose, https://github.com/divinevideo/divine-mobile/issues/9471.
   grandfather.legacySvg('grandfather'),
 
+  hairDryer('hair_dryer'),
   handGrip('hand_grip'),
+  handSanitizer('hand_sanitizer'),
+  handcuffs('handcuffs'),
+  handheldConsole('handheld_console'),
 
   /// The shaka hand. [ceramicHands] is a separate sticker.
   hangLoose('hang_loose'),
@@ -103,45 +132,58 @@ enum DivineStickerName {
   holographicJacket('holographic_jacket'),
   holographicShape('holographic_shape'),
   horse('horse'),
+  horseshoeMagnet('horseshoe_magnet'),
   hotAirBalloon('hot_air_balloon'),
   indexFingerPointingUp('index_finger_pointing_up'),
 
   /// The flamingo pool float. Not a variant of [unicornFloat].
   inflatableFlamingo('inflatable_flamingo'),
 
+  instantCamera('instant_camera'),
+  instantPhoto('instant_photo'),
   knightInArmor('knight_in_armor'),
-  lavaLamp('lava_lamp'),
   lipPiercing('lip_piercing'),
   lipstick('lipstick'),
+  lowBatteryPhone('low_battery_phone'),
+  luckyCat('lucky_cat'),
   luggage('luggage'),
   mannequinHand('mannequin_hand'),
   mapleLeaf('maple_leaf'),
+  massageGun('massage_gun'),
   matrixMessageSign('matrix_message_sign'),
+  microwaveBurger('microwave_burger'),
   middleFinger('middle_finger'),
+  milkBottle('milk_bottle'),
   mirrorBall('mirror_ball'),
   mittens('mittens'),
+  mokaPot('moka_pot'),
+  motionLamp('motion_lamp'),
   nailPolish('nail_polish'),
   newsCamera('news_camera'),
   oakTree('oak_tree'),
   oldFashionMic('old_fashion_mic'),
   onAirSign('on_air_sign'),
+  orangeJuice('orange_juice'),
   padlock('padlock'),
+  passportHolder('passport_holder'),
   pause('pause'),
   peaceSign('peace_sign'),
   peaceSignNeon('peace_sign_neon'),
   peach('peach'),
+  phoneCharger('phone_charger'),
   pineapplePizza('pineapple_pizza'),
   pinkDumbbells('pink_dumbbells'),
+  pixelSunglasses('pixel_sunglasses'),
   pizzaSlice('pizza_slice'),
-  polaroid('polaroid'),
-  polaroidCamera('polaroid_camera'),
 
   /// The red siren. Not a variant of [alert].
   policeSiren('police_siren'),
 
   poopEmoji('poop_emoji'),
+  powerBank('power_bank'),
   profile('profile'),
   programmer('programmer'),
+  proteinBar('protein_bar'),
   psychedelicTv('psychedelic_tv'),
   purpleDiamond('purple_diamond'),
   radar('radar'),
@@ -152,6 +194,7 @@ enum DivineStickerName {
 
   rollerSkates('roller_skates'),
   rotaryPhone('rotary_phone'),
+  saltLamp('salt_lamp'),
   samoyedDog('samoyed_dog'),
   schoolBackpack('school_backpack'),
   schoolNotebook('school_notebook'),
@@ -160,30 +203,42 @@ enum DivineStickerName {
   shrimp('shrimp'),
   skateboard('skateboard'),
   skeletonKey('skeleton_key'),
+  soapBar('soap_bar'),
   soccerBall('soccer_ball'),
-  spaceInvader('space_invader'),
+  socksAndSandals('socks_and_sandals'),
   sparkle('sparkle'),
   speakers('speakers'),
   stopSign('stop_sign'),
   storyboard('storyboard'),
   sunglasses('sunglasses'),
-  tamagotchi('tamagotchi'),
-  tapedBanana('taped_banana'),
   teeth('teeth'),
+  tissueBox('tissue_box'),
   toaster('toaster'),
+  toddlerBike('toddler_bike'),
+  toiletPaper('toilet_paper'),
   trafficBarrel('traffic_barrel'),
   trafficCone('traffic_cone'),
   trailSign('trail_sign'),
-  trollFace('troll_face'),
+  travelPillow('travel_pillow'),
   tulip('tulip'),
+
+  /// The television remote. Not a variant of [acRemote].
+  tvRemote('tv_remote'),
+
   underConstructionSign('under_construction_sign'),
   unicornFloat('unicorn_float'),
+  usbStick('usb_stick'),
+  venusFlytrap('venus_flytrap'),
   verified('verified'),
   videoCamera('video_camera'),
   videoClapBoard('video_clap_board'),
   vintageTvTestPattern('vintage_tv_test_pattern'),
   vinylRecord('vinyl_record'),
+  vrHeadset('vr_headset'),
   wavePool('wave_pool'),
+  wetWipes('wet_wipes'),
+  wheyProtein('whey_protein'),
+  wirelessEarbuds('wireless_earbuds'),
   x('x');
 
   const DivineStickerName(this.fileName) : isLegacySvg = false;
@@ -194,7 +249,7 @@ enum DivineStickerName {
   /// The file name, without extension, of this sticker's asset.
   final String fileName;
 
-  /// Whether this variant is a legacy SVG rather than Figma artwork.
+  /// Whether this variant is a legacy SVG rather than WebP artwork.
   final bool isLegacySvg;
 
   /// The full asset path for this sticker.
