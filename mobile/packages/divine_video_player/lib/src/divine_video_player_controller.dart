@@ -560,8 +560,7 @@ class DivineVideoPlayerController {
     );
     if (exclusivePlayback) {
       await _pauseOtherLiveControllers();
-      // A dispose during that await has already torn down this player's
-      // native channel, so `play` would throw MissingPluginException.
+      // Disposed during that await; don't start a player being torn down.
       if (_disposed) return;
     }
     if (_isWebBackend) return _webBackend!.play();
