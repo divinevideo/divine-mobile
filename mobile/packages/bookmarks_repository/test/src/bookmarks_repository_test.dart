@@ -1371,7 +1371,9 @@ void main() {
             expect(service.isVideoBookmarkedGlobally(originalId), isTrue);
           },
         );
+      });
 
+      group('syncGlobalBookmarks', () {
         // Every sync, the toggle's included, waits on the resolver, so an id
         // that never resolves — another client's note, a deleted video — must
         // not be asked about on every one.
@@ -1404,85 +1406,6 @@ void main() {
               equals([
                 [originalId, unrelatedId],
               ]),
-            );
-          },
-        );
-
-        // An account switch disposes this instance and clears the unscoped
-        // keys for the next account; a sync still waiting on the resolver
-        // must not write the previous account's list back into them.
-        test(
-          'saves nothing to the device once disposed mid-sync',
-          () async {
-            stubRelay(
-              events: [
-                bookmarkListEvent([originalId]),
-              ],
-            );
-            final lookup = Completer<Map<String, String>>();
-            final service = createService(
-              resolveVideoAddresses: (ids) => lookup.future,
-            );
-
-            final sync = service.syncGlobalBookmarks();
-            await pumpEventQueue();
-            service.dispose();
-            lookup.complete({originalId: coordinate});
-            await sync;
-
-            expect(
-              prefs.getString(BookmarksRepository.globalBookmarksStorageKey),
-              isNull,
-            );
-            expect(
-              prefs.getString(
-                BookmarksRepository.globalBookmarksRevisionStorageKey,
-              ),
-              isNull,
-            );
-          },
-        );
-
-        test(
-          'saves no revision record when disposed between the two writes',
-          () async {
-            stubRelay(
-              events: [
-                bookmarkListEvent([originalId]),
-              ],
-            );
-            final suspendedPrefs = _MockPrefs();
-            final firstWrite = Completer<bool>();
-            when(() => suspendedPrefs.getString(any())).thenReturn(null);
-            when(
-              () => suspendedPrefs.setString(
-                BookmarksRepository.globalBookmarksStorageKey,
-                any(),
-              ),
-            ).thenAnswer((_) => firstWrite.future);
-            when(
-              () => suspendedPrefs.setString(
-                BookmarksRepository.globalBookmarksRevisionStorageKey,
-                any(),
-              ),
-            ).thenAnswer((_) async => true);
-            final service = BookmarksRepository(
-              nostrClient: nostrClient,
-              signer: signer,
-              prefs: suspendedPrefs,
-            );
-
-            final sync = service.syncGlobalBookmarks();
-            await pumpEventQueue();
-            service.dispose();
-            firstWrite.complete(true);
-            await sync;
-
-            verifyNever(
-              () => suspendedPrefs.setString(
-                BookmarksRepository.globalBookmarksRevisionStorageKey,
-                any(),
-              ),
             );
           },
         );
@@ -1564,6 +1487,87 @@ void main() {
             isTrue,
           );
         });
+      });
+
+      group('dispose', () {
+        // An account switch disposes this instance and clears the unscoped
+        // keys for the next account; a sync still waiting on the resolver
+        // must not write the previous account's list back into them.
+        test(
+          'saves nothing to the device once disposed mid-sync',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent([originalId]),
+              ],
+            );
+            final lookup = Completer<Map<String, String>>();
+            final service = createService(
+              resolveVideoAddresses: (ids) => lookup.future,
+            );
+
+            final sync = service.syncGlobalBookmarks();
+            await pumpEventQueue();
+            service.dispose();
+            lookup.complete({originalId: coordinate});
+            await sync;
+
+            expect(
+              prefs.getString(BookmarksRepository.globalBookmarksStorageKey),
+              isNull,
+            );
+            expect(
+              prefs.getString(
+                BookmarksRepository.globalBookmarksRevisionStorageKey,
+              ),
+              isNull,
+            );
+          },
+        );
+
+        test(
+          'saves no revision record when disposed between the two writes',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent([originalId]),
+              ],
+            );
+            final suspendedPrefs = _MockPrefs();
+            final firstWrite = Completer<bool>();
+            when(() => suspendedPrefs.getString(any())).thenReturn(null);
+            when(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksStorageKey,
+                any(),
+              ),
+            ).thenAnswer((_) => firstWrite.future);
+            when(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksRevisionStorageKey,
+                any(),
+              ),
+            ).thenAnswer((_) async => true);
+            final service = BookmarksRepository(
+              nostrClient: nostrClient,
+              signer: signer,
+              prefs: suspendedPrefs,
+            );
+
+            final sync = service.syncGlobalBookmarks();
+            await pumpEventQueue();
+            service.dispose();
+            firstWrite.complete(true);
+            await sync;
+
+            verifyNever(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksRevisionStorageKey,
+                any(),
+              ),
+            );
+          },
+        );
       });
 
       group('bookmarkedVideoReferences', () {
