@@ -373,6 +373,63 @@ void main() {
             expect(bloc.state.privateBookmarksLocked, isTrue);
           },
         );
+
+        blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+          'flags it on a first load that shows the public saves',
+          setUp: () {
+            when(
+              () => mockBookmarksRepository.globalBookmarks,
+            ).thenReturn(repositoryListShownAs(['video-1']));
+            when(
+              () => mockBookmarksRepository.hasUnreadablePrivateItems,
+            ).thenReturn(true);
+            when(
+              () => mockVideosRepository.getVideosByIds(
+                any(),
+                cacheResults: any(named: 'cacheResults'),
+              ),
+            ).thenAnswer((_) async => [createTestVideo('video-1')]);
+          },
+          build: createBloc,
+          act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
+          wait: const Duration(milliseconds: 50),
+          verify: (bloc) {
+            expect(bloc.state.videos.map((video) => video.id), ['video-1']);
+            expect(bloc.state.privateBookmarksLocked, isTrue);
+          },
+        );
+
+        blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+          'flags it on a re-sync that moves the saves already showing',
+          setUp: () {
+            when(
+              () => mockBookmarksRepository.globalBookmarks,
+            ).thenReturn(repositoryListShownAs(['video-2', 'video-1']));
+            when(
+              () => mockBookmarksRepository.hasUnreadablePrivateItems,
+            ).thenReturn(true);
+            when(
+              () => mockVideosRepository.getVideosByIds(
+                any(),
+                cacheResults: any(named: 'cacheResults'),
+              ),
+            ).thenAnswer((_) async => [createTestVideo('video-2')]);
+          },
+          build: createBloc,
+          seed: () => ProfileSavedVideosState(
+            status: ProfileSavedVideosStatus.success,
+            videos: [createTestVideo('video-1')],
+            savedEventIds: const ['video-1'],
+            nextPageOffset: 1,
+            hasMoreContent: false,
+          ),
+          act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
+          wait: const Duration(milliseconds: 50),
+          verify: (bloc) {
+            expect(bloc.state.savedEventIds, ['video-2', 'video-1']);
+            expect(bloc.state.privateBookmarksLocked, isTrue);
+          },
+        );
       });
 
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
