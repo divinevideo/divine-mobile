@@ -1087,6 +1087,55 @@ void main() {
           expect(cacheWriteWarnings(), hasLength(1));
         },
       );
+
+      test('a failure after a successful write logs again', () async {
+        final event = _createTestEvent(kind: EventKind.textNote);
+        when(
+          () => mockNostr.sendEvent(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => event);
+        // Built per call: a failed future made up front is already unhandled.
+        final outcomes = <Future<void> Function()>[
+          () => Future<void>.error(diskFull),
+          Future<void>.value,
+          () => Future<void>.error(diskFull),
+        ];
+        var call = 0;
+        when(
+          () => mockNostrEventsDao.upsertEvent(any()),
+        ).thenAnswer((_) => outcomes[call++]());
+
+        for (var i = 0; i < outcomes.length; i++) {
+          await clientWithCache.publishEvent(event);
+          await pumpEventQueue();
+        }
+
+        // Once the cache recovers, the next run of failures is a new incident.
+        expect(cacheWriteWarnings(), hasLength(2));
+      });
+
+      test(
+        'a cache write that throws before returning still publishes',
+        () async {
+          final event = _createTestEvent(kind: EventKind.textNote);
+          when(
+            () => mockNostr.sendEvent(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+            ),
+          ).thenAnswer((_) async => event);
+          when(() => mockNostrEventsDao.upsertEvent(any())).thenThrow(diskFull);
+
+          final result = await clientWithCache.publishEvent(event);
+
+          expect(result, isA<PublishSuccess>());
+          expect(cacheWriteWarnings(), hasLength(1));
+        },
+      );
     });
 
     group('publishEventAwaitOk', () {
