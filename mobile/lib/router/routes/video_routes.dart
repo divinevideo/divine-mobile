@@ -250,8 +250,9 @@ Widget buildVideoEngagementList(
   final lookupId = ref?.lookupId;
   if (lookupId == null) {
     // `parse` returns null for a blank segment — including one that is only
-    // whitespace, which the old `raw.isEmpty` guard let past — and for a
-    // NIP-19 reference that does not decode. Forwarding the raw segment
+    // whitespace, which the old `raw.isEmpty` guard let past — for a NIP-19
+    // reference that does not decode, and for a video coordinate whose
+    // author is not a hex pubkey. Forwarding the raw segment
     // instead sent bech32 to an API that 404s on it and a d tag to an `#e`
     // filter that cannot match, and the screen rendered "No likes yet" for
     // a video that has likers: the exact failure this route's decoding

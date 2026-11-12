@@ -92,6 +92,21 @@ void main() {
       expect(ref.stableId, equals(dTag));
     });
 
+    test('lowercases the pubkey of a raw coordinate and keeps its d tag', () {
+      final ref = VideoRouteRef.parse(
+        '34236:${authorHex.toUpperCase()}:$dTag',
+      );
+
+      expect(ref, isNotNull);
+      expect(ref!.addressablePubkey, equals(authorHex));
+      expect(ref.addressableId, equals(coordinate));
+      expect(ref.stableId, equals(dTag));
+    });
+
+    test('returns null for a raw video coordinate whose pubkey is not hex', () {
+      expect(VideoRouteRef.parse('34236:not-a-pubkey:$dTag'), isNull);
+    });
+
     test('decodes an nevent1 reference in upper case', () {
       // bech32 permits an all-upper-case string and the decoder handles it,
       // so a link that arrived shouted is still a reference, not a stable id.

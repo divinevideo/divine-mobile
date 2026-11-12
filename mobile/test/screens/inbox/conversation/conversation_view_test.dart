@@ -4868,7 +4868,7 @@ void main() {
           when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
           when(
             () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-              'skate-loop',
+              '34236:$otherPubkey:skate-loop',
               fallbackRouteIds: any(named: 'fallbackRouteIds'),
             ),
           ).thenAnswer(
@@ -6016,8 +6016,7 @@ void main() {
           ).build();
           when(
             () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-              stableId,
-              fallbackRouteIds: ['34236:$currentPubkey:$stableId'],
+              '34236:$currentPubkey:$stableId',
             ),
           ).thenAnswer((_) async => video);
           when(
@@ -6064,8 +6063,7 @@ void main() {
           ).build();
           when(
             () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-              stableId,
-              fallbackRouteIds: ['34236:$otherPubkey:$stableId'],
+              '34236:$otherPubkey:$stableId',
             ),
           ).thenAnswer((_) async => video);
           when(
@@ -6167,8 +6165,7 @@ void main() {
         var resolveCalls = 0;
         when(
           () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-            stableId,
-            fallbackRouteIds: ['34236:$currentPubkey:$stableId'],
+            '34236:$currentPubkey:$stableId',
           ),
         ).thenAnswer((_) {
           resolveCalls += 1;
@@ -6208,8 +6205,7 @@ void main() {
 
         verify(
           () => mockVideosRepository.fetchVideoWithStatsForRouteId(
-            stableId,
-            fallbackRouteIds: ['34236:$currentPubkey:$stableId'],
+            '34236:$currentPubkey:$stableId',
           ),
         ).called(1);
 

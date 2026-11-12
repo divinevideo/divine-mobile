@@ -21,7 +21,8 @@ void main() {
       expect(target!.stableId, 'skate-loop');
       expect(target.authorPubkey, isNull);
       expect(target.videoKind, isNull);
-      expect(target.fallbackRouteIds, isEmpty);
+      expect(target.routeId, 'skate-loop');
+      expect(target.routeAuthor, isNull);
       expect(
         target.canonicalUrl,
         'https://divine.video/video/skate-loop',
@@ -42,7 +43,9 @@ void main() {
       expect(target!.stableId, eventId);
       expect(target.authorPubkey, author);
       expect(target.videoKind, 22);
-      expect(target.fallbackRouteIds, ['22:$author:$eventId']);
+      expect(target.routeId, eventId);
+      // A hex route is also looked up as a d tag, so the author travels with it.
+      expect(target.routeAuthor, author);
       expect(
         target.canonicalUrl,
         'https://divine.video/video/$eventId',
@@ -62,7 +65,10 @@ void main() {
       expect(target!.stableId, 'skate-loop');
       expect(target.authorPubkey, author);
       expect(target.videoKind, 34236);
-      expect(target.fallbackRouteIds, ['34236:$author:skate-loop']);
+      // The bare d tag names no author, and another account's video can
+      // share it, so an author-named share resolves by its coordinate alone.
+      expect(target.routeId, '34236:$author:skate-loop');
+      expect(target.routeAuthor, isNull);
       expect(
         target.canonicalUrl,
         'https://divine.video/video/skate-loop',
@@ -70,8 +76,30 @@ void main() {
     });
 
     test(
-      'prefers the URL identity and retains structured routing metadata',
+      'keeps structured routing metadata when it names the URL d tag',
       () {
+        final target = resolveDmVideoTarget(
+          content: 'https://divine.video/video/skate-loop',
+          sharedVideoRef: const DmSharedVideoRef(
+            coordinateOrId: '34236:$author:skate-loop',
+            videoKind: DmSharedVideoKind.addressableShortVideo,
+          ),
+        );
+
+        expect(target, isNotNull);
+        expect(target!.stableId, 'skate-loop');
+        expect(target.authorPubkey, author);
+        expect(target.videoKind, 34236);
+        expect(target.routeId, '34236:$author:skate-loop');
+      },
+    );
+
+    test(
+      'drops structured routing metadata that names a different d tag '
+      'from the URL',
+      () {
+        // Pairing the URL's d tag with another video's author builds a
+        // coordinate that names neither video.
         final target = resolveDmVideoTarget(
           content: 'https://divine.video/video/url-stable-id',
           sharedVideoRef: const DmSharedVideoRef(
@@ -82,11 +110,29 @@ void main() {
 
         expect(target, isNotNull);
         expect(target!.stableId, 'url-stable-id');
-        expect(target.authorPubkey, author);
-        expect(target.videoKind, 34236);
-        expect(target.fallbackRouteIds, ['34236:$author:url-stable-id']);
+        expect(target.authorPubkey, isNull);
+        expect(target.videoKind, isNull);
+        expect(target.routeId, 'url-stable-id');
       },
     );
+
+    test('routes a citation whose author is not a hex pubkey like an '
+        'unattributed link', () {
+      // Divine's clients always write a hex author; another client's npub or
+      // truncated key would build a coordinate no lookup can parse.
+      final target = resolveDmVideoTarget(
+        content: 'watch this',
+        sharedVideoRef: const DmSharedVideoRef(
+          coordinateOrId: '34236:npub1notahexpubkey:skate-loop',
+          videoKind: DmSharedVideoKind.addressableShortVideo,
+        ),
+      );
+
+      expect(target, isNotNull);
+      expect(target!.stableId, 'skate-loop');
+      expect(target.routeId, 'skate-loop');
+      expect(target.routeAuthor, isNull);
+    });
 
     test('rejects a malformed addressable reference without a URL', () {
       final target = resolveDmVideoTarget(
@@ -113,7 +159,6 @@ void main() {
       expect(target!.stableId, 'url-stable-id');
       expect(target.authorPubkey, isNull);
       expect(target.videoKind, isNull);
-      expect(target.fallbackRouteIds, isEmpty);
     });
   });
 
@@ -182,7 +227,7 @@ void main() {
       expect(target!.stableId, equals(dTag));
       expect(target.authorPubkey, equals(author));
       expect(target.videoKind, equals(34236));
-      expect(target.fallbackRouteIds, equals(['34236:$author:$dTag']));
+      expect(target.routeId, equals('34236:$author:$dTag'));
       expect(
         target.canonicalUrl,
         equals('https://divine.video/video/$dTag'),

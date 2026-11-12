@@ -13,10 +13,13 @@ class DmVideoTarget {
     this.videoKind,
   });
 
-  /// Stable route ID used by Divine video URLs and repository lookups.
+  /// Stable id used by Divine video URLs. Repository lookups go through
+  /// [routeId], which is this id unless the share is addressable and names a
+  /// hex author.
   final String stableId;
 
-  /// Full author pubkey when supplied by a structured NIP-18 reference.
+  /// Author as a structured NIP-18 reference carried it. Routing uses it only
+  /// when it is a hex pubkey.
   final String? authorPubkey;
 
   /// NIP-71 video event kind when supplied by a structured reference.
@@ -25,12 +28,33 @@ class DmVideoTarget {
   /// Canonical web URL for copying or sharing this video.
   String get canonicalUrl => 'https://divine.video/video/$stableId';
 
-  /// Author-scoped repository route used to disambiguate addressable videos.
-  List<String> get fallbackRouteIds {
-    final author = authorPubkey;
+  /// The repository route this video resolves by.
+  ///
+  /// An addressable share with a known author resolves by its coordinate
+  /// alone: the bare d tag names no author, and another account's video can
+  /// share it (#10384).
+  String get routeId => _authorScopedCoordinate ?? stableId;
+
+  /// The author a lookup of [routeId] is held to, when [routeId] does not
+  /// already name one: a regular-event share routes by its event id, which
+  /// the repository also looks up as a `d` tag anyone can publish under.
+  String? get routeAuthor =>
+      _authorScopedCoordinate == null ? _routingAuthor : null;
+
+  String? get _authorScopedCoordinate {
+    final author = _routingAuthor;
     final kind = videoKind;
-    if (author == null || kind == null) return const [];
-    return ['$kind:$author:$stableId'];
+    if (author == null || kind == null) return null;
+    if (!NIP71VideoKinds.isAddressableVideoKind(kind)) return null;
+    return '$kind:$author:$stableId';
+  }
+
+  /// [authorPubkey] when it is a hex pubkey. Another client's npub or
+  /// truncated key cannot scope a lookup, so routing treats it as absent.
+  String? get _routingAuthor {
+    final author = authorPubkey;
+    if (!NostrHexUtils.isValidPubkey(author)) return null;
+    return author!.toLowerCase();
   }
 
   @override
@@ -49,7 +73,9 @@ class DmVideoTarget {
 ///
 /// Canonical Divine URLs remain the primary stable identity for compatibility
 /// with older messages. A valid NIP-18 `q` reference contributes author/kind
-/// routing metadata, or supplies the identity when no URL is present.
+/// routing metadata when it cites the URL's video (a regular-event reference,
+/// or an addressable one naming the same d tag), or supplies the identity when
+/// no URL is present.
 ///
 /// When [contentIsTruncated] is true, [content] is a bounded prefix of the
 /// full body and a URL match that runs to its end is ignored: the URL capture
@@ -67,10 +93,16 @@ DmVideoTarget? resolveDmVideoTarget({
   final structuredTarget = _targetFromRef(sharedVideoRef);
 
   if (urlStableId != null) {
+    // An addressable citation of another d tag names a different video, so
+    // its author must not scope this URL's lookup.
+    final citesUrl =
+        structuredTarget != null &&
+        (sharedVideoRef?.isAddressable != true ||
+            structuredTarget.stableId == urlStableId);
     return DmVideoTarget(
       stableId: urlStableId,
-      authorPubkey: structuredTarget?.authorPubkey,
-      videoKind: structuredTarget?.videoKind,
+      authorPubkey: citesUrl ? structuredTarget.authorPubkey : null,
+      videoKind: citesUrl ? structuredTarget.videoKind : null,
     );
   }
 

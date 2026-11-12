@@ -14384,6 +14384,342 @@ void main() {
         },
       );
 
+      group('when the route names an author', () {
+        const author =
+            '4bf0c63fcb93463407af97a5e5ee64fa'
+            '883d107ef9e558472c4eb9aaaefa459d';
+        const otherAuthor =
+            '5bf0c63fcb93463407af97a5e5ee64fa'
+            '883d107ef9e558472c4eb9aaaefa459d';
+        // Divine's d tag is the sha256 of the uploaded file, so two accounts
+        // that upload the same bytes share one.
+        const dTag =
+            'ea331e1d9e63bb0bb35ff888f142a888'
+            '4fd0859ce2428ea3ec33613fa7629478';
+        const authorEventId =
+            'a1a1f6b60119d9521934a691347d9f78'
+            'e8770b56da16bb255ee77ac112b4c1f6';
+        const otherEventId =
+            'b2b2f6b60119d9521934a691347d9f78'
+            'e8770b56da16bb255ee77ac112b4c1f6';
+
+        final otherAuthorsVideo = _createVideoEventWithDTag(
+          id: otherEventId,
+          pubkey: otherAuthor,
+          dTag: dTag,
+          videoUrl: 'https://example.com/other.mp4',
+          createdAt: 1739350100,
+        );
+
+        test("returns null instead of another author's same-d-tag video "
+            "when the named author's naddr1 video is missing", () async {
+          _answerQueriesFrom(mockNostrClient, [otherAuthorsVideo]);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+          final naddr = NIP19Tlv.encodeNaddr(
+            Naddr(id: dTag, author: author, kind: EventKind.videoVertical),
+          );
+
+          // Positive control: the relay does hold a video under this d tag,
+          // and a bare d-tag link, which names no author, still opens it.
+          final bare = await repo.fetchVideoWithStatsForRouteId(dTag);
+          expect(bare?.id, equals(otherEventId));
+
+          expect(await repo.fetchVideoWithStatsForRouteId(naddr), isNull);
+        });
+
+        test(
+          "returns null instead of another author's same-d-tag video "
+          "when the named author's raw coordinate video is missing",
+          () async {
+            _answerQueriesFrom(mockNostrClient, [otherAuthorsVideo]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            expect(
+              await repo.fetchVideoWithStatsForRouteId('34236:$author:$dTag'),
+              isNull,
+            );
+          },
+        );
+
+        test("resolves a 34236 coordinate to the named author's Kind 34235 "
+            'video, not a newer same-d-tag video by another author', () async {
+          // Before #10776 Divine wrote 34236 coordinates for 34235 videos, so
+          // the kind-exact addressable query misses these links.
+          final authorsHorizontalVideo = _createVideoEventWithDTag(
+            id: authorEventId,
+            pubkey: author,
+            dTag: dTag,
+            videoUrl: 'https://example.com/author.mp4',
+            createdAt: 1739350000,
+            kind: EventKind.videoHorizontal,
+          );
+          _answerQueriesFrom(mockNostrClient, [
+            authorsHorizontalVideo,
+            otherAuthorsVideo,
+          ]);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          final result = await repo.fetchVideoWithStatsForRouteId(
+            '34236:$author:$dTag',
+          );
+
+          expect(result?.id, equals(authorEventId));
+        });
+
+        test('resolves an upper-case raw coordinate pubkey to the named '
+            'author, not a newer same-d-tag video by another author', () async {
+          final authorsVideo = _createVideoEventWithDTag(
+            id: authorEventId,
+            pubkey: author,
+            dTag: dTag,
+            videoUrl: 'https://example.com/author.mp4',
+            createdAt: 1739350000,
+          );
+          _answerQueriesFrom(mockNostrClient, [
+            authorsVideo,
+            otherAuthorsVideo,
+          ]);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          final result = await repo.fetchVideoWithStatsForRouteId(
+            '34236:${author.toUpperCase()}:$dTag',
+          );
+
+          expect(result?.id, equals(authorEventId));
+        });
+
+        test('returns null when Funnelcake and the relay hold only another '
+            "author's same-d-tag video", () async {
+          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+          when(
+            () => mockFunnelcakeClient.getVideoEvent(dTag),
+          ).thenAnswer((_) async => otherAuthorsVideo);
+          _answerQueriesFrom(mockNostrClient, [otherAuthorsVideo]);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          expect(
+            await repo.fetchVideoWithStatsForRouteId('34236:$author:$dTag'),
+            isNull,
+          );
+          verify(() => mockFunnelcakeClient.getVideoEvent(dTag)).called(1);
+        });
+
+        test('returns null when the cache and the relay hold only another '
+            "author's same-d-tag video", () async {
+          final mockLocalStorage = MockVideoLocalStorage();
+          when(
+            () => mockLocalStorage.getEventsByDTag(dTag),
+          ).thenAnswer((_) async => [otherAuthorsVideo]);
+          _answerQueriesFrom(mockNostrClient, [otherAuthorsVideo]);
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            localStorage: mockLocalStorage,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+
+          expect(
+            await repo.fetchVideoWithStatsForRouteId('34236:$author:$dTag'),
+            isNull,
+          );
+          verify(() => mockLocalStorage.getEventsByDTag(dTag)).called(1);
+        });
+
+        group('when an event id is a candidate', () {
+          // A hex route is looked up as an event id and as a d tag, so anyone
+          // can answer it by publishing a video whose d tag is that id.
+          final squattingVideo = _createVideoEventWithDTag(
+            id: otherEventId,
+            pubkey: otherAuthor,
+            dTag: authorEventId,
+            videoUrl: 'https://example.com/squat.mp4',
+            createdAt: 1739350200,
+          );
+          final authorsRegularVideo = _createVideoEventWithDTag(
+            id: authorEventId,
+            pubkey: author,
+            dTag: 'unrelated-d-tag',
+            videoUrl: 'https://example.com/author.mp4',
+            createdAt: 1739350000,
+            kind: 22,
+          );
+
+          test('holds a fallback to the author of an author-named primary '
+              'route', () async {
+            _answerQueriesFrom(mockNostrClient, [squattingVideo]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            // Positive control: an unattributed lookup finds the squatter.
+            final bare = await repo.fetchVideoWithStatsForRouteId(
+              authorEventId,
+            );
+            expect(bare?.id, equals(otherEventId));
+
+            expect(
+              await repo.fetchVideoWithStatsForRouteId(
+                '34236:$author:$dTag',
+                fallbackRouteIds: [authorEventId],
+              ),
+              isNull,
+            );
+          });
+
+          test('does not resolve a fallback event id that belongs to another '
+              "author's video", () async {
+            // A notification pairs the coordinate with an anchor event id an
+            // outside party wrote, which can name a real video by anyone.
+            final othersRegularVideo = _createVideoEventWithDTag(
+              id: otherEventId,
+              pubkey: otherAuthor,
+              dTag: 'others-d-tag',
+              videoUrl: 'https://example.com/others.mp4',
+              createdAt: 1739350200,
+              kind: 22,
+            );
+            _answerQueriesFrom(mockNostrClient, [othersRegularVideo]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            expect(
+              await repo.fetchVideoWithStatsForRouteId(
+                '34236:$author:$dTag',
+                fallbackRouteIds: [otherEventId],
+              ),
+              isNull,
+            );
+          });
+
+          test('resolves a fallback event id published by the author of the '
+              'primary route', () async {
+            _answerQueriesFrom(mockNostrClient, [authorsRegularVideo]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repo.fetchVideoWithStatsForRouteId(
+              '34236:$author:$dTag',
+              fallbackRouteIds: [authorEventId],
+            );
+
+            expect(result?.id, equals(authorEventId));
+          });
+
+          test('holds the route to expectedAuthor in the cache, Funnelcake '
+              'and the relay', () async {
+            final mockLocalStorage = MockVideoLocalStorage();
+            when(
+              () => mockLocalStorage.getEventsByIds(any()),
+            ).thenAnswer((_) async => []);
+            when(
+              () => mockLocalStorage.getEventsByDTag(authorEventId),
+            ).thenAnswer((_) async => [squattingVideo]);
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            when(
+              () => mockFunnelcakeClient.getVideoEvent(authorEventId),
+            ).thenAnswer((_) async => squattingVideo);
+            _answerQueriesFrom(mockNostrClient, [squattingVideo]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              localStorage: mockLocalStorage,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            expect(
+              await repo.fetchVideoWithStatsForRouteId(
+                authorEventId,
+                expectedAuthor: author,
+              ),
+              isNull,
+            );
+            verify(
+              () => mockLocalStorage.getEventsByDTag(authorEventId),
+            ).called(1);
+            verify(
+              () => mockFunnelcakeClient.getVideoEvent(authorEventId),
+            ).called(1);
+          });
+
+          test('resolves the route by an upper-case expectedAuthor', () async {
+            _answerQueriesFrom(mockNostrClient, [
+              authorsRegularVideo,
+            ]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repo.fetchVideoWithStatsForRouteId(
+              authorEventId,
+              expectedAuthor: author.toUpperCase(),
+            );
+
+            expect(result?.id, equals(authorEventId));
+          });
+
+          test('skips a candidate that names a different author than '
+              'expectedAuthor', () async {
+            final authorsVideo = _createVideoEventWithDTag(
+              id: authorEventId,
+              pubkey: author,
+              dTag: dTag,
+              videoUrl: 'https://example.com/author.mp4',
+              createdAt: 1739350000,
+            );
+            _answerQueriesFrom(mockNostrClient, [
+              authorsVideo,
+              otherAuthorsVideo,
+            ]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            expect(
+              await repo.fetchVideoWithStatsForRouteId(
+                '34236:$otherAuthor:$dTag',
+                expectedAuthor: author,
+              ),
+              isNull,
+            );
+          });
+
+          test('ignores an expectedAuthor that is not a hex pubkey', () async {
+            _answerQueriesFrom(mockNostrClient, [authorsRegularVideo]);
+            final repo = VideosRepository(
+              nostrClient: mockNostrClient,
+              funnelcakeApiClient: mockFunnelcakeClient,
+            );
+
+            final result = await repo.fetchVideoWithStatsForRouteId(
+              authorEventId,
+              expectedAuthor: 'npub1notahexpubkey',
+            );
+
+            expect(result?.id, equals(authorEventId));
+          });
+        });
+      });
+
       test(
         'resolves plain stable IDs from local storage before relay',
         () async {
@@ -17019,6 +17355,19 @@ Event _createVideoEventWithDTag({
     'tags': tags,
     'content': '',
     'sig': '',
+  });
+}
+
+/// Answers [NostrClient.queryEvents] the way a relay holding [stored] would:
+/// each filter is applied with [Filter.checkEvent], so an `authors` list is
+/// matched exactly and a filter without one matches every author.
+void _answerQueriesFrom(MockNostrClient client, List<Event> stored) {
+  when(() => client.queryEvents(any())).thenAnswer((invocation) async {
+    final filters = invocation.positionalArguments.single as List<Filter>;
+    return [
+      for (final event in stored)
+        if (filters.any((filter) => filter.checkEvent(event))) event,
+    ];
   });
 }
 

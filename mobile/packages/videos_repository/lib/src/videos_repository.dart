@@ -3379,6 +3379,9 @@ class VideosRepository {
   /// a confirmed absence, an unparseable route ID, or relay-only lookups that
   /// returned nothing. Callers may render "not found" on `null`.
   ///
+  /// [expectedAuthor] holds the lookup to that author; see
+  /// [lookupVideoForRouteId] for the candidates it applies to.
+  ///
   /// Throws:
   ///
   /// * [FunnelcakeException] when a lookup could not reach the API and neither
@@ -3388,10 +3391,12 @@ class VideosRepository {
   Future<VideoEvent?> fetchVideoWithStatsForRouteId(
     String routeId, {
     List<String> fallbackRouteIds = const [],
+    String? expectedAuthor,
   }) async {
     final result = await lookupVideoForRouteId(
       routeId,
       fallbackRouteIds: fallbackRouteIds,
+      expectedAuthor: expectedAuthor,
     );
     return result is VideoRouteFound ? result.video : null;
   }
@@ -3404,12 +3409,23 @@ class VideosRepository {
   /// with nothing naming the setting responsible and no way to act on it
   /// (#7892). Callers that only need the video keep using
   /// [fetchVideoWithStatsForRouteId].
+  ///
+  /// A hex route id is also looked up as a `d` tag, which any account can
+  /// publish under, so a known author has to travel with it: every candidate
+  /// is held to [expectedAuthor] when that is a hex pubkey, or otherwise to
+  /// the author an author-named [routeId] (a coordinate or `naddr1`) names.
+  /// Any other [expectedAuthor] value is ignored. A candidate that names a
+  /// different author is skipped (#10384).
   Future<VideoRouteLookupResult> lookupVideoForRouteId(
     String routeId, {
     List<String> fallbackRouteIds = const [],
+    String? expectedAuthor,
   }) async {
     FunnelcakeException? apiFailure;
     final attempted = <String>{};
+    final routeAuthor = NostrHexUtils.isValidPubkey(expectedAuthor)
+        ? expectedAuthor!.toLowerCase()
+        : VideoRouteRef.parse(routeId)?.addressablePubkey;
 
     // Any source may parse the video and then have it filtered; keep the
     // first so the caller can explain the outcome instead of guessing.
@@ -3421,6 +3437,7 @@ class VideosRepository {
       try {
         final video = await _fetchVideoWithStatsForSingleRouteId(
           candidateRouteId,
+          routeAuthor: routeAuthor,
           onContentFiltered: onContentFiltered,
         );
         if (video != null) return VideoRouteFound(video);
@@ -3452,6 +3469,7 @@ class VideosRepository {
 
   Future<VideoEvent?> _fetchVideoWithStatsForSingleRouteId(
     String routeId, {
+    String? routeAuthor,
     void Function(VideoEvent video)? onContentFiltered,
   }) async {
     final candidate = VideoRouteRef.parse(routeId);
@@ -3463,6 +3481,20 @@ class VideosRepository {
       );
       return null;
     }
+
+    // A lookup held to one author never answers with another's video, so a
+    // candidate naming a different author cannot satisfy it.
+    final ownAuthor = candidate.addressablePubkey;
+    if (ownAuthor != null && routeAuthor != null && ownAuthor != routeAuthor) {
+      Log.info(
+        'Route lookup skipped $routeId: it names a different author than '
+        'the lookup is held to (${pubkeyForLogs(routeAuthor)})',
+        name: 'VideosRepository',
+        category: LogCategory.video,
+      );
+      return null;
+    }
+    final author = ownAuthor ?? routeAuthor;
 
     // Sources that answered "no", in the order they were tried. A null from
     // this method renders a permanent "video not found", so the misses are
@@ -3482,6 +3514,7 @@ class VideosRepository {
 
     final cached = await _fetchRouteVideoFromLocalCache(
       candidate,
+      author: author,
       onContentFiltered: onContentFiltered,
     );
     if (cached != null) return resolved('localCache', cached);
@@ -3500,7 +3533,7 @@ class VideosRepository {
       try {
         final byFunnelcake = await _fetchVideoFromRouteApi(
           funnelcakeRouteId,
-          expectedPubkey: candidate.addressablePubkey,
+          expectedPubkey: author,
           permissive: true,
           onContentFiltered: onContentFiltered,
         );
@@ -3524,6 +3557,7 @@ class VideosRepository {
     if (candidate.eventId != null) {
       final byEventId = await _fetchRouteVideoByEventIdFromRelay(
         candidate.eventId!,
+        author: author,
         onContentFiltered: onContentFiltered,
       );
       if (byEventId != null) return resolved('relayEventId', byEventId);
@@ -3544,6 +3578,7 @@ class VideosRepository {
     if (candidate.stableId != null) {
       final byStableId = await _fetchVideoByStableIdFromRelay(
         candidate.stableId!,
+        author: author,
         onContentFiltered: onContentFiltered,
       );
       if (byStableId != null) return resolved('relayStableId', byStableId);
@@ -3554,7 +3589,9 @@ class VideosRepository {
       'Route lookup exhausted every source for $routeId '
       '(eventId=${candidate.eventId}, '
       'addressableId=${candidate.addressableId}, '
-      'stableId=${candidate.stableId}); missed: ${missed.join(', ')}',
+      'stableId=${candidate.stableId}, '
+      'heldToAuthor=${pubkeyForLogs(author, whenNull: 'none')}); '
+      'missed: ${missed.join(', ')}',
       name: 'VideosRepository',
       category: LogCategory.video,
     );
@@ -3961,11 +3998,12 @@ class VideosRepository {
   ///
   /// Shared links should be able to reopen a video on a cold start before the
   /// relay layer has finished connecting and before the REST fallback returns.
-  /// Addressable coordinates remain author-scoped even through this fast path:
-  /// a same-d-tag cache hit from another creator must fall through to the
-  /// author-filtered relay lookup instead of satisfying the route.
+  /// A lookup held to an [author] stays author-scoped even through this fast
+  /// path: a same-d-tag cache hit from another creator must fall through to
+  /// the author-filtered relay lookup instead of satisfying the route.
   Future<VideoEvent?> _fetchRouteVideoFromLocalCache(
     VideoRouteRef candidate, {
+    String? author,
     void Function(VideoEvent video)? onContentFiltered,
   }) async {
     if (_localStorage == null) return null;
@@ -3986,10 +4024,8 @@ class VideosRepository {
       );
     }
 
-    if (candidate.addressablePubkey != null) {
-      candidates.removeWhere(
-        (event) => event.pubkey != candidate.addressablePubkey,
-      );
+    if (author != null) {
+      candidates.removeWhere((event) => event.pubkey != author);
     }
 
     if (candidates.isEmpty) return null;
@@ -4001,6 +4037,7 @@ class VideosRepository {
 
   Future<VideoEvent?> _fetchRouteVideoByEventIdFromRelay(
     String eventId, {
+    String? author,
     void Function(VideoEvent video)? onContentFiltered,
   }) async {
     if (eventId.isEmpty) return null;
@@ -4010,6 +4047,7 @@ class VideosRepository {
           Filter(
             ids: [eventId],
             kinds: NIP71VideoKinds.getAllAcceptableVideoKinds(),
+            authors: author == null ? null : [author],
           ),
         ])
         .timeout(_routeRelayTimeout, onTimeout: () => const <Event>[]);
@@ -4019,16 +4057,26 @@ class VideosRepository {
     );
   }
 
+  /// Fetches a video by its `d` tag from relay only, limited to [author] when
+  /// the lookup carries one.
+  ///
+  /// A `d` tag is unique only per author, and Divine's is the sha256 of the
+  /// uploaded file, so without [author] another account's video can answer
+  /// an author-named link (#10384).
   Future<VideoEvent?> _fetchVideoByStableIdFromRelay(
     String stableId, {
+    String? author,
     void Function(VideoEvent video)? onContentFiltered,
   }) async {
     final events = await _nostrClient
         .queryEvents([
           Filter(
             // Route-specific lookups accept all supported NIP-71 video kinds so
-            // older shared links still resolve instead of failing as not found.
+            // older shared links still resolve instead of failing as not found,
+            // including the 34236 coordinates Divine wrote for 34235 videos
+            // before #10776.
             kinds: NIP71VideoKinds.getAllAcceptableVideoKinds(),
+            authors: author == null ? null : [author],
             d: [stableId],
             limit: 10,
           ),
@@ -4097,6 +4145,9 @@ class VideosRepository {
 
     final event = await _funnelcakeApiClient.getVideoEvent(routeId);
     if (event == null) return null;
+    // Checked before content filtering, so another author's filtered video
+    // is not reported back as this route's hidden video.
+    if (expectedPubkey != null && event.pubkey != expectedPubkey) return null;
 
     final video = _tryParseAndFilter(
       event,
@@ -4106,7 +4157,6 @@ class VideosRepository {
       onContentFiltered: onContentFiltered,
     );
     if (video == null) return null;
-    if (expectedPubkey != null && video.pubkey != expectedPubkey) return null;
 
     return _hydrateFirstRouteVideo([video]);
   }
