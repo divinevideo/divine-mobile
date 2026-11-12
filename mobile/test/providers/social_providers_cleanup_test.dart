@@ -815,8 +815,21 @@ void main() {
           participantPubkeys: _pubkeyB,
           isGroup: false,
           createdAt: 1700000000,
+          lastMessageTimestamp: 1700000000,
           ownerPubkey: _pubkeyA,
         );
+        for (final owner in [_pubkeyA, _pubkeyB]) {
+          await db.pendingGiftWrapsDao.recordFailedDecrypt(
+            giftWrapId: 'pending-$owner',
+            ownerPubkey: owner,
+            rawJson: '{}',
+            createdAt: 1700000000,
+          );
+          await db.processedGiftWrapsDao.record(
+            giftWrapId: 'processed-$owner',
+            ownerPubkey: owner,
+          );
+        }
         await DmSyncState(prefs).markHistoryDrainComplete(_pubkeyA);
         expect(DmSyncState(prefs).historyDrainComplete(_pubkeyA), isTrue);
         final now = DateTime.now().millisecondsSinceEpoch;
@@ -841,16 +854,23 @@ void main() {
             row.ownerPubkey,
         ];
         expect(owners, [_pubkeyB]);
-        // Deleted rows under a kept cursor would never download again.
-        expect(DmSyncState(prefs).historyDrainComplete(_pubkeyA), isFalse);
-        // Its conversations keep their read state, as on any sign-out.
+        expect(await db.pendingGiftWrapsDao.countForOwner(_pubkeyA), 0);
+        expect(await db.pendingGiftWrapsDao.countForOwner(_pubkeyB), 1);
         expect(
           [
-            for (final c in await db.select(db.conversations).get())
-              c.ownerPubkey,
+            for (final row in await db.select(db.processedGiftWraps).get())
+              row.ownerPubkey,
           ],
-          [_pubkeyA],
+          [_pubkeyB],
         );
+        // Deleted rows under a kept cursor would never download again.
+        expect(DmSyncState(prefs).historyDrainComplete(_pubkeyA), isFalse);
+        // Its conversation keeps its read state and the IDs of the messages
+        // it lost, as on any sign-out.
+        final conversation = (await db.select(db.conversations).get()).single;
+        expect(conversation.ownerPubkey, _pubkeyA);
+        expect(conversation.lastReadTimestamp, 1700000000);
+        expect(jsonDecode(conversation.retainedMessageIds!), ['dm-a']);
         expect(await db.seenVideosDao.getAll(), hasLength(1));
         verifyNever(() => dmRepository.stopListening());
       });
