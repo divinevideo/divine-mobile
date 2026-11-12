@@ -208,8 +208,9 @@ class BookmarksRepository {
 
   /// Storage key for the cached public-item snapshot.
   ///
-  /// `UserDataCleanupService` clears this key by literal on identity change
-  /// with no compile-time link back to it (#8314), so the value is frozen.
+  /// `UserDataCleanupService.userSpecificKeys` references this constant, so
+  /// the key is cleared on identity change. The value must not change:
+  /// devices already hold their snapshot under it.
   static const String globalBookmarksStorageKey = 'global_bookmarks';
 
   /// Storage key for [_revision] and its complete publish source.
