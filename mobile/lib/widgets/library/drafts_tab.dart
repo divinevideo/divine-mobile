@@ -154,7 +154,7 @@ class _DraftsList extends ConsumerWidget {
                     subtitle: context.l10n.libraryNoDraftsYetSubtitle,
                   ),
                 )
-              else
+              else ...[
                 SliverList.builder(
                   itemCount: drafts.length,
                   itemBuilder: (context, index) {
@@ -166,6 +166,10 @@ class _DraftsList extends ConsumerWidget {
                     );
                   },
                 ),
+                // The library leaves the bottom inset to its tabs, so the
+                // last draft would otherwise end behind the navigation bar.
+                const SliverBottomSafeArea(),
+              ],
             ],
           ),
         };
