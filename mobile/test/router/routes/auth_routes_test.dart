@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/auth_entry_redirect.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/router_guards.dart';
@@ -279,6 +280,30 @@ void main() {
               error: error,
             ),
           ),
+        );
+      });
+
+      test('an empty sign-in email still passes the anonymous gate', () {
+        final typed = const LoginOptionsRouteData(email: '').location;
+        final built = WelcomeScreen.loginOptionsPathWithRecovery(email: '');
+
+        expect(Uri.parse(typed).queryParameters, containsPair('email', ''));
+        expect(Uri.parse(built).queryParameters, isNot(contains('email')));
+        expect(
+          authenticatedRedirectsFromAuthEntry(
+            typed,
+            hasExpiredOAuthSession: false,
+            isAnonymous: true,
+          ),
+          isFalse,
+        );
+        expect(
+          authenticatedRedirectsFromAuthEntry(
+            built,
+            hasExpiredOAuthSession: false,
+            isAnonymous: true,
+          ),
+          isTrue,
         );
       });
 

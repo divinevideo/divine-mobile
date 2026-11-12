@@ -79,6 +79,10 @@ class LoginOptionsRouteData extends GoRouteData with $LoginOptionsRouteData {
   });
 
   /// An email to prefill, from create-account recovery.
+  ///
+  /// Pass `null`, not an empty string: the key alone, even empty, lets an
+  /// anonymous user past the sign-in gate. For a value that may be empty, use
+  /// [WelcomeScreen.loginOptionsPathWithRecovery], which drops it.
   final String? email;
 
   /// A message to show above the form, from create-account recovery.
