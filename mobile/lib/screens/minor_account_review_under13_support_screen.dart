@@ -4,13 +4,13 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/routes/minor_account_review_routes.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -146,7 +146,7 @@ class _Under13SupportBody extends StatelessWidget {
         DivineButton(
           label: l10n.minorAccountReviewBackToReview,
           expanded: true,
-          onPressed: () => context.go(MinorAccountReviewScreen.path),
+          onPressed: () => const MinorAccountReviewRouteData().go(context),
         ),
       ],
     );

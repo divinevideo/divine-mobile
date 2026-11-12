@@ -14,8 +14,8 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
+import 'package:openvine/router/routes/minor_account_review_routes.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
-import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/delete_account_action.dart';
@@ -44,6 +44,7 @@ class MinorAccountReviewScreen extends ConsumerWidget {
   static const routeName = 'minor-account-review';
   static const String path = RoutePaths.minorAccountReview;
   static const welcomePath = '/account-review/welcome';
+  static const welcomeRouteName = '$routeName-welcome';
 
   static String pathFor({
     MinorAccountReviewEntryPoint entryPoint =
@@ -149,7 +150,8 @@ class _WelcomeEntryView extends StatelessWidget {
                       child: DivineButton(
                         label: l10n.minorAccountReviewUnder13Cta,
                         onPressed: () =>
-                            context.push(MinorAccountReviewUnder13Screen.path),
+                            const MinorAccountReviewUnder13RouteData()
+                                .push<void>(context),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -157,9 +159,9 @@ class _WelcomeEntryView extends StatelessWidget {
                       child: DivineButton(
                         label: l10n.minorAccountReviewTeenCta,
                         type: DivineButtonType.secondary,
-                        onPressed: () => context.push(
-                          MinorAccountReviewParentConsentScreen.path,
-                        ),
+                        onPressed: () =>
+                            const MinorAccountReviewParentConsentRouteData()
+                                .push<void>(context),
                       ),
                     ),
                   ],

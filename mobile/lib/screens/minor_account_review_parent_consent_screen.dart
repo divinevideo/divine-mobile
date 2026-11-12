@@ -1,6 +1,5 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
@@ -9,8 +8,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
-import 'package:openvine/screens/minor_account_review_record_consent_screen.dart';
+import 'package:openvine/router/routes/minor_account_review_routes.dart';
 import 'package:openvine/utils/share_position_origin.dart';
 import 'package:openvine/widgets/minor_account_review_checklist_card.dart';
 
@@ -110,9 +108,9 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
                         context.l10n.minorAccountReviewParentConsentRecordCta,
                     leadingIcon: DivineIconName.videoCamera,
                     expanded: true,
-                    onPressed: () => context.push(
-                      MinorAccountReviewRecordConsentScreen.path,
-                    ),
+                    onPressed: () =>
+                        const MinorAccountReviewRecordConsentRouteData()
+                            .push<void>(context),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -140,7 +138,9 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
         reviewCase?.allowsParentVideoOrEmail == true &&
         reviewCase?.state ==
             MinorReviewCaseState.restrictedPendingUserResponse) {
-      await context.push<void>(MinorAccountReviewParentContactScreen.path);
+      await const MinorAccountReviewParentContactRouteData().push<void>(
+        context,
+      );
       return;
     }
     final MinorAccountReviewComposeEmail composer =

@@ -223,6 +223,78 @@ void main() {
       );
     });
 
+    group('welcome-entry choices', () {
+      Future<MockGoRouter> pumpWelcomeEntry(WidgetTester tester) async {
+        final goRouter = _pushStubbedGoRouter();
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: MockGoRouterProvider(
+              goRouter: goRouter,
+              child: const MinorAccountReviewScreen(
+                entryPoint: MinorAccountReviewEntryPoint.welcome,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        return goRouter;
+      }
+
+      testWidgets('the under-13 choice pushes the under-13 step', (
+        tester,
+      ) async {
+        final goRouter = await pumpWelcomeEntry(tester);
+        final label = lookupAppLocalizations(
+          const Locale('en'),
+        ).minorAccountReviewUnder13Cta;
+
+        await scrollUntilTappable(
+          tester,
+          find.text(label),
+          200,
+          scrollable: find.byType(Scrollable),
+        );
+        await tester.tap(find.text(label));
+        await tester.pump();
+
+        verify(
+          () => goRouter.push<void>(
+            '/account-review/under-13',
+            extra: any(named: 'extra'),
+          ),
+        ).called(1);
+        verifyNoMoreInteractions(goRouter);
+      });
+
+      testWidgets('the teen choice pushes the parent consent step', (
+        tester,
+      ) async {
+        final goRouter = await pumpWelcomeEntry(tester);
+        final label = lookupAppLocalizations(
+          const Locale('en'),
+        ).minorAccountReviewTeenCta;
+
+        await scrollUntilTappable(
+          tester,
+          find.text(label),
+          200,
+          scrollable: find.byType(Scrollable),
+        );
+        await tester.tap(find.text(label));
+        await tester.pump();
+
+        verify(
+          () => goRouter.push<void>(
+            '/account-review/parent-consent',
+            extra: any(named: 'extra'),
+          ),
+        ).called(1);
+        verifyNoMoreInteractions(goRouter);
+      });
+    });
+
     testWidgets('welcome-entry back button pops to the previous screen', (
       tester,
     ) async {
