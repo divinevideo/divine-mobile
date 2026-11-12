@@ -147,6 +147,17 @@ void stubUserDataCleanupSuccess(UserDataCleanupService cleanupService) {
   when(
     () => cleanupService.markOwnerScopedLegacyDataForUser(any()),
   ).thenAnswer((_) async {});
+  stubUnfinishedSignOutRetry(cleanupService);
+}
+
+/// Stubs the sign-in retry of an unfinished sign-out cleanup (#8587) as a
+/// no-op, for a mocked [UserDataCleanupService] stubbed call by call.
+void stubUnfinishedSignOutRetry(UserDataCleanupService cleanupService) {
+  when(
+    () => cleanupService.retryUnfinishedSignOutCleanup(
+      incomingPubkey: any(named: 'incomingPubkey'),
+    ),
+  ).thenAnswer((_) async {});
 }
 
 /// Builds an [AuthService] wired to a real channel-backed [SecureKeyStorage]

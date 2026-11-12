@@ -14,6 +14,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../test_setup.dart';
+import 'support/auth_service_test_harness.dart';
 
 class _MockSecureKeyStorage extends Mock implements SecureKeyStorage {}
 
@@ -165,6 +166,7 @@ void main() {
 
         when(() => mockCleanupService.claimLegacyRows(any()))
             .thenAnswer((_) async {});
+        stubUnfinishedSignOutRetry(mockCleanupService);
         when(() => mockCleanupService.markOwnerScopedLegacyDataForUser(any()))
             .thenAnswer((_) async {});
 

@@ -688,6 +688,124 @@ void main() {
       },
     );
 
+    group('a sign-out whose DM cleanup fails (#8587)', () {
+      // Watch history has no owner column: whatever survives the sign-out is
+      // read as the next account's own.
+      Future<void> seedDepartingWatchHistory() async {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        await db.seenVideosDao.markSeenBatch([
+          SeenVideoRow(
+            videoId: _reactionIdA,
+            firstSeenAt: now,
+            lastSeenAt: now,
+          ),
+        ]);
+        expect(await db.seenVideosDao.getAll(), hasLength(1));
+      }
+
+      UserDataCleanupService readService() {
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        return subscription.read();
+      }
+
+      test('still clears the shared stores when DM listening cannot be '
+          'stopped', () async {
+        await seedDepartingWatchHistory();
+        when(
+          () => dmRepository.stopListening(),
+        ).thenThrow(StateError('relay subscription close failed'));
+        final service = readService();
+        container.read(dmRepositoryProvider);
+
+        await service.clearUserSpecificData(
+          reason: 'explicit_logout',
+          userPubkey: _pubkeyA,
+        );
+
+        expect(await db.seenVideosDao.getAll(), isEmpty);
+      });
+
+      test('still clears the shared stores when the DM tables cannot be '
+          'cleared', () async {
+        await seedDepartingWatchHistory();
+        await db.customStatement('DROP TABLE direct_messages');
+
+        await readService().clearUserSpecificData(
+          reason: 'explicit_logout',
+          userPubkey: _pubkeyA,
+        );
+
+        expect(await db.seenVideosDao.getAll(), isEmpty);
+      });
+
+      test(
+        'a failed account switch still stops at its first failure',
+        () async {
+          await seedDepartingWatchHistory();
+          await db.customStatement('DROP TABLE direct_messages');
+
+          await expectLater(
+            readService().clearUserSpecificData(
+              reason: 'identity_change',
+              isIdentityChange: true,
+              userPubkey: _pubkeyA,
+            ),
+            throwsA(isA<UserDataCleanupException>()),
+          );
+
+          expect(await db.seenVideosDao.getAll(), hasLength(1));
+        },
+      );
+    });
+
+    group('onDepartedAccountDmCleanup (#8587)', () {
+      test("deletes only the departed account's DM rows", () async {
+        for (final (id, owner) in [
+          ('dm-a', _pubkeyA),
+          ('dm-b', _pubkeyB),
+        ]) {
+          final inserted = await db.directMessagesDao.insertMessage(
+            id: id,
+            conversationId: _dmConversationId,
+            senderPubkey: _pubkeyB,
+            content: 'kept until its owner signs out',
+            createdAt: 1700000000,
+            giftWrapId: 'wrap-$id',
+            ownerPubkey: owner,
+          );
+          expect(inserted, isTrue);
+        }
+        final now = DateTime.now().millisecondsSinceEpoch;
+        await db.seenVideosDao.markSeenBatch([
+          SeenVideoRow(
+            videoId: _reactionIdA,
+            firstSeenAt: now,
+            lastSeenAt: now,
+          ),
+        ]);
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        container.read(dmRepositoryProvider);
+
+        await subscription.read().onDepartedAccountDmCleanup!(_pubkeyA);
+
+        final owners = [
+          for (final row in await db.select(db.directMessages).get())
+            row.ownerPubkey,
+        ];
+        expect(owners, [_pubkeyB]);
+        expect(await db.seenVideosDao.getAll(), hasLength(1));
+        verifyNever(() => dmRepository.stopListening());
+      });
+    });
+
     test(
       'an account switch clears live watch history before it can be saved',
       () async {

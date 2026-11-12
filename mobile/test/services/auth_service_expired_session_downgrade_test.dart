@@ -24,6 +24,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_platfor
 import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/shared_channel_override.dart';
+import 'support/auth_service_test_harness.dart';
 
 class _MockUserDataCleanupService extends Mock
     implements UserDataCleanupService {}
@@ -76,6 +77,7 @@ void main() {
       when(
         () => mockCleanupService.claimLegacyRows(any()),
       ).thenAnswer((_) async {});
+      stubUnfinishedSignOutRetry(mockCleanupService);
       when(
         () => mockCleanupService.markOwnerScopedLegacyDataForUser(any()),
       ).thenAnswer((_) async {});

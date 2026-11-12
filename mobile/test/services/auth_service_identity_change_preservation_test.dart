@@ -222,6 +222,7 @@ void main() {
       ).thenAnswer((_) async => 0);
       when(() => mockCleanupService.claimLegacyRows(any()))
           .thenAnswer((_) async {});
+      stubUnfinishedSignOutRetry(mockCleanupService);
       when(() => mockCleanupService.markOwnerScopedLegacyDataForUser(any()))
           .thenAnswer((_) async {});
 

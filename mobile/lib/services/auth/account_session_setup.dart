@@ -220,6 +220,15 @@ extension _AccountSessionSetup on AuthService {
         );
       }
       ensureCurrent();
+      // A plain sign-out never blocks on its database cleanup, so finish one
+      // it left behind before this session starts using the shared stores.
+      await coordinator.runGuardedStorage(
+        activation,
+        () => _userDataCleanupService.retryUnfinishedSignOutCleanup(
+          incomingPubkey: pubkeyHex,
+        ),
+      );
+      ensureCurrent();
       final storedOwner = await coordinator.runGuardedStorage(
         activation,
         () => prefs.setString('current_user_pubkey_hex', pubkeyHex),
