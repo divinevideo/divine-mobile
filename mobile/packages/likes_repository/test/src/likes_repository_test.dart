@@ -7999,6 +7999,90 @@ void main() {
         }
       });
 
+      test('getVoteCounts counts an emoji reaction as no vote', () async {
+        // NIP-25: `+` or empty content is an upvote and `-` a downvote; an
+        // emoji SHOULD NOT be read as either.
+        mockQueryEventsSequence([
+          [
+            createMockReaction(
+              id: 'emoji_reaction',
+              targetEventId: editedId,
+              authorPubkey: 'emoji_reactor_pubkey_1234567890abcdef',
+              content: '🔥',
+            ),
+            createMockReaction(
+              id: 'empty_reaction',
+              targetEventId: editedId,
+              authorPubkey: 'empty_reactor_pubkey_1234567890abcdef',
+              content: '',
+            ),
+          ],
+          <Event>[],
+          <Event>[],
+        ]);
+
+        repository = createRepository(withLocalStorage: false);
+
+        final counts = await repository.getVoteCounts([editedId]);
+
+        expect(counts.upvotes[editedId], equals(1));
+        expect(counts.downvotes[editedId], equals(0));
+      });
+
+      test('getVoteCounts keeps a downvote when a newer emoji reaction '
+          'follows it', () async {
+        const voter = 'some_voter_pubkey_1234567890abcdef';
+        mockQueryEventsSequence([
+          [
+            createMockReaction(
+              id: 'newer_emoji',
+              targetEventId: editedId,
+              authorPubkey: voter,
+              content: '😂',
+              createdAt: defaultTimestamp + 1,
+            ),
+            createMockReaction(
+              id: 'older_downvote',
+              targetEventId: editedId,
+              authorPubkey: voter,
+              content: '-',
+            ),
+          ],
+          <Event>[],
+          <Event>[],
+        ]);
+
+        repository = createRepository(withLocalStorage: false);
+
+        final counts = await repository.getVoteCounts([editedId]);
+
+        expect(counts.upvotes[editedId], equals(0));
+        expect(counts.downvotes[editedId], equals(1));
+      });
+
+      test('getUserVoteStatuses does not read an own emoji reaction as an '
+          'upvote', () async {
+        mockQueryEventsSequence([
+          [
+            createMockReaction(
+              id: 'own_emoji',
+              targetEventId: editedId,
+              authorPubkey: testUserPubkey,
+              content: '🔥',
+            ),
+          ],
+          <Event>[],
+          <Event>[],
+        ]);
+
+        repository = createRepository(withLocalStorage: false);
+
+        final statuses = await repository.getUserVoteStatuses([editedId]);
+
+        expect(statuses.upvotedIds, isEmpty);
+        expect(statuses.downvotedIds, isEmpty);
+      });
+
       test('deleting an older revision keeps the newer coordinate downvote '
           'indexed (#6124)', () async {
         const coordinate = '34236:$testAuthorPubkey:reply-d-tag';
