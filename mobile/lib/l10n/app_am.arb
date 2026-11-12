@@ -832,6 +832,7 @@
   "@shareFailedToRemoveBookmark": {
     "description": "Snackbar when toggling Save off (remove from bookmarks) fails."
   },
+  "shareBookmarkPrivateItemsLocked": "የግል ዕልባቶችዎን መክፈት አልተቻለም፣ ስለዚህ ምንም አልተለወጠም። ትንሽ ቆይተው እንደገና ይሞክሩ።",
   "shareActionFailed": "እርምጃ አልተሳካም።",
   "shareWithTitle": "ሼር በማድረግ ያካፍሉ።",
   "shareFindPeople": "ሰዎችን ያግኙ",

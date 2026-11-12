@@ -1892,6 +1892,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'Nabigong tanggalin ang bookmark';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Hindi ma-unlock ang mga private bookmark mo, kaya walang nagbago. Subukan ulit mamaya.';
+
+  @override
   String get shareActionFailed => 'Nabigo ang action';
 
   @override

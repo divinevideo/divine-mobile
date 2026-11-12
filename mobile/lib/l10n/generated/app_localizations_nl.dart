@@ -1907,6 +1907,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Verwijderen uit bladwijzers mislukt';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Je privébladwijzers konden niet worden ontgrendeld, dus er is niets veranderd. Probeer het zo nog eens.';
+
+  @override
   String get shareActionFailed => 'Actie mislukt';
 
   @override

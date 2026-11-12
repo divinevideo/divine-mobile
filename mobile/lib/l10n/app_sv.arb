@@ -722,6 +722,7 @@
   "shareRemovedFromBookmarks": "Borttagen från bokmärken",
   "shareFailedToAddBookmark": "Kunde inte lägga till bokmärket",
   "shareFailedToRemoveBookmark": "Kunde inte ta bort från bokmärken",
+  "shareBookmarkPrivateItemsLocked": "Det gick inte att låsa upp dina privata bokmärken, så inget har ändrats. Försök igen om en stund.",
   "shareActionFailed": "Åtgärden misslyckades",
   "shareWithTitle": "Dela med",
   "shareFindPeople": "Hitta personer",

@@ -766,6 +766,7 @@
   "@shareFailedToRemoveBookmark": {
     "description": "Snackbar when toggling Save off (remove from bookmarks) fails."
   },
+  "shareBookmarkPrivateItemsLocked": "Не успяхме да отключим личните ти отметки, затова нищо не се промени. Опитай пак след малко.",
   "shareActionFailed": "Действието не мина",
   "shareWithTitle": "Сподели с",
   "shareFindPeople": "Намери хора",

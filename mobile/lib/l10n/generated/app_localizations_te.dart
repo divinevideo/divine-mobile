@@ -1939,6 +1939,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'బుక్‌మార్క్‌ని తీసివేయడంలో విఫలమైంది';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'మీ ప్రైవేట్ బుక్‌మార్క్‌లను అన్‌లాక్ చేయడం సాధ్యపడలేదు, కాబట్టి ఏమీ మారలేదు. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get shareActionFailed => 'చర్య విఫలమైంది';
 
   @override

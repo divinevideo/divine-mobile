@@ -1898,6 +1898,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'بک مارک نہیں ہٹایا جا سکا';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'آپ کے نجی بک مارکس کھولے نہیں جا سکے، اس لیے کچھ نہیں بدلا۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
+
+  @override
   String get shareActionFailed => 'کارروائی ناکام';
 
   @override

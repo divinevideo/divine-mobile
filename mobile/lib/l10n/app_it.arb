@@ -722,6 +722,7 @@
   "shareRemovedFromBookmarks": "Rimosso dai segnalibri",
   "shareFailedToAddBookmark": "Impossibile aggiungere ai segnalibri",
   "shareFailedToRemoveBookmark": "Impossibile rimuovere dai segnalibri",
+  "shareBookmarkPrivateItemsLocked": "Impossibile sbloccare i tuoi segnalibri privati, quindi non è cambiato nulla. Riprova tra un attimo.",
   "shareActionFailed": "Azione fallita",
   "shareWithTitle": "Condividi con",
   "shareFindPeople": "Trova persone",

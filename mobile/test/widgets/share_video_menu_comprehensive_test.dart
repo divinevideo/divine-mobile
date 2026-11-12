@@ -672,6 +672,49 @@ void main() {
       });
     }
 
+    // The refusal is neither an add nor a remove: with the private items
+    // unreadable the repository cannot tell which one Save would have been,
+    // so the copy names neither, whatever the public read suggested.
+    for (final wasBookmarked in const [false, true]) {
+      testWidgets(
+        'tapping Save reports an unreadable private list '
+        '(wasBookmarked: $wasBookmarked)',
+        (tester) async {
+          when(
+            () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+          ).thenReturn(wasBookmarked);
+          when(
+            () => mockBookmarksRepository.hasUnreadablePrivateItems,
+          ).thenReturn(true);
+          when(
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+          ).thenAnswer(
+            (_) async => BookmarkToggleResult(
+              succeeded: false,
+              wasBookmarked: wasBookmarked,
+              isBookmarked: wasBookmarked,
+              failure: BookmarkToggleFailure.privateItemsUnreadable,
+            ),
+          );
+          final l10n = lookupAppLocalizations(const Locale('en'));
+
+          await tester.pumpWidget(buildSubject());
+          await tester.tap(find.byType(ShareActionButton));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.shareSheetSave));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(l10n.shareBookmarkPrivateItemsLocked),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.shareFailedToAddBookmark), findsNothing);
+          expect(find.text(l10n.shareFailedToRemoveBookmark), findsNothing);
+        },
+      );
+    }
+
     testWidgets('share sheet has correct DivineIcons', (tester) async {
       await tester.pumpWidget(buildSubject());
       await tester.tap(find.byType(ShareActionButton));

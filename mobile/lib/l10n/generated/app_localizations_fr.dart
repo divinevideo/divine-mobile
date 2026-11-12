@@ -1935,6 +1935,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'Échec du retrait des favoris';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Impossible de déverrouiller tes favoris privés, donc rien n\'a changé. Réessaie dans un instant.';
+
+  @override
   String get shareActionFailed => 'Action échouée';
 
   @override

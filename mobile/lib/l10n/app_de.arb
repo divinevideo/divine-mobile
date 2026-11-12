@@ -722,6 +722,7 @@
   "shareRemovedFromBookmarks": "Aus Lesezeichen entfernt",
   "shareFailedToAddBookmark": "Lesezeichen konnte nicht hinzugefügt werden",
   "shareFailedToRemoveBookmark": "Lesezeichen konnte nicht entfernt werden",
+  "shareBookmarkPrivateItemsLocked": "Deine privaten Lesezeichen lassen sich nicht entsperren, deshalb hat sich nichts geändert. Versuch es gleich noch mal.",
   "shareActionFailed": "Aktion fehlgeschlagen",
   "shareWithTitle": "Teilen mit",
   "shareFindPeople": "Leute finden",

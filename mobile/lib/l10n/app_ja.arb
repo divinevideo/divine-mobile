@@ -722,6 +722,7 @@
   "shareRemovedFromBookmarks": "ブックマークから外したよ",
   "shareFailedToAddBookmark": "ブックマークの追加がうまくいかなかった",
   "shareFailedToRemoveBookmark": "ブックマークを外せなかった",
+  "shareBookmarkPrivateItemsLocked": "非公開のブックマークのロックを解除できなかったため、変更はありません。少し待ってからもう一度お試しください。",
   "shareActionFailed": "操作がうまくいかなかった",
   "shareWithTitle": "共有先",
   "shareFindPeople": "ユーザーを検索",

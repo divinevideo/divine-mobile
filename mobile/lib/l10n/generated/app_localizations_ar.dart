@@ -1898,6 +1898,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'فشل إزالة الإشارة المرجعية';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'تعذّر فتح إشاراتك المرجعية الخاصة، لذا لم يتغيّر شيء. يُرجى المحاولة مرة أخرى بعد قليل.';
+
+  @override
   String get shareActionFailed => 'فشل الإجراء';
 
   @override

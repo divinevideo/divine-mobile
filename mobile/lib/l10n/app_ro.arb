@@ -722,6 +722,7 @@
   "shareRemovedFromBookmarks": "Eliminat din semne de carte",
   "shareFailedToAddBookmark": "N-am putut adăuga semnul de carte",
   "shareFailedToRemoveBookmark": "N-am putut elimina semnul de carte",
+  "shareBookmarkPrivateItemsLocked": "Nu ți-am putut debloca semnele de carte private, așa că nu s-a schimbat nimic. Încearcă din nou peste câteva momente.",
   "shareActionFailed": "Acțiunea a eșuat",
   "shareWithTitle": "Partajează cu",
   "shareFindPeople": "Găsește oameni",

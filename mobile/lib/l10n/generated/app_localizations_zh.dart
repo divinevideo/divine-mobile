@@ -1758,6 +1758,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareFailedToRemoveBookmark => '移除收藏失败';
 
   @override
+  String get shareBookmarkPrivateItemsLocked => '无法解锁你的私密收藏，所以没有任何改动。请稍后再试。';
+
+  @override
   String get shareActionFailed => '操作失败';
 
   @override

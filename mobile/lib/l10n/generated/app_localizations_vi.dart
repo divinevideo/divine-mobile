@@ -1865,6 +1865,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'Không xóa được dấu trang';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Không thể mở khoá dấu trang riêng tư của bạn nên chưa có gì thay đổi. Hãy thử lại sau giây lát.';
+
+  @override
   String get shareActionFailed => 'Thao tác thất bại';
 
   @override

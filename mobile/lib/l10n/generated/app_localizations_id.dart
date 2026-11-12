@@ -1828,6 +1828,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'Gagal menghapus bookmark';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Tidak bisa membuka bookmark pribadimu, jadi tidak ada yang berubah. Coba lagi sebentar lagi.';
+
+  @override
   String get shareActionFailed => 'Aksi gagal';
 
   @override

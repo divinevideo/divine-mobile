@@ -1918,6 +1918,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'No se pudo quitar el marcador';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'No pudimos desbloquear tus marcadores privados, así que no cambió nada. Probá de nuevo en un momento.';
+
+  @override
   String get shareActionFailed => 'Falló la acción';
 
   @override

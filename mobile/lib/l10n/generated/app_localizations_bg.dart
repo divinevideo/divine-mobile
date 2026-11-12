@@ -1921,6 +1921,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'Не успяхме да премахнем отметката';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Не успяхме да отключим личните ти отметки, затова нищо не се промени. Опитай пак след малко.';
+
+  @override
   String get shareActionFailed => 'Действието не мина';
 
   @override

@@ -1924,6 +1924,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Lesezeichen konnte nicht entfernt werden';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Deine privaten Lesezeichen lassen sich nicht entsperren, deshalb hat sich nichts geändert. Versuch es gleich noch mal.';
+
+  @override
   String get shareActionFailed => 'Aktion fehlgeschlagen';
 
   @override

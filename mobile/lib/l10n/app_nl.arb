@@ -722,6 +722,7 @@
   "shareRemovedFromBookmarks": "Verwijderd uit bladwijzers",
   "shareFailedToAddBookmark": "Bladwijzer toevoegen mislukt",
   "shareFailedToRemoveBookmark": "Verwijderen uit bladwijzers mislukt",
+  "shareBookmarkPrivateItemsLocked": "Je privébladwijzers konden niet worden ontgrendeld, dus er is niets veranderd. Probeer het zo nog eens.",
   "shareActionFailed": "Actie mislukt",
   "shareWithTitle": "Delen met",
   "shareFindPeople": "Mensen zoeken",

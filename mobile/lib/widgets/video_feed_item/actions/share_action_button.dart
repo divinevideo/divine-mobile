@@ -447,6 +447,8 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         // more, not less. Both network-shaped failures are worded that way:
         // the read runs with requireAllRelaysSettled, so a single slow relay
         // reports timedOut while the device is merely degraded, not offline.
+        // An unreadable private list names neither add nor remove: the
+        // repository refused because it cannot tell which one Save would be.
         // Everything else keeps today's copy.
         final snackText = succeeded
             ? (removed
@@ -456,6 +458,8 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
                 BookmarkToggleFailure.couldNotReachRelays ||
                 BookmarkToggleFailure.timedOut =>
                   context.l10n.profileSetupNoRelaysConnected,
+                BookmarkToggleFailure.privateItemsUnreadable =>
+                  context.l10n.shareBookmarkPrivateItemsLocked,
                 _ =>
                   wasBookmarkedBeforeToggle
                       ? context.l10n.shareFailedToRemoveBookmark

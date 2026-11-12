@@ -1929,6 +1929,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Impossibile rimuovere dai segnalibri';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Impossibile sbloccare i tuoi segnalibri privati, quindi non è cambiato nulla. Riprova tra un attimo.';
+
+  @override
   String get shareActionFailed => 'Azione fallita';
 
   @override

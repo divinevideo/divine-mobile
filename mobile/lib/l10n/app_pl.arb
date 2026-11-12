@@ -722,6 +722,7 @@
   "shareRemovedFromBookmarks": "Usunięto z zakładek",
   "shareFailedToAddBookmark": "Nie udało się dodać zakładki",
   "shareFailedToRemoveBookmark": "Nie udało się usunąć zakładki",
+  "shareBookmarkPrivateItemsLocked": "Nie udało się odblokować twoich prywatnych zakładek, więc nic się nie zmieniło. Spróbuj ponownie za chwilę.",
   "shareActionFailed": "Akcja nieudana",
   "shareWithTitle": "Udostępnij z",
   "shareFindPeople": "Znajdź ludzi",

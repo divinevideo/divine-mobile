@@ -1180,6 +1180,7 @@
   "@shareFailedToRemoveBookmark": {
     "description": "Snackbar when toggling Save off (remove from bookmarks) fails."
   },
+  "shareBookmarkPrivateItemsLocked": "మీ ప్రైవేట్ బుక్‌మార్క్‌లను అన్‌లాక్ చేయడం సాధ్యపడలేదు, కాబట్టి ఏమీ మారలేదు. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.",
   "shareActionFailed": "చర్య విఫలమైంది",
   "shareWithTitle": "వీరితో భాగస్వామ్యం చేయండి",
   "shareFindPeople": "వ్యక్తులను కనుగొనండి",

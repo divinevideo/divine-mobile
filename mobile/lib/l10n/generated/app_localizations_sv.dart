@@ -1890,6 +1890,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'Kunde inte ta bort från bokmärken';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Det gick inte att låsa upp dina privata bokmärken, så inget har ändrats. Försök igen om en stund.';
+
+  @override
   String get shareActionFailed => 'Åtgärden misslyckades';
 
   @override

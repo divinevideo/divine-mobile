@@ -1749,6 +1749,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get shareFailedToRemoveBookmark => '북마크를 지우지 못했어요';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      '비공개 북마크를 열 수 없어서 아무것도 바뀌지 않았어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
   String get shareActionFailed => '작업에 실패했어요';
 
   @override

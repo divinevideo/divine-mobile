@@ -946,6 +946,7 @@
   "@shareFailedToRemoveBookmark": {
     "description": "Snackbar when toggling Save off (remove from bookmarks) fails."
   },
+  "shareBookmarkPrivateItemsLocked": "Tidak dapat membuka penanda buku peribadi anda, jadi tiada apa-apa yang berubah. Cuba lagi sebentar nanti.",
   "shareActionFailed": "Tindakan gagal",
   "shareWithTitle": "Kongsi dengan",
   "shareFindPeople": "Cari orang",

@@ -1951,6 +1951,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'N-am putut elimina semnul de carte';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Nu ți-am putut debloca semnele de carte private, așa că nu s-a schimbat nimic. Încearcă din nou peste câteva momente.';
+
+  @override
   String get shareActionFailed => 'Acțiunea a eșuat';
 
   @override

@@ -946,6 +946,7 @@
   "@shareFailedToRemoveBookmark": {
     "description": "Snackbar when toggling Save off (remove from bookmarks) fails."
   },
+  "shareBookmarkPrivateItemsLocked": "آپ کے نجی بک مارکس کھولے نہیں جا سکے، اس لیے کچھ نہیں بدلا۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
   "shareActionFailed": "کارروائی ناکام",
   "shareWithTitle": "کس کے ساتھ شیئر کریں",
   "shareFindPeople": "لوگ تلاش کریں",

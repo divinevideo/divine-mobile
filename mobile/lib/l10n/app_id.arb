@@ -722,6 +722,7 @@
   "shareRemovedFromBookmarks": "Dihapus dari bookmark",
   "shareFailedToAddBookmark": "Gagal menambahkan bookmark",
   "shareFailedToRemoveBookmark": "Gagal menghapus bookmark",
+  "shareBookmarkPrivateItemsLocked": "Tidak bisa membuka bookmark pribadimu, jadi tidak ada yang berubah. Coba lagi sebentar lagi.",
   "shareActionFailed": "Aksi gagal",
   "shareWithTitle": "Bagikan dengan",
   "shareFindPeople": "Cari orang",

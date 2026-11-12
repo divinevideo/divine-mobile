@@ -946,6 +946,7 @@
   "@shareFailedToRemoveBookmark": {
     "description": "Snackbar when toggling Save off (remove from bookmarks) fails."
   },
+  "shareBookmarkPrivateItemsLocked": "无法解锁你的私密收藏，所以没有任何改动。请稍后再试。",
   "shareActionFailed": "操作失败",
   "shareWithTitle": "分享给",
   "shareFindPeople": "找人",

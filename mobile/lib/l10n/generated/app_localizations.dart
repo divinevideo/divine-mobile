@@ -3205,6 +3205,12 @@ abstract class AppLocalizations {
   /// **'Failed to remove bookmark'**
   String get shareFailedToRemoveBookmark;
 
+  /// Snackbar when Save is refused because the encrypted (private) part of the user's bookmark list could not be decrypted. Neither adding nor removing happened, so it must not name either. A retry can work when the signer was only briefly unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t unlock your private bookmarks, so nothing changed. Try again in a moment.'**
+  String get shareBookmarkPrivateItemsLocked;
+
   /// No description provided for @shareActionFailed.
   ///
   /// In en, this message translates to:

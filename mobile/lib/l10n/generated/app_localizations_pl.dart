@@ -1948,6 +1948,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'Nie udało się usunąć zakładki';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Nie udało się odblokować twoich prywatnych zakładek, więc nic się nie zmieniło. Spróbuj ponownie za chwilę.';
+
+  @override
   String get shareActionFailed => 'Akcja nieudana';
 
   @override

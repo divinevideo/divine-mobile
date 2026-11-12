@@ -722,6 +722,7 @@
   "shareRemovedFromBookmarks": "Removido dos favoritos",
   "shareFailedToAddBookmark": "Falha ao adicionar aos favoritos",
   "shareFailedToRemoveBookmark": "Falha ao remover dos favoritos",
+  "shareBookmarkPrivateItemsLocked": "Não deu para desbloquear seus favoritos privados, então nada mudou. Tente de novo daqui a pouco.",
   "shareActionFailed": "A ação falhou",
   "shareWithTitle": "Compartilhar com",
   "shareFindPeople": "Encontrar pessoas",

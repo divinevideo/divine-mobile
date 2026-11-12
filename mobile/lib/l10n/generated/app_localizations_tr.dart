@@ -1832,6 +1832,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'Yer imi kaldırılamadı';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Gizli yer imlerinin kilidini açamadık, bu yüzden hiçbir şey değişmedi. Biraz sonra tekrar dene.';
+
+  @override
   String get shareActionFailed => 'İşlem başarısız';
 
   @override

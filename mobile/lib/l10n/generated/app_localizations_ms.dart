@@ -1874,6 +1874,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Gagal mengalih keluar penanda buku';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Tidak dapat membuka penanda buku peribadi anda, jadi tiada apa-apa yang berubah. Cuba lagi sebentar nanti.';
+
+  @override
   String get shareActionFailed => 'Tindakan gagal';
 
   @override

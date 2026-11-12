@@ -1739,6 +1739,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'ブックマークを外せなかった';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      '非公開のブックマークのロックを解除できなかったため、変更はありません。少し待ってからもう一度お試しください。';
+
+  @override
   String get shareActionFailed => '操作がうまくいかなかった';
 
   @override

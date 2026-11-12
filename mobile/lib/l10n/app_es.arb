@@ -722,6 +722,7 @@
   "shareRemovedFromBookmarks": "Quitado de marcadores",
   "shareFailedToAddBookmark": "No se pudo agregar el marcador",
   "shareFailedToRemoveBookmark": "No se pudo quitar el marcador",
+  "shareBookmarkPrivateItemsLocked": "No pudimos desbloquear tus marcadores privados, así que no cambió nada. Probá de nuevo en un momento.",
   "shareActionFailed": "Falló la acción",
   "shareWithTitle": "Compartir con",
   "shareFindPeople": "Buscar personas",

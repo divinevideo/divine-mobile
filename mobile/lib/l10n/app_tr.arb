@@ -722,6 +722,7 @@
   "shareRemovedFromBookmarks": "Yer imlerinden kaldırıldı",
   "shareFailedToAddBookmark": "Yer imi eklenemedi",
   "shareFailedToRemoveBookmark": "Yer imi kaldırılamadı",
+  "shareBookmarkPrivateItemsLocked": "Gizli yer imlerinin kilidini açamadık, bu yüzden hiçbir şey değişmedi. Biraz sonra tekrar dene.",
   "shareActionFailed": "İşlem başarısız",
   "shareWithTitle": "Şununla paylaş",
   "shareFindPeople": "Kişi bul",

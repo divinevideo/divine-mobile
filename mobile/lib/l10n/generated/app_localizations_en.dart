@@ -1902,6 +1902,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'Failed to remove bookmark';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'Couldn\'t unlock your private bookmarks, so nothing changed. Try again in a moment.';
+
+  @override
   String get shareActionFailed => 'Action failed';
 
   @override

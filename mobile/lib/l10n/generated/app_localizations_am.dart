@@ -1853,6 +1853,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get shareFailedToRemoveBookmark => 'ዕልባትን ማስወገድ አልተሳካም።';
 
   @override
+  String get shareBookmarkPrivateItemsLocked =>
+      'የግል ዕልባቶችዎን መክፈት አልተቻለም፣ ስለዚህ ምንም አልተለወጠም። ትንሽ ቆይተው እንደገና ይሞክሩ።';
+
+  @override
   String get shareActionFailed => 'እርምጃ አልተሳካም።';
 
   @override

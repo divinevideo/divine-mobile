@@ -946,6 +946,7 @@
   "@shareFailedToRemoveBookmark": {
     "description": "Snackbar when toggling Save off (remove from bookmarks) fails."
   },
+  "shareBookmarkPrivateItemsLocked": "Không thể mở khoá dấu trang riêng tư của bạn nên chưa có gì thay đổi. Hãy thử lại sau giây lát.",
   "shareActionFailed": "Thao tác thất bại",
   "shareWithTitle": "Chia sẻ với",
   "shareFindPeople": "Tìm người",
