@@ -3,8 +3,10 @@
 
 import 'dart:async';
 
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show RenderCanceledException;
+import 'package:unified_logger/unified_logger.dart';
 
 /// Registry of in-flight native `pro_video_editor` tasks started by this app.
 ///
@@ -49,6 +51,10 @@ class NativeRenderTaskRegistry {
   /// wrap this very call, as the loop alignment's render does, and waiting
   /// for it would wait for good.
   ///
+  /// The cancel and the wait together last at most
+  /// [VideoEditorConstants.renderTaskHandoverTimeout]. Past that, the
+  /// earlier task is treated as stuck and [operation] starts anyway.
+  ///
   /// Of several calls waiting on the same [id], only the newest starts. The
   /// others throw [RenderCanceledException] without starting, as they would
   /// once the newest had cancelled them.
@@ -61,8 +67,16 @@ class NativeRenderTaskRegistry {
     final registration = _register(id, exclusive: true);
     try {
       if (previous != null) {
-        await cancel(id);
-        if (previous.exclusive) await previous.settled;
+        await _handOver(id, previous, cancel).timeout(
+          VideoEditorConstants.renderTaskHandoverTimeout,
+          onTimeout: () => Log.warning(
+            'Native task $id did not let go of its id within '
+            '${VideoEditorConstants.renderTaskHandoverTimeout.inSeconds} s, '
+            'starting the next one anyway',
+            name: 'NativeRenderTaskRegistry',
+            category: LogCategory.video,
+          ),
+        );
         if (!identical(_registrations[id], registration)) {
           throw const RenderCanceledException();
         }
@@ -71,6 +85,15 @@ class NativeRenderTaskRegistry {
     } finally {
       _release(id, registration);
     }
+  }
+
+  static Future<void> _handOver(
+    String id,
+    _Registration previous,
+    Future<void> Function(String id) cancel,
+  ) async {
+    await cancel(id);
+    if (previous.exclusive) await previous.settled;
   }
 
   static _Registration _register(String id, {required bool exclusive}) =>

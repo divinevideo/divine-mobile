@@ -1428,8 +1428,9 @@ class VideoEditorRenderService {
   }
 
   /// Cancels any existing native render with [task]'s id and waits until it
-  /// has let go of the id, tracks this render instance, then renders to
-  /// [outputPath].
+  /// has let go of the id (at most
+  /// [VideoEditorConstants.renderTaskHandoverTimeout]), tracks this render
+  /// instance, then renders to [outputPath].
   ///
   /// Renders sharing an id, such as two exports of the same draft, therefore
   /// reach the plugin one at a time: the newest one renders and an older one

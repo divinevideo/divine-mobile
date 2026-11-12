@@ -224,6 +224,18 @@ class VideoEditorConstants {
   /// "slow" and below "forever" (#8488).
   static const Duration renderWatchdogTimeout = Duration(minutes: 5);
 
+  /// How long a render waits for an earlier render under its task id to let
+  /// go of the id before it starts anyway.
+  ///
+  /// The plugin answers a cancelled render as soon as the cancel lands, so the
+  /// hand-over normally takes one round trip. This bounds the cases where it
+  /// does not: a cancel that never comes back, or a render stuck before it
+  /// reached the platform. Without it one stuck render would hold up every
+  /// later render of its draft. It matches the plugin's own 20 s no-progress
+  /// watchdog. Past it, a platform still holding the id refuses the new
+  /// render at once with `TASK_ALREADY_RUNNING`.
+  static const Duration renderTaskHandoverTimeout = Duration(seconds: 20);
+
   /// How long a preview render — a transition seam or a speed body — may run
   /// before it is treated as never returning (#9347).
   ///

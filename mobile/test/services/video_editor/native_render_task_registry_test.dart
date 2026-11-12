@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show RenderCanceledException;
@@ -168,6 +170,69 @@ void main() {
         expect(result, equals('rendered'));
         expect(cancelled, equals(['task-1']));
         expect(NativeRenderTaskRegistry.activeTaskIds, isEmpty);
+      });
+
+      // A render the watchdog gave up on can stay unsettled, and a cancel
+      // stuck on a blocked platform thread never answers. Neither may hold
+      // up every later render under the id.
+      group('starts anyway once the hand-over bound has passed', () {
+        final justBefore =
+            VideoEditorConstants.renderTaskHandoverTimeout -
+            const Duration(milliseconds: 1);
+
+        test('when the task holding the id never settles', () {
+          fakeAsync((async) {
+            var secondStarted = false;
+            unawaited(
+              NativeRenderTaskRegistry.trackExclusively<void>(
+                'task-1',
+                () => Completer<void>().future,
+                cancel: (_) async {},
+              ),
+            );
+            unawaited(
+              NativeRenderTaskRegistry.trackExclusively(
+                'task-1',
+                () async => secondStarted = true,
+                cancel: (_) async {},
+              ),
+            );
+
+            async.elapse(justBefore);
+            expect(secondStarted, isFalse);
+
+            async.elapse(const Duration(milliseconds: 1));
+            expect(secondStarted, isTrue);
+          });
+        });
+
+        test('when the cancel of that task never comes back', () {
+          fakeAsync((async) {
+            final first = Completer<void>();
+            var secondStarted = false;
+            unawaited(
+              NativeRenderTaskRegistry.trackExclusively(
+                'task-1',
+                () => first.future,
+                cancel: (_) async {},
+              ),
+            );
+            unawaited(
+              NativeRenderTaskRegistry.trackExclusively(
+                'task-1',
+                () async => secondStarted = true,
+                cancel: (_) => Completer<void>().future,
+              ),
+            );
+            first.complete();
+
+            async.elapse(justBefore);
+            expect(secondStarted, isFalse);
+
+            async.elapse(const Duration(milliseconds: 1));
+            expect(secondStarted, isTrue);
+          });
+        });
       });
 
       test('starts only the newest of the calls waiting for an id', () async {
