@@ -1487,6 +1487,46 @@ void main() {
             isTrue,
           );
         });
+
+        test(
+          'resolves event ids when the relay answers with a revision older '
+          'than this device holds',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent(
+                  [originalId],
+                  createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60,
+                ),
+              ],
+            );
+            var lookups = 0;
+            final service = createService(
+              resolveVideoAddresses: (ids) async {
+                if (++lookups == 1) throw StateError('relay gone');
+                return {originalId: coordinate};
+              },
+            );
+            // The save's own sync fails the lookup, and its publish leaves
+            // the relay answering with the revision it replaced.
+            final save = await service.toggleVideoInGlobalBookmarks(
+              unrelatedId,
+            );
+            expect(save.succeeded, isTrue);
+            expect(
+              service.bookmarkedVideoReferences,
+              equals([originalId, unrelatedId]),
+            );
+
+            await service.syncGlobalBookmarks();
+
+            expect(lookups, equals(2));
+            expect(
+              service.bookmarkedVideoReferences,
+              equals([coordinate, unrelatedId]),
+            );
+          },
+        );
       });
 
       group('dispose', () {
@@ -1584,6 +1624,7 @@ void main() {
                   ['t', 'loops'],
                   ['a', coordinate],
                   ['a', otherCoordinate],
+                  ['a', '34235:$author:wide-clip'],
                 ]),
               ],
             );
@@ -1595,7 +1636,12 @@ void main() {
 
             expect(
               service.bookmarkedVideoReferences,
-              equals([unrelatedId, coordinate, otherCoordinate]),
+              equals([
+                unrelatedId,
+                coordinate,
+                otherCoordinate,
+                '34235:$author:wide-clip',
+              ]),
             );
           },
         );
@@ -1629,14 +1675,14 @@ void main() {
           addTearDown(subscription.cancel);
 
           await service.syncGlobalBookmarks();
+          await service.toggleVideoInGlobalBookmarks(
+            unrelatedId,
+            addressableId: otherCoordinate,
+          );
           await pumpEventQueue();
 
-          expect(
-            announced,
-            equals([
-              [coordinate],
-            ]),
-          );
+          expect(announced.first, equals([coordinate]));
+          expect(announced.last, equals([coordinate, otherCoordinate]));
         });
       });
     });
