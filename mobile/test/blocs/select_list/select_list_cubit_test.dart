@@ -1497,6 +1497,37 @@ void main() {
         expect(cubit.state.memberListIds, {'older'});
       });
 
+      test('saves the picks when the lookup fails', () async {
+        stubLists([
+          _list('holds', videoEventIds: [address]),
+          _list('other', videoEventIds: [_otherVideoId]),
+          _list('empty'),
+        ]);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
+        when(
+          () => service.removeVideoFromList(any(), any()),
+        ).thenAnswer((_) async => true);
+        final lookup = Completer<Map<String, String>>();
+        final cubit = buildResolvingCubit((_) => lookup.future);
+        addTearDown(cubit.close);
+
+        cubit
+          ..toggled('holds')
+          ..toggled('empty');
+        final save = cubit.submitted();
+        lookup.completeError(Exception('relay down'));
+
+        expect(await save, SelectListStatus.saved);
+        verify(
+          () => service.removeVideoFromList('$_ownerPubkey:holds', address),
+        ).called(1);
+        verify(
+          () => service.addVideoToList('$_ownerPubkey:empty', address),
+        ).called(1);
+      });
+
       test('asks nothing for a video without a coordinate', () async {
         stubLists([
           _list('older', videoEventIds: [olderVideoId]),
