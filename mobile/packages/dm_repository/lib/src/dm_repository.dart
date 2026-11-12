@@ -7831,6 +7831,7 @@ class DmRepository {
       await _finalizeAfterRecipientUnconfirmed(
         outgoingDao: outgoingDao,
         rumorId: rumor.id,
+        unconfirmedWrap: _unconfirmedWrapOf(result),
       );
       await _ensureConversationVisibleAfterSendFailure(
         conversationId: conversationId,
@@ -7850,6 +7851,8 @@ class DmRepository {
         rumorId: rumor.id,
         errorMessage: result.error ?? 'Unknown publish failure',
         reachedNoRelay: result.reachedNoRelay,
+        wrapRefused: result.recipientWrapRefused,
+        unconfirmedWrap: _unconfirmedWrapOf(result),
       );
       // Make a brand-new thread visible so the user can find the red bubble
       // to retry or delete it. A blocked result is handled terminally above
@@ -7892,6 +7895,8 @@ class DmRepository {
           retryablePending: result.retryablePending,
           queuedRumorId: rumorId,
           reachedNoRelay: result.reachedNoRelay,
+          unconfirmedRecipientWrap: result.unconfirmedRecipientWrap,
+          recipientWrapRefused: result.recipientWrapRefused,
         ),
       };
 
@@ -8497,7 +8502,7 @@ class DmRepository {
 
     // A wrap the pool accepted on an earlier held attempt is already where an
     // inbox-less recipient reads, and another one is not more likely to reach
-    // an inbox we still cannot read. Only a found inbox gets a new wrap
+    // an inbox we still cannot read. Only a found inbox is sent to again
     // (#10012).
     final poolWrapId = _heldPoolWrapId(row);
     // A retry that keeps or settles on that wrap skips sendRumor, so it makes
@@ -8534,6 +8539,7 @@ class DmRepository {
         awaitRecipientOk: true,
         // Held by the downgrade below, so no self-copy yet (#10012).
         withholdSelfWrap: inbox.state == DmInboxResolution.unreadable,
+        recipientWrap: _storedUnconfirmedWrap(row),
       );
 
       // Same rule as the initial send: a default-pool `OK` is not delivery
@@ -8795,6 +8801,7 @@ class DmRepository {
       await _finalizeAfterRecipientUnconfirmed(
         outgoingDao: dao,
         rumorId: rumorId,
+        unconfirmedWrap: _unconfirmedWrapOf(result),
       );
     } else {
       await _finalizeAfterRecipientFailure(
@@ -8802,6 +8809,8 @@ class DmRepository {
         rumorId: rumorId,
         errorMessage: result.error ?? 'Unknown publish failure',
         reachedNoRelay: result.reachedNoRelay,
+        wrapRefused: result.recipientWrapRefused,
+        unconfirmedWrap: _unconfirmedWrapOf(result),
       );
       // An attempt that reached no relay is an outage on our side, not a
       // failed attempt, so it stays free (#8516).
@@ -9386,7 +9395,16 @@ class DmRepository {
     required String rumorId,
     required String errorMessage,
     bool reachedNoRelay = false,
+    bool wrapRefused = false,
+    Event? unconfirmedWrap,
   }) async {
+    // A relay that stayed silent beside a refusal a retry can get past may
+    // hold this attempt's wrap (#8441).
+    await _keepUnconfirmedWrap(
+      outgoingDao: outgoingDao,
+      rumorId: rumorId,
+      wrap: unconfirmedWrap,
+    );
     try {
       await outgoingDao.markRecipientWrapStatus(
         id: rumorId,
@@ -9398,6 +9416,11 @@ class DmRepository {
         status: OutgoingWrapStatus.failed,
         lastError: errorMessage,
       );
+      // A relay that refused the kept wrap for good would refuse it again, so
+      // the next attempt builds a new one; any other failure keeps it.
+      if (wrapRefused) {
+        await _clearUnconfirmedWrap(outgoingDao: outgoingDao, rumorId: rumorId);
+      }
     } on Object catch (e, stackTrace) {
       Log.error(
         'Failed to mark outgoing_dms row failed for $rumorId: $e',
@@ -9524,7 +9547,13 @@ class DmRepository {
   Future<void> _finalizeAfterRecipientUnconfirmed({
     required OutgoingDmsDao outgoingDao,
     required String rumorId,
+    Event? unconfirmedWrap,
   }) async {
+    await _keepUnconfirmedWrap(
+      outgoingDao: outgoingDao,
+      rumorId: rumorId,
+      wrap: unconfirmedWrap,
+    );
     try {
       await outgoingDao.incrementRetry(rumorId);
     } on Object catch (e, stackTrace) {
@@ -9546,6 +9575,62 @@ class DmRepository {
       // The row stays pending either way — nudge the sweep so a
       // soft-unconfirmed send converges without a foreground flip.
       _notifyRetryableWork();
+    }
+  }
+
+  /// Keeps [wrap], the recipient wrap an attempt on queue row [rumorId] wrote
+  /// without hearing its `OK`, so the next attempt sends that same event
+  /// again and a relay that stored it confirms it rather than storing a
+  /// second one (#8441). Non-rethrowing: losing the wrap only means the next
+  /// attempt builds a new one.
+  Future<void> _keepUnconfirmedWrap({
+    required OutgoingDmsDao outgoingDao,
+    required String rumorId,
+    required Event? wrap,
+  }) async {
+    if (wrap == null) return;
+    try {
+      await outgoingDao.recordUnconfirmedRecipientWrap(
+        id: rumorId,
+        wrapJson: jsonEncode(wrap.toJson()),
+      );
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Failed to keep unconfirmed recipient wrap ${wrap.id} for '
+        'outgoing_dms row $rumorId: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _errorReporter?.call(
+        e,
+        stackTrace,
+        site: DmRepositoryReportableSites.keepUnconfirmedRecipientWrap,
+      );
+    }
+  }
+
+  /// Forgets a permanently refused wrap while the caller owns the row's
+  /// recovery key. Non-rethrowing: a failed clear leaves that wrap retryable.
+  Future<void> _clearUnconfirmedWrap({
+    required OutgoingDmsDao outgoingDao,
+    required String rumorId,
+  }) async {
+    try {
+      await outgoingDao.clearUnconfirmedRecipientWrap(rumorId);
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Failed to clear unconfirmed recipient wrap for outgoing_dms row '
+        '$rumorId: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _errorReporter?.call(
+        e,
+        stackTrace,
+        site: DmRepositoryReportableSites.clearUnconfirmedRecipientWrap,
+      );
     }
   }
 
@@ -9591,6 +9676,30 @@ class DmRepository {
     }
     return result;
   }
+
+  /// The recipient wrap an earlier attempt on [row] wrote without hearing its
+  /// `OK` (#8441), or `null` when there is none or it no longer parses.
+  static Event? _storedUnconfirmedWrap(OutgoingDm row) {
+    final json = row.unconfirmedRecipientWrapJson;
+    if (json == null) return null;
+    try {
+      return Event.fromJson(jsonDecode(json) as Map<String, dynamic>);
+    } on Object catch (e) {
+      Log.warning(
+        'Ignoring the unreadable recipient wrap kept for queued DM '
+        '${row.id}: $e',
+        category: LogCategory.system,
+      );
+      return null;
+    }
+  }
+
+  /// The recipient wrap [result]'s attempt wrote without hearing an `OK`.
+  static Event? _unconfirmedWrapOf(NIP17SendResult result) => switch (result) {
+    NIP17SendFailure(:final unconfirmedRecipientWrap) =>
+      unconfirmedRecipientWrap,
+    NIP17SendSuccess() => null,
+  };
 
   /// The recipient wrap the fallback pool accepted on a held attempt of
   /// [row] (#10012), or `null` when no attempt was held that way.
@@ -9737,6 +9846,7 @@ class DmRepository {
     List<String>? selfWrapTargetRelays,
     bool awaitRecipientOk = false,
     bool withholdSelfWrap = false,
+    Event? recipientWrap,
   }) {
     return _messageService!
         .sendRumor(
@@ -9745,6 +9855,7 @@ class DmRepository {
           targetRelays: targetRelays,
           selfWrapTargetRelays: selfWrapTargetRelays,
           awaitRecipientOk: awaitRecipientOk,
+          recipientWrap: recipientWrap,
           // A soft-unconfirmed message send must NOT publish the self-wrap:
           // the durable queue replays the full send until the recipient wrap
           // confirms (publishing both wraps then), while a soft self-wrap
@@ -10251,9 +10362,16 @@ class DmRepository {
           if (_disposed || _resetGeneration != generation) {
             return _queuedForDelivery(queueIds[i]);
           }
+          // A sweep may have finished an unconfirmed attempt on this row
+          // before this loop reached it. Read its wrap under the row's key: a
+          // recovery can finish after the cancel check above read the row.
+          final keptRow = await outgoingDao?.getById(queueIds[i]);
           final published = await _sendRumorWithTimeout(
             rumor: groupRumor,
             recipientPubkey: pubkey,
+            recipientWrap: keptRow == null
+                ? null
+                : _storedUnconfirmedWrap(keptRow),
             targetRelays: inbox?.relays,
             selfWrapTargetRelays: selfWrapRelays,
             awaitRecipientOk: true,
@@ -10262,6 +10380,24 @@ class DmRepository {
                 outgoingDao != null &&
                 inbox?.state == DmInboxResolution.unreadable,
           );
+          // Kept while this key is held: the finalize pass below runs only
+          // after every sibling has published, and a retry of this row in
+          // between would otherwise build a second wrap (#8441).
+          if (outgoingDao != null) {
+            // Clear under the same key too: the later finalize pass must not
+            // erase a newer wrap that a recovery kept between siblings.
+            if (published.recipientWrapRefused) {
+              await _clearUnconfirmedWrap(
+                outgoingDao: outgoingDao,
+                rumorId: queueIds[i],
+              );
+            }
+            await _keepUnconfirmedWrap(
+              outgoingDao: outgoingDao,
+              rumorId: queueIds[i],
+              wrap: _unconfirmedWrapOf(published),
+            );
+          }
           // An `OK` from the DEFAULT POOL is not delivery for a recipient
           // whose inbox we never read: their wrap may sit on relays they never
           // query, and finalizing this sibling deletes the one handle that
@@ -10488,6 +10624,9 @@ class DmRepository {
             result: result,
           );
         } else if (result.retryablePending) {
+          // The attempt kept its wrap while it held the row's key. Keeping it
+          // again here could restore a wrap that a retry in between had seen
+          // refused (#8441).
           await _finalizeAfterRecipientUnconfirmed(
             outgoingDao: outgoingDao,
             rumorId: queueIds[i],

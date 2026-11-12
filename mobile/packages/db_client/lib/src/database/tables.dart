@@ -1498,6 +1498,17 @@ class OutgoingDms extends Table {
   /// relays (#10148). Null for rows queued before v22; those retry anywhere.
   TextColumn get environment => text().nullable()();
 
+  /// The signed recipient gift wrap (kind 1059, as JSON) of the latest attempt
+  /// that wrote it to a relay but heard no `OK` in time (#8441). A relay can
+  /// still have accepted it, so the next attempt re-sends this same event:
+  /// a relay that holds it answers `OK` without storing a second wrap. Null
+  /// until an attempt goes unconfirmed; cleared when a relay refuses the wrap
+  /// for a reason sending it again cannot get past.
+  /// Separate from [recipientWrapEventId], which records a wrap the fallback
+  /// pool did accept while the recipient's inbox was unreadable (#10012).
+  TextColumn get unconfirmedRecipientWrapJson =>
+      text().nullable().named('unconfirmed_recipient_wrap_json')();
+
   @override
   Set<Column> get primaryKey => {id};
 

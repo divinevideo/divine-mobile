@@ -21,6 +21,7 @@ import 'package:nostr_sdk/nip59/gift_wrap_batch_wrap.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/nostr.dart';
 import 'package:nostr_sdk/relay/relay.dart';
+import 'package:nostr_sdk/relay/relay_diagnostics.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:nostr_sdk/signer/signer_failure.dart';
@@ -674,6 +675,14 @@ class NIP17MessageService {
   static const Duration _recipientOkConfirmTimeout =
       DmSendBudget.recipientOkConfirm;
 
+  /// Refusal categories a later attempt with the same wrap can get past
+  /// (#8441), as [relayRefusalCategoryForDiagnostics] names them.
+  static const _retryableRefusalCategories = {
+    'rate-limited',
+    'error',
+    'auth-required',
+  };
+
   /// Hard bound on the self-wrap publish. `publishEvent` is frame-accept
   /// with no timeout of its own, so a stalled socket would otherwise hang
   /// the send's tail past the caller's outer cap and misclassify a
@@ -757,6 +766,14 @@ class NIP17MessageService {
   /// costs the sender their cross-device copy permanently and silently.
   /// [sendPrivateMessage] is that caller, reached by
   /// `DmRepository.sendFileMessage` and the bug-report send.
+  ///
+  /// [recipientWrap] is the recipient gift wrap an earlier attempt wrote to a
+  /// relay without hearing its `OK`. A relay may have stored it, so when it is
+  /// addressed to [recipientPubkey] it is sent again instead of a new wrap,
+  /// and a relay that holds it confirms it rather than storing a second copy
+  /// (#8441). Anything else is ignored and a new wrap is built. An attempt
+  /// that a relay left unanswered, with no relay refusing the wrap for good,
+  /// reports its wrap in `NIP17SendFailure.unconfirmedRecipientWrap`.
   @useResult
   Future<NIP17SendResult> sendRumor({
     required Event rumorEvent,
@@ -768,6 +785,7 @@ class NIP17MessageService {
     Duration? recipientWrapBuildTimeout = DmBatchSendBudget.recipientWrapBuild,
     Duration? selfWrapBuildTimeout = DmSendBudget.selfWrapBuild,
     void Function(Event? prebuiltSelfWrap)? onSelfWrapDue,
+    Event? recipientWrap,
   }) async {
     final recipientWrapBound = recipientWrapBuildTimeout;
     final selfWrapBound = selfWrapBuildTimeout;
@@ -832,23 +850,33 @@ class NIP17MessageService {
       // (#6586). Timing out before any publish leaves nothing delivered, so the
       // durable queue can safely keep it retryable.
       var recipientWrapBuildTimedOut = false;
-      final recipientWrapBuild = _buildBothWraps(
-        nostr: nostr,
-        rumorEvent: rumorEvent,
-        recipientPubkey: recipientPubkey,
+      Future<(Event?, Event?)> buildWraps() {
+        final build = _buildBothWraps(
+          nostr: nostr,
+          rumorEvent: rumorEvent,
+          recipientPubkey: recipientPubkey,
+        );
+        if (recipientWrapBound == null) return build;
+        return build.timeout(
+          recipientWrapBound,
+          onTimeout: () {
+            recipientWrapBuildTimedOut = true;
+            return (null, null);
+          },
+        );
+      }
+
+      // A wrap an earlier attempt left unconfirmed may already be stored on a
+      // relay, so it is sent again as is; the self-wrap is then built when the
+      // recipient wrap confirms (#8441).
+      final reusableWrap = _reusableRecipientWrap(
+        recipientWrap,
+        recipientPubkey,
       );
-      final (
-        giftWrapEvent,
-        prebuiltSelfWrap,
-      ) = await (recipientWrapBound == null
-          ? recipientWrapBuild
-          : recipientWrapBuild.timeout(
-              recipientWrapBound,
-              onTimeout: () {
-                recipientWrapBuildTimedOut = true;
-                return (null, null);
-              },
-            ));
+      final wraps = reusableWrap != null
+          ? (reusableWrap, null)
+          : await buildWraps();
+      final (giftWrapEvent, prebuiltSelfWrap) = wraps;
 
       if (giftWrapEvent == null) {
         return NIP17SendResult.failure(
@@ -861,8 +889,10 @@ class NIP17MessageService {
       }
 
       Log.debug(
-        'Created recipient gift wrap with ephemeral key: '
-        '${pubkeyForLogs(giftWrapEvent.pubkey)}',
+        reusableWrap != null
+            ? 'Sending recipient gift wrap ${giftWrapEvent.id} again'
+            : 'Created recipient gift wrap with ephemeral key: '
+                  '${pubkeyForLogs(giftWrapEvent.pubkey)}',
         category: LogCategory.system,
       );
 
@@ -987,9 +1017,21 @@ class NIP17MessageService {
           '${outcome.summary}); selfWrapPublished=$selfWrapPublished',
           category: LogCategory.system,
         );
+        final recipientWrapRefused = outcome.rejectedBy.values.any(
+          (reason) => !_retryableRefusalCategories.contains(
+            relayRefusalCategoryForDiagnostics(reason),
+          ),
+        );
         return NIP17SendResult.failure(
           errorMsg,
           retryablePending: softUnconfirmed,
+          // A relay that never answered may hold the wrap, also beside a
+          // refusal a retry can get past (#8441).
+          unconfirmedRecipientWrap:
+              outcome.noResponseFrom.isNotEmpty && !recipientWrapRefused
+              ? giftWrapEvent
+              : null,
+          recipientWrapRefused: recipientWrapRefused,
           // Retry sweeps leave an attempt that reached no relay uncounted, as
           // an outage on our side. Inbox relays the recipient names that
           // cannot be reached while our own relays are connected are not
@@ -1229,6 +1271,25 @@ class NIP17MessageService {
     Log.warning(
       'Prebuilt self-wrap ${wrap.id} is not addressed to the sender; '
       'building the copy again',
+      category: LogCategory.system,
+    );
+    return null;
+  }
+
+  /// [wrap] when it is a gift wrap addressed to [recipientPubkey], so it can be
+  /// sent again; `null` (and a log line) for anything else.
+  Event? _reusableRecipientWrap(Event? wrap, String recipientPubkey) {
+    if (wrap == null) return null;
+    final addressedToRecipient =
+        wrap.kind == EventKind.giftWrap &&
+        wrap.tags.any(
+          (tag) =>
+              tag.length >= 2 && tag[0] == 'p' && tag[1] == recipientPubkey,
+        );
+    if (addressedToRecipient) return wrap;
+    Log.warning(
+      'Not re-sending gift wrap ${wrap.id}: it is not addressed to '
+      '${pubkeyForLogs(recipientPubkey)}; building a new one',
       category: LogCategory.system,
     );
     return null;

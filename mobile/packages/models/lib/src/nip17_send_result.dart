@@ -3,6 +3,7 @@
 // ABOUTME: Failure carries the error and never carries selfWrapPublished
 
 import 'package:meta/meta.dart';
+import 'package:nostr_sdk/event.dart';
 
 /// Durable treatment for a queue row after a terminal policy refusal.
 enum NIP17BlockedSendDisposition {
@@ -83,12 +84,18 @@ sealed class NIP17SendResult {
   /// for the retry sweep — see [NIP17SendResult.queuedRumorId].
   ///
   /// [reachedNoRelay] marks a send that never got to any relay — see
-  /// [NIP17SendResult.reachedNoRelay].
+  /// [NIP17SendResult.reachedNoRelay]. [unconfirmedRecipientWrap] is the
+  /// signed recipient wrap an unconfirmed attempt wrote to a relay — see
+  /// [NIP17SendFailure.unconfirmedRecipientWrap]. [recipientWrapRefused] marks
+  /// a refusal that sending the same wrap again cannot get past — see
+  /// [NIP17SendResult.recipientWrapRefused].
   const factory NIP17SendResult.failure(
     String error, {
     bool retryablePending,
     String? queuedRumorId,
     bool reachedNoRelay,
+    Event? unconfirmedRecipientWrap,
+    bool recipientWrapRefused,
   }) = NIP17SendFailure;
 
   /// Build a blocked result: a send that is refused for good, such as a policy
@@ -148,6 +155,10 @@ sealed class NIP17SendResult {
   /// ours was connected is not reported here: that attempt counts, or it
   /// would be resent forever. Always `false` for success.
   bool get reachedNoRelay => false;
+
+  /// Whether a relay refused the recipient wrap for a reason a retry of the
+  /// same event cannot get past (#8441).
+  bool get recipientWrapRefused => false;
 
   /// The `outgoing_dms` row this send left parked for recovery.
   ///
@@ -275,6 +286,8 @@ final class NIP17SendFailure extends NIP17SendResult {
     this.retryablePending = false,
     this.queuedRumorId,
     this.reachedNoRelay = false,
+    this.unconfirmedRecipientWrap,
+    this.recipientWrapRefused = false,
   }) : blocked = false,
        _blockedDisposition = null,
        tooLong = false;
@@ -293,7 +306,9 @@ final class NIP17SendFailure extends NIP17SendResult {
        tooLong = false,
        retryablePending = false,
        queuedRumorId = null,
-       reachedNoRelay = false;
+       reachedNoRelay = false,
+       unconfirmedRecipientWrap = null,
+       recipientWrapRefused = false;
 
   /// An oversized message (#7331): refused before any wrap build.
   ///
@@ -307,7 +322,9 @@ final class NIP17SendFailure extends NIP17SendResult {
       tooLong = true,
       retryablePending = false,
       queuedRumorId = null,
-      reachedNoRelay = false;
+      reachedNoRelay = false,
+      unconfirmedRecipientWrap = null,
+      recipientWrapRefused = false;
 
   @override
   final String error;
@@ -334,6 +351,15 @@ final class NIP17SendFailure extends NIP17SendResult {
   @override
   final bool reachedNoRelay;
 
+  /// The signed recipient gift wrap this attempt wrote to a relay without
+  /// hearing an `OK` in time (#8441). The relay may still have accepted it,
+  /// so a retry sends this same event again rather than a new wrap. Null when
+  /// every relay answered, or when one refused the wrap for good.
+  final Event? unconfirmedRecipientWrap;
+
+  @override
+  final bool recipientWrapRefused;
+
   @override
   String? get rumorEventId => null;
 
@@ -359,7 +385,9 @@ final class NIP17SendFailure extends NIP17SendResult {
         other.tooLong == tooLong &&
         other.retryablePending == retryablePending &&
         other.queuedRumorId == queuedRumorId &&
-        other.reachedNoRelay == reachedNoRelay;
+        other.reachedNoRelay == reachedNoRelay &&
+        other.unconfirmedRecipientWrap?.id == unconfirmedRecipientWrap?.id &&
+        other.recipientWrapRefused == recipientWrapRefused;
   }
 
   @override
@@ -371,6 +399,8 @@ final class NIP17SendFailure extends NIP17SendResult {
     retryablePending,
     queuedRumorId,
     reachedNoRelay,
+    unconfirmedRecipientWrap?.id,
+    recipientWrapRefused,
   );
 
   @override
@@ -380,5 +410,7 @@ final class NIP17SendFailure extends NIP17SendResult {
       'tooLong: $tooLong, '
       'retryablePending: $retryablePending, '
       'queuedRumorId: $queuedRumorId, '
-      'reachedNoRelay: $reachedNoRelay)';
+      'reachedNoRelay: $reachedNoRelay, '
+      'unconfirmedRecipientWrap: ${unconfirmedRecipientWrap?.id}, '
+      'recipientWrapRefused: $recipientWrapRefused)';
 }

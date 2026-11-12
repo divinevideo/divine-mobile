@@ -1,6 +1,8 @@
 # Flutter and Dart lens
 
-Facts here come from the pinned SDK source (Flutter 3.47.2, Dart 3.13.2),
+Facts here come from the SDK source pinned at the time (Flutter 3.47.2,
+Dart 3.13.2; `mobile/mise.toml` now pins 3.47.9 with Dart 3.13.7, on which
+the §3 and §4 recipes were re-run against an iOS 27.2 simulator on 2026-11-11),
 `origin/main`, runs on a developer Mac in October 2026, and on 2026-11-02 a
 headless `flutter-tester`, an iOS 27.0 simulator and a USB iPhone on iOS 27.0.1.
 iOS build traps are

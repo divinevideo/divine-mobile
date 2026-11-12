@@ -2,7 +2,9 @@
 
 Line numbers below are `nostr-protocol/nips` at `400d157` (2026-10-27). If the
 local clone has moved, re-read the line before quoting it: NIP-01 lines after
-141 moved by two when the empty-list rule landed. Command behaviour is `nak`
+141 moved by two when the empty-list rule landed. NIP-01's `OK` and `CLOSED`
+block was re-read at `b587c61` (2026-11-07), after 98b57cf moved its prefix
+list to 01.md:185. Command behaviour is `nak`
 0.20.6 as run on 2026-10-10, and a reviewer re-checked the recipes on 0.20.7.
 Later releases exist (0.22.1 on 2026-10-31) and have not been re-run: re-check
 flags after upgrading. The bulk-read limits in §3 (COUNT, `--paginate`, many
@@ -76,6 +78,7 @@ metadata, `limit: 0`) are not repeated here:
 | 2026-09-03 | NIP-78: relays SHOULD require NIP-42 AUTH for kind 78 / 30078 and serve them only to the authenticated owner | 78.md:21-24 |
 | 2026-10-05 | NIP-92: `imeta` on kind 0 picture and banner, carried over on republish | 92.md:49, 80 |
 | 2026-10-17, 10-19 | NIP-01: a filter list that is empty matches nothing and is never "attribute absent"; clients SHOULD NOT send empty lists | 01.md:141 |
+| 2026-11-04 | NIP-01: `OK` and `CLOSED` take an optional extra element whose meaning depends on the prefix | 01.md:160, 168, 180 |
 
 ## 3. Relay ground truth
 
@@ -148,7 +151,7 @@ conclusion.
 | `limit` | initial query only (01.md:151); `limit: 0` returns no stored events, then EOSE, and the subscription stays live (01.md:153, 2026-09-04); relays clamp (`max_limit`) | "Missing" items past the clamp; a count that equals the clamp |
 | Empty filter list | `authors: []`, `ids: []`, `kinds: []` or an empty tag list matches nothing; it is not "no restriction" (01.md:141) | An empty follow list sent as `authors: []`: a conforming relay returns nothing, a relay that reads `[]` as "absent" returns the global stream, so the same code looks right on one relay and wrong on another. Grep the filter builders for a list that can be empty |
 | Unanswered is not empty | EOSE ends stored events (01.md:161); CLOSED refuses (01.md:180) | A timeout or CLOSED rendered as "nothing here yet" |
-| `OK` handling | 3rd field is the verdict; prefixes `duplicate, pow, blocked, rate-limited, invalid, restricted, mute, error` (01.md:168-184); `auth-required:` / `restricted:` (42.md:58-59) | `duplicate:` arrives with `true`; `rate-limited:` and `error:` are retryable; a late OK after a client timeout means the relay stored it |
+| `OK` handling | 3rd field is the verdict; prefixes `duplicate, pow, blocked, rate-limited, invalid, restricted, mute, error` (01.md:168-185); an optional 5th element carries a prefix-specific value such as a `rate-limited:` delay (01.md:168, 174); `auth-required:` / `restricted:` (42.md:58-59) | `duplicate:` arrives with `true`; `rate-limited:` and `error:` are retryable; a late OK after a client timeout means the relay stored it, and Divine's pool never reports it: the tracker is gone once the publish settles, and a relay silent for the whole window has its socket recycled first (#8441) |
 | Subscription id | max 64 chars (01.md:121) | Strict relays reject; Divine's own relays do not, so no local test catches it |
 | Id serialisation | escapes for `\n " \\ \r \t \b \f` only (01.md:49-55) | "event id does not match" on content with TAB / CR when either side escapes differently |
 | Relay URL identity | one endpoint per relay when path segments change nothing (01.md:111, 2026-05-28) | Trailing-slash or path variants treated as two relays: double REQ or a skipped publish |
@@ -207,7 +210,9 @@ production.
   | `--stall-after-ms 60000`, nothing outstanding (idle), the connection that carries the traffic | for two minutes the app's 7 kind 22236 EVENTs (its periodic one) and 37 relay frames were swallowed, and I found no app log line about them. Then `Connection idle for 119s (timeout: 90s), forcing disconnect`, `Reconnecting in 2s (attempt 1/4)`, and the new connection reached the proxy 2.1 s later (an earlier run, proxy restarted under a live app: idle 92 s, then `Re-issuing 11 saved relay requests`). `WebSocketConnectionManager` checks every 30 s (`heartbeatInterval`) for 90 s without a *received* frame (`idleTimeout`), so detection lands 90 to 120 s after the last inbound frame, whatever the app sends. None of the swallowed EVENTs was sent again after the reconnect (each id appears once at the proxy, in two runs) |
   | `--close-req auth-required`, 6 REQs, no AUTH challenge first | none re-sent in 45 s; one `Relay closed request … (reason=auth-required)` line. A real relay sends the challenge first, which this fault does not |
 
-  Not run with the app: `--drop-ok`, `--delay-ok-ms`, `--drop-event` and `--duplicate-event` (they need an app write to get through, which the guard prevents). Nothing was run on an iPhone.
+  Not run with the app: `--drop-ok`, `--drop-event` and `--duplicate-event` (they need an app write to get through, which the guard prevents). Nothing was run on an iPhone.
+
+  `--delay-ok-ms` was run with the app on 2026-11-11 (#8441, iOS 27.2 simulator, `DEFAULT_ENV=LOCAL`, `nak serve` upstream, DM sends allowed through). As written it holds every `OK` and every frame behind it, so the app's kind 22236 every ~15 s keeps the socket stalled and delays unrelated `EOSE`s: a DM's inbox lookup then reads the recipient's inbox as unreadable and takes the held-send path instead. The run used a scratch copy that held only the `OK`s of kind 1059.
 
   **Run on a phone**, 2026-11-02: a Galaxy S23 (Android 17) on USB, debug, `DEFAULT_ENV=LOCAL`, staging upstream, the proxy on loopback with the write guard, `adb reverse tcp:47777 tcp:47777`, the scratch `localHost` change described below, and a throwaway key imported as above. The proxy never left loopback.
 

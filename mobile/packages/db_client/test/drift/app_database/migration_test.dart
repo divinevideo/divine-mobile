@@ -306,8 +306,43 @@ void main() {
       });
     }
 
-    test('current schema version is 33', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 33);
+    test('current schema version is 34', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 34);
+    });
+
+    test('v34 gives a queued DM a place for an unconfirmed recipient wrap, '
+        'keeping the row it belongs to', () async {
+      final schema = await verifier.schemaAt(33);
+      final rumorId = 'a' * 64;
+      final owner = 'b' * 64;
+      schema.rawDatabase.execute(
+        'INSERT INTO outgoing_dms (id, conversation_id, recipient_pubkey, '
+        'content, created_at, rumor_event_json, recipient_wrap_status, '
+        'self_wrap_status, retry_count, queued_at, owner_pubkey) '
+        'VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+        [
+          rumorId,
+          'c' * 64,
+          'd' * 64,
+          'queued before the upgrade',
+          1700000000,
+          '{"id":"$rumorId","kind":14}',
+          'pending',
+          'pending',
+          1,
+          1700000000,
+          owner,
+        ],
+      );
+      final db = AppDatabase(schema.newConnection());
+      addTearDown(db.close);
+
+      await verifier.migrateAndValidate(db, 34);
+
+      final row = await db.outgoingDmsDao.getById(rumorId);
+      expect(row!.content, 'queued before the upgrade');
+      expect(row.retryCount, 1);
+      expect(row.unconfirmedRecipientWrapJson, isNull);
     });
 
     test('v32 cached events survive without a verification record', () async {

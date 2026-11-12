@@ -1257,6 +1257,194 @@ void main() {
           expect(result.selfWrapPublished, isFalse);
         });
       });
+
+      group('the recipient wrap of an unconfirmed attempt (#8441)', () {
+        late List<Event> published;
+
+        void answerRecipientWith(PublishOutcome Function(Event) answer) {
+          when(
+            () => mockNostrClient.publishEventAwaitOk(
+              any(),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((inv) async {
+            final event = inv.positionalArguments[0] as Event;
+            published.add(event);
+            return answer(event);
+          });
+          when(() => mockNostrClient.publishEvent(any())).thenAnswer(
+            (inv) async =>
+                PublishSuccess(event: inv.positionalArguments[0] as Event),
+          );
+        }
+
+        PublishOutcome unanswered(Event event) => PublishOutcome(
+          eventId: event.id,
+          acceptedBy: const [],
+          rejectedBy: const {},
+          noResponseFrom: const ['wss://relay.example.com'],
+        );
+
+        PublishOutcome accepted(Event event) => PublishOutcome(
+          eventId: event.id,
+          acceptedBy: const ['wss://relay.example.com'],
+          rejectedBy: const {},
+          noResponseFrom: const [],
+        );
+
+        Future<NIP17SendResult> send({Event? recipientWrap}) =>
+            okService.sendRumor(
+              rumorEvent: okService.buildRumor(
+                recipientPubkey: _recipientPubkey,
+                content: 'hi',
+              ),
+              recipientPubkey: _recipientPubkey,
+              awaitRecipientOk: true,
+              selfWrapOnSoftUnconfirmed: false,
+              recipientWrap: recipientWrap,
+            );
+
+        setUp(() => published = []);
+
+        test('hands back the wrap an unconfirmed send wrote', () async {
+          answerRecipientWith(unanswered);
+
+          final result = await send();
+
+          expect(result.retryablePending, isTrue);
+          final wrap = (result as NIP17SendFailure).unconfirmedRecipientWrap;
+          expect(wrap, isNotNull);
+          expect(wrap!.id, equals(published.single.id));
+          expect(wrap.kind, EventKind.giftWrap);
+        });
+
+        test('hands back no wrap when a relay refuses it', () async {
+          answerRecipientWith(
+            (event) => PublishOutcome(
+              eventId: event.id,
+              acceptedBy: const [],
+              rejectedBy: const {'wss://relay.example.com': 'invalid: no'},
+              noResponseFrom: const [],
+            ),
+          );
+
+          final result = await send();
+
+          expect(result.success, isFalse);
+          expect(result.retryablePending, isFalse);
+          expect(
+            (result as NIP17SendFailure).unconfirmedRecipientWrap,
+            isNull,
+          );
+        });
+
+        test('hands back the wrap when one relay stays silent beside a '
+            'refusal a retry can get past', () async {
+          answerRecipientWith(
+            (event) => PublishOutcome(
+              eventId: event.id,
+              acceptedBy: const [],
+              rejectedBy: const {
+                'wss://other.example.com': 'rate-limited: slow down',
+              },
+              noResponseFrom: const ['wss://relay.example.com'],
+            ),
+          );
+
+          final result = await send();
+
+          expect(result.retryablePending, isFalse);
+          expect(
+            (result as NIP17SendFailure).unconfirmedRecipientWrap?.id,
+            equals(published.single.id),
+          );
+        });
+
+        test('hands back no wrap when one relay stays silent beside a '
+            'refusal for good', () async {
+          answerRecipientWith(
+            (event) => PublishOutcome(
+              eventId: event.id,
+              acceptedBy: const [],
+              rejectedBy: const {
+                'wss://other.example.com': 'invalid: created_at too old',
+              },
+              noResponseFrom: const ['wss://relay.example.com'],
+            ),
+          );
+
+          final result = await send();
+
+          expect(result.recipientWrapRefused, isTrue);
+          expect(
+            (result as NIP17SendFailure).unconfirmedRecipientWrap,
+            isNull,
+          );
+        });
+
+        for (final (reason, refused) in [
+          ('invalid: created_at too old', true),
+          ('Blocked: you are banned', true),
+          ('RATE-LIMITED: slow down', false),
+          (' error: could not connect to the database', false),
+          ('ERROR: auth-required: authenticate first', false),
+        ]) {
+          test('reads "$reason" as a refusal the same wrap '
+              '${refused ? 'cannot' : 'can'} get past', () async {
+            answerRecipientWith(
+              (event) => PublishOutcome(
+                eventId: event.id,
+                acceptedBy: const [],
+                rejectedBy: {'wss://relay.example.com': reason},
+                noResponseFrom: const [],
+              ),
+            );
+
+            final result = await send();
+
+            expect(result.success, isFalse);
+            expect(result.recipientWrapRefused, refused);
+          });
+        }
+
+        test('sends the given wrap again instead of building a new one, and '
+            'publishes the sender copy once it is confirmed', () async {
+          answerRecipientWith(unanswered);
+          final first = await send();
+          final wrap = (first as NIP17SendFailure).unconfirmedRecipientWrap!;
+          answerRecipientWith(accepted);
+
+          final retried = await send(recipientWrap: wrap);
+
+          expect(retried.success, isTrue);
+          expect(published.map((event) => event.id), [wrap.id, wrap.id]);
+          expect(retried.messageEventId, equals(wrap.id));
+          expect(retried.selfWrapPublished, isTrue);
+        });
+
+        test('builds a new wrap when the given one is addressed to someone '
+            'else', () async {
+          answerRecipientWith(accepted);
+          final stranger = Event(
+            _recipientPubkey,
+            EventKind.giftWrap,
+            [
+              ['p', 'f' * 64],
+            ],
+            'ciphertext',
+            createdAt: 1700000000,
+          );
+
+          final result = await send(recipientWrap: stranger);
+
+          expect(result.success, isTrue);
+          expect(published.single.id, isNot(equals(stranger.id)));
+          expect(
+            published.single.tags,
+            contains(equals(['p', _recipientPubkey])),
+          );
+        });
+      });
     });
 
     group('publishSelfApplicationMarker (#4977)', () {

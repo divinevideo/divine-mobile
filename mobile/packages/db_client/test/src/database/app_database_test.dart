@@ -103,6 +103,41 @@ void main() {
       );
     });
 
+    group('queued DM schema recovery', () {
+      test('restores the column that keeps an unconfirmed recipient wrap '
+          '(#8441)', () async {
+        await database.customStatement(
+          'ALTER TABLE outgoing_dms '
+          'DROP COLUMN unconfirmed_recipient_wrap_json',
+        );
+        await database.close();
+        database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+        final id = 'a' * 64;
+
+        await database.outgoingDmsDao.enqueue(
+          OutgoingDm(
+            id: id,
+            conversationId: 'c' * 64,
+            recipientPubkey: testPubkey2,
+            content: 'hello',
+            createdAt: 1700000000,
+            rumorEventJson: '{"id":"$id","kind":14,"content":"hello"}',
+            recipientWrapStatus: OutgoingWrapStatus.pending,
+            selfWrapStatus: OutgoingWrapStatus.pending,
+            queuedAt: DateTime.utc(2026, 11),
+            ownerPubkey: testPubkey,
+          ),
+        );
+        await database.outgoingDmsDao.recordUnconfirmedRecipientWrap(
+          id: id,
+          wrapJson: '{"id":"${'b' * 64}"}',
+        );
+
+        final row = await database.outgoingDmsDao.getById(id);
+        expect(row!.unconfirmedRecipientWrapJson, '{"id":"${'b' * 64}"}');
+      });
+    });
+
     group('conversation dismissal schema recovery', () {
       for (final missingColumn in [
         'last_message_created_at',

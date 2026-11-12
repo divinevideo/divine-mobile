@@ -8,6 +8,8 @@ import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+const _wrapJson = '{"id":"wrap","kind":1059}';
+
 void main() {
   late AppDatabase database;
   late OutgoingDmsDao dao;
@@ -42,6 +44,7 @@ void main() {
     String? sendBatchId,
     String? environment,
     String? recipientWrapEventId,
+    String? unconfirmedRecipientWrapJson,
   }) {
     return OutgoingDm(
       id: id,
@@ -58,6 +61,7 @@ void main() {
       sendBatchId: sendBatchId,
       environment: environment,
       recipientWrapEventId: recipientWrapEventId,
+      unconfirmedRecipientWrapJson: unconfirmedRecipientWrapJson,
     );
   }
 
@@ -143,6 +147,27 @@ void main() {
       expect(base.environment, isNull);
 
       expect(base.copyWith(environment: 'poc').environment, equals('poc'));
+    });
+
+    test('rows differing only in the unconfirmed recipient wrap are NOT '
+        'equal', () {
+      final sent = makeDm(id: 'eq-wrap', unconfirmedRecipientWrapJson: '{}');
+      final unsent = makeDm(id: 'eq-wrap');
+
+      expect(sent, isNot(equals(unsent)));
+      expect(sent.hashCode, isNot(equals(unsent.hashCode)));
+    });
+
+    test('copyWith(unconfirmedRecipientWrapJson:) round-trips the field', () {
+      final base = makeDm(id: 'eq-wrap-rt');
+      expect(base.unconfirmedRecipientWrapJson, isNull);
+
+      expect(
+        base
+            .copyWith(unconfirmedRecipientWrapJson: '{"id":"w"}')
+            .unconfirmedRecipientWrapJson,
+        equals('{"id":"w"}'),
+      );
     });
   });
 
@@ -546,6 +571,106 @@ void main() {
           status: OutgoingWrapStatus.sent,
         );
         expect(ok, isFalse);
+      });
+    });
+
+    group('recordUnconfirmedRecipientWrap (#8441)', () {
+      test('keeps the wrap on a pending row without touching its delivery '
+          'state', () async {
+        await dao.enqueue(makeDm(id: 'aaaa', retryCount: 1));
+
+        final ok = await dao.recordUnconfirmedRecipientWrap(
+          id: 'aaaa',
+          wrapJson: _wrapJson,
+        );
+
+        expect(ok, isTrue);
+        final fetched = await dao.getById('aaaa');
+        expect(fetched!.unconfirmedRecipientWrapJson, equals(_wrapJson));
+        expect(fetched.recipientWrapStatus, OutgoingWrapStatus.pending);
+        expect(fetched.selfWrapStatus, OutgoingWrapStatus.pending);
+        expect(fetched.retryCount, equals(1));
+      });
+
+      test(
+        'keeps the wrap on a failed row a Resend left unconfirmed',
+        () async {
+          await dao.enqueue(
+            makeDm(
+              id: 'aaaa',
+              recipientStatus: OutgoingWrapStatus.failed,
+              selfStatus: OutgoingWrapStatus.failed,
+            ),
+          );
+
+          expect(
+            await dao.recordUnconfirmedRecipientWrap(
+              id: 'aaaa',
+              wrapJson: _wrapJson,
+            ),
+            isTrue,
+          );
+          expect(
+            (await dao.getById('aaaa'))!.unconfirmedRecipientWrapJson,
+            equals(_wrapJson),
+          );
+        },
+      );
+
+      for (final status in [
+        OutgoingWrapStatus.sent,
+        OutgoingWrapStatus.blocked,
+        OutgoingWrapStatus.cancelled,
+      ]) {
+        test('leaves a ${status.name} recipient wrap alone', () async {
+          await dao.enqueue(
+            makeDm(id: 'aaaa', recipientStatus: status, selfStatus: status),
+          );
+
+          final ok = await dao.recordUnconfirmedRecipientWrap(
+            id: 'aaaa',
+            wrapJson: _wrapJson,
+          );
+
+          expect(ok, isFalse);
+          expect(
+            (await dao.getById('aaaa'))!.unconfirmedRecipientWrapJson,
+            isNull,
+          );
+        });
+      }
+
+      test('returns false when the row does not exist', () async {
+        expect(
+          await dao.recordUnconfirmedRecipientWrap(
+            id: 'missing',
+            wrapJson: _wrapJson,
+          ),
+          isFalse,
+        );
+      });
+    });
+
+    group('clearUnconfirmedRecipientWrap (#8441)', () {
+      test('forgets the wrap', () async {
+        await dao.enqueue(
+          makeDm(id: 'aaaa', unconfirmedRecipientWrapJson: _wrapJson),
+        );
+        expect(
+          (await dao.getById('aaaa'))!.unconfirmedRecipientWrapJson,
+          equals(_wrapJson),
+          reason: 'precondition: enqueue keeps the wrap',
+        );
+
+        expect(await dao.clearUnconfirmedRecipientWrap('aaaa'), isTrue);
+        expect(
+          (await dao.getById('aaaa'))!.unconfirmedRecipientWrapJson,
+          isNull,
+        );
+      });
+
+      test('reports a missing row', () async {
+        expect(await dao.clearUnconfirmedRecipientWrap('missing'), isFalse);
       });
     });
 

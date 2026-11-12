@@ -13555,6 +13555,17 @@ class $OutgoingDmsTable extends OutgoingDms
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _unconfirmedRecipientWrapJsonMeta =
+      const VerificationMeta('unconfirmedRecipientWrapJson');
+  @override
+  late final GeneratedColumn<String> unconfirmedRecipientWrapJson =
+      GeneratedColumn<String>(
+        'unconfirmed_recipient_wrap_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -13577,6 +13588,7 @@ class $OutgoingDmsTable extends OutgoingDms
     ownerPubkey,
     sendBatchId,
     environment,
+    unconfirmedRecipientWrapJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -13769,6 +13781,15 @@ class $OutgoingDmsTable extends OutgoingDms
         ),
       );
     }
+    if (data.containsKey('unconfirmed_recipient_wrap_json')) {
+      context.handle(
+        _unconfirmedRecipientWrapJsonMeta,
+        unconfirmedRecipientWrapJson.isAcceptableOrUnknown(
+          data['unconfirmed_recipient_wrap_json']!,
+          _unconfirmedRecipientWrapJsonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -13857,6 +13878,10 @@ class $OutgoingDmsTable extends OutgoingDms
       environment: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}environment'],
+      ),
+      unconfirmedRecipientWrapJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unconfirmed_recipient_wrap_json'],
       ),
     );
   }
@@ -13979,6 +14004,16 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
   /// never sent to, or scored as delivered on, the other environment's
   /// relays (#10148). Null for rows queued before v22; those retry anywhere.
   final String? environment;
+
+  /// The signed recipient gift wrap (kind 1059, as JSON) of the latest attempt
+  /// that wrote it to a relay but heard no `OK` in time (#8441). A relay can
+  /// still have accepted it, so the next attempt re-sends this same event:
+  /// a relay that holds it answers `OK` without storing a second wrap. Null
+  /// until an attempt goes unconfirmed; cleared when a relay refuses the wrap
+  /// for a reason sending it again cannot get past.
+  /// Separate from [recipientWrapEventId], which records a wrap the fallback
+  /// pool did accept while the recipient's inbox was unreadable (#10012).
+  final String? unconfirmedRecipientWrapJson;
   const OutgoingDmRow({
     required this.id,
     required this.conversationId,
@@ -14000,6 +14035,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     required this.ownerPubkey,
     this.sendBatchId,
     this.environment,
+    this.unconfirmedRecipientWrapJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -14042,6 +14078,11 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     if (!nullToAbsent || environment != null) {
       map['environment'] = Variable<String>(environment);
     }
+    if (!nullToAbsent || unconfirmedRecipientWrapJson != null) {
+      map['unconfirmed_recipient_wrap_json'] = Variable<String>(
+        unconfirmedRecipientWrapJson,
+      );
+    }
     return map;
   }
 
@@ -14083,6 +14124,10 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
       environment: environment == null && nullToAbsent
           ? const Value.absent()
           : Value(environment),
+      unconfirmedRecipientWrapJson:
+          unconfirmedRecipientWrapJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unconfirmedRecipientWrapJson),
     );
   }
 
@@ -14120,6 +14165,9 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
       ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
       sendBatchId: serializer.fromJson<String?>(json['sendBatchId']),
       environment: serializer.fromJson<String?>(json['environment']),
+      unconfirmedRecipientWrapJson: serializer.fromJson<String?>(
+        json['unconfirmedRecipientWrapJson'],
+      ),
     );
   }
   @override
@@ -14148,6 +14196,9 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
       'ownerPubkey': serializer.toJson<String>(ownerPubkey),
       'sendBatchId': serializer.toJson<String?>(sendBatchId),
       'environment': serializer.toJson<String?>(environment),
+      'unconfirmedRecipientWrapJson': serializer.toJson<String?>(
+        unconfirmedRecipientWrapJson,
+      ),
     };
   }
 
@@ -14172,6 +14223,7 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     String? ownerPubkey,
     Value<String?> sendBatchId = const Value.absent(),
     Value<String?> environment = const Value.absent(),
+    Value<String?> unconfirmedRecipientWrapJson = const Value.absent(),
   }) => OutgoingDmRow(
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
@@ -14203,6 +14255,9 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     ownerPubkey: ownerPubkey ?? this.ownerPubkey,
     sendBatchId: sendBatchId.present ? sendBatchId.value : this.sendBatchId,
     environment: environment.present ? environment.value : this.environment,
+    unconfirmedRecipientWrapJson: unconfirmedRecipientWrapJson.present
+        ? unconfirmedRecipientWrapJson.value
+        : this.unconfirmedRecipientWrapJson,
   );
   OutgoingDmRow copyWithCompanion(OutgoingDmsCompanion data) {
     return OutgoingDmRow(
@@ -14256,6 +14311,9 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
       environment: data.environment.present
           ? data.environment.value
           : this.environment,
+      unconfirmedRecipientWrapJson: data.unconfirmedRecipientWrapJson.present
+          ? data.unconfirmedRecipientWrapJson.value
+          : this.unconfirmedRecipientWrapJson,
     );
   }
 
@@ -14281,13 +14339,14 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
           ..write('queuedAt: $queuedAt, ')
           ..write('ownerPubkey: $ownerPubkey, ')
           ..write('sendBatchId: $sendBatchId, ')
-          ..write('environment: $environment')
+          ..write('environment: $environment, ')
+          ..write('unconfirmedRecipientWrapJson: $unconfirmedRecipientWrapJson')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     conversationId,
     recipientPubkey,
@@ -14308,7 +14367,8 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
     ownerPubkey,
     sendBatchId,
     environment,
-  );
+    unconfirmedRecipientWrapJson,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -14332,7 +14392,9 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
           other.queuedAt == this.queuedAt &&
           other.ownerPubkey == this.ownerPubkey &&
           other.sendBatchId == this.sendBatchId &&
-          other.environment == this.environment);
+          other.environment == this.environment &&
+          other.unconfirmedRecipientWrapJson ==
+              this.unconfirmedRecipientWrapJson);
 }
 
 class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
@@ -14356,6 +14418,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
   final Value<String> ownerPubkey;
   final Value<String?> sendBatchId;
   final Value<String?> environment;
+  final Value<String?> unconfirmedRecipientWrapJson;
   final Value<int> rowid;
   const OutgoingDmsCompanion({
     this.id = const Value.absent(),
@@ -14378,6 +14441,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     this.ownerPubkey = const Value.absent(),
     this.sendBatchId = const Value.absent(),
     this.environment = const Value.absent(),
+    this.unconfirmedRecipientWrapJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   OutgoingDmsCompanion.insert({
@@ -14401,6 +14465,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     required String ownerPubkey,
     this.sendBatchId = const Value.absent(),
     this.environment = const Value.absent(),
+    this.unconfirmedRecipientWrapJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        conversationId = Value(conversationId),
@@ -14433,6 +14498,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     Expression<String>? ownerPubkey,
     Expression<String>? sendBatchId,
     Expression<String>? environment,
+    Expression<String>? unconfirmedRecipientWrapJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -14459,6 +14525,8 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
       if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
       if (sendBatchId != null) 'send_batch_id': sendBatchId,
       if (environment != null) 'environment': environment,
+      if (unconfirmedRecipientWrapJson != null)
+        'unconfirmed_recipient_wrap_json': unconfirmedRecipientWrapJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -14484,6 +14552,7 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     Value<String>? ownerPubkey,
     Value<String?>? sendBatchId,
     Value<String?>? environment,
+    Value<String?>? unconfirmedRecipientWrapJson,
     Value<int>? rowid,
   }) {
     return OutgoingDmsCompanion(
@@ -14508,6 +14577,8 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
       ownerPubkey: ownerPubkey ?? this.ownerPubkey,
       sendBatchId: sendBatchId ?? this.sendBatchId,
       environment: environment ?? this.environment,
+      unconfirmedRecipientWrapJson:
+          unconfirmedRecipientWrapJson ?? this.unconfirmedRecipientWrapJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -14581,6 +14652,11 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
     if (environment.present) {
       map['environment'] = Variable<String>(environment.value);
     }
+    if (unconfirmedRecipientWrapJson.present) {
+      map['unconfirmed_recipient_wrap_json'] = Variable<String>(
+        unconfirmedRecipientWrapJson.value,
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -14610,6 +14686,9 @@ class OutgoingDmsCompanion extends UpdateCompanion<OutgoingDmRow> {
           ..write('ownerPubkey: $ownerPubkey, ')
           ..write('sendBatchId: $sendBatchId, ')
           ..write('environment: $environment, ')
+          ..write(
+            'unconfirmedRecipientWrapJson: $unconfirmedRecipientWrapJson, ',
+          )
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -31165,6 +31244,7 @@ typedef $$OutgoingDmsTableCreateCompanionBuilder =
       required String ownerPubkey,
       Value<String?> sendBatchId,
       Value<String?> environment,
+      Value<String?> unconfirmedRecipientWrapJson,
       Value<int> rowid,
     });
 typedef $$OutgoingDmsTableUpdateCompanionBuilder =
@@ -31189,6 +31269,7 @@ typedef $$OutgoingDmsTableUpdateCompanionBuilder =
       Value<String> ownerPubkey,
       Value<String?> sendBatchId,
       Value<String?> environment,
+      Value<String?> unconfirmedRecipientWrapJson,
       Value<int> rowid,
     });
 
@@ -31298,6 +31379,11 @@ class $$OutgoingDmsTableFilterComposer
 
   ColumnFilters<String> get environment => $composableBuilder(
     column: $table.environment,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get unconfirmedRecipientWrapJson => $composableBuilder(
+    column: $table.unconfirmedRecipientWrapJson,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -31410,6 +31496,12 @@ class $$OutgoingDmsTableOrderingComposer
     column: $table.environment,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get unconfirmedRecipientWrapJson =>
+      $composableBuilder(
+        column: $table.unconfirmedRecipientWrapJson,
+        builder: (column) => ColumnOrderings(column),
+      );
 }
 
 class $$OutgoingDmsTableAnnotationComposer
@@ -31510,6 +31602,12 @@ class $$OutgoingDmsTableAnnotationComposer
     column: $table.environment,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get unconfirmedRecipientWrapJson =>
+      $composableBuilder(
+        column: $table.unconfirmedRecipientWrapJson,
+        builder: (column) => column,
+      );
 }
 
 class $$OutgoingDmsTableTableManager
@@ -31563,6 +31661,8 @@ class $$OutgoingDmsTableTableManager
                 Value<String> ownerPubkey = const Value.absent(),
                 Value<String?> sendBatchId = const Value.absent(),
                 Value<String?> environment = const Value.absent(),
+                Value<String?> unconfirmedRecipientWrapJson =
+                    const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OutgoingDmsCompanion(
                 id: id,
@@ -31585,6 +31685,7 @@ class $$OutgoingDmsTableTableManager
                 ownerPubkey: ownerPubkey,
                 sendBatchId: sendBatchId,
                 environment: environment,
+                unconfirmedRecipientWrapJson: unconfirmedRecipientWrapJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -31609,6 +31710,8 @@ class $$OutgoingDmsTableTableManager
                 required String ownerPubkey,
                 Value<String?> sendBatchId = const Value.absent(),
                 Value<String?> environment = const Value.absent(),
+                Value<String?> unconfirmedRecipientWrapJson =
+                    const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => OutgoingDmsCompanion.insert(
                 id: id,
@@ -31631,6 +31734,7 @@ class $$OutgoingDmsTableTableManager
                 ownerPubkey: ownerPubkey,
                 sendBatchId: sendBatchId,
                 environment: environment,
+                unconfirmedRecipientWrapJson: unconfirmedRecipientWrapJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
