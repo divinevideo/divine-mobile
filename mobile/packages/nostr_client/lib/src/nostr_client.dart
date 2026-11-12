@@ -311,7 +311,8 @@ class NostrClient {
 
   /// Runs a best-effort write to the local event cache without awaiting it.
   ///
-  /// A failed write is logged and dropped. The cache only saves a later
+  /// A failed write is logged and dropped, unless it failed with a programming
+  /// error, which is logged and still reported. The cache only saves a later
   /// network read, and its failures are not ones this client can fix: a full
   /// disk, or iOS data protection closing the database file while the device
   /// is locked. A `try` around `unawaited(write)` does not catch them, because
@@ -334,7 +335,18 @@ class NostrClient {
         (_) {
           _cacheWritesFailing = false;
         },
-        onError: (Object error) => _logCacheWriteFailure(operation, error),
+        onError: (Object error, StackTrace stackTrace) {
+          _logCacheWriteFailure(operation, error);
+          // A StateError, TypeError or RangeError is a defect, not a disk
+          // condition, and detached work must not silence it
+          // (.claude/rules/error_handling.md), so it still reaches the
+          // uncaught-error reporter as before.
+          if (error is StateError ||
+              error is TypeError ||
+              error is RangeError) {
+            Error.throwWithStackTrace(error, stackTrace);
+          }
+        },
       ),
     );
   }

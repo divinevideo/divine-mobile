@@ -1136,6 +1136,38 @@ void main() {
           expect(cacheWriteWarnings(), hasLength(1));
         },
       );
+
+      test(
+        'a cache write that fails with a programming error is still reported',
+        () async {
+          // StateError, TypeError and RangeError are defects, not disk
+          // conditions: error_handling.md keeps them reportable even when the
+          // work is detached, so they must still reach the uncaught handler.
+          final event = _createTestEvent(kind: EventKind.textNote);
+          when(
+            () => mockNostr.sendEvent(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+            ),
+          ).thenAnswer((_) async => event);
+          final defect = StateError('cache invariant broken');
+          when(
+            () => mockNostrEventsDao.upsertEvent(any()),
+          ).thenAnswer((_) => Future<void>.error(defect));
+
+          final uncaught = <Object>[];
+          PublishResult? result;
+          await runZonedGuarded(() async {
+            result = await clientWithCache.publishEvent(event);
+            await pumpEventQueue();
+          }, (error, _) => uncaught.add(error));
+
+          expect(result, isA<PublishSuccess>());
+          expect(uncaught, equals([defect]));
+          expect(cacheWriteWarnings(), hasLength(1));
+        },
+      );
     });
 
     group('publishEventAwaitOk', () {
