@@ -369,6 +369,31 @@ void main() {
         ).called(1);
       });
 
+      testWidgets('people read failure waits for the video lists', (
+        tester,
+      ) async {
+        // Until the video lists load there may still be something to show,
+        // so the people error must not flash under the loader and vanish.
+        _videoLoad = Completer();
+        when(() => mockListService.myLists).thenReturn([_videoList('a')]);
+        when(() => peopleBloc.state).thenReturn(
+          const PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: owner,
+            ownerReadStatus: PeopleListsOwnerReadStatus.failed,
+          ),
+        );
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+        expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+        expect(find.text(l10n.listErrorLoading), findsNothing);
+
+        _videoLoad!.complete([_videoList('a')]);
+        await tester.pumpAndSettle();
+        expect(find.text('Video a'), findsOneWidget);
+        expect(find.text(l10n.listErrorLoading), findsNothing);
+      });
+
       testWidgets('video failure keeps people list accessible', (
         tester,
       ) async {

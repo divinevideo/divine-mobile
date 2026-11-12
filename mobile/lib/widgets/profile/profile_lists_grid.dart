@@ -166,7 +166,8 @@ class _ListsGallery extends ConsumerWidget {
     // The people owner read fails whenever one relay is slow to settle, even
     // though the lists came back; under a full gallery its error reads as if
     // every card failed, so it shows only when there is nothing to show.
-    final showsPeopleReadFailure = peopleFailed && entries.isEmpty;
+    // While a source is still loading there may yet be something to show.
+    final showsPeopleReadFailure = peopleFailed && entries.isEmpty && !loading;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
