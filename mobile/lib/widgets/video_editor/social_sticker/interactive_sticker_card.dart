@@ -253,6 +253,8 @@ class _Question extends StatelessWidget {
               data.prompt ?? '',
             ),
             excludeSemantics: true,
+            // excludeSemantics drops the detector's own tap action with it.
+            onTap: onAnswer,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onAnswer,
@@ -456,6 +458,8 @@ class _Replies extends StatelessWidget {
             )
           : l10n.videoStickerRepliesSemanticLabel(responses?.count ?? 0),
       excludeSemantics: true,
+      // excludeSemantics drops the detector's own tap action with it.
+      onTap: onOpen,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onOpen,

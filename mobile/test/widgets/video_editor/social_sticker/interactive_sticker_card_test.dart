@@ -208,6 +208,42 @@ void main() {
 
         expect(opened, equals(1));
       });
+
+      testWidgets("a screen reader answers a question's field", (
+        tester,
+      ) async {
+        var answered = 0;
+        await pump(
+          tester,
+          InteractiveStickerCopy(data: question, onAnswer: () => answered++),
+        );
+
+        tester.semantics.tap(
+          find.semantics.byLabel(
+            l10n.videoStickerQuestionAnswerSemanticLabel('Ask me anything'),
+          ),
+        );
+
+        expect(answered, equals(1));
+      });
+
+      testWidgets('a screen reader opens the replies', (tester) async {
+        var opened = 0;
+        await pump(
+          tester,
+          InteractiveStickerCopy(
+            data: replies,
+            responses: responses,
+            onOpenResponses: () => opened++,
+          ),
+        );
+
+        tester.semantics.tap(
+          find.semantics.byLabel(l10n.videoStickerRepliesSemanticLabel(3)),
+        );
+
+        expect(opened, equals(1));
+      });
     });
   });
 }

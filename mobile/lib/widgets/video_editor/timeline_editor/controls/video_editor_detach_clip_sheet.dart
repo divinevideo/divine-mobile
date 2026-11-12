@@ -196,6 +196,8 @@ class _ChoiceTile extends StatelessWidget {
       button: true,
       selected: isCurrent,
       label: '$label. $detail',
+      // ExcludeSemantics drops the InkWell's own tap action with its text.
+      onTap: () => context.pop<DetachClipChoice>(choice),
       child: ExcludeSemantics(
         child: Material(
           color: colors.surfaceContainer,
