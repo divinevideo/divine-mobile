@@ -142,36 +142,44 @@ void main() {
         'ExploreScreen.initialTabName', () {
       final source = File('lib/router/routes/shell.dart').readAsStringSync();
 
-      final tabRouteOffset = source.indexOf(
-        'path: ExploreScreen.pathTabSubpath',
-      );
+      // The route is a typed class; its annotation names the class
+      // registered at ExploreScreen.pathTabSubpath.
+      final registration = RegExp(
+        r'TypedGoRoute<(\w+)>\(\s*path: ExploreScreen\.pathTabSubpath\b',
+      ).firstMatch(source);
       expect(
-        tabRouteOffset,
-        isNonNegative,
+        registration,
+        isNotNull,
         reason:
-            'shell.dart must register a GoRoute at '
+            'shell.dart must register a typed route at '
             'ExploreScreen.pathTabSubpath so /explore/tab/<name> is '
             'a valid URL.',
       );
 
-      // The pageBuilder for this route must read and validate the :name
-      // path parameter before passing it to ExploreScreen. Invalid or
-      // currently-unconfigured slugs pass null so Explore falls back to the
-      // default tab instead of erroring.
-      final nextGoRouteAfter = source.indexOf('GoRoute(', tabRouteOffset + 1);
+      // That class's page must read and validate the :name path parameter,
+      // which go_router_builder binds to its `name` field, before passing it
+      // to ExploreScreen. Invalid or currently-unconfigured slugs pass null
+      // so Explore falls back to the default tab instead of erroring.
+      final classOffset = source.indexOf('class ${registration!.group(1)} ');
+      expect(
+        classOffset,
+        isNonNegative,
+        reason: 'shell.dart must declare the /explore/tab/:name route class.',
+      );
+      final classEnd = source.indexOf('\n}\n', classOffset);
       final region = source.substring(
-        tabRouteOffset,
-        nextGoRouteAfter == -1 ? source.length : nextGoRouteAfter,
+        classOffset,
+        classEnd == -1 ? source.length : classEnd,
       );
       expect(
-        region.contains("pathParameters['name']"),
+        region.contains('final String name;'),
         isTrue,
         reason:
-            'The /explore/tab/:name route must read '
-            "state.pathParameters['name'] in its pageBuilder.",
+            'The /explore/tab/:name route must bind the :name path '
+            'parameter to its `name` field.',
       );
       expect(
-        region.contains('tabNameFromPathParameter'),
+        region.contains('tabNameFromPathParameter(name)'),
         isTrue,
         reason:
             'The /explore/tab/:name route must validate the slug with '

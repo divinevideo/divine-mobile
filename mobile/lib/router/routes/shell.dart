@@ -1,5 +1,6 @@
 // ABOUTME: Bottom-nav StatefulShellRoute (home/explore/inbox/profile branches)
-// ABOUTME: Split from app_router.dart (#4508); owns per-branch pageContext scoping
+// ABOUTME: Typed with go_router_builder; owns per-branch pageContext scoping
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,185 +23,342 @@ import 'package:openvine/screens/profile_unavailable_pins_screen.dart';
 import 'package:openvine/startup/app_side_effects.dart';
 import 'package:openvine/widgets/age_review_closure_launch_notice.dart';
 
+part 'shell.g.dart';
+
+/// The bottom-nav shell: the generated [AppShellRouteData] route, rebuilt with
+/// `notifyRootObserver: false`.
+///
+/// go_router 18.0.1's `StatefulShellRouteData.$route` takes no
+/// `notifyRootObserver` (flutter/packages#13323 adds it), and
+/// go_router_builder 4.5.2 never reads
+/// [TypedStatefulShellRoute.notifyRootObserver], so the generated route keeps
+/// the default `true` and would forward branch navigation to the root
+/// observers. The wrapper can go once both are fixed. Every other argument is
+/// copied from the generated route.
 List<RouteBase> shellRoutes() {
+  final generated = $appRoutes.single as StatefulShellRoute;
   return [
-    // Bottom-nav tabs live in a StatefulShellRoute so every tab keeps its
-    // own Navigator (and state) alive while inactive — that is what lets the
-    // tab switch cross-fade between two live tabs (see AppShellBranchContainer).
-    //
-    // Each branch screen reads the *globally-active* route via
-    // pageContextProvider and renders a placeholder when it doesn't match.
-    // Because all branches stay mounted, [branchPage] scopes
-    // pageContextProvider per branch so each tab sees *its own* route context
-    // (not the active tab's) and keeps rendering real content while inactive.
     StatefulShellRoute(
       // Branch events are navigator lifecycle rather than reliable user
       // arrivals, so root analytics deliberately observes only the shell page
       // and routes above it; see docs/ANALYTICS_OBSERVABILITY.md.
       notifyRootObserver: false,
-      // Transition-free on purpose: the shell replaces `/welcome` on the root
-      // navigator when the authenticated redirect lands (startup restore,
-      // login), and the startup splash lifts at the *start* of that
-      // navigation. A default MaterialPage here plays a ~400ms slide that
-      // shows the welcome screen exiting — the "sign-in page glimpse" of
-      // #5242 in its post-splash form. Pinned by shell_transition_test.
-      pageBuilder: (context, state, navigationShell) => NoTransitionPage<void>(
-        key: state.pageKey,
-        name: goRouterPageName(state),
-        arguments: <String, String>{
-          ...state.pathParameters,
-          ...state.uri.queryParameters,
-        },
-        restorationId: state.pageKey.value,
-        // The shell-tier app-wide side effects are activated here rather than
-        // inside AppShell so the shell widget stays pure chrome — see
-        // AppShellSideEffects for the membership rule.
-        child: AppShellSideEffects(
-          // Explains an age-review closure as soon as a closed account opens
-          // the app, instead of waiting for a rejected post.
-          child: AgeReviewClosureLaunchNotice(
-            // Provided above AppShell so both consumers can reach the same
-            // instance: VineBottomNav (inside AppShell) signals a home-tab or
-            // profile-tab retap; the home branch refreshes its feed and the
-            // profile branch retries a failed load.
-            child: BlocProvider<HomeFeedRetapCubit>(
-              create: (_) => HomeFeedRetapCubit(),
-              child: BlocProvider<ProfileTabRetapCubit>(
-                create: (_) => ProfileTabRetapCubit(),
-                child: AppShell(
-                  currentIndex: navigationShell.currentIndex,
-                  child: navigationShell,
-                ),
-              ),
+      branches: generated.branches,
+      redirect: generated.redirect,
+      builder: generated.builder,
+      pageBuilder: generated.pageBuilder,
+      navigatorContainerBuilder: generated.navigatorContainerBuilder,
+      parentNavigatorKey: generated.parentNavigatorKey,
+      restorationScopeId: generated.restorationScopeId,
+      metadata: generated.metadata,
+    ),
+  ];
+}
+
+/// Bottom-nav tabs live in a StatefulShellRoute so every tab keeps its own
+/// Navigator (and state) alive while inactive — that is what lets the tab
+/// switch cross-fade between two live tabs (see [AppShellBranchContainer]).
+///
+/// Each branch screen reads the *globally-active* route via
+/// pageContextProvider and renders a placeholder when it doesn't match.
+/// Because all branches stay mounted, [branchPage] scopes pageContextProvider
+/// per branch so each tab sees *its own* route context (not the active tab's)
+/// and keeps rendering real content while inactive.
+@TypedStatefulShellRoute<AppShellRouteData>(
+  // Not read by go_router_builder 4.5.2; shellRoutes applies it.
+  notifyRootObserver: false,
+  branches: [
+    TypedStatefulShellBranch<HomeBranchData>(
+      routes: [
+        TypedGoRoute<FollowingNewRouteData>(path: RoutePaths.followingNew),
+        TypedGoRoute<HomeFeedRouteData>(
+          path: VideoFeedPage.pathWithIndex,
+          name: VideoFeedPage.routeName,
+        ),
+      ],
+    ),
+    TypedStatefulShellBranch<ExploreBranchData>(
+      routes: [
+        TypedGoRoute<ExploreRouteData>(
+          path: ExploreScreen.path,
+          name: ExploreScreen.routeName,
+        ),
+        TypedGoRoute<ExploreTabRouteData>(path: ExploreScreen.pathTabSubpath),
+        TypedGoRoute<ExploreFeedRouteData>(path: ExploreScreen.pathWithIndex),
+      ],
+    ),
+    TypedStatefulShellBranch<InboxBranchData>(
+      routes: [
+        TypedGoRoute<NotificationsRouteData>(
+          path: NotificationsPage.pathWithIndex,
+          name: NotificationsPage.routeName,
+        ),
+        TypedGoRoute<InboxRouteData>(
+          path: InboxPage.path,
+          name: InboxPage.routeName,
+        ),
+      ],
+    ),
+    TypedStatefulShellBranch<ProfileBranchData>(
+      routes: [
+        // Ahead of /profile/:npub/:index, which would otherwise match this
+        // location and read `unavailable-pins` as a video index.
+        TypedGoRoute<ProfileUnavailablePinsRouteData>(
+          path: RoutePaths.profileUnavailablePins,
+        ),
+        TypedGoRoute<ProfileRouteData>(
+          path: ProfileScreenRouter.path,
+          name: ProfileScreenRouter.routeName,
+        ),
+        TypedGoRoute<ProfileGridRouteData>(
+          path: ProfileScreenRouter.pathWithNpub,
+        ),
+        TypedGoRoute<ProfileFeedRouteData>(
+          path: ProfileScreenRouter.pathWithIndex,
+        ),
+      ],
+    ),
+  ],
+)
+class AppShellRouteData extends StatefulShellRouteData {
+  const AppShellRouteData();
+
+  // Transition-free on purpose: the shell replaces `/welcome` on the root
+  // navigator when the authenticated redirect lands (startup restore, login),
+  // and the startup splash lifts at the *start* of that navigation. A default
+  // MaterialPage here plays a ~400ms slide that shows the welcome screen
+  // exiting — the "sign-in page glimpse" of #5242 in its post-splash form.
+  // Pinned by shell_transition_test.
+  @override
+  Page<void> pageBuilder(
+    BuildContext context,
+    GoRouterState state,
+    StatefulNavigationShell navigationShell,
+  ) => NoTransitionPage<void>(
+    key: state.pageKey,
+    name: goRouterPageName(state),
+    arguments: <String, String>{
+      ...state.pathParameters,
+      ...state.uri.queryParameters,
+    },
+    restorationId: state.pageKey.value,
+    // The shell-tier app-wide side effects are activated here rather than
+    // inside AppShell so the shell widget stays pure chrome — see
+    // AppShellSideEffects for the membership rule.
+    child: AppShellSideEffects(
+      // Explains an age-review closure as soon as a closed account opens
+      // the app, instead of waiting for a rejected post.
+      child: AgeReviewClosureLaunchNotice(
+        // Provided above AppShell so both consumers can reach the same
+        // instance: VineBottomNav (inside AppShell) signals a home-tab or
+        // profile-tab retap; the home branch refreshes its feed and the
+        // profile branch retries a failed load.
+        child: BlocProvider<HomeFeedRetapCubit>(
+          create: (_) => HomeFeedRetapCubit(),
+          child: BlocProvider<ProfileTabRetapCubit>(
+            create: (_) => ProfileTabRetapCubit(),
+            child: AppShell(
+              currentIndex: navigationShell.currentIndex,
+              child: navigationShell,
             ),
           ),
         ),
       ),
-      navigatorContainerBuilder: (context, navigationShell, children) =>
-          AppShellBranchContainer(
-            currentIndex: navigationShell.currentIndex,
-            children: children,
-          ),
-      branches: [
-        // HOME tab
-        StatefulShellBranch(
-          navigatorKey: NavigatorKeys.home,
-          initialLocation: VideoFeedPage.pathForIndex(0),
-          routes: [
-            GoRoute(
-              path: RoutePaths.followingNew,
-              // This contract location intentionally parses as RouteType.following
-              // while rendering the home branch's Following feed. Keep the exact
-              // literal ahead of /following/:pubkey so `new` is never treated as
-              // an account identifier.
-              pageBuilder: (ctx, st) => branchPage(
-                st,
-                const VideoFeedPage(
-                  initialMode: FeedMode.following,
-                  // A campaign tap must land on Following whatever the
-                  // account's saved home source is; the forced start is not
-                  // persisted back (see VideoFeedStarted.forceMode).
-                  forceInitialMode: true,
-                ),
-              ),
-            ),
-            GoRoute(
-              path: VideoFeedPage.pathWithIndex,
-              name: VideoFeedPage.routeName,
-              pageBuilder: (ctx, st) => branchPage(
-                st,
-                VideoFeedPage(
-                  initialIndex: homeInitialIndexFromPathParameters(
-                    st.pathParameters,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        // EXPLORE tab (grid + tab-by-name + feed)
-        StatefulShellBranch(
-          navigatorKey: NavigatorKeys.explore,
-          initialLocation: ExploreScreen.path,
-          routes: [
-            GoRoute(
-              path: ExploreScreen.path,
-              name: ExploreScreen.routeName,
-              pageBuilder: (ctx, st) => branchPage(st, const ExploreScreen()),
-            ),
-            GoRoute(
-              path: ExploreScreen.pathTabSubpath,
-              pageBuilder: (_, st) {
-                final slug = st.pathParameters['name'];
-                final tabName = ExploreScreen.tabNameFromPathParameter(slug);
-                return branchPage(
-                  st,
-                  ExploreScreen(initialTabName: tabName, initialTabSlug: slug),
-                );
-              },
-            ),
-            GoRoute(
-              path: ExploreScreen.pathWithIndex,
-              pageBuilder: (ctx, st) => branchPage(st, const ExploreScreen()),
-            ),
-          ],
-        ),
-
-        // INBOX tab (inbox + notifications share tab position 2)
-        StatefulShellBranch(
-          navigatorKey: NavigatorKeys.inbox,
-          initialLocation: InboxPage.path,
-          routes: [
-            GoRoute(
-              path: NotificationsPage.pathWithIndex,
-              name: NotificationsPage.routeName,
-              pageBuilder: (ctx, st) =>
-                  branchPage(st, const NotificationsPage()),
-            ),
-            GoRoute(
-              path: InboxPage.path,
-              name: InboxPage.routeName,
-              pageBuilder: (ctx, st) => branchPage(st, const InboxPage()),
-            ),
-          ],
-        ),
-
-        // PROFILE tab (own profile grid/feed)
-        StatefulShellBranch(
-          navigatorKey: NavigatorKeys.profile,
-          initialLocation: ProfileScreenRouter.path,
-          routes: [
-            GoRoute(
-              path: RoutePaths.profileUnavailablePins,
-              pageBuilder: (ctx, st) => branchPage(
-                st,
-                ProfileUnavailablePinsPage(
-                  npub: st.pathParameters['npub'] ?? '',
-                ),
-              ),
-            ),
-            GoRoute(
-              path: ProfileScreenRouter.path,
-              name: ProfileScreenRouter.routeName,
-              pageBuilder: (ctx, st) =>
-                  branchPage(st, const ProfileScreenRouter()),
-            ),
-            GoRoute(
-              path: ProfileScreenRouter.pathWithNpub,
-              pageBuilder: (ctx, st) =>
-                  branchPage(st, const ProfileScreenRouter()),
-            ),
-            GoRoute(
-              path: ProfileScreenRouter.pathWithIndex,
-              pageBuilder: (ctx, st) =>
-                  branchPage(st, const ProfileScreenRouter()),
-            ),
-          ],
-        ),
-      ],
     ),
-  ];
+  );
+
+  static Widget $navigatorContainerBuilder(
+    BuildContext context,
+    StatefulNavigationShell navigationShell,
+    List<Widget> children,
+  ) => AppShellBranchContainer(
+    currentIndex: navigationShell.currentIndex,
+    children: children,
+  );
+}
+
+/// The home tab: the feed, and the campaign landing on Following.
+class HomeBranchData extends StatefulShellBranchData {
+  const HomeBranchData();
+
+  static final GlobalKey<NavigatorState> $navigatorKey = NavigatorKeys.home;
+  static final String $initialLocation = VideoFeedPage.pathForIndex(0);
+}
+
+/// The explore tab: the grid, a tab chosen by name, and the feed.
+class ExploreBranchData extends StatefulShellBranchData {
+  const ExploreBranchData();
+
+  static final GlobalKey<NavigatorState> $navigatorKey = NavigatorKeys.explore;
+  static const String $initialLocation = ExploreScreen.path;
+}
+
+/// The inbox tab, which notifications share.
+class InboxBranchData extends StatefulShellBranchData {
+  const InboxBranchData();
+
+  static final GlobalKey<NavigatorState> $navigatorKey = NavigatorKeys.inbox;
+  static const String $initialLocation = InboxPage.path;
+}
+
+/// The own-profile tab: the grid and the feed.
+class ProfileBranchData extends StatefulShellBranchData {
+  const ProfileBranchData();
+
+  static final GlobalKey<NavigatorState> $navigatorKey = NavigatorKeys.profile;
+  static const String $initialLocation = ProfileScreenRouter.path;
+}
+
+/// The campaign landing, rendered as the home branch's Following feed.
+///
+/// This contract location intentionally parses as RouteType.following while
+/// rendering the home branch's Following feed. Keep the exact literal ahead of
+/// /following/:pubkey so `new` is never treated as an account identifier.
+class FollowingNewRouteData extends GoRouteData with $FollowingNewRouteData {
+  const FollowingNewRouteData();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) => branchPage(
+    state,
+    const VideoFeedPage(
+      initialMode: FeedMode.following,
+      // A campaign tap must land on Following whatever the account's saved
+      // home source is; the forced start is not persisted back (see
+      // VideoFeedStarted.forceMode).
+      forceInitialMode: true,
+    ),
+  );
+}
+
+/// The home feed at a video index.
+class HomeFeedRouteData extends GoRouteData with $HomeFeedRouteData {
+  const HomeFeedRouteData({required this.index});
+
+  /// The video index as written in the URL; [buildPage] parses it with
+  /// [homeInitialIndexFromPathParameters], which starts a malformed or
+  /// negative index at the first video.
+  final String index;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) => branchPage(
+    state,
+    VideoFeedPage(
+      initialIndex: homeInitialIndexFromPathParameters(state.pathParameters),
+    ),
+  );
+}
+
+/// The explore grid on its default tab.
+class ExploreRouteData extends GoRouteData with $ExploreRouteData {
+  const ExploreRouteData();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      branchPage(state, const ExploreScreen());
+}
+
+/// An explore tab chosen by its URL slug.
+class ExploreTabRouteData extends GoRouteData with $ExploreTabRouteData {
+  const ExploreTabRouteData({required this.name});
+
+  /// The tab's URL slug. An unknown or currently unconfigured slug opens the
+  /// default tab rather than an error, and is kept for a featured tab whose
+  /// configuration arrives later.
+  final String name;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) => branchPage(
+    state,
+    ExploreScreen(
+      initialTabName: ExploreScreen.tabNameFromPathParameter(name),
+      initialTabSlug: name,
+    ),
+  );
+}
+
+/// The explore feed at a video index.
+///
+/// The screen reads the index from its branch's route context ([branchPage]),
+/// not from [index].
+class ExploreFeedRouteData extends GoRouteData with $ExploreFeedRouteData {
+  const ExploreFeedRouteData({required this.index});
+
+  final String index;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      branchPage(state, const ExploreScreen());
+}
+
+/// Notifications, in the inbox tab. The page does not read [index].
+class NotificationsRouteData extends GoRouteData with $NotificationsRouteData {
+  const NotificationsRouteData({required this.index});
+
+  final String index;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      branchPage(state, const NotificationsPage());
+}
+
+/// The inbox.
+class InboxRouteData extends GoRouteData with $InboxRouteData {
+  const InboxRouteData();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      branchPage(state, const InboxPage());
+}
+
+/// The owner's recovery page for pinned videos that no longer resolve; the
+/// page itself turns away anyone but the owner of [npub].
+class ProfileUnavailablePinsRouteData extends GoRouteData
+    with $ProfileUnavailablePinsRouteData {
+  const ProfileUnavailablePinsRouteData({required this.npub});
+
+  final String npub;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      branchPage(state, ProfileUnavailablePinsPage(npub: npub));
+}
+
+/// The profile tab's root.
+class ProfileRouteData extends GoRouteData with $ProfileRouteData {
+  const ProfileRouteData();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      branchPage(state, const ProfileScreenRouter());
+}
+
+/// A profile's grid.
+///
+/// The screen reads the npub from its branch's route context ([branchPage]),
+/// not from [npub].
+class ProfileGridRouteData extends GoRouteData with $ProfileGridRouteData {
+  const ProfileGridRouteData({required this.npub});
+
+  final String npub;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      branchPage(state, const ProfileScreenRouter());
+}
+
+/// A profile's feed at a video index.
+///
+/// The screen reads the npub and index from its branch's route context
+/// ([branchPage]), not from [npub] and [index].
+class ProfileFeedRouteData extends GoRouteData with $ProfileFeedRouteData {
+  const ProfileFeedRouteData({required this.npub, required this.index});
+
+  final String npub;
+  final String index;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      branchPage(state, const ProfileScreenRouter());
 }
 
 /// Builds a [StatefulShellBranch] page whose subtree sees its *own* route's
