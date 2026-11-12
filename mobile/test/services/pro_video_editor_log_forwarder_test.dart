@@ -214,7 +214,7 @@ void main() {
       expect(breadcrumb, isNot(contains(secretKey)));
       expect(breadcrumb, isNot(contains('creator@example.com')));
       expect(breadcrumb, contains('npub1<redacted>'));
-      expect(breadcrumb, contains('nsec1<redacted>'));
+      expect(breadcrumb, contains('[REDACTED]'));
       expect(breadcrumb, contains('Caused by:'));
     });
 

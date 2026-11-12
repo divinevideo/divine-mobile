@@ -1,6 +1,7 @@
 // ABOUTME: Tests for PasswordResetListener
 // ABOUTME: Verifies that deep links navigate to the reset password screen
 
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -8,6 +9,7 @@ import 'package:openvine/router/providers/deep_link_listeners.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/services/password_reset_listener.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/go_router.dart';
 
@@ -139,5 +141,85 @@ void main() {
         ).called(1);
       },
     );
+
+    group('logging (#10385)', () {
+      test('does not log the nsec of a link it only inspects', () async {
+        // NIP-19's published test vector; it controls no real account.
+        const nsec =
+            'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+        await LogCaptureService().clearAllLogs();
+
+        await listener.handleUri(
+          Uri.parse('https://divine.video/profile/$nsec'),
+        );
+
+        final logged = [
+          for (final entry in LogCaptureService().getRecentLogs())
+            entry.message,
+        ].join('\n');
+        expect(logged, contains('callback from '));
+        // Unbracketed: the listener's own redaction, not the sink's.
+        expect(logged, contains('/profile/REDACTED'));
+        expect(logged.toLowerCase(), isNot(contains('nsec1')));
+      });
+
+      // app_links throws while parsing a malformed link. Unhandled, that
+      // error reached the crash reporter with the raw link in its text.
+      group('a link the platform cannot parse', () {
+        const events = EventChannel('com.llfbandit.app_links/events');
+        const messages = MethodChannel('com.llfbandit.app_links/messages');
+        final messenger =
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+
+        setUp(() {
+          messenger
+            ..setMockMethodCallHandler(messages, (_) async => null)
+            ..setMockStreamHandler(
+              events,
+              MockStreamHandler.inline(
+                onListen: (_, sink) =>
+                    sink.success('divine://[x]/reset?token=SECRETTOKEN'),
+              ),
+            );
+        });
+
+        tearDown(() {
+          messenger
+            ..setMockMethodCallHandler(messages, null)
+            ..setMockStreamHandler(events, null);
+          listener.dispose();
+        });
+
+        test('is handled and logged without the link', () async {
+          await LogCaptureService().clearAllLogs();
+
+          listener.initialize();
+          await pumpEventQueue();
+
+          final logged = [
+            for (final entry in LogCaptureService().getRecentLogs())
+              '${entry.message} ${entry.error ?? ''}',
+          ].join('\n');
+          expect(logged, contains('link stream error'));
+          expect(logged, isNot(contains('SECRETTOKEN')));
+        });
+      });
+
+      // NIP-46 callbacks reach this line too, and have no path.
+      test('logs a path-less signer callback as the link it is', () async {
+        await LogCaptureService().clearAllLogs();
+
+        await listener.handleUri(
+          Uri.parse('divine://nostrconnect?relay=wss://relay.example.com'),
+        );
+
+        final logged = [
+          for (final entry in LogCaptureService().getRecentLogs())
+            entry.message,
+        ].join('\n');
+        expect(logged, contains('callback from divine://nostrconnect'));
+        expect(logged, isNot(contains('[invalid-uri]')));
+      });
+    });
   });
 }

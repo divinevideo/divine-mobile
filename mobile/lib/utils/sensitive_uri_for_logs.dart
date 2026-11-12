@@ -3,6 +3,8 @@
 // ABOUTME: are handled here; Nostr key stripping for crash reports lives in
 // ABOUTME: lib/observability/reportable_error.dart).
 
+import 'package:unified_logger/unified_logger.dart';
+
 /// Placeholder for secrets in free-form log text or HTTP headers.
 const redactedSensitiveLogPlaceholder = '[REDACTED]';
 
@@ -11,8 +13,9 @@ const redactedSensitiveLogPlaceholder = '[REDACTED]';
 const redactedUriComponentForLogs = 'REDACTED';
 
 /// Returns a URI string safe for logs: clears [userInfo], redacts query and
-/// fragment values, and redacts legacy `/invite/<code>` path segments while
-/// keeping public route identifiers verbatim.
+/// fragment values, and redacts legacy `/invite/<code>` path segments and any
+/// host, path segment or query key carrying a Nostr private key, while keeping
+/// public route identifiers verbatim.
 ///
 /// On parse failure, returns `[invalid-uri]` without echoing [uriString].
 String redactUriStringForLogs(String uriString) {
@@ -21,8 +24,17 @@ String redactUriStringForLogs(String uriString) {
   if (uri == null || trimmed.isEmpty) {
     return '[invalid-uri]';
   }
+  try {
+    return _redactParsedUri(uri);
+  } on FormatException {
+    // tryParse accepts an undecodable escape such as %C3%28; decoding the
+    // path or query throws later. Logging must never throw.
+    return '[invalid-uri]';
+  }
+}
 
-  var pathSegments = List<String>.from(uri.pathSegments);
+String _redactParsedUri(Uri uri) {
+  var pathSegments = uri.pathSegments.map(_redactSecretSegment).toList();
   if (pathSegments.length >= 2 &&
       pathSegments.first.toLowerCase() == 'invite') {
     pathSegments = [
@@ -38,14 +50,16 @@ String redactUriStringForLogs(String uriString) {
   } else {
     qp = {
       for (final e in uri.queryParametersAll.entries)
-        e.key: e.value.length == 1
+        _redactSecretSegment(e.key): e.value.length == 1
             ? redactedUriComponentForLogs
             : List<String>.filled(e.value.length, redactedUriComponentForLogs),
     };
   }
 
+  // Any app can open divine://, so the host is as untrusted as the path.
   var redactedUri = uri.replace(
     userInfo: '',
+    host: uri.hasAuthority ? _redactSecretSegment(uri.host) : null,
     pathSegments: pathSegments,
     queryParameters: qp,
   );
@@ -60,6 +74,12 @@ String redactUriStringForLogs(String uriString) {
   }
   return out;
 }
+
+// A link can carry a pasted nsec where a public id belongs (#10385).
+String _redactSecretSegment(String segment) =>
+    nostrPrivateKeyPatterns.any((p) => p.hasMatch(segment))
+    ? redactedUriComponentForLogs
+    : segment;
 
 /// Returns an email address safe for diagnostic logs.
 ///

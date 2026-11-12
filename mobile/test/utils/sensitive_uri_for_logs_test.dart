@@ -15,6 +15,19 @@ void main() {
       expect(redactUriStringForLogs('   '), '[invalid-uri]');
     });
 
+    // Uri.tryParse accepts these, but decoding the segment or query throws.
+    // At cold start that throw used to skip the deep-link subscription.
+    test('returns invalid placeholder for an undecodable escape', () {
+      expect(
+        redactUriStringForLogs('https://divine.video/x/%C3%28'),
+        '[invalid-uri]',
+      );
+      expect(
+        redactUriStringForLogs('https://divine.video/x?q=%C3%28'),
+        '[invalid-uri]',
+      );
+    });
+
     group('AC #3360 — sensitive query keys', () {
       test('redacts values for token, code, deviceCode, verifier, secret (and any other query)', () {
         const raw =
@@ -88,6 +101,83 @@ void main() {
       expect(out, isNot(contains('ABCD')));
       expect(out, isNot(contains('utm_source=test')));
       expect(out, contains('/invite/$redactedUriComponentForLogs'));
+    });
+
+    group('Nostr private keys in the path (#10385)', () {
+      // NIP-19's published test vector; it controls no real account.
+      const nsec =
+          'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
+      test('redacts an nsec profile segment of a universal link', () {
+        final out = redactUriStringForLogs(
+          'https://divine.video/profile/$nsec',
+        );
+
+        expect(out, isNot(contains('nsec1')));
+        expect(
+          out,
+          equals('https://divine.video/profile/$redactedUriComponentForLogs'),
+        );
+      });
+
+      test('redacts the segment in a router location and keeps the rest', () {
+        final out = redactUriStringForLogs('/profile/$nsec/3');
+
+        expect(out, equals('/profile/$redactedUriComponentForLogs/3'));
+      });
+
+      test('redacts an nsec carried by the divine:// scheme', () {
+        final out = redactUriStringForLogs('divine:///profile/$nsec');
+
+        expect(out, isNot(contains('nsec1')));
+        expect(out, contains('/profile/$redactedUriComponentForLogs'));
+      });
+
+      test('redacts an uppercase nsec, which bech32 also accepts', () {
+        final out = redactUriStringForLogs(
+          'https://divine.video/profile/${nsec.toUpperCase()}',
+        );
+
+        expect(out.toLowerCase(), isNot(contains('nsec1')));
+      });
+
+      test('redacts an nsec carried as the host of a divine:// link', () {
+        expect(
+          redactUriStringForLogs('divine://$nsec/x').toLowerCase(),
+          isNot(contains('nsec1')),
+        );
+        expect(
+          redactUriStringForLogs('divine://$nsec').toLowerCase(),
+          isNot(contains('nsec1')),
+        );
+      });
+
+      test('redacts an nsec carried as a query key', () {
+        expect(
+          redactUriStringForLogs('https://divine.video/x?$nsec=1'),
+          isNot(contains('nsec1')),
+        );
+        expect(
+          redactUriStringForLogs('https://divine.video/x?$nsec'),
+          isNot(contains('nsec1')),
+        );
+      });
+
+      test('keeps an ordinary host and query key', () {
+        expect(
+          redactUriStringForLogs('divine://nostrconnect?relay=wss://r.example'),
+          equals('divine://nostrconnect?relay=$redactedUriComponentForLogs'),
+        );
+      });
+
+      test('redacts an ncryptsec segment', () {
+        final out = redactUriStringForLogs(
+          'https://divine.video/video/ncryptsec1qgqeyafqwz',
+        );
+
+        expect(out, isNot(contains('ncryptsec1')));
+        expect(out, contains('/video/$redactedUriComponentForLogs'));
+      });
     });
 
     test('clears userInfo credentials', () {

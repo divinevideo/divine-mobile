@@ -129,7 +129,7 @@ class DeepLinkCoordinator {
     required String familyPrefix,
   }) {
     Log.info(
-      '📱 Navigating to list: $targetPath',
+      '📱 Navigating to list: ${redactUriStringForLogs(targetPath)}',
       name: 'DeepLinkHandler',
       category: LogCategory.ui,
     );
@@ -145,21 +145,21 @@ class DeepLinkCoordinator {
           // here; skip the duplicate navigation to avoid a second navigation
           // frame on the same target.
           Log.info(
-            '⏭️ Already on $targetPath — skipping duplicate list navigation',
+            '⏭️ Already on ${redactUriStringForLogs(targetPath)} — skipping duplicate list navigation',
             name: 'DeepLinkHandler',
             category: LogCategory.ui,
           );
         case DeepLinkNavAction.go:
           _router.go(targetPath);
           Log.info(
-            '✅ Navigation completed to: $targetPath',
+            '✅ Navigation completed to: ${redactUriStringForLogs(targetPath)}',
             name: 'DeepLinkHandler',
             category: LogCategory.ui,
           );
         case DeepLinkNavAction.push:
           _push(targetPath);
           Log.info(
-            '✅ Navigation completed to: $targetPath',
+            '✅ Navigation completed to: ${redactUriStringForLogs(targetPath)}',
             name: 'DeepLinkHandler',
             category: LogCategory.ui,
           );
@@ -230,7 +230,7 @@ class DeepLinkCoordinator {
             final targetPath = deepLinkRouterPath(deepLink);
             if (targetPath != null) {
               Log.info(
-                '📱 Navigating to video: $targetPath'
+                '📱 Navigating to video: ${redactUriStringForLogs(targetPath)}'
                 '${deepLink.autoOpenComments ? " (open comments)" : ""}',
                 name: 'DeepLinkHandler',
                 category: LogCategory.ui,
@@ -262,7 +262,7 @@ class DeepLinkCoordinator {
                     _push(targetPath, extra: routeExtra);
                 }
                 Log.info(
-                  '✅ Navigation completed to: $targetPath',
+                  '✅ Navigation completed to: ${redactUriStringForLogs(targetPath)}',
                   name: 'DeepLinkHandler',
                   category: LogCategory.ui,
                 );
@@ -284,7 +284,7 @@ class DeepLinkCoordinator {
             final targetPath = deepLinkRouterPath(deepLink);
             if (targetPath != null) {
               Log.info(
-                '📱 Navigating to profile: $targetPath',
+                '📱 Navigating to profile: ${redactUriStringForLogs(targetPath)}',
                 name: 'DeepLinkHandler',
                 category: LogCategory.ui,
               );
@@ -311,7 +311,7 @@ class DeepLinkCoordinator {
                     _push(targetPath);
                 }
                 Log.info(
-                  '✅ Navigation completed to: $targetPath',
+                  '✅ Navigation completed to: ${redactUriStringForLogs(targetPath)}',
                   name: 'DeepLinkHandler',
                   category: LogCategory.ui,
                 );
@@ -333,7 +333,7 @@ class DeepLinkCoordinator {
             final targetPath = deepLinkRouterPath(deepLink);
             if (targetPath != null) {
               Log.info(
-                '📱 Navigating to hashtag: $targetPath',
+                '📱 Navigating to hashtag: ${redactUriStringForLogs(targetPath)}',
                 name: 'DeepLinkHandler',
                 category: LogCategory.ui,
               );
@@ -360,7 +360,7 @@ class DeepLinkCoordinator {
                     _push(targetPath);
                 }
                 Log.info(
-                  '✅ Navigation completed to: $targetPath',
+                  '✅ Navigation completed to: ${redactUriStringForLogs(targetPath)}',
                   name: 'DeepLinkHandler',
                   category: LogCategory.ui,
                 );
@@ -382,7 +382,7 @@ class DeepLinkCoordinator {
             final targetPath = deepLinkRouterPath(deepLink);
             if (targetPath != null) {
               Log.info(
-                '📱 Navigating to search: $targetPath',
+                '📱 Navigating to search: ${redactUriStringForLogs(targetPath)}',
                 name: 'DeepLinkHandler',
                 category: LogCategory.ui,
               );
@@ -412,7 +412,7 @@ class DeepLinkCoordinator {
                     _push(targetPath);
                 }
                 Log.info(
-                  '✅ Navigation completed to: $targetPath',
+                  '✅ Navigation completed to: ${redactUriStringForLogs(targetPath)}',
                   name: 'DeepLinkHandler',
                   category: LogCategory.ui,
                 );

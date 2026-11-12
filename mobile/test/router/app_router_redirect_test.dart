@@ -20,6 +20,7 @@ import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/feature_request_dialog.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -372,6 +373,124 @@ void main() {
         ),
         WelcomeScreen.path,
       );
+    });
+  });
+
+  group('logging a location that carries a secret (#10385)', () {
+    // NIP-19's published test vector; it controls no real account.
+    const nsec =
+        'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
+    Future<String> loggedWhileRedirecting({
+      required AuthState authState,
+      required String location,
+      MinorAccountReviewStatus? reviewStatus,
+    }) async {
+      resetNavigationState();
+      final authService = _MockAuthService();
+      when(() => authService.authState).thenReturn(authState);
+      when(() => authService.isAnonymous).thenReturn(false);
+      when(() => authService.hasExpiredOAuthSession).thenReturn(false);
+
+      final container = ProviderContainer(
+        overrides: [
+          authServiceProvider.overrideWithValue(authService),
+          currentAccountDeletionAttemptProvider.overrideWith(
+            (ref) async => null,
+          ),
+          currentMinorAccountReviewStatusProvider.overrideWith(
+            (ref) async => reviewStatus ?? MinorAccountReviewStatus.active(),
+          ),
+          checkEmptyFollowingRedirectProvider.overrideWith(
+            (ref, location) => null,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(currentAccountDeletionAttemptProvider.future);
+      await container.read(currentMinorAccountReviewStatusProvider.future);
+
+      final state = _MockGoRouterState();
+      final uri = Uri.parse(location);
+      when(() => state.uri).thenReturn(uri);
+      when(() => state.matchedLocation).thenReturn(uri.path);
+
+      await LogCaptureService().clearAllLogs();
+      appRouterRedirect(container.read(_refProbeProvider), state);
+      return [
+        for (final entry in LogCaptureService().getRecentLogs()) entry.message,
+      ].join('\n');
+    }
+
+    // The redirect logs several redacted lines into one capture, so each
+    // assertion reads only its own line: any other line's redaction would
+    // satisfy a check over all of them.
+    String loggedLine(String logged, String marker) =>
+        logged.split('\n').singleWhere((line) => line.contains(marker));
+
+    test('does not log the nsec of a signed-out profile location', () async {
+      final logged = await loggedWhileRedirecting(
+        authState: AuthState.unauthenticated,
+        location: '/profile/$nsec',
+      );
+
+      // Unbracketed: each line's own redaction, not the sink's.
+      expect(
+        loggedLine(logged, 'Router redirect: location='),
+        contains('/profile/REDACTED'),
+      );
+      expect(
+        loggedLine(logged, 'unauthenticated on'),
+        contains('/profile/REDACTED'),
+      );
+      expect(logged.toLowerCase(), isNot(contains('nsec1')));
+    });
+
+    test('does not log the nsec of a universal link', () async {
+      final logged = await loggedWhileRedirecting(
+        authState: AuthState.authenticated,
+        location: 'https://divine.video/profile/$nsec',
+      );
+
+      // Unbracketed: the redirect target's own redaction, not the sink's.
+      // The link before the arrow is redacted too, so read only the target.
+      expect(
+        loggedLine(logged, 'Router redirect: universal link').split(' → ').last,
+        contains('/profile/REDACTED'),
+      );
+      expect(logged.toLowerCase(), isNot(contains('nsec1')));
+    });
+
+    test('does not log the nsec of a divine:// link', () async {
+      final logged = await loggedWhileRedirecting(
+        authState: AuthState.authenticated,
+        location: 'divine:///profile/$nsec',
+      );
+
+      // Unbracketed: the redirect target's own redaction, not the sink's.
+      // The link before the arrow is redacted too, so read only the target.
+      expect(
+        loggedLine(logged, 'Router redirect: divine scheme').split(' -> ').last,
+        contains('/profile/REDACTED'),
+      );
+      expect(logged.toLowerCase(), isNot(contains('nsec1')));
+    });
+
+    test('does not log the nsec when a restricted account is held', () async {
+      final logged = await loggedWhileRedirecting(
+        authState: AuthState.authenticated,
+        location: '/profile/$nsec',
+        reviewStatus: const MinorAccountReviewStatus(
+          restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
+        ),
+      );
+
+      // Unbracketed: the line's own redaction, not the sink's.
+      expect(
+        loggedLine(logged, 'restricted account on'),
+        contains('/profile/REDACTED'),
+      );
+      expect(logged.toLowerCase(), isNot(contains('nsec1')));
     });
   });
 }

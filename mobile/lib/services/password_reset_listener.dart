@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Service to listen for Password Reset redirects (deeplinks)
@@ -32,14 +33,23 @@ class PasswordResetListener {
     );
 
     // Handle links while app is running in background
-    _subscription = _appLinks.uriLinkStream.listen((uri) {
-      runDetached(
-        handleUri(uri),
-        'handle a password-reset link',
-        logName: '$PasswordResetListener',
+    _subscription = _appLinks.uriLinkStream.listen(
+      (uri) {
+        runDetached(
+          handleUri(uri),
+          'handle a password-reset link',
+          logName: '$PasswordResetListener',
+          category: LogCategory.auth,
+        );
+      },
+      // app_links throws while parsing a malformed link, and the error's text
+      // carries the raw link. Unhandled, it reached the crash reporter.
+      onError: (Object error) => Log.warning(
+        'Password reset link stream error: ${error.runtimeType}',
+        name: '$PasswordResetListener',
         category: LogCategory.auth,
-      );
-    });
+      ),
+    );
   }
 
   Future<void> _handleInitialLink() async {
@@ -50,7 +60,7 @@ class PasswordResetListener {
   @visibleForTesting
   Future<void> handleUri(Uri uri) async {
     Log.info(
-      '🔑 callback from host ${uri.host} path: ${uri.path}',
+      '🔑 callback from ${redactUriStringForLogs(uri.toString())}',
       name: '$PasswordResetListener',
     );
 
@@ -61,7 +71,7 @@ class PasswordResetListener {
 
     // Log path only — query params can contain the account email (PII).
     Log.info(
-      '🔑 Password reset callback detected for path: ${uri.path}',
+      '🔑 Password reset callback detected for path: ${redactUriStringForLogs(uri.path)}',
       name: '$PasswordResetListener',
     );
 

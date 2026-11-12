@@ -60,6 +60,36 @@ void main() {
       test('redacts an ncryptsec whole', () {
         expect(pubkeyForLogs('ncryptsec1abcdef'), equals('<redacted>'));
       });
+
+      // Bech32 also accepts the all-uppercase form, so a pasted NSEC1 is
+      // the same secret.
+      test('redacts an uppercase nsec whole', () {
+        const nsec =
+            'NSEC1VL029MGPSPEDVA04G90VLTKH6FVH240ZQTV9K0T9AF8935KE9LAQSNLFE5';
+
+        expect(pubkeyForLogs(nsec), equals('<redacted>'));
+      });
+
+      test('redacts an uppercase ncryptsec whole', () {
+        expect(pubkeyForLogs('NCRYPTSEC1ABCDEF'), equals('<redacted>'));
+      });
+
+      // A link can carry the key behind a NIP-21 prefix or stray text.
+      for (final (label, wrapped) in const [
+        (
+          'an nsec behind nostr:',
+          'nostr:nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5',
+        ),
+        (
+          'an nsec behind a space',
+          ' nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5',
+        ),
+        ('an ncryptsec behind nostr:', 'nostr:ncryptsec1abcdef'),
+      ]) {
+        test('redacts $label', () {
+          expect(pubkeyForLogs(wrapped), equals('<redacted>'));
+        });
+      }
     });
 
     group('values that cannot be encoded', () {

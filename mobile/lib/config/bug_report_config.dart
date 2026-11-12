@@ -162,14 +162,9 @@ class BugReportConfig {
   /// device info, steps to reproduce, etc. 32KB leaves headroom.
   static const int maxLogSummaryLength = 32 * 1024;
 
-  /// Nostr private keys: bech32 `nsec` and NIP-49 `ncryptsec`.
-  static final List<RegExp> nostrPrivateKeyPatterns = [
-    RegExp('nsec1[a-z0-9]{58}', caseSensitive: false),
-    RegExp('ncryptsec1[a-z0-9]+', caseSensitive: false),
-  ];
-
   /// Sensitive data patterns to sanitize
   static final List<RegExp> sensitivePatterns = [
+    // Owned by unified_logger, whose log sink applies the same patterns.
     ...nostrPrivateKeyPatterns,
     // Note: we do not redact 64-char hex strings because that would also
     // redact public event IDs and pubkeys. Hex-form private keys are an
@@ -298,18 +293,6 @@ String redactFilesAndPaths(String input, Iterable<String?> paths) {
     if (name.isNotEmpty) redacted = redacted.replaceAll(name, '[REDACTED]');
   }
   return redactFilesystemPaths(redacted);
-}
-
-/// Redacts Nostr private keys and nothing else, for text only Divine's
-/// moderators read, such as a reported message, where redacting an email or a
-/// handle would hide the evidence. Anything bound for a public or shareable
-/// payload uses [sanitizeDiagnosticText].
-String redactNostrPrivateKeys(String input) {
-  var redacted = input;
-  for (final pattern in BugReportConfig.nostrPrivateKeyPatterns) {
-    redacted = redacted.replaceAll(pattern, '[REDACTED]');
-  }
-  return redacted;
 }
 
 /// Sanitize one user-provided or diagnostic text field before it reaches a

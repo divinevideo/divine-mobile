@@ -34,6 +34,14 @@ enum DeepLinkType {
 /// select detail, even when their d-tag is `members` or `add-people`.
 enum PeopleListLinkView { detail, members, addPeople }
 
+/// [value] with any Nostr private key in it redacted, for [DeepLink.toString].
+///
+/// Link segments are untrusted input, and a pasted nsec can sit where a
+/// public id belongs (#10385). A `Log` line needs nothing extra, because the
+/// log sink redacts keys itself; `toString` can be printed anywhere.
+String _forLogs(String? value) =>
+    value == null ? 'null' : redactNostrPrivateKeys(value);
+
 /// Represents a parsed deep link
 class DeepLink {
   const DeepLink({
@@ -86,24 +94,28 @@ class DeepLink {
     final indexStr = index != null ? ', index: $index' : '';
     switch (type) {
       case DeepLinkType.challenge:
-        return 'DeepLink(type: challenge, naddr: $challengeNaddr)';
+        return 'DeepLink(type: challenge, naddr: ${_forLogs(challengeNaddr)})';
       case DeepLinkType.shortLink:
-        return 'DeepLink(type: shortLink, code: $shortCode)';
+        return 'DeepLink(type: shortLink, code: ${_forLogs(shortCode)})';
       case DeepLinkType.video:
         final commentsStr = autoOpenComments ? ', autoOpenComments: true' : '';
-        return 'DeepLink(type: video, videoRef: $videoRef$commentsStr)';
+        return 'DeepLink(type: video, videoRef: ${_forLogs(videoRef)}'
+            '$commentsStr)';
       case DeepLinkType.profile:
-        return 'DeepLink(type: profile, npub: $npub$indexStr)';
+        return 'DeepLink(type: profile, npub: ${pubkeyForLogs(npub)}$indexStr)';
       case DeepLinkType.hashtag:
-        return 'DeepLink(type: hashtag, hashtag: $hashtag$indexStr)';
+        return 'DeepLink(type: hashtag, hashtag: ${_forLogs(hashtag)}$indexStr)';
       case DeepLinkType.search:
-        return 'DeepLink(type: search, searchTerm: $searchTerm$indexStr)';
+        return 'DeepLink(type: search, '
+            'searchTerm: ${_forLogs(searchTerm)}$indexStr)';
       case DeepLinkType.list:
-        return 'DeepLink(type: list, listPubkey: $listPubkey, '
-            'listId: $listId)';
+        return 'DeepLink(type: list, '
+            'listPubkey: ${pubkeyForLogs(listPubkey)}, '
+            'listId: ${_forLogs(listId)})';
       case DeepLinkType.peopleList:
-        return 'DeepLink(type: peopleList, listPubkey: $listPubkey, '
-            'listId: $listId)';
+        return 'DeepLink(type: peopleList, '
+            'listPubkey: ${pubkeyForLogs(listPubkey)}, '
+            'listId: ${_forLogs(listId)})';
       case DeepLinkType.savedVideos:
         return 'DeepLink(type: savedVideos)';
       case DeepLinkType.signerCallback:
@@ -158,8 +170,9 @@ class DeepLinkService {
           _controller.add(deepLink);
         },
         onError: (Object error, StackTrace stackTrace) {
+          // The error's text can carry the raw link; its type is enough.
           Log.error(
-            'Deep link stream error: $error',
+            'Deep link stream error: ${error.runtimeType}',
             name: 'DeepLinkService',
             category: LogCategory.ui,
           );
@@ -302,7 +315,8 @@ class DeepLinkService {
             ? int.tryParse(pathSegments[2])
             : null;
         Log.info(
-          '📱 Parsed hashtag deep link: $hashtag${index != null ? " (index: $index)" : ""}',
+          '📱 Parsed hashtag deep link: $hashtag'
+          '${index != null ? " (index: $index)" : ""}',
           name: 'DeepLinkService',
           category: LogCategory.ui,
         );
@@ -321,7 +335,8 @@ class DeepLinkService {
             ? int.tryParse(pathSegments[2])
             : null;
         Log.info(
-          '📱 Parsed search deep link: $searchTerm${index != null ? " (index: $index)" : ""}',
+          '📱 Parsed search deep link: $searchTerm'
+          '${index != null ? " (index: $index)" : ""}',
           name: 'DeepLinkService',
           category: LogCategory.ui,
         );

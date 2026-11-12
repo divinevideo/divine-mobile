@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// The [RouterConfig] `MaterialApp.router` is given.
@@ -94,7 +95,8 @@ class RestorationSafeRouteInformationParser
       );
     } catch (error, stackTrace) {
       Log.error(
-        'Dropping undecodable saved route state for ${routeInformation.uri}',
+        'Dropping undecodable saved route state for '
+        '${redactUriStringForLogs(routeInformation.uri.toString())}',
         name: 'RestorationSafeRouter',
         category: LogCategory.ui,
         error: error,

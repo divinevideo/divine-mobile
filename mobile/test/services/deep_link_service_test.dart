@@ -1,6 +1,7 @@
 // ABOUTME: Unit tests for DeepLinkService URL parsing and deep link handling
 // ABOUTME: Tests video URLs, profile URLs, and unknown URL patterns
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/services/deep_link_service.dart';
@@ -30,6 +31,143 @@ void main() {
         isNot(contains('ABCD-EFGH-SECRET')),
         reason: 'a retired invite code must not reach diagnostics',
       );
+    });
+  });
+
+  group('secrets pasted into a link (#10385)', () {
+    // NIP-19's published test vector; it controls no real account.
+    const nsec =
+        'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+
+    group('parseDeepLink', () {
+      for (final (route, parsedLine) in const [
+        ('video', 'Parsed video deep link ref'),
+        ('hashtag', 'Parsed hashtag deep link'),
+        ('search', 'Parsed search deep link'),
+        ('list', 'Parsed list deep link id'),
+      ]) {
+        test('does not log an nsec carried by a /$route link', () async {
+          await LogCaptureService().clearAllLogs();
+
+          DeepLinkService.parseDeepLink('https://divine.video/$route/$nsec');
+
+          final logged = [
+            for (final entry in LogCaptureService().getRecentLogs())
+              entry.message,
+          ].join('\n');
+          expect(logged, contains(parsedLine));
+          expect(logged.toLowerCase(), isNot(contains('nsec1')));
+        });
+      }
+    });
+
+    // Any app can open divine://, so the key can sit where only the log sink
+    // stops it: the host, or the first segment of an app route.
+    group('a divine:// link carrying the key', () {
+      for (final (label, url, logLine) in const [
+        (
+          'as its host',
+          'divine://$nsec/x',
+          'unrecognised authority',
+        ),
+        (
+          'as its first segment',
+          'divine:///$nsec',
+          'No DeepLinkType for divine:// route',
+        ),
+      ]) {
+        test('does not log the key $label', () async {
+          await LogCaptureService().clearAllLogs();
+
+          DeepLinkService.parseDeepLink(url);
+
+          final logged = [
+            for (final entry in LogCaptureService().getRecentLogs())
+              entry.message,
+          ].join('\n');
+          expect(logged, contains(logLine));
+          expect(logged.toLowerCase(), isNot(contains('nsec1')));
+        });
+      }
+    });
+
+    // app_links throws while parsing a malformed link, and the error's text
+    // carries the raw link.
+    group('a link the platform cannot parse', () {
+      const events = EventChannel('com.llfbandit.app_links/events');
+      const messages = MethodChannel('com.llfbandit.app_links/messages');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      late DeepLinkService service;
+
+      setUp(() {
+        messenger
+          ..setMockMethodCallHandler(messages, (_) async => null)
+          ..setMockStreamHandler(
+            events,
+            MockStreamHandler.inline(
+              onListen: (_, sink) =>
+                  sink.success('divine://[x]/verify?token=SECRETTOKEN'),
+            ),
+          );
+        service = DeepLinkService();
+      });
+
+      tearDown(() {
+        service.dispose();
+        messenger
+          ..setMockMethodCallHandler(messages, null)
+          ..setMockStreamHandler(events, null);
+      });
+
+      test('logs the stream error without the link', () async {
+        await LogCaptureService().clearAllLogs();
+
+        await service.initialize();
+        await pumpEventQueue();
+
+        final logged = [
+          for (final entry in LogCaptureService().getRecentLogs())
+            '${entry.message} ${entry.error ?? ''}',
+        ].join('\n');
+        expect(logged, contains('Deep link stream error'));
+        expect(logged, isNot(contains('SECRETTOKEN')));
+      });
+    });
+
+    group('$DeepLink toString', () {
+      for (final link in const [
+        DeepLink(type: DeepLinkType.profile, npub: nsec),
+        DeepLink(type: DeepLinkType.video, videoRef: nsec),
+        DeepLink(type: DeepLinkType.hashtag, hashtag: nsec),
+        DeepLink(type: DeepLinkType.search, searchTerm: nsec),
+        DeepLink(type: DeepLinkType.list, listId: nsec),
+        DeepLink(type: DeepLinkType.shortLink, shortCode: nsec),
+        DeepLink(type: DeepLinkType.challenge, challengeNaddr: nsec),
+      ]) {
+        test('does not render an nsec in a ${link.type.name} link', () {
+          expect(link.toString().toLowerCase(), isNot(contains('nsec1')));
+        });
+      }
+
+      test('renders an uppercase nsec in a profile link as redacted', () {
+        final link = DeepLink(
+          type: DeepLinkType.profile,
+          npub: nsec.toUpperCase(),
+        );
+
+        expect(link.toString(), contains('<redacted>'));
+      });
+
+      test('renders a profile npub with its hex, as other logs do', () {
+        const npub =
+            'npub10elfcs4fr0l0r8af98jlmgdh9c8tcxjvz9qkw038js35mp4dma8qzvjptg';
+        const hex =
+            '7e7e9c42a91bfef19fa929e5fda1b72e0ebc1a4c1141673e2794234d86addf4e';
+        const link = DeepLink(type: DeepLinkType.profile, npub: npub);
+
+        expect(link.toString(), contains('$npub ($hex)'));
+      });
     });
   });
 
@@ -798,17 +936,22 @@ void main() {
         expect(link.toString(), equals('DeepLink(type: video, videoRef: abc)'));
       });
 
-      test('formats list deep link with full untruncated pubkey', () {
-        const pubkey =
-            'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+      test('formats list deep link with both full pubkey encodings', () {
+        // NIP-19's published pubkey test vector.
+        const hex =
+            '7e7e9c42a91bfef19fa929e5fda1b72e0ebc1a4c1141673e2794234d86addf4e';
+        const npub =
+            'npub10elfcs4fr0l0r8af98jlmgdh9c8tcxjvz9qkw038js35mp4dma8qzvjptg';
         const link = DeepLink(
           type: DeepLinkType.list,
-          listPubkey: pubkey,
+          listPubkey: hex,
           listId: 'my-vines',
         );
         expect(
           link.toString(),
-          equals('DeepLink(type: list, listPubkey: $pubkey, listId: my-vines)'),
+          equals(
+            'DeepLink(type: list, listPubkey: $npub ($hex), listId: my-vines)',
+          ),
         );
       });
 

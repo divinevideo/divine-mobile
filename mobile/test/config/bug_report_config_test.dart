@@ -28,23 +28,20 @@ const _deepLinkLogLine =
     'segments=2, queryKeys=[code, state]';
 
 void main() {
-  group('redactNostrPrivateKeys', () {
-    test('removes private keys and keeps every other word as written', () {
-      final nsec = 'nsec1${'q' * 58}';
-      final ncryptsec = 'ncryptsec1${'p' * 40}';
-
-      expect(
-        redactNostrPrivateKeys(
-          'mail someone@example.com, api_key=abc, $nsec and $ncryptsec',
-        ),
-        'mail someone@example.com, api_key=abc, [REDACTED] and [REDACTED]',
-      );
-    });
-
+  // The patterns are owned and unit-tested by unified_logger; these pin that
+  // the export sanitizer applies them.
+  group('Nostr private keys in sanitizeDiagnosticText', () {
     test('the full sanitizer still redacts the same keys', () {
       final nsec = 'nsec1${'q' * 58}';
 
       expect(sanitizeDiagnosticText('key $nsec'), 'key [REDACTED]');
+    });
+
+    // Any prefix of a key is still most of the secret.
+    test('the full sanitizer redacts a key cut short', () {
+      final truncated = 'nsec1${'q' * 40}';
+
+      expect(sanitizeDiagnosticText('key $truncated'), 'key [REDACTED]');
     });
   });
 

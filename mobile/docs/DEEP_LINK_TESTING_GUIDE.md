@@ -100,13 +100,20 @@ adb shell pm verify-app-links --re-verify co.openvine.app
    - Video links → `VideoDetailScreen` showing the specific video
    - Profile links → `ProfileScreen` showing the user's profile
 3. **Console logs** (look for these emoji):
-   - `🔗 Setting up deep link listener...`
-   - `🔗 Deep link service initialized`
-   - `📱 App opened with deep link: https://divine.video/...`
-   - `🔗 Processing deep link: DeepLink(type: video, videoId: ...)`
+   - `📱 App opened with deep link: https://divine.video/...` (cold start) or
+     `📱 Received deep link while running: https://divine.video/...`
+   - `🔗 Processing deep link: DeepLink(type: video, videoRef: ...)`
    - `📱 Navigating to video: /video/{id}`
    - `✅ Navigation completed to: /video/{id}`
-   - `📱 Loading video by ID: {id}`
+
+   A link is untrusted input, so these lines never carry a private key or a
+   query value (#10385). In a logged URL, every query value reads `REDACTED`,
+   and so does a host, path segment or query key that carries an `nsec` or
+   `ncryptsec` (a host prints as `redacted`, because URIs lowercase hosts).
+   In a field the parser extracted, a key reads `[REDACTED]`, or `<redacted>`
+   where it stood in for a pubkey. The log sink itself also replaces any key
+   that still reaches it, at any length, with `[REDACTED]`. Public ids such as
+   an npub, a hex pubkey or a note id are logged whole.
 
 ### ❌ Failure Indicators
 

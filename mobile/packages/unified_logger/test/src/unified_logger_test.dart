@@ -320,4 +320,48 @@ void main() {
       );
     });
   });
+
+  // The patterns themselves are covered in secret_redaction_test.dart; these
+  // prove the sink applies them before anything is stored.
+  group('secret redaction at the sink (#10385)', () {
+    // NIP-19's published nsec test vector, standing in for a key pasted into
+    // a link; it controls no real account.
+    const untrustedLinkSegment =
+        'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+    const npub =
+        'npub10elfcs4fr0l0r8af98jlmgdh9c8tcxjvz9qkw038js35mp4dma8qzvjptg';
+    const hex =
+        '7e7e9c42a91bfef19fa929e5fda1b72e0ebc1a4c1141673e2794234d86addf4e';
+
+    setUp(() async {
+      await LogCaptureService().clearAllLogs();
+    });
+
+    test('stores a message with the key redacted', () {
+      Log.info('opened /profile/$untrustedLinkSegment', name: 'Test');
+
+      final entry = LogCaptureService().getRecentLogs().last;
+      expect(entry.message, equals('opened /profile/[REDACTED]'));
+    });
+
+    test('stores an error and stack trace with the key redacted', () {
+      Log.error(
+        'failed',
+        name: 'Test',
+        error: const FormatException('bad link $untrustedLinkSegment'),
+        stackTrace: StackTrace.fromString('#0 open ($untrustedLinkSegment)'),
+      );
+
+      final entry = LogCaptureService().getRecentLogs().last;
+      expect(entry.error, contains('bad link [REDACTED]'));
+      expect(entry.stackTrace, isNot(contains('nsec1')));
+    });
+
+    test('stores public ids whole', () {
+      Log.info('author $npub ($hex)', name: 'Test');
+
+      final entry = LogCaptureService().getRecentLogs().last;
+      expect(entry.message, equals('author $npub ($hex)'));
+    });
+  });
 }

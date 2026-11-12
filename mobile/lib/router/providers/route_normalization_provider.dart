@@ -10,6 +10,7 @@ import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/router/providers/router_location_provider.dart';
 import 'package:openvine/services/deep_link_service.dart';
+import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 @visibleForTesting
@@ -54,7 +55,8 @@ String? normalizedPathFor(RouteConfiguration routes, Uri location) {
   final loc = location.toString();
   if (shouldSkipRouteNormalization(loc)) {
     Log.info(
-      '🔄 RouteNormalizationProvider: skipping normalization for $loc',
+      '🔄 RouteNormalizationProvider: skipping normalization for '
+      '${redactUriStringForLogs(loc)}',
       name: 'RouteNormalizationProvider',
     );
     return null;
@@ -95,7 +97,8 @@ final routeNormalizationProvider = Provider<void>((ref) {
 
         final canonical = Uri(path: canonicalPath).toString();
         Log.info(
-          '🔄 Normalizing route from $now to $canonical',
+          '🔄 Normalizing route from ${redactUriStringForLogs(now.toString())} '
+          'to ${redactUriStringForLogs(canonical)}',
           name: 'RouteNormalizationProvider',
         );
         router.go(canonical);
