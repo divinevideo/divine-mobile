@@ -1178,6 +1178,9 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
       );
       await db.pendingGiftWrapsDao.deleteAllForOwner(owner);
       await db.processedGiftWrapsDao.deleteAllForOwner(owner);
+      // Reaction rows keep decrypted rumor payloads; the retryable own rows
+      // are the outgoing queue and stay, as on a plain sign-out.
+      await db.dmReactionsDao.deleteNonRetryableForOwner(owner);
     });
   };
 

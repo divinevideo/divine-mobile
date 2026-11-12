@@ -829,7 +829,30 @@ void main() {
             giftWrapId: 'processed-$owner',
             ownerPubkey: owner,
           );
+          await db.dmReactionsDao.upsertIncoming(
+            id: 'reaction-$owner',
+            conversationId: _dmConversationId,
+            targetMessageId: 'dm-a',
+            targetMessageAuthor: _pubkeyB,
+            reactorPubkey: _pubkeyB,
+            emoji: '😂',
+            createdAt: 1700000000,
+            giftWrapId: 'reaction-wrap-$owner',
+            ownerPubkey: owner,
+          );
         }
+        // An unpublished own reaction is the outgoing queue, not a cache.
+        await db.dmReactionsDao.insertOwnReactionSuperseding(
+          placeholderId: 'queued-reaction',
+          conversationId: _dmConversationId,
+          targetMessageId: 'dm-a',
+          targetMessageAuthor: _pubkeyB,
+          reactorPubkey: _pubkeyA,
+          emoji: '😂',
+          createdAt: 1700000000,
+          ownerPubkey: _pubkeyA,
+          rumorEventJson: '{"id":"queued-reaction"}',
+        );
         await DmSyncState(prefs).markHistoryDrainComplete(_pubkeyA);
         expect(DmSyncState(prefs).historyDrainComplete(_pubkeyA), isTrue);
         final now = DateTime.now().millisecondsSinceEpoch;
@@ -862,6 +885,13 @@ void main() {
               row.ownerPubkey,
           ],
           [_pubkeyB],
+        );
+        expect(
+          [
+            for (final row in await db.select(db.dmMessageReactions).get())
+              row.id,
+          ],
+          unorderedEquals(['reaction-$_pubkeyB', 'queued-reaction']),
         );
         // Deleted rows under a kept cursor would never download again.
         expect(DmSyncState(prefs).historyDrainComplete(_pubkeyA), isFalse);
