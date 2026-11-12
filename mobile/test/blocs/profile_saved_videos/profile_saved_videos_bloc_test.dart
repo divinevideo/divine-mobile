@@ -1727,6 +1727,33 @@ void main() {
       );
 
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'shows one tile for a video the change names by its address and by '
+        'an earlier event id',
+        // The repository could not match the older `e` bookmark to the
+        // address, so both references reach the grid and both resolve.
+        setUp: () {
+          stubLatestRevisionAtClipAddress();
+          stubVideosByEventId();
+        },
+        build: createBloc,
+        seed: () => showing(['video-1']),
+        act: (_) => bookmarkChanges.add(
+          referencesShownAs([
+            coordinateFor('clip'),
+            originalRevisionId,
+            'video-1',
+          ]),
+        ),
+        wait: const Duration(milliseconds: 50),
+        verify: (bloc) {
+          expect(bloc.state.videos.map((v) => v.id), [
+            editedRevisionId,
+            'video-1',
+          ]);
+        },
+      );
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
         'an unsave drops the video without fetching anything',
         build: createBloc,
         seed: () => showing(['video-2', 'video-1']),
