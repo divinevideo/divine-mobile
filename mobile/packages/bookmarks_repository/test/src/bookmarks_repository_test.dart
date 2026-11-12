@@ -1410,6 +1410,39 @@ void main() {
           },
         );
 
+        // One id a relay cannot parse closes the whole `ids` lookup, so
+        // another client's malformed item would leave every older version
+        // unmatched.
+        test('asks the resolver only about well-formed event ids', () async {
+          stubRelay(
+            events: [
+              bookmarkListEvent([
+                'not-an-event-id',
+                'A' * 64,
+                'a' * 63,
+                'a' * 65,
+                originalId,
+              ]),
+            ],
+          );
+          final asked = <List<String>>[];
+          final service = createService(
+            resolveVideoAddresses: (ids) async {
+              asked.add(ids);
+              return {originalId: coordinate};
+            },
+          );
+
+          await service.syncGlobalBookmarks();
+
+          expect(
+            asked,
+            equals([
+              [originalId],
+            ]),
+          );
+        });
+
         test(
           'asks again about an event id that found nothing, once a while '
           'has passed',

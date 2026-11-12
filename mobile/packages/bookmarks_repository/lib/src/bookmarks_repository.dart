@@ -197,6 +197,9 @@ class BookmarksRepository {
   /// device snapshot, whose keys the next account reuses.
   bool _disposed = false;
 
+  /// A NIP-01 event id: 64 lowercase hex characters.
+  static final _eventIdPattern = RegExp(r'^[0-9a-f]{64}$');
+
   /// The addressable video kinds NIP-71 defines (34235 and 34236).
   static const Set<int> _addressableVideoKinds = {
     EventKind.videoHorizontal,
@@ -754,9 +757,13 @@ class BookmarksRepository {
           now.difference(missedAt) >= videoAddressRetryInterval;
     }
 
+    // Only well-formed ids: one a relay cannot parse closes the whole lookup.
     final unresolved = [
       for (final item in globalBookmarks)
-        if (item.type == 'e' && due(item.id)) item.id,
+        if (item.type == 'e' &&
+            _eventIdPattern.hasMatch(item.id) &&
+            due(item.id))
+          item.id,
     ];
     if (unresolved.isEmpty) return;
 
