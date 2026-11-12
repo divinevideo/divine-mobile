@@ -13,17 +13,26 @@ String? shortLinkCodeFor(Uri uri) {
   return RegExp(r'^/l/([A-Za-z0-9]{8})$').firstMatch(uri.path)?.group(1);
 }
 
+/// The one query a short-link destination may carry: the author of a video
+/// link, so a shortened share keeps naming the account it came from (#10929).
+///
+/// The short-link gateway accepts exactly this shape, so it must stay in step
+/// with that service's own check.
+final _videoAuthorQuery = RegExp(r'\?author=[0-9a-f]{64}$');
+
 bool isShortLinkDestination(String raw) {
-  if (raw.length > 2048 ||
-      !raw.startsWith('https://divine.video/') ||
-      RegExp(r'[\\%?#\s\x00-\x1f\x7f]').hasMatch(raw)) {
+  if (raw.length > 2048) return false;
+  final authorQuery = _videoAuthorQuery.firstMatch(raw);
+  final base = authorQuery == null ? raw : raw.substring(0, authorQuery.start);
+  if (!base.startsWith('https://divine.video/') ||
+      RegExp(r'[\\%?#\s\x00-\x1f\x7f]').hasMatch(base)) {
     return false;
   }
-  final uri = Uri.tryParse(raw);
+  final uri = Uri.tryParse(base);
   if (uri == null ||
       uri.userInfo.isNotEmpty ||
       uri.hasPort ||
-      uri.toString() != raw ||
+      uri.toString() != base ||
       uri.pathSegments.length != 2) {
     return false;
   }
@@ -33,7 +42,7 @@ bool isShortLinkDestination(String raw) {
     return false;
   }
   if (kind == 'video') return true;
-  if (kind != 'profile') return false;
+  if (kind != 'profile' || authorQuery != null) return false;
   if (RegExp(r'^[0-9A-Fa-f]{64}$').hasMatch(id)) return true;
   return id.toLowerCase().startsWith('npub1') &&
       NostrKeyUtils.isValidKey(NostrKeyUtils.decode(id));

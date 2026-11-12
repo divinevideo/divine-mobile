@@ -33,6 +33,10 @@ void main() {
         'https://divine.video/video/a?q=1',
         'https://divine.video/l/Abc12345',
         'https://divine.video/profile/short',
+        // Only a video link may name an author, only as lowercase hex.
+        'https://divine.video/profile/${'a' * 64}?author=${'b' * 64}',
+        'https://divine.video/video/a?author=${'B' * 64}',
+        'https://divine.video/video/a?author=${'b' * 64}&q=1',
       ]) {
         expect(await enabled.shorten(url), url);
       }
@@ -69,6 +73,22 @@ void main() {
         transport.close();
       },
     );
+
+    // #10929: a shortened share keeps naming the video's author.
+    test('shortens a video link that names its author', () async {
+      const authored =
+          'https://divine.video/video/CaseSensitive_Stable-ID'
+          '?author=e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3';
+      final transport = MockClient((request) async {
+        expect(request.body, jsonEncode({'url': authored}));
+        return http.Response(mapping(url: authored), 201);
+      });
+      final client = ShortLinkClient(client: transport, enabled: true);
+
+      expect(await client.shorten(authored), short);
+      client.close();
+      transport.close();
+    });
 
     test(
       'failed and invalid responses preserve the full URL and permit retry',

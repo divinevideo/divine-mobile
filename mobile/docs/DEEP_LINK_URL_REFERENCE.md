@@ -20,25 +20,27 @@ Where:
 
 Opens a specific video in full-screen player.
 
-**Pattern**: `https://divine.video/video/{videoId}`
+**Pattern**: `https://divine.video/video/{videoId}[?author={pubkey}]`
 
 **Parameters**:
 - `videoId` (required): a 64-character hex event id, a NIP-19 `note1`, `nevent1` or `naddr1`, a raw NIP-33 `kind:pubkey:d-tag` coordinate of a video kind, or a first-party stable id (the video's `d` tag)
+- `author` (optional): the video author's public key, as 64-character hex. Any account can publish under a given `d` tag (a Divine upload's `d` tag is the file's sha256), so a bare `d` tag can resolve to another account's video. With `author`, the lookup is held to that account. A value that is not a hex key is ignored. The app's share sheet, its copied DM links, collaborator invites and sound-request messages all name the author (#10929). The app shortens a destination carrying exactly `?author=<64 lowercase hex>` on a video link; the short-link gateway must accept the same shape, and until it does such a share falls back to the full link.
 
 **Examples**:
 ```
 https://divine.video/video/059fb12899fbab94d2087351d6f03ec15fb0d4266bcb049a0529f86464b84631
+https://divine.video/video/my-reel-123?author=e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3
 ```
 
 **Mobile Behavior**:
-- Fetches video by event ID from Nostr
+- Fetches video by event ID from Nostr, held to `author` when the link names one
 - Opens VideoDetailScreen
 - Displays in full-screen video player
 - Shows video metadata, author, reactions
 
 **Web App Should**:
 - Route to `/video/:id`
-- Fetch event from Nostr relay
+- Fetch event from Nostr relay, held to `author` when the link names one
 - Display video player with same metadata
 
 ---
@@ -286,7 +288,7 @@ parsing alone does not install that server association.
 
 | URL Pattern | View | Mobile Route | Purpose |
 |-------------|------|--------------|---------|
-| `/video/{id}` | Player | `/video/{id}` | Play specific video |
+| `/video/{id}` | Player | `/video/{id}` | Play specific video; `?author=` holds the lookup to that account |
 | `/profile/{npub}` | Grid | `/profile/{npub}` | User's videos (grid) |
 | `/profile/{npub}/{i}` | Feed | `/profile/{npub}/{i}` | User's videos (feed) |
 | `/hashtag/{tag}` | Grid | `/hashtag/{tag}` | Tagged videos (grid) |

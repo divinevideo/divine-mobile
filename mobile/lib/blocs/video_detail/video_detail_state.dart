@@ -11,6 +11,7 @@ class VideoDetailState extends Equatable {
     this.status = VideoDetailStatus.searching,
     this.video,
     this.routeId = '',
+    this.expectedAuthor,
     this.fallbackRouteIds = const [],
     this.retryCount = 0,
     this.generation = 0,
@@ -21,6 +22,10 @@ class VideoDetailState extends Equatable {
   final VideoDetailStatus status;
   final VideoEvent? video;
   final String routeId;
+
+  /// The author the lookup of [routeId] is held to, from a link that named
+  /// one; see `VideosRepository.lookupVideoForRouteId`.
+  final String? expectedAuthor;
   final List<String> fallbackRouteIds;
   final int retryCount;
   final int generation;
@@ -38,6 +43,7 @@ class VideoDetailState extends Equatable {
     status: status ?? this.status,
     video: video ?? this.video,
     routeId: routeId,
+    expectedAuthor: expectedAuthor,
     fallbackRouteIds: fallbackRouteIds,
     retryCount: retryCount ?? this.retryCount,
     generation: generation ?? this.generation,
@@ -51,6 +57,7 @@ class VideoDetailState extends Equatable {
     status,
     video,
     routeId,
+    expectedAuthor,
     fallbackRouteIds,
     retryCount,
     generation,

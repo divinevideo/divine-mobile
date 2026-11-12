@@ -62,6 +62,25 @@ void main() {
       expect(result.videoRef, 'CaseSensitive_Stable-ID');
     });
 
+    test('keeps the author a shortened video link names', () async {
+      const author =
+          'e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3';
+      final resolver = ShortLinkResolver(
+        client: MockClient(
+          (_) async => http.Response(
+            responseBody(url: '$target?author=$author'),
+            200,
+          ),
+        ),
+      );
+
+      final result = await resolver.resolve(shortUrl);
+
+      expect(result.type, DeepLinkType.video);
+      expect(result.videoRef, 'CaseSensitive_Stable-ID');
+      expect(result.videoAuthor, author);
+    });
+
     test(
       'rejects malformed codes and untrusted origins before making a request',
       () async {

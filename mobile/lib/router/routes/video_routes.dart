@@ -129,9 +129,18 @@ class PostAnalyticsDetailRouteData extends GoRouteData
   name: VideoDetailScreen.routeName,
 )
 class VideoDetailRouteData extends GoRouteData with $VideoDetailRouteData {
-  const VideoDetailRouteData({required this.id, this.$extra});
+  const VideoDetailRouteData({
+    required this.id,
+    @TypedQueryParameter(name: VideoDetailScreen.authorQueryParameter)
+    this.author,
+    this.$extra,
+  });
 
   final String id;
+
+  /// The hex pubkey the lookup of [id] is held to, from a link that names
+  /// one (`?author=`). A `d` tag can name videos from more than one account.
+  final String? author;
 
   /// A [VideoDetailRouteExtra] warm start, read through [extraAs]; absent
   /// after a deep link.
@@ -145,6 +154,7 @@ class VideoDetailRouteData extends GoRouteData with $VideoDetailRouteData {
     final routeExtra = extraAs<VideoDetailRouteExtra>($extra);
     return VideoDetailScreen(
       videoId: id,
+      authorPubkey: author,
       autoOpenComments: routeExtra?.autoOpenComments ?? false,
       fallbackVideoIds: routeExtra?.fallbackVideoIds ?? const [],
       initialVideo: routeExtra?.initialVideo,
