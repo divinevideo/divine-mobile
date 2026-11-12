@@ -8060,6 +8060,30 @@ void main() {
         expect(counts.downvotes[editedId], equals(1));
       });
 
+      test('getVoteCounts sends no deletion lookup for emoji-only '
+          'reactions', () async {
+        mockQueryEventsSequence([
+          [
+            createMockReaction(
+              id: 'only_emoji',
+              targetEventId: editedId,
+              authorPubkey: 'emoji_reactor_pubkey_1234567890abcdef',
+              content: '🔥',
+            ),
+          ],
+        ]);
+
+        repository = createRepository(withLocalStorage: false);
+
+        final counts = await repository.getVoteCounts([editedId]);
+
+        expect(counts.upvotes[editedId], equals(0));
+        expect(counts.downvotes[editedId], equals(0));
+        // Only the kind 7 read: a retracted emoji can't change a vote, so
+        // no kind 5 query is sent for it.
+        verify(() => mockNostrClient.queryEvents(any())).called(1);
+      });
+
       test('getUserVoteStatuses skips an own emoji reaction and keeps own '
           'votes', () async {
         // The empty-content like on a second target is the positive
