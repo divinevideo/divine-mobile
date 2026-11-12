@@ -1885,7 +1885,8 @@ class LikesRepository {
   /// Get vote counts (upvotes and downvotes) for multiple events.
   ///
   /// Queries relays for Kind 7 reactions on each event, differentiating
-  /// between `+` (upvote) and `-` (downvote) content.
+  /// between `+` or empty (upvote) and `-` (downvote) content. Emoji
+  /// reactions are not votes (NIP-25).
   ///
   /// Pass [addressableIds] — event id to `kind:pubkey:d-tag` coordinate — for
   /// targets that are addressable. An edit republishes such a target under a
@@ -1926,7 +1927,11 @@ class LikesRepository {
     // since deleted — switching an upvote to a downvote on an edited reply
     // publishes exactly that pair. Counting both inflates the visible totals
     // and incorrectly gives the reply a net score of zero (#6124).
-    final reactionsById = {for (final event in events) event.id: event};
+    // Emoji reactions are dropped before the deletion lookup, since a
+    // retracted emoji can't change a vote.
+    final reactionsById = {
+      for (final event in events.where(_isVoteReaction)) event.id: event,
+    };
     final deletedReactionIds = await _deletedReactionIds(reactionsById);
 
     // One vote per account per target, decided by the account's newest
@@ -1955,7 +1960,6 @@ class LikesRepository {
       if (event.content == _downvoteContent) {
         downvotes[targetId] = downvotes[targetId]! + 1;
       } else {
-        // '+' and any other content counts as upvote
         upvotes[targetId] = upvotes[targetId]! + 1;
       }
     }
@@ -1969,7 +1973,7 @@ class LikesRepository {
   /// [getVoteCounts] needs it: without the coordinate the voter's own arrow
   /// silently un-fills after the target is edited (#6124).
   ///
-  /// Returns maps of event IDs the user has upvoted or downvoted.
+  /// Returns the sets of event IDs the user has upvoted or downvoted.
   Future<({Set<String> upvotedIds, Set<String> downvotedIds})>
   getUserVoteStatuses(
     List<String> eventIds, {
@@ -2019,6 +2023,7 @@ class LikesRepository {
 
     for (final event in events) {
       if (deletedIds.contains(event.id)) continue;
+      if (!_isVoteReaction(event)) continue;
 
       final targetId = _resolveVoteTarget(
         event,
@@ -3606,6 +3611,12 @@ class LikesRepository {
   /// empty form.
   static bool _isLikeReaction(Event event) =>
       event.content == _likeContent || event.content.isEmpty;
+
+  /// Whether [event] is an upvote or a downvote. NIP-25 says an emoji
+  /// reaction SHOULD NOT be read as either, so it neither counts as a vote
+  /// nor replaces the account's earlier one.
+  static bool _isVoteReaction(Event event) =>
+      _isLikeReaction(event) || event.content == _downvoteContent;
 
   /// Whether [event] supersedes [other] as one account's vote. Reactions
   /// from the same second are ordered by id, so every reader keeps the same

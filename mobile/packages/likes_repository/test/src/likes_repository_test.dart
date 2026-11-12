@@ -7999,6 +7999,131 @@ void main() {
         }
       });
 
+      test('getVoteCounts counts an emoji reaction as no vote', () async {
+        // NIP-25: `+` or empty content is an upvote and `-` a downvote; an
+        // emoji SHOULD NOT be read as either.
+        mockQueryEventsSequence([
+          [
+            createMockReaction(
+              id: 'emoji_reaction',
+              targetEventId: editedId,
+              authorPubkey: 'emoji_reactor_pubkey_1234567890abcdef',
+              content: '🔥',
+            ),
+            createMockReaction(
+              id: 'empty_reaction',
+              targetEventId: editedId,
+              authorPubkey: 'empty_reactor_pubkey_1234567890abcdef',
+              content: '',
+            ),
+          ],
+          <Event>[],
+        ]);
+
+        repository = createRepository(withLocalStorage: false);
+
+        final counts = await repository.getVoteCounts([editedId]);
+
+        expect(counts.upvotes[editedId], equals(1));
+        expect(counts.downvotes[editedId], equals(0));
+      });
+
+      test('getVoteCounts keeps a downvote when a newer emoji reaction '
+          'follows it', () async {
+        const voter = 'some_voter_pubkey_1234567890abcdef';
+        mockQueryEventsSequence([
+          [
+            createMockReaction(
+              id: 'newer_emoji',
+              targetEventId: editedId,
+              authorPubkey: voter,
+              content: '😂',
+              createdAt: defaultTimestamp + 1,
+            ),
+            createMockReaction(
+              id: 'older_downvote',
+              targetEventId: editedId,
+              authorPubkey: voter,
+              content: '-',
+            ),
+          ],
+          <Event>[],
+        ]);
+
+        repository = createRepository(withLocalStorage: false);
+
+        final counts = await repository.getVoteCounts([editedId]);
+
+        expect(counts.upvotes[editedId], equals(0));
+        expect(counts.downvotes[editedId], equals(1));
+      });
+
+      test('getVoteCounts sends no deletion lookup for emoji-only '
+          'reactions', () async {
+        mockQueryEventsSequence([
+          [
+            createMockReaction(
+              id: 'only_emoji',
+              targetEventId: editedId,
+              authorPubkey: 'emoji_reactor_pubkey_1234567890abcdef',
+              content: '🔥',
+            ),
+          ],
+        ]);
+
+        repository = createRepository(withLocalStorage: false);
+
+        final counts = await repository.getVoteCounts([editedId]);
+
+        expect(counts.upvotes[editedId], equals(0));
+        expect(counts.downvotes[editedId], equals(0));
+        // Only the kind 7 read: a retracted emoji can't change a vote, so
+        // no kind 5 query is sent for it.
+        verify(() => mockNostrClient.queryEvents(any())).called(1);
+      });
+
+      test('getUserVoteStatuses skips an own emoji reaction and keeps own '
+          'votes', () async {
+        // The empty-content like on a second target is the positive
+        // control: a skip that dropped upvotes too would still leave the
+        // emoji target out of upvotedIds.
+        const otherId = 'other_reply_id_1234567890abcdef';
+        mockQueryEventsSequence([
+          [
+            createMockReaction(
+              id: 'own_downvote',
+              targetEventId: editedId,
+              authorPubkey: testUserPubkey,
+              content: '-',
+            ),
+            createMockReaction(
+              id: 'own_newer_emoji',
+              targetEventId: editedId,
+              authorPubkey: testUserPubkey,
+              content: '🔥',
+              createdAt: defaultTimestamp + 1,
+            ),
+            createMockReaction(
+              id: 'own_empty_upvote',
+              targetEventId: otherId,
+              authorPubkey: testUserPubkey,
+              content: '',
+            ),
+          ],
+          <Event>[],
+        ]);
+
+        repository = createRepository(withLocalStorage: false);
+
+        final statuses = await repository.getUserVoteStatuses([
+          editedId,
+          otherId,
+        ]);
+
+        expect(statuses.upvotedIds, equals({otherId}));
+        expect(statuses.downvotedIds, equals({editedId}));
+      });
+
       test('deleting an older revision keeps the newer coordinate downvote '
           'indexed (#6124)', () async {
         const coordinate = '34236:$testAuthorPubkey:reply-d-tag';
