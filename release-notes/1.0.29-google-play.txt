@@ -5,7 +5,6 @@ Make bolder six-second videos.
 - Caption styles with outlines, glow and word highlights.
 - Pick any color right off the frame.
 - Smoother slow motion, plus hands-free stop motion.
-- A bigger sound library — name and reuse your sounds.
 - Sort comments by top and hide the ones you don't want.
 
 Plus speed and stability fixes.
@@ -17,7 +16,6 @@ Hacé videos de seis segundos más audaces.
 - Estilos de subtítulos con contorno, brillo y resaltado de palabras.
 - Tomá cualquier color directo del cuadro.
 - Cámara lenta más fluida, y stop motion sin manos.
-- Más sonidos en la biblioteca: nombrá y reutilizá tus sonidos.
 - Ordená los comentarios por destacados y ocultá los que no querés.
 
 Además, mejoras de velocidad y estabilidad.
@@ -29,7 +27,6 @@ Faça vídeos de seis segundos mais ousados.
 - Estilos de legenda com contorno, brilho e destaque de palavras.
 - Pegue qualquer cor direto do quadro.
 - Câmera lenta mais fluida, além de stop motion sem as mãos.
-- Biblioteca de sons maior — nomeie e reutilize seus sons.
 - Ordene os comentários por mais votados e oculte os indesejados.
 
 Mais correções de velocidade e estabilidade.
@@ -41,7 +38,6 @@ Crée des vidéos de six secondes plus audacieuses.
 - Styles de sous-titres avec contours, lueur et surbrillance des mots.
 - Capte une couleur sur l'image.
 - Ralenti plus fluide et stop motion mains libres.
-- Bibliothèque de sons plus grande — nomme et réutilise tes sons.
 - Trie les commentaires par popularité et masque les indésirables.
 
 Plus des correctifs de vitesse et de stabilité.
@@ -53,7 +49,6 @@ Mach kühnere Sechs-Sekunden-Videos.
 - Untertitel-Stile mit Umrandung, Leuchten und Wort-Highlights.
 - Nimm jede Farbe direkt aus dem Bild.
 - Flüssigere Zeitlupe, plus Stop-Motion ganz ohne Hände.
-- Größere Sound-Bibliothek – benenne deine Sounds und nutze sie erneut.
 - Sortiere Kommentare nach Top und blende unerwünschte aus.
 
 Dazu schneller und stabiler.
@@ -65,7 +60,6 @@ Crea video di sei secondi più audaci.
 - Stili di sottotitoli con contorno, bagliore ed evidenziazione delle parole.
 - Prendi un colore dal fotogramma.
 - Slow motion più fluido e stop motion a mani libere.
-- Libreria di suoni più ampia: dai un nome ai tuoi suoni e riusali.
 - Ordina i commenti per più votati e nascondi quelli che non vuoi.
 
 Più correzioni di velocità e stabilità.
@@ -77,7 +71,6 @@ Maak gedurfdere video's van zes seconden.
 - Ondertitelstijlen met contouren, gloed en woordmarkering.
 - Pak elke kleur recht van het beeld.
 - Vloeiendere slow motion, plus handsfree stop-motion.
-- Grotere geluidsbibliotheek — geef je geluiden een naam en gebruik ze opnieuw.
 - Sorteer reacties op top en verberg wat je niet wilt.
 
 Plus snelheids- en stabiliteitsverbeteringen.
@@ -89,7 +82,6 @@ Twórz śmielsze sześciosekundowe filmy.
 - Style napisów z obrysem, poświatą i podświetlaniem słów.
 - Pobieraj dowolny kolor prosto z kadru.
 - Płynniejsze zwolnione tempo i tryb poklatkowy bez rąk.
-- Większa biblioteka dźwięków — nazywaj i używaj swoich dźwięków ponownie.
 - Sortuj komentarze według najlepszych i ukrywaj niechciane.
 
 Do tego poprawki szybkości i stabilności.
@@ -101,7 +93,6 @@ Gör djärvare sexsekundersvideor.
 - Undertextstilar med kontur, sken och ordmarkering.
 - Plocka valfri färg direkt från bilden.
 - Mjukare slow motion, plus handsfree stop motion.
-- Större ljudbibliotek – namnge och återanvänd dina ljud.
 - Sortera kommentarer efter toppen och dölj dem du inte vill ha.
 
 Plus snabbhets- och stabilitetsfixar.
@@ -113,7 +104,6 @@ Creează videoclipuri de șase secunde mai îndrăznețe.
 - Stiluri de subtitrări cu contur, strălucire și evidențierea cuvintelor.
 - Ia o culoare din cadru.
 - Încetinitor mai fluid și stop motion fără mâini.
-- Bibliotecă de sunete mai mare — denumește și refolosește-ți sunetele.
 - Sortează comentariile după top și ascunde-le pe cele nedorite.
 
 Plus remedieri de viteză și stabilitate.
@@ -125,7 +115,6 @@ Plus remedieri de viteză și stabilitate.
 - Стилове субтитри с контур, сияние и открояване на думи.
 - Вземай всеки цвят директно от кадъра.
 - По-плавно забавено движение и стоп моушън без ръце.
-- По-голяма библиотека със звуци — наименувай и използвай отново своите звуци.
 - Подреждай коментарите по топ и скривай нежеланите.
 
 Плюс подобрения в скоростта и стабилността.
@@ -137,7 +126,6 @@ Daha cesur altı saniyelik videolar oluştur.
 - Dış çizgi, parlama ve kelime vurgulu altyazı stilleri.
 - Kareden doğrudan istediğin rengi al.
 - Daha akıcı ağır çekim ve eller serbest stop motion.
-- Daha büyük ses kitaplığı — seslerine ad ver ve yeniden kullan.
 - Yorumları en beğenilenlere göre sırala ve istemediklerini gizle.
 
 Ayrıca hız ve kararlılık düzeltmeleri.
@@ -149,7 +137,6 @@ Ayrıca hız ve kararlılık düzeltmeleri.
 - أنماط ترجمات بحدود وتوهج وإبراز للكلمات.
 - التقاط أي لون مباشرة من الإطار.
 - حركة بطيئة أكثر سلاسة، وإيقاف حركي دون استخدام اليدين.
-- مكتبة أصوات أكبر — تسمية أصواتك وإعادة استخدامها.
 - ترتيب التعليقات حسب الأفضل وإخفاء غير المرغوب فيها.
 
 بالإضافة إلى تحسينات في السرعة والاستقرار.
@@ -161,7 +148,6 @@ Ayrıca hız ve kararlılık düzeltmeleri.
 - خاکہ، چمک اور الفاظ کی ہائی لائٹ کے ساتھ کیپشن اسٹائلز۔
 - فریم سے براہِ راست کوئی بھی رنگ منتخب کریں۔
 - زیادہ ہموار سلو موشن، اور بغیر ہاتھ کے اسٹاپ موشن۔
-- بڑی ساؤنڈ لائبریری — اپنی آوازوں کو نام دیں اور دوبارہ استعمال کریں۔
 - تبصروں کو ٹاپ کے حساب سے ترتیب دیں اور ناپسندیدہ کو چھپائیں۔
 
 ساتھ ہی رفتار اور استحکام کی اصلاحات۔
@@ -173,7 +159,6 @@ Ayrıca hız ve kararlılık düzeltmeleri.
 - 縁取り、グロー、単語ハイライト付きの字幕スタイル。
 - フレームから直接どんな色でも選べます。
 - よりなめらかなスローモーション、そして手を使わないストップモーション。
-- サウンドライブラリが拡大。サウンドに名前を付けて再利用できます。
 - コメントを人気順に並べ替え、見たくないものは非表示に。
 
 さらに、速度と安定性の改善。
@@ -185,7 +170,6 @@ Ayrıca hız ve kararlılık düzeltmeleri.
 - 외곽선, 글로우, 단어 강조가 있는 자막 스타일.
 - 프레임에서 바로 원하는 색을 골라요.
 - 더 부드러운 슬로 모션과 손 안 대는 스톱 모션.
-- 더 커진 사운드 라이브러리 — 사운드에 이름을 붙이고 다시 써요.
 - 댓글을 인기순으로 정렬하고 원치 않는 댓글은 숨겨요.
 
 속도와 안정성 개선도 함께.
@@ -197,7 +181,6 @@ Ayrıca hız ve kararlılık düzeltmeleri.
 - 带描边、辉光和逐词高亮的字幕样式。
 - 直接从画面中取任意颜色。
 - 更流畅的慢动作，以及免手操作的定格动画。
-- 更大的声音库——为你的声音命名并重复使用。
 - 按热门排序评论，隐藏你不想看的。
 
 另外还有速度和稳定性修复。
@@ -209,7 +192,6 @@ Tạo video sáu giây táo bạo hơn.
 - Kiểu phụ đề với viền, ánh sáng và tô sáng từng từ.
 - Lấy bất kỳ màu nào ngay từ khung hình.
 - Chuyển động chậm mượt hơn, cùng stop motion rảnh tay.
-- Thư viện âm thanh lớn hơn — đặt tên và tái sử dụng âm thanh của bạn.
 - Sắp xếp bình luận theo nổi bật và ẩn những bình luận bạn không muốn.
 
 Cùng các bản sửa tốc độ và ổn định.
@@ -221,7 +203,6 @@ Buat video enam detik yang lebih berani.
 - Gaya subtitel dengan garis tepi, cahaya, dan sorotan kata.
 - Ambil warna apa pun langsung dari bingkai.
 - Gerak lambat lebih mulus, plus stop motion tanpa tangan.
-- Pustaka suara lebih besar — beri nama dan pakai ulang suaramu.
 - Urutkan komentar berdasarkan teratas dan sembunyikan yang tidak kamu mau.
 
 Plus perbaikan kecepatan dan stabilitas.
@@ -233,7 +214,6 @@ Hasilkan video enam saat yang lebih berani.
 - Gaya sari kata dengan garis luar, cahaya dan sorotan perkataan.
 - Pilih warna dari bingkai.
 - Gerakan perlahan lebih lancar, serta stop motion tanpa tangan.
-- Pustaka bunyi lebih besar — namakan dan guna semula bunyi anda.
 - Isih komen mengikut teratas dan sembunyikan yang tak diingini.
 
 Juga pembaikan kelajuan dan kestabilan.
@@ -245,7 +225,6 @@ Gumawa ng mas matatapang na six-second na video.
 - Mga caption style na may outline, glow at word highlight.
 - Kumuha ng kulay mula sa frame.
 - Mas smooth na slow motion, plus hands-free na stop motion.
-- Mas malaking sound library — pangalanan at gamitin ulit ang iyong mga sound.
 - I-sort ang mga komento ayon sa top at itago ang mga ayaw mo.
 
 Plus mga pag-aayos sa bilis at stability.
@@ -257,7 +236,6 @@ Plus mga pag-aayos sa bilis at stability.
 - ከጠርዝ፣ ከብርሃን እና ከቃላት ማድመቅ ጋር የግርጌ ጽሑፍ ቅጦች።
 - ከፍሬም ላይ በቀጥታ ማንኛውንም ቀለም ይምረጡ።
 - ይበልጥ ለስላሳ የዝግታ እንቅስቃሴ እና እጅ-አልባ ስቶፕ ሞሽን።
-- ትልቅ የድምፅ ቤተ-መጻሕፍት — ድምፆችዎን ይሰይሙ እና እንደገና ይጠቀሙ።
 - አስተያየቶችን በከፍተኛ ይደርድሩ እና የማይፈልጉትን ይደብቁ።
 
 በተጨማሪም የፍጥነት እና የመረጋጋት ማስተካከያዎች።
@@ -269,7 +247,6 @@ Plus mga pag-aayos sa bilis at stability.
 - అంచులు, మెరుపు మరియు పద హైలైట్‌లతో శీర్షిక శైలులు.
 - ఫ్రేమ్ నుండి రంగును ఎంచుకోండి.
 - సున్నితమైన స్లో మోషన్, అలాగే చేతులు అవసరం లేని స్టాప్ మోషన్.
-- పెద్ద సౌండ్ లైబ్రరీ — మీ శబ్దాలకు పేరు పెట్టి మళ్లీ ఉపయోగించండి.
 - వ్యాఖ్యలను టాప్ ద్వారా క్రమబద్ధీకరించండి, నచ్చనివాటిని దాచండి.
 
 అదనంగా వేగం మరియు స్థిరత్వ పరిష్కారాలు.
