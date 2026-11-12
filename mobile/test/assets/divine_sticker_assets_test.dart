@@ -127,9 +127,7 @@ int _uint24(ByteData data, int offset) =>
 
 void main() {
   // Tests run with the package root as the working directory.
-  final webpBacked = DivineStickerName.values
-      .where((sticker) => !sticker.isLegacySvg)
-      .toList();
+  const webpBacked = DivineStickerName.values;
 
   group(DivineStickerName, () {
     test('every variant points at a bundled asset', () {

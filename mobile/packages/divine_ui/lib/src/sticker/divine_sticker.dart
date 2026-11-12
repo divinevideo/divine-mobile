@@ -1,6 +1,5 @@
 // ignore_for_file: public_member_api_docs, Sticker names are self-documenting
 
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// Sticker names from the Divine design system sticker set.
@@ -15,8 +14,7 @@ import 'package:material_ui/material_ui.dart';
 ///
 /// The OpenMoji SVGs in `assets/stickers/` are a separate set. The video
 /// editor's sticker picker draws from them, and some auth, account and upload
-/// screens still load them by path. [grandfather] is the only variant still
-/// drawn from them.
+/// screens still load them by path; no variant here uses them.
 enum DivineStickerName {
   acRemote('ac_remote'),
 
@@ -108,13 +106,6 @@ enum DivineStickerName {
   frenchBulldog('french_bulldog'),
   gameController('game_controller'),
   glitterLips('glitter_lips'),
-
-  /// Legacy exception. Figma has no counterpart, so this keeps its original
-  /// OpenMoji SVG until design decides. It backs the recorder's six-second
-  /// explainer.
-  // TODO(realmeylisdev): Replace with Figma artwork or keep the SVG on
-  // purpose, https://github.com/divinevideo/divine-mobile/issues/9471.
-  grandfather.legacySvg('grandfather'),
 
   hairDryer('hair_dryer'),
   handGrip('hand_grip'),
@@ -241,21 +232,13 @@ enum DivineStickerName {
   wirelessEarbuds('wireless_earbuds'),
   x('x');
 
-  const DivineStickerName(this.fileName) : isLegacySvg = false;
-
-  /// A variant with no Figma counterpart, still drawn from the OpenMoji SVGs.
-  const DivineStickerName.legacySvg(this.fileName) : isLegacySvg = true;
+  const DivineStickerName(this.fileName);
 
   /// The file name, without extension, of this sticker's asset.
   final String fileName;
 
-  /// Whether this variant is a legacy SVG rather than WebP artwork.
-  final bool isLegacySvg;
-
   /// The full asset path for this sticker.
-  String get assetPath => isLegacySvg
-      ? 'assets/stickers/$fileName.svg'
-      : 'assets/divine_stickers/$fileName.webp';
+  String get assetPath => 'assets/divine_stickers/$fileName.webp';
 }
 
 /// A sticker from the Divine design system.
@@ -283,10 +266,6 @@ class DivineSticker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (sticker.isLegacySvg) {
-      return SvgPicture.asset(sticker.assetPath, width: size, height: size);
-    }
-
     return Image.asset(
       sticker.assetPath,
       width: size,

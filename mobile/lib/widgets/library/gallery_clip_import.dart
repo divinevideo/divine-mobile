@@ -61,7 +61,7 @@ Future<bool> confirmGalleryClipImport(
   final navigator = Navigator.of(context);
   final confirmed = await VineBottomSheetPrompt.show<bool>(
     context: context,
-    sticker: .grandfather,
+    sticker: .secureVault,
     title: context.l10n.libraryGalleryImportExplainerTitle,
     subtitle: context.l10n.libraryGalleryImportExplainerSubtitle,
     primaryButtonText: context.l10n.libraryGalleryImportExplainerButton,

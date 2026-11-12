@@ -1,9 +1,6 @@
-import 'dart:convert';
-
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -16,10 +13,8 @@ final _transparentWebp = Uint8List.fromList(const <int>[
   0x07, 0x00,
 ]);
 
-const _emptySvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"/>';
-
 // The real artwork ships with the app, not with this package, so every
-// sticker path resolves to a stand-in of the right format.
+// sticker path resolves to a stand-in WebP.
 class _TestAssetBundle extends CachingAssetBundle {
   _TestAssetBundle() {
     final manifest = <String, List<Map<String, Object>>>{
@@ -33,14 +28,13 @@ class _TestAssetBundle extends CachingAssetBundle {
 
   late final ByteData _manifest;
   final ByteData _webp = ByteData.sublistView(_transparentWebp);
-  final ByteData _svg = ByteData.sublistView(utf8.encode(_emptySvg));
 
   @override
   Future<ByteData> load(String key) {
     if (key == 'AssetManifest.bin') {
       return SynchronousFuture<ByteData>(_manifest);
     }
-    return SynchronousFuture<ByteData>(key.endsWith('.svg') ? _svg : _webp);
+    return SynchronousFuture<ByteData>(_webp);
   }
 }
 
@@ -51,8 +45,8 @@ String _snakeCase(String identifier) => identifier.replaceAllMapped(
 
 void main() {
   group(DivineStickerName, () {
-    test('has 181 variants', () {
-      expect(DivineStickerName.values.length, equals(181));
+    test('has 180 variants', () {
+      expect(DivineStickerName.values.length, equals(180));
     });
 
     test('assetPath points WebP artwork at the WebP directory', () {
@@ -122,22 +116,6 @@ void main() {
         expect(sticker.fileName, equals(fileName), reason: sticker.name);
       }
     });
-
-    group('grandfather', () {
-      test('is the only legacy variant', () {
-        expect(
-          DivineStickerName.values.where((sticker) => sticker.isLegacySvg),
-          equals([DivineStickerName.grandfather]),
-        );
-      });
-
-      test('keeps its original SVG artwork', () {
-        expect(
-          DivineStickerName.grandfather.assetPath,
-          equals('assets/stickers/grandfather.svg'),
-        );
-      });
-    });
   });
 
   group(DivineSticker, () {
@@ -159,13 +137,10 @@ void main() {
       );
     }
 
-    testWidgets('renders WebP artwork as an $Image, not an $SvgPicture', (
-      tester,
-    ) async {
+    testWidgets('renders the artwork as an $Image', (tester) async {
       await tester.pumpWidget(buildSubject());
 
       expect(find.byType(Image), findsOneWidget);
-      expect(find.byType(SvgPicture), findsNothing);
     });
 
     testWidgets('loads the asset the variant points at', (tester) async {
@@ -211,16 +186,6 @@ void main() {
       final image = tester.widget<Image>(find.byType(Image));
       expect(image.color, isNull);
       expect(image.colorBlendMode, isNull);
-    });
-
-    testWidgets('renders the legacy variant as an $SvgPicture', (tester) async {
-      await tester.pumpWidget(
-        buildSubject(sticker: DivineStickerName.grandfather, size: 96),
-      );
-
-      expect(find.byType(SvgPicture), findsOneWidget);
-      expect(find.byType(Image), findsNothing);
-      expect(tester.getSize(find.byType(DivineSticker)), const Size(96, 96));
     });
   });
 }

@@ -46,7 +46,7 @@ Never include: any text, letters or numbers other than exactly what the Subject 
 - `art`, `trollFace`, `tapedBanana` and `spaceInvader` were held back in review over their resemblance to existing works, and were not regenerated.
 - `bobRoss` depicted a real person and was left out.
 - `shockedMan` and `idLicense` were unused and removed.
-- `grandfather` is not in this directory: it is still the OpenMoji SVG in `assets/stickers/`, under that set's CC BY-SA 4.0 licence.
+- `grandfather`, the last variant still drawn from an OpenMoji SVG, was removed rather than regenerated. Its two prompts now use `videoClapBoard` and `secureVault`.
 
 ## Stickers
 
