@@ -3,7 +3,7 @@ Make bolder six-second videos.
 
 - New editor effects: light rays, prism, spotlight and more.
 - Caption styles with outlines, glow and word highlights.
-- Switch a video between tall and square, and pick any color right off the frame.
+- Pick any color right off the frame.
 - Smoother slow motion, plus hands-free stop motion.
 - A bigger sound library — name and reuse your sounds.
 - Sort comments by top and hide the ones you don't want.
@@ -15,7 +15,7 @@ Hacé videos de seis segundos más audaces.
 
 - Nuevos efectos del editor: rayos de luz, prisma, foco y más.
 - Estilos de subtítulos con contorno, brillo y resaltado de palabras.
-- Cambiá un video entre vertical y cuadrado, y tomá cualquier color directo del cuadro.
+- Tomá cualquier color directo del cuadro.
 - Cámara lenta más fluida, y stop motion sin manos.
 - Más sonidos en la biblioteca: nombrá y reutilizá tus sonidos.
 - Ordená los comentarios por destacados y ocultá los que no querés.
@@ -27,7 +27,7 @@ Faça vídeos de seis segundos mais ousados.
 
 - Novos efeitos do editor: raios de luz, prisma, holofote e mais.
 - Estilos de legenda com contorno, brilho e destaque de palavras.
-- Troque um vídeo entre vertical e quadrado e pegue qualquer cor direto do quadro.
+- Pegue qualquer cor direto do quadro.
 - Câmera lenta mais fluida, além de stop motion sem as mãos.
 - Biblioteca de sons maior — nomeie e reutilize seus sons.
 - Ordene os comentários por mais votados e oculte os indesejados.
@@ -39,7 +39,7 @@ Crée des vidéos de six secondes plus audacieuses.
 
 - Nouveaux effets : rayons de lumière, prisme, projecteur et plus.
 - Styles de sous-titres avec contours, lueur et surbrillance des mots.
-- Passe une vidéo du vertical au carré et capte une couleur sur l'image.
+- Capte une couleur sur l'image.
 - Ralenti plus fluide et stop motion mains libres.
 - Bibliothèque de sons plus grande — nomme et réutilise tes sons.
 - Trie les commentaires par popularité et masque les indésirables.
@@ -51,7 +51,7 @@ Mach kühnere Sechs-Sekunden-Videos.
 
 - Neue Editor-Effekte: Lichtstrahlen, Prisma, Spotlight und mehr.
 - Untertitel-Stile mit Umrandung, Leuchten und Wort-Highlights.
-- Wechsle ein Video zwischen Hochformat und Quadratisch und nimm jede Farbe direkt aus dem Bild.
+- Nimm jede Farbe direkt aus dem Bild.
 - Flüssigere Zeitlupe, plus Stop-Motion ganz ohne Hände.
 - Größere Sound-Bibliothek – benenne deine Sounds und nutze sie erneut.
 - Sortiere Kommentare nach Top und blende unerwünschte aus.
@@ -63,7 +63,7 @@ Crea video di sei secondi più audaci.
 
 - Nuovi effetti dell'editor: raggi di luce, prisma, riflettore e altro.
 - Stili di sottotitoli con contorno, bagliore ed evidenziazione delle parole.
-- Passa un video dal verticale al quadrato e prendi un colore dal fotogramma.
+- Prendi un colore dal fotogramma.
 - Slow motion più fluido e stop motion a mani libere.
 - Libreria di suoni più ampia: dai un nome ai tuoi suoni e riusali.
 - Ordina i commenti per più votati e nascondi quelli che non vuoi.
@@ -75,7 +75,7 @@ Maak gedurfdere video's van zes seconden.
 
 - Nieuwe editor-effecten: lichtstralen, prisma, spotlight en meer.
 - Ondertitelstijlen met contouren, gloed en woordmarkering.
-- Wissel een video tussen staand en vierkant en pak elke kleur recht van het beeld.
+- Pak elke kleur recht van het beeld.
 - Vloeiendere slow motion, plus handsfree stop-motion.
 - Grotere geluidsbibliotheek — geef je geluiden een naam en gebruik ze opnieuw.
 - Sorteer reacties op top en verberg wat je niet wilt.
@@ -87,7 +87,7 @@ Twórz śmielsze sześciosekundowe filmy.
 
 - Nowe efekty w edytorze: promienie światła, pryzmat, reflektor i więcej.
 - Style napisów z obrysem, poświatą i podświetlaniem słów.
-- Przełączaj film między pionem a kwadratem i pobieraj dowolny kolor prosto z kadru.
+- Pobieraj dowolny kolor prosto z kadru.
 - Płynniejsze zwolnione tempo i tryb poklatkowy bez rąk.
 - Większa biblioteka dźwięków — nazywaj i używaj swoich dźwięków ponownie.
 - Sortuj komentarze według najlepszych i ukrywaj niechciane.
@@ -99,7 +99,7 @@ Gör djärvare sexsekundersvideor.
 
 - Nya editoreffekter: ljusstrålar, prisma, spotlight och mer.
 - Undertextstilar med kontur, sken och ordmarkering.
-- Växla en video mellan stående och kvadratisk och plocka valfri färg direkt från bilden.
+- Plocka valfri färg direkt från bilden.
 - Mjukare slow motion, plus handsfree stop motion.
 - Större ljudbibliotek – namnge och återanvänd dina ljud.
 - Sortera kommentarer efter toppen och dölj dem du inte vill ha.
@@ -111,7 +111,7 @@ Creează videoclipuri de șase secunde mai îndrăznețe.
 
 - Efecte noi în editor: raze de lumină, prismă, reflector și altele.
 - Stiluri de subtitrări cu contur, strălucire și evidențierea cuvintelor.
-- Comută un videoclip între vertical și pătrat și ia o culoare din cadru.
+- Ia o culoare din cadru.
 - Încetinitor mai fluid și stop motion fără mâini.
 - Bibliotecă de sunete mai mare — denumește și refolosește-ți sunetele.
 - Sortează comentariile după top și ascunde-le pe cele nedorite.
@@ -123,7 +123,7 @@ Plus remedieri de viteză și stabilitate.
 
 - Нови ефекти в редактора: светлинни лъчи, призма, прожектор и още.
 - Стилове субтитри с контур, сияние и открояване на думи.
-- Превключвай видео между вертикално и квадратно и вземай всеки цвят директно от кадъра.
+- Вземай всеки цвят директно от кадъра.
 - По-плавно забавено движение и стоп моушън без ръце.
 - По-голяма библиотека със звуци — наименувай и използвай отново своите звуци.
 - Подреждай коментарите по топ и скривай нежеланите.
@@ -135,7 +135,7 @@ Daha cesur altı saniyelik videolar oluştur.
 
 - Yeni düzenleyici efektleri: ışık huzmeleri, prizma, spot ışığı ve daha fazlası.
 - Dış çizgi, parlama ve kelime vurgulu altyazı stilleri.
-- Bir videoyu dikey ile kare arasında değiştir ve kareden doğrudan istediğin rengi al.
+- Kareden doğrudan istediğin rengi al.
 - Daha akıcı ağır çekim ve eller serbest stop motion.
 - Daha büyük ses kitaplığı — seslerine ad ver ve yeniden kullan.
 - Yorumları en beğenilenlere göre sırala ve istemediklerini gizle.
@@ -147,7 +147,7 @@ Ayrıca hız ve kararlılık düzeltmeleri.
 
 - مؤثرات جديدة في المحرر: أشعة ضوئية، وموشور، وضوء كاشف، والمزيد.
 - أنماط ترجمات بحدود وتوهج وإبراز للكلمات.
-- تبديل الفيديو بين العمودي والمربع، والتقاط أي لون مباشرة من الإطار.
+- التقاط أي لون مباشرة من الإطار.
 - حركة بطيئة أكثر سلاسة، وإيقاف حركي دون استخدام اليدين.
 - مكتبة أصوات أكبر — تسمية أصواتك وإعادة استخدامها.
 - ترتيب التعليقات حسب الأفضل وإخفاء غير المرغوب فيها.
@@ -159,7 +159,7 @@ Ayrıca hız ve kararlılık düzeltmeleri.
 
 - نئے ایڈیٹر ایفیکٹس: روشنی کی کرنیں، پرزم، اسپاٹ لائٹ اور مزید۔
 - خاکہ، چمک اور الفاظ کی ہائی لائٹ کے ساتھ کیپشن اسٹائلز۔
-- ویڈیو کو عمودی اور مربع کے درمیان بدلیں، اور فریم سے براہِ راست کوئی بھی رنگ منتخب کریں۔
+- فریم سے براہِ راست کوئی بھی رنگ منتخب کریں۔
 - زیادہ ہموار سلو موشن، اور بغیر ہاتھ کے اسٹاپ موشن۔
 - بڑی ساؤنڈ لائبریری — اپنی آوازوں کو نام دیں اور دوبارہ استعمال کریں۔
 - تبصروں کو ٹاپ کے حساب سے ترتیب دیں اور ناپسندیدہ کو چھپائیں۔
@@ -171,7 +171,7 @@ Ayrıca hız ve kararlılık düzeltmeleri.
 
 - 新しいエディターエフェクト：光線、プリズム、スポットライトなど。
 - 縁取り、グロー、単語ハイライト付きの字幕スタイル。
-- 動画を縦と正方形で切り替え、フレームから直接どんな色でも選べます。
+- フレームから直接どんな色でも選べます。
 - よりなめらかなスローモーション、そして手を使わないストップモーション。
 - サウンドライブラリが拡大。サウンドに名前を付けて再利用できます。
 - コメントを人気順に並べ替え、見たくないものは非表示に。
@@ -183,7 +183,7 @@ Ayrıca hız ve kararlılık düzeltmeleri.
 
 - 새로운 편집기 효과: 광선, 프리즘, 스포트라이트 등.
 - 외곽선, 글로우, 단어 강조가 있는 자막 스타일.
-- 영상을 세로와 정사각형으로 전환하고, 프레임에서 바로 원하는 색을 골라요.
+- 프레임에서 바로 원하는 색을 골라요.
 - 더 부드러운 슬로 모션과 손 안 대는 스톱 모션.
 - 더 커진 사운드 라이브러리 — 사운드에 이름을 붙이고 다시 써요.
 - 댓글을 인기순으로 정렬하고 원치 않는 댓글은 숨겨요.
@@ -195,7 +195,7 @@ Ayrıca hız ve kararlılık düzeltmeleri.
 
 - 全新编辑器特效：光线、棱镜、聚光灯等。
 - 带描边、辉光和逐词高亮的字幕样式。
-- 在竖版和正方形之间切换视频，并直接从画面中取任意颜色。
+- 直接从画面中取任意颜色。
 - 更流畅的慢动作，以及免手操作的定格动画。
 - 更大的声音库——为你的声音命名并重复使用。
 - 按热门排序评论，隐藏你不想看的。
@@ -207,7 +207,7 @@ Tạo video sáu giây táo bạo hơn.
 
 - Hiệu ứng trình chỉnh sửa mới: tia sáng, lăng kính, đèn rọi và hơn thế.
 - Kiểu phụ đề với viền, ánh sáng và tô sáng từng từ.
-- Chuyển video giữa dọc và vuông, và lấy bất kỳ màu nào ngay từ khung hình.
+- Lấy bất kỳ màu nào ngay từ khung hình.
 - Chuyển động chậm mượt hơn, cùng stop motion rảnh tay.
 - Thư viện âm thanh lớn hơn — đặt tên và tái sử dụng âm thanh của bạn.
 - Sắp xếp bình luận theo nổi bật và ẩn những bình luận bạn không muốn.
@@ -219,7 +219,7 @@ Buat video enam detik yang lebih berani.
 
 - Efek editor baru: sinar cahaya, prisma, sorotan, dan lainnya.
 - Gaya subtitel dengan garis tepi, cahaya, dan sorotan kata.
-- Alihkan video antara tegak dan persegi, dan ambil warna apa pun langsung dari bingkai.
+- Ambil warna apa pun langsung dari bingkai.
 - Gerak lambat lebih mulus, plus stop motion tanpa tangan.
 - Pustaka suara lebih besar — beri nama dan pakai ulang suaramu.
 - Urutkan komentar berdasarkan teratas dan sembunyikan yang tidak kamu mau.
@@ -231,7 +231,7 @@ Hasilkan video enam saat yang lebih berani.
 
 - Kesan editor baharu: pancaran cahaya, prisma, lampu sorot dan lagi.
 - Gaya sari kata dengan garis luar, cahaya dan sorotan perkataan.
-- Tukar video antara menegak dan segi empat sama, dan pilih warna dari bingkai.
+- Pilih warna dari bingkai.
 - Gerakan perlahan lebih lancar, serta stop motion tanpa tangan.
 - Pustaka bunyi lebih besar — namakan dan guna semula bunyi anda.
 - Isih komen mengikut teratas dan sembunyikan yang tak diingini.
@@ -243,7 +243,7 @@ Gumawa ng mas matatapang na six-second na video.
 
 - Bagong editor effects: light rays, prism, spotlight at higit pa.
 - Mga caption style na may outline, glow at word highlight.
-- I-switch ang video sa patayo o parisukat, at kumuha ng kulay mula sa frame.
+- Kumuha ng kulay mula sa frame.
 - Mas smooth na slow motion, plus hands-free na stop motion.
 - Mas malaking sound library — pangalanan at gamitin ulit ang iyong mga sound.
 - I-sort ang mga komento ayon sa top at itago ang mga ayaw mo.
@@ -255,7 +255,7 @@ Plus mga pag-aayos sa bilis at stability.
 
 - አዳዲስ የአርታዒ ተፅዕኖዎች፦ የብርሃን ጨረሮች፣ ፕሪዝም፣ ስፖትላይት እና ሌሎችም።
 - ከጠርዝ፣ ከብርሃን እና ከቃላት ማድመቅ ጋር የግርጌ ጽሑፍ ቅጦች።
-- ቪዲዮን በቁም እና በካሬ መካከል ይቀይሩ፣ እና ከፍሬም ላይ በቀጥታ ማንኛውንም ቀለም ይምረጡ።
+- ከፍሬም ላይ በቀጥታ ማንኛውንም ቀለም ይምረጡ።
 - ይበልጥ ለስላሳ የዝግታ እንቅስቃሴ እና እጅ-አልባ ስቶፕ ሞሽን።
 - ትልቅ የድምፅ ቤተ-መጻሕፍት — ድምፆችዎን ይሰይሙ እና እንደገና ይጠቀሙ።
 - አስተያየቶችን በከፍተኛ ይደርድሩ እና የማይፈልጉትን ይደብቁ።
@@ -267,7 +267,7 @@ Plus mga pag-aayos sa bilis at stability.
 
 - కొత్త ఎడిటర్ ఎఫెక్ట్‌లు: కాంతి కిరణాలు, ప్రిజం, స్పాట్‌లైట్ మరియు మరిన్ని.
 - అంచులు, మెరుపు మరియు పద హైలైట్‌లతో శీర్షిక శైలులు.
-- వీడియోను నిలువు, స్క్వేర్ మధ్య మార్చండి, ఫ్రేమ్ నుండి రంగును ఎంచుకోండి.
+- ఫ్రేమ్ నుండి రంగును ఎంచుకోండి.
 - సున్నితమైన స్లో మోషన్, అలాగే చేతులు అవసరం లేని స్టాప్ మోషన్.
 - పెద్ద సౌండ్ లైబ్రరీ — మీ శబ్దాలకు పేరు పెట్టి మళ్లీ ఉపయోగించండి.
 - వ్యాఖ్యలను టాప్ ద్వారా క్రమబద్ధీకరించండి, నచ్చనివాటిని దాచండి.
