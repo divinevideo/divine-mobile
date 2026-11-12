@@ -193,6 +193,23 @@ void main() {
           equals([_eventId]),
         );
       });
+
+      // One id a relay cannot parse closes the whole `ids` lookup, so another
+      // client's malformed item would hide every older version on the list.
+      test('leaves out items that are not 64-character lowercase hex', () {
+        expect(
+          CuratedListVideo.eventIdItemsOf([
+            _listWith([
+              'not-an-event-id',
+              'A' * 64,
+              'a' * 63,
+              'a' * 65,
+              _otherEventId,
+            ]),
+          ]),
+          equals([_otherEventId]),
+        );
+      });
     });
 
     group('isIn', () {

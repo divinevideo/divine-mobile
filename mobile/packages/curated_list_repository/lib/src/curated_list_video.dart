@@ -66,12 +66,18 @@ class CuratedListVideo {
 
   /// The event-id items of [lists], once each in list order, leaving out
   /// [except]: the items a [CuratedListVideoAddressResolver] can place.
+  ///
+  /// Only well-formed ids are listed: one a relay cannot parse closes the
+  /// whole lookup, which would hide every older version on the list.
   static List<String> eventIdItemsOf(
     Iterable<CuratedList> lists, {
     Set<String> except = const {},
   }) => {
     for (final list in lists)
       for (final item in list.videoEventIds)
-        if (!item.contains(':') && !except.contains(item)) item,
+        if (_eventIdPattern.hasMatch(item) && !except.contains(item)) item,
   }.toList();
+
+  /// A NIP-01 event id: 64 lowercase hex characters.
+  static final _eventIdPattern = RegExp(r'^[0-9a-f]{64}$');
 }
