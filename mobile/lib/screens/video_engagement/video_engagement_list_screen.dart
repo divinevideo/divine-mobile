@@ -49,11 +49,12 @@ class VideoEngagementListScreen extends ConsumerWidget {
   /// Route name used for the reposters list.
   static const repostersRouteName = 'videoReposters';
 
-  /// Identifier the engagement query addresses the video by.
+  /// Identifier the route addresses the video by.
   ///
   /// Usually the hex event id. For an addressable reference that names no
   /// single version — an `naddr1` or a raw coordinate — this is the `d` tag,
-  /// which the first-party API resolves the same way.
+  /// which [VideoEngagementBloc] resolves through [addressableId] before it
+  /// queries.
   final String eventId;
 
   /// Whether to render the likers list or the reposters list.
@@ -67,6 +68,7 @@ class VideoEngagementListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final likesRepository = ref.watch(likesRepositoryProvider);
     final repostsRepository = ref.watch(repostsRepositoryProvider);
+    final videosRepository = ref.watch(videosRepositoryProvider);
     final profileRepository = ref.watch(profileRepositoryProvider);
 
     return BlocProvider<VideoEngagementBloc>(
@@ -74,6 +76,7 @@ class VideoEngagementListScreen extends ConsumerWidget {
         (
           likesRepository,
           repostsRepository,
+          videosRepository,
           profileRepository,
           eventId,
           type,
@@ -85,6 +88,7 @@ class VideoEngagementListScreen extends ConsumerWidget {
         type: type,
         likesRepository: likesRepository,
         repostsRepository: repostsRepository,
+        videosRepository: videosRepository,
         profileRepository: profileRepository,
         addressableId: addressableId,
       )..add(const VideoEngagementLoadRequested()),

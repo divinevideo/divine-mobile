@@ -21,6 +21,7 @@ import 'package:openvine/screens/video_engagement/video_engagement_list_screen.d
 import 'package:openvine/screens/video_engagement/video_engagement_list_view.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:reposts_repository/reposts_repository.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -28,9 +29,12 @@ class _MockLikesRepository extends Mock implements LikesRepository {}
 
 class _MockRepostsRepository extends Mock implements RepostsRepository {}
 
+class _MockVideosRepository extends Mock implements VideosRepository {}
+
 void main() {
   late _MockLikesRepository likesRepository;
   late _MockRepostsRepository repostsRepository;
+  late _MockVideosRepository videosRepository;
 
   const testEventId =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -42,6 +46,7 @@ void main() {
   setUp(() {
     likesRepository = _MockLikesRepository();
     repostsRepository = _MockRepostsRepository();
+    videosRepository = _MockVideosRepository();
   });
 
   Widget buildSubject({
@@ -52,6 +57,7 @@ void main() {
       additionalOverrides: [
         likesRepositoryProvider.overrideWithValue(likesRepository),
         repostsRepositoryProvider.overrideWithValue(repostsRepository),
+        videosRepositoryProvider.overrideWithValue(videosRepository),
       ],
       home: VideoEngagementListScreen(
         eventId: testEventId,
@@ -371,6 +377,7 @@ void main() {
                 type: VideoEngagementType.likers,
                 likesRepository: likesRepository,
                 repostsRepository: repostsRepository,
+                videosRepository: videosRepository,
                 profileRepository: null,
               ),
               child: const VideoEngagementListView(),
@@ -420,6 +427,7 @@ void main() {
             additionalOverrides: [
               likesRepositoryProvider.overrideWithValue(likesRepository),
               repostsRepositoryProvider.overrideWithValue(repostsRepository),
+              videosRepositoryProvider.overrideWithValue(videosRepository),
             ],
             child: MaterialApp.router(
               localizationsDelegates: appLocalizationsDelegates,
@@ -456,6 +464,9 @@ void main() {
             '34236:81acbb70475b8b715c38d072ce93769ca275783d187990117ec0c01ea849bf95'
             ':$dTag';
         when(
+          () => videosRepository.lookupVideoForRouteId(coordinate),
+        ).thenAnswer((_) async => const VideoRouteMissing());
+        when(
           () => likesRepository.fetchEventLikers(
             eventId: dTag,
             addressableId: coordinate,
@@ -483,6 +494,7 @@ void main() {
             additionalOverrides: [
               likesRepositoryProvider.overrideWithValue(likesRepository),
               repostsRepositoryProvider.overrideWithValue(repostsRepository),
+              videosRepositoryProvider.overrideWithValue(videosRepository),
             ],
             child: MaterialApp.router(
               localizationsDelegates: appLocalizationsDelegates,
@@ -493,6 +505,69 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(router.canPop(), isFalse);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.bySemanticsLabel(l10n.commonBack));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('detail $coordinate'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'cold entry back from a Divine upload link keeps the coordinate',
+      (tester) async {
+        // A Divine upload's d tag is the file's sha256, so it passes every
+        // event-id check. The fallback still has to be the coordinate, or the
+        // detail route resolves the d tag without the author (#10929).
+        const hexDTag =
+            '5f3a2c1d0e9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39';
+        const coordinate =
+            '34236:81acbb70475b8b715c38d072ce93769ca275783d187990117ec0c01ea849bf95'
+            ':$hexDTag';
+        when(
+          () => videosRepository.lookupVideoForRouteId(coordinate),
+        ).thenAnswer((_) async => const VideoRouteMissing());
+        when(
+          () => likesRepository.fetchEventLikers(
+            eventId: hexDTag,
+            addressableId: coordinate,
+          ),
+        ).thenAnswer((_) async => const LikersPage(pubkeys: [testPubkey1]));
+
+        final router = GoRouter(
+          initialLocation: const VideoLikersRouteData(
+            eventId: coordinate,
+          ).location,
+          routes: [
+            GoRoute(
+              path: VideoDetailScreen.path,
+              builder: (_, state) =>
+                  Scaffold(body: Text('detail ${state.pathParameters['id']}')),
+            ),
+            likersRoute(),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          testProviderScope(
+            additionalOverrides: [
+              likesRepositoryProvider.overrideWithValue(likesRepository),
+              repostsRepositoryProvider.overrideWithValue(repostsRepository),
+              videosRepositoryProvider.overrideWithValue(videosRepository),
+            ],
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(router.canPop(), isFalse);
+        expect(find.byType(VideoEngagementListView), findsOneWidget);
 
         final l10n = lookupAppLocalizations(const Locale('en'));
         await tester.tap(find.bySemanticsLabel(l10n.commonBack));

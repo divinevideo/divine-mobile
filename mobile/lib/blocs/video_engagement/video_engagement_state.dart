@@ -55,6 +55,7 @@ final class VideoEngagementState extends Equatable {
     this.loadMoreStatus = VideoEngagementLoadMoreStatus.idle,
     this.nextCursor,
     this.isComplete = true,
+    this.resolvedEventId,
   });
 
   /// Whether this state is for the likers list or the reposters list.
@@ -82,6 +83,12 @@ final class VideoEngagementState extends Equatable {
   /// then shows them, with a way to try again for the rest (#10846).
   final bool isComplete;
 
+  /// The event id a coordinate link resolved to, which every page queries by.
+  ///
+  /// Null when the link named an exact event, or when the coordinate could
+  /// not be resolved and the lists fall back to the link's `d` tag.
+  final String? resolvedEventId;
+
   /// Whether a further page can be requested.
   bool get hasMore => nextCursor != null;
 
@@ -95,6 +102,7 @@ final class VideoEngagementState extends Equatable {
     VideoEngagementLoadMoreStatus? loadMoreStatus,
     Object? nextCursor = _unchanged,
     bool? isComplete,
+    String? resolvedEventId,
   }) {
     return VideoEngagementState(
       type: type,
@@ -105,6 +113,7 @@ final class VideoEngagementState extends Equatable {
           ? this.nextCursor
           : nextCursor as String?,
       isComplete: isComplete ?? this.isComplete,
+      resolvedEventId: resolvedEventId ?? this.resolvedEventId,
     );
   }
 
@@ -116,5 +125,6 @@ final class VideoEngagementState extends Equatable {
     loadMoreStatus,
     nextCursor,
     isComplete,
+    resolvedEventId,
   ];
 }

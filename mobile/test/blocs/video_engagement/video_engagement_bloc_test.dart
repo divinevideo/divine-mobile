@@ -4,11 +4,14 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:openvine/blocs/video_engagement/video_engagement_bloc.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:reposts_repository/reposts_repository.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 class _MockLikesRepository extends Mock implements LikesRepository {}
 
@@ -16,11 +19,14 @@ class _MockRepostsRepository extends Mock implements RepostsRepository {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
+class _MockVideosRepository extends Mock implements VideosRepository {}
+
 void main() {
   group(VideoEngagementBloc, () {
     late _MockLikesRepository likesRepository;
     late _MockRepostsRepository repostsRepository;
     late _MockProfileRepository profileRepository;
+    late _MockVideosRepository videosRepository;
 
     const testEventId = 'event-id-1';
     const testAddressableId = '34236:authorpubkey:dtag';
@@ -32,6 +38,7 @@ void main() {
       likesRepository = _MockLikesRepository();
       repostsRepository = _MockRepostsRepository();
       profileRepository = _MockProfileRepository();
+      videosRepository = _MockVideosRepository();
 
       // Default stub — batch fetch returns empty map (cache miss is fine).
       when(
@@ -49,6 +56,7 @@ void main() {
       type: type,
       likesRepository: likesRepository,
       repostsRepository: repostsRepository,
+      videosRepository: videosRepository,
       profileRepository: profileRepository,
       addressableId: addressableId,
     );
@@ -548,6 +556,217 @@ void main() {
       );
     });
 
+    // #10929: a link that names the video by coordinate reaches the bloc as
+    // its d tag. The API resolves a bare d tag to the newest video any
+    // account posted under it, and 404s on a 64-hex one, so the bloc
+    // resolves the coordinate to that author's event first.
+    group('coordinate links', () {
+      const authorPubkey =
+          '81acbb70475b8b715c38d072ce93769ca275783d187990117ec0c01ea849bf95';
+      // A Divine upload's d tag is the file's sha256: 64-hex, like an id.
+      const hexDTag =
+          '5f3a2c1d0e9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39';
+      const hexCoordinate = '34236:$authorPubkey:$hexDTag';
+      const resolvedEventId =
+          'c218ed9ce99db3c216ca7c70f7a289a3da56fe0b9ba1492b3179db73c8e63a4d';
+
+      VideoEvent videoWithId(String id) => VideoEvent(
+        id: id,
+        pubkey: authorPubkey,
+        createdAt: 1700000000,
+        content: '',
+        timestamp: DateTime.utc(2023, 11, 14),
+      );
+
+      VideoEngagementBloc blocFor({
+        String eventId = hexDTag,
+        String? addressableId = hexCoordinate,
+        VideoEngagementType type = VideoEngagementType.likers,
+      }) => VideoEngagementBloc(
+        eventId: eventId,
+        type: type,
+        likesRepository: likesRepository,
+        repostsRepository: repostsRepository,
+        videosRepository: videosRepository,
+        profileRepository: profileRepository,
+        addressableId: addressableId,
+      );
+
+      void stubLookup(String coordinate, VideoRouteLookupResult result) {
+        when(() => videosRepository.lookupVideoForRouteId(coordinate))
+            .thenAnswer((_) async => result);
+      }
+
+      void stubLikers(String eventId, String coordinate, List<String> pks) {
+        when(
+          () => likesRepository.fetchEventLikers(
+            eventId: eventId,
+            addressableId: coordinate,
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((_) async => LikersPage(pubkeys: pks));
+      }
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'queries likers by the event a 64-hex d tag coordinate resolves to',
+        setUp: () {
+          stubLookup(
+            hexCoordinate,
+            VideoRouteFound(videoWithId(resolvedEventId)),
+          );
+          stubLikers(resolvedEventId, hexCoordinate, [liker1]);
+          stubLikers(hexDTag, hexCoordinate, [liker2]);
+        },
+        build: blocFor,
+        act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
+        expect: () => [
+          const VideoEngagementState(
+            type: VideoEngagementType.likers,
+            status: VideoEngagementStatus.loading,
+          ),
+          const VideoEngagementState(
+            type: VideoEngagementType.likers,
+            status: VideoEngagementStatus.success,
+            pubkeys: [liker1],
+            resolvedEventId: resolvedEventId,
+          ),
+        ],
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'resolves a non-hex d tag coordinate the same way',
+        setUp: () {
+          const dTag = 'ip1dd9tAlmw';
+          const coordinate = '34236:$authorPubkey:$dTag';
+          stubLookup(coordinate, VideoRouteFound(videoWithId(resolvedEventId)));
+          stubLikers(resolvedEventId, coordinate, [liker1]);
+          stubLikers(dTag, coordinate, [liker2]);
+        },
+        build: () => blocFor(
+          eventId: 'ip1dd9tAlmw',
+          addressableId: '34236:$authorPubkey:ip1dd9tAlmw',
+        ),
+        act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
+        verify: (bloc) {
+          expect(bloc.state.status, equals(VideoEngagementStatus.success));
+          expect(bloc.state.pubkeys, equals([liker1]));
+        },
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'queries reposters by the resolved event',
+        setUp: () {
+          stubLookup(
+            hexCoordinate,
+            VideoRouteFound(videoWithId(resolvedEventId)),
+          );
+          when(
+            () => repostsRepository.fetchEventReposters(
+              eventId: resolvedEventId,
+              addressableId: hexCoordinate,
+            ),
+          ).thenAnswer((_) async => const RepostersPage(pubkeys: [reposter1]));
+        },
+        build: () => blocFor(type: VideoEngagementType.reposters),
+        act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
+        verify: (bloc) {
+          expect(bloc.state.status, equals(VideoEngagementStatus.success));
+          expect(bloc.state.pubkeys, equals([reposter1]));
+        },
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'pages on with the resolved event without looking it up again',
+        setUp: () {
+          when(
+            () => likesRepository.fetchEventLikers(
+              eventId: resolvedEventId,
+              addressableId: hexCoordinate,
+              cursor: 'cursor-2',
+            ),
+          ).thenAnswer((_) async => const LikersPage(pubkeys: [liker2]));
+        },
+        build: blocFor,
+        seed: () => const VideoEngagementState(
+          type: VideoEngagementType.likers,
+          status: VideoEngagementStatus.success,
+          pubkeys: [liker1],
+          nextCursor: 'cursor-2',
+          resolvedEventId: resolvedEventId,
+        ),
+        act: (bloc) => bloc.add(const VideoEngagementLoadMoreRequested()),
+        verify: (bloc) {
+          expect(bloc.state.pubkeys, equals([liker1, liker2]));
+          verifyNever(() => videosRepository.lookupVideoForRouteId(any()));
+        },
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'falls back to the d tag when no video answers for the coordinate',
+        setUp: () {
+          stubLookup(hexCoordinate, const VideoRouteMissing());
+          stubLikers(hexDTag, hexCoordinate, [liker1]);
+        },
+        build: blocFor,
+        act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
+        expect: () => [
+          const VideoEngagementState(
+            type: VideoEngagementType.likers,
+            status: VideoEngagementStatus.loading,
+          ),
+          const VideoEngagementState(
+            type: VideoEngagementType.likers,
+            status: VideoEngagementStatus.success,
+            pubkeys: [liker1],
+          ),
+        ],
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'falls back to the d tag without failing when the lookup is '
+        'unreachable',
+        setUp: () {
+          when(() => videosRepository.lookupVideoForRouteId(hexCoordinate))
+              .thenThrow(const FunnelcakeException('offline'));
+          stubLikers(hexDTag, hexCoordinate, [liker1]);
+        },
+        build: blocFor,
+        act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
+        verify: (bloc) {
+          expect(bloc.state.status, equals(VideoEngagementStatus.success));
+          expect(bloc.state.pubkeys, equals([liker1]));
+        },
+        errors: () => isEmpty,
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'does not look anything up when the link named an exact event',
+        setUp: () => stubLikers(resolvedEventId, hexCoordinate, [liker1]),
+        // In-app pushes send the event id and its coordinate, whose d tag
+        // differs from the id.
+        build: () => blocFor(eventId: resolvedEventId),
+        act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
+        verify: (bloc) {
+          expect(bloc.state.pubkeys, equals([liker1]));
+          verifyNever(() => videosRepository.lookupVideoForRouteId(any()));
+        },
+      );
+
+      blocTest<VideoEngagementBloc, VideoEngagementState>(
+        'does not resolve a coordinate that names no valid author',
+        setUp: () =>
+            stubLikers(hexDTag, '34236:not-a-pubkey:$hexDTag', [liker1]),
+        // The route lookup would read it as a bare d tag: the unscoped
+        // lookup this resolution exists to avoid.
+        build: () => blocFor(addressableId: '34236:not-a-pubkey:$hexDTag'),
+        act: (bloc) => bloc.add(const VideoEngagementLoadRequested()),
+        verify: (bloc) {
+          expect(bloc.state.pubkeys, equals([liker1]));
+          verifyNever(() => videosRepository.lookupVideoForRouteId(any()));
+        },
+      );
+    });
+
     group('videoRouteId', () {
       const hexEventId =
           'c218ed9ce99db3c216ca7c70f7a289a3da56fe0b9ba1492b3179db73c8e63a4d';
@@ -563,6 +782,7 @@ void main() {
         type: VideoEngagementType.likers,
         likesRepository: likesRepository,
         repostsRepository: repostsRepository,
+        videosRepository: videosRepository,
         profileRepository: profileRepository,
         addressableId: addressableId,
       );
@@ -584,6 +804,20 @@ void main() {
         addTearDown(bloc.close);
 
         expect(bloc.videoRouteId, equals(coordinate));
+      });
+
+      test('is the coordinate when a 64-hex event id is its d tag', () {
+        // A Divine upload's d tag is the file's sha256, which passes every
+        // event-id check (#10929).
+        const hexDTag =
+            '5f3a2c1d0e9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a39';
+        const hexCoordinate =
+            '34236:81acbb70475b8b715c38d072ce93769ca275783d187990117ec0c01ea849bf95'
+            ':$hexDTag';
+        final bloc = blocFor(eventId: hexDTag, addressableId: hexCoordinate);
+        addTearDown(bloc.close);
+
+        expect(bloc.videoRouteId, equals(hexCoordinate));
       });
 
       test('falls back to the d tag when no coordinate is known', () {

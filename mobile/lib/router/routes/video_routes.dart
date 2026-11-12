@@ -440,16 +440,13 @@ class VideoRepostersRouteData extends GoRouteData
 ///
 /// The path segment shares the detail route's identifier space, so a shared
 /// link can arrive as a hex event id, a NIP-19 `note1` / `nevent1` /
-/// `naddr1`, or a raw coordinate. The first-party API resolves a hex id or a
-/// d tag and 404s on bech32, so an undecoded reference silently renders an
-/// empty list instead of the video's likers (#9359 follow-up).
+/// `naddr1`, or a raw coordinate. The first-party API 404s on bech32, so an
+/// undecoded reference silently renders an empty list instead of the video's
+/// likers (#9359 follow-up).
 ///
-/// The detail route passes its segment through untouched, and
-/// `VideosRepository.lookupVideoForRouteId` resolves it to a concrete
-/// VideoEvent. These screens query by identifier and have no resolver of
-/// their own, so the decode happens here — which also means they never learn
-/// the event id behind an addressable reference, and the relay `#e` arm stays
-/// unusable for one.
+/// The decode happens here; for an addressable reference the screen gets the
+/// d tag and the coordinate, and `VideoEngagementBloc` resolves the
+/// coordinate to that author's event before it queries (#10929).
 Widget _buildEngagementList(
   BuildContext context, {
   required String eventId,
