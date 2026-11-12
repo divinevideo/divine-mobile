@@ -18,8 +18,8 @@ class DmVideoTarget {
   /// hex author.
   final String stableId;
 
-  /// Author as a structured NIP-18 reference carried it. Routing uses it only
-  /// when it is a hex pubkey.
+  /// Author as a structured NIP-18 reference carried it, or else as the URL's
+  /// `?author=` query named it. Routing uses it only when it is a hex pubkey.
   final String? authorPubkey;
 
   /// NIP-71 video event kind when supplied by a structured reference.

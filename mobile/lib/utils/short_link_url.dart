@@ -16,8 +16,8 @@ String? shortLinkCodeFor(Uri uri) {
 /// The one query a short-link destination may carry: the author of a video
 /// link, so a shortened share keeps naming the account it came from (#10929).
 ///
-/// The short-link gateway accepts exactly this shape, so it must stay in step
-/// with that service's own check.
+/// The short-link gateway must accept exactly this shape; until it does, a
+/// share carrying it falls back to the full link.
 final _videoAuthorQuery = RegExp(r'\?author=[0-9a-f]{64}$');
 
 bool isShortLinkDestination(String raw) {
