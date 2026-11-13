@@ -132,7 +132,7 @@ class NewVideosFeed extends _$NewVideosFeed {
 
     try {
       final videosRepository = ref.read(videosRepositoryProvider);
-      for (var emptyPages = 1; ; emptyPages++) {
+      while (true) {
         final requestedUntil = _nextCursor;
         final requestedCursor = _paginationCursor;
         final page = await videosRepository.getNewVideos(
@@ -163,14 +163,8 @@ class NewVideosFeed extends _$NewVideosFeed {
         final filteredNew = allVideos.skip(currentState.videos.length).toList();
 
         // A page with nothing new to show (capped, filtered or already
-        // shown) must not strand the viewer at the end of the window, up to a
-        // bounded run of empty pages.
-        if (filteredNew.isEmpty &&
-            hasMore &&
-            progressed &&
-            emptyPages < maxSeenOnlyFeedPages) {
-          continue;
-        }
+        // shown) must not strand the viewer at the end of the window.
+        if (filteredNew.isEmpty && hasMore && progressed) continue;
 
         state = AsyncData(
           currentState.copyWith(

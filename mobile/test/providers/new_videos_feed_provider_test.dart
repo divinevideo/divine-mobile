@@ -230,47 +230,6 @@ void main() {
       );
     }
 
-    test(
-      'loadMore stops after maxSeenOnlyFeedPages empty cursor pages',
-      () async {
-        final first = _videos(1);
-        var loadMoreCalls = 0;
-        when(
-          () => videosRepository.getNewVideos(
-            limit: any(named: 'limit'),
-            until: any(named: 'until'),
-            cursor: any(named: 'cursor'),
-            skipCache: any(named: 'skipCache'),
-          ),
-        ).thenAnswer((call) async {
-          final cursor = call.namedArguments[#cursor] as String?;
-          if (cursor == null) {
-            return HomeFeedResult(
-              videos: first,
-              hasMore: true,
-              paginationCursor: 'page-1',
-            );
-          }
-          loadMoreCalls++;
-          return HomeFeedResult(
-            videos: const [],
-            hasMore: true,
-            paginationCursor: 'page-${loadMoreCalls + 1}',
-          );
-        });
-        final container = createContainer();
-        await container.read(newVideosFeedProvider.future);
-
-        await container.read(newVideosFeedProvider.notifier).loadMore();
-
-        final state = container.read(newVideosFeedProvider).requireValue;
-        expect(loadMoreCalls, equals(maxSeenOnlyFeedPages));
-        expect(state.videos, equals(first));
-        expect(state.hasMoreContent, isFalse);
-        expect(state.isLoadingMore, isFalse);
-      },
-    );
-
     group('build', () {
       test(
         'keeps the cursor when the first page has no visible rows',

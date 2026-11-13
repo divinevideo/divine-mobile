@@ -712,49 +712,6 @@ void main() {
       );
     }
 
-    test(
-      'New loadMore stops after maxSeenOnlyFeedPages empty cursor pages',
-      () async {
-        final first = [createTestVideo('1' * 64)];
-        var loadMoreCalls = 0;
-        when(
-          () => mockVideosRepository.getNewVideos(
-            until: any(named: 'until'),
-            cursor: any(named: 'cursor'),
-            skipCache: any(named: 'skipCache'),
-            revalidate: any(named: 'revalidate'),
-          ),
-        ).thenAnswer((call) async {
-          final cursor = call.namedArguments[#cursor] as String?;
-          if (cursor == null) {
-            return HomeFeedResult(
-              videos: first,
-              hasMore: true,
-              paginationCursor: 'page-1',
-            );
-          }
-          loadMoreCalls++;
-          return HomeFeedResult(
-            videos: const [],
-            hasMore: true,
-            paginationCursor: 'page-${loadMoreCalls + 1}',
-          );
-        });
-        final bloc = createBloc();
-        addTearDown(bloc.close);
-        bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
-        await pumpEventQueue();
-
-        bloc.add(const VideoFeedLoadMoreRequested());
-        await pumpEventQueue();
-
-        expect(loadMoreCalls, equals(maxSeenOnlyFeedPages));
-        expect(bloc.state.videos, equals(first));
-        expect(bloc.state.hasMore, isFalse);
-        expect(bloc.state.isLoadingMore, isFalse);
-      },
-    );
-
     test('initial state is correct', () {
       final bloc = createBloc();
       addTearDown(bloc.close);
