@@ -1,3 +1,4 @@
+import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/widgets/video_recorder/shutter_gesture_detector.dart';
@@ -302,5 +303,74 @@ void main() {
         expect(stopped, equals(1));
       },
     );
+
+    group('screen reader', () {
+      testWidgets('activation toggles recording in press-down mode', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        var toggled = 0;
+        var started = 0;
+        var stopped = 0;
+        await pumpHost(
+          tester,
+          startsRecordingOnPressDown: true,
+          onTapToggle: () => toggled++,
+          onLongPressStartRecording: () => started++,
+          onLongPressStopRecording: () => stopped++,
+        );
+
+        final node = tester.getSemantics(find.byType(ShutterGestureDetector));
+        node.owner!.performAction(node.id, SemanticsAction.tap);
+        await tester.pump();
+
+        expect(toggled, equals(1));
+        expect(started, equals(0));
+        expect(stopped, equals(0));
+        semantics.dispose();
+      });
+
+      testWidgets('offers no long-press action', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpHost(
+          tester,
+          onTapToggle: () {},
+          onLongPressStartRecording: () {},
+          onLongPressStopRecording: () {},
+        );
+
+        final node = tester.getSemantics(find.byType(ShutterGestureDetector));
+
+        expect(
+          node.getSemanticsData().hasAction(SemanticsAction.tap),
+          isTrue,
+        );
+        expect(
+          node.getSemanticsData().hasAction(SemanticsAction.longPress),
+          isFalse,
+        );
+        semantics.dispose();
+      });
+
+      testWidgets('offers no tap action while disabled', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpHost(
+          tester,
+          isEnabled: false,
+          startsRecordingOnPressDown: true,
+          onTapToggle: () {},
+          onLongPressStartRecording: () {},
+          onLongPressStopRecording: () {},
+        );
+
+        final node = tester.getSemantics(find.byType(ShutterGestureDetector));
+
+        expect(
+          node.getSemanticsData().hasAction(SemanticsAction.tap),
+          isFalse,
+        );
+        semantics.dispose();
+      });
+    });
   });
 }

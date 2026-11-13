@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -482,6 +483,49 @@ void main() {
           verify(
             () => recorderBloc.add(const VideoRecorderRecordingStopRequested()),
           ).called(1);
+        },
+      );
+
+      testWidgets(
+        'screen-reader activation toggles recording with hold-to-record on',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          await sharedPreferences.setBool('hold_to_record_enabled', true);
+          when(() => recorderBloc.state).thenReturn(
+            const VideoRecorderBlocState(
+              canRecord: true,
+              isCameraInitialized: true,
+            ),
+          );
+
+          await tester.pumpWidget(buildWidget());
+          await tester.pumpAndSettle();
+
+          final node = tester.getSemantics(find.byType(RecordButton));
+          expect(
+            node,
+            isSemantics(
+              isButton: true,
+              hasTapAction: true,
+              hasLongPressAction: false,
+            ),
+          );
+
+          node.owner!.performAction(node.id, SemanticsAction.tap);
+          await tester.pump();
+
+          verify(
+            () =>
+                recorderBloc.add(const VideoRecorderRecordingToggleRequested()),
+          ).called(1);
+          verifyNever(
+            () =>
+                recorderBloc.add(const VideoRecorderRecordingStartRequested()),
+          );
+          verifyNever(
+            () => recorderBloc.add(const VideoRecorderRecordingStopRequested()),
+          );
+          semantics.dispose();
         },
       );
     });
