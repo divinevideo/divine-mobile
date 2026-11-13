@@ -167,6 +167,15 @@ void main() {
                 ),
                 findsOneWidget,
               );
+              bool canTap(String label) => find.semantics
+                  .byLabel(label)
+                  .evaluate()
+                  .any(
+                    (node) => node.getSemanticsData().hasAction(
+                      SemanticsAction.tap,
+                    ),
+                  );
+              expect(canTap('Report Divine Support'), isTrue);
               await tester.tap(action('Report Divine Support'));
               await tester.pumpAndSettle();
               expect(group, findsOneWidget);
@@ -177,6 +186,7 @@ void main() {
                 findsOneWidget,
               );
               expect(action('Reported Divine Support'), findsOneWidget);
+              expect(canTap('Reported Divine Support'), isFalse);
               await tester.tap(action('Report Liz'));
               await tester.pumpAndSettle();
               expect(group, findsOneWidget);
