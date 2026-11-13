@@ -63,6 +63,7 @@ class MediaCacheBudgetService {
   final MediaCacheBudgetListener? _onBudgetApplied;
 
   Future<MediaCacheBudget>? _inFlight;
+  Future<MediaCacheBudget>? _followUp;
   DateTime? _lastRefreshedAt;
   MediaCacheBudget? _appliedBudget;
 
@@ -73,10 +74,31 @@ class MediaCacheBudgetService {
   /// The budget the last [refresh] applied, or null before the first.
   MediaCacheBudget? get appliedBudget => _appliedBudget;
 
-  /// Re-reads the disk and applies the resulting budget. Overlapping calls
-  /// share one reading.
-  Future<MediaCacheBudget> refresh() =>
-      _inFlight ??= _refresh().whenComplete(() => _inFlight = null);
+  /// Re-reads the disk and applies the resulting budget.
+  ///
+  /// A call made while a refresh is running gets a fresh one once that
+  /// finishes, so it sees whatever the caller changed first, such as a fixed
+  /// size it just removed. Calls made in that window share the follow-up.
+  Future<MediaCacheBudget> refresh() {
+    final running = _inFlight;
+    if (running == null) return _start();
+    return _followUp ??= _runAfter(running);
+  }
+
+  Future<MediaCacheBudget> _start() =>
+      _inFlight = _refresh().whenComplete(() => _inFlight = null);
+
+  Future<MediaCacheBudget> _runAfter(Future<MediaCacheBudget> running) async {
+    try {
+      await running;
+    } on Object {
+      // The running refresh's own caller hears its failure; this one still
+      // re-reads the disk.
+    }
+    _followUp = null;
+    // A refresh started since then began after this caller's change.
+    return _inFlight ?? _start();
+  }
 
   /// [refresh]es unless the last one finished less than [staleAfter] ago.
   Future<void> refreshIfStale() async {
@@ -87,7 +109,7 @@ class MediaCacheBudgetService {
 
   Future<MediaCacheBudget> _refresh() async {
     final storage = await _readStorageSpace();
-    final automatic = storage == null
+    final diskBudget = storage == null
         ? _ceiling
         : automaticMediaCacheBudget(
             storage: storage,
@@ -95,10 +117,14 @@ class MediaCacheBudgetService {
                 _videoCache.knownCacheBytes + _imageCache.knownCacheBytes,
             ceiling: _ceiling,
           );
+    // Read once, so the log and the listener label the budget with the mode
+    // it was computed under even if the user switches during the trims.
+    final fixedVideoBytes = _prefs.getInt(kCacheLimitPrefKey);
+    final automatic = fixedVideoBytes == null;
     final budget = MediaCacheBudget(
-      videoBytes: _prefs.getInt(kCacheLimitPrefKey) ?? automatic.videoBytes,
-      imageBytes: automatic.imageBytes,
-      playerBytes: automatic.playerBytes,
+      videoBytes: fixedVideoBytes ?? diskBudget.videoBytes,
+      imageBytes: diskBudget.imageBytes,
+      playerBytes: diskBudget.playerBytes,
     );
 
     await Future.wait([
@@ -111,11 +137,11 @@ class MediaCacheBudgetService {
     // space or anything derived from it — the budget included — off the
     // device.
     Log.info(
-      'Media cache budget applied (automatic=$isAutomatic)',
+      'Media cache budget applied (automatic=$automatic)',
       name: _logName,
       category: LogCategory.storage,
     );
-    _onBudgetApplied?.call(storage, budget, automatic: isAutomatic);
+    _onBudgetApplied?.call(storage, budget, automatic: automatic);
     return budget;
   }
 

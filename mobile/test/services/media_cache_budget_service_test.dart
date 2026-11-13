@@ -168,22 +168,98 @@ void main() {
         expect(videoBudget, equals(_ceiling.videoBytes));
       });
 
-      test('shares one reading between overlapping refreshes', () async {
-        final reading = Completer<DeviceStorageSpace?>();
+      group('while a refresh is running', () {
+        test('runs one follow-up for every call made meanwhile', () async {
+          var reads = 0;
+          final readings = <Completer<DeviceStorageSpace?>>[];
+          final service = build(
+            readStorageSpace: () {
+              reads++;
+              final reading = Completer<DeviceStorageSpace?>();
+              readings.add(reading);
+              return reading.future;
+            },
+          );
+
+          final first = service.refresh();
+          final second = service.refresh();
+          final third = service.refresh();
+          readings.single.complete(_fullDisk);
+          await first;
+          await pumpEventQueue();
+          expect(reads, equals(2));
+          readings.last.complete(_roomyDisk);
+
+          expect(await second, equals(_ceiling));
+          expect(await third, equals(_ceiling));
+          expect(reads, equals(2));
+        });
+
+        test('applies the automatic budget to a caller that removed the '
+            'fixed size mid-refresh', () async {
+          await prefs.setInt(kCacheLimitPrefKey, 5 * _gb);
+          final trim = Completer<void>();
+          when(
+            () => imageCache.enforceCacheLimits(force: any(named: 'force')),
+          ).thenAnswer((_) => trim.future);
+          final heard = <(MediaCacheBudget, bool)>[];
+          final service = build(
+            storage: _fullDisk,
+            onBudgetApplied: (_, budget, {required automatic}) =>
+                heard.add((budget, automatic)),
+          );
+
+          final first = service.refresh();
+          await pumpEventQueue();
+          await prefs.remove(kCacheLimitPrefKey);
+          final second = service.refresh();
+          trim.complete();
+
+          expect((await first).videoBytes, equals(5 * _gb));
+          expect((await second).videoBytes, equals(kVideoCacheFloorBytes));
+          expect(videoBudget, equals(kVideoCacheFloorBytes));
+          expect(
+            heard.map((entry) => (entry.$1.videoBytes, entry.$2)),
+            equals([(5 * _gb, false), (kVideoCacheFloorBytes, true)]),
+          );
+        });
+
+        test(
+          'still re-reads the disk after the running refresh fails',
+          () async {
+            final reading = Completer<DeviceStorageSpace?>();
+            var reads = 0;
+            final service = build(
+              readStorageSpace: () {
+                reads++;
+                return reads == 1 ? reading.future : Future.value(_roomyDisk);
+              },
+            );
+
+            final first = service.refresh();
+            final second = service.refresh();
+            reading.completeError(Exception('disk read failed'));
+
+            await expectLater(first, throwsException);
+            expect(await second, equals(_ceiling));
+            expect(reads, equals(2));
+          },
+        );
+      });
+
+      test('lets the next call re-read the disk after a failure', () async {
         var reads = 0;
         final service = build(
-          readStorageSpace: () {
+          readStorageSpace: () async {
             reads++;
-            return reading.future;
+            if (reads == 1) throw Exception('disk read failed');
+            return _roomyDisk;
           },
         );
 
-        final first = service.refresh();
-        final second = service.refresh();
-        reading.complete(_fullDisk);
-
-        expect(await first, equals(await second));
-        expect(reads, equals(1));
+        await expectLater(service.refresh(), throwsException);
+        expect(await service.refresh(), equals(_ceiling));
+        expect(reads, equals(2));
       });
 
       test('tells the listener what it read and what it applied', () async {
