@@ -485,6 +485,7 @@ void main() {
         editor = _MockProImageEditorState();
         final stateManager = _MockStateManager();
         when(() => editor.stateManager).thenReturn(stateManager);
+        when(() => editor.activeLayers).thenReturn(const []);
         when(() => stateManager.activeMeta).thenReturn(<String, dynamic>{});
         when(
           () => editor.addHistory(

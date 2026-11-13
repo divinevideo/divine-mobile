@@ -10,7 +10,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
-import 'package:openvine/models/video_editor/sticker_card_layer.dart';
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/playhead_on_keyframe_builder.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/timeline_keyframe_dot.dart';
@@ -93,9 +93,9 @@ class TimelineOverlayPositionedItem extends StatelessWidget {
 
     final y = isDragging ? baseY + dragDeltaY : baseY;
 
-    // A sticker card shows for as long as it was placed, so it has no trim
-    // handles; see [isStickerCardLayer].
-    if (isSelected && !isDragging && !isStickerCardLayer(item.layer)) {
+    // An interactive card shows for the whole video, so it has no trim
+    // handles; see [isInteractiveCardTimelineItem].
+    if (isSelected && !isDragging && !isInteractiveCardTimelineItem(item)) {
       return Positioned(
         left: x - trimExpansion,
         top: y,
@@ -156,7 +156,7 @@ class TimelineOverlayPositionedItem extends StatelessWidget {
 }
 
 /// The tile of a layer without trim handles, with its keyframes marked: one
-/// that is not selected, or a selected sticker card.
+/// that is not selected, or a selected interactive card.
 class _UnselectedTile extends StatelessWidget {
   const _UnselectedTile({
     required this.item,

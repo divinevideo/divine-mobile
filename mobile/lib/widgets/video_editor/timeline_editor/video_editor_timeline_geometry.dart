@@ -7,7 +7,11 @@ import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:pro_image_editor/features/main_editor/services/layer_copy_manager.dart';
+import 'package:pro_image_editor/pro_image_editor.dart' show Layer;
 import 'package:pro_video_editor/pro_video_editor.dart' show VideoSpeedRamp;
 
 /// Converts a [sourcePosition] inside one untrimmed clip to the matching
@@ -367,13 +371,15 @@ AudioEvent _audioRetimed(
   return retimed.copyWith(endTime: newEnd);
 }
 
-/// Granularity an audio window survives a history/draft round-trip at.
+/// Granularity a sound's or a layer's window survives a history/draft
+/// round-trip at.
 ///
-/// [AudioEvent] serializes its window in whole milliseconds while a stop-motion
-/// composition is microsecond-accurate (a 1/30s hold is 33334µs), so a window
-/// restored from history sits up to a millisecond short of the composition end
-/// it was clamped to. Comparisons against the composition end carry that slack.
-const _audioWindowResolution = Duration(milliseconds: 1);
+/// [AudioEvent] and [Layer] serialize their windows in whole milliseconds while
+/// a stop-motion composition is microsecond-accurate (a 1/30s hold is
+/// 33334µs), so a window restored from history sits up to a millisecond short
+/// of the composition end it was clamped to. Comparisons against the
+/// composition end carry that slack.
+const _windowEndResolution = Duration(milliseconds: 1);
 
 /// Stretches audio windows that ran to the end of the composition so they keep
 /// covering it after an edit made the composition longer.
@@ -417,7 +423,7 @@ List<AudioEvent> growAudioToCompositionEnd(
     // that to the video. A window that ends anywhere but the old composition
     // end — short of it or past it — was placed by the user, not by the clamp.
     if (endTime == null ||
-        (endTime - previousDuration).abs() > _audioWindowResolution) {
+        (endTime - previousDuration).abs() > _windowEndResolution) {
       result.add(track);
       continue;
     }
@@ -450,6 +456,59 @@ Duration? _audioSourceEnd(AudioEvent track) {
       Duration(milliseconds: (duration * 1000).toInt()) - track.startOffset;
   if (remaining <= Duration.zero) return null;
   return track.startTime + track.timelineSpanOf(remaining);
+}
+
+/// Stretches layers whose window ran to the end of the composition so they
+/// keep covering it after an edit made the composition longer, as
+/// [growAudioToCompositionEnd] does for sounds (#6401).
+///
+/// A layer gets an end of its own when its bar is moved or trimmed, or a leave
+/// animation is added, and that end used to stay at the old, shorter end once
+/// clips were added: a sticker placed over the whole video then stopped
+/// halfway through it.
+///
+/// Only layers whose window *ended at* [previousDuration] follow, for the same
+/// reasons as sounds: one trimmed short of it, or left overhanging a shrunken
+/// composition, was placed there by the user. A layer with no end of its own
+/// runs to the end already. A burned-in caption keeps the timing of its cue,
+/// which the caption track owns, and a detached clip stops where its footage
+/// does.
+///
+/// Returns [layers] itself when nothing grew. Otherwise every layer is a copy,
+/// because a history entry must not share its layers with the one before.
+List<Layer> growLayersToCompositionEnd(
+  List<Layer> layers, {
+  required Duration previousDuration,
+  required Duration duration,
+}) {
+  if (layers.isEmpty || duration <= previousDuration) return layers;
+
+  final grownEnds = <int, Duration>{};
+  for (final (index, layer) in layers.indexed) {
+    final endTime = layer.endTime;
+    if (endTime == null ||
+        isCaptionCueLayer(layer) ||
+        (endTime - previousDuration).abs() > _windowEndResolution) {
+      continue;
+    }
+    final footage = DetachedClipLayerData.remainingPlaybackOf(
+      DetachedClipLayerData.metaOf(layer),
+    );
+    final footageEnd = footage == null
+        ? null
+        : (layer.startTime ?? Duration.zero) + footage;
+    final newEnd = footageEnd != null && footageEnd < duration
+        ? footageEnd
+        : duration;
+    if (newEnd > endTime) grownEnds[index] = newEnd;
+  }
+  if (grownEnds.isEmpty) return layers;
+
+  final copies = LayerCopyManager().copyLayerList(layers);
+  for (final MapEntry(key: index, value: end) in grownEnds.entries) {
+    copies[index].endTime = end;
+  }
+  return copies;
 }
 
 /// The clip under the playhead at the timeline [position], or `null` when

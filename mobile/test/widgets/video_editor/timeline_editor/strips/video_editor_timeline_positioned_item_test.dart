@@ -15,6 +15,7 @@ import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/timeline_trim_handles.dart';
@@ -393,7 +394,7 @@ void main() {
         exportConfigs: WidgetLayerExportConfigs(id: 'layer-1', meta: meta),
       );
 
-      testWidgets('frame a selected sticker card without trim handles', (
+      testWidgets('frame a selected interactive card without trim handles', (
         tester,
       ) async {
         await pumpSelected(
@@ -418,6 +419,34 @@ void main() {
           ),
         );
         expect(frame, isNotNull);
+      });
+
+      testWidgets('are shown on a selected social sticker', (tester) async {
+        await pumpSelected(
+          tester,
+          layerWith(
+            const SocialStickerData(
+              kind: SocialStickerKind.mention,
+              name: 'alice',
+            ).toMeta(),
+          ),
+        );
+
+        expect(find.byType(TimelineTrimHandles), findsOneWidget);
+      });
+
+      testWidgets('are shown on a selected info sticker', (tester) async {
+        await pumpSelected(
+          tester,
+          layerWith(
+            const InfoStickerData(
+              kind: InfoStickerKind.weather,
+              localeName: 'en',
+            ).toMeta(),
+          ),
+        );
+
+        expect(find.byType(TimelineTrimHandles), findsOneWidget);
       });
 
       testWidgets('are shown on any other selected sticker', (tester) async {

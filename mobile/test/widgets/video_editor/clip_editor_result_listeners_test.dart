@@ -61,6 +61,7 @@ void main() {
       stateManager = _MockStateManager();
       when(() => overlayBloc.state).thenReturn(const TimelineOverlayState());
       when(() => editor.stateManager).thenReturn(stateManager);
+      when(() => editor.activeLayers).thenReturn(const []);
       when(() => stateManager.activeMeta).thenReturn({});
     });
 

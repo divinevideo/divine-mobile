@@ -9,9 +9,10 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 /// rows of the sticker sheet: a date, place or weather card, a mention, link
 /// or hashtag, a countdown, a poll and the like.
 ///
-/// A card shows as it is for as long as it was placed: it is not trimmed,
-/// split, masked, made see-through or blended, and it neither gives its style
-/// to other layers nor takes theirs.
+/// A card shows as it is: it is not split, masked, made see-through or
+/// blended, and it neither gives its style to other layers nor takes theirs.
+/// Its bar can be trimmed, except an interactive card's, which shows for the
+/// whole video.
 bool isStickerCardLayer(Layer? layer) =>
     layer != null &&
     (InfoStickerData.isInfoStickerLayer(layer) ||

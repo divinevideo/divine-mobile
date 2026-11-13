@@ -56,7 +56,8 @@ Rect interactiveCardSafeRect({
 /// Whether [item] is the timeline bar of an interactive card.
 ///
 /// The bar keeps the last layer row, the layer drawn in front, and cannot be
-/// dragged out of it.
+/// dragged out of it. It has no trim handles: the card shows for the whole
+/// video.
 bool isInteractiveCardTimelineItem(TimelineOverlayItem item) =>
     item.type == TimelineOverlayType.layer &&
     item.layer != null &&
