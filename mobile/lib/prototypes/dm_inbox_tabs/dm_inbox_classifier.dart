@@ -13,7 +13,7 @@
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 
-/// Why a sender is allowed into the cryptographically trusted Official tab.
+/// The role of a signed-registry identity; decides whether it can be blocked.
 enum DivineIdentityKind { operationalAccount, teamMember }
 
 /// A signed-registry identity and the capabilities attached to that role.
@@ -28,7 +28,7 @@ class DivineOfficialIdentity {
 
 /// Where a conversation lands in the four-tab inbox.
 enum DmInboxBucket {
-  /// Authenticated DivineHQ / Divine Support / Trust & Safety.
+  /// Rooms whose every other participant is an authenticated Divine identity.
   ///
   /// Never routed to requests or hidden by a privacy setting. Always
   /// reportable. Blocking targets individual team members only.

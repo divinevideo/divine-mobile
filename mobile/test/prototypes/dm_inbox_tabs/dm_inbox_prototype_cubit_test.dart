@@ -50,7 +50,7 @@ void main() {
       });
     });
 
-    group('official reports', () {
+    group('reportOfficial', () {
       test('records the exact participant without removing their rooms', () {
         final participant = fixtures.officialIdentities.keys.first;
         final before = cubit.state.conversationCount;

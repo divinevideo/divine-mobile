@@ -95,7 +95,8 @@ class DmInboxFixtures {
         '${rest == 1 ? '1 other' : '$rest others'}';
   }
 
-  /// Names every verified counterparty instead of giving one member the seal.
+  /// Official row title: every counterparty's name, deduplicated and in
+  /// pubkey order.
   String officialTitleFor(DmConversation conversation) {
     final others =
         conversation.participantPubkeys
@@ -586,6 +587,9 @@ DmInboxFixtures _build() {
       containsLink: true,
       isRead: false,
     ),
+
+    // Official room policy: a mixed room is an ordinary request; an
+    // all-official group stays Official.
     conversation(
       otherSeeds: ['h8', _supportPubkey],
       preview: 'Synthetic mixed-room message',
