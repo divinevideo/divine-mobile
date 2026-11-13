@@ -99,8 +99,9 @@ void main() {
         countdownEnd: clock.now().add(left),
       );
 
-      /// Pumps [countdown] as it shows on the editor canvas, or, without
-      /// [onCanvas], with no editor around it, like the draft rasterizer.
+      /// Pumps [countdown] as it shows on the editor canvas or, with
+      /// [onCanvas] false, with no editor around it, like the draft
+      /// rasterizer.
       Future<void> pump(
         WidgetTester tester,
         SocialStickerData countdown, {
