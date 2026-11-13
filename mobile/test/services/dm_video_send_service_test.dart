@@ -300,11 +300,8 @@ void main() {
       );
 
       test(
-        'reads the preview once the file is encrypted, so encryption does not '
-        'use up its time limit',
+        'reads the preview only after the file is encrypted',
         () async {
-          // Encryption runs on this isolate and holds it for seconds on a
-          // large file, which would expire a deadline started before it.
           final order = <String>[];
           final sent = stubSuccessfulSend(
             videoFile,
