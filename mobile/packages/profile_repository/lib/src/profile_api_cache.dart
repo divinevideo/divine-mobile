@@ -4,28 +4,45 @@
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 
+// A sparse/older response is not a permanent negative, but scrolling through
+// unanswered authors must not request their full profile on every mount.
+const _unknownEligibilityRetryDelay = Duration(minutes: 1);
+
 /// Session-scoped REST read coordination shared by read/write profile handles.
 /// It belongs to one Funnelcake environment and is replaced with its client.
 class ProfileApiCache {
   /// Creates a read coordinator for the optional [client].
-  ProfileApiCache({required FunnelcakeApiClient? client}) : _client = client;
+  ProfileApiCache({
+    required FunnelcakeApiClient? client,
+    DateTime Function()? now,
+  }) : _client = client,
+       _now = now ?? DateTime.now;
 
   final FunnelcakeApiClient? _client;
+  final DateTime Function() _now;
   final _eligibility = <String, bool>{};
+  final _unknownUntil = <String, DateTime>{};
   final _inFlight = <String, Future<UserProfileResult?>>{};
 
   /// Reuses a single/bulk response; fetches only if this session has no answer.
   Future<bool> isOgDiviner(String pubkey) async {
     final cached = _eligibility[pubkey];
     if (cached != null) return cached;
-    return (await getProfile(pubkey))?.isOgDiviner == true;
+    final unknownUntil = _unknownUntil[pubkey];
+    if (unknownUntil != null && _now().isBefore(unknownUntil)) return false;
+    final result = await getProfile(pubkey);
+    // Also throttle an unavailable client, which returns before _remember.
+    if (result?.isOgDiviner == null) _remember(pubkey, result);
+    return result?.isOgDiviner == true;
   }
 
   void _remember(String pubkey, UserProfileResult? result) {
     final eligible = result?.isOgDiviner;
     if (eligible == null) {
       _eligibility.remove(pubkey);
+      _unknownUntil[pubkey] = _now().add(_unknownEligibilityRetryDelay);
     } else {
+      _unknownUntil.remove(pubkey);
       _eligibility[pubkey] = eligible;
     }
   }
