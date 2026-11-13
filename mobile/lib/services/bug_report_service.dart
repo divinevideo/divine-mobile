@@ -462,8 +462,9 @@ class BugReportService {
     if (storage != null) {
       try {
         final usage = await storage.cacheUsage();
-        // The video and image budgets follow the disk, and on iOS nothing
-        // derived from disk space may leave the device (E174.1).
+        // The video and image budgets follow the disk, and on Apple's
+        // platforms nothing derived from disk space may leave the device
+        // (E174.1, see diskSpaceMayLeaveDevice).
         final showDiskSizedLimits = diskSpaceMayLeaveDevice();
         buffer.writeln(
           'Cache: '

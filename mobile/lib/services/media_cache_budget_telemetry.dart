@@ -13,10 +13,13 @@ const int _bytesPerGb = 1000 * 1000 * 1000;
 const int _bytesPerMb = 1024 * 1024;
 
 /// Whether disk-space readings, and what is derived from them, may leave the
-/// device. iOS reads disk space under required reason E174.1, which forbids
-/// it; Android sets no such limit.
+/// device. Apple's platforms read disk space under required reason E174.1,
+/// which forbids it; macOS has no reading today but falls under the same
+/// rule. Every other platform sets no such limit.
 bool diskSpaceMayLeaveDevice() =>
-    kIsWeb || defaultTargetPlatform != TargetPlatform.iOS;
+    kIsWeb ||
+    (defaultTargetPlatform != TargetPlatform.iOS &&
+        defaultTargetPlatform != TargetPlatform.macOS);
 
 /// Labels describing [storage] and the [budget] in force.
 ///
@@ -24,17 +27,15 @@ bool diskSpaceMayLeaveDevice() =>
 /// free-space band, a budget band — so the labels say what kind of device
 /// this is without telling one device from another.
 ///
-/// Where [diskSpaceMayLeaveDevice] is false only the mode is labelled. On iOS
-/// the disk is read under Apple's required reason E174.1, which forbids
-/// sending what was read, or anything derived from it, off the device — and
-/// the budget is derived from it.
+/// Without [includeDiskDerived] only the mode is labelled: the budget is
+/// derived from the disk reading (see [diskSpaceMayLeaveDevice]).
 Map<String, String> mediaCacheBudgetProperties({
   required DeviceStorageSpace? storage,
   required MediaCacheBudget budget,
   required bool automatic,
-  required bool diskSpaceMayLeaveDevice,
+  required bool includeDiskDerived,
 }) => {
-  if (diskSpaceMayLeaveDevice) ...{
+  if (includeDiskDerived) ...{
     'storage_total': storage == null
         ? 'unknown'
         : _storageTotalLabel(storage.totalBytes),

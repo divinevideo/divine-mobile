@@ -41,7 +41,7 @@ final mediaCacheBudgetServiceProvider = Provider<MediaCacheBudgetService>((
           storage: storage,
           budget: budget,
           automatic: automatic,
-          diskSpaceMayLeaveDevice: diskSpaceMayLeaveDevice(),
+          includeDiskDerived: diskSpaceMayLeaveDevice(),
         ),
         setUserProperty: setUserProperty,
         setCustomKey: crashReporting.setCustomKey,

@@ -281,15 +281,6 @@ void main() {
 
         expect(heard, equals([(_fullDisk, budget, false)]));
       });
-
-      test('remembers the budget it applied', () async {
-        final service = build(storage: _fullDisk);
-        expect(service.appliedBudget, isNull);
-
-        final budget = await service.refresh();
-
-        expect(service.appliedBudget, equals(budget));
-      });
     });
 
     group('before the caches are measured', () {

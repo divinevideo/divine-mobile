@@ -1,6 +1,7 @@
 // ABOUTME: Tests the coarse disk and cache-budget labels recorded so cache
 // ABOUTME: sizing can be tuned from real devices, and where they are sent.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/constants/storage_cache_constants.dart';
 import 'package:openvine/services/device_storage_service.dart';
@@ -17,12 +18,12 @@ Map<String, String> _properties({
   DeviceStorageSpace? storage,
   int videoBytes = kCacheLimitDefaultBytes,
   bool automatic = true,
-  bool diskSpaceMayLeaveDevice = true,
+  bool includeDiskDerived = true,
 }) => mediaCacheBudgetProperties(
   storage: storage,
   budget: _video(videoBytes),
   automatic: automatic,
-  diskSpaceMayLeaveDevice: diskSpaceMayLeaveDevice,
+  includeDiskDerived: includeDiskDerived,
 );
 
 void main() {
@@ -113,7 +114,7 @@ void main() {
           freeBytes: 2 * _gb,
         ),
         videoBytes: kVideoCacheFloorBytes,
-        diskSpaceMayLeaveDevice: false,
+        includeDiskDerived: false,
       );
 
       expect(properties, equals({'cache_mode': 'automatic'}));
@@ -132,6 +133,28 @@ void main() {
         expect(key, matches(RegExp(r'^[a-z][a-z0-9_]*$')));
         expect(value.length, lessThanOrEqualTo(36));
       }
+    });
+  });
+
+  group('diskSpaceMayLeaveDevice', () {
+    tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    test('is false on iOS, which reads disk space under E174.1', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
+      expect(diskSpaceMayLeaveDevice(), isFalse);
+    });
+
+    test('is false on macOS, which falls under the same rule', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+
+      expect(diskSpaceMayLeaveDevice(), isFalse);
+    });
+
+    test('is true on Android', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+
+      expect(diskSpaceMayLeaveDevice(), isTrue);
     });
   });
 

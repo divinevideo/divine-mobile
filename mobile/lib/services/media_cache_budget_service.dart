@@ -68,14 +68,10 @@ class MediaCacheBudgetService {
   Future<MediaCacheBudget>? _inFlight;
   Future<MediaCacheBudget>? _followUp;
   DateTime? _lastRefreshedAt;
-  MediaCacheBudget? _appliedBudget;
 
   /// Whether the video cache follows the disk rather than a size the user
   /// picked.
   bool get isAutomatic => !_prefs.containsKey(kCacheLimitPrefKey);
-
-  /// The budget the last [refresh] applied, or null before the first.
-  MediaCacheBudget? get appliedBudget => _appliedBudget;
 
   /// Re-reads the disk and applies the resulting budget.
   ///
@@ -154,7 +150,6 @@ class MediaCacheBudgetService {
       _apply(_videoCache, budget.videoBytes),
       _apply(_imageCache, budget.imageBytes),
     ]);
-    _appliedBudget = budget;
     if (!provisional) _lastRefreshedAt = _now();
     // Logs travel with bug reports, and on iOS E174.1 forbids sending disk
     // space or anything derived from it — the budget included — off the
