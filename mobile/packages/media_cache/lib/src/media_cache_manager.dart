@@ -455,9 +455,8 @@ class MediaCacheManager extends CacheManager {
   /// only ever costs one extra window-gated sweep, never a missed budget.
   int _knownCacheBytes = 0;
 
-  /// Whether [_knownCacheBytes] has been set from a directory walk (or by
-  /// [clearCache] emptying the directory) rather than only summed from this
-  /// session's downloads.
+  /// Whether [_knownCacheBytes] has been set from a directory walk rather
+  /// than only summed from this session's downloads.
   bool _hasMeasuredCacheBytes = false;
 
   /// One-shot sweep armed when a download crosses the byte budget inside the
@@ -534,8 +533,9 @@ class MediaCacheManager extends CacheManager {
   int get knownCacheBytes => _knownCacheBytes;
 
   /// Whether [knownCacheBytes] reflects the whole directory: true once a
-  /// budgeted [enforceCacheLimits] pass has walked it, or [clearCache] has
-  /// emptied it.
+  /// budgeted [enforceCacheLimits] pass has walked it (counting what it could
+  /// read of any unreadable subtree), false again after [clearCache], which
+  /// removes only tracked entries and so leaves the total unknown.
   bool get hasMeasuredCacheBytes => _hasMeasuredCacheBytes;
 
   /// The effective on-disk byte budget: the runtime override when set,
@@ -1641,7 +1641,7 @@ class MediaCacheManager extends CacheManager {
     }
     _pendingCacheOperations.clear();
     _knownCacheBytes = 0;
-    _hasMeasuredCacheBytes = true;
+    _hasMeasuredCacheBytes = false;
     _cancelTrailingSweep();
   }
 

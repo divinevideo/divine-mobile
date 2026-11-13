@@ -690,6 +690,34 @@ void main() {
         expect(manager.hasMeasuredCacheBytes, isFalse);
       });
 
+      test('is false again after clearCache, which leaves untracked files '
+          'behind', () async {
+        final cacheKey =
+            'enforce_clear_${DateTime.now().microsecondsSinceEpoch}';
+        final dir = Directory('$testTempPath/$cacheKey')
+          ..createSync(recursive: true);
+        final manager = TestableMediaCacheManager(
+          config: MediaCacheConfig(
+            cacheKey: cacheKey,
+            enableSyncManifest: true,
+            maxCacheSizeBytes: 1000,
+          ),
+          repoOverride: repo,
+          mockEmptyCache: () async {},
+        );
+        writeFile(dir, 'a_1_1.mp4', 60);
+        when(repo.getAllObjects).thenAnswer(
+          (_) async => [obj('a_1_1.mp4', id: 1, touched: DateTime(2020))],
+        );
+        await manager.enforceCacheLimits();
+        expect(manager.hasMeasuredCacheBytes, isTrue);
+
+        await manager.clearCache();
+
+        expect(manager.hasMeasuredCacheBytes, isFalse);
+        expect(manager.knownCacheBytes, isZero);
+      });
+
       test('is false again after resetForTesting', () async {
         final (manager, dir) = build(maxCacheSizeBytes: 1000);
         writeFile(dir, 'a_1_1.mp4', 60);
