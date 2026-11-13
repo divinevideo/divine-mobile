@@ -657,12 +657,9 @@ void main() {
       });
     });
 
-    // The tiles are built from the strip's own copy of the clips, which holds
-    // the drag order while a reorder runs, but the thumbnail manager only
-    // holds notifiers for widget.clips. A clip set that changed mid-drag (an
-    // undo, a delete, an import landing) left a tile with no notifier behind
-    // it: the "Null check operator used on a null value" build error in
-    // ClipThumbnailManager.[].
+    // A clip removed mid-drag left a tile with no thumbnail notifier: the
+    // "Null check operator used on a null value" build error in
+    // ClipThumbnailManager.[]. An edit landing mid-drag committed a stale clip.
     group('clip changes during a reorder drag', () {
       late List<List<DivineVideoClip>> reorders;
       late List<bool> reorderChanges;
