@@ -2383,6 +2383,39 @@ void main() {
         );
 
         blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+          'keeps the end of a layer moved since its bar was built',
+          build: TimelineOverlayBloc.new,
+          // Like a trim, the move writes the end into the editor without
+          // rebuilding the items, so the bar still holds the layer with no
+          // end of its own.
+          act: (bloc) => bloc
+            ..add(
+              staleUpdate([
+                TextLayer(
+                  id: 'text-1',
+                  text: 'Hi',
+                  startTime: const Duration(seconds: 1),
+                ),
+              ]),
+            )
+            ..add(
+              const TimelineOverlayItemMoved(
+                itemId: 'text-1',
+                startTime: Duration.zero,
+              ),
+            )
+            ..add(
+              const TimelineOverlayTotalDurationChanged(Duration(seconds: 6)),
+            ),
+          verify: (bloc) {
+            final layer = bloc.state.items.single;
+            expect(layer.layer?.endTime, isNull);
+            expect(layer.startTime, Duration.zero);
+            expect(layer.endTime, const Duration(seconds: 2));
+          },
+        );
+
+        blocTest<TimelineOverlayBloc, TimelineOverlayState>(
           'follows the real total with a filter that has no end of its own',
           build: TimelineOverlayBloc.new,
           act: (bloc) => bloc
