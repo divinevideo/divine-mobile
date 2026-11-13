@@ -278,10 +278,12 @@ Custody also decides how the app presents a retired key; see
   labeler with the user-facing support identity.
 - `divinevideo/divine-mobile#9986` — the "Former moderation account" label
   (`dmFormerModerationAccountName`) has had no fluent-speaker review, and the
-  closed-thread notice shown under it still names Divine Moderation. A key
-  registered as `archived` or `compromised` is the first to show both, so
-  before such an entry lands, settle #9986 or fall back to English in every
-  locale nobody has reviewed.
+  closed-thread notice in the same threads (`dmRetiredThreadClosedBody`) still
+  names Divine Moderation. A key registered as `archived` or `compromised` is
+  the first to show both, so before such an entry lands, settle #9986 or fall
+  back to English in every locale nobody has reviewed. That fallback covers
+  the label's translations only: whether the notice should name Divine for
+  such a key stays open in #9986.
 
 Settled, kept here because the register used to cite these as open:
 
