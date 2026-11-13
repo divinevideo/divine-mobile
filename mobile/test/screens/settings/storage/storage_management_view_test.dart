@@ -452,6 +452,29 @@ void main() {
       );
     });
 
+    testWidgets('a failed hand-back to automatic sizing does not claim low '
+        'space', (tester) async {
+      const oneGb = 1024 * 1024 * 1024;
+      when(service.videoCacheLimitBytes).thenReturn(oneGb);
+      when(service.useAutomaticVideoCacheLimit).thenAnswer((_) async {
+        // The preference write failed after its in-memory cache dropped the
+        // key, so the service already reads as automatic.
+        when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+        throw Exception('prefs write failed');
+      });
+      final cubit = StorageCubit(service: service);
+      addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+
+      await tester.pumpWidget(wrap(cubit));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.settingsStorageAutoCacheTitle));
+      await tester.pumpAndSettle();
+
+      expect(cubit.state.cacheStatus, StorageCacheStatus.failure);
+      expect(find.text(l10n.settingsStorageAutoCacheLowSpace), findsNothing);
+    });
+
     testWidgets('the switch itself toggles automatic sizing once', (
       tester,
     ) async {

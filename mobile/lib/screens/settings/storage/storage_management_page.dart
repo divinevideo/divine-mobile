@@ -388,7 +388,9 @@ class _AutoCacheSummary extends StatelessWidget {
             color: context.vineColors.accentPositive,
           ),
         ),
-        if (shrunk)
+        // After a failed hand-back the limit is the fixed size the user left,
+        // so a small one would read as a shrink it never was.
+        if (shrunk && status != StorageCacheStatus.failure)
           Text(
             l10n.settingsStorageAutoCacheLowSpace,
             style: VineTheme.bodySmallFont(color: context.vineColors.mutedText),
