@@ -23,7 +23,6 @@ import 'package:openvine/screens/settings/settings_screen.dart';
 
 class MonetizationLinksSettingsScreen extends ConsumerWidget {
   static const routeName = 'monetization-links-settings';
-  static const String subpath = RoutePaths.monetizationLinksSettingsSubpath;
   static const String path = RoutePaths.monetizationLinksSettings;
 
   const MonetizationLinksSettingsScreen({super.key});

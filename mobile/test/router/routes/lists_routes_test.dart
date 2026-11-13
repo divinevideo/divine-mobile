@@ -202,11 +202,7 @@ void main() {
           const CreatePeopleListRouteData(
             initialPubkey: syntheticOtherTestPubkey,
           ).location,
-          equals(
-            CreatePeopleListPage.pathWithInitialPubkey(
-              syntheticOtherTestPubkey,
-            ),
-          ),
+          equals('/people-lists/new?initialPubkey=$syntheticOtherTestPubkey'),
         );
       });
 

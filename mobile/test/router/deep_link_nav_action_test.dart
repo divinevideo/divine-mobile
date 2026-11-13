@@ -70,7 +70,7 @@ void main() {
       );
       final searchLocations = [
         SearchResultsPage.emptyPath,
-        SearchResultsPage.pathForEmptyQuery(requestFocusOnMount: true),
+        '/search-results?focus=1',
         SearchResultsPage.pathForQuery(
           'dog tricks',
           requestFocusOnMount: false,

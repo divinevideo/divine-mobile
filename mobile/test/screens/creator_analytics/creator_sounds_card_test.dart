@@ -11,8 +11,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/creator_sounds/creator_sounds_cubit.dart';
 import 'package:openvine/features/creator_analytics/creator_analytics_repository.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/creator_analytics/creator_sounds_card.dart';
-import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -169,7 +169,7 @@ void main() {
         await tester.tap(find.text('Test sound'));
 
         verify(
-          () => goRouter.push<void>(SoundDetailScreen.pathForId('sound-a')),
+          () => goRouter.push<void>(RoutePaths.soundDetailForId('sound-a')),
         ).called(1);
       });
 

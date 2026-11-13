@@ -464,20 +464,6 @@ void main() {
       await tester.pump();
       verifyNever(() => bloc.submit(any()));
     });
-
-    test(
-      'pathWithInitialPubkey builds a URL with URI-encoded, untruncated '
-      'pubkey',
-      () {
-        expect(
-          CreatePeopleListPage.pathWithInitialPubkey(targetPubkey),
-          equals(
-            '${CreatePeopleListPage.path}'
-            '?initialPubkey=${Uri.encodeQueryComponent(targetPubkey)}',
-          ),
-        );
-      },
-    );
   });
 
   group('GoRouter /people-lists/new', () {

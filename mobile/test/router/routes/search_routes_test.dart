@@ -98,17 +98,13 @@ void main() {
       test('an empty search carries its focus request', () {
         expect(
           const SearchRouteData().location,
-          equals(
-            SearchResultsPage.pathForEmptyQuery(requestFocusOnMount: false),
-          ),
+          equals('/search-results'),
         );
         expect(
           const SearchRouteData(
             focus: SearchResultsPage.requestFocusQueryValue,
           ).location,
-          equals(
-            SearchResultsPage.pathForEmptyQuery(requestFocusOnMount: true),
-          ),
+          equals('/search-results?focus=1'),
         );
       });
 
@@ -200,12 +196,8 @@ void main() {
               _FakeGoRouterState(location: location),
             ) as SearchResultsPage;
 
-        final focused = build(
-          SearchResultsPage.pathForEmptyQuery(requestFocusOnMount: true),
-        );
-        final unfocused = build(
-          SearchResultsPage.pathForEmptyQuery(requestFocusOnMount: false),
-        );
+        final focused = build('/search-results?focus=1');
+        final unfocused = build('/search-results');
 
         expect(focused.requestFocusOnMount, isTrue);
         expect(unfocused.requestFocusOnMount, isFalse);

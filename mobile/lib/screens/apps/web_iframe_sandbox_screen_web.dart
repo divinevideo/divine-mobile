@@ -26,9 +26,6 @@ class WebIframeSandboxScreen extends ConsumerStatefulWidget {
   static const String routeName = 'web-iframe-sandbox';
   static const String path = '/apps/:appId/web-sandbox';
 
-  static String pathForAppId(String appId) =>
-      '/apps/${Uri.encodeComponent(appId)}/web-sandbox';
-
   final NostrAppDirectoryEntry app;
 
   @override

@@ -77,9 +77,6 @@ class NostrAppSandboxScreen extends ConsumerStatefulWidget {
   @visibleForTesting
   final String? bridgeNonceOverride;
 
-  static String pathForAppId(String appId) =>
-      '/apps/${Uri.encodeComponent(appId)}/sandbox';
-
   @override
   ConsumerState<NostrAppSandboxScreen> createState() =>
       _NostrAppSandboxScreenState();

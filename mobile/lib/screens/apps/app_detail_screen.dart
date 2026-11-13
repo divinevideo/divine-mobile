@@ -10,7 +10,6 @@ import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:openvine/blocs/app_detail/app_detail_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/apps/nostr_app_launch_mode.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -33,9 +32,6 @@ class AppDetailScreen extends ConsumerWidget {
 
   /// An optional pre-loaded entry to avoid a network call.
   final NostrAppDirectoryEntry? initialEntry;
-
-  /// Returns the path for a given [slug].
-  static String pathForSlug(String slug) => RoutePaths.appDetailForSlug(slug);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
