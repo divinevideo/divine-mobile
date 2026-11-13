@@ -4846,8 +4846,8 @@ class AppLocalizationsEs extends AppLocalizations {
       'Tu feed Para ti está vacío.\nExplora videos y sigue a creadores para personalizarlo.';
 
   @override
-  String get feedFollowingEmpty =>
-      'Aún no hay videos de personas que sigues.\nEncuentra creadores que te gusten y síguelos.';
+  String get feedFollowingNothingNew =>
+      'No hay nada nuevo de las personas que seguís.\nEncontrá más creadores que te gusten y seguilos.';
 
   @override
   String get feedLatestEmpty => 'Aún no hay videos nuevos.\nVuelve pronto.';

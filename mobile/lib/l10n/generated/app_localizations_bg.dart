@@ -4844,8 +4844,8 @@ class AppLocalizationsBg extends AppLocalizations {
       'Твоят фийд „За теб“ е празен.\nРазгледай видеа и последвай творци, за да го оформиш.';
 
   @override
-  String get feedFollowingEmpty =>
-      'Още няма видеа от хората, които следваш.\nНамери творци, които ти допадат, и ги последвай.';
+  String get feedFollowingNothingNew =>
+      'Няма нищо ново от хората, които следваш.\nНамери още творци, които ти допадат, и ги последвай.';
 
   @override
   String get feedLatestEmpty => 'Още няма нови видеа.\nПровери пак скоро.';

@@ -71,7 +71,7 @@ void main() {
                 when(
                   () => videos.createBadgeVideoPager(
                     any(),
-                    prioritizeUnseen: true,
+                    hideSeen: true,
                   ),
                 ).thenReturn(pager);
                 var directReads = 0;

@@ -1616,7 +1616,7 @@
   },
   "videoAuthorAvatarSemanticLabel": "作者のアバター",
   "feedForYouEmpty": "おすすめフィードはまだ空です。\n動画を見つけてクリエイターをフォローし、あなた向けに育てましょう。",
-  "feedFollowingEmpty": "フォロー中の人の動画はまだありません。\n気に入ったクリエイターを見つけてフォローしましょう。",
+  "feedFollowingNothingNew": "フォロー中の人の新しい動画はありません。\n気に入ったクリエイターをもっと見つけてフォローしましょう。",
   "feedLatestEmpty": "新しい動画はまだありません。\nしばらくしてからもう一度確認してください。",
   "feedClassicEmpty": "クラシック動画はまだありません。\nしばらくしてからもう一度確認してください。",
   "feedExploreVideos": "動画を探しに行こう",

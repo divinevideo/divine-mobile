@@ -2323,7 +2323,7 @@
     "description": "Semantic label for the author's circular profile avatar on feed video metadata. Screen reader only."
   },
   "feedForYouEmpty": "你的“为你推荐”还是空的。\n去逛逛视频、关注些创作者，它就会越来越懂你。",
-  "feedFollowingEmpty": "你关注的人还没有发视频。\n去找找喜欢的创作者，关注他们吧。",
+  "feedFollowingNothingNew": "你关注的人暂时没有新视频。\n去找找更多喜欢的创作者，关注他们吧。",
   "feedLatestEmpty": "还没有新视频。\n过会儿再来看看。",
   "feedClassicEmpty": "还没有经典 Vine。\n过会儿再来看看。",
   "feedExploreVideos": "去探索视频",

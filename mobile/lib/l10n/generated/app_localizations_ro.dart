@@ -4935,8 +4935,8 @@ class AppLocalizationsRo extends AppLocalizations {
       'Feedul tău Pentru tine este gol.\nExplorează videoclipuri și urmărește creatori pentru a-l modela.';
 
   @override
-  String get feedFollowingEmpty =>
-      'Încă nu există videoclipuri de la persoanele pe care le urmărești.\nGăsește creatori care îți plac și urmărește-i.';
+  String get feedFollowingNothingNew =>
+      'Nimic nou de la persoanele pe care le urmărești.\nGăsește mai mulți creatori care îți plac și urmărește-i.';
 
   @override
   String get feedLatestEmpty =>

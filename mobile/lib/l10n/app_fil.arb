@@ -1225,7 +1225,7 @@
   },
   "videoAuthorAvatarSemanticLabel": "Avatar ng may-akda",
   "feedForYouEmpty": "Walang laman ang For You feed mo.\nMag-explore ng video at mag-follow ng creators para mahubog ito.",
-  "feedFollowingEmpty": "Wala pang video mula sa mga taong fino-follow mo.\nHumanap ng creators na gusto mo at i-follow sila.",
+  "feedFollowingNothingNew": "Walang bago mula sa mga taong fino-follow mo.\nHumanap ng iba pang creators na gusto mo at i-follow sila.",
   "feedLatestEmpty": "Wala pang bagong video.\nBumalik mamaya.",
   "feedClassicEmpty": "Wala pang klasiko.\nBumalik mamaya.",
   "feedExploreVideos": "Mag-explore ng Video",

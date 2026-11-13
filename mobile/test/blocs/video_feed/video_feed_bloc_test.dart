@@ -1745,7 +1745,7 @@ void main() {
           when(
             () => mockVideosRepository.createBadgeVideoPager(
               any(),
-              prioritizeUnseen: true,
+              hideSeen: true,
             ),
           ).thenReturn(pager);
           when(pager.loadMore).thenAnswer(
@@ -1771,7 +1771,7 @@ void main() {
         verify: (_) => verify(
           () => mockVideosRepository.createBadgeVideoPager([
             'badge-holder',
-          ], prioritizeUnseen: true),
+          ], hideSeen: true),
         ).called(1),
       );
 
@@ -1783,7 +1783,7 @@ void main() {
           when(
             () => mockVideosRepository.createBadgeVideoPager(
               any(),
-              prioritizeUnseen: true,
+              hideSeen: true,
             ),
           ).thenReturn(pager);
           when(pager.loadMore).thenAnswer(
@@ -1821,7 +1821,7 @@ void main() {
           verify(
             () => mockVideosRepository.createBadgeVideoPager([
               'badge-holder',
-            ], prioritizeUnseen: true),
+            ], hideSeen: true),
           ).called(2);
         },
       );
@@ -1837,7 +1837,7 @@ void main() {
           when(
             () => mockVideosRepository.createBadgeVideoPager(
               any(),
-              prioritizeUnseen: true,
+              hideSeen: true,
             ),
           ).thenReturn(pager);
           var pages = 0;
@@ -1889,7 +1889,7 @@ void main() {
               'direct-follow',
               'direct-follow',
               'badge-holder',
-            ], prioritizeUnseen: true),
+            ], hideSeen: true),
           ).called(1);
           verify(
             () => mockVideosRepository.getHomeFeedVideos(
@@ -1954,7 +1954,7 @@ void main() {
           when(
             () => mockVideosRepository.createBadgeVideoPager(
               any(),
-              prioritizeUnseen: true,
+              hideSeen: true,
             ),
           ).thenReturn(pager);
           when(
@@ -1979,7 +1979,7 @@ void main() {
           verify(
             () => mockVideosRepository.createBadgeVideoPager([
               'holder',
-            ], prioritizeUnseen: true),
+            ], hideSeen: true),
           ).called(1);
         },
       );
@@ -2004,7 +2004,7 @@ void main() {
           when(
             () => mockVideosRepository.createBadgeVideoPager(
               any(),
-              prioritizeUnseen: true,
+              hideSeen: true,
             ),
           ).thenReturn(pager);
           when(
@@ -2078,7 +2078,7 @@ void main() {
             when(
               () => mockVideosRepository.createBadgeVideoPager(
                 any(),
-                prioritizeUnseen: true,
+                hideSeen: true,
               ),
             ).thenReturn(pager);
             final bloc = VideoFeedBloc(
@@ -2114,7 +2114,7 @@ void main() {
             when(
               () => mockVideosRepository.createBadgeVideoPager(
                 any(),
-                prioritizeUnseen: true,
+                hideSeen: true,
               ),
             ).thenReturn(pager);
             final bloc = VideoFeedBloc(
@@ -2129,7 +2129,7 @@ void main() {
             verifyNever(
               () => mockVideosRepository.createBadgeVideoPager(
                 any(),
-                prioritizeUnseen: true,
+                hideSeen: true,
               ),
             );
             authors = ['1' * 64];
@@ -2140,7 +2140,7 @@ void main() {
               () => mockVideosRepository.createBadgeVideoPager([
                 '1' * 64,
                 '2' * 64,
-              ], prioritizeUnseen: true),
+              ], hideSeen: true),
             ).called(1);
             expect(bloc.state.videos.single.id, 'merged');
           },
@@ -2216,7 +2216,7 @@ void main() {
             when(
               () => mockVideosRepository.createBadgeVideoPager(
                 any(),
-                prioritizeUnseen: true,
+                hideSeen: true,
               ),
             ).thenReturn(pager);
             final bloc = VideoFeedBloc(
@@ -2352,7 +2352,7 @@ void main() {
               verifyNever(
                 () => mockVideosRepository.createBadgeVideoPager(
                   any(),
-                  prioritizeUnseen: true,
+                  hideSeen: true,
                 ),
               );
               verifyNever(
@@ -2402,7 +2402,7 @@ void main() {
                 when(
                   () => mockVideosRepository.createBadgeVideoPager(
                     any(),
-                    prioritizeUnseen: true,
+                    hideSeen: true,
                   ),
                 ).thenAnswer(
                   (call) =>
@@ -2526,7 +2526,7 @@ void main() {
               when(
                 () => mockVideosRepository.createBadgeVideoPager(
                   any(),
-                  prioritizeUnseen: true,
+                  hideSeen: true,
                 ),
               ).thenAnswer(
                 (call) =>
@@ -2633,7 +2633,7 @@ void main() {
                 when(
                   () => mockVideosRepository.createBadgeVideoPager(
                     any(),
-                    prioritizeUnseen: true,
+                    hideSeen: true,
                   ),
                 ).thenAnswer((call) {
                   final authors =
@@ -2987,7 +2987,7 @@ void main() {
               when(
                 () => mockVideosRepository.createBadgeVideoPager(
                   any(),
-                  prioritizeUnseen: true,
+                  hideSeen: true,
                 ),
               ).thenReturn(pager);
               when(pager.loadMore)
@@ -3111,7 +3111,7 @@ void main() {
             when(
               () => mockVideosRepository.createBadgeVideoPager(
                 any(),
-                prioritizeUnseen: true,
+                hideSeen: true,
               ),
             ).thenReturn(pager);
             when(pager.loadMore).thenThrow(StateError('unavailable'));
@@ -3185,7 +3185,7 @@ void main() {
         verify: (_) => verifyNever(
           () => mockVideosRepository.createBadgeVideoPager(
             any(),
-            prioritizeUnseen: true,
+            hideSeen: true,
           ),
         ),
       );
@@ -3211,7 +3211,7 @@ void main() {
           when(
             () => mockVideosRepository.createBadgeVideoPager(
               any(),
-              prioritizeUnseen: true,
+              hideSeen: true,
             ),
           ).thenReturn(pager);
           when(pager.loadMore).thenThrow(Exception('by-authors unavailable'));
@@ -3326,7 +3326,7 @@ void main() {
           when(
             () => mockVideosRepository.createBadgeVideoPager(
               any(),
-              prioritizeUnseen: true,
+              hideSeen: true,
             ),
           ).thenReturn(pager);
           when(pager.loadMore).thenThrow(Exception('badge page failed'));
@@ -7681,7 +7681,7 @@ void main() {
             when(
               () => mockVideosRepository.createBadgeVideoPager(
                 any(),
-                prioritizeUnseen: true,
+                hideSeen: true,
               ),
             ).thenAnswer(
               (call) =>

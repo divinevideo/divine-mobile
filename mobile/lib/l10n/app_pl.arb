@@ -1626,7 +1626,7 @@
   },
   "videoAuthorAvatarSemanticLabel": "Awatar autora",
   "feedForYouEmpty": "Twój kanał Dla Ciebie jest pusty.\nOdkrywaj filmy i obserwuj twórców, aby go ukształtować.",
-  "feedFollowingEmpty": "Brak filmów od osób, które obserwujesz.\nZnajdź twórców, których lubisz i zacznij ich obserwować.",
+  "feedFollowingNothingNew": "Nic nowego od osób, które obserwujesz.\nZnajdź więcej twórców, których lubisz, i zacznij ich obserwować.",
   "feedLatestEmpty": "Brak nowych filmów.\nWróć tu wkrótce.",
   "feedClassicEmpty": "Brak klasyków.\nWróć tu wkrótce.",
   "feedExploreVideos": "Odkrywaj filmy",

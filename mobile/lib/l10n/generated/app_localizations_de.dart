@@ -4855,8 +4855,8 @@ class AppLocalizationsDe extends AppLocalizations {
       'Dein Für-dich-Feed ist leer.\nEntdecke Videos und folge Creator:innen, um ihn zu personalisieren.';
 
   @override
-  String get feedFollowingEmpty =>
-      'Noch keine Videos von Personen, denen du folgst.\nFinde Creator:innen, die dir gefallen, und folge ihnen.';
+  String get feedFollowingNothingNew =>
+      'Nichts Neues von Personen, denen du folgst.\nFinde weitere Creator:innen, die dir gefallen, und folge ihnen.';
 
   @override
   String get feedLatestEmpty =>

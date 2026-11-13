@@ -4868,8 +4868,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ton fil Pour toi est vide.\nExplore des vidéos et abonne-toi à des créateurs pour le personnaliser.';
 
   @override
-  String get feedFollowingEmpty =>
-      'Aucune vidéo des personnes que tu suis pour le moment.\nTrouve des créateurs que tu aimes et abonne-toi à eux.';
+  String get feedFollowingNothingNew =>
+      'Rien de nouveau des personnes que tu suis.\nTrouve d\'autres créateurs que tu aimes et abonne-toi à eux.';
 
   @override
   String get feedLatestEmpty =>
