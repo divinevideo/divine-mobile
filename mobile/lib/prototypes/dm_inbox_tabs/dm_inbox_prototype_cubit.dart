@@ -73,6 +73,10 @@ class DmInboxPrototypeCubit extends Cubit<DmInboxPrototypeState> {
   /// Deletes, or reports and removes, a conversation.
   void remove(String id) => _update(session: state.session.remove(id));
 
+  /// Simulates reporting an official participant without removing the room.
+  void reportOfficial(String pubkey) =>
+      _update(session: state.session.reportOfficial(pubkey));
+
   void block(String pubkey) => _update(session: state.session.block(pubkey));
 
   /// Applies saved tuning. A new presentation condition starts from the same

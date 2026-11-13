@@ -16,6 +16,7 @@ class DmPrototypeSession {
     this.notSpam = const {},
     this.removed = const {},
     this.blocked = const {},
+    this.reportedOfficial = const {},
   });
 
   /// Conversation ids the user opened.
@@ -32,6 +33,12 @@ class DmPrototypeSession {
 
   /// Blocked sender pubkeys. Every conversation with them is hidden.
   final Set<String> blocked;
+
+  /// Official participant pubkeys reported in this session; rooms stay visible.
+  final Set<String> reportedOfficial;
+
+  DmPrototypeSession reportOfficial(String pubkey) =>
+      _copy(reportedOfficial: {...reportedOfficial, pubkey});
 
   DmPrototypeSession reveal(String id) => _copy(revealed: {...revealed, id});
 
@@ -66,6 +73,7 @@ class DmPrototypeSession {
     Set<String>? notSpam,
     Set<String>? removed,
     Set<String>? blocked,
+    Set<String>? reportedOfficial,
   }) {
     return DmPrototypeSession(
       revealed: Set.unmodifiable(revealed ?? this.revealed),
@@ -73,6 +81,9 @@ class DmPrototypeSession {
       notSpam: Set.unmodifiable(notSpam ?? this.notSpam),
       removed: Set.unmodifiable(removed ?? this.removed),
       blocked: Set.unmodifiable(blocked ?? this.blocked),
+      reportedOfficial: Set.unmodifiable(
+        reportedOfficial ?? this.reportedOfficial,
+      ),
     );
   }
 }

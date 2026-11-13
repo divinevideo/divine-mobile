@@ -78,7 +78,7 @@ class DmInboxFixtures {
     return DmMessageSignals.none;
   }
 
-  /// Name shown on a row: the counterparty, or "A and N others" for a group.
+  /// Ordinary row title: the counterparty, or "A and N others" for a group.
   String titleFor(DmConversation conversation) {
     final others = conversation.participantPubkeys
         .where((pk) => pk != userPubkey)
@@ -88,6 +88,17 @@ class DmInboxFixtures {
     final rest = others.length - 1;
     return '${displayNameFor(others.first)} and '
         '${rest == 1 ? '1 other' : '$rest others'}';
+  }
+
+  /// Names every verified counterparty instead of giving one member the seal.
+  String officialTitleFor(DmConversation conversation) {
+    final others =
+        conversation.participantPubkeys
+            .where((pk) => pk != userPubkey)
+            .toSet()
+            .toList()
+          ..sort();
+    return others.map(displayNameFor).join(' · ');
   }
 
   static DmInboxFixtures build() => _build();
@@ -569,6 +580,16 @@ DmInboxFixtures _build() {
       hoursAgo: 8,
       containsLink: true,
       isRead: false,
+    ),
+    conversation(
+      otherSeeds: ['h8', _supportPubkey],
+      preview: 'Synthetic mixed-room message',
+      hoursAgo: 1,
+    ),
+    conversation(
+      otherSeeds: [_supportPubkey, _lizTeamPubkey],
+      preview: 'Synthetic official group message',
+      hoursAgo: 3,
     ),
   ];
 

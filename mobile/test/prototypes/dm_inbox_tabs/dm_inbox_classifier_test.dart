@@ -55,10 +55,128 @@ void main() {
     }
 
     group('official', () {
+      DmVerdict roomVerdict(
+        List<String> others, {
+        bool replied = false,
+        bool followed = false,
+        String? sender,
+      }) =>
+          DmInboxClassifier(officialIdentities: fixtures.officialIdentities)
+              .classify(
+                [
+                  DmConversation(
+                    id: 'policy-room',
+                    participantPubkeys: [fixtures.userPubkey, ...others],
+                    isGroup: others.length > 1,
+                    createdAt: 0,
+                    currentUserHasSent: replied,
+                    lastMessageSenderPubkey: sender,
+                  ),
+                ],
+                userPubkey: fixtures.userPubkey,
+                isFollowing: (_) => followed,
+                signalsFor: (_) => DmSenderSignals.unknown,
+              )
+              .verdicts['policy-room']!;
+
+      test(
+        'a mixed room gets no Official status in either participant order',
+        () {
+          final official = fixtures.officialIdentities.keys.first;
+          for (final others in [
+            [official, _stranger],
+            [_stranger, official],
+          ]) {
+            for (final sender in others) {
+              final verdict = roomVerdict(others, sender: sender);
+              expect(verdict.bucket, DmInboxBucket.requests);
+              expect(verdict.score, 20);
+              expect(verdict.officialParticipants, isEmpty);
+            }
+          }
+        },
+      );
+
+      test('mixed rooms retain ordinary reply and follow consent', () {
+        final others = [fixtures.officialIdentities.keys.first, _stranger];
+        expect(roomVerdict(others, replied: true).bucket, DmInboxBucket.inbox);
+        expect(roomVerdict(others, followed: true).bucket, DmInboxBucket.inbox);
+      });
+
+      test(
+        'a self-only room is not Official even when the viewer is official',
+        () {
+          final result =
+              DmInboxClassifier(
+                officialIdentities: {
+                  fixtures.userPubkey: fixtures.officialIdentities.values.first,
+                },
+              ).classify(
+                [
+                  DmConversation(
+                    id: 'self',
+                    participantPubkeys: [fixtures.userPubkey],
+                    isGroup: false,
+                    createdAt: 0,
+                  ),
+                ],
+                userPubkey: fixtures.userPubkey,
+                isFollowing: (_) => false,
+                signalsFor: (_) => DmSenderSignals.unknown,
+              );
+          expect(result.verdicts['self']!.bucket, DmInboxBucket.requests);
+        },
+      );
+
+      test(
+        'all-official groups stay Official regardless of participant order',
+        () {
+          final others = fixtures.officialIdentities.keys.take(2).toList();
+          expect(roomVerdict(others).bucket, DmInboxBucket.official);
+          expect(
+            roomVerdict(others.reversed.toList()).bucket,
+            DmInboxBucket.official,
+          );
+        },
+      );
+
+      test('official group verdict retains each participant and role', () {
+        final keys = fixtures.officialIdentities.keys;
+        final operational = keys.firstWhere(
+          (key) => !fixtures.officialIdentities[key]!.isBlockable,
+        );
+        final team = keys.firstWhere(
+          (key) => fixtures.officialIdentities[key]!.isBlockable,
+        );
+        for (final others in [
+          [operational, team],
+          [team, operational, team],
+        ]) {
+          final verdict = roomVerdict(others);
+          expect(verdict.bucket, DmInboxBucket.official);
+          expect(verdict.officialParticipants, {
+            operational: fixtures.officialIdentities[operational],
+            team: fixtures.officialIdentities[team],
+          });
+        }
+      });
+
+      test('policy fixtures pin mixed and all-official destinations', () {
+        final result = classify();
+        final mixed = fixtures.dmConversations.firstWhere(
+          (c) => c.lastMessageContent == 'Synthetic mixed-room message',
+        );
+        final official = fixtures.dmConversations.firstWhere(
+          (c) => c.lastMessageContent == 'Synthetic official group message',
+        );
+        expect(result.verdicts[mixed.id]!.bucket, DmInboxBucket.requests);
+        expect(result.verdicts[official.id]!.bucket, DmInboxBucket.official);
+      });
+
       test('routes every canonical Divine account to the official bucket', () {
         final result = classify();
 
-        expect(result.official, hasLength(6));
+        expect(result.official, hasLength(7));
         expect(
           result.official.map(fixtures.titleFor),
           containsAll(<String>[
@@ -76,8 +194,13 @@ void main() {
         final result = classify();
         final identities = <String, DivineOfficialIdentity>{
           for (final conversation in result.official)
-            fixtures.titleFor(conversation):
-                result.verdicts[conversation.id]!.officialIdentity!,
+            if (result.verdicts[conversation.id]!.officialParticipants.length ==
+                1)
+              fixtures.titleFor(conversation): result
+                  .verdicts[conversation.id]!
+                  .officialParticipants
+                  .values
+                  .single,
         };
 
         expect(identities['DivineHQ']!.isBlockable, isFalse);

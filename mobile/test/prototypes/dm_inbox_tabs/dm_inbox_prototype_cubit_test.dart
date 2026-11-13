@@ -50,6 +50,20 @@ void main() {
       });
     });
 
+    group('official reports', () {
+      test('records the exact participant without removing their rooms', () {
+        final participant = fixtures.officialIdentities.keys.first;
+        final before = cubit.state.conversationCount;
+        expect(before, fixtures.dmConversations.length);
+        expect(cubit.state.session.reportedOfficial, isEmpty);
+        cubit.reportOfficial(participant);
+        expect(cubit.state.session.reportedOfficial, {participant});
+        expect(cubit.state.conversationCount, before);
+        cubit.reveal(fixtures.dmConversations.first.id);
+        expect(cubit.state.session.reportedOfficial, {participant});
+      });
+    });
+
     group('block', () {
       test('hides every conversation with the blocked sender', () {
         final priya = conversationTitled('Priya Raman');

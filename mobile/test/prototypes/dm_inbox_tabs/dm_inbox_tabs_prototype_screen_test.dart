@@ -82,6 +82,98 @@ void main() {
       }
     }
 
+    group('official room policy', () {
+      testWidgets('mixed first contact stays concealed with ordinary actions', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          await pumpScreen(tester);
+          await openTab(tester, 'Requests');
+          final row = rowOf('Divine Support and 1 other');
+          expect(row, findsOneWidget);
+          expect(find.text('Synthetic mixed-room message'), findsNothing);
+          expect(
+            find
+                .descendant(of: row, matching: find.byType(DivineIcon))
+                .evaluate()
+                .map((e) => (e.widget as DivineIcon).icon),
+            isNot(contains(DivineIconName.sealCheckFill)),
+          );
+          expect(
+            find.descendant(of: row, matching: find.text('Report')),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(of: row, matching: find.text('Delete')),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(of: row, matching: find.text('Block')),
+            findsNothing,
+          );
+          await tester.tap(find.text('Divine Support and 1 other'));
+          await tester.pumpAndSettle();
+          expect(find.text('Synthetic mixed-room message'), findsOneWidget);
+        } finally {
+          semantics.dispose();
+        }
+      });
+
+      for (final pinned in [false, true]) {
+        testWidgets(
+          'official actions target participants in ${pinned ? 'Inbox' : 'Official'}',
+          (tester) async {
+            final semantics = tester.ensureSemantics();
+            try {
+              await pumpScreen(tester);
+              if (pinned) {
+                await saveTuningWith(tester, 'Official gets its own tab');
+              } else {
+                await openTab(tester, 'Official');
+              }
+              const title = 'Divine Support · Liz · Divine team';
+              final group = rowOf(title);
+              expect(group, findsOneWidget);
+              expect(
+                find.text('Synthetic official group message'),
+                findsOneWidget,
+              );
+              Finder action(String label) => find.descendant(
+                of: group,
+                matching: find.bySemanticsLabel(label),
+              );
+              expect(action('Report Divine Support'), findsOneWidget);
+              expect(action('Report Liz · Divine team'), findsOneWidget);
+              expect(action('Block Divine Support'), findsNothing);
+              expect(action('Block Liz · Divine team'), findsOneWidget);
+              await tester.tap(action('Report Divine Support'));
+              await tester.pumpAndSettle();
+              expect(group, findsOneWidget);
+              expect(
+                find.text(
+                  'Prototype: reported Divine Support. Nothing was sent.',
+                ),
+                findsOneWidget,
+              );
+              expect(action('Reported Divine Support'), findsOneWidget);
+              await tester.tap(action('Report Liz · Divine team'));
+              await tester.pumpAndSettle();
+              expect(group, findsOneWidget);
+              expect(action('Reported Liz · Divine team'), findsOneWidget);
+              await tester.tap(action('Block Liz · Divine team'));
+              await tester.pumpAndSettle();
+              expect(group, findsNothing);
+              expect(rowOf('Liz · Divine team'), findsNothing);
+              expect(rowOf('Divine Support'), findsOneWidget);
+            } finally {
+              semantics.dispose();
+            }
+          },
+        );
+      }
+    });
+
     group('renders', () {
       testWidgets('shows all four tabs', (tester) async {
         await pumpScreen(tester);
@@ -174,6 +266,9 @@ void main() {
         await openTab(tester, 'Requests');
 
         expect(find.text('Priya Raman'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await openTab(tester, 'Official');
+        expect(find.text('Divine Support · Liz · Divine team'), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
     });
