@@ -1763,6 +1763,96 @@ void main() {
       });
     });
 
+    // #11005. The notices that replace the composer grow with the text, and
+    // nothing bounded them, so at the largest size they pushed the header and
+    // the thread itself off a phone screen.
+    group('at the largest text size (#11005)', () {
+      // iOS's largest Larger Text setting: body text goes from 17 to 53 pt.
+      const largestIosTextScale = 53 / 17;
+      const message = 'the last message in this thread';
+
+      void useLargestTextOnAPhone(WidgetTester tester) {
+        tester.view.physicalSize = const Size(1170, 2532);
+        tester.view.devicePixelRatio = 3;
+        tester.platformDispatcher.textScaleFactorTestValue =
+            largestIosTextScale;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      }
+
+      ConversationState threadFrom(String sender) => ConversationState(
+        status: ConversationStatus.loaded,
+        messages: [
+          DmMessage(
+            id: 'd' * 64,
+            conversationId: 'c' * 64,
+            senderPubkey: sender,
+            content: message,
+            createdAt: now.millisecondsSinceEpoch ~/ 1000,
+            giftWrapId: 'a' * 64,
+          ),
+        ],
+      );
+
+      Finder header(AppLocalizations strings) =>
+          find.bySemanticsLabel(strings.inboxConversationOptionsLabel);
+
+      testWidgets('a closed thread keeps its header and its messages', (
+        tester,
+      ) async {
+        useLargestTextOnAPhone(tester);
+        await tester.pumpWidget(
+          buildSubject(
+            counterparty: shippedRetiredKey,
+            state: threadFrom(shippedRetiredKey),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(header(l10n).hitTestable(), findsOneWidget);
+        expect(find.text(message).hitTestable(), findsOneWidget);
+      });
+
+      testWidgets("a closed thread's way out stays reachable", (tester) async {
+        useLargestTextOnAPhone(tester);
+        await tester.pumpWidget(
+          buildSubject(
+            counterparty: shippedRetiredKey,
+            state: threadFrom(shippedRetiredKey),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final wayOut = find.text(l10n.dmRetiredThreadOpenSupport);
+        await tester.ensureVisible(wayOut);
+        await tester.pumpAndSettle();
+
+        expect(wayOut.hitTestable(), findsOneWidget);
+      });
+
+      // The read-only notices share the slot. English's blocked notice
+      // happens to fit; German's, like nine other locales', does not.
+      testWidgets('a blocked thread keeps its header and its messages', (
+        tester,
+      ) async {
+        const german = Locale('de');
+        when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(true);
+        useLargestTextOnAPhone(tester);
+        await tester.pumpWidget(
+          buildSubject(state: threadFrom(otherPubkey), locale: german),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(
+          header(lookupAppLocalizations(german)).hitTestable(),
+          findsOneWidget,
+        );
+        expect(find.text(message).hitTestable(), findsOneWidget);
+      });
+    });
+
     // #7025. Reachable from the inbox's Blocked chip so a user asked for
     // screenshots of abusive DMs can produce them without unblocking — which
     // would re-expose them to the person they blocked. Readable, not writable.

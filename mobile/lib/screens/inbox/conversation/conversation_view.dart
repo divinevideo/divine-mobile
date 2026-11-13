@@ -1317,48 +1317,38 @@ class _ClosedThreadNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    // Matches the composer's slot geometry so the layout does not shift.
-    return Container(
-      color: context.vineColors.surface,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 8,
-          children: [
-            Text(
-              l10n.dmRetiredThreadClosedTitle,
-              style: VineTheme.titleSmallFont(
-                color: context.vineColors.primaryText,
-              ),
-            ),
-            if (!isGroup) ...[
-              Text(
-                l10n.dmRetiredThreadClosedBody,
-                style: VineTheme.bodyMediumFont(
-                  color: context.vineColors.onSurfaceVariant,
-                ),
-              ),
-              // `semanticLabel` is what makes this announce as a button:
-              // `DivineButton` only wires `Semantics(button: true)` when it is
-              // given one. The composer is gone here, so this is the screen's
-              // only control and the only route to a moderation account that
-              // reads — without the flag a screen reader gets a third line of
-              // prose after the title and body, naming no way out.
-              DivineButton(
-                label: l10n.dmRetiredThreadOpenSupport,
-                semanticLabel: l10n.dmRetiredThreadOpenSupport,
-                type: DivineButtonType.secondary,
-                expanded: true,
-                onPressed: currentPubkey.isEmpty
-                    ? null
-                    : () => _openCurrentSupportThread(context),
-              ),
-            ],
-          ],
+    return _ComposerSlotNotice(
+      children: [
+        Text(
+          l10n.dmRetiredThreadClosedTitle,
+          style: VineTheme.titleSmallFont(
+            color: context.vineColors.primaryText,
+          ),
         ),
-      ),
+        if (!isGroup) ...[
+          Text(
+            l10n.dmRetiredThreadClosedBody,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.onSurfaceVariant,
+            ),
+          ),
+          // `semanticLabel` is what makes this announce as a button:
+          // `DivineButton` only wires `Semantics(button: true)` when it is
+          // given one. The composer is gone here, so this is the screen's
+          // only control and the only route to a moderation account that
+          // reads — without the flag a screen reader gets a third line of
+          // prose after the title and body, naming no way out.
+          DivineButton(
+            label: l10n.dmRetiredThreadOpenSupport,
+            semanticLabel: l10n.dmRetiredThreadOpenSupport,
+            type: DivineButtonType.secondary,
+            expanded: true,
+            onPressed: currentPubkey.isEmpty
+                ? null
+                : () => _openCurrentSupportThread(context),
+          ),
+        ],
+      ],
     );
   }
 
@@ -1543,9 +1533,9 @@ class _UnresolvedThreadNotice extends StatelessWidget {
 /// Shared read-only composer-slot layout for [_BlockedThreadNotice],
 /// [_BlockedGroupNotice] and [_UnresolvedThreadNotice].
 ///
-/// Matches the composer's slot geometry so replacing [MessageInputBar] with
-/// any of them does not shift the layout. A group with only some members
-/// blocked keeps the composer, with [_BlockedMembersBanner] above it instead.
+/// Drawn in [_ComposerSlotNotice], so it keeps the composer's slot geometry.
+/// A group with only some members blocked keeps the composer, with
+/// [_BlockedMembersBanner] above it instead.
 class _ReadOnlyThreadNotice extends StatelessWidget {
   const _ReadOnlyThreadNotice({required this.title, required this.body});
 
@@ -1554,28 +1544,62 @@ class _ReadOnlyThreadNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _ComposerSlotNotice(
+      children: [
+        Text(
+          title,
+          style: VineTheme.titleSmallFont(
+            color: context.vineColors.primaryText,
+          ),
+        ),
+        Text(
+          body,
+          style: VineTheme.bodyMediumFont(
+            color: context.vineColors.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The most of the screen's height a composer-slot notice's content may take.
+///
+/// The notices grow with the text, and the thread above them is what gives
+/// way: at the largest text sizes they pushed the header and the messages off
+/// screen (#11005). Past this share the notice scrolls instead.
+const double _composerSlotNoticeMaxHeightFactor = 0.4;
+
+/// The frame every notice that replaces [MessageInputBar] shares.
+///
+/// Matches the composer's slot geometry so swapping the composer for a notice
+/// does not shift the layout, and caps the content's height so the notice can
+/// never crowd out the thread it closes.
+class _ComposerSlotNotice extends StatelessWidget {
+  const _ComposerSlotNotice({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       color: context.vineColors.surface,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: SafeArea(
         top: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 8,
-          children: [
-            Text(
-              title,
-              style: VineTheme.titleSmallFont(
-                color: context.vineColors.primaryText,
-              ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight:
+                MediaQuery.sizeOf(context).height *
+                _composerSlotNoticeMaxHeightFactor,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 8,
+              children: children,
             ),
-            Text(
-              body,
-              style: VineTheme.bodyMediumFont(
-                color: context.vineColors.onSurfaceVariant,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
