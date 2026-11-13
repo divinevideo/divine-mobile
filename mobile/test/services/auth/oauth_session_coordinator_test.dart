@@ -231,6 +231,62 @@ void main() {
         },
       );
 
+      group('when the shared refresh fails', () {
+        // An unhandled async error fails the test by itself, so these pass
+        // only when no future derived from the shared refresh is left
+        // without a listener.
+        final failure = OAuthNetworkException(
+          'Refresh request failed: HandshakeException',
+        );
+
+        late Completer<KeycastSession?> gate;
+
+        setUp(() {
+          gate = Completer<KeycastSession?>();
+          when(oauthClient.getSession).thenAnswer((_) async => null);
+          when(
+            () => oauthClient.refreshSession(
+              userPubkey: any(named: 'userPubkey'),
+            ),
+          ).thenAnswer((_) => gate.future);
+        });
+
+        test('reports the failure to a joining caller that was still '
+            'checking its owner', () async {
+          final storedRead = Completer<KeycastSession?>();
+          final coordinator = build();
+          final first = coordinator.refreshSession();
+          final joined = coordinator.refreshSession(
+            expectedOwnerPubkey: 'owner',
+            storedSessionReader: () => storedRead.future,
+          );
+
+          gate.completeError(failure);
+          await expectLater(first, throwsA(same(failure)));
+          storedRead.complete(_session(userPubkey: 'owner'));
+
+          await expectLater(joined, throwsA(same(failure)));
+          await pumpEventQueue();
+        });
+
+        test('leaves a joining caller refused by the owner check '
+            'unaffected', () async {
+          final coordinator = build();
+          final first = coordinator.refreshSession();
+          final joined = await coordinator.refreshSession(
+            expectedOwnerPubkey: 'current-owner',
+            storedSessionReader: () async =>
+                _session(userPubkey: 'previous-owner'),
+          );
+          expect(joined, isNull);
+
+          gate.completeError(failure);
+
+          await expectLater(first, throwsA(same(failure)));
+          await pumpEventQueue();
+        });
+      });
+
       test('applies caller timeout when joining an in-flight refresh', () {
         fakeAsync((async) {
           when(

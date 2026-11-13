@@ -147,7 +147,7 @@ class OAuthSessionCoordinator {
     final pending = _pendingOAuthRefresh;
     if (pending != null) {
       return _guardRefreshForCaller(
-        pending.outcome.then((outcome) => outcome.session),
+        pending.outcome,
         expectedOwnerPubkey: expectedOwnerPubkey,
         timeout: timeout,
         storedSessionReader: storedSessionReader,
@@ -256,8 +256,13 @@ class OAuthSessionCoordinator {
     }
   }
 
+  /// Joins the in-flight [sharedRefresh] after the caller's own owner check.
+  ///
+  /// Chains nothing onto [sharedRefresh] before that check: a derived future
+  /// has no listener while it runs, and none at all when it refuses the
+  /// caller, so a failed refresh would surface as an unhandled error.
   Future<KeycastSession?> _guardRefreshForCaller(
-    Future<KeycastSession?> refresh, {
+    Future<_RefreshOutcome> sharedRefresh, {
     String? expectedOwnerPubkey,
     Duration? timeout,
     Future<KeycastSession?> Function()? storedSessionReader,
@@ -274,8 +279,8 @@ class OAuthSessionCoordinator {
     }
 
     final guardedRefresh = timeout == null
-        ? refresh
-        : refresh.timeout(
+        ? sharedRefresh
+        : sharedRefresh.timeout(
             timeout,
             onTimeout: () {
               Log.warning(
@@ -287,7 +292,7 @@ class OAuthSessionCoordinator {
               throw OAuthNetworkException('OAuth refresh timed out');
             },
           );
-    final refreshed = await guardedRefresh;
+    final refreshed = (await guardedRefresh).session;
     if (expectedOwnerPubkey != null &&
         refreshed != null &&
         refreshed.userPubkey != expectedOwnerPubkey) {
