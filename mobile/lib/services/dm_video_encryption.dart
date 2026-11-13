@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:nostr_sdk/nip17/file_encryption.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -114,28 +115,30 @@ class DmVideoEncryption {
   ///
   /// Throws a [DmVideoTooLargeException] before reading the file when it is
   /// larger than [dmVideoMaxPlaintextBytes].
+  ///
+  /// The read, both hashes, the encryption and the write run on a background
+  /// isolate: in pure Dart they take seconds for a phone-sized clip, which on
+  /// the calling isolate froze the UI for the whole time.
   Future<EncryptedVideoFile> encryptFile(File plaintextFile) async {
     final size = await plaintextFile.length();
     if (size > dmVideoMaxPlaintextBytes) {
       throw DmVideoTooLargeException(size);
     }
-    final plaintext = await plaintextFile.readAsBytes();
-    final plaintextHash = HashUtil.sha256Hash(plaintext);
-
-    final result = await _fileEncryption.encrypt(plaintext);
-    final ciphertextHash = HashUtil.sha256Hash(result.ciphertext);
-
     final tempDir = await getTemporaryDirectory();
-    final ciphertextFile = File('${tempDir.path}/$ciphertextHash');
-    await ciphertextFile.writeAsBytes(result.ciphertext);
+
+    final encrypted = await compute(_encryptToFile, (
+      plaintextPath: plaintextFile.path,
+      outputDirectoryPath: tempDir.path,
+      encryption: _fileEncryption,
+    ));
 
     return EncryptedVideoFile(
-      ciphertextFile: ciphertextFile,
-      key: result.key,
-      nonce: result.nonce,
-      ciphertextHash: ciphertextHash,
-      plaintextHash: plaintextHash,
-      ciphertextSize: result.ciphertext.length,
+      ciphertextFile: File(encrypted.ciphertextPath),
+      key: encrypted.key,
+      nonce: encrypted.nonce,
+      ciphertextHash: encrypted.ciphertextHash,
+      plaintextHash: encrypted.plaintextHash,
+      ciphertextSize: encrypted.ciphertextSize,
     );
   }
 
@@ -154,4 +157,46 @@ class DmVideoEncryption {
       hexNonce: nonce,
     );
   }
+}
+
+/// Encrypts the file at `plaintextPath` and writes `ciphertext || GCM tag` to
+/// `outputDirectoryPath`, named by its own hash.
+///
+/// Top-level so [compute] can run it on a background isolate. Only paths,
+/// hashes and the key material cross back, never the video bytes.
+Future<
+  ({
+    String ciphertextPath,
+    String key,
+    String nonce,
+    String ciphertextHash,
+    String plaintextHash,
+    int ciphertextSize,
+  })
+>
+_encryptToFile(
+  ({
+    String plaintextPath,
+    String outputDirectoryPath,
+    FileEncryption encryption,
+  })
+  job,
+) async {
+  final plaintext = await File(job.plaintextPath).readAsBytes();
+  final plaintextHash = HashUtil.sha256Hash(plaintext);
+
+  final result = await job.encryption.encrypt(plaintext);
+  final ciphertextHash = HashUtil.sha256Hash(result.ciphertext);
+
+  final ciphertextPath = '${job.outputDirectoryPath}/$ciphertextHash';
+  await File(ciphertextPath).writeAsBytes(result.ciphertext);
+
+  return (
+    ciphertextPath: ciphertextPath,
+    key: result.key,
+    nonce: result.nonce,
+    ciphertextHash: ciphertextHash,
+    plaintextHash: plaintextHash,
+    ciphertextSize: result.ciphertext.length,
+  );
 }

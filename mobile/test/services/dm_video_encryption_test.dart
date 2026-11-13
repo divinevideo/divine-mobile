@@ -1,7 +1,10 @@
 // ABOUTME: Unit tests for DmVideoEncryption
 // ABOUTME: Verifies AES-256-GCM round-trip, separate hashes, and the size cap.
 
+import 'dart:async';
 import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,6 +48,37 @@ void main() {
         expect(plain, input.readAsBytesSync());
       },
     );
+
+    test('keeps the calling isolate responsive while it encrypts', () async {
+      // A clip as large as a typical phone recording. Encrypting it in pure
+      // Dart takes over a second on a laptop, and longer on a phone, so work
+      // done on the calling isolate shows up as one long stall between ticks.
+      final random = Random(7);
+      final bytes = Uint8List(24 * 1024 * 1024);
+      for (var i = 0; i < bytes.length; i += 4093) {
+        bytes[i] = random.nextInt(256);
+      }
+      final input = File('${tempDir.path}/clip.mp4')..writeAsBytesSync(bytes);
+
+      final clock = Stopwatch()..start();
+      var lastTick = Duration.zero;
+      var longestStall = Duration.zero;
+      final ticker = Timer.periodic(const Duration(milliseconds: 5), (_) {
+        final now = clock.elapsed;
+        final stall = now - lastTick;
+        if (stall > longestStall) longestStall = stall;
+        lastTick = now;
+      });
+      addTearDown(ticker.cancel);
+
+      final out = await DmVideoEncryption().encryptFile(input);
+      ticker.cancel();
+      final stall = clock.elapsed - lastTick;
+      if (stall > longestStall) longestStall = stall;
+
+      expect(out.ciphertextSize, bytes.length + 16);
+      expect(longestStall, lessThan(const Duration(milliseconds: 400)));
+    });
 
     test('rejects a file larger than the plaintext ceiling', () async {
       // A sparse file, so the test does not actually write 100 MB to disk.
