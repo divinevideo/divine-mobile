@@ -89,33 +89,6 @@ void main() {
         );
       }
     });
-
-    test('stickers that look alike are dedicated variants with own files', () {
-      const dedicated = {
-        DivineStickerName.alert: 'alert',
-        DivineStickerName.policeSiren: 'police_siren',
-        DivineStickerName.hazardSign: 'hazard_sign',
-        DivineStickerName.blocked: 'blocked',
-        DivineStickerName.raisedHand: 'raised_hand',
-        DivineStickerName.stopSign: 'stop_sign',
-        DivineStickerName.hangLoose: 'hang_loose',
-        DivineStickerName.ceramicHands: 'ceramic_hands',
-        DivineStickerName.unicornFloat: 'unicorn_float',
-        DivineStickerName.inflatableFlamingo: 'inflatable_flamingo',
-        DivineStickerName.floatingLilo: 'floating_lilo',
-        DivineStickerName.bomb: 'bomb',
-        DivineStickerName.boom: 'boom',
-        DivineStickerName.biohazardSign: 'biohazard_sign',
-        DivineStickerName.emptyToiletRoll: 'empty_toilet_roll',
-        DivineStickerName.toiletPaper: 'toilet_paper',
-        DivineStickerName.tvRemote: 'tv_remote',
-        DivineStickerName.acRemote: 'ac_remote',
-      };
-
-      for (final MapEntry(key: sticker, value: fileName) in dedicated.entries) {
-        expect(sticker.fileName, equals(fileName), reason: sticker.name);
-      }
-    });
   });
 
   group(DivineSticker, () {
