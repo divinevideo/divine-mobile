@@ -116,6 +116,53 @@ void main() {
         );
       }
 
+      // The list freezes Top when this turns false, so a read that settles
+      // first must not report the totals still loading for another as in.
+      test(
+        'reports reads as loading until the last overlapping one settles',
+        () async {
+          final first = validId('c1');
+          final second = validId('c2');
+          final firstCounts =
+              Completer<
+                ({Map<String, int> upvotes, Map<String, int> downvotes})
+              >();
+          final secondCounts =
+              Completer<
+                ({Map<String, int> upvotes, Map<String, int> downvotes})
+              >();
+          when(
+            () => mockLikesRepository.getVoteCounts([first]),
+          ).thenAnswer((_) => firstCounts.future);
+          when(
+            () => mockLikesRepository.getVoteCounts([second]),
+          ).thenAnswer((_) => secondCounts.future);
+
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+          bloc
+            ..add(CommentVoteCountsFetchRequested([first]))
+            ..add(CommentVoteCountsFetchRequested([second]));
+          await pumpEventQueue();
+
+          firstCounts.complete((
+            upvotes: {first: 1},
+            downvotes: <String, int>{},
+          ));
+          await pumpEventQueue();
+          expect(bloc.state.commentUpvoteCounts[first], 1);
+          expect(bloc.state.isLoadingVoteCounts, isTrue);
+
+          secondCounts.complete((
+            upvotes: {second: 2},
+            downvotes: <String, int>{},
+          ));
+          await pumpEventQueue();
+          expect(bloc.state.commentUpvoteCounts[second], 2);
+          expect(bloc.state.isLoadingVoteCounts, isFalse);
+        },
+      );
+
       test('publishes totals while the viewer vote is still loading', () async {
         final id = validId('c1');
         final viewerVote =
