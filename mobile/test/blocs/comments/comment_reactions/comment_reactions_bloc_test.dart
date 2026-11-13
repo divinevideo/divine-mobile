@@ -80,6 +80,42 @@ void main() {
     });
 
     group('CommentVoteCountsFetchRequested', () {
+      for (final succeeds in [true, false]) {
+        test(
+          'reports the read as loading until it settles, succeeds: $succeeds',
+          () async {
+            final id = validId('c1');
+            final counts =
+                Completer<
+                  ({Map<String, int> upvotes, Map<String, int> downvotes})
+                >();
+            when(
+              () => mockLikesRepository.getVoteCounts([id]),
+            ).thenAnswer((_) => counts.future);
+
+            final bloc = createBloc();
+            addTearDown(bloc.close);
+            expect(bloc.state.isLoadingVoteCounts, isFalse);
+
+            bloc.add(CommentVoteCountsFetchRequested([id]));
+            await pumpEventQueue();
+            expect(bloc.state.isLoadingVoteCounts, isTrue);
+
+            if (succeeds) {
+              counts.complete((upvotes: {id: 3}, downvotes: <String, int>{}));
+            } else {
+              counts.completeError(
+                const LikesRepositoryException('read failed'),
+              );
+            }
+            await pumpEventQueue();
+
+            expect(bloc.state.isLoadingVoteCounts, isFalse);
+            expect(bloc.state.commentUpvoteCounts[id], succeeds ? 3 : isNull);
+          },
+        );
+      }
+
       test('publishes totals while the viewer vote is still loading', () async {
         final id = validId('c1');
         final viewerVote =
@@ -348,6 +384,11 @@ void main() {
         build: createBloc,
         act: (b) => b.add(CommentVoteCountsFetchRequested([validId('c1')])),
         expect: () => [
+          isA<CommentReactionsState>().having(
+            (s) => s.isLoadingVoteCounts,
+            'loading',
+            true,
+          ),
           isA<CommentReactionsState>()
               .having((s) => s.commentUpvoteCounts[validId('c1')], 'up', 5)
               .having((s) => s.commentDownvoteCounts[validId('c1')], 'down', 1),
@@ -358,6 +399,11 @@ void main() {
                 'isUpvoted',
                 true,
               ),
+          isA<CommentReactionsState>().having(
+            (s) => s.isLoadingVoteCounts,
+            'loading',
+            false,
+          ),
         ],
       );
 
@@ -440,6 +486,44 @@ void main() {
     });
 
     group('CommentVoteToggled (upvote)', () {
+      for (final (label, up, down) in [
+        ('loaded', 4 as int?, 1 as int?),
+        ('never loaded', null, null),
+      ]) {
+        blocTest<CommentReactionsBloc, CommentReactionsState>(
+          'tells the list the totals the vote changed, $label',
+          setUp: () {
+            when(
+              () => mockLikesRepository.likeEvent(
+                eventId: any(named: 'eventId'),
+                authorPubkey: any(named: 'authorPubkey'),
+                targetKind: any(named: 'targetKind'),
+              ),
+            ).thenAnswer((_) async => 'like-event-id');
+          },
+          build: createBloc,
+          seed: () => CommentReactionsState(
+            commentUpvoteCounts: {validId('c1'): ?up},
+            commentDownvoteCounts: {validId('c1'): ?down},
+          ),
+          act: (b) => b.add(
+            CommentVoteToggled(
+              commentId: validId('c1'),
+              authorPubkey: validId('author1'),
+              vote: Vote.up,
+            ),
+          ),
+          verify: (b) => expect(
+            b.state.outbox,
+            ReactionsOutboxVoteCast(
+              commentId: validId('c1'),
+              upvoteCountsBefore: {validId('c1'): ?up},
+              downvoteCountsBefore: {validId('c1'): ?down},
+            ),
+          ),
+        );
+      }
+
       blocTest<CommentReactionsBloc, CommentReactionsState>(
         'optimistically adds upvote then publishes via LikesRepository',
         setUp: () {
@@ -516,6 +600,17 @@ void main() {
                 false,
               )
               .having((s) => s.error, 'error', ReactionsError.voteFailed),
+          // The totals never loaded, so they are read once the vote settles.
+          isA<CommentReactionsState>().having(
+            (s) => s.isLoadingVoteCounts,
+            'loading',
+            true,
+          ),
+          isA<CommentReactionsState>().having(
+            (s) => s.isLoadingVoteCounts,
+            'loading',
+            false,
+          ),
         ],
       );
 
@@ -644,6 +739,17 @@ void main() {
             (s) => s.downvotedCommentIds.contains(validId('c1')),
             'isDownvoted',
             true,
+          ),
+          // The totals never loaded, so they are read once the vote settles.
+          isA<CommentReactionsState>().having(
+            (s) => s.isLoadingVoteCounts,
+            'loading',
+            true,
+          ),
+          isA<CommentReactionsState>().having(
+            (s) => s.isLoadingVoteCounts,
+            'loading',
+            false,
           ),
         ],
         verify: (_) {

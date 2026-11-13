@@ -300,60 +300,80 @@ void main() {
       expect(find.text('Classic Vine'), findsOneWidget);
     });
 
-    testWidgets(
-      'ranks replies with all comments and reorders when downvotes change',
-      (
+    group('Top', () {
+      final highest = CommentBuilder()
+          .withId('1' * 64)
+          .withCreatedAt(DateTime.utc(2026))
+          .withReplyToEventId('2' * 64)
+          .withReplyToAuthorPubkey(testVideoAuthorPubkey)
+          .build();
+      final runnerUp = CommentBuilder()
+          .withId('2' * 64)
+          .withCreatedAt(DateTime.utc(2026, 2))
+          .build();
+      final unvoted = CommentBuilder()
+          .withId('3' * 64)
+          .withCreatedAt(DateTime.utc(2026, 3))
+          .build();
+
+      CommentsListState listState({List<String>? topOrder}) =>
+          CommentsListState(
+            rootEventId: testVideoEventId,
+            rootAuthorPubkey: testVideoAuthorPubkey,
+            status: CommentsStatus.success,
+            commentsById: {
+              highest.id: highest,
+              runnerUp.id: runnerUp,
+              unvoted.id: unvoted,
+            },
+            topOrder: topOrder,
+          );
+
+      Iterable<String> displayedOrder(WidgetTester tester) => tester
+          .widgetList<CommentItem>(find.byType(CommentItem))
+          .map((item) => item.comment.id);
+
+      testWidgets('ranks replies with all comments by net votes', (
         tester,
       ) async {
-        final highest = CommentBuilder()
-            .withId('1' * 64)
-            .withCreatedAt(DateTime.utc(2026))
-            .withReplyToEventId('2' * 64)
-            .withReplyToAuthorPubkey(testVideoAuthorPubkey)
-            .build();
-        final runnerUp = CommentBuilder()
-            .withId('2' * 64)
-            .withCreatedAt(DateTime.utc(2026, 2))
-            .build();
-        final unvoted = CommentBuilder()
-            .withId('3' * 64)
-            .withCreatedAt(DateTime.utc(2026, 3))
-            .build();
+        when(() => mockReactionsBloc.state).thenReturn(
+          CommentReactionsState(
+            commentUpvoteCounts: {highest.id: 6, runnerUp.id: 4},
+            commentDownvoteCounts: {runnerUp.id: 5},
+          ),
+        );
+
+        await tester.pumpWidget(buildTestWidget(listState: listState()));
+        await tester.pump();
+
+        expect(displayedOrder(tester), [highest.id, unvoted.id, runnerUp.id]);
+      });
+
+      // Replaces "reorders when downvotes change" (#10921): once the order is
+      // frozen, a change of votes must not move the rows.
+      testWidgets('holds the frozen order when the votes change', (
+        tester,
+      ) async {
         final reactions = CommentReactionsState(
           commentUpvoteCounts: {highest.id: 6, runnerUp.id: 4},
         );
         final updates = StreamController<CommentReactionsState>();
         addTearDown(updates.close);
         whenListen(mockReactionsBloc, updates.stream, initialState: reactions);
+        final frozen = [highest.id, runnerUp.id, unvoted.id];
 
         await tester.pumpWidget(
-          buildTestWidget(
-            listState: CommentsListState(
-              rootEventId: testVideoEventId,
-              rootAuthorPubkey: testVideoAuthorPubkey,
-              status: CommentsStatus.success,
-              commentsById: {
-                highest.id: highest,
-                runnerUp.id: runnerUp,
-                unvoted.id: unvoted,
-              },
-            ),
-          ),
+          buildTestWidget(listState: listState(topOrder: frozen)),
         );
         await tester.pump();
-
-        Iterable<String> displayedOrder() => tester
-            .widgetList<CommentItem>(find.byType(CommentItem))
-            .map((item) => item.comment.id);
-
-        expect(displayedOrder(), [highest.id, runnerUp.id, unvoted.id]);
+        expect(displayedOrder(tester), frozen);
 
         updates.add(reactions.copyWith(commentDownvoteCounts: {highest.id: 7}));
         await tester.pump();
 
-        expect(displayedOrder(), [runnerUp.id, unvoted.id, highest.id]);
-      },
-    );
+        expect(displayedOrder(tester), frozen);
+      });
+    });
 
     testWidgets('keeps the state of a row that Top moves', (tester) async {
       final newer = CommentBuilder()

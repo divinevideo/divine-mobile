@@ -82,6 +82,7 @@ final class CommentsListState extends Equatable {
     this.viewerBlockedAuthors = const {},
     this.moderation = CommentModeration.empty,
     this.showHiddenComments = false,
+    this.topOrder,
   });
 
   /// The current status of the list.
@@ -176,6 +177,15 @@ final class CommentsListState extends Equatable {
   /// Whether the viewer chose to see the comments the owner hid.
   final bool showHiddenComments;
 
+  /// The ids of the comments Top holds in place, in display order, or `null`
+  /// until [CommentsTopOrderFrozen] fixes them.
+  ///
+  /// Held still so a vote never moves a row under the viewer's finger
+  /// (#10921). Comments posted live or by the viewer go on top as they
+  /// arrive; a later page waits below, ranked by votes, until the next
+  /// freeze places it. A switch of sort mode lets Top rank again.
+  final List<String>? topOrder;
+
   /// Whether this root has the coordinate required to persist moderation.
   bool get supportsModeration => rootAddressableId?.isNotEmpty ?? false;
 
@@ -229,22 +239,32 @@ final class CommentsListState extends Equatable {
 
   /// Visible comments in display order.
   ///
-  /// Top ranks every comment by net votes. Recent orders threads by recency
-  /// and nests replies under visible parents.
+  /// Top lists the comments of [topOrder] in place, then ranks the rest by
+  /// net votes below them. Recent orders threads by recency and nests
+  /// replies under visible parents.
   List<CommentNode> displayCommentsWith({
     Map<String, int> upvoteCounts = const {},
     Map<String, int> downvoteCounts = const {},
   }) {
     final shown = shownCommentsById;
     if (sortMode == CommentsSortMode.topEngagement) {
-      final ranked = shown.values.toList()
-        ..sort(
-          commentVoteComparator(
-            upvoteCounts: upvoteCounts,
-            downvoteCounts: downvoteCounts,
-          ),
-        );
-      return [for (final comment in ranked) CommentNode(comment: comment)];
+      final placed = topOrder ?? const <String>[];
+      final placedIds = placed.toSet();
+      final ranked =
+          [
+            for (final comment in shown.values)
+              if (!placedIds.contains(comment.id)) comment,
+          ]..sort(
+            commentVoteComparator(
+              upvoteCounts: upvoteCounts,
+              downvoteCounts: downvoteCounts,
+            ),
+          );
+      return [
+        for (final id in placed)
+          if (shown[id] case final comment?) CommentNode(comment: comment),
+        for (final comment in ranked) CommentNode(comment: comment),
+      ];
     }
 
     final childrenMap = <String, List<Comment>>{};
@@ -307,9 +327,11 @@ final class CommentsListState extends Equatable {
     CommentModeration? moderation,
     Set<String>? viewerBlockedAuthors,
     bool? showHiddenComments,
+    List<String>? topOrder,
     bool clearError = false,
     bool clearScrollTo = false,
     bool clearPendingFocus = false,
+    bool clearTopOrder = false,
   }) {
     return CommentsListState(
       status: status ?? this.status,
@@ -338,6 +360,7 @@ final class CommentsListState extends Equatable {
       viewerBlockedAuthors: viewerBlockedAuthors ?? this.viewerBlockedAuthors,
       moderation: moderation ?? this.moderation,
       showHiddenComments: showHiddenComments ?? this.showHiddenComments,
+      topOrder: clearTopOrder ? null : (topOrder ?? this.topOrder),
     );
   }
 
@@ -362,5 +385,6 @@ final class CommentsListState extends Equatable {
     viewerBlockedAuthors,
     moderation,
     showHiddenComments,
+    topOrder,
   ];
 }

@@ -185,9 +185,10 @@ class _CommentsListState extends State<CommentsList> {
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   itemCount: displayed.length + offset,
-                  // Top re-ranks rows as votes change. Without this a moved
-                  // row is rebuilt from scratch, stopping an inline video
-                  // reply and dropping screen-reader focus.
+                  // Rows shift when Top ranks or new comments land above
+                  // them. Without this a moved row is rebuilt from scratch,
+                  // stopping an inline video reply and dropping
+                  // screen-reader focus.
                   findChildIndexCallback: (key) => indexByKey[key],
                   itemBuilder: (context, index) {
                     if (index < offset) {
