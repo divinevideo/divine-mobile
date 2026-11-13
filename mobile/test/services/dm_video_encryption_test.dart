@@ -59,6 +59,21 @@ void main() {
       },
     );
 
+    test('gives every file its own key and nonce', () async {
+      // Each call copies the cipher into a fresh isolate, so a random source
+      // with state would hand every send the same key and nonce.
+      final service = DmVideoEncryption();
+      final input = File('${tempDir.path}/in.mp4')
+        ..writeAsBytesSync(List<int>.generate(4096, (i) => i % 251));
+
+      final first = await service.encryptFile(input);
+      final second = await service.encryptFile(input);
+
+      expect(second.key, isNot(equals(first.key)));
+      expect(second.nonce, isNot(equals(first.nonce)));
+      expect(second.ciphertextHash, isNot(equals(first.ciphertextHash)));
+    });
+
     test('keeps the calling isolate responsive while it encrypts', () async {
       // A clip as large as a typical phone recording. Encrypting it in pure
       // Dart takes over a second on a laptop, and longer on a phone, so work
