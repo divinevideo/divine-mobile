@@ -137,8 +137,9 @@ class StorageCubit extends Cubit<StorageState>
   /// Switches the video cache between sizing itself to the disk and a size
   /// the user picks.
   ///
-  /// Turning [automatic] off fixes the slider position nearest the budget in
-  /// force, so the cache keeps roughly its size until the user drags it.
+  /// Turning [automatic] off fixes the budget in force, raised to
+  /// [kCacheLimitMinBytes] when automatic sizing had shrunk it below the
+  /// slider's range.
   Future<void> setVideoCacheLimitAutomatic({required bool automatic}) async {
     if (!automatic) {
       final bytes = state.videoCacheLimitBytes.clamp(

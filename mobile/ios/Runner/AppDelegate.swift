@@ -327,10 +327,9 @@ extension FlutterError: @retroactive Error {}
 
   /// Device-storage platform channel.
   ///
-  /// The Dart side reads the disk's capacity and free space to size the
-  /// media caches so the app never fills the device. Free space is the
-  /// "important usage" figure, which counts space iOS would purge on demand —
-  /// the same number the Settings app shows as available.
+  /// The Dart side reads the disk's capacity and free space to shrink the
+  /// media caches as the disk fills. Free space is the "important usage"
+  /// figure, which counts space iOS would purge on demand.
   private func setupDeviceStorageChannel(with engineBridge: FlutterImplicitEngineBridge) {
     let channel = FlutterMethodChannel(
       name: "divine/device_storage",

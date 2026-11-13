@@ -24,9 +24,9 @@ const int kApproxVideoBytes = 4 * 1024 * 1024;
 /// Default upper bound on persisted transition-seam previews (200 MB).
 const int kSeamCacheLimitBytes = 200 * 1024 * 1024;
 
-/// Share of the disk Divine leaves free when it sizes its caches
-/// automatically. The caches shrink as the disk fills, so Divine is never
-/// what pushes a device past this line.
+/// Share of the disk automatic sizing tries to keep free. The caches shrink
+/// as the disk fills, but stop at their floors (the `k*CacheFloorBytes`
+/// below), and caches outside automatic sizing are not counted.
 const double kAutoCacheReservedDiskFraction = 0.15;
 
 /// Smallest video-cache budget automatic sizing shrinks to (64 MB): the

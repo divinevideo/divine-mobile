@@ -624,7 +624,8 @@ class StorageManagementService {
   bool isVideoCacheLimitAutomatic() => !_prefs.containsKey(kCacheLimitPrefKey);
 
   /// The video-cache byte budget in force: the size the user fixed, else the
-  /// one automatic sizing applied, else [kCacheLimitDefaultBytes].
+  /// video cache's current budget (automatic sizing's once it has run), else
+  /// [kCacheLimitDefaultBytes].
   int videoCacheLimitBytes() =>
       _prefs.getInt(kCacheLimitPrefKey) ??
       _videoCache.maxCacheSizeBytes ??

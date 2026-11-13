@@ -11,8 +11,10 @@ Validated against: `mobile/lib/services/openvine_media_cache.dart`,
 `mobile/lib/services/storage_management_service.dart`,
 `mobile/lib/services/watermark_download_service.dart`,
 `mobile/lib/observability/feed_playback_performance.dart`,
-`mobile/lib/services/performance_monitoring_service.dart`, and
-`mobile/lib/startup/app_bootstrap.dart` on 2026-10-28.
+`mobile/lib/services/performance_monitoring_service.dart`,
+`mobile/lib/services/media_cache_budget.dart`,
+`mobile/lib/services/media_cache_budget_service.dart`, and
+`mobile/lib/startup/app_bootstrap.dart` on 2026-11-13.
 
 Two caches can hold video bytes on disk. They serve different paths and only
 one of them is meant to hold a given video. (On iOS and macOS a player also
@@ -20,11 +22,12 @@ keeps a temporary copy of a looping clip while it plays; see below.)
 
 | Cache | Owner | Where | Budget | Holds |
 |---|---|---|---|---|
-| Media cache | Dart, `openVineMediaCache` (`media_cache`) | `<temp>/openvine_video_cache` | User setting, Settings → Storage (2 GB default) | Whole files the feed prefetched ahead of the viewer, plus files other features fetch through it: sound requests and the watermark download (both keyed by the video id, so they can turn into feed hits), clip import, subtitle timeline thumbnails, and grid prefetch where the feed is unsupported |
-| Player cache | Android only, ExoPlayer `SimpleCache` (`VideoCache.kt`) | `<cacheDir>/divine_video_cache` | 500 MB, `configureCache()` at startup | Byte ranges ExoPlayer streamed from an HTTP(S) URL, from the feed and from any other surface that plays `VideoClip.network`, such as video comments and challenges |
+| Media cache | Dart, `openVineMediaCache` (`media_cache`) | `<temp>/openvine_video_cache` | Sized to the disk, 64 MB–2 GB (`automaticMediaCacheBudget`), or a fixed size set in Settings → Storage | Whole files the feed prefetched ahead of the viewer, plus files other features fetch through it: sound requests and the watermark download (both keyed by the video id, so they can turn into feed hits), clip import, subtitle timeline thumbnails, and grid prefetch where the feed is unsupported |
+| Player cache | Android only, ExoPlayer `SimpleCache` (`VideoCache.kt`) | `<cacheDir>/divine_video_cache` | Sized to the disk at launch, 32–500 MB (`startupPlayerCacheBudgetBytes`, `configureCache()`) | Byte ranges ExoPlayer streamed from an HTTP(S) URL, from the feed and from any other surface that plays `VideoClip.network`, such as video comments and challenges |
 
 The media cache trims to its byte budget at startup, every 25 downloads, and
-as soon as it crosses the budget, at most once a minute.
+as soon as it crosses the budget, at most once a minute. It also trims at once
+when automatic sizing lowers that budget (`MediaCacheBudgetService`).
 
 Settings → Storage counts both and "Clear cache" empties both
 (`StorageManagementService`, categories `video` and `player`).
@@ -146,8 +149,9 @@ comes from disk — and whatever the miss rate is on a slow cellular link, which
 this run did not measure. It also saves a second download on that path: the
 looping-audio decode of a remote, anonymous clip waits until the player has
 buffered the whole clip and then reads it from the player cache. The player
-cache is a bounded 500 MB budget that Settings → Storage now counts and
-"Clear cache" reclaims, so it is kept rather than removed. Two things would
+cache is a bounded budget (at most 500 MB, smaller on a filling disk) that
+Settings → Storage now counts and "Clear cache" reclaims, so it is kept rather
+than removed. Two things would
 reopen the question: a cellular measurement showing the miss path is as rare
 there as on Wi-Fi, or a prefetcher that also fetches the active index on
 entry, which would leave the player cache nothing to add.

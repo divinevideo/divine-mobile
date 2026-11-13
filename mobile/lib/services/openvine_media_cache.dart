@@ -50,7 +50,7 @@ MediaCacheManager mediaCache(Ref ref) => openVineMediaCache;
 /// user's configured byte budget (if any). The startup sequence then sweeps
 /// the cache and sizes it to the disk in the background, so neither blocks
 /// startup (see `sweepThenBudgetMediaCaches`).
-/// Call this in main.dart after WidgetsFlutterBinding.ensureInitialized().
+/// Called from `initializeVideoCacheManifest` during startup.
 /// Skipped on web where file-based caching is not available.
 Future<void> initializeMediaCache() async {
   if (kIsWeb) return;

@@ -50,8 +50,7 @@ const MediaCacheBudget mediaCacheBudgetFloor = MediaCacheBudget(
 ///
 /// Every cache sits between its floor ([mediaCacheBudgetFloor]) and its
 /// [ceiling], at the same fraction of the way up. When the space above the
-/// reserve is smaller than the floor, the floor wins: Divine keeps working,
-/// and what filled the disk was something else.
+/// reserve is smaller than the floor, the floor wins so Divine keeps working.
 MediaCacheBudget automaticMediaCacheBudget({
   required DeviceStorageSpace storage,
   required int cacheUsageBytes,
@@ -80,11 +79,11 @@ MediaCacheBudget automaticMediaCacheBudget({
   );
 }
 
-/// Today's fixed cache sizes, which automatic sizing never exceeds.
-///
-/// [imageBytes] is the image cache's configured budget. The player budget is
-/// zero where [hasPlayerCache] is false: only Android's player keeps a disk
-/// cache of its own.
+/// The largest budget each cache may get, which automatic sizing never
+/// exceeds: [kCacheLimitDefaultBytes] for video, the image cache's configured
+/// [imageBytes], and [kDefaultCacheMaxSizeBytes] for the player where
+/// [hasPlayerCache] (zero elsewhere: only Android's player keeps a disk cache
+/// of its own).
 MediaCacheBudget mediaCacheBudgetCeiling({
   required int imageBytes,
   required bool hasPlayerCache,

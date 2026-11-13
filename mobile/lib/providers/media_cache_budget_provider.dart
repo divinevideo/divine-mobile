@@ -1,5 +1,5 @@
 // ABOUTME: Wires MediaCacheBudgetService to the app's video and image caches
-// ABOUTME: and the device-storage channel, and records the budget it applies.
+// ABOUTME: and the device-storage channel, and labels the budget it applies.
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,15 +15,16 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Today's fixed cache sizes on this platform, which automatic sizing never
-/// exceeds. Only Android's player keeps a disk cache of its own.
+/// The largest budget each cache may get on this platform, which automatic
+/// sizing never exceeds. Only Android's player keeps a disk cache of its own.
 MediaCacheBudget appMediaCacheBudgetCeiling() => mediaCacheBudgetCeiling(
   imageBytes: openVineImageCache.mediaConfig.maxCacheSizeBytes ?? 0,
   hasPlayerCache: !kIsWeb && defaultTargetPlatform == TargetPlatform.android,
 );
 
-/// Keeps the video and image caches sized to the disk, and records the disk
-/// and the budget as coarse labels on analytics and crash reports.
+/// Keeps the video and image caches sized to the disk, and records coarse
+/// labels of the result on analytics and crash keys: only the mode where
+/// [diskSpaceMayLeaveDevice] is false.
 final mediaCacheBudgetServiceProvider = Provider<MediaCacheBudgetService>((
   ref,
 ) {

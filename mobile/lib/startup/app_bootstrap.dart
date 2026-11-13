@@ -236,7 +236,7 @@ Future<void> startOpenVineApp({
   // first created.
 
   // Configure the Android player's disk cache (LRU eviction), sized to the
-  // disk: up to 500 MB, shrinking toward 32 MB as the disk fills. It is
+  // disk between kPlayerCacheFloorBytes and kDefaultCacheMaxSizeBytes. It is
   // Android-only: AVFoundation never reads a URLCache, so the Apple plugin
   // has nothing to configure (#8029). Skip on web/Linux/Windows —
   // divine_video_player has no native plugin on those targets and

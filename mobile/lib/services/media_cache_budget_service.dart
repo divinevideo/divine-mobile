@@ -33,8 +33,8 @@ typedef MediaCacheBudgetListener = void Function(
 class MediaCacheBudgetService {
   /// Creates a service over the given caches.
   ///
-  /// [ceiling] is the largest budget each cache may get: today's fixed
-  /// sizes, with a zero player budget where the platform has no player cache.
+  /// [ceiling] is the largest budget each cache may get, with a zero player
+  /// budget where the platform has no player cache.
   /// [onBudgetApplied] hears every budget applied, for telemetry.
   MediaCacheBudgetService({
     required MediaCacheManager videoCache,
