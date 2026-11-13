@@ -147,6 +147,23 @@ MemoryTelemetryService createAppMemoryTelemetryService({
 bool shouldSuspendDownloadsAtLaunch(AppLifecycleState? state) =>
     state != null && state != AppLifecycleState.resumed;
 
+/// Re-sizes the media caches when the app returns to the foreground: other
+/// apps may have filled the disk while this one was away. The refresh skips
+/// itself when the last one is recent.
+@visibleForTesting
+void resizeMediaCachesOnResume(
+  AppLifecycleState state, {
+  required Future<void> Function() refreshIfStale,
+}) {
+  if (state != AppLifecycleState.resumed) return;
+  runDetached(
+    refreshIfStale(),
+    'resize the media caches',
+    logName: 'DivineApp',
+    category: LogCategory.storage,
+  );
+}
+
 class _DivineAppState extends ConsumerState<DivineApp>
     with WidgetsBindingObserver {
   bool _backgroundInitDone = false;
@@ -350,15 +367,12 @@ class _DivineAppState extends ConsumerState<DivineApp>
     } else if (state == AppLifecycleState.resumed) {
       openVineMediaCache.resumeDownloads();
       openVineImageCache.resumeDownloads();
-      // Other apps may have filled the disk while this one was away; resize
-      // the caches so Divine never pushes the device past its free reserve.
-      runDetached(
-        ref.read(mediaCacheBudgetServiceProvider).refreshIfStale(),
-        'resize the media caches',
-        logName: 'DivineApp',
-        category: LogCategory.storage,
-      );
     }
+    resizeMediaCachesOnResume(
+      state,
+      refreshIfStale: () =>
+          ref.read(mediaCacheBudgetServiceProvider).refreshIfStale(),
+    );
     _sampleMemory('lifecycle');
   }
 

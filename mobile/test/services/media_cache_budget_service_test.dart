@@ -336,7 +336,8 @@ void main() {
     group('refreshIfStale', () {
       setUp(stubMeasured);
 
-      test('skips a refresh inside the interval and runs one after', () async {
+      test('skips inside five minutes of the last refresh and runs once they '
+          'have passed', () async {
         var clock = DateTime(2026, 11, 13, 12);
         var reads = 0;
         final service = build(
@@ -348,11 +349,12 @@ void main() {
         );
 
         await service.refreshIfStale();
-        clock = clock.add(MediaCacheBudgetService.staleAfter);
+        clock = clock.add(const Duration(minutes: 4, seconds: 59));
         await service.refreshIfStale();
+        expect(reads, equals(1));
+
         clock = clock.add(const Duration(seconds: 1));
         await service.refreshIfStale();
-
         expect(reads, equals(2));
       });
     });

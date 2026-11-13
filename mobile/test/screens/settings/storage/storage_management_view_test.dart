@@ -452,6 +452,28 @@ void main() {
       );
     });
 
+    testWidgets('the switch itself toggles automatic sizing once', (
+      tester,
+    ) async {
+      when(service.useAutomaticVideoCacheLimit).thenAnswer((_) async {
+        when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+      });
+      final cubit = StorageCubit(service: service);
+      addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+
+      await tester.pumpWidget(wrap(cubit));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(DivineSwitch));
+      await tester.pumpAndSettle();
+
+      verify(service.useAutomaticVideoCacheLimit).called(1);
+      expect(
+        tester.widget<DivineSwitch>(find.byType(DivineSwitch)).value,
+        isTrue,
+      );
+    });
+
     testWidgets('turning automatic sizing off fixes a size', (tester) async {
       when(service.isVideoCacheLimitAutomatic).thenReturn(true);
       when(() => service.setVideoCacheLimit(any())).thenAnswer((_) async {

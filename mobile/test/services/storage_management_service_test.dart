@@ -718,6 +718,28 @@ void main() {
         expect(budgetRefreshes, equals(1));
       });
 
+      test('useAutomaticVideoCacheLimit forgets the fixed size before it '
+          're-sizes', () async {
+        await prefs.setInt(kCacheLimitPrefKey, 3 * oneGb);
+        bool? fixedAtRefresh;
+        service = StorageManagementService(
+          videoCache: videoCache,
+          imageCache: imageCache,
+          clipLibrary: clipLibrary,
+          clipsDao: db.clipsDao,
+          draftsDao: db.draftsDao,
+          prefs: prefs,
+          temporaryDirectoryProvider: () async => temp,
+          documentsDirectoryProvider: () async => docs,
+          refreshMediaCacheBudget: () async =>
+              fixedAtRefresh = prefs.containsKey(kCacheLimitPrefKey),
+        );
+
+        await service.useAutomaticVideoCacheLimit();
+
+        expect(fixedAtRefresh, isFalse);
+      });
+
       test('videoCacheLimitBytes returns the stored value', () async {
         await prefs.setInt(kCacheLimitPrefKey, 3 * oneGb);
         expect(service.videoCacheLimitBytes(), 3 * oneGb);

@@ -158,6 +158,44 @@ void main() {
       expect(bytes, equals(_floor.playerBytes));
     });
 
+    test('keeps the full player cache on a roomy disk', () async {
+      final bytes = await startupPlayerCacheBudgetBytes(
+        readStorageSpace: () async => const DeviceStorageSpace(
+          totalBytes: 256 * _gb,
+          freeBytes: 120 * _gb,
+        ),
+        ceiling: _ceiling,
+      );
+
+      expect(bytes, equals(_ceiling.playerBytes));
+    });
+
+    test(
+      'takes the player share, not another cache, on a filling disk',
+      () async {
+        // 15 GB reserve on 100 GB; 1466 MB above it is halfway up from the
+        // floors, where the player and image budgets differ.
+        const disk = DeviceStorageSpace(
+          totalBytes: 100 * _gb,
+          freeBytes: 15 * _gb + 1466 * _mb,
+        );
+
+        final bytes = await startupPlayerCacheBudgetBytes(
+          readStorageSpace: () async => disk,
+          ceiling: _ceiling,
+        );
+
+        final expected = _budget(
+          totalBytes: disk.totalBytes,
+          freeBytes: disk.freeBytes,
+        );
+        expect(bytes, equals(expected.playerBytes));
+        expect(bytes, greaterThan(_floor.playerBytes));
+        expect(bytes, lessThan(_ceiling.playerBytes));
+        expect(bytes, isNot(equals(expected.imageBytes)));
+      },
+    );
+
     test('does not read the disk where there is no player cache', () async {
       var read = false;
 

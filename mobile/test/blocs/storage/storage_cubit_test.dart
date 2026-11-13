@@ -439,6 +439,7 @@ void main() {
           videoCacheLimitBytes: 64 * 1024 * 1024,
         ),
         act: (cubit) => cubit.setVideoCacheLimitAutomatic(automatic: false),
+        errors: () => isEmpty,
         verify: (cubit) {
           verify(() => service.setVideoCacheLimit(kCacheLimitMinBytes))
               .called(1);
