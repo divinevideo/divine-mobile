@@ -13924,6 +13924,22 @@ class AppLocalizationsAr extends AppLocalizations {
       'الحد الأقصى لذاكرة تخزين الفيديو المؤقتة';
 
   @override
+  String get settingsStorageAutoCacheTitle => 'تحديد الحجم تلقائيًا';
+
+  @override
+  String get settingsStorageAutoCacheSubtitle =>
+      'يتقلّص مع امتلاء الهاتف، حتى يترك Divine دائمًا 15% على الأقل من مساحة التخزين فارغة';
+
+  @override
+  String settingsStorageAutoCacheUsing(String size) {
+    return 'استخدام ما يصل إلى $size للفيديوهات';
+  }
+
+  @override
+  String get settingsStorageAutoCacheLowSpace =>
+      'أصغر من المعتاد لأن مساحة الهاتف توشك على النفاد';
+
+  @override
   String settingsStorageApproxVideos(int count) {
     return '≈ $count مقطع فيديو';
   }

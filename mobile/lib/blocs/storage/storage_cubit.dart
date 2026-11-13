@@ -43,22 +43,29 @@ class StorageCubit extends Cubit<StorageState>
       state.copyWith(
         cacheStatus: StorageCacheStatus.loading,
         videoCacheLimitBytes: _service.videoCacheLimitBytes(),
+        videoCacheLimitAutomatic: _service.isVideoCacheLimitAutomatic(),
       ),
     );
     try {
-      final usage = await _service.cacheUsage();
-      emit(
-        state.copyWith(
-          cacheStatus: StorageCacheStatus.ready,
-          cacheSizeBytes: usage.totalBytes,
-          cacheUsage: usage,
-          videoCacheLimitBytes: _service.videoCacheLimitBytes(),
-        ),
-      );
+      await _emitCacheUsage();
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       emit(state.copyWith(cacheStatus: StorageCacheStatus.failure));
     }
+  }
+
+  /// Measures the caches and emits them as ready, with the limit in force.
+  Future<void> _emitCacheUsage() async {
+    final usage = await _service.cacheUsage();
+    emit(
+      state.copyWith(
+        cacheStatus: StorageCacheStatus.ready,
+        cacheSizeBytes: usage.totalBytes,
+        cacheUsage: usage,
+        videoCacheLimitBytes: _service.videoCacheLimitBytes(),
+        videoCacheLimitAutomatic: _service.isVideoCacheLimitAutomatic(),
+      ),
+    );
   }
 
   /// Measures the documents directory: what the user's clips, drafts and
@@ -115,19 +122,40 @@ class StorageCubit extends Cubit<StorageState>
       state.copyWith(
         cacheStatus: StorageCacheStatus.loading,
         videoCacheLimitBytes: bytes,
+        videoCacheLimitAutomatic: false,
       ),
     );
     try {
       await _service.setVideoCacheLimit(bytes);
-      final usage = await _service.cacheUsage();
-      emit(
-        state.copyWith(
-          cacheStatus: StorageCacheStatus.ready,
-          cacheSizeBytes: usage.totalBytes,
-          cacheUsage: usage,
-          videoCacheLimitBytes: _service.videoCacheLimitBytes(),
-        ),
+      await _emitCacheUsage();
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      emit(state.copyWith(cacheStatus: StorageCacheStatus.failure));
+    }
+  }
+
+  /// Switches the video cache between sizing itself to the disk and a size
+  /// the user picks.
+  ///
+  /// Turning [automatic] off fixes the slider position nearest the budget in
+  /// force, so the cache keeps roughly its size until the user drags it.
+  Future<void> setVideoCacheLimitAutomatic({required bool automatic}) async {
+    if (!automatic) {
+      final bytes = state.videoCacheLimitBytes.clamp(
+        kCacheLimitMinBytes,
+        kCacheLimitMaxBytes,
       );
+      return commitVideoCacheLimit(bytes);
+    }
+    emit(
+      state.copyWith(
+        cacheStatus: StorageCacheStatus.loading,
+        videoCacheLimitAutomatic: true,
+      ),
+    );
+    try {
+      await _service.useAutomaticVideoCacheLimit();
+      await _emitCacheUsage();
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       emit(state.copyWith(cacheStatus: StorageCacheStatus.failure));

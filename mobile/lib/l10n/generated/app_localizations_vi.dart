@@ -13846,6 +13846,22 @@ class AppLocalizationsVi extends AppLocalizations {
   String get settingsStorageMaxVideoCacheLabel => 'Bộ nhớ đệm video tối đa';
 
   @override
+  String get settingsStorageAutoCacheTitle => 'Tự động điều chỉnh dung lượng';
+
+  @override
+  String get settingsStorageAutoCacheSubtitle =>
+      'Thu nhỏ khi điện thoại của bạn đầy dần, để Divine luôn chừa trống ít nhất 15% bộ nhớ';
+
+  @override
+  String settingsStorageAutoCacheUsing(String size) {
+    return 'Dùng tối đa $size cho video';
+  }
+
+  @override
+  String get settingsStorageAutoCacheLowSpace =>
+      'Nhỏ hơn bình thường vì điện thoại của bạn sắp hết dung lượng';
+
+  @override
   String settingsStorageApproxVideos(int count) {
     return '≈ $count video';
   }

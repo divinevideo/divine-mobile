@@ -14023,6 +14023,22 @@ class AppLocalizationsFil extends AppLocalizations {
       'Pinakamataas na cache ng video';
 
   @override
+  String get settingsStorageAutoCacheTitle => 'Awtomatikong i-size';
+
+  @override
+  String get settingsStorageAutoCacheSubtitle =>
+      'Lumiliit habang napupuno ang phone mo, kaya laging nag-iiwan ang Divine ng at least 15% na libreng storage';
+
+  @override
+  String settingsStorageAutoCacheUsing(String size) {
+    return 'Gumagamit ng hanggang $size para sa mga video';
+  }
+
+  @override
+  String get settingsStorageAutoCacheLowSpace =>
+      'Mas maliit kaysa karaniwan kasi paubos na ang space ng phone mo';
+
+  @override
   String settingsStorageApproxVideos(int count) {
     return '≈ $count video';
   }

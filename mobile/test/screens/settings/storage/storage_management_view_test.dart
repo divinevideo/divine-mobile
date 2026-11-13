@@ -14,6 +14,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/screens/settings/storage/storage_management_page.dart';
 import 'package:openvine/services/storage_management_service.dart';
+import 'package:openvine/utils/byte_size_format.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
 
 import '../../../helpers/scroll.dart';
@@ -48,6 +49,7 @@ void main() {
   setUp(() {
     service = _MockService();
     when(service.videoCacheLimitBytes).thenReturn(kCacheLimitDefaultBytes);
+    when(service.isVideoCacheLimitAutomatic).thenReturn(false);
     when(service.cacheUsage).thenAnswer(
       (_) async => const CacheUsage(
         video: CacheUsageCategory(
@@ -89,6 +91,11 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(l10n.settingsStorageClearButton), findsOneWidget);
+      await scrollUntilTappable(
+        tester,
+        find.text(l10n.settingsStorageScanButton),
+        200,
+      );
       expect(find.text(l10n.settingsStorageScanButton), findsOneWidget);
     });
 
@@ -106,6 +113,69 @@ void main() {
       expect(find.byType(Slider), findsOneWidget);
       // Default 2 GB budget / ~4 MB per video ≈ 512 videos.
       expect(find.text(l10n.settingsStorageApproxVideos(512)), findsOneWidget);
+    });
+
+    testWidgets('automatic sizing shows the budget it chose instead of the '
+        'slider', (tester) async {
+      when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+      final cubit = StorageCubit(service: service);
+      addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+
+      await tester.pumpWidget(wrap(cubit));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.settingsStorageAutoCacheTitle), findsOneWidget);
+      expect(
+        tester.widget<DivineSwitch>(find.byType(DivineSwitch)).value,
+        isTrue,
+      );
+      expect(
+        find.text(
+          l10n.settingsStorageAutoCacheUsing(
+            formatByteSize(kCacheLimitDefaultBytes),
+          ),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(Slider), findsNothing);
+      expect(find.text(l10n.settingsStorageAutoCacheLowSpace), findsNothing);
+    });
+
+    testWidgets('says why when automatic sizing shrank the cache', (
+      tester,
+    ) async {
+      when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+      when(service.videoCacheLimitBytes).thenReturn(64 * 1024 * 1024);
+      final cubit = StorageCubit(service: service);
+      addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+
+      await tester.pumpWidget(wrap(cubit));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(l10n.settingsStorageAutoCacheUsing(formatByteSize(64 << 20))),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.settingsStorageAutoCacheLowSpace), findsOneWidget);
+    });
+
+    testWidgets('a fixed size shows the switch off beside the slider', (
+      tester,
+    ) async {
+      final cubit = StorageCubit(service: service);
+      addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+
+      await tester.pumpWidget(wrap(cubit));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<DivineSwitch>(find.byType(DivineSwitch)).value,
+        isFalse,
+      );
+      expect(find.byType(Slider), findsOneWidget);
     });
   });
 
@@ -322,6 +392,44 @@ void main() {
       await tester.pumpAndSettle();
 
       verify(() => service.setVideoCacheLimit(any())).called(1);
+    });
+
+    testWidgets('turning automatic sizing on hands the cache back to it', (
+      tester,
+    ) async {
+      when(service.useAutomaticVideoCacheLimit).thenAnswer((_) async {
+        when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+      });
+      final cubit = StorageCubit(service: service);
+      addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+
+      await tester.pumpWidget(wrap(cubit));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.settingsStorageAutoCacheTitle));
+      await tester.pumpAndSettle();
+
+      verify(service.useAutomaticVideoCacheLimit).called(1);
+      expect(find.byType(Slider), findsNothing);
+    });
+
+    testWidgets('turning automatic sizing off fixes a size', (tester) async {
+      when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+      when(() => service.setVideoCacheLimit(any())).thenAnswer((_) async {
+        when(service.isVideoCacheLimitAutomatic).thenReturn(false);
+      });
+      final cubit = StorageCubit(service: service);
+      addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+
+      await tester.pumpWidget(wrap(cubit));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.settingsStorageAutoCacheTitle));
+      await tester.pumpAndSettle();
+
+      verify(() => service.setVideoCacheLimit(kCacheLimitDefaultBytes))
+          .called(1);
+      expect(find.byType(Slider), findsOneWidget);
     });
   });
 

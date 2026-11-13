@@ -14199,6 +14199,22 @@ class AppLocalizationsRo extends AppLocalizations {
   String get settingsStorageMaxVideoCacheLabel => 'Cache video maxim';
 
   @override
+  String get settingsStorageAutoCacheTitle => 'Dimensionare automată';
+
+  @override
+  String get settingsStorageAutoCacheSubtitle =>
+      'Se micșorează pe măsură ce telefonul se umple, ca Divine să lase mereu liber cel puțin 15% din spațiul tău de stocare';
+
+  @override
+  String settingsStorageAutoCacheUsing(String size) {
+    return 'Folosește până la $size pentru videoclipuri';
+  }
+
+  @override
+  String get settingsStorageAutoCacheLowSpace =>
+      'Mai mic decât de obicei, pentru că telefonul tău rămâne fără spațiu';
+
+  @override
   String settingsStorageApproxVideos(int count) {
     return '≈ $count videoclipuri';
   }

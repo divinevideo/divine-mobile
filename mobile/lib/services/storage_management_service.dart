@@ -203,7 +203,8 @@ class StorageManagementService {
   /// mistaken for junk. The directory providers are injectable for tests and
   /// otherwise resolve the OS temp and documents directories.
   /// [protectedPaths] supplies upload inputs that must survive both a cache
-  /// clear and an orphan sweep.
+  /// clear and an orphan sweep. [refreshMediaCacheBudget] re-sizes the caches
+  /// to the disk when the user hands the video cache back to automatic sizing.
   StorageManagementService({
     required MediaCacheManager videoCache,
     required MediaCacheManager imageCache,
@@ -211,6 +212,7 @@ class StorageManagementService {
     required ClipsDao clipsDao,
     required DraftsDao draftsDao,
     required SharedPreferences prefs,
+    required Future<void> Function() refreshMediaCacheBudget,
     @visibleForTesting Future<Directory> Function()? temporaryDirectoryProvider,
     @visibleForTesting Future<Directory> Function()? documentsDirectoryProvider,
     @visibleForTesting
@@ -226,6 +228,7 @@ class StorageManagementService {
        _clipsDao = clipsDao,
        _draftsDao = draftsDao,
        _prefs = prefs,
+       _refreshMediaCacheBudget = refreshMediaCacheBudget,
        _temporaryDirectoryProvider =
            temporaryDirectoryProvider ?? getTemporaryDirectory,
        _documentsDirectoryProvider =
@@ -245,6 +248,7 @@ class StorageManagementService {
   final ClipsDao _clipsDao;
   final DraftsDao _draftsDao;
   final SharedPreferences _prefs;
+  final Future<void> Function() _refreshMediaCacheBudget;
   final Future<Directory> Function() _temporaryDirectoryProvider;
   final Future<Directory> Function() _documentsDirectoryProvider;
   final Future<Directory> Function() _applicationSupportDirectoryProvider;
@@ -609,10 +613,22 @@ class StorageManagementService {
     }
   }
 
-  /// The user-configured video-cache byte budget, or
-  /// [kCacheLimitDefaultBytes] when none is set.
+  /// Whether the video cache sizes itself to the disk, which it does until
+  /// the user fixes a size with [setVideoCacheLimit].
+  bool isVideoCacheLimitAutomatic() => !_prefs.containsKey(kCacheLimitPrefKey);
+
+  /// The video-cache byte budget in force: the size the user fixed, else the
+  /// one automatic sizing applied, else [kCacheLimitDefaultBytes].
   int videoCacheLimitBytes() =>
-      _prefs.getInt(kCacheLimitPrefKey) ?? kCacheLimitDefaultBytes;
+      _prefs.getInt(kCacheLimitPrefKey) ??
+      _videoCache.maxCacheSizeBytes ??
+      kCacheLimitDefaultBytes;
+
+  /// Forgets the size the user fixed and re-sizes the caches to the disk.
+  Future<void> useAutomaticVideoCacheLimit() async {
+    await _prefs.remove(kCacheLimitPrefKey);
+    await _refreshMediaCacheBudget();
+  }
 
   /// Persists [bytes] (clamped to
   /// `[kCacheLimitMinBytes, kCacheLimitMaxBytes]`) as the video-cache budget,

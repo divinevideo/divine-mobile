@@ -14039,6 +14039,22 @@ class AppLocalizationsBg extends AppLocalizations {
   String get settingsStorageMaxVideoCacheLabel => 'Максимален кеш за видео';
 
   @override
+  String get settingsStorageAutoCacheTitle => 'Автоматичен размер';
+
+  @override
+  String get settingsStorageAutoCacheSubtitle =>
+      'Намалява, докато телефонът ти се пълни, така че Divine винаги оставя поне 15% от хранилището ти свободни';
+
+  @override
+  String settingsStorageAutoCacheUsing(String size) {
+    return 'Използва до $size за видеа';
+  }
+
+  @override
+  String get settingsStorageAutoCacheLowSpace =>
+      'По-малко от обикновено, защото телефонът ти е почти пълен';
+
+  @override
   String settingsStorageApproxVideos(int count) {
     return '≈ $count видеа';
   }

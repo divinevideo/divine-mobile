@@ -114,6 +114,7 @@ class StorageState extends Equatable {
     this.cacheSizeBytes = 0,
     this.cacheUsage = CacheUsage.empty,
     this.videoCacheLimitBytes = kCacheLimitDefaultBytes,
+    this.videoCacheLimitAutomatic = true,
     this.contentStatus = StorageContentStatus.initial,
     this.documentsUsage = DocumentsUsage.empty,
     this.libraryStatus = StorageLibraryStatus.idle,
@@ -133,8 +134,19 @@ class StorageState extends Equatable {
   /// Clearable cache usage split by category and matching budget.
   final CacheUsage cacheUsage;
 
-  /// The configured maximum video-cache size, in bytes.
+  /// The maximum video-cache size in force, in bytes: the size the user
+  /// fixed, or the one automatic sizing chose for the disk.
   final int videoCacheLimitBytes;
+
+  /// Whether the video cache sizes itself to the disk rather than to a size
+  /// the user fixed.
+  final bool videoCacheLimitAutomatic;
+
+  /// Whether automatic sizing has shrunk the video cache below its usual
+  /// size because the disk is filling up.
+  bool get videoCacheShrunkForLowSpace =>
+      videoCacheLimitAutomatic &&
+      videoCacheLimitBytes < kCacheLimitDefaultBytes;
 
   /// Lifecycle of the "your content" section.
   final StorageContentStatus contentStatus;
@@ -167,6 +179,7 @@ class StorageState extends Equatable {
     int? cacheSizeBytes,
     CacheUsage? cacheUsage,
     int? videoCacheLimitBytes,
+    bool? videoCacheLimitAutomatic,
     StorageContentStatus? contentStatus,
     DocumentsUsage? documentsUsage,
     StorageLibraryStatus? libraryStatus,
@@ -181,6 +194,8 @@ class StorageState extends Equatable {
       cacheSizeBytes: cacheSizeBytes ?? this.cacheSizeBytes,
       cacheUsage: cacheUsage ?? this.cacheUsage,
       videoCacheLimitBytes: videoCacheLimitBytes ?? this.videoCacheLimitBytes,
+      videoCacheLimitAutomatic:
+          videoCacheLimitAutomatic ?? this.videoCacheLimitAutomatic,
       contentStatus: contentStatus ?? this.contentStatus,
       documentsUsage: documentsUsage ?? this.documentsUsage,
       libraryStatus: libraryStatus ?? this.libraryStatus,
@@ -199,6 +214,7 @@ class StorageState extends Equatable {
     cacheSizeBytes,
     cacheUsage,
     videoCacheLimitBytes,
+    videoCacheLimitAutomatic,
     contentStatus,
     documentsUsage,
     libraryStatus,

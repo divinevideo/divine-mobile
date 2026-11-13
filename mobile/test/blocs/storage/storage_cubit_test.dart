@@ -62,6 +62,7 @@ void main() {
         'emits loading then ready with the size',
         setUp: () {
           when(service.videoCacheLimitBytes).thenReturn(configuredVideoLimit);
+          when(service.isVideoCacheLimitAutomatic).thenReturn(false);
           when(service.cacheUsage).thenAnswer((_) async => cacheUsage);
         },
         build: build,
@@ -70,12 +71,37 @@ void main() {
           StorageState(
             cacheStatus: StorageCacheStatus.loading,
             videoCacheLimitBytes: configuredVideoLimit,
+            videoCacheLimitAutomatic: false,
           ),
           StorageState(
             cacheStatus: StorageCacheStatus.ready,
             cacheSizeBytes: 2176,
             cacheUsage: cacheUsage,
             videoCacheLimitBytes: configuredVideoLimit,
+            videoCacheLimitAutomatic: false,
+          ),
+        ],
+      );
+
+      blocTest<StorageCubit, StorageState>(
+        'reports automatic sizing and the budget it applied',
+        setUp: () {
+          when(service.videoCacheLimitBytes).thenReturn(64 * 1024 * 1024);
+          when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+          when(service.cacheUsage).thenAnswer((_) async => cacheUsage);
+        },
+        build: build,
+        act: (cubit) => cubit.loadCacheSize(),
+        expect: () => const [
+          StorageState(
+            cacheStatus: StorageCacheStatus.loading,
+            videoCacheLimitBytes: 64 * 1024 * 1024,
+          ),
+          StorageState(
+            cacheStatus: StorageCacheStatus.ready,
+            cacheSizeBytes: 2176,
+            cacheUsage: cacheUsage,
+            videoCacheLimitBytes: 64 * 1024 * 1024,
           ),
         ],
       );
@@ -84,6 +110,7 @@ void main() {
         'keeps the saved limit and emits failure when sizing throws',
         setUp: () {
           when(service.videoCacheLimitBytes).thenReturn(savedLimit);
+          when(service.isVideoCacheLimitAutomatic).thenReturn(false);
           when(service.cacheUsage).thenThrow(Exception('boom'));
         },
         build: build,
@@ -92,10 +119,12 @@ void main() {
           StorageState(
             cacheStatus: StorageCacheStatus.loading,
             videoCacheLimitBytes: savedLimit,
+            videoCacheLimitAutomatic: false,
           ),
           StorageState(
             cacheStatus: StorageCacheStatus.failure,
             videoCacheLimitBytes: savedLimit,
+            videoCacheLimitAutomatic: false,
           ),
         ],
         errors: () => [isA<Exception>()],
@@ -326,6 +355,7 @@ void main() {
             ),
           );
           when(service.videoCacheLimitBytes).thenReturn(oneGb);
+          when(service.isVideoCacheLimitAutomatic).thenReturn(false);
         },
         build: build,
         act: (cubit) => cubit.commitVideoCacheLimit(oneGb),
@@ -333,10 +363,12 @@ void main() {
           StorageState(
             cacheStatus: StorageCacheStatus.loading,
             videoCacheLimitBytes: oneGb,
+            videoCacheLimitAutomatic: false,
           ),
           StorageState(
             cacheStatus: StorageCacheStatus.ready,
             videoCacheLimitBytes: oneGb,
+            videoCacheLimitAutomatic: false,
             cacheSizeBytes: 512,
             cacheUsage: CacheUsage(
               video: CacheUsageCategory(usedBytes: 512, limitBytes: oneGb),
@@ -356,6 +388,110 @@ void main() {
         verify: (_) =>
             verify(() => service.setVideoCacheLimit(oneGb)).called(1),
       );
+
+      blocTest<StorageCubit, StorageState>(
+        'setVideoCacheLimitAutomatic(true) hands the cache back to automatic '
+        'sizing and shows the budget it chose',
+        setUp: () {
+          when(
+            service.useAutomaticVideoCacheLimit,
+          ).thenAnswer((_) async {});
+          when(service.cacheUsage).thenAnswer((_) async => cacheUsage);
+          when(service.videoCacheLimitBytes).thenReturn(64 * 1024 * 1024);
+          when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+        },
+        build: build,
+        seed: () => const StorageState(
+          cacheStatus: StorageCacheStatus.ready,
+          videoCacheLimitBytes: oneGb,
+          videoCacheLimitAutomatic: false,
+        ),
+        act: (cubit) => cubit.setVideoCacheLimitAutomatic(automatic: true),
+        expect: () => const [
+          StorageState(
+            cacheStatus: StorageCacheStatus.loading,
+            videoCacheLimitBytes: oneGb,
+          ),
+          StorageState(
+            cacheStatus: StorageCacheStatus.ready,
+            cacheSizeBytes: 2176,
+            cacheUsage: cacheUsage,
+            videoCacheLimitBytes: 64 * 1024 * 1024,
+          ),
+        ],
+        verify: (_) => verify(service.useAutomaticVideoCacheLimit).called(1),
+      );
+
+      blocTest<StorageCubit, StorageState>(
+        'setVideoCacheLimitAutomatic(false) fixes the size the slider can '
+        'reach nearest to the current budget',
+        setUp: () {
+          when(
+            () => service.setVideoCacheLimit(any()),
+          ).thenAnswer((_) async {});
+          when(service.cacheUsage).thenAnswer((_) async => cacheUsage);
+          when(service.videoCacheLimitBytes).thenReturn(kCacheLimitMinBytes);
+          when(service.isVideoCacheLimitAutomatic).thenReturn(false);
+        },
+        build: build,
+        seed: () => const StorageState(
+          cacheStatus: StorageCacheStatus.ready,
+          videoCacheLimitBytes: 64 * 1024 * 1024,
+        ),
+        act: (cubit) => cubit.setVideoCacheLimitAutomatic(automatic: false),
+        verify: (cubit) {
+          verify(() => service.setVideoCacheLimit(kCacheLimitMinBytes))
+              .called(1);
+          expect(cubit.state.videoCacheLimitAutomatic, isFalse);
+        },
+      );
+
+      blocTest<StorageCubit, StorageState>(
+        'emits failure when handing back to automatic sizing throws',
+        setUp: () {
+          when(
+            service.useAutomaticVideoCacheLimit,
+          ).thenThrow(Exception('boom'));
+        },
+        build: build,
+        seed: () => const StorageState(
+          cacheStatus: StorageCacheStatus.ready,
+          videoCacheLimitBytes: oneGb,
+          videoCacheLimitAutomatic: false,
+        ),
+        act: (cubit) => cubit.setVideoCacheLimitAutomatic(automatic: true),
+        expect: () => const [
+          StorageState(
+            cacheStatus: StorageCacheStatus.loading,
+            videoCacheLimitBytes: oneGb,
+          ),
+          StorageState(
+            cacheStatus: StorageCacheStatus.failure,
+            videoCacheLimitBytes: oneGb,
+          ),
+        ],
+        errors: () => [isA<Exception>()],
+      );
+    });
+
+    group(StorageState, () {
+      test('reports a shrunk budget only while sizing is automatic', () {
+        const shrunk = StorageState(videoCacheLimitBytes: 64 * 1024 * 1024);
+
+        expect(shrunk.videoCacheShrunkForLowSpace, isTrue);
+        expect(
+          shrunk
+              .copyWith(videoCacheLimitAutomatic: false)
+              .videoCacheShrunkForLowSpace,
+          isFalse,
+        );
+        expect(
+          shrunk
+              .copyWith(videoCacheLimitBytes: kCacheLimitDefaultBytes)
+              .videoCacheShrunkForLowSpace,
+          isFalse,
+        );
+      });
     });
 
     group('recovery', () {

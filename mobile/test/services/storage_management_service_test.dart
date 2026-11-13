@@ -44,6 +44,7 @@ void main() {
     late Directory caches;
     late SharedPreferences prefs;
     late StorageManagementService service;
+    late int budgetRefreshes;
 
     // Fixed so a file's age relative to the sweep's grace period is a property
     // of the test, not of how long the suite took to reach it.
@@ -69,6 +70,7 @@ void main() {
       fileLengthProvider: fileLengthProvider,
       now: () => now,
       protectedPaths: protectedPaths,
+      refreshMediaCacheBudget: () async => budgetRefreshes++,
     );
 
     setUp(() async {
@@ -81,6 +83,7 @@ void main() {
       caches = Directory.systemTemp.createTempSync('storage_caches_');
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
+      budgetRefreshes = 0;
       when(() => videoCache.clearCache()).thenAnswer((_) async {});
       when(() => imageCache.clearCache()).thenAnswer((_) async {});
       when(() => imageCache.maxCacheSizeBytes).thenReturn(256 * 1024 * 1024);
@@ -670,6 +673,34 @@ void main() {
 
       test('videoCacheLimitBytes returns the default when unset', () {
         expect(service.videoCacheLimitBytes(), kCacheLimitDefaultBytes);
+      });
+
+      test('videoCacheLimitBytes returns the budget automatic sizing '
+          'applied when unset', () {
+        when(() => videoCache.maxCacheSizeBytes).thenReturn(64 * 1024 * 1024);
+
+        expect(service.videoCacheLimitBytes(), 64 * 1024 * 1024);
+      });
+
+      test(
+        'isVideoCacheLimitAutomatic is true until a size is fixed',
+        () async {
+          expect(service.isVideoCacheLimitAutomatic(), isTrue);
+
+          await prefs.setInt(kCacheLimitPrefKey, 3 * oneGb);
+
+          expect(service.isVideoCacheLimitAutomatic(), isFalse);
+        },
+      );
+
+      test('useAutomaticVideoCacheLimit forgets the fixed size and re-sizes '
+          'the caches', () async {
+        await prefs.setInt(kCacheLimitPrefKey, 3 * oneGb);
+
+        await service.useAutomaticVideoCacheLimit();
+
+        expect(prefs.containsKey(kCacheLimitPrefKey), isFalse);
+        expect(budgetRefreshes, equals(1));
       });
 
       test('videoCacheLimitBytes returns the stored value', () async {

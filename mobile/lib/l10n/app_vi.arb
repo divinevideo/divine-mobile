@@ -6781,6 +6781,10 @@
     "description": "Generic error shown when a storage operation fails."
   },
   "settingsStorageMaxVideoCacheLabel": "Bộ nhớ đệm video tối đa",
+  "settingsStorageAutoCacheTitle": "Tự động điều chỉnh dung lượng",
+  "settingsStorageAutoCacheSubtitle": "Thu nhỏ khi điện thoại của bạn đầy dần, để Divine luôn chừa trống ít nhất 15% bộ nhớ",
+  "settingsStorageAutoCacheUsing": "Dùng tối đa {size} cho video",
+  "settingsStorageAutoCacheLowSpace": "Nhỏ hơn bình thường vì điện thoại của bạn sắp hết dung lượng",
   "settingsStorageApproxVideos": "≈ {count} video",
   "@settingsStorageApproxVideos": {
     "description": "Approximate number of videos that fit in the chosen cache size.",

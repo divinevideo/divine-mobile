@@ -282,6 +282,115 @@ class _CacheLimitControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final automatic = context.select(
+      (StorageCubit c) => c.state.videoCacheLimitAutomatic,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 12,
+      children: [
+        const _AutoCacheSwitch(),
+        if (automatic) const _AutoCacheSummary() else const _CacheLimitSlider(),
+      ],
+    );
+  }
+}
+
+/// Switches the video cache between sizing itself to the disk and the size
+/// the slider sets. The whole row toggles, as a settings row does.
+class _AutoCacheSwitch extends StatelessWidget {
+  const _AutoCacheSwitch();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final cubit = context.read<StorageCubit>();
+    final automatic = context.select(
+      (StorageCubit c) => c.state.videoCacheLimitAutomatic,
+    );
+    final status = context.select((StorageCubit c) => c.state.cacheStatus);
+    final busy =
+        status == StorageCacheStatus.loading ||
+        status == StorageCacheStatus.clearing;
+    void toggle(bool value) =>
+        cubit.setVideoCacheLimitAutomatic(automatic: value);
+
+    return MergeSemantics(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: busy ? null : () => toggle(!automatic),
+        child: Row(
+          spacing: 12,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 4,
+                children: [
+                  Text(
+                    l10n.settingsStorageAutoCacheTitle,
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.primaryText,
+                    ),
+                  ),
+                  Text(
+                    l10n.settingsStorageAutoCacheSubtitle,
+                    style: VineTheme.bodySmallFont(
+                      color: context.vineColors.mutedText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            DivineSwitch(value: automatic, onChanged: busy ? null : toggle),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// What automatic sizing currently allows, and why when it has shrunk.
+class _AutoCacheSummary extends StatelessWidget {
+  const _AutoCacheSummary();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final limit = context.select(
+      (StorageCubit c) => c.state.videoCacheLimitBytes,
+    );
+    final shrunk = context.select(
+      (StorageCubit c) => c.state.videoCacheShrunkForLowSpace,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 4,
+      children: [
+        Text(
+          l10n.settingsStorageAutoCacheUsing(formatByteSize(limit)),
+          style: VineTheme.bodyMediumFont(
+            color: context.vineColors.accentPositive,
+          ),
+        ),
+        if (shrunk)
+          Text(
+            l10n.settingsStorageAutoCacheLowSpace,
+            style: VineTheme.bodySmallFont(color: context.vineColors.mutedText),
+          ),
+      ],
+    );
+  }
+}
+
+/// The fixed maximum video-cache size the user picks.
+class _CacheLimitSlider extends StatelessWidget {
+  const _CacheLimitSlider();
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final cubit = context.read<StorageCubit>();
     final limit = context.select(
