@@ -111,3 +111,10 @@ final class CommentDeleteRequested extends CommentReactionsEvent {
 final class ReactionsOutboxConsumed extends CommentReactionsEvent {
   const ReactionsOutboxConsumed();
 }
+
+/// The likes repository's liked event ids changed.
+final class _LikedEventIdsChanged extends CommentReactionsEvent {
+  const _LikedEventIdsChanged(this.likedEventIds);
+
+  final Set<String> likedEventIds;
+}

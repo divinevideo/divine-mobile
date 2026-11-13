@@ -104,6 +104,16 @@ typedef QueueOfflineActionCallback =
       int? targetKind,
     });
 
+/// A like or unlike of `eventId` the current user has queued, still waiting
+/// to reach the relays or being replayed now.
+typedef QueuedLikeAction = ({String eventId, bool isLike});
+
+/// Reads the current user's queued likes and unlikes, oldest first.
+///
+/// The offline queue keeps a vote it could not publish yet. Relays do not
+/// hold it, so the vote reads add it to what the relays report.
+typedef QueuedLikeActionsReader = Future<List<QueuedLikeAction>> Function();
+
 /// Reporter port for programming-invariant violations swallowed by the
 /// best-effort local-storage paths.
 ///
@@ -152,6 +162,9 @@ class LikesRepository {
   /// - [localStorage]: Optional local storage for persistence
   /// - [isOnline]: Optional callback to check connectivity status
   /// - [queueOfflineAction]: Optional callback to queue actions when offline
+  /// - [queuedLikeActions]: Optional read of the likes and unlikes that
+  ///   callback queued and that have not been published yet, so
+  ///   [getVoteCounts] and [getUserVoteStatuses] include them (#10922)
   /// - [blockFilter]: Optional callback to hide blocked/muted users from
   ///   engagement lists ([fetchEventLikers])
   /// - [funnelcakeApiClient]: Optional REST client preferred by
@@ -166,6 +179,7 @@ class LikesRepository {
     LikesLocalStorage? localStorage,
     IsOnlineCallback? isOnline,
     QueueOfflineActionCallback? queueOfflineAction,
+    QueuedLikeActionsReader? queuedLikeActions,
     BlockedLikerFilter? blockFilter,
     FunnelcakeApiClient? funnelcakeApiClient,
     LikesRepositoryErrorReporter? errorReporter,
@@ -173,6 +187,7 @@ class LikesRepository {
        _localStorage = localStorage,
        _isOnline = isOnline,
        _queueOfflineAction = queueOfflineAction,
+       _queuedLikeActions = queuedLikeActions,
        _blockFilter = blockFilter,
        _funnelcakeApiClient = funnelcakeApiClient,
        _errorReporter = errorReporter;
@@ -194,6 +209,9 @@ class LikesRepository {
 
   /// Callback to queue actions for offline sync
   final QueueOfflineActionCallback? _queueOfflineAction;
+
+  /// Read of the votes [_queueOfflineAction] queued and that are unpublished.
+  final QueuedLikeActionsReader? _queuedLikeActions;
 
   /// In-memory cache of like records keyed by target event ID.
   final Map<String, LikeRecord> _likeRecords = {};
@@ -1464,6 +1482,7 @@ class LikesRepository {
           isLike: false,
           eventId: resolvedEventId,
           authorPubkey: '', // Not needed for unlike
+          addressableId: snapshotRecord.addressableId ?? addressableId,
         );
         return;
       }
@@ -1491,6 +1510,7 @@ class LikesRepository {
             isLike: false,
             eventId: resolvedEventId,
             authorPubkey: '', // Not needed for unlike
+            addressableId: snapshotRecord.addressableId ?? addressableId,
           );
         }
         return;
@@ -1526,6 +1546,7 @@ class LikesRepository {
               isLike: false,
               eventId: resolvedEventId,
               authorPubkey: '',
+              addressableId: snapshotRecord.addressableId ?? addressableId,
             );
             return;
           }
@@ -1570,6 +1591,7 @@ class LikesRepository {
             isLike: false,
             eventId: resolvedEventId,
             authorPubkey: '', // Not needed for unlike
+            addressableId: snapshotRecord.addressableId ?? addressableId,
           );
           return;
         }
@@ -1595,11 +1617,21 @@ class LikesRepository {
   ///
   /// [addressableId] resolves the record by coordinate when [eventId] finds
   /// nothing — mirrors [unlikeEvent]'s fallback for the same reason (#6020).
+  ///
+  /// [unlikeEvent] removes the record before it queues the unlike, so the
+  /// replay usually finds none. It then looks for the account's live like on
+  /// the relays and deletes that, and does nothing when they conclusively
+  /// hold none (#10922).
+  ///
+  /// Throws `UnlikeFailedException` when the relays cannot confirm whether
+  /// the like is still live, or no public key is available to ask them, so
+  /// the queue retries, or when the deletion fails;
+  /// `LikeAccountRestrictedException` when account policy rejects it.
   Future<void> executeUnlikeAction(
     String eventId, {
     String? addressableId,
   }) async {
-    // Try to get the record - it may not exist if the like was also offline
+    // Usually gone: [unlikeEvent] removes the record before it queues this.
     var record = _likeRecords[eventId];
     if (record == null && addressableId != null && addressableId.isNotEmpty) {
       record = _likeRecordForCoordinate(addressableId);
@@ -1614,9 +1646,28 @@ class LikesRepository {
       }
     }
 
-    // If no record exists, the like was never synced either, so we're done
+    // The like was published and the unlike's own removal took the record.
+    final removedByUnlike = record == null;
     if (record == null) {
-      return;
+      // Without the account's key the relays cannot be asked, and the check
+      // below would read that as "no like", dropping the unlike unsent.
+      if (await _currentUserPubkey() == null) {
+        throw const UnlikeFailedException(
+          'No public key to look for the like with',
+        );
+      }
+      final check = await _checkRelayForLiveLike(
+        eventId,
+        addressableId: addressableId,
+        timeout: _queuedLikeCheckTimeout,
+      );
+      if (!check.isConclusive) {
+        throw const UnlikeFailedException(
+          'Could not confirm whether the like is still live',
+        );
+      }
+      record = check.newest;
+      if (record == null) return;
     }
 
     final resolvedEventId = record.targetEventId;
@@ -1657,11 +1708,68 @@ class LikesRepository {
       throw const UnlikeFailedException('Failed to publish unlike deletion');
     }
 
+    // [unlikeEvent] already removed the record and lowered the count.
+    if (removedByUnlike) return;
+
     // Remove from cache and storage
     _deindexLikeRecord(resolvedEventId);
     await _localStorage?.deleteLikeRecord(resolvedEventId);
     _emitLikedIds();
     _decrementLikeCountCache(eventId, addressableId: addressableId);
+  }
+
+  /// Takes back a like the offline queue gave up on (#10922).
+  ///
+  /// The queue marks a like failed after its last retry or a terminal
+  /// refusal. It never reached the relays, so the placeholder it left would
+  /// show [eventId] as liked for good. Does nothing once the record holds a
+  /// real reaction, or while a publish of the placeholder is in flight.
+  Future<void> abandonLikeAction(
+    String eventId, {
+    String? addressableId,
+  }) async {
+    await _ensureInitialized();
+    final placeholderId = _likeRecords[eventId]?.reactionEventId;
+    if (placeholderId == null ||
+        !_isPlaceholderId(placeholderId) ||
+        _inFlightLikePublishPlaceholders.contains(placeholderId)) {
+      return;
+    }
+    _deindexLikeRecord(eventId);
+    await _bestEffortLocalStorage(
+      () async => _localStorage?.deleteLikeRecord(eventId),
+      description: 'dropping a like the queue gave up on',
+      site: LikesRepositoryReportableSites.abandonLikeDeletePlaceholder,
+    );
+    _decrementLikeCountCache(eventId, addressableId: addressableId);
+    _emitLikedIds();
+  }
+
+  /// Restores a like whose unlike the offline queue gave up on (#10922).
+  ///
+  /// The Kind 5 never reached the relays, so the like is still live there
+  /// while this device shows it removed. Adopts it again when the relays
+  /// confirm it, and leaves [eventId] unliked when they show none, cannot
+  /// tell, or it was liked again in the meantime.
+  Future<void> abandonUnlikeAction(
+    String eventId, {
+    String? addressableId,
+  }) async {
+    await _ensureInitialized();
+    if (_likeRecords.containsKey(eventId)) return;
+    final check = await _checkRelayForLiveLike(
+      eventId,
+      addressableId: addressableId,
+      timeout: _queuedLikeCheckTimeout,
+    );
+    final liveRecord = check.isConclusive ? check.newest : null;
+    if (liveRecord == null || _likeRecords.containsKey(eventId)) return;
+    await _adoptRemoteLikeRecord(
+      liveRecord,
+      site: LikesRepositoryReportableSites.abandonUnlikeRestoreRecord,
+    );
+    _adjustCachedLikeCount(eventId, 1, addressableId: addressableId);
+    _emitLikedIds();
   }
 
   /// Toggle like status for an event.
@@ -1894,6 +2002,9 @@ class LikesRepository {
   /// reachable by coordinate; an `e`-only query reports zero and the score
   /// vanishes for every viewer the moment the target is edited (#6124).
   ///
+  /// The current user's like or unlike that is still queued counts as
+  /// published, so the totals agree with [getUserVoteStatuses] (#10922).
+  ///
   /// Returns a record of upvote and downvote count maps.
   Future<({Map<String, int> upvotes, Map<String, int> downvotes})>
   getVoteCounts(
@@ -1908,6 +2019,11 @@ class LikesRepository {
       eventIds,
       addressableIds,
     );
+    final knownEventIds = eventIds.toSet();
+    // Read the queue before the relays: a vote already gone from it was
+    // published, so the relay read that follows has it, and one still in it
+    // is counted once even if its publish lands during that read.
+    final queuedLikesFuture = _queuedLikesOn(knownEventIds);
 
     final events = await _queryVoteTargetReactions(
       eventIds: eventIds,
@@ -1938,7 +2054,6 @@ class LikesRepository {
     // surviving reaction. Kind 7 is a regular event, so a relay keeps every
     // reaction an account publishes; counting events would let one account
     // cast any number of votes and set a comment's place in the Top order.
-    final knownEventIds = eventIds.toSet();
     final newestVoteByVoter = <(String, String), Event>{};
     for (final event in reactionsById.values) {
       if (deletedReactionIds.contains(event.id)) continue;
@@ -1955,9 +2070,27 @@ class LikesRepository {
       }
     }
 
-    for (final MapEntry(key: (targetId, _), value: event)
-        in newestVoteByVoter.entries) {
-      if (event.content == _downvoteContent) {
+    final isDownvoteByVoter = {
+      for (final MapEntry(:key, value: event) in newestVoteByVoter.entries)
+        key: event.content == _downvoteContent,
+    };
+    final queuedLikes = await queuedLikesFuture;
+    final viewer = queuedLikes.isEmpty ? null : await _currentUserPubkey();
+    if (viewer != null) {
+      for (final MapEntry(key: targetId, value: isLike)
+          in queuedLikes.entries) {
+        final key = (targetId, viewer);
+        if (isLike) {
+          isDownvoteByVoter[key] = false;
+        } else if (isDownvoteByVoter[key] == false) {
+          isDownvoteByVoter.remove(key);
+        }
+      }
+    }
+
+    for (final MapEntry(key: (targetId, _), value: isDownvote)
+        in isDownvoteByVoter.entries) {
+      if (isDownvote) {
         downvotes[targetId] = downvotes[targetId]! + 1;
       } else {
         upvotes[targetId] = upvotes[targetId]! + 1;
@@ -1972,6 +2105,8 @@ class LikesRepository {
   /// Pass [addressableIds] for addressable targets, for the same reason
   /// [getVoteCounts] needs it: without the coordinate the voter's own arrow
   /// silently un-fills after the target is edited (#6124).
+  ///
+  /// A like or unlike that is still queued counts as published (#10922).
   ///
   /// Returns the sets of event IDs the user has upvoted or downvoted.
   Future<({Set<String> upvotedIds, Set<String> downvotedIds})>
@@ -1994,6 +2129,9 @@ class LikesRepository {
       eventIds,
       addressableIds,
     );
+    final knownEventIds = eventIds.toSet();
+    // Read before the relays, as in [getVoteCounts].
+    final queuedLikesFuture = _queuedLikesOn(knownEventIds);
 
     final events = await _queryVoteTargetReactions(
       eventIds: eventIds,
@@ -2019,7 +2157,6 @@ class LikesRepository {
 
     final upvotedIds = <String>{};
     final downvotedIds = <String>{};
-    final knownEventIds = eventIds.toSet();
 
     for (final event in events) {
       if (deletedIds.contains(event.id)) continue;
@@ -2039,7 +2176,35 @@ class LikesRepository {
       }
     }
 
+    final queuedLikes = await queuedLikesFuture;
+    for (final MapEntry(key: targetId, value: isLike) in queuedLikes.entries) {
+      if (isLike) {
+        upvotedIds.add(targetId);
+        downvotedIds.remove(targetId);
+      } else {
+        upvotedIds.remove(targetId);
+      }
+    }
+
     return (upvotedIds: upvotedIds, downvotedIds: downvotedIds);
+  }
+
+  /// The current user's queued vote on each of [targets]: `true` for a
+  /// queued like, `false` for a queued unlike, decided by the newest queued
+  /// action. Empty when nothing is queued or the queue cannot be read, which
+  /// leaves the relays' answer as it is.
+  Future<Map<String, bool>> _queuedLikesOn(Set<String> targets) async {
+    final reader = _queuedLikeActions;
+    if (reader == null) return const {};
+    final actions = await _bestEffortLocalStorage(
+      reader,
+      description: 'reading the queued likes',
+      site: LikesRepositoryReportableSites.readQueuedLikeActions,
+    );
+    return {
+      for (final action in actions ?? const <QueuedLikeAction>[])
+        if (targets.contains(action.eventId)) action.eventId: action.isLike,
+    };
   }
 
   Future<List<Event>> _queryVoteTargetReactions({

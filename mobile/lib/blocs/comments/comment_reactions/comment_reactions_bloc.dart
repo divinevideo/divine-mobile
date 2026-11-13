@@ -8,6 +8,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/comments/comment_reactions/reportable_sites.dart';
 import 'package:openvine/blocs/sequential_by_key.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -67,6 +68,12 @@ class CommentReactionsBloc
     );
     on<CommentReactionsErrorCleared>(_onErrorCleared);
     on<ReactionsOutboxConsumed>(_onOutboxConsumed);
+    on<_LikedEventIdsChanged>(_onLikedEventIdsChanged);
+    // The repository undoes a vote the offline queue gives up on, so this
+    // sheet hears of it only through the liked ids (#10922).
+    _likedIdsSubscription = _likesRepository.watchLikedEventIds().listen(
+      (ids) => addIfOpen(_LikedEventIdsChanged(ids.toSet())),
+    );
   }
 
   final AuthService _authService;
@@ -92,6 +99,14 @@ class CommentReactionsBloc
   /// Reads to send when a comment's publish finishes. An entry exists only
   /// while the comment is in [_publishingVotes].
   final _voteRefreshAfterPublish = <String, CommentVoteCountsFetchRequested>{};
+
+  late final StreamSubscription<List<String>> _likedIdsSubscription;
+
+  /// The liked ids last heard from the repository, null before the first.
+  Set<String>? _likedEventIds;
+
+  /// Coordinates of the comments read so far, so a re-read keeps them.
+  final _addressableIdByCommentId = <String, String>{};
 
   /// Logs [error] to the unified log and forwards through [addError]. Wraps
   /// with [Reportable] (matrix-YES → Crashlytics) when [error] is not one of
@@ -147,10 +162,50 @@ class CommentReactionsBloc
     emit(state.copyWith(clearOutbox: true));
   }
 
+  /// Reads a comment again when the repository's like on it changed without
+  /// a vote from this sheet and no longer matches the arrow, as when the
+  /// offline queue gives up on a vote (#10922).
+  void _onLikedEventIdsChanged(
+    _LikedEventIdsChanged event,
+    Emitter<CommentReactionsState> emit,
+  ) {
+    final previous = _likedEventIds;
+    final liked = event.likedEventIds;
+    _likedEventIds = liked;
+    if (previous == null) return;
+
+    final changed = previous
+        .difference(liked)
+        .union(liked.difference(previous));
+    final stale = [
+      for (final id in changed)
+        if (_isLoaded(id) &&
+            !_publishingVotes.contains(id) &&
+            liked.contains(id) != state.upvotedCommentIds.contains(id))
+          id,
+    ];
+    if (stale.isEmpty) return;
+    _confirmedLocalVotes.removeAll(stale);
+    addIfOpen(
+      CommentVoteCountsFetchRequested(
+        stale,
+        addressableIdsByCommentId: {
+          for (final id in stale) id: ?_addressableIdByCommentId[id],
+        },
+      ),
+    );
+  }
+
+  bool _isLoaded(String commentId) =>
+      state.commentUpvoteCounts.containsKey(commentId) ||
+      state.upvotedCommentIds.contains(commentId) ||
+      state.downvotedCommentIds.contains(commentId);
+
   Future<void> _onVoteCountsFetchRequested(
     CommentVoteCountsFetchRequested event,
     Emitter<CommentReactionsState> emit,
   ) async {
+    _addressableIdByCommentId.addAll(event.addressableIdsByCommentId);
     final commentIds = <String>[];
     for (final id in event.commentIds) {
       if (_voteReads.containsKey(id)) continue;
@@ -257,6 +312,14 @@ class CommentReactionsBloc
     }
   }
 
+  /// Reads [commentId]'s totals again once its vote finishes publishing.
+  void _readAgainAfterPublish(String commentId, String? addressableId) {
+    _voteRefreshAfterPublish[commentId] ??= CommentVoteCountsFetchRequested(
+      [commentId],
+      addressableIdsByCommentId: {commentId: ?addressableId},
+    );
+  }
+
   /// [counts] with [id] set back to [count], or without [id] when it was
   /// never loaded.
   static Map<String, int> _restoreCount(
@@ -290,10 +353,7 @@ class CommentReactionsBloc
     final prevUpCount = state.commentUpvoteCounts[commentId];
     final prevDownCount = state.commentDownvoteCounts[commentId];
     if (prevUpCount == null || prevDownCount == null) {
-      _voteRefreshAfterPublish[commentId] ??= CommentVoteCountsFetchRequested(
-        [commentId],
-        addressableIdsByCommentId: {commentId: ?event.addressableId},
-      );
+      _readAgainAfterPublish(commentId, event.addressableId);
     }
 
     // Optimistic update.
@@ -390,24 +450,38 @@ class CommentReactionsBloc
     } on AlreadyLikedException {
       _confirmedLocalVotes.add(commentId);
       // State-sync sentinel (silent): repo already had the upvote, the
-      // pre-tap baseline was wrong. Reconcile and continue.
+      // pre-tap baseline was wrong. The loaded total already counts that
+      // upvote, so the tap's +1 is taken back and the total read again.
+      _readAgainAfterPublish(commentId, event.addressableId);
       emit(
         state.copyWith(
           upvotedCommentIds: Set<String>.from(state.upvotedCommentIds)
             ..add(commentId),
           downvotedCommentIds: Set<String>.from(state.downvotedCommentIds)
             ..remove(commentId),
+          commentUpvoteCounts: _restoreCount(
+            state.commentUpvoteCounts,
+            commentId,
+            prevUpCount,
+          ),
         ),
       );
     } on AlreadyDownvotedException {
       _confirmedLocalVotes.add(commentId);
-      // State-sync sentinel (silent): repo already had the downvote.
+      // State-sync sentinel (silent): repo already had the downvote, which
+      // the loaded total already counts.
+      _readAgainAfterPublish(commentId, event.addressableId);
       emit(
         state.copyWith(
           downvotedCommentIds: Set<String>.from(state.downvotedCommentIds)
             ..add(commentId),
           upvotedCommentIds: Set<String>.from(state.upvotedCommentIds)
             ..remove(commentId),
+          commentDownvoteCounts: _restoreCount(
+            state.commentDownvoteCounts,
+            commentId,
+            prevDownCount,
+          ),
         ),
       );
     } catch (e, stackTrace) {
@@ -507,6 +581,12 @@ class CommentReactionsBloc
       );
       emit(state.copyWith(error: ReactionsError.deleteCommentFailed));
     }
+  }
+
+  @override
+  Future<void> close() async {
+    await _likedIdsSubscription.cancel();
+    return super.close();
   }
 }
 

@@ -56,6 +56,9 @@ void main() {
       when(() => mockLikesRepository.getUserVoteStatuses(any())).thenAnswer(
         (_) async => (upvotedIds: <String>{}, downvotedIds: <String>{}),
       );
+      when(
+        () => mockLikesRepository.watchLikedEventIds(),
+      ).thenAnswer((_) => const Stream.empty());
     });
 
     CommentReactionsBloc createBloc({String? rootAddressableId}) =>
