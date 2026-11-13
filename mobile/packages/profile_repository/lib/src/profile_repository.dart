@@ -152,6 +152,7 @@ class ProfileRepository implements ProfileReader {
     required Client httpClient,
     ProfileStatsDao? profileStatsDao,
     FunnelcakeApiClient? funnelcakeApiClient,
+    ProfileApiCache? profileApiCache,
     ProfileSearchFilter? profileSearchFilter,
     LocalProfileSearch? localProfileSearch,
     BlockedProfileFilter? blockFilter,
@@ -168,6 +169,8 @@ class ProfileRepository implements ProfileReader {
        _httpClient = httpClient,
        _profileStatsDao = profileStatsDao,
        _funnelcakeApiClient = funnelcakeApiClient,
+       _profileApiCache =
+           profileApiCache ?? ProfileApiCache(client: funnelcakeApiClient),
        _profileSearchFilter = profileSearchFilter,
        _localProfileSearch = localProfileSearch,
        _blockFilter = blockFilter,
@@ -186,6 +189,7 @@ class ProfileRepository implements ProfileReader {
   final Client _httpClient;
   final ProfileStatsDao? _profileStatsDao;
   final FunnelcakeApiClient? _funnelcakeApiClient;
+  final ProfileApiCache _profileApiCache;
   final ProfileSearchFilter? _profileSearchFilter;
   final LocalProfileSearch? _localProfileSearch;
   final BlockedProfileFilter? _blockFilter;
@@ -231,6 +235,17 @@ class ProfileRepository implements ProfileReader {
   /// In-flight relay fetches keyed by pubkey. Concurrent callers for the
   /// same pubkey share the same future instead of firing duplicate requests.
   final _inFlightFetches = <String, Future<_ProfileRead>>{};
+
+  /// Reuses eligibility learned by single/bulk profile reads this session.
+  /// A warm Drift profile or a relay-only profile has no server answer yet;
+  /// read the canonical profile once in that case, never Keycast.
+  @override
+  Future<bool> isOgDiviner(String pubkey) async {
+    final normalized = pubkey.trim().toLowerCase();
+    if (normalized.isEmpty || _vanished.contains(normalized)) return false;
+    final eligible = await _profileApiCache.isOgDiviner(normalized);
+    return !_vanished.contains(normalized) && eligible;
+  }
 
   /// Pubkeys confirmed to have no Kind 0 profile by an authoritative source.
   /// Session-scoped — cleared on app restart.
@@ -1128,7 +1143,7 @@ class ProfileRepository implements ProfileReader {
     // Step 1: Try Funnelcake REST API (fast, broad coverage).
     if (_funnelcakeApiClient?.isAvailable ?? false) {
       try {
-        final result = await _funnelcakeApiClient!.getUserProfile(pubkey);
+        final result = await getUserProfileFromApi(pubkey: pubkey);
         switch (result) {
           case UserProfileVanished():
             // The account asked to be erased. Drop every local trace and stop
@@ -3282,10 +3297,7 @@ class ProfileRepository implements ProfileReader {
   Future<UserProfileResult?> getUserProfileFromApi({
     required String pubkey,
   }) async {
-    if (_funnelcakeApiClient == null || !_funnelcakeApiClient.isAvailable) {
-      return null;
-    }
-    return _funnelcakeApiClient.getUserProfile(pubkey);
+    return _profileApiCache.getProfile(pubkey);
   }
 
   /// Fetches follower/following counts from the Funnelcake REST API.
@@ -3310,10 +3322,7 @@ class ProfileRepository implements ProfileReader {
   Future<BulkProfilesResponse?> getBulkProfilesFromApi(
     List<String> pubkeys,
   ) async {
-    if (_funnelcakeApiClient == null || !_funnelcakeApiClient.isAvailable) {
-      return null;
-    }
-    return _funnelcakeApiClient.getBulkProfiles(pubkeys);
+    return _profileApiCache.getBulkProfiles(pubkeys);
   }
 
   /// Refreshes cached stats from REST in batches of at most 100 pubkeys.
@@ -3400,10 +3409,10 @@ class ProfileRepository implements ProfileReader {
     // Step 2: Funnelcake REST API for uncached
     if (_funnelcakeApiClient?.isAvailable ?? false) {
       try {
-        final bulkResponse = await _funnelcakeApiClient!.getBulkProfiles(
+        final bulkResponse = await getBulkProfilesFromApi(
           remaining.toList(),
         );
-        for (final entry in bulkResponse.profiles.entries) {
+        for (final entry in bulkResponse!.profiles.entries) {
           final pubkey = entry.key;
           final result = entry.value;
 

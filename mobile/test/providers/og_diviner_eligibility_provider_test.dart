@@ -5,32 +5,49 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
-import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/services/og_diviner_eligibility_service.dart';
+import 'package:profile_repository/profile_repository.dart';
 
 class _EligibilityService extends Mock implements OgDivinerEligibilityService {}
+
+class _Profiles extends Mock implements ProfileReader {}
 
 void main() {
   const pubkey =
       'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
 
   group('ogDivinerEligibilityProvider', () {
+    test(
+      'recovers when the signer-free profile handle becomes available',
+      () async {
+        final profiles = _Profiles();
+        when(() => profiles.isOgDiviner(pubkey)).thenAnswer((_) async => true);
+        final container = ProviderContainer(
+          overrides: [profileReadRepositoryProvider.overrideWithValue(null)],
+        );
+        addTearDown(container.dispose);
+        final provider = ogDivinerEligibilityProvider(pubkey);
+        final subscription = container.listen(provider, (_, _) {});
+        addTearDown(subscription.close);
+
+        expect(await container.read(provider.future), isFalse);
+        container.updateOverrides([
+          profileReadRepositoryProvider.overrideWithValue(profiles),
+        ]);
+        await container.pump();
+        expect(await container.read(provider.future), isTrue);
+      },
+    );
+
     test('returns false when the lookup fails', () async {
-      final service = OgDivinerEligibilityService(
-        keycast: KeycastOAuth(
-          config: const OAuthConfig(
-            serverUrl: 'https://login.divine.video',
-            clientId: 'divine-mobile',
-            redirectUri: 'divine://oauth/callback',
-          ),
-          httpClient: MockClient(
-            (_) async => http.Response('unavailable', 503),
-          ),
-        ),
+      final profiles = _Profiles();
+      when(() => profiles.isOgDiviner(pubkey)).thenAnswer(
+        (_) async => throw http.ClientException('unavailable'),
       );
+      final service = OgDivinerEligibilityService(profiles: profiles);
       final container = ProviderContainer(
         overrides: [
           ogDivinerEligibilityServiceProvider.overrideWithValue(service),
