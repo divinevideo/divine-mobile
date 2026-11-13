@@ -69,8 +69,9 @@ class CacheUsage extends Equatable {
   final CacheUsageCategory video;
 
   /// The native player's own disk cache: what ExoPlayer kept of the HTTP(S)
-  /// sources it streamed on Android, under its separate 500 MB budget. Empty
-  /// on other platforms, apart from what an older iOS build left behind.
+  /// sources it streamed on Android, under the budget it was created with at
+  /// launch (at most [kDefaultCacheMaxSizeBytes]). Empty on other platforms,
+  /// apart from what an older iOS build left behind.
   final CacheUsageCategory player;
 
   /// Image and thumbnail cache.
@@ -205,6 +206,8 @@ class StorageManagementService {
   /// [protectedPaths] supplies upload inputs that must survive both a cache
   /// clear and an orphan sweep. [refreshMediaCacheBudget] re-sizes the caches
   /// to the disk when the user hands the video cache back to automatic sizing.
+  /// [playerCacheLimitBytes] is the budget the Android player cache was
+  /// created with, which [cacheUsage] reports.
   StorageManagementService({
     required MediaCacheManager videoCache,
     required MediaCacheManager imageCache,
@@ -213,6 +216,7 @@ class StorageManagementService {
     required DraftsDao draftsDao,
     required SharedPreferences prefs,
     required Future<void> Function() refreshMediaCacheBudget,
+    int playerCacheLimitBytes = kDefaultCacheMaxSizeBytes,
     @visibleForTesting Future<Directory> Function()? temporaryDirectoryProvider,
     @visibleForTesting Future<Directory> Function()? documentsDirectoryProvider,
     @visibleForTesting
@@ -229,6 +233,7 @@ class StorageManagementService {
        _draftsDao = draftsDao,
        _prefs = prefs,
        _refreshMediaCacheBudget = refreshMediaCacheBudget,
+       _playerCacheLimitBytes = playerCacheLimitBytes,
        _temporaryDirectoryProvider =
            temporaryDirectoryProvider ?? getTemporaryDirectory,
        _documentsDirectoryProvider =
@@ -249,6 +254,7 @@ class StorageManagementService {
   final DraftsDao _draftsDao;
   final SharedPreferences _prefs;
   final Future<void> Function() _refreshMediaCacheBudget;
+  final int _playerCacheLimitBytes;
   final Future<Directory> Function() _temporaryDirectoryProvider;
   final Future<Directory> Function() _documentsDirectoryProvider;
   final Future<Directory> Function() _applicationSupportDirectoryProvider;
@@ -341,7 +347,7 @@ class StorageManagementService {
         usedBytes: playerCache == null
             ? 0
             : (await _dirSize(playerCache)).bytes,
-        limitBytes: kDefaultCacheMaxSizeBytes,
+        limitBytes: _playerCacheLimitBytes,
       ),
       images: CacheUsageCategory(
         usedBytes: (await _dirSize(

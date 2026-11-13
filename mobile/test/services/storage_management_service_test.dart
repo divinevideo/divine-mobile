@@ -55,6 +55,7 @@ void main() {
       Set<String> Function()? protectedPaths,
       Future<Directory> Function()? applicationSupportDirectoryProvider,
       Future<Directory> Function()? applicationCacheDirectoryProvider,
+      int playerCacheLimitBytes = kDefaultCacheMaxSizeBytes,
     }) => StorageManagementService(
       videoCache: videoCache,
       imageCache: imageCache,
@@ -71,6 +72,7 @@ void main() {
       now: () => now,
       protectedPaths: protectedPaths,
       refreshMediaCacheBudget: () async => budgetRefreshes++,
+      playerCacheLimitBytes: playerCacheLimitBytes,
     );
 
     setUp(() async {
@@ -202,6 +204,19 @@ void main() {
         // Nothing cleared transition_frames before #7641; it is the same
         // kind of regenerable preview as the seams and lives beside them.
         expect(usage.transitionSeams.usedBytes, 42);
+      });
+
+      test('reports the player budget the cache was created with', () async {
+        const launchBudget = 32 * 1024 * 1024;
+        writeFile('${caches.path}/divine_video_cache/1/2.0.3.v3.exo', 70);
+        service = buildService(playerCacheLimitBytes: launchBudget);
+
+        final usage = await service.cacheUsage();
+
+        expect(
+          usage.player,
+          const CacheUsageCategory(usedBytes: 70, limitBytes: launchBudget),
+        );
       });
 
       test('reports an empty player cache when the platform has no cache '

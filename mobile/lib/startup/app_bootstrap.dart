@@ -6,7 +6,7 @@ import 'dart:async';
 import 'package:app_update_repository/app_update_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart'
-    show DivineVideoPlayerController;
+    show DivineVideoPlayerController, kDefaultCacheMaxSizeBytes;
 import 'package:dm_repository/dm_repository.dart' show DmSyncState;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -241,14 +241,19 @@ Future<void> startOpenVineApp({
   // has nothing to configure (#8029). Skip on web/Linux/Windows —
   // divine_video_player has no native plugin on those targets and
   // `configureCache` is a bare method-channel call.
+  // Kept for the container below, so Settings → Storage and bug reports show
+  // the player limit actually in force rather than its ceiling.
+  var playerCacheBudgetBytes = kDefaultCacheMaxSizeBytes;
   await configureVideoPlayerCacheForStartup(
     skip: !hasNativeVideoPlayer,
-    configureCache: () async => DivineVideoPlayerController.configureCache(
-      maxSizeBytes: await startupPlayerCacheBudgetBytes(
+    configureCache: () async {
+      final bytes = await startupPlayerCacheBudgetBytes(
         readStorageSpace: const DeviceStorageService().storageSpace,
         ceiling: appMediaCacheBudgetCeiling(),
-      ),
-    ),
+      );
+      if (bytes > 0) playerCacheBudgetBytes = bytes;
+      await DivineVideoPlayerController.configureCache(maxSizeBytes: bytes);
+    },
   );
 
   // Dispose any zombie native players from a previous Dart VM (e.g. hot
@@ -754,6 +759,7 @@ Future<void> startOpenVineApp({
     // local release build for performance collection (#7302).
     shorebirdAvailable:
         (startupShorebirdUpdater ??= ShorebirdUpdater()).isAvailable,
+    playerCacheBudgetBytes: playerCacheBudgetBytes,
     accountOverrides: [
       // Screenshot mode: lead the 01_classics OG-Viner row with returning
       // Vine OGs who all have avatars, so the marketing shot has no
