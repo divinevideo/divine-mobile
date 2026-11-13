@@ -61,6 +61,9 @@ void main() {
       commentsRepository = _MockCommentsRepository();
       when(() => auth.isAuthenticated).thenReturn(true);
       when(
+        () => likes.watchLikedEventIds(),
+      ).thenAnswer((_) => const Stream<List<String>>.empty());
+      when(
         () => likes.likeEvent(
           eventId: any(named: 'eventId'),
           authorPubkey: any(named: 'authorPubkey'),
