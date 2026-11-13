@@ -46,7 +46,7 @@ jobs:
           ref: d96a1229ee94acf88e6b2321eeb6e36ca346fefc
           path: .consent-backend
           persist-credentials: false
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
       - uses: actions/setup-java@v6
