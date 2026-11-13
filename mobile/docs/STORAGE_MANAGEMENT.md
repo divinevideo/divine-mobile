@@ -154,8 +154,21 @@ Independent of the screen, these sweeps run on their own:
   (`VideoEditorConstants.autoSaveId`) are kept, because the Library lists them
   as clips with or without their draft row; trashed rows are left to the trash
   purge.
-- The media caches enforce their own byte budgets (`kCacheLimitDefaultBytes`,
-  adjustable on this screen; `kSeamCacheLimitBytes` for the seams).
+- The media caches enforce their own byte budgets (`kSeamCacheLimitBytes` for
+  the seams). The video, image and Android player caches are sized to the
+  disk by `MediaCacheBudgetService` (`media_cache_budget.dart`): each sits
+  between a usable floor (128 MB in total) and today's fixed ceiling
+  (`kCacheLimitDefaultBytes` for video), at whatever point leaves
+  `kAutoCacheReservedDiskFraction` (15%) of the disk free. What the caches
+  already hold counts as space they may keep, so a full cache on a roomy disk
+  does not shrink. The budget is applied after the startup sweep and again on
+  return to the foreground at most every five minutes; the Android player
+  cache can only be sized when it is created, at launch. On this screen
+  "Size it automatically" is the default; turning it off fixes the video
+  cache to the slider (`kCacheLimitPrefKey`), and the image and player caches
+  keep following the disk. Each applied budget is recorded as coarse labels
+  (disk tier, free-space band, mode, video-budget band) on Firebase Analytics
+  user properties and Crashlytics keys.
 
 Apart from those two legacy leftovers, none of them touch a non-empty file
 under the documents root — that is what the sweep on this screen is for.
