@@ -90,8 +90,20 @@ void main() {
         try {
           await pumpScreen(tester);
           await openTab(tester, 'Requests');
-          final row = rowOf('Divine Support and 1 other');
+          final row = rowOf('Ines Duarte and 1 other');
           expect(row, findsOneWidget);
+          expect(
+            find.bySemanticsLabel(
+              'Message request from Ines Duarte and 1 other, content hidden. Tap to open.',
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.bySemanticsLabel(
+              'Message request from Divine Support and 1 other, content hidden. Tap to open.',
+            ),
+            findsNothing,
+          );
           expect(find.text('Synthetic mixed-room message'), findsNothing);
           expect(
             find
@@ -112,7 +124,7 @@ void main() {
             find.descendant(of: row, matching: find.text('Block')),
             findsNothing,
           );
-          await tester.tap(find.text('Divine Support and 1 other'));
+          await tester.tap(find.text('Ines Duarte and 1 other'));
           await tester.pumpAndSettle();
           expect(find.text('Synthetic mixed-room message'), findsOneWidget);
         } finally {

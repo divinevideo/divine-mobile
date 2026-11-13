@@ -85,8 +85,13 @@ class DmInboxFixtures {
         .toList();
     if (others.isEmpty) return 'Unknown sender';
     if (others.length == 1) return displayNameFor(others.first);
+    // Mixed rooms lead with a non-official participant, independent of key order.
+    final leading = others.firstWhere(
+      (pk) => !officialIdentities.containsKey(pk),
+      orElse: () => others.first,
+    );
     final rest = others.length - 1;
-    return '${displayNameFor(others.first)} and '
+    return '${displayNameFor(leading)} and '
         '${rest == 1 ? '1 other' : '$rest others'}';
   }
 
