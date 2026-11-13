@@ -1630,7 +1630,7 @@ class LikesRepository {
     String eventId, {
     String? addressableId,
   }) async {
-    // Try to get the record - it may not exist if the like was also offline
+    // Usually gone: [unlikeEvent] removes the record before it queues this.
     var record = _likeRecords[eventId];
     if (record == null && addressableId != null && addressableId.isNotEmpty) {
       record = _likeRecordForCoordinate(addressableId);
