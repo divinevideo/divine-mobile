@@ -62,6 +62,14 @@ void main() {
         cubit.reveal(fixtures.dmConversations.first.id);
         expect(cubit.state.session.reportedOfficial, {participant});
       });
+
+      test('keeps earlier reports when another participant is reported', () {
+        final [first, second, ...] = fixtures.officialIdentities.keys.toList();
+        cubit
+          ..reportOfficial(first)
+          ..reportOfficial(second);
+        expect(cubit.state.session.reportedOfficial, {first, second});
+      });
     });
 
     group('block', () {
