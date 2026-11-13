@@ -1,7 +1,11 @@
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show RenderCanceledException;
 
 void main() {
   group(NativeRenderTaskRegistry, () {
@@ -92,6 +96,175 @@ void main() {
         second.complete();
         await secondTracked;
 
+        expect(NativeRenderTaskRegistry.activeTaskIds, isEmpty);
+      });
+    });
+
+    group('trackExclusively', () {
+      test('starts at once when no task holds the id', () async {
+        final cancelled = <String>[];
+        var started = false;
+
+        final tracked = NativeRenderTaskRegistry.trackExclusively(
+          'task-1',
+          () async {
+            started = true;
+            return 'done';
+          },
+          cancel: (id) async => cancelled.add(id),
+        );
+
+        expect(started, isTrue);
+        expect(await tracked, equals('done'));
+        expect(cancelled, isEmpty);
+      });
+
+      test('cancels the task holding the id and starts once it has '
+          'settled', () async {
+        final first = Completer<void>();
+        final cancelled = <String>[];
+        var secondStarted = false;
+
+        final firstTracked = NativeRenderTaskRegistry.trackExclusively(
+          'task-1',
+          () => first.future,
+          cancel: (_) async {},
+        );
+        final secondTracked = NativeRenderTaskRegistry.trackExclusively(
+          'task-1',
+          () async => secondStarted = true,
+          cancel: (id) async => cancelled.add(id),
+        );
+        await pumpEventQueue();
+
+        expect(cancelled, equals(['task-1']));
+        expect(
+          secondStarted,
+          isFalse,
+          reason: 'the cancelled task still holds the id',
+        );
+
+        first.complete();
+        await firstTracked;
+        await secondTracked;
+
+        expect(secondStarted, isTrue);
+        expect(NativeRenderTaskRegistry.activeTaskIds, isEmpty);
+      });
+
+      // The loop alignment registers a render's id around the render it
+      // starts under that same id. Waiting for that registration would mean
+      // waiting for itself.
+      test('runs inside a track registration of the same id', () async {
+        final cancelled = <String>[];
+
+        final result = await NativeRenderTaskRegistry.track(
+          'task-1',
+          () => NativeRenderTaskRegistry.trackExclusively(
+            'task-1',
+            () async => 'rendered',
+            cancel: (id) async => cancelled.add(id),
+          ),
+        ).timeout(const Duration(seconds: 5));
+
+        expect(result, equals('rendered'));
+        expect(cancelled, equals(['task-1']));
+        expect(NativeRenderTaskRegistry.activeTaskIds, isEmpty);
+      });
+
+      // A render the watchdog gave up on can stay unsettled, and a cancel
+      // stuck on a blocked platform thread never answers. Neither may hold
+      // up every later render under the id.
+      group('starts anyway once the hand-over bound has passed', () {
+        final justBefore =
+            VideoEditorConstants.renderTaskHandoverTimeout -
+            const Duration(milliseconds: 1);
+
+        test('when the task holding the id never settles', () {
+          fakeAsync((async) {
+            var secondStarted = false;
+            unawaited(
+              NativeRenderTaskRegistry.trackExclusively<void>(
+                'task-1',
+                () => Completer<void>().future,
+                cancel: (_) async {},
+              ),
+            );
+            unawaited(
+              NativeRenderTaskRegistry.trackExclusively(
+                'task-1',
+                () async => secondStarted = true,
+                cancel: (_) async {},
+              ),
+            );
+
+            async.elapse(justBefore);
+            expect(secondStarted, isFalse);
+
+            async.elapse(const Duration(milliseconds: 1));
+            expect(secondStarted, isTrue);
+          });
+        });
+
+        test('when the cancel of that task never comes back', () {
+          fakeAsync((async) {
+            final first = Completer<void>();
+            var secondStarted = false;
+            unawaited(
+              NativeRenderTaskRegistry.trackExclusively(
+                'task-1',
+                () => first.future,
+                cancel: (_) async {},
+              ),
+            );
+            unawaited(
+              NativeRenderTaskRegistry.trackExclusively(
+                'task-1',
+                () async => secondStarted = true,
+                cancel: (_) => Completer<void>().future,
+              ),
+            );
+            first.complete();
+
+            async.elapse(justBefore);
+            expect(secondStarted, isFalse);
+
+            async.elapse(const Duration(milliseconds: 1));
+            expect(secondStarted, isTrue);
+          });
+        });
+      });
+
+      test('starts only the newest of the calls waiting for an id', () async {
+        final first = Completer<void>();
+        final started = <String>[];
+
+        final firstTracked = NativeRenderTaskRegistry.trackExclusively(
+          'task-1',
+          () => first.future,
+          cancel: (_) async {},
+        );
+        final overtaken = NativeRenderTaskRegistry.trackExclusively(
+          'task-1',
+          () async => started.add('overtaken'),
+          cancel: (_) async {},
+        );
+        final newest = NativeRenderTaskRegistry.trackExclusively(
+          'task-1',
+          () async => started.add('newest'),
+          cancel: (_) async {},
+        );
+        final overtakenCancellation = expectLater(
+          overtaken,
+          throwsA(isA<RenderCanceledException>()),
+        );
+
+        first.complete();
+        await firstTracked;
+        await overtakenCancellation;
+        await newest;
+
+        expect(started, equals(['newest']));
         expect(NativeRenderTaskRegistry.activeTaskIds, isEmpty);
       });
     });
