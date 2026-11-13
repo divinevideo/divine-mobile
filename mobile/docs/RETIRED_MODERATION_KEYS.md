@@ -90,7 +90,7 @@ role uses the shared support identity.
 
 | Behaviour | Where |
 |---|---|
-| Official name ("Divine Moderation"), inbox search name and bundled wordmark avatar — kept for a retired key nobody can sign as (`unrecovered`, `destroyed`) | `dm_peer_identity.dart` (`dmPeerDisplayName`, `dmPeerAvatar`) and `dm_peer_name.dart`, reached from the inbox row, request row and preview, thread header, empty-conversation state, following strip and reactions sheet; resolved by `moderationPresentationOf` |
+| Official name ("Divine Moderation"), inbox search name and bundled wordmark avatar — kept for a retired key nobody can sign as (`unrecovered`, `destroyed`) | `dm_peer_identity.dart` (`dmPeerDisplayName`, `dmPeerAvatar`) and `dm_peer_name.dart`, reached from the inbox row, request row and preview, thread header, empty-conversation state and reactions sheet; resolved by `moderationPresentationOf` |
 | Neutral "Former moderation account" name and the default placeholder avatar, with no handle line — withdrawn official name and wordmark, and the key's own kind-0 name, picture and NIP-05 are ignored too; the thread header shows no subtitle, not a social-proof line — for a retired key someone could still sign as (`archived`, `compromised`) | the same helpers plus `dmPeerHandle`, through `ModerationPresentation.former` |
 | A room is named and pictured for its first member that is not a moderation key, and never carries Divine's name, wordmark or handle — a room's members are whoever its author listed (#10151). A room whose other members are all moderation keys is named for a former key ahead of an official one, keeping that key's neutral name | `dmConversationNamedPeer` in `dm_peer_name.dart`, read by the same surfaces |
 | Conversation and request rows labelled closed — a room too when any member is a retired key, since a room send is refused whole when any member is (#10151) | `conversation_tile.dart` and `request_tile.dart`, via `isRetiredModerationAccount` |
@@ -98,7 +98,7 @@ role uses the shared support identity.
 | Pinned support row, unread partition, and retired predicates wired into list state | `inbox_page.dart`, `message_requests_page.dart`, `app_shell_badge_scope.dart`, and `ConversationListBloc` |
 | Destructive request action withheld for a one-to-one with a moderation key, whatever the custody; a room is removable like any other (#10151) | `RequestPreviewCubit`, via `DmRepository.isRemovalProtected` |
 | Outbound sends refused and retained as non-retryable evidence | `dmSendPolicyProvider` → `DmSendPolicyDecision.terminallyBlockedRetain` |
-| Never offered as a DM recipient, whatever the custody (#10172, #9711) | `ShareSheetBloc._isSupportedRecipient`, `NewMessageSearchBloc` (`isRetiredRecipient`) and `UserSearchBloc.excludeWhere` from `FindPeopleSheet`, all via `isRetiredModerationAccount` |
+| Never offered as a DM recipient or conversation partner, whatever the custody (#10172, #9711) | `ShareSheetBloc._isSupportedRecipient`, `NewMessageSearchBloc` (`isRetiredRecipient`), `UserSearchBloc.excludeWhere` from `FindPeopleSheet`, and the inbox's `FollowingBar`, all via `isRetiredModerationAccount` |
 | Pre-rotation threads excluded from pinned-support adoption | `DmRepository.extractPinnedSupport` |
 | Labeler subscription migrated to the current key | `ModerationLabelService._migrateLegacyPubkey` |
 | A protected minor may read (never send to) a retired-key thread while nobody can sign as it | `OfficialAccountsService.isReadableByProtectedMinor`, gated on `RetiredKeyCustody.canStillSign` |

@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -47,9 +48,13 @@ class FollowingBar extends StatelessWidget {
         // can self-follow, and only the merge path strips that — every other
         // path assigns the list as received. Case-insensitive: a pubkey
         // arriving from another client may be upper-case hex. See #8351.
+        // A retired moderation key is dropped too: every send to one is
+        // refused, so it is never offered as a conversation partner (#9711).
         final followingPubkeys = [
           for (final pubkey in allFollowingPubkeys)
-            if (!pubkeysEqual(pubkey, currentUserPubkey)) pubkey,
+            if (!pubkeysEqual(pubkey, currentUserPubkey) &&
+                !isRetiredModerationAccount(pubkey))
+              pubkey,
         ];
         if (followingPubkeys.isEmpty) return const SizedBox.shrink();
 

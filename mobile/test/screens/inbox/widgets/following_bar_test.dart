@@ -228,73 +228,79 @@ void main() {
       );
     });
 
-    // Official branding follows recorded custody (#9963). Before it, this strip
-    // named an official moderation key but pictured it with a generic
-    // placeholder, so the name and the avatar disagreed.
-    group('a retired moderation key, by recorded custody (#9963)', () {
+    group('moderation accounts', () {
       final l10n = lookupAppLocalizations(const Locale('en'));
-      final retired = shippedRetiredKey;
 
       Finder wordmarkFinder() => find.byWidgetPredicate(
         (widget) => widget is DivineIcon && widget.icon == DivineIconName.logo,
         description: 'bundled Divine wordmark',
       );
 
-      Future<void> pumpBarFor(
-        WidgetTester tester,
-        RetiredKeyCustody custody,
+      // A key's holder controls its kind-0, so the tests give it one that
+      // tries to look official.
+      Override looksOfficial(String pubkey) =>
+          fetchUserProfileProvider(pubkey).overrideWith(
+            (ref) async => UserProfile(
+              pubkey: pubkey,
+              displayName: 'Looks Official',
+              picture: 'https://example.invalid/looks-official.png',
+              rawData: const {},
+              createdAt: now,
+              eventId: 'c' * 64,
+            ),
+          );
+
+      // Before #9963 this strip named an official moderation key but
+      // pictured it with a generic placeholder, so the two disagreed.
+      testWidgets('names the current account Divine over the wordmark', (
+        tester,
       ) async {
         await tester.pumpWidget(
           buildSubject(
-            state: MyFollowingState(
+            state: const MyFollowingState(
               status: MyFollowingStatus.success,
-              followingPubkeys: [retired],
+              followingPubkeys: [kModerationPubkeyHex],
             ),
-            additionalOverrides: [
-              retiredKeyCustody(custody),
-              // The key's holder controls its kind-0, so the test gives it one
-              // that tries to look official.
-              fetchUserProfileProvider(retired).overrideWith(
-                (ref) async => UserProfile(
-                  pubkey: retired,
-                  displayName: 'Looks Official',
-                  picture: 'https://example.invalid/looks-official.png',
-                  rawData: const {},
-                  createdAt: now,
-                  eventId: 'c' * 64,
-                ),
-              ),
-            ],
+            additionalOverrides: [looksOfficial(kModerationPubkeyHex)],
           ),
         );
         await tester.pumpAndSettle();
-      }
 
-      for (final custody in keptCustodies) {
-        testWidgets("${custody.name}: Divine's name over the wordmark", (
+        expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);
+        expect(wordmarkFinder(), findsOneWidget);
+        expect(find.text('Looks Official'), findsNothing);
+      });
+
+      // Every send to a retired key is refused, so the strip never offers
+      // one to start a conversation with, whatever its custody (#9711).
+      for (final custody in RetiredKeyCustody.values) {
+        testWidgets('${custody.name}: leaves a followed retired key out', (
           tester,
         ) async {
-          await pumpBarFor(tester, custody);
-
-          expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);
-          expect(wordmarkFinder(), findsOneWidget);
-        });
-      }
-
-      for (final custody in withdrawnCustodies) {
-        testWidgets('${custody.name}: neutral label, no wordmark, no picture', (
-          tester,
-        ) async {
-          await pumpBarFor(tester, custody);
-
-          expect(find.text(l10n.dmFormerModerationAccountName), findsOneWidget);
-          expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
-          expect(find.text('Looks Official'), findsNothing);
-          expect(wordmarkFinder(), findsNothing);
-          expect(
-            tester.widget<UserAvatar>(find.byType(UserAvatar)).imageUrl,
-            isNull,
+          await tester.pumpWidget(
+            buildSubject(
+              state: MyFollowingState(
+                status: MyFollowingStatus.success,
+                followingPubkeys: [shippedRetiredKey, pubkey1],
+              ),
+              additionalOverrides: [
+                retiredKeyCustody(custody),
+                looksOfficial(shippedRetiredKey),
+                fetchUserProfileProvider(pubkey1).overrideWith(
+                  (ref) async =>
+                      createTestProfile(pubkey: pubkey1, displayName: 'Alice'),
+                ),
+              ],
+            ),
           );
+          await tester.pumpAndSettle();
+
+          // The control: the ordinary account beside it is still offered.
+          expect(find.text('Alice'), findsOneWidget);
+          expect(find.byType(UserAvatar), findsOneWidget);
+          expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
+          expect(find.text(l10n.dmFormerModerationAccountName), findsNothing);
+          expect(wordmarkFinder(), findsNothing);
         });
       }
     });
