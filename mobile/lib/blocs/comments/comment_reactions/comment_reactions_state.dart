@@ -47,6 +47,31 @@ final class ReactionsOutboxRemoveByAuthor extends ReactionsOutbox {
   List<Object?> get props => [authorPubkey];
 }
 
+/// The viewer's vote changed the totals of [commentId]; the list holds its
+/// Top order by the totals from before it.
+final class ReactionsOutboxVoteCast extends ReactionsOutbox {
+  const ReactionsOutboxVoteCast({
+    required this.commentId,
+    required this.upvoteCountsBefore,
+    required this.downvoteCountsBefore,
+  });
+
+  final String commentId;
+
+  /// Upvotes per comment id as they were before the vote.
+  final Map<String, int> upvoteCountsBefore;
+
+  /// Downvotes per comment id as they were before the vote.
+  final Map<String, int> downvoteCountsBefore;
+
+  @override
+  List<Object?> get props => [
+    commentId,
+    upvoteCountsBefore,
+    downvoteCountsBefore,
+  ];
+}
+
 /// State for [CommentReactionsBloc].
 final class CommentReactionsState extends Equatable {
   const CommentReactionsState({
@@ -56,6 +81,7 @@ final class CommentReactionsState extends Equatable {
     this.downvotedCommentIds = const {},
     this.error,
     this.outbox,
+    this.isLoadingVoteCounts = false,
   });
 
   /// Upvote counts per comment ID.
@@ -76,6 +102,10 @@ final class CommentReactionsState extends Equatable {
   /// One-shot signal for the UI to bridge into [CommentsListBloc].
   final ReactionsOutbox? outbox;
 
+  /// Whether a read of vote totals is in flight. Turns false once every read
+  /// settled, whether it loaded the totals or failed.
+  final bool isLoadingVoteCounts;
+
   CommentReactionsState copyWith({
     Map<String, int>? commentUpvoteCounts,
     Map<String, int>? commentDownvoteCounts,
@@ -83,6 +113,7 @@ final class CommentReactionsState extends Equatable {
     Set<String>? downvotedCommentIds,
     ReactionsError? error,
     ReactionsOutbox? outbox,
+    bool? isLoadingVoteCounts,
     bool clearError = false,
     bool clearOutbox = false,
   }) {
@@ -94,6 +125,7 @@ final class CommentReactionsState extends Equatable {
       downvotedCommentIds: downvotedCommentIds ?? this.downvotedCommentIds,
       error: clearError ? null : (error ?? this.error),
       outbox: clearOutbox ? null : (outbox ?? this.outbox),
+      isLoadingVoteCounts: isLoadingVoteCounts ?? this.isLoadingVoteCounts,
     );
   }
 
@@ -105,5 +137,6 @@ final class CommentReactionsState extends Equatable {
     downvotedCommentIds,
     error,
     outbox,
+    isLoadingVoteCounts,
   ];
 }

@@ -28,6 +28,24 @@ final class CommentsSortModeChanged extends CommentsListEvent {
   final CommentsSortMode sortMode;
 }
 
+/// Fixes the Top position of every loaded comment that has none yet.
+///
+/// The UI sends it when the vote reads settle, when the viewer switches to
+/// Top, and on each vote with the totals from before it, so a vote never
+/// moves a row (#10921).
+final class CommentsTopOrderFrozen extends CommentsListEvent {
+  const CommentsTopOrderFrozen({
+    required this.upvoteCounts,
+    required this.downvoteCounts,
+  });
+
+  /// Upvotes per comment id that the comments are ranked by.
+  final Map<String, int> upvoteCounts;
+
+  /// Downvotes per comment id that the comments are ranked by.
+  final Map<String, int> downvoteCounts;
+}
+
 /// Comments received from the real-time subscription within one window.
 ///
 /// A burst arrives as one event, so it costs one state update and none of it

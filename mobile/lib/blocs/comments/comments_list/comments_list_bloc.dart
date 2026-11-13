@@ -60,6 +60,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     on<CommentsLoadRequested>(_onLoadRequested);
     on<CommentsLoadMoreRequested>(_onLoadMoreRequested);
     on<CommentsSortModeChanged>(_onSortModeChanged);
+    on<CommentsTopOrderFrozen>(_onTopOrderFrozen);
     on<NewCommentsBatchReceived>(_onNewCommentsBatchReceived);
     on<CommentsInitialBackfillCompleted>(_onInitialBackfillCompleted);
     on<NewCommentsAcknowledged>(_onNewCommentsAcknowledged);
@@ -250,7 +251,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     if (realCreatedAts.isEmpty) return;
     final cursor = realCreatedAts.reduce((a, b) => a.isBefore(b) ? a : b);
 
-    emit(state.copyWith(isLoadingMore: true));
+    emit(state.copyWith(isLoadingMore: true, loadMoreFailed: false));
 
     try {
       Log.info(
@@ -274,18 +275,25 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         ...state.commentsById,
         for (final c in thread.comments) c.id: c,
       };
+      // A page that adds nothing and moves no REST position would be asked
+      // for again, unchanged, each time the viewer nears the end.
+      final advanced =
+          allCommentsById.length > loadedBefore ||
+          (thread.nextOffset != null && thread.nextOffset != state.nextOffset);
 
       emit(
         state.copyWith(
           commentsById: allCommentsById,
           isLoadingMore: false,
           nextOffset: thread.nextOffset,
-          hasMoreContent: _hasMoreContent(
-            loadedCount: allCommentsById.length,
-            lastBatchCount: thread.comments.length,
-            threadTotalCount: thread.totalCount,
-            threadHasMore: thread.hasMore,
-          ),
+          hasMoreContent:
+              advanced &&
+              _hasMoreContent(
+                loadedCount: allCommentsById.length,
+                lastBatchCount: thread.comments.length,
+                threadTotalCount: thread.totalCount,
+                threadHasMore: thread.hasMore,
+              ),
         ),
       );
       _focusWhenLoaded(
@@ -298,6 +306,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       emit(
         state.copyWith(
           isLoadingMore: false,
+          loadMoreFailed: true,
           error: CommentsListError.loadFailed,
           clearPendingFocus: true,
         ),
@@ -312,6 +321,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       emit(
         state.copyWith(
           isLoadingMore: false,
+          loadMoreFailed: true,
           error: CommentsListError.loadFailed,
           clearPendingFocus: true,
         ),
@@ -325,8 +335,8 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   /// it. The search also ends on the last page and on a failed load. A comment
   /// it does not find, such as a deleted one, leaves the list where it starts.
   ///
-  /// A page that added no comment ends the search: `hasMoreContent` can stay
-  /// true past the last comment the relays return, because the count it is
+  /// A page that added no comment ends the search. It ends the paging too
+  /// unless it moved the REST position: the count `hasMoreContent` is
   /// measured against includes comments the list never gets.
   void _focusWhenLoaded(
     Emitter<CommentsListState> emit, {
@@ -352,7 +362,56 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     CommentsSortModeChanged event,
     Emitter<CommentsListState> emit,
   ) {
-    emit(state.copyWith(sortMode: event.sortMode));
+    if (event.sortMode == state.sortMode) return;
+    // Top ranks again by the current votes until the next freeze.
+    emit(state.copyWith(sortMode: event.sortMode, clearTopOrder: true));
+  }
+
+  /// Appends the comments Top has not placed yet to the Top order, ranked by
+  /// the event's votes. The first freeze places every comment.
+  void _onTopOrderFrozen(
+    CommentsTopOrderFrozen event,
+    Emitter<CommentsListState> emit,
+  ) {
+    if (state.sortMode != CommentsSortMode.topEngagement) return;
+    final placed = state.topOrder ?? const <String>[];
+    final placedIds = placed.toSet();
+    final unplaced = [
+      for (final comment in state.commentsById.values)
+        if (!placedIds.contains(comment.id)) comment,
+    ];
+    if (state.topOrder != null && unplaced.isEmpty) return;
+    unplaced.sort(
+      commentVoteComparator(
+        upvoteCounts: event.upvoteCounts,
+        downvoteCounts: event.downvoteCounts,
+      ),
+    );
+    emit(
+      state.copyWith(
+        topOrder: [...placed, for (final comment in unplaced) comment.id],
+      ),
+    );
+  }
+
+  /// [CommentsListState.topOrder] kept to the comments in [store], with
+  /// [prepended] on top and each id in [renamed] taking the place of the
+  /// comment it replaces; `null` while Top is not frozen.
+  List<String>? _topOrderFor(
+    Map<String, Comment> store, {
+    Iterable<String> prepended = const [],
+    Map<String, String> renamed = const {},
+  }) {
+    final order = state.topOrder;
+    if (order == null) return null;
+    final seen = <String>{};
+    return [
+      for (final id in [
+        ...prepended,
+        for (final id in order) renamed[id] ?? id,
+      ])
+        if (store.containsKey(id) && seen.add(id)) id,
+    ];
   }
 
   void _onErrorCleared(
@@ -387,6 +446,8 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         if (entry.key.startsWith(commentPlaceholderIdPrefix)) entry.value,
     ];
     final newIds = <String>{};
+    final live = <Comment>[];
+    final renamed = <String, String>{};
     var scrollToCommentId = state.scrollToCommentId;
     var changed = false;
     var added = false;
@@ -431,7 +492,10 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       if (placeholder != null) {
         store.remove(placeholder.id);
         placeholders.remove(placeholder);
+        renamed[placeholder.id] = comment.id;
         if (scrollToCommentId == placeholder.id) scrollToCommentId = comment.id;
+      } else if (state.isBackfillComplete) {
+        live.add(comment);
       }
       store[comment.id] = comment;
       // A comment the owner hid does not announce itself in the pill.
@@ -445,10 +509,18 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     }
 
     if (!changed) return;
+    // Live comments go on top, newest first. Comments from the backfill wait
+    // below the placed rows until the next freeze.
+    live.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     emit(
       state.copyWith(
         status: added ? CommentsStatus.success : state.status,
         commentsById: store,
+        topOrder: _topOrderFor(
+          store,
+          prepended: [for (final comment in live) comment.id],
+          renamed: renamed,
+        ),
         scrollToCommentId: scrollToCommentId,
         // The pill counts only new comments that are still listed.
         newCommentIds: {
@@ -488,9 +560,11 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     Emitter<CommentsListState> emit,
     Map<String, Comment> updated, {
     String? scrollToCommentId,
+    Map<String, String> renamed = const {},
   }) {
     final next = state.copyWith(
       commentsById: updated,
+      topOrder: _topOrderFor(updated, renamed: renamed),
       scrollToCommentId: scrollToCommentId,
       // The pill counts only new comments that are still listed.
       newCommentIds: state.newCommentIds.where(updated.containsKey).toSet(),
@@ -508,9 +582,10 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     OptimisticCommentInserted event,
     Emitter<CommentsListState> emit,
   ) {
-    // A post can rank below other comments in Top. In Recent a new
-    // top-level post lands at the top, while replies can nest off-screen
-    // under an older parent (#5854).
+    // A post can rank below other comments in Top until the order is
+    // frozen, and goes on top after. In Recent a new top-level post lands at
+    // the top, while replies can nest off-screen under an older parent
+    // (#5854).
     final updated = {
       ...state.commentsById,
       event.placeholder.id: event.placeholder,
@@ -521,6 +596,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     emit(
       state.copyWith(
         commentsById: updated,
+        topOrder: _topOrderFor(updated, prepended: [event.placeholder.id]),
         scrollToCommentId: shouldReveal ? event.placeholder.id : null,
       ),
     );
@@ -542,6 +618,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       scrollToCommentId: state.scrollToCommentId == event.placeholderId
           ? event.confirmed.id
           : null,
+      renamed: {event.placeholderId: event.confirmed.id},
     );
   }
 
@@ -566,6 +643,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       Map<String, Comment>.from(state.commentsById)
         ..remove(event.oldId)
         ..[event.newComment.id] = event.newComment,
+      renamed: {event.oldId: event.newComment.id},
     );
   }
 

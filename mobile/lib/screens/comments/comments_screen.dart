@@ -402,7 +402,8 @@ abstract final class _CommentsSheetSizing {
 
 /// Wires the composer / reactions outbox signals into [CommentsListBloc] store
 /// mutations. Also triggers a vote-count batch fetch on the reactions bloc
-/// every time the loaded-comment set changes.
+/// every time the loaded-comment set changes, and freezes the Top order once
+/// those reads settle or the viewer votes (#10921).
 ///
 /// Public-by-test only: it has no callers outside `CommentsScreen.show` but is
 /// exposed via [visibleForTesting] so the bridge wiring can be exercised
@@ -475,6 +476,35 @@ class OutboxBridges extends StatelessWidget {
               ),
             );
           },
+        ),
+        // Switching back to Top ranks it again, then holds it, unless the
+        // totals are still loading: the listener below freezes it then.
+        BlocListener<CommentsListBloc, CommentsListState>(
+          listenWhen: (prev, next) =>
+              prev.sortMode != next.sortMode &&
+              next.sortMode == CommentsSortMode.topEngagement,
+          listener: (ctx, _) {
+            final votes = ctx.read<CommentReactionsBloc>().state;
+            if (votes.isLoadingVoteCounts) return;
+            ctx.read<CommentsListBloc>().add(
+              CommentsTopOrderFrozen(
+                upvoteCounts: votes.commentUpvoteCounts,
+                downvoteCounts: votes.commentDownvoteCounts,
+              ),
+            );
+          },
+        ),
+        // Top holds its order once the vote totals of the loaded comments
+        // are in, whether the reads loaded them or failed.
+        BlocListener<CommentReactionsBloc, CommentReactionsState>(
+          listenWhen: (prev, next) =>
+              prev.isLoadingVoteCounts && !next.isLoadingVoteCounts,
+          listener: (ctx, state) => ctx.read<CommentsListBloc>().add(
+            CommentsTopOrderFrozen(
+              upvoteCounts: state.commentUpvoteCounts,
+              downvoteCounts: state.commentDownvoteCounts,
+            ),
+          ),
         ),
         // Composer → ListBloc outbox bridge.
         BlocListener<CommentComposerBloc, CommentComposerState>(
@@ -566,6 +596,17 @@ class OutboxBridges extends StatelessWidget {
         listBloc.add(CommentRemovedFromStore(commentId));
       case ReactionsOutboxRemoveByAuthor(:final authorPubkey):
         listBloc.add(CommentsRemovedByAuthorFromStore(authorPubkey));
+      case ReactionsOutboxVoteCast(
+        :final upvoteCountsBefore,
+        :final downvoteCountsBefore,
+      ):
+        // Ranked by the totals before the vote, the voted row stays put.
+        listBloc.add(
+          CommentsTopOrderFrozen(
+            upvoteCounts: upvoteCountsBefore,
+            downvoteCounts: downvoteCountsBefore,
+          ),
+        );
     }
     ctx.read<CommentReactionsBloc>().add(const ReactionsOutboxConsumed());
   }

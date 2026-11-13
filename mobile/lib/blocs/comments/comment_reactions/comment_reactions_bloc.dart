@@ -215,6 +215,7 @@ class CommentReactionsBloc
       commentIds.add(id);
     }
     if (commentIds.isEmpty) return;
+    emit(state.copyWith(isLoadingVoteCounts: true));
 
     bool canApply(String id) => _voteReads[id] == _VoteRead.current;
 
@@ -309,6 +310,9 @@ class CommentReactionsBloc
           }
         }
       }
+      if (!emit.isDone) {
+        emit(state.copyWith(isLoadingVoteCounts: _voteReads.isNotEmpty));
+      }
     }
   }
 
@@ -391,6 +395,12 @@ class CommentReactionsBloc
         downvotedCommentIds: downIds,
         commentUpvoteCounts: upCounts,
         commentDownvoteCounts: downCounts,
+        // Lets the list hold its Top order by the totals before the vote.
+        outbox: ReactionsOutboxVoteCast(
+          commentId: commentId,
+          upvoteCountsBefore: state.commentUpvoteCounts,
+          downvoteCountsBefore: state.commentDownvoteCounts,
+        ),
       ),
     );
 

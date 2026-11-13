@@ -313,5 +313,121 @@ void main() {
         );
       },
     );
+
+    group('Top order (#10921)', () {
+      Matcher frozenWith(Map<String, int> up, Map<String, int> down) =>
+          isA<CommentsTopOrderFrozen>()
+              .having((e) => e.upvoteCounts, 'upvoteCounts', up)
+              .having((e) => e.downvoteCounts, 'downvoteCounts', down);
+
+      testWidgets('freezes it with the totals once the vote reads settle', (
+        tester,
+      ) async {
+        final id = validId('c1');
+        whenListen(
+          reactions,
+          Stream.fromIterable([
+            const CommentReactionsState(isLoadingVoteCounts: true),
+            CommentReactionsState(
+              commentUpvoteCounts: {id: 3},
+              commentDownvoteCounts: {id: 1},
+              isLoadingVoteCounts: true,
+            ),
+            CommentReactionsState(
+              commentUpvoteCounts: {id: 3},
+              commentDownvoteCounts: {id: 1},
+            ),
+          ]),
+          initialState: const CommentReactionsState(),
+        );
+
+        await pumpBridges(tester);
+        await tester.pump();
+
+        final captured = verify(() => list.add(captureAny())).captured;
+        expect(captured, [
+          frozenWith({id: 3}, {id: 1}),
+        ]);
+      });
+
+      testWidgets(
+        'freezes it with the totals from before a vote, then acks',
+        (tester) async {
+          final voted = validId('c1');
+          final other = validId('c2');
+          whenListen(
+            reactions,
+            Stream.fromIterable([
+              CommentReactionsState(
+                commentUpvoteCounts: {voted: 4, other: 2},
+                commentDownvoteCounts: {voted: 0, other: 0},
+                outbox: ReactionsOutboxVoteCast(
+                  commentId: voted,
+                  upvoteCountsBefore: {voted: 3, other: 2},
+                  downvoteCountsBefore: {voted: 0, other: 0},
+                ),
+              ),
+            ]),
+            initialState: const CommentReactionsState(),
+          );
+
+          await pumpBridges(tester);
+          await tester.pump();
+
+          final captured = verify(() => list.add(captureAny())).captured;
+          expect(captured, [
+            frozenWith({voted: 3, other: 2}, {voted: 0, other: 0}),
+          ]);
+          verify(
+            () => reactions.add(const ReactionsOutboxConsumed()),
+          ).called(1);
+        },
+      );
+
+      for (final reading in [false, true]) {
+        testWidgets(
+          'after a switch to Top, ${reading ? 'waits for the vote reads' : 'freezes it at once'}',
+          (tester) async {
+            final id = validId('c1');
+            when(() => reactions.state).thenReturn(
+              CommentReactionsState(
+                commentUpvoteCounts: {id: 2},
+                commentDownvoteCounts: {id: 0},
+                isLoadingVoteCounts: reading,
+              ),
+            );
+            final comment = makeComment(id);
+            final recent = CommentsListState(
+              commentsById: {comment.id: comment},
+              sortMode: CommentsSortMode.newest,
+            );
+            whenListen(
+              list,
+              Stream.fromIterable([
+                recent,
+                recent.copyWith(sortMode: CommentsSortMode.topEngagement),
+              ]),
+              initialState: recent,
+            );
+
+            await pumpBridges(tester);
+            await tester.pump();
+
+            if (reading) {
+              verifyNever(
+                () => list.add(any(that: isA<CommentsTopOrderFrozen>())),
+              );
+            } else {
+              final captured = verify(
+                () => list.add(captureAny(that: isA<CommentsTopOrderFrozen>())),
+              ).captured;
+              expect(captured, [
+                frozenWith({id: 2}, {id: 0}),
+              ]);
+            }
+          },
+        );
+      }
+    });
   });
 }

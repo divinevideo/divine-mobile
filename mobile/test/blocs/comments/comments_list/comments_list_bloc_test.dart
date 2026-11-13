@@ -451,7 +451,39 @@ void main() {
         verify: (b) {
           expect(b.state.isLoadingMore, isFalse);
           expect(b.state.error, CommentsListError.loadFailed);
+          // So the list does not ask for the failed page again on its own.
+          expect(b.state.loadMoreFailed, isTrue);
         },
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'clears loadMoreFailed when the next page is asked for',
+        setUp: () {
+          when(
+            () => mockCommentsRepository.loadComments(
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer((_) async => CommentThread.empty(validId('root')));
+        },
+        build: createBloc,
+        seed: () => CommentsListState(
+          status: CommentsStatus.success,
+          loadMoreFailed: true,
+          commentsById: {validId('c1'): makeComment(validId('c1'))},
+        ),
+        act: (b) => b.add(const CommentsLoadMoreRequested()),
+        expect: () => [
+          isA<CommentsListState>()
+              .having((s) => s.isLoadingMore, 'isLoadingMore', isTrue)
+              .having((s) => s.loadMoreFailed, 'loadMoreFailed', isFalse),
+          isA<CommentsListState>()
+              .having((s) => s.isLoadingMore, 'isLoadingMore', isFalse)
+              .having((s) => s.loadMoreFailed, 'loadMoreFailed', isFalse),
+        ],
       );
 
       blocTest<CommentsListBloc, CommentsListState>(
@@ -1727,7 +1759,8 @@ void main() {
         ),
         act: (b) => b.add(const CommentsLoadRequested()),
         verify: (b) {
-          expect(b.state.hasMoreContent, isTrue);
+          // Paging ends there too, or each scroll would ask again (#10921).
+          expect(b.state.hasMoreContent, isFalse);
           expect(b.state.pendingFocusCommentId, isNull);
           expect(b.state.scrollToCommentId, isNull);
           verify(
