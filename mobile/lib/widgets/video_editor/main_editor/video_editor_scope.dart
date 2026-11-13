@@ -50,6 +50,7 @@ class VideoEditorScope extends InheritedWidget {
     this.canvasToolPanelHeightNotifier,
     this.clipFrameTracker,
     this.previewReleasedNotifier,
+    this.layerCaptureNotifier,
     this.onAddAudioVisualizer,
     this.onOpenLayout,
     this.onFreshSessionReady,
@@ -193,6 +194,15 @@ class VideoEditorScope extends InheritedWidget {
   /// [canvasBodyKey].
   final ValueNotifier<bool>? previewReleasedNotifier;
 
+  /// Whether the canvas' layers are being captured into the images the export
+  /// draws into the video's frames.
+  ///
+  /// A layer that shows the canvas something else than the frames show draws
+  /// what goes into the frames while this is `true`: a countdown counts down
+  /// on the canvas, but its date goes into the frames, as a time left there
+  /// would be wrong a second after posting. Optional, like [canvasBodyKey].
+  final ValueNotifier<bool>? layerCaptureNotifier;
+
   /// Callback to open the text editor.
   final Future<TextLayer?> Function([TextLayer? layer]) onAddEditTextLayer;
 
@@ -329,5 +339,6 @@ class VideoEditorScope extends InheritedWidget {
       canvasToolPanelHeightNotifier !=
           oldWidget.canvasToolPanelHeightNotifier ||
       clipFrameTracker != oldWidget.clipFrameTracker ||
-      previewReleasedNotifier != oldWidget.previewReleasedNotifier;
+      previewReleasedNotifier != oldWidget.previewReleasedNotifier ||
+      layerCaptureNotifier != oldWidget.layerCaptureNotifier;
 }

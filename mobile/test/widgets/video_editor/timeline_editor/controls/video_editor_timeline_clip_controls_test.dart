@@ -1268,11 +1268,18 @@ void main() {
         final editor = _MockProImageEditorState();
         final stateManager = _MockStateManager();
         final sizesManager = _MockSizesManager();
+        final layerCapture = ValueNotifier<bool>(false);
+        addTearDown(layerCapture.dispose);
+        bool? capturedWhileShowingFrames;
         when(
           () => editor.captureAllLayersWithMeta(
             basePixelRatio: any(named: 'basePixelRatio'),
           ),
-        ).thenAnswer((_) async => <ExportedLayer>[]);
+        ).thenAnswer((_) async {
+          capturedWhileShowingFrames = layerCapture.value;
+          return <ExportedLayer>[];
+        });
+        when(() => editor.mounted).thenReturn(true);
         when(() => editor.activeLayers).thenReturn(const []);
         when(() => editor.stateManager).thenReturn(stateManager);
         when(() => editor.sizesManager).thenReturn(sizesManager);
@@ -1298,6 +1305,7 @@ void main() {
                   zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
                   playTimeNotifier: ValueNotifier(Duration.zero),
                   playheadAdvancingNotifier: ValueNotifier<bool>(false),
+                  layerCaptureNotifier: layerCapture,
                   fromLibrary: false,
                   onOpenCamera: () {},
                   onOpenClipsEditor: () {},
@@ -1347,6 +1355,10 @@ void main() {
         final event = captured.single as ClipEditorSaveClipToLibraryRequested;
         expect(event.clipId, equals('clip-1'));
         expect(event.overlays, isNotNull);
+        // A countdown goes into the saved clip with its date, and counts down
+        // on the canvas again afterwards.
+        expect(capturedWhileShowingFrames, isTrue);
+        expect(layerCapture.value, isFalse);
       },
     );
 

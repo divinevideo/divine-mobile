@@ -1,13 +1,17 @@
-// ABOUTME: Tests the social sticker as it shows on the video: the same size
-// ABOUTME: whatever font size the system asks for.
+// ABOUTME: Tests the social sticker as it shows on the video, the same size
+// ABOUTME: at any font size, and a countdown on the editor canvas.
 
-import 'package:flutter/widgets.dart';
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/utils/sound_credit_paint.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
+import 'package:pro_image_editor/pro_image_editor.dart';
 
 const _mention = SocialStickerData(
   kind: SocialStickerKind.mention,
@@ -76,6 +80,114 @@ void main() {
           ),
         );
         expect(comment.text.style?.fontWeight, equals(FontWeight.w400));
+      });
+    });
+
+    group('countdown', () {
+      late ValueNotifier<bool> layerCapture;
+
+      setUp(() {
+        layerCapture = ValueNotifier<bool>(false);
+      });
+
+      tearDown(() => layerCapture.dispose());
+
+      /// A countdown titled "Summer" that ends [left] from now.
+      SocialStickerData countdownIn(Duration left) => SocialStickerData(
+        kind: SocialStickerKind.countdown,
+        countdownTitle: 'Summer',
+        countdownEnd: clock.now().add(left),
+      );
+
+      /// Pumps [countdown] as it shows on the editor canvas or, with
+      /// [onCanvas] false, with no editor around it, like the draft
+      /// rasterizer.
+      Future<void> pump(
+        WidgetTester tester,
+        SocialStickerData countdown, {
+        bool onCanvas = true,
+      }) {
+        final sticker = Center(child: SocialStickerView(data: countdown));
+        return tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: onCanvas
+                ? VideoEditorScope(
+                    editorKey: GlobalKey<ProImageEditorState>(),
+                    removeAreaKey: GlobalKey(),
+                    originalClipAspectRatio: 9 / 16,
+                    bodySizeNotifier: ValueNotifier(const Size(400, 600)),
+                    zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
+                    playTimeNotifier: ValueNotifier(Duration.zero),
+                    playheadAdvancingNotifier: ValueNotifier<bool>(false),
+                    layerCaptureNotifier: layerCapture,
+                    fromLibrary: false,
+                    onOpenCamera: () {},
+                    onOpenClipsEditor: () {},
+                    onAddStickers: () {},
+                    onOpenMusicLibrary: () {},
+                    onOpenVoiceOver: () {},
+                    onOpenCaptions: () {},
+                    onOpenEffects: () {},
+                    onAddEditTextLayer: ([layer]) async => null,
+                    child: sticker,
+                  )
+                : sticker,
+          ),
+        );
+      }
+
+      group('renders', () {
+        testWidgets('the time left on the editor canvas, counting down every '
+            'second', (tester) async {
+          final countdown = countdownIn(
+            const Duration(days: 12, hours: 4, seconds: 10),
+          );
+          await pump(tester, countdown);
+
+          expect(find.text('12 days 04:00:10'), findsOneWidget);
+          expect(
+            find.text(SocialStickerView.countdownDateOf(countdown)),
+            findsNothing,
+          );
+
+          await tester.pump(const Duration(seconds: 1));
+          expect(find.text('12 days 04:00:09'), findsOneWidget);
+        });
+
+        testWidgets('the date while the canvas is captured for the frames', (
+          tester,
+        ) async {
+          final countdown = countdownIn(const Duration(hours: 1));
+          await pump(tester, countdown);
+          expect(find.text('01:00:00'), findsOneWidget);
+
+          layerCapture.value = true;
+          await tester.pump();
+          expect(
+            find.text(SocialStickerView.countdownDateOf(countdown)),
+            findsOneWidget,
+          );
+          expect(find.text('01:00:00'), findsNothing);
+
+          layerCapture.value = false;
+          await tester.pump();
+          expect(find.text('01:00:00'), findsOneWidget);
+        });
+
+        testWidgets('the date outside the editor, as it goes into the frames', (
+          tester,
+        ) async {
+          final countdown = countdownIn(const Duration(hours: 1));
+          await pump(tester, countdown, onCanvas: false);
+
+          expect(
+            find.text(SocialStickerView.countdownDateOf(countdown)),
+            findsOneWidget,
+          );
+          expect(find.text('01:00:00'), findsNothing);
+        });
       });
     });
   });

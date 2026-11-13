@@ -2695,6 +2695,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// Precaches the generated image overlay and triggers video rendering.
   Future<void> _handleEditorComplete(CompleteParameters parameters) async {
     _settleLayerCaptureTracking();
+    // The layers are captured; the canvas counts its countdowns down again.
+    VideoEditorScope.of(context).layerCaptureNotifier?.value = false;
     Log.info(
       '🎬 Editor complete - starting render (image size: ${parameters.image.length} bytes)',
       name: 'VideoEditorCanvas',
@@ -2768,6 +2770,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // Seams and speed bodies only serve the preview; still encoding, they hold
     // the export back on platforms that run one encode at a time (#10142).
     _composition.suspendRenders();
+    final scope = VideoEditorScope.of(context);
+    // Until the capture is in, the layers show what goes into the frames: a
+    // countdown its date rather than the time left it counts down on the
+    // canvas. The capture waits for the frame that draws it.
+    final layerCapture = scope.layerCaptureNotifier?..value = true;
     _trackLayerCapture();
 
     // Delegate the cover-transition wait to the screen: its context sits above
@@ -2775,7 +2782,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // is actually driven by the push (the canvas context resolves to the inner
     // route, which the outer push never animates). Falls back to the canvas
     // context — timeout-bounded — when the scope didn't provide it.
-    final scope = VideoEditorScope.of(context);
     final awaitCover = scope.awaitPushCoverTransition;
     final previewReleased = scope.previewReleasedNotifier;
     final gate = _decoderReleaseGate = Completer<void>();
@@ -2805,6 +2811,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       _isMetadataRouteActive = false;
       // A capture that failed never reaches [_handleEditorComplete].
       _settleLayerCaptureTracking();
+      if (mounted) layerCapture?.value = false;
     }
     if (!mounted) return;
     // Stop-motion has no player to rebuild (_clipPaths is empty, which the
