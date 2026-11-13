@@ -396,6 +396,18 @@ class StorageManagementService {
     for (final dir in _documentsCacheDirs) {
       await _deleteDirContents(Directory(p.join(docs.path, dir)));
     }
+    // `clearCache()` drops each cache's measured-bytes flag until the next
+    // forced sweep. Walk the just-emptied directories now so automatic sizing
+    // stays authoritative and re-sizes against the freed disk space.
+    await _guard(
+      () => _videoCache.enforceCacheLimits(force: true),
+      label: 'enforceCacheLimits',
+    );
+    await _guard(
+      () => _imageCache.enforceCacheLimits(force: true),
+      label: 'enforceCacheLimits',
+    );
+    await _guard(_refreshMediaCacheBudget, label: 'refreshMediaCacheBudget');
   }
 
   /// What the documents directory holds, split into the user's content and
@@ -634,6 +646,7 @@ class StorageManagementService {
   /// Forgets the size the user fixed and re-sizes the caches to the disk.
   Future<void> useAutomaticVideoCacheLimit() async {
     await _prefs.remove(kCacheLimitPrefKey);
+    await _ensureCachesMeasured();
     await _refreshMediaCacheBudget();
   }
 
@@ -647,7 +660,22 @@ class StorageManagementService {
     await _prefs.setInt(kCacheLimitPrefKey, clamped);
     _videoCache.maxCacheSizeBytes = clamped;
     await _videoCache.enforceCacheLimits(force: true);
+    if (!_imageCache.hasMeasuredCacheBytes) {
+      await _imageCache.enforceCacheLimits(force: true);
+    }
     await _refreshMediaCacheBudget();
+  }
+
+  /// Ensures both download caches have a measured byte count before an
+  /// explicit user sizing change refreshes the budget, even when the detached
+  /// cold-start sweep has not finished yet.
+  Future<void> _ensureCachesMeasured() async {
+    await Future.wait([
+      if (!_videoCache.hasMeasuredCacheBytes)
+        _videoCache.enforceCacheLimits(force: true),
+      if (!_imageCache.hasMeasuredCacheBytes)
+        _imageCache.enforceCacheLimits(force: true),
+    ]);
   }
 
   Future<_DocumentsScan> _scanDocuments() async {
@@ -860,12 +888,15 @@ class StorageManagementService {
     }
   }
 
-  Future<void> _guard(Future<void> Function() action) async {
+  Future<void> _guard(
+    Future<void> Function() action, {
+    String label = 'clearCache',
+  }) async {
     try {
       await action();
     } on Object catch (error) {
       Log.warning(
-        '$_logName: clearCache failed: $error',
+        '$_logName: $label failed: $error',
         name: _logName,
         category: LogCategory.system,
       );

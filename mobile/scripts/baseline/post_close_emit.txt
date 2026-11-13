@@ -13,4 +13,4 @@ lib/blocs/apps_permissions/apps_permissions_cubit.dart	1
 lib/blocs/dm/reactions/conversation_reactions_cubit.dart	1
 lib/blocs/notifications/badge/notification_badge_cubit.dart	1
 lib/blocs/signature_verification_policy/signature_verification_policy_cubit.dart	1
-lib/blocs/storage/storage_cubit.dart	8
+lib/blocs/storage/storage_cubit.dart	6

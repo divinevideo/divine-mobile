@@ -137,6 +137,10 @@ void main() {
         setUp: () {
           when(service.clearCaches).thenAnswer((_) async {});
           when(service.cacheUsage).thenAnswer((_) async => CacheUsage.empty);
+          when(service.videoCacheLimitBytes).thenReturn(
+            kCacheLimitDefaultBytes,
+          );
+          when(service.isVideoCacheLimitAutomatic).thenReturn(true);
         },
         build: build,
         seed: () => const StorageState(cacheSizeBytes: 4096),
@@ -149,6 +153,59 @@ void main() {
           StorageState(cacheStatus: StorageCacheStatus.cleared),
         ],
       );
+
+      blocTest<StorageCubit, StorageState>(
+        'refreshes the automatic cache budget when clearing frees space',
+        setUp: () {
+          when(service.clearCaches).thenAnswer((_) async {});
+          when(service.cacheUsage).thenAnswer((_) async => CacheUsage.empty);
+          when(service.videoCacheLimitBytes).thenReturn(
+            kCacheLimitDefaultBytes,
+          );
+          when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+        },
+        build: build,
+        seed: () => const StorageState(
+          cacheSizeBytes: 4096,
+          videoCacheLimitBytes: 64 * 1024 * 1024,
+        ),
+        act: (cubit) => cubit.clearCaches(),
+        expect: () => const [
+          StorageState(
+            cacheStatus: StorageCacheStatus.clearing,
+            cacheSizeBytes: 4096,
+            videoCacheLimitBytes: 64 * 1024 * 1024,
+          ),
+          StorageState(cacheStatus: StorageCacheStatus.cleared),
+        ],
+      );
+
+      test('completing after close does not emit', () async {
+        final clear = Completer<void>();
+        when(service.clearCaches).thenAnswer((_) => clear.future);
+        when(service.cacheUsage).thenAnswer((_) async => CacheUsage.empty);
+        when(service.videoCacheLimitBytes).thenReturn(kCacheLimitDefaultBytes);
+        when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+        final cubit = build();
+
+        final clearing = cubit.clearCaches();
+        await cubit.close();
+        clear.complete();
+
+        await expectLater(clearing, completes);
+      });
+
+      test('failing after close does not emit', () async {
+        final clear = Completer<void>();
+        when(service.clearCaches).thenAnswer((_) => clear.future);
+        final cubit = build();
+
+        final clearing = cubit.clearCaches();
+        await cubit.close();
+        clear.completeError(Exception('boom'));
+
+        await expectLater(clearing, completes);
+      });
     });
 
     group('loadDocumentsUsage', () {

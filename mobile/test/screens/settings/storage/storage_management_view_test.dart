@@ -515,6 +515,38 @@ void main() {
           .called(1);
       expect(find.byType(Slider), findsOneWidget);
     });
+
+    testWidgets('clearing caches drops the low-space warning once space '
+        'returns', (tester) async {
+      when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+      when(service.videoCacheLimitBytes).thenReturn(64 * 1024 * 1024);
+      when(service.clearCaches).thenAnswer((_) async {
+        when(service.videoCacheLimitBytes).thenReturn(kCacheLimitDefaultBytes);
+        when(service.cacheUsage).thenAnswer((_) async => CacheUsage.empty);
+      });
+      final cubit = StorageCubit(service: service);
+      addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+
+      await tester.pumpWidget(wrap(cubit));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.settingsStorageAutoCacheLowSpace), findsOneWidget);
+
+      await tester.tap(find.text(l10n.settingsStorageClearButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.settingsStorageClearConfirmAction));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.settingsStorageAutoCacheLowSpace), findsNothing);
+      expect(
+        find.text(
+          l10n.settingsStorageAutoCacheUsing(
+            formatByteSize(kCacheLimitDefaultBytes),
+          ),
+        ),
+        findsOneWidget,
+      );
+    });
   });
 
   /// Scrolls the repair button into view and opens its confirmation sheet.

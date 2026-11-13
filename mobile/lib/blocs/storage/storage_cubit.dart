@@ -54,12 +54,14 @@ class StorageCubit extends Cubit<StorageState>
     }
   }
 
-  /// Measures the caches and emits them as ready, with the limit in force.
-  Future<void> _emitCacheUsage() async {
+  /// Measures the caches and emits them with [status] and the limit in force.
+  Future<void> _emitCacheUsage({
+    StorageCacheStatus status = StorageCacheStatus.ready,
+  }) async {
     final usage = await _service.cacheUsage();
     emitIfOpen(
       state.copyWith(
-        cacheStatus: StorageCacheStatus.ready,
+        cacheStatus: status,
         cacheSizeBytes: usage.totalBytes,
         cacheUsage: usage,
         videoCacheLimitBytes: _service.videoCacheLimitBytes(),
@@ -170,22 +172,15 @@ class StorageCubit extends Cubit<StorageState>
     }
   }
 
-  /// Clears the caches, then refreshes the reported size.
+  /// Clears the caches, then refreshes the reported size and budget.
   Future<void> clearCaches() async {
     emit(state.copyWith(cacheStatus: StorageCacheStatus.clearing));
     try {
       await _service.clearCaches();
-      final usage = await _service.cacheUsage();
-      emit(
-        state.copyWith(
-          cacheStatus: StorageCacheStatus.cleared,
-          cacheSizeBytes: usage.totalBytes,
-          cacheUsage: usage,
-        ),
-      );
+      await _emitCacheUsage(status: StorageCacheStatus.cleared);
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emit(state.copyWith(cacheStatus: StorageCacheStatus.failure));
+      emitIfOpen(state.copyWith(cacheStatus: StorageCacheStatus.failure));
     }
   }
 
