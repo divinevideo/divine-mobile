@@ -11,6 +11,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_sheet_controls.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/interactive_sticker_card.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_inputs.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_labels.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_poll_inputs.dart';
@@ -167,7 +168,8 @@ class SocialStickerSheet extends StatelessWidget {
   }
 }
 
-/// The sticker as it will look, on a dark ground like a video's.
+/// The sticker as it will look, on a dark ground like a video's; an Add yours
+/// or replies sticker with sample people who answered.
 class _Preview extends StatelessWidget {
   const _Preview();
 
@@ -187,7 +189,12 @@ class _Preview extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.all(isTyping ? 12 : 20),
           child: data.isComplete
-              ? FittedBox(child: SocialStickerView(data: data))
+              ? FittedBox(
+                  child: SocialStickerView(
+                    data: data,
+                    responses: sampleStickerResponses,
+                  ),
+                )
               // Nothing to show yet: a person, hashtag or address is to come.
               : Center(
                   child: FittedBox(

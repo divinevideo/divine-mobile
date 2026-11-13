@@ -1,5 +1,5 @@
-// ABOUTME: Tests the social sticker sheet: hashtags and their limit, links,
-// ABOUTME: and switching the sound a sound credit credits.
+// ABOUTME: Tests the social sticker sheet: its preview, hashtags and their
+// ABOUTME: limit, links, and switching the sound a sound credit credits.
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -12,6 +12,7 @@ import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/interactive_sticker_card.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_sheet.dart';
 
 class _MockContentBlocklistRepository extends Mock
@@ -107,6 +108,23 @@ void main() {
         final fieldRect = tester.getRect(field);
         expect(fieldRect.top, greaterThanOrEqualTo(options.top));
         expect(fieldRect.bottom, lessThanOrEqualTo(options.bottom));
+      });
+
+      testWidgets('a preview of a replies sticker with sample repliers', (
+        tester,
+      ) async {
+        await pumpSheet(
+          tester,
+          initial: SocialStickerData.interactive(
+            SocialStickerKind.replies,
+            prompt: 'Reply with a video',
+          ),
+        );
+
+        expect(
+          find.text(l10n.videoStickerRepliesCount(maxStickerAvatars)),
+          findsOneWidget,
+        );
       });
     });
 

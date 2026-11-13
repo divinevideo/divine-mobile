@@ -83,6 +83,29 @@ void main() {
         expect(find.byType(ImageFiltered), findsNothing);
       });
 
+      testWidgets('an avatar with no picture in its own color', (tester) async {
+        await pump(
+          tester,
+          const InteractiveStickerCopy(
+            data: addYours,
+            responses: StickerResponses(
+              count: 1,
+              latest: [
+                StickerResponsePreview(avatarColor: VineTheme.accentPink),
+              ],
+            ),
+          ),
+        );
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is ColoredBox && widget.color == VineTheme.accentPink,
+          ),
+          findsOneWidget,
+        );
+      });
+
       testWidgets('a count that is only a floor with a plus', (tester) async {
         const floor = StickerResponses(count: 500, countIsAtLeast: true);
         await pump(
