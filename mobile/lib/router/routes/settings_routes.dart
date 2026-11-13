@@ -2,6 +2,7 @@
 // ABOUTME: Split from app_router.dart (#4508)
 
 import 'package:badge_repository/badge_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -14,6 +15,7 @@ import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/go_router_page_name.dart';
 import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/dm_inbox_prototype_routes.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
@@ -300,6 +302,9 @@ List<RouteBase> settingsRoutes(Ref ref) {
       name: ClipRecoveryScreen.routeName,
       builder: (_, _) => const ClipRecoveryScreen(),
     ),
+    // A const gate here, not only the default parameter, is what lets a
+    // release build drop the prototype's code and fixtures entirely.
+    if (kDebugMode) ...dmInboxPrototypeRoutes(),
     GoRoute(
       path: DeveloperOptionsScreen.path,
       name: DeveloperOptionsScreen.routeName,
