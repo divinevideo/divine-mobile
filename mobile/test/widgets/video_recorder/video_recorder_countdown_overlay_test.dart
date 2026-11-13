@@ -2,6 +2,7 @@
 // ABOUTME: Validates countdown display, animations, and visibility states
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -123,6 +124,77 @@ void main() {
           ),
         );
         expect(backdrop.color.a, equals(0));
+      });
+    });
+
+    group('screen reader', () {
+      List<Object?> captureAnnouncements(WidgetTester tester) {
+        final announced = <Object?>[];
+        tester.binding.defaultBinaryMessenger
+            .setMockDecodedMessageHandler<Object?>(
+              SystemChannels.accessibility,
+              (message) async {
+                if (message is Map && message['type'] == 'announce') {
+                  announced.add((message['data'] as Map?)?['message']);
+                }
+                return null;
+              },
+            );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger
+              .setMockDecodedMessageHandler<Object?>(
+                SystemChannels.accessibility,
+                null,
+              ),
+        );
+        return announced;
+      }
+
+      testWidgets('announces each second before a delayed take', (
+        tester,
+      ) async {
+        final announced = captureAnnouncements(tester);
+        whenListen(
+          recorderBloc,
+          Stream.fromIterable(const [
+            VideoRecorderBlocState(countdownValue: 3),
+            VideoRecorderBlocState(countdownValue: 2),
+            VideoRecorderBlocState(countdownValue: 1),
+            VideoRecorderBlocState(),
+          ]),
+          initialState: const VideoRecorderBlocState(),
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        expect(announced, equals(['3', '2', '1']));
+      });
+
+      testWidgets('stays quiet between stop-motion interval stills', (
+        tester,
+      ) async {
+        final announced = captureAnnouncements(tester);
+        whenListen(
+          recorderBloc,
+          Stream.fromIterable(const [
+            VideoRecorderBlocState(
+              isIntervalCaptureRunning: true,
+              countdownValue: 2,
+            ),
+            VideoRecorderBlocState(
+              isIntervalCaptureRunning: true,
+              countdownValue: 1,
+            ),
+          ]),
+          initialState: const VideoRecorderBlocState(),
+        );
+
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        expect(find.text('1'), findsOneWidget);
+        expect(announced, isEmpty);
       });
     });
 

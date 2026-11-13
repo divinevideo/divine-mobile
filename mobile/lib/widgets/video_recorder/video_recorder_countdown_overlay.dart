@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 
 /// Fullscreen overlay displaying the running countdown.
 ///
@@ -33,24 +34,44 @@ class VideoRecorderCountdownOverlay extends StatelessWidget {
 
     final isActive = countdownValue > 0;
 
-    return IgnorePointer(
-      ignoring: !isActive || isIntervalCapture,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 100),
-        opacity: isActive ? 1 : 0,
-        child: ColoredBox(
-          color: isIntervalCapture ? VineTheme.transparent : VineTheme.scrim70,
-          child: Center(
-            child: Text(
-              countdownValue.toString(),
-              textScaler: MediaQuery.textScalerOf(
-                context,
-              ).clamp(maxScaleFactor: overlayNumeralTextScaleLimit),
-              style: VineTheme.displayLargeFont(color: VineTheme.whiteText)
-                  .copyWith(
-                    fontSize: 114,
-                    shadows: isIntervalCapture ? _intervalNumberShadows : null,
-                  ),
+    return BlocListener<VideoRecorderBloc, VideoRecorderBlocState>(
+      // The number is only drawn: screen-reader focus stays on the record
+      // button, so a delayed take would start without a word. The interval
+      // loop between stop-motion stills stays quiet — it would talk over the
+      // whole session.
+      listenWhen: (previous, current) =>
+          current.countdownValue > 0 &&
+          current.countdownValue != previous.countdownValue &&
+          !current.isIntervalCaptureRunning,
+      listener: (context, state) => announceDetached(
+        context,
+        state.countdownValue.toString(),
+        description: 'announce recording countdown',
+        logName: 'VideoRecorderCountdownOverlay',
+      ),
+      child: IgnorePointer(
+        ignoring: !isActive || isIntervalCapture,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 100),
+          opacity: isActive ? 1 : 0,
+          child: ColoredBox(
+            color: isIntervalCapture
+                ? VineTheme.transparent
+                : VineTheme.scrim70,
+            child: Center(
+              child: Text(
+                countdownValue.toString(),
+                textScaler: MediaQuery.textScalerOf(
+                  context,
+                ).clamp(maxScaleFactor: overlayNumeralTextScaleLimit),
+                style: VineTheme.displayLargeFont(color: VineTheme.whiteText)
+                    .copyWith(
+                      fontSize: 114,
+                      shadows: isIntervalCapture
+                          ? _intervalNumberShadows
+                          : null,
+                    ),
+              ),
             ),
           ),
         ),
