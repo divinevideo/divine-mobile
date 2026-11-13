@@ -104,27 +104,21 @@ void main() {
         },
       );
 
+      // The switch back to Top would clear an order frozen in Recent anyway,
+      // so only the state itself shows that none was frozen.
       blocTest<CommentsListBloc, CommentsListState>(
         'does not freeze Top while the list shows Recent',
         build: createBloc,
         seed: () =>
             loaded([oldest, middle, newest], sortMode: CommentsSortMode.newest),
-        act: (bloc) => bloc
-          ..add(
-            CommentsTopOrderFrozen(
-              upvoteCounts: {oldest.id: 2},
-              downvoteCounts: const {},
-            ),
-          )
-          ..add(const CommentsSortModeChanged(CommentsSortMode.topEngagement)),
-        verify: (bloc) {
-          // Not frozen while in Recent, so Top ranks by the current totals.
-          expect(order(bloc.state, upvotes: {middle.id: 4}), [
-            middle.id,
-            newest.id,
-            oldest.id,
-          ]);
-        },
+        act: (bloc) => bloc.add(
+          CommentsTopOrderFrozen(
+            upvoteCounts: {oldest.id: 2},
+            downvoteCounts: const {},
+          ),
+        ),
+        expect: () => isEmpty,
+        verify: (bloc) => expect(bloc.state.topOrder, isNull),
       );
 
       blocTest<CommentsListBloc, CommentsListState>(
