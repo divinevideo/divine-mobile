@@ -91,7 +91,10 @@ void main() {
             for (final sender in others) {
               final verdict = roomVerdict(others, sender: sender);
               expect(verdict.bucket, DmInboxBucket.requests);
-              expect(verdict.score, 20);
+              expect(
+                verdict.score,
+                const DmSpamHeuristics().weightUnknownGroupInvite,
+              );
               expect(verdict.officialParticipants, isEmpty);
             }
           }
