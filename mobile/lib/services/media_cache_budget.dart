@@ -3,6 +3,8 @@
 
 import 'dart:math' as math;
 
+import 'package:divine_video_player/divine_video_player.dart'
+    show kDefaultCacheMaxSizeBytes;
 import 'package:equatable/equatable.dart';
 import 'package:openvine/constants/storage_cache_constants.dart';
 import 'package:openvine/services/device_storage_service.dart';
@@ -76,4 +78,39 @@ MediaCacheBudget automaticMediaCacheBudget({
     imageBytes: between(floor.imageBytes, ceiling.imageBytes),
     playerBytes: between(floor.playerBytes, ceiling.playerBytes),
   );
+}
+
+/// Today's fixed cache sizes, which automatic sizing never exceeds.
+///
+/// [imageBytes] is the image cache's configured budget. The player budget is
+/// zero where [hasPlayerCache] is false: only Android's player keeps a disk
+/// cache of its own.
+MediaCacheBudget mediaCacheBudgetCeiling({
+  required int imageBytes,
+  required bool hasPlayerCache,
+}) => MediaCacheBudget(
+  videoBytes: kCacheLimitDefaultBytes,
+  imageBytes: imageBytes,
+  playerBytes: hasPlayerCache ? kDefaultCacheMaxSizeBytes : 0,
+);
+
+/// The Android player-cache budget to configure at launch.
+///
+/// The player cache can only be sized when it is created, before the other
+/// caches have been measured, so this counts their contents as zero. That
+/// errs small: a launch on a filling disk gets a smaller player cache, never
+/// a larger one. Returns the ceiling when the disk cannot be read, and zero
+/// without reading it where the platform has no player cache.
+Future<int> startupPlayerCacheBudgetBytes({
+  required Future<DeviceStorageSpace?> Function() readStorageSpace,
+  required MediaCacheBudget ceiling,
+}) async {
+  if (ceiling.playerBytes == 0) return 0;
+  final storage = await readStorageSpace();
+  if (storage == null) return ceiling.playerBytes;
+  return automaticMediaCacheBudget(
+    storage: storage,
+    cacheUsageBytes: 0,
+    ceiling: ceiling,
+  ).playerBytes;
 }

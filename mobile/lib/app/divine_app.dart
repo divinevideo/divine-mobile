@@ -24,6 +24,7 @@ import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/deep_link_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/foreground_idle_warmup_provider.dart';
+import 'package:openvine/providers/media_cache_budget_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/deep_link_coordinator.dart';
@@ -349,6 +350,14 @@ class _DivineAppState extends ConsumerState<DivineApp>
     } else if (state == AppLifecycleState.resumed) {
       openVineMediaCache.resumeDownloads();
       openVineImageCache.resumeDownloads();
+      // Other apps may have filled the disk while this one was away; resize
+      // the caches so Divine never pushes the device past its free reserve.
+      runDetached(
+        ref.read(mediaCacheBudgetServiceProvider).refreshIfStale(),
+        'resize the media caches',
+        logName: 'DivineApp',
+        category: LogCategory.storage,
+      );
     }
     _sampleMemory('lifecycle');
   }

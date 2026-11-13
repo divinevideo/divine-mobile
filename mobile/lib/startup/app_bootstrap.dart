@@ -37,6 +37,7 @@ import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/media_cache_budget_provider.dart';
 import 'package:openvine/repositories/shorebird_patch_repository.dart';
 import 'package:openvine/services/app_engagement_store.dart';
 import 'package:openvine/services/build_provenance_service.dart';
@@ -47,9 +48,11 @@ import 'package:openvine/services/database_corruption_service.dart';
 import 'package:openvine/services/database_encryption_bootstrap.dart';
 import 'package:openvine/services/database_recovery_store.dart';
 import 'package:openvine/services/device_memory_service.dart';
+import 'package:openvine/services/device_storage_service.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/install_source_service.dart';
 import 'package:openvine/services/locale_preference_service.dart';
+import 'package:openvine/services/media_cache_budget.dart';
 import 'package:openvine/services/pro_video_editor_log_forwarder.dart';
 import 'package:openvine/services/screenshot_mode_service.dart';
 import 'package:openvine/services/secure_storage_options.dart';
@@ -232,14 +235,20 @@ Future<void> startOpenVineApp({
   // They initialize automatically when a DivineVideoPlayerController is
   // first created.
 
-  // Configure the Android player's disk cache (500 MB, LRU eviction). It is
+  // Configure the Android player's disk cache (LRU eviction), sized to the
+  // disk: up to 500 MB, shrinking toward 32 MB as the disk fills. It is
   // Android-only: AVFoundation never reads a URLCache, so the Apple plugin
   // has nothing to configure (#8029). Skip on web/Linux/Windows —
   // divine_video_player has no native plugin on those targets and
   // `configureCache` is a bare method-channel call.
   await configureVideoPlayerCacheForStartup(
     skip: !hasNativeVideoPlayer,
-    configureCache: DivineVideoPlayerController.configureCache,
+    configureCache: () async => DivineVideoPlayerController.configureCache(
+      maxSizeBytes: await startupPlayerCacheBudgetBytes(
+        readStorageSpace: const DeviceStorageService().storageSpace,
+        ceiling: appMediaCacheBudgetCeiling(),
+      ),
+    ),
   );
 
   // Dispose any zombie native players from a previous Dart VM (e.g. hot

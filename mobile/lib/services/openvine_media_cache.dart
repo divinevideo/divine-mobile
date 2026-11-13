@@ -46,11 +46,10 @@ MediaCacheManager mediaCache(Ref ref) => openVineMediaCache;
 
 /// Initialize video file cache on app startup.
 ///
-/// Loads the in-memory manifest for synchronous cache lookups, applies the
-/// user's configured byte budget (if any), then kicks off a background pass
-/// that reclaims leaked cache files and trims the directory back under that
-/// budget (see [MediaCacheManager.enforceCacheLimits]). The trim runs
-/// unawaited so it never blocks startup.
+/// Loads the in-memory manifest for synchronous cache lookups and applies the
+/// user's configured byte budget (if any). The startup sequence then sweeps
+/// the cache and sizes it to the disk in the background, so neither blocks
+/// startup (see `sweepThenBudgetMediaCaches`).
 /// Call this in main.dart after WidgetsFlutterBinding.ensureInitialized().
 /// Skipped on web where file-based caching is not available.
 Future<void> initializeMediaCache() async {
@@ -61,5 +60,4 @@ Future<void> initializeMediaCache() async {
   if (storedLimit != null) {
     openVineMediaCache.maxCacheSizeBytes = storedLimit;
   }
-  unawaited(openVineMediaCache.enforceCacheLimits());
 }

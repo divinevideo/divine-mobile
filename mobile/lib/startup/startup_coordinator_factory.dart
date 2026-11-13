@@ -17,6 +17,7 @@ import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/live_account_container.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
+import 'package:openvine/providers/media_cache_budget_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shorebird_availability_provider.dart';
@@ -210,6 +211,8 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
     initialize: () => initializeVideoCacheManifest(
       startupPerformance: startupPerformance,
       crashReporting: crashReporting,
+      refreshMediaCacheBudget: () =>
+          container.read(mediaCacheBudgetServiceProvider).refresh(),
     ),
     optional: true,
   );

@@ -1,7 +1,10 @@
 // ABOUTME: Tests the automatic media-cache budget: keep 15% of the disk free,
 // ABOUTME: never exceed today's ceilings, never shrink below the usable floor.
 
+import 'package:divine_video_player/divine_video_player.dart'
+    show kDefaultCacheMaxSizeBytes;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/constants/storage_cache_constants.dart';
 import 'package:openvine/services/device_storage_service.dart';
 import 'package:openvine/services/media_cache_budget.dart';
 
@@ -116,6 +119,71 @@ void main() {
   group(MediaCacheBudget, () {
     test('totalBytes sums the three caches', () {
       expect(_floor.totalBytes, equals(128 * _mb));
+    });
+  });
+
+  group('mediaCacheBudgetCeiling', () {
+    test("is today's fixed sizes where there is a player cache", () {
+      expect(
+        mediaCacheBudgetCeiling(imageBytes: 256 * _mb, hasPlayerCache: true),
+        equals(
+          const MediaCacheBudget(
+            videoBytes: kCacheLimitDefaultBytes,
+            imageBytes: 256 * _mb,
+            playerBytes: kDefaultCacheMaxSizeBytes,
+          ),
+        ),
+      );
+    });
+
+    test('gives no player budget where there is no player cache', () {
+      expect(
+        mediaCacheBudgetCeiling(
+          imageBytes: 256 * _mb,
+          hasPlayerCache: false,
+        ).playerBytes,
+        isZero,
+      );
+    });
+  });
+
+  group('startupPlayerCacheBudgetBytes', () {
+    test('shrinks the player cache on a nearly full disk', () async {
+      final bytes = await startupPlayerCacheBudgetBytes(
+        readStorageSpace: () async =>
+            const DeviceStorageSpace(totalBytes: 64 * _gb, freeBytes: 2 * _gb),
+        ceiling: _ceiling,
+      );
+
+      expect(bytes, equals(_floor.playerBytes));
+    });
+
+    test('does not read the disk where there is no player cache', () async {
+      var read = false;
+
+      final bytes = await startupPlayerCacheBudgetBytes(
+        readStorageSpace: () async {
+          read = true;
+          return null;
+        },
+        ceiling: const MediaCacheBudget(
+          videoBytes: 2 * _gb,
+          imageBytes: 256 * _mb,
+          playerBytes: 0,
+        ),
+      );
+
+      expect(bytes, isZero);
+      expect(read, isFalse);
+    });
+
+    test('keeps the ceiling when the disk cannot be read', () async {
+      final bytes = await startupPlayerCacheBudgetBytes(
+        readStorageSpace: () async => null,
+        ceiling: _ceiling,
+      );
+
+      expect(bytes, equals(_ceiling.playerBytes));
     });
   });
 }
