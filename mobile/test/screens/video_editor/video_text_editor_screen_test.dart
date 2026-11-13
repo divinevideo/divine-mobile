@@ -464,6 +464,52 @@ void main() {
         expect(event.formatting, equals(formatting));
       });
 
+      testWidgets('keeps the formatting when another font is picked', (
+        tester,
+      ) async {
+        // A font's own style carries no formatting, so the editor puts the
+        // text's formatting back on the newly picked font. The selector
+        // builds every font in its own face, which google_fonts cannot fetch
+        // in a test; those expected load failures are dropped.
+        final unexpected = <Object>[];
+        await runZonedGuarded(
+          () async {
+            await tester.pumpWidget(
+              buildWidget(
+                state: const VideoEditorTextState(
+                  showFontSelector: true,
+                  formatting: TextFormatting(
+                    bold: true,
+                    underline: true,
+                    letterSpacing: 6,
+                  ),
+                ),
+              ),
+            );
+            await tester.pump();
+
+            tester
+                .widget<VideoEditorTextFontSelector>(
+                  find.byType(VideoEditorTextFontSelector),
+                )
+                .onFontSelected!(VideoEditorConstants.textFonts[1]());
+            await tester.pump();
+          },
+          (error, stackTrace) {
+            if (!'$error'.contains('allowRuntimeFetching is false')) {
+              unexpected.add(error);
+            }
+          },
+        );
+        await tester.runAsync(pumpEventQueue);
+        expect(unexpected, isEmpty);
+
+        final style = editor(tester).selectedTextStyle;
+        expect(style.fontWeight, FontWeight.w700);
+        expect(style.decoration, TextDecoration.underline);
+        expect(style.letterSpacing, 6);
+      });
+
       testWidgets('writes bold from the panel to the live editor', (
         tester,
       ) async {
