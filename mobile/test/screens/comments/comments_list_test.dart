@@ -620,6 +620,38 @@ void main() {
         );
       });
 
+      testWidgets('after a failed page, asks again only once the viewer '
+          'scrolls', (tester) async {
+        final updates = StreamController<CommentsListState>();
+        addTearDown(updates.close);
+        whenListen(
+          mockListBloc,
+          updates.stream,
+          initialState: loaded(isLoadingMore: true),
+        );
+        final controller = await pumpList(tester, loaded(isLoadingMore: true));
+        var current = loaded(isLoadingMore: true);
+        when(() => mockListBloc.state).thenAnswer((_) => current);
+        await scrollToEnd(tester, controller);
+
+        // The page fails, and the spinner row below the comments goes.
+        current = loaded().copyWith(loadMoreFailed: true);
+        updates.add(current);
+        await tester.pump();
+        await tester.pump();
+        expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+        verifyNever(
+          () => mockListBloc.add(any(that: isA<CommentsLoadMoreRequested>())),
+        );
+
+        controller.jumpTo(controller.position.maxScrollExtent - 1);
+        await tester.pump();
+
+        verify(
+          () => mockListBloc.add(any(that: isA<CommentsLoadMoreRequested>())),
+        ).called(1);
+      });
+
       testWidgets('shows a spinner below the comments while a page loads', (
         tester,
       ) async {

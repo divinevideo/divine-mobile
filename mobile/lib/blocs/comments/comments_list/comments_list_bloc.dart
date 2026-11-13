@@ -251,7 +251,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     if (realCreatedAts.isEmpty) return;
     final cursor = realCreatedAts.reduce((a, b) => a.isBefore(b) ? a : b);
 
-    emit(state.copyWith(isLoadingMore: true));
+    emit(state.copyWith(isLoadingMore: true, loadMoreFailed: false));
 
     try {
       Log.info(
@@ -306,6 +306,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       emit(
         state.copyWith(
           isLoadingMore: false,
+          loadMoreFailed: true,
           error: CommentsListError.loadFailed,
           clearPendingFocus: true,
         ),
@@ -320,6 +321,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       emit(
         state.copyWith(
           isLoadingMore: false,
+          loadMoreFailed: true,
           error: CommentsListError.loadFailed,
           clearPendingFocus: true,
         ),

@@ -71,6 +71,7 @@ final class CommentsListState extends Equatable {
     this.commentsById = const {},
     this.error,
     this.isLoadingMore = false,
+    this.loadMoreFailed = false,
     this.hasMoreContent = true,
     this.nextOffset,
     this.sortMode = CommentsSortMode.topEngagement,
@@ -131,6 +132,11 @@ final class CommentsListState extends Equatable {
 
   /// Whether more comments are being loaded (pagination).
   final bool isLoadingMore;
+
+  /// Whether the last request for older comments failed. The list asks again
+  /// only when the viewer scrolls, so a page that keeps failing is not
+  /// requested in a loop.
+  final bool loadMoreFailed;
 
   /// Where the next REST page of comments starts, or `null` until REST has
   /// served a page.
@@ -318,6 +324,7 @@ final class CommentsListState extends Equatable {
     Map<String, Comment>? commentsById,
     CommentsListError? error,
     bool? isLoadingMore,
+    bool? loadMoreFailed,
     bool? hasMoreContent,
     int? nextOffset,
     CommentsSortMode? sortMode,
@@ -346,6 +353,7 @@ final class CommentsListState extends Equatable {
       // a pending failure before the snackbar listener can read it.
       error: clearError ? null : (error ?? this.error),
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      loadMoreFailed: loadMoreFailed ?? this.loadMoreFailed,
       hasMoreContent: hasMoreContent ?? this.hasMoreContent,
       nextOffset: nextOffset ?? this.nextOffset,
       sortMode: sortMode ?? this.sortMode,
@@ -374,6 +382,7 @@ final class CommentsListState extends Equatable {
     commentsById,
     error,
     isLoadingMore,
+    loadMoreFailed,
     hasMoreContent,
     nextOffset,
     sortMode,

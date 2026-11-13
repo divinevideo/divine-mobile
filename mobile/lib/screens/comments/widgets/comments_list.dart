@@ -68,18 +68,22 @@ class _CommentsListState extends State<CommentsList> {
         state.newCommentCount > 0) {
       bloc.add(const NewCommentsAcknowledged());
     }
-    _loadMoreNearEnd(position);
+    _loadMoreNearEnd(position, scrolled: true);
   }
 
   /// Asks for the next page of older comments once the end of the list is
   /// within [_loadMoreExtent], including when the comments do not fill it.
-  void _loadMoreNearEnd(ScrollMetrics metrics) {
+  ///
+  /// After a failed page only a scroll asks again: the failure takes the
+  /// spinner row away, and that change of size alone would repeat the request.
+  void _loadMoreNearEnd(ScrollMetrics metrics, {bool scrolled = false}) {
     final bloc = context.read<CommentsListBloc>();
     final state = bloc.state;
     if (metrics.extentAfter < _loadMoreExtent &&
         state.status == CommentsStatus.success &&
         state.hasMoreContent &&
-        !state.isLoadingMore) {
+        !state.isLoadingMore &&
+        (scrolled || !state.loadMoreFailed)) {
       bloc.add(const CommentsLoadMoreRequested());
     }
   }
