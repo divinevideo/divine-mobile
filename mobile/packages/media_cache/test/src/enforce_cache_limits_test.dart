@@ -644,6 +644,49 @@ void main() {
       });
     });
 
+    group('sweep log', () {
+      Iterable<String> sweepLines(MediaCacheManager manager) =>
+          LogCaptureService()
+              .getRecentLogs()
+              .map((entry) => entry.message)
+              .where(
+                (message) =>
+                    message.contains(
+                      'MediaCacheManager(${manager.mediaConfig.cacheKey})',
+                    ) &&
+                    message.contains('sweep reclaimed'),
+              );
+
+      test('leaves the budget and the directory total out', () async {
+        const budget = 987654;
+        const fileBytes = 4321;
+        final (manager, dir) = build(maxCacheSizeBytes: budget);
+        writeFile(dir, 'a_1_1.mp4', fileBytes);
+        when(repo.getAllObjects).thenAnswer(
+          (_) async => [obj('a_1_1.mp4', id: 1, touched: DateTime(2020))],
+        );
+
+        await manager.enforceCacheLimits();
+
+        final lines = sweepLines(manager).toList();
+        expect(lines, hasLength(1));
+        expect(lines.single, contains('within budget'));
+        expect(lines.single, isNot(contains('$budget')));
+        expect(lines.single, isNot(contains('$fileBytes')));
+      });
+
+      test('says so when the directory is still over budget', () async {
+        final (manager, dir) = build(maxCacheSizeBytes: 10);
+        // Untracked and unmanaged, so it counts but cannot be evicted.
+        writeFile(dir, 'externally-managed.bin', 25);
+        when(repo.getAllObjects).thenAnswer((_) async => []);
+
+        await manager.enforceCacheLimits();
+
+        expect(sweepLines(manager).single, contains('still over budget'));
+      });
+    });
+
     group('directory-total byte budget', () {
       test('counts untracked unmanaged bytes towards the budget', () async {
         final (manager, dir) = build(maxCacheSizeBytes: 100);

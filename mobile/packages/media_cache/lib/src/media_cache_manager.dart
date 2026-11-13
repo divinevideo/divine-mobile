@@ -1249,7 +1249,7 @@ class MediaCacheManager extends CacheManager {
       final budget = maxCacheSizeBytes;
       var evictedCount = 0;
       var evictedBytes = 0;
-      int? directoryBytes;
+      bool? overBudget;
       if (budget != null) {
         final evicted = await _evictToByteBudget(
           baseDir,
@@ -1259,14 +1259,20 @@ class MediaCacheManager extends CacheManager {
         );
         evictedCount = evicted.deletedCount;
         evictedBytes = evicted.deletedBytes;
-        directoryBytes = evicted.directoryBytes;
+        overBudget = evicted.directoryBytes > budget;
       }
       final elapsed = clock.now().difference(started);
+      // The budget and the directory total stay out of the line: the app
+      // sizes the budget from disk space, which iOS forbids sending off the
+      // device, and logs travel with bug reports.
       Log.info(
         'MediaCacheManager(${_config.cacheKey}): sweep reclaimed $reclaimed '
         'orphans, evicted $evictedCount files ($evictedBytes bytes)'
-        '${directoryBytes == null ? '' : '; directory $directoryBytes bytes '
-                  'of $budget budget'}'
+        '${switch (overBudget) {
+          null => '',
+          true => '; still over budget',
+          false => '; within budget',
+        }}'
         '; took ${elapsed.inMilliseconds}ms',
         name: 'MediaCache',
         category: LogCategory.video,

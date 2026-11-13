@@ -107,8 +107,9 @@ class MediaCacheBudgetService {
     ]);
     _appliedBudget = budget;
     _lastRefreshedAt = _now();
-    // Logs reach crash reports, and iOS forbids sending disk space or
-    // anything derived from it — the budget included — off the device.
+    // Logs travel with bug reports, and on iOS E174.1 forbids sending disk
+    // space or anything derived from it — the budget included — off the
+    // device.
     Log.info(
       'Media cache budget applied (automatic=$isAutomatic)',
       name: _logName,
