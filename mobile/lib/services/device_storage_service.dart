@@ -50,8 +50,28 @@ class DeviceStorageService {
       );
       final total = reading?['totalBytes'];
       final free = reading?['freeBytes'];
-      if (total is! int || free is! int) return null;
-      if (total <= 0 || free < 0 || free > total) return null;
+      // The warnings carry no figures: on iOS, E174.1 keeps disk space on
+      // the device, and logs travel with bug reports.
+      if (reading == null) {
+        Log.warning(
+          'Device storage unavailable from the platform',
+          name: 'DeviceStorageService',
+          category: LogCategory.system,
+        );
+        return null;
+      }
+      if (total is! int ||
+          free is! int ||
+          total <= 0 ||
+          free < 0 ||
+          free > total) {
+        Log.warning(
+          'Device storage reading rejected as inconsistent',
+          name: 'DeviceStorageService',
+          category: LogCategory.system,
+        );
+        return null;
+      }
       return DeviceStorageSpace(totalBytes: total, freeBytes: free);
     } on PlatformException catch (e) {
       Log.warning(

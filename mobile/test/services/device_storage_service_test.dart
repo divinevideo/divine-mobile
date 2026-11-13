@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/device_storage_service.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 const _channel = MethodChannel('divine/device_storage');
 
@@ -87,6 +88,42 @@ void main() {
             reason: '$reading',
           );
         }
+      });
+
+      group('logs', () {
+        List<String> storageWarnings() => [
+          for (final entry in LogCaptureService().getRecentLogs())
+            if (entry.name == 'DeviceStorageService' &&
+                entry.level == LogLevel.warning)
+              entry.message,
+        ];
+
+        test('a warning when the channel reports nothing', () async {
+          debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+          answerWith((_) async => null);
+          final before = storageWarnings().length;
+
+          await const DeviceStorageService().storageSpace();
+
+          expect(storageWarnings().skip(before), [
+            'Device storage unavailable from the platform',
+          ]);
+        });
+
+        test('a warning without the figures for a rejected reading', () async {
+          debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+          answerWith(
+            (_) async => {'totalBytes': 1234567, 'freeBytes': 7654321},
+          );
+          final before = storageWarnings().length;
+
+          await const DeviceStorageService().storageSpace();
+
+          final logged = storageWarnings().skip(before).toList();
+          expect(logged, ['Device storage reading rejected as inconsistent']);
+          expect(logged.single, isNot(contains('1234567')));
+          expect(logged.single, isNot(contains('7654321')));
+        });
       });
 
       test('returns null when the platform call fails', () async {
