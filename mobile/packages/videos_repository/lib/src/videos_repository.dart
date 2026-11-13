@@ -529,9 +529,11 @@ class VideosRepository {
       );
       final hydratedVideos = await _hydrateVideosWithBulkStats(videos);
       final unseenVideos = _withoutSeenVideos(hydratedVideos);
-      seenOnlyPages = hydratedVideos.isNotEmpty && unseenVideos.isEmpty
-          ? seenOnlyPages + 1
-          : 0;
+      if (unseenVideos.isNotEmpty) {
+        seenOnlyPages = 0;
+      } else if (hydratedVideos.isNotEmpty) {
+        seenOnlyPages++;
+      }
       _appendUniqueVideos(
         visible,
         unseenVideos,
@@ -1139,9 +1141,11 @@ class VideosRepository {
 
       final videos = _transformVideoStats(page.videos);
       final unseenVideos = _withoutSeenVideos(videos);
-      seenOnlyPages = videos.isNotEmpty && unseenVideos.isEmpty
-          ? seenOnlyPages + 1
-          : 0;
+      if (unseenVideos.isNotEmpty) {
+        seenOnlyPages = 0;
+      } else if (videos.isNotEmpty) {
+        seenOnlyPages++;
+      }
       _appendUniqueVideos(visible, unseenVideos, seenVideoKeys: seenVideoKeys);
 
       // Compare the server's row count, not the surviving videos: dropping one

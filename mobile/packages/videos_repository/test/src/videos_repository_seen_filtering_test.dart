@@ -46,6 +46,7 @@ VideoStats _stats(
   String? pubkey,
   int? createdAt,
   String? platform,
+  String? videoUrl,
 }) => VideoStats(
   rawTags: platform != null ? {'platform': platform} : const {},
   id: id,
@@ -57,7 +58,7 @@ VideoStats _stats(
   dTag: 'dtag-$id',
   title: 'Test',
   thumbnail: 'https://example.com/thumb.jpg',
-  videoUrl: 'https://example.com/$id.mp4',
+  videoUrl: videoUrl ?? 'https://example.com/$id.mp4',
   reactions: 0,
   comments: 0,
   reposts: 0,
@@ -248,6 +249,60 @@ void main() {
             before: any(named: 'before'),
           ),
         ).called(maxSeenOnlyFeedPages);
+      },
+    );
+
+    test(
+      'getHomeFeedVideos does not reset seen-only budget on empty transformed '
+      'pages',
+      () async {
+        var cursor = 1000;
+        var calls = 0;
+        when(
+          () => mockFunnelcake.getBulkVideoStats(any()),
+        ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
+        when(
+          () => mockFunnelcake.getHomeFeed(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((_) async {
+          calls++;
+          cursor -= 10;
+          final isEmptyTransformed = calls % 3 == 0;
+          return HomeFeedResponse(
+            videos: [
+              _stats(
+                'row-$calls',
+                createdAt: cursor,
+                videoUrl: isEmptyTransformed ? '' : null,
+              ),
+            ],
+            nextCursor: cursor,
+            hasMore: true,
+            rawBody: '{}',
+          );
+        });
+
+        final repo = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (_, {within = const Duration(hours: 24)}) => true,
+          ),
+        );
+
+        final result = await repo.getHomeFeedVideos(
+          authors: ['a'],
+          userPubkey: 'u',
+        );
+        expect(result.videos, isEmpty);
+        expect(result.hasMore, isFalse);
+        expect(result.paginationCursor, isNull);
+        // Calls 3, 6, and 9 transform to empty pages without resetting the
+        // 8-page seen budget, so the 8th seen page lands on call 11.
+        expect(calls, equals(maxSeenOnlyFeedPages + 3));
       },
     );
 
@@ -460,6 +515,49 @@ void main() {
         expect(page, equals(1 + maxSeenOnlyFeedPages));
         expect(result.hasMore, isTrue);
         expect(result.paginationCursor, equals('cursor-$page'));
+      },
+    );
+
+    test(
+      'getNewVideos does not reset seen-only budget on empty transformed '
+      'pages',
+      () async {
+        var calls = 0;
+        when(
+          () => mockFunnelcake.getRecentVideosPage(
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((_) async {
+          calls++;
+          final isEmptyTransformed = calls % 3 == 0;
+          return RecentVideosResponse(
+            videos: [
+              _stats('row-$calls', videoUrl: isEmptyTransformed ? '' : null),
+            ],
+            serverItemCount: 1,
+            hasMore: true,
+            nextCursor: 'cursor-$calls',
+          );
+        });
+        when(
+          () => mockFunnelcake.getBulkVideoStats(any()),
+        ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
+
+        final repo = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (_, {within = const Duration(hours: 24)}) => true,
+          ),
+        );
+
+        final result = await repo.getNewVideos(limit: 1);
+        expect(result.videos, isEmpty);
+        expect(result.hasMore, isFalse);
+        expect(result.paginationCursor, isNull);
+        expect(calls, equals(maxSeenOnlyFeedPages + 3));
       },
     );
 
