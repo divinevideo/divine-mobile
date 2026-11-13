@@ -608,6 +608,23 @@ void main() {
 
         expect(emptyCacheCalled, true);
       });
+
+      test('marks the emptied directory as measured at zero bytes', () async {
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        cacheManager = TestableMediaCacheManager(
+          config: MediaCacheConfig(
+            cacheKey: 'clear_measured_$timestamp',
+            enableSyncManifest: true,
+          ),
+          mockEmptyCache: () async {},
+        );
+        expect(cacheManager.hasMeasuredCacheBytes, isFalse);
+
+        await cacheManager.clearCache();
+
+        expect(cacheManager.hasMeasuredCacheBytes, isTrue);
+        expect(cacheManager.knownCacheBytes, isZero);
+      });
     });
 
     group('preCacheFiles with mocks', () {

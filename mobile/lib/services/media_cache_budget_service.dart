@@ -2,6 +2,7 @@
 // ABOUTME: caches, keeping a video-cache size the user fixed in Settings.
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:media_cache/media_cache.dart';
 import 'package:openvine/constants/storage_cache_constants.dart';
@@ -26,7 +27,9 @@ typedef MediaCacheBudgetListener = void Function(
 /// that and only the image cache keeps following the disk.
 ///
 /// A budget that shrinks trims the cache straight away. One that grows only
-/// raises the ceiling; the cache fills back up as videos are watched.
+/// raises the ceiling; the cache fills back up as videos are watched. A
+/// reading taken before both caches have been measured only ever grows them
+/// (see [MediaCacheManager.hasMeasuredCacheBytes]).
 class MediaCacheBudgetService {
   /// Creates a service over the given caches.
   ///
@@ -121,9 +124,29 @@ class MediaCacheBudgetService {
     // it was computed under even if the user switches during the trims.
     final fixedVideoBytes = _prefs.getInt(kCacheLimitPrefKey);
     final automatic = fixedVideoBytes == null;
+    // Until both caches have been walked, their sizes cover only this
+    // session's downloads, so the reading undercounts what they may keep.
+    // Such a reading can grow the automatic budgets but never shrink them,
+    // and it leaves the next refresh free to run.
+    final provisional =
+        storage != null &&
+        !(_videoCache.hasMeasuredCacheBytes &&
+            _imageCache.hasMeasuredCacheBytes);
     final budget = MediaCacheBudget(
-      videoBytes: fixedVideoBytes ?? diskBudget.videoBytes,
-      imageBytes: diskBudget.imageBytes,
+      videoBytes:
+          fixedVideoBytes ??
+          _automaticBytes(
+            _videoCache,
+            diskBudget.videoBytes,
+            ceiling: _ceiling.videoBytes,
+            provisional: provisional,
+          ),
+      imageBytes: _automaticBytes(
+        _imageCache,
+        diskBudget.imageBytes,
+        ceiling: _ceiling.imageBytes,
+        provisional: provisional,
+      ),
       playerBytes: diskBudget.playerBytes,
     );
 
@@ -132,7 +155,7 @@ class MediaCacheBudgetService {
       _apply(_imageCache, budget.imageBytes),
     ]);
     _appliedBudget = budget;
-    _lastRefreshedAt = _now();
+    if (!provisional) _lastRefreshedAt = _now();
     // Logs travel with bug reports, and on iOS E174.1 forbids sending disk
     // space or anything derived from it — the budget included — off the
     // device.
@@ -143,6 +166,17 @@ class MediaCacheBudgetService {
     );
     _onBudgetApplied?.call(storage, budget, automatic: automatic);
     return budget;
+  }
+
+  int _automaticBytes(
+    MediaCacheManager cache,
+    int bytes, {
+    required int ceiling,
+    required bool provisional,
+  }) {
+    final current = cache.maxCacheSizeBytes;
+    if (!provisional || current == null) return bytes;
+    return math.min(math.max(bytes, current), ceiling);
   }
 
   Future<void> _apply(MediaCacheManager cache, int bytes) async {

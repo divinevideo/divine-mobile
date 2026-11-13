@@ -78,7 +78,14 @@ void main() {
       onBudgetApplied: onBudgetApplied,
     );
 
+    void stubMeasured({bool video = true, bool image = true}) {
+      when(() => videoCache.hasMeasuredCacheBytes).thenReturn(video);
+      when(() => imageCache.hasMeasuredCacheBytes).thenReturn(image);
+    }
+
     group('refresh', () {
+      setUp(stubMeasured);
+
       test('keeps the caches at their ceilings on a roomy disk', () async {
         final budget = await build(storage: _roomyDisk).refresh();
 
@@ -285,7 +292,59 @@ void main() {
       });
     });
 
+    group('before the caches are measured', () {
+      test('does not shrink either cache on a nearly full disk', () async {
+        stubMeasured(video: false);
+
+        final budget = await build(storage: _fullDisk).refresh();
+
+        expect(budget.videoBytes, equals(_ceiling.videoBytes));
+        expect(budget.imageBytes, equals(_ceiling.imageBytes));
+        expect(videoBudget, equals(_ceiling.videoBytes));
+        expect(imageBudget, equals(_ceiling.imageBytes));
+        verifyNever(() => videoCache.enforceCacheLimits(force: true));
+        verifyNever(() => imageCache.enforceCacheLimits(force: true));
+      });
+
+      test('still grows a cache toward the disk budget', () async {
+        stubMeasured(image: false);
+        imageBudget = kImageCacheFloorBytes;
+
+        await build(storage: _roomyDisk).refresh();
+
+        expect(imageBudget, equals(_ceiling.imageBytes));
+      });
+
+      test('still applies a fixed size the user chose', () async {
+        stubMeasured(video: false, image: false);
+        await prefs.setInt(kCacheLimitPrefKey, 1 * _gb);
+
+        await build(storage: _fullDisk).refresh();
+
+        expect(videoBudget, equals(1 * _gb));
+        verify(() => videoCache.enforceCacheLimits(force: true)).called(1);
+      });
+
+      test('leaves the next stale check free to read the disk', () async {
+        stubMeasured(video: false);
+        var reads = 0;
+        final service = build(
+          readStorageSpace: () async {
+            reads++;
+            return _fullDisk;
+          },
+        );
+
+        await service.refreshIfStale();
+        await service.refreshIfStale();
+
+        expect(reads, equals(2));
+      });
+    });
+
     group('refreshIfStale', () {
+      setUp(stubMeasured);
+
       test('skips a refresh inside the interval and runs one after', () async {
         var clock = DateTime(2026, 11, 13, 12);
         var reads = 0;

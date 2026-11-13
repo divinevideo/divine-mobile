@@ -644,6 +644,67 @@ void main() {
       });
     });
 
+    group('hasMeasuredCacheBytes', () {
+      test('is false before any sweep walks the directory', () {
+        final (manager, dir) = build(maxCacheSizeBytes: 1000);
+        writeFile(dir, 'a_1_1.mp4', 60);
+
+        expect(manager.hasMeasuredCacheBytes, isFalse);
+      });
+
+      test('is true after a budgeted sweep walks the directory', () async {
+        final (manager, dir) = build(maxCacheSizeBytes: 1000);
+        writeFile(dir, 'a_1_1.mp4', 60);
+        when(repo.getAllObjects).thenAnswer(
+          (_) async => [obj('a_1_1.mp4', id: 1, touched: DateTime(2020))],
+        );
+
+        await manager.enforceCacheLimits();
+
+        expect(manager.hasMeasuredCacheBytes, isTrue);
+      });
+
+      test('is true after a sweep that evicts', () async {
+        final (manager, dir) = build(maxCacheSizeBytes: 100);
+        writeFile(dir, 'a_1_1.mp4', 60);
+        writeFile(dir, 'b_2_2.mp4', 60);
+        when(repo.getAllObjects).thenAnswer(
+          (_) async => [
+            obj('a_1_1.mp4', id: 1, touched: DateTime(2020)),
+            obj('b_2_2.mp4', id: 2, touched: DateTime(2020, 1, 2)),
+          ],
+        );
+
+        await manager.enforceCacheLimits();
+
+        expect(manager.hasMeasuredCacheBytes, isTrue);
+      });
+
+      test('stays false when the repository cannot open', () async {
+        final (manager, dir) = build(maxCacheSizeBytes: 1000);
+        writeFile(dir, 'a_1_1.mp4', 60);
+        when(repo.open).thenAnswer((_) async => false);
+
+        await manager.enforceCacheLimits();
+
+        expect(manager.hasMeasuredCacheBytes, isFalse);
+      });
+
+      test('is false again after resetForTesting', () async {
+        final (manager, dir) = build(maxCacheSizeBytes: 1000);
+        writeFile(dir, 'a_1_1.mp4', 60);
+        when(repo.getAllObjects).thenAnswer(
+          (_) async => [obj('a_1_1.mp4', id: 1, touched: DateTime(2020))],
+        );
+        await manager.enforceCacheLimits();
+        expect(manager.hasMeasuredCacheBytes, isTrue);
+
+        manager.resetForTesting();
+
+        expect(manager.hasMeasuredCacheBytes, isFalse);
+      });
+    });
+
     group('sweep log', () {
       Iterable<String> sweepLines(MediaCacheManager manager) =>
           LogCaptureService()
