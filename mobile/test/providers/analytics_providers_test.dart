@@ -8,6 +8,16 @@ import 'package:openvine/providers/app_providers.dart';
 
 import '../helpers/recording_consumption_analytics.dart';
 
+class _RecordingFirebaseSink extends FirebaseAnalyticsEventSink {
+  final properties = <String, String?>{};
+
+  @override
+  Future<void> setUserProperty({
+    required String name,
+    required String? value,
+  }) async => properties[name] = value;
+}
+
 class _RecordingSink implements AnalyticsEventSink {
   final userIds = <String?>[];
 
@@ -86,6 +96,40 @@ void main() {
 
       expect(sink.userIds, isEmpty);
       expect(crashIds, isEmpty);
+    });
+  });
+
+  group('analyticsUserPropertySetterProvider', () {
+    test('sets properties through the Firebase sink', () async {
+      final firebase = _RecordingFirebaseSink();
+      final container = ProviderContainer(
+        overrides: [analyticsEventSinkProvider.overrideWithValue(firebase)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(analyticsUserPropertySetterProvider)(
+        name: 'cache_mode',
+        value: 'automatic',
+      );
+
+      expect(firebase.properties, equals({'cache_mode': 'automatic'}));
+    });
+
+    test('does nothing for a sink with no user properties', () async {
+      final container = ProviderContainer(
+        overrides: [
+          analyticsEventSinkProvider.overrideWithValue(_RecordingSink()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await expectLater(
+        container.read(analyticsUserPropertySetterProvider)(
+          name: 'cache_mode',
+          value: 'automatic',
+        ),
+        completes,
+      );
     });
   });
 

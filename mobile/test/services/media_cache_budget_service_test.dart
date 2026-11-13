@@ -67,6 +67,7 @@ void main() {
       DeviceStorageSpace? storage,
       Future<DeviceStorageSpace?> Function()? readStorageSpace,
       DateTime Function()? now,
+      MediaCacheBudgetListener? onBudgetApplied,
     }) => MediaCacheBudgetService(
       videoCache: videoCache,
       imageCache: imageCache,
@@ -74,6 +75,7 @@ void main() {
       readStorageSpace: readStorageSpace ?? () async => storage,
       ceiling: _ceiling,
       now: now,
+      onBudgetApplied: onBudgetApplied,
     );
 
     group('refresh', () {
@@ -182,6 +184,19 @@ void main() {
 
         expect(await first, equals(await second));
         expect(reads, equals(1));
+      });
+
+      test('tells the listener what it read and what it applied', () async {
+        await prefs.setInt(kCacheLimitPrefKey, 5 * _gb);
+        final heard = <(DeviceStorageSpace?, MediaCacheBudget, bool)>[];
+
+        final budget = await build(
+          storage: _fullDisk,
+          onBudgetApplied: (storage, budget, {required automatic}) =>
+              heard.add((storage, budget, automatic)),
+        ).refresh();
+
+        expect(heard, equals([(_fullDisk, budget, false)]));
       });
 
       test('remembers the budget it applied', () async {

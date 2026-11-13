@@ -66,6 +66,26 @@ final analyticsEventSinkProvider = Provider<AnalyticsEventSink>(
   (ref) => FirebaseAnalyticsEventSink(),
 );
 
+/// Sets an analytics user property, or clears it when [value] is null.
+typedef AnalyticsUserPropertySetter = Future<void> Function({
+  required String name,
+  required String? value,
+});
+
+/// Sets analytics user properties on the Firebase backend.
+///
+/// Derived from [analyticsEventSinkProvider] so properties reach the same
+/// backend, behind the same consent gate, as events. Any other sink has no
+/// user properties, so setting one does nothing.
+final analyticsUserPropertySetterProvider =
+    Provider<AnalyticsUserPropertySetter>((ref) {
+      final sink = ref.watch(analyticsEventSinkProvider);
+      if (sink case final FirebaseAnalyticsEventSink firebase) {
+        return firebase.setUserProperty;
+      }
+      return ({required name, required value}) async {};
+    });
+
 /// Provides the SDK-level consent gate for the Firebase analytics backend.
 ///
 /// Derived from [analyticsEventSinkProvider] so both reach the same backend.

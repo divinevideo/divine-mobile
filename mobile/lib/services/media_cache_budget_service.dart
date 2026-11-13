@@ -10,6 +10,14 @@ import 'package:openvine/services/media_cache_budget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+/// Hears each budget a refresh applies, with the disk reading it came from
+/// (null when the disk could not be read).
+typedef MediaCacheBudgetListener = void Function(
+  DeviceStorageSpace? storage,
+  MediaCacheBudget budget, {
+  required bool automatic,
+});
+
 /// Keeps the video and image caches sized to the disk they live on.
 ///
 /// In automatic mode — the default, meaning the user never picked a size in
@@ -24,6 +32,7 @@ class MediaCacheBudgetService {
   ///
   /// [ceiling] is the largest budget each cache may get: today's fixed
   /// sizes, with a zero player budget where the platform has no player cache.
+  /// [onBudgetApplied] hears every budget applied, for telemetry.
   MediaCacheBudgetService({
     required MediaCacheManager videoCache,
     required MediaCacheManager imageCache,
@@ -31,12 +40,14 @@ class MediaCacheBudgetService {
     required Future<DeviceStorageSpace?> Function() readStorageSpace,
     required MediaCacheBudget ceiling,
     DateTime Function()? now,
+    MediaCacheBudgetListener? onBudgetApplied,
   }) : _videoCache = videoCache,
        _imageCache = imageCache,
        _prefs = prefs,
        _readStorageSpace = readStorageSpace,
        _ceiling = ceiling,
-       _now = now ?? DateTime.now;
+       _now = now ?? DateTime.now,
+       _onBudgetApplied = onBudgetApplied;
 
   /// How long a refresh stays current for [refreshIfStale].
   static const Duration staleAfter = Duration(minutes: 5);
@@ -49,6 +60,7 @@ class MediaCacheBudgetService {
   final Future<DeviceStorageSpace?> Function() _readStorageSpace;
   final MediaCacheBudget _ceiling;
   final DateTime Function() _now;
+  final MediaCacheBudgetListener? _onBudgetApplied;
 
   Future<MediaCacheBudget>? _inFlight;
   DateTime? _lastRefreshedAt;
@@ -103,6 +115,7 @@ class MediaCacheBudgetService {
       name: _logName,
       category: LogCategory.storage,
     );
+    _onBudgetApplied?.call(storage, budget, automatic: isAutomatic);
     return budget;
   }
 
