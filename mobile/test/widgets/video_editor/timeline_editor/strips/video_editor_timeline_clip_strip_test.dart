@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -689,6 +690,26 @@ void main() {
           find.bySemanticsLabel(RegExp('Clip 1 of 2')),
         );
         expect(semantics.hint, contains('Long press to reorder'));
+      });
+
+      // A screen reader's long press replays start and end at once, and the
+      // end handler is only wired while a reorder runs — so it used to enter
+      // reorder mode and never leave it. The tiles' move actions reorder.
+      testWidgets('offers no long press that would strand a reorder', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(buildWidget());
+
+        expect(
+          find.semantics.byAction(SemanticsAction.longPress),
+          findsNothing,
+        );
+        expect(
+          find.semantics.byAction(SemanticsAction.customAction),
+          findsNWidgets(2),
+        );
+        semantics.dispose();
       });
     });
 

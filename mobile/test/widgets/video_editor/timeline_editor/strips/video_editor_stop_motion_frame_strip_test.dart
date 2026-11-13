@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -497,6 +498,88 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(movedToSlot, isNull);
+    });
+  });
+
+  group('screen reader', () {
+    // A screen reader's long press replays start and end at once, and the end
+    // handler is only wired while a reorder runs — so it used to enter reorder
+    // mode and never leave it.
+    testWidgets('offers no long press that would strand a reorder', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await pump(tester, onFrameTapped: (_) {});
+
+      expect(find.semantics.byAction(SemanticsAction.longPress), findsNothing);
+      semantics.dispose();
+    });
+
+    testWidgets('moves a still with the move actions', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final moves = <(int, int)>[];
+      await pump(
+        tester,
+        onFrameTapped: (_) {},
+        onReorder: (from, to) => moves.add((from, to)),
+      );
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final middle = find.semantics.byLabel(
+        l10n.videoEditorStopMotionFrameSemanticLabel(2, 3),
+      );
+
+      tester.semantics.customAction(
+        middle,
+        CustomSemanticsAction(label: l10n.videoEditorTimelineClipMoveLeft),
+      );
+      tester.semantics.customAction(
+        middle,
+        CustomSemanticsAction(label: l10n.videoEditorTimelineClipMoveRight),
+      );
+
+      expect(moves, equals([(1, 0), (1, 2)]));
+      semantics.dispose();
+    });
+
+    testWidgets('offers no move past either end', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pump(tester, onFrameTapped: (_) {});
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      final first = tester
+          .getSemantics(
+            find.bySemanticsLabel(
+              l10n.videoEditorStopMotionFrameSemanticLabel(1, 3),
+            ),
+          )
+          .getSemanticsData();
+      final last = tester
+          .getSemantics(
+            find.bySemanticsLabel(
+              l10n.videoEditorStopMotionFrameSemanticLabel(3, 3),
+            ),
+          )
+          .getSemanticsData();
+
+      expect(first.customSemanticsActionIds, hasLength(1));
+      expect(last.customSemanticsActionIds, hasLength(1));
+      semantics.dispose();
+    });
+
+    testWidgets('offers no move actions in multi-select mode', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pump(
+        tester,
+        onFrameTapped: (_) {},
+        isMultiSelectMode: true,
+        selectedFrameIndexes: {1},
+      );
+
+      expect(
+        find.semantics.byAction(SemanticsAction.customAction),
+        findsNothing,
+      );
+      semantics.dispose();
     });
   });
 }
