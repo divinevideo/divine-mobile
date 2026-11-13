@@ -73,8 +73,6 @@ void main() {
     String? tertiaryButtonText,
     VoidCallback? onTertiaryPressed,
   }) {
-    // Wraps the MaterialApp rather than its home: the modal route that `show`
-    // pushes sits above home, and must still resolve sticker assets here.
     return DefaultAssetBundle(
       bundle: bundle,
       child: MaterialApp(
@@ -325,6 +323,9 @@ void main() {
     });
 
     group('show', () {
+      // Each test wraps the MaterialApp in the bundle rather than its home: the
+      // modal route that `show` pushes sits above home, and must still resolve
+      // sticker assets.
       testWidgets('shows as modal bottom sheet', (tester) async {
         await tester.pumpWidget(
           DefaultAssetBundle(
