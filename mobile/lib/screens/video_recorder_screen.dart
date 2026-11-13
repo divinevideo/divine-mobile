@@ -414,7 +414,7 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
     final navigator = Navigator.of(context);
     await VineBottomSheetPrompt.show(
       context: context,
-      sticker: .grandfather,
+      sticker: .videoClapBoard,
       title: context.l10n.videoRecorderWhySixSecondsTitle,
       subtitle: context.l10n.videoRecorderWhySixSecondsSubtitle,
       secondaryButtonText: context.l10n.videoRecorderWhySixSecondsButton,
