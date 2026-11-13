@@ -196,6 +196,19 @@ void main() {
           findsOneWidget,
         );
       });
+
+      testWidgets('names its cancel and confirm buttons', (tester) async {
+        await tester.pumpWidget(_buildSubject());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        for (final label in [l10n.commonCancel, l10n.videoEditorDoneLabel]) {
+          expect(
+            tester.getSemantics(find.bySemanticsLabel(label)),
+            isSemantics(isButton: true, hasTapAction: true),
+          );
+        }
+      });
     });
 
     group('initial speed clamping', () {

@@ -234,6 +234,34 @@ void main() {
         );
       });
 
+      testWidgets('names the clear button', (tester) async {
+        final stateWithQuery = VideoEditorStickerLoaded(
+          stickers: testStickers,
+          allStickers: testStickers,
+          searchQuery: 'test',
+        );
+        whenListen(
+          mockBloc,
+          Stream.value(stateWithQuery),
+          initialState: stateWithQuery,
+        );
+
+        await tester.pumpWidget(buildSubject(state: stateWithQuery));
+        await tester.pump();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        expect(
+          tester.getSemantics(
+            find.byTooltip(l10n.userPickerClearSearchSemantics),
+          ),
+          isSemantics(
+            tooltip: l10n.userPickerClearSearchSemantics,
+            isButton: true,
+            hasTapAction: true,
+          ),
+        );
+      });
+
       testWidgets('hides clear button when no search query', (tester) async {
         when(
           () => mockBloc.state,

@@ -31,6 +31,18 @@ void main() {
       expect(find.text(l10n.videoEditorStopMotionFramesCount(5)), findsWidgets);
     });
 
+    testWidgets('names its close and confirm buttons', (tester) async {
+      await pump(tester, initialValue: 5);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      for (final label in [l10n.commonCancel, l10n.videoEditorDoneLabel]) {
+        expect(
+          tester.getSemantics(find.bySemanticsLabel(label)),
+          isSemantics(isButton: true, hasTapAction: true),
+        );
+      }
+    });
+
     testWidgets('uses the singular form for a hold of one frame', (
       tester,
     ) async {

@@ -75,6 +75,7 @@ class _StopMotionFramesPerImageSheetState
                 icon: DivineIconName.x,
                 type: DivineIconButtonType.secondary,
                 size: DivineIconButtonSize.small,
+                semanticLabel: context.l10n.commonCancel,
                 onPressed: () => context.pop<int>(),
               ),
               Flexible(
@@ -89,6 +90,7 @@ class _StopMotionFramesPerImageSheetState
               DivineIconButton(
                 icon: DivineIconName.check,
                 size: DivineIconButtonSize.small,
+                semanticLabel: context.l10n.videoEditorDoneLabel,
                 onPressed: () => context.pop<int>(_value),
               ),
             ],
