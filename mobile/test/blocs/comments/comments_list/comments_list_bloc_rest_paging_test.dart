@@ -215,6 +215,33 @@ void main() {
       );
 
       blocTest<CommentsListBloc, CommentsListState>(
+        'stops paging when a relay page brings nothing new',
+        // The relay reports no hasMore, and a total that counts comments
+        // the list never gets would keep the next request identical.
+        setUp: () => stubLoadMore(
+          CommentThread(rootEventId: rootId, totalCount: 60),
+        ),
+        build: createBloc,
+        seed: loadedState,
+        act: (bloc) => bloc.add(const CommentsLoadMoreRequested()),
+        verify: (bloc) => expect(bloc.state.hasMoreContent, isFalse),
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'keeps paging past a REST page of comments already loaded',
+        setUp: () => stubLoadMore(
+          threadOf([makeComment('f' * 64, 5000)], nextOffset: 100),
+        ),
+        build: createBloc,
+        seed: () => loadedState(nextOffset: 50),
+        act: (bloc) => bloc.add(const CommentsLoadMoreRequested()),
+        verify: (bloc) {
+          expect(bloc.state.commentsById, hasLength(1));
+          expect(bloc.state.hasMoreContent, isTrue);
+        },
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
         'keeps the REST position when the relay served the page',
         setUp: () => stubLoadMore(threadOf([makeComment('2' * 64, 3000)])),
         build: createBloc,

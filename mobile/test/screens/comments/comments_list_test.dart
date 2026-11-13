@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -497,6 +498,155 @@ void main() {
       expect(listView.controller, equals(scrollController));
 
       scrollController.dispose();
+    });
+
+    group('paging', () {
+      final page = [
+        for (var i = 0; i < 50; i++)
+          CommentBuilder()
+              .withId('$i'.padLeft(64, 'd'))
+              .withContent('comment $i')
+              .withCreatedAt(DateTime.utc(2026).add(Duration(minutes: 50 - i)))
+              .build(),
+      ];
+
+      CommentsListState loaded({
+        CommentsSortMode sortMode = CommentsSortMode.topEngagement,
+        bool hasMoreContent = true,
+        bool isLoadingMore = false,
+      }) => CommentsListState(
+        rootEventId: testVideoEventId,
+        rootAuthorPubkey: testVideoAuthorPubkey,
+        status: CommentsStatus.success,
+        commentsById: {for (final c in page) c.id: c},
+        sortMode: sortMode,
+        hasMoreContent: hasMoreContent,
+        isLoadingMore: isLoadingMore,
+      );
+
+      Future<ScrollController> pumpList(
+        WidgetTester tester,
+        CommentsListState state,
+      ) async {
+        final controller = ScrollController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          buildTestWidget(listState: state, scrollController: controller),
+        );
+        await tester.pump();
+        return controller;
+      }
+
+      Future<void> scrollToEnd(
+        WidgetTester tester,
+        ScrollController controller,
+      ) async {
+        controller.jumpTo(controller.position.maxScrollExtent);
+        await tester.pump();
+      }
+
+      for (final mode in CommentsSortMode.values) {
+        testWidgets('asks for older comments near the end in ${mode.name}', (
+          tester,
+        ) async {
+          final controller = await pumpList(tester, loaded(sortMode: mode));
+          verifyNever(
+            () => mockListBloc.add(any(that: isA<CommentsLoadMoreRequested>())),
+          );
+          // Like the bloc, the list reports the page loading once asked.
+          var current = loaded(sortMode: mode);
+          when(() => mockListBloc.state).thenAnswer((_) => current);
+          when(
+            () => mockListBloc.add(any(that: isA<CommentsLoadMoreRequested>())),
+          ).thenAnswer((_) => current = current.copyWith(isLoadingMore: true));
+
+          await scrollToEnd(tester, controller);
+
+          verify(
+            () => mockListBloc.add(any(that: isA<CommentsLoadMoreRequested>())),
+          ).called(1);
+        });
+      }
+
+      for (final hasMoreContent in [true, false]) {
+        testWidgets(
+          'with too few comments to scroll, '
+          '${hasMoreContent ? 'asks for older ones' : 'asks for nothing'}',
+          (tester) async {
+            final few = page.take(2);
+            await pumpList(
+              tester,
+              loaded(hasMoreContent: hasMoreContent).copyWith(
+                commentsById: {for (final c in few) c.id: c},
+              ),
+            );
+            await tester.pump();
+
+            if (hasMoreContent) {
+              verify(
+                () => mockListBloc.add(
+                  any(that: isA<CommentsLoadMoreRequested>()),
+                ),
+              ).called(1);
+            } else {
+              verifyNever(
+                () => mockListBloc.add(
+                  any(that: isA<CommentsLoadMoreRequested>()),
+                ),
+              );
+            }
+          },
+        );
+      }
+
+      testWidgets('waits while a page is loading', (tester) async {
+        final controller = await pumpList(tester, loaded(isLoadingMore: true));
+        await scrollToEnd(tester, controller);
+
+        verifyNever(
+          () => mockListBloc.add(any(that: isA<CommentsLoadMoreRequested>())),
+        );
+      });
+
+      testWidgets('stops once every comment is loaded', (tester) async {
+        final controller = await pumpList(
+          tester,
+          loaded(hasMoreContent: false),
+        );
+        await scrollToEnd(tester, controller);
+
+        verifyNever(
+          () => mockListBloc.add(any(that: isA<CommentsLoadMoreRequested>())),
+        );
+      });
+
+      testWidgets('shows a spinner below the comments while a page loads', (
+        tester,
+      ) async {
+        final updates = StreamController<CommentsListState>();
+        addTearDown(updates.close);
+        whenListen(
+          mockListBloc,
+          updates.stream,
+          initialState: loaded(isLoadingMore: true),
+        );
+        final controller = ScrollController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          buildTestWidget(
+            listState: loaded(isLoadingMore: true),
+            scrollController: controller,
+          ),
+        );
+        await tester.pump();
+        await scrollToEnd(tester, controller);
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+
+        updates.add(loaded());
+        await tester.pump();
+
+        expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+      });
     });
 
     testWidgets(

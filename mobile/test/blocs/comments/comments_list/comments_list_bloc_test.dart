@@ -1727,7 +1727,8 @@ void main() {
         ),
         act: (b) => b.add(const CommentsLoadRequested()),
         verify: (b) {
-          expect(b.state.hasMoreContent, isTrue);
+          // Paging ends there too, or each scroll would ask again (#10921).
+          expect(b.state.hasMoreContent, isFalse);
           expect(b.state.pendingFocusCommentId, isNull);
           expect(b.state.scrollToCommentId, isNull);
           verify(

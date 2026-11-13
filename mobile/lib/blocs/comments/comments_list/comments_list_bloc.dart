@@ -275,18 +275,25 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         ...state.commentsById,
         for (final c in thread.comments) c.id: c,
       };
+      // A page that adds nothing and moves no REST position would be asked
+      // for again, unchanged, each time the viewer nears the end.
+      final advanced =
+          allCommentsById.length > loadedBefore ||
+          (thread.nextOffset != null && thread.nextOffset != state.nextOffset);
 
       emit(
         state.copyWith(
           commentsById: allCommentsById,
           isLoadingMore: false,
           nextOffset: thread.nextOffset,
-          hasMoreContent: _hasMoreContent(
-            loadedCount: allCommentsById.length,
-            lastBatchCount: thread.comments.length,
-            threadTotalCount: thread.totalCount,
-            threadHasMore: thread.hasMore,
-          ),
+          hasMoreContent:
+              advanced &&
+              _hasMoreContent(
+                loadedCount: allCommentsById.length,
+                lastBatchCount: thread.comments.length,
+                threadTotalCount: thread.totalCount,
+                threadHasMore: thread.hasMore,
+              ),
         ),
       );
       _focusWhenLoaded(
@@ -326,9 +333,9 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   /// it. The search also ends on the last page and on a failed load. A comment
   /// it does not find, such as a deleted one, leaves the list where it starts.
   ///
-  /// A page that added no comment ends the search: `hasMoreContent` can stay
-  /// true past the last comment the relays return, because the count it is
-  /// measured against includes comments the list never gets.
+  /// A page that added no comment ends the search, and the paging with it:
+  /// the count `hasMoreContent` is measured against includes comments the
+  /// list never gets.
   void _focusWhenLoaded(
     Emitter<CommentsListState> emit, {
     required bool pageAddedComments,

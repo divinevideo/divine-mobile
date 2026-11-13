@@ -41,6 +41,10 @@ class _CommentsListState extends State<CommentsList> {
   /// where the target lies.
   static const _maxJumpsTowardsTarget = 5;
 
+  /// How far from the end of the list the next page of older comments is
+  /// asked for, so it is usually in before the viewer gets there.
+  static const _loadMoreExtent = 600.0;
+
   @override
   void initState() {
     super.initState();
@@ -54,13 +58,29 @@ class _CommentsListState extends State<CommentsList> {
   }
 
   void _onScroll() {
-    // Scrolling to the top of Recent reveals the latest comments.
     if (!widget.scrollController.hasClients) return;
     final bloc = context.read<CommentsListBloc>();
-    if (widget.scrollController.offset <= 0 &&
-        bloc.state.sortMode == CommentsSortMode.newest &&
-        bloc.state.newCommentCount > 0) {
+    final state = bloc.state;
+    final position = widget.scrollController.position;
+    // Scrolling to the top of Recent reveals the latest comments.
+    if (position.pixels <= 0 &&
+        state.sortMode == CommentsSortMode.newest &&
+        state.newCommentCount > 0) {
       bloc.add(const NewCommentsAcknowledged());
+    }
+    _loadMoreNearEnd(position);
+  }
+
+  /// Asks for the next page of older comments once the end of the list is
+  /// within [_loadMoreExtent], including when the comments do not fill it.
+  void _loadMoreNearEnd(ScrollMetrics metrics) {
+    final bloc = context.read<CommentsListBloc>();
+    final state = bloc.state;
+    if (metrics.extentAfter < _loadMoreExtent &&
+        state.status == CommentsStatus.success &&
+        state.hasMoreContent &&
+        !state.isLoadingMore) {
+      bloc.add(const CommentsLoadMoreRequested());
     }
   }
 
@@ -180,35 +200,47 @@ class _CommentsListState extends State<CommentsList> {
                   for (final (i, node) in displayed.indexed)
                     rowKey(node.comment.id): i + offset,
                 };
-                return ListView.builder(
-                  controller: widget.scrollController,
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  itemCount: displayed.length + offset,
-                  // Rows shift when Top ranks or new comments land above
-                  // them. Without this a moved row is rebuilt from scratch,
-                  // stopping an inline video reply and dropping
-                  // screen-reader focus.
-                  findChildIndexCallback: (key) => indexByKey[key],
-                  itemBuilder: (context, index) {
-                    if (index < offset) {
-                      return HiddenCommentsNotice(
-                        viewerOwnsVideo: state.isViewerRootAuthor,
-                      );
-                    }
-                    final node = displayed[index - offset];
-                    return CommentItem(
-                      key: rowKey(node.comment.id),
-                      comment: node.comment,
-                      depth: node.depth,
-                      isHiddenByOwner: state.isHiddenByOwner(node.comment),
-                      viewerOwnsVideo: state.isViewerRootAuthor,
-                      supportsModeration: state.supportsModeration,
-                      repliesToHiddenComment: state.repliesToHiddenComment(
-                        node.comment,
-                      ),
-                    );
+                final rowCount = displayed.length + offset;
+                // The list's size changes without a scroll when it is first
+                // laid out and when a page arrives.
+                return NotificationListener<ScrollMetricsNotification>(
+                  onNotification: (notification) {
+                    _loadMoreNearEnd(notification.metrics);
+                    return false;
                   },
+                  child: ListView.builder(
+                    controller: widget.scrollController,
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    itemCount: rowCount + (state.isLoadingMore ? 1 : 0),
+                    // Rows shift when Top ranks or new comments land above
+                    // them. Without this a moved row is rebuilt from scratch,
+                    // stopping an inline video reply and dropping
+                    // screen-reader focus.
+                    findChildIndexCallback: (key) => indexByKey[key],
+                    itemBuilder: (context, index) {
+                      if (index < offset) {
+                        return HiddenCommentsNotice(
+                          viewerOwnsVideo: state.isViewerRootAuthor,
+                        );
+                      }
+                      if (index == rowCount) {
+                        return const _LoadingMoreIndicator();
+                      }
+                      final node = displayed[index - offset];
+                      return CommentItem(
+                        key: rowKey(node.comment.id),
+                        comment: node.comment,
+                        depth: node.depth,
+                        isHiddenByOwner: state.isHiddenByOwner(node.comment),
+                        viewerOwnsVideo: state.isViewerRootAuthor,
+                        supportsModeration: state.supportsModeration,
+                        repliesToHiddenComment: state.repliesToHiddenComment(
+                          node.comment,
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
             );
@@ -249,6 +281,21 @@ class HiddenCommentsNotice extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Shown below the comments while the next page of older ones loads.
+class _LoadingMoreIndicator extends StatelessWidget {
+  const _LoadingMoreIndicator();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 16),
+    child: Center(
+      child: DivineCircularProgressIndicator(
+        semanticsLabel: context.l10n.commentsLoadingSemanticLabel,
+      ),
+    ),
+  );
 }
 
 class _LoadingState extends StatelessWidget {
