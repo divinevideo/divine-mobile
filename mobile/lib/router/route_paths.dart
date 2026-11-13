@@ -1,4 +1,4 @@
-// ABOUTME: Canonical route path constants and builders for every named route
+// ABOUTME: Canonical route path constants and builders for every named route, plus the auth query keys
 // ABOUTME: Leaf module with no imports, so non-UI layers can read paths without pulling in screens
 
 /// Canonical location strings for the app's named routes.
@@ -229,4 +229,20 @@ abstract final class RoutePaths {
       '$videoRepliesBase/${Uri.encodeComponent(videoId)}';
   static String videoMetadataEditFor(String videoId) =>
       '$videoMetadataEdit/${Uri.encodeComponent(videoId)}';
+}
+
+/// Query-parameter keys the authentication routes read and write.
+///
+/// Reset emails link with `token` and `email`, and verification emails with
+/// `token`, so change those only together with the backend that sends them.
+/// They live here because the deep-link services may import this file and
+/// nothing else in `router/`.
+abstract final class AuthQueryParameters {
+  static const selectedPubkey = 'selectedPubkey';
+  static const email = 'email';
+  static const error = 'error';
+  static const token = 'token';
+  static const deviceCode = 'deviceCode';
+  static const verifier = 'verifier';
+  static const restored = 'restored';
 }

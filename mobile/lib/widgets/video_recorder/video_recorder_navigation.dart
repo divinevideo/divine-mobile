@@ -21,9 +21,9 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/library_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
-import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/utils/await_push_transition.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -398,7 +398,7 @@ Future<bool> _ensureAuthenticatedForRecorderExit(
   );
 
   if (saved) {
-    context.go(WelcomeScreen.path);
+    const WelcomeRouteData().go(context);
   }
   return false;
 }

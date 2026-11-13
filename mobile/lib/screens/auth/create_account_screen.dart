@@ -17,7 +17,7 @@ import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_version_provider.dart';
-import 'package:openvine/screens/auth/email_verification_screen.dart';
+import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/validators.dart';
@@ -98,13 +98,11 @@ class _CreateAccountView extends StatelessWidget {
         }
         if (state is DivineAuthEmailVerification) {
           TextInput.finishAutofillContext();
-          final encodedEmail = Uri.encodeComponent(state.email);
-          context.go(
-            '${EmailVerificationScreen.path}'
-            '?deviceCode=${state.deviceCode}'
-            '&verifier=${state.verifier}'
-            '&email=$encodedEmail',
-          );
+          EmailVerificationRouteData(
+            deviceCode: state.deviceCode,
+            verifier: state.verifier,
+            email: state.email,
+          ).go(context);
         }
       },
       child: BlocBuilder<DivineAuthCubit, DivineAuthState>(

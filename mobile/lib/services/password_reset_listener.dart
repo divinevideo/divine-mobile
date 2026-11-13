@@ -77,16 +77,16 @@ class PasswordResetListener {
 
     final params = uri.queryParameters;
 
-    if (params.containsKey('token')) {
-      final token = params['token']!;
-      final email = params['email'];
+    if (params.containsKey(AuthQueryParameters.token)) {
+      final token = params[AuthQueryParameters.token]!;
+      final email = params[AuthQueryParameters.email];
       final router = ref.read(goRouterProvider);
       final buffer = StringBuffer(RoutePaths.welcomeResetPassword)
-        ..write('?token=')
+        ..write('?${AuthQueryParameters.token}=')
         ..write(Uri.encodeQueryComponent(token));
       if (email != null && email.isNotEmpty) {
         buffer
-          ..write('&email=')
+          ..write('&${AuthQueryParameters.email}=')
           ..write(Uri.encodeQueryComponent(email));
       }
       router.go(buffer.toString());

@@ -7,8 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/supporter_providers.dart';
+import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
-import 'package:openvine/screens/auth/secure_account_screen.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -151,7 +151,8 @@ class _ProfileActionsSheetContentState
             title: l10n.profileSecureYourAccount,
             subtitle: l10n.profileSecureSubtitle,
             primaryLabel: l10n.profileSecurePrimaryButton,
-            onPrimaryTap: () => _openDestination(SecureAccountScreen.path),
+            onPrimaryTap: () =>
+                _openDestination(const SecureAccountRouteData().location),
             onSecondaryTap: _onMaybeLater,
           ),
           ProfileActionType.completeProfile => _ActionPrompt(

@@ -6,12 +6,14 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/auth/login_options_screen.dart';
@@ -42,8 +44,10 @@ void main() {
   late _MockKeycastOAuth mockOAuth;
   late _MockAuthService mockAuthService;
   late _MockPendingVerificationService mockPendingVerification;
+  Map<String, String>? verifyEmailQuery;
 
   setUp(() {
+    verifyEmailQuery = null;
     mockOAuth = _MockKeycastOAuth();
     mockAuthService = _MockAuthService();
     mockPendingVerification = _MockPendingVerificationService();
@@ -87,8 +91,10 @@ void main() {
             ),
             GoRoute(
               path: '/verify-email',
-              builder: (_, _) =>
-                  const Scaffold(body: Text('Email Verification')),
+              builder: (_, state) {
+                verifyEmailQuery = state.uri.queryParameters;
+                return const Scaffold(body: Text('Email Verification'));
+              },
             ),
             GoRoute(
               path: SupportCenterScreen.path,
@@ -662,6 +668,36 @@ void main() {
             password: any(named: 'password'),
             scope: any(named: 'scope'),
           ),
+        );
+      });
+    });
+
+    group('email verification', () {
+      testWidgets('opens verification with the code, verifier and email', (
+        tester,
+      ) async {
+        await tester.pumpWidget(createTestWidget());
+        await tester.pumpAndSettle();
+
+        BlocProvider.of<DivineAuthCubit>(
+          tester.element(find.byType(DivineAuthTextField).first),
+        ).emitIfOpen(
+          const DivineAuthEmailVerification(
+            email: 'test@example.com',
+            deviceCode: 'test-device-code',
+            verifier: 'test-verifier',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Email Verification'), findsOneWidget);
+        expect(
+          verifyEmailQuery,
+          equals(<String, String>{
+            'deviceCode': 'test-device-code',
+            'verifier': 'test-verifier',
+            'email': 'test@example.com',
+          }),
         );
       });
     });

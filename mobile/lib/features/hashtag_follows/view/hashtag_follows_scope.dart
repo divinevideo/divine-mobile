@@ -5,12 +5,11 @@ import 'dart:async';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/hashtag_follows/cubit/hashtag_follows_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/hashtag_subscription_repository_provider.dart';
-import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/auth_routes.dart';
 
 class HashtagFollowsScope extends ConsumerWidget {
   const HashtagFollowsScope({
@@ -28,7 +27,7 @@ class HashtagFollowsScope extends ConsumerWidget {
       return DivineButton(
         label: anonymousLabel ?? context.l10n.profileSignInButton,
         size: DivineButtonSize.small,
-        onPressed: () => context.push(RoutePaths.welcomeLoginOptions),
+        onPressed: () => const LoginOptionsRouteData().push<void>(context),
       );
     }
     return BlocProvider(

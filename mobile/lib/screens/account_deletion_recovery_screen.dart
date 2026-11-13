@@ -15,6 +15,7 @@ import 'package:openvine/models/signer_readiness.dart';
 import 'package:openvine/providers/account_deletion_recovery_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/auth_routes.dart';
 
 class AccountDeletionRecoveryScreen extends ConsumerWidget {
   const AccountDeletionRecoveryScreen({super.key});
@@ -235,7 +236,7 @@ Future<void> _switchAccount(
   AccountDeletionRecoveryCubit cubit,
 ) async {
   final signedOut = await cubit.switchAccount();
-  if (signedOut && context.mounted) context.go(RoutePaths.welcome);
+  if (signedOut && context.mounted) const WelcomeRouteData().go(context);
 }
 
 class _PassiveRecoveryContent extends StatelessWidget {

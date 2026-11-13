@@ -19,9 +19,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_result.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/screens/auth/email_verification_screen.dart';
-import 'package:openvine/screens/auth/nostr_connect_screen.dart';
-import 'package:openvine/screens/key_import_screen.dart';
+import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/validators.dart';
@@ -38,6 +36,9 @@ class LoginOptionsScreen extends ConsumerWidget {
 
   /// Route path for this screen.
   static const String path = '/login-options';
+
+  /// Path segment of the reset password child route.
+  static const String resetPasswordSegment = 'reset-password';
 
   const LoginOptionsScreen({this.initialEmail, this.initialError, super.key});
 
@@ -168,13 +169,11 @@ class _LoginOptionsView extends StatelessWidget {
           return;
         }
         if (state is DivineAuthEmailVerification) {
-          final encodedEmail = Uri.encodeComponent(state.email);
-          context.go(
-            '${EmailVerificationScreen.path}'
-            '?deviceCode=${state.deviceCode}'
-            '&verifier=${state.verifier}'
-            '&email=$encodedEmail',
-          );
+          EmailVerificationRouteData(
+            deviceCode: state.deviceCode,
+            verifier: state.verifier,
+            email: state.email,
+          ).go(context);
         }
       },
       child: Scaffold(
@@ -518,7 +517,7 @@ class _SignInContentState extends ConsumerState<_SignInContent> {
                   label: context.l10n.authImportNostrKey,
                   onPressed: isDisabled
                       ? null
-                      : () => context.push(KeyImportScreen.path),
+                      : () => const KeyImportRouteData().push<void>(context),
                 ),
 
                 const SizedBox(height: 12),
@@ -529,7 +528,7 @@ class _SignInContentState extends ConsumerState<_SignInContent> {
                   label: context.l10n.authConnectSignerApp,
                   onPressed: isDisabled
                       ? null
-                      : () => context.push(NostrConnectScreen.path),
+                      : () => const NostrConnectRouteData().push<void>(context),
                 ),
 
                 if (isNip07Available) ...[
