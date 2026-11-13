@@ -240,9 +240,7 @@ void main() {
         final args =
             verify(
                   () => router.push<void>(
-                    PooledFullscreenVideoFeedScreen.pathForVideoId(
-                      _secondClassicId,
-                    ),
+                    '/pooled-video-feed?video=$_secondClassicId',
                     extra: captureAny(named: 'extra'),
                   ),
                 ).captured.single
@@ -271,7 +269,7 @@ void main() {
 
         verify(
           () => router.push<void>(
-            PooledFullscreenVideoFeedScreen.pathForVideoId(_firstClassicId),
+            '/pooled-video-feed?video=$_firstClassicId',
             extra: any(named: 'extra'),
           ),
         ).called(1);

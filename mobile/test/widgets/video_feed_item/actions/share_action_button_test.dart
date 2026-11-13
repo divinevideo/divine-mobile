@@ -32,7 +32,6 @@ import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
-import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
@@ -713,7 +712,7 @@ void main() {
 
           verify(
             () => goRouter.push<void>(
-              VideoMetadataEditScreen.pathFor(testVideo.id),
+              RoutePaths.videoMetadataEditFor(testVideo.id),
               extra: testVideo,
             ),
           ).called(1);

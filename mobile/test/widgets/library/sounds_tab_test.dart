@@ -27,7 +27,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
-import 'package:openvine/screens/sounds/add_sound_page.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
@@ -245,7 +245,7 @@ void main() {
                         Text('sound detail ${state.pathParameters['id']}'),
                   ),
                   GoRoute(
-                    path: AddSoundPage.path,
+                    path: RoutePaths.addSound,
                     builder: (context, state) => const Text('add sound page'),
                   ),
                 ],

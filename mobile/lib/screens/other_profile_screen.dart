@@ -50,9 +50,6 @@ class OtherProfileScreen extends ConsumerWidget {
   /// Route name for this screen.
   static const routeName = 'profile-view';
 
-  /// Base path for profile view routes.
-  static const String path = RoutePaths.otherProfile;
-
   /// Path pattern for this route.
   static const pathWithNpub = '/profile-view/:npub';
 

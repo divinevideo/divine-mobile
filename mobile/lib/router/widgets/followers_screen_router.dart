@@ -4,7 +4,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
-import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/followers/my_followers_screen.dart';
 import 'package:openvine/screens/followers/others_followers_screen.dart';
 
@@ -20,15 +19,8 @@ class FollowersScreenRouter extends ConsumerWidget {
   /// Route name for followers screen.
   static const routeName = 'followers';
 
-  /// Base path for followers routes.
-  static const String basePath = RoutePaths.followersBase;
-
   /// Path pattern for followers route.
   static const path = '/followers/:pubkey';
-
-  /// Build path for a specific user's followers.
-  static String pathForPubkey(String pubkey) =>
-      RoutePaths.followersForPubkey(pubkey);
 
   final String pubkey;
   final String? displayName;

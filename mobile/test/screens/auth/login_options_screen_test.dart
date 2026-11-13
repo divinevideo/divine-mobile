@@ -31,6 +31,9 @@ class _MockAuthService extends Mock implements AuthService {}
 class _MockPendingVerificationService extends Mock
     implements PendingVerificationService {}
 
+/// Where the harness mounts the screen; it does not need the app's route.
+const _loginOptionsPath = '/login-options';
+
 Finder _divineIcon(DivineIconName name) =>
     find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
 
@@ -57,7 +60,7 @@ void main() {
     ).thenAnswer((_) => const Stream<AuthState>.empty());
   });
 
-  Widget createTestWidget({String initialLocation = LoginOptionsScreen.path}) {
+  Widget createTestWidget({String initialLocation = _loginOptionsPath}) {
     return ProviderScope(
       overrides: [
         ...getStandardTestOverrides(mockAuthService: mockAuthService),
@@ -75,7 +78,7 @@ void main() {
           routes: [
             GoRoute(path: '/', builder: (_, _) => const Scaffold()),
             GoRoute(
-              path: LoginOptionsScreen.path,
+              path: _loginOptionsPath,
               builder: (_, state) => LoginOptionsScreen(
                 initialEmail: state.uri.queryParameters['email'],
                 initialError: state.uri.queryParameters['error'],
@@ -129,7 +132,7 @@ void main() {
         await tester.pumpWidget(
           createTestWidget(
             initialLocation:
-                '${LoginOptionsScreen.path}?email=person%40example.com&error=This%20email%20is%20already%20registered.%20Please%20sign%20in%20instead.',
+                '$_loginOptionsPath?email=person%40example.com&error=This%20email%20is%20already%20registered.%20Please%20sign%20in%20instead.',
           ),
         );
         await tester.pumpAndSettle();

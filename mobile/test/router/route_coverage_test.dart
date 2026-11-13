@@ -6,17 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/notifications/view/notifications_page.dart';
 import 'package:openvine/providers/active_video_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
-import 'package:openvine/screens/apps/app_detail_screen.dart';
 import 'package:openvine/screens/apps/apps_directory_screen.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
-import 'package:openvine/screens/category_gallery_screen.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
-import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/key_import_screen.dart';
@@ -35,10 +33,8 @@ import 'package:openvine/screens/settings/nip05_settings_screen.dart';
 import 'package:openvine/screens/settings/nostr_settings_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
 import 'package:openvine/screens/settings/storage/storage_management_page.dart';
-import 'package:openvine/screens/subtitle_editor/subtitle_editor_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
-import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 
@@ -74,9 +70,9 @@ void main() {
       });
 
       test(
-        '${AppDetailScreen.pathForSlug('primal')} parses to RouteType.settings',
+        '${RoutePaths.appDetailForSlug('primal')} parses to RouteType.settings',
         () {
-          final context = parseRoute(AppDetailScreen.pathForSlug('primal'));
+          final context = parseRoute(RoutePaths.appDetailForSlug('primal'));
           expect(context.type, RouteType.settings);
           expect(context.appSlug, 'primal');
         },
@@ -279,13 +275,13 @@ void main() {
         final path = buildRoute(
           const RouteContext(type: RouteType.settings, appSlug: 'primal'),
         );
-        expect(path, AppDetailScreen.pathForSlug('primal'));
+        expect(path, '/apps/primal');
       });
     });
 
     group('Tab routes parse correctly', () {
-      test('${VideoFeedPage.path} parses to RouteType.home with index 0', () {
-        final context = parseRoute(VideoFeedPage.path);
+      test('/home parses to RouteType.home with index 0', () {
+        final context = parseRoute('/home');
         expect(context.type, RouteType.home);
         expect(context.videoIndex, 0);
       });
@@ -333,11 +329,9 @@ void main() {
       );
 
       test(
-        '${CategoryGalleryScreen.locationFor('animals')} parses to RouteType.categoryGallery',
+        '${RoutePaths.categoryGalleryFor('animals')} parses to RouteType.categoryGallery',
         () {
-          final context = parseRoute(
-            CategoryGalleryScreen.locationFor('animals'),
-          );
+          final context = parseRoute(RoutePaths.categoryGalleryFor('animals'));
           expect(context.type, RouteType.categoryGallery);
           expect(context.categoryName, 'animals');
           expect(context.videoIndex, isNull);
@@ -476,7 +470,7 @@ void main() {
       });
       test('/video-edit/:videoId parses videoId', () {
         final context = parseRoute(
-          VideoMetadataEditScreen.pathFor('test-id-abc'),
+          RoutePaths.videoMetadataEditFor('test-id-abc'),
         );
         expect(context.type, RouteType.videoEdit);
         expect(context.videoId, 'test-id-abc');
@@ -486,7 +480,7 @@ void main() {
         expect(context.type, RouteType.subtitleEdit);
       });
       test('/subtitle-edit/:videoId parses videoId', () {
-        final context = parseRoute(SubtitleEditorScreen.pathFor('test-id-abc'));
+        final context = parseRoute(RoutePaths.subtitleEditorFor('test-id-abc'));
         expect(context.type, RouteType.subtitleEdit);
         expect(context.videoId, 'test-id-abc');
       });
@@ -569,16 +563,12 @@ void main() {
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
       test('pooled feed query route parses as pooled feed', () {
-        final context = parseRoute(
-          PooledFullscreenVideoFeedScreen.pathForVideoId(videoId),
-        );
+        final context = parseRoute('/pooled-video-feed?video=$videoId');
         expect(context.type, RouteType.pooledVideoFeed);
       });
 
       test('people list create query route parses as create route', () {
-        final context = parseRoute(
-          CreatePeopleListPage.pathWithInitialPubkey(pubkey),
-        );
+        final context = parseRoute('/people-lists/new?initialPubkey=$pubkey');
         expect(context.type, RouteType.peopleListCreate);
       });
 
@@ -611,14 +601,14 @@ void main() {
       'profile grid': ProfileScreenRouter.pathForNpub('npub1test'),
       'profile feed': ProfileScreenRouter.pathForIndex('npub1test', 2),
       'hashtag': HashtagScreenRouter.pathForTag('nostr'),
-      'category gallery': CategoryGalleryScreen.locationFor('animals'),
+      'category gallery': RoutePaths.categoryGalleryFor('animals'),
       'settings': SettingsScreen.path,
       'crossposting settings': CrosspostingSettingsScreen.path,
       'monetization links settings': MonetizationLinksSettingsScreen.path,
       'badges': BadgesScreen.path,
       'relay settings': RelaySettingsScreen.path,
-      'video edit': VideoMetadataEditScreen.pathFor('test-id-abc'),
-      'subtitle edit': SubtitleEditorScreen.pathFor('test-id-abc'),
+      'video edit': RoutePaths.videoMetadataEditFor('test-id-abc'),
+      'subtitle edit': RoutePaths.subtitleEditorFor('test-id-abc'),
       'sound detail': '/sound/a%3Fb%2Fc%23d',
       'people list create': CreatePeopleListPage.path,
       'people list members': '/people-lists/list%3A123',
@@ -651,12 +641,12 @@ void main() {
         RouteType.notifications: NotificationsPage.pathForIndex(0),
         RouteType.profile: ProfileScreenRouter.pathForNpub('npub1test'),
         RouteType.hashtag: HashtagScreenRouter.pathForTag('test'),
-        RouteType.categoryGallery: CategoryGalleryScreen.locationFor('animals'),
+        RouteType.categoryGallery: RoutePaths.categoryGalleryFor('animals'),
         RouteType.videoRecorder: VideoRecorderScreen.path,
         RouteType.videoEditor: VideoEditorScreen.path,
         RouteType.videoMetadata: VideoMetadataScreen.path,
-        RouteType.videoEdit: VideoMetadataEditScreen.pathFor('test-id-abc'),
-        RouteType.subtitleEdit: SubtitleEditorScreen.pathFor('test-id-abc'),
+        RouteType.videoEdit: RoutePaths.videoMetadataEditFor('test-id-abc'),
+        RouteType.subtitleEdit: RoutePaths.subtitleEditorFor('test-id-abc'),
         RouteType.importKey: KeyImportScreen.path,
         RouteType.badges: BadgesScreen.path,
         RouteType.settings: SettingsScreen.path,

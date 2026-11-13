@@ -866,7 +866,7 @@ void main() {
 
         final captured = verify(
           () => goRouter.push<void>(
-            PostAnalyticsDetailScreen.pathForId('video-open'),
+            '/creator-analytics/video-open',
             extra: captureAny(named: 'extra'),
           ),
         ).captured;

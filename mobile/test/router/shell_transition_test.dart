@@ -27,7 +27,7 @@ class _FakeGoRouterState extends Fake implements GoRouterState {
 
   @override
   GoRoute? get topRoute => GoRoute(
-    path: VideoFeedPage.path,
+    path: '/home',
     name: VideoFeedPage.routeName,
     builder: (_, _) => const SizedBox.shrink(),
   );

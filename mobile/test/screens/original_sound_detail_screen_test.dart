@@ -157,14 +157,7 @@ void main() {
       });
     });
 
-    group('Route helpers', () {
-      test('pathForPubkey generates correct path', () {
-        expect(
-          OriginalSoundDetailScreen.pathForPubkey(testPubkey),
-          equals('/original-sound/$testPubkey'),
-        );
-      });
-
+    group('Route constants', () {
       test('path constant matches expected pattern', () {
         expect(
           OriginalSoundDetailScreen.path,

@@ -47,7 +47,6 @@ class AddSoundPage extends ConsumerWidget {
   const AddSoundPage({super.key});
 
   static const routeName = 'add-sound';
-  static const String path = RoutePaths.addSound;
 
   /// Path segment under the Library's sounds route.
   static const String subpath = RoutePaths.addSoundSubpath;

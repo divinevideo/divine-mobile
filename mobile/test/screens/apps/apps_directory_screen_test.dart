@@ -7,7 +7,6 @@ import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/apps/apps_directory_screen.dart';
-import 'package:openvine/screens/apps/nostr_app_sandbox_screen.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
@@ -208,7 +207,7 @@ void main() {
 
       verify(
         () => mockGoRouter.push<void>(
-          NostrAppSandboxScreen.pathForAppId('app-primal'),
+          '/apps/app-primal/sandbox',
           extra: any(named: 'extra'),
         ),
       ).called(1);

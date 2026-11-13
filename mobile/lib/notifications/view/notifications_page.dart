@@ -27,9 +27,6 @@ class NotificationsPage extends ConsumerWidget {
   /// Route name for this screen.
   static const routeName = 'notifications';
 
-  /// Path for this route.
-  static const String path = RoutePaths.notifications;
-
   /// Path for this route with index.
   static const pathWithIndex = '/notifications/:index';
 

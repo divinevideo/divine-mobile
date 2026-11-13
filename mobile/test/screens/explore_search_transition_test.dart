@@ -163,11 +163,10 @@ void main() {
         await tester.pumpAndSettle();
 
         // The probe route reflects the pushed location: the empty search
-        // route (no prefilled query) with the mount-focus flag set — i.e.
-        // pathForEmptyQuery(requestFocusOnMount: true). This is the exact
-        // contract #4901 shipped and #5131 could silently regress. (The probe
-        // reads its query params from the routed GoRouterState.uri, so a
-        // match here proves the pushed URI was '/search-results?focus=1'.)
+        // route (no prefilled query) with the mount-focus flag set. This is
+        // the exact contract #4901 shipped and #5131 could silently regress.
+        // (The probe reads its query params from the routed GoRouterState.uri,
+        // so a match here proves the pushed URI was '/search-results?focus=1'.)
         expect(find.text('search-probe focus=1 query=none'), findsOneWidget);
       },
     );

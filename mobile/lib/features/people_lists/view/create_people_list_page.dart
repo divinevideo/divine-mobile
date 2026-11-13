@@ -34,15 +34,6 @@ class CreatePeopleListPage extends ConsumerStatefulWidget {
   /// GoRouter path template for this route.
   static const String path = RoutePaths.createPeopleList;
 
-  /// Builds the path + query string that opens this page and seeds the
-  /// new list with [pubkey] on submit.
-  ///
-  /// The pubkey is URI-encoded but never truncated; consumers pass the
-  /// full hex pubkey so the create flow can add the target person in
-  /// the same request.
-  static String pathWithInitialPubkey(String pubkey) =>
-      '$path?initialPubkey=${Uri.encodeQueryComponent(pubkey)}';
-
   /// Optional pubkey to seed into the new list on submit. Threaded
   /// through from `/people-lists/new?initialPubkey=<hex>` so the
   /// create flow works as a single URL-reloadable operation.
