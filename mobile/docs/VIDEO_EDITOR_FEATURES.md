@@ -121,7 +121,9 @@ Timeline:
 
 ## Overlay layers
 
-Every overlay below sits on the timeline, where it can be moved, trimmed to show for only part of the video, split, duplicated and deleted. Text, stickers, drawings and audio visualizers can also be made see-through (opacity 0–100 %). Info, social and interactive stickers are the exception: they show for the whole video, as they are (see [Info, social and interactive stickers](#info-social-and-interactive-stickers)).
+Every overlay below sits on the timeline, where it can be moved, trimmed to show for only part of the video, split, duplicated and deleted. Text, stickers, drawings and audio visualizers can also be made see-through (opacity 0–100 %). Info, social and interactive stickers are the exception: they show as they are, and an interactive sticker shows for the whole video (see [Info, social and interactive stickers](#info-social-and-interactive-stickers)).
+
+A layer that runs to the end of the video keeps running to its end when clips are added or a clip gets longer, as a sound does. One that was moved or trimmed to end exactly where the video ended follows the new end too; one trimmed to end earlier keeps its end. A detached clip stops where its footage ends, and a burned-in caption keeps the timing of its cue.
 
 An overlay shows from the start of its bar up to, but not at, its end: at the exact end time it is gone, in the preview and in the export alike, for clips, layers, effects, filters and adjustments on iOS and Android. Trimming an overlay's end parks the playhead one millisecond inside it, so the trim still shows its last frame, and a tool that needs the overlay on screen (opacity, blend mode, keyframes, mask, tracking) moves a playhead sitting on the end to the overlay's start.
 
@@ -168,7 +170,7 @@ Tracking, per layer that keyframes can move (text, sticker, drawing, audio visua
 
 The sticker sheet ([`video_editor_sticker_sheet.dart`](../lib/widgets/video_editor/sticker_editor/video_editor_sticker_sheet.dart)) lists three rows of cards above the Divine Originals: Info, Social and Interactive. Each card opens a sheet of its own to fill in and style before it is placed, and Edit on its timeline bar reopens that sheet later, keeping where it sits and how large it is.
 
-These cards show for the whole video, as they are: their timeline bar has no trim handles and cannot be split, and they cannot be masked, made see-through or blended, give or take a copied style, or be multi-selected and combined. They can be moved, resized and turned on the canvas, duplicated and deleted. A sticker a viewer can tap, which is every social and interactive sticker and the location sticker, holds still so its tap area stays where it shows: it takes no animations, keyframes or tracking. The other info stickers do.
+These cards show as they are: their timeline bar cannot be split, and they cannot be masked, made see-through or blended, give or take a copied style, or be multi-selected and combined. Info and social stickers can be trimmed to show for only part of the video. An interactive card shows for the whole video, so its bar has no trim handles. They can be moved, resized and turned on the canvas, duplicated and deleted. A sticker a viewer can tap, which is every social and interactive sticker and the location sticker, holds still so its tap area stays where it shows: it takes no animations, keyframes or tracking. The other info stickers do.
 
 Looks: most cards take eight pill looks (light, dark, glass, Divine green, highlighter yellow, neon, plain and outline). Time adds film, camcorder, digital and an analog clock face; date adds film and camcorder; the REC timer takes camcorder, dark, digital or film. A countdown takes light, green or yellow, an interactive card one white card, and a reply a light or a dark one.
 

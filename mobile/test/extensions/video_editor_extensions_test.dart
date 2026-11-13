@@ -357,6 +357,67 @@ void main() {
           expect(capturedAudio().single.id, 'local_extracted_1');
         },
       );
+
+      group('with a layer that ran to the old end', () {
+        // A sticker over a 3 s video whose bar was moved, which gave it an end
+        // of its own; then the user adds a clip. Without the grow it stops
+        // halfway through the 6 s video.
+        late TextLayer sticker;
+
+        setUp(() {
+          sticker = TextLayer(
+            id: 'sticker',
+            text: '#tag',
+            endTime: const Duration(seconds: 3),
+          );
+          when(() => editor.activeLayers).thenReturn([sticker]);
+        });
+
+        List<Object?> capturedEntry() => verify(
+          () => editor.addHistory(
+            layers: captureAny(named: 'layers'),
+            meta: captureAny(named: 'meta'),
+          ),
+        ).captured;
+
+        test('grows it onto the added clip in the clips entry', () {
+          when(() => stateManager.activeMeta).thenReturn({});
+
+          editor.setLengthenedClipState(
+            previousClips: [_clip('clip-1')],
+            clips: [_clip('clip-1'), _clip('clip-2')],
+          );
+
+          final [layers as List<Layer>, meta as Map<String, dynamic>] =
+              capturedEntry();
+          expect(layers.single.endTime, const Duration(seconds: 6));
+          // One undo takes the clip and the longer sticker away together.
+          expect(meta[VideoEditorConstants.clipsStateHistoryKey], hasLength(2));
+          // The entry before keeps the sticker as it was.
+          expect(sticker.endTime, const Duration(seconds: 3));
+        });
+
+        test('grows it in the same entry as a growing sound', () {
+          when(() => stateManager.activeMeta).thenReturn({
+            VideoEditorConstants.audioStateHistoryKey: [covering.toJson()],
+          });
+
+          editor.setLengthenedClipState(
+            previousClips: [_clip('clip-1')],
+            clips: [_clip('clip-1'), _clip('clip-2')],
+          );
+
+          final [layers as List<Layer>, meta as Map<String, dynamic>] =
+              capturedEntry();
+          final audio =
+              meta[VideoEditorConstants.audioStateHistoryKey] as List<dynamic>;
+          expect(layers.single.endTime, const Duration(seconds: 6));
+          expect(
+            AudioEvent.fromJson(audio.single as Map<String, dynamic>).endTime,
+            const Duration(seconds: 6),
+          );
+        });
+      });
     });
 
     group('setClipStateRemovingLayer', () {
@@ -429,6 +490,35 @@ void main() {
           AudioEvent.fromJson(audio.single as Map<String, dynamic>).endTime,
           const Duration(seconds: 6),
         );
+      });
+
+      test('grows a layer that ran to the old end onto the clip that came '
+          'back', () {
+        final sticker = TextLayer(
+          id: 'sticker',
+          text: '#tag',
+          endTime: const Duration(seconds: 3),
+        );
+        final detached = TextLayer(id: 'detached_b', text: 'clip');
+        when(() => editor.activeLayers).thenReturn([sticker, detached]);
+        when(() => stateManager.activeMeta).thenReturn({});
+
+        editor.setClipStateRemovingLayer(
+          previousClips: [_clip('clip-1')],
+          clips: [_clip('clip-1'), _clip('clip-2')],
+          layerId: 'detached_b',
+        );
+
+        final layers =
+            verify(
+                  () => editor.addHistory(
+                    layers: captureAny(named: 'layers'),
+                    meta: any(named: 'meta'),
+                  ),
+                ).captured.single
+                as List<Layer>;
+        expect(layers.single.id, 'sticker');
+        expect(layers.single.endTime, const Duration(seconds: 6));
       });
 
       test('writes no audio key when the composition has no sound', () {
