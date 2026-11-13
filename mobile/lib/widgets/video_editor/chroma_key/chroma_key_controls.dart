@@ -598,7 +598,7 @@ class _BackgroundChip extends StatelessWidget {
     final (label, icon) = switch (option) {
       ClipChromaKeyBackgroundType.transparent => (
         l10n.videoEditorChromaKeyBackgroundNone,
-        DivineIconName.textBgTransparent,
+        DivineIconName.squareDuo,
       ),
       ClipChromaKeyBackgroundType.color => (
         l10n.videoEditorChromaKeyBackgroundColor,
