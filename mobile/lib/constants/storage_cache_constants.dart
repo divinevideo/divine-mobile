@@ -23,3 +23,18 @@ const int kApproxVideoBytes = 4 * 1024 * 1024;
 
 /// Default upper bound on persisted transition-seam previews (200 MB).
 const int kSeamCacheLimitBytes = 200 * 1024 * 1024;
+
+/// Share of the disk Divine leaves free when it sizes its caches
+/// automatically. The caches shrink as the disk fills, so Divine is never
+/// what pushes a device past this line.
+const double kAutoCacheReservedDiskFraction = 0.15;
+
+/// Smallest video-cache budget automatic sizing shrinks to (64 MB): the
+/// feed's eight-video prefetch window plus as many behind for scrolling back.
+const int kVideoCacheFloorBytes = 64 * 1024 * 1024;
+
+/// Smallest image-cache budget automatic sizing shrinks to (32 MB).
+const int kImageCacheFloorBytes = 32 * 1024 * 1024;
+
+/// Smallest Android player-cache budget automatic sizing shrinks to (32 MB).
+const int kPlayerCacheFloorBytes = 32 * 1024 * 1024;
