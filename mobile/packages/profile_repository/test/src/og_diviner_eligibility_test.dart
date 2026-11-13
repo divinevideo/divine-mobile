@@ -230,6 +230,33 @@ void main() {
       expect(fixture.requests, hasLength(1));
     });
 
+    test('a fresh unknown hides a previously eligible decoration', () async {
+      var includeAnswer = true;
+      var now = DateTime.utc(2026, 11, 13);
+      final fixture = _fixture(
+        (_) => _response(
+          includeAnswer ? _user() : (_user()..remove('is_og_diviner')),
+        ),
+        now: () => now,
+      );
+
+      expect(await fixture.repository.isOgDiviner(_pubkey), isTrue);
+      includeAnswer = false;
+      final unknown = await fixture.repository.getUserProfileFromApi(
+        pubkey: _pubkey,
+      );
+      // Unknown is not an authoritative negative. It still hides decoration
+      // for this render, rather than preserving a stale positive answer.
+      expect(unknown!.isOgDiviner, isNull);
+      expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
+      expect(fixture.requests, hasLength(2));
+
+      includeAnswer = true;
+      now = now.add(const Duration(minutes: 1));
+      expect(await fixture.repository.isOgDiviner(_pubkey), isTrue);
+      expect(fixture.requests, hasLength(3));
+    });
+
     test(
       'an unknown answer retries after its cooldown and can recover',
       () async {
