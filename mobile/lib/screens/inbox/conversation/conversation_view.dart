@@ -1594,6 +1594,9 @@ class _ComposerSlotNotice extends StatelessWidget {
                 _composerSlotNoticeMaxHeightFactor,
           ),
           child: SingleChildScrollView(
+            // The thread above owns the route's primary scroll controller;
+            // sharing it would make keyboard scrolling throw.
+            primary: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: 8,

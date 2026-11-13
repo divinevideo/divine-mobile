@@ -1851,6 +1851,50 @@ void main() {
         );
         expect(find.text(message).hitTestable(), findsOneWidget);
       });
+
+      // Page Up and Page Down scroll whatever holds the route's primary
+      // scroll controller. Had the notice's scroll view taken it as well,
+      // the key would find two scroll views and throw instead of scrolling.
+      testWidgets("a closed thread's messages still scroll by keyboard", (
+        tester,
+      ) async {
+        useLargestTextOnAPhone(tester);
+        await tester.pumpWidget(
+          buildSubject(
+            counterparty: shippedRetiredKey,
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              messages: [
+                for (var i = 0; i < 30; i++)
+                  DmMessage(
+                    id: i.toRadixString(16).padLeft(64, 'd'),
+                    conversationId: 'c' * 64,
+                    senderPubkey: shippedRetiredKey,
+                    content: 'message $i',
+                    createdAt: now.millisecondsSinceEpoch ~/ 1000 - i,
+                    giftWrapId: i.toRadixString(16).padLeft(64, 'a'),
+                  ),
+              ],
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final thread = tester.state<ScrollableState>(
+          find
+              .ancestor(
+                of: find.text('message 0'),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        expect(thread.position.pixels, equals(0));
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.pageUp);
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(thread.position.pixels, greaterThan(0));
+      });
     });
 
     // #7025. Reachable from the inbox's Blocked chip so a user asked for
