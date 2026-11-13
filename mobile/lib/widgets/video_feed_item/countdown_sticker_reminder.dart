@@ -1,5 +1,5 @@
-// ABOUTME: What a countdown sticker on a playing video shows and says: the
-// ABOUTME: time left over its date, and what a tap did with its reminder.
+// ABOUTME: What a tap on a countdown sticker in the player did with its
+// ABOUTME: reminder, told to the viewer in a snackbar.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,21 +8,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/countdown_reminder/countdown_reminder_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/notifications_providers.dart';
-
-/// The time [left] on a countdown, as its sticker shows it in the player:
-/// whole days, then hours, minutes and seconds, such as "12 days 04:33:10".
-String countdownTimeLeft(AppLocalizations l10n, Duration left) {
-  String twoDigits(int value) => value.toString().padLeft(2, '0');
-  final clockTime = [
-    left.inHours.remainder(Duration.hoursPerDay),
-    left.inMinutes.remainder(Duration.minutesPerHour),
-    left.inSeconds.remainder(Duration.secondsPerMinute),
-  ].map(twoDigits).join(':');
-  final days = left.inDays;
-  return days == 0
-      ? clockTime
-      : '${l10n.videoStickerCountdownDays(days)} $clockTime';
-}
 
 /// Provides the [CountdownReminderCubit] a tap on a countdown sticker below
 /// sets its reminder through, and tells the viewer what each tap did.

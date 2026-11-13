@@ -4,7 +4,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:clock/clock.dart';
 import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController, DivineVideoPlayerState;
 import 'package:flutter/foundation.dart' show kIsWeb, listEquals;
@@ -22,6 +21,7 @@ import 'package:openvine/utils/map_search_launcher.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_navigation.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/live_countdown.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_feed_item/countdown_sticker_reminder.dart';
 import 'package:openvine/widgets/video_feed_item/interactive_sticker_overlay.dart';
@@ -502,53 +502,22 @@ class _CardStickerArea extends StatelessWidget {
 
 /// A countdown drawn over itself in the frames with the time left in place
 /// of its date, ticking every second until it ends; then its date again.
-class _LiveCountdown extends StatefulWidget {
+class _LiveCountdown extends StatelessWidget {
   const _LiveCountdown({required this.data});
 
   final SocialStickerData data;
 
   @override
-  State<_LiveCountdown> createState() => _LiveCountdownState();
-}
-
-class _LiveCountdownState extends State<_LiveCountdown> {
-  Timer? _ticker;
-
-  @override
-  void initState() {
-    super.initState();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
-  }
-
-  @override
-  void dispose() {
-    _ticker?.cancel();
-    super.dispose();
-  }
-
-  void _tick() {
-    if (!mounted) return;
-    setState(() {});
-    if (!_left.isNegative) return;
-    // Over: the date stays as it is from here on.
-    _ticker?.cancel();
-    _ticker = null;
-  }
-
-  Duration get _left =>
-      (widget.data.countdownEnd ?? clock.now()).difference(clock.now());
-
-  @override
   Widget build(BuildContext context) {
-    final left = _left;
-    return SocialStickerCopy(
-      data: widget.data.copyWith(
-        localeName: Localizations.localeOf(context).toString(),
-        use24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+    return LiveCountdown(
+      end: data.countdownEnd,
+      builder: (context, timeLeft) => SocialStickerCopy(
+        data: data.copyWith(
+          localeName: Localizations.localeOf(context).toString(),
+          use24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+        ),
+        countdownValue: timeLeft,
       ),
-      countdownValue: left > Duration.zero
-          ? countdownTimeLeft(context.l10n, left)
-          : null,
     );
   }
 }

@@ -1,5 +1,5 @@
-// ABOUTME: Tests what a countdown sticker shows and says in the player: the
-// ABOUTME: time left, and what a tap did with its reminder.
+// ABOUTME: Tests what a tap on a countdown sticker in the player tells the
+// ABOUTME: viewer it did with its reminder.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,29 +35,6 @@ final _video = VideoEvent(
 
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
-
-  group('countdownTimeLeft', () {
-    test('writes whole days before the hours, minutes and seconds', () {
-      expect(
-        countdownTimeLeft(
-          l10n,
-          const Duration(days: 12, hours: 4, minutes: 3, seconds: 9),
-        ),
-        equals('12 days 04:03:09'),
-      );
-      expect(
-        countdownTimeLeft(l10n, const Duration(days: 1, minutes: 1)),
-        equals('1 day 00:01:00'),
-      );
-    });
-
-    test('leaves the days out on the last day', () {
-      expect(
-        countdownTimeLeft(l10n, const Duration(hours: 23, seconds: 59)),
-        equals('23:00:59'),
-      );
-    });
-  });
 
   group(CountdownReminderScope, () {
     late _MockNotificationService notifications;

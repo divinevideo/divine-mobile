@@ -222,6 +222,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// Whether an export holds the preview decoders, set by the canvas.
   final _previewReleasedNotifier = ValueNotifier<bool>(false);
 
+  /// Whether the canvas' layers are being captured for the export, set by
+  /// the canvas and the save-clip capture.
+  final _layerCaptureNotifier = ValueNotifier<bool>(false);
+
   /// Track ids whose missing duration we already tried to backfill, so a
   /// failed probe isn't retried on every audio-track change.
   final Set<String> _durationHealAttempted = {};
@@ -465,6 +469,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     _liveClipKeyframesNotifier.dispose();
     _canvasToolPanelHeightNotifier.dispose();
     _previewReleasedNotifier.dispose();
+    _layerCaptureNotifier.dispose();
     super.dispose();
   }
 
@@ -1614,6 +1619,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               canvasToolPanelHeightNotifier: _canvasToolPanelHeightNotifier,
               clipFrameTracker: _clipFrameTracker,
               previewReleasedNotifier: _previewReleasedNotifier,
+              layerCaptureNotifier: _layerCaptureNotifier,
               fromLibrary: widget.fromLibrary,
               onOpenCamera: () => _runDetached(
                 _openCamera(

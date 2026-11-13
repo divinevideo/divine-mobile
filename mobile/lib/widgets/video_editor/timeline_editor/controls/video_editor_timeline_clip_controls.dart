@@ -20,6 +20,7 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/models/video_editor/clip_style.dart';
+import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/screens/video_editor/video_clip_chroma_key_screen.dart';
 import 'package:openvine/screens/video_editor/video_clip_transform_screen.dart';
@@ -733,7 +734,18 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     // the text and filters the user was looking at is worse than no clip.
     final editor = _editorOrNull(context);
     if (editor == null) return;
-    final overlays = await editor.captureOverlaySnapshot();
+    // While the layers are captured they show what goes into the frames: a
+    // countdown its date rather than the time left it counts down on the
+    // canvas. The capture waits for the frame that draws it.
+    final layerCapture = VideoEditorScope.of(context).layerCaptureNotifier
+      ?..value = true;
+    final EditorOverlaySnapshot overlays;
+    try {
+      overlays = await editor.captureOverlaySnapshot();
+    } finally {
+      // The screen that owns the notifier goes with the editor.
+      if (editor.mounted) layerCapture?.value = false;
+    }
 
     // Capturing the snapshot rasterizes every layer and costs at least a frame,
     // during which the editor screen can be popped and its bloc closed. Adding

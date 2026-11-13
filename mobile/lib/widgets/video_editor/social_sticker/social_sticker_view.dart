@@ -18,6 +18,7 @@ import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_text_scope.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/interactive_sticker_card.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/live_countdown.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/poll_sticker_card.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_marks.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -43,6 +44,9 @@ class SocialStickerView extends StatelessWidget {
 
   /// What a countdown shows under its title instead of its date: the time
   /// left, which the player draws over the date in the frames.
+  ///
+  /// Without one, a countdown on the editor canvas counts down by itself, as
+  /// the player shows it, and shows its date anywhere else.
   final String? countdownValue;
 
   /// The date a countdown counts down to, written in its locale and clock the
@@ -131,11 +135,14 @@ class SocialStickerView extends StatelessWidget {
                 ],
               ),
             ),
-            SocialStickerKind.countdown => _CountdownCard(
-              data: data,
-              palette: palette,
-              value: countdownValue ?? countdownDateOf(data),
-            ),
+            SocialStickerKind.countdown =>
+              countdownValue == null
+                  ? _LiveCountdownCard(data: data, palette: palette)
+                  : _CountdownCard(
+                      data: data,
+                      palette: palette,
+                      value: countdownValue,
+                    ),
             SocialStickerKind.reply => _ReplyCard(data: data, palette: palette),
             SocialStickerKind.poll ||
             SocialStickerKind.quiz ||
@@ -273,6 +280,31 @@ const double _countdownRoundness =
         _countdownTitleFontSize * 1.15 +
         _countdownSpacing +
         _countdownValueFontSize * 1.15);
+
+/// A countdown that is given no time left: on the editor canvas it counts
+/// down like the player shows it, apart from while the canvas is captured for
+/// the frames; anywhere else, such as the draft rasterizer, it shows its date.
+class _LiveCountdownCard extends StatelessWidget {
+  const _LiveCountdownCard({required this.data, required this.palette});
+
+  final SocialStickerData data;
+  final StickerPillPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final date = SocialStickerView.countdownDateOf(data);
+    final scope = VideoEditorScope.maybeOf(context);
+    if (scope == null) {
+      return _CountdownCard(data: data, palette: palette, value: date);
+    }
+    return LiveCountdown(
+      end: data.countdownEnd,
+      showDate: scope.layerCaptureNotifier,
+      builder: (context, timeLeft) =>
+          _CountdownCard(data: data, palette: palette, value: timeLeft ?? date),
+    );
+  }
+}
 
 /// A countdown: its title over its date, or over the time left the player
 /// draws in [value].
