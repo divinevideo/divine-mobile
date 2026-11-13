@@ -7,12 +7,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -53,6 +55,63 @@ class _HeldAccountSyncDao extends AccountSyncDao {
     }
     await super.writeState(owner, namespace, sections);
   }
+}
+
+class _HeldRestoreDatabase extends AppDatabase {
+  _HeldRestoreDatabase() : super.test(NativeDatabase.memory());
+
+  late final _HeldRestoreDao _heldAccountSyncDao = _HeldRestoreDao(this);
+
+  @override
+  _HeldRestoreDao get accountSyncDao => _heldAccountSyncDao;
+}
+
+/// Holds the first durable-state read, which is the repository's restore.
+class _HeldRestoreDao extends AccountSyncDao {
+  _HeldRestoreDao(super.attachedDatabase);
+
+  final entered = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<List<AccountSyncRecord>> readState(
+    String owner,
+    String namespace,
+  ) async {
+    if (!entered.isCompleted) {
+      entered.complete();
+      await release.future;
+    }
+    return super.readState(owner, namespace);
+  }
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+}
+
+/// A client whose session [isReadyForActiveClient] accepts for [owner].
+_Client _readyClient(NostrSigner signer, String owner) {
+  final client = _Client();
+  when(() => client.signer).thenReturn(signer);
+  when(() => client.hasKeys).thenReturn(true);
+  when(() => client.publicKey).thenReturn(owner);
+  return client;
 }
 
 void main() {
@@ -249,5 +308,164 @@ void main() {
         container.dispose();
       },
     );
+
+    group('when a ready account repository is closed', () {
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+
+      setUp(() {
+        originalReporter = detachedFailureReporter;
+        addTearDown(() => detachedFailureReporter = originalReporter);
+        reporter = _RecordingCrashReporter();
+        detachedFailureReporter = reporter;
+      });
+
+      test(
+        'preference sync never starts a repository the barrier closed while '
+        'it was binding',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          final preferences = await SharedPreferences.getInstance();
+          final signer = LocalNostrSigner('1'.padLeft(64, '0'));
+          final owner = (await signer.getPublicKey())!;
+          final client = _readyClient(signer, owner);
+          final container = ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(preferences),
+              nostrServiceProvider.overrideWithValue(client),
+              nostrSessionProvider.overrideWith(
+                () => _Session(
+                  NostrSessionReadiness.nostrReady(
+                    pubkey: owner,
+                    client: client,
+                  ),
+                ),
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+          final binding = container.listen(
+            accountPreferenceSyncProvider,
+            (_, _) {},
+          );
+          addTearDown(binding.close);
+          expect(binding.read(), isNotNull);
+
+          // Account erasure drains the owner's writers before its identity
+          // clears, so this provider and its ready session outlive the close.
+          await container.read(accountStateWriteBarrierProvider).stop(owner);
+          await pumpEventQueue();
+
+          expect(reporter.recordedErrors, isEmpty);
+          verifyNever(() => client.subscribe(any()));
+        },
+      );
+
+      for (final (name, provider) in [
+        ('preference sync', accountPreferenceSyncProvider),
+        ('conversation state', accountDmStateProvider),
+      ]) {
+        test(
+          '$name does not start when the session turns ready after account '
+          'erasure closed it',
+          () async {
+            SharedPreferences.setMockInitialValues({});
+            final preferences = await SharedPreferences.getInstance();
+            final database = AppDatabase.test(NativeDatabase.memory());
+            addTearDown(database.close);
+            final signer = LocalNostrSigner('1'.padLeft(64, '0'));
+            final owner = (await signer.getPublicKey())!;
+            final client = _readyClient(signer, owner);
+            final container = ProviderContainer(
+              overrides: [
+                sharedPreferencesProvider.overrideWithValue(preferences),
+                databaseProvider.overrideWithValue(database),
+                nostrServiceProvider.overrideWithValue(client),
+                nostrSessionProvider.overrideWith(
+                  () => _Session(
+                    NostrSessionReadiness.identityKnown(pubkey: owner),
+                  ),
+                ),
+              ],
+            );
+            addTearDown(container.dispose);
+            final binding = container.listen(provider, (_, _) {});
+            addTearDown(binding.close);
+            await pumpEventQueue();
+
+            // Erasure can begin before the relays connect; the identity is
+            // still the owner's when the client then reports ready.
+            await container.read(accountStateWriteBarrierProvider).stop(owner);
+            container
+                .read(nostrSessionProvider.notifier)
+                .update(
+                  NostrSessionReadiness.nostrReady(
+                    pubkey: owner,
+                    client: client,
+                  ),
+                );
+            await pumpEventQueue();
+
+            expect(binding.read(), isNotNull);
+            expect(reporter.recordedErrors, isEmpty);
+            verifyNever(() => client.subscribe(any()));
+          },
+        );
+      }
+
+      for (final closer in ['account erasure', 'session teardown']) {
+        test(
+          'conversation state start yields to $closer during its restore',
+          () async {
+            SharedPreferences.setMockInitialValues({});
+            final preferences = await SharedPreferences.getInstance();
+            final database = _HeldRestoreDatabase();
+            addTearDown(database.close);
+            final signer = LocalNostrSigner('1'.padLeft(64, '0'));
+            final owner = (await signer.getPublicKey())!;
+            final client = _readyClient(signer, owner);
+            final container = ProviderContainer(
+              overrides: [
+                sharedPreferencesProvider.overrideWithValue(preferences),
+                databaseProvider.overrideWithValue(database),
+                nostrServiceProvider.overrideWithValue(client),
+                nostrSessionProvider.overrideWith(
+                  () => _Session(
+                    NostrSessionReadiness.nostrReady(
+                      pubkey: owner,
+                      client: client,
+                    ),
+                  ),
+                ),
+              ],
+            );
+            addTearDown(container.dispose);
+            final binding = container.listen(accountDmStateProvider, (_, _) {});
+            addTearDown(binding.close);
+            // The ready session started sync, which now waits on the restore.
+            await database.accountSyncDao.entered.future;
+
+            var closing = Future<void>.value();
+            if (closer == 'account erasure') {
+              closing = container
+                  .read(accountStateWriteBarrierProvider)
+                  .stop(owner);
+            } else {
+              container
+                  .read(nostrSessionProvider.notifier)
+                  .update(NostrSessionReadiness.tearingDown(pubkey: owner));
+              await container.pump();
+              expect(container.read(accountDmStateProvider), isNull);
+            }
+            database.accountSyncDao.release.complete();
+            await closing;
+            await pumpEventQueue();
+
+            expect(reporter.recordedErrors, isEmpty);
+            verifyNever(() => client.subscribe(any()));
+          },
+        );
+      }
+    });
   });
 }
