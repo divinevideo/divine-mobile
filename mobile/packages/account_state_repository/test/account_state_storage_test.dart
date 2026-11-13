@@ -243,6 +243,38 @@ void main() {
     );
   });
 
+  group('start', () {
+    test('yields to a close that lands while storage restores', () async {
+      final storage = _HeldStorage(
+        DriftAccountStateStorage(
+          db.accountSyncDao,
+          owner: owner,
+          namespace: 'dm',
+        ),
+      );
+      // Unstubbed: subscribing would fail the start below.
+      final repository = AccountStateRepository(
+        nostrClient: _Client(),
+        sharedPreferences: prefs,
+        pubkey: owner,
+        signer: () => LocalNostrSigner('1'.padLeft(64, '0')),
+        namespace: 'dm',
+        storage: storage,
+      );
+      final starting = repository.start();
+      final closing = repository.close();
+      storage.gate.complete();
+      await expectLater(starting, completes);
+      await closing;
+    });
+
+    test('rejects a start after close', () async {
+      final repository = create(owner);
+      await repository.close();
+      await expectLater(repository.start(), throwsStateError);
+    });
+  });
+
   group('setValues', () {
     test(
       'pending fields and null tombstones survive restart without preference history',
