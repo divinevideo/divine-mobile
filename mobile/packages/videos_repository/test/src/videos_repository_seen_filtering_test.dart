@@ -686,4 +686,107 @@ void main() {
       expect(ordered.map((v) => v.id).toList(), ['unseen', 'seen']);
     });
   });
+
+  group('getVideoDiscoveryPage', () {
+    late List<VideoStats> recommendationPage;
+    late List<String> requestedSeeds;
+
+    setUp(() {
+      recommendationPage = [];
+      requestedSeeds = [];
+      when(
+        () => mockFunnelcake.getRecommendations(
+          pubkey: any(named: 'pubkey'),
+          limit: any(named: 'limit'),
+          seed: any(named: 'seed'),
+          preferredLanguages: any(named: 'preferredLanguages'),
+          viewerCountry: any(named: 'viewerCountry'),
+        ),
+      ).thenAnswer((invocation) async {
+        requestedSeeds.add(invocation.namedArguments[#seed] as String);
+        return RecommendationsResponse(
+          videos: List.of(recommendationPage),
+          source: 'personalized',
+        );
+      });
+    });
+
+    VideosRepository buildRepository({Set<String> watched = const {}}) =>
+        VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          inMemoryFeedCache: InMemoryFeedCache(),
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+                watched.contains(id),
+          ),
+        );
+
+    test(
+      'fetches a new first page instead of replaying the cached For You page',
+      () async {
+        final repo = buildRepository();
+        recommendationPage = [_stats('home-first-page')];
+        await repo.getRecommendedVideos(userPubkey: 'u', limit: 10);
+
+        recommendationPage = [_stats('fresh-discovery')];
+        final result = await repo.getVideoDiscoveryPage(
+          userPubkey: 'u',
+          limit: 10,
+        );
+
+        expect(result.videos.map((v) => v.id), equals(['fresh-discovery']));
+      },
+    );
+
+    test('leaves the For You tab cached first page in place', () async {
+      final repo = buildRepository();
+      recommendationPage = [_stats('home-first-page')];
+      await repo.getRecommendedVideos(userPubkey: 'u', limit: 10);
+
+      recommendationPage = [_stats('fresh-discovery')];
+      await repo.getVideoDiscoveryPage(userPubkey: 'u', limit: 10);
+      final home = await repo.getRecommendedVideos(userPubkey: 'u', limit: 10);
+
+      expect(home.videos.map((v) => v.id), equals(['home-first-page']));
+    });
+
+    test('keeps the For You session seed', () async {
+      final repo = buildRepository();
+      recommendationPage = [_stats('home-first-page')];
+      await repo.getRecommendedVideos(userPubkey: 'u', limit: 10);
+      await repo.getVideoDiscoveryPage(userPubkey: 'u', limit: 10);
+
+      expect(requestedSeeds, hasLength(2));
+      expect(requestedSeeds.last, equals(requestedSeeds.first));
+    });
+
+    test(
+      'drops videos watched in the last day instead of replaying them',
+      () async {
+        final repo = buildRepository(watched: {'watched'});
+        recommendationPage = [_stats('watched'), _stats('unwatched')];
+
+        final result = await repo.getVideoDiscoveryPage(
+          userPubkey: 'u',
+          limit: 10,
+        );
+
+        expect(result.videos.map((v) => v.id), equals(['unwatched']));
+      },
+    );
+
+    test('ends discovery when every recommendation was watched', () async {
+      final repo = buildRepository(watched: {'watched'});
+      recommendationPage = [_stats('watched')];
+
+      final result = await repo.getVideoDiscoveryPage(
+        userPubkey: 'u',
+        limit: 10,
+      );
+
+      expect(result.videos, isEmpty);
+      expect(result.hasMore, isFalse);
+    });
+  });
 }

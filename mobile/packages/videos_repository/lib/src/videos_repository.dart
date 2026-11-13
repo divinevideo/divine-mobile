@@ -3678,19 +3678,47 @@ class VideosRepository {
   ///
   /// An opaque [cursor] continues recommendations. A popular fallback without
   /// a cursor is a terminal page, matching the home For You feed.
+  ///
+  /// Every opened video starts its own discovery, so the first page is always
+  /// fetched rather than read from the For You tab's cached first page, which
+  /// would replay the same videos after each opened video. It neither reads
+  /// nor replaces that cache, and keeps the For You session seed, so the tab
+  /// itself is undisturbed. Videos watched within
+  /// [defaultRecentlySeenVideoWindow] are dropped rather than demoted: a
+  /// continuation the viewer swipes into should not replay them.
   Future<HomeFeedResult> getVideoDiscoveryPage({
     required String? userPubkey,
     int limit = _defaultLimit,
     String? cursor,
     List<String> preferredLanguages = const [],
     String? viewerCountry,
-  }) {
-    return getRecommendedVideos(
+  }) async {
+    final result = await _recommendedVideos(
       userPubkey: userPubkey,
       limit: limit,
       cursor: cursor,
+      skipCache: false,
+      revalidate: false,
       preferredLanguages: preferredLanguages,
       viewerCountry: viewerCountry,
+      useFirstPageCache: false,
+    );
+    final unwatched = filterOutRecentlySeenVideos(
+      result.videos,
+      seenVideoLookup: _seenVideoLookup,
+      retainAllWhenAllSeen: false,
+    );
+    if (unwatched.length == result.videos.length) return result;
+    return HomeFeedResult(
+      videos: unwatched,
+      videoListSources: result.videoListSources,
+      listOnlyVideoIds: result.listOnlyVideoIds,
+      consumedItemCount: result.consumedItemCount,
+      nextCursor: result.nextCursor,
+      paginationCursor: result.paginationCursor,
+      hasMore: result.hasMore,
+      recommendationPageCount: result.recommendationPageCount,
+      followingPageCount: result.followingPageCount,
     );
   }
 
@@ -3712,6 +3740,30 @@ class VideosRepository {
     bool revalidate = false,
     List<String> preferredLanguages = const [],
     String? viewerCountry,
+  }) => _recommendedVideos(
+    userPubkey: userPubkey,
+    limit: limit,
+    until: until,
+    cursor: cursor,
+    skipCache: skipCache,
+    revalidate: revalidate,
+    preferredLanguages: preferredLanguages,
+    viewerCountry: viewerCountry,
+    useFirstPageCache: true,
+  );
+
+  /// Loads a For You page; [useFirstPageCache] gates both reading and writing
+  /// the tab's in-memory first page.
+  Future<HomeFeedResult> _recommendedVideos({
+    required String? userPubkey,
+    required int limit,
+    required bool skipCache,
+    required bool revalidate,
+    required List<String> preferredLanguages,
+    required String? viewerCountry,
+    required bool useFirstPageCache,
+    int? until,
+    String? cursor,
   }) async {
     final effectiveUserPubkey =
         userPubkey ??
@@ -3722,7 +3774,11 @@ class VideosRepository {
     final cacheKey =
         'recommended:${effectiveUserPubkey ?? 'anonymous'}'
         '$preferenceCacheSuffix';
-    if (!skipCache && !revalidate && until == null && cursor == null) {
+    if (useFirstPageCache &&
+        !skipCache &&
+        !revalidate &&
+        until == null &&
+        cursor == null) {
       final cached = _inMemoryFeedCache?.get(cacheKey);
       if (cached != null) return _withSeenFreshnessOrdering(cached);
     }
@@ -3795,7 +3851,7 @@ class VideosRepository {
     if (isFirstPage) {
       _recommendationSessionSeed = requestSeed;
     }
-    if (until == null && cursor == null) {
+    if (useFirstPageCache && until == null && cursor == null) {
       _inMemoryFeedCache?.set(cacheKey, result);
     }
     return result;
