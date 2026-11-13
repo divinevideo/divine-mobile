@@ -13,6 +13,7 @@ import 'package:crypto/crypto.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+// Relative to the package root, which tests run in.
 const _directory = 'assets/divine_stickers';
 const _maxLongEdge = 512;
 
@@ -126,9 +127,6 @@ int _uint24(ByteData data, int offset) =>
     (data.getUint8(offset + 2) << 16);
 
 void main() {
-  // Tests run with the package root as the working directory.
-  const webpBacked = DivineStickerName.values;
-
   group(DivineStickerName, () {
     test('every variant points at a bundled asset', () {
       for (final sticker in DivineStickerName.values) {
@@ -151,7 +149,9 @@ void main() {
             .where((name) => !name.startsWith('.'))
             .toSet();
         final expected = {
-          ...webpBacked.map((sticker) => '${sticker.fileName}.webp'),
+          ...DivineStickerName.values.map(
+            (sticker) => '${sticker.fileName}.webp',
+          ),
           ..._documents,
         };
 
@@ -160,7 +160,7 @@ void main() {
     );
 
     test('every artwork file is a lossless WebP', () {
-      for (final sticker in webpBacked) {
+      for (final sticker in DivineStickerName.values) {
         final header = _readWebpHeader(sticker.assetPath);
 
         expect(
@@ -172,7 +172,7 @@ void main() {
     });
 
     test('every artwork file keeps its transparency', () {
-      final withoutAlpha = webpBacked
+      final withoutAlpha = DivineStickerName.values
           .where((sticker) => !_readWebpHeader(sticker.assetPath).alpha)
           .toSet();
 
@@ -182,7 +182,7 @@ void main() {
     });
 
     test('no artwork file exceeds $_maxLongEdge px on its long edge', () {
-      for (final sticker in webpBacked) {
+      for (final sticker in DivineStickerName.values) {
         final header = _readWebpHeader(sticker.assetPath);
         final longEdge = header.width > header.height
             ? header.width
@@ -198,7 +198,7 @@ void main() {
 
     test('every artwork file decodes', () async {
       final undecodable = [
-        for (final sticker in webpBacked)
+        for (final sticker in DivineStickerName.values)
           if (!await _decodes(sticker.assetPath)) sticker.assetPath,
       ];
 
@@ -214,9 +214,11 @@ void main() {
 
       expect(
         sections.keys.toSet(),
-        equals(webpBacked.map((s) => '${s.fileName}.webp').toSet()),
+        equals(
+          DivineStickerName.values.map((s) => '${s.fileName}.webp').toSet(),
+        ),
       );
-      for (final sticker in webpBacked) {
+      for (final sticker in DivineStickerName.values) {
         final hash = sha256.convert(File(sticker.assetPath).readAsBytesSync());
         expect(
           sections['${sticker.fileName}.webp'],
