@@ -104,6 +104,16 @@ typedef QueueOfflineActionCallback =
       int? targetKind,
     });
 
+/// A like or unlike of `eventId` the current user has queued, still waiting
+/// to reach the relays or being replayed now.
+typedef QueuedLikeAction = ({String eventId, bool isLike});
+
+/// Reads the current user's queued likes and unlikes, oldest first.
+///
+/// The offline queue keeps a vote it could not publish yet. Relays do not
+/// hold it, so the vote reads add it to what the relays report.
+typedef QueuedLikeActionsReader = Future<List<QueuedLikeAction>> Function();
+
 /// Reporter port for programming-invariant violations swallowed by the
 /// best-effort local-storage paths.
 ///
@@ -152,6 +162,9 @@ class LikesRepository {
   /// - [localStorage]: Optional local storage for persistence
   /// - [isOnline]: Optional callback to check connectivity status
   /// - [queueOfflineAction]: Optional callback to queue actions when offline
+  /// - [queuedLikeActions]: Optional read of the likes and unlikes that
+  ///   callback queued and that have not been published yet, so
+  ///   [getVoteCounts] and [getUserVoteStatuses] include them (#10922)
   /// - [blockFilter]: Optional callback to hide blocked/muted users from
   ///   engagement lists ([fetchEventLikers])
   /// - [funnelcakeApiClient]: Optional REST client preferred by
@@ -166,6 +179,7 @@ class LikesRepository {
     LikesLocalStorage? localStorage,
     IsOnlineCallback? isOnline,
     QueueOfflineActionCallback? queueOfflineAction,
+    QueuedLikeActionsReader? queuedLikeActions,
     BlockedLikerFilter? blockFilter,
     FunnelcakeApiClient? funnelcakeApiClient,
     LikesRepositoryErrorReporter? errorReporter,
@@ -173,6 +187,7 @@ class LikesRepository {
        _localStorage = localStorage,
        _isOnline = isOnline,
        _queueOfflineAction = queueOfflineAction,
+       _queuedLikeActions = queuedLikeActions,
        _blockFilter = blockFilter,
        _funnelcakeApiClient = funnelcakeApiClient,
        _errorReporter = errorReporter;
@@ -194,6 +209,9 @@ class LikesRepository {
 
   /// Callback to queue actions for offline sync
   final QueueOfflineActionCallback? _queueOfflineAction;
+
+  /// Read of the votes [_queueOfflineAction] queued and that are unpublished.
+  final QueuedLikeActionsReader? _queuedLikeActions;
 
   /// In-memory cache of like records keyed by target event ID.
   final Map<String, LikeRecord> _likeRecords = {};
@@ -1894,6 +1912,9 @@ class LikesRepository {
   /// reachable by coordinate; an `e`-only query reports zero and the score
   /// vanishes for every viewer the moment the target is edited (#6124).
   ///
+  /// The current user's like or unlike that is still queued counts as
+  /// published, so the totals agree with [getUserVoteStatuses] (#10922).
+  ///
   /// Returns a record of upvote and downvote count maps.
   Future<({Map<String, int> upvotes, Map<String, int> downvotes})>
   getVoteCounts(
@@ -1908,6 +1929,11 @@ class LikesRepository {
       eventIds,
       addressableIds,
     );
+    final knownEventIds = eventIds.toSet();
+    // Read the queue before the relays: a vote already gone from it was
+    // published, so the relay read that follows has it, and one still in it
+    // is counted once even if its publish lands during that read.
+    final queuedLikesFuture = _queuedLikesOn(knownEventIds);
 
     final events = await _queryVoteTargetReactions(
       eventIds: eventIds,
@@ -1938,7 +1964,6 @@ class LikesRepository {
     // surviving reaction. Kind 7 is a regular event, so a relay keeps every
     // reaction an account publishes; counting events would let one account
     // cast any number of votes and set a comment's place in the Top order.
-    final knownEventIds = eventIds.toSet();
     final newestVoteByVoter = <(String, String), Event>{};
     for (final event in reactionsById.values) {
       if (deletedReactionIds.contains(event.id)) continue;
@@ -1955,9 +1980,27 @@ class LikesRepository {
       }
     }
 
-    for (final MapEntry(key: (targetId, _), value: event)
-        in newestVoteByVoter.entries) {
-      if (event.content == _downvoteContent) {
+    final isDownvoteByVoter = {
+      for (final MapEntry(:key, value: event) in newestVoteByVoter.entries)
+        key: event.content == _downvoteContent,
+    };
+    final queuedLikes = await queuedLikesFuture;
+    final viewer = queuedLikes.isEmpty ? null : await _currentUserPubkey();
+    if (viewer != null) {
+      for (final MapEntry(key: targetId, value: isLike)
+          in queuedLikes.entries) {
+        final key = (targetId, viewer);
+        if (isLike) {
+          isDownvoteByVoter[key] = false;
+        } else if (isDownvoteByVoter[key] == false) {
+          isDownvoteByVoter.remove(key);
+        }
+      }
+    }
+
+    for (final MapEntry(key: (targetId, _), value: isDownvote)
+        in isDownvoteByVoter.entries) {
+      if (isDownvote) {
         downvotes[targetId] = downvotes[targetId]! + 1;
       } else {
         upvotes[targetId] = upvotes[targetId]! + 1;
@@ -1972,6 +2015,8 @@ class LikesRepository {
   /// Pass [addressableIds] for addressable targets, for the same reason
   /// [getVoteCounts] needs it: without the coordinate the voter's own arrow
   /// silently un-fills after the target is edited (#6124).
+  ///
+  /// A like or unlike that is still queued counts as published (#10922).
   ///
   /// Returns the sets of event IDs the user has upvoted or downvoted.
   Future<({Set<String> upvotedIds, Set<String> downvotedIds})>
@@ -1994,6 +2039,9 @@ class LikesRepository {
       eventIds,
       addressableIds,
     );
+    final knownEventIds = eventIds.toSet();
+    // Read before the relays, as in [getVoteCounts].
+    final queuedLikesFuture = _queuedLikesOn(knownEventIds);
 
     final events = await _queryVoteTargetReactions(
       eventIds: eventIds,
@@ -2019,7 +2067,6 @@ class LikesRepository {
 
     final upvotedIds = <String>{};
     final downvotedIds = <String>{};
-    final knownEventIds = eventIds.toSet();
 
     for (final event in events) {
       if (deletedIds.contains(event.id)) continue;
@@ -2039,7 +2086,35 @@ class LikesRepository {
       }
     }
 
+    final queuedLikes = await queuedLikesFuture;
+    for (final MapEntry(key: targetId, value: isLike) in queuedLikes.entries) {
+      if (isLike) {
+        upvotedIds.add(targetId);
+        downvotedIds.remove(targetId);
+      } else {
+        upvotedIds.remove(targetId);
+      }
+    }
+
     return (upvotedIds: upvotedIds, downvotedIds: downvotedIds);
+  }
+
+  /// The current user's queued vote on each of [targets]: `true` for a
+  /// queued like, `false` for a queued unlike, decided by the newest queued
+  /// action. Empty when nothing is queued or the queue cannot be read, which
+  /// leaves the relays' answer as it is.
+  Future<Map<String, bool>> _queuedLikesOn(Set<String> targets) async {
+    final reader = _queuedLikeActions;
+    if (reader == null) return const {};
+    final actions = await _bestEffortLocalStorage(
+      reader,
+      description: 'reading the queued likes',
+      site: LikesRepositoryReportableSites.readQueuedLikeActions,
+    );
+    return {
+      for (final action in actions ?? const <QueuedLikeAction>[])
+        if (targets.contains(action.eventId)) action.eventId: action.isLike,
+    };
   }
 
   Future<List<Event>> _queryVoteTargetReactions({
