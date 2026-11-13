@@ -3692,3 +3692,18 @@ final class LookVideoEffectTests: XCTestCase {
     return out
   }
 }
+
+/// Native coverage for the device-storage channel. The Dart side rejects a
+/// reading whose free space exceeds its capacity, so the two figures must come
+/// from the same volume — the one the app's data lives on.
+final class DeviceStorageSpaceTests: XCTestCase {
+  func testReportsTheVolumeHoldingTheAppsData() throws {
+    let space = try XCTUnwrap(AppDelegate.deviceStorageSpace())
+    let total = try XCTUnwrap(space["totalBytes"])
+    let free = try XCTUnwrap(space["freeBytes"])
+
+    XCTAssertGreaterThan(total, 0)
+    XCTAssertGreaterThanOrEqual(free, 0)
+    XCTAssertLessThanOrEqual(free, total)
+  }
+}
