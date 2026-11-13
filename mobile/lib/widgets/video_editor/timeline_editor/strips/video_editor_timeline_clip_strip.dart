@@ -227,11 +227,39 @@ class _VideoEditorTimelineClipStripState
   @override
   void didUpdateWidget(VideoEditorTimelineClipStrip oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!_isReordering) {
+    if (_isReordering) {
+      _followClipsDuringReorder();
+    } else {
       _orderedClips = List.of(widget.clips);
     }
     _maybeSeedSplit();
     _syncThumbnails();
+  }
+
+  /// Keeps a running reorder in step with [widget.clips].
+  ///
+  /// The tiles are built from [_orderedClips], but [_thumbnails] and
+  /// [_waveforms] only hold notifiers for the clips in [widget.clips], so a
+  /// clip left only in [_orderedClips] has nothing to build from. The drop
+  /// also hands [_orderedClips] to the editor as its whole clip list.
+  void _followClipsDuringReorder() {
+    final current = {for (final clip in widget.clips) clip.id: clip};
+    final sameClips =
+        current.length == _orderedClips.length &&
+        _orderedClips.every((clip) => current.containsKey(clip.id));
+    if (sameClips) {
+      // An edit landed mid-drag (e.g. a reverse finished): keep the drag's
+      // order, but with the edited clips, or the drop would undo the edit.
+      _orderedClips = [for (final clip in _orderedClips) current[clip.id]!];
+      return;
+    }
+    // Clips were added or removed under the finger (an undo, a delete, an
+    // import landing). The drag's order is for a timeline that no longer
+    // exists, so the drag is dropped rather than committed.
+    _orderedClips = List.of(widget.clips);
+    _leaveReorderMode();
+    // Not from inside the build that delivered the new clips.
+    addPostFrameCallbackIfMounted(() => widget.onReorderChanged?.call(false));
   }
 
   @override
@@ -629,25 +657,29 @@ class _VideoEditorTimelineClipStripState
   void _endReorder() {
     if (!_isReordering) return;
 
-    _stopAutoScroll();
-
     final reordered = List<DivineVideoClip>.of(_orderedClips);
     final changed = !_sameOrder(reordered, widget.clips);
 
-    // Phase 1: switch to exit mode — layout returns to normal widths
-    // while AnimatedPositioned still has animDuration.
-    setState(() {
-      _isReordering = false;
-      _isReorderExiting = true;
-      _dragIndex = null;
-      _dragAnimating = false;
-    });
+    setState(_leaveReorderMode);
 
     widget.onReorderChanged?.call(false);
 
     if (changed) {
       widget.onReorder?.call(reordered);
     }
+  }
+
+  /// Returns the tiles to their clip widths and clears the drag state once
+  /// they have grown back. Commits nothing and notifies no one.
+  void _leaveReorderMode() {
+    _stopAutoScroll();
+
+    // Phase 1: switch to exit mode — layout returns to normal widths
+    // while AnimatedPositioned still has animDuration.
+    _isReordering = false;
+    _isReorderExiting = true;
+    _dragIndex = null;
+    _dragAnimating = false;
 
     // Phase 2: after the grow-back animation completes, clean up.
     _reorderAnimController.reset();
