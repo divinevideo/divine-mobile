@@ -92,12 +92,18 @@ class _Relay {
   int deletions = 0;
   var _createdAt = 1700000000;
 
-  Event vote(String pubkey, String target, {String content = '+'}) {
+  Event vote(
+    String pubkey,
+    String target, {
+    String content = '+',
+    String? coordinate,
+  }) {
     final reaction = Event(
       pubkey,
       EventKind.reaction,
       [
         ['e', target],
+        if (coordinate != null) ['a', coordinate],
         ['p', _author],
         ['k', '${EventKind.comment}'],
       ],
@@ -119,6 +125,13 @@ class _Relay {
           .where((t) => t.length > 1 && t[0] == 'e')
           .map((t) => t[1]);
       if (!tagged.any(e.contains)) return false;
+    }
+    final a = filter.a;
+    if (a != null) {
+      final tagged = event.tags
+          .where((t) => t.length > 1 && t[0] == 'a')
+          .map((t) => t[1]);
+      if (!tagged.any(a.contains)) return false;
     }
     return true;
   }
@@ -428,10 +441,73 @@ void main() {
         expect(relay.deletions, equals(0));
       });
 
-      test('queues the unlike with the target coordinate', () async {
-        await likeThenUnlikeOffline(addressableId: coordinate);
+      test('finds the like on an edited target by its coordinate', () async {
+        // The like names the revision before the edit, so only the
+        // coordinate reaches it.
+        relay.vote(_me, _hex('clip-v1'), coordinate: coordinate);
 
-        expect(queued.single.addressableId, equals(coordinate));
+        await repository.executeUnlikeAction(
+          _comment,
+          addressableId: coordinate,
+        );
+
+        expect(relay.deletions, equals(1));
+      });
+
+      group('queues the unlike with the target coordinate', () {
+        Future<void> like() => repository.likeEvent(
+          eventId: _comment,
+          authorPubkey: _author,
+          addressableId: coordinate,
+        );
+
+        void expectQueuedUnlike() => expect(
+          queued.last,
+          equals((eventId: _comment, isLike: false, addressableId: coordinate)),
+        );
+
+        test('when the device is offline', () async {
+          await likeThenUnlikeOffline(addressableId: coordinate);
+
+          expect(queued.single.addressableId, equals(coordinate));
+        });
+
+        test('when the deletion is not published', () async {
+          await like();
+          when(
+            () => relay.client.deleteEvent(any()),
+          ).thenAnswer((_) async => null);
+
+          await repository.unlikeEvent(_comment, addressableId: coordinate);
+
+          expectQueuedUnlike();
+        });
+
+        test('when a relay refuses the deletion', () async {
+          await like();
+          when(() => relay.client.deleteEvent(any())).thenThrow(
+            SocialPublishException(
+              SocialPublishResult(
+                status: SocialPublishStatus.rejected,
+                event: Event(_me, EventKind.eventDeletion, const [], ''),
+              ),
+            ),
+          );
+
+          await repository.unlikeEvent(_comment, addressableId: coordinate);
+
+          expectQueuedUnlike();
+        });
+
+        test('while the like is still queued', () async {
+          online = false;
+          await like();
+          online = true;
+
+          await repository.unlikeEvent(_comment, addressableId: coordinate);
+
+          expectQueuedUnlike();
+        });
       });
     });
   });
