@@ -4793,7 +4793,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get feedFollowingNothingNew =>
-      'لا جديد من الأشخاص الذين تتابعهم.\nاعثر على المزيد من صناع المحتوى الذين يعجبونك وتابعهم.';
+      'لا جديد من المتابَعين.\nيمكن اكتشاف المزيد من صناع المحتوى المفضّلين ومتابعتهم.';
 
   @override
   String get feedLatestEmpty => 'لا توجد مقاطع جديدة بعد.\nعد لاحقًا.';
