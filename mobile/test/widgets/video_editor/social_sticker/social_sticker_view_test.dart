@@ -1,5 +1,5 @@
-// ABOUTME: Tests the social sticker as it shows on the video: the same size
-// ABOUTME: whatever font size the system asks for.
+// ABOUTME: Tests the social sticker as it shows on the video, the same size
+// ABOUTME: at any font size, and a countdown on the editor canvas.
 
 import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
