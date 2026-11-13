@@ -334,6 +334,79 @@ void main() {
       });
     });
 
+    group('registerFailureHandler', () {
+      late List<PendingAction> abandoned;
+
+      setUp(() {
+        abandoned = [];
+        service.registerFailureHandler(
+          PendingActionType.like,
+          (action) async => abandoned.add(action),
+        );
+      });
+
+      test('hands over an action account policy refuses', () async {
+        await service.queueAction(
+          type: PendingActionType.like,
+          targetId: 'event123',
+          authorPubkey: 'author123',
+        );
+        service.registerExecutor(
+          PendingActionType.like,
+          (_) async => throw const _TerminalActionException(),
+        );
+
+        await service.syncPendingActions();
+        await pumpEventQueue();
+
+        expect(abandoned.map((a) => a.targetId), equals(['event123']));
+      });
+
+      test('hands over an action once its last retry fails', () async {
+        await dao.upsertAction(
+          PendingAction(
+            id: 'last_try',
+            type: PendingActionType.like,
+            targetId: 'event123',
+            status: PendingActionStatus.pending,
+            userPubkey: testUserPubkey,
+            createdAt: DateTime(2026, 11, 13),
+            retryCount: PendingAction.maxRetries - 1,
+          ),
+        );
+        service.registerExecutor(
+          PendingActionType.like,
+          (_) async => throw Exception('connection refused'),
+        );
+
+        await service.syncPendingActions();
+        await pumpEventQueue();
+
+        expect(abandoned.map((a) => a.targetId), equals(['event123']));
+      });
+
+      test('keeps an action it will retry', () async {
+        await service.queueAction(
+          type: PendingActionType.like,
+          targetId: 'event123',
+          authorPubkey: 'author123',
+        );
+        service.registerExecutor(
+          PendingActionType.like,
+          (_) async => throw Exception('connection refused'),
+        );
+
+        await service.syncPendingActions();
+        await pumpEventQueue();
+
+        expect(
+          service.pendingActions.single.status,
+          equals(PendingActionStatus.pending),
+        );
+        expect(abandoned, isEmpty);
+      });
+    });
+
     group('cancelAction', () {
       test('removes action from queue', () async {
         await service.queueAction(

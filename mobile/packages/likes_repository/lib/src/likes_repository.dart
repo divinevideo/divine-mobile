@@ -1682,6 +1682,60 @@ class LikesRepository {
     _decrementLikeCountCache(eventId, addressableId: addressableId);
   }
 
+  /// Takes back a like the offline queue gave up on (#10922).
+  ///
+  /// The queue marks a like failed after its last retry or a terminal
+  /// refusal. It never reached the relays, so the placeholder it left would
+  /// show [eventId] as liked for good. Does nothing once the record holds a
+  /// real reaction, or while a publish of the placeholder is in flight.
+  Future<void> abandonLikeAction(
+    String eventId, {
+    String? addressableId,
+  }) async {
+    await _ensureInitialized();
+    final placeholderId = _likeRecords[eventId]?.reactionEventId;
+    if (placeholderId == null ||
+        !_isPlaceholderId(placeholderId) ||
+        _inFlightLikePublishPlaceholders.contains(placeholderId)) {
+      return;
+    }
+    _deindexLikeRecord(eventId);
+    await _bestEffortLocalStorage(
+      () async => _localStorage?.deleteLikeRecord(eventId),
+      description: 'dropping a like the queue gave up on',
+      site: LikesRepositoryReportableSites.abandonLikeDeletePlaceholder,
+    );
+    _decrementLikeCountCache(eventId, addressableId: addressableId);
+    _emitLikedIds();
+  }
+
+  /// Restores a like whose unlike the offline queue gave up on (#10922).
+  ///
+  /// The Kind 5 never reached the relays, so the like is still live there
+  /// while this device shows it removed. Adopts it again when the relays
+  /// confirm it, and leaves [eventId] unliked when they show none, cannot
+  /// tell, or it was liked again in the meantime.
+  Future<void> abandonUnlikeAction(
+    String eventId, {
+    String? addressableId,
+  }) async {
+    await _ensureInitialized();
+    if (_likeRecords.containsKey(eventId)) return;
+    final check = await _checkRelayForLiveLike(
+      eventId,
+      addressableId: addressableId,
+      timeout: _queuedLikeCheckTimeout,
+    );
+    final liveRecord = check.isConclusive ? check.newest : null;
+    if (liveRecord == null || _likeRecords.containsKey(eventId)) return;
+    await _adoptRemoteLikeRecord(
+      liveRecord,
+      site: LikesRepositoryReportableSites.abandonUnlikeRestoreRecord,
+    );
+    _adjustCachedLikeCount(eventId, 1, addressableId: addressableId);
+    _emitLikedIds();
+  }
+
   /// Toggle like status for an event.
   ///
   /// If the event is not liked, likes it and returns `true`.

@@ -20,6 +20,10 @@ export 'package:db_client/db_client.dart'
 /// Callback type for executing a pending action
 typedef ActionExecutor = Future<void> Function(PendingAction action);
 
+/// Callback for an action the queue has given up on: its last retry failed,
+/// or account policy refused it for good.
+typedef ActionFailureHandler = Future<void> Function(PendingAction action);
+
 /// Configuration for retry behavior
 class PendingActionRetryConfig {
   const PendingActionRetryConfig({
@@ -76,6 +80,9 @@ class PendingActionService extends ChangeNotifier {
   /// Executors for different action types
   final Map<PendingActionType, ActionExecutor> _executors = {};
 
+  /// What to do when the queue gives up on an action, per action type.
+  final Map<PendingActionType, ActionFailureHandler> _failureHandlers = {};
+
   /// Stream controller for pending actions
   final _pendingActionsController = BehaviorSubject<List<PendingAction>>.seeded(
     const [],
@@ -109,6 +116,17 @@ class PendingActionService extends ChangeNotifier {
       name: 'PendingActionService',
       category: LogCategory.system,
     );
+  }
+
+  /// Register what to do when the queue gives up on an action of [type].
+  ///
+  /// The action stays `failed` in the queue. [handler] lets its owner undo the
+  /// optimistic state it showed for it.
+  void registerFailureHandler(
+    PendingActionType type,
+    ActionFailureHandler handler,
+  ) {
+    _failureHandlers[type] = handler;
   }
 
   /// Initialize the service
@@ -584,6 +602,7 @@ class PendingActionService extends ChangeNotifier {
         name: 'PendingActionService',
         category: LogCategory.system,
       );
+      _handOverAbandoned(action);
     } catch (e) {
       // Mark as failed or pending for retry
       final newRetryCount = action.retryCount + 1;
@@ -603,7 +622,22 @@ class PendingActionService extends ChangeNotifier {
         name: 'PendingActionService',
         category: LogCategory.system,
       );
+      if (newStatus == PendingActionStatus.failed) _handOverAbandoned(action);
     }
+  }
+
+  /// Runs the failure handler for [action], which the queue has given up on.
+  /// Detached so a slow rollback does not hold up the rest of the sync.
+  void _handOverAbandoned(PendingAction action) {
+    final handler = _failureHandlers[action.type];
+    if (handler == null) return;
+    runDetached(
+      handler(action),
+      'roll back ${action.type.name} on ${action.targetId} after the queue '
+      'gave up on it',
+      logName: 'PendingActionService',
+      category: LogCategory.system,
+    );
   }
 
   bool _isRetriableError(dynamic error) {

@@ -1099,6 +1099,22 @@ LikesRepository likesRepository(Ref ref) {
         addressableId: action.addressableId,
       ),
     );
+    // A vote the queue gives up on is undone locally, so the heart and the
+    // vote totals stop showing it (#10922).
+    pendingActionService.registerFailureHandler(
+      PendingActionType.like,
+      (action) => repository.abandonLikeAction(
+        action.targetId,
+        addressableId: action.addressableId,
+      ),
+    );
+    pendingActionService.registerFailureHandler(
+      PendingActionType.unlike,
+      (action) => repository.abandonUnlikeAction(
+        action.targetId,
+        addressableId: action.addressableId,
+      ),
+    );
   }
 
   // Initialize: load from local storage + set up persistent subscription

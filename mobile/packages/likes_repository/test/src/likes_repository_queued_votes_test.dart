@@ -21,19 +21,53 @@ final String _author = _hex('author');
 final String _comment = _hex('comment');
 final String _otherComment = _hex('comment2');
 
-/// A relay held in memory, answering the mocked [NostrClient.queryEvents].
+/// A relay held in memory, reached through a mocked [NostrClient].
 class _Relay {
   _Relay(this.client) {
     when(() => client.publicKey).thenReturn(_me);
+    when(() => client.hasKeys).thenReturn(true);
     when(client.resolvePublicKey).thenAnswer((_) async => _me);
-    when(() => client.queryEvents(any())).thenAnswer((invocation) async {
-      final filters = invocation.positionalArguments.first as List;
-      return [
-        for (final event in events)
-          if (filters.cast<Filter>().any((f) => _matches(f, event))) event,
-      ];
-    });
+    when(
+      () => client.subscribe(
+        any(),
+        subscriptionId: any(named: 'subscriptionId'),
+      ),
+    ).thenAnswer((_) => const Stream.empty());
+    when(() => client.unsubscribe(any())).thenAnswer((_) async {});
+    when(() => client.queryEvents(any())).thenAnswer(
+      (invocation) async =>
+          _matching(invocation.positionalArguments.first as List),
+    );
+    when(
+      () => client.readEvents(
+        any(),
+        requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        timeout: any(named: 'timeout'),
+      ),
+    ).thenAnswer(
+      (invocation) async => QueryResult(
+        events: _matching(invocation.positionalArguments.first as List),
+        endedBy: QueryEnd.complete,
+      ),
+    );
+    when(
+      () => client.sendLike(
+        any(),
+        content: any(named: 'content'),
+        addressableId: any(named: 'addressableId'),
+        targetAuthorPubkey: any(named: 'targetAuthorPubkey'),
+        targetKind: any(named: 'targetKind'),
+      ),
+    ).thenAnswer(
+      (invocation) async =>
+          vote(_me, invocation.positionalArguments.first as String),
+    );
   }
+
+  List<Event> _matching(List<dynamic> filters) => [
+    for (final event in events)
+      if (filters.cast<Filter>().any((f) => _matches(f, event))) event,
+  ];
 
   final _MockNostrClient client;
   final List<Event> events = <Event>[];
@@ -77,7 +111,10 @@ void main() {
     late List<QueuedLikeAction> queue;
     late LikesRepository repository;
 
-    setUpAll(() => registerFallbackValue(<Filter>[]));
+    setUpAll(() {
+      registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Duration.zero);
+    });
 
     setUp(() {
       relay = _Relay(_MockNostrClient());
@@ -220,6 +257,77 @@ void main() {
 
         expect(statuses.upvotedIds, equals({_comment}));
         expect(statuses.downvotedIds, isEmpty);
+      });
+    });
+
+    group('when the queue gives up', () {
+      late bool online;
+
+      setUp(() {
+        online = true;
+        repository.dispose();
+        repository = LikesRepository(
+          nostrClient: relay.client,
+          isOnline: () => online,
+          queueOfflineAction:
+              ({
+                required isLike,
+                required eventId,
+                required authorPubkey,
+                addressableId,
+                targetKind,
+              }) async {},
+        );
+      });
+
+      Future<void> like() =>
+          repository.likeEvent(eventId: _comment, authorPubkey: _author);
+
+      group('abandonLikeAction', () {
+        test('takes back a like that never reached the relays', () async {
+          online = false;
+          await like();
+          expect(await repository.isLiked(_comment), isTrue);
+
+          await repository.abandonLikeAction(_comment);
+
+          expect(await repository.isLiked(_comment), isFalse);
+          expect(await repository.getLikedEventIds(), isEmpty);
+        });
+
+        test('control: keeps a like that was published', () async {
+          await like();
+
+          await repository.abandonLikeAction(_comment);
+
+          expect(await repository.isLiked(_comment), isTrue);
+        });
+      });
+
+      group('abandonUnlikeAction', () {
+        test('restores a like whose unlike never reached the relays', () async {
+          await like();
+          online = false;
+          await repository.unlikeEvent(_comment);
+          expect(await repository.isLiked(_comment), isFalse);
+
+          await repository.abandonUnlikeAction(_comment);
+
+          expect(await repository.isLiked(_comment), isTrue);
+        });
+
+        test(
+          'control: leaves it unliked when the relays hold no like',
+          () async {
+            online = false;
+            await like();
+            await repository.unlikeEvent(_comment);
+
+            await repository.abandonUnlikeAction(_comment);
+
+            expect(await repository.isLiked(_comment), isFalse);
+          },
+        );
       });
     });
   });
