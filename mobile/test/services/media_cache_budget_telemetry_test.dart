@@ -17,10 +17,12 @@ Map<String, String> _properties({
   DeviceStorageSpace? storage,
   int videoBytes = kCacheLimitDefaultBytes,
   bool automatic = true,
+  bool diskSpaceMayLeaveDevice = true,
 }) => mediaCacheBudgetProperties(
   storage: storage,
   budget: _video(videoBytes),
   automatic: automatic,
+  diskSpaceMayLeaveDevice: diskSpaceMayLeaveDevice,
 );
 
 void main() {
@@ -99,6 +101,22 @@ void main() {
           reason: '$bytes bytes',
         );
       }
+    });
+
+    test('carries nothing derived from disk space where it may not leave '
+        'the device', () {
+      // Apple's E174.1: disk space read to free space, and anything derived
+      // from it — the budget included — may not be sent off-device.
+      final properties = _properties(
+        storage: const DeviceStorageSpace(
+          totalBytes: 64 * _gb,
+          freeBytes: 2 * _gb,
+        ),
+        videoBytes: kVideoCacheFloorBytes,
+        diskSpaceMayLeaveDevice: false,
+      );
+
+      expect(properties, equals({'cache_mode': 'automatic'}));
     });
 
     test('keeps every label within analytics user-property limits', () {

@@ -16,19 +16,27 @@ const int _bytesPerMb = 1024 * 1024;
 /// Every value is a coarse bucket — the marketed size a disk falls under, a
 /// free-space band, a budget band — so the labels say what kind of device
 /// this is without telling one device from another.
+///
+/// Where [diskSpaceMayLeaveDevice] is false only the mode is labelled. On iOS
+/// the disk is read under Apple's required reason E174.1, which forbids
+/// sending what was read, or anything derived from it, off the device — and
+/// the budget is derived from it.
 Map<String, String> mediaCacheBudgetProperties({
   required DeviceStorageSpace? storage,
   required MediaCacheBudget budget,
   required bool automatic,
+  required bool diskSpaceMayLeaveDevice,
 }) => {
-  'storage_total': storage == null
-      ? 'unknown'
-      : _storageTotalLabel(storage.totalBytes),
-  'storage_free_pct': storage == null
-      ? 'unknown'
-      : _freePercentLabel(storage.freeBytes * 100 / storage.totalBytes),
+  if (diskSpaceMayLeaveDevice) ...{
+    'storage_total': storage == null
+        ? 'unknown'
+        : _storageTotalLabel(storage.totalBytes),
+    'storage_free_pct': storage == null
+        ? 'unknown'
+        : _freePercentLabel(storage.freeBytes * 100 / storage.totalBytes),
+    'cache_budget': _videoBudgetLabel(budget.videoBytes),
+  },
   'cache_mode': automatic ? 'automatic' : 'fixed',
-  'cache_budget': _videoBudgetLabel(budget.videoBytes),
 };
 
 /// Sends [properties] as analytics user properties and as crash-report keys,

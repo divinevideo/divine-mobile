@@ -107,11 +107,10 @@ class MediaCacheBudgetService {
     ]);
     _appliedBudget = budget;
     _lastRefreshedAt = _now();
+    // Logs reach crash reports, and iOS forbids sending disk space or
+    // anything derived from it — the budget included — off the device.
     Log.info(
-      'Media cache budget: video=${budget.videoBytes} '
-      'image=${budget.imageBytes} player=${budget.playerBytes} '
-      'automatic=$isAutomatic '
-      'disk=${storage?.freeBytes}/${storage?.totalBytes}',
+      'Media cache budget applied (automatic=$isAutomatic)',
       name: _logName,
       category: LogCategory.storage,
     );
