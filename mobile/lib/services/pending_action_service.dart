@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:db_client/db_client.dart';
 import 'package:flutter/foundation.dart';
+import 'package:likes_repository/likes_repository.dart' show QueuedLikeAction;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/utils/async_utils.dart';
@@ -245,6 +246,26 @@ class PendingActionService extends ChangeNotifier {
       return null;
     }
   }
+
+  /// The likes and unlikes still to be published, oldest first: those
+  /// waiting in the queue and those being replayed now.
+  ///
+  /// `LikesRepository` counts them as published, since the relays do not
+  /// have them yet (#10922).
+  Future<List<QueuedLikeAction>> getUnsettledLikeActions() async => [
+    for (final action in await _dao.getAllActions(_userPubkey))
+      if (_isUnsettled(action.status) &&
+          (action.type == PendingActionType.like ||
+              action.type == PendingActionType.unlike))
+        (
+          eventId: action.targetId,
+          isLike: action.type == PendingActionType.like,
+        ),
+  ];
+
+  static bool _isUnsettled(PendingActionStatus status) =>
+      status == PendingActionStatus.pending ||
+      status == PendingActionStatus.syncing;
 
   /// Cancel a pending action
   Future<void> cancelAction(String actionId) async {

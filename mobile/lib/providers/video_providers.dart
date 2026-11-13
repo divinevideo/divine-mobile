@@ -1078,6 +1078,7 @@ LikesRepository likesRepository(Ref ref) {
             );
           }
         : null,
+    queuedLikeActions: pendingActionService?.getUnsettledLikeActions,
   );
 
   // Register executors with pending action service for sync
