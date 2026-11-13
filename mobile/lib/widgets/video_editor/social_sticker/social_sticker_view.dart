@@ -307,7 +307,7 @@ class _LiveCountdownCard extends StatelessWidget {
 }
 
 /// A countdown: its title over its date, or over the time left the player
-/// draws in [value].
+/// draws or the editor canvas counts down, in [value].
 class _CountdownCard extends StatelessWidget {
   const _CountdownCard({
     required this.data,
