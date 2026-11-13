@@ -8,7 +8,7 @@ import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_classifier.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_fixtures.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_prototype_settings.dart';
 
-/// Actions taken on requests during one session. Nothing is published.
+/// Actions taken on inbox rows during one session. Nothing is published.
 class DmPrototypeSession {
   const DmPrototypeSession({
     this.revealed = const {},
