@@ -8,6 +8,7 @@ export 'src/exceptions.dart';
 export 'src/identity_claim.dart';
 export 'src/identity_claims_repository.dart';
 export 'src/pending_profile_save.dart';
+export 'src/profile_api_cache.dart';
 export 'src/profile_reader.dart';
 export 'src/profile_repository.dart';
 export 'src/progressive_search_result.dart';

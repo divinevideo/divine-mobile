@@ -34,6 +34,11 @@ import 'package:profile_repository/profile_repository.dart';
 /// `mobile/scripts/check_profile_read_write_split.sh` guards the indirect
 /// route a type cannot see.
 abstract interface class ProfileReader {
+  /// Reads the server-owned beta eligibility from the shared Funnelcake
+  /// profile response. This unauthenticated read never signs or publishes.
+  /// Reuses single/bulk profile hydration and coalesces concurrent lookups.
+  Future<bool> isOgDiviner(String pubkey);
+
   /// Returns the cached profile from local storage (SQLite) only.
   ///
   /// Returns `null` if no cached profile exists for the given pubkey.

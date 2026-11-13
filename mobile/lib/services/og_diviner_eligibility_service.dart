@@ -1,31 +1,18 @@
 // ABOUTME: Privacy-preserving lookup for server-computed OG Diviner eligibility.
-// ABOUTME: Deduplicates requests in memory without persisting viewed accounts.
+// ABOUTME: Reuses the profile repository's server-owned eligibility answers.
 
-import 'package:keycast_flutter/keycast_flutter.dart';
+import 'package:profile_repository/profile_repository.dart';
 
 class OgDivinerEligibilityService {
-  OgDivinerEligibilityService({required KeycastOAuth keycast})
-    : _keycast = keycast;
+  OgDivinerEligibilityService({required ProfileReader profiles})
+    : _profiles = profiles;
 
-  final KeycastOAuth _keycast;
-  final Map<String, bool> _eligibility = {};
-  final Map<String, Future<bool>> _inFlight = {};
+  final ProfileReader _profiles;
 
   Future<bool> isEligible(String pubkey) {
     final normalized = pubkey.trim().toLowerCase();
     if (normalized.isEmpty) return Future.value(false);
 
-    final cached = _eligibility[normalized];
-    if (cached != null) return Future.value(cached);
-
-    return _inFlight.putIfAbsent(normalized, () async {
-      try {
-        final eligible = await _keycast.isOgDiviner(normalized);
-        _eligibility[normalized] = eligible;
-        return eligible;
-      } finally {
-        _inFlight.removeWhere((key, _) => key == normalized);
-      }
-    });
+    return _profiles.isOgDiviner(normalized);
   }
 }

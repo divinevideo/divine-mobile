@@ -44,6 +44,7 @@ import 'package:openvine/providers/followed_people_lists_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
+import 'package:openvine/providers/profile_api_cache_provider.dart';
 import 'package:openvine/providers/profile_pins_signer_adapter.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/provider_identity_stream.dart';
@@ -726,6 +727,7 @@ ProfileRepository _buildProfileRepository(Ref ref) {
     // would abort an in-flight username claim mid-flow.
     httpClient: ref.watch(instrumentedHttpClientFactoryProvider)(),
     funnelcakeApiClient: funnelcakeClient,
+    profileApiCache: ref.watch(profileApiCacheProvider),
     indexerRelays: env.indexerRelays,
     nameServerBaseUrl: env.nameServerBaseUrl,
     // Keycast keys its username namespace on the request Host, so the
