@@ -59,6 +59,22 @@ void main() {
         expect(picked, [SoundKind.music]);
       });
 
+      testWidgets('a screen reader opens its menu', (tester) async {
+        final picked = <SoundKind?>[];
+        await tester.pumpWidget(buildPill(onChanged: picked.add));
+
+        tester.semantics.tap(
+          find.semantics.byLabel(
+            l10n.searchFilterPillSemanticLabel(l10n.libraryFilterAll),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.categoryMusic));
+        await tester.pumpAndSettle();
+
+        expect(picked, [SoundKind.music]);
+      });
+
       testWidgets('reports All as no kind', (tester) async {
         final picked = <SoundKind?>[];
         await tester.pumpWidget(

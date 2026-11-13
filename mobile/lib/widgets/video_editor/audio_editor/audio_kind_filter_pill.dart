@@ -74,6 +74,8 @@ class AudioKindFilterPill extends StatelessWidget {
         button: true,
         label: context.l10n.searchFilterPillSemanticLabel(label),
         excludeSemantics: true,
+        // excludeSemantics drops the InkWell's own tap action with its text.
+        onTap: () => _pick(context),
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(

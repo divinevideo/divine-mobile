@@ -271,6 +271,27 @@ void main() {
           findsOneWidget,
         );
       });
+
+      testWidgets('a screen reader picks an option', (tester) async {
+        DetachClipChoice? result;
+        await tester.pumpWidget(
+          _buildSubject(
+            canRemoveSlot: true,
+            onResult: (choice) => result = choice,
+          ),
+        );
+        await _open(tester);
+
+        tester.semantics.tap(
+          find.semantics.byLabel(
+            '${l10n.videoEditorDetachReplaceColor}. '
+            '${l10n.videoEditorDetachReplaceColorDetail}',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(result, DetachClipChoice.color);
+      });
     });
   });
 
