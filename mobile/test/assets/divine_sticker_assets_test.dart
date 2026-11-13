@@ -12,6 +12,7 @@ import 'dart:ui' as ui;
 import 'package:crypto/crypto.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yaml/yaml.dart';
 
 // Relative to the package root, which tests run in.
 const _directory = 'assets/divine_stickers';
@@ -136,6 +137,16 @@ void main() {
           reason: '${sticker.name} points at ${sticker.assetPath}.',
         );
       }
+    });
+
+    test('the app bundles the artwork directory', () {
+      // The other tests read the files from disk, so a dropped pubspec entry
+      // would leave them green while no sticker loads at runtime.
+      final pubspec =
+          loadYaml(File('pubspec.yaml').readAsStringSync()) as YamlMap;
+      final assets = (pubspec['flutter'] as YamlMap)['assets'] as YamlList;
+
+      expect(assets, contains('$_directory/'));
     });
 
     test(
