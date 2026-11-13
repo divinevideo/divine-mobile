@@ -37,7 +37,8 @@ QueryExecutor openConnection() {
       // backup sits beside. The plaintext migration backup is deliberately
       // not swept here: only a keyed open proves it is safe to drop. A
       // recovery snapshot left behind needs no such proof.
-      setup: (_) {
+      setup: (rawDb) {
+        _waitForDatabaseLocks(rawDb);
         sweepPreservedDatabaseCopies(dbPath);
         sweepStrandedHotJournalSnapshots(dbPath);
       },
@@ -47,6 +48,42 @@ QueryExecutor openConnection() {
 
 bool get _isFlutterTestProcess =>
     Platform.executable.contains('flutter_tester');
+
+/// How long a connection to the shared database waits for another connection
+/// to release its lock before SQLite gives up with `SQLITE_BUSY`.
+///
+/// On Android a back press or a closed task destroys the Flutter engine but
+/// can keep the process, and the next launch runs `main()` again in it. The
+/// previous engine's drift worker isolate closes its connection only after it
+/// learns that its client isolate exited and has finished the requests it had
+/// already received, so for a moment the new launch meets a lock that is about
+/// to go. With no busy handler SQLite fails at once, and the keyless
+/// classification refused to start the app over it.
+///
+/// Waiting changes nothing about what a read returns once it gets through. A
+/// lock that outlasts the wait still fails exactly as before.
+const _databaseLockWait = Duration(seconds: 5);
+
+/// Lets [db] wait up to [timeout] for another connection's lock instead of
+/// failing with `SQLITE_BUSY` straight away.
+///
+/// `busy_timeout` is a connection setting that reads no page, so it is safe on
+/// a keyless connection to an encrypted file and before `PRAGMA key`.
+void _waitForDatabaseLocks(
+  CommonDatabase db, {
+  Duration timeout = _databaseLockWait,
+}) => db.execute('PRAGMA busy_timeout = ${timeout.inMilliseconds};');
+
+/// Opens the database at [path] with [_waitForDatabaseLocks] applied.
+Database _openWaitingForLocks(
+  String path, {
+  OpenMode mode = OpenMode.readWriteCreate,
+  Duration lockWait = _databaseLockWait,
+}) {
+  final db = sqlite3.open(path, mode: mode);
+  _waitForDatabaseLocks(db, timeout: lockWait);
+  return db;
+}
 
 // ---------------------------------------------------------------------------
 // SQLite3MultipleCiphers at-rest encryption (#570, finding C2).
@@ -90,6 +127,8 @@ QueryExecutor openEncryptedConnection({
     return NativeDatabase.createInBackground(
       dbFile,
       setup: (rawDb) {
+        // Before the key, so the schema read that checks it waits too.
+        _waitForDatabaseLocks(rawDb);
         applyCipherKey(rawDb, rawKeyHex);
         cleanUpPreCipherMigrationBackups(dbPath);
         sweepPreservedDatabaseCopies(dbPath);
@@ -127,7 +166,7 @@ Future<bool> encryptedDatabaseOpensWithKey({
 
   Database? db;
   try {
-    db = sqlite3.open(dbPath);
+    db = _openWaitingForLocks(dbPath);
     applyCipherKey(db, rawKeyHex);
     return databasePassesIntegrityCheck(db);
   } on SqliteException catch (e) {
@@ -164,7 +203,7 @@ Future<bool> encryptedDatabaseKeyDecrypts({
 
   Database? db;
   try {
-    db = sqlite3.open(dbPath);
+    db = _openWaitingForLocks(dbPath);
     applyCipherKey(db, rawKeyHex);
     return true;
   } on SqliteException catch (e) {
@@ -355,7 +394,7 @@ bool _buildSalvageCopy({
   Database? source;
   Database? target;
   try {
-    source = sqlite3.open(sourcePath);
+    source = _openWaitingForLocks(sourcePath);
     applyCipherKey(source, rawKeyHex);
     target = sqlite3.open(salvagePath);
     applyCipherKey(target, rawKeyHex);
@@ -626,8 +665,12 @@ class DatabaseClassificationException implements Exception {
 /// while copying the rest of it — which no retry can fix, so the caller must
 /// fail closed rather than open it unkeyed.
 ///
+/// Every connection it opens to the existing file waits up to [lockWait] for a
+/// lock another connection holds.
+///
 /// Throws [DatabaseClassificationException] when SQLite cannot safely identify
-/// the existing file format. Throws [DatabaseHotJournalRecoveryError] when a
+/// the existing file format, including when such a lock outlasts [lockWait].
+/// Throws [DatabaseHotJournalRecoveryError] when a
 /// hot rollback journal cannot be safely replayed, or when a restore an earlier
 /// launch left unfinished cannot be completed. Requires
 /// SQLite3MultipleCiphers;
@@ -637,6 +680,7 @@ Future<CipherMigrationOutcome> migratePlaintextToEncrypted({
   required String rawKeyHex,
   String? databasePath,
   @visibleForTesting void Function()? onHotJournalRecoveryCompletedForTesting,
+  @visibleForTesting Duration lockWait = _databaseLockWait,
 }) async {
   _rawKeyLiteral(rawKeyHex); // validate shape up front (never embeds the key)
 
@@ -674,6 +718,7 @@ Future<CipherMigrationOutcome> migratePlaintextToEncrypted({
   switch (_classifyDatabase(
     dbPath,
     rawKeyHex: rawKeyHex,
+    lockWait: lockWait,
     onRecoveryCompleted: onHotJournalRecoveryCompletedForTesting,
   )) {
     case _DbClassification.encrypted:
@@ -686,7 +731,11 @@ Future<CipherMigrationOutcome> migratePlaintextToEncrypted({
       deleteDatabaseAndSidecars(dbPath);
       return CipherMigrationOutcome.removedEmptyPlaintext;
     case _DbClassification.populatedPlaintext:
-      return _rekeyPlaintextInPlace(dbPath: dbPath, rawKeyHex: rawKeyHex);
+      return _rekeyPlaintextInPlace(
+        dbPath: dbPath,
+        rawKeyHex: rawKeyHex,
+        lockWait: lockWait,
+      );
   }
 }
 
@@ -751,13 +800,18 @@ enum _DbClassification {
 /// split out from the transient errors: it is a property of the file, not of
 /// the moment, so it repeats on every launch and needs the caller to fail
 /// closed rather than defer.
+///
+/// A lock held by another connection is waited out for up to [lockWait]. A
+/// `SQLITE_BUSY` after that is still thrown as unclassified, never read as a
+/// format.
 _DbClassification _classifyDatabase(
   String dbPath, {
   required String rawKeyHex,
+  required Duration lockWait,
   void Function()? onRecoveryCompleted,
 }) {
   try {
-    return _classifyDatabaseOnce(dbPath);
+    return _classifyDatabaseOnce(dbPath, lockWait: lockWait);
   } on DatabaseClassificationException catch (error) {
     if (!isHotRollbackJournalFailure(error)) {
       rethrow;
@@ -785,7 +839,7 @@ _DbClassification _classifyDatabase(
 
     final _DbClassification classification;
     try {
-      classification = _classifyDatabaseOnce(dbPath);
+      classification = _classifyDatabaseOnce(dbPath, lockWait: lockWait);
     } on DatabaseClassificationException catch (retryError) {
       if (retryError.extendedResultCode == sqliteReadOnlyRollback) {
         throw const DatabaseHotJournalRecoveryError(
@@ -813,10 +867,17 @@ bool isHotRollbackJournalFailure(DatabaseClassificationException error) =>
     error.resultCode == sqliteReadOnly &&
     error.extendedResultCode == sqliteReadOnlyRollback;
 
-_DbClassification _classifyDatabaseOnce(String dbPath) {
+_DbClassification _classifyDatabaseOnce(
+  String dbPath, {
+  required Duration lockWait,
+}) {
   Database db;
   try {
-    db = sqlite3.open(dbPath, mode: OpenMode.readOnly);
+    db = _openWaitingForLocks(
+      dbPath,
+      mode: OpenMode.readOnly,
+      lockWait: lockWait,
+    );
   } on SqliteException catch (e) {
     return _classifyKeylessFailure(
       e,
@@ -877,6 +938,7 @@ CipherMigrationOutcome _rekeyFailureOutcome(SqliteException e) =>
 CipherMigrationOutcome _rekeyPlaintextInPlace({
   required String dbPath,
   required String rawKeyHex,
+  required Duration lockWait,
 }) {
   final encryptedPath = '$dbPath$_migratingSuffix';
   // Remove any partial artifact from an interrupted previous attempt.
@@ -886,7 +948,7 @@ CipherMigrationOutcome _rekeyPlaintextInPlace({
   try {
     // The source must be opened UNKEYED. It remains untouched until a verified
     // encrypted side-file is ready to promote.
-    source = sqlite3.open(dbPath);
+    source = _openWaitingForLocks(dbPath, lockWait: lockWait);
   } on SqliteException catch (e) {
     return _rekeyFailureOutcome(e);
   }
@@ -917,6 +979,7 @@ CipherMigrationOutcome _rekeyPlaintextInPlace({
     plaintextPath: dbPath,
     encryptedPath: encryptedPath,
     rawKeyHex: rawKeyHex,
+    lockWait: lockWait,
   )) {
     deleteDatabaseAndSidecars(encryptedPath);
     return CipherMigrationOutcome.failed;
@@ -983,6 +1046,7 @@ bool encryptedCopyMatchesSource({
   required String rawKeyHex,
   bool Function(CommonDatabase db) integrityCheck =
       databasePassesIntegrityCheck,
+  Duration lockWait = _databaseLockWait,
 }) {
   Database? encrypted;
   Database? plaintext;
@@ -990,7 +1054,11 @@ bool encryptedCopyMatchesSource({
     encrypted = sqlite3.open(encryptedPath);
     applyCipherKey(encrypted, rawKeyHex);
 
-    plaintext = sqlite3.open(plaintextPath, mode: OpenMode.readOnly);
+    plaintext = _openWaitingForLocks(
+      plaintextPath,
+      mode: OpenMode.readOnly,
+      lockWait: lockWait,
+    );
 
     if (_userVersion(encrypted) != _userVersion(plaintext)) return false;
 

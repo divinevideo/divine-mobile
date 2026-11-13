@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:db_client/db_client.dart' show AppDatabase;
@@ -1502,6 +1503,36 @@ void main() {
         expect(stranded.existsSync(), isFalse);
       },
     );
+
+    test('waits for a lock another connection releases', () async {
+      final tempRoot = Directory.systemTemp.createTempSync(
+        'db_client_cib_lock_wait_test_',
+      );
+      addTearDown(() {
+        if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+      });
+      final dbPath = p.join(tempRoot.path, 'divine_db.db');
+      final created = AppDatabase(
+        openEncryptedConnection(rawKeyHex: validKey, databasePath: dbPath),
+      );
+      await created.customSelect('SELECT 1;').get();
+      await created.close();
+      final lock = await _holdExclusiveLockFromAnotherIsolate(
+        dbPath,
+        key: validKey,
+        holdFor: const Duration(milliseconds: 300),
+      );
+
+      final db = AppDatabase(
+        openEncryptedConnection(rawKeyHex: validKey, databasePath: dbPath),
+      );
+      addTearDown(db.close);
+      // Forces the lazy open, whose `setup:` reads the schema under the key.
+      final rows = await db.customSelect('SELECT 1 AS one;').get();
+      await lock.released;
+
+      expect(rows.single.read<int>('one'), 1);
+    });
   });
 
   group('migratePlaintextToEncrypted', () {
@@ -1618,7 +1649,46 @@ void main() {
       );
     });
 
-    test('fails closed when the keyless classification is locked', () async {
+    test('waits for a lock another connection releases, then migrates the '
+        'plaintext database', () async {
+      // The previous engine's drift worker still finishing its writes when
+      // `main()` runs again in the same process.
+      _createSqliteDatabase(dbPath, draftCount: 2);
+      final lock = await _holdExclusiveLockFromAnotherIsolate(
+        dbPath,
+        holdFor: const Duration(milliseconds: 300),
+      );
+
+      final outcome = await migratePlaintextToEncrypted(
+        rawKeyHex: validKey,
+        databasePath: dbPath,
+      );
+      await lock.released;
+
+      expect(outcome, CipherMigrationOutcome.migrated);
+      expect(_encryptedRowCount(dbPath, validKey, 'drafts'), 2);
+    });
+
+    test('waits for a lock another connection releases, then still '
+        'classifies an encrypted database as encrypted', () async {
+      _createEncryptedDatabaseWithLocalData(dbPath, validKey);
+      final lock = await _holdExclusiveLockFromAnotherIsolate(
+        dbPath,
+        key: validKey,
+        holdFor: const Duration(milliseconds: 300),
+      );
+
+      final outcome = await migratePlaintextToEncrypted(
+        rawKeyHex: validKey,
+        databasePath: dbPath,
+      );
+      await lock.released;
+
+      expect(outcome, CipherMigrationOutcome.alreadyEncrypted);
+      expect(_encryptedRowCount(dbPath, validKey, 'drafts'), 2);
+    });
+
+    test('fails closed when the lock outlasts the wait', () async {
       _createSqliteDatabase(dbPath, draftCount: 1);
       final lockHolder = sqlite3.open(dbPath)..execute('BEGIN EXCLUSIVE;');
       addTearDown(() {
@@ -1628,7 +1698,11 @@ void main() {
       });
 
       await expectLater(
-        migratePlaintextToEncrypted(rawKeyHex: validKey, databasePath: dbPath),
+        migratePlaintextToEncrypted(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+          lockWait: const Duration(milliseconds: 50),
+        ),
         throwsA(
           isA<DatabaseClassificationException>()
               .having(
@@ -3908,3 +3982,42 @@ Object _sampleValueFor(String type) => switch (type.toUpperCase()) {
   'REAL' => 1.0,
   _ => 'x',
 };
+
+/// Holds an exclusive lock on the database at [path] from another isolate for
+/// [holdFor], the way the previous engine's drift worker can while it finishes
+/// up. Completes once the lock is held; `released` completes once the isolate
+/// has let go of it and exited.
+Future<({Future<void> released})> _holdExclusiveLockFromAnotherIsolate(
+  String path, {
+  required Duration holdFor,
+  String? key,
+}) async {
+  final ready = ReceivePort();
+  final exited = ReceivePort();
+  await Isolate.spawn(
+    _holdExclusiveLock,
+    (ready.sendPort, path, key, holdFor.inMilliseconds),
+    onExit: exited.sendPort,
+  );
+  final error = await ready.first;
+  if (error != null) fail('the lock holder could not lock: $error');
+  return (released: exited.first.then((_) => exited.close()));
+}
+
+void _holdExclusiveLock((SendPort, String, String?, int) message) {
+  final (ready, path, key, holdForMs) = message;
+  final Database db;
+  try {
+    db = sqlite3.open(path);
+    if (key != null) applyCipherKey(db, key);
+    db.execute('BEGIN EXCLUSIVE;');
+  } on Object catch (error) {
+    ready.send('$error');
+    return;
+  }
+  ready.send(null);
+  sleep(Duration(milliseconds: holdForMs));
+  db
+    ..execute('ROLLBACK;')
+    ..close();
+}
