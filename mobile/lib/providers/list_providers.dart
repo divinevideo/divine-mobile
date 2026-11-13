@@ -7,7 +7,6 @@ import 'dart:convert';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart'
     show NostrClient, RelaySubscriptionRefusedException;
-import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
@@ -19,6 +18,7 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/video_event_service.dart'
     show VideoEventService;
 import 'package:openvine/utils/curated_lists_snapshot.dart';
+import 'package:openvine/utils/list_video_relay_query.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -419,26 +419,11 @@ Stream<List<VideoEvent>> _curatedListVideoEvents({
       category: LogCategory.video,
     );
 
-    // Build filters for missing videos
-    final filters = <Filter>[];
-
-    // Filter for regular event IDs
-    if (missingIds.isNotEmpty) {
-      filters.add(Filter(ids: missingIds));
-    }
-
-    // Filter for addressable events (kind 34236)
-    for (final coord in missingCoords) {
-      final parts = coord.split(':');
-      if (parts.length >= 3) {
-        final kind = int.tryParse(parts[0]);
-        final pubkey = parts[1];
-        final dTag = parts[2];
-        if (kind != null) {
-          filters.add(Filter(kinds: [kind], authors: [pubkey], d: [dTag]));
-        }
-      }
-    }
+    final query = ListVideoRelayQuery(
+      eventIds: missingIds,
+      coordinates: missingCoords,
+    );
+    final filters = query.filters;
 
     // Null once the provider is disposed — see the cache lookup above.
     final nostrClient = live.nostrClient;
@@ -460,6 +445,7 @@ Stream<List<VideoEvent>> _curatedListVideoEvents({
       final seenIds = foundVideos.map((v) => v.id.toLowerCase()).toSet();
 
       await for (final event in eventStream) {
+        if (!query.asked(event)) continue;
         if (seenIds.contains(event.id.toLowerCase())) continue;
 
         try {
@@ -653,26 +639,11 @@ Stream<List<VideoEvent>> _videoEventsByIds({
       category: LogCategory.video,
     );
 
-    // Build filters for missing videos
-    final filters = <Filter>[];
-
-    // Filter for regular event IDs
-    if (missingIds.isNotEmpty) {
-      filters.add(Filter(ids: missingIds));
-    }
-
-    // Filter for addressable events (NIP-71 video kinds)
-    for (final coord in missingCoords) {
-      final parts = coord.split(':');
-      if (parts.length >= 3) {
-        final kind = int.tryParse(parts[0]);
-        final pubkey = parts[1];
-        final dTag = parts[2];
-        if (kind != null) {
-          filters.add(Filter(kinds: [kind], authors: [pubkey], d: [dTag]));
-        }
-      }
-    }
+    final query = ListVideoRelayQuery(
+      eventIds: missingIds,
+      coordinates: missingCoords,
+    );
+    final filters = query.filters;
 
     // Null once the provider is disposed — see the cache lookup above.
     final nostrClient = live.nostrClient;
@@ -694,6 +665,7 @@ Stream<List<VideoEvent>> _videoEventsByIds({
       final seenIds = foundVideos.map((v) => v.id.toLowerCase()).toSet();
 
       await for (final event in eventStream) {
+        if (!query.asked(event)) continue;
         if (seenIds.contains(event.id.toLowerCase())) continue;
 
         try {

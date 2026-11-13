@@ -8,6 +8,8 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/select_list/select_list_state.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 export 'package:openvine/blocs/select_list/select_list_state.dart';
 
@@ -20,21 +22,61 @@ export 'package:openvine/blocs/select_list/select_list_state.dart';
 class SelectListCubit extends Cubit<SelectListState>
     with CloseGuardedEmit<SelectListState> {
   /// Creates the cubit for one visit to the sheet, opened on [videoEventId].
+  ///
+  /// Pass the video's [videoAddress] when it has one: the video is then added
+  /// by that coordinate, which outlives an edit, and a list holding either
+  /// name counts as holding it (#7135). With [resolveVideoAddresses] too, the
+  /// event-id items of the lists are looked up once, so an item naming an
+  /// older version of the video counts as holding it as well.
   SelectListCubit({
     required CuratedListService service,
     required String videoEventId,
     required String? Function() currentOwnerPubkey,
+    String? videoAddress,
+    CuratedListVideoAddressResolver? resolveVideoAddresses,
+  }) : this._(
+         service: service,
+         video: CuratedListVideo(eventId: videoEventId, address: videoAddress),
+         currentOwnerPubkey: currentOwnerPubkey,
+         resolveVideoAddresses: resolveVideoAddresses,
+       );
+
+  SelectListCubit._({
+    required CuratedListService service,
+    required CuratedListVideo video,
+    required String? Function() currentOwnerPubkey,
+    required CuratedListVideoAddressResolver? resolveVideoAddresses,
   }) : _service = service,
        _currentOwnerPubkey = currentOwnerPubkey,
        _openingOwnerPubkey = currentOwnerPubkey(),
-       _videoEventId = videoEventId,
-       super(_initialState(service, videoEventId, currentOwnerPubkey())) {
+       _video = video,
+       super(_initialState(service, video, currentOwnerPubkey())) {
     _service.addListener(_listsChanged);
+    _olderVersionsLookup =
+        resolveVideoAddresses != null && video.address != null
+        ? _lookUpOlderVersions(resolveVideoAddresses)
+        : Future<void>.value();
+    runDetached(
+      _olderVersionsLookup,
+      'look up older versions of the video',
+      logName: 'SelectListCubit',
+      category: LogCategory.ui,
+    );
   }
 
   CuratedListService _service;
   int _writeEpoch = 0;
-  final String _videoEventId;
+  final CuratedListVideo _video;
+
+  /// The lookup of older versions started with the sheet; already complete
+  /// when none runs. A save waits for it before writing, so it neither adds
+  /// the video to a list holding an older version nor leaves that version
+  /// behind when removing.
+  late final Future<void> _olderVersionsLookup;
+
+  /// Whether [_olderVersionsLookup] has finished, so a save only waits on one
+  /// still running.
+  bool _olderVersionsSettled = true;
   final String? Function() _currentOwnerPubkey;
   final String? _openingOwnerPubkey;
 
@@ -65,10 +107,13 @@ class SelectListCubit extends Cubit<SelectListState>
         _openingOwnerPubkey,
       ).any((list) => list.id == listId);
 
-  String? _mutationCoordinate(String listId) => _ownedLists(
+  CuratedList? _ownedList(String listId) => _ownedLists(
     _service,
     _openingOwnerPubkey,
-  ).firstWhereOrNull((list) => list.id == listId)?.authorScopedId;
+  ).firstWhereOrNull((list) => list.id == listId);
+
+  String? _mutationCoordinate(String listId) =>
+      _ownedList(listId)?.authorScopedId;
 
   bool _permissionRecoveryBlocks(Set<String> ids) => _ownedLists(
     _service,
@@ -111,27 +156,72 @@ class SelectListCubit extends Cubit<SelectListState>
 
   static SelectListState _initialState(
     CuratedListService service,
-    String videoEventId,
-    String? owner,
-  ) {
+    CuratedListVideo video,
+    String? owner, {
+    Map<String, String> addressByEventId = const {},
+  }) {
     final lists = service.isCurrentSession
         ? _ownedLists(service, owner)
         : const <CuratedList>[];
-    final members = _membership(lists, videoEventId);
+    final members = _membership(lists, video, addressByEventId);
     return SelectListState(
       lists: lists,
       memberListIds: members,
       selectedListIds: members,
       recoveryReadOnly: service.recoveryNeedsRepair,
       serviceAvailable: service.isCurrentSession,
+      addressByEventId: addressByEventId,
     );
   }
 
-  static Set<String> _membership(List<CuratedList> lists, String videoEventId) {
+  static Set<String> _membership(
+    List<CuratedList> lists,
+    CuratedListVideo video,
+    Map<String, String> addressByEventId,
+  ) {
     return {
       for (final list in lists)
-        if (list.videoEventIds.contains(videoEventId)) list.id,
+        if (video.isIn(list, addressByEventId: addressByEventId)) list.id,
     };
+  }
+
+  /// Learns which event-id items in the lists are older versions of the
+  /// video, then follows the lists again so they count as holding it. Picks
+  /// made meanwhile stand, as for any change to the lists.
+  ///
+  /// Best effort: a failed lookup leaves membership as it was.
+  Future<void> _lookUpOlderVersions(
+    CuratedListVideoAddressResolver resolve,
+  ) async {
+    final eventIds = CuratedListVideo.eventIdItemsOf(
+      state.lists,
+      except: {_video.eventId},
+    );
+    if (eventIds.isEmpty) return;
+    _olderVersionsSettled = false;
+    try {
+      final Map<String, String> addresses;
+      try {
+        addresses = await resolve(eventIds);
+      } on Object catch (error) {
+        Log.warning(
+          'Could not look up the videos of ${eventIds.length} list items: '
+          '$error',
+          name: 'SelectListCubit',
+          category: LogCategory.ui,
+        );
+        return;
+      }
+      if (isClosed) return;
+      emitIfOpen(
+        state.copyWith(
+          addressByEventId: {...state.addressByEventId, ...addresses},
+        ),
+      );
+      _listsChanged();
+    } finally {
+      _olderVersionsSettled = true;
+    }
   }
 
   /// Follows the provider's current service without carrying staged picks
@@ -160,7 +250,14 @@ class SelectListCubit extends Cubit<SelectListState>
       _service.removeListener(_listsChanged);
       _service = service;
       _service.addListener(_listsChanged);
-      emitIfOpen(_initialState(service, _videoEventId, _openingOwnerPubkey));
+      emitIfOpen(
+        _initialState(
+          service,
+          _video,
+          _openingOwnerPubkey,
+          addressByEventId: state.addressByEventId,
+        ),
+      );
     } else {
       emitIfOpen(state.copyWith(serviceAvailable: true));
     }
@@ -251,13 +348,27 @@ class SelectListCubit extends Cubit<SelectListState>
     var failed = 0;
     var full = 0;
     try {
-      for (final listId in toAdd) {
+      // The lookup can show that a list already holds the video by an older
+      // version's event id, so the picks are read again once it answers: a
+      // quick save then neither adds the video to that list a second time nor
+      // leaves the older item behind when removing.
+      if (!_olderVersionsSettled) {
+        await _olderVersionsLookup;
+        if (!isSessionCurrent) return _sessionFailure();
+        if (_writeInterrupted(epoch)) return null;
+      }
+      final adds = state.listIdsToAdd;
+      final removes = state.listIdsToRemove;
+      for (final listId in adds) {
         if (_writeInterrupted(epoch)) return null;
         if (!_canMutate(listId)) return _sessionFailure();
         if (_permissionRecoveryBlocks({listId})) return _recoveryRequired();
         final coordinate = _mutationCoordinate(listId);
         if (coordinate == null) return _sessionFailure();
-        final added = await service.addVideoToList(coordinate, _videoEventId);
+        final added = await service.addVideoToList(
+          coordinate,
+          _video.reference,
+        );
         if (!isSessionCurrent) return _sessionFailure();
         if (_writeInterrupted(epoch)) return null;
         if (added) continue;
@@ -266,23 +377,32 @@ class SelectListCubit extends Cubit<SelectListState>
         if (list != null &&
             CuratedListConverter.wouldExceedPrivateItemLimit(
               list,
-              _videoEventId,
+              _video.reference,
             )) {
           full++;
         }
       }
-      for (final listId in toRemove) {
+      for (final listId in removes) {
         if (_writeInterrupted(epoch)) return null;
         if (!_canMutate(listId)) return _sessionFailure();
         if (_permissionRecoveryBlocks({listId})) return _recoveryRequired();
-        final coordinate = _mutationCoordinate(listId);
-        if (coordinate == null) return _sessionFailure();
-        final removed = await service.removeVideoFromList(
-          coordinate,
-          _videoEventId,
-        );
-        if (!isSessionCurrent) return _sessionFailure();
-        if (_writeInterrupted(epoch)) return null;
+        final list = _ownedList(listId);
+        if (list == null) return _sessionFailure();
+        // A list can hold the video by its coordinate and by an older event
+        // id at once; each name is a separate item to drop.
+        var removed = true;
+        for (final reference in _video.referencesIn(
+          list,
+          addressByEventId: state.addressByEventId,
+        )) {
+          final dropped = await service.removeVideoFromList(
+            list.authorScopedId,
+            reference,
+          );
+          removed = removed && dropped;
+          if (!isSessionCurrent) return _sessionFailure();
+          if (_writeInterrupted(epoch)) return null;
+        }
         if (!removed) {
           failed++;
         }
@@ -405,7 +525,7 @@ class SelectListCubit extends Cubit<SelectListState>
       return;
     }
     final lists = _ownedLists(_service, _openingOwnerPubkey);
-    final members = _membership(lists, _videoEventId);
+    final members = _membership(lists, _video, state.addressByEventId);
     final gained = members.difference(state.memberListIds);
     final lost = state.memberListIds.difference(members);
     final offered = {for (final list in lists) list.id};

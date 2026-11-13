@@ -74,7 +74,18 @@ void main() {
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
     /// Where the bloc persists its snapshot.
-    const snapshotCacheKey = '$currentUserPubkey:profile_saved_videos_v2';
+    const snapshotCacheKey = '$currentUserPubkey:profile_saved_videos_v3';
+
+    /// Author of every fixture video.
+    final videoAuthor = '0' * 64;
+
+    /// The address of the Kind 34236 fixture video carrying [dTag].
+    String coordinateFor(String dTag) => '34236:$videoAuthor:$dTag';
+
+    /// One addressable video before and after an edit: the edit republishes it
+    /// at the same address under a new event id (#7135).
+    final originalRevisionId = '1' * 64;
+    final editedRevisionId = '2' * 64;
 
     setUp(() async {
       mockBookmarksRepository = _MockBookmarksRepository();
@@ -90,8 +101,8 @@ void main() {
       // The bloc subscribes at construction; tests that drive a change swap in
       // a controller of their own.
       when(
-        () => mockBookmarksRepository.watchGlobalBookmarks(),
-      ).thenAnswer((_) => const Stream<List<BookmarkItem>>.empty());
+        () => mockBookmarksRepository.watchBookmarkedVideoReferences(),
+      ).thenAnswer((_) => const Stream<List<String>>.empty());
       when(
         () => mockBookmarksRepository.hasUnreadablePrivateItems,
       ).thenReturn(false);
@@ -108,28 +119,64 @@ void main() {
       deletedVideoFilter: deletedVideoFilter ?? (_) => false,
     );
 
-    /// The list the repository holds for a grid showing [ids] top to bottom.
-    ///
-    /// These public-only fixtures are reversed for presentation, matching
-    /// the bloc's reverse repository order.
-    List<BookmarkItem> repositoryListShownAs(List<String> ids) => [
-      for (final id in ids.reversed) BookmarkItem(type: 'e', id: id),
-    ];
+    /// The video references the repository holds for a grid showing [ids]
+    /// top to bottom: the repository lists the oldest bookmark first, and the
+    /// bloc reverses it for presentation.
+    List<String> referencesShownAs(List<String> ids) => ids.reversed.toList();
 
     VideoEvent createTestVideo(
       String id, {
       String videoUrl = 'https://example.com/video.mp4',
+      String? addressableDTag,
     }) {
       final now = DateTime.now();
       return VideoEvent(
         id: id,
-        pubkey: '0' * 64,
+        pubkey: videoAuthor,
         createdAt: now.millisecondsSinceEpoch ~/ 1000,
         content: '',
         timestamp: now,
         title: 'Test Video $id',
         videoUrl: videoUrl,
         thumbnailUrl: 'https://example.com/thumb.jpg',
+        addressableDTag: addressableDTag,
+      );
+    }
+
+    /// Answers [VideosRepository.getVideosByAddressableIds] with the edited
+    /// revision of the `clip` video, the latest one at its address.
+    void stubLatestRevisionAtClipAddress() {
+      when(
+        () => mockVideosRepository.getVideosByAddressableIds(
+          any(),
+          cacheResults: any(named: 'cacheResults'),
+        ),
+      ).thenAnswer(
+        (invocation) async => [
+          for (final coordinate
+              in invocation.positionalArguments.first as List<String>)
+            if (coordinate == coordinateFor('clip'))
+              createTestVideo(editedRevisionId, addressableDTag: 'clip'),
+        ],
+      );
+    }
+
+    /// Answers [VideosRepository.getVideosByIds] with a video per id, the
+    /// original revision of the `clip` video included.
+    void stubVideosByEventId() {
+      when(
+        () => mockVideosRepository.getVideosByIds(
+          any(),
+          cacheResults: any(named: 'cacheResults'),
+        ),
+      ).thenAnswer(
+        (invocation) async => [
+          for (final id in invocation.positionalArguments.first as List<String>)
+            createTestVideo(
+              id,
+              addressableDTag: id == originalRevisionId ? 'clip' : null,
+            ),
+        ],
       );
     }
 
@@ -140,11 +187,11 @@ void main() {
           final firstId = 'a' * 64;
           final secondId = 'b' * 64;
           final newestId = 'c' * 64;
-          final changes = StreamController<List<BookmarkItem>>.broadcast();
-          var items = repositoryListShownAs([firstId]);
-          when(() => mockBookmarksRepository.globalBookmarks)
+          final changes = StreamController<List<String>>.broadcast();
+          var items = referencesShownAs([firstId]);
+          when(() => mockBookmarksRepository.bookmarkedVideoReferences)
               .thenAnswer((_) => items);
-          when(() => mockBookmarksRepository.watchGlobalBookmarks())
+          when(() => mockBookmarksRepository.watchBookmarkedVideoReferences())
               .thenAnswer((_) => changes.stream);
           when(() => mockBookmarksRepository.syncGlobalBookmarks())
               .thenAnswer((_) async {
@@ -180,12 +227,12 @@ void main() {
             await initial.future;
             await pumpEventQueue();
           }
-          items = repositoryListShownAs([secondId, firstId]);
+          items = referencesShownAs([secondId, firstId]);
           final sync = Completer<void>();
           bloc.add(ProfileSavedVideosSyncRequested(completer: sync));
           await fetchStarted.future;
           await pumpEventQueue();
-          items = repositoryListShownAs([newestId, secondId, firstId]);
+          items = referencesShownAs([newestId, secondId, firstId]);
           changes.add(items);
           await pumpEventQueue();
           fetchGate.complete();
@@ -212,8 +259,8 @@ void main() {
         ProfileTabPagination.pageSize * 4,
         (i) => i.toRadixString(16).padLeft(64, '0'),
       );
-      when(() => mockBookmarksRepository.globalBookmarks)
-          .thenReturn(repositoryListShownAs(ids));
+      when(() => mockBookmarksRepository.bookmarkedVideoReferences)
+          .thenReturn(referencesShownAs(ids));
       when(
         () => mockVideosRepository.getVideosByIds(
           any(),
@@ -306,7 +353,7 @@ void main() {
           'flags it rather than settling as nothing saved',
           setUp: () {
             when(
-              () => mockBookmarksRepository.globalBookmarks,
+              () => mockBookmarksRepository.bookmarkedVideoReferences,
             ).thenReturn(const []);
             when(
               () => mockBookmarksRepository.hasUnreadablePrivateItems,
@@ -327,7 +374,7 @@ void main() {
         test('clears the flag once a later sync unlocks the list', () async {
           var locked = true;
           when(
-            () => mockBookmarksRepository.globalBookmarks,
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
           ).thenReturn(const []);
           when(
             () => mockBookmarksRepository.hasUnreadablePrivateItems,
@@ -352,8 +399,8 @@ void main() {
           'flags it on a re-sync of videos already showing',
           setUp: () {
             when(
-              () => mockBookmarksRepository.globalBookmarks,
-            ).thenReturn(repositoryListShownAs(['video-1']));
+              () => mockBookmarksRepository.bookmarkedVideoReferences,
+            ).thenReturn(referencesShownAs(['video-1']));
             when(
               () => mockBookmarksRepository.hasUnreadablePrivateItems,
             ).thenReturn(true);
@@ -378,8 +425,8 @@ void main() {
           'flags it on a first load that shows the public saves',
           setUp: () {
             when(
-              () => mockBookmarksRepository.globalBookmarks,
-            ).thenReturn(repositoryListShownAs(['video-1']));
+              () => mockBookmarksRepository.bookmarkedVideoReferences,
+            ).thenReturn(referencesShownAs(['video-1']));
             when(
               () => mockBookmarksRepository.hasUnreadablePrivateItems,
             ).thenReturn(true);
@@ -403,8 +450,8 @@ void main() {
           'flags it on a re-sync that moves the saves already showing',
           setUp: () {
             when(
-              () => mockBookmarksRepository.globalBookmarks,
-            ).thenReturn(repositoryListShownAs(['video-2', 'video-1']));
+              () => mockBookmarksRepository.bookmarkedVideoReferences,
+            ).thenReturn(referencesShownAs(['video-2', 'video-1']));
             when(
               () => mockBookmarksRepository.hasUnreadablePrivateItems,
             ).thenReturn(true);
@@ -436,7 +483,7 @@ void main() {
         'emits success with empty list when there are no bookmarks',
         setUp: () {
           when(
-            () => mockBookmarksRepository.globalBookmarks,
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
           ).thenReturn(const []);
         },
         build: createBloc,
@@ -454,7 +501,7 @@ void main() {
         're-sync of a settled empty tab still settles (pull-to-refresh)',
         () async {
           when(
-            () => mockBookmarksRepository.globalBookmarks,
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
           ).thenReturn(const []);
           final bloc = createBloc();
           addTearDown(bloc.close);
@@ -499,14 +546,15 @@ void main() {
         // without the reconcile the tab renders nothing even though the user's
         // kind-10003 list is on the relay.
         when(
-          () => mockBookmarksRepository.globalBookmarks,
+          () => mockBookmarksRepository.bookmarkedVideoReferences,
         ).thenReturn(const []);
         when(() => mockBookmarksRepository.syncGlobalBookmarks()).thenAnswer((
           _,
         ) async {
-          when(() => mockBookmarksRepository.globalBookmarks).thenReturn(const [
-            BookmarkItem(type: 'e', id: 'video-1'),
-          ]);
+          when(() => mockBookmarksRepository.bookmarkedVideoReferences)
+              .thenReturn(const [
+                'video-1',
+              ]);
           return true;
         });
         when(
@@ -532,7 +580,7 @@ void main() {
 
       test('a sync arriving during the snapshot write still runs', () async {
         when(
-          () => mockBookmarksRepository.globalBookmarks,
+          () => mockBookmarksRepository.bookmarkedVideoReferences,
         ).thenReturn(const []);
         final bloc = createBloc();
         addTearDown(bloc.close);
@@ -577,8 +625,8 @@ void main() {
           );
           cacheDao.staleKeys.add(snapshotCacheKey);
           when(
-            () => mockBookmarksRepository.globalBookmarks,
-          ).thenReturn(repositoryListShownAs(['video-1', 'video-2']));
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(referencesShownAs(['video-1', 'video-2']));
         },
         build: createBloc,
         act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
@@ -598,9 +646,10 @@ void main() {
           ),
         ],
         verify: (_) {
-          verify(() => mockBookmarksRepository.globalBookmarks).called(
-            greaterThan(0),
-          );
+          verify(() => mockBookmarksRepository.bookmarkedVideoReferences)
+              .called(
+                greaterThan(0),
+              );
         },
       );
 
@@ -618,8 +667,8 @@ void main() {
             ).toJson(),
           );
           when(
-            () => mockBookmarksRepository.globalBookmarks,
-          ).thenReturn(repositoryListShownAs(['video-1', 'video-2']));
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(referencesShownAs(['video-1', 'video-2']));
         },
         build: createBloc,
         act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
@@ -658,8 +707,8 @@ void main() {
             ).toJson(),
           );
           when(
-            () => mockBookmarksRepository.globalBookmarks,
-          ).thenReturn(const [BookmarkItem(type: 'e', id: 'video-1')]);
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(const ['video-1']);
         },
         build: () => createBloc(
           deletedVideoFilter: (video) => video.id == 'deleted-video',
@@ -701,9 +750,10 @@ void main() {
               hasMoreContent: false,
             ).toJson(),
           );
-          when(() => mockBookmarksRepository.globalBookmarks).thenReturn(const [
-            BookmarkItem(type: 'e', id: 'video-2'),
-          ]);
+          when(() => mockBookmarksRepository.bookmarkedVideoReferences)
+              .thenReturn(const [
+                'video-2',
+              ]);
           when(
             () => mockVideosRepository.getVideosByIds(
               any(),
@@ -842,6 +892,39 @@ void main() {
         ],
       );
 
+      group('when a video saved by its address is removed', () {
+        late StreamController<String> removals;
+
+        setUp(() {
+          removals = StreamController<String>.broadcast();
+          addTearDown(removals.close);
+        });
+
+        blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+          'prunes the address from the saved references',
+          build: () => createBloc(removedVideoIds: removals.stream),
+          seed: () => ProfileSavedVideosState(
+            status: ProfileSavedVideosStatus.success,
+            videos: [
+              createTestVideo(editedRevisionId, addressableDTag: 'clip'),
+              createTestVideo('a' * 64),
+            ],
+            savedEventIds: [coordinateFor('clip'), 'a' * 64],
+            nextPageOffset: 2,
+            hasMoreContent: false,
+          ),
+          // The deletion bus reports the event id of the revision on screen.
+          act: (_) => removals.add(editedRevisionId),
+          wait: const Duration(milliseconds: 50),
+          expect: () => [
+            isA<ProfileSavedVideosState>()
+                .having((s) => s.videos.map((v) => v.id), 'videos', ['a' * 64])
+                .having((s) => s.savedEventIds, 'savedEventIds', ['a' * 64])
+                .having((s) => s.nextPageOffset, 'nextPageOffset', 1),
+          ],
+        );
+      });
+
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
         'grows a persisted window shorter than a page even when the bookmark '
         'list is unchanged',
@@ -860,8 +943,8 @@ void main() {
             ).toJson(),
           );
           when(
-            () => mockBookmarksRepository.globalBookmarks,
-          ).thenReturn(repositoryListShownAs(ids));
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(referencesShownAs(ids));
           when(
             () => mockVideosRepository.getVideosByIds(
               any(),
@@ -920,8 +1003,8 @@ void main() {
             ).toJson(),
           );
           when(
-            () => mockBookmarksRepository.globalBookmarks,
-          ).thenReturn(repositoryListShownAs(ids));
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(referencesShownAs(ids));
           when(
             () => mockVideosRepository.getVideosByIds(
               any(),
@@ -958,32 +1041,29 @@ void main() {
       );
 
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
-        'filters non-event bookmarks (hashtags, urls) and loads videos for '
-        'event bookmarks',
+        'lists the most recent bookmark first',
         setUp: () {
-          when(() => mockBookmarksRepository.globalBookmarks).thenReturn(const [
-            BookmarkItem(type: 'e', id: 'video-1'),
-            BookmarkItem(type: 't', id: 'flutter'),
-            BookmarkItem(type: 'e', id: 'video-2'),
-            BookmarkItem(type: 'r', id: 'https://example.com'),
-          ]);
+          // The repository lists bookmarks oldest first.
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(const ['video-1', 'video-2']);
           when(
             () => mockVideosRepository.getVideosByIds(
               any(),
               cacheResults: any(named: 'cacheResults'),
             ),
           ).thenAnswer(
-            (_) async => [
-              createTestVideo('video-1'),
-              createTestVideo('video-2'),
-            ],
+            (invocation) async =>
+                (invocation.positionalArguments.first as List<String>)
+                    .map(createTestVideo)
+                    .toList(),
           );
         },
         build: createBloc,
         act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
         verify: (bloc) {
           expect(bloc.state.status, ProfileSavedVideosStatus.success);
-          expect(bloc.state.videos, hasLength(2));
+          expect(bloc.state.videos.map((v) => v.id), ['video-2', 'video-1']);
           expect(bloc.state.savedEventIds, equals(['video-2', 'video-1']));
           expect(bloc.state.hasMoreContent, isFalse);
           verify(
@@ -999,8 +1079,8 @@ void main() {
         'emits failure when fetching videos throws',
         setUp: () {
           when(
-            () => mockBookmarksRepository.globalBookmarks,
-          ).thenReturn(const [BookmarkItem(type: 'e', id: 'video-1')]);
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(const ['video-1']);
           when(
             () => mockVideosRepository.getVideosByIds(
               any(),
@@ -1016,16 +1096,277 @@ void main() {
         },
         errors: () => [isA<Exception>()],
       );
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'shows the latest revision of a video saved by its address',
+        setUp: () {
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn([coordinateFor('clip')]);
+          stubLatestRevisionAtClipAddress();
+          stubVideosByEventId();
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
+        verify: (bloc) {
+          expect(bloc.state.videos.map((v) => v.id), [editedRevisionId]);
+          expect(bloc.state.savedEventIds, [coordinateFor('clip')]);
+          verify(
+            () => mockVideosRepository.getVideosByAddressableIds([
+              coordinateFor('clip'),
+            ], cacheResults: true),
+          ).called(1);
+          verifyNever(
+            () => mockVideosRepository.getVideosByIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          );
+        },
+      );
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'keeps newest-first order across address and event-id bookmarks',
+        setUp: () {
+          when(() => mockBookmarksRepository.bookmarkedVideoReferences)
+              .thenReturn([
+                'a' * 64,
+                coordinateFor('clip'),
+                'b' * 64,
+              ]);
+          stubLatestRevisionAtClipAddress();
+          stubVideosByEventId();
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
+        verify: (bloc) {
+          expect(bloc.state.videos.map((v) => v.id), [
+            'b' * 64,
+            editedRevisionId,
+            'a' * 64,
+          ]);
+          expect(bloc.state.savedEventIds, [
+            'b' * 64,
+            coordinateFor('clip'),
+            'a' * 64,
+          ]);
+        },
+      );
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'shows one tile for a video saved by both its event id and its '
+        'address',
+        // An `e` bookmark the repository could not match to its address sits
+        // beside an `a` bookmark of the same video. Both resolve.
+        setUp: () {
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn([originalRevisionId, coordinateFor('clip')]);
+          stubLatestRevisionAtClipAddress();
+          stubVideosByEventId();
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
+        verify: (bloc) {
+          expect(bloc.state.videos.map((v) => v.id), [editedRevisionId]);
+          expect(bloc.state.savedEventIds, [
+            coordinateFor('clip'),
+            originalRevisionId,
+          ]);
+        },
+      );
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'does not restore a snapshot saved under the event-id-only key',
+        // A v2 snapshot keys its videos by event id, so restoring it would
+        // show the pre-edit revision until the reconcile replaced it.
+        setUp: () async {
+          await cacheDao.write(
+            key: '$currentUserPubkey:profile_saved_videos_v2',
+            payload: ProfileVideoListSnapshot(
+              videos: [
+                createTestVideo(originalRevisionId, addressableDTag: 'clip'),
+              ],
+              itemIds: [originalRevisionId],
+              nextPageOffset: 1,
+              hasMoreContent: false,
+            ).toJson(),
+          );
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn([coordinateFor('clip')]);
+          stubLatestRevisionAtClipAddress();
+          stubVideosByEventId();
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
+        wait: const Duration(milliseconds: 50),
+        expect: () => [
+          isA<ProfileSavedVideosState>()
+              .having((s) => s.videos.map((v) => v.id), 'videos', [
+                editedRevisionId,
+              ])
+              .having((s) => s.isRefreshing, 'isRefreshing', false),
+        ],
+      );
+
+      group('revalidating an unchanged bookmark list', () {
+        /// Persists a snapshot showing the original revision of the `clip`
+        /// video, saved by its address.
+        Future<void> persistOriginalRevisionAtClipAddress() => cacheDao.write(
+          key: snapshotCacheKey,
+          payload: ProfileVideoListSnapshot(
+            videos: [
+              createTestVideo(originalRevisionId, addressableDTag: 'clip'),
+            ],
+            itemIds: [coordinateFor('clip')],
+            nextPageOffset: 1,
+            hasMoreContent: false,
+          ).toJson(),
+        );
+
+        Future<ProfileSavedVideosBloc> syncedBloc() async {
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+          final sync = Completer<void>();
+          bloc.add(ProfileSavedVideosSyncRequested(completer: sync));
+          await sync.future;
+          return bloc;
+        }
+
+        test('shows an address edited since the snapshot at its latest '
+            'revision', () async {
+          await persistOriginalRevisionAtClipAddress();
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn([coordinateFor('clip')]);
+          stubLatestRevisionAtClipAddress();
+
+          final bloc = await syncedBloc();
+
+          expect(bloc.state.videos.map((v) => v.id), [editedRevisionId]);
+          expect(bloc.state.isRefreshing, isFalse);
+          final persisted = ProfileVideoListSnapshot.fromJson(
+            (await cacheDao.readEntry(snapshotCacheKey))!.payload,
+          );
+          expect(persisted.videos.map((v) => v.id), [editedRevisionId]);
+          expect(persisted.itemIds, [coordinateFor('clip')]);
+        });
+
+        test('keeps the tile when its address comes back empty', () async {
+          await persistOriginalRevisionAtClipAddress();
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn([coordinateFor('clip')]);
+          when(
+            () => mockVideosRepository.getVideosByAddressableIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          ).thenAnswer((_) async => []);
+
+          final bloc = await syncedBloc();
+
+          verify(
+            () => mockVideosRepository.getVideosByAddressableIds([
+              coordinateFor('clip'),
+            ], cacheResults: true),
+          ).called(1);
+          expect(bloc.state.videos.map((v) => v.id), [originalRevisionId]);
+          expect(bloc.state.isRefreshing, isFalse);
+        });
+
+        test('makes no request for a full window of event ids', () async {
+          // One id never resolved, so anything but the fast path would ask
+          // for it again. An event id cannot be edited.
+          final ids = List.generate(
+            ProfileTabPagination.pageSize,
+            (i) => i.toRadixString(16).padLeft(64, 'e'),
+          );
+          final unresolvedId = ids[3];
+          await cacheDao.write(
+            key: snapshotCacheKey,
+            payload: ProfileVideoListSnapshot(
+              videos: [
+                for (final id in ids)
+                  if (id != unresolvedId) createTestVideo(id),
+              ],
+              itemIds: ids,
+              nextPageOffset: ids.length,
+              hasMoreContent: false,
+            ).toJson(),
+          );
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(referencesShownAs(ids));
+
+          final bloc = await syncedBloc();
+
+          expect(bloc.state.videos, hasLength(ids.length - 1));
+          expect(bloc.state.isRefreshing, isFalse);
+          verifyNever(
+            () => mockVideosRepository.getVideosByIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          );
+          verifyNever(
+            () => mockVideosRepository.getVideosByAddressableIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          );
+        });
+      });
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'prunes the address of a tombstoned video from a restored snapshot',
+        setUp: () async {
+          await cacheDao.write(
+            key: snapshotCacheKey,
+            payload: ProfileVideoListSnapshot(
+              videos: [
+                createTestVideo(editedRevisionId, addressableDTag: 'clip'),
+                createTestVideo('a' * 64),
+              ],
+              itemIds: [coordinateFor('clip'), 'a' * 64],
+              nextPageOffset: 2,
+              hasMoreContent: false,
+            ).toJson(),
+          );
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(['a' * 64]);
+        },
+        build: () => createBloc(
+          deletedVideoFilter: (video) => video.id == editedRevisionId,
+        ),
+        act: (bloc) => bloc.add(const ProfileSavedVideosSyncRequested()),
+        wait: const Duration(milliseconds: 50),
+        expect: () => [
+          isA<ProfileSavedVideosState>()
+              .having((s) => s.isRefreshing, 'isRefreshing', true)
+              .having((s) => s.videos.map((v) => v.id), 'cached videos', [
+                'a' * 64,
+              ])
+              .having((s) => s.savedEventIds, 'savedEventIds', ['a' * 64]),
+          isA<ProfileSavedVideosState>().having(
+            (s) => s.isRefreshing,
+            'isRefreshing',
+            false,
+          ),
+        ],
+      );
     });
 
     group('ProfileSavedVideosLoadMoreRequested', () {
       // Build a list that exceeds one page so hasMoreContent starts true and
       // a second fetch is required.
       const bookmarkCount = ProfileTabPagination.pageSize + 7;
-      late List<BookmarkItem> manyBookmarks;
+      late List<String> manyBookmarks;
 
       setUp(() {
-        manyBookmarks = repositoryListShownAs(
+        manyBookmarks = referencesShownAs(
           List.generate(bookmarkCount, (i) => 'video-$i'),
         );
       });
@@ -1040,7 +1381,7 @@ void main() {
           // binding reports android, so the filter is inert without this.
           debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
           when(
-            () => mockBookmarksRepository.globalBookmarks,
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
           ).thenReturn(manyBookmarks);
           when(
             () => mockVideosRepository.getVideosByIds(
@@ -1082,7 +1423,7 @@ void main() {
         'fetches the next page and advances offset',
         setUp: () {
           when(
-            () => mockBookmarksRepository.globalBookmarks,
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
           ).thenReturn(manyBookmarks);
           when(
             () => mockVideosRepository.getVideosByIds(
@@ -1113,6 +1454,43 @@ void main() {
       );
 
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'skips a video the first page already shows under its address',
+        setUp: () {
+          // Newest first, the address opens page one and the event-id bookmark
+          // of the same video's original revision is alone on page two.
+          final fillers = List.generate(
+            ProfileTabPagination.pageSize - 1,
+            (i) => i.toRadixString(16).padLeft(64, 'f'),
+          );
+          when(() => mockBookmarksRepository.bookmarkedVideoReferences)
+              .thenReturn([
+                originalRevisionId,
+                ...fillers.reversed,
+                coordinateFor('clip'),
+              ]);
+          stubLatestRevisionAtClipAddress();
+          stubVideosByEventId();
+        },
+        build: createBloc,
+        act: (bloc) async {
+          bloc.add(const ProfileSavedVideosSyncRequested());
+          await bloc.stream.firstWhere(
+            (state) => state.status == ProfileSavedVideosStatus.success,
+          );
+          bloc.add(const ProfileSavedVideosLoadMoreRequested());
+        },
+        verify: (bloc) {
+          expect(bloc.state.nextPageOffset, ProfileTabPagination.pageSize + 1);
+          expect(bloc.state.videos, hasLength(ProfileTabPagination.pageSize));
+          expect(bloc.state.videos.first.id, editedRevisionId);
+          expect(
+            bloc.state.videos.map((v) => v.id),
+            isNot(contains(originalRevisionId)),
+          );
+        },
+      );
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
         'is a no-op when hasMoreContent is false',
         build: createBloc,
         seed: () => const ProfileSavedVideosState(
@@ -1136,13 +1514,13 @@ void main() {
     });
 
     group('a bookmark change while the grid is showing', () {
-      late StreamController<List<BookmarkItem>> bookmarkChanges;
+      late StreamController<List<String>> bookmarkChanges;
 
       setUp(() {
-        bookmarkChanges = StreamController<List<BookmarkItem>>.broadcast();
+        bookmarkChanges = StreamController<List<String>>.broadcast();
         addTearDown(bookmarkChanges.close);
         when(
-          () => mockBookmarksRepository.watchGlobalBookmarks(),
+          () => mockBookmarksRepository.watchBookmarkedVideoReferences(),
         ).thenAnswer((_) => bookmarkChanges.stream);
         when(
           () => mockVideosRepository.getVideosByIds(
@@ -1175,7 +1553,7 @@ void main() {
         },
         build: createBloc,
         seed: () => showing(['video-1']),
-        act: (_) => bookmarkChanges.add(repositoryListShownAs(['video-1'])),
+        act: (_) => bookmarkChanges.add(referencesShownAs(['video-1'])),
         wait: const Duration(milliseconds: 50),
         expect: () => [
           showing(['video-1']).copyWith(privateBookmarksLocked: true),
@@ -1192,7 +1570,7 @@ void main() {
         build: createBloc,
         seed: () => showing(['video-1']),
         act: (_) => bookmarkChanges.add(
-          repositoryListShownAs(['video-2', 'video-1']),
+          referencesShownAs(['video-2', 'video-1']),
         ),
         wait: const Duration(milliseconds: 50),
         verify: (bloc) {
@@ -1206,7 +1584,7 @@ void main() {
         build: createBloc,
         seed: () => showing(['video-1']),
         act: (_) => bookmarkChanges.add(
-          repositoryListShownAs(['video-2', 'video-1']),
+          referencesShownAs(['video-2', 'video-1']),
         ),
         wait: const Duration(milliseconds: 50),
         expect: () => [
@@ -1235,11 +1613,151 @@ void main() {
         },
       );
 
+      group('when a bookmark saved by event id resolves to its address', () {
+        // The first sync timed out, so the grid fetched the revision the
+        // event id names; a later sync matched that id to the address.
+        ProfileSavedVideosState showingOriginalRevisionByEventId() =>
+            ProfileSavedVideosState(
+              status: ProfileSavedVideosStatus.success,
+              videos: [
+                createTestVideo(originalRevisionId, addressableDTag: 'clip'),
+              ],
+              savedEventIds: [originalRevisionId],
+              nextPageOffset: 1,
+              hasMoreContent: false,
+            );
+
+        blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+          'shows the latest revision at that address',
+          setUp: stubLatestRevisionAtClipAddress,
+          build: createBloc,
+          seed: showingOriginalRevisionByEventId,
+          act: (_) => bookmarkChanges.add([coordinateFor('clip')]),
+          wait: const Duration(milliseconds: 50),
+          expect: () => [
+            isA<ProfileSavedVideosState>()
+                .having((s) => s.videos.map((v) => v.id), 'videos', [
+                  editedRevisionId,
+                ])
+                .having((s) => s.savedEventIds, 'savedEventIds', [
+                  coordinateFor('clip'),
+                ]),
+          ],
+          verify: (_) {
+            verify(
+              () => mockVideosRepository.getVideosByAddressableIds([
+                coordinateFor('clip'),
+              ], cacheResults: true),
+            ).called(1);
+          },
+        );
+
+        blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+          'keeps the tile when the address comes back empty',
+          setUp: () {
+            when(
+              () => mockVideosRepository.getVideosByAddressableIds(
+                any(),
+                cacheResults: any(named: 'cacheResults'),
+              ),
+            ).thenAnswer((_) async => []);
+          },
+          build: createBloc,
+          seed: showingOriginalRevisionByEventId,
+          act: (_) => bookmarkChanges.add([coordinateFor('clip')]),
+          wait: const Duration(milliseconds: 50),
+          expect: () => [
+            isA<ProfileSavedVideosState>()
+                .having((s) => s.videos.map((v) => v.id), 'videos', [
+                  originalRevisionId,
+                ])
+                .having((s) => s.savedEventIds, 'savedEventIds', [
+                  coordinateFor('clip'),
+                ]),
+          ],
+          verify: (_) {
+            verify(
+              () => mockVideosRepository.getVideosByAddressableIds([
+                coordinateFor('clip'),
+              ], cacheResults: true),
+            ).called(1);
+          },
+        );
+      });
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'a save does not refetch a video already showing under its address',
+        setUp: stubLatestRevisionAtClipAddress,
+        build: createBloc,
+        seed: () => ProfileSavedVideosState(
+          status: ProfileSavedVideosStatus.success,
+          videos: [createTestVideo(editedRevisionId, addressableDTag: 'clip')],
+          savedEventIds: [coordinateFor('clip')],
+          nextPageOffset: 1,
+          hasMoreContent: false,
+        ),
+        act: (_) => bookmarkChanges.add(
+          referencesShownAs(['a' * 64, coordinateFor('clip')]),
+        ),
+        wait: const Duration(milliseconds: 50),
+        expect: () => [
+          isA<ProfileSavedVideosState>()
+              .having((s) => s.videos.map((v) => v.id), 'videos', [
+                'a' * 64,
+                editedRevisionId,
+              ])
+              .having((s) => s.savedEventIds, 'savedEventIds', [
+                'a' * 64,
+                coordinateFor('clip'),
+              ]),
+        ],
+        verify: (_) {
+          verify(
+            () => mockVideosRepository.getVideosByIds([
+              'a' * 64,
+            ], cacheResults: true),
+          ).called(1);
+          verifyNever(
+            () => mockVideosRepository.getVideosByAddressableIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          );
+        },
+      );
+
+      blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
+        'shows one tile for a video the change names by its address and by '
+        'an earlier event id',
+        // The repository could not match the older `e` bookmark to the
+        // address, so both references reach the grid and both resolve.
+        setUp: () {
+          stubLatestRevisionAtClipAddress();
+          stubVideosByEventId();
+        },
+        build: createBloc,
+        seed: () => showing(['video-1']),
+        act: (_) => bookmarkChanges.add(
+          referencesShownAs([
+            coordinateFor('clip'),
+            originalRevisionId,
+            'video-1',
+          ]),
+        ),
+        wait: const Duration(milliseconds: 50),
+        verify: (bloc) {
+          expect(bloc.state.videos.map((v) => v.id), [
+            editedRevisionId,
+            'video-1',
+          ]);
+        },
+      );
+
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
         'an unsave drops the video without fetching anything',
         build: createBloc,
         seed: () => showing(['video-2', 'video-1']),
-        act: (_) => bookmarkChanges.add(repositoryListShownAs(['video-1'])),
+        act: (_) => bookmarkChanges.add(referencesShownAs(['video-1'])),
         wait: const Duration(milliseconds: 50),
         expect: () => [
           isA<ProfileSavedVideosState>()
@@ -1259,7 +1777,7 @@ void main() {
       blocTest<ProfileSavedVideosBloc, ProfileSavedVideosState>(
         'is ignored before the first sync has settled',
         build: createBloc,
-        act: (_) => bookmarkChanges.add(repositoryListShownAs(['video-1'])),
+        act: (_) => bookmarkChanges.add(referencesShownAs(['video-1'])),
         wait: const Duration(milliseconds: 50),
         expect: () => const <ProfileSavedVideosState>[],
         verify: (_) {
@@ -1280,7 +1798,7 @@ void main() {
         seed: () => showing(['video-2', 'video-1']),
         // The repository announces every sync, changed or not.
         act: (_) => bookmarkChanges.add(
-          repositoryListShownAs(['video-2', 'video-1']),
+          referencesShownAs(['video-2', 'video-1']),
         ),
         wait: const Duration(milliseconds: 50),
         expect: () => const <ProfileSavedVideosState>[],
@@ -1299,7 +1817,7 @@ void main() {
         build: createBloc,
         seed: () => showing(['video-1']),
         act: (_) => bookmarkChanges.add(
-          repositoryListShownAs(['video-2', 'video-1']),
+          referencesShownAs(['video-2', 'video-1']),
         ),
         wait: const Duration(milliseconds: 50),
         expect: () => const <ProfileSavedVideosState>[],

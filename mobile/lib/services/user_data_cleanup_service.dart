@@ -203,6 +203,7 @@ class UserDataCleanupService {
     // Bookmark services
     BookmarksRepository.globalBookmarksStorageKey,
     BookmarksRepository.globalBookmarksRevisionStorageKey,
+    BookmarksRepository.globalBookmarksVideoAddressesStorageKey,
     // Content history
     ContentReportingService.reportsStorageKey,
     ContentDeletionService.deletionsStorageKey,

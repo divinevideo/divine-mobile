@@ -127,7 +127,10 @@ void main() {
       ),
     ).thenAnswer((_) async => VideoClipImportSuccess(_FakeDivineVideoClip()));
     when(
-      () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+      () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+        any(),
+        addressableId: any(named: 'addressableId'),
+      ),
     ).thenReturn(false);
     when(
       () => mockBookmarksRepository.hasUnreadablePrivateItems,
@@ -136,7 +139,10 @@ void main() {
       () => mockBookmarksRepository.syncGlobalBookmarks(),
     ).thenAnswer((_) async => true);
     when(
-      () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+      () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+        any(),
+        addressableId: any(named: 'addressableId'),
+      ),
     ).thenAnswer(
       (_) async => const BookmarkToggleResult(
         succeeded: true,
@@ -246,7 +252,10 @@ void main() {
         expect(find.text(l10n.shareSheetRemoveFromSaved), findsNothing);
         verify(() => mockBookmarksRepository.syncGlobalBookmarks()).called(1);
         verify(
-          () => mockBookmarksRepository.isVideoBookmarkedGlobally(testVideo.id),
+          () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+            testVideo.id,
+            addressableId: testVideo.addressableId,
+          ),
         ).called(1);
       },
     );
@@ -259,7 +268,10 @@ void main() {
           () => mockBookmarksRepository.syncGlobalBookmarks(),
         ).thenAnswer((_) async => true);
         when(
-          () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+          () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+            any(),
+            addressableId: any(named: 'addressableId'),
+          ),
         ).thenReturn(true);
         final l10n = lookupAppLocalizations(const Locale('en'));
 
@@ -282,7 +294,10 @@ void main() {
           () => mockBookmarksRepository.syncGlobalBookmarks(),
         ).thenAnswer((_) async => false);
         when(
-          () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+          () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+            any(),
+            addressableId: any(named: 'addressableId'),
+          ),
         ).thenReturn(true);
         final l10n = lookupAppLocalizations(const Locale('en'));
 
@@ -500,10 +515,16 @@ void main() {
 
     testWidgets('tapping Save shows success snackbar', (tester) async {
       when(
-        () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+        () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+          any(),
+          addressableId: any(named: 'addressableId'),
+        ),
       ).thenReturn(false);
       when(
-        () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+        () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+          any(),
+          addressableId: any(named: 'addressableId'),
+        ),
       ).thenAnswer(
         (_) async => const BookmarkToggleResult(
           succeeded: true,
@@ -523,11 +544,16 @@ void main() {
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(find.text(l10n.shareAddedToBookmarks), findsOneWidget);
       verify(
-        () => mockBookmarksRepository.isVideoBookmarkedGlobally(testVideo.id),
+        () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+          testVideo.id,
+          addressableId: testVideo.addressableId,
+        ),
       ).called(1);
       verify(
-        () =>
-            mockBookmarksRepository.toggleVideoInGlobalBookmarks(testVideo.id),
+        () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+          testVideo.id,
+          addressableId: testVideo.addressableId,
+        ),
       ).called(1);
     });
 
@@ -541,10 +567,16 @@ void main() {
         // handler finishes before the first rebuild.
         final gate = Completer<BookmarkToggleResult>();
         when(
-          () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+          () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+            any(),
+            addressableId: any(named: 'addressableId'),
+          ),
         ).thenReturn(false);
         when(
-          () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+          () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+            any(),
+            addressableId: any(named: 'addressableId'),
+          ),
         ).thenAnswer((_) => gate.future);
 
         await tester.pumpWidget(buildSubject());
@@ -585,6 +617,7 @@ void main() {
         verify(
           () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
             testVideo.id,
+            addressableId: testVideo.addressableId,
           ),
         ).called(1);
       },
@@ -592,10 +625,16 @@ void main() {
 
     testWidgets('tapping Save shows failure snackbar on error', (tester) async {
       when(
-        () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+        () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+          any(),
+          addressableId: any(named: 'addressableId'),
+        ),
       ).thenReturn(false);
       when(
-        () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+        () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+          any(),
+          addressableId: any(named: 'addressableId'),
+        ),
       ).thenAnswer(
         (_) async => const BookmarkToggleResult(
           succeeded: false,
@@ -618,10 +657,16 @@ void main() {
       tester,
     ) async {
       when(
-        () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+        () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+          any(),
+          addressableId: any(named: 'addressableId'),
+        ),
       ).thenReturn(false);
       when(
-        () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+        () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+          any(),
+          addressableId: any(named: 'addressableId'),
+        ),
       ).thenThrow(Exception('Network error'));
 
       await tester.pumpWidget(buildSubject());
@@ -646,10 +691,16 @@ void main() {
         tester,
       ) async {
         when(
-          () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+          () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+            any(),
+            addressableId: any(named: 'addressableId'),
+          ),
         ).thenReturn(false);
         when(
-          () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+          () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+            any(),
+            addressableId: any(named: 'addressableId'),
+          ),
         ).thenAnswer(
           (_) async => BookmarkToggleResult(
             succeeded: false,

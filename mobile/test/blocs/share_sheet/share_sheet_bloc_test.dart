@@ -153,7 +153,10 @@ void main() {
 
       // Default stubs
       when(
-        () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+        () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+          any(),
+          addressableId: any(named: 'addressableId'),
+        ),
       ).thenReturn(false);
       when(
         () => mockBookmarksRepository.hasUnreadablePrivateItems,
@@ -1885,7 +1888,10 @@ void main() {
         'emits $ShareSheetSaveResult with succeeded=true, removed=false when adding bookmark',
         setUp: () {
           when(
-            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenAnswer(
             (_) async => const BookmarkToggleResult(
               succeeded: true,
@@ -1919,7 +1925,10 @@ void main() {
         'emits $ShareSheetSaveResult with succeeded=true, removed=true when removing bookmark',
         setUp: () {
           when(
-            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenAnswer(
             (_) async => const BookmarkToggleResult(
               succeeded: true,
@@ -1953,7 +1962,10 @@ void main() {
         'emits $ShareSheetSaveResult with succeeded=false when bookmark fails',
         setUp: () {
           when(
-            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenAnswer(
             (_) async => const BookmarkToggleResult(
               succeeded: false,
@@ -1988,7 +2000,10 @@ void main() {
         'bookmark fails',
         setUp: () {
           when(
-            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenAnswer(
             (_) async => const BookmarkToggleResult(
               succeeded: false,
@@ -2022,7 +2037,10 @@ void main() {
         'emits $ShareSheetSaveResult with succeeded=false when bookmark throws',
         setUp: () {
           when(
-            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenThrow(Exception('offline'));
         },
         build: createBloc,
@@ -2052,10 +2070,16 @@ void main() {
         'throws while bookmarked',
         setUp: () {
           when(
-            () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+            () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenReturn(true);
           when(
-            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenThrow(Exception('offline'));
         },
         build: createBloc,
@@ -2108,7 +2132,10 @@ void main() {
         setUp: () {
           var inGlobalBookmarks = false;
           when(
-            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenAnswer((_) async {
             final wasBookmarked = inGlobalBookmarks;
             inGlobalBookmarks = !inGlobalBookmarks;
@@ -2162,7 +2189,10 @@ void main() {
         setUp: () {
           saveGate = Completer<BookmarkToggleResult>();
           when(
-            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenAnswer((_) => saveGate.future);
         },
         build: createBloc,
@@ -2197,7 +2227,10 @@ void main() {
               ),
         ],
         verify: (_) => verify(
-          () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+          () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+            any(),
+            addressableId: any(named: 'addressableId'),
+          ),
         ).called(1),
       );
 
@@ -2206,7 +2239,10 @@ void main() {
         setUp: () {
           saveGate = Completer<BookmarkToggleResult>();
           when(
-            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenAnswer((_) => saveGate.future);
         },
         build: createBloc,
@@ -2686,6 +2722,78 @@ void main() {
       );
     });
 
+    // An edit republishes an addressable video under a new event id, so the
+    // sheet names the video by its coordinate as well (#7135).
+    group('addressable video', () {
+      late String coordinate;
+
+      setUp(() {
+        testVideo = VideoEvent(
+          id: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          pubkey: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
+          createdAt: 1757385263,
+          content: 'Test video',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
+          videoUrl: 'https://example.com/video.mp4',
+          title: 'Test Video',
+          addressableDTag: 'clip',
+        );
+        coordinate = testVideo.addressableId!;
+        when(
+          () => mockBookmarksRepository.syncGlobalBookmarks(),
+        ).thenAnswer((_) async => true);
+      });
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'reads the video as saved when its coordinate is bookmarked',
+        setUp: () {
+          when(
+            () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+              testVideo.id,
+              addressableId: coordinate,
+            ),
+          ).thenReturn(true);
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetBookmarkStatusRequested()),
+        expect: () => [
+          isA<ShareSheetState>().having(
+            (s) => s.bookmarkStatus,
+            'bookmarkStatus',
+            ShareSheetBookmarkStatus.saved,
+          ),
+        ],
+      );
+
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'toggles the bookmark by the video coordinate',
+        setUp: () {
+          when(
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
+          ).thenAnswer(
+            (_) async => const BookmarkToggleResult(
+              succeeded: true,
+              wasBookmarked: false,
+              isBookmarked: true,
+            ),
+          );
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetSaveRequested()),
+        verify: (_) {
+          verify(
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              testVideo.id,
+              addressableId: coordinate,
+            ),
+          ).called(1);
+        },
+      );
+    });
+
     group('ShareSheetBookmarkStatusRequested', () {
       late Completer<bool> bookmarkStatusSyncCompleter;
 
@@ -2696,7 +2804,10 @@ void main() {
             () => mockBookmarksRepository.syncGlobalBookmarks(),
           ).thenAnswer((_) async => true);
           when(
-            () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+            () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenReturn(true);
         },
         build: createBloc,
@@ -2717,7 +2828,10 @@ void main() {
             () => mockBookmarksRepository.syncGlobalBookmarks(),
           ).thenAnswer((_) async => true);
           when(
-            () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+            () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenReturn(false);
         },
         build: createBloc,
@@ -2744,7 +2858,10 @@ void main() {
           // exactly where the video might be — claiming notSaved here is the
           // mislabel that precedes the disclosure (#7136).
           when(
-            () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+            () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenReturn(false);
         },
         build: createBloc,
@@ -2762,10 +2879,16 @@ void main() {
             () => mockBookmarksRepository.syncGlobalBookmarks(),
           ).thenAnswer((_) => bookmarkStatusSyncCompleter.future);
           when(
-            () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+            () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenReturn(false);
           when(
-            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenAnswer(
             (_) async => const BookmarkToggleResult(
               succeeded: true,
@@ -2829,7 +2952,10 @@ void main() {
         expect: () => <ShareSheetState>[],
         verify: (_) {
           verifyNever(
-            () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+            () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           );
         },
       );
@@ -2845,10 +2971,16 @@ void main() {
         'a successful remove flips the status to notSaved',
         setUp: () {
           when(
-            () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+            () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenReturn(true);
           when(
-            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenAnswer(
             (_) async => const BookmarkToggleResult(
               succeeded: true,
@@ -2885,10 +3017,16 @@ void main() {
         ),
         setUp: () {
           when(
-            () => mockBookmarksRepository.isVideoBookmarkedGlobally(any()),
+            () => mockBookmarksRepository.isVideoBookmarkedGlobally(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenReturn(false);
           when(
-            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(any()),
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
           ).thenAnswer(
             (_) async => const BookmarkToggleResult(
               succeeded: false,

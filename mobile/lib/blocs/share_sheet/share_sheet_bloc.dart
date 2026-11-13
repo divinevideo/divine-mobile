@@ -533,7 +533,10 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       emit(
         state.copyWith(
           bookmarkStatus:
-              bookmarksRepository.isVideoBookmarkedGlobally(_video.id)
+              bookmarksRepository.isVideoBookmarkedGlobally(
+                _video.id,
+                addressableId: _video.addressableId,
+              )
               ? ShareSheetBookmarkStatus.saved
               : ShareSheetBookmarkStatus.notSaved,
         ),
@@ -590,14 +593,18 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     // before it can report the reconciled state.
     var wasBookmarked = bookmarksRepository.isVideoBookmarkedGlobally(
       _video.id,
+      addressableId: _video.addressableId,
     );
     try {
       // On the success path the direction comes from the toggle's own
       // reconciled read rather than the guess above — the two disagree when
       // the video was bookmarked on another device, and the sheet would then
       // claim the wrong outcome.
+      // The coordinate keeps the bookmark on the video across edits, which
+      // republish it under a new event id (#7135).
       final result = await bookmarksRepository.toggleVideoInGlobalBookmarks(
         _video.id,
+        addressableId: _video.addressableId,
       );
       if (isClosed) return;
 

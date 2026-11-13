@@ -6,9 +6,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
-import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:openvine/utils/list_video_relay_query.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Caches videos from curated lists the user has subscribed to
@@ -267,25 +267,11 @@ class SubscribedListVideoCache extends ChangeNotifier {
       category: LogCategory.video,
     );
 
-    final filters = <Filter>[];
-
-    // Filter for regular event IDs
-    if (missingIds.isNotEmpty) {
-      filters.add(Filter(ids: missingIds));
-    }
-
-    // Filters for addressable events
-    for (final coord in missingCoords) {
-      final parts = coord.split(':');
-      if (parts.length >= 3) {
-        final kind = int.tryParse(parts[0]);
-        final pubkey = parts[1];
-        final dTag = parts[2];
-        if (kind != null) {
-          filters.add(Filter(kinds: [kind], authors: [pubkey], d: [dTag]));
-        }
-      }
-    }
+    final query = ListVideoRelayQuery(
+      eventIds: missingIds,
+      coordinates: missingCoords,
+    );
+    final filters = query.filters;
 
     if (filters.isEmpty) return;
 
@@ -297,6 +283,7 @@ class SubscribedListVideoCache extends ChangeNotifier {
       await for (final event in eventStream.timeout(
         const Duration(seconds: 3),
       )) {
+        if (!query.asked(event)) continue;
         if (seenIds.contains(event.id)) continue;
         seenIds.add(event.id);
 

@@ -25,8 +25,11 @@ import 'package:openvine/widgets/list_picker_row.dart';
 import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
 
 class _MockCuratedListService extends Mock implements CuratedListService {
   @override
@@ -143,6 +146,7 @@ void main() {
       CuratedListsState Function() listsState = _FakeCuratedListsState.new,
       List<CuratedList>? thumbnails = const [],
       Override? hydrationOverride,
+      List<Override> extraOverrides = const [],
       Locale locale = const Locale('en'),
       bool observeLists = false,
       bool settle = true,
@@ -162,6 +166,7 @@ void main() {
                       ? neverResolves.future
                       : Future.value(thumbnails),
                 ),
+            ...extraOverrides,
           ],
           home: Consumer(
             builder: (context, ref, _) {
@@ -875,6 +880,71 @@ void main() {
           ),
         ).called(1);
         expect(find.byType(SelectListSheetBody), findsNothing);
+      });
+
+      testWidgets('an addressable video is saved by its coordinate, and a '
+          'list naming it either way counts as holding it', (tester) async {
+        const address = '34236:$_authorPubkey:clip';
+        video = video.copyWith(addressableDTag: 'clip');
+        when(() => service.pickerListsForOwner(any())).thenReturn([
+          list('Holds it', videoEventIds: const [address, _videoEventId]),
+          list('First'),
+        ]);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
+        when(
+          () => service.removeVideoFromList(any(), any()),
+        ).thenAnswer((_) async => true);
+        await openSheet(tester);
+
+        await tester.tap(find.text('First'));
+        await tester.tap(find.text('Holds it'));
+        await tester.pump();
+        await tester.tap(saveButton());
+        await tester.pumpAndSettle();
+
+        verify(
+          () => service.addVideoToList('$_authorPubkey:list_first', address),
+        ).called(1);
+        verify(
+          () => service.removeVideoFromList(
+            '$_authorPubkey:list_holds_it',
+            address,
+          ),
+        ).called(1);
+        verify(
+          () => service.removeVideoFromList(
+            '$_authorPubkey:list_holds_it',
+            _videoEventId,
+          ),
+        ).called(1);
+      });
+
+      testWidgets('a list holding an older version of an addressable video '
+          'is checked once the lookup places it (#7135)', (tester) async {
+        final olderVideoId = 'c' * 64;
+        video = video.copyWith(addressableDTag: 'clip');
+        final videosRepository = _MockVideosRepository();
+        when(
+          () => videosRepository.getVideosByIds(
+            [olderVideoId],
+            hydrateBulkStats: false,
+            includeFeedShape: false,
+          ),
+        ).thenAnswer((_) async => [video.copyWith(id: olderVideoId)]);
+        when(() => service.pickerListsForOwner(any())).thenReturn([
+          list('Older', videoEventIds: [olderVideoId]),
+        ]);
+
+        await openSheet(
+          tester,
+          extraOverrides: [
+            videosRepositoryProvider.overrideWithValue(videosRepository),
+          ],
+        );
+
+        expect(rowChecks(), findsOneWidget);
       });
 
       testWidgets('with the video in no list, the check is disabled until a '

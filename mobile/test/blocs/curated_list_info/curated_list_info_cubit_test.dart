@@ -680,6 +680,65 @@ void main() {
         },
       );
 
+      group('with an addressable video (#7135)', () {
+        final address = '34236:$_alice:clip';
+
+        CuratedListInfoCubit buildAddressableCubit() => CuratedListInfoCubit(
+          currentOwnerPubkey: () => _viewer,
+          resolveService: () => service,
+          videoEventId: _videoEventId,
+          videoAddress: address,
+        );
+
+        blocTest<CuratedListInfoCubit, CuratedListInfoState>(
+          'adds the video to the list it created by its coordinate',
+          setUp: () {
+            stubCreate(() async => _list());
+            when(
+              () => service.addVideoToList(any(), any()),
+            ).thenAnswer((_) async => true);
+          },
+          build: buildAddressableCubit,
+          seed: () => const CuratedListInfoState(name: 'Puppets'),
+          act: (cubit) => cubit.submitted(),
+          verify: (cubit) {
+            expect(cubit.state.status, equals(CuratedListInfoStatus.saved));
+            verify(
+              () => service.addVideoToList(_listIdentity, address),
+            ).called(1);
+            verifyNever(() => service.addVideoToList(any(), _videoEventId));
+          },
+        );
+
+        blocTest<CuratedListInfoCubit, CuratedListInfoState>(
+          'reports the video pending when the list holds its coordinate but '
+          'no relay took it',
+          setUp: () {
+            stubCreate(() async => _list());
+            when(
+              () => service.addVideoToList(any(), any()),
+            ).thenAnswer((_) async => false);
+            when(() => service.getListById(_listIdentity)).thenReturn(
+              CuratedList(
+                id: 'list-1',
+                pubkey: _viewer,
+                name: 'Puppets',
+                videoEventIds: [address],
+                createdAt: DateTime(2026),
+                updatedAt: DateTime(2026),
+              ),
+            );
+          },
+          build: buildAddressableCubit,
+          seed: () => const CuratedListInfoState(name: 'Puppets'),
+          act: (cubit) => cubit.submitted(),
+          verify: (cubit) => expect(
+            cubit.state.status,
+            equals(CuratedListInfoStatus.createdWithVideoPendingSync),
+          ),
+        );
+      });
+
       blocTest<CuratedListInfoCubit, CuratedListInfoState>(
         'closes on createdWithoutVideo when the list exists but refused the '
         'video, rather than saved or a failure that invites a second list',

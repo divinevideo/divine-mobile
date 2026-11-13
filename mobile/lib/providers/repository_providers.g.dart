@@ -916,6 +916,10 @@ String _$notifySubscriptionsRepositoryHash() =>
 /// Synchronous because every dependency is: the `async` it carried out of the
 /// #6969 extraction awaited nothing, and only forced both consumers to hold a
 /// `Future` they could not read at build time.
+///
+/// The videos repository is read when a lookup runs rather than watched: it
+/// rebuilds on every content-filter change, and watching it would rebuild this
+/// repository with it.
 
 @ProviderFor(bookmarksRepository)
 final bookmarksRepositoryProvider = BookmarksRepositoryProvider._();
@@ -937,6 +941,10 @@ final bookmarksRepositoryProvider = BookmarksRepositoryProvider._();
 /// Synchronous because every dependency is: the `async` it carried out of the
 /// #6969 extraction awaited nothing, and only forced both consumers to hold a
 /// `Future` they could not read at build time.
+///
+/// The videos repository is read when a lookup runs rather than watched: it
+/// rebuilds on every content-filter change, and watching it would rebuild this
+/// repository with it.
 
 final class BookmarksRepositoryProvider
     extends
@@ -963,6 +971,10 @@ final class BookmarksRepositoryProvider
   /// Synchronous because every dependency is: the `async` it carried out of the
   /// #6969 extraction awaited nothing, and only forced both consumers to hold a
   /// `Future` they could not read at build time.
+  ///
+  /// The videos repository is read when a lookup runs rather than watched: it
+  /// rebuilds on every content-filter change, and watching it would rebuild this
+  /// repository with it.
   BookmarksRepositoryProvider._()
     : super(
         from: null,
@@ -998,7 +1010,7 @@ final class BookmarksRepositoryProvider
 }
 
 String _$bookmarksRepositoryHash() =>
-    r'ac8d517214891bb5075222d2d948a0bef524c12b';
+    r'2a15a7f4055606139ae85e297b45147908d4f3fb';
 
 /// Pinned profile videos (NIP-51 kind 10001 with kind-34236 `a` tags).
 ///

@@ -2,6 +2,7 @@
 // ABOUTME: or updates the curated list when the form is submitted.
 
 import 'package:collection/collection.dart';
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
@@ -21,7 +22,8 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   /// Creates the cubit for one visit to the sheet.
   ///
   /// Pass [existingList] to edit that list; leave it out to create one.
-  /// [videoEventId] is added to a newly created list.
+  /// [videoEventId] is added to a newly created list, by the video's
+  /// [videoAddress] when it has one, so the item outlives an edit (#7135).
   ///
   /// [resolveService] is asked for the service when a save starts: the app
   /// builds a new one when its relay client is replaced, and a save has to
@@ -31,12 +33,15 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
     required String? Function() currentOwnerPubkey,
     CuratedList? existingList,
     String? videoEventId,
+    String? videoAddress,
   }) : _resolveService = resolveService,
        _currentOwnerPubkey = currentOwnerPubkey,
        _openingOwnerPubkey = currentOwnerPubkey(),
        _listOwnerPubkey = existingList?.pubkey,
        _listId = existingList?.authorScopedId,
-       _videoEventId = videoEventId,
+       _video = videoEventId == null
+           ? null
+           : CuratedListVideo(eventId: videoEventId, address: videoAddress),
        super(
          CuratedListInfoState(
            name: existingList?.name ?? '',
@@ -65,7 +70,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
       _openingOwnerPubkey.isNotEmpty &&
       _currentOwnerPubkey() == _openingOwnerPubkey;
 
-  final String? _videoEventId;
+  final CuratedListVideo? _video;
 
   /// Refreshes saved delivery and permissions without replacing unsaved edits.
   ///
@@ -317,24 +322,25 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
           emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
           return;
         }
-        final videoEventId = _videoEventId;
+        final video = _video;
         // addVideoToList answers false for a private list with no room or a
         // publish no relay took; the list exists either way, so the form
         // closes and the opener hands the outcome to its caller.
         final videoAdded =
-            videoEventId == null ||
-            await service.addVideoToList(created.authorScopedId, videoEventId);
+            video == null ||
+            await service.addVideoToList(
+              created.authorScopedId,
+              video.reference,
+            );
         if (!isSessionCurrent) {
           emitIfOpen(state.copyWith(status: CuratedListInfoStatus.failure));
           return;
         }
+        final createdList = videoAdded
+            ? null
+            : service.getListById(created.authorScopedId);
         final pendingVideo =
-            !videoAdded &&
-            service
-                    .getListById(created.authorScopedId)
-                    ?.videoEventIds
-                    .contains(videoEventId) ==
-                true;
+            video != null && createdList != null && video.isIn(createdList);
         emitIfOpen(
           state.copyWith(
             visibilityEdited: false,

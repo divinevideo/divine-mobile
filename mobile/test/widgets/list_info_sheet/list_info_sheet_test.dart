@@ -690,6 +690,27 @@ void main() {
         expect(find.text(l10n.listCreateNewList), findsNothing);
       });
 
+      testWidgets('adds an addressable video to the list it created by its '
+          'coordinate', (tester) async {
+        stubCreate(() async => list(name: 'Video List'));
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
+        await openSheet(tester, video: video.copyWith(addressableDTag: 'clip'));
+
+        await tester.enterText(find.byType(TextField).first, 'Video List');
+        await tester.pump();
+        await tester.tap(saveButton(editing: false));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => service.addVideoToList(
+            _listIdentity,
+            '34236:$_authorPubkey:clip',
+          ),
+        ).called(1);
+      });
+
       testWidgets('closes and hands its caller createdWithoutVideo when the '
           'created list refused the video', (tester) async {
         stubCreate(() async => list(name: 'Video List'));

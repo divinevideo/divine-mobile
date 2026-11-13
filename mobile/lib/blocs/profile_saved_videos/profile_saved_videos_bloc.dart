@@ -25,10 +25,14 @@ part 'profile_saved_videos_state.dart';
 /// BLoC for managing profile saved (bookmarked) videos.
 ///
 /// Coordinates between:
-/// - [BookmarksRepository]: Provides NIP-51 global bookmarks (kind 10003) — only
-///   items of type `'e'` (event bookmarks) are treated as saved videos.
-/// - [VideosRepository]: Fetches video data with cache-first lookups via
-///   SQLite local storage. Automatically checks cache before relay queries.
+/// - [BookmarksRepository]: Provides the videos in the viewer's NIP-51 global
+///   bookmarks (kind 10003) as references — a video's `kind:pubkey:d-tag`
+///   address where known, else its event id.
+/// - [VideosRepository]: Fetches the latest revision at each address, and the
+///   video of each event id, checking SQLite local storage before the relays.
+///
+/// An edit republishes a video at the same address under a new event id, so
+/// only the address keeps a saved video current (#7135).
 ///
 /// Bookmarks are the current viewer's own list, so this BLoC is only wired for
 /// the current user's own profile.
@@ -55,24 +59,25 @@ class ProfileSavedVideosBloc
     });
     // The share sheet saves through the same repository instance, so this is
     // how a grid that is already mounted learns about it.
-    _bookmarksSubscription = bookmarksRepository.watchGlobalBookmarks().listen((
-      items,
-    ) {
-      if (isClosed) return;
-      add(
-        ProfileSavedVideosReconcileRequested(
-          _savedVideoIds(items),
-          privateBookmarksLocked: bookmarksRepository.hasUnreadablePrivateItems,
-        ),
-      );
-    });
+    _bookmarksSubscription = bookmarksRepository
+        .watchBookmarkedVideoReferences()
+        .listen((references) {
+          if (isClosed) return;
+          add(
+            ProfileSavedVideosReconcileRequested(
+              _newestFirst(references),
+              privateBookmarksLocked:
+                  bookmarksRepository.hasUnreadablePrivateItems,
+            ),
+          );
+        });
   }
 
   final BookmarksRepository _bookmarksRepository;
   final VideosRepository _videosRepository;
   final String _currentUserPubkey;
   late final StreamSubscription<String> _removedVideoIdsSubscription;
-  late final StreamSubscription<List<BookmarkItem>> _bookmarksSubscription;
+  late final StreamSubscription<List<String>> _bookmarksSubscription;
   final bool Function(VideoEvent video) _deletedVideoFilter;
   bool _loadMorePending = false;
 
@@ -98,18 +103,37 @@ class ProfileSavedVideosBloc
   /// in user because this is the viewer's own list and must be cleared on
   /// sign-out.
   ///
-  /// `_v2` because the snapshot now reverses the repository order. Reusing
-  /// the previous order would widen reconciliation to the entire list when
-  /// the old top ID moves to the far end. Starting cold loads one page.
-  String get _cacheKey => '$_currentUserPubkey:profile_saved_videos_v2';
+  /// `_v3` because the snapshot's item ids are now bookmark references — a
+  /// video's address where known, else its event id — and a v2 snapshot holds
+  /// event ids only, along with the revisions they named, which may predate an
+  /// edit (#7135). Starting cold loads one page.
+  String get _cacheKey => '$_currentUserPubkey:profile_saved_videos_v3';
 
-  /// Video bookmarks in reverse repository order: private entries first,
+  /// Video references in reverse repository order: private entries first,
   /// then public entries, with each group reversed. The source contains no
   /// per-bookmark timestamps for a chronological merge across the groups.
-  static List<String> _savedVideoIds(List<BookmarkItem> items) => [
-    for (final item in items.reversed)
-      if (item.type == 'e') item.id,
+  static List<String> _newestFirst(List<String> references) =>
+      references.reversed.toList();
+
+  /// Whether [reference] is a video's address rather than its event id.
+  static bool _isAddress(String reference) => reference.contains(':');
+
+  /// The references [video] can be saved under: its event id, and its
+  /// address when it has one.
+  static List<String> _referencesTo(VideoEvent video) => [
+    video.id,
+    ?video.addressableId,
   ];
+
+  /// [videos] with one tile per video, the first of each kept: references are
+  /// newest first, so that is the most recently saved one.
+  static List<VideoEvent> _oneTilePerVideo(Iterable<VideoEvent> videos) {
+    final shown = <String>{};
+    return [
+      for (final video in videos)
+        if (shown.add(video.feedDedupKey)) video,
+    ];
+  }
 
   Future<void> _onEvent(
     ProfileSavedVideosEvent event,
@@ -217,8 +241,8 @@ class ProfileSavedVideosBloc
     }
   }
 
-  /// Reconciles the bookmark list against the relay, then reads the
-  /// event-type IDs from it.
+  /// Reconciles the bookmark list against the relay, then reads its video
+  /// references.
   ///
   /// Bookmarks are a NIP-51 kind 10003 list, and this is the only read
   /// surface for it — without the sync, Saved would show the
@@ -236,7 +260,7 @@ class ProfileSavedVideosBloc
   _resolveSavedIds() async {
     await _bookmarksRepository.syncGlobalBookmarks();
     return (
-      ids: _savedVideoIds(_bookmarksRepository.globalBookmarks),
+      ids: _newestFirst(_bookmarksRepository.bookmarkedVideoReferences),
       privateBookmarksLocked: _bookmarksRepository.hasUnreadablePrivateItems,
     );
   }
@@ -296,7 +320,8 @@ class ProfileSavedVideosBloc
   }
 
   /// Warm path: cached videos are already on screen. Reconcile against the
-  /// fresh bookmark list (drop unsaved, fetch newly-saved in the window).
+  /// fresh bookmark list (drop unsaved, fetch newly-saved in the window, and
+  /// re-read every address in it, which an edit may have moved on).
   Future<void> _warmRevalidate(
     List<String> freshIds,
     Emitter<ProfileSavedVideosState> emit, {
@@ -304,7 +329,8 @@ class ProfileSavedVideosBloc
   }) async {
     if (listEquals(freshIds, state.savedEventIds) &&
         !_isWindowUnderfilled(freshIds) &&
-        !state.videos.any(_deletedVideoFilter)) {
+        !state.videos.any(_deletedVideoFilter) &&
+        !_reconcileWindow(freshIds).any(_isAddress)) {
       emit(
         state.copyWith(
           isRefreshing: false,
@@ -314,7 +340,7 @@ class ProfileSavedVideosBloc
       return;
     }
 
-    final reconciled = await _reconcile(freshIds);
+    final reconciled = await _reconcile(freshIds, refreshAddresses: true);
     if (isClosed) return;
     emit(
       state.copyWith(
@@ -395,6 +421,10 @@ class ProfileSavedVideosBloc
   /// Reconciles displayed videos against a fresh [freshIds] list: keeps saved
   /// videos still present, drops the rest, and fetches only the newly-saved
   /// IDs in the loaded window. Bounded so it never bulk-fetches.
+  ///
+  /// With [refreshAddresses], every address in the window is fetched again
+  /// too, since an edit republishes a video at its address (#7135). A tile
+  /// whose address comes back empty keeps the revision already shown.
   Future<
     ({
       List<VideoEvent> videos,
@@ -403,11 +433,52 @@ class ProfileSavedVideosBloc
       int resolvedVideoCount,
     })
   >
-  _reconcile(List<String> freshIds) async {
-    final byId = {
+  _reconcile(List<String> freshIds, {bool refreshAddresses = false}) async {
+    final byReference = <String, VideoEvent>{
       for (final video in state.videos)
-        if (!_deletedVideoFilter(video)) video.id: video,
+        if (!_deletedVideoFilter(video))
+          for (final reference in _referencesTo(video)) reference: video,
     };
+    final windowIds = _reconcileWindow(freshIds);
+    // An address new to the list may name a tile fetched under its event id
+    // (a bookmark the repository has just matched to its address), which can
+    // be a revision from before an edit.
+    final previousIds = state.savedEventIds.toSet();
+
+    final idsToFetch = windowIds
+        .where(
+          (id) =>
+              !byReference.containsKey(id) ||
+              (_isAddress(id) &&
+                  (refreshAddresses || !previousIds.contains(id))),
+        )
+        .toList();
+    // Counts this window's fetch only. A video carried over in [byReference]
+    // but absent from [windowIds] is no longer saved, so it is no evidence
+    // that the window resolved — seeding the count with it would send an
+    // all-unresolved window back to the empty state this fix exists to avoid.
+    var resolvedVideoCount = 0;
+    if (idsToFetch.isNotEmpty) {
+      final fetched = await _resolveReferences(idsToFetch, cacheResults: true);
+      resolvedVideoCount = fetched.length;
+      for (final MapEntry(key: reference, value: video) in fetched.entries) {
+        if (video.isSupportedOnCurrentPlatform) byReference[reference] = video;
+      }
+    }
+
+    final videos = _oneTilePerVideo([
+      for (final id in windowIds) ?byReference[id],
+    ]);
+    return (
+      videos: videos,
+      nextPageOffset: windowIds.length,
+      hasMoreContent: windowIds.length < freshIds.length,
+      resolvedVideoCount: videos.isEmpty ? resolvedVideoCount : 0,
+    );
+  }
+
+  /// The leading [freshIds] that [_reconcile] resolves.
+  List<String> _reconcileWindow(List<String> freshIds) {
     // Anchor on the previous top ID rather than a length delta, so a capped
     // persisted ID list can't balloon the reconcile window into a full
     // re-fetch on reopen (see ProfileLikedVideosBloc for the rationale).
@@ -420,32 +491,7 @@ class ProfileSavedVideosBloc
       loadedWindow,
       ProfileTabPagination.pageSize,
     ).clamp(0, freshIds.length);
-    final windowIds = freshIds.take(windowSize).toList();
-
-    final missingIds = windowIds.where((id) => !byId.containsKey(id)).toList();
-    // Counts this window's fetch only. A video carried over in [byId] but
-    // absent from [windowIds] is no longer saved, so it is no evidence that
-    // the window resolved — seeding the count with it would send an
-    // all-unresolved window back to the empty state this fix exists to avoid.
-    var resolvedVideoCount = 0;
-    if (missingIds.isNotEmpty) {
-      final fetchResult = await _fetchVideos(missingIds, cacheResults: true);
-      resolvedVideoCount = fetchResult.resolvedVideoCount;
-      for (final video in fetchResult.videos) {
-        byId[video.id] = video;
-      }
-    }
-
-    final videos = windowIds
-        .map((id) => byId[id])
-        .whereType<VideoEvent>()
-        .toList();
-    return (
-      videos: videos,
-      nextPageOffset: windowIds.length,
-      hasMoreContent: windowIds.length < freshIds.length,
-      resolvedVideoCount: videos.isEmpty ? resolvedVideoCount : 0,
-    );
+    return freshIds.take(windowSize).toList();
   }
 
   /// Number of fresh IDs prepended above the previous top item, located by
@@ -495,18 +541,20 @@ class ProfileSavedVideosBloc
   ProfileVideoListSnapshot _filterDeletedSnapshot(
     ProfileVideoListSnapshot snapshot,
   ) {
-    final deletedVideoIds = snapshot.videos
-        .where(_deletedVideoFilter)
-        .map((video) => video.id)
-        .toSet();
-    if (deletedVideoIds.isEmpty) return snapshot;
+    final deletedReferences = <String>{};
+    final videos = <VideoEvent>[];
+    for (final video in snapshot.videos) {
+      if (_deletedVideoFilter(video)) {
+        deletedReferences.addAll(_referencesTo(video));
+      } else {
+        videos.add(video);
+      }
+    }
+    if (deletedReferences.isEmpty) return snapshot;
 
-    final videos = snapshot.videos
-        .where((video) => !deletedVideoIds.contains(video.id))
-        .toList();
     final pruned = pruneProfileVideoListIds(
       itemIds: snapshot.itemIds,
-      removedIds: deletedVideoIds,
+      removedIds: deletedReferences,
       nextPageOffset: snapshot.nextPageOffset,
     );
     return ProfileVideoListSnapshot(
@@ -586,9 +634,10 @@ class ProfileSavedVideosBloc
         category: LogCategory.video,
       );
 
-      final existingIds = state.videos.map((v) => v.id).toSet();
+      // A video saved under two references can land on two pages.
+      final shownVideos = state.videos.map((v) => v.feedDedupKey).toSet();
       final uniqueNewVideos = newVideos
-          .where((v) => !existingIds.contains(v.id))
+          .where((v) => !shownVideos.contains(v.feedDedupKey))
           .toList();
 
       final newOffset = offset + nextPageIds.length;
@@ -633,12 +682,12 @@ class ProfileSavedVideosBloc
     ProfileSavedVideosVideoRemoved event,
     Emitter<ProfileSavedVideosState> emit,
   ) async {
-    final removedVideoIds = <String>{event.videoId};
+    final removedReferences = <String>{event.videoId};
     final videos = <VideoEvent>[];
     for (final video in state.videos) {
       final isRemoved = video.id == event.videoId || _deletedVideoFilter(video);
       if (isRemoved) {
-        removedVideoIds.add(video.id);
+        removedReferences.addAll(_referencesTo(video));
       } else {
         videos.add(video);
       }
@@ -646,7 +695,7 @@ class ProfileSavedVideosBloc
 
     final pruned = pruneProfileVideoListIds(
       itemIds: state.savedEventIds,
-      removedIds: removedVideoIds,
+      removedIds: removedReferences,
       nextPageOffset: state.nextPageOffset,
     );
     if (videos.length == state.videos.length &&
@@ -672,40 +721,72 @@ class ProfileSavedVideosBloc
     );
   }
 
-  /// Fetch videos for the given event IDs via [VideosRepository], which
-  /// handles cache-first lookups (SQLite local storage → relay fallback).
+  /// Fetch the videos [references] name, one tile per video.
   ///
-  /// When [cacheResults] is true, videos fetched from relay are saved to
-  /// local storage for future cache hits. Only use for first-page loads to
-  /// avoid bloating the cache.
-  ///
-  /// Returns videos in the same order as [eventIds], excluding videos not
-  /// found in cache or relay and videos whose format is unsupported on the
-  /// current platform.
+  /// Returns videos in the same order as [references], excluding references
+  /// not found in cache or relay and videos whose format is unsupported on
+  /// the current platform. `resolvedVideoCount` counts them before that
+  /// platform filter.
   Future<({List<VideoEvent> videos, int resolvedVideoCount})> _fetchVideos(
-    List<String> eventIds, {
+    List<String> references, {
     bool cacheResults = false,
   }) async {
-    if (eventIds.isEmpty) {
+    if (references.isEmpty) {
       return (videos: <VideoEvent>[], resolvedVideoCount: 0);
     }
 
-    final videos = await _videosRepository.getVideosByIds(
-      eventIds,
+    final byReference = await _resolveReferences(
+      references,
       cacheResults: cacheResults,
     );
-
-    Log.debug(
-      'ProfileSavedVideosBloc: Fetched ${videos.length}/${eventIds.length} '
-      'videos (cacheResults: $cacheResults)',
-      name: 'ProfileSavedVideosBloc',
-      category: LogCategory.video,
-    );
-
+    final videos = _oneTilePerVideo([
+      for (final reference in references) ?byReference[reference],
+    ]);
     return (
       videos: videos.where((v) => v.isSupportedOnCurrentPlatform).toList(),
       resolvedVideoCount: videos.length,
     );
+  }
+
+  /// The videos [references] resolve to, keyed by reference, via
+  /// [VideosRepository], which checks local storage before the relays. An
+  /// address resolves to its latest revision, an event id to that event.
+  /// References that resolve to nothing are absent.
+  ///
+  /// When [cacheResults] is true, videos fetched from relay are saved to
+  /// local storage for future cache hits.
+  Future<Map<String, VideoEvent>> _resolveReferences(
+    List<String> references, {
+    required bool cacheResults,
+  }) async {
+    final addresses = references.where(_isAddress).toList();
+    final eventIds = references.where((r) => !_isAddress(r)).toList();
+    final [videosByEventId, videosByAddress] = await Future.wait([
+      if (eventIds.isEmpty)
+        Future.value(const <VideoEvent>[])
+      else
+        _videosRepository.getVideosByIds(eventIds, cacheResults: cacheResults),
+      if (addresses.isEmpty)
+        Future.value(const <VideoEvent>[])
+      else
+        _videosRepository.getVideosByAddressableIds(
+          addresses,
+          cacheResults: cacheResults,
+        ),
+    ]);
+    final byReference = <String, VideoEvent>{
+      for (final video in videosByEventId) video.id: video,
+      for (final video in videosByAddress) ?video.addressableId: video,
+    };
+
+    Log.debug(
+      'ProfileSavedVideosBloc: Fetched ${byReference.length}/'
+      '${references.length} videos (cacheResults: $cacheResults)',
+      name: 'ProfileSavedVideosBloc',
+      category: LogCategory.video,
+    );
+
+    return byReference;
   }
 
   @override

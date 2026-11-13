@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -1194,6 +1195,360 @@ void main() {
           );
         },
       );
+    });
+
+    group('addressable video (#7135)', () {
+      final address = '34236:$_ownerPubkey:clip';
+
+      SelectListCubit buildAddressableCubit() => SelectListCubit(
+        service: service,
+        videoEventId: _videoId,
+        videoAddress: address,
+        currentOwnerPubkey: () => _ownerPubkey,
+      );
+
+      test('picks a list that holds the video by its coordinate', () {
+        stubLists([
+          _list('holds', videoEventIds: [address]),
+          _list('empty'),
+        ]);
+        final cubit = buildAddressableCubit();
+        addTearDown(cubit.close);
+
+        expect(cubit.state.memberListIds, {'holds'});
+        expect(cubit.state.selectedListIds, {'holds'});
+      });
+
+      test('adds the video by its coordinate', () async {
+        stubLists([_list('empty')]);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
+        final cubit = buildAddressableCubit();
+        addTearDown(cubit.close);
+
+        cubit.toggled('empty');
+        final status = await cubit.submitted();
+
+        expect(status, SelectListStatus.saved);
+        verify(
+          () => service.addVideoToList('$_ownerPubkey:empty', address),
+        ).called(1);
+        verifyNever(() => service.addVideoToList(any(), _videoId));
+      });
+
+      test('removes the video under every name the list holds it by', () async {
+        stubLists([
+          _list('holds', videoEventIds: [_videoId, _otherVideoId, address]),
+        ]);
+        when(
+          () => service.removeVideoFromList(any(), any()),
+        ).thenAnswer((_) async => true);
+        final cubit = buildAddressableCubit();
+        addTearDown(cubit.close);
+
+        cubit.toggled('holds');
+        final status = await cubit.submitted();
+
+        expect(status, SelectListStatus.saved);
+        verify(
+          () => service.removeVideoFromList('$_ownerPubkey:holds', _videoId),
+        ).called(1);
+        verify(
+          () => service.removeVideoFromList('$_ownerPubkey:holds', address),
+        ).called(1);
+        verifyNever(() => service.removeVideoFromList(any(), _otherVideoId));
+      });
+
+      test('reports a failure when either name could not be removed', () async {
+        // The refused name comes first, so a later success cannot mask it.
+        stubLists([
+          _list('holds', videoEventIds: [address, _videoId]),
+        ]);
+        when(
+          () => service.removeVideoFromList(any(), address),
+        ).thenAnswer((_) async => false);
+        when(
+          () => service.removeVideoFromList(any(), _videoId),
+        ).thenAnswer((_) async => true);
+        final cubit = buildAddressableCubit();
+        addTearDown(cubit.close);
+
+        cubit.toggled('holds');
+
+        expect(await cubit.submitted(), SelectListStatus.failure);
+      });
+
+      test('names a private list with no room for the coordinate', () async {
+        // 896 event-id items leave room for one more event id but not for a
+        // coordinate with a long d-tag, so only the stored form decides.
+        final longAddress = '34236:$_ownerPubkey:${'d' * 60}';
+        final full = _list(
+          'full',
+          isPublic: false,
+          videoEventIds: [
+            for (var i = 0; i < 896; i++) i.toString().padLeft(64, '0'),
+          ],
+        );
+        expect(
+          CuratedListConverter.wouldExceedPrivateItemLimit(full, _videoId),
+          isFalse,
+        );
+        expect(
+          CuratedListConverter.wouldExceedPrivateItemLimit(full, longAddress),
+          isTrue,
+        );
+        stubLists([full]);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => false);
+        final cubit = SelectListCubit(
+          service: service,
+          videoEventId: _videoId,
+          videoAddress: longAddress,
+          currentOwnerPubkey: () => _ownerPubkey,
+        );
+        addTearDown(cubit.close);
+
+        cubit.toggled('full');
+
+        expect(await cubit.submitted(), SelectListStatus.failureListFull);
+      });
+    });
+
+    // A list saved before #7135 holds the event id of the version it saw. Once
+    // the lookup reports that version's coordinate it is the same video.
+    group('older versions (#7135)', () {
+      final address = '34236:$_ownerPubkey:clip';
+      final olderVideoId = 'c' * 64;
+
+      SelectListCubit buildResolvingCubit(
+        CuratedListVideoAddressResolver resolve,
+      ) => SelectListCubit(
+        service: service,
+        videoEventId: _videoId,
+        videoAddress: address,
+        currentOwnerPubkey: () => _ownerPubkey,
+        resolveVideoAddresses: resolve,
+      );
+
+      test('picks a list holding an older version once the lookup '
+          'answers', () async {
+        stubLists([
+          _list('older', videoEventIds: [olderVideoId]),
+          _list('other', videoEventIds: [_otherVideoId]),
+        ]);
+        final requested = <List<String>>[];
+        final cubit = buildResolvingCubit((ids) async {
+          requested.add(ids);
+          return {olderVideoId: address};
+        });
+        addTearDown(cubit.close);
+        expect(cubit.state.memberListIds, isEmpty);
+
+        await pumpEventQueue();
+
+        expect(requested, [
+          [olderVideoId, _otherVideoId],
+        ]);
+        expect(cubit.state.memberListIds, {'older'});
+        expect(cubit.state.selectedListIds, {'older'});
+      });
+
+      test('keeps a pick made before the lookup answers', () async {
+        stubLists([
+          _list('older', videoEventIds: [olderVideoId]),
+          _list('empty'),
+        ]);
+        final lookup = Completer<Map<String, String>>();
+        final cubit = buildResolvingCubit((_) => lookup.future);
+        addTearDown(cubit.close);
+
+        cubit.toggled('empty');
+        lookup.complete({olderVideoId: address});
+        await pumpEventQueue();
+
+        expect(cubit.state.memberListIds, {'older'});
+        expect(cubit.state.selectedListIds, {'older', 'empty'});
+        expect(cubit.state.listIdsToAdd, {'empty'});
+      });
+
+      test(
+        'unpicking drops both the coordinate and the older version',
+        () async {
+          stubLists([
+            _list(
+              'holds',
+              videoEventIds: [olderVideoId, _otherVideoId, address],
+            ),
+          ]);
+          when(
+            () => service.removeVideoFromList(any(), any()),
+          ).thenAnswer((_) async => true);
+          final cubit = buildResolvingCubit(
+            (_) async => {olderVideoId: address},
+          );
+          addTearDown(cubit.close);
+          await pumpEventQueue();
+
+          cubit.toggled('holds');
+          expect(await cubit.submitted(), SelectListStatus.saved);
+
+          verify(
+            () => service.removeVideoFromList(
+              '$_ownerPubkey:holds',
+              olderVideoId,
+            ),
+          ).called(1);
+          verify(
+            () => service.removeVideoFromList('$_ownerPubkey:holds', address),
+          ).called(1);
+          verifyNever(() => service.removeVideoFromList(any(), _otherVideoId));
+        },
+      );
+
+      test('keeps membership as it was when the lookup fails', () async {
+        stubLists([
+          _list('holds', videoEventIds: [address]),
+          _list('older', videoEventIds: [olderVideoId]),
+        ]);
+        final lookup = Completer<Map<String, String>>();
+        final cubit = buildResolvingCubit((_) => lookup.future);
+        addTearDown(cubit.close);
+        cubit.toggled('holds');
+        final before = cubit.state;
+        expect(before.memberListIds, {'holds'});
+
+        lookup.completeError(Exception('relay down'));
+        await pumpEventQueue();
+
+        expect(cubit.state, before);
+      });
+
+      test('still knows the older version after the service is '
+          'replaced', () async {
+        stubLists([
+          _list('older', videoEventIds: [olderVideoId]),
+        ]);
+        final cubit = buildResolvingCubit(
+          (_) async => {olderVideoId: address},
+        );
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+        final replacement = _MockCuratedListService();
+        when(() => replacement.isCurrentSession).thenReturn(true);
+        when(() => replacement.pickerListsForOwner(any())).thenReturn([
+          _list('older', videoEventIds: [olderVideoId]),
+        ]);
+
+        cubit.serviceChanged(replacement);
+
+        expect(cubit.state.memberListIds, {'older'});
+      });
+
+      test('a save made before the lookup answers waits for it, so the '
+          'older version is removed too', () async {
+        // What #7135 left for anyone who re-added a video after editing it:
+        // the list names both versions by event id.
+        stubLists([
+          _list('holds', videoEventIds: [olderVideoId, _videoId]),
+        ]);
+        when(
+          () => service.removeVideoFromList(any(), any()),
+        ).thenAnswer((_) async => true);
+        final lookup = Completer<Map<String, String>>();
+        final cubit = buildResolvingCubit((_) => lookup.future);
+        addTearDown(cubit.close);
+        expect(cubit.state.memberListIds, {'holds'});
+
+        cubit.toggled('holds');
+        final save = cubit.submitted();
+        lookup.complete({olderVideoId: address});
+
+        expect(await save, SelectListStatus.saved);
+        verify(
+          () => service.removeVideoFromList('$_ownerPubkey:holds', _videoId),
+        ).called(1);
+        verify(
+          () =>
+              service.removeVideoFromList('$_ownerPubkey:holds', olderVideoId),
+        ).called(1);
+      });
+
+      test('a save made before the lookup answers does not add the video '
+          'again to a list that holds an older version', () async {
+        stubLists([
+          _list('older', videoEventIds: [olderVideoId]),
+        ]);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
+        final lookup = Completer<Map<String, String>>();
+        final cubit = buildResolvingCubit((_) => lookup.future);
+        addTearDown(cubit.close);
+        expect(cubit.state.memberListIds, isEmpty);
+
+        cubit.toggled('older');
+        final save = cubit.submitted();
+        lookup.complete({olderVideoId: address});
+
+        expect(await save, SelectListStatus.saved);
+        verifyNever(() => service.addVideoToList(any(), any()));
+        expect(cubit.state.memberListIds, {'older'});
+      });
+
+      test('saves the picks when the lookup fails', () async {
+        stubLists([
+          _list('holds', videoEventIds: [address]),
+          _list('other', videoEventIds: [_otherVideoId]),
+          _list('empty'),
+        ]);
+        when(
+          () => service.addVideoToList(any(), any()),
+        ).thenAnswer((_) async => true);
+        when(
+          () => service.removeVideoFromList(any(), any()),
+        ).thenAnswer((_) async => true);
+        final lookup = Completer<Map<String, String>>();
+        final cubit = buildResolvingCubit((_) => lookup.future);
+        addTearDown(cubit.close);
+
+        cubit
+          ..toggled('holds')
+          ..toggled('empty');
+        final save = cubit.submitted();
+        lookup.completeError(Exception('relay down'));
+
+        expect(await save, SelectListStatus.saved);
+        verify(
+          () => service.removeVideoFromList('$_ownerPubkey:holds', address),
+        ).called(1);
+        verify(
+          () => service.addVideoToList('$_ownerPubkey:empty', address),
+        ).called(1);
+      });
+
+      test('asks nothing for a video without a coordinate', () async {
+        stubLists([
+          _list('older', videoEventIds: [olderVideoId]),
+        ]);
+        var asked = false;
+        final cubit = SelectListCubit(
+          service: service,
+          videoEventId: _videoId,
+          currentOwnerPubkey: () => _ownerPubkey,
+          resolveVideoAddresses: (_) async {
+            asked = true;
+            return const {};
+          },
+        );
+        addTearDown(cubit.close);
+
+        await pumpEventQueue();
+
+        expect(asked, isFalse);
+        expect(cubit.state.memberListIds, isEmpty);
+      });
     });
 
     group('close', () {

@@ -15,6 +15,7 @@ import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
+import 'package:openvine/providers/video_address_lookup.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
@@ -308,6 +309,10 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       _manageCubit = CuratedListManagePostsCubit(
         service: service,
         listId: widget.listId,
+        resolveVideoAddresses: (eventIds) => lookUpVideoAddresses(
+          ref.read(videosRepositoryProvider),
+          eventIds,
+        ),
       );
     });
     announceDetached(
@@ -748,8 +753,10 @@ class _ListBody extends ConsumerWidget {
             backgroundColor: context.vineColors.surfaceContainerHigh,
             showSubscribedListBadge: false,
             selectedVideoIds: selectedVideoIds,
-            onVideoTap: (videoList, index) =>
-                cubit.togglePost(videoList[index].id),
+            onVideoTap: (videoList, index) => cubit.togglePost(
+              videoList[index].id,
+              videoAddress: videoList[index].addressableId,
+            ),
             emptyBuilder: () => const _EmptyListMessage(),
           ),
         ),
