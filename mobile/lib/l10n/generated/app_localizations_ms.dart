@@ -10057,6 +10057,30 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Warna bayang';
 
   @override
+  String get videoEditorTextLineHeight => 'Ketinggian baris';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Jarak huruf';
+
+  @override
+  String get videoEditorTextBold => 'Tebal';
+
+  @override
+  String get videoEditorTextItalic => 'Condong';
+
+  @override
+  String get videoEditorTextUnderline => 'Garis bawah';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Garis lorek';
+
+  @override
+  String get videoEditorTextUppercase => 'Huruf besar semua';
+
+  @override
+  String get videoEditorTextCurve => 'Lengkungan';
+
+  @override
   String get videoEditorTextFillSolid => 'Padu';
 
   @override

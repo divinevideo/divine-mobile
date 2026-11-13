@@ -1,5 +1,6 @@
 // ABOUTME: The look of a free-form text overlay — font, colors or gradient,
-// ABOUTME: background mode, alignment, size, outline and shadow, and
+// ABOUTME: background mode, alignment, size, outline and shadow, formatting,
+// ABOUTME: and
 // ABOUTME: enter/leave/loop animation — as one serializable unit that can be
 // ABOUTME: lifted off a layer and applied to another (#7742).
 
@@ -13,6 +14,7 @@ import 'package:openvine/extensions/layer_animation_apply.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/layer_slide_point.dart';
 import 'package:openvine/models/video_editor/text_effects.dart';
+import 'package:openvine/models/video_editor/text_formatting.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerBackgroundMode, TextGradient, TextLayer;
@@ -41,6 +43,7 @@ class TitleStyle extends Equatable {
     this.align = TextAlign.center,
     this.fontScale = 1,
     this.effects = TextEffects.none,
+    this.formatting = TextFormatting.none,
     this.gradient,
     this.enter = const [],
     this.leave = const [],
@@ -65,6 +68,7 @@ class TitleStyle extends Equatable {
       align: layer.align,
       fontScale: layer.fontScale,
       effects: TextEffects.of(layer),
+      formatting: TextFormatting.of(layer),
       gradient: layer.hasGradient ? layer.gradient : null,
       enter: layer.divineEnterAnimations,
       leave: layer.divineLeaveAnimations,
@@ -106,6 +110,7 @@ class TitleStyle extends Equatable {
       ),
       fontScale: (fontScale as num?)?.toDouble() ?? 1,
       effects: TextEffects.fromJson(json['effects']),
+      formatting: TextFormatting.fromJson(json['formatting']),
       gradient: _gradientFromJson(json['gradient']),
       enter: enter,
       leave: leave,
@@ -139,6 +144,10 @@ class TitleStyle extends Equatable {
 
   /// The outline and shadow drawn around the text.
   final TextEffects effects;
+
+  /// The line height, letter spacing, weight, slant, decoration and capitals
+  /// of the text.
+  final TextFormatting formatting;
 
   /// The color gradient that fills the letters in place of [color], or
   /// `null` when they are filled with [color].
@@ -191,7 +200,9 @@ class TitleStyle extends Equatable {
     final restyled = effects
         .applyTo(layer)
         .copyWith(
-          textStyle: effects.applyToStyle(font()),
+          textStyle: effects.applyToStyle(formatting.applyToStyle(font())),
+          uppercase: formatting.uppercase,
+          curvature: formatting.curvature,
           color: color,
           background: background,
           colorMode: colorMode,
@@ -223,6 +234,7 @@ class TitleStyle extends Equatable {
     'align': align.name,
     'fontScale': fontScale,
     'effects': effects.toJson(),
+    'formatting': formatting.toJson(),
     if (gradient case final gradient?) 'gradient': _gradientToJson(gradient),
     'enter': [for (final animation in enter) animation.toMap()],
     'leave': [for (final animation in leave) animation.toMap()],
@@ -241,6 +253,7 @@ class TitleStyle extends Equatable {
     align,
     fontScale,
     effects,
+    formatting,
     gradient,
     enter,
     leave,

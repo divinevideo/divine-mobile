@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +17,7 @@ import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.d
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/text_effects.dart';
+import 'package:openvine/models/video_editor/text_formatting.dart';
 import 'package:openvine/models/video_editor/text_gradient_presets.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/screens/video_editor/video_text_editor_screen.dart';
@@ -27,6 +29,8 @@ import 'package:openvine/widgets/video_editor/text_effects_controls.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../helpers/scroll.dart';
 
 class MockVideoEditorTextBloc
     extends MockBloc<VideoEditorTextEvent, VideoEditorTextState>
@@ -292,6 +296,24 @@ void main() {
       TextEditorState editor(WidgetTester tester) =>
           tester.state<TextEditorState>(find.byType(TextEditor));
 
+      /// Taps [label]'s slider once the panel has scrolled it into view: the
+      /// formatting controls come first.
+      Future<void> tapSlider(WidgetTester tester, String label) async {
+        await scrollUntilTappable(
+          tester,
+          slider(label),
+          100,
+          scrollable: find
+              .descendant(
+                of: find.byType(VideoEditorTextEffectsPanel),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.tap(slider(label));
+        await tester.pump();
+      }
+
       testWidgets('dispatches the outline and shadow of the edited layer', (
         tester,
       ) async {
@@ -341,6 +363,26 @@ void main() {
         expect(find.byType(VideoEditorColorPickerSheet), findsNothing);
       });
 
+      testWidgets('keeps the panel low enough to show the text above it', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: const VideoEditorTextState(showEffectsPanel: true),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // No keyboard has shown in the test, so a share of the screen stands
+        // in for its height.
+        final screenHeight =
+            tester.view.physicalSize.height / tester.view.devicePixelRatio;
+        expect(
+          tester.getSize(find.byType(VideoEditorTextEffectsPanel)).height,
+          lessThanOrEqualTo(screenHeight * 0.4),
+        );
+      });
+
       testWidgets('writes an outline from the panel to the live editor', (
         tester,
       ) async {
@@ -351,8 +393,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.tap(slider(l10n.videoEditorTextOutlineThickness));
-        await tester.pump();
+        await tapSlider(tester, l10n.videoEditorTextOutlineThickness);
 
         expect(editor(tester).outlineWidth, greaterThan(0));
         verify(
@@ -370,10 +411,128 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.tap(slider(l10n.videoEditorTextShadowStrength));
-        await tester.pump();
+        await tapSlider(tester, l10n.videoEditorTextShadowStrength);
 
         expect(editor(tester).selectedTextStyle.shadows, isNotEmpty);
+      });
+    });
+
+    group('Formatting', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      Finder toggle(String label) => find.byWidgetPredicate(
+        (widget) => widget is DivineIconButton && widget.semanticLabel == label,
+      );
+
+      TextEditorState editor(WidgetTester tester) =>
+          tester.state<TextEditorState>(find.byType(TextEditor));
+
+      Future<void> tapToggle(WidgetTester tester, String label) async {
+        await scrollUntilTappable(
+          tester,
+          toggle(label),
+          100,
+          // The panel's own; the color rows inside it scroll sideways.
+          scrollable: find
+              .descendant(
+                of: find.byType(VideoEditorTextEffectsPanel),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.tap(toggle(label));
+        await tester.pump();
+      }
+
+      testWidgets('dispatches the formatting of the edited layer', (
+        tester,
+      ) async {
+        const formatting = TextFormatting(lineHeight: 1.5, underline: true);
+        final layer = formatting.applyTo(
+          TextLayer(text: 'Test', textStyle: const TextStyle()),
+        );
+
+        await tester.pumpWidget(buildWidget(layer: layer));
+        await tester.pump();
+
+        final captured = verify(
+          () => mockBloc.add(
+            captureAny(that: isA<VideoEditorTextInitFromLayer>()),
+          ),
+        ).captured;
+        final event = captured.first as VideoEditorTextInitFromLayer;
+        expect(event.formatting, equals(formatting));
+      });
+
+      testWidgets('writes bold from the panel to the live editor', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: const VideoEditorTextState(showEffectsPanel: true),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tapToggle(tester, l10n.videoEditorTextBold);
+
+        expect(editor(tester).selectedTextStyle.fontWeight, FontWeight.w700);
+        verify(
+          () => mockBloc.add(
+            any(that: isA<VideoEditorTextFormattingChanged>()),
+          ),
+        ).called(1);
+      });
+
+      testWidgets('writes capitals from the panel to the live editor', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: const VideoEditorTextState(showEffectsPanel: true),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tapToggle(tester, l10n.videoEditorTextUppercase);
+
+        expect(editor(tester).uppercase, isTrue);
+      });
+
+      testWidgets('bends the text from the panel in the live editor', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: const VideoEditorTextState(showEffectsPanel: true),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final slider = find.byWidgetPredicate(
+          (widget) =>
+              widget is DivineSlider &&
+              widget.semanticLabel == l10n.videoEditorTextCurve,
+        );
+        await scrollUntilTappable(
+          tester,
+          slider,
+          100,
+          scrollable: find
+              .descendant(
+                of: find.byType(VideoEditorTextEffectsPanel),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+
+        // Right of the middle bends the text into an arch.
+        await tester.tapAt(
+          tester.getCenter(slider) +
+              Offset(tester.getSize(slider).width / 4, 0),
+        );
+        await tester.pump();
+
+        expect(editor(tester).curvature, greaterThan(0));
       });
     });
 

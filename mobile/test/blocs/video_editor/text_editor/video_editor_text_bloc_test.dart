@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.dart';
 import 'package:openvine/models/video_editor/text_effects.dart';
+import 'package:openvine/models/video_editor/text_formatting.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 void main() {
@@ -450,6 +451,24 @@ void main() {
       );
     });
 
+    group('VideoEditorTextFormattingChanged', () {
+      const formatting = TextFormatting(lineHeight: 1.2, bold: true);
+
+      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
+        'stores the formatting',
+        build: buildBloc,
+        act: (bloc) =>
+            bloc.add(const VideoEditorTextFormattingChanged(formatting)),
+        expect: () => [
+          isA<VideoEditorTextState>().having(
+            (s) => s.formatting,
+            'formatting',
+            formatting,
+          ),
+        ],
+      );
+    });
+
     group('VideoEditorTextGradientChanged', () {
       const gradient = TextGradient(
         colors: [Color(0xFF34BBF1), Color(0xFF8568FF)],
@@ -652,6 +671,7 @@ void main() {
             backgroundStyle: LayerBackgroundMode.onlyColor,
             selectedFontIndex: 3,
             effects: TextEffects(outlineThickness: 0.25),
+            formatting: TextFormatting(italic: true),
           ),
         ),
         expect: () => [
@@ -660,6 +680,11 @@ void main() {
                 (s) => s.effects,
                 'effects',
                 const TextEffects(outlineThickness: 0.25),
+              )
+              .having(
+                (s) => s.formatting,
+                'formatting',
+                const TextFormatting(italic: true),
               )
               .having((s) => s.text, 'text', 'Existing Text')
               .having((s) => s.alignment, 'alignment', TextAlign.left)

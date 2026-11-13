@@ -9834,6 +9834,30 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTextShadowColor => 'የጥላ ቀለም';
 
   @override
+  String get videoEditorTextLineHeight => 'የመስመር ቁመት';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'የፊደል ክፍተት';
+
+  @override
+  String get videoEditorTextBold => 'ደማቅ';
+
+  @override
+  String get videoEditorTextItalic => 'ሰያፍ';
+
+  @override
+  String get videoEditorTextUnderline => 'ከስር ማስመር';
+
+  @override
+  String get videoEditorTextStrikethrough => 'በመሃል ማስመር';
+
+  @override
+  String get videoEditorTextUppercase => 'ሁሉም በትልቅ ፊደል';
+
+  @override
+  String get videoEditorTextCurve => 'ጥምዝ';
+
+  @override
   String get videoEditorTextFillSolid => 'ነጠላ ቀለም';
 
   @override

@@ -10145,6 +10145,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Shadow color';
 
   @override
+  String get videoEditorTextLineHeight => 'Line height';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Letter spacing';
+
+  @override
+  String get videoEditorTextBold => 'Bold';
+
+  @override
+  String get videoEditorTextItalic => 'Italic';
+
+  @override
+  String get videoEditorTextUnderline => 'Underline';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Strikethrough';
+
+  @override
+  String get videoEditorTextUppercase => 'All caps';
+
+  @override
+  String get videoEditorTextCurve => 'Curve';
+
+  @override
   String get videoEditorTextFillSolid => 'Solid';
 
   @override

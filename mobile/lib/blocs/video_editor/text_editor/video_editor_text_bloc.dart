@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/text_effects.dart';
+import 'package:openvine/models/video_editor/text_formatting.dart';
 import 'package:openvine/models/video_editor/text_gradient_presets.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_extensions.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -30,6 +31,7 @@ class VideoEditorTextBloc
     on<VideoEditorTextFontSelectorToggled>(_onFontSelectorToggled);
     on<VideoEditorTextColorPickerToggled>(_onColorPickerToggled);
     on<VideoEditorTextEffectsChanged>(_onEffectsChanged);
+    on<VideoEditorTextFormattingChanged>(_onFormattingChanged);
     on<VideoEditorTextEffectsPanelToggled>(_onEffectsPanelToggled);
     on<VideoEditorTextGradientChanged>(_onGradientChanged);
     on<VideoEditorTextClosePanels>(_onClosePanels);
@@ -137,6 +139,15 @@ class VideoEditorTextBloc
     emit(state.copyWith(effects: event.effects));
   }
 
+  /// Updates the line height, letter spacing, weight, slant, decoration and
+  /// capitals.
+  void _onFormattingChanged(
+    VideoEditorTextFormattingChanged event,
+    Emitter<VideoEditorTextState> emit,
+  ) {
+    emit(state.copyWith(formatting: event.formatting));
+  }
+
   /// Fills the letters with a gradient, or with a single color again, and
   /// remembers the gradient for switching back to it.
   void _onGradientChanged(
@@ -200,6 +211,7 @@ class VideoEditorTextBloc
         backgroundStyle: event.backgroundStyle,
         selectedFontIndex: event.selectedFontIndex,
         effects: event.effects,
+        formatting: event.formatting,
         gradient: event.gradient,
         lastGradient: event.gradient,
       ),

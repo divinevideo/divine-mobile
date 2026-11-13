@@ -10099,6 +10099,30 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Schaduwkleur';
 
   @override
+  String get videoEditorTextLineHeight => 'Regelhoogte';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Letterafstand';
+
+  @override
+  String get videoEditorTextBold => 'Vet';
+
+  @override
+  String get videoEditorTextItalic => 'Cursief';
+
+  @override
+  String get videoEditorTextUnderline => 'Onderstrepen';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Doorhalen';
+
+  @override
+  String get videoEditorTextUppercase => 'Hoofdletters';
+
+  @override
+  String get videoEditorTextCurve => 'Kromming';
+
+  @override
   String get videoEditorTextFillSolid => 'Effen';
 
   @override

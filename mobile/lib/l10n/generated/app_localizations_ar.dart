@@ -10071,6 +10071,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTextShadowColor => 'لون الظل';
 
   @override
+  String get videoEditorTextLineHeight => 'ارتفاع السطر';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'تباعد الأحرف';
+
+  @override
+  String get videoEditorTextBold => 'غامق';
+
+  @override
+  String get videoEditorTextItalic => 'مائل';
+
+  @override
+  String get videoEditorTextUnderline => 'تسطير';
+
+  @override
+  String get videoEditorTextStrikethrough => 'يتوسطه خط';
+
+  @override
+  String get videoEditorTextUppercase => 'أحرف كبيرة';
+
+  @override
+  String get videoEditorTextCurve => 'انحناء';
+
+  @override
   String get videoEditorTextFillSolid => 'لون واحد';
 
   @override

@@ -9,6 +9,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/layer_slide_point.dart';
 import 'package:openvine/models/video_editor/text_effects.dart';
+import 'package:openvine/models/video_editor/text_formatting.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
@@ -49,6 +50,16 @@ void main() {
     shadowStrength: 0.25,
     shadowColor: Color(0x80000000),
   );
+  const formatting = TextFormatting(
+    lineHeight: 1.5,
+    letterSpacing: 3,
+    bold: true,
+    italic: true,
+    underline: true,
+    strikethrough: true,
+    uppercase: true,
+    curvature: 0.3,
+  );
   const gradient = TextGradient(
     colors: [Color(0xFFFFF140), Color(0xFFFF7640), Color(0xFFFF7FAF)],
     stops: [0, 0.4, 1],
@@ -67,6 +78,7 @@ void main() {
     align: TextAlign.left,
     fontScale: 1.6,
     effects: effects,
+    formatting: formatting,
     gradient: gradient,
     enter: [enterFade, enterSlide],
     leave: [leaveScale],
@@ -79,7 +91,11 @@ void main() {
       test('lifts the styling, animations and slide points off a layer', () {
         final layer = TextLayer(
           text: 'Episode 12',
-          textStyle: effects.applyToStyle(VideoEditorConstants.textFonts[0]()),
+          textStyle: effects.applyToStyle(
+            formatting.applyToStyle(VideoEditorConstants.textFonts[0]()),
+          ),
+          uppercase: true,
+          curvature: 0.3,
           color: style.color,
           background: style.background,
           colorMode: style.colorMode,
@@ -311,6 +327,7 @@ void main() {
         expect(decoded?.fontScale, 1);
         expect(decoded?.customSecondaryColor, isFalse);
         expect(decoded?.effects, TextEffects.none);
+        expect(decoded?.formatting, TextFormatting.none);
         expect(decoded?.gradient, isNull);
         expect(decoded?.enter, isEmpty);
         expect(decoded?.leave, isEmpty);
@@ -362,6 +379,10 @@ void main() {
         expect(result.outlineWidth, effects.outlineWidth);
         expect(result.outlineColor, effects.outlineColor);
         expect(result.textStyle?.shadows, effects.shadows);
+        expect(result.textStyle?.height, formatting.lineHeight);
+        expect(result.textStyle?.fontWeight, FontWeight.w700);
+        expect(result.uppercase, isTrue);
+        expect(result.curvature, 0.3);
         expect(result.gradient, gradient);
 
         expect(result.divineEnterAnimations, [enterFade, enterSlide]);
@@ -430,6 +451,24 @@ void main() {
 
         expect(result.gradient, isNull);
         expect(result.color, plain.color);
+      });
+
+      test('clears the formatting a plain style is applied over', () {
+        const plain = TitleStyle(
+          fontIndex: 0,
+          color: Color(0xFFFFFFFF),
+          background: Color(0xFF000000),
+          colorMode: LayerBackgroundMode.onlyColor,
+        );
+        final formatted = formatting.applyTo(target());
+
+        final result = plain.applyTo(
+          formatted,
+          canvasSize: canvas,
+          totalDuration: total,
+        );
+
+        expect(TextFormatting.of(result), TextFormatting.none);
       });
     });
   });

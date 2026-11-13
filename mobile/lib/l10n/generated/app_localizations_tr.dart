@@ -9970,6 +9970,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Gölge rengi';
 
   @override
+  String get videoEditorTextLineHeight => 'Satır yüksekliği';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Harf aralığı';
+
+  @override
+  String get videoEditorTextBold => 'Kalın';
+
+  @override
+  String get videoEditorTextItalic => 'İtalik';
+
+  @override
+  String get videoEditorTextUnderline => 'Altı çizili';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Üstü çizili';
+
+  @override
+  String get videoEditorTextUppercase => 'Tümü büyük harf';
+
+  @override
+  String get videoEditorTextCurve => 'Kavis';
+
+  @override
   String get videoEditorTextFillSolid => 'Düz';
 
   @override

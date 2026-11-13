@@ -10052,6 +10052,30 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorTextShadowColor => 'سائے کا رنگ';
 
   @override
+  String get videoEditorTextLineHeight => 'لائن کی اونچائی';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'حروف کا فاصلہ';
+
+  @override
+  String get videoEditorTextBold => 'بولڈ';
+
+  @override
+  String get videoEditorTextItalic => 'ترچھا';
+
+  @override
+  String get videoEditorTextUnderline => 'زیر خط';
+
+  @override
+  String get videoEditorTextStrikethrough => 'درمیان سے لکیر';
+
+  @override
+  String get videoEditorTextUppercase => 'تمام بڑے حروف';
+
+  @override
+  String get videoEditorTextCurve => 'خم';
+
+  @override
   String get videoEditorTextFillSolid => 'ایک رنگ';
 
   @override

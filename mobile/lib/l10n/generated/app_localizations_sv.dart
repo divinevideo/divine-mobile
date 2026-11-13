@@ -10052,6 +10052,30 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Skuggfärg';
 
   @override
+  String get videoEditorTextLineHeight => 'Radhöjd';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Teckenavstånd';
+
+  @override
+  String get videoEditorTextBold => 'Fet';
+
+  @override
+  String get videoEditorTextItalic => 'Kursiv';
+
+  @override
+  String get videoEditorTextUnderline => 'Understruken';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Genomstruken';
+
+  @override
+  String get videoEditorTextUppercase => 'Versaler';
+
+  @override
+  String get videoEditorTextCurve => 'Böjning';
+
+  @override
   String get videoEditorTextFillSolid => 'Enfärgad';
 
   @override

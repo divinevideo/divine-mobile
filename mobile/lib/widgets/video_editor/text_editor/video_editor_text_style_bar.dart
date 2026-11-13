@@ -1,4 +1,4 @@
-// ABOUTME: Style controls bar for text editor with color, alignment, background, outline and shadow, and font buttons.
+// ABOUTME: Style controls bar for text editor with color, alignment, background, text style, and font buttons.
 // ABOUTME: Directly accesses VideoEditorTextBloc for state management.
 
 import 'dart:math';
@@ -15,8 +15,8 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Style controls bar for text editor.
 ///
-/// Displays buttons for color, alignment, background style, outline and
-/// shadow, and font selection.
+/// Displays buttons for color, alignment, background style, text style
+/// (formatting, outline and shadow), and font selection.
 /// Directly accesses [VideoEditorTextBloc] for state management and syncs
 /// changes with the [TextEditorState] via [VideoTextEditorScope].
 class VideoEditorTextStyleBar extends StatelessWidget {
@@ -51,7 +51,7 @@ class VideoEditorTextStyleBar extends StatelessWidget {
     );
   }
 
-  /// Toggles a panel (font selector, color picker, or outline and shadow) and
+  /// Toggles a panel (font selector, color picker, or text style) and
   /// manages keyboard focus.
   void _togglePanel({
     required BuildContext context,

@@ -10180,6 +10180,30 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Schattenfarbe';
 
   @override
+  String get videoEditorTextLineHeight => 'Zeilenhöhe';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Zeichenabstand';
+
+  @override
+  String get videoEditorTextBold => 'Fett';
+
+  @override
+  String get videoEditorTextItalic => 'Kursiv';
+
+  @override
+  String get videoEditorTextUnderline => 'Unterstrichen';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Durchgestrichen';
+
+  @override
+  String get videoEditorTextUppercase => 'Großbuchstaben';
+
+  @override
+  String get videoEditorTextCurve => 'Rundung';
+
+  @override
   String get videoEditorTextFillSolid => 'Einfarbig';
 
   @override

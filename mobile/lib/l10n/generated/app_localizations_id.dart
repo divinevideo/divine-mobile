@@ -9960,6 +9960,30 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Warna bayangan';
 
   @override
+  String get videoEditorTextLineHeight => 'Tinggi baris';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Jarak huruf';
+
+  @override
+  String get videoEditorTextBold => 'Tebal';
+
+  @override
+  String get videoEditorTextItalic => 'Miring';
+
+  @override
+  String get videoEditorTextUnderline => 'Garis bawah';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Coret';
+
+  @override
+  String get videoEditorTextUppercase => 'Huruf kapital';
+
+  @override
+  String get videoEditorTextCurve => 'Lengkungan';
+
+  @override
   String get videoEditorTextFillSolid => 'Solid';
 
   @override

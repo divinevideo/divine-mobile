@@ -9603,6 +9603,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTextShadowColor => '그림자 색상';
 
   @override
+  String get videoEditorTextLineHeight => '줄 높이';
+
+  @override
+  String get videoEditorTextLetterSpacing => '자간';
+
+  @override
+  String get videoEditorTextBold => '굵게';
+
+  @override
+  String get videoEditorTextItalic => '기울임꼴';
+
+  @override
+  String get videoEditorTextUnderline => '밑줄';
+
+  @override
+  String get videoEditorTextStrikethrough => '취소선';
+
+  @override
+  String get videoEditorTextUppercase => '모두 대문자';
+
+  @override
+  String get videoEditorTextCurve => '곡선';
+
+  @override
   String get videoEditorTextFillSolid => '단색';
 
   @override

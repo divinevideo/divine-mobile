@@ -234,6 +234,13 @@ enum DivineIconName {
   textAlignCenter('text_align_center'),
   textAlignLeft('text_align_left'),
   textAlignRight('text_align_right'),
+  textBold('text_b'),
+  textItalic('text_italic'),
+  textStrikethrough('text_strikethrough'),
+  textUnderline('text_underline'),
+
+  /// Two capital As: text drawn in capital letters.
+  textUppercase('text_uppercase'),
   textBgNone('square'),
   textBgTransparent('square_duo'),
   textBgFill('square_fill'),

@@ -10275,6 +10275,30 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Kolor cienia';
 
   @override
+  String get videoEditorTextLineHeight => 'Wysokość wiersza';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Odstęp między literami';
+
+  @override
+  String get videoEditorTextBold => 'Pogrubienie';
+
+  @override
+  String get videoEditorTextItalic => 'Kursywa';
+
+  @override
+  String get videoEditorTextUnderline => 'Podkreślenie';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Przekreślenie';
+
+  @override
+  String get videoEditorTextUppercase => 'Wielkie litery';
+
+  @override
+  String get videoEditorTextCurve => 'Wygięcie';
+
+  @override
   String get videoEditorTextFillSolid => 'Jednolity';
 
   @override
