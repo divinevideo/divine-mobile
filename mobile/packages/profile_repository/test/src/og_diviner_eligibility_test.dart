@@ -44,7 +44,10 @@ http.Response _response(Object body) => http.Response(jsonEncode(body), 200);
   List<http.Request> requests,
   ProfileApiCache apiCache,
 })
-_fixture(FutureOr<http.Response> Function(http.Request) respond) {
+_fixture(
+  FutureOr<http.Response> Function(http.Request) respond, {
+  DateTime Function()? now,
+}) {
   final database = AppDatabase.test(NativeDatabase.memory());
   final requests = <http.Request>[];
   final client = MockClient((request) async {
@@ -56,7 +59,7 @@ _fixture(FutureOr<http.Response> Function(http.Request) respond) {
     httpClient: client,
     retryBaseDelay: Duration.zero,
   );
-  final apiCache = ProfileApiCache(client: api);
+  final apiCache = ProfileApiCache(client: api, now: now);
   addTearDown(database.close);
   addTearDown(client.close);
   return (
@@ -197,8 +200,67 @@ void main() {
       final fixture = _fixture((_) => _response(user));
 
       expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
+      expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
       expect(fixture.requests, hasLength(1));
     });
+
+    test(
+      'an unknown answer retries after its cooldown and can recover',
+      () async {
+        var now = DateTime.utc(2026, 11, 13);
+        var includeAnswer = false;
+        final fixture = _fixture(
+          (_) => _response(
+            includeAnswer ? _user() : (_user()..remove('is_og_diviner')),
+          ),
+          now: () => now,
+        );
+
+        expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
+        includeAnswer = true;
+        expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
+        expect(fixture.requests, hasLength(1));
+        now = now.add(const Duration(minutes: 1));
+        expect(await fixture.repository.isOgDiviner(_pubkey), isTrue);
+        expect(fixture.requests, hasLength(2));
+      },
+    );
+
+    test('a 404 answer is throttled across repeated badge reads', () async {
+      final fixture = _fixture((_) => http.Response('not found', 404));
+
+      expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
+      expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
+      expect(fixture.requests, hasLength(1));
+    });
+
+    test('a sparse bulk answer does not trigger per-row GETs', () async {
+      final fixture = _fixture((_) => _response({'users': <Object>[]}));
+
+      await fixture.repository.getBulkProfilesFromApi([_pubkey]);
+      expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
+      expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
+      expect(fixture.requests, hasLength(1));
+      expect(fixture.requests.single.method, 'POST');
+    });
+
+    test(
+      'a fresh response can replace an unknown before its cooldown',
+      () async {
+        var includeAnswer = false;
+        final fixture = _fixture(
+          (_) => _response(
+            includeAnswer ? _user() : (_user()..remove('is_og_diviner')),
+          ),
+        );
+
+        expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
+        includeAnswer = true;
+        await fixture.repository.getUserProfileFromApi(pubkey: _pubkey);
+        expect(await fixture.repository.isOgDiviner(_pubkey), isTrue);
+        expect(fixture.requests, hasLength(2));
+      },
+    );
 
     test('a failed lookup can recover on the next request', () async {
       var fail = true;
