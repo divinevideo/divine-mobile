@@ -513,10 +513,13 @@ void main() {
       await tester.pumpAndSettle();
 
       // `push`, not `go`: closing the video must pop back to the profile the
-      // creator was standing on, not reset to the feed.
+      // creator was standing on, not reset to the feed. The route names the
+      // creator, so the lookup cannot answer with another account's video
+      // under the same d tag (#10929).
       verify(
-        () =>
-            router.push<void>(RoutePaths.videoDetailForId(_publishedStableId)),
+        () => router.push<void>(
+          RoutePaths.videoDetailForId(_publishedStableId, author: _ownHex),
+        ),
       ).called(1);
       verifyNever(() => router.go(any()));
     });

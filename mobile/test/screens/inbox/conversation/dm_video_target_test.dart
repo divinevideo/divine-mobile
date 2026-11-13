@@ -48,7 +48,7 @@ void main() {
       expect(target.routeAuthor, author);
       expect(
         target.canonicalUrl,
-        'https://divine.video/video/$eventId',
+        'https://divine.video/video/$eventId?author=$author',
       );
     });
 
@@ -69,10 +69,44 @@ void main() {
       // share it, so an author-named share resolves by its coordinate alone.
       expect(target.routeId, '34236:$author:skate-loop');
       expect(target.routeAuthor, isNull);
+      // The copied link names the author too (#10929).
       expect(
         target.canonicalUrl,
-        'https://divine.video/video/skate-loop',
+        'https://divine.video/video/skate-loop?author=$author',
       );
+    });
+
+    test('reads the author a shared link names', () {
+      final target = resolveDmVideoTarget(
+        content: 'watch https://divine.video/video/skate-loop?author=$author',
+      );
+
+      expect(target, isNotNull);
+      expect(target!.stableId, 'skate-loop');
+      expect(target.authorPubkey, author);
+      // No kind to build a coordinate from, so the lookup is held to the
+      // author instead.
+      expect(target.routeId, 'skate-loop');
+      expect(target.routeAuthor, author);
+      expect(
+        target.canonicalUrl,
+        'https://divine.video/video/skate-loop?author=$author',
+      );
+    });
+
+    test('lets a citation of the same video keep its own author', () {
+      const linkAuthor =
+          '5566778855667788556677885566778855667788556677885566778855667788';
+      final target = resolveDmVideoTarget(
+        content: 'https://divine.video/video/skate-loop?author=$linkAuthor',
+        sharedVideoRef: const DmSharedVideoRef(
+          coordinateOrId: '34236:$author:skate-loop',
+          videoKind: DmSharedVideoKind.addressableShortVideo,
+        ),
+      );
+
+      expect(target!.authorPubkey, author);
+      expect(target.routeId, '34236:$author:skate-loop');
     });
 
     test(
@@ -192,6 +226,31 @@ void main() {
       expect(target?.stableId, 'abc123');
     });
 
+    // #10929: the id ends at `?`, so a cut inside the author query would
+    // otherwise resolve the bare d tag, unscoped.
+    test('ignores a URL whose author query the prefix cut through', () {
+      for (final cut in ['?', '?auth', '?author=', '?author=${'e' * 63}']) {
+        expect(
+          resolveDmVideoTarget(
+            content: 'note\n$url$cut',
+            contentIsTruncated: true,
+          ),
+          isNull,
+          reason: cut,
+        );
+      }
+    });
+
+    test('keeps a URL whose author query is complete in the prefix', () {
+      final target = resolveDmVideoTarget(
+        content: 'note\n$url?author=$author\nmore',
+        contentIsTruncated: true,
+      );
+
+      expect(target?.stableId, 'abc123');
+      expect(target?.routeAuthor, author);
+    });
+
     test('falls back to the citation when the URL is cut', () {
       final target = resolveDmVideoTarget(
         content: 'note\nhttps://divine.video/video/ab',
@@ -230,7 +289,7 @@ void main() {
       expect(target.routeId, equals('34236:$author:$dTag'));
       expect(
         target.canonicalUrl,
-        equals('https://divine.video/video/$dTag'),
+        equals('https://divine.video/video/$dTag?author=$author'),
       );
     });
 

@@ -416,6 +416,21 @@ void main() {
         );
       });
 
+      test('the video detail reads author', () {
+        const author =
+            'e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3';
+        final location = const VideoDetailRouteData(
+          id: 'stable_id',
+          author: author,
+        ).location;
+
+        expect(location, equals('/video/stable_id?author=$author'));
+        expect(
+          location,
+          equals(VideoDetailScreen.pathForId('stable_id', author: author)),
+        );
+      });
+
       test('the editor reads from', () {
         final location = const VideoEditorRouteData(
           from: VideoEditorScreen.libraryOrigin,
@@ -694,6 +709,17 @@ void main() {
                 'autoOpenComments',
                 isFalse,
               ),
+        );
+      });
+
+      test('a video link that names its author holds the lookup to it', () {
+        const author =
+            'e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3';
+        expect(
+          _build(_videoRouter(), '/video/stable_id?author=$author'),
+          isA<VideoDetailScreen>()
+              .having((screen) => screen.videoId, 'videoId', 'stable_id')
+              .having((screen) => screen.authorPubkey, 'authorPubkey', author),
         );
       });
 

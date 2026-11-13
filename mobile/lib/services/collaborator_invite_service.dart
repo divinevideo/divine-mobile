@@ -5,6 +5,7 @@ import 'dart:ui' show Locale;
 
 import 'package:dm_repository/dm_repository.dart';
 import 'package:equatable/equatable.dart';
+import 'package:models/models.dart' show divineVideoUrlWithAuthor;
 import 'package:openvine/l10n/l10n.dart';
 
 class CollaboratorInviteResult extends Equatable {
@@ -176,7 +177,11 @@ class CollaboratorInviteService {
     // in the stableId intact.
     final parts = videoAddress.split(':');
     final stableId = parts.length >= 3 ? parts.sublist(2).join(':') : '';
-    return '$videoLinkBase/$stableId';
+    // The coordinate names the author, so the link does too (#10929).
+    return divineVideoUrlWithAuthor(
+      '$videoLinkBase/$stableId',
+      parts.length >= 3 ? parts[1] : null,
+    );
   }
 
   List<List<String>> _buildTags({

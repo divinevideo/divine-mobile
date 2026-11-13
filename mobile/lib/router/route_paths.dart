@@ -108,6 +108,13 @@ abstract final class RoutePaths {
   static const supportCenter = '/support-center';
   static const supportReportBug = '/support-center/report-bug';
   static const videoDetailBase = '/video';
+
+  /// Query that holds a video route to one author.
+  ///
+  /// The same name as `divineVideoAuthorQueryParameter` in `package:models`,
+  /// which share links carry; this module stays import-free, so a test pins
+  /// the two together.
+  static const videoAuthorQueryParameter = 'author';
   static const videoEditor = '/video-editor';
   static const videoMetadata = '/video-metadata';
   static const videoMetadataEdit = '/video-edit';
@@ -204,8 +211,19 @@ abstract final class RoutePaths {
       '$soundDetailBase/${Uri.encodeComponent(id)}';
   static String subtitleEditorFor(String videoId) =>
       '$subtitleEditor/${Uri.encodeComponent(videoId)}';
-  static String videoDetailForId(String id) =>
-      '$videoDetailBase/${Uri.encodeComponent(id)}';
+
+  /// The detail route for [id], held to [author] when one is given.
+  ///
+  /// [author] goes in the same `author` query a shared link carries, so the
+  /// lookup cannot answer with another account's video under the same `d`
+  /// tag (#10929).
+  static String videoDetailForId(String id, {String? author}) {
+    final path = '$videoDetailBase/${Uri.encodeComponent(id)}';
+    if (author == null || author.isEmpty) return path;
+    return '$path?$videoAuthorQueryParameter='
+        '${Uri.encodeQueryComponent(author)}';
+  }
+
   static String videoFeedForIndex(int index) => '/home/$index';
   static String videoRepliesFor(String videoId) =>
       '$videoRepliesBase/${Uri.encodeComponent(videoId)}';

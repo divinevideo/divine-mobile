@@ -1,5 +1,6 @@
-// ABOUTME: Tests for the canonical divine.video share-URL regexes.
-// ABOUTME: Covers casing, trailing punctuation, query strings, and id shapes.
+// ABOUTME: Tests for the canonical divine.video share-URL regexes and builders.
+// ABOUTME: Covers casing, trailing punctuation, query strings, id shapes, and
+// ABOUTME: the author query parameter (#10929).
 
 import 'package:models/models.dart';
 import 'package:test/test.dart';
@@ -10,6 +11,24 @@ void main() {
       expect(
         divineVideoUrlLineRegex.hasMatch('https://divine.video/video/abc123'),
         isTrue,
+      );
+    });
+
+    test('matches a line that names the author', () {
+      expect(
+        divineVideoUrlLineRegex.hasMatch(
+          'https://divine.video/video/abc123?author=${'a' * 64}',
+        ),
+        isTrue,
+      );
+    });
+
+    test('rejects a line with any other query string', () {
+      expect(
+        divineVideoUrlLineRegex.hasMatch(
+          'https://divine.video/video/abc123?author=not-a-pubkey',
+        ),
+        isFalse,
       );
     });
 
@@ -184,6 +203,81 @@ void main() {
           'a https://divine.video/video/aaa111 b https://divine.video/video/bbb222',
         ),
         equals('https://divine.video/video/aaa111'),
+      );
+    });
+  });
+
+  // #10929: a d tag is not unique across accounts, so share links name the
+  // author and the parsers read it back.
+  group('divineVideoUrlRegex author', () {
+    const author =
+        'e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3';
+
+    test('captures the author and spans it in the match', () {
+      const url = 'https://divine.video/video/abc123?author=$author';
+      final match = divineVideoUrlRegex.firstMatch('look $url then');
+
+      expect(match?.group(0), equals(url));
+      expect(match?.group(1), equals('abc123'));
+      expect(match?.group(2), equals(author));
+    });
+
+    test('leaves the author group empty for a link without one', () {
+      final match = divineVideoUrlRegex.firstMatch(
+        'https://divine.video/video/abc123',
+      );
+
+      expect(match?.group(1), equals('abc123'));
+      expect(match?.group(2), isNull);
+    });
+
+    test('does not take a value longer than a pubkey as the author', () {
+      final match = divineVideoUrlRegex.firstMatch(
+        'https://divine.video/video/abc123?author=${author}ff',
+      );
+
+      expect(match?.group(0), equals('https://divine.video/video/abc123'));
+      expect(match?.group(2), isNull);
+    });
+  });
+
+  group('divineVideoShareUrl', () {
+    const author =
+        'e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3';
+
+    test('names a hex author in the query, lower-cased', () {
+      expect(
+        divineVideoShareUrl('abc123', authorPubkey: author.toUpperCase()),
+        equals('https://divine.video/video/abc123?author=$author'),
+      );
+    });
+
+    test('omits the query when no usable author is known', () {
+      expect(
+        divineVideoShareUrl('abc123'),
+        equals('https://divine.video/video/abc123'),
+      );
+      expect(
+        divineVideoShareUrl('abc123', authorPubkey: 'npub1notahexkey'),
+        equals('https://divine.video/video/abc123'),
+      );
+    });
+
+    test('round-trips through divineVideoUrlRegex', () {
+      final url = divineVideoShareUrl('abc123', authorPubkey: author);
+      final match = divineVideoUrlRegex.firstMatch(url);
+
+      expect(match?.group(1), equals('abc123'));
+      expect(match?.group(2), equals(author));
+      expect(divineVideoUrlLineRegex.hasMatch(url), isTrue);
+    });
+  });
+
+  group('divineVideoUrlWithAuthor', () {
+    test('appends the author to a link on another base', () {
+      expect(
+        divineVideoUrlWithAuthor('https://example.test/video/x', 'b' * 64),
+        equals('https://example.test/video/x?author=${'b' * 64}'),
       );
     });
   });

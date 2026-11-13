@@ -18,15 +18,20 @@ class DmVideoTarget {
   /// hex author.
   final String stableId;
 
-  /// Author as a structured NIP-18 reference carried it. Routing uses it only
-  /// when it is a hex pubkey.
+  /// Author as a structured NIP-18 reference carried it, or else as the URL's
+  /// `?author=` query named it. Routing uses it only when it is a hex pubkey.
   final String? authorPubkey;
 
   /// NIP-71 video event kind when supplied by a structured reference.
   final int? videoKind;
 
   /// Canonical web URL for copying or sharing this video.
-  String get canonicalUrl => 'https://divine.video/video/$stableId';
+  ///
+  /// Names the author when one is known, so the link opens this account's
+  /// video rather than whichever account posted last under the same `d` tag
+  /// (#10929).
+  String get canonicalUrl =>
+      divineVideoShareUrl(stableId, authorPubkey: _routingAuthor);
 
   /// The repository route this video resolves by.
   ///
@@ -78,18 +83,20 @@ class DmVideoTarget {
 /// no URL is present.
 ///
 /// When [contentIsTruncated] is true, [content] is a bounded prefix of the
-/// full body and a URL match that runs to its end is ignored: the URL capture
-/// has no right anchor, so a cut inside the id would otherwise resolve a
-/// shortened, wrong identity. See [firstCompleteDivineVideoUrlMatch].
+/// full body and a URL match that runs to its end, or into a cut author query,
+/// is ignored: the URL capture has no right anchor, so a cut inside the id
+/// would otherwise resolve a shortened, wrong identity. See
+/// [firstCompleteDivineVideoUrlMatch].
 DmVideoTarget? resolveDmVideoTarget({
   required String content,
   DmSharedVideoRef? sharedVideoRef,
   bool contentIsTruncated = false,
 }) {
-  final urlStableId = firstCompleteDivineVideoUrlMatch(
+  final urlMatch = firstCompleteDivineVideoUrlMatch(
     content,
     contentIsTruncated: contentIsTruncated,
-  )?.group(1);
+  );
+  final urlStableId = urlMatch?.group(1);
   final structuredTarget = _targetFromRef(sharedVideoRef);
 
   if (urlStableId != null) {
@@ -99,9 +106,13 @@ DmVideoTarget? resolveDmVideoTarget({
         structuredTarget != null &&
         (sharedVideoRef?.isAddressable != true ||
             structuredTarget.stableId == urlStableId);
+    // The URL's own `?author=` scopes it when no citation does.
+    final urlAuthor = urlMatch?.group(2);
     return DmVideoTarget(
       stableId: urlStableId,
-      authorPubkey: citesUrl ? structuredTarget.authorPubkey : null,
+      authorPubkey: citesUrl
+          ? structuredTarget.authorPubkey ?? urlAuthor
+          : urlAuthor,
       videoKind: citesUrl ? structuredTarget.videoKind : null,
     );
   }
@@ -110,19 +121,36 @@ DmVideoTarget? resolveDmVideoTarget({
 }
 
 /// The first canonical Divine video URL in [content], or null when
-/// [contentIsTruncated] and the match reaches the end of [content].
+/// [contentIsTruncated] and the match reaches the end of [content], or only
+/// an `?author=` query the cut sliced through follows it.
 ///
 /// A match that touches the cut may be an id the display bound sliced
 /// through, and `[\w-]+` cannot tell a complete id from a prefix of one, so
 /// the caller keeps rendering the text and re-resolves once more is shown.
+/// A cut author query leaves the id intact, but resolving it then would drop
+/// the author the link names (#10929).
 RegExpMatch? firstCompleteDivineVideoUrlMatch(
   String content, {
   required bool contentIsTruncated,
 }) {
   final match = divineVideoUrlRegex.firstMatch(content);
   if (match == null) return null;
-  if (contentIsTruncated && match.end == content.length) return null;
+  if (contentIsTruncated && _mayBeCutQuery(content.substring(match.end))) {
+    return null;
+  }
   return match;
+}
+
+final _partialPubkey = RegExp(r'^[0-9a-f]{1,63}$');
+
+/// Whether [rest], everything after a URL match, could be the start of an
+/// author query the cut sliced through. Empty [rest] is a cut at the id.
+bool _mayBeCutQuery(String rest) {
+  const query = '?$divineVideoAuthorQueryParameter=';
+  final lower = rest.toLowerCase();
+  if (lower.length <= query.length) return query.startsWith(lower);
+  return lower.startsWith(query) &&
+      _partialPubkey.hasMatch(lower.substring(query.length));
 }
 
 DmVideoTarget? _targetFromRef(DmSharedVideoRef? ref) {

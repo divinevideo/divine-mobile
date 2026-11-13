@@ -143,7 +143,10 @@ final _locations = <String, List<String>>{
   'shortLinkForCode': [RoutePaths.shortLinkForCode('Abc12345')],
   'soundDetailForId': [RoutePaths.soundDetailForId(_eventId)],
   'subtitleEditorFor': [RoutePaths.subtitleEditorFor(_eventId)],
-  'videoDetailForId': [RoutePaths.videoDetailForId(_eventId)],
+  'videoDetailForId': [
+    RoutePaths.videoDetailForId(_eventId),
+    RoutePaths.videoDetailForId(_eventId, author: _eventId),
+  ],
   'videoFeedForIndex': [RoutePaths.videoFeedForIndex(0)],
   'videoRepliesFor': [RoutePaths.videoRepliesFor(_eventId)],
   'questionAnswerFor': [RoutePaths.questionAnswerFor(_pubkeyHex)],
@@ -186,6 +189,9 @@ const _notLocations = {
   // service maps them onto an in-app location (peopleListForId with an
   // owner query), which is checked itself.
   'peopleListByAuthorFor',
+  // A query parameter name, not a path; videoDetailForId with an author is
+  // checked above.
+  'videoAuthorQueryParameter',
   // Not registered. The redirect and route normalizer rewrite them: `root`
   // to welcome or the home feed, `notifications` to /notifications/0.
   'notifications',

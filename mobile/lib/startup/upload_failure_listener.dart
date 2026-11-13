@@ -233,13 +233,24 @@ bool _showPublishSuccess(
       stableId != null &&
       _isOnOwnProfile(container)) {
     final eventId = video!.eventId;
+    // The sheet shows only on the creator's own profile, so the signed-in
+    // account is the video's author; links name it (#10929).
+    final authorPubkey = container
+        .read(authServiceProvider)
+        .currentPublicKeyHex;
     unawaited(
       PostPublishConfirmationSheet.show(
         context: navContext,
         thumbnailBytes: video.thumbnailBytes,
-        onView: () => _onConfirmationView(container, offer, stableId),
-        onShare: () =>
-            _onConfirmationShare(navContext, container, offer, stableId),
+        onView: () =>
+            _onConfirmationView(container, offer, stableId, authorPubkey),
+        onShare: () => _onConfirmationShare(
+          navContext,
+          container,
+          offer,
+          stableId,
+          authorPubkey,
+        ),
         crosspostSection: eventId != null
             ? _postPublishCrosspost(navContext, container, eventId)
             : null,
@@ -312,6 +323,7 @@ void _onConfirmationView(
   ProviderContainer container,
   PostPublishConfirmationOffer offer,
   String stableId,
+  String? authorPubkey,
 ) {
   unawaited(container.read(postPublishExperimentProvider).viewTapped(offer));
   // Push, not go: closing the video has to pop back to the profile the
@@ -319,7 +331,9 @@ void _onConfirmationView(
   unawaited(
     container
         .read(goRouterProvider)
-        .push<void>(RoutePaths.videoDetailForId(stableId)),
+        .push<void>(
+          RoutePaths.videoDetailForId(stableId, author: authorPubkey),
+        ),
   );
 }
 
@@ -328,6 +342,7 @@ void _onConfirmationShare(
   ProviderContainer container,
   PostPublishConfirmationOffer offer,
   String stableId,
+  String? authorPubkey,
 ) {
   unawaited(container.read(postPublishExperimentProvider).shareTapped(offer));
   // Preserve the OS-share behavior assigned to the active `viewShare`
@@ -336,7 +351,12 @@ void _onConfirmationShare(
   unawaited(
     showShareSheet(
       context,
-      ShareParams(text: VideoSharingService.shareUrlForStableId(stableId)),
+      ShareParams(
+        text: VideoSharingService.shareUrlForStableId(
+          stableId,
+          authorPubkey: authorPubkey,
+        ),
+      ),
     ),
   );
 }

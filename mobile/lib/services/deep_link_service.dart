@@ -4,6 +4,8 @@
 import 'dart:async';
 
 import 'package:app_links/app_links.dart';
+import 'package:models/models.dart'
+    show NostrHexUtils, divineVideoAuthorQueryParameter;
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/features/challenges/challenge_link.dart';
 import 'package:openvine/features/challenges/challenge_test_build.dart';
@@ -47,6 +49,7 @@ class DeepLink {
   const DeepLink({
     required this.type,
     this.videoRef,
+    this.videoAuthor,
     this.challengeNaddr,
     this.shortCode,
     this.npub,
@@ -69,6 +72,11 @@ class DeepLink {
   /// This may be a hex event ID, a first-party stable ID / d-tag, or a
   /// NIP-19 reference such as `note1`, `nevent1`, or `naddr1`.
   final String? videoRef;
+
+  /// Lowercase hex author a `/video/:id?author=` link names, so the video
+  /// opens from that account rather than from whichever account posted last
+  /// under the same `d` tag (#10929). Null when absent or not a hex pubkey.
+  final String? videoAuthor;
   final String? npub;
   final String? hashtag;
   final String? searchTerm;
@@ -99,8 +107,11 @@ class DeepLink {
         return 'DeepLink(type: shortLink, code: ${_forLogs(shortCode)})';
       case DeepLinkType.video:
         final commentsStr = autoOpenComments ? ', autoOpenComments: true' : '';
+        final authorStr = videoAuthor == null
+            ? ''
+            : ', videoAuthor: ${pubkeyForLogs(videoAuthor)}';
         return 'DeepLink(type: video, videoRef: ${_forLogs(videoRef)}'
-            '$commentsStr)';
+            '$authorStr$commentsStr)';
       case DeepLinkType.profile:
         return 'DeepLink(type: profile, npub: ${pubkeyForLogs(npub)}$indexStr)';
       case DeepLinkType.hashtag:
@@ -283,12 +294,21 @@ class DeepLinkService {
       // downstream resolution accepts raw IDs, stable IDs, and NIP-19 refs.
       if (pathSegments.length == 2 && pathSegments[0] == 'video') {
         final videoRef = pathSegments[1];
+        final author = uri.queryParameters[divineVideoAuthorQueryParameter];
+        final videoAuthor = NostrHexUtils.isValidPubkey(author)
+            ? author!.toLowerCase()
+            : null;
         Log.info(
-          '📱 Parsed video deep link ref: $videoRef',
+          '📱 Parsed video deep link ref: $videoRef, '
+          'author: ${pubkeyForLogs(videoAuthor, whenNull: 'none')}',
           name: 'DeepLinkService',
           category: LogCategory.ui,
         );
-        return DeepLink(type: DeepLinkType.video, videoRef: videoRef);
+        return DeepLink(
+          type: DeepLinkType.video,
+          videoRef: videoRef,
+          videoAuthor: videoAuthor,
+        );
       }
 
       // Handle /profile/{npub} or /profile/{npub}/{index}

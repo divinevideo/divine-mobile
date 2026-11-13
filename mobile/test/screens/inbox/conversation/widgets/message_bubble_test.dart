@@ -2270,6 +2270,39 @@ void main() {
         expect(redundantLink, findsNothing);
       });
 
+      // #10929: share links name the author. The bubble splits its text at
+      // the end of the URL, so the query must not surface as text.
+      testWidgets('reads a link that names its author as one share', (
+        tester,
+      ) async {
+        const author =
+            'e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3';
+        when(
+          () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+            'abc123',
+            fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            expectedAuthor: author,
+          ),
+        ).thenAnswer((_) async => testVideo);
+
+        await tester.pumpWidget(
+          buildWithVideoMessage(
+            message: 'https://divine.video/video/abc123?author=$author',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(VideoThumbnailWidget), findsOneWidget);
+        expect(find.textContaining('author='), findsNothing);
+        verify(
+          () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+            'abc123',
+            fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            expectedAuthor: author,
+          ),
+        ).called(1);
+      });
+
       testWidgets('shows the unavailable card when video not found', (
         tester,
       ) async {

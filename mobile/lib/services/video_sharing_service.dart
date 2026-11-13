@@ -351,17 +351,21 @@ class VideoSharingService {
   /// exists for the post-publish confirmation, which knows the freshly
   /// published video only by its `d` tag — seconds after publish the event
   /// is often not yet resolvable from Funnelcake or any relay.
-  static String shareUrlForStableId(String stableId) =>
-      'https://divine.video/video/$stableId';
+  ///
+  /// [authorPubkey] goes into the link's `author` query, so the link opens
+  /// that account's video rather than whichever account posted last under
+  /// the same `d` tag (#10929).
+  static String shareUrlForStableId(String stableId, {String? authorPubkey}) =>
+      divineVideoShareUrl(stableId, authorPubkey: authorPubkey);
 
   /// Generate external share URL for the video.
   ///
-  /// Always emits an `https://divine.video/video/...` URL. The route accepts
-  /// raw event IDs, d-tags, and NIP-19 references, and [VideoEvent.stableId]
-  /// falls back to the event ID when a `d` tag is missing — so this never
-  /// returns a non-routable URL.
+  /// Always emits an `https://divine.video/video/...` URL naming the video's
+  /// author. The route accepts raw event IDs, d-tags, and NIP-19 references,
+  /// and [VideoEvent.stableId] falls back to the event ID when a `d` tag is
+  /// missing — so this never returns a non-routable URL.
   String generateShareUrl(VideoEvent video) =>
-      shareUrlForStableId(video.stableId);
+      shareUrlForStableId(video.stableId, authorPubkey: video.pubkey);
 
   /// Shorten only explicit external shares; protocol and DM builders stay canonical.
   Future<String> shortenExternalUrl(String url) =>

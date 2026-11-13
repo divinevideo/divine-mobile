@@ -2,7 +2,8 @@
 // ABOUTME: These are a deep-link contract — a silent change breaks live links
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart'
+    show AudioEvent, divineVideoAuthorQueryParameter;
 import 'package:openvine/router/route_paths.dart';
 
 void main() {
@@ -146,6 +147,10 @@ void main() {
       );
       expect(RoutePaths.videoDetailForId('v1'), equals('/video/v1'));
       expect(
+        RoutePaths.videoDetailForId('v1', author: 'abc'),
+        equals('/video/v1?author=abc'),
+      );
+      expect(
         RoutePaths.videoDetailForId('a?b/c#d'),
         equals('/video/a%3Fb%2Fc%23d'),
       );
@@ -176,6 +181,17 @@ void main() {
           reason: id,
         );
       }
+    });
+  });
+
+  group('videoAuthorQueryParameter', () {
+    test('is the query share links name the author with', () {
+      // route_paths.dart stays import-free, so this pins its copy to the
+      // name the share links carry (#10929).
+      expect(
+        RoutePaths.videoAuthorQueryParameter,
+        equals(divineVideoAuthorQueryParameter),
+      );
     });
   });
 }

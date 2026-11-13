@@ -44,7 +44,10 @@ String? deepLinkRouterPath(DeepLink deepLink) {
     case DeepLinkType.video:
       final videoRef = deepLink.videoRef;
       if (videoRef == null || videoRef.isEmpty) return null;
-      return VideoDetailScreen.pathForId(videoRef);
+      return VideoDetailScreen.pathForId(
+        videoRef,
+        author: deepLink.videoAuthor,
+      );
     case DeepLinkType.profile:
       final rawNpub = deepLink.npub;
       if (rawNpub == null || rawNpub.isEmpty) return null;

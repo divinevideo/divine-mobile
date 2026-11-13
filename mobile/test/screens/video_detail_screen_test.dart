@@ -109,6 +109,7 @@ void main() {
 
     Widget buildSubject({
       String videoId = 'test_video_id',
+      String? authorPubkey,
       List<String> fallbackVideoIds = const [],
       Override? videoEventServiceOverride,
       List<Override> extraOverrides = const <Override>[],
@@ -129,6 +130,7 @@ void main() {
         ],
         home: VideoDetailScreen(
           videoId: videoId,
+          authorPubkey: authorPubkey,
           fallbackVideoIds: fallbackVideoIds,
           videoFeedBuilder: (_) =>
               const SizedBox(key: Key('video-feed-placeholder')),
@@ -749,6 +751,35 @@ void main() {
         },
       );
 
+      // #10929: a d tag can name videos from more than one account, so a
+      // link that names the author holds the lookup to that author.
+      testWidgets('holds the lookup to the author a link names', (
+        tester,
+      ) async {
+        const author =
+            'e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3';
+        final video = createTestVideoEvent(id: 'c' * 64, pubkey: author);
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId(
+            'stable_id',
+            expectedAuthor: author,
+          ),
+        ).thenAnswer((_) async => VideoRouteFound(video));
+
+        await tester.pumpWidget(
+          buildSubject(videoId: 'stable_id', authorPubkey: author),
+        );
+        await tester.pump();
+
+        expect(find.byKey(const Key('video-feed-placeholder')), findsOneWidget);
+        verify(
+          () => mockVideosRepository.lookupVideoForRouteId(
+            'stable_id',
+            expectedAuthor: author,
+          ),
+        ).called(1);
+      });
+
       testWidgets(
         'stats are hydrated before player renders (regression #3768)',
         (tester) async {
@@ -1093,6 +1124,43 @@ void main() {
           );
         },
       );
+
+      testWidgets('a retry keeps holding the lookup to the named author', (
+        tester,
+      ) async {
+        const author =
+            'e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3';
+        final video = createTestVideoEvent(id: 'b' * 64, pubkey: author);
+        var available = false;
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId(
+            any(),
+            expectedAuthor: any(named: 'expectedAuthor'),
+          ),
+        ).thenAnswer((_) async => const VideoRouteMissing());
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId(
+            'stable_id',
+            expectedAuthor: author,
+          ),
+        ).thenAnswer(
+          (_) async =>
+              available ? VideoRouteFound(video) : const VideoRouteMissing(),
+        );
+
+        await tester.pumpWidget(
+          buildSubject(videoId: 'stable_id', authorPubkey: author),
+        );
+        await tester.pump();
+        await exhaustSearch(tester);
+        expect(find.text(l10n.videoErrorRetry), findsOneWidget);
+
+        available = true;
+        await tester.tap(find.text(l10n.videoErrorRetry));
+        await tester.pump();
+
+        expect(find.byKey(const Key('video-feed-placeholder')), findsOneWidget);
+      });
 
       testWidgets('bounds an offline search even if no relay reconnects', (
         tester,

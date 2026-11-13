@@ -45,6 +45,7 @@ class VideoDetailCubit extends Cubit<VideoDetailState>
   /// Starts a new bounded search, replacing any previous route or request.
   void search({
     required String routeId,
+    String? expectedAuthor,
     List<String> fallbackRouteIds = const [],
     VideoEvent? initialVideo,
     bool allowRelayReadyRetry = true,
@@ -54,6 +55,7 @@ class VideoDetailCubit extends Cubit<VideoDetailState>
     emitIfOpen(
       VideoDetailState(
         routeId: routeId,
+        expectedAuthor: expectedAuthor,
         fallbackRouteIds: List.unmodifiable(fallbackRouteIds),
         generation: state.generation,
         status: initialVideo == null
@@ -70,6 +72,7 @@ class VideoDetailCubit extends Cubit<VideoDetailState>
   /// Starts a fresh search after the viewer chooses Retry.
   void retry() => search(
     routeId: state.routeId,
+    expectedAuthor: state.expectedAuthor,
     fallbackRouteIds: state.fallbackRouteIds,
     allowRelayReadyRetry: false,
   );
@@ -138,6 +141,7 @@ class VideoDetailCubit extends Cubit<VideoDetailState>
       final lookup = await _videosRepository().lookupVideoForRouteId(
         state.routeId,
         fallbackRouteIds: state.fallbackRouteIds,
+        expectedAuthor: state.expectedAuthor,
       );
       if (!_isCurrent(generation)) return;
 

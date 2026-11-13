@@ -145,14 +145,17 @@ mixin $VideoDetailRouteData on GoRouteData {
   static VideoDetailRouteData _fromState(GoRouterState state) =>
       VideoDetailRouteData(
         id: state.pathParameters['id']!,
+        author: state.uri.queryParameters['author'],
         $extra: state.extra as Object?,
       );
 
   VideoDetailRouteData get _self => this as VideoDetailRouteData;
 
   @override
-  String get location =>
-      GoRouteData.$location('/video/${Uri.encodeComponent(_self.id)}');
+  String get location => GoRouteData.$location(
+    '/video/${Uri.encodeComponent(_self.id)}',
+    queryParams: {if (_self.author != null) 'author': _self.author},
+  );
 
   @override
   void go(BuildContext context) => context.go(location, extra: _self.$extra);

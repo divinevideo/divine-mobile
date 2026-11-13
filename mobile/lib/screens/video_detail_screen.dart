@@ -65,10 +65,16 @@ class VideoDetailScreen extends ConsumerWidget {
   ///
   /// The route segment may be a raw event ID, a stable ID / d-tag, or
   /// a NIP-19 reference such as `note1...`, `nevent1...`, or `naddr1...`.
-  static String pathForId(String id) => RoutePaths.videoDetailForId(id);
+  static String pathForId(String id, {String? author}) =>
+      RoutePaths.videoDetailForId(id, author: author);
+
+  /// Query that holds the lookup to one author's video.
+  static const String authorQueryParameter =
+      RoutePaths.videoAuthorQueryParameter;
 
   const VideoDetailScreen({
     required this.videoId,
+    this.authorPubkey,
     this.autoOpenComments = false,
     this.fallbackVideoIds = const [],
     this.initialVideo,
@@ -79,6 +85,13 @@ class VideoDetailScreen extends ConsumerWidget {
   });
 
   final String videoId;
+
+  /// The author a link named for [videoId], when it named one.
+  ///
+  /// The lookup is held to this author, so a `d` tag that another account
+  /// also posted under cannot open that account's video (#10929). A value
+  /// that is not a hex pubkey is ignored.
+  final String? authorPubkey;
   final bool autoOpenComments;
   final List<String> fallbackVideoIds;
   final VideoEvent? initialVideo;
@@ -143,6 +156,7 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
     final previous = oldWidget.screen;
     final current = widget.screen;
     if (previous.videoId != current.videoId ||
+        previous.authorPubkey != current.authorPubkey ||
         !listEquals(previous.fallbackVideoIds, current.fallbackVideoIds) ||
         previous.initialVideo != current.initialVideo) {
       _disposeDiscoveryRepository();
@@ -207,6 +221,7 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
     final screen = widget.screen;
     context.read<VideoDetailCubit>().search(
       routeId: screen.videoId,
+      expectedAuthor: screen.authorPubkey,
       fallbackRouteIds: screen.fallbackVideoIds,
       initialVideo: screen.initialVideo,
     );

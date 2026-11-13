@@ -236,6 +236,29 @@ void main() {
         expect(result.videoRef, isNull);
       });
 
+      // #10929: a d tag can name videos from more than one account.
+      test('reads the author a video link names', () {
+        const author =
+            'e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3e7d3';
+        final result = DeepLinkService.parseDeepLink(
+          'https://divine.video/video/abc123?author=${author.toUpperCase()}',
+        );
+
+        expect(result.type, equals(DeepLinkType.video));
+        expect(result.videoRef, equals('abc123'));
+        expect(result.videoAuthor, equals(author));
+      });
+
+      test('ignores an author that is not a hex pubkey', () {
+        final result = DeepLinkService.parseDeepLink(
+          'https://divine.video/video/abc123?author=npub1notahexkey',
+        );
+
+        expect(result.type, equals(DeepLinkType.video));
+        expect(result.videoRef, equals('abc123'));
+        expect(result.videoAuthor, isNull);
+      });
+
       test('rejects video URL with extra path segments', () {
         const url = 'https://divine.video/video/abc123/extra';
 
