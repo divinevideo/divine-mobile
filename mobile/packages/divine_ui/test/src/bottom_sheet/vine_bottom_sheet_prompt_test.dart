@@ -54,8 +54,6 @@ final Finder _dragHandle = find.byWidgetPredicate((widget) {
 });
 
 void main() {
-  // Wraps the MaterialApp rather than its home: the modal route that `show`
-  // pushes sits above home, and must still resolve sticker assets here.
   late _TestAssetBundle bundle;
 
   setUp(() {
@@ -75,6 +73,8 @@ void main() {
     String? tertiaryButtonText,
     VoidCallback? onTertiaryPressed,
   }) {
+    // Wraps the MaterialApp rather than its home: the modal route that `show`
+    // pushes sits above home, and must still resolve sticker assets here.
     return DefaultAssetBundle(
       bundle: bundle,
       child: MaterialApp(
