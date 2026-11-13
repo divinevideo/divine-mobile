@@ -8,8 +8,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/l10n/l10n.dart';
 
-/// The time [left] on a countdown, as its sticker shows it in the player:
-/// whole days, then hours, minutes and seconds, such as "12 days 04:33:10".
+/// The time [left] on a countdown, as its sticker shows it in the player and
+/// on the editor canvas: whole days, then hours, minutes and seconds, such as
+/// "12 days 04:33:10".
 String countdownTimeLeft(AppLocalizations l10n, Duration left) {
   String twoDigits(int value) => value.toString().padLeft(2, '0');
   final clockTime = [
