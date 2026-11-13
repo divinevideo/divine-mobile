@@ -352,18 +352,31 @@ class _AutoCacheSwitch extends StatelessWidget {
 }
 
 /// What automatic sizing currently allows, and why when it has shrunk.
+///
+/// While the caches are being measured or resized the limit on hand can be
+/// the fixed size the user just left, so it says "Measuring…" instead.
 class _AutoCacheSummary extends StatelessWidget {
   const _AutoCacheSummary();
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final status = context.select((StorageCubit c) => c.state.cacheStatus);
     final limit = context.select(
       (StorageCubit c) => c.state.videoCacheLimitBytes,
     );
     final shrunk = context.select(
       (StorageCubit c) => c.state.videoCacheShrunkForLowSpace,
     );
+
+    if (status == StorageCacheStatus.initial ||
+        status == StorageCacheStatus.loading ||
+        status == StorageCacheStatus.clearing) {
+      return Text(
+        l10n.settingsStorageMeasuring,
+        style: VineTheme.bodyMediumFont(color: context.vineColors.mutedText),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

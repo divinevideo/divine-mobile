@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
@@ -411,6 +412,44 @@ void main() {
 
       verify(service.useAutomaticVideoCacheLimit).called(1);
       expect(find.byType(Slider), findsNothing);
+    });
+
+    testWidgets('turning automatic sizing on says measuring, not low space, '
+        'while it resizes', (tester) async {
+      const oneGb = 1024 * 1024 * 1024;
+      when(service.videoCacheLimitBytes).thenReturn(oneGb);
+      final handBack = Completer<void>();
+      when(
+        service.useAutomaticVideoCacheLimit,
+      ).thenAnswer((_) => handBack.future);
+      final cubit = StorageCubit(service: service);
+      addTearDown(cubit.close);
+      await cubit.loadCacheSize();
+
+      await tester.pumpWidget(wrap(cubit));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.settingsStorageAutoCacheTitle));
+      await tester.pump();
+
+      expect(find.text(l10n.settingsStorageAutoCacheLowSpace), findsNothing);
+      expect(
+        find.text(l10n.settingsStorageAutoCacheUsing(formatByteSize(oneGb))),
+        findsNothing,
+      );
+
+      when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+      when(service.videoCacheLimitBytes).thenReturn(kCacheLimitDefaultBytes);
+      handBack.complete();
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          l10n.settingsStorageAutoCacheUsing(
+            formatByteSize(kCacheLimitDefaultBytes),
+          ),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('turning automatic sizing off fixes a size', (tester) async {

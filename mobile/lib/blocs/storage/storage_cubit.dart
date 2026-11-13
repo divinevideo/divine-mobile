@@ -158,7 +158,14 @@ class StorageCubit extends Cubit<StorageState>
       await _emitCacheUsage();
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emitIfOpen(state.copyWith(cacheStatus: StorageCacheStatus.failure));
+      // The switch flipped ahead of the service; show where it really is.
+      emitIfOpen(
+        state.copyWith(
+          cacheStatus: StorageCacheStatus.failure,
+          videoCacheLimitBytes: _service.videoCacheLimitBytes(),
+          videoCacheLimitAutomatic: _service.isVideoCacheLimitAutomatic(),
+        ),
+      );
     }
   }
 

@@ -447,11 +447,14 @@ void main() {
       );
 
       blocTest<StorageCubit, StorageState>(
-        'emits failure when handing back to automatic sizing throws',
+        'emits failure with the mode and size the service still holds when '
+        'handing back to automatic sizing throws',
         setUp: () {
           when(
             service.useAutomaticVideoCacheLimit,
           ).thenThrow(Exception('boom'));
+          when(service.videoCacheLimitBytes).thenReturn(oneGb);
+          when(service.isVideoCacheLimitAutomatic).thenReturn(false);
         },
         build: build,
         seed: () => const StorageState(
@@ -468,6 +471,7 @@ void main() {
           StorageState(
             cacheStatus: StorageCacheStatus.failure,
             videoCacheLimitBytes: oneGb,
+            videoCacheLimitAutomatic: false,
           ),
         ],
         errors: () => [isA<Exception>()],
@@ -496,6 +500,8 @@ void main() {
           when(
             service.useAutomaticVideoCacheLimit,
           ).thenAnswer((_) => handBack.future);
+          when(service.videoCacheLimitBytes).thenReturn(oneGb);
+          when(service.isVideoCacheLimitAutomatic).thenReturn(false);
           final cubit = build();
 
           final toggle = cubit.setVideoCacheLimitAutomatic(automatic: true);
