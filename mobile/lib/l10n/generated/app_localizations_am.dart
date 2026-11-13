@@ -4678,7 +4678,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get feedFollowingNothingNew =>
-      'ከምትከተላቸው ሰዎች አዲስ ነገር የለም።\nተጨማሪ የሚወዷቸውን ፈጣሪዎች ያግኙ እና ይከተሉዋቸው።';
+      'ከሚከተሏቸው ሰዎች አዲስ ነገር የለም።\nተጨማሪ የሚወዷቸውን ፈጣሪዎች ያግኙ እና ይከተሉዋቸው።';
 
   @override
   String get feedLatestEmpty => 'እስካሁን ምንም አዲስ ቪዲዮዎች የሉም።\nበቅርቡ ተመልሰው ይመልከቱ።';

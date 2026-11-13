@@ -4847,7 +4847,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get feedFollowingNothingNew =>
-      'No hay nada nuevo de las personas que sigues.\nEncuentra más creadores que te gusten y síguelos.';
+      'No hay nada nuevo de las personas que seguís.\nEncontrá más creadores que te gusten y seguilos.';
 
   @override
   String get feedLatestEmpty => 'Aún no hay videos nuevos.\nVuelve pronto.';
