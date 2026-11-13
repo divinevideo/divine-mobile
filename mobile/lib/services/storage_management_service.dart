@@ -205,7 +205,7 @@ class StorageManagementService {
   /// otherwise resolve the OS temp and documents directories.
   /// [protectedPaths] supplies upload inputs that must survive both a cache
   /// clear and an orphan sweep. [refreshMediaCacheBudget] re-sizes the caches
-  /// to the disk when the user hands the video cache back to automatic sizing.
+  /// to the disk whenever the user changes how the video cache is sized.
   /// [playerCacheLimitBytes] is the budget the Android player cache was
   /// created with, which [cacheUsage] reports.
   StorageManagementService({
@@ -639,12 +639,14 @@ class StorageManagementService {
   /// Persists [bytes] (clamped to
   /// `[kCacheLimitMinBytes, kCacheLimitMaxBytes]`) as the video-cache budget,
   /// applies it, and trims immediately so a lowered limit shrinks the cache
-  /// right away.
+  /// right away. Then re-sizes the image cache through the budget refresh,
+  /// which also records the fixed mode for telemetry.
   Future<void> setVideoCacheLimit(int bytes) async {
     final clamped = bytes.clamp(kCacheLimitMinBytes, kCacheLimitMaxBytes);
     await _prefs.setInt(kCacheLimitPrefKey, clamped);
     _videoCache.maxCacheSizeBytes = clamped;
     await _videoCache.enforceCacheLimits(force: true);
+    await _refreshMediaCacheBudget();
   }
 
   Future<_DocumentsScan> _scanDocuments() async {

@@ -735,6 +735,30 @@ void main() {
         verify(() => videoCache.enforceCacheLimits(force: true)).called(1);
       });
 
+      test('setVideoCacheLimit re-sizes the caches once the fixed size is '
+          'saved', () async {
+        when(
+          () => videoCache.enforceCacheLimits(force: any(named: 'force')),
+        ).thenAnswer((_) async {});
+        int? savedAtRefresh;
+        service = StorageManagementService(
+          videoCache: videoCache,
+          imageCache: imageCache,
+          clipLibrary: clipLibrary,
+          clipsDao: db.clipsDao,
+          draftsDao: db.draftsDao,
+          prefs: prefs,
+          temporaryDirectoryProvider: () async => temp,
+          documentsDirectoryProvider: () async => docs,
+          refreshMediaCacheBudget: () async =>
+              savedAtRefresh = prefs.getInt(kCacheLimitPrefKey),
+        );
+
+        await service.setVideoCacheLimit(oneGb);
+
+        expect(savedAtRefresh, equals(oneGb));
+      });
+
       test('setVideoCacheLimit clamps below the minimum', () async {
         when(
           () => videoCache.enforceCacheLimits(force: any(named: 'force')),
