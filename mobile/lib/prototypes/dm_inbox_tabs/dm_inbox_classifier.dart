@@ -156,7 +156,8 @@ class DmVerdict {
 
   final List<DmRiskReason> reasons;
 
-  /// Authenticated counterparties, populated only for an all-official room.
+  /// Authenticated counterparties in pubkey order, populated only for an
+  /// all-official room.
   final Map<String, DivineOfficialIdentity> officialParticipants;
 }
 
@@ -449,7 +450,11 @@ class DmInboxClassifier {
     required DmSenderSignals Function(String) signalsFor,
     required DmMessageSignals messageSignals,
   }) {
-    if (others.isNotEmpty && others.every(officialIdentities.containsKey)) {
+    final officialParticipants = <String, DivineOfficialIdentity>{
+      for (final pubkey in others.toList()..sort())
+        pubkey: ?officialIdentities[pubkey],
+    };
+    if (others.isNotEmpty && officialParticipants.length == others.length) {
       return DmVerdict(
         bucket: DmInboxBucket.official,
         score: 0,
@@ -459,9 +464,7 @@ class DmInboxClassifier {
             0,
           ),
         ],
-        officialParticipants: Map.unmodifiable({
-          for (final pubkey in others) pubkey: officialIdentities[pubkey],
-        }),
+        officialParticipants: Map.unmodifiable(officialParticipants),
       );
     }
 

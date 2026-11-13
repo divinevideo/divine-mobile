@@ -633,11 +633,11 @@ class _ConversationRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: 8,
                 children: [
-                  for (final pubkey
-                      in (verdict.officialParticipants.keys.toList()..sort()))
+                  for (final MapEntry(key: pubkey, value: identity)
+                      in verdict.officialParticipants.entries)
                     _OfficialParticipantActions(
                       name: fixtures.displayNameFor(pubkey),
-                      identity: verdict.officialParticipants[pubkey]!,
+                      identity: identity,
                       reported: reportedOfficial.contains(pubkey),
                       onReport: () => actions.onReportOfficial(pubkey),
                       onBlock: () => actions.onBlock(pubkey),
