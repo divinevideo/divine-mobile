@@ -724,17 +724,23 @@ class ClipEditorLibraryClipsImportRequested extends ClipEditorEvent {
 /// the whole composition; the handler windows it down to this clip's slice. The
 /// widget layer captures it because only it can reach the editor — see
 /// `ProImageEditorState.captureOverlaySnapshot`. `null` renders the bare video.
+///
+/// [audioTracks] are the session's sounds at dispatch time. Only a track that
+/// Extract audio took from this clip is used, to give the saved clip its sound
+/// back — see `VideoEditorClipLibrarySaveService.withExtractedSound`.
 class ClipEditorSaveClipToLibraryRequested extends ClipEditorEvent {
   const ClipEditorSaveClipToLibraryRequested({
     required this.clipId,
     this.overlays,
+    this.audioTracks = const [],
   });
 
   final String clipId;
   final EditorOverlaySnapshot? overlays;
+  final List<AudioEvent> audioTracks;
 
   @override
-  List<Object?> get props => [clipId, overlays];
+  List<Object?> get props => [clipId, overlays, audioTracks];
 }
 
 /// Mirrors the loop operation into the shared pending-operation guard.

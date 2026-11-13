@@ -8,7 +8,8 @@ import 'dart:ui';
 import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio, ClipSourceCredit;
-import 'package:models/models.dart' show NativeProofData;
+import 'package:models/models.dart'
+    show AudioEvent, EqualizerSettings, NativeProofData;
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -728,6 +729,62 @@ void main() {
         result.sourceCredits[1].relayUrl,
         equals('wss://relay-b.divine.video'),
       );
+    });
+
+    group('withExtractedSound', () {
+      const boosted = EqualizerSettings([6, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+      AudioEvent extractedTrack({String? anchorClipId = 'a', double? volume}) {
+        return AudioEvent(
+          id: '${AudioEvent.localExtractedMarker}_1',
+          pubkey: '',
+          createdAt: 0,
+          volume: volume ?? 0.6,
+          anchorClipId: anchorClipId,
+          equalizer: boosted,
+        );
+      }
+
+      test('plays a muted clip at its extracted track volume and EQ', () {
+        final result = VideoEditorClipLibrarySaveService.withExtractedSound(
+          _createClip(volume: 0),
+          [extractedTrack()],
+        );
+
+        expect(result.volume, equals(0.6));
+        expect(result.equalizer, equals(boosted));
+      });
+
+      test('keeps a muted clip silent with no extracted track on it', () {
+        final result = VideoEditorClipLibrarySaveService.withExtractedSound(
+          _createClip(volume: 0),
+          [
+            // Extracted from another clip.
+            extractedTrack(anchorClipId: 'b'),
+            // Moved off the picture, which releases the anchor.
+            extractedTrack(anchorClipId: null),
+            // A video's original sound, not this clip's.
+            AudioEvent(
+              id: 'video_1',
+              pubkey: '',
+              createdAt: 0,
+              anchorClipId: 'a',
+            ),
+          ],
+        );
+
+        expect(result.volume, equals(0));
+      });
+
+      test('keeps the volume of a clip that is not muted', () {
+        final result = VideoEditorClipLibrarySaveService.withExtractedSound(
+          _createClip(volume: 0.8),
+          [extractedTrack(volume: 0.3)],
+        );
+
+        expect(result.volume, equals(0.8));
+        expect(result.equalizer, equals(EqualizerSettings.none));
+      });
     });
 
     group('cleanupFlattenedClip', () {

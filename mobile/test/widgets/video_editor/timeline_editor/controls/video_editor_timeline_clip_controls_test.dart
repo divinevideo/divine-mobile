@@ -1254,13 +1254,22 @@ void main() {
     });
 
     testWidgets(
-      'captures overlays and dispatches a save for the current clip',
+      'captures overlays and sounds and dispatches a save for the current '
+      'clip',
       (tester) async {
         when(() => bloc.state).thenReturn(
           ClipEditorState(clips: [clip('clip-1'), clip('clip-2')]),
         );
+        final extractedSound = AudioEvent(
+          id: '${AudioEvent.localExtractedMarker}_1',
+          pubkey: '',
+          createdAt: 0,
+          anchorClipId: 'clip-1',
+        );
         final overlayBloc = _MockTimelineOverlayBloc();
-        when(() => overlayBloc.state).thenReturn(const TimelineOverlayState());
+        when(() => overlayBloc.state).thenReturn(
+          TimelineOverlayState(audioTracks: [extractedSound]),
+        );
         when(
           () => overlayBloc.stream,
         ).thenAnswer((_) => const Stream<TimelineOverlayState>.empty());
@@ -1346,7 +1355,8 @@ void main() {
 
         // The dispatch binds the *current* clip and carries a captured (never
         // null) overlay snapshot, so a regression that binds the wrong clip or
-        // drops the overlays fails here.
+        // drops the overlays fails here. The sounds go along because a clip
+        // whose audio was extracted plays it from one of them.
         final captured = verify(
           () => bloc.add(
             captureAny(that: isA<ClipEditorSaveClipToLibraryRequested>()),
@@ -1355,6 +1365,7 @@ void main() {
         final event = captured.single as ClipEditorSaveClipToLibraryRequested;
         expect(event.clipId, equals('clip-1'));
         expect(event.overlays, isNotNull);
+        expect(event.audioTracks, equals([extractedSound]));
         // A countdown goes into the saved clip with its date, and counts down
         // on the canvas again afterwards.
         expect(capturedWhileShowingFrames, isTrue);

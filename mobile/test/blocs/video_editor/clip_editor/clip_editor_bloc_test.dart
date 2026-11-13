@@ -9,7 +9,7 @@ import 'dart:ui';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' show EqualizerSettings;
+import 'package:models/models.dart' show AudioEvent, EqualizerSettings;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
@@ -4583,6 +4583,54 @@ void main() {
           expect(bloc.state.savingClipToLibraryClipId, isNull);
         },
       );
+
+      group('extracted sound', () {
+        late DivineVideoClip? renderedClip;
+
+        /// Captures the clip the BLoC handed to the render.
+        Future<DivineVideoClip?> recordRenderedClip({
+          required DivineVideoClip clip,
+          required String renderId,
+          EditorOverlaySnapshot? overlays,
+        }) async {
+          renderedClip = clip;
+          return _createClip(id: 'flattened-${clip.id}');
+        }
+
+        setUp(() => renderedClip = null);
+
+        // Extract audio mutes the clip and plays its sound from a track the
+        // library save leaves out, so the saved clip used to be silent.
+        blocTest<ClipEditorBloc, ClipEditorState>(
+          'renders a clip muted by Extract audio with its sound',
+          build: () => buildBloc(
+            flattenClipForLibrary: recordRenderedClip,
+            saveClipToLibrary: recordSave,
+          ),
+          seed: () => ClipEditorState(
+            clips: [twoClips.first.copyWith(volume: 0), twoClips.last],
+          ),
+          act: (bloc) => bloc.add(
+            ClipEditorSaveClipToLibraryRequested(
+              clipId: 'a',
+              audioTracks: [
+                AudioEvent(
+                  id: '${AudioEvent.localExtractedMarker}_1',
+                  pubkey: '',
+                  createdAt: 0,
+                  volume: 0.7,
+                  anchorClipId: 'a',
+                ),
+              ],
+            ),
+          ),
+          verify: (bloc) {
+            expect(renderedClip!.volume, equals(0.7));
+            // The timeline keeps playing the sound from its track.
+            expect(bloc.state.clips.first.volume, equals(0));
+          },
+        );
+      });
 
       blocTest<ClipEditorBloc, ClipEditorState>(
         'leaves the timeline untouched — saving only copies to the library',

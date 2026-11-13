@@ -1386,7 +1386,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     DivineVideoClip? flattened;
     try {
       flattened = await _flattenClipForLibrary(
-        clip: (await _withCapturedChromaKeysBaked([clip])).single,
+        clip: VideoEditorClipLibrarySaveService.withExtractedSound(
+          (await _withCapturedChromaKeysBaked([clip])).single,
+          event.audioTracks,
+        ),
         renderId: renderId,
         overlays: overlays,
       );
