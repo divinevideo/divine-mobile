@@ -25,6 +25,8 @@ class ProfileApiCache {
   final _inFlight = <String, Future<UserProfileResult?>>{};
 
   /// Reuses a single/bulk response; fetches only if this session has no answer.
+  ///
+  /// Throws [FunnelcakeException] subtypes on API errors.
   Future<bool> isOgDiviner(String pubkey) async {
     final cached = _eligibility[pubkey];
     if (cached != null) return cached;
@@ -48,6 +50,8 @@ class ProfileApiCache {
   }
 
   /// Fetches a fresh profile response, sharing any already-running request.
+  ///
+  /// Throws [FunnelcakeException] subtypes on API errors.
   Future<UserProfileResult?> getProfile(String pubkey) async {
     final client = _client;
     if (client == null || !client.isAvailable) return null;
@@ -68,6 +72,8 @@ class ProfileApiCache {
   }
 
   /// Fetches a bulk response and makes its pending rows available to lookups.
+  ///
+  /// Throws [FunnelcakeException] subtypes on API errors.
   Future<BulkProfilesResponse?> getBulkProfiles(List<String> pubkeys) async {
     final client = _client;
     if (client == null || !client.isAvailable) return null;
