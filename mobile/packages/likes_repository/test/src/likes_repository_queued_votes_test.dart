@@ -47,9 +47,22 @@ class _Relay {
     ).thenAnswer(
       (invocation) async => QueryResult(
         events: _matching(invocation.positionalArguments.first as List),
-        endedBy: QueryEnd.complete,
+        endedBy: checksAreConclusive ? QueryEnd.complete : QueryEnd.deadline,
       ),
     );
+    when(() => client.countEvents(any())).thenAnswer(
+      (invocation) async => CountResult(
+        count: _matching(invocation.positionalArguments.first as List).length,
+      ),
+    );
+    when(() => client.deleteEvent(any())).thenAnswer((invocation) async {
+      final deletion = Event(_me, EventKind.eventDeletion, [
+        ['e', invocation.positionalArguments.first as String],
+      ], '');
+      events.add(deletion);
+      deletions++;
+      return deletion;
+    });
     when(
       () => client.sendLike(
         any(),
@@ -71,6 +84,12 @@ class _Relay {
 
   final _MockNostrClient client;
   final List<Event> events = <Event>[];
+
+  /// Whether a read that must prove its answer ends complete.
+  bool checksAreConclusive = true;
+
+  /// Kind 5 deletions published through the client.
+  int deletions = 0;
   var _createdAt = 1700000000;
 
   Event vote(String pubkey, String target, {String content = '+'}) {
@@ -328,6 +347,91 @@ void main() {
             expect(await repository.isLiked(_comment), isFalse);
           },
         );
+      });
+    });
+
+    group('executeUnlikeAction for an unlike queued offline', () {
+      late bool online;
+      late List<({String eventId, bool isLike, String? addressableId})> queued;
+      final coordinate = '${EventKind.videoVertical}:$_author:clip';
+
+      setUp(() {
+        online = true;
+        queued = [];
+        repository.dispose();
+        repository = LikesRepository(
+          nostrClient: relay.client,
+          isOnline: () => online,
+          queueOfflineAction:
+              ({
+                required isLike,
+                required eventId,
+                required authorPubkey,
+                addressableId,
+                targetKind,
+              }) async => queued.add((
+                eventId: eventId,
+                isLike: isLike,
+                addressableId: addressableId,
+              )),
+        );
+      });
+
+      Future<void> likeThenUnlikeOffline({String? addressableId}) async {
+        await repository.likeEvent(
+          eventId: _comment,
+          authorPubkey: _author,
+          addressableId: addressableId,
+        );
+        online = false;
+        await repository.unlikeEvent(_comment, addressableId: addressableId);
+        online = true;
+      }
+
+      test('deletes the like this device already removed', () async {
+        await likeThenUnlikeOffline();
+        expect(queued.single.isLike, isFalse);
+
+        await repository.executeUnlikeAction(_comment);
+
+        expect(relay.deletions, equals(1));
+        final counts = await repository.getVoteCounts([_comment]);
+        expect(counts.upvotes[_comment], equals(0));
+      });
+
+      test('leaves the like count where the unlike put it', () async {
+        relay.vote(_other, _comment);
+        expect(await repository.getLikeCount(_comment), equals(1));
+        await likeThenUnlikeOffline();
+        expect(await repository.getLikeCount(_comment), equals(1));
+
+        await repository.executeUnlikeAction(_comment);
+
+        expect(relay.deletions, equals(1));
+        expect(await repository.getLikeCount(_comment), equals(1));
+      });
+
+      test('control: deletes nothing when the relays hold no like', () async {
+        await repository.executeUnlikeAction(_comment);
+
+        expect(relay.deletions, equals(0));
+      });
+
+      test('throws so the queue retries when the relays cannot tell', () async {
+        await likeThenUnlikeOffline();
+        relay.checksAreConclusive = false;
+
+        await expectLater(
+          repository.executeUnlikeAction(_comment),
+          throwsA(isA<UnlikeFailedException>()),
+        );
+        expect(relay.deletions, equals(0));
+      });
+
+      test('queues the unlike with the target coordinate', () async {
+        await likeThenUnlikeOffline(addressableId: coordinate);
+
+        expect(queued.single.addressableId, equals(coordinate));
       });
     });
   });

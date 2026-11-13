@@ -1482,6 +1482,7 @@ class LikesRepository {
           isLike: false,
           eventId: resolvedEventId,
           authorPubkey: '', // Not needed for unlike
+          addressableId: snapshotRecord.addressableId ?? addressableId,
         );
         return;
       }
@@ -1509,6 +1510,7 @@ class LikesRepository {
             isLike: false,
             eventId: resolvedEventId,
             authorPubkey: '', // Not needed for unlike
+            addressableId: snapshotRecord.addressableId ?? addressableId,
           );
         }
         return;
@@ -1544,6 +1546,7 @@ class LikesRepository {
               isLike: false,
               eventId: resolvedEventId,
               authorPubkey: '',
+              addressableId: snapshotRecord.addressableId ?? addressableId,
             );
             return;
           }
@@ -1588,6 +1591,7 @@ class LikesRepository {
             isLike: false,
             eventId: resolvedEventId,
             authorPubkey: '', // Not needed for unlike
+            addressableId: snapshotRecord.addressableId ?? addressableId,
           );
           return;
         }
@@ -1613,6 +1617,15 @@ class LikesRepository {
   ///
   /// [addressableId] resolves the record by coordinate when [eventId] finds
   /// nothing — mirrors [unlikeEvent]'s fallback for the same reason (#6020).
+  ///
+  /// [unlikeEvent] removes the record before it queues the unlike, so the
+  /// replay usually finds none. It then looks for the account's live like on
+  /// the relays and deletes that, and does nothing when they conclusively
+  /// hold none (#10922).
+  ///
+  /// Throws `UnlikeFailedException` when the relays cannot confirm whether
+  /// the like is still live, so the queue retries, or when the deletion
+  /// fails; `LikeAccountRestrictedException` when account policy rejects it.
   Future<void> executeUnlikeAction(
     String eventId, {
     String? addressableId,
@@ -1632,9 +1645,21 @@ class LikesRepository {
       }
     }
 
-    // If no record exists, the like was never synced either, so we're done
+    // The like was published and the unlike's own removal took the record.
+    final removedByUnlike = record == null;
     if (record == null) {
-      return;
+      final check = await _checkRelayForLiveLike(
+        eventId,
+        addressableId: addressableId,
+        timeout: _queuedLikeCheckTimeout,
+      );
+      if (!check.isConclusive) {
+        throw const UnlikeFailedException(
+          'Could not confirm whether the like is still live',
+        );
+      }
+      record = check.newest;
+      if (record == null) return;
     }
 
     final resolvedEventId = record.targetEventId;
@@ -1674,6 +1699,9 @@ class LikesRepository {
     if (deletionEvent == null) {
       throw const UnlikeFailedException('Failed to publish unlike deletion');
     }
+
+    // [unlikeEvent] already removed the record and lowered the count.
+    if (removedByUnlike) return;
 
     // Remove from cache and storage
     _deindexLikeRecord(resolvedEventId);

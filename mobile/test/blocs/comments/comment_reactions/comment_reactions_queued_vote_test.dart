@@ -457,6 +457,35 @@ void main() {
       });
     });
 
+    group('when the queued unlike drains', () {
+      setUp(() => relay.seedUpvote(_other));
+
+      test('a reopened sheet still shows the unlike', () async {
+        final first = openSheet();
+        upvote(first);
+        await settle();
+        await first.close();
+        final second = openSheet()
+          ..add(CommentVoteCountsFetchRequested([_comment]));
+        await settle();
+        online = false;
+        upvote(second);
+        await settle();
+        await second.close();
+        expect(queued, [false]);
+
+        online = true;
+        queue.clear();
+        await likes.executeUnlikeAction(_comment);
+        final reopened = openSheet()
+          ..add(CommentVoteCountsFetchRequested([_comment]));
+        await settle();
+
+        expectShown(reopened, upvoted: false, count: 1);
+        await reopened.close();
+      });
+    });
+
     group('when the queue gives up on the vote', () {
       setUp(() => relay.seedUpvote(_other));
 

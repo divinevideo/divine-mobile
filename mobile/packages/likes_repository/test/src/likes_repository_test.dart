@@ -6767,16 +6767,24 @@ void main() {
         verify(() => mockLocalStorage.deleteLikeRecord(testEventId)).called(1);
       });
 
-      test('does nothing when no record exists', () async {
+      test('deletes nothing when no record or live like exists', () async {
+        // The relays prove there is no live like to take back (#10922).
         when(
           () => mockLocalStorage.getLikeRecord(any()),
         ).thenAnswer((_) async => null);
+        mockReadEventsSequence([<Event>[]]);
 
         repository = createRepository();
 
-        // Should not throw, just return
         await repository.executeUnlikeAction(testEventId);
 
+        verify(
+          () => mockNostrClient.readEvents(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).called(greaterThan(0));
         verifyNever(() => mockNostrClient.deleteEvent(any()));
         verifyNever(() => mockLocalStorage.deleteLikeRecord(testEventId));
       });
