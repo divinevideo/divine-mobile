@@ -14,12 +14,15 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
 import 'package:openvine/services/video_editor/layer_capture_resolution.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_view.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_layer_actions.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_group.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -521,6 +524,42 @@ void main() {
       expect(restored.widget, isA<InfoStickerView>());
       expect((restored.widget as InfoStickerView).data, equals(data));
     });
+
+    test(
+      'renders a replies sticker with no sample people who answered',
+      () async {
+        final stub = _StubLayerRasterizer();
+        addTearDown(stub.dispose);
+        final layer = socialStickerWidgetLayer(
+          SocialStickerData.interactive(
+            SocialStickerKind.replies,
+            prompt: 'Reply with a video',
+          ),
+          width: 120,
+        );
+
+        await DraftRenderParametersService(rasterizer: stub).buildForDraft(
+          _draft(
+            editorEditingParameters: _persistedParameters(
+              bodySize: const Size(300, 500),
+            ),
+            editorStateHistory: {
+              'position': 0,
+              'history': [
+                {
+                  'layers': [layer.toMap()],
+                },
+              ],
+            },
+          ),
+        );
+
+        // The frames freeze whatever is drawn here; the player draws the real
+        // people over it once they are in.
+        final restored = stub.capturedLayers!.single as WidgetLayer;
+        expect((restored.widget as SocialStickerView).responses, isNull);
+      },
+    );
 
     test('wraps text layers inside the bounds the editor canvas used', () async {
       // A landscape clip cropped to vertical: its body is wider than the video

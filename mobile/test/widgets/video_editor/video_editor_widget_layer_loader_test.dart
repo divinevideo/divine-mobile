@@ -149,6 +149,23 @@ void main() {
       expect((restored.widget as SocialStickerView).data, equals(data));
     });
 
+    test('rebuilds a replies sticker with no sample people who answered', () {
+      final layer = socialStickerWidgetLayer(
+        SocialStickerData.interactive(
+          SocialStickerKind.replies,
+          prompt: 'Reply with a video',
+        ),
+        width: 120,
+      );
+      final stored = jsonDecode(
+        jsonEncode(_exportedHistory(layer)),
+      ) as Map<String, dynamic>;
+
+      final restored = _reopen(stored).single! as WidgetLayer;
+
+      expect((restored.widget as SocialStickerView).responses, isNull);
+    });
+
     test('still rebuilds a sticker as a sticker', () {
       final layer = WidgetLayer(
         width: 120,
