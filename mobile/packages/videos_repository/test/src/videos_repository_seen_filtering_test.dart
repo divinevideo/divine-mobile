@@ -822,6 +822,57 @@ void main() {
       );
       expect(result.videos.map((v) => v.id), contains('fresh-foyou'));
     });
+
+    test(
+      'getRecommendedVideos stops after maxSeenOnlyFeedPages and falls back to '
+      'unseen popular videos',
+      () async {
+        var page = 0;
+        when(
+          () => mockFunnelcake.getRecommendations(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            seed: any(named: 'seed'),
+            preferredLanguages: any(named: 'preferredLanguages'),
+            viewerCountry: any(named: 'viewerCountry'),
+          ),
+        ).thenAnswer((_) async {
+          page++;
+          return RecommendationsResponse(
+            videos: [_stats('seen-rec-$page')],
+            source: 'personalized',
+            hasMore: true,
+            nextCursor: 'cursor-$page',
+          );
+        });
+        when(
+          () => mockFunnelcake.getWatchingVideos(
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer(
+          (_) async => [_stats('seen-rec-1'), _stats('popular-unseen')],
+        );
+
+        final repo = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+                id.startsWith('seen-'),
+          ),
+        );
+
+        final result = await repo.getRecommendedVideos(
+          userPubkey: 'u',
+          limit: 1,
+        );
+        expect(page, equals(maxSeenOnlyFeedPages));
+        expect(result.videos.map((v) => v.id), equals(['popular-unseen']));
+        expect(result.paginationCursor, isNull);
+      },
+    );
   });
 
   group('filterOutRecentlySeenVideos helper', () {
@@ -979,6 +1030,59 @@ void main() {
         );
 
         expect(result.videos.map((v) => v.id), equals(['popular-new']));
+        expect(result.paginationCursor, isNull);
+      },
+    );
+
+    test(
+      'stops after maxSeenOnlyFeedPages seen recommendation pages and falls '
+      'back to unwatched popular videos',
+      () async {
+        var page = 0;
+        when(
+          () => mockFunnelcake.getRecommendations(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            seed: any(named: 'seed'),
+            preferredLanguages: any(named: 'preferredLanguages'),
+            viewerCountry: any(named: 'viewerCountry'),
+          ),
+        ).thenAnswer((_) async {
+          page++;
+          return RecommendationsResponse(
+            videos: [_stats('watched-$page')],
+            source: 'personalized',
+            hasMore: true,
+            nextCursor: 'discovery-cursor-$page',
+          );
+        });
+        when(
+          () => mockFunnelcake.getWatchingVideos(
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer(
+          (_) async => [_stats('watched-1'), _stats('popular-unwatched')],
+        );
+
+        final repo = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          inMemoryFeedCache: InMemoryFeedCache(),
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+                id.startsWith('watched-'),
+          ),
+        );
+
+        final result = await repo.getVideoDiscoveryPage(
+          userPubkey: 'u',
+          limit: 1,
+        );
+
+        expect(page, equals(maxSeenOnlyFeedPages));
+        expect(result.videos.map((v) => v.id), equals(['popular-unwatched']));
         expect(result.paginationCursor, isNull);
       },
     );

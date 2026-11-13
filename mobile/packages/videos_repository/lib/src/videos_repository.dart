@@ -3952,6 +3952,7 @@ class VideosRepository {
       if (videos.isEmpty ||
           _seenVideoLookup == null ||
           _hasNotRecentlySeenCandidate(videos) ||
+          pageCount >= maxSeenOnlyFeedPages ||
           !hasMore ||
           nextCursor == null ||
           nextCursor == fetchedCursor) {
