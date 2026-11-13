@@ -55,16 +55,22 @@ void main() {
       );
       expect(
         LayerBackgroundMode.backgroundAndColor.icon,
-        equals(DivineIconName.textBgFill),
+        equals(DivineIconName.textBgSolid),
       );
       expect(
         LayerBackgroundMode.background.icon,
-        equals(DivineIconName.textBgFill),
+        equals(DivineIconName.textBgHighlight),
       );
       expect(
         LayerBackgroundMode.backgroundAndColorWithOpacity.icon,
         equals(DivineIconName.textBgTransparent),
       );
+    });
+
+    test('gives every background mode its own icon', () {
+      final icons = LayerBackgroundMode.values.map((mode) => mode.icon);
+
+      expect(icons.toSet(), hasLength(LayerBackgroundMode.values.length));
     });
   });
 }

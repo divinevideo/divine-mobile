@@ -123,8 +123,8 @@ extension TextEditorBackgroundMode on LayerBackgroundMode {
   /// Returns the icon for this background mode.
   DivineIconName get icon => switch (this) {
     LayerBackgroundMode.onlyColor => .textBgNone,
-    LayerBackgroundMode.backgroundAndColor => .textBgFill,
-    LayerBackgroundMode.background => .textBgFill,
+    LayerBackgroundMode.backgroundAndColor => .textBgSolid,
+    LayerBackgroundMode.background => .textBgHighlight,
     LayerBackgroundMode.backgroundAndColorWithOpacity => .textBgTransparent,
   };
 
