@@ -42,7 +42,6 @@ videoClipSemanticValueSelectedAtPosition # ordinal: pick order
 videoCollaboratorWithMore # detached: "+{count}" overflow badge
 videoCollaboratorWithPendingSuffix # detached: parenthetical "({pending} pending)"
 videoEditorClipVolumeLabel # ordinal: "Clip {index}"
-videoEditorSaturationBrightnessValue # percentage
 videoEditorSplitPositionInvalid # unit: "{minDurationMs}ms" symbol
 videoEditorStopMotionFrameSemanticLabel # ordinal: "frame {position} of {total}"
 videoEditorStopMotionTooShortSnackbar # unit: "{seconds}s" symbol

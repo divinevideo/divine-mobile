@@ -387,10 +387,13 @@ void main() {
       group('screen reader', () {
         final l10n = lookupAppLocalizations(const Locale('en'));
 
+        SemanticsNode labelled(String label) =>
+            find.semantics.byLabel(label).evaluate().single;
+
         // A screen reader replays its tap or scroll at a point the SDK picks,
         // so either would move the color. The whole subtree is checked: the
-        // panel's gestures would otherwise sit in an unlabelled node under
-        // the group, beside the two axis sliders.
+        // panel's gestures would otherwise sit in an unlabelled node beside
+        // the two axis sliders.
         testWidgets('offers no tap or scroll that would reset the color', (
           tester,
         ) async {
@@ -403,10 +406,13 @@ void main() {
             SemanticsAction.scrollUp,
             SemanticsAction.scrollDown,
           };
-          for (final label in [
-            l10n.videoEditorSaturationBrightnessSemanticLabel,
-            l10n.videoEditorHueSemanticLabel,
-          ]) {
+          final controls = {
+            'panel': labelled(l10n.videoEditorTuneSaturation).parent!,
+            'hue bar': tester.getSemantics(
+              find.bySemanticsLabel(l10n.videoEditorHueSemanticLabel),
+            ),
+          };
+          for (final MapEntry(key: name, value: control) in controls.entries) {
             final offered = <SemanticsAction>{};
             void collect(SemanticsNode node) {
               final data = node.getSemanticsData();
@@ -417,8 +423,8 @@ void main() {
               });
             }
 
-            collect(tester.getSemantics(find.bySemanticsLabel(label)));
-            expect(offered, isEmpty, reason: label);
+            collect(control);
+            expect(offered, isEmpty, reason: name);
           }
         });
 
@@ -437,20 +443,67 @@ void main() {
           );
           await tester.pump();
 
-          expect(
-            tester.getSemantics(
-              find.bySemanticsLabel(
-                l10n.videoEditorSaturationBrightnessSemanticLabel,
-              ),
-            ),
-            isSemantics(
-              value: l10n.videoEditorSaturationBrightnessValue(5, 95),
-            ),
-          );
+          expect(labelled(l10n.videoEditorTuneSaturation).value, '5%');
+          expect(labelled(l10n.videoEditorTuneBrightness).value, '95%');
         });
+
+        // A double-tap on a stop that has no tap action, other than a slider,
+        // is replayed as a real touch at its centre (flutter/flutter#156427),
+        // and the panel would take that touch as a pick.
+        testWidgets(
+          'leaves the color alone when a panel stop is double-tapped',
+          (
+            tester,
+          ) async {
+            await pumpOpener(tester, onResult: (_) {});
+
+            List<String> readout() => [
+              labelled(l10n.videoEditorTuneSaturation).value,
+              labelled(l10n.videoEditorTuneBrightness).value,
+            ];
+            final before = readout();
+            expect(before, equals(['0%', '100%']));
+
+            final realTapStops = <SemanticsNode>[];
+            void collect(SemanticsNode node) {
+              final isStop = node.label.isNotEmpty || node.value.isNotEmpty;
+              if (isStop &&
+                  !node.flagsCollection.isSlider &&
+                  !node.getSemanticsData().hasAction(SemanticsAction.tap)) {
+                realTapStops.add(node);
+              }
+              node.visitChildren((child) {
+                collect(child);
+                return true;
+              });
+            }
+
+            collect(labelled(l10n.videoEditorTuneSaturation).parent!);
+            for (final node in realTapStops) {
+              await tester.tapAt(
+                _logicalCenter(node, tester.view.devicePixelRatio),
+              );
+              await tester.pump();
+            }
+
+            expect(readout(), equals(before));
+          },
+        );
       });
     });
   });
+}
+
+/// Where a screen reader's fallback touch lands on [node]: its centre, in
+/// logical pixels.
+Offset _logicalCenter(SemanticsNode node, double devicePixelRatio) {
+  var rect = node.rect;
+  for (SemanticsNode? current = node; current != null;) {
+    final transform = current.transform;
+    if (transform != null) rect = MatrixUtils.transformRect(transform, rect);
+    current = current.parent;
+  }
+  return rect.center / devicePixelRatio;
 }
 
 /// A video view on screen whose eyedropper always picks [color], or is closed

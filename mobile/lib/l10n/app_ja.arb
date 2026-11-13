@@ -2928,18 +2928,6 @@
   "videoEditorVoiceOverTooLong": "録音が動画より長くなっています",
   "videoEditorRedoSemanticLabel": "やり直し",
   "videoEditorReleaseToDeleteLayer": "離してレイヤーを削除",
-  "videoEditorSaturationBrightnessSemanticLabel": "彩度と明度",
-  "videoEditorSaturationBrightnessValue": "彩度 {saturation}%、明度 {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorSaveClip": "クリップを保存",
   "videoEditorSaveDraftButton": "下書きを保存",
   "videoEditorSaveDraftSubtitle": "編集内容を後で保存するか、破棄してエディタを終了します。",

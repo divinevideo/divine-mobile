@@ -12179,15 +12179,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEyedropperCancelSemanticLabel => 'Спри избора на цвят';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel =>
-      'Наситеност и яркост';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'Наситеност $saturation%, яркост $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'Нюанс';
 
   @override

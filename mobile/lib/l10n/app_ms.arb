@@ -5920,18 +5920,6 @@
   "videoEditorEyedropperSemanticLabel": "Pilih warna daripada video",
   "videoEditorEyedropperHint": "Sentuh dan seret untuk memilih warna",
   "videoEditorEyedropperCancelSemanticLabel": "Berhenti memilih warna",
-  "videoEditorSaturationBrightnessSemanticLabel": "Ketepuan dan kecerahan",
-  "videoEditorSaturationBrightnessValue": "Ketepuan {saturation}%, Kecerahan {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorHueSemanticLabel": "Rona",
   "videoEditorLevelSemanticLabel": "Tahap",
   "videoEditorBrushSizeSemanticLabel": "Saiz berus",

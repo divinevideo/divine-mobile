@@ -432,13 +432,11 @@ class _SaturationBrightnessPanel extends StatelessWidget {
         final size = Size(constraints.maxWidth, _height);
         final l10n = context.l10n;
         return Semantics(
+          // No label or value: a screen reader would stop here, and a
+          // double-tap on a stop without a tap action lands as a real touch
+          // that picks a color. The two axis sliders are the only stops.
           container: true,
           explicitChildNodes: true,
-          label: l10n.videoEditorSaturationBrightnessSemanticLabel,
-          value: l10n.videoEditorSaturationBrightnessValue(
-            (hsvColor.saturation * 100).round(),
-            (hsvColor.value * 100).round(),
-          ),
           child: GestureDetector(
             // A screen reader replays its tap or scroll at a point the SDK
             // picks, so either would silently move the color. The two axis

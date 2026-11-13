@@ -3395,18 +3395,6 @@
   "videoEditorEyedropperSemanticLabel": "Kies een kleur uit de video",
   "videoEditorEyedropperHint": "Tik en sleep om een kleur te kiezen",
   "videoEditorEyedropperCancelSemanticLabel": "Stoppen met kleur kiezen",
-  "videoEditorSaturationBrightnessSemanticLabel": "Verzadiging en helderheid",
-  "videoEditorSaturationBrightnessValue": "Verzadiging {saturation}%, Helderheid {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorHueSemanticLabel": "Tint",
   "videoEditorLevelSemanticLabel": "Niveau",
   "videoEditorBrushSizeSemanticLabel": "Penseelgrootte",

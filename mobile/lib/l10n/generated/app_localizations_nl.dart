@@ -12125,15 +12125,6 @@ class AppLocalizationsNl extends AppLocalizations {
       'Stoppen met kleur kiezen';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel =>
-      'Verzadiging en helderheid';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'Verzadiging $saturation%, Helderheid $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'Tint';
 
   @override

@@ -12225,15 +12225,6 @@ class AppLocalizationsIt extends AppLocalizations {
       'Smetti di scegliere un colore';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel =>
-      'Saturazione e luminosità';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'Saturazione $saturation %, luminosità $brightness %';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'Tonalità';
 
   @override

@@ -11973,15 +11973,6 @@ class AppLocalizationsId extends AppLocalizations {
       'Berhenti memilih warna';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel =>
-      'Saturasi dan kecerahan';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'Saturasi $saturation%, Kecerahan $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'Rona';
 
   @override

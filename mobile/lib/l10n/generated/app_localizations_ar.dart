@@ -12079,14 +12079,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEyedropperCancelSemanticLabel => 'إيقاف اختيار اللون';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel => 'التشبع والسطوع';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'التشبع $saturation%، السطوع $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'الصبغة';
 
   @override

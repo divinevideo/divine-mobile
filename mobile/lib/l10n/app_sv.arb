@@ -3395,18 +3395,6 @@
   "videoEditorEyedropperSemanticLabel": "Välj en färg från videon",
   "videoEditorEyedropperHint": "Tryck och dra för att välja en färg",
   "videoEditorEyedropperCancelSemanticLabel": "Sluta välja färg",
-  "videoEditorSaturationBrightnessSemanticLabel": "Mättnad och ljusstyrka",
-  "videoEditorSaturationBrightnessValue": "Mättnad {saturation}%, Ljusstyrka {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorHueSemanticLabel": "Nyans",
   "videoEditorLevelSemanticLabel": "Nivå",
   "videoEditorBrushSizeSemanticLabel": "Penselstorlek",

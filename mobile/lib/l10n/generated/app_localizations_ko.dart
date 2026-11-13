@@ -11508,14 +11508,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEyedropperCancelSemanticLabel => '색상 선택 그만하기';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel => '채도 및 밝기';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return '채도 $saturation%, 밝기 $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => '색조';
 
   @override

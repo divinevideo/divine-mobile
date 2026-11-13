@@ -11362,14 +11362,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEyedropperCancelSemanticLabel => '停止取色';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel => '饱和度和亮度';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return '饱和度 $saturation%，亮度 $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => '色相';
 
   @override

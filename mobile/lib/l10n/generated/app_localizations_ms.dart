@@ -12076,15 +12076,6 @@ class AppLocalizationsMs extends AppLocalizations {
       'Berhenti memilih warna';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel =>
-      'Ketepuan dan kecerahan';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'Ketepuan $saturation%, Kecerahan $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'Rona';
 
   @override

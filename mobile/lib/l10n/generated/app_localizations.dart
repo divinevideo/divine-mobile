@@ -20439,18 +20439,6 @@ abstract class AppLocalizations {
   /// **'Stop picking a color'**
   String get videoEditorEyedropperCancelSemanticLabel;
 
-  /// No description provided for @videoEditorSaturationBrightnessSemanticLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Saturation and brightness'**
-  String get videoEditorSaturationBrightnessSemanticLabel;
-
-  /// No description provided for @videoEditorSaturationBrightnessValue.
-  ///
-  /// In en, this message translates to:
-  /// **'Saturation {saturation}%, Brightness {brightness}%'**
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness);
-
   /// No description provided for @videoEditorHueSemanticLabel.
   ///
   /// In en, this message translates to:

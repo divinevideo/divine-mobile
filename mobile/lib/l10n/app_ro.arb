@@ -3395,18 +3395,6 @@
   "videoEditorEyedropperSemanticLabel": "Alege o culoare din videoclip",
   "videoEditorEyedropperHint": "Atinge și trage pentru a alege o culoare",
   "videoEditorEyedropperCancelSemanticLabel": "Oprește alegerea culorii",
-  "videoEditorSaturationBrightnessSemanticLabel": "Saturație și luminozitate",
-  "videoEditorSaturationBrightnessValue": "Saturație {saturation}%, Luminozitate {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorHueSemanticLabel": "Nuanță",
   "videoEditorLevelSemanticLabel": "Nivel",
   "videoEditorBrushSizeSemanticLabel": "Dimensiunea pensulei",

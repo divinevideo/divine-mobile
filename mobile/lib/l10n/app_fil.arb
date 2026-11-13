@@ -2645,8 +2645,6 @@
   "videoEditorEyedropperSemanticLabel": "Pumili ng kulay mula sa video",
   "videoEditorEyedropperHint": "I-tap at i-drag para pumili ng kulay",
   "videoEditorEyedropperCancelSemanticLabel": "Itigil ang pagpili ng kulay",
-  "videoEditorSaturationBrightnessSemanticLabel": "Saturation at brightness",
-  "videoEditorSaturationBrightnessValue": "Saturation {saturation}%, Brightness {brightness}%",
   "videoEditorHueSemanticLabel": "Hue",
   "videoEditorLevelSemanticLabel": "Antas",
   "videoEditorBrushSizeSemanticLabel": "Laki ng brush",

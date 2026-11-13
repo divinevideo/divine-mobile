@@ -12024,15 +12024,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEyedropperCancelSemanticLabel => 'Dừng chọn màu';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel =>
-      'Độ bão hòa và độ sáng';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'Độ bão hòa $saturation%, Độ sáng $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'Tông màu';
 
   @override

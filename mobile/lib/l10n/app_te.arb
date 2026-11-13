@@ -6716,18 +6716,6 @@
   "videoEditorEyedropperSemanticLabel": "వీడియో నుండి రంగును ఎంచుకోండి",
   "videoEditorEyedropperHint": "రంగును ఎంచుకోవడానికి తాకి లాగండి",
   "videoEditorEyedropperCancelSemanticLabel": "రంగు ఎంపికను ఆపండి",
-  "videoEditorSaturationBrightnessSemanticLabel": "సంతృప్తత మరియు ప్రకాశం",
-  "videoEditorSaturationBrightnessValue": "సంతృప్తత {saturation}%, ప్రకాశం {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorHueSemanticLabel": "రంగు",
   "videoEditorLevelSemanticLabel": "స్థాయి",
   "videoEditorBrushSizeSemanticLabel": "బ్రష్ పరిమాణం",

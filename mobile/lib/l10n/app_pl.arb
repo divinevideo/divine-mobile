@@ -3395,18 +3395,6 @@
   "videoEditorEyedropperSemanticLabel": "Wybierz kolor z filmu",
   "videoEditorEyedropperHint": "Dotknij i przeciągnij, aby wybrać kolor",
   "videoEditorEyedropperCancelSemanticLabel": "Przestań wybierać kolor",
-  "videoEditorSaturationBrightnessSemanticLabel": "Nasycenie i jasność",
-  "videoEditorSaturationBrightnessValue": "Nasycenie {saturation}%, jasność {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorHueSemanticLabel": "Odcień",
   "videoEditorLevelSemanticLabel": "Poziom",
   "videoEditorBrushSizeSemanticLabel": "Rozmiar pędzla",
