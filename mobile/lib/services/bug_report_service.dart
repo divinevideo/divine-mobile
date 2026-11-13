@@ -15,6 +15,7 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
 import 'package:openvine/l10n/resolve_app_ui_locale.dart';
+import 'package:openvine/services/media_cache_budget_telemetry.dart';
 import 'package:openvine/services/storage_management_service.dart';
 import 'package:openvine/utils/app_uptime.dart';
 import 'package:openvine/utils/browser_file_download.dart';
@@ -461,11 +462,14 @@ class BugReportService {
     if (storage != null) {
       try {
         final usage = await storage.cacheUsage();
+        // The video and image budgets follow the disk, and on iOS nothing
+        // derived from disk space may leave the device (E174.1).
+        final showDiskSizedLimits = diskSpaceMayLeaveDevice();
         buffer.writeln(
           'Cache: '
-          'video ${_formatCacheUsageCategory(usage.video)} · '
+          'video ${_formatCacheUsageCategory(usage.video, showLimit: showDiskSizedLimits)} · '
           'player ${_formatCacheUsageCategory(usage.player)} · '
-          'images ${_formatCacheUsageCategory(usage.images)} · '
+          'images ${_formatCacheUsageCategory(usage.images, showLimit: showDiskSizedLimits)} · '
           'seams ${_formatCacheUsageCategory(usage.transitionSeams)} · '
           'temp ${_formatCacheUsageCategory(usage.tempRenders)}',
         );
@@ -504,10 +508,13 @@ class BugReportService {
     return '${mb.toStringAsFixed(1)} MB';
   }
 
-  static String _formatCacheUsageCategory(CacheUsageCategory usage) {
+  static String _formatCacheUsageCategory(
+    CacheUsageCategory usage, {
+    bool showLimit = true,
+  }) {
     final limitBytes = usage.limitBytes;
     final used = _formatBytesShort(usage.usedBytes);
-    if (limitBytes == null) return used;
+    if (limitBytes == null || !showLimit) return used;
     final ratio = limitBytes == 0 ? 0 : usage.usedBytes / limitBytes;
     final percent = (ratio * 100).toStringAsFixed(1);
     final status = _cacheBudgetStatus(usage.usedBytes, limitBytes);

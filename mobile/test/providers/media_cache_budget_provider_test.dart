@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/constants/storage_cache_constants.dart';
 import 'package:openvine/providers/media_cache_budget_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/media_cache_budget_telemetry.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

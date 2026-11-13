@@ -22,12 +22,6 @@ MediaCacheBudget appMediaCacheBudgetCeiling() => mediaCacheBudgetCeiling(
   hasPlayerCache: !kIsWeb && defaultTargetPlatform == TargetPlatform.android,
 );
 
-/// Whether disk-space readings, and what is derived from them, may leave the
-/// device. iOS reads disk space under required reason E174.1, which forbids
-/// it; Android sets no such limit.
-bool diskSpaceMayLeaveDevice() =>
-    kIsWeb || defaultTargetPlatform != TargetPlatform.iOS;
-
 /// Keeps the video and image caches sized to the disk, and records the disk
 /// and the budget as coarse labels on analytics and crash reports.
 final mediaCacheBudgetServiceProvider = Provider<MediaCacheBudgetService>((

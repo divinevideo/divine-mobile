@@ -166,9 +166,12 @@ Independent of the screen, these sweeps run on their own:
   cache can only be sized when it is created, at launch. On this screen
   "Size it automatically" is the default; turning it off fixes the video
   cache to the slider (`kCacheLimitPrefKey`), and the image and player caches
-  keep following the disk. Each applied budget is recorded as coarse labels
-  (disk tier, free-space band, mode, video-budget band) on Firebase Analytics
-  user properties and Crashlytics keys.
+  keep following the disk. On Android each applied budget is recorded as
+  coarse labels (disk tier, free-space band, mode, video-budget band) on
+  Firebase Analytics user properties and Crashlytics keys. iOS reads disk
+  space under required reason E174.1, which forbids sending it, or anything
+  derived from it, off the device: there only the mode is recorded, and bug
+  reports omit the video and image budgets (`diskSpaceMayLeaveDevice`).
 
 Apart from those two legacy leftovers, none of them touch a non-empty file
 under the documents root — that is what the sweep on this screen is for.

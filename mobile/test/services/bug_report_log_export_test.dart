@@ -453,6 +453,42 @@ void main() {
       expect(diagnostics, contains('within limit'));
     });
 
+    test('on iOS, leaves out the budgets sized from disk space', () async {
+      // Apple's E174.1 forbids sending disk space, or anything derived from
+      // it, off the device. The video and image budgets follow the disk; the
+      // sizes the caches hold are measured from their own files and stay.
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      final storage = _MockStorageManagementService();
+      when(storage.cacheUsage).thenAnswer(
+        (_) async => const CacheUsage(
+          video: CacheUsageCategory(
+            usedBytes: 48 * 1024 * 1024,
+            limitBytes: 64 * 1024 * 1024,
+          ),
+          player: CacheUsageCategory(usedBytes: 0, limitBytes: 0),
+          images: CacheUsageCategory(
+            usedBytes: 16 * 1024 * 1024,
+            limitBytes: 32 * 1024 * 1024,
+          ),
+          transitionSeams: CacheUsageCategory(
+            usedBytes: 0,
+            limitBytes: 200 * 1024 * 1024,
+          ),
+          tempRenders: CacheUsageCategory(usedBytes: 0),
+        ),
+      );
+
+      final diagnostics = await BugReportService(
+        storageManagementService: storage,
+      ).buildEnvironmentDiagnostics();
+
+      expect(diagnostics, contains('Cache: video 48.0 MB · player'));
+      expect(diagnostics, contains('images 16.0 MB · seams 0.0 MB/200.0 MB'));
+      expect(diagnostics, isNot(contains('64.0 MB')));
+      expect(diagnostics, isNot(contains('32.0 MB')));
+    });
+
     test('reports exact cache limit status at and over budget', () async {
       final storage = _MockStorageManagementService();
       when(storage.cacheUsage).thenAnswer(

@@ -1,6 +1,7 @@
 // ABOUTME: Coarse labels for the disk and the media-cache budget, recorded so
 // ABOUTME: cache sizing can be tuned from real devices rather than guesses.
 
+import 'package:flutter/foundation.dart';
 import 'package:openvine/constants/storage_cache_constants.dart';
 import 'package:openvine/services/device_storage_service.dart';
 import 'package:openvine/services/media_cache_budget.dart';
@@ -10,6 +11,12 @@ const List<int> _storageTiersGb = [16, 32, 64, 128, 256, 512, 1024];
 
 const int _bytesPerGb = 1000 * 1000 * 1000;
 const int _bytesPerMb = 1024 * 1024;
+
+/// Whether disk-space readings, and what is derived from them, may leave the
+/// device. iOS reads disk space under required reason E174.1, which forbids
+/// it; Android sets no such limit.
+bool diskSpaceMayLeaveDevice() =>
+    kIsWeb || defaultTargetPlatform != TargetPlatform.iOS;
 
 /// Labels describing [storage] and the [budget] in force.
 ///
