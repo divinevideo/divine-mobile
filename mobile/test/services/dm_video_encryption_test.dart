@@ -9,15 +9,25 @@ import 'dart:typed_data';
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+
+import '../mocks/mock_path_provider_platform.dart';
 
 void main() {
   late Directory tempDir;
+  late PathProviderPlatform originalPathProvider;
 
   setUp(() {
     tempDir = Directory.systemTemp.createTempSync('dm_video_encryption_test');
+    // encryptFile writes its ciphertext to getTemporaryDirectory(), which the
+    // shared harness points at /tmp; keep it in this test's directory instead.
+    originalPathProvider = PathProviderPlatform.instance;
+    PathProviderPlatform.instance = MockPathProviderPlatform()
+      ..setTemporaryPath(tempDir.path);
   });
 
   tearDown(() {
+    PathProviderPlatform.instance = originalPathProvider;
     if (tempDir.existsSync()) {
       tempDir.deleteSync(recursive: true);
     }
