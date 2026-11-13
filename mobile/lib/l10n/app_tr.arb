@@ -2936,18 +2936,6 @@
   "videoEditorVoiceOverTooLong": "Kayıt videonuzdan daha uzun",
   "videoEditorRedoSemanticLabel": "Yinele",
   "videoEditorReleaseToDeleteLayer": "Katmanı silmek için bırak",
-  "videoEditorSaturationBrightnessSemanticLabel": "Doygunluk ve parlaklık",
-  "videoEditorSaturationBrightnessValue": "Doygunluk {saturation}%, Parlaklık {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorSaveClip": "Klibi kaydet",
   "videoEditorSaveDraftButton": "Taslağı kaydet",
   "videoEditorSaveDraftSubtitle": "Düzenlemelerinizi sonraya kaydedin veya atıp düzenleyiciden çıkın.",

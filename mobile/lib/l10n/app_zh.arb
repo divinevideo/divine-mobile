@@ -5922,18 +5922,6 @@
   "videoEditorEyedropperSemanticLabel": "从视频中取色",
   "videoEditorEyedropperHint": "按住并拖动来取色",
   "videoEditorEyedropperCancelSemanticLabel": "停止取色",
-  "videoEditorSaturationBrightnessSemanticLabel": "饱和度和亮度",
-  "videoEditorSaturationBrightnessValue": "饱和度 {saturation}%，亮度 {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorHueSemanticLabel": "色相",
   "videoEditorLevelSemanticLabel": "层级",
   "videoEditorBrushSizeSemanticLabel": "画笔大小",

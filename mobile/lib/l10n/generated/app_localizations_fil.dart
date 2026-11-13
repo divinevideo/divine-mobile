@@ -12171,15 +12171,6 @@ class AppLocalizationsFil extends AppLocalizations {
       'Itigil ang pagpili ng kulay';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel =>
-      'Saturation at brightness';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'Saturation $saturation%, Brightness $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'Hue';
 
   @override

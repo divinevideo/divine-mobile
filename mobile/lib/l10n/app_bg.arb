@@ -3638,18 +3638,6 @@
   "videoEditorEyedropperSemanticLabel": "Избери цвят от видеото",
   "videoEditorEyedropperHint": "Докосни и плъзни, за да избереш цвят",
   "videoEditorEyedropperCancelSemanticLabel": "Спри избора на цвят",
-  "videoEditorSaturationBrightnessSemanticLabel": "Наситеност и яркост",
-  "videoEditorSaturationBrightnessValue": "Наситеност {saturation}%, яркост {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorHueSemanticLabel": "Нюанс",
   "videoEditorLevelSemanticLabel": "Ниво",
   "videoEditorBrushSizeSemanticLabel": "Размер на четката",

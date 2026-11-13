@@ -2929,18 +2929,6 @@
   "videoEditorVoiceOverTooLong": "التسجيل أطول من الفيديو الخاص بك",
   "videoEditorRedoSemanticLabel": "إعادة",
   "videoEditorReleaseToDeleteLayer": "أفلت لحذف الطبقة",
-  "videoEditorSaturationBrightnessSemanticLabel": "التشبع والسطوع",
-  "videoEditorSaturationBrightnessValue": "التشبع {saturation}%، السطوع {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorSaveClip": "حفظ المقطع",
   "videoEditorSaveDraftButton": "حفظ المسودة",
   "videoEditorSaveDraftSubtitle": "احفظ تعديلاتك لاحقًا، أو تجاهلها واخرج من المحرر.",

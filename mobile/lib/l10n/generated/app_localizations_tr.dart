@@ -11991,15 +11991,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEyedropperCancelSemanticLabel => 'Renk seçmeyi bırak';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel =>
-      'Doygunluk ve parlaklık';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'Doygunluk $saturation%, Parlaklık $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'Ton';
 
   @override

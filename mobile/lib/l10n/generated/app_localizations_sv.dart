@@ -12085,15 +12085,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEyedropperCancelSemanticLabel => 'Sluta välja färg';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel =>
-      'Mättnad och ljusstyrka';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'Mättnad $saturation%, Ljusstyrka $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'Nyans';
 
   @override

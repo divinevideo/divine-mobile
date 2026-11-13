@@ -9577,18 +9577,6 @@
   "@videoEditorEyedropperCancelSemanticLabel": {
     "description": "Accessibility label of the button that closes the eyedropper without picking a color, which goes back to the Pick color sheet."
   },
-  "videoEditorSaturationBrightnessSemanticLabel": "Saturation and brightness",
-  "videoEditorSaturationBrightnessValue": "Saturation {saturation}%, Brightness {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorHueSemanticLabel": "Hue",
   "videoEditorLevelSemanticLabel": "Level",
   "videoEditorBrushSizeSemanticLabel": "Brush size",

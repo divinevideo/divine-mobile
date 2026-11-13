@@ -4027,18 +4027,6 @@
   "videoEditorEyedropperSemanticLabel": "ከቪዲዮው ቀለም ይምረጡ",
   "videoEditorEyedropperHint": "ቀለም ለመምረጥ ይንኩና ይጎትቱ",
   "videoEditorEyedropperCancelSemanticLabel": "ቀለም መምረጥን ያቁሙ",
-  "videoEditorSaturationBrightnessSemanticLabel": "ሙሌት እና ብሩህነት",
-  "videoEditorSaturationBrightnessValue": "ሙሌት {saturation}%፣ ብሩህነት {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorHueSemanticLabel": "ሁ",
   "videoEditorLevelSemanticLabel": "ደረጃ",
   "videoEditorBrushSizeSemanticLabel": "የብሩሽ መጠን",

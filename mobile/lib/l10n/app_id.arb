@@ -2936,18 +2936,6 @@
   "videoEditorVoiceOverTooLong": "Rekaman lebih panjang dari video Anda",
   "videoEditorRedoSemanticLabel": "Ulangi",
   "videoEditorReleaseToDeleteLayer": "Lepas untuk menghapus lapisan",
-  "videoEditorSaturationBrightnessSemanticLabel": "Saturasi dan kecerahan",
-  "videoEditorSaturationBrightnessValue": "Saturasi {saturation}%, Kecerahan {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorSaveClip": "Simpan klip",
   "videoEditorSaveDraftButton": "Simpan draf",
   "videoEditorSaveDraftSubtitle": "Simpan editan untuk nanti, atau buang dan keluar dari editor.",

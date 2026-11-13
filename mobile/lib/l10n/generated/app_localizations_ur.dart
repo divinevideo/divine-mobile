@@ -12080,14 +12080,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEyedropperCancelSemanticLabel => 'رنگ چننا بند کریں';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel => 'سیچوریشن اور چمک';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'سیچوریشن $saturation%، چمک $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'رنگت';
 
   @override

@@ -5922,18 +5922,6 @@
   "videoEditorEyedropperSemanticLabel": "ویڈیو سے رنگ چنیں",
   "videoEditorEyedropperHint": "رنگ چننے کے لیے چھوئیں اور گھسیٹیں",
   "videoEditorEyedropperCancelSemanticLabel": "رنگ چننا بند کریں",
-  "videoEditorSaturationBrightnessSemanticLabel": "سیچوریشن اور چمک",
-  "videoEditorSaturationBrightnessValue": "سیچوریشن {saturation}%، چمک {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorHueSemanticLabel": "رنگت",
   "videoEditorLevelSemanticLabel": "سطح",
   "videoEditorBrushSizeSemanticLabel": "برش کا سائز",

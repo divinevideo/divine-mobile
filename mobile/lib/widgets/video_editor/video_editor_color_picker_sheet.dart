@@ -430,13 +430,18 @@ class _SaturationBrightnessPanel extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, _height);
+        final l10n = context.l10n;
         return Semantics(
-          label: context.l10n.videoEditorSaturationBrightnessSemanticLabel,
-          value: context.l10n.videoEditorSaturationBrightnessValue(
-            (hsvColor.saturation * 100).round(),
-            (hsvColor.value * 100).round(),
-          ),
+          // No label or value: a screen reader would stop here, and a
+          // double-tap on a stop without a tap action lands as a real touch
+          // that picks a color. The two axis sliders are the only stops.
+          container: true,
+          explicitChildNodes: true,
           child: GestureDetector(
+            // A screen reader replays its tap or scroll at a point the SDK
+            // picks, so either would silently move the color. The two axis
+            // sliders below are the screen-reader way to adjust it.
+            excludeFromSemantics: true,
             onPanStart: (d) => _handleInteraction(d.localPosition, size),
             onPanUpdate: (d) => _handleInteraction(d.localPosition, size),
             onTapDown: (d) => _handleInteraction(d.localPosition, size),
@@ -458,12 +463,70 @@ class _SaturationBrightnessPanel extends StatelessWidget {
                     top: (1 - hsvColor.value) * size.height - _thumbSize / 2,
                     child: const _ColorThumb(),
                   ),
+                  // Semantics only: a gesture recognizer added here would
+                  // take touches from the panel.
+                  Positioned.fill(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _PanelAxisSlider(
+                            label: l10n.videoEditorTuneSaturation,
+                            value: hsvColor.saturation,
+                            onChanged: (saturation) => onChanged(
+                              hsvColor.withSaturation(saturation),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: _PanelAxisSlider(
+                            label: l10n.videoEditorTuneBrightness,
+                            value: hsvColor.value,
+                            onChanged: (brightness) =>
+                                onChanged(hsvColor.withValue(brightness)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// One axis of the saturation/brightness panel as a screen-reader slider.
+class _PanelAxisSlider extends StatelessWidget {
+  const _PanelAxisSlider({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final double value;
+  final ValueChanged<double> onChanged;
+
+  static const double _step = 0.05;
+
+  static String _percent(double value) => '${(value * 100).round()}%';
+
+  @override
+  Widget build(BuildContext context) {
+    final increased = (value + _step).clamp(0.0, 1.0);
+    final decreased = (value - _step).clamp(0.0, 1.0);
+    return Semantics(
+      slider: true,
+      label: label,
+      value: _percent(value),
+      increasedValue: _percent(increased),
+      decreasedValue: _percent(decreased),
+      onIncrease: () => onChanged(increased),
+      onDecrease: () => onChanged(decreased),
+      child: const SizedBox.expand(),
     );
   }
 }
@@ -529,6 +592,10 @@ class _HueBar extends StatelessWidget {
           onIncrease: () => onChanged((hue + 10).clamp(0.0, 360.0)),
           onDecrease: () => onChanged((hue - 10).clamp(0.0, 360.0)),
           child: GestureDetector(
+            // A screen reader replays its tap or scroll at a point the SDK
+            // picks, so either would move the hue; the slider actions above
+            // adjust it.
+            excludeFromSemantics: true,
             onPanStart: (d) => _handleInteraction(d.localPosition, width),
             onPanUpdate: (d) => _handleInteraction(d.localPosition, width),
             onTapDown: (d) => _handleInteraction(d.localPosition, width),

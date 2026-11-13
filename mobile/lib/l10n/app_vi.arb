@@ -5922,18 +5922,6 @@
   "videoEditorEyedropperSemanticLabel": "Chọn màu từ video",
   "videoEditorEyedropperHint": "Chạm và kéo để chọn màu",
   "videoEditorEyedropperCancelSemanticLabel": "Dừng chọn màu",
-  "videoEditorSaturationBrightnessSemanticLabel": "Độ bão hòa và độ sáng",
-  "videoEditorSaturationBrightnessValue": "Độ bão hòa {saturation}%, Độ sáng {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorHueSemanticLabel": "Tông màu",
   "videoEditorLevelSemanticLabel": "Mức",
   "videoEditorBrushSizeSemanticLabel": "Kích thước cọ",

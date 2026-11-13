@@ -12382,15 +12382,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEyedropperCancelSemanticLabel => 'రంగు ఎంపికను ఆపండి';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel =>
-      'సంతృప్తత మరియు ప్రకాశం';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'సంతృప్తత $saturation%, ప్రకాశం $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'రంగు';
 
   @override

@@ -3396,18 +3396,6 @@
   "videoEditorEyedropperSemanticLabel": "Farbe aus dem Video wählen",
   "videoEditorEyedropperHint": "Tippe und ziehe, um eine Farbe zu wählen",
   "videoEditorEyedropperCancelSemanticLabel": "Farbauswahl beenden",
-  "videoEditorSaturationBrightnessSemanticLabel": "Sättigung und Helligkeit",
-  "videoEditorSaturationBrightnessValue": "Sättigung {saturation} %, Helligkeit {brightness} %",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorHueSemanticLabel": "Farbton",
   "videoEditorLevelSemanticLabel": "Stufe",
   "videoEditorBrushSizeSemanticLabel": "Pinselgröße",

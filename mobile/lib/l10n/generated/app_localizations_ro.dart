@@ -12334,15 +12334,6 @@ class AppLocalizationsRo extends AppLocalizations {
       'Oprește alegerea culorii';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel =>
-      'Saturație și luminozitate';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'Saturație $saturation%, Luminozitate $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'Nuanță';
 
   @override

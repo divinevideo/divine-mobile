@@ -2475,18 +2475,6 @@
   "videoEditorVoiceOverTooLong": "녹음이 동영상보다 깁니다",
   "videoEditorRedoSemanticLabel": "다시 실행",
   "videoEditorReleaseToDeleteLayer": "놓아서 레이어 삭제",
-  "videoEditorSaturationBrightnessSemanticLabel": "채도 및 밝기",
-  "videoEditorSaturationBrightnessValue": "채도 {saturation}%, 밝기 {brightness}%",
-  "@videoEditorSaturationBrightnessValue": {
-    "placeholders": {
-      "saturation": {
-        "type": "int"
-      },
-      "brightness": {
-        "type": "int"
-      }
-    }
-  },
   "videoEditorSaveClip": "클립 저장",
   "videoEditorSaveDraftButton": "임시저장",
   "videoEditorSaveDraftSubtitle": "편집 내용을 나중에 저장하거나, 버리고 편집기를 나갑니다.",

@@ -11798,14 +11798,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEyedropperCancelSemanticLabel => 'ቀለም መምረጥን ያቁሙ';
 
   @override
-  String get videoEditorSaturationBrightnessSemanticLabel => 'ሙሌት እና ብሩህነት';
-
-  @override
-  String videoEditorSaturationBrightnessValue(int saturation, int brightness) {
-    return 'ሙሌት $saturation%፣ ብሩህነት $brightness%';
-  }
-
-  @override
   String get videoEditorHueSemanticLabel => 'ሁ';
 
   @override
