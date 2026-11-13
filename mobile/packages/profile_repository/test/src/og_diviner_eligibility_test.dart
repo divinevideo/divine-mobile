@@ -66,6 +66,7 @@ _fixture(
     repository: ProfileRepository(
       nostrClient: _MockNostrClient(),
       userProfilesDao: database.userProfilesDao,
+      vanishedProfilesDao: database.vanishedProfilesDao,
       httpClient: client,
       funnelcakeApiClient: api,
       profileApiCache: apiCache,
@@ -192,6 +193,31 @@ void main() {
 
       expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
       expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
+      expect(fixture.requests, hasLength(1));
+    });
+
+    test('a locally vanished account skips the lookup', () async {
+      final fixture = _fixture((_) => _response(_user()));
+      await fixture.database.vanishedProfilesDao.markVanished(_pubkey);
+      await fixture.repository.loadVanishedPubkeys();
+
+      expect(await fixture.repository.isOgDiviner(_pubkey), isFalse);
+      expect(fixture.requests, isEmpty);
+      // The server would have granted it; the local marker is what hid it.
+      expect(await fixture.apiCache.isOgDiviner(_pubkey), isTrue);
+    });
+
+    test('an account vanished during the lookup is not eligible', () async {
+      final response = Completer<http.Response>();
+      final fixture = _fixture((_) => response.future);
+
+      final eligible = fixture.repository.isOgDiviner(_pubkey);
+      await fixture.database.vanishedProfilesDao.markVanished(_pubkey);
+      await fixture.repository.loadVanishedPubkeys();
+      response.complete(_response(_user()));
+
+      expect(await eligible, isFalse);
+      expect(await fixture.apiCache.isOgDiviner(_pubkey), isTrue);
       expect(fixture.requests, hasLength(1));
     });
 
