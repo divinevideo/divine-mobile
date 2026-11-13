@@ -605,6 +605,45 @@ void main() {
       expect(newest.existsSync(), isTrue);
     });
 
+    group('knownCacheBytes', () {
+      test('is zero until the first sweep measures the directory', () {
+        final (manager, dir) = build(maxCacheSizeBytes: 1000);
+        writeFile(dir, 'a_1_1.mp4', 60);
+
+        expect(manager.knownCacheBytes, isZero);
+      });
+
+      test('reports the directory total a sweep within budget '
+          'measured', () async {
+        final (manager, dir) = build(maxCacheSizeBytes: 1000);
+        writeFile(dir, 'a_1_1.mp4', 60);
+        writeFile(dir, 'externally-managed.bin', 25);
+        when(repo.getAllObjects).thenAnswer(
+          (_) async => [obj('a_1_1.mp4', id: 1, touched: DateTime(2020))],
+        );
+
+        await manager.enforceCacheLimits();
+
+        expect(manager.knownCacheBytes, equals(85));
+      });
+
+      test('reports what is left after a sweep evicts', () async {
+        final (manager, dir) = build(maxCacheSizeBytes: 100);
+        writeFile(dir, 'a_1_1.mp4', 60);
+        writeFile(dir, 'b_2_2.mp4', 60);
+        when(repo.getAllObjects).thenAnswer(
+          (_) async => [
+            obj('a_1_1.mp4', id: 1, touched: DateTime(2020)),
+            obj('b_2_2.mp4', id: 2, touched: DateTime(2020, 1, 2)),
+          ],
+        );
+
+        await manager.enforceCacheLimits();
+
+        expect(manager.knownCacheBytes, equals(60));
+      });
+    });
+
     group('directory-total byte budget', () {
       test('counts untracked unmanaged bytes towards the budget', () async {
         final (manager, dir) = build(maxCacheSizeBytes: 100);

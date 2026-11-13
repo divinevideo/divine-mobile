@@ -518,6 +518,14 @@ class MediaCacheManager extends CacheManager {
   /// The configuration used by this cache manager.
   MediaCacheConfig get mediaConfig => _config;
 
+  /// Running estimate of the cache directory's on-disk bytes.
+  ///
+  /// Zero until the first [enforceCacheLimits] pass walks the directory;
+  /// after that it grows as downloads settle and is re-synced to the walked
+  /// total by every sweep that measures it. Cheap to read, so callers can
+  /// size budgets without walking the directory themselves.
+  int get knownCacheBytes => _knownCacheBytes;
+
   /// The effective on-disk byte budget: the runtime override when set,
   /// otherwise [MediaCacheConfig.maxCacheSizeBytes].
   int? get maxCacheSizeBytes =>
