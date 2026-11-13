@@ -37,6 +37,8 @@ abstract interface class ProfileReader {
   /// Reads the server-owned beta eligibility from the shared Funnelcake
   /// profile response. This unauthenticated read never signs or publishes.
   /// Reuses single/bulk profile hydration and coalesces concurrent lookups.
+  ///
+  /// Throws `FunnelcakeException` subtypes when the profile read fails.
   Future<bool> isOgDiviner(String pubkey);
 
   /// Returns the cached profile from local storage (SQLite) only.
