@@ -192,6 +192,7 @@ void main() {
               expect(group, findsOneWidget);
               expect(action('Reported Liz'), findsOneWidget);
               expect(action('Reported Divine Support'), findsOneWidget);
+              expect(rowOf('Liz'), findsOneWidget);
               await tester.tap(action('Block Liz'));
               await tester.pumpAndSettle();
               expect(group, findsNothing);
