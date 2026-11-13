@@ -472,6 +472,67 @@ void main() {
         ],
         errors: () => [isA<Exception>()],
       );
+
+      group('after close', () {
+        test('turning automatic sizing on lands without emitting', () async {
+          final handBack = Completer<void>();
+          when(
+            service.useAutomaticVideoCacheLimit,
+          ).thenAnswer((_) => handBack.future);
+          when(service.cacheUsage).thenAnswer((_) async => cacheUsage);
+          when(service.videoCacheLimitBytes).thenReturn(oneGb);
+          when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+          final cubit = build();
+
+          final toggle = cubit.setVideoCacheLimitAutomatic(automatic: true);
+          await cubit.close();
+          handBack.complete();
+
+          await expectLater(toggle, completes);
+        });
+
+        test('a failed hand-back lands without emitting', () async {
+          final handBack = Completer<void>();
+          when(
+            service.useAutomaticVideoCacheLimit,
+          ).thenAnswer((_) => handBack.future);
+          final cubit = build();
+
+          final toggle = cubit.setVideoCacheLimitAutomatic(automatic: true);
+          await cubit.close();
+          handBack.completeError(Exception('boom'));
+
+          await expectLater(toggle, completes);
+        });
+
+        test('a committed size lands without emitting', () async {
+          final commit = Completer<void>();
+          when(
+            () => service.setVideoCacheLimit(any()),
+          ).thenAnswer((_) => commit.future);
+          final cubit = build();
+
+          final committed = cubit.commitVideoCacheLimit(oneGb);
+          await cubit.close();
+          commit.completeError(Exception('boom'));
+
+          await expectLater(committed, completes);
+        });
+
+        test('a cache-size read lands without emitting', () async {
+          final usage = Completer<CacheUsage>();
+          when(service.cacheUsage).thenAnswer((_) => usage.future);
+          when(service.videoCacheLimitBytes).thenReturn(oneGb);
+          when(service.isVideoCacheLimitAutomatic).thenReturn(true);
+          final cubit = build();
+
+          final load = cubit.loadCacheSize();
+          await cubit.close();
+          usage.complete(cacheUsage);
+
+          await expectLater(load, completes);
+        });
+      });
     });
 
     group(StorageState, () {

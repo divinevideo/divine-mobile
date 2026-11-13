@@ -50,14 +50,14 @@ class StorageCubit extends Cubit<StorageState>
       await _emitCacheUsage();
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emit(state.copyWith(cacheStatus: StorageCacheStatus.failure));
+      emitIfOpen(state.copyWith(cacheStatus: StorageCacheStatus.failure));
     }
   }
 
   /// Measures the caches and emits them as ready, with the limit in force.
   Future<void> _emitCacheUsage() async {
     final usage = await _service.cacheUsage();
-    emit(
+    emitIfOpen(
       state.copyWith(
         cacheStatus: StorageCacheStatus.ready,
         cacheSizeBytes: usage.totalBytes,
@@ -130,7 +130,7 @@ class StorageCubit extends Cubit<StorageState>
       await _emitCacheUsage();
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emit(state.copyWith(cacheStatus: StorageCacheStatus.failure));
+      emitIfOpen(state.copyWith(cacheStatus: StorageCacheStatus.failure));
     }
   }
 
@@ -158,7 +158,7 @@ class StorageCubit extends Cubit<StorageState>
       await _emitCacheUsage();
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emit(state.copyWith(cacheStatus: StorageCacheStatus.failure));
+      emitIfOpen(state.copyWith(cacheStatus: StorageCacheStatus.failure));
     }
   }
 
