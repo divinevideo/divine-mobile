@@ -657,6 +657,116 @@ void main() {
       });
     });
 
+    // A clip removed mid-drag left a tile with no thumbnail notifier: the
+    // "Null check operator used on a null value" build error in
+    // ClipThumbnailManager.[]. An edit landing mid-drag committed a stale clip.
+    group('clip changes during a reorder drag', () {
+      late List<List<DivineVideoClip>> reorders;
+      late List<bool> reorderChanges;
+
+      setUp(() {
+        reorders = [];
+        reorderChanges = [];
+      });
+
+      Widget buildStrip(List<DivineVideoClip> clips) => buildWidget(
+        clips: clips,
+        totalWidth: 600,
+        onReorder: reorders.add,
+        onReorderChanged: reorderChanges.add,
+      );
+
+      /// Long-presses the first clip and keeps holding it.
+      Future<TestGesture> pickUpFirstClip(WidgetTester tester) async {
+        final gesture = await tester.startGesture(
+          tester.getTopLeft(find.byType(VideoEditorTimelineClipStrip)) +
+              const Offset(60, 32),
+        );
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pumpAndSettle();
+        expect(reorderChanges, equals([true]));
+        return gesture;
+      }
+
+      testWidgets('cancels the drag when another clip is removed', (
+        tester,
+      ) async {
+        final a = _createTestClip(id: 'a', seconds: 3);
+        final b = _createTestClip(id: 'b', seconds: 4);
+        final c = _createTestClip(id: 'c');
+        await tester.pumpWidget(buildStrip([a, b, c]));
+        final gesture = await pickUpFirstClip(tester);
+
+        await tester.pumpWidget(buildStrip([a, b]));
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(reorderChanges, equals([true, false]));
+
+        await gesture.moveBy(const Offset(60, 0));
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        // Committing the drag's order would write the removed clip back.
+        expect(reorders, isEmpty);
+        expect(find.byType(ClipRRect), findsNWidgets(2));
+      });
+
+      testWidgets('cancels the drag when the dragged clip is removed', (
+        tester,
+      ) async {
+        final a = _createTestClip(id: 'a', seconds: 3);
+        final b = _createTestClip(id: 'b', seconds: 4);
+        final c = _createTestClip(id: 'c');
+        await tester.pumpWidget(buildStrip([a, b, c]));
+        final gesture = await pickUpFirstClip(tester);
+
+        await tester.pumpWidget(buildStrip([b, c]));
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(reorderChanges, equals([true, false]));
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        expect(reorders, isEmpty);
+        expect(find.byType(ClipRRect), findsNWidgets(2));
+      });
+
+      testWidgets('commits the edited clip when an edit lands mid-drag', (
+        tester,
+      ) async {
+        final a = _createTestClip(id: 'a', seconds: 3);
+        final b = _createTestClip(id: 'b', seconds: 4);
+        final c = _createTestClip(id: 'c');
+        await tester.pumpWidget(buildStrip([a, b, c]));
+        final gesture = await pickUpFirstClip(tester);
+
+        // Same clip, new file — e.g. a reverse that finished during the drag.
+        final reversedB = b.copyWith(
+          video: EditorVideo.file('/tmp/test_b_reversed.mp4'),
+        );
+        await tester.pumpWidget(buildStrip([a, reversedB, c]));
+
+        // One slot right: the first clip moves behind the second.
+        await gesture.moveBy(const Offset(60, 0));
+        await tester.pump();
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        expect(reorderChanges, equals([true, false]));
+        expect(reorders, hasLength(1));
+        expect(
+          reorders.single.map((clip) => clip.id),
+          equals(['b', 'a', 'c']),
+        );
+        // The drop replaces the editor's clip list, so a stale copy would
+        // undo the edit.
+        expect(reorders.single.first, same(reversedB));
+      });
+    });
+
     group('accessibility', () {
       testWidgets('provides clip semantics with duration', (tester) async {
         final clips = [
