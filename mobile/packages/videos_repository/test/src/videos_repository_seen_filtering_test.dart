@@ -100,7 +100,7 @@ void main() {
   });
 
   group('Seen filtering per surface', () {
-    test('getHomeFeedVideos demotes recently seen (following)', () async {
+    test('getHomeFeedVideos drops videos the viewer has seen', () async {
       const seenId = 'seen-home';
       const unseenId = 'unseen-home';
       when(
@@ -129,78 +129,271 @@ void main() {
         authors: ['a'],
         userPubkey: 'u',
       );
-      expect(result.videos.map((v) => v.id).toList(), [unseenId, seenId]);
+      expect(result.videos.map((v) => v.id).toList(), [unseenId]);
     });
 
-    // The New feed is chronological by contract: the label promises recency,
-    // so a recently-seen video keeps its place instead of sinking. Demotion
-    // partitioned each page independently, which produced a sawtooth —
-    // timestamps descended, jumped back at the page's seen block, then
-    // descended again from the next page's top. Discovery surfaces that do
-    // want the bias still use the shared helper (see getHomeFeedVideos above).
-    test('getNewVideos preserves source order for recently seen', () async {
-      final seen = _stats('seen-new');
-      final unseen = _stats('unseen-new');
+    test('getHomeFeedVideos hides videos seen up to a year ago', () async {
       when(
-        () => mockFunnelcake.getRecentVideosPage(
+        () => mockFunnelcake.getHomeFeed(
+          pubkey: any(named: 'pubkey'),
           limit: any(named: 'limit'),
           before: any(named: 'before'),
         ),
       ).thenAnswer(
-        (_) async => RecentVideosResponse(
-          videos: [seen, unseen],
-          serverItemCount: 2,
+        (_) async => HomeFeedResponse(
+          videos: [_stats('seen-months-ago'), _stats('never-seen')],
+          rawBody: '{}',
         ),
       );
-      when(
-        () => mockFunnelcake.getBulkVideoStats(any()),
-      ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
 
       final repo = VideosRepository(
         nostrClient: mockNostr,
         funnelcakeApiClient: mockFunnelcake,
         seenVideoLookup: SeenVideoLookup(
           wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
-              id == 'seen-new',
+              id == 'seen-months-ago' && within >= const Duration(days: 300),
         ),
       );
 
-      final result = await repo.getNewVideos();
-      expect(result.videos.map((v) => v.id).toList(), [
-        'seen-new',
-        'unseen-new',
-      ]);
+      final result = await repo.getHomeFeedVideos(
+        authors: ['a'],
+        userPubkey: 'u',
+      );
+      expect(result.videos.map((v) => v.id).toList(), ['never-seen']);
     });
 
-    // Cross-page, not per-page: the seen heads of both pages must keep their
-    // places, so the concatenation descends monotonically across the
-    // boundary. Per-page partitioning is what made the feed read as unsorted
-    // — timestamps descended, jumped back at the page's seen block, then
-    // descended again from the next page's top.
-    test('getNewVideos does not re-partition across page boundaries', () async {
+    test(
+      'getHomeFeedVideos reads past pages the viewer has fully seen',
+      () async {
+        when(
+          () => mockFunnelcake.getHomeFeed(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((invocation) async {
+          final before = invocation.namedArguments[#before] as int?;
+          if (before == null) {
+            return HomeFeedResponse(
+              videos: [_stats('seen-newest', createdAt: 1000)],
+              nextCursor: 1000,
+              hasMore: true,
+              rawBody: '{}',
+            );
+          }
+          return HomeFeedResponse(
+            videos: [_stats('unseen-older', createdAt: 900)],
+            rawBody: '{}',
+          );
+        });
+
+        final repo = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+                id == 'seen-newest',
+          ),
+        );
+
+        final result = await repo.getHomeFeedVideos(
+          authors: ['a'],
+          userPubkey: 'u',
+          limit: 1,
+        );
+        expect(result.videos.map((v) => v.id).toList(), ['unseen-older']);
+        expect(result.hasMore, isFalse);
+      },
+    );
+
+    test(
+      'getHomeFeedVideos ends the feed after a long run of seen pages',
+      () async {
+        var cursor = 100000;
+        when(
+          () => mockFunnelcake.getHomeFeed(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((_) async {
+          cursor -= 10;
+          return HomeFeedResponse(
+            videos: [_stats('seen-$cursor', createdAt: cursor)],
+            nextCursor: cursor,
+            hasMore: true,
+            rawBody: '{}',
+          );
+        });
+
+        final repo = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (_, {within = const Duration(hours: 24)}) => true,
+          ),
+        );
+
+        final result = await repo.getHomeFeedVideos(
+          authors: ['a'],
+          userPubkey: 'u',
+        );
+        expect(result.videos, isEmpty);
+        expect(result.hasMore, isFalse);
+        expect(result.paginationCursor, isNull);
+        verify(
+          () => mockFunnelcake.getHomeFeed(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).called(maxSeenOnlyFeedPages);
+      },
+    );
+
+    test('getHomeFeedVideos drops seen videos from relays', () async {
+      when(() => mockFunnelcake.isAvailable).thenReturn(false);
+      when(() => mockNostr.queryEventsDetailed(any())).thenAnswer(
+        (_) async => (
+          events: [
+            _event('relay-seen', createdAt: 1704067300),
+            _event('relay-unseen'),
+          ],
+          noRelays: false,
+          timedOut: false,
+        ),
+      );
+
+      final repo = VideosRepository(
+        nostrClient: mockNostr,
+        funnelcakeApiClient: mockFunnelcake,
+        seenVideoLookup: SeenVideoLookup(
+          wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+              id == 'relay-seen',
+        ),
+      );
+
+      final result = await repo.getHomeFeedVideos(authors: ['author']);
+      expect(result.videos.map((v) => v.id).toList(), ['relay-unseen']);
+    });
+
+    // The New feed is chronological by contract: the label promises recency.
+    // Seen videos are dropped rather than demoted, so what remains keeps its
+    // place; demotion partitioned each page and produced a sawtooth.
+    test(
+      'getNewVideos drops seen videos and keeps the rest in order',
+      () async {
+        when(
+          () => mockFunnelcake.getRecentVideosPage(
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer(
+          (_) async => RecentVideosResponse(
+            videos: [
+              _stats('newest', createdAt: 1000),
+              _stats('seen-new', createdAt: 900),
+              _stats('oldest', createdAt: 800),
+            ],
+            serverItemCount: 3,
+          ),
+        );
+        when(
+          () => mockFunnelcake.getBulkVideoStats(any()),
+        ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
+
+        final repo = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+                id == 'seen-new',
+          ),
+        );
+
+        final result = await repo.getNewVideos();
+        expect(result.videos.map((v) => v.id).toList(), ['newest', 'oldest']);
+      },
+    );
+
+    test(
+      'getNewVideos tops up a page whose seen videos were dropped',
+      () async {
+        when(
+          () => mockFunnelcake.getRecentVideosPage(
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((invocation) async {
+          final before = invocation.namedArguments[#before] as int?;
+          if (before == null) {
+            return RecentVideosResponse(
+              videos: [
+                _stats('p1-seen-newest', createdAt: 1000),
+                _stats('p1-mid', createdAt: 900),
+                _stats('p1-tail', createdAt: 800),
+              ],
+              serverItemCount: 3,
+            );
+          }
+          return RecentVideosResponse(
+            videos: [
+              _stats('p2-seen-head', createdAt: 700),
+              _stats('p2-older', createdAt: 600),
+            ],
+            serverItemCount: 2,
+          );
+        });
+        when(
+          () => mockFunnelcake.getBulkVideoStats(any()),
+        ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
+
+        final repo = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+                id == 'p1-seen-newest' || id == 'p2-seen-head',
+          ),
+        );
+
+        final page = await repo.getNewVideos(limit: 3);
+        expect(page.videos.map((v) => v.id).toList(), [
+          'p1-mid',
+          'p1-tail',
+          'p2-older',
+        ]);
+      },
+    );
+
+    test('getNewVideos stops after a long run of seen pages', () async {
+      var page = 0;
+      when(
+        () => mockFunnelcake.getRecentVideosPage(
+          limit: any(named: 'limit'),
+          cursor: any(named: 'cursor'),
+        ),
+      ).thenAnswer((_) async {
+        page++;
+        return RecentVideosResponse(
+          videos: [_stats('seen-$page')],
+          serverItemCount: 1,
+          hasMore: true,
+          nextCursor: 'cursor-$page',
+        );
+      });
       when(
         () => mockFunnelcake.getRecentVideosPage(
           limit: any(named: 'limit'),
           before: any(named: 'before'),
         ),
-      ).thenAnswer((invocation) async {
-        final before = invocation.namedArguments[#before] as int?;
-        if (before == null) {
-          return RecentVideosResponse(
-            videos: [
-              _stats('p1-seen-newest', createdAt: 1000),
-              _stats('p1-mid', createdAt: 900),
-              _stats('p1-tail', createdAt: 800),
-            ],
-            serverItemCount: 3,
-          );
-        }
+      ).thenAnswer((_) async {
+        page++;
         return RecentVideosResponse(
-          videos: [
-            _stats('p2-seen-head', createdAt: 700),
-            _stats('p2-older', createdAt: 600),
-          ],
-          serverItemCount: 2,
+          videos: [_stats('seen-$page')],
+          serverItemCount: 1,
+          hasMore: true,
+          nextCursor: 'cursor-$page',
         );
       });
       when(
@@ -211,29 +404,18 @@ void main() {
         nostrClient: mockNostr,
         funnelcakeApiClient: mockFunnelcake,
         seenVideoLookup: SeenVideoLookup(
-          wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
-              id == 'p1-seen-newest' || id == 'p2-seen-head',
+          wasSeenRecently: (_, {within = const Duration(hours: 24)}) => true,
         ),
       );
 
-      final page1 = await repo.getNewVideos(limit: 3);
-      final page2 = await repo.getNewVideos(limit: 3, until: 800);
-      final all = [...page1.videos, ...page2.videos];
-      expect(all.map((v) => v.id).toList(), [
-        'p1-seen-newest',
-        'p1-mid',
-        'p1-tail',
-        'p2-seen-head',
-        'p2-older',
-      ]);
+      final result = await repo.getNewVideos(limit: 1);
+      expect(result.videos, isEmpty);
+      expect(page, equals(maxSeenOnlyFeedPages));
+      expect(result.paginationCursor, equals('cursor-$page'));
     });
 
-    // Reopening Explore within a day of browsing is a same-session cache
-    // hit — the PR's named worst case. The cached page must come back in
-    // its recorded order, not re-demoted on the way out.
-    test('getNewVideos cache hit returns the cached order unchanged', () async {
-      final seen = _stats('cache-seen');
-      final unseen = _stats('cache-unseen');
+    test('getNewVideos cache hit drops videos seen since caching', () async {
+      final seenIds = <String>{};
       when(
         () => mockFunnelcake.getRecentVideosPage(
           limit: any(named: 'limit'),
@@ -241,7 +423,7 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => RecentVideosResponse(
-          videos: [seen, unseen],
+          videos: [_stats('cache-a'), _stats('cache-b')],
           serverItemCount: 2,
         ),
       );
@@ -255,20 +437,15 @@ void main() {
         inMemoryFeedCache: InMemoryFeedCache(),
         seenVideoLookup: SeenVideoLookup(
           wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
-              id == 'cache-seen',
+              seenIds.contains(id),
         ),
       );
 
       final first = await repo.getNewVideos();
+      seenIds.add('cache-a');
       final second = await repo.getNewVideos();
-      expect(first.videos.map((v) => v.id).toList(), [
-        'cache-seen',
-        'cache-unseen',
-      ]);
-      expect(second.videos.map((v) => v.id).toList(), [
-        'cache-seen',
-        'cache-unseen',
-      ]);
+      expect(first.videos.map((v) => v.id).toList(), ['cache-a', 'cache-b']);
+      expect(second.videos.map((v) => v.id).toList(), ['cache-b']);
       verify(
         () => mockFunnelcake.getRecentVideosPage(
           limit: any(named: 'limit'),
@@ -277,9 +454,45 @@ void main() {
       ).called(1);
     });
 
-    // With Funnelcake down, the relay path must still be chronological: the
-    // newest event is recently seen, but must not sink.
-    test('getNewVideos relay fallback stays chronological for seen', () async {
+    test('getNewVideos refetches when every cached video was seen', () async {
+      final seenIds = <String>{};
+      var calls = 0;
+      when(
+        () => mockFunnelcake.getRecentVideosPage(
+          limit: any(named: 'limit'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async {
+        calls++;
+        return RecentVideosResponse(
+          videos: [_stats(calls == 1 ? 'cached-only' : 'freshly-posted')],
+          serverItemCount: 1,
+        );
+      });
+      when(
+        () => mockFunnelcake.getBulkVideoStats(any()),
+      ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
+
+      final repo = VideosRepository(
+        nostrClient: mockNostr,
+        funnelcakeApiClient: mockFunnelcake,
+        inMemoryFeedCache: InMemoryFeedCache(),
+        seenVideoLookup: SeenVideoLookup(
+          wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+              seenIds.contains(id),
+        ),
+      );
+
+      await repo.getNewVideos();
+      seenIds.add('cached-only');
+      final second = await repo.getNewVideos();
+      expect(second.videos.map((v) => v.id).toList(), ['freshly-posted']);
+      expect(calls, equals(2));
+    });
+
+    // With Funnelcake down, the relay path drops seen videos too and keeps
+    // the rest chronological.
+    test('getNewVideos relay fallback drops seen videos', () async {
       final newestSeen = _event('relay-seen-newest', createdAt: 1704067300);
       final middle = _event('relay-mid', createdAt: 1704067250);
       final oldest = _event('relay-oldest');
@@ -307,7 +520,6 @@ void main() {
 
       final result = await repo.getNewVideos(limit: 10);
       expect(result.videos.map((v) => v.id).toList(), [
-        'relay-seen-newest',
         'relay-mid',
         'relay-oldest',
       ]);
@@ -516,52 +728,51 @@ void main() {
       ).called(1);
     });
 
-    test(
-      'classic cache stays non-empty when every cached video was seen',
-      () async {
-        var allSeen = false;
-        when(
-          () => mockFunnelcake.getClassicVines(
-            limit: any(named: 'limit'),
-            offset: any(named: 'offset'),
-          ),
-        ).thenAnswer(
-          (_) async => [
-            _stats('cached-a', platform: 'vine'),
-            _stats('cached-b', platform: 'vine'),
-          ],
-        );
-        when(
-          () => mockFunnelcake.getBulkVideoStats(any()),
-        ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
+    test('classic skips its cache once every cached video was seen', () async {
+      final seenIds = <String>{};
+      var calls = 0;
+      when(
+        () => mockFunnelcake.getClassicVines(
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+        ),
+      ).thenAnswer((_) async {
+        calls++;
+        return calls == 1
+            ? [
+                _stats('cached-a', platform: 'vine'),
+                _stats('cached-b', platform: 'vine'),
+              ]
+            : [_stats('fresh-classic', platform: 'vine')];
+      });
+      when(
+        () => mockFunnelcake.getBulkVideoStats(any()),
+      ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
 
-        final repo = VideosRepository(
-          nostrClient: mockNostr,
-          funnelcakeApiClient: mockFunnelcake,
-          inMemoryFeedCache: InMemoryFeedCache(),
-          seenVideoLookup: SeenVideoLookup(
-            wasSeenRecently: (_, {within = const Duration(hours: 24)}) =>
-                allSeen,
-          ),
-          random: StubRandom(offsetPage: 0),
-        );
+      final repo = VideosRepository(
+        nostrClient: mockNostr,
+        funnelcakeApiClient: mockFunnelcake,
+        inMemoryFeedCache: InMemoryFeedCache(),
+        seenVideoLookup: SeenVideoLookup(
+          wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+              seenIds.contains(id),
+        ),
+        random: StubRandom(offsetPage: 0),
+      );
 
-        final initial = await repo.getClassicVideos(limit: 2);
-        allSeen = true;
-        final cached = await repo.getClassicVideos(limit: 2);
+      await repo.getClassicVideos(limit: 2);
+      seenIds.addAll(['cached-a', 'cached-b']);
+      final refreshed = await repo.getClassicVideos(limit: 2);
 
-        expect(
-          cached.videos.map((video) => video.id),
-          unorderedEquals(initial.videos.map((video) => video.id)),
-        );
-        verify(
-          () => mockFunnelcake.getClassicVines(
-            limit: 2,
-            offset: any(named: 'offset'),
-          ),
-        ).called(1);
-      },
-    );
+      expect(
+        refreshed.videos.map((video) => video.id),
+        contains('fresh-classic'),
+      );
+      expect(
+        refreshed.videos.map((video) => video.id),
+        isNot(contains('cached-a')),
+      );
+    });
 
     test('forYou deep-fetch via getRecommendedVideos', () async {
       final seen = _stats('seen-foyou');
@@ -658,33 +869,6 @@ void main() {
       );
       expect(filtered.map((v) => v.id), ['a']);
     });
-
-    test('prioritize keeps all but reorders', () {
-      final vSeen = VideoEvent(
-        id: 'seen',
-        pubkey: 'p',
-        createdAt: 1,
-        content: '',
-        timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
-        videoUrl: 'https://x/1.mp4',
-      );
-      final vUnseen = VideoEvent(
-        id: 'unseen',
-        pubkey: 'p',
-        createdAt: 1,
-        content: '',
-        timestamp: DateTime.fromMillisecondsSinceEpoch(1000),
-        videoUrl: 'https://x/2.mp4',
-      );
-      final ordered = prioritizeNotRecentlySeenVideos(
-        [vSeen, vUnseen],
-        seenVideoLookup: SeenVideoLookup(
-          wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
-              id == 'seen',
-        ),
-      );
-      expect(ordered.map((v) => v.id).toList(), ['unseen', 'seen']);
-    });
   });
 
   group('getVideoDiscoveryPage', () {
@@ -762,7 +946,7 @@ void main() {
     });
 
     test(
-      'drops videos watched in the last day instead of replaying them',
+      'drops videos the viewer has watched instead of replaying them',
       () async {
         final repo = buildRepository(watched: {'watched'});
         recommendationPage = [_stats('watched'), _stats('unwatched')];
@@ -776,17 +960,27 @@ void main() {
       },
     );
 
-    test('ends discovery when every recommendation was watched', () async {
-      final repo = buildRepository(watched: {'watched'});
-      recommendationPage = [_stats('watched')];
+    test(
+      'falls back to unwatched popular videos when every recommendation was '
+      'watched',
+      () async {
+        when(
+          () => mockFunnelcake.getWatchingVideos(
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((_) async => [_stats('watched'), _stats('popular-new')]);
+        final repo = buildRepository(watched: {'watched'});
+        recommendationPage = [_stats('watched')];
 
-      final result = await repo.getVideoDiscoveryPage(
-        userPubkey: 'u',
-        limit: 10,
-      );
+        final result = await repo.getVideoDiscoveryPage(
+          userPubkey: 'u',
+          limit: 10,
+        );
 
-      expect(result.videos, isEmpty);
-      expect(result.hasMore, isFalse);
-    });
+        expect(result.videos.map((v) => v.id), equals(['popular-new']));
+        expect(result.paginationCursor, isNull);
+      },
+    );
   });
 }

@@ -341,11 +341,11 @@ class VideosRepository {
   }
 
   /// A snapshot pager for videos by all currently accepted badge holders.
-  /// [prioritizeUnseen] applies Following's existing seen-freshness ordering
-  /// to each delivered page without changing the underlying snapshot cursor.
+  /// [hideSeen] leaves out videos the viewer has already seen, as Following
+  /// does, without changing the underlying snapshot cursor.
   BadgeVideoPager createBadgeVideoPager(
     Iterable<String> authors, {
-    bool prioritizeUnseen = false,
+    bool hideSeen = false,
   }) {
     final client = _funnelcakeApiClient;
     if (client == null || !client.isAvailable) {
@@ -355,11 +355,14 @@ class VideosRepository {
     return BadgeVideoPager(
       client: client,
       authors: unique,
-      orderPage: prioritizeUnseen ? _orderBySeenFreshness : null,
+      beforePage: hideSeen ? _seenVideoLookup?.ensureInitialized : null,
+      // Eight of the pager's 100-video reads, like Following's direct path.
+      maxHiddenPerPage: hideSeen ? maxSeenOnlyFeedPages * 100 : null,
       transform: (stats) => _transformVideoStats(stats, sortByCreatedAt: false),
       isVisible: (video) =>
           !(_blockFilter?.call(video.pubkey) ?? false) &&
-          !(_deletedFilter?.call(video) ?? false),
+          !(_deletedFilter?.call(video) ?? false) &&
+          !(hideSeen && _wasSeen(video)),
     );
   }
 
@@ -395,13 +398,13 @@ class VideosRepository {
   /// republishes an old video at the top of the feed, so its publication
   /// sits weeks below rows the next page has not reached yet.
   ///
-  /// Returns a [HomeFeedResult] in revision order (newest first, recently
-  /// seen videos demoted) with the next [HomeFeedResult.paginationCursor] and
-  /// [HomeFeedResult.hasMore], plus attribution metadata mapping videos to
-  /// their source curated lists. Returns empty result if both [authors] is
-  /// empty and [userPubkey] is null. When [userPubkey] is provided, the
-  /// Funnelcake API is attempted even with an empty [authors] list (fast-path
-  /// startup).
+  /// Returns a [HomeFeedResult] in revision order (newest first, videos the
+  /// viewer has seen left out) with the next
+  /// [HomeFeedResult.paginationCursor] and [HomeFeedResult.hasMore], plus
+  /// attribution metadata mapping videos to their source curated lists.
+  /// Returns empty result if both [authors] is empty and [userPubkey] is
+  /// null. When [userPubkey] is provided, the Funnelcake API is attempted even
+  /// with an empty [authors] list (fast-path startup).
   ///
   /// Throws a [FormatException] when [cursor] was not produced by this
   /// method.
@@ -416,6 +419,8 @@ class VideosRepository {
       return const HomeFeedResult(videos: [], hasMore: false);
     }
 
+    await _seenVideoLookup?.ensureInitialized();
+
     // 1. Fetch following videos (Funnelcake API → Nostr relay waterfall)
     final following = await _fetchFollowingVideos(
       authors: authors,
@@ -426,11 +431,10 @@ class VideosRepository {
     final nextBefore = following.nextBefore;
     final paginationCursor = nextBefore?.toString();
 
-    // 2. If no list refs, return following-only result (with seen demotion)
+    // 2. If no list refs, return following-only result without seen videos
     if (videoRefs.isEmpty) {
-      final ordered = await _orderBySeenFreshness(following.videos);
       final result = HomeFeedResult(
-        videos: ordered,
+        videos: _withoutSeenVideos(following.videos),
         paginationCursor: paginationCursor,
         hasMore: nextBefore != null,
         followingPageCount: following.pageCount,
@@ -443,9 +447,8 @@ class VideosRepository {
       followingVideos: following.videos,
       videoRefs: videoRefs,
     );
-    final orderedVideos = await _orderBySeenFreshness(merged.videos);
     final result = HomeFeedResult(
-      videos: orderedVideos,
+      videos: _withoutSeenVideos(merged.videos),
       videoListSources: merged.videoListSources,
       listOnlyVideoIds: merged.listOnlyVideoIds,
       paginationCursor: paginationCursor,
@@ -501,11 +504,13 @@ class VideosRepository {
     final visible = <VideoEvent>[];
     final seenVideoKeys = <String>{};
     var pageCount = 0;
+    var seenOnlyPages = 0;
     int? nextBefore;
 
     // Intentionally walk until we have enough visible videos or the upstream
     // feed is exhausted. A hard page cap caused premature EOF on reply-dense
-    // feeds by hiding visible videos behind reply-only raw pages.
+    // feeds by hiding visible videos behind reply-only raw pages. Only a run
+    // of pages the viewer has entirely seen is budgeted, see below.
     while (visible.length < limit) {
       nextBefore = null;
       pageCount++;
@@ -523,9 +528,13 @@ class VideosRepository {
         sortByCreatedAt: false,
       );
       final hydratedVideos = await _hydrateVideosWithBulkStats(videos);
+      final unseenVideos = _withoutSeenVideos(hydratedVideos);
+      seenOnlyPages = hydratedVideos.isNotEmpty && unseenVideos.isEmpty
+          ? seenOnlyPages + 1
+          : 0;
       _appendUniqueVideos(
         visible,
-        hydratedVideos,
+        unseenVideos,
         seenVideoKeys: seenVideoKeys,
       );
       // Trust the server's flag rather than the row count: the client drops
@@ -540,6 +549,12 @@ class VideosRepository {
       if (nextCursor == null || nextCursor == cursor) break;
       cursor = nextCursor;
       nextBefore = nextCursor;
+      if (seenOnlyPages >= maxSeenOnlyFeedPages) {
+        // Nothing unseen this far back: the viewer is caught up, so end the
+        // feed rather than leave an empty page that claims more.
+        if (visible.isEmpty) nextBefore = null;
+        break;
+      }
     }
 
     // Return the over-fetched tail too: the next page resumes after the last
@@ -939,18 +954,13 @@ class VideosRepository {
   /// their original publication time. Editing an older video does not move it
   /// back to the front of the feed.
   ///
-  /// Deliberately does not apply seen-freshness reordering. This feed is
-  /// surfaced as "New", and that label is a chronological promise: a video
-  /// watched in the last 24 hours keeps its position rather than sinking
-  /// below older ones. Because reordering ran after pagination it also
-  /// partitioned each page on its own, so timestamps descended, jumped
-  /// backwards at the page's recently-seen block, then descended again from
-  /// the next page's top — the feed read as unsorted rather than merely
-  /// re-prioritised.
-  ///
-  /// Discovery surfaces that do want the bias keep it: [getHomeFeedVideos]
-  /// still demotes via [prioritizeNotRecentlySeenVideos], and classics drop
-  /// recently-seen entirely via [filterOutRecentlySeenVideos].
+  /// Videos the viewer has already seen are dropped, never reordered. This
+  /// feed is surfaced as "New", and that label is a chronological promise, so
+  /// what remains keeps its position. Reordering after pagination would
+  /// partition each page on its own: timestamps would descend, jump backwards
+  /// at the page's seen block, then descend again from the next page's top,
+  /// and the feed would read as unsorted. A page that loses videos this way
+  /// is topped up from the following pages.
   ///
   /// Strategy:
   /// 1. If Funnelcake API is available, tries the REST API first (faster)
@@ -988,12 +998,19 @@ class VideosRepository {
     bool skipCache = false,
     bool revalidate = false,
   }) async {
-    // Return in-memory cached result when available (initial page only).
+    await _seenVideoLookup?.ensureInitialized();
+
+    // Return in-memory cached result when available (initial page only),
+    // without videos seen since it was cached. Once all of them have been
+    // seen, fetch rather than replay it.
     if (!skipCache && !revalidate && until == null && cursor == null) {
       final cached = _inMemoryFeedCache?.get('latest');
-      if (cached != null) {
+      final unseen = cached == null
+          ? const <VideoEvent>[]
+          : _withoutSeenVideos(cached.videos);
+      if (cached != null && unseen.isNotEmpty) {
         return HomeFeedResult(
-          videos: cached.videos,
+          videos: unseen,
           hasMore: cached.hasMore,
           paginationCursor: cached.paginationCursor,
         );
@@ -1081,7 +1098,9 @@ class VideosRepository {
     bool cacheResult = false,
   }) {
     final result = HomeFeedResult(
-      videos: videos,
+      // Relay pages are not topped up, so seen videos are dropped here; the
+      // fallback `hasMore` still reads the page as the source returned it.
+      videos: _withoutSeenVideos(videos),
       hasMore: serverHasMore ?? videos.length >= limit,
       paginationCursor: paginationCursor,
     );
@@ -1103,6 +1122,7 @@ class VideosRepository {
     final seenVideoKeys = <String>{};
     bool? serverHasMore;
     String? nextPageCursor;
+    var seenOnlyPages = 0;
 
     while (visible.length < limit) {
       final page = pageCursor == null
@@ -1118,12 +1138,19 @@ class VideosRepository {
       nextPageCursor = page.nextCursor;
 
       final videos = _transformVideoStats(page.videos);
-      _appendUniqueVideos(visible, videos, seenVideoKeys: seenVideoKeys);
+      final unseenVideos = _withoutSeenVideos(videos);
+      seenOnlyPages = videos.isNotEmpty && unseenVideos.isEmpty
+          ? seenOnlyPages + 1
+          : 0;
+      _appendUniqueVideos(visible, unseenVideos, seenVideoKeys: seenVideoKeys);
 
       // Compare the server's row count, not the surviving videos: dropping one
       // malformed row would otherwise read as the source running out and pin a
       // premature `hasMore: false` into the feed cache.
       if (page.hasMore == false || page.serverItemCount < limit) break;
+      // A long run of pages the viewer has entirely seen ends this read; the
+      // cursor still resumes after the last of them.
+      if (seenOnlyPages >= maxSeenOnlyFeedPages) break;
 
       if (nextPageCursor != null) {
         if (nextPageCursor == pageCursor) break;
@@ -1270,24 +1297,20 @@ class VideosRepository {
       final cached = _inMemoryFeedCache?.get(_classicsCacheKey);
       if (cached != null) {
         // Classics uses drop-filtering; cached page was already filtered &
-        // shuffled, so re-apply freshness in case seen set grew since cache.
+        // shuffled, so re-apply it in case the seen set grew since caching.
         await _seenVideoLookup?.ensureInitialized();
-        final filtered = filterOutRecentlySeenVideos(
-          cached.videos,
-          seenVideoLookup: _seenVideoLookup,
-          retainAllWhenAllSeen: false,
-        );
-        // If drop would empty it, return cached as-is to avoid empty feed.
-        if (filtered.isEmpty || filtered.length == cached.videos.length) {
-          return cached;
+        final filtered = _withoutSeenVideos(cached.videos);
+        if (filtered.length == cached.videos.length) return cached;
+        // Once every cached classic has been seen, draw a fresh slice below
+        // rather than replay them. A short filtered page is returned as is;
+        // pagination deep-fetches on the next page rather than blocking here.
+        if (filtered.isNotEmpty) {
+          return HomeFeedResult(
+            videos: filtered..shuffle(_random),
+            paginationCursor: cached.paginationCursor,
+            hasMore: cached.hasMore,
+          );
         }
-        // For drop policy, filtered cache may be short; return filtered and
-        // let pagination deep-fetch on next page rather than blocking here.
-        return HomeFeedResult(
-          videos: filtered..shuffle(_random),
-          paginationCursor: cached.paginationCursor,
-          hasMore: cached.hasMore,
-        );
       }
     }
 
@@ -1307,11 +1330,10 @@ class VideosRepository {
     // to avoid short pages (heavy users have seen top 500). Variable page
     // sizes are fine for continuous feeds; we fetch until we have limit or
     // we've tried enough pages. _classicsMaxPageFetches covers transport
-    // filtering; add extra budget for seen filtering (up to 8 total).
-    const maxSeenFilteredFetches = 8;
+    // filtering; seen filtering gets the shared seen-only page budget.
     final maxFetches = _seenVideoLookup == null
         ? _classicsMaxPageFetches
-        : maxSeenFilteredFetches;
+        : maxSeenOnlyFeedPages;
 
     try {
       for (
@@ -1335,13 +1357,7 @@ class VideosRepository {
         // Apply seen filtering per-page: drop recently-seen when lookup
         // available (inventory is unlimited, so dropping is safe), but only
         // if we have not already filled limit via filtered results.
-        final filteredPage = _seenVideoLookup == null
-            ? pageVideos
-            : filterOutRecentlySeenVideos(
-                pageVideos,
-                seenVideoLookup: _seenVideoLookup,
-                retainAllWhenAllSeen: false,
-              );
+        final filteredPage = _withoutSeenVideos(pageVideos);
 
         // If filtering would drop an entire page but we have no filtered
         // results yet, don't let one leaderboard page trap us — we continue
@@ -3683,44 +3699,24 @@ class VideosRepository {
   /// fetched rather than read from the For You tab's cached first page, which
   /// would replay the same videos after each opened video. It neither reads
   /// nor replaces that cache, and keeps the For You session seed, so the tab
-  /// itself is undisturbed. Videos watched within
-  /// [defaultRecentlySeenVideoWindow] are dropped rather than demoted: a
-  /// continuation the viewer swipes into should not replay them.
+  /// itself is undisturbed. Like the tab, it leaves out videos the viewer has
+  /// already seen.
   Future<HomeFeedResult> getVideoDiscoveryPage({
     required String? userPubkey,
     int limit = _defaultLimit,
     String? cursor,
     List<String> preferredLanguages = const [],
     String? viewerCountry,
-  }) async {
-    final result = await _recommendedVideos(
-      userPubkey: userPubkey,
-      limit: limit,
-      cursor: cursor,
-      skipCache: false,
-      revalidate: false,
-      preferredLanguages: preferredLanguages,
-      viewerCountry: viewerCountry,
-      useFirstPageCache: false,
-    );
-    final unwatched = filterOutRecentlySeenVideos(
-      result.videos,
-      seenVideoLookup: _seenVideoLookup,
-      retainAllWhenAllSeen: false,
-    );
-    if (unwatched.length == result.videos.length) return result;
-    return HomeFeedResult(
-      videos: unwatched,
-      videoListSources: result.videoListSources,
-      listOnlyVideoIds: result.listOnlyVideoIds,
-      consumedItemCount: result.consumedItemCount,
-      nextCursor: result.nextCursor,
-      paginationCursor: result.paginationCursor,
-      hasMore: result.hasMore,
-      recommendationPageCount: result.recommendationPageCount,
-      followingPageCount: result.followingPageCount,
-    );
-  }
+  }) => _recommendedVideos(
+    userPubkey: userPubkey,
+    limit: limit,
+    cursor: cursor,
+    skipCache: false,
+    revalidate: false,
+    preferredLanguages: preferredLanguages,
+    viewerCountry: viewerCountry,
+    useFirstPageCache: false,
+  );
 
   /// Fetches For You videos from the recommendations endpoint.
   ///
@@ -3780,7 +3776,12 @@ class VideosRepository {
         until == null &&
         cursor == null) {
       final cached = _inMemoryFeedCache?.get(cacheKey);
-      if (cached != null) return _withSeenFreshnessOrdering(cached);
+      if (cached != null) {
+        await _seenVideoLookup?.ensureInitialized();
+        final unseen = _withoutSeenVideosInResult(cached);
+        // Once every cached video has been seen, fetch rather than replay it.
+        if (unseen.videos.isNotEmpty) return unseen;
+      }
     }
 
     final isFirstPage = until == null && cursor == null;
@@ -3876,19 +3877,17 @@ class VideosRepository {
       name: 'VideosRepository',
       category: LogCategory.video,
     );
-    return HomeFeedResult(
-      videos: await _orderBySeenFreshness(
-        await getPopularVideos(
-          limit: limit,
-          until: until,
-          // This legacy, no-variant popular call has no heavier refresh
-          // semantics, so revalidation bypasses its cache like manual refresh.
-          skipCache: skipCache || revalidate,
-          preferredLanguages: preferredLanguages,
-          viewerCountry: viewerCountry,
-        ),
-      ),
+    final popular = await getPopularVideos(
+      limit: limit,
+      until: until,
+      // This legacy, no-variant popular call has no heavier refresh
+      // semantics, so revalidation bypasses its cache like manual refresh.
+      skipCache: skipCache || revalidate,
+      preferredLanguages: preferredLanguages,
+      viewerCountry: viewerCountry,
     );
+    await _seenVideoLookup?.ensureInitialized();
+    return HomeFeedResult(videos: _withoutSeenVideos(popular));
   }
 
   Future<RecommendationsResponse> _fetchRecommendationsPage({
@@ -3974,52 +3973,47 @@ class VideosRepository {
     }
 
     return HomeFeedResult(
-      videos: prioritizeNotRecentlySeenVideos(
-        videos,
-        seenVideoLookup: _seenVideoLookup,
-      ),
+      videos: _withoutSeenVideos(videos),
       paginationCursor: nextCursor,
       hasMore: hasMore,
       recommendationPageCount: pageCount,
     );
   }
 
-  bool _hasNotRecentlySeenCandidate(List<VideoEvent> videos) {
+  bool _hasNotRecentlySeenCandidate(List<VideoEvent> videos) =>
+      videos.any((video) => !_wasSeen(video));
+
+  /// Whether the viewer has seen [video] within [seenVideoExclusionWindow].
+  bool _wasSeen(VideoEvent video) {
     final lookup = _seenVideoLookup;
-    if (lookup == null) return true;
-    return videos.any(
-      (video) =>
-          video.id.isEmpty ||
-          !lookup.wasSeenRecently(
-            video.id,
-            within: defaultRecentlySeenVideoWindow,
-          ),
-    );
+    return lookup != null &&
+        video.id.isNotEmpty &&
+        lookup.wasSeenRecently(video.id, within: seenVideoExclusionWindow);
   }
 
-  Future<List<VideoEvent>> _orderBySeenFreshness(
-    List<VideoEvent> videos,
-  ) async {
-    await _seenVideoLookup?.ensureInitialized();
-    return prioritizeNotRecentlySeenVideos(
-      videos,
-      seenVideoLookup: _seenVideoLookup,
-    );
-  }
+  /// [videos] without the ones the viewer has already seen, order kept.
+  List<VideoEvent> _withoutSeenVideos(List<VideoEvent> videos) =>
+      filterOutRecentlySeenVideos(
+        videos,
+        seenVideoLookup: _seenVideoLookup,
+        retainAllWhenAllSeen: false,
+      );
 
-  Future<HomeFeedResult> _withSeenFreshnessOrdering(
-    HomeFeedResult result,
-  ) async {
-    final orderedVideos = await _orderBySeenFreshness(result.videos);
-    if (identical(orderedVideos, result.videos)) return result;
+  /// [result] without the videos the viewer has already seen, keeping its
+  /// pagination and attribution.
+  HomeFeedResult _withoutSeenVideosInResult(HomeFeedResult result) {
+    final unseen = _withoutSeenVideos(result.videos);
+    if (unseen.length == result.videos.length) return result;
     return HomeFeedResult(
-      videos: orderedVideos,
+      videos: unseen,
       videoListSources: result.videoListSources,
       listOnlyVideoIds: result.listOnlyVideoIds,
       consumedItemCount: result.consumedItemCount,
       nextCursor: result.nextCursor,
       paginationCursor: result.paginationCursor,
       hasMore: result.hasMore,
+      recommendationPageCount: result.recommendationPageCount,
+      followingPageCount: result.followingPageCount,
     );
   }
 

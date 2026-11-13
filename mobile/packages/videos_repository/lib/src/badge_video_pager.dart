@@ -8,18 +8,22 @@ import 'package:models/models.dart';
 class BadgeVideoPager {
   /// Creates a pager for a snapshot of [authors].
   ///
-  /// [orderPage] may reorder each delivered batch without changing offsets.
+  /// [beforePage] is awaited before each page, so [isVisible] reads settled
+  /// state. [maxHiddenPerPage] bounds how many videos [isVisible] may reject
+  /// while filling one page; reaching it with nothing to show ends the pager.
   BadgeVideoPager({
     required FunnelcakeApiClient client,
     required List<String> authors,
     required List<VideoEvent> Function(List<VideoStats>) transform,
     bool Function(VideoEvent)? isVisible,
-    Future<List<VideoEvent>> Function(List<VideoEvent>)? orderPage,
+    Future<void> Function()? beforePage,
+    int? maxHiddenPerPage,
     int? before,
   }) : _client = client,
        _transform = transform,
        _isVisible = isVisible,
-       _orderPage = orderPage,
+       _beforePage = beforePage,
+       _maxHiddenPerPage = maxHiddenPerPage,
        _before =
            before ?? DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000 + 1,
        _chunks = [
@@ -34,7 +38,8 @@ class BadgeVideoPager {
   /// fetch time, and a chunk buffers up to 100 videos, so an author blocked
   /// after the fetch would otherwise come back on a later page.
   final bool Function(VideoEvent)? _isVisible;
-  final Future<List<VideoEvent>> Function(List<VideoEvent>)? _orderPage;
+  final Future<void> Function()? _beforePage;
+  final int? _maxHiddenPerPage;
   final int _before;
   final List<_AuthorChunk> _chunks;
   final Set<String> _seen = {};
@@ -46,7 +51,7 @@ class BadgeVideoPager {
 
   /// Returns the next [limit] public, visible videos.
   ///
-  /// Videos merge in recency order before any optional page ordering.
+  /// Videos merge in recency order.
   ///
   /// Calls are served one at a time. Following can ask for a page while a
   /// refresh is still loading the first one, and two walks over the same
@@ -54,9 +59,8 @@ class BadgeVideoPager {
   Future<List<VideoEvent>> loadMore({int limit = 25}) {
     if (limit < 1) throw ArgumentError.value(limit, 'limit');
     final page = _tail.then((_) async {
-      final videos = await _loadPage(limit);
-      final orderPage = _orderPage;
-      return orderPage == null ? videos : await orderPage(videos);
+      await _beforePage?.call();
+      return _loadPage(limit);
     });
     _tail = page.then<void>((_) {}, onError: (Object _) {});
     return page;
@@ -64,6 +68,7 @@ class BadgeVideoPager {
 
   Future<List<VideoEvent>> _loadPage(int limit) async {
     final result = <VideoEvent>[];
+    var hidden = 0;
     while (result.length < limit) {
       // Walk 200-author chunks serially to bound concurrent server requests.
       // Total request cost still grows with the number of author chunks.
@@ -94,7 +99,23 @@ class BadgeVideoPager {
       }
       if (newestChunk == null) break;
       final video = newestChunk.buffer.removeAt(0);
-      if (!(_isVisible?.call(video) ?? true)) continue;
+      if (!(_isVisible?.call(video) ?? true)) {
+        hidden++;
+        final maxHidden = _maxHiddenPerPage;
+        if (maxHidden != null && hidden >= maxHidden) {
+          // Nothing visible this far back ends the pager rather than leaving
+          // an empty page that claims more.
+          if (result.isEmpty) {
+            for (final chunk in _chunks) {
+              chunk
+                ..buffer.clear()
+                ..exhausted = true;
+            }
+          }
+          break;
+        }
+        continue;
+      }
       if (_seen.add(video.feedDedupKey)) result.add(video);
     }
     return result;

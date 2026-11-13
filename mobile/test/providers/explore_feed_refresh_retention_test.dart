@@ -946,10 +946,7 @@ void main() {
         addTearDown(subscription.close);
 
         final state = await container.read(forYouFeedProvider.future);
-        expect(state.videos.map((video) => video.id), [
-          'for-you-fresh',
-          'for-you-seen',
-        ]);
+        expect(state.videos.map((video) => video.id), ['for-you-fresh']);
         verify(
           () => mockFunnelcakeApiClient.getRecommendations(
             pubkey: 'viewer-pubkey',

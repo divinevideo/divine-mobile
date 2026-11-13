@@ -459,5 +459,73 @@ void main() {
       await expectLater(pager.loadMore(), throwsA(isA<FunnelcakeException>()));
       expect(pager.hasMore, isTrue);
     });
+
+    group('hidden videos', () {
+      late _Client client;
+
+      setUp(() {
+        client = _Client();
+        when(
+          () => client.getVideosByAuthors(
+            authors: any(named: 'authors'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((invocation) async {
+          final offset = invocation.namedArguments[#offset]! as int;
+          final videos = [_video(offset + 1, 1000 - offset)];
+          return RecentVideosResponse(
+            videos: videos,
+            serverItemCount: 1,
+            hasMore: true,
+          );
+        });
+      });
+
+      BadgeVideoPager pagerHiding(
+        bool Function(VideoEvent) hidden, {
+        Future<void> Function()? beforePage,
+      }) => BadgeVideoPager(
+        client: client,
+        authors: ['a' * 64],
+        transform: (stats) => stats.map((v) => v.toVideoEvent()).toList(),
+        isVisible: (video) => !hidden(video),
+        beforePage: beforePage,
+        maxHiddenPerPage: 3,
+      );
+
+      test(
+        'ends when the hidden budget runs out with nothing visible',
+        () async {
+          final pager = pagerHiding((_) => true);
+
+          expect(await pager.loadMore(), isEmpty);
+          expect(pager.hasMore, isFalse);
+        },
+      );
+
+      test('returns what it found once the hidden budget runs out', () async {
+        final visibleId = _video(1, 0).id;
+        final pager = pagerHiding((video) => video.id != visibleId);
+
+        final page = await pager.loadMore(limit: 2);
+
+        expect(page.map((v) => v.id), [visibleId]);
+        expect(pager.hasMore, isTrue);
+      });
+
+      test('waits for beforePage before choosing visible videos', () async {
+        var ready = false;
+        final pager = pagerHiding(
+          (_) => !ready,
+          beforePage: () async => ready = true,
+        );
+
+        final page = await pager.loadMore(limit: 1);
+
+        expect(page.map((v) => v.id), [_video(1, 0).id]);
+      });
+    });
   });
 }

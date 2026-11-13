@@ -113,7 +113,7 @@ class FollowingVideoFeedSession {
         final pager = _videosRepository.createBadgeVideoPager([
           ..._directAuthors(),
           ...badgeAuthors,
-        ], prioritizeUnseen: true);
+        ], hideSeen: true);
         final videos = await pager.loadMore();
         if (!ownsRequest()) throw const FollowingReadSuperseded();
         _pager = pager;
