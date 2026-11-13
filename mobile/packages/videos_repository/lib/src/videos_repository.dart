@@ -1149,8 +1149,14 @@ class VideosRepository {
       // premature `hasMore: false` into the feed cache.
       if (page.hasMore == false || page.serverItemCount < limit) break;
       // A long run of pages the viewer has entirely seen ends this read; the
-      // cursor still resumes after the last of them.
-      if (seenOnlyPages >= maxSeenOnlyFeedPages) break;
+      // cursor still resumes after the last of them when unseen videos remain.
+      if (seenOnlyPages >= maxSeenOnlyFeedPages) {
+        if (visible.isEmpty) {
+          serverHasMore = false;
+          nextPageCursor = null;
+        }
+        break;
+      }
 
       if (nextPageCursor != null) {
         if (nextPageCursor == pageCursor) break;

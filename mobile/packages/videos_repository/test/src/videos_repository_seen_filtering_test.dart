@@ -411,8 +411,57 @@ void main() {
       final result = await repo.getNewVideos(limit: 1);
       expect(result.videos, isEmpty);
       expect(page, equals(maxSeenOnlyFeedPages));
-      expect(result.paginationCursor, equals('cursor-$page'));
+      expect(result.hasMore, isFalse);
+      expect(result.paginationCursor, isNull);
     });
+
+    test(
+      'getNewVideos keeps cursor when unseen videos precede a seen-only run',
+      () async {
+        var page = 0;
+        when(
+          () => mockFunnelcake.getRecentVideosPage(
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((invocation) async {
+          page++;
+          if (invocation.namedArguments[#cursor] == null) {
+            return RecentVideosResponse(
+              videos: [_stats('unseen-1'), _stats('seen-1')],
+              serverItemCount: 2,
+              hasMore: true,
+              nextCursor: 'cursor-$page',
+            );
+          }
+          return RecentVideosResponse(
+            videos: [_stats('seen-${page}a'), _stats('seen-${page}b')],
+            serverItemCount: 2,
+            hasMore: true,
+            nextCursor: 'cursor-$page',
+          );
+        });
+        when(
+          () => mockFunnelcake.getBulkVideoStats(any()),
+        ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
+
+        final repo = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+                id != 'unseen-1',
+          ),
+        );
+
+        final result = await repo.getNewVideos(limit: 2);
+        expect(result.videos.map((v) => v.id).toList(), ['unseen-1']);
+        expect(page, equals(1 + maxSeenOnlyFeedPages));
+        expect(result.hasMore, isTrue);
+        expect(result.paginationCursor, equals('cursor-$page'));
+      },
+    );
 
     test('getNewVideos cache hit drops videos seen since caching', () async {
       final seenIds = <String>{};

@@ -938,7 +938,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         var previousUntil =
             state.coordination.newVideosUntil ?? _oldestTimestamp(state.videos);
         var previousCursor = state.paginationCursor;
-        while (true) {
+        for (var emptyPages = 1; ; emptyPages++) {
           final nextUntil = _oldestTimestamp(result.videos);
           final nextCursor = result.paginationCursor;
           final progressed = nextCursor != null
@@ -955,7 +955,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           ]);
           if (displayable.length > state.videos.length ||
               !hasMore ||
-              !progressed) {
+              !progressed ||
+              emptyPages >= maxSeenOnlyFeedPages) {
             emit(
               state.copyWith(
                 coordination: state.coordination.copyWith(
@@ -963,8 +964,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
                 ),
               ),
             );
-            // Progress only decides whether to read another page: a page
-            // that showed nothing new ends the feed.
+            // A page or bounded run with nothing new ends the feed.
             result = HomeFeedResult(
               videos: result.videos,
               paginationCursor: nextCursor,
