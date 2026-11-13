@@ -1,5 +1,5 @@
 // ABOUTME: Tests the automatic media-cache budget: keep 15% of the disk free,
-// ABOUTME: never exceed today's ceilings, never shrink below the usable floor.
+// ABOUTME: never exceed their ceilings, never shrink below the usable floor.
 
 import 'package:divine_video_player/divine_video_player.dart'
     show kDefaultCacheMaxSizeBytes;
@@ -123,7 +123,7 @@ void main() {
   });
 
   group('mediaCacheBudgetCeiling', () {
-    test("is today's fixed sizes where there is a player cache", () {
+    test('is the fixed default sizes where there is a player cache', () {
       expect(
         mediaCacheBudgetCeiling(imageBytes: 256 * _mb, hasPlayerCache: true),
         equals(

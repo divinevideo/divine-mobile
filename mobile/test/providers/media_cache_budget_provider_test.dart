@@ -1,5 +1,5 @@
-// ABOUTME: Tests the app wiring of MediaCacheBudgetService: today's fixed
-// ABOUTME: sizes as the ceiling, and a player budget only on Android.
+// ABOUTME: Tests the app wiring of MediaCacheBudgetService: the fixed sizes as
+// ABOUTME: the ceiling, a player budget only on Android, and its telemetry.
 
 import 'package:divine_video_player/divine_video_player.dart'
     show kDefaultCacheMaxSizeBytes;
@@ -69,16 +69,22 @@ void main() {
       const channel = MethodChannel('divine/device_storage');
       late Map<String, String?> userProperties;
       late _RecordingCrashReporting crashReporting;
+      late int? videoBudgetBefore;
+      late int? imageBudgetBefore;
 
       setUp(() {
         userProperties = {};
         crashReporting = _RecordingCrashReporting();
+        // refresh() writes the budget onto the app's shared caches; a roomy
+        // disk keeps them at their ceilings, and tearDown puts them back.
+        videoBudgetBefore = openVineMediaCache.maxCacheSizeBytes;
+        imageBudgetBefore = openVineImageCache.maxCacheSizeBytes;
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(
               channel,
               (_) async => {
                 'totalBytes': 256000000000,
-                'freeBytes': 9000000000,
+                'freeBytes': 120000000000,
               },
             );
       });
@@ -87,9 +93,8 @@ void main() {
         debugDefaultTargetPlatformOverride = null;
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(channel, null);
-        // refresh() writes the budget onto the app's shared caches.
-        openVineMediaCache.maxCacheSizeBytes = null;
-        openVineImageCache.maxCacheSizeBytes = null;
+        openVineMediaCache.maxCacheSizeBytes = videoBudgetBefore;
+        openVineImageCache.maxCacheSizeBytes = imageBudgetBefore;
       });
 
       Future<void> refreshOn(TargetPlatform platform) async {

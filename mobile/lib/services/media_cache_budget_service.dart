@@ -28,8 +28,9 @@ typedef MediaCacheBudgetListener = void Function(
 ///
 /// A budget that shrinks trims the cache straight away. One that grows only
 /// raises the ceiling; the cache fills back up as videos are watched. A
-/// reading taken before both caches have been measured only ever grows them
-/// (see [MediaCacheManager.hasMeasuredCacheBytes]).
+/// reading taken before both caches have been measured never shrinks them
+/// below their current budget, except down to the ceiling (see
+/// [MediaCacheManager.hasMeasuredCacheBytes]).
 class MediaCacheBudgetService {
   /// Creates a service over the given caches.
   ///
@@ -122,8 +123,9 @@ class MediaCacheBudgetService {
     final automatic = fixedVideoBytes == null;
     // Until both caches have been walked, their sizes cover only this
     // session's downloads, so the reading undercounts what they may keep.
-    // Such a reading can grow the automatic budgets but never shrink them,
-    // and it leaves the next refresh free to run.
+    // Such a reading can grow the automatic budgets but not shrink them below
+    // their current size (only down to the ceiling), and it leaves the next
+    // refresh free to run.
     final provisional =
         storage != null &&
         !(_videoCache.hasMeasuredCacheBytes &&
