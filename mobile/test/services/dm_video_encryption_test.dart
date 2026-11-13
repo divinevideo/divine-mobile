@@ -1,5 +1,5 @@
 // ABOUTME: Unit tests for DmVideoEncryption
-// ABOUTME: Verifies AES-256-GCM round-trip, separate hashes, and the size cap.
+// ABOUTME: Verifies round-trip, hashes, size cap, fresh keys, off-isolate work.
 
 import 'dart:async';
 import 'dart:io';
@@ -75,9 +75,8 @@ void main() {
     });
 
     test('keeps the calling isolate responsive while it encrypts', () async {
-      // A clip as large as a typical phone recording. Encrypting it in pure
-      // Dart takes over a second on a laptop, and longer on a phone, so work
-      // done on the calling isolate shows up as one long stall between ticks.
+      // Large enough that encrypting on the calling isolate would stall the
+      // ticker far past the bound asserted below.
       final random = Random(7);
       final bytes = Uint8List(24 * 1024 * 1024);
       for (var i = 0; i < bytes.length; i += 4093) {
@@ -102,7 +101,7 @@ void main() {
       final stall = window - lastTick;
       if (stall > longestStall) longestStall = stall;
 
-      expect(out.ciphertextSize, bytes.length + 16);
+      expect(out.ciphertextSize, equals(bytes.length + 16));
       expect(
         longestStall,
         lessThan(const Duration(milliseconds: 400)),
