@@ -209,6 +209,7 @@ void main() {
         () => overlayBloc.stream,
       ).thenAnswer((_) => const Stream<TimelineOverlayState>.empty());
       when(() => editor.stateManager).thenReturn(stateManager);
+      when(() => editor.activeLayers).thenReturn(const []);
       when(() => stateManager.activeMeta).thenReturn(activeMeta);
       when(
         () => editor.addHistory(

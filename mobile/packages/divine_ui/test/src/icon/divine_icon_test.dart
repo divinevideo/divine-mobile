@@ -62,6 +62,25 @@ void main() {
       );
     });
 
+    test('text background icons map to their own glyphs', () {
+      expect(
+        DivineIconName.textBgHighlight.assetPath,
+        'assets/icon/text_bg_highlight.svg',
+      );
+      expect(
+        DivineIconName.textBgNone.assetPath,
+        'assets/icon/text_bg_none.svg',
+      );
+      expect(
+        DivineIconName.textBgSolid.assetPath,
+        'assets/icon/text_bg_solid.svg',
+      );
+      expect(
+        DivineIconName.textBgTransparent.assetPath,
+        'assets/icon/text_bg_transparent.svg',
+      );
+    });
+
     test('bug maps to the diagnostics glyph pair', () {
       expect(DivineIconName.bug.fileName, 'bug');
       expect(DivineIconName.bug.assetPath, 'assets/icon/bug.svg');

@@ -2,14 +2,19 @@
 // ABOUTME: Verifies scroll-offset ↔ playback-position conversion symmetry
 // ABOUTME: across single-clip, multi-clip, and empty-clip compositions.
 
+import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show Layer, TextLayer, WidgetLayer;
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 AudioEvent _audio({
@@ -1938,6 +1943,115 @@ void main() {
       expect(result[0].endTime, maxDuration);
       expect(identical(result[1], trimmed), isTrue);
       expect(identical(result[2], unbounded), isTrue);
+    });
+  });
+
+  group(growLayersToCompositionEnd, () {
+    // A sticker over a 3 s video whose bar was moved, which gave it an end of
+    // its own, and then a 3 s clip added after it.
+    const shortComposition = Duration(seconds: 3);
+    const longComposition = Duration(seconds: 6);
+
+    List<Layer> grow(
+      List<Layer> layers, {
+      Duration previousDuration = shortComposition,
+      Duration duration = longComposition,
+    }) => growLayersToCompositionEnd(
+      layers,
+      previousDuration: previousDuration,
+      duration: duration,
+    );
+
+    TextLayer text({Duration? endTime}) =>
+        TextLayer(id: 'sticker', text: '#tag', endTime: endTime);
+
+    test('stretches a layer that ran to the old composition end', () {
+      expect(
+        grow([text(endTime: shortComposition)]).single.endTime,
+        longComposition,
+      );
+    });
+
+    test('follows the end across the millisecond the window persists at', () {
+      // A 30 fps composition ends between two milliseconds; the layer comes
+      // back from history at the millisecond below it.
+      const exactEnd = Duration(microseconds: 2966667);
+
+      expect(
+        grow([
+          text(endTime: const Duration(milliseconds: 2966)),
+        ], previousDuration: exactEnd).single.endTime,
+        longComposition,
+      );
+    });
+
+    test('writes copies, so the entry before keeps its layers', () {
+      final layer = text(endTime: shortComposition);
+
+      final grown = grow([layer]).single;
+
+      expect(identical(grown, layer), isFalse);
+      expect(grown.id, layer.id);
+      expect(layer.endTime, shortComposition);
+    });
+
+    test('leaves a layer the user trimmed short of the old end', () {
+      final layers = [text(endTime: const Duration(seconds: 1))];
+
+      expect(identical(grow(layers), layers), isTrue);
+    });
+
+    test('leaves a layer that overhangs a composition that shrank', () {
+      // Trimmed to 5 s, then the video shrank to 3 s and grows to 6 s again.
+      final layers = [text(endTime: const Duration(seconds: 5))];
+
+      expect(identical(grow(layers), layers), isTrue);
+    });
+
+    test('leaves a layer with no end of its own', () {
+      final layers = [text()];
+
+      expect(identical(grow(layers), layers), isTrue);
+    });
+
+    test('leaves the layers alone when the composition did not grow', () {
+      final layers = [text(endTime: shortComposition)];
+
+      expect(
+        identical(grow(layers, duration: const Duration(seconds: 2)), layers),
+        isTrue,
+      );
+    });
+
+    test('keeps a burned-in caption on the timing of its cue', () {
+      final layers = [
+        TextLayer(
+          id: 'cue',
+          text: 'Hello',
+          endTime: shortComposition,
+          meta: {VideoEditorConstants.captionCueMetaKey: true},
+        ),
+      ];
+
+      expect(identical(grow(layers), layers), isTrue);
+    });
+
+    test('stops a detached clip where its footage ends', () {
+      final detached = WidgetLayer(
+        id: 'detached',
+        widget: const SizedBox.shrink(),
+        startTime: const Duration(seconds: 1),
+        endTime: shortComposition,
+        meta: DetachedClipLayerData(
+          layerId: 'detached',
+          clip: _clip('footage', 4),
+        ).toMeta(),
+      );
+
+      expect(
+        grow([detached]).single.endTime,
+        const Duration(seconds: 5),
+      );
     });
   });
 

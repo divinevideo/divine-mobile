@@ -155,6 +155,7 @@ class TimelineOverlayBloc
             startTime: event.filters[i].startTime ?? .zero,
             endTime: _clampEnd(event.filters[i].endTime ?? total, total),
             label: event.filters[i].name,
+            runsToVideoEnd: event.filters[i].endTime == null,
           ),
     ];
 
@@ -169,6 +170,7 @@ class TimelineOverlayBloc
           // every member), so the first member is representative.
           startTime: entry.value.first.startTime ?? .zero,
           endTime: _clampEnd(entry.value.first.endTime ?? total, total),
+          runsToVideoEnd: entry.value.first.endTime == null,
           // Every Color and Curve value shares its section's label, which
           // the bar names once.
           label: entry.value.map(_tuneKindLabel).toSet().join(', '),
@@ -190,6 +192,7 @@ class TimelineOverlayBloc
             ),
             label: _labelForLayer(layer),
             layer: layer,
+            runsToVideoEnd: layer.endTime == null,
             keyframeTimes: [for (final k in layer.keyframes) k.time],
             maskKeyframeTimes: [
               for (final k
@@ -230,6 +233,7 @@ class TimelineOverlayBloc
           type: .effect,
           startTime: entry.startTime ?? .zero,
           endTime: _clampEnd(entry.endTime ?? total, total),
+          runsToVideoEnd: entry.endTime == null,
           label: entry.type.name,
           effectType: entry.type,
           effectOnBeat: entry.onBeat,
@@ -405,6 +409,8 @@ class TimelineOverlayBloc
       startTime: newStartTime,
       endTime: old.endTime + endTimeShift,
       row: event.row ?? old.row,
+      // The move gave the editor's overlay an end of its own.
+      runsToVideoEnd: false,
     );
 
     final hasOverlap = items.any(
@@ -472,6 +478,8 @@ class TimelineOverlayBloc
       endTime: newEnd,
       startOffset: newStartOffset,
       maxDuration: newMaxDuration,
+      // The trim gave the editor's overlay an end of its own.
+      runsToVideoEnd: false,
       // A trimmed start leaves keyframes where they are on the video (see
       // `LayerKeyframeTimeline.keyframesFrom`), so they move against the new
       // start until the item is rebuilt from the editor on release. The end
@@ -643,6 +651,12 @@ class TimelineOverlayBloc
   /// composition hands this handler a bar already truncated to the old, shorter
   /// end. Clamping it again would leave the sound playing short under a longer
   /// video (#6401).
+  ///
+  /// A layer, filter, Adjust set or effect with no end of its own
+  /// ([TimelineOverlayItem.runsToVideoEnd]) is re-derived the same way: it
+  /// runs to the end of the video, so its bar follows the new end instead of
+  /// keeping the stale one. An interactive card has no trim handles to pull
+  /// its bar back out.
   void _onTotalDurationChanged(
     TimelineOverlayTotalDurationChanged event,
     Emitter<TimelineOverlayState> emit,
@@ -666,8 +680,15 @@ class TimelineOverlayBloc
       }
 
       final track = isSound ? tracksById[item.id] : null;
+      final layer = item.layer;
       final clampedEnd = _clampEnd(
-        track == null ? item.endTime : _soundWindowEnd(track, totalDuration),
+        track != null
+            ? _soundWindowEnd(track, totalDuration)
+            : !item.runsToVideoEnd
+            ? item.endTime
+            : layer != null
+            ? _defaultLayerEnd(layer, totalDuration)
+            : totalDuration,
         totalDuration,
       );
       if (clampedEnd <= item.startTime) {

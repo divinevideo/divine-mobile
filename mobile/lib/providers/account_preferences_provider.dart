@@ -44,15 +44,16 @@ final accountPreferenceSyncProvider = Provider<AccountStateRepository?>((ref) {
     signer: () => client.signer,
     namespace: 'divine/preferences/v1',
   );
-  final close = ref
-      .read(accountStateWriteBarrierProvider)
-      .register(
-        pubkey,
-        () => Future.wait<void>([
-          store.stopProjection(repository),
-          repository.close(),
-        ]).then((_) {}),
-      );
+  // Account erasure closes this repository through the barrier before the
+  // identity clears, so this provider and its ready session can outlive it.
+  var closed = false;
+  final close = ref.read(accountStateWriteBarrierProvider).register(pubkey, () {
+    closed = true;
+    return Future.wait<void>([
+      store.stopProjection(repository),
+      repository.close(),
+    ]).then((_) {});
+  });
   ref.onDispose(() {
     runProviderDetached(
       close(),
@@ -63,6 +64,7 @@ final accountPreferenceSyncProvider = Provider<AccountStateRepository?>((ref) {
   var bound = false;
   void startWhenReady(NostrSessionReadiness session) {
     if (bound &&
+        !closed &&
         session.isReadyForActiveClient &&
         session.pubkey == pubkey &&
         identical(session.client, client)) {
@@ -117,12 +119,12 @@ final accountDmStateProvider = Provider<AccountStateRepository?>((ref) {
       namespace: 'divine/dm-dismissals/v1',
     ),
   );
-  final close = ref
-      .read(accountStateWriteBarrierProvider)
-      .register(
-        pubkey,
-        repository.close,
-      );
+  // The barrier can close this repository while the provider stays live.
+  var closed = false;
+  final close = ref.read(accountStateWriteBarrierProvider).register(pubkey, () {
+    closed = true;
+    return repository.close();
+  });
   ref.onDispose(
     () => runProviderDetached(
       close(),
@@ -131,7 +133,8 @@ final accountDmStateProvider = Provider<AccountStateRepository?>((ref) {
     ),
   );
   void startWhenReady(NostrSessionReadiness session) {
-    if (session.isReadyForActiveClient &&
+    if (!closed &&
+        session.isReadyForActiveClient &&
         session.pubkey == pubkey &&
         identical(session.client, client)) {
       runProviderDetached(

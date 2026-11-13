@@ -47,6 +47,20 @@ abstract class LikesRepositoryReportableSites {
   static const String syncUserReactionsLoadRecords =
       'syncUserReactions.loadRecords';
 
+  /// `getVoteCounts` / `getUserVoteStatuses`: reading the queued likes and
+  /// unlikes threw, so the vote reads report the relays alone.
+  static const String readQueuedLikeActions = 'readQueuedLikeActions';
+
+  /// `abandonLikeAction`: dropping the placeholder of a like the offline
+  /// queue gave up on threw, so the stale row survives locally.
+  static const String abandonLikeDeletePlaceholder =
+      'abandonLikeAction.deletePlaceholder';
+
+  /// `abandonUnlikeAction`: saving the live like re-adopted after the queue
+  /// gave up on its unlike threw.
+  static const String abandonUnlikeRestoreRecord =
+      'abandonUnlikeAction.restoreRecord';
+
   /// `syncUserReactions`: dropping a record whose reaction was deleted on
   /// the wire threw, so a stale row survives locally.
   static const String syncUserReactionsDeleteRecord =

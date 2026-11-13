@@ -530,7 +530,8 @@ extension VideoEditorExtensions on ProImageEditorState {
   }
 
   /// Persists a clip-list change that can make the composition longer, growing
-  /// any audio window that covered the old end onto the new one (#6401).
+  /// any audio window that covered the old end onto the new one (#6401), and
+  /// any layer window too (see [growLayersToCompositionEnd]).
   ///
   /// [previousClips] is the composition as it stood *before* the edit, so the
   /// grow can tell a window that ran to the end from one the user trimmed
@@ -571,15 +572,31 @@ extension VideoEditorExtensions on ProImageEditorState {
       clips: clips,
       replacedClipIds: replacedClipIds,
     );
+    final currentLayers = activeLayers;
+    final grownLayers = growLayersToCompositionEnd(
+      currentLayers,
+      previousDuration: compositionDuration(previousClips),
+      duration: compositionDuration(clips),
+    );
+    final layers = identical(grownLayers, currentLayers) ? null : grownLayers;
 
     if (identical(grownTracks, currentTracks) && addedAudioTracks.isEmpty) {
-      setClipState(clips, timelineMarkers: timelineMarkers);
+      if (layers == null) {
+        setClipState(clips, timelineMarkers: timelineMarkers);
+      } else {
+        setClipStateWithLayers(
+          clips: clips,
+          layers: layers,
+          timelineMarkers: timelineMarkers,
+        );
+      }
       return;
     }
     setClipAndAudioState(
       clips: clips,
       audioTracks: [...grownTracks, ...addedAudioTracks],
       timelineMarkers: timelineMarkers,
+      layers: layers,
     );
   }
 
@@ -638,8 +655,12 @@ extension VideoEditorExtensions on ProImageEditorState {
   void setClipStateWithLayers({
     required List<DivineVideoClip> clips,
     required List<Layer> layers,
+    List<Duration>? timelineMarkers,
   }) {
-    addHistory(layers: layers, meta: _clipHistoryMeta(clips));
+    addHistory(
+      layers: layers,
+      meta: _clipHistoryMeta(clips, timelineMarkers: timelineMarkers),
+    );
     setState(() {});
   }
 
@@ -647,8 +668,8 @@ extension VideoEditorExtensions on ProImageEditorState {
   /// history entry — the reverse of [setClipStateWithNewLayer], for putting a
   /// detached clip back onto the timeline.
   ///
-  /// The clip list can come out longer than [previousClips], so a sound that
-  /// covered the old end grows onto the new one, as in
+  /// The clip list can come out longer than [previousClips], so a sound or a
+  /// layer that covered the old end grows onto the new one, as in
   /// [setLengthenedClipState].
   void setClipStateRemovingLayer({
     required List<DivineVideoClip> previousClips,
@@ -664,10 +685,14 @@ extension VideoEditorExtensions on ProImageEditorState {
     );
 
     addHistory(
-      layers: [
-        for (final layer in activeLayers)
-          if (layer.id != layerId) layer,
-      ],
+      layers: growLayersToCompositionEnd(
+        [
+          for (final layer in activeLayers)
+            if (layer.id != layerId) layer,
+        ],
+        previousDuration: compositionDuration(previousClips),
+        duration: compositionDuration(clips),
+      ),
       meta: _clipHistoryMeta(
         clips,
         serializedAudio: identical(tracks, currentTracks)

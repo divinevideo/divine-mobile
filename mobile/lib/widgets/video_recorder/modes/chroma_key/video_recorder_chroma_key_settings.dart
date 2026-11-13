@@ -123,8 +123,7 @@ class _BackdropSwatch extends StatelessWidget {
     final imagePath = chromaKey.backgroundImagePath;
     final color = chromaKey.key.backgroundColor;
     final icon = switch (chromaKey.backgroundType) {
-      ClipChromaKeyBackgroundType.transparent =>
-        DivineIconName.textBgTransparent,
+      ClipChromaKeyBackgroundType.transparent => DivineIconName.squareDuo,
       ClipChromaKeyBackgroundType.video => DivineIconName.filmSlate,
       ClipChromaKeyBackgroundType.color ||
       ClipChromaKeyBackgroundType.image => DivineIconName.userFocus,

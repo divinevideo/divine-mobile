@@ -173,10 +173,14 @@ class AccountStateRepository {
     });
   }
 
+  /// Subscribes to relay updates once local state has been restored.
+  ///
+  /// Throws a [StateError] when called after [close]. A [close] that lands
+  /// while the restore is still running wins, and the start does nothing.
   Future<void> start() async {
-    await _ready;
     _ensureOpen();
-    if (_started) return;
+    await _ready;
+    if (_closed || _started) return;
     _started = true;
     _incoming = _client.subscribe(_filters).listen((event) {
       if (_closed ||

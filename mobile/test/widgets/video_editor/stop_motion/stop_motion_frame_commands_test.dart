@@ -76,6 +76,7 @@ void main() {
 
       when(() => overlayBloc.state).thenReturn(const TimelineOverlayState());
       when(() => editor.stateManager).thenReturn(stateManager);
+      when(() => editor.activeLayers).thenReturn(const []);
       when(
         () => editor.addHistory(
           layers: any(named: 'layers'),

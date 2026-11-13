@@ -129,6 +129,7 @@ class TimelineOverlayItem extends Equatable {
     this.keyframeTimes = const [],
     this.maskKeyframeTimes = const [],
     this.effectOnBeat = false,
+    this.runsToVideoEnd = false,
   });
 
   /// Unique identifier.
@@ -232,6 +233,14 @@ class TimelineOverlayItem extends Equatable {
   /// says next to the effect's name.
   final bool effectOnBeat;
 
+  /// Whether a layer, filter, Adjust set or effect item has no end of its own
+  /// in the editor and so runs to the end of the video, wherever that is.
+  ///
+  /// Its [endTime] is that end as it stood when the item was built. Moving or
+  /// trimming the bar gives the editor's overlay an end of its own, so it
+  /// clears this. Always `false` for sounds and captions.
+  final bool runsToVideoEnd;
+
   /// Whether a sound item fades in or out at all.
   bool get hasFade => fadeIn > Duration.zero || fadeOut > Duration.zero;
 
@@ -297,6 +306,7 @@ class TimelineOverlayItem extends Equatable {
     List<Duration>? keyframeTimes,
     List<Duration>? maskKeyframeTimes,
     bool? effectOnBeat,
+    bool? runsToVideoEnd,
   }) {
     return TimelineOverlayItem(
       id: id ?? this.id,
@@ -320,6 +330,7 @@ class TimelineOverlayItem extends Equatable {
       keyframeTimes: keyframeTimes ?? this.keyframeTimes,
       maskKeyframeTimes: maskKeyframeTimes ?? this.maskKeyframeTimes,
       effectOnBeat: effectOnBeat ?? this.effectOnBeat,
+      runsToVideoEnd: runsToVideoEnd ?? this.runsToVideoEnd,
     );
   }
 
@@ -346,5 +357,6 @@ class TimelineOverlayItem extends Equatable {
     keyframeTimes,
     maskKeyframeTimes,
     effectOnBeat,
+    runsToVideoEnd,
   ];
 }

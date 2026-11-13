@@ -2304,6 +2304,180 @@ void main() {
         },
       );
 
+      group('a layer built against a stale total', () {
+        // The same stale reconcile as the sound above, for a layer: the bar
+        // is built against the pre-redo 3 s and then hears the real 6 s. A
+        // layer with no end of its own runs to the end of the video, so its
+        // bar has to follow; an interactive card, which has no trim handles,
+        // otherwise stays short for good.
+        TimelineOverlayItemsUpdate staleUpdate(List<Layer> layers) =>
+            TimelineOverlayItemsUpdate(
+              layers: layers,
+              filters: const <FilterState>[],
+              audioTracks: const [],
+              totalVideoDuration: const Duration(seconds: 3),
+            );
+
+        blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+          'follows the real total when the layer has no end of its own',
+          build: TimelineOverlayBloc.new,
+          act: (bloc) => bloc
+            ..add(staleUpdate([TextLayer(id: 'text-1', text: 'Poll')]))
+            ..add(
+              const TimelineOverlayTotalDurationChanged(Duration(seconds: 6)),
+            ),
+          verify: (bloc) {
+            final layer = bloc.state.items.single;
+            expect(layer.startTime, Duration.zero);
+            expect(layer.endTime, const Duration(seconds: 6));
+          },
+        );
+
+        blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+          'keeps the end the user trimmed the layer to',
+          build: TimelineOverlayBloc.new,
+          act: (bloc) => bloc
+            ..add(
+              staleUpdate([
+                TextLayer(
+                  id: 'text-1',
+                  text: 'Hi',
+                  endTime: const Duration(milliseconds: 1500),
+                ),
+              ]),
+            )
+            ..add(
+              const TimelineOverlayTotalDurationChanged(Duration(seconds: 6)),
+            ),
+          verify: (bloc) {
+            expect(
+              bloc.state.items.single.endTime,
+              const Duration(milliseconds: 1500),
+            );
+          },
+        );
+
+        blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+          'keeps the end of a layer trimmed since its bar was built',
+          build: TimelineOverlayBloc.new,
+          // The trim writes the end into the editor without rebuilding the
+          // items, so the bar still holds the layer as it was before: with
+          // no end of its own.
+          act: (bloc) => bloc
+            ..add(staleUpdate([TextLayer(id: 'text-1', text: 'Hi')]))
+            ..add(
+              const TimelineOverlayItemTrimmed(
+                itemId: 'text-1',
+                isStart: false,
+                endTime: Duration(seconds: 2),
+              ),
+            )
+            ..add(
+              const TimelineOverlayTotalDurationChanged(Duration(seconds: 6)),
+            ),
+          verify: (bloc) {
+            final layer = bloc.state.items.single;
+            expect(layer.layer?.endTime, isNull);
+            expect(layer.endTime, const Duration(seconds: 2));
+          },
+        );
+
+        blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+          'keeps the end of a layer moved since its bar was built',
+          build: TimelineOverlayBloc.new,
+          // Like a trim, the move writes the end into the editor without
+          // rebuilding the items, so the bar still holds the layer with no
+          // end of its own.
+          act: (bloc) => bloc
+            ..add(
+              staleUpdate([
+                TextLayer(
+                  id: 'text-1',
+                  text: 'Hi',
+                  startTime: const Duration(seconds: 1),
+                ),
+              ]),
+            )
+            ..add(
+              const TimelineOverlayItemMoved(
+                itemId: 'text-1',
+                startTime: Duration.zero,
+              ),
+            )
+            ..add(
+              const TimelineOverlayTotalDurationChanged(Duration(seconds: 6)),
+            ),
+          verify: (bloc) {
+            final layer = bloc.state.items.single;
+            expect(layer.layer?.endTime, isNull);
+            expect(layer.startTime, Duration.zero);
+            expect(layer.endTime, const Duration(seconds: 2));
+          },
+        );
+
+        blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+          'follows the real total with a filter that has no end of its own',
+          build: TimelineOverlayBloc.new,
+          act: (bloc) => bloc
+            ..add(
+              TimelineOverlayItemsUpdate(
+                layers: const <Layer>[],
+                filters: [
+                  FilterState(
+                    id: 'filter-1',
+                    name: 'Noir',
+                    matrices: const [
+                      [1.0],
+                    ],
+                  ),
+                ],
+                audioTracks: const [],
+                totalVideoDuration: const Duration(seconds: 3),
+              ),
+            )
+            ..add(
+              const TimelineOverlayTotalDurationChanged(Duration(seconds: 6)),
+            ),
+          verify: (bloc) {
+            expect(
+              bloc.state.items.single.endTime,
+              const Duration(seconds: 6),
+            );
+          },
+        );
+
+        blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+          'stops a detached clip where its footage ends',
+          build: TimelineOverlayBloc.new,
+          act: (bloc) => bloc
+            ..add(
+              staleUpdate([
+                WidgetLayer(
+                  id: 'detached-1',
+                  widget: const SizedBox.shrink(),
+                  meta: DetachedClipLayerData(
+                    layerId: 'detached-1',
+                    clip: DivineVideoClip(
+                      id: 'clip-1',
+                      video: EditorVideo.file('/docs/clip-1.mp4'),
+                      duration: const Duration(seconds: 4),
+                      recordedAt: DateTime(2026),
+                      targetAspectRatio: model.AspectRatio.vertical,
+                      originalAspectRatio: 9 / 16,
+                    ),
+                  ).toMeta(),
+                ),
+              ]),
+            )
+            ..add(
+              const TimelineOverlayTotalDurationChanged(Duration(seconds: 6)),
+            ),
+          verify: (bloc) {
+            expect(bloc.state.items.single.endTime, const Duration(seconds: 4));
+          },
+        );
+      });
+
       blocTest<TimelineOverlayBloc, TimelineOverlayState>(
         'does not re-sync the player mid clip-trim drag',
         build: TimelineOverlayBloc.new,

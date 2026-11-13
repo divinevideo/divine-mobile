@@ -125,8 +125,8 @@ class _LayerOverlayControls extends StatelessWidget {
         layer != null && InfoStickerData.isInfoStickerLayer(layer);
     final isSocialSticker =
         layer != null && SocialStickerData.isSocialStickerLayer(layer);
-    // Info, social and interactive stickers show as they are, for as long as
-    // they were placed: no split, mask, opacity or blend.
+    // Info, social and interactive stickers show as they are: no split, mask,
+    // opacity or blend.
     final isStickerCard = isStickerCardLayer(layer);
     // A video carries one interactive card.
     final isInteractiveCard = layer != null && isInteractiveCardLayer(layer);
