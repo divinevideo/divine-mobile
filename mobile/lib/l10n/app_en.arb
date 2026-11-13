@@ -7386,7 +7386,7 @@
   "@videoEditorTextWrapAtEdges": {
     "description": "Video editor toolbar chip shown for a text that runs past the video edges. Tapping it makes the text wrap at the edges of the video again."
   },
-  "videoEditorTextEffectsSemanticLabel": "Outline and shadow",
+  "videoEditorTextEffectsSemanticLabel": "Text style",
   "videoEditorTextOutline": "Outline",
   "videoEditorTextOutlineThickness": "Outline thickness",
   "videoEditorTextOutlineColor": "Outline color",

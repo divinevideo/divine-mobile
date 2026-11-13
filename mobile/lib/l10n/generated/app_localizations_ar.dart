@@ -10050,7 +10050,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'التفاف عند الحواف';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'الحد الخارجي والظل';
+  String get videoEditorTextEffectsSemanticLabel => 'نمط النص';
 
   @override
   String get videoEditorTextOutline => 'الحد الخارجي';

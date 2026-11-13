@@ -10254,7 +10254,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Zawijaj przy krawędziach';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Obrys i cień';
+  String get videoEditorTextEffectsSemanticLabel => 'Styl tekstu';
 
   @override
   String get videoEditorTextOutline => 'Obrys';

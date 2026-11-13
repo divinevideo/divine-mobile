@@ -9582,7 +9582,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => '가장자리에서 줄 바꿈';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => '외곽선 및 그림자';
+  String get videoEditorTextEffectsSemanticLabel => '텍스트 스타일';
 
   @override
   String get videoEditorTextOutline => '외곽선';

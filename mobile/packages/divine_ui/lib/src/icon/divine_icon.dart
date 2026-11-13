@@ -231,6 +231,9 @@ enum DivineIconName {
   sunDim('sun_dim'),
   television('television'),
   textAa('text_aa'),
+
+  /// A capital A over a line: formatting the letters of a text.
+  textAUnderline('text_a_underline'),
   textAlignCenter('text_align_center'),
   textAlignLeft('text_align_left'),
   textAlignRight('text_align_right'),
@@ -244,7 +247,6 @@ enum DivineIconName {
   textBgNone('square'),
   textBgTransparent('square_duo'),
   textBgFill('square_fill'),
-  textOutlineShadow('text_outline_shadow'),
   timer('timer'),
   timer3('timer_3'),
   timer5('timer_5'),

@@ -5020,7 +5020,7 @@
   "videoEditorTextBackgroundSemanticLabel": "文字背景",
   "videoEditorTextDontWrap": "不换行",
   "videoEditorTextWrapAtEdges": "在边缘换行",
-  "videoEditorTextEffectsSemanticLabel": "描边和阴影",
+  "videoEditorTextEffectsSemanticLabel": "文字样式",
   "videoEditorTextOutline": "描边",
   "videoEditorTextOutlineThickness": "描边粗细",
   "videoEditorTextOutlineColor": "描边颜色",

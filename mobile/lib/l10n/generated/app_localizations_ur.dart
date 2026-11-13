@@ -10031,7 +10031,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'کناروں پر لپیٹیں';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'آؤٹ لائن اور سایہ';
+  String get videoEditorTextEffectsSemanticLabel => 'متن کا انداز';
 
   @override
   String get videoEditorTextOutline => 'آؤٹ لائن';

@@ -2773,7 +2773,7 @@
   "videoEditorTextBackgroundSemanticLabel": "텍스트 배경",
   "videoEditorTextDontWrap": "줄 바꿈 안 함",
   "videoEditorTextWrapAtEdges": "가장자리에서 줄 바꿈",
-  "videoEditorTextEffectsSemanticLabel": "외곽선 및 그림자",
+  "videoEditorTextEffectsSemanticLabel": "텍스트 스타일",
   "videoEditorTextOutline": "외곽선",
   "videoEditorTextOutlineThickness": "외곽선 두께",
   "videoEditorTextOutlineColor": "외곽선 색상",

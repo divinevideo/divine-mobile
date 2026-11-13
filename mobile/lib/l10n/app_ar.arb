@@ -3227,7 +3227,7 @@
   "videoEditorTextBackgroundSemanticLabel": "خلفية النص",
   "videoEditorTextDontWrap": "بدون التفاف",
   "videoEditorTextWrapAtEdges": "التفاف عند الحواف",
-  "videoEditorTextEffectsSemanticLabel": "الحد الخارجي والظل",
+  "videoEditorTextEffectsSemanticLabel": "نمط النص",
   "videoEditorTextOutline": "الحد الخارجي",
   "videoEditorTextOutlineThickness": "سُمك الحد الخارجي",
   "videoEditorTextOutlineColor": "لون الحد الخارجي",

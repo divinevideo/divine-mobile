@@ -9813,7 +9813,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'በጠርዞች ላይ መጠቅለል';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'የጠርዝ መስመር እና ጥላ';
+  String get videoEditorTextEffectsSemanticLabel => 'የጽሑፍ ቅጥ';
 
   @override
   String get videoEditorTextOutline => 'የጠርዝ መስመር';

@@ -9949,7 +9949,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Kenarlarda kaydır';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Kontur ve gölge';
+  String get videoEditorTextEffectsSemanticLabel => 'Metin stili';
 
   @override
   String get videoEditorTextOutline => 'Kontur';

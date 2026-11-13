@@ -9939,7 +9939,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Pindah baris di tepi';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Garis tepi dan bayangan';
+  String get videoEditorTextEffectsSemanticLabel => 'Gaya teks';
 
   @override
   String get videoEditorTextOutline => 'Garis tepi';

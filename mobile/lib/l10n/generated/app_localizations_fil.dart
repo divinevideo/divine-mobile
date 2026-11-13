@@ -10106,7 +10106,7 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'I-wrap sa gilid';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Outline at anino';
+  String get videoEditorTextEffectsSemanticLabel => 'Istilo ng teksto';
 
   @override
   String get videoEditorTextOutline => 'Outline';

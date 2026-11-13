@@ -10123,7 +10123,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Пренасяне до краищата';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Контур и сянка';
+  String get videoEditorTextEffectsSemanticLabel => 'Стил на текста';
 
   @override
   String get videoEditorTextOutline => 'Контур';

@@ -10031,7 +10031,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Radbryt vid kanterna';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Kontur och skugga';
+  String get videoEditorTextEffectsSemanticLabel => 'Textstil';
 
   @override
   String get videoEditorTextOutline => 'Kontur';

@@ -16964,7 +16964,7 @@ abstract class AppLocalizations {
   /// No description provided for @videoEditorTextEffectsSemanticLabel.
   ///
   /// In en, this message translates to:
-  /// **'Outline and shadow'**
+  /// **'Text style'**
   String get videoEditorTextEffectsSemanticLabel;
 
   /// No description provided for @videoEditorTextOutline.

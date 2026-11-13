@@ -9478,7 +9478,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => '在边缘换行';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => '描边和阴影';
+  String get videoEditorTextEffectsSemanticLabel => '文字样式';
 
   @override
   String get videoEditorTextOutline => '描边';

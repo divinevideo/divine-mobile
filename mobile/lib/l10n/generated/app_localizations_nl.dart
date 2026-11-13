@@ -10078,7 +10078,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Afbreken bij de rand';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Contour en schaduw';
+  String get videoEditorTextEffectsSemanticLabel => 'Tekststijl';
 
   @override
   String get videoEditorTextOutline => 'Contour';

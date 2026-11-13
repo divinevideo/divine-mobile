@@ -10154,7 +10154,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'A capo ai bordi';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Contorno e ombra';
+  String get videoEditorTextEffectsSemanticLabel => 'Stile del testo';
 
   @override
   String get videoEditorTextOutline => 'Contorno';

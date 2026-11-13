@@ -3227,7 +3227,7 @@
   "videoEditorTextBackgroundSemanticLabel": "テキストの背景",
   "videoEditorTextDontWrap": "折り返さない",
   "videoEditorTextWrapAtEdges": "端で折り返す",
-  "videoEditorTextEffectsSemanticLabel": "縁取りと影",
+  "videoEditorTextEffectsSemanticLabel": "テキストスタイル",
   "videoEditorTextOutline": "縁取り",
   "videoEditorTextOutlineThickness": "縁取りの太さ",
   "videoEditorTextOutlineColor": "縁取りの色",

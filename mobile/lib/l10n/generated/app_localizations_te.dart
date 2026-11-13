@@ -10297,7 +10297,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'అంచుల వద్ద చుట్టండి';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'అంచు గీత మరియు నీడ';
+  String get videoEditorTextEffectsSemanticLabel => 'టెక్స్ట్ శైలి';
 
   @override
   String get videoEditorTextOutline => 'అంచు గీత';

@@ -157,7 +157,7 @@ class VideoEditorTextStyleBar extends StatelessWidget {
                                 .videoEditorTextEffectsSemanticLabel,
                             size: .small,
                             type: .secondary,
-                            icon: .textOutlineShadow,
+                            icon: .textAUnderline,
                             onPressed: () =>
                                 _toggleEffectsPanel(context, state),
                           ),

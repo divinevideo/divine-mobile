@@ -10186,7 +10186,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Retour à la ligne aux bords';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Contour et ombre';
+  String get videoEditorTextEffectsSemanticLabel => 'Style du texte';
 
   @override
   String get videoEditorTextOutline => 'Contour';

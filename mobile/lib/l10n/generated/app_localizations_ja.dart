@@ -9564,7 +9564,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => '端で折り返す';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => '縁取りと影';
+  String get videoEditorTextEffectsSemanticLabel => 'テキストスタイル';
 
   @override
   String get videoEditorTextOutline => '縁取り';

@@ -2951,7 +2951,7 @@
   "videoEditorTextBackgroundSemanticLabel": "Arrière-plan du texte",
   "videoEditorTextDontWrap": "Pas de retour à la ligne",
   "videoEditorTextWrapAtEdges": "Retour à la ligne aux bords",
-  "videoEditorTextEffectsSemanticLabel": "Contour et ombre",
+  "videoEditorTextEffectsSemanticLabel": "Style du texte",
   "videoEditorTextOutline": "Contour",
   "videoEditorTextOutlineThickness": "Épaisseur du contour",
   "videoEditorTextOutlineColor": "Couleur du contour",

@@ -10256,7 +10256,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Încadrare la margini';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Contur și umbră';
+  String get videoEditorTextEffectsSemanticLabel => 'Stilul textului';
 
   @override
   String get videoEditorTextOutline => 'Contur';
