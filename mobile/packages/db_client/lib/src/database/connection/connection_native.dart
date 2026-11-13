@@ -64,15 +64,33 @@ bool get _isFlutterTestProcess =>
 /// lock that outlasts the wait still fails exactly as before.
 const _databaseLockWait = Duration(seconds: 5);
 
+/// How long [_waitForDatabaseLocks] sleeps between two lock attempts.
+const _databaseLockRetryInterval = Duration(milliseconds: 25);
+
 /// Lets [db] wait up to [timeout] for another connection's lock instead of
 /// failing with `SQLITE_BUSY` straight away.
 ///
-/// `busy_timeout` is a connection setting that reads no page, so it is safe on
-/// a keyless connection to an encrypted file and before `PRAGMA key`.
+/// The wait is measured on a clock. SQLite's own `PRAGMA busy_timeout` adds up
+/// the sleeps it asked for instead, so a signal that cuts those sleeps short
+/// ends it early; the Dart VM's profiler sends such signals on Linux, where a
+/// five-second timeout gave up within milliseconds.
+///
+/// Installing a busy handler reads no page, so it is safe on a keyless
+/// connection to an encrypted file and before `PRAGMA key`.
 void _waitForDatabaseLocks(
   CommonDatabase db, {
   Duration timeout = _databaseLockWait,
-}) => db.execute('PRAGMA busy_timeout = ${timeout.inMilliseconds};');
+}) {
+  final waited = Stopwatch();
+  db.busyHandler = (attempt) {
+    // SQLite counts attempts per locking event, so 0 starts a new wait.
+    if (attempt == 0) waited.reset();
+    waited.start();
+    if (waited.elapsed >= timeout) return false;
+    sleep(_databaseLockRetryInterval);
+    return true;
+  };
+}
 
 /// Opens the database at [path] with [_waitForDatabaseLocks] applied.
 Database _openWaitingForLocks(
