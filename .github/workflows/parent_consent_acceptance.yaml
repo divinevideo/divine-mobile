@@ -109,7 +109,7 @@ jobs:
           script: python3 local_stack/consent_acceptance/run.py .consent-backend --native
       - name: Upload synthetic acceptance diagnostics
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: parent-consent-acceptance
           path: |
