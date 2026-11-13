@@ -59,6 +59,7 @@ void main() {
         List<String> others, {
         bool replied = false,
         bool followed = false,
+        bool Function(String pubkey)? isFollowing,
         String? sender,
       }) =>
           DmInboxClassifier(officialIdentities: fixtures.officialIdentities)
@@ -74,7 +75,7 @@ void main() {
                   ),
                 ],
                 userPubkey: fixtures.userPubkey,
-                isFollowing: (_) => followed,
+                isFollowing: isFollowing ?? (_) => followed,
                 signalsFor: (_) => DmSenderSignals.unknown,
               )
               .verdicts['policy-room']!;
@@ -101,6 +102,14 @@ void main() {
         final others = [fixtures.officialIdentities.keys.first, _stranger];
         expect(roomVerdict(others, replied: true).bucket, DmInboxBucket.inbox);
         expect(roomVerdict(others, followed: true).bucket, DmInboxBucket.inbox);
+      });
+
+      test('following only the stranger does not admit a mixed room', () {
+        final verdict = roomVerdict(
+          [fixtures.officialIdentities.keys.first, _stranger],
+          isFollowing: (pubkey) => pubkey == _stranger,
+        );
+        expect(verdict.bucket, DmInboxBucket.requests);
       });
 
       test(
