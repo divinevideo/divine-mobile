@@ -235,6 +235,102 @@ void main() {
       },
     );
 
+    group('excludeWhere', () {
+      blocTest<UserSearchBloc, UserSearchState>(
+        'omits every result the predicate matches',
+        setUp: () {
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: 'mod',
+              limit: 50,
+              sortBy: profileSearchSortRelevance,
+            ),
+          ).thenAnswer(
+            (_) => progressive([
+              createTestProfile('a' * 64, 'Divine Moderation'),
+              createTestProfile('b' * 64, 'Divine Moderation'),
+              createTestProfile('c' * 64, 'Moderna'),
+            ]),
+          );
+        },
+        build: () => UserSearchBloc(
+          profileRepository: mockProfileRepository,
+          searchRunner: mockSearchRunner,
+          excludeWhere: (pubkey) => pubkey == 'b' * 64,
+        ),
+        act: (bloc) => bloc.add(const UserSearchQueryChanged('mod')),
+        wait: debounceDuration,
+        verify: (bloc) {
+          expect(bloc.state.results.map((profile) => profile.pubkey), [
+            'a' * 64,
+            'c' * 64,
+          ]);
+          expect(bloc.state.offset, 3);
+        },
+      );
+
+      blocTest<UserSearchBloc, UserSearchState>(
+        'omits matching results from a later page',
+        setUp: () {
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: 'mod',
+              limit: 50,
+              offset: 50,
+              sortBy: profileSearchSortRelevance,
+            ),
+          ).thenAnswer(
+            (_) => progressive([
+              createTestProfile('b' * 64, 'Divine Moderation'),
+              createTestProfile('c' * 64, 'Moderna'),
+            ]),
+          );
+        },
+        build: () => UserSearchBloc(
+          profileRepository: mockProfileRepository,
+          searchRunner: mockSearchRunner,
+          excludeWhere: (pubkey) => pubkey == 'b' * 64,
+        ),
+        seed: () => UserSearchState(
+          status: UserSearchStatus.success,
+          query: 'mod',
+          results: createTestProfiles(50),
+          offset: 50,
+          hasMore: true,
+        ),
+        act: (bloc) => bloc.add(const UserSearchLoadMore()),
+        verify: (bloc) {
+          expect(bloc.state.results, hasLength(51));
+          expect(bloc.state.results.last.pubkey, 'c' * 64);
+          expect(
+            bloc.state.results.map((profile) => profile.pubkey),
+            isNot(contains('b' * 64)),
+          );
+        },
+      );
+
+      test('drops a matching result from a retained snapshot', () async {
+        final bloc = UserSearchBloc(
+          profileRepository: mockProfileRepository,
+          searchRunner: mockSearchRunner,
+          excludeWhere: (pubkey) => pubkey == 'b' * 64,
+          initialState: UserSearchState(
+            status: UserSearchStatus.success,
+            query: 'mod',
+            results: [
+              createTestProfile('a' * 64, 'Divine Moderation'),
+              createTestProfile('b' * 64, 'Divine Moderation'),
+            ],
+          ),
+        );
+        addTearDown(bloc.close);
+
+        expect(bloc.state.results.map((profile) => profile.pubkey), [
+          'a' * 64,
+        ]);
+      });
+    });
+
     group('page-local ranking', () {
       late _MockRankingSignalsLoader loader;
       late List<UserProfile> profiles;

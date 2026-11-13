@@ -564,80 +564,41 @@ void main() {
         expect(find.text('moderation-bot-v2'), findsNothing);
       });
 
-      // Official branding follows recorded custody (#9963). The picker shares
-      // the inbox row's helpers, so a withdrawn key must read the same here.
-      for (final custody in keptCustodies) {
-        testWidgets("${custody.name}: Divine's name and wordmark", (
-          tester,
-        ) async {
-          await pumpPickerWith(
+      // Every send to a retired moderation key is refused, so the picker
+      // never lists one, whatever its custody would name it (#9711).
+      for (final custody in RetiredKeyCustody.values) {
+        testWidgets('${custody.name}: does not list a followed retired '
+            'moderation account', (tester) async {
+          await openSheet(
             tester,
-            contact: profileFor(shippedRetiredKey, 'Looks Official'),
+            allowGroups: false,
+            contacts: [
+              profileFor(kModerationPubkeyHex, 'moderation-bot-v2'),
+              profileFor(shippedRetiredKey, 'Looks Official'),
+            ],
             extraOverrides: [retiredKeyCustody(custody)],
           );
 
+          // The current account is still listed, so the contacts did load.
           expect(find.text(l10n.inboxSupportRowTitle), findsOneWidget);
           expect(find.byType(ModerationAvatar), findsOneWidget);
-        });
-      }
-
-      for (final custody in withdrawnCustodies) {
-        testWidgets('${custody.name}: neutral label, no wordmark, no photo', (
-          tester,
-        ) async {
-          await pumpPickerWith(
-            tester,
-            contact: profileFor(shippedRetiredKey, 'Looks Official'),
-            extraOverrides: [retiredKeyCustody(custody)],
-          );
-
-          expect(find.text(l10n.dmFormerModerationAccountName), findsOneWidget);
-          expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
+          expect(find.text(l10n.dmFormerModerationAccountName), findsNothing);
           expect(find.text('Looks Official'), findsNothing);
-          expect(find.byType(ModerationAvatar), findsNothing);
-          expect(find.byType(VineCachedImage), findsNothing);
         });
       }
 
       // With no NIP-05 the handle line falls back to the kind-0 `name`.
-      for (final custody in keptCustodies) {
-        testWidgets('${custody.name}: shows the handle the key published', (
+      testWidgets('shows the handle a peer published', (tester) async {
+        await pumpPickerWith(
           tester,
-        ) async {
-          await pumpPickerWith(
-            tester,
-            contact: profileFor(
-              shippedRetiredKey,
-              'Looks Official',
-              name: 'looks_official',
-            ),
-            extraOverrides: [retiredKeyCustody(custody)],
-          );
+          contact: profileFor(alicePubkey, 'Alice', name: 'alice'),
+        );
 
-          expect(
-            find.text('${l10n.socialProofYouFollow} · @looks_official'),
-            findsOneWidget,
-          );
-        });
-      }
-
-      for (final custody in withdrawnCustodies) {
-        testWidgets('${custody.name}: hides the handle its holder chose', (
-          tester,
-        ) async {
-          await pumpPickerWith(
-            tester,
-            contact: profileFor(
-              shippedRetiredKey,
-              'Looks Official',
-              name: 'looks_official',
-            ),
-            extraOverrides: [retiredKeyCustody(custody)],
-          );
-
-          expect(find.text('@looks_official'), findsNothing);
-        });
-      }
+        expect(
+          find.text('${l10n.socialProofYouFollow} · @alice'),
+          findsOneWidget,
+        );
+      });
 
       testWidgets('renders an ordinary peer under their own name', (
         tester,
@@ -909,15 +870,12 @@ void main() {
         );
       });
 
-      // Official branding follows recorded custody (#9963), on the chip as
-      // on the row it was picked from.
-      testWidgets("keeps Divine's name and wordmark on the chip of a retired "
-          'key nobody can sign as', (tester) async {
+      testWidgets("keeps Divine's name and wordmark on the moderation "
+          "account's chip", (tester) async {
         await openSheet(
           tester,
           allowGroups: true,
-          contacts: [profileFor(shippedRetiredKey, 'Looks Official')],
-          extraOverrides: [retiredKeyCustody(keptCustodies.first)],
+          contacts: [profileFor(kModerationPubkeyHex, 'moderation-bot-v2')],
         );
         await enterGroupMode(tester);
 
@@ -929,25 +887,30 @@ void main() {
         );
       });
 
-      testWidgets('gives a retired key someone could still sign as its '
-          'neutral name, and no wordmark or photo, on its chip', (
-        tester,
-      ) async {
-        await openSheet(
-          tester,
-          allowGroups: true,
-          contacts: [profileFor(shippedRetiredKey, 'Looks Official')],
-          extraOverrides: [retiredKeyCustody(withdrawnCustodies.first)],
-        );
-        await enterGroupMode(tester);
+      // A retired key is not listed, so it can never become a group pick:
+      // one in a group would close the conversation for everyone (#9711).
+      for (final custody in [keptCustodies.first, withdrawnCustodies.first]) {
+        testWidgets('${custody.name}: offers no retired moderation account to '
+            'add to a group', (tester) async {
+          await openSheet(
+            tester,
+            allowGroups: true,
+            contacts: [
+              profileFor(shippedRetiredKey, 'Looks Official'),
+              profileFor(alicePubkey, 'Alice'),
+            ],
+            extraOverrides: [retiredKeyCustody(custody)],
+          );
+          await enterGroupMode(tester);
 
-        await tapPerson(tester, l10n.dmFormerModerationAccountName);
-
-        final avatar = chipAvatar(tester, l10n.dmFormerModerationAccountName);
-        expect(avatar.contentOverride, isNull);
-        expect(avatar.imageUrl, isNull);
-        expect(find.text('Looks Official'), findsNothing);
-      });
+          // The control: an ordinary contact can still be picked.
+          await tapPerson(tester, 'Alice');
+          expect(chipFor('Alice'), findsOneWidget);
+          expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
+          expect(find.text(l10n.dmFormerModerationAccountName), findsNothing);
+          expect(find.text('Looks Official'), findsNothing);
+        });
+      }
 
       group('start button placement', () {
         const surface = Size(800, 1200);

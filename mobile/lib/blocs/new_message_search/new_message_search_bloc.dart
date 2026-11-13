@@ -33,13 +33,22 @@ class NewMessageSearchBloc
     required UserRankingSignalsLoader rankingSignalsLoader,
     required String currentUserPubkey,
     required ModerationPresentationResolver moderationPresentation,
+    required bool Function(String pubkey) isRetiredRecipient,
     NewMessageSearchState? initialState,
   }) : _profileRepository = profileRepository,
        _followRepository = followRepository,
        _rankingSignalsLoader = rankingSignalsLoader,
        _currentUserPubkey = currentUserPubkey,
        _moderationPresentation = moderationPresentation,
-       super(_retained(initialState, rankingSignalsLoader, currentUserPubkey)) {
+       _isRetiredRecipient = isRetiredRecipient,
+       super(
+         _retained(
+           initialState,
+           rankingSignalsLoader,
+           currentUserPubkey,
+           isRetiredRecipient,
+         ),
+       ) {
     on<NewMessageSearchStarted>(_onStarted);
     on<NewMessageSearchQueryChanged>(
       _onQueryChanged,
@@ -57,12 +66,15 @@ class NewMessageSearchBloc
     NewMessageSearchState? snapshot,
     UserRankingSignalsLoader loader,
     String owner,
+    bool Function(String pubkey) isRetiredRecipient,
   ) {
     if (snapshot == null) {
       return const NewMessageSearchState(isLoadingContacts: true);
     }
     bool eligible(String key) =>
-        !pubkeysEqual(key, owner) && loader.isEligible(key);
+        !pubkeysEqual(key, owner) &&
+        !isRetiredRecipient(key) &&
+        loader.isEligible(key);
     List<UserProfile> keep(List<UserProfile> profiles) =>
         List.unmodifiable(profiles.where((p) => eligible(p.pubkey)));
     return snapshot.copyWith(
@@ -86,6 +98,10 @@ class NewMessageSearchBloc
   /// name the row renders, including a withdrawn key's neutral label (#9963).
   final ModerationPresentationResolver _moderationPresentation;
 
+  /// Whether a pubkey is a retired moderation account. Nothing reads one, so
+  /// every send to it is refused, and the picker never offers it (#9711).
+  final bool Function(String pubkey) _isRetiredRecipient;
+
   /// Live mirror of the durable `vanished_profiles` table.
   StreamSubscription<Set<String>>? _vanishedSubscription;
 
@@ -96,7 +112,7 @@ class NewMessageSearchBloc
     final repository = _profileRepository;
     if (repository == null) return;
     final pubkeys = _followRepository.followingPubkeys
-        .where((pubkey) => !_isSelf(pubkey))
+        .where(_isCandidate)
         .toSet();
     Map<String, UserRankingSignals>? signals;
     try {
@@ -214,7 +230,7 @@ class NewMessageSearchBloc
         query: query,
         limit: 50,
         sortBy: profileSearchSortFollowers,
-      )).where((profile) => !_isSelf(profile.pubkey)).toList();
+      )).where((profile) => _isCandidate(profile.pubkey)).toList();
 
       // Also dropped when the field was cleared while this was running.
       if (emit.isDone || state.query != query) return;
@@ -281,9 +297,10 @@ class NewMessageSearchBloc
     if (!state.isGroupMode) return;
 
     final pubkey = event.profile.pubkey;
-    // The lists this bloc builds already leave the viewer out (#8351). Refused
-    // here as well, so the selection cannot hold them whoever dispatches this.
-    if (_isSelf(pubkey)) return;
+    // The lists this bloc builds already leave these out (#8351, #9711).
+    // Refused here as well, so the selection cannot hold them whoever
+    // dispatches this.
+    if (!_isCandidate(pubkey)) return;
 
     if (state.isSelected(pubkey)) {
       emit(
@@ -316,6 +333,11 @@ class NewMessageSearchBloc
   /// Case-insensitive, because a pubkey that reaches Divine from another
   /// client may be upper-case hex.
   bool _isSelf(String pubkey) => pubkeysEqual(pubkey, _currentUserPubkey);
+
+  /// Whether [pubkey] may be offered as a recipient: neither the viewer nor a
+  /// retired moderation account.
+  bool _isCandidate(String pubkey) =>
+      !_isSelf(pubkey) && !_isRetiredRecipient(pubkey);
 
   /// Filters contacts by the name the row renders, or by NIP-05.
   ///
