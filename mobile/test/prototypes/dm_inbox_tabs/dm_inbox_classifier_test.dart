@@ -209,7 +209,7 @@ void main() {
         expect(identities['Rabble · Divine team']!.isBlockable, isTrue);
       });
 
-      test('never routes an official account to requests or likely spam', () {
+      test('never routes an all-official room to requests or likely spam', () {
         // A very strict config: identity weights raised, mitigations zeroed
         // and the threshold at the floor. Official must still not move.
         final result = classify(

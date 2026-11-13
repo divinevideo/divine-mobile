@@ -343,7 +343,7 @@ void main() {
         expect(badgeOn('Inbox'), equals('Inbox|4'));
       });
 
-      testWidgets('shows official messages unconcealed and unblockable', (
+      testWidgets('shows official previews and role-specific capability copy', (
         tester,
       ) async {
         await pumpScreen(tester);

@@ -145,7 +145,7 @@ DmInboxFixtures _build() {
     );
   }
 
-  // Official senders never reach the scorer, so their signals are unused.
+  // Unknown signals stay neutral when these accounts appear in mixed rooms.
   sender(_hqPubkey, 'DivineHQ', DmSenderSignals.unknown);
   sender(_supportPubkey, 'Divine Support', DmSenderSignals.unknown);
   sender(_trustSafetyPubkey, 'Divine Trust & Safety', DmSenderSignals.unknown);
