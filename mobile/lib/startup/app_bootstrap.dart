@@ -64,6 +64,7 @@ import 'package:openvine/startup/image_cache_budget.dart';
 import 'package:openvine/startup/startup_coordinator_factory.dart';
 import 'package:openvine/startup/window_size_constants.dart';
 import 'package:openvine/utils/app_uptime.dart';
+import 'package:openvine/utils/cache_manager_flutter_error.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/expected_network_error.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
@@ -424,13 +425,15 @@ Future<void> startOpenVineApp({
         'Cache manager error (non-fatal): ${details.exception}',
         name: 'Main',
       );
-      unawaited(
-        crashReporting.recordError(
-          details.exception,
-          details.stack,
-          reason: 'Cache manager JSON corruption',
-        ),
-      );
+      if (shouldReportCacheManagerError(details)) {
+        unawaited(
+          crashReporting.recordError(
+            details.exception,
+            details.stack,
+            reason: 'Cache manager JSON corruption',
+          ),
+        );
+      }
       return;
     }
 
