@@ -144,7 +144,7 @@ void main() {
               } else {
                 await openTab(tester, 'Official');
               }
-              const title = 'Divine Support · Liz · Divine team';
+              const title = 'Divine Support, Liz';
               final group = rowOf(title);
               expect(group, findsOneWidget);
               expect(
@@ -156,9 +156,17 @@ void main() {
                 matching: find.bySemanticsLabel(label),
               );
               expect(action('Report Divine Support'), findsOneWidget);
-              expect(action('Report Liz · Divine team'), findsOneWidget);
+              expect(action('Report Liz'), findsOneWidget);
               expect(action('Block Divine Support'), findsNothing);
-              expect(action('Block Liz · Divine team'), findsOneWidget);
+              expect(action('Block Liz'), findsOneWidget);
+              // Each participant names their role once, beside their name.
+              expect(
+                find.descendant(
+                  of: group,
+                  matching: find.text('Liz · Divine team'),
+                ),
+                findsOneWidget,
+              );
               await tester.tap(action('Report Divine Support'));
               await tester.pumpAndSettle();
               expect(group, findsOneWidget);
@@ -169,14 +177,14 @@ void main() {
                 findsOneWidget,
               );
               expect(action('Reported Divine Support'), findsOneWidget);
-              await tester.tap(action('Report Liz · Divine team'));
+              await tester.tap(action('Report Liz'));
               await tester.pumpAndSettle();
               expect(group, findsOneWidget);
-              expect(action('Reported Liz · Divine team'), findsOneWidget);
-              await tester.tap(action('Block Liz · Divine team'));
+              expect(action('Reported Liz'), findsOneWidget);
+              await tester.tap(action('Block Liz'));
               await tester.pumpAndSettle();
               expect(group, findsNothing);
-              expect(rowOf('Liz · Divine team'), findsNothing);
+              expect(rowOf('Liz'), findsNothing);
               expect(rowOf('Divine Support'), findsOneWidget);
             } finally {
               semantics.dispose();
@@ -280,7 +288,7 @@ void main() {
         expect(find.text('Priya Raman'), findsOneWidget);
         expect(tester.takeException(), isNull);
         await openTab(tester, 'Official');
-        expect(find.text('Divine Support · Liz · Divine team'), findsOneWidget);
+        expect(find.text('Divine Support, Liz'), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
     });
@@ -373,7 +381,7 @@ void main() {
         );
         expect(
           find.descendant(
-            of: rowOf('Liz · Divine team'),
+            of: rowOf('Liz'),
             matching: find.text('Reportable · blockable'),
           ),
           findsOneWidget,

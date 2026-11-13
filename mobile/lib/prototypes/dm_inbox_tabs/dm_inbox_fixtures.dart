@@ -103,7 +103,7 @@ class DmInboxFixtures {
             .toSet()
             .toList()
           ..sort();
-    return others.map(displayNameFor).join(' · ');
+    return others.map(displayNameFor).join(', ');
   }
 
   static DmInboxFixtures build() => _build();
@@ -155,8 +155,8 @@ DmInboxFixtures _build() {
   sender(_supportPubkey, 'Divine Support', DmSenderSignals.unknown);
   sender(_trustSafetyPubkey, 'Divine Trust & Safety', DmSenderSignals.unknown);
   sender(_moderationPubkey, 'Divine Moderation', DmSenderSignals.unknown);
-  sender(_lizTeamPubkey, 'Liz · Divine team', DmSenderSignals.unknown);
-  sender(_rabbleTeamPubkey, 'Rabble · Divine team', DmSenderSignals.unknown);
+  sender(_lizTeamPubkey, 'Liz', DmSenderSignals.unknown);
+  sender(_rabbleTeamPubkey, 'Rabble', DmSenderSignals.unknown);
 
   // Known, trusted people.
   sender(

@@ -15,8 +15,8 @@ void main() {
         final others = fixtures.officialIdentities.keys.take(2).toList();
         final names = (others.toList()..sort())
             .map(fixtures.displayNameFor)
-            .join(' · ');
-        expect(names, 'DivineHQ · Divine Support');
+            .join(', ');
+        expect(names, 'DivineHQ, Divine Support');
         for (final participants in [others, others.reversed.toList()]) {
           final room = DmConversation(
             id: 'title',

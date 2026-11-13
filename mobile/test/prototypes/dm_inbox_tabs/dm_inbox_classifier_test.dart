@@ -184,8 +184,8 @@ void main() {
             'Divine Support',
             'Divine Trust & Safety',
             'Divine Moderation',
-            'Liz · Divine team',
-            'Rabble · Divine team',
+            'Liz',
+            'Rabble',
           ]),
         );
       });
@@ -205,8 +205,8 @@ void main() {
 
         expect(identities['DivineHQ']!.isBlockable, isFalse);
         expect(identities['Divine Support']!.isBlockable, isFalse);
-        expect(identities['Liz · Divine team']!.isBlockable, isTrue);
-        expect(identities['Rabble · Divine team']!.isBlockable, isTrue);
+        expect(identities['Liz']!.isBlockable, isTrue);
+        expect(identities['Rabble']!.isBlockable, isTrue);
       });
 
       test('never routes an all-official room to requests or likely spam', () {
