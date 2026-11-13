@@ -81,6 +81,7 @@ class _Relay {
       final reaction = _reaction(
         _me,
         invocation.positionalArguments.first as String,
+        content: invocation.namedArguments[#content] as String,
       );
       events.add(reaction);
       return reaction;
@@ -100,6 +101,9 @@ class _Relay {
   _Check check = _Check.conclusive;
   bool publishFails = false;
 
+  /// When set, every read of one account's own reactions fails.
+  bool failViewerReads = false;
+
   /// When set, the viewer's own reaction read waits for it.
   Completer<void>? holdViewerRead;
 
@@ -108,19 +112,23 @@ class _Relay {
 
   var _createdAt = 1700000000;
 
-  Event _reaction(String pubkey, String target) => Event(
-    pubkey,
-    EventKind.reaction,
-    [
-      ['e', target],
-      ['p', _author],
-      ['k', '${EventKind.comment}'],
-    ],
-    '+',
-    createdAt: _createdAt++,
-  );
+  Event _reaction(String pubkey, String target, {String content = '+'}) =>
+      Event(
+        pubkey,
+        EventKind.reaction,
+        [
+          ['e', target],
+          ['p', _author],
+          ['k', '${EventKind.comment}'],
+        ],
+        content,
+        createdAt: _createdAt++,
+      );
 
   void seedUpvote(String pubkey) => events.add(_reaction(pubkey, _comment));
+
+  void seedDownvote(String pubkey) =>
+      events.add(_reaction(pubkey, _comment, content: '-'));
 
   /// Reaction reads that asked about [_comment].
   int commentReads = 0;
@@ -138,6 +146,7 @@ class _Relay {
       (f) => (f.kinds ?? const []).contains(EventKind.reaction),
     );
     final viewerRead = typed.any((f) => f.authors?.isNotEmpty ?? false);
+    if (viewerRead && failViewerReads) throw Exception('relay timed out');
     final hold = !reactionRead
         ? null
         : viewerRead
@@ -521,6 +530,119 @@ void main() {
         await settle();
 
         expect(relay.commentReads, equals(readsBefore));
+        await bloc.close();
+      });
+    });
+
+    group('a tap on a vote the sheet did not load', () {
+      /// Opens a sheet whose read of the viewer's own votes failed, so the
+      /// arrows are empty while the totals are known.
+      Future<CommentReactionsBloc> openWithoutViewerVotes() async {
+        relay.failViewerReads = true;
+        final bloc = openSheet()
+          ..add(CommentVoteCountsFetchRequested([_comment]));
+        await settle();
+        relay.failViewerReads = false;
+        return bloc;
+      }
+
+      void downvote(CommentReactionsBloc bloc) => bloc.add(
+        CommentVoteToggled(
+          commentId: _comment,
+          authorPubkey: _author,
+          vote: Vote.down,
+        ),
+      );
+
+      test('counts an upvote the relay already holds once', () async {
+        relay
+          ..seedUpvote(_other)
+          ..seedUpvote(_me);
+        final bloc = await openWithoutViewerVotes();
+        expectShown(bloc, upvoted: false, count: 2);
+
+        upvote(bloc);
+        await settle();
+
+        expectShown(bloc, upvoted: true, count: 2);
+        await bloc.close();
+      });
+
+      test(
+        'takes the extra upvote back before the total is read again',
+        () async {
+          relay
+            ..seedUpvote(_other)
+            ..seedUpvote(_me);
+          final bloc = await openWithoutViewerVotes();
+          relay.holdCountRead = Completer<void>();
+
+          upvote(bloc);
+          await settle();
+
+          expectShown(bloc, upvoted: true, count: 2);
+          await releaseRead();
+          expectShown(bloc, upvoted: true, count: 2);
+          await bloc.close();
+        },
+      );
+
+      test(
+        'reads the total again when the upvote landed after the sheet loaded',
+        () async {
+          relay.seedUpvote(_other);
+          final bloc = await openWithoutViewerVotes();
+          expectShown(bloc, upvoted: false, count: 1);
+          relay.seedUpvote(_me);
+
+          upvote(bloc);
+          await settle();
+
+          expectShown(bloc, upvoted: true, count: 2);
+          await bloc.close();
+        },
+      );
+
+      test('control: counts an upvote the relay did not hold', () async {
+        relay.seedUpvote(_other);
+        final bloc = await openWithoutViewerVotes();
+        expectShown(bloc, upvoted: false, count: 1);
+
+        upvote(bloc);
+        await settle();
+
+        expectShown(bloc, upvoted: true, count: 2);
+        await bloc.close();
+      });
+
+      test('counts a downvote this device already holds once', () async {
+        relay.seedDownvote(_other);
+        final first = openSheet();
+        downvote(first);
+        await settle();
+        await first.close();
+        final bloc = await openWithoutViewerVotes();
+        expect(bloc.state.downvotedCommentIds, isNot(contains(_comment)));
+        expect(bloc.state.commentDownvoteCounts[_comment], 2);
+
+        downvote(bloc);
+        await settle();
+
+        expect(bloc.state.downvotedCommentIds, contains(_comment));
+        expect(bloc.state.commentDownvoteCounts[_comment], 2);
+        await bloc.close();
+      });
+
+      test('control: counts a downvote the relay did not hold', () async {
+        relay.seedDownvote(_other);
+        final bloc = await openWithoutViewerVotes();
+        expect(bloc.state.commentDownvoteCounts[_comment], 1);
+
+        downvote(bloc);
+        await settle();
+
+        expect(bloc.state.downvotedCommentIds, contains(_comment));
+        expect(bloc.state.commentDownvoteCounts[_comment], 2);
         await bloc.close();
       });
     });

@@ -312,6 +312,14 @@ class CommentReactionsBloc
     }
   }
 
+  /// Reads [commentId]'s totals again once its vote finishes publishing.
+  void _readAgainAfterPublish(String commentId, String? addressableId) {
+    _voteRefreshAfterPublish[commentId] ??= CommentVoteCountsFetchRequested(
+      [commentId],
+      addressableIdsByCommentId: {commentId: ?addressableId},
+    );
+  }
+
   /// [counts] with [id] set back to [count], or without [id] when it was
   /// never loaded.
   static Map<String, int> _restoreCount(
@@ -345,10 +353,7 @@ class CommentReactionsBloc
     final prevUpCount = state.commentUpvoteCounts[commentId];
     final prevDownCount = state.commentDownvoteCounts[commentId];
     if (prevUpCount == null || prevDownCount == null) {
-      _voteRefreshAfterPublish[commentId] ??= CommentVoteCountsFetchRequested(
-        [commentId],
-        addressableIdsByCommentId: {commentId: ?event.addressableId},
-      );
+      _readAgainAfterPublish(commentId, event.addressableId);
     }
 
     // Optimistic update.
@@ -445,24 +450,38 @@ class CommentReactionsBloc
     } on AlreadyLikedException {
       _confirmedLocalVotes.add(commentId);
       // State-sync sentinel (silent): repo already had the upvote, the
-      // pre-tap baseline was wrong. Reconcile and continue.
+      // pre-tap baseline was wrong. The loaded total already counts that
+      // upvote, so the tap's +1 is taken back and the total read again.
+      _readAgainAfterPublish(commentId, event.addressableId);
       emit(
         state.copyWith(
           upvotedCommentIds: Set<String>.from(state.upvotedCommentIds)
             ..add(commentId),
           downvotedCommentIds: Set<String>.from(state.downvotedCommentIds)
             ..remove(commentId),
+          commentUpvoteCounts: _restoreCount(
+            state.commentUpvoteCounts,
+            commentId,
+            prevUpCount,
+          ),
         ),
       );
     } on AlreadyDownvotedException {
       _confirmedLocalVotes.add(commentId);
-      // State-sync sentinel (silent): repo already had the downvote.
+      // State-sync sentinel (silent): repo already had the downvote, which
+      // the loaded total already counts.
+      _readAgainAfterPublish(commentId, event.addressableId);
       emit(
         state.copyWith(
           downvotedCommentIds: Set<String>.from(state.downvotedCommentIds)
             ..add(commentId),
           upvotedCommentIds: Set<String>.from(state.upvotedCommentIds)
             ..remove(commentId),
+          commentDownvoteCounts: _restoreCount(
+            state.commentDownvoteCounts,
+            commentId,
+            prevDownCount,
+          ),
         ),
       );
     } catch (e, stackTrace) {
