@@ -2085,7 +2085,7 @@
   },
   "videoAuthorAvatarSemanticLabel": "የፈጣሪ ፎቶ",
   "feedForYouEmpty": "የእርስዎ ለአንተ ምግብ ባዶ ነው።\nቪዲዮዎችን ያስሱ እና ለመቅረጽ ፈጣሪዎችን ይከተሉ።",
-  "feedFollowingEmpty": "እስካሁን ከምትከተላቸው ሰዎች ምንም ቪዲዮዎች የሉም።\nየሚወዷቸውን ፈጣሪዎች ያግኙ እና ይከተሉዋቸው።",
+  "feedFollowingNothingNew": "ከምትከተላቸው ሰዎች አዲስ ነገር የለም።\nተጨማሪ የሚወዷቸውን ፈጣሪዎች ያግኙ እና ይከተሉዋቸው።",
   "feedLatestEmpty": "እስካሁን ምንም አዲስ ቪዲዮዎች የሉም።\nበቅርቡ ተመልሰው ይመልከቱ።",
   "feedClassicEmpty": "እስካሁን ምንም ክላሲኮች የሉም።\nበቅርቡ ተመልሰው ይመልከቱ።",
   "feedExploreVideos": "ቪዲዮዎችን ያስሱ",

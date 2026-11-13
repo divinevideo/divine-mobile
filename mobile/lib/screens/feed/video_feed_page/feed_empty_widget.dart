@@ -28,9 +28,15 @@ class FeedEmptyWidget extends StatelessWidget {
       return _FollowingFeedEmptyState(
         // A people list projects onto the Following mode, but it is not the
         // viewer's follows: "people you follow" would be the wrong people.
-        message: state.source.type == VideoFeedSourceType.peopleList
-            ? context.l10n.peopleListsNoVideosSubtitle
-            : context.l10n.feedFollowingEmpty,
+        // "Nothing new" also covers a viewer who has seen every video from
+        // the people they follow, since Following leaves seen videos out.
+        message: switch (state) {
+          _ when state.source.type == VideoFeedSourceType.peopleList =>
+            context.l10n.peopleListsNoVideosSubtitle,
+          _ when state.error == VideoFeedError.noFollowedUsers =>
+            context.l10n.feedNoFollowedUsers,
+          _ => context.l10n.feedFollowingNothingNew,
+        },
       );
     }
 
@@ -83,7 +89,7 @@ class FeedEmptyWidget extends StatelessWidget {
 
     return switch (state.mode) {
       FeedMode.forYou => context.l10n.feedForYouEmpty,
-      FeedMode.following => context.l10n.feedFollowingEmpty,
+      FeedMode.following => context.l10n.feedFollowingNothingNew,
       FeedMode.latest => context.l10n.feedLatestEmpty,
       FeedMode.classic => context.l10n.feedClassicEmpty,
     };

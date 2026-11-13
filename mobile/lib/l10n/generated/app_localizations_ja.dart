@@ -4499,8 +4499,8 @@ class AppLocalizationsJa extends AppLocalizations {
       'おすすめフィードはまだ空です。\n動画を見つけてクリエイターをフォローし、あなた向けに育てましょう。';
 
   @override
-  String get feedFollowingEmpty =>
-      'フォロー中の人の動画はまだありません。\n気に入ったクリエイターを見つけてフォローしましょう。';
+  String get feedFollowingNothingNew =>
+      'フォロー中の人の新しい動画はありません。\n気に入ったクリエイターをもっと見つけてフォローしましょう。';
 
   @override
   String get feedLatestEmpty => '新しい動画はまだありません。\nしばらくしてからもう一度確認してください。';

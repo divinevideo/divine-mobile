@@ -1626,7 +1626,7 @@
   },
   "videoAuthorAvatarSemanticLabel": "Avatar autor",
   "feedForYouEmpty": "Feedul tău Pentru tine este gol.\nExplorează videoclipuri și urmărește creatori pentru a-l modela.",
-  "feedFollowingEmpty": "Încă nu există videoclipuri de la persoanele pe care le urmărești.\nGăsește creatori care îți plac și urmărește-i.",
+  "feedFollowingNothingNew": "Nimic nou de la persoanele pe care le urmărești.\nGăsește mai mulți creatori care îți plac și urmărește-i.",
   "feedLatestEmpty": "Încă nu există videoclipuri noi.\nRevino curând.",
   "feedClassicEmpty": "Încă nu există clasice.\nRevino curând.",
   "feedExploreVideos": "Explorează videoclipuri",

@@ -4677,8 +4677,8 @@ class AppLocalizationsAm extends AppLocalizations {
       'የእርስዎ ለአንተ ምግብ ባዶ ነው።\nቪዲዮዎችን ያስሱ እና ለመቅረጽ ፈጣሪዎችን ይከተሉ።';
 
   @override
-  String get feedFollowingEmpty =>
-      'እስካሁን ከምትከተላቸው ሰዎች ምንም ቪዲዮዎች የሉም።\nየሚወዷቸውን ፈጣሪዎች ያግኙ እና ይከተሉዋቸው።';
+  String get feedFollowingNothingNew =>
+      'ከምትከተላቸው ሰዎች አዲስ ነገር የለም።\nተጨማሪ የሚወዷቸውን ፈጣሪዎች ያግኙ እና ይከተሉዋቸው።';
 
   @override
   String get feedLatestEmpty => 'እስካሁን ምንም አዲስ ቪዲዮዎች የሉም።\nበቅርቡ ተመልሰው ይመልከቱ።';

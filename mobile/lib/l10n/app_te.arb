@@ -2731,7 +2731,7 @@
     "description": "Semantic label for the author's circular profile avatar on feed video metadata. Screen reader only."
   },
   "feedForYouEmpty": "మీ కోసం మీ ఫీడ్ ఖాళీగా ఉంది.\nవీడియోలను అన్వేషించండి మరియు దానిని ఆకృతి చేయడానికి సృష్టికర్తలను అనుసరించండి.",
-  "feedFollowingEmpty": "మీరు అనుసరించే వ్యక్తుల నుండి ఇంకా వీడియోలు లేవు.\nమీకు నచ్చిన సృష్టికర్తలను కనుగొని వారిని అనుసరించండి.",
+  "feedFollowingNothingNew": "మీరు అనుసరించే వ్యక్తుల నుండి కొత్తగా ఏమీ లేదు.\nమీకు నచ్చిన మరిన్ని సృష్టికర్తలను కనుగొని వారిని అనుసరించండి.",
   "feedLatestEmpty": "ఇంకా కొత్త వీడియోలు లేవు.\nత్వరలో మళ్లీ తనిఖీ చేయండి.",
   "feedClassicEmpty": "ఇంకా క్లాసిక్ వైన్‌లు లేవు.\nత్వరలో మళ్లీ తనిఖీ చేయండి.",
   "feedExploreVideos": "వీడియోలను అన్వేషించండి",

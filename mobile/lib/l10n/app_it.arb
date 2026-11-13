@@ -1626,7 +1626,7 @@
   },
   "videoAuthorAvatarSemanticLabel": "Avatar dell'autore",
   "feedForYouEmpty": "Il tuo feed Per te è vuoto.\nEsplora i video e segui i creator per personalizzarlo.",
-  "feedFollowingEmpty": "Ancora nessun video dalle persone che segui.\nTrova creator che ti piacciono e seguili.",
+  "feedFollowingNothingNew": "Niente di nuovo dalle persone che segui.\nTrova altri creator che ti piacciono e seguili.",
   "feedLatestEmpty": "Ancora nessun nuovo video.\nTorna a controllare a breve.",
   "feedClassicEmpty": "Ancora nessun classico.\nTorna a controllare a breve.",
   "feedExploreVideos": "Esplora video",

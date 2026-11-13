@@ -4792,8 +4792,8 @@ class AppLocalizationsAr extends AppLocalizations {
       'خلاصة لك فارغة.\nاستكشف المقاطع واتبع صناع المحتوى لتخصيصها.';
 
   @override
-  String get feedFollowingEmpty =>
-      'لا توجد مقاطع بعد من الأشخاص الذين تتابعهم.\nاعثر على صناع محتوى يعجبونك وتابعهم.';
+  String get feedFollowingNothingNew =>
+      'لا جديد من الأشخاص الذين تتابعهم.\nاعثر على المزيد من صناع المحتوى الذين يعجبونك وتابعهم.';
 
   @override
   String get feedLatestEmpty => 'لا توجد مقاطع جديدة بعد.\nعد لاحقًا.';
