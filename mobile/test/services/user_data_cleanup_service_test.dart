@@ -1656,6 +1656,163 @@ void main() {
       });
     });
 
+    group('retryUnfinishedSignOutCleanup (#8587)', () {
+      final departing = 'a' * 64;
+      final incoming = 'b' * 64;
+      late bool databaseFails;
+      late int sharedStoreCleanups;
+      late List<String> retriedOwners;
+      late int retryFailuresLeft;
+
+      setUp(() {
+        databaseFails = false;
+        sharedStoreCleanups = 0;
+        retriedOwners = [];
+        retryFailuresLeft = 0;
+        service
+          ..onDatabaseCleanup =
+              ({
+                String? userPubkey,
+                bool deleteUserData = false,
+                bool preserveActiveSession = false,
+                bool forgetAccount = false,
+              }) async {
+                if (databaseFails) throw StateError('database is locked');
+              }
+          ..onSharedStoresCleanup = () async {
+            sharedStoreCleanups++;
+          }
+          ..onDepartedAccountDmCleanup = (owner) async {
+            if (retryFailuresLeft > 0) {
+              retryFailuresLeft--;
+              throw StateError('database is locked');
+            }
+            retriedOwners.add(owner);
+          };
+      });
+
+      Future<void> failedSignOut() async {
+        databaseFails = true;
+        await service.clearUserSpecificData(
+          reason: 'explicit_logout',
+          userPubkey: departing,
+        );
+        databaseFails = false;
+      }
+
+      test('a failed sign-out still clears the shared stores', () async {
+        await failedSignOut();
+
+        expect(sharedStoreCleanups, 1);
+      });
+
+      test('a completed sign-out leaves nothing to clear or retry', () async {
+        await service.clearUserSpecificData(
+          reason: 'explicit_logout',
+          userPubkey: departing,
+        );
+        await service.retryUnfinishedSignOutCleanup(
+          incomingPubkey: incoming,
+        );
+
+        expect(sharedStoreCleanups, 0);
+        expect(retriedOwners, isEmpty);
+      });
+
+      test("another account's sign-in deletes the departed account's DM "
+          'rows', () async {
+        await failedSignOut();
+
+        await service.retryUnfinishedSignOutCleanup(
+          incomingPubkey: incoming,
+        );
+
+        expect(retriedOwners, [departing]);
+      });
+
+      test('a finished retry is not repeated', () async {
+        await failedSignOut();
+        await service.retryUnfinishedSignOutCleanup(
+          incomingPubkey: incoming,
+        );
+        await service.retryUnfinishedSignOutCleanup(
+          incomingPubkey: incoming,
+        );
+
+        expect(retriedOwners, [departing]);
+      });
+
+      test('a retry that fails again does not throw and is kept', () async {
+        await failedSignOut();
+        retryFailuresLeft = 1;
+
+        await expectLater(
+          service.retryUnfinishedSignOutCleanup(incomingPubkey: incoming),
+          completes,
+        );
+        expect(retriedOwners, isEmpty);
+
+        await service.retryUnfinishedSignOutCleanup(
+          incomingPubkey: incoming,
+        );
+        expect(retriedOwners, [departing]);
+      });
+
+      test('the departed account signing back in keeps its own rows and '
+          'the retry', () async {
+        await failedSignOut();
+
+        await service.retryUnfinishedSignOutCleanup(
+          incomingPubkey: departing,
+        );
+        expect(retriedOwners, isEmpty);
+
+        await service.retryUnfinishedSignOutCleanup(
+          incomingPubkey: incoming,
+        );
+        expect(retriedOwners, [departing]);
+      });
+
+      test('an unreadable record does not throw and is replaced', () async {
+        await prefs.setString(
+          UserDataCleanupService.unfinishedSignOutCleanupKey,
+          'not a list',
+        );
+
+        await expectLater(
+          service.retryUnfinishedSignOutCleanup(incomingPubkey: incoming),
+          completes,
+        );
+        expect(retriedOwners, isEmpty);
+
+        await failedSignOut();
+        await service.retryUnfinishedSignOutCleanup(
+          incomingPubkey: incoming,
+        );
+        expect(retriedOwners, [departing]);
+      });
+
+      test('a failed account switch is left to its pending cleanup', () async {
+        databaseFails = true;
+        await expectLater(
+          service.clearUserSpecificData(
+            reason: 'identity_change',
+            isIdentityChange: true,
+            userPubkey: departing,
+          ),
+          throwsA(isA<UserDataCleanupException>()),
+        );
+        expect(prefs.containsKey(PendingAccountCleanup.storageKey), isTrue);
+
+        await service.retryUnfinishedSignOutCleanup(
+          incomingPubkey: incoming,
+        );
+
+        expect(retriedOwners, isEmpty);
+        expect(sharedStoreCleanups, 0);
+      });
+    });
+
     group('sweepRowsOfUnknownAccounts (#10276)', () {
       const knownPubkey =
           'a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1';

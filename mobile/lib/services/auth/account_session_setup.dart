@@ -220,6 +220,16 @@ extension _AccountSessionSetup on AuthService {
         );
       }
       ensureCurrent();
+      // A plain sign-out never blocks on its database cleanup; delete the DM
+      // rows one left behind for another account. Owner-scoped only, so this
+      // is safe on a restore or a refresh too.
+      await coordinator.runGuardedStorage(
+        activation,
+        () => _userDataCleanupService.retryUnfinishedSignOutCleanup(
+          incomingPubkey: pubkeyHex,
+        ),
+      );
+      ensureCurrent();
       final storedOwner = await coordinator.runGuardedStorage(
         activation,
         () => prefs.setString('current_user_pubkey_hex', pubkeyHex),

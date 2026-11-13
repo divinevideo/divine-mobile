@@ -91,6 +91,15 @@ class UserDataCleanupService {
   })?
   onDatabaseCleanup;
 
+  /// Clears the device-wide stores no pubkey scopes, for a plain sign-out
+  /// whose [onDatabaseCleanup] failed before reaching them. Set by the
+  /// provider layer.
+  Future<void> Function()? onSharedStoresCleanup;
+
+  /// Deletes only [owner]'s DM rows, for a plain sign-out whose cleanup is
+  /// finished at a later sign-in. Set by the provider layer.
+  Future<void> Function(String owner)? onDepartedAccountDmCleanup;
+
   /// Optional callback that deletes the DM conversations kept for returning
   /// accounts, except those owned by the given pubkeys, and returns how many
   /// it deleted. Set by the provider layer which has access to DAOs.
@@ -678,6 +687,13 @@ class UserDataCleanupService {
     // A refusal must stop before the first cache removal; otherwise a restart
     // would lose the only evidence that database cleanup is still required.
     await requiredCleanup?.record(_prefs);
+    // A plain sign-out records no blocking to-do, so its owner is remembered
+    // until its rows are cleared and the next sign-in retries them (#8587).
+    final unfinishedOwner = requiredCleanup == null ? userPubkey : null;
+    if (unfinishedOwner != null) {
+      await _rememberUnfinishedSignOut(unfinishedOwner);
+    }
+    var databaseCleanupFailed = false;
     if ((deleteUserData || forgetAccount) && userPubkey != null) {
       await onAccountStateWritesStop?.call(userPubkey);
       // The intent's readback may have preceded a held native projection.
@@ -813,11 +829,13 @@ class UserDataCleanupService {
         );
         // An account switch must fail closed: proceeding after its shared
         // database cleanup fails can expose the departing account's local DM
-        // state to the incoming session. Ordinary same-account logout remains
-        // best-effort unless it is explicitly destructive.
+        // state to the incoming session. A plain sign-out does not block on
+        // it: its owner stays remembered and the next sign-in retries.
         if (deleteUserData || forgetAccount || isIdentityChange) {
           rethrow;
         }
+        databaseCleanupFailed = true;
+        await _clearSharedStoresAfterFailedSignOut();
       }
     }
 
@@ -825,6 +843,16 @@ class UserDataCleanupService {
     // Only acknowledged preference removals and completed required database
     // cleanup may release the durable account boundary.
     await requiredCleanup?.complete(_prefs);
+    if (unfinishedOwner != null &&
+        !databaseCleanupFailed &&
+        !await _forgetUnfinishedSignOut(unfinishedOwner)) {
+      Log.warning(
+        'Could not drop the finished sign-out cleanup of '
+        '${pubkeyForLogs(unfinishedOwner)}; a later sign-in repeats it',
+        name: 'UserDataCleanupService',
+        category: LogCategory.auth,
+      );
+    }
 
     // Log detailed cleanup results for observability
     if (clearedCount > 0) {
@@ -847,6 +875,105 @@ class UserDataCleanupService {
     }
 
     return clearedCount;
+  }
+
+  /// Accounts whose plain sign-out has not finished clearing their database
+  /// rows. Without it nothing retried them once the marker was gone (#8587).
+  static const String unfinishedSignOutCleanupKey =
+      'unfinished_sign_out_cleanup_owners';
+
+  /// Device bookkeeping that names accounts so their cleanup can finish under
+  /// whichever account signs in next; the identity sweep must keep it.
+  static const List<String> deviceScopedPrefsKeys = [
+    unfinishedSignOutCleanupKey,
+  ];
+
+  Future<void> _rememberUnfinishedSignOut(String owner) async {
+    List<String> owners;
+    try {
+      owners = _prefs.getStringList(unfinishedSignOutCleanupKey) ?? [];
+    } on Object {
+      // An unreadable record is replaced, or every sign-out would fail here.
+      owners = [];
+    }
+    if (owners.contains(owner)) return;
+    final stored = await _prefs.setStringList(unfinishedSignOutCleanupKey, [
+      ...owners,
+      owner,
+    ]);
+    if (!stored) {
+      throw const UserDataCleanupException(
+        'Could not record the sign-out cleanup',
+      );
+    }
+  }
+
+  /// Returns false when the record could not be updated.
+  Future<bool> _forgetUnfinishedSignOut(String owner) async {
+    final owners = _prefs.getStringList(unfinishedSignOutCleanupKey);
+    if (owners == null || !owners.contains(owner)) return true;
+    final remaining = [...owners]..remove(owner);
+    return remaining.isEmpty
+        ? _prefs.remove(unfinishedSignOutCleanupKey)
+        : _prefs.setStringList(unfinishedSignOutCleanupKey, remaining);
+  }
+
+  Future<void> _clearSharedStoresAfterFailedSignOut() async {
+    try {
+      await onSharedStoresCleanup?.call();
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Shared store cleanup after a failed sign-out failed '
+        '(${e.runtimeType})',
+        name: 'UserDataCleanupService',
+        category: LogCategory.auth,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
+  /// Deletes the DM rows a plain sign-out left behind, for every account
+  /// other than [incomingPubkey], whose own rows are left alone.
+  ///
+  /// Only owner-scoped rows are touched, so this is safe on every sign-in,
+  /// restore and refresh. Never throws: an entry whose cleanup fails again,
+  /// and the incoming account's own entry, stay for a later sign-in.
+  Future<void> retryUnfinishedSignOutCleanup({
+    required String incomingPubkey,
+  }) async {
+    final List<String> owners;
+    try {
+      owners = _prefs.getStringList(unfinishedSignOutCleanupKey) ?? const [];
+    } on Object catch (e, stackTrace) {
+      Log.warning(
+        'Unfinished sign-out cleanups unreadable (${e.runtimeType})',
+        name: 'UserDataCleanupService',
+        category: LogCategory.auth,
+        stackTrace: stackTrace,
+      );
+      return;
+    }
+    final cleanup = onDepartedAccountDmCleanup;
+    if (cleanup == null) return;
+    for (final owner in owners) {
+      if (owner == incomingPubkey) continue;
+      try {
+        await cleanup(owner);
+        if (!await _forgetUnfinishedSignOut(owner)) {
+          throw const UserDataCleanupException(
+            'Could not drop a finished sign-out cleanup',
+          );
+        }
+      } on Object catch (e, stackTrace) {
+        Log.warning(
+          'Retried sign-out cleanup for ${pubkeyForLogs(owner)} failed '
+          '(${e.runtimeType}); kept for a later sign-in',
+          name: 'UserDataCleanupService',
+          category: LogCategory.auth,
+          stackTrace: stackTrace,
+        );
+      }
+    }
   }
 
   /// Claims legacy database rows (NULL ownerPubkey) for [userPubkey].

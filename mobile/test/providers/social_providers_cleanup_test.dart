@@ -688,6 +688,224 @@ void main() {
       },
     );
 
+    group('a sign-out whose DM cleanup fails (#8587)', () {
+      // Watch history has no owner column: whatever survives the sign-out is
+      // read as the next account's own.
+      Future<void> seedDepartingWatchHistory() async {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        await db.seenVideosDao.markSeenBatch([
+          SeenVideoRow(
+            videoId: _reactionIdA,
+            firstSeenAt: now,
+            lastSeenAt: now,
+          ),
+        ]);
+        expect(await db.seenVideosDao.getAll(), hasLength(1));
+      }
+
+      UserDataCleanupService readService() {
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        return subscription.read();
+      }
+
+      test('still clears the shared stores when DM listening cannot be '
+          'stopped', () async {
+        await seedDepartingWatchHistory();
+        when(
+          () => dmRepository.stopListening(),
+        ).thenThrow(StateError('relay subscription close failed'));
+        final service = readService();
+        container.read(dmRepositoryProvider);
+
+        await service.clearUserSpecificData(
+          reason: 'explicit_logout',
+          userPubkey: _pubkeyA,
+        );
+
+        expect(await db.seenVideosDao.getAll(), isEmpty);
+      });
+
+      test('still clears the shared stores when the DM tables cannot be '
+          'cleared', () async {
+        await seedDepartingWatchHistory();
+        await db.customStatement('DROP TABLE direct_messages');
+
+        await readService().clearUserSpecificData(
+          reason: 'explicit_logout',
+          userPubkey: _pubkeyA,
+        );
+
+        expect(await db.seenVideosDao.getAll(), isEmpty);
+      });
+
+      test(
+        'a failed account switch still stops at its first failure',
+        () async {
+          await seedDepartingWatchHistory();
+          await db.customStatement('DROP TABLE direct_messages');
+
+          await expectLater(
+            readService().clearUserSpecificData(
+              reason: 'identity_change',
+              isIdentityChange: true,
+              userPubkey: _pubkeyA,
+            ),
+            throwsA(isA<UserDataCleanupException>()),
+          );
+
+          expect(await db.seenVideosDao.getAll(), hasLength(1));
+        },
+      );
+    });
+
+    test('onSharedStoresCleanup tries every store and reports the first '
+        'failure (#8587)', () async {
+      var preferenceResets = 0;
+      final failing = ProviderContainer(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          dmRepositoryProvider.overrideWithValue(dmRepository),
+          openVineImageCacheClearProvider.overrideWithValue(() async {}),
+          seenVideosClearProvider.overrideWithValue(
+            () async => throw StateError('watch history unavailable'),
+          ),
+          accountScopedPreferenceServicesResetProvider.overrideWithValue(
+            () async => preferenceResets++,
+          ),
+        ],
+      );
+      addTearDown(failing.dispose);
+      final subscription = failing.listen(
+        userDataCleanupServiceProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+
+      await expectLater(
+        subscription.read().onSharedStoresCleanup!(),
+        throwsA(isA<StateError>()),
+      );
+      expect(preferenceResets, 1);
+    });
+
+    group('onDepartedAccountDmCleanup (#8587)', () {
+      test("deletes only the departed account's DM rows", () async {
+        for (final (id, owner) in [
+          ('dm-a', _pubkeyA),
+          ('dm-b', _pubkeyB),
+        ]) {
+          final inserted = await db.directMessagesDao.insertMessage(
+            id: id,
+            conversationId: _dmConversationId,
+            senderPubkey: _pubkeyB,
+            content: 'kept until its owner signs out',
+            createdAt: 1700000000,
+            giftWrapId: 'wrap-$id',
+            ownerPubkey: owner,
+          );
+          expect(inserted, isTrue);
+        }
+        await db.conversationsDao.upsertConversation(
+          id: _dmConversationId,
+          participantPubkeys: _pubkeyB,
+          isGroup: false,
+          createdAt: 1700000000,
+          lastMessageTimestamp: 1700000000,
+          ownerPubkey: _pubkeyA,
+        );
+        for (final owner in [_pubkeyA, _pubkeyB]) {
+          await db.pendingGiftWrapsDao.recordFailedDecrypt(
+            giftWrapId: 'pending-$owner',
+            ownerPubkey: owner,
+            rawJson: '{}',
+            createdAt: 1700000000,
+          );
+          await db.processedGiftWrapsDao.record(
+            giftWrapId: 'processed-$owner',
+            ownerPubkey: owner,
+          );
+          await db.dmReactionsDao.upsertIncoming(
+            id: 'reaction-$owner',
+            conversationId: _dmConversationId,
+            targetMessageId: 'dm-a',
+            targetMessageAuthor: _pubkeyB,
+            reactorPubkey: _pubkeyB,
+            emoji: '😂',
+            createdAt: 1700000000,
+            giftWrapId: 'reaction-wrap-$owner',
+            ownerPubkey: owner,
+          );
+        }
+        // An unpublished own reaction is the outgoing queue, not a cache.
+        await db.dmReactionsDao.insertOwnReactionSuperseding(
+          placeholderId: 'queued-reaction',
+          conversationId: _dmConversationId,
+          targetMessageId: 'dm-a',
+          targetMessageAuthor: _pubkeyB,
+          reactorPubkey: _pubkeyA,
+          emoji: '😂',
+          createdAt: 1700000000,
+          ownerPubkey: _pubkeyA,
+          rumorEventJson: '{"id":"queued-reaction"}',
+        );
+        await DmSyncState(prefs).markHistoryDrainComplete(_pubkeyA);
+        expect(DmSyncState(prefs).historyDrainComplete(_pubkeyA), isTrue);
+        final now = DateTime.now().millisecondsSinceEpoch;
+        await db.seenVideosDao.markSeenBatch([
+          SeenVideoRow(
+            videoId: _reactionIdA,
+            firstSeenAt: now,
+            lastSeenAt: now,
+          ),
+        ]);
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        container.read(dmRepositoryProvider);
+
+        await subscription.read().onDepartedAccountDmCleanup!(_pubkeyA);
+
+        final owners = [
+          for (final row in await db.select(db.directMessages).get())
+            row.ownerPubkey,
+        ];
+        expect(owners, [_pubkeyB]);
+        expect(await db.pendingGiftWrapsDao.countForOwner(_pubkeyA), 0);
+        expect(await db.pendingGiftWrapsDao.countForOwner(_pubkeyB), 1);
+        expect(
+          [
+            for (final row in await db.select(db.processedGiftWraps).get())
+              row.ownerPubkey,
+          ],
+          [_pubkeyB],
+        );
+        expect(
+          [
+            for (final row in await db.select(db.dmMessageReactions).get())
+              row.id,
+          ],
+          unorderedEquals(['reaction-$_pubkeyB', 'queued-reaction']),
+        );
+        // Deleted rows under a kept cursor would never download again.
+        expect(DmSyncState(prefs).historyDrainComplete(_pubkeyA), isFalse);
+        // Its conversation keeps its read state and the IDs of the messages
+        // it lost, as on any sign-out.
+        final conversation = (await db.select(db.conversations).get()).single;
+        expect(conversation.ownerPubkey, _pubkeyA);
+        expect(conversation.lastReadTimestamp, 1700000000);
+        expect(jsonDecode(conversation.retainedMessageIds!), ['dm-a']);
+        expect(await db.seenVideosDao.getAll(), hasLength(1));
+        verifyNever(() => dmRepository.stopListening());
+      });
+    });
+
     test(
       'an account switch clears live watch history before it can be saved',
       () async {

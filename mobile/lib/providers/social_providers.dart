@@ -745,6 +745,39 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
     onAccountStateWritesStop: accountWrites.stop,
   );
 
+  Future<void> clearSharedAccountStores({
+    required Future<void> Function(String, Future<void> Function()) required,
+    required Future<void> Function(String, Future<void> Function()) safe,
+    Future<void> Function()? personalEvents,
+  }) async {
+    // Issue #3936 requires the NIP-39 identity caches to clear on logout
+    // and account switches rather than persisting across identities.
+    await safe('identityEvents', db.identityEventsDao.clearAll);
+    await safe('identityVerifications', db.identityVerificationsDao.clearAll);
+    // The two stores below hold this account's data under a key with no
+    // pubkey in it, so the next account reads the previous account's
+    // rows. Each already had a clear method; none of them had a caller
+    // (#8314).
+    //
+    // Watch history is feed *dedup* state, so inheriting it also hides
+    // videos the incoming account has never seen.
+    await required('seenVideos', ref.read(seenVideosClearProvider));
+    // Personal events are owner-scoped in Drift, so an account switch
+    // only needs to hide them. Delete them when the account itself is
+    // being removed; otherwise they remain available after re-auth.
+    if (personalEvents != null) {
+      await required('personalEvents', personalEvents);
+    }
+    await required(
+      'pushPreferences',
+      ref.read(notificationPreferencesStoreProvider).clearPreferences,
+    );
+    await required(
+      'accountScopedPreferenceServices',
+      ref.read(accountScopedPreferenceServicesResetProvider),
+    );
+  }
+
   // Wire database cleanup callback so signOut() clears DM and notification data.
   // Stop DM listening FIRST to prevent in-flight event handlers from writing
   // to tables that are being cleared (H3 race condition fix).
@@ -946,40 +979,12 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           );
         }
         if (!preserveActiveSession) {
-          // Issue #3936 requires the NIP-39 identity caches to clear on logout
-          // and account switches rather than persisting across identities.
-          await safeCleanup('identityEvents', db.identityEventsDao.clearAll);
-          await safeCleanup(
-            'identityVerifications',
-            db.identityVerificationsDao.clearAll,
-          );
-          // The two stores below hold this account's data under a key with no
-          // pubkey in it, so the next account reads the previous account's
-          // rows. Each already had a clear method; none of them had a caller
-          // (#8314).
-          //
-          // Watch history is feed *dedup* state, so inheriting it also hides
-          // videos the incoming account has never seen.
-          await requiredCleanup(
-            'seenVideos',
-            ref.read(seenVideosClearProvider),
-          );
-          // Personal events are owner-scoped in Drift, so an account switch
-          // only needs to hide them. Delete them when the account itself is
-          // being removed; otherwise they remain available after re-auth.
-          if (deleteUserData) {
-            await requiredCleanup(
-              'personalEvents',
-              () => ref.read(personalEventCacheClearProvider)(userPubkey),
-            );
-          }
-          await requiredCleanup(
-            'pushPreferences',
-            ref.read(notificationPreferencesStoreProvider).clearPreferences,
-          );
-          await requiredCleanup(
-            'accountScopedPreferenceServices',
-            ref.read(accountScopedPreferenceServicesResetProvider),
+          await clearSharedAccountStores(
+            required: requiredCleanup,
+            safe: safeCleanup,
+            personalEvents: deleteUserData
+                ? () => ref.read(personalEventCacheClearProvider)(userPubkey)
+                : null,
           );
         }
         // Clear the leaving account's DM sync cursors so its next login
@@ -1131,6 +1136,53 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           );
         }
       };
+
+  // A plain sign-out does not fail when its database cleanup does, so a step
+  // that failed before the shared stores must not leave them to the next
+  // account (#8587). Each store is tried; the first failure is rethrown.
+  service.onSharedStoresCleanup = () async {
+    (Object, StackTrace)? firstFailure;
+    Future<void> attempt(String name, Future<void> Function() fn) async {
+      try {
+        await fn();
+      } catch (e, stackTrace) {
+        Log.error(
+          'Shared account store cleanup failed for $name (${e.runtimeType})',
+          name: 'UserDataCleanup',
+          category: LogCategory.auth,
+          stackTrace: stackTrace,
+        );
+        firstFailure ??= (e, stackTrace);
+      }
+    }
+
+    await clearSharedAccountStores(required: attempt, safe: attempt);
+    if (firstFailure case (final error, final stackTrace)?) {
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+  };
+
+  // Finishes a failed plain sign-out's DM cleanup at a later sign-in. It only
+  // touches [owner]'s rows, never a listener, a shared store or a legacy
+  // unowned row, so it is safe beside whichever session is live (#8587).
+  // The sync cursors go first: rows deleted under a kept cursor would never
+  // download again.
+  service.onDepartedAccountDmCleanup = (owner) async {
+    await DmSyncState(prefs).clear(owner);
+    await db.transaction(() async {
+      await db.conversationsDao.retainMessageIdsForAccountSwitch(owner);
+      await db.directMessagesDao.deleteAllForOwner(owner);
+      await db.conversationsDao.pinReadCursorsToLatestMessage(
+        owner,
+        nowSeconds: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      );
+      await db.pendingGiftWrapsDao.deleteAllForOwner(owner);
+      await db.processedGiftWrapsDao.deleteAllForOwner(owner);
+      // Reaction rows keep decrypted rumor payloads; the retryable own rows
+      // are the outgoing queue and stay, as on a plain sign-out.
+      await db.dmReactionsDao.deleteNonRetryableForOwner(owner);
+    });
+  };
 
   // Wire legacy row claim callback so session setup can attribute
   // pre-multi-account drafts/clips to the current user.

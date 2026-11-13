@@ -20,6 +20,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../test_setup.dart';
+import 'support/auth_service_test_harness.dart';
 
 /// Consumer fixture with actual key-derived ownership and readback. Backend
 /// current/legacy native slot behavior is exercised by the package's real tests.
@@ -291,6 +292,7 @@ void main() {
     when(
       () => mockCleanupService.claimLegacyRows(any()),
     ).thenAnswer((_) async {});
+    stubUnfinishedSignOutRetry(mockCleanupService);
     when(
       () => mockSecureStorage.write(
         key: any(named: 'key'),

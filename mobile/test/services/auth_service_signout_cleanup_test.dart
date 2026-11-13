@@ -19,6 +19,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/shared_channel_override.dart';
 import '../test_setup.dart';
+import 'support/auth_service_test_harness.dart';
 
 class _MockRelayDiscoveryService extends Mock
     implements RelayDiscoveryService {}
@@ -273,6 +274,7 @@ void main() {
       );
       when(() => mockCleanupService.claimLegacyRows(any()))
           .thenAnswer((_) async {});
+      stubUnfinishedSignOutRetry(mockCleanupService);
       when(() => mockCleanupService.markOwnerScopedLegacyDataForUser(any()))
           .thenAnswer((_) async {});
       authService = createAuth();
