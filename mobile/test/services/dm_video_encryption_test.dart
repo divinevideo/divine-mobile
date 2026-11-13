@@ -98,11 +98,18 @@ void main() {
 
       final out = await DmVideoEncryption().encryptFile(input);
       ticker.cancel();
-      final stall = clock.elapsed - lastTick;
+      final window = clock.elapsed;
+      final stall = window - lastTick;
       if (stall > longestStall) longestStall = stall;
 
       expect(out.ciphertextSize, bytes.length + 16);
-      expect(longestStall, lessThan(const Duration(milliseconds: 400)));
+      expect(
+        longestStall,
+        lessThan(const Duration(milliseconds: 400)),
+        reason:
+            'longest stall ${longestStall.inMilliseconds} ms in a '
+            '${window.inMilliseconds} ms encrypt',
+      );
     });
 
     test('rejects a file larger than the plaintext ceiling', () async {
