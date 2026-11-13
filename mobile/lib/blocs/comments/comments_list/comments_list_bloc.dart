@@ -335,9 +335,9 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   /// it. The search also ends on the last page and on a failed load. A comment
   /// it does not find, such as a deleted one, leaves the list where it starts.
   ///
-  /// A page that added no comment ends the search, and the paging with it:
-  /// the count `hasMoreContent` is measured against includes comments the
-  /// list never gets.
+  /// A page that added no comment ends the search. It ends the paging too
+  /// unless it moved the REST position: the count `hasMoreContent` is
+  /// measured against includes comments the list never gets.
   void _focusWhenLoaded(
     Emitter<CommentsListState> emit, {
     required bool pageAddedComments,
