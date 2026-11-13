@@ -7036,6 +7036,123 @@ void main() {
           await relay.close();
         },
       );
+
+      test(
+        'startListening repairs the sync boundaries of its own pubkey once '
+        'per open (#8503)',
+        () async {
+          final controller = StreamController<Event>();
+          when(
+            () => mockNostrClient.subscribe(
+              any(that: isLiveDmRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer((_) => controller.stream);
+
+          final syncState = _FakeDmSyncState();
+          final repository = createRepository(syncState: syncState);
+          await repository.startListening();
+
+          expect(syncState.repairedPubkeys, equals([_validPubkeyA]));
+
+          await repository.stopListening();
+          await controller.close();
+        },
+      );
+
+      test(
+        'startListening heals a future-dated boundary before deriving since: '
+        'from it (#8503)',
+        () async {
+          // The shape a build before the rumor clamp (#6368) left behind: a
+          // future rumor stamp as the newest boundary, and no wire boundary,
+          // which only exists since #8361. A since: derived before the repair
+          // lands weeks in the future, so the relay serves nothing at all.
+          final poisoned =
+              DateTime.now().millisecondsSinceEpoch ~/ 1000 + 30 * 86400;
+          final controller = StreamController<Event>();
+          when(
+            () => mockNostrClient.subscribe(
+              any(that: isLiveDmRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer((_) => controller.stream);
+
+          final syncState = _FakeDmSyncState()..newestOverride = poisoned;
+          final repository = createRepository(syncState: syncState);
+          final before = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          await repository.startListening();
+          final after = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+          final captured =
+              verify(
+                    () => mockNostrClient.subscribe(
+                      captureAny(that: isLiveDmRead),
+                      subscriptionId: any(named: 'subscriptionId'),
+                      onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                      onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+                    ),
+                  ).captured.single
+                  as List<nostr_filter.Filter>;
+          // The repair heals to its own clock reading, taken during the call,
+          // so since: is that reading minus the 2-day overlap.
+          expect(
+            captured.single.since,
+            inInclusiveRange(before - 2 * 86400, after - 2 * 86400),
+          );
+
+          await repository.stopListening();
+          await controller.close();
+        },
+      );
+
+      test(
+        'an account switch between opens repairs the incoming pubkey, not the '
+        'outgoing one (#8503)',
+        () async {
+          final controllers = <StreamController<Event>>[];
+          when(
+            () => mockNostrClient.subscribe(
+              any(that: isLiveDmRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer((_) {
+            final controller = StreamController<Event>();
+            controllers.add(controller);
+            return controller.stream;
+          });
+          when(
+            () => mockNostrClient.unsubscribe(any()),
+          ).thenAnswer((_) async {});
+
+          final syncState = _FakeDmSyncState();
+          final repository = createRepository(syncState: syncState);
+          await repository.startListening();
+          repository.setCredentials(
+            userPubkey: _validPubkeyB,
+            signer: LocalNostrSigner(_validPrivateKey),
+            messageService: mockMessageService,
+          );
+          await repository.startListening();
+
+          expect(controllers, hasLength(2));
+          expect(
+            syncState.repairedPubkeys,
+            equals([_validPubkeyA, _validPubkeyB]),
+          );
+
+          await repository.stopListening();
+          for (final controller in controllers) {
+            await controller.close();
+          }
+        },
+      );
     });
 
     group('resolveDmInboxRelaysDetailed routing', () {
