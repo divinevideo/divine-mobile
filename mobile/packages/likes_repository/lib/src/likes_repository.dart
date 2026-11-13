@@ -1624,8 +1624,9 @@ class LikesRepository {
   /// hold none (#10922).
   ///
   /// Throws `UnlikeFailedException` when the relays cannot confirm whether
-  /// the like is still live, so the queue retries, or when the deletion
-  /// fails; `LikeAccountRestrictedException` when account policy rejects it.
+  /// the like is still live, or no public key is available to ask them, so
+  /// the queue retries, or when the deletion fails;
+  /// `LikeAccountRestrictedException` when account policy rejects it.
   Future<void> executeUnlikeAction(
     String eventId, {
     String? addressableId,
@@ -1648,6 +1649,13 @@ class LikesRepository {
     // The like was published and the unlike's own removal took the record.
     final removedByUnlike = record == null;
     if (record == null) {
+      // Without the account's key the relays cannot be asked, and the check
+      // below would read that as "no like", dropping the unlike unsent.
+      if (await _currentUserPubkey() == null) {
+        throw const UnlikeFailedException(
+          'No public key to look for the like with',
+        );
+      }
       final check = await _checkRelayForLiveLike(
         eventId,
         addressableId: addressableId,

@@ -441,6 +441,21 @@ void main() {
         expect(relay.deletions, equals(0));
       });
 
+      test(
+        'throws so the queue retries when no key can ask the relays',
+        () async {
+          await likeThenUnlikeOffline();
+          // A signer that cannot answer leaves the client without a key.
+          when(relay.client.resolvePublicKey).thenAnswer((_) async => null);
+
+          await expectLater(
+            repository.executeUnlikeAction(_comment),
+            throwsA(isA<UnlikeFailedException>()),
+          );
+          expect(relay.deletions, equals(0));
+        },
+      );
+
       test('finds the like on an edited target by its coordinate', () async {
         // The like names the revision before the edit, so only the
         // coordinate reaches it.
