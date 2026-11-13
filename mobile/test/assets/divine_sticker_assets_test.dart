@@ -231,8 +231,17 @@ void main() {
       );
       for (final sticker in DivineStickerName.values) {
         final hash = sha256.convert(File(sticker.assetPath).readAsBytesSync());
+        // Each entry also carries the original's hash, so only the Shipped
+        // line says what is in the app.
+        final shipped = sections['${sticker.fileName}.webp']!
+            .split('\n')
+            .firstWhere(
+              (line) => line.startsWith('- Shipped:'),
+              orElse: () => '',
+            );
+
         expect(
-          sections['${sticker.fileName}.webp'],
+          shipped,
           contains('sha256 `$hash`'),
           reason: '${sticker.assetPath} changed without its provenance.',
         );
