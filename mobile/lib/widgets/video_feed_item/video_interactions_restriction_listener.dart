@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/router/providers/router_location_provider.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -33,7 +34,7 @@ class VideoInteractionsRestrictionListener extends StatelessWidget {
         if (routerLocationOf(GoRouter.of(context)).path !=
             AccountStatusScreen.path) {
           runDetached(
-            context.pushNamed(AccountStatusScreen.routeName, extra: true),
+            const AccountStatusRouteData($extra: true).push<void>(context),
             'open account status',
             logName: 'VideoInteractionsRestrictionListener',
             category: LogCategory.ui,

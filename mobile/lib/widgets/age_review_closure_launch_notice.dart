@@ -4,11 +4,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/repositories/account_enforcement_repository.dart';
-import 'package:openvine/screens/settings/account_status_screen.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/widgets/age_review_closure_launch_notice_cubit.dart';
@@ -129,7 +128,7 @@ class _LaunchStatusReaderState extends ConsumerState<_LaunchStatusReader> {
     if (pubkey == null) return;
     if (!shown.markShown(pubkey)) return;
     runDetached(
-      context.pushNamed(AccountStatusScreen.routeName),
+      const AccountStatusRouteData().push<void>(context),
       'open account status for age-review closure',
       logName: 'AgeReviewClosureLaunchNotice',
       category: LogCategory.ui,

@@ -19,6 +19,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/settings/nostr_settings_screen.dart';
+import 'package:openvine/screens/settings/signature_verification_policy_screen.dart';
 import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -62,6 +63,14 @@ void main() {
             path: NostrSettingsScreen.path,
             builder: (context, state) =>
                 NostrSettingsScreen(networkOnly: networkOnly),
+            routes: [
+              GoRoute(
+                path: SignatureVerificationPolicyScreen.subpath,
+                name: SignatureVerificationPolicyScreen.routeName,
+                builder: (context, state) =>
+                    const SizedBox(key: Key('signature-verification-screen')),
+              ),
+            ],
           ),
           GoRoute(
             path: WelcomeScreen.path,
@@ -175,6 +184,23 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(l10n.nostrSettingsClientAttribution), findsNothing);
+    });
+
+    testWidgets('the signature verification tile pushes its policy screen', (
+      tester,
+    ) async {
+      await pumpSubject(tester);
+      final tile = find.text(l10n.nostrSettingsSignatureVerification);
+      await tester.ensureVisible(tile);
+      await tester.pumpAndSettle();
+
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('signature-verification-screen')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('network-only view keeps client attribution when signed in', (

@@ -115,7 +115,7 @@ List<RouteBase> appRoutes(Ref ref) => [
   ...listsRoutes(),
   ...authRoutes(),
   ...appsRoutes(),
-  ...settingsRoutes(ref),
+  ...settingsRoutes(),
   ...profileRoutes(),
   ...libraryRoutes(),
 ];

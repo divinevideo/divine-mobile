@@ -1,5 +1,4 @@
 import 'package:badge_repository/badge_repository.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -330,14 +329,6 @@ void main() {
     const conversationId =
         '3333333333333333333333333333333333333333333333333333333333333333';
 
-    late ProviderContainer container;
-
-    setUp(() => container = ProviderContainer());
-    tearDown(() => container.dispose());
-
-    List<RouteBase> withRef(List<RouteBase> Function(Ref ref) routes) =>
-        container.read(Provider<List<RouteBase>>(routes));
-
     Future<Widget> buildFromUrl(
       WidgetTester tester,
       List<RouteBase> routes,
@@ -579,7 +570,7 @@ void main() {
         final location = BadgeVideosRouteData(naddr: coordinate.toNaddr())
             .location;
         expect(location, BadgeVideosScreen.pathFor(coordinate));
-        final router = GoRouter(routes: withRef(settingsRoutes));
+        final router = GoRouter(routes: settingsRoutes());
         addTearDown(router.dispose);
         final match = router.configuration.findMatch(Uri.parse(location));
         expect(match.isError, isFalse);
@@ -600,7 +591,7 @@ void main() {
           tester,
         ) async {
           final route = _routeNamed(
-            withRef(settingsRoutes),
+            settingsRoutes(),
             BadgeVideosScreen.routeName,
           );
           late BadgeVideosScreen screen;
@@ -624,7 +615,7 @@ void main() {
       ) async {
         final screen = await buildFromUrl(
           tester,
-          withRef(settingsRoutes),
+          settingsRoutes(),
           BadgeVideosScreen.routeName,
           location: '/badges/b/invalid/videos',
           pathParameters: const {'naddr': 'invalid'},
@@ -638,7 +629,7 @@ void main() {
     ) async {
       final screen = await buildFromUrl(
         tester,
-        withRef(settingsRoutes),
+        settingsRoutes(),
         AccountStatusScreen.routeName,
         location: AccountStatusScreen.path,
       );
