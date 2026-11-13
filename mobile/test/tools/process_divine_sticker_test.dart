@@ -65,6 +65,7 @@ void main() {
     });
 
     test('clears residue below the alpha floor before cropping', () {
+      // Inside the 2 px margin, so uncleared residue would reach the output.
       final source = _canvas(
         width: 300,
         height: 300,
@@ -72,11 +73,13 @@ void main() {
         top: 100,
         subjectWidth: 100,
         subjectHeight: 100,
-      )..setPixelRgba(5, 5, 0, 255, 0, alphaFloor - 1);
+      )..setPixelRgba(99, 99, 0, 255, 0, alphaFloor - 1);
 
       final result = prepareSticker(source);
 
       expect(result.crop.left, equals(98));
+      expect(result.crop.top, equals(98));
+      expect(result.image.getPixel(1, 1).a, equals(0));
       for (final pixel in result.image) {
         expect(pixel.a == 0 || pixel.a == 255, isTrue);
       }
