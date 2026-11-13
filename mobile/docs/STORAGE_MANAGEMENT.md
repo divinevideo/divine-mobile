@@ -164,10 +164,15 @@ Independent of the screen, these sweeps run on their own:
   (`kCacheLimitDefaultBytes` for video), at whatever point leaves
   `kAutoCacheReservedDiskFraction` (15%) of the disk free. What the video and
   image caches already hold counts as space they may keep, so a full cache on
-  a roomy disk does not shrink; until a startup sweep has measured them
-  (`hasMeasuredCacheBytes`) a reading can only grow the budgets. The budget is
-  applied after the startup sweep, when the user changes the setting, and on
-  return to the foreground at most every five minutes. The player limit
+  a roomy disk does not shrink; until a sweep has measured them
+  (`hasMeasuredCacheBytes`) — the startup sweep, or a forced sweep after a
+  clear — a reading can grow the budgets but not shrink them below their
+  current size, only down to their ceilings. The budget is applied after the
+  startup sweep, when the user changes the setting, when Settings → Storage's
+  *Clear cache* empties and re-measures both caches (the image-cache clears on
+  sign-out and the 18+ toggle, and the Developer Options format switch,
+  re-measure without re-reading the disk), and on return to the foreground at
+  most every five minutes. The player limit
   Settings and bug reports show is the one configured at launch
   (`playerCacheBudgetBytesProvider`). On this screen
   "Size it automatically" is the default; turning it off fixes the video
