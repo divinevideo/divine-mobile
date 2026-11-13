@@ -122,8 +122,18 @@ class _Relay {
 
   void seedUpvote(String pubkey) => events.add(_reaction(pubkey, _comment));
 
+  /// Reaction reads that asked about [_comment].
+  int commentReads = 0;
+
   Future<List<Event>> _query(List<dynamic> filters) async {
     final typed = filters.cast<Filter>();
+    if (typed.any(
+      (f) =>
+          (f.kinds ?? const []).contains(EventKind.reaction) &&
+          (f.e?.contains(_comment) ?? false),
+    )) {
+      commentReads++;
+    }
     final reactionRead = typed.any(
       (f) => (f.kinds ?? const []).contains(EventKind.reaction),
     );
@@ -434,6 +444,83 @@ void main() {
 
         expect(queued, [false]);
         expectShown(bloc, upvoted: false, count: 1);
+        await bloc.close();
+      });
+    });
+
+    group('when the queue gives up on the vote', () {
+      setUp(() => relay.seedUpvote(_other));
+
+      Future<CommentReactionsBloc> openLoaded() async {
+        final bloc = openSheet()
+          ..add(CommentVoteCountsFetchRequested([_comment]));
+        await settle();
+        return bloc;
+      }
+
+      test('the open sheet drops a like that never published', () async {
+        final bloc = await openLoaded();
+        online = false;
+        upvote(bloc);
+        await settle();
+        expectShown(bloc, upvoted: true, count: 2);
+
+        queue.clear();
+        await likes.abandonLikeAction(_comment);
+        await settle();
+
+        expectShown(bloc, upvoted: false, count: 1);
+        await bloc.close();
+      });
+
+      test(
+        'the open sheet restores a like whose unlike never published',
+        () async {
+          final first = openSheet();
+          upvote(first);
+          await settle();
+          await first.close();
+          final bloc = await openLoaded();
+          online = false;
+          upvote(bloc);
+          await settle();
+          expectShown(bloc, upvoted: false, count: 1);
+
+          queue.clear();
+          await likes.abandonUnlikeAction(_comment);
+          await settle();
+
+          expectShown(bloc, upvoted: true, count: 2);
+          await bloc.close();
+        },
+      );
+
+      test(
+        'control: a vote the sheet itself casts is not read again',
+        () async {
+          final bloc = await openLoaded();
+          final readsBefore = relay.commentReads;
+          expect(readsBefore, greaterThan(0));
+          online = false;
+
+          upvote(bloc);
+          await settle();
+
+          expectShown(bloc, upvoted: true, count: 2);
+          expect(relay.commentReads, equals(readsBefore));
+          await bloc.close();
+        },
+      );
+
+      test('control: liking something else does not read the sheet', () async {
+        final bloc = await openLoaded();
+        final readsBefore = relay.commentReads;
+        expect(readsBefore, greaterThan(0));
+
+        await likes.likeEvent(eventId: _hex('video'), authorPubkey: _author);
+        await settle();
+
+        expect(relay.commentReads, equals(readsBefore));
         await bloc.close();
       });
     });
