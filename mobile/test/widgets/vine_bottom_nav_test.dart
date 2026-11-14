@@ -732,7 +732,6 @@ void main() {
         );
       });
 
-      // Review Focus 1
       testWidgets('holding while already on Profile opens the report and does '
           'not retry the profile', (tester) async {
         await pumpSubjectWithRouter(tester, router, currentIndex: 3);
