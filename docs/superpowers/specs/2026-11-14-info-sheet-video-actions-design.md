@@ -1,7 +1,92 @@
 # Video actions in the info sheet
 
-Date: 2026-11-14
-Status: approved direction (Rabble), visual polish to follow from design (Sebastian)
+Date: 2026-11-14, revised 2026-11-15 after Rabble's review of PR #11044
+Status: revision 2 — this section supersedes anything below it that conflicts
+
+## Revision 2 (2026-11-15)
+
+Rabble rejected the first build (PR #11044). Reviewed on web, the info sheet
+showed Save, Add to List, Event JSON, Event ID — and no way to use the classic
+Vine at all, because Add to clips is hidden on web (the clip library and editor
+don't run there). The point of the work is to get people making new videos
+with classic Vines; the first build buried that as one small circle among
+five, and showed nothing on web.
+
+### What changes
+
+1. **Remix button (the headline).** On a video the viewer may reuse
+   (`canAddVideoToClips`: classic Vine, own video, or creator allows reuse),
+   the info sheet shows one full-width primary `DivineButton` directly under
+   the stats row: "Remix this Vine" on a classic Vine (`isOriginalVine`),
+   "Remix this video" otherwise.
+   - **App (iOS, Android, macOS):** tap imports the video into the clip
+     library (no title prompt; the default title), then closes the info sheet
+     and opens the editor with that clip on the timeline — the same path the
+     Library uses when you select clips and tap create
+     (`LibraryScreen._createVideoFromSelected`: `clipManager.insertClip`, then
+     `VideoEditorRouteData(from: VideoEditorScreen.libraryOrigin)`), except
+     that it clears the editor session with `keepAutosavedDraft: true` (the
+     Drafts tab's draft-safe call) so an in-progress autosaved draft survives.
+     While importing, the button shows its loading state and ignores taps; a
+     failed import shows the existing "Couldn't add to clips" snackbar.
+   - **Re-tapping does not duplicate.** If a non-trashed clip in the library
+     already has this video's `sourceEventId`, it is reused instead of
+     importing again.
+   - **Credit:** the clip keeps its source credit, so a published remix whose
+     timeline has exactly this one reused source is published "Inspired by"
+     the original (`VideoEditorNotifier._attributionSourceFromClips`). No
+     change needed; covered by an existing path.
+   - **Web:** the same button shows. Tapping it shows a snackbar saying
+     remixing happens in the Divine app, with a "Get the app" action that
+     opens `AppConstants.downloadUrl` (`https://divine.video/download`).
+2. **Info sheet secondary actions shrink to:** Edit and Delete (own videos
+   only), then Save. Removed from the info sheet: Add to list (it overlaps
+   Save; it stays in the share sheet), Event JSON and Event ID (debug tools;
+   they stay in the share sheet), and the small Add to clips circle (the Remix
+   button replaces it there). The share sheet is unchanged by revision 2.
+3. **"From others" Library tab.** Clips whose source credit names someone
+   other than the signed-in viewer (`sourceAuthorPubkey != null &&
+   sourceAuthorPubkey != viewer`) — imported classic Vines and other people's
+   videos, and clips received in DMs — move out of the Clips tab into a new
+   Library tab, "From others". The Clips tab shows only the viewer's own
+   clips (no source credit, or credited to the viewer).
+   - Tab order: Drafts, Clips, From others, Sounds (Sounds absent in the
+     recorder's `withoutSounds` mode, as today).
+   - The editor's add-clips picker (`LibraryScreen` selection mode) today
+     shows only Clips with no tab bar; it gains a two-tab bar, Clips and From
+     others, so a Vine can be added to a remix from inside the editor.
+   - Selection, sorting, grid size, archive/trash and category behaviour in
+     From others match the Clips tab (it is the same clip grid with a
+     different ownership scope). Category chips, Archive and Deleted filters
+     apply within each tab.
+4. **Screenshots in the PR.** The rework is run on the macOS app or iOS
+   simulator and the PR gets screenshots of: a classic Vine's info sheet, the
+   web nudge, an own video's info sheet, the editor opened by Remix, and the
+   From others tab.
+
+### New copy (ARB keys, translated into every locale per
+`mobile/docs/LOCALIZATION_STYLE_GUIDE.md`, flagged for fluent review)
+
+- Remix this Vine
+- Remix this video
+- Remixing happens in the Divine app. (web snackbar)
+- Get the app (web snackbar action)
+- From others (Library tab)
+
+Builder's call: exact key names (feature-prefixed), and whether the web
+message reads better as one sentence or two.
+
+### Non-goals (revision 2)
+
+- Changing the share sheet.
+- Merging Save and Add to list into one picker.
+- A camera-first reaction flow (Remix opens the editor; the editor can add a
+  recording).
+- Analytics.
+
+---
+
+## Original design (revision 1)
 
 ## Intent
 
