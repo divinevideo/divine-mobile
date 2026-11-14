@@ -2078,6 +2078,49 @@ void main() {
       const userA = 'pubkey_a';
       const userB = 'pubkey_b';
 
+      test("keeps the preview on the sender's own unconfirmed retraction, "
+          'which the thread still shows (#9772)', () async {
+        // What an account switch leaves behind: every other row went with
+        // the account, and the queued retraction stayed to be sent.
+        await dao.upsertConversation(
+          id: 'conv_1',
+          participantPubkeys: '["$userA","$userB"]',
+          isGroup: false,
+          createdAt: 1700000000,
+          lastMessageContent: 'sent to the wrong room',
+          lastMessageTimestamp: 1700000002,
+          lastMessageSenderPubkey: userA,
+          ownerPubkey: userA,
+        );
+        await database.directMessagesDao.insertMessage(
+          id: 'msg_retracted',
+          conversationId: 'conv_1',
+          senderPubkey: userA,
+          content: 'sent to the wrong room',
+          createdAt: 1700000002,
+          giftWrapId: 'gw_retracted',
+          ownerPubkey: userA,
+        );
+        expect(
+          await database.directMessagesDao.markMessageDeletionPending(
+            'msg_retracted',
+            deletionRumorJson: '{"kind":5}',
+            ownerPubkey: userA,
+          ),
+          isTrue,
+        );
+
+        final updated = await dao.backfillLatestMessagePreviews(
+          ownerPubkey: userA,
+        );
+
+        expect(updated, equals(0));
+        final conv = await dao.getConversation('conv_1', ownerPubkey: userA);
+        expect(conv!.lastMessageContent, equals('sent to the wrong room'));
+        expect(conv.lastMessageTimestamp, equals(1700000002));
+        expect(conv.lastMessageSenderPubkey, equals(userA));
+      });
+
       test(
         'updates stale preview columns to the newest non-deleted message',
         () async {

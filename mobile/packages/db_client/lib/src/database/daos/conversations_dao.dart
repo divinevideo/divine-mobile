@@ -1076,6 +1076,11 @@ LEFT JOIN (
   /// Deleted rows still count as restored history so a deleted latest message
   /// can have its preview cleared or replaced.
   ///
+  /// The preview is the newest message the thread shows, as
+  /// [visibleActivityExcluding] reads it: the sender's own retraction stays
+  /// there until it is confirmed, and an account switch keeps that row while
+  /// the rest of the history is downloaded again (#9772).
+  ///
   /// Returns the number of conversations updated.
   Future<int> backfillLatestMessagePreviews({String? ownerPubkey}) {
     final scopedConversationFilter = ownerPubkey == null
@@ -1088,12 +1093,19 @@ LEFT JOIN (
         ? '1 = 1'
         : "(dm.owner_pubkey = ? OR dm.owner_pubkey = '' "
               'OR dm.owner_pubkey IS NULL)';
+    final shownStatuses = [
+      for (final status in DirectMessagesDao.retractionsShownToSender)
+        "'$status'",
+    ].join(', ');
+    final shownInThread =
+        '(dm.is_deleted = 0 OR (dm.sender_pubkey = c.owner_pubkey '
+        'AND dm.deletion_publish_status IN ($shownStatuses)))';
     final latestPreviewContentSubquery =
         '''
 SELECT $_latestMessagePreviewCase
 FROM direct_messages dm
 WHERE dm.conversation_id = c.id
-  AND dm.is_deleted = 0
+  AND $shownInThread
   AND $latestMessageOwnerFilter
 ORDER BY dm.created_at DESC, dm.id DESC
 LIMIT 1
@@ -1103,7 +1115,7 @@ LIMIT 1
 SELECT dm.created_at
 FROM direct_messages dm
 WHERE dm.conversation_id = c.id
-  AND dm.is_deleted = 0
+  AND $shownInThread
   AND $latestMessageOwnerFilter
 ORDER BY dm.created_at DESC, dm.id DESC
 LIMIT 1
@@ -1113,7 +1125,7 @@ LIMIT 1
 SELECT dm.sender_pubkey
 FROM direct_messages dm
 WHERE dm.conversation_id = c.id
-  AND dm.is_deleted = 0
+  AND $shownInThread
   AND $latestMessageOwnerFilter
 ORDER BY dm.created_at DESC, dm.id DESC
 LIMIT 1

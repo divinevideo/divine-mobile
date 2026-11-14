@@ -374,5 +374,57 @@ void main() {
         reason: 'the retraction is still queued for the sweep',
       );
     });
+
+    test('a newer message keeps its preview when the retraction is '
+        'confirmed before the history comes back', () async {
+      final rumor = ownGroupMessage();
+      await receive(await selfCopyOf(rumor));
+      final later = Event(
+        _alice,
+        EventKind.privateDirectMessage,
+        [
+          ['p', _owner],
+          ['p', _bob],
+        ],
+        'a newer message from the room',
+        createdAt: _sentAt + 60,
+      );
+      final laterWrap = await buildGiftWrapFromHex(
+        senderPrivateKeyHex: _aliceSecret,
+        rumorJson: later.toJson(),
+        receiverPublicKey: _owner,
+      );
+      await receive(laterWrap!);
+      await deleteWhileOffline(rumor.id);
+      final before = await conversationsDao.getConversation(
+        _roomId,
+        ownerPubkey: _owner,
+      );
+      expect(
+        before!.lastMessageTimestamp,
+        equals(_sentAt + 60),
+        reason: 'precondition: the newer message is the preview',
+      );
+
+      await switchAwayAndBack();
+      relayConfirms = true;
+      expect(await sweep(), equals([DmMessageDeletionOutcome.sent]));
+
+      final after = await conversationsDao.getConversation(
+        _roomId,
+        ownerPubkey: _owner,
+      );
+      expect(
+        after!.lastMessageTimestamp,
+        equals(_sentAt + 60),
+        reason:
+            'the retracted message was never the preview, and the newer one '
+            'is only missing until the history sync downloads it again',
+      );
+      expect(
+        after.lastMessageContent,
+        equals('a newer message from the room'),
+      );
+    });
   });
 }

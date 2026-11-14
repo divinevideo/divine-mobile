@@ -10836,6 +10836,35 @@ class DmRepository {
     );
   }
 
+  /// Refreshes the preview of [conversationId] once the retraction of
+  /// [rumorId] is settled as sent or blocked, unless the preview shows a
+  /// newer message.
+  ///
+  /// A retraction can only move a preview that showed its message. After an
+  /// account switch the newer message may not be downloaded again yet, and a
+  /// refresh that finds no newer row would clear the conversation's kept stamp
+  /// (#9772, #10276).
+  Future<void> _refreshPreviewAfterRetractionSettles({
+    required String rumorId,
+    required String conversationId,
+  }) async {
+    final conversation = await _conversationsDao.getConversation(
+      conversationId,
+      ownerPubkey: _ownerPubkey,
+    );
+    final retracted = await _directMessagesDao.getMessageById(
+      rumorId,
+      ownerPubkey: _ownerPubkey,
+    );
+    final previewTimestamp = conversation?.lastMessageTimestamp;
+    if (retracted != null &&
+        previewTimestamp != null &&
+        previewTimestamp > retracted.createdAt) {
+      return;
+    }
+    await _refreshConversationPreview(conversationId);
+  }
+
   /// Every other participant of [conversationId] — the gift-wrap recipients
   /// for a deletion.
   ///
@@ -10894,7 +10923,10 @@ class DmRepository {
           // delete time could still pick this message. It has only now left,
           // which makes this the first refresh able to move past it.
           try {
-            await _refreshConversationPreview(conversationId);
+            await _refreshPreviewAfterRetractionSettles(
+              rumorId: rumorId,
+              conversationId: conversationId,
+            );
           } on Object catch (e, stackTrace) {
             // The durable outcome is already sent and the sweep has dropped
             // the row. A denormalized preview failure must not relabel it
@@ -10924,7 +10956,10 @@ class DmRepository {
               ownerPubkey: _ownerPubkey,
             );
             try {
-              await _refreshConversationPreview(conversationId);
+              await _refreshPreviewAfterRetractionSettles(
+                rumorId: rumorId,
+                conversationId: conversationId,
+              );
             } on Object catch (e, stackTrace) {
               // The durable outcome is already blocked. A denormalized
               // preview failure must not relabel it unconfirmed and invite
