@@ -304,6 +304,31 @@ void main() {
         expect(events.last[1].phase, isNot(OutgoingVideoDmPhase.queued));
       });
 
+      test(
+        'publishes upload progress only when the shown percent changes',
+        () async {
+          final events = recordConversation('c1');
+          sendVideo();
+          await pumpEventQueue();
+          final send = sends.single;
+          send.onPhase!(DmVideoSendPhase.uploading);
+          await pumpEventQueue();
+          final beforeProgress = events.length;
+
+          [0.101, 0.102, 0.103, 0.104].forEach(send.onUploadProgress!);
+          await pumpEventQueue();
+
+          expect(events, hasLength(beforeProgress + 1));
+          expect(events.last.single.uploadProgress, equals(0.101));
+
+          send.onUploadProgress!(0.106);
+          await pumpEventQueue();
+
+          expect(events, hasLength(beforeProgress + 2));
+          expect(events.last.single.uploadProgress, equals(0.106));
+        },
+      );
+
       test('a late subscriber gets the current entries', () async {
         sendVideo();
         await pumpEventQueue();

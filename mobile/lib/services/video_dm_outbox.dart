@@ -521,12 +521,23 @@ class VideoDmOutbox {
     });
   }
 
+  /// Stores [fraction] only when the whole percent the bubble shows changes,
+  /// so the thousands of callbacks of a large upload do not each rebuild the
+  /// thread.
   void _onUploadProgress(String id, double fraction) {
     _update(id, (e) {
       if (e.phase != OutgoingVideoDmPhase.uploading) return e;
+      final previous = e.uploadProgress;
+      if (previous != null &&
+          _shownPercent(previous) == _shownPercent(fraction)) {
+        return e;
+      }
       return e.copyWith(uploadProgress: () => fraction);
     });
   }
+
+  static int _shownPercent(double fraction) =>
+      (fraction.clamp(0.0, 1.0) * 100).round();
 
   void _setPhase(String id, OutgoingVideoDmPhase phase) =>
       _update(id, (e) => e.copyWith(phase: phase));
