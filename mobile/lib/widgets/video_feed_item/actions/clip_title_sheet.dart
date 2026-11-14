@@ -6,11 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
+/// Asks for the title a clip is saved under in the clip library.
 class ClipTitleSheet extends StatefulWidget {
   const ClipTitleSheet({required this.initialTitle, super.key});
 
+  /// Title the field starts with.
   final String initialTitle;
 
+  /// Shows the prompt over [context], resolving with the trimmed title, or
+  /// null when it is cancelled or dismissed.
   static Future<String?> show({
     required BuildContext context,
     required String initialTitle,
@@ -23,10 +27,10 @@ class ClipTitleSheet extends StatefulWidget {
   }
 
   @override
-  State<ClipTitleSheet> createState() => ClipTitleSheetState();
+  State<ClipTitleSheet> createState() => _ClipTitleSheetState();
 }
 
-class ClipTitleSheetState extends State<ClipTitleSheet> {
+class _ClipTitleSheetState extends State<ClipTitleSheet> {
   late final TextEditingController _controller;
 
   bool get _canSave => _controller.text.trim().isNotEmpty;
@@ -91,6 +95,7 @@ class ClipTitleSheetState extends State<ClipTitleSheet> {
                 labelText: context.l10n.shareSheetClipTitleLabel,
                 maxLength: 80,
                 maxLines: 1,
+                textCapitalization: TextCapitalization.words,
                 textInputAction: TextInputAction.done,
                 inputFormatters: [
                   FilteringTextInputFormatter.singleLineFormatter,
