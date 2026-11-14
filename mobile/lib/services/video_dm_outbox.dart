@@ -101,9 +101,9 @@ class VideoDmOutbox {
   /// archived Vine, which the recipient adds too. Without it such a clip is
   /// held back like any other that fails the check.
   ///
-  /// [reporter] receives the programming errors a send or a clip check
-  /// throws. It defaults to the app-wide [detachedFailureReporter], read when
-  /// each error is reported.
+  /// [reporter] receives the programming errors the outbox's work throws: a
+  /// send, a clip check, a frame read or the worker. It defaults to the
+  /// app-wide [detachedFailureReporter], read when each error is reported.
   VideoDmOutbox({
     required DmVideoSendService Function() sendService,
     DmVideoCardFrameReader readFrame = readDmVideoCardFrame,

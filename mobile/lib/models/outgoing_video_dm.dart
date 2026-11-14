@@ -96,7 +96,7 @@ class OutgoingVideoDm extends Equatable {
   /// The library clip being sent; null for a gallery video.
   final DivineVideoClip? clip;
 
-  /// Shared by the clips of one multi-clip pick; null for a single video.
+  /// Shared by the clips of one library pick; null for a gallery video.
   final String? batchId;
 
   /// When the send was requested.

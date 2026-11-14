@@ -182,7 +182,9 @@ class ConversationState extends Equatable {
   ///
   /// A sent entry is dropped once its row is in [messages]: from then on the
   /// row is the bubble. Until the row arrives the entry keeps the slot, so
-  /// the handoff never leaves the video off screen or shows it twice.
+  /// the handoff never leaves the video off screen. The row can land while the
+  /// entry is still publishing, since its commit comes before the send
+  /// returns; both then show until the outbox marks the entry sent.
   List<OutgoingVideoDm> get displayedVideoSends {
     if (pendingVideoSends.isEmpty) return const [];
     final messageIds = {for (final message in messages) message.id};

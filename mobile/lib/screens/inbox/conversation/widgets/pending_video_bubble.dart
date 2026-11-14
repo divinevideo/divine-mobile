@@ -159,7 +159,8 @@ class _PendingCard extends StatelessWidget {
   }
 }
 
-/// The frame this device read from the video, else a neutral card colour.
+/// The frame this device read from the video, else a neutral card with a
+/// play icon.
 class _PendingPreview extends StatelessWidget {
   const _PendingPreview({required this.frame});
 

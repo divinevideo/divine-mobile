@@ -28,7 +28,8 @@ Run Flutter commands from `mobile/` with `mise exec -- … --no-pub`.
 - **One upload at a time.** Queued entries run FIFO.
 - **Lifetime.** `videoDmOutboxProvider` watches only
   `currentAccountIdProvider`. The send service, clip verifier and clip
-  importer are read through callbacks when each job starts.
+  importer are read through callbacks: the send service for each send and
+  the clip verifier for each clip check.
 - **No protocol change.** The kind 15, its tags, the encryption and the
   Blossom upload stay as they are.
 - **Retry redoes the whole pipeline**, including after an unconfirmed
@@ -102,7 +103,9 @@ Run Flutter commands from `mobile/` with `mise exec -- … --no-pub`.
 ### Task 2: `VideoDmOutbox`, gallery videos
 
 **Files:**
-- Create: `lib/services/video_dm_outbox.dart` (the model and the outbox)
+- Create: `lib/models/outgoing_video_dm.dart` (the model)
+- Create: `lib/services/video_dm_outbox.dart` (the outbox, which re-exports
+  the model)
 - Test: `test/services/video_dm_outbox_test.dart`
 
 **Interfaces:**
@@ -114,14 +117,14 @@ Run Flutter commands from `mobile/` with `mise exec -- … --no-pub`.
   ```dart
   enum OutgoingVideoDmPhase { queued, checking, encrypting, uploading, publishing, sent, failed }
   enum OutgoingVideoDmFailure { tooLarge, clipNotVerified, failed }
-  enum VideoDmSendStatus { sent, tooLarge, clipNotVerified, failed } // outcome status
+  enum VideoDmOutcomeStatus { sent, tooLarge, clipNotVerified, failed } // outcome status
   class OutgoingVideoDm extends Equatable { id, conversationId, recipientPubkey,
     localPath, DivineVideoClip? clip, String? batchId, DateTime requestedAt,
     Uint8List? frame, OutgoingVideoDmPhase phase, double? uploadProgress,
     OutgoingVideoDmFailure? failure, String? rumorEventId;
     bool get canRetry => phase == failed && failure == OutgoingVideoDmFailure.failed;
     OutgoingVideoDm copyWith(...); }
-  class VideoDmSendOutcome extends Equatable { VideoDmSendStatus status;
+  class VideoDmSendOutcome extends Equatable { VideoDmOutcomeStatus status;
     int sentCount; int total; bool get isPartial; }
   typedef DmVideoCardFrameReader = Future<Uint8List?> Function(File video);
   class VideoDmOutbox {
@@ -133,6 +136,7 @@ Run Flutter commands from `mobile/` with `mise exec -- … --no-pub`.
       DmVideoCardFrameReader readFrame = readDmVideoCardFrame,
       String Function()? newId,           // defaults to Uuid().v4
       DateTime Function()? now,           // defaults to DateTime.now
+      CrashReporter? reporter,            // defaults to detachedFailureReporter
     });
     Stream<List<OutgoingVideoDm>> watchConversation(String conversationId);
     Stream<VideoDmSendOutcome> get outcomes;
@@ -347,14 +351,15 @@ Run Flutter commands from `mobile/` with `mise exec -- … --no-pub`.
 - ARB keys (exact English):
   - `dmPendingVideoWaiting` "Waiting…"
   - `dmPendingVideoPreparing` "Preparing…"
-  - `dmPendingVideoUploading` "Uploading {percent}%" (`percent`: int)
+  - `dmPendingVideoUploading` "Uploading {percent}" (`percent`: String,
+    formatted by `NumberFormat.percentPattern`)
   - `dmPendingVideoSending` "Sending…"
-  - `dmPendingVideoRetry` "Retry"
   - `dmPendingVideoRemove` "Remove"
-  - `dmPendingVideoSemantics` "Sending video, {percent}%" (`percent`: int)
+  - `dmPendingVideoSemantics` "Sending video, {percent}" (`percent`: String,
+    formatted the same way)
   - `dmPendingVideoFailedSemantics` "Video failed to send"
 
-  Failure lines reuse `dmVideoSendFailed`, `dmVideoTooLarge` (argument:
+  Retry reuses `commonRetry`. Failure lines reuse `dmVideoSendFailed`, `dmVideoTooLarge` (argument:
   `videoDmMaxMegabytes`) and `dmClipSendNotVerified`.
 
 - [ ] **Step 1: Write the failing widget tests**, one per state, each

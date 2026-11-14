@@ -6631,19 +6631,19 @@ abstract class AppLocalizations {
   /// **'Couldn\'t open this video'**
   String get dmVideoUnavailable;
 
-  /// SnackBar shown in a DM conversation after an encrypted video DM reaches the recipient's relays. It states delivery only: it must not claim the video can be revoked, or that it cannot be saved or forwarded.
+  /// SnackBar shown anywhere in the app after an encrypted video DM reaches the recipient's relays. It states delivery only: it must not claim the video can be revoked, or that it cannot be saved or forwarded.
   ///
   /// In en, this message translates to:
   /// **'Video sent'**
   String get dmVideoSent;
 
-  /// SnackBar shown in a DM conversation when an encrypted video DM fails to upload or send. The composer stays usable, so the user can attach the video again.
+  /// SnackBar shown anywhere in the app, and the status line under the failed video in the conversation, when an encrypted video DM fails to upload or send. The failed video offers Retry.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t send video'**
   String get dmVideoSendFailed;
 
-  /// SnackBar shown in a DM conversation when the picked video exceeds the encrypted video DM size limit, before anything is uploaded.
+  /// SnackBar shown anywhere in the app, and the status line under the failed video in the conversation, when the picked video exceeds the encrypted video DM size limit, before anything is uploaded.
   ///
   /// In en, this message translates to:
   /// **'That video\'s too big to send. Pick one under {maxMegabytes} MB'**
@@ -6757,7 +6757,7 @@ abstract class AppLocalizations {
   /// **'Video failed to send'**
   String get dmPendingVideoFailedSemantics;
 
-  /// SnackBar shown in the DM composer when a clip picked from the sender's own library has no valid Divine camera credential, so it is not sent: the recipient could never add it to their clips.
+  /// SnackBar shown anywhere in the app, and the status line under the failed clip in the conversation, when a clip picked from the sender's own library has no valid Divine camera credential, so it is not sent: the recipient could never add it to their clips.
   ///
   /// In en, this message translates to:
   /// **'We couldn\'t confirm this clip was shot with the Divine camera, so it can\'t be sent as a clip.'**

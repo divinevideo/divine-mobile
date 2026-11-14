@@ -241,7 +241,7 @@ void main() {
         ),
       );
 
-      testWidgets('a failed clip with two actions does not overflow', (
+      testWidgets('an unverified clip with Remove only does not overflow', (
         tester,
       ) async {
         await tester.pumpWidget(

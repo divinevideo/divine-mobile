@@ -1,6 +1,6 @@
 # Video DM send progress that survives leaving the chat
 
-Status: draft, awaiting Rabble's approval. Date: 2026-11-13.
+Status: approved by Rabble, 2026-11-13.
 
 ## Why
 
@@ -120,8 +120,10 @@ Nostr session goes from identity-known to ready, or its client is
 regenerated, and each such rebuild would silently wipe in-flight sends.
 
 Instead the outbox gets reader callbacks for the send service, the clip
-verifier and the clip importer. Each job reads the current instances when it
-starts. A job already running keeps the instances it started with.
+verifier and the clip importer. The send service is read for each send and
+the clip verifier for each clip check, so a send uses the instances current
+when it starts, even within one clip batch. A send already running keeps the
+instances it started with.
 
 Disposal (account switch) stops publishing state and drops all entries. A send
 already mid-flight is not cancelled (it can't be today) and its result is
@@ -130,13 +132,13 @@ discarded: the same behaviour as now.
 **Entry model.** `OutgoingVideoDm` (Equatable, immutable):
 
 - `id`: a local id (uuid), stable for the entry's life.
-- `conversationId`: from `DmRepository.computeConversationId([self, recipient])`.
+- `conversationId`: passed in by `ConversationBloc`.
 - `recipientPubkey`.
 - `localPath`: the picked or library file.
-- `clipAspectRatio`: non-null for library clips (drives `DmClipTag`), null
-  for gallery videos.
-- `batchId`: shared by the clips of one multi-clip pick; null for a single
-  gallery video.
+- `clip`: the library clip, non-null for clips (its `targetAspectRatio`
+  drives `DmClipTag`); null for gallery videos.
+- `batchId`: shared by the clips of one library pick; null for a gallery
+  video.
 - `requestedAt`.
 - `frame`: JPEG bytes of the card frame, null until read or if the read fails.
 - `phase`: `queued | checking | encrypting | uploading | publishing | sent |
@@ -153,8 +155,8 @@ discarded: the same behaviour as now.
   current entries for one thread, emitting the current value on listen.
 - `Stream<VideoDmSendOutcome> get outcomes`: one event per finished request
   (a single video, or a whole clip batch). Broadcast, no replay.
-- `void sendVideo({required String recipientPubkey, required File file})`.
-- `void sendClips({required String recipientPubkey, required List<DivineVideoClip> clips})`.
+- `void sendVideo({required String conversationId, required String recipientPubkey, required File file})`.
+- `void sendClips({required String conversationId, required String recipientPubkey, required List<DivineVideoClip> clips})`.
 - `void retry(String id)`: re-queues a failed entry with the same inputs.
 - `void remove(String id)`: drops a failed entry.
 - `void acknowledge(String id)`: drops a `sent` entry once its message row is
@@ -185,8 +187,8 @@ synchronously, so the bubble appears on the same frame as the request.
   frame.
 - **Progress.** `DmVideoSendService.sendVideo` gains an
   `onUploadProgress(double)` callback, passed through to
-  `uploadEncryptedFile(onProgress:)`. The outbox stores the value as given
-  (Blossom reports 0.1 → 1.0, monotonic). Phases come from the existing
+  `uploadEncryptedFile(onProgress:)`. The outbox stores a value only when
+  the whole percent shown changes (Blossom reports 0.1 → 1.0). Phases come from the existing
   `onPhase`.
 - **Retry.** Re-queues the single entry at the back of the queue and redoes
   its whole pipeline. A retried clip runs the check again for that clip alone,
@@ -202,8 +204,8 @@ synchronously, so the bubble appears on the same frame as the request.
   repeated. Republishing the stored signed wrap instead was considered and
   not chosen.
 
-**Outcomes.** `VideoDmSendOutcome { status, sentCount, total }` reuses the
-`ClipSendOutcome` shape and the existing status set. It is emitted when a
+**Outcomes.** `VideoDmSendOutcome { VideoDmOutcomeStatus status, sentCount,
+total }` has the `ClipSendOutcome` shape with a terminal-only status enum. It is emitted when a
 single video finishes, or when the last entry of a batch settles. A retry
 emits its own single-entry outcome.
 
@@ -233,16 +235,18 @@ getter `displayedVideoSends`. The getter drops any `sent` entry whose
 entry whose row has arrived, it calls `outbox.acknowledge(id)`.
 
 **Handoff.** `sendFileMessage` commits the message row before it returns, and
-the entry turns `sent` only after that return. So for one stream tick the
-entry is `sent` and its row may not be in `messages` yet; the bubble stays up.
-On the next tick the row arrives, the entry is filtered out and acknowledged.
-The result: no gap, no duplicate, no jump.
+the entry turns `sent` only after that return. Usually the entry is `sent`
+before its row is in `messages`, so the bubble stays up until the row arrives;
+then the entry is filtered out and acknowledged, with no gap. The row's stream
+can also win: `DmVideoSendService` deletes the ciphertext after the commit and
+before it returns, and in that window the row and the still-publishing bubble
+both show, until the outbox marks the entry sent a moment later.
 
 **New events**, so the composer goes UI → bloc → outbox and never reaches the
 outbox directly:
 
-- `ConversationVideoSendRequested(File)`
-- `ConversationClipsSendRequested(List<DivineVideoClip>)`
+- `ConversationVideoSendRequested({recipientPubkey, file})`
+- `ConversationClipsSendRequested({recipientPubkey, clips})`
 - `ConversationVideoSendRetried(id)`
 - `ConversationVideoSendRemoved(id)`
 
@@ -311,13 +315,14 @@ rules require:
 
 - `dmPendingVideoWaiting`: "Waiting…"
 - `dmPendingVideoPreparing`: "Preparing…"
-- `dmPendingVideoUploading`: "Uploading {percent}%"
+- `dmPendingVideoUploading`: "Uploading {percent}", `percent` a String
+  formatted by `NumberFormat.percentPattern`
 - `dmPendingVideoSending`: "Sending…"
-- `dmPendingVideoRetry`: "Retry"
 - `dmPendingVideoRemove`: "Remove"
 - `dmPendingVideoSemantics` / `dmPendingVideoFailedSemantics`
 
-Existing keys are reused for every outcome message.
+Existing keys are reused for every outcome message, and Retry reuses
+`commonRetry`.
 
 ## Testing
 
