@@ -22,6 +22,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:models/models.dart' as models show AspectRatio;
 import 'package:openvine/blocs/dm/conversation/collaborator_invite_actions_cubit.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
 import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
@@ -29,6 +30,7 @@ import 'package:openvine/blocs/dm/restore_status/dm_restore_status_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/collaborator_invite.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/outgoing_video_dm.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
@@ -37,6 +39,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/watermark_download_provider.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_view.dart';
+import 'package:openvine/screens/inbox/conversation/dm_clip_picker.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
@@ -52,6 +55,7 @@ import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6414,6 +6418,73 @@ void main() {
           ).called(1);
         },
       );
+
+      group('picking clips from the library', () {
+        DivineVideoClip libraryClip(String id) => DivineVideoClip(
+          id: id,
+          video: EditorVideo.file('${tempDir.path}/$id.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime.utc(2026, 9, 28),
+          targetAspectRatio: models.AspectRatio.square,
+          originalAspectRatio: 9 / 16,
+        );
+
+        Future<void> attachLibraryClips(
+          WidgetTester tester,
+          List<DivineVideoClip>? picked,
+        ) async {
+          await tester.pumpWidget(
+            buildSubject(
+              state: const ConversationState(
+                status: ConversationStatus.loaded,
+              ),
+              extraOverrides: [
+                dmClipPickerProvider.overrideWithValue((_) async => picked),
+              ],
+            ),
+          );
+          await tester.pump();
+
+          await tester.tap(
+            find.bySemanticsIdentifier('dm_attach_video_button'),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.dmAttachClipFromLibrary));
+          await tester.pumpAndSettle();
+        }
+
+        testWidgets('adds $ConversationClipsSendRequested with the recipient '
+            'and the picked clips', (tester) async {
+          final clips = [libraryClip('clip-a'), libraryClip('clip-b')];
+
+          await attachLibraryClips(tester, clips);
+
+          verify(
+            () => mockBloc.add(
+              any(
+                that: isA<ConversationClipsSendRequested>()
+                    .having(
+                      (event) => event.recipientPubkey,
+                      'recipientPubkey',
+                      otherPubkey,
+                    )
+                    .having((event) => event.clips, 'clips', equals(clips)),
+              ),
+            ),
+          ).called(1);
+        });
+
+        testWidgets('adds nothing when the library is dismissed', (
+          tester,
+        ) async {
+          await attachLibraryClips(tester, null);
+
+          verifyNever(
+            () =>
+                mockBloc.add(any(that: isA<ConversationClipsSendRequested>())),
+          );
+        });
+      });
 
       testWidgets('a pending entry renders as a $PendingVideoBubble at the '
           'bottom of the thread', (tester) async {
