@@ -8287,7 +8287,7 @@ abstract class AppLocalizations {
   /// **'Profile'**
   String get navProfile;
 
-  /// TalkBack hint on the Profile tab of the bottom bar; Android reads it as 'Double-tap and hold to <hint>'. Holding the tab opens the bug report form. Use the same grammatical form as inboxConversationTileLongPressHint in each locale.
+  /// TalkBack hint on the Profile tab of the bottom bar. Holding the tab opens the bug report form. Write a verb phrase completing Android's 'Double-tap and hold to …', in the register mobile/docs/LOCALIZATION_STYLE_GUIDE.md sets for the locale.
   ///
   /// In en, this message translates to:
   /// **'Report a bug'**
