@@ -11,7 +11,6 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_items.dart';
-import 'package:openvine/widgets/video_feed_item/actions/video_content_action_rules.dart';
 
 /// Content actions for [video] in the info sheet.
 ///
@@ -90,8 +89,11 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
         isSaved: isSaved,
         isPending: isSavePending,
       ),
-      if (canAddVideoToClips(video: video, isOwnContent: ownerCubit != null))
-        addToClipsActionItem(context),
+      ?addToClipsActionItem(
+        context,
+        video: video,
+        isOwnContent: ownerCubit != null,
+      ),
       addToListActionItem(
         context,
         onAddToList: () => openAddToList(context, video),

@@ -15,6 +15,7 @@ import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
+import 'package:openvine/widgets/video_feed_item/actions/video_content_action_rules.dart';
 
 void _runActionDetached(Future<void> operation, String description) {
   runDetached(
@@ -122,12 +123,20 @@ VideoActionRowItem saveVideoActionItem(
   );
 }
 
-/// Asks for a clip title, then adds the video to the viewer's clips.
+/// Asks for a clip title, then adds [video] to the viewer's clips, or null
+/// when [canAddVideoToClips] does not allow it for this viewer.
 ///
 /// Shows as pending while the import runs. [context] must be the building
 /// context of a widget below the sheet's [VideoContentActionsBloc]: the item
 /// subscribes it to the import progress.
-VideoActionRowItem addToClipsActionItem(BuildContext context) {
+VideoActionRowItem? addToClipsActionItem(
+  BuildContext context, {
+  required VideoEvent video,
+  required bool isOwnContent,
+}) {
+  if (!canAddVideoToClips(video: video, isOwnContent: isOwnContent)) {
+    return null;
+  }
   final isImporting = context.select(
     (VideoContentActionsBloc bloc) => bloc.state.isImportingClip,
   );

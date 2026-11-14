@@ -49,7 +49,6 @@ import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_items.dart';
-import 'package:openvine/widgets/video_feed_item/actions/video_content_action_rules.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:openvine/widgets/watermark_download_progress_sheet.dart';
@@ -237,16 +236,11 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     // in initState. Auth can change while the sheet is open; recomputing here
     // could expose owner UI without installing its cubit.
     final isOwnContent = _ownerVideoActionsCubit != null;
-    final showAddVideoToClips = canAddVideoToClips(
-      video: widget.video,
-      isOwnContent: isOwnContent,
-    );
 
     final sheetView = _UnifiedShareSheetView(
       video: widget.video,
       messageController: _messageController,
       isOwnContent: isOwnContent,
-      canAddToClips: showAddVideoToClips,
       onFindPeople: _handleFindPeople,
       onAddToList: () => openAddToList(context, widget.video),
       onEditVideo: switch (_ownerVideoActionsCubit) {
@@ -558,7 +552,6 @@ class _UnifiedShareSheetView extends StatelessWidget {
     required this.video,
     required this.messageController,
     required this.isOwnContent,
-    required this.canAddToClips,
     required this.onFindPeople,
     required this.onAddToList,
     required this.onSaveWithWatermark,
@@ -572,7 +565,6 @@ class _UnifiedShareSheetView extends StatelessWidget {
   final VideoEvent video;
   final TextEditingController messageController;
   final bool isOwnContent;
-  final bool canAddToClips;
   final VoidCallback onFindPeople;
   final Future<void> Function() onAddToList;
   final Future<void> Function()? onEditVideo;
@@ -653,7 +645,6 @@ class _UnifiedShareSheetView extends StatelessWidget {
                       _MoreActionsSection(
                         video: video,
                         isOwnContent: isOwnContent,
-                        canAddToClips: canAddToClips,
                         isDeletePending: isDeletePending,
                         onCrosspost: onCrosspost,
                         onCrosspostShown: onCrosspostShown,

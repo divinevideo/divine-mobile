@@ -8,7 +8,6 @@ class _MoreActionsSection extends ConsumerWidget {
   const _MoreActionsSection({
     required this.video,
     required this.isOwnContent,
-    required this.canAddToClips,
     required this.onSaveWithWatermark,
     required this.onAddToList,
     required this.onCopyLink,
@@ -23,9 +22,6 @@ class _MoreActionsSection extends ConsumerWidget {
 
   final VideoEvent video;
   final bool isOwnContent;
-
-  /// Whether Add to clips is offered for this video.
-  final bool canAddToClips;
   final bool isDeletePending;
   final Future<void> Function()? onSaveOriginal;
   final Future<void> Function() onSaveWithWatermark;
@@ -81,7 +77,11 @@ class _MoreActionsSection extends ConsumerWidget {
             : context.l10n.shareSheetSaveVideo,
         onTap: onSaveWithWatermark,
       ),
-      if (canAddToClips) addToClipsActionItem(context),
+      ?addToClipsActionItem(
+        context,
+        video: video,
+        isOwnContent: isOwnContent,
+      ),
       if (onCrosspost != null)
         VideoActionRowItem(
           icon: DivineIconName.arrowsClockwise,

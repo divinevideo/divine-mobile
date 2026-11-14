@@ -820,6 +820,18 @@ void main() {
           expect(find.text(testVideo.title!), findsWidgets);
         });
 
+        testWidgets(
+          'offers no Add to clips on a video that is not the viewer own, '
+          'a classic Vine, or open to reuse',
+          (tester) async {
+            stubBookmarkStatus(saved: false);
+            await pumpSheet(tester);
+
+            expect(find.text(l10n.shareSheetAddToList), findsOneWidget);
+            expect(find.text(l10n.shareSheetAddToClips), findsNothing);
+          },
+        );
+
         testWidgets('Add to clips shows a spinner while the clip imports', (
           tester,
         ) async {
