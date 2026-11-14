@@ -3331,8 +3331,9 @@ class RelayPool {
   /// arrived. It emits the query's one [RelayDiagnosticSite.queryCompletion]
   /// line, at warning level, and marks the query reported, so the pool emits
   /// no second line for it, even if a relay completes it before [unsubscribe]
-  /// runs. Pass [silence] when the caller ended the read early because that
-  /// relay had sent nothing for that long; the line then names it.
+  /// runs. Pass [silence] when the caller ended the read early because a relay
+  /// owing its answer went quiet for that long or left the pool; the line then
+  /// names it.
   ///
   /// Returns null when the pool holds no record of [id]: it has completed or
   /// been unsubscribed, or it was started with neither `onComplete` nor
