@@ -1161,6 +1161,41 @@ void main() {
         expect(reporter.errors, isEmpty);
       });
 
+      test(
+        'does not forward an expected error the send service throws',
+        () async {
+          whenSendVideo().thenThrow(const SocketException('offline'));
+          outbox = createOutbox(reporter: reporter);
+          final outcomes = recordOutcomes();
+
+          sendVideo();
+          await pumpEventQueue();
+
+          expect(outcomes.single.status, equals(VideoDmOutcomeStatus.failed));
+          expect(reporter.errors, isEmpty);
+        },
+      );
+
+      test('does not forward an expected error a clip check throws', () async {
+        stubAutoSend();
+        final verifier = _MockClipProvenanceVerifier();
+        when(
+          () => verifier.verify(any()),
+        ).thenThrow(Exception('manifest read failed'));
+        outbox = createOutbox(
+          clipVerifier: () => verifier,
+          reporter: reporter,
+        );
+        final outcomes = recordOutcomes();
+
+        sendClips([_clip('clip-a')]);
+        await pumpEventQueue();
+
+        expect(outcomes.single.status, equals(VideoDmOutcomeStatus.failed));
+        expect(reporter.errors, isEmpty);
+        expect(sentPaths, isEmpty);
+      });
+
       test('reports a clip check that throws under its own site', () async {
         stubAutoSend();
         final verifier = _MockClipProvenanceVerifier();
