@@ -18,10 +18,21 @@ COMPOSE_FILE="$ROOT/local_stack/docker-compose.yml"
 # It is a kernel flock on fd 9, released when every holder of the fd has closed
 # it or died. up.sh and the tuning run inherit the fd, so killing this script
 # mid-start does not free the lock while the start it began is still running.
-exec 9>> /tmp/pr-screenshots-stack.lock
-if ! python3 -I -c 'import fcntl; fcntl.flock(9, fcntl.LOCK_EX | fcntl.LOCK_NB)' 2>/dev/null; then
+STACK_LOCK=/tmp/pr-screenshots-stack.lock
+command -v python3 > /dev/null || { echo "error: sim_up.sh needs python3 on PATH" >&2; exit 1; }
+exec 9>> "$STACK_LOCK" \
+  || { echo "error: cannot open $STACK_LOCK; if it is a directory or another user's file, remove it" >&2; exit 1; }
+# Exit 75 means another run holds the lock; anything else is a real failure.
+lock_rc=0
+python3 -I -c 'import fcntl, sys
+try: fcntl.flock(9, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except BlockingIOError: sys.exit(75)' || lock_rc=$?
+if [ "$lock_rc" -eq 75 ]; then
   echo "Waiting for another sim_up.sh to finish starting the stack..."
   python3 -I -c 'import fcntl; fcntl.flock(9, fcntl.LOCK_EX)'
+elif [ "$lock_rc" -ne 0 ]; then
+  echo "error: could not lock $STACK_LOCK" >&2
+  exit 1
 fi
 
 # Every worktree's local_stack is the same compose project, so a stack another
