@@ -903,7 +903,7 @@ void main() {
           );
           await tester.pumpAndSettle();
 
-          expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+          expect(find.text(l10n.shareWithTitle), findsNothing);
           expect(find.text(l10n.shareSheetAddToClipsFailed), findsOneWidget);
         });
 

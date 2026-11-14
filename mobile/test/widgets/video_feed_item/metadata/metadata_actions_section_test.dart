@@ -366,6 +366,20 @@ void main() {
         ).called(1);
       });
 
+      testWidgets('debug tools copy the Event JSON', (tester) async {
+        stubContentActions();
+        await tester.pumpWidget(
+          buildSubject(video: _classicVine, debugTools: true),
+        );
+
+        await tester.tap(find.text(l10n.shareSheetEventJson));
+        await tester.pump();
+
+        verify(
+          () => contentActions.add(const VideoContentCopyEventJsonRequested()),
+        ).called(1);
+      });
+
       testWidgets('Add to clips prompts with the default title and adds it', (
         tester,
       ) async {
@@ -514,6 +528,26 @@ void main() {
             find.text(l10n.shareMenuDeleteCleanupConfirmed),
             findsOneWidget,
           );
+        },
+      );
+
+      testWidgets(
+        'logs an unexpected delete error instead of leaving it unhandled',
+        (tester) async {
+          stubContentActions();
+          final ownerCubit = stubbedOwnerCubit() as _MockOwnerVideoActionsCubit;
+          when(
+            () => ownerCubit.deleteVideo(any()),
+          ).thenThrow(Exception('unexpected'));
+
+          await openSheet(tester, video: _video(), ownerCubit: ownerCubit);
+          await tester.tap(find.text(l10n.shareMenuDeleteVideo));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.shareMenuDelete));
+          await tester.pumpAndSettle();
+
+          verify(() => ownerCubit.deleteVideo(any())).called(1);
+          expect(tester.takeException(), isNull);
         },
       );
 

@@ -30,7 +30,7 @@ void main() {
       tester,
     ) async {
       var presenterCalls = 0;
-      var hostMounted = false;
+      BuildContext? host;
       late BuildContext opener;
 
       await tester.pumpWidget(
@@ -52,8 +52,7 @@ void main() {
               sheetContext,
               (hostContext) async {
                 presenterCalls++;
-                hostMounted = hostContext.mounted;
-                return;
+                host = hostContext;
               },
             ),
           ),
@@ -67,7 +66,51 @@ void main() {
 
       expect(find.text('present'), findsNothing);
       expect(presenterCalls, equals(1));
-      expect(hostMounted, isTrue);
+      // The root navigator's context, which outlives the sheet; the sheet's
+      // own context is still mounted here, so a mounted check alone would not
+      // tell the two apart.
+      expect(host, same(Navigator.of(opener, rootNavigator: true).context));
+    });
+
+    testWidgets('presents nothing once the sheet is already gone', (
+      tester,
+    ) async {
+      var presenterCalls = 0;
+      late BuildContext opener;
+      late BuildContext sheetContext;
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: Builder(
+            builder: (context) {
+              opener = context;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      unawaited(
+        VineBottomSheet.show<void>(
+          context: opener,
+          body: Builder(
+            builder: (context) {
+              sheetContext = context;
+              return const Text('sheet');
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      Navigator.of(sheetContext).pop();
+      await tester.pumpAndSettle();
+      expect(sheetContext.mounted, isFalse);
+
+      await presentAfterSheetDismiss<void>(sheetContext, (_) async {
+        presenterCalls++;
+      });
+
+      expect(presenterCalls, equals(0));
+      expect(tester.takeException(), isNull);
     });
   });
 }
