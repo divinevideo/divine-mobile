@@ -1360,6 +1360,30 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     XCTAssertEqual(latestState()?["status"] as? String, "paused")
   }
 
+  /// A load starts one frame past zero, past the black frame many feed videos
+  /// open on (#3242). When its paused first frame takes longer than the
+  /// output's 600 ms window, as on a streamed load, the window reports that
+  /// start as stuck, and a retry with tolerance before it snaps back to the
+  /// clip's only sync sample, at zero.
+  func testStuckSeekRecoveryNeverLandsBeforeTheLoadsStart() throws {
+    let instance = try XCTUnwrap(PlayerRegistry.shared.get(Self.playerId))
+    let player = try XCTUnwrap(instance.getPlayer())
+    let recover = try XCTUnwrap(instance.textureOutput?.onSeekStuck)
+    let loadStart = CMTime(value: 1, timescale: 30)
+    // Away from the start first, so the retry has to move the player and its
+    // landing is seen.
+    _ = try invoke("seekTo", ["positionMs": 500])
+
+    recover(loadStart)
+    try pollUntil("the retry lands") { player.currentTime().seconds < 0.4 }
+
+    let landedMs = player.currentTime().seconds * 1000
+    XCTAssertGreaterThanOrEqual(
+      landedMs, loadStart.seconds * 1000 - 1,
+      "the retry landed at \(landedMs) ms, on the frame the load starts past"
+    )
+  }
+
   /// Calls [method] the way the Dart controller does and waits for its answer.
   @discardableResult
   private func invoke(
