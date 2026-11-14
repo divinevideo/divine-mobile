@@ -3,45 +3,26 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart';
-import 'package:openvine/providers/nip05_verification_provider.dart';
+import 'package:openvine/blocs/profile_link/profile_link_cubit.dart';
 import 'package:openvine/providers/short_link_provider.dart';
-import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/utils/profile_link_resolver.dart';
 
 /// The URL a profile is shared under.
 ///
 /// A Divine username becomes its subdomain URL only once that exact claim
 /// verifies. Anything else, including an external NIP-05, falls back to the
-/// npub profile URL without a verification lookup.
+/// npub profile URL. Missing metadata uses the public ownership lookup.
 Future<String> resolveProfileShareUrl(
   WidgetRef ref, {
   required String pubkey,
   required UserProfile? profile,
+  ProfileLinkCubit? linkCubit,
 }) async {
   final shortener = ref.read(shortLinkClientProvider);
-  final canonical = await _resolveCanonicalProfileShareUrl(
-    ref,
-    pubkey: pubkey,
-    profile: profile,
-  );
-  return shortener?.shorten(canonical) ?? canonical;
-}
-
-Future<String> _resolveCanonicalProfileShareUrl(
-  WidgetRef ref, {
-  required String pubkey,
-  required UserProfile? profile,
-}) async {
-  final npub = NostrKeyUtils.encodePubKey(pubkey);
-  final claim = profile?.divineUsername == null ? null : profile?.nip05;
-  if (claim == null) return buildProfileUrl(null, npub);
-
-  final status = await ref.read(
-    nip05ClaimVerificationProvider(
-      Nip05Claim(pubkey: pubkey, nip05: claim),
-    ).future,
-  );
-  return buildProfileUrl(
-    status == Nip05VerificationStatus.verified ? profile?.displayNip05 : null,
-    npub,
-  );
+  final link = linkCubit == null
+      ? await profileLinkResolverFor(ref)
+            .resolve(pubkey: pubkey, profile: profile)
+      : await (linkCubit.state.resolution ??
+            Future.value(linkCubit.state.link));
+  return shortener?.shorten(link.url) ?? link.url;
 }

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/short_link_provider.dart';
 import 'package:openvine/services/short_link_client.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -44,6 +45,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              profileReadRepositoryProvider.overrideWithValue(null),
               shortLinkClientProvider.overrideWithValue(
                 enabled ? client : null,
               ),

@@ -19,6 +19,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
+import 'package:openvine/blocs/profile_link/profile_link_cubit.dart';
 import 'package:openvine/blocs/supporter/public_supporter_cubit.dart';
 import 'package:openvine/blocs/supporter/supporter_cubit.dart';
 import 'package:openvine/blocs/supporter/supporter_state.dart';
@@ -61,6 +62,7 @@ import 'package:openvine/widgets/profile/profile_action_buttons_widget.dart';
 import 'package:openvine/widgets/profile/profile_actions_sheet/profile_actions_sheet.dart';
 import 'package:openvine/widgets/profile/profile_followers_stat.dart';
 import 'package:openvine/widgets/profile/profile_following_stat.dart';
+import 'package:openvine/widgets/profile/profile_link_scope.dart';
 import 'package:openvine/widgets/profile/profile_stats_row_widget.dart';
 import 'package:openvine/widgets/profile/profile_support_sheet.dart';
 import 'package:openvine/widgets/profile/profile_website_row.dart';
@@ -347,7 +349,7 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
     // status bar at rest.
     final safeAreaTop = MediaQuery.paddingOf(context).top;
 
-    return Padding(
+    final header = Padding(
       padding: EdgeInsets.only(top: safeAreaTop),
       child: Column(
         mainAxisSize: .min,
@@ -499,6 +501,12 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
           ),
         ],
       ),
+    );
+    return ProfileLinkScope(
+      pubkey: widget.userIdHex,
+      profile: effectiveProfile,
+      enabled: !isVanished,
+      child: header,
     );
   }
 

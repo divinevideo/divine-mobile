@@ -11,6 +11,7 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_scope.dart';
+import 'package:openvine/blocs/profile_link/profile_link_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -223,6 +224,7 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
     final shareSubjectFn = l10n.profileShareSubject;
     final fallbackName = l10n.profileUserFallback;
     final sharePositionOrigin = shareAnchorForContext(shareButtonContext);
+    final linkCubit = shareButtonContext.read<ProfileLinkCubit>();
 
     try {
       final profile = await ref
@@ -234,6 +236,7 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
         ref,
         pubkey: widget.pubkey,
         profile: profile,
+        linkCubit: linkCubit,
       );
       if (!mounted) return;
       final shareText = shareTextFn(displayName, profileUrl);

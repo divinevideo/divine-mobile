@@ -259,6 +259,12 @@ void main() {
     Nip05VerificationStatus verificationStatus =
         Nip05VerificationStatus.verified,
   }) {
+    if (sharedProfile != null) {
+      // The shared URL must describe the profile actually rendered by the bloc.
+      when(() => otherProfileBloc.state).thenReturn(
+        OtherProfileLoaded(profile: sharedProfile, isFresh: true),
+      );
+    }
     final profileRepository = createMockProfileRepository();
     when(() => profileRepository.getCachedProfile(pubkey: targetPubkey))
         .thenAnswer((_) async => sharedProfile);
