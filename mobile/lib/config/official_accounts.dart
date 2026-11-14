@@ -3,6 +3,7 @@
 // ABOUTME: the profile checkmark. Pinned accounts keep NIP-05 as a revocation
 // ABOUTME: lever; checkmark-only entries are release-gated.
 
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/models/moderation_presentation.dart';
 
 export 'package:openvine/models/moderation_presentation.dart';
@@ -251,20 +252,12 @@ final List<String> kLegacyModerationPubkeys = List.unmodifiable([
 /// Keyed on the pubkey alone, with no freshness gate: a message a retired key
 /// signs today is treated exactly like one predating the rotation. See
 /// `mobile/docs/RETIRED_MODERATION_KEYS.md`.
-bool isModerationAccount(String pubkeyHex) =>
-    _sameIdentity(pubkeyHex, kModerationPubkeyHex) ||
-    kLegacyModerationPubkeys.any((key) => _sameIdentity(key, pubkeyHex));
-
-/// Whether two pubkey hex strings address the same identity, whatever case
-/// each carries.
 ///
-/// Case-insensitive because a pubkey that reaches Divine from another client
-/// may be upper-case hex (#8351): contact lists carry `p` tags verbatim, and
-/// the follow repository validates hex without normalizing it. Identity
-/// compares lowercase first, the way `shouldShowSpecialProfileCheckmark`
-/// tests team-register membership.
-bool _sameIdentity(String first, String second) =>
-    first.toLowerCase() == second.toLowerCase();
+/// Like every register match below, case-insensitive: a contact list carries
+/// `p` tags verbatim, so the same key can arrive as upper-case hex (#8351).
+bool isModerationAccount(String pubkeyHex) =>
+    pubkeysEqual(pubkeyHex, kModerationPubkeyHex) ||
+    kLegacyModerationPubkeys.any((key) => pubkeysEqual(key, pubkeyHex));
 
 /// Which presentation [pubkeyHex] gets: official branding follows recorded
 /// custody (#9963).
@@ -277,11 +270,11 @@ ModerationPresentation moderationPresentationOf(
   String pubkeyHex, {
   List<RetiredModerationKey> retiredKeys = kRetiredModerationKeys,
 }) {
-  if (_sameIdentity(pubkeyHex, kModerationPubkeyHex)) {
+  if (pubkeysEqual(pubkeyHex, kModerationPubkeyHex)) {
     return ModerationPresentation.official;
   }
   for (final key in retiredKeys) {
-    if (_sameIdentity(key.pubkeyHex, pubkeyHex)) {
+    if (pubkeysEqual(key.pubkeyHex, pubkeyHex)) {
       return key.custody.canStillSign
           ? ModerationPresentation.former
           : ModerationPresentation.official;
@@ -307,4 +300,4 @@ ModerationPresentation moderationPresentationOf(
 /// is why each [kRetiredModerationKeys] entry records its own custody in
 /// code — mirrored in `mobile/docs/RETIRED_MODERATION_KEYS.md`'s register.
 bool isRetiredModerationAccount(String pubkeyHex) =>
-    kLegacyModerationPubkeys.any((key) => _sameIdentity(key, pubkeyHex));
+    kLegacyModerationPubkeys.any((key) => pubkeysEqual(key, pubkeyHex));
