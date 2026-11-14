@@ -15,8 +15,9 @@ COMPOSE_FILE="$ROOT/local_stack/docker-compose.yml"
 
 # Two runs that both find no stack would both start one, each recreating the
 # other's containers, so the check and the start hold a machine-wide lock.
-# It is a kernel flock on fd 9, which this script keeps open: it is released
-# when the fd closes or the script dies, so no stale lock can outlive a run.
+# It is a kernel flock on fd 9, released when every holder of the fd has closed
+# it or died. up.sh and the tuning run inherit the fd, so killing this script
+# mid-start does not free the lock while the start it began is still running.
 exec 9>> /tmp/pr-screenshots-stack.lock
 if ! python3 -I -c 'import fcntl; fcntl.flock(9, fcntl.LOCK_EX | fcntl.LOCK_NB)' 2>/dev/null; then
   echo "Waiting for another sim_up.sh to finish starting the stack..."
@@ -57,15 +58,14 @@ else
   fi
 
   echo "Starting local stack (log: $LOG_DIR/stack.log)..."
-  # 9>&-: nothing this starts may keep holding the lock after the script releases it.
-  if ! bash "$ROOT/local_stack/up.sh" > "$LOG_DIR/stack.log" 2>&1 9>&-; then
+  if ! bash "$ROOT/local_stack/up.sh" > "$LOG_DIR/stack.log" 2>&1; then
     echo "warning: local_stack/up.sh failed; the end of $LOG_DIR/stack.log:" >&2
     tail -n 15 "$LOG_DIR/stack.log" >&2
   fi
   # Untuned, a video published now stays out of the REST feeds for up to
   # 15 minutes, so a failed up.sh must not skip this step.
   if ! grep -q 'refresh-interval tuning: applied=' "$LOG_DIR/stack.log"; then
-    docker compose -f "$COMPOSE_FILE" run --rm funnelcake-local-tuning >> "$LOG_DIR/stack.log" 2>&1 9>&- \
+    docker compose -f "$COMPOSE_FILE" run --rm funnelcake-local-tuning >> "$LOG_DIR/stack.log" 2>&1 \
       || { echo "error: refresh-interval tuning failed; see $LOG_DIR/stack.log" >&2; exit 1; }
   fi
 fi
