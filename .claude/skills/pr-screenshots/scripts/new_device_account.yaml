@@ -1,0 +1,29 @@
+# ABOUTME: Maestro flow that clears the keychain and the app, then creates a fresh device-only account (no Keycast, no email).
+# ABOUTME: Run: maestro --device <UDID> test -e APP_ID=<bundle id> new_device_account.yaml
+appId: ${APP_ID}
+---
+# The Nostr key lives in the keychain, which clearState keeps; without this the
+# app opens on "Continue as" the previous run's account.
+- clearKeychain
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: create_account_button
+    timeout: 60000
+# Same taps as mobile/e2e/maestro/tests/loginFreshInstall.yaml, which the PR
+# smoke lane keeps current: if one stops matching, copy the change from there.
+- tapOn:
+    id: create_account_button
+- tapOn:
+    id: use_without_backup_button
+- tapOn:
+    id: use_device_only_button
+- extendedWaitUntil:
+    visible:
+      id: profile_tab
+    timeout: 60000
+# iOS asks for notification permission shortly after sign-in.
+- tapOn:
+    text: "Don’t Allow"
+    optional: true
