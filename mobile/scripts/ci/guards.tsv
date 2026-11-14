@@ -373,3 +373,12 @@
 # surfaces in a file that does not contain the mistake. Nothing else here reads
 # import URIs.
 🎨 Verify no legacy Material/Cupertino imports (frozen at zero)	-	bash scripts/check_legacy_design_imports.sh
+
+# One Play AAB must reach every device the previous release did. A Nov 2026
+# 1.0.29 upload dropped ~16k devices because the artifact lost its 32-bit
+# (armeabi-v7a) slice. This freezes the three config-level narrowings: minSdk
+# rising above 28 (c2pa_flutter-pinned), an abiFilters list that omits
+# armeabi-v7a, and a --target-platform on the Shorebird AAB build in
+# codemagic.yaml. Not `native`: it also reads the repo-root codemagic.yaml. The
+# built AAB and the Play upload are covered by mobile/docs/ANDROID_DEVICE_SUPPORT.md.
+🤖 Verify Android device support is not narrowed (minSdk/ABI/target-platform)	-	bash scripts/check_android_device_support.sh

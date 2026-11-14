@@ -139,6 +139,14 @@ This does **not** change store submission: iOS still uploads without submitting
 for review, and Play still receives the internal-testing AAB. App Store and
 Play promotion remain explicit store operations.
 
+When promoting the Android artifact in Play Console, upload the **universal
+Shorebird AAB**, never a per-ABI split APK (those are for Zapstore / direct
+download only). If Play warns that the release **"no longer supports N
+devices"**, stop and inspect the artifact — it is almost always a 64-bit-only
+binary that dropped the 32-bit (`armeabi-v7a`) slice — rather than clicking
+through. The full device-support policy and upload runbook are in
+[`mobile/docs/ANDROID_DEVICE_SUPPORT.md`](../mobile/docs/ANDROID_DEVICE_SUPPORT.md).
+
 ## Retry publication with the original files
 
 Download and preserve the failed job's original signed artifacts from Codemagic.
