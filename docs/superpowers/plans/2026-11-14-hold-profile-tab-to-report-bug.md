@@ -307,16 +307,37 @@ Setup:
   - `supportRouteTrailProvider.overrideWith(_EmptySupportRouteTrail.new)`, a `SupportRouteTrail` subclass whose `build()` returns `const []`;
   - `bugReportServiceProvider.overrideWithValue(_MockBugReportService())`;
   - `authServiceProvider.overrideWithValue(createMockAuthService())`.
-- Take the route with `routes.whereType<GoRoute>().singleWhere((r) => r.path == BugReportScreen.path)`.
+- Name the report route `reportRoute`: `routes.whereType<GoRoute>().singleWhere((r) => r.path == BugReportScreen.path)`.
 - Define a `pageFor(tester, location)` helper:
   1. `await tester.pumpWidget(const SizedBox())`.
-  2. Call `route.pageBuilder!(tester.element(find.byType(SizedBox)), _FakeGoRouterState(...))`, where the fake carries `name: BugReportScreen.routeName`, `path: BugReportScreen.path` and `uri: Uri.parse(location)`.
+  2. Call `reportRoute.pageBuilder!(tester.element(find.byType(SizedBox)), _FakeGoRouterState(...))`, where the fake carries `name: BugReportScreen.routeName`, `path: BugReportScreen.path` and `uri: Uri.parse(location)`.
+
+The first test checks the iOS behaviour, not the flag. On a regular Cupertino
+page, a drag from the left edge pops the route; on the modal page it must not.
+Use the real route in a minimal `GoRouter`:
 
 ```dart
-testWidgets('slides up as a modal on iOS', (tester) async {
-  final page = await pageFor(tester, RoutePaths.supportReportBug);
-  expect(page, isA<MaterialPage<void>>().having(
-    (p) => p.fullscreenDialog, 'fullscreenDialog', isTrue));
+testWidgets('on iOS an edge swipe does not close the report', (tester) async {
+  final router = GoRouter(
+    routes: [
+      GoRoute(path: '/', builder: (_, _) => const Scaffold(body: Text('home'))),
+      reportRoute,
+    ],
+  );
+  addTearDown(router.dispose);
+  await tester.pumpWidget(MaterialApp.router(
+    localizationsDelegates: appLocalizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    routerConfig: router,
+  ));
+  unawaited(router.push(RoutePaths.supportReportBug));
+  await tester.pumpAndSettle();
+  expect(find.byType(BugReportScreen), findsOneWidget);
+
+  await tester.dragFrom(const Offset(2, 300), const Offset(600, 0));
+  await tester.pumpAndSettle();
+
+  expect(find.byType(BugReportScreen), findsOneWidget);
 }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
 testWidgets('keeps the regular page transition on Android', (tester) async {
@@ -350,7 +371,9 @@ testWidgets('shows the shortcut tip for every other way in', (tester) async {
 - [ ] **Step 5: Run and see it fail**
 
 Run: `mise exec -- flutter test test/router/routes/settings_routes_test.dart`
-Expected: fails because `route.pageBuilder` is null (the route still uses `builder`).
+Expected:
+- the `pageFor` tests fail because `route.pageBuilder` is null (the route still uses `builder`);
+- the edge-swipe test fails because the swipe pops the form (`BugReportScreen` not found).
 
 - [ ] **Step 6: Implement**
 
