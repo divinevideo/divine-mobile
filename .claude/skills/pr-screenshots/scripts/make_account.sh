@@ -18,7 +18,8 @@ echo "$SECRET" > "$KEY_DIR/$PUBKEY.sec"
 PROFILE=$(python3 -c 'import json, sys; print(json.dumps({"name": sys.argv[1], "display_name": sys.argv[1]}))' "$NAME")
 # Deliberately no kind 10050: an inbox relay of ws://localhost is refused by the app,
 # so DMs to it fail. With none advertised, DMs fall back to the local relay.
-# perl alarm: nak can wait forever for an OK the relay never sends.
+# nak reads an event from stdin whenever stdin is a pipe, so close it, and the
+# perl alarm covers an OK the relay never sends.
 # The secret goes in through the environment, not the command line ps shows.
-NOSTR_SECRET_KEY="$SECRET" perl -e 'alarm 30; exec @ARGV' nak event -k 0 -c "$PROFILE" "$RELAY" > /dev/null
+NOSTR_SECRET_KEY="$SECRET" perl -e 'alarm 30; exec @ARGV' nak event -k 0 -c "$PROFILE" "$RELAY" < /dev/null > /dev/null
 echo "$NPUB"
