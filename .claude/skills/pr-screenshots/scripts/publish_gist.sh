@@ -35,7 +35,8 @@ fi
 
 printf '%s\n\nReal-app screenshots: iOS simulator, LOCAL Docker stack, throwaway accounts.\n' "$DESCRIPTION" > "$WORK/README.md"
 GIST_URL=$(gh gist create "$WORK/README.md" --desc "$DESCRIPTION" | tail -1)
-# Not GID: zsh reserves that name as a read-only integer.
+# Not GID: in zsh that is the shell's integer group id, so a copy of this
+# line pasted into zsh fails with "bad math expression".
 GIST_ID=$(basename "$GIST_URL")
 echo "GIST=$GIST_URL"
 
