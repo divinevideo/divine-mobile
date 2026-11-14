@@ -47,7 +47,7 @@ navigation map below before dumping.
 | Freeze an upload mid-way | `docker compose -f local_stack/docker-compose.yml pause blossom-proxy` before the send; `… unpause blossom-proxy` straight after the shot. The stack is shared, so this freezes uploads for every session on it |
 | Capture | First wait for an element that loads **last**: "No videos yet" renders before the profile header, so wait for the header too. Then `xcrun simctl io <UDID> screenshot "$SCRATCH/NN-state.png"` and **Read the PNG** to check it shows what you claim |
 | Publish | `bash <skill-dir>/scripts/publish_gist.sh "PR <n> screenshots at <sha>" "$SCRATCH/01-profile-dark.png" "$SCRATCH/02-profile-light.png"`, naming each file you checked rather than a glob that also catches retakes → `<img>` tags with verified raw URLs |
-| Put in PR | add a `## Screenshots` table of those tags with `gh pr edit <n> --body-file …` |
+| Put in PR | Reviewers edit descriptions, so build the new body from the live one, read right before you save: `gh pr view <n> --json body -q .body > "$SCRATCH/body.md" && test -s "$SCRATCH/body.md"`, append a `## Screenshots` table of those tags, then `gh pr edit <n> --body-file "$SCRATCH/body.md"` and re-read it. On someone else's PR, post the table as a comment (`gh pr comment <n> --body-file …`) unless the author asked for it in the description |
 
 ## Navigation map (debug build: bundle id `co.openvine.app.staging`)
 
@@ -74,7 +74,7 @@ create whatever else the screen needs yourself.
 5. **Stage every state the PR claims, not just the happy path.** That includes in progress, failed, empty, after navigating away and back, and both appearances. A failure you produce for real, such as stopping a container, beats describing one.
 6. **Capture and look.** Read every PNG. Check that it shows the claimed state, and that no real names, keys or emails appear. The synthetic accounts are fine.
 7. **Publish** with `publish_gist.sh`. Run `--dry-run` first to check the files. It prints each URL only after checking it answers 200.
-8. **Write the PR section.** Add a table of states, the commit they were built from, one line on how they were captured (simulator, LOCAL stack, throwaway accounts, anything staged such as a paused container), and anything you noticed. Then fix any "Not verified" text that the screenshots now contradict. Check authorship before editing someone else's PR (`AGENTS.md`, "Working On An Existing PR").
+8. **Write the PR section.** Add a table of states, the commit they were built from, one line on how they were captured (simulator, LOCAL stack, throwaway accounts, anything staged such as a paused container), and anything you noticed. On your own PR, also fix any "Not verified" text that the screenshots now contradict. Someone else's description is theirs: check authorship first (`AGENTS.md`, "Working On An Existing PR") and follow the "Put in PR" row above.
 9. **Clean up:**
    - stop the stack (`cd mobile && mise run local_down`) only if `sim_up.sh` printed `STACK_STARTED=yes` and no other session has started using it since. Every worktree shares the one `local_stack` compose project, so `down` stops it for everyone;
    - `xcrun simctl delete <UDID>`, which removes this run's simulator, its data and the status-bar override;
