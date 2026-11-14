@@ -10,9 +10,9 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/models/moderation_presentation.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
@@ -110,6 +110,8 @@ class _NewMessageScopeState extends ConsumerState<NewMessageSheet> {
         rankingSignalsLoader: loader,
         currentUserPubkey: widget.currentUserPubkey,
         moderationPresentation: moderation,
+        // The same register the send policy refuses (#9711).
+        isRetiredRecipient: isRetiredModerationAccount,
         initialState: snapshot,
       )..add(const NewMessageSearchStarted()),
       child: _PeerLabelSync(

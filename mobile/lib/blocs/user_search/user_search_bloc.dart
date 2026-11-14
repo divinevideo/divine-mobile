@@ -51,6 +51,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     this.hasVideos = false,
     this.searchTimeout = userSearchOuterTimeout,
     this.excludedPubkey,
+    this.excludeWhere,
     this.viewerPubkey,
     FeedPerformanceTracker? feedTracker,
     UserSearchRunner? searchRunner,
@@ -65,6 +66,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
            initialState,
            rankingSignalsLoader,
            excludedPubkey,
+           excludeWhere,
            viewerPubkey,
          ),
        ) {
@@ -80,13 +82,14 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
     UserSearchState? snapshot,
     UserRankingSignalsLoader? loader,
     String? excluded,
+    bool Function(String pubkey)? excludeWhere,
     String? viewer,
   ) {
     if (snapshot == null) return const UserSearchState();
     final profiles = snapshot.results
         .where(
           (p) =>
-              (excluded == null || !pubkeysEqual(p.pubkey, excluded)) &&
+              !_isExcludedBy(excluded, excludeWhere, p.pubkey) &&
               _isListedBy(loader, viewer, p.pubkey),
         )
         .toList();
@@ -126,6 +129,11 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
   /// signed-in viewer.
   final String? excludedPubkey;
 
+  /// Omits every pubkey it matches from every result page, for accounts a
+  /// picker must never offer, such as retired moderation keys in a DM
+  /// recipient search (#9711).
+  final bool Function(String pubkey)? excludeWhere;
+
   /// The signed-in account, which global search still lists although
   /// ranking never scores it. Pickers drop it through [excludedPubkey].
   final String? viewerPubkey;
@@ -142,13 +150,20 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
   static bool _isViewer(String? viewer, String pubkey) =>
       viewer != null && viewer.isNotEmpty && pubkeysEqual(pubkey, viewer);
 
-  List<UserProfile> _visibleProfiles(Iterable<UserProfile> profiles) {
-    final excluded = excludedPubkey;
-    if (excluded == null) return profiles.toList();
-    return profiles
-        .where((profile) => !pubkeysEqual(profile.pubkey, excluded))
-        .toList();
-  }
+  static bool _isExcludedBy(
+    String? excluded,
+    bool Function(String pubkey)? excludeWhere,
+    String pubkey,
+  ) =>
+      (excluded != null && pubkeysEqual(pubkey, excluded)) ||
+      (excludeWhere?.call(pubkey) ?? false);
+
+  List<UserProfile> _visibleProfiles(Iterable<UserProfile> profiles) => profiles
+      .where(
+        (profile) =>
+            !_isExcludedBy(excludedPubkey, excludeWhere, profile.pubkey),
+      )
+      .toList();
 
   Future<
     ({List<UserProfile> profiles, Map<String, UserRankingSignals> signals})

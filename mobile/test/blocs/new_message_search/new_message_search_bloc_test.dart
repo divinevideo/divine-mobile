@@ -14,6 +14,7 @@ import 'package:openvine/blocs/new_message_search/new_message_search_bloc.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:user_ranking/user_ranking.dart';
 
@@ -61,12 +62,20 @@ void main() {
       ).thenAnswer((_) => const Stream<Set<String>>.empty());
     });
 
+    const labels = DmPeerLabels(
+      deletedAccount: 'Deleted account',
+      moderation: 'Divine Moderation',
+      formerModeration: 'Former moderation account',
+      retiredConversationClosed: 'Conversation closed',
+    );
+
     NewMessageSearchBloc createBloc() => NewMessageSearchBloc(
       profileRepository: mockProfileRepo,
       followRepository: mockFollowRepo,
       rankingSignalsLoader: rankingSignalsLoader,
       currentUserPubkey: currentUserPubkey,
       moderationPresentation: moderationPresentationOf,
+      isRetiredRecipient: isRetiredModerationAccount,
     );
 
     UserProfile createTestProfile(
@@ -179,6 +188,177 @@ void main() {
             (s) => s.contacts,
             'contacts',
             isEmpty,
+          ),
+        ],
+      );
+    });
+
+    // Nothing reads a retired moderation key, so every send to one is refused.
+    // The picker hides it rather than offering a recipient that cannot
+    // receive, whatever its custody makes the row look like (#9711).
+    group('excludes retired moderation accounts (#9711)', () {
+      final retired = kLegacyModerationPubkeys.first;
+
+      void stubNetworkResults(List<UserProfile> profiles) {
+        when(
+          () => mockProfileRepo.searchUsers(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            sortBy: any(named: 'sortBy'),
+          ),
+        ).thenAnswer((_) async => profiles);
+      }
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'omits a followed retired key from contacts',
+        setUp: () {
+          when(
+            () => mockFollowRepo.followingPubkeys,
+          ).thenReturn([retired, 'a' * 64]);
+          when(
+            () => mockProfileRepo.getCachedProfile(pubkey: retired),
+          ).thenAnswer((_) async => createTestProfile(retired, 'Mod Retired'));
+          when(
+            () => mockProfileRepo.getCachedProfile(pubkey: 'a' * 64),
+          ).thenAnswer((_) async => createTestProfile('a' * 64, 'Alice'));
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const NewMessageSearchStarted()),
+        expect: () => [
+          isA<NewMessageSearchState>().having(
+            (s) => s.contacts.map((c) => c.pubkey),
+            'contact pubkeys',
+            ['a' * 64],
+          ),
+        ],
+      );
+
+      // A contact list stores `p` tags verbatim, so the retired key can
+      // arrive as upper-case hex — the same hazard the viewer filter above
+      // handles. It is the same identity and stays omitted (#9711).
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'omits a followed retired key stored as upper-case hex from contacts',
+        setUp: () {
+          when(() => mockFollowRepo.followingPubkeys).thenReturn([
+            retired.toUpperCase(),
+          ]);
+          when(
+            () => mockProfileRepo.getCachedProfile(
+              pubkey: retired.toUpperCase(),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                createTestProfile(retired.toUpperCase(), 'Mod Retired'),
+          );
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const NewMessageSearchStarted()),
+        expect: () => [
+          isA<NewMessageSearchState>().having(
+            (s) => s.contacts,
+            'contacts',
+            isEmpty,
+          ),
+        ],
+      );
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        "omits a retired key from network results found by Divine's name",
+        setUp: () {
+          when(() => mockFollowRepo.followingPubkeys).thenReturn([]);
+          stubNetworkResults([
+            createTestProfile(kModerationPubkeyHex, 'Divine Moderation'),
+            createTestProfile(retired, 'Mod Retired'),
+          ]);
+        },
+        build: createBloc,
+        act: (bloc) => bloc
+          ..add(const NewMessageSearchPeerLabelsChanged(labels))
+          ..add(const NewMessageSearchStarted())
+          ..add(const NewMessageSearchQueryChanged('Moderation')),
+        wait: debounceDuration,
+        verify: (bloc) {
+          expect(bloc.state.status, NewMessageSearchStatus.searchSuccess);
+          expect(bloc.state.results.map((r) => r.pubkey), [
+            kModerationPubkeyHex,
+          ]);
+        },
+      );
+
+      // Asserted before the row names arrive, so the rendered-name re-check
+      // of renamed peers cannot be what drops the retired key.
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'omits a retired key found by its pasted npub',
+        setUp: () {
+          when(() => mockFollowRepo.followingPubkeys).thenReturn([]);
+          stubNetworkResults([
+            createTestProfile(retired, 'Mod Retired'),
+            createTestProfile('a' * 64, 'Alice'),
+          ]);
+        },
+        build: createBloc,
+        act: (bloc) => bloc
+          ..add(const NewMessageSearchStarted())
+          ..add(
+            NewMessageSearchQueryChanged(NostrKeyUtils.encodePubKey(retired)),
+          ),
+        wait: debounceDuration,
+        verify: (bloc) {
+          expect(bloc.state.status, NewMessageSearchStatus.searchSuccess);
+          expect(bloc.state.results.map((r) => r.pubkey), ['a' * 64]);
+        },
+      );
+
+      test('drops a retired key from a retained snapshot', () async {
+        final retiredProfile = createTestProfile(retired, 'Mod Retired');
+        final alice = createTestProfile('a' * 64, 'Alice');
+        final bloc = NewMessageSearchBloc(
+          profileRepository: mockProfileRepo,
+          followRepository: mockFollowRepo,
+          rankingSignalsLoader: rankingSignalsLoader,
+          currentUserPubkey: currentUserPubkey,
+          moderationPresentation: moderationPresentationOf,
+          isRetiredRecipient: isRetiredModerationAccount,
+          initialState: NewMessageSearchState(
+            status: NewMessageSearchStatus.idle,
+            isGroupMode: true,
+            contacts: [retiredProfile, alice],
+            results: [retiredProfile, alice],
+            networkResults: [retiredProfile],
+            selectedRecipients: [retiredProfile, alice],
+          ),
+        );
+        addTearDown(bloc.close);
+
+        Iterable<String> keys(List<UserProfile> profiles) =>
+            profiles.map((p) => p.pubkey);
+        expect(keys(bloc.state.contacts), ['a' * 64]);
+        expect(keys(bloc.state.results), ['a' * 64]);
+        expect(bloc.state.networkResults, isEmpty);
+        expect(keys(bloc.state.selectedRecipients), ['a' * 64]);
+      });
+
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'ignores a group-mode toggle of a retired key',
+        build: createBloc,
+        seed: () => const NewMessageSearchState(
+          status: NewMessageSearchStatus.idle,
+          isGroupMode: true,
+        ),
+        act: (bloc) => bloc
+          ..add(
+            NewMessageSearchRecipientToggled(
+              createTestProfile(retired, 'Mod Retired'),
+            ),
+          )
+          // The control: an ordinary recipient sent through the same handler
+          // is added, so the missing retired key is the guard at work.
+          ..add(NewMessageSearchRecipientToggled(recipients(1).single)),
+        expect: () => [
+          isA<NewMessageSearchState>().having(
+            (s) => s.selectedRecipients.map((p) => p.pubkey),
+            'selected',
+            [pubkeyAt(1)],
           ),
         ],
       );
@@ -1505,12 +1685,6 @@ void main() {
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
       const aliceNpub =
           'npub1424242424242424242424242424242424242424242424242424qamrcaj';
-      const labels = DmPeerLabels(
-        deletedAccount: 'Deleted account',
-        moderation: 'Divine Moderation',
-        formerModeration: 'Former moderation account',
-        retiredConversationClosed: 'Conversation closed',
-      );
 
       void stubContact(String pubkey, String name) {
         when(
@@ -1739,66 +1913,58 @@ void main() {
         },
       );
 
-      // Official branding follows recorded custody (#9963): the picker renders
-      // a withdrawn retired key under the neutral label, so that is what the
-      // search must match, and Divine's name must not find it.
+      // Custody decides only how a retired key would be named (#9963). The
+      // picker hides it under every custody, so neither Divine's name nor the
+      // neutral label finds it (#9711).
       for (final custody in RetiredKeyCustody.values) {
         final retired = 'c' * 64;
-        final withdrawn = custody.canStillSign;
+        final register = [
+          RetiredModerationKey(pubkeyHex: retired, custody: custody),
+        ];
 
         NewMessageSearchBloc createBlocFor() => NewMessageSearchBloc(
           profileRepository: mockProfileRepo,
           followRepository: mockFollowRepo,
           rankingSignalsLoader: rankingSignalsLoader,
           currentUserPubkey: currentUserPubkey,
-          moderationPresentation: (pubkey) => moderationPresentationOf(
-            pubkey,
-            retiredKeys: [
-              RetiredModerationKey(pubkeyHex: retired, custody: custody),
-            ],
-          ),
+          moderationPresentation: (pubkey) =>
+              moderationPresentationOf(pubkey, retiredKeys: register),
+          isRetiredRecipient: (pubkey) =>
+              register.any((key) => key.pubkeyHex == pubkey),
         );
 
-        blocTest<NewMessageSearchBloc, NewMessageSearchState>(
-          '${custody.name}: ${withdrawn ? "found by the neutral label, not "
-                    "Divine's name" : "found by Divine's name, not the neutral "
-                    "label"}',
-          setUp: () {
-            stubVanished(const {});
-            when(() => mockFollowRepo.followingPubkeys).thenReturn([retired]);
-            stubContact(retired, 'Looks Official');
-            stubNoNetworkResults();
-          },
-          build: createBlocFor,
-          act: (bloc) => loadThenSearch(
-            bloc,
-            withdrawn ? labels.formerModeration : labels.moderation,
-          ),
-          verify: (bloc) {
-            expect(bloc.state.results.map((p) => p.pubkey), contains(retired));
-          },
-        );
-
-        blocTest<NewMessageSearchBloc, NewMessageSearchState>(
-          '${custody.name}: ${withdrawn ? "not found by Divine's name" : "not found by the neutral label"}',
-          setUp: () {
-            stubVanished(const {});
-            when(() => mockFollowRepo.followingPubkeys).thenReturn([retired]);
-            stubContact(retired, 'Looks Official');
-            stubNoNetworkResults();
-          },
-          build: createBlocFor,
-          act: (bloc) => loadThenSearch(
-            bloc,
-            withdrawn ? labels.moderation : labels.formerModeration,
-          ),
-          verify: (bloc) {
-            expect(
-              bloc.state.results.map((p) => p.pubkey),
-              isNot(contains(retired)),
-            );
-          },
-        );
+        for (final name in [labels.moderation, labels.formerModeration]) {
+          blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+            '${custody.name}: not offered when searching "$name"',
+            setUp: () {
+              stubVanished(const {});
+              when(
+                () => mockFollowRepo.followingPubkeys,
+              ).thenReturn([retired, alice]);
+              stubContact(retired, 'Looks Official');
+              stubContact(alice, name);
+              when(
+                () => mockProfileRepo.searchUsers(
+                  query: any(named: 'query'),
+                  limit: any(named: 'limit'),
+                  sortBy: any(named: 'sortBy'),
+                ),
+              ).thenAnswer(
+                (_) async => [createTestProfile(retired, 'Looks Official')],
+              );
+            },
+            build: createBlocFor,
+            act: (bloc) => loadThenSearch(bloc, name),
+            verify: (bloc) {
+              // Alice carries the searched name, so the search did match.
+              expect(bloc.state.results.map((p) => p.pubkey), [alice]);
+              expect(
+                bloc.state.contacts.map((p) => p.pubkey),
+                isNot(contains(retired)),
+              );
+            },
+          );
+        }
       }
 
       blocTest<NewMessageSearchBloc, NewMessageSearchState>(

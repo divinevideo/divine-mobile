@@ -3,6 +3,7 @@
 // ABOUTME: the profile checkmark. Pinned accounts keep NIP-05 as a revocation
 // ABOUTME: lever; checkmark-only entries are release-gated.
 
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/models/moderation_presentation.dart';
 
 export 'package:openvine/models/moderation_presentation.dart';
@@ -251,9 +252,12 @@ final List<String> kLegacyModerationPubkeys = List.unmodifiable([
 /// Keyed on the pubkey alone, with no freshness gate: a message a retired key
 /// signs today is treated exactly like one predating the rotation. See
 /// `mobile/docs/RETIRED_MODERATION_KEYS.md`.
+///
+/// Like every register match below, case-insensitive: a contact list carries
+/// `p` tags verbatim, so the same key can arrive as upper-case hex (#8351).
 bool isModerationAccount(String pubkeyHex) =>
-    pubkeyHex == kModerationPubkeyHex ||
-    kLegacyModerationPubkeys.contains(pubkeyHex);
+    pubkeysEqual(pubkeyHex, kModerationPubkeyHex) ||
+    kLegacyModerationPubkeys.any((key) => pubkeysEqual(key, pubkeyHex));
 
 /// Which presentation [pubkeyHex] gets: official branding follows recorded
 /// custody (#9963).
@@ -266,9 +270,11 @@ ModerationPresentation moderationPresentationOf(
   String pubkeyHex, {
   List<RetiredModerationKey> retiredKeys = kRetiredModerationKeys,
 }) {
-  if (pubkeyHex == kModerationPubkeyHex) return ModerationPresentation.official;
+  if (pubkeysEqual(pubkeyHex, kModerationPubkeyHex)) {
+    return ModerationPresentation.official;
+  }
   for (final key in retiredKeys) {
-    if (key.pubkeyHex == pubkeyHex) {
+    if (pubkeysEqual(key.pubkeyHex, pubkeyHex)) {
       return key.custody.canStillSign
           ? ModerationPresentation.former
           : ModerationPresentation.official;
@@ -294,4 +300,4 @@ ModerationPresentation moderationPresentationOf(
 /// is why each [kRetiredModerationKeys] entry records its own custody in
 /// code — mirrored in `mobile/docs/RETIRED_MODERATION_KEYS.md`'s register.
 bool isRetiredModerationAccount(String pubkeyHex) =>
-    kLegacyModerationPubkeys.contains(pubkeyHex);
+    kLegacyModerationPubkeys.any((key) => pubkeysEqual(key, pubkeyHex));

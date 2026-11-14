@@ -9,6 +9,7 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
+import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -112,6 +113,9 @@ class _FindPeopleScopeState extends ConsumerState<FindPeopleSheet> {
         rankingSignalsLoader: loader,
         searchTimeout: widget.searchTimeout,
         excludedPubkey: widget.currentUserPubkey,
+        // Every send to a retired moderation key is refused, so it is never
+        // offered as a recipient (#9711).
+        excludeWhere: isRetiredModerationAccount,
         initialState: snapshot,
       ),
     );
