@@ -54,6 +54,7 @@ export 'relay/native_schnorr_verify.dart';
 export 'relay/publish_outcome.dart';
 export 'relay/query_outcome.dart';
 export 'relay/query_result.dart';
+export 'relay/read_scope.dart';
 export 'relay/relay.dart';
 export 'relay/relay_base.dart';
 export 'relay/relay_diagnostics.dart';

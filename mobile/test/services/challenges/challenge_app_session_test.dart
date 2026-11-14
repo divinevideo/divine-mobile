@@ -65,6 +65,7 @@ class _Client extends Mock implements NostrClient {
     bool useQueryPool = true,
     Duration timeout = const Duration(seconds: 5),
     bool requireAllRelaysSettled = false,
+    Duration? silentRelayTimeout,
     int? maxCollectedEvents,
     int? maxCollectedBytes,
   }) async {

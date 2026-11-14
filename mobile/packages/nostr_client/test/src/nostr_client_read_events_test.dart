@@ -66,6 +66,7 @@ class _ScriptedReadsNostr extends Mock implements Nostr {
     Duration timeout = const Duration(seconds: 5),
     DateTime? deadline,
     bool requireAllRelaysSettled = false,
+    Duration? silentRelayTimeout,
     int? maxCollectedEvents,
     int? maxCollectedBytes,
   }) async {
@@ -88,6 +89,7 @@ class _ControlledNostr extends Mock implements Nostr {
     Duration timeout = const Duration(seconds: 5),
     DateTime? deadline,
     bool requireAllRelaysSettled = false,
+    Duration? silentRelayTimeout,
     int? maxCollectedEvents,
     int? maxCollectedBytes,
   }) {

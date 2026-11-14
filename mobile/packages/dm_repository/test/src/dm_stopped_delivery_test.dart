@@ -108,6 +108,7 @@ void main() {
             named: 'acceptRelayClosedWhenOthersAnswered',
           ),
           timeout: any(named: 'timeout'),
+          silentRelayTimeout: any(named: 'silentRelayTimeout'),
         ),
       ).thenAnswer(
         (_) async =>
@@ -582,6 +583,7 @@ void main() {
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
             timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((invocation) async {
           final filters = (invocation.positionalArguments.first as List)
@@ -762,6 +764,7 @@ void main() {
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
             timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((invocation) async {
           await lookupGate.future;
@@ -802,6 +805,7 @@ void main() {
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
             timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) async {
           if (!lookupStarted.isCompleted) lookupStarted.complete();

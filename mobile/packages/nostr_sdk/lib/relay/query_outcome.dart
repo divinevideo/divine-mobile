@@ -3,6 +3,11 @@
 
 import 'query_result.dart';
 
+/// Why a caller's silence bound ended a read early: the relay that showed no
+/// sign of life for [bound], and whether it had left the pool before
+/// answering rather than gone quiet in it.
+typedef QuerySilence = ({String relayUrl, Duration bound, bool leftPool});
+
 /// How a one-shot query ended, as far as the relay pool can tell.
 ///
 /// `RelayPool.query` hands one to its `onOutcome` callback when the pool

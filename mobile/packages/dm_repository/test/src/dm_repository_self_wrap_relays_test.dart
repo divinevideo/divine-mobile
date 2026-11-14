@@ -109,6 +109,7 @@ void main() {
             named: 'acceptRelayClosedWhenOthersAnswered',
           ),
           timeout: any(named: 'timeout'),
+          silentRelayTimeout: any(named: 'silentRelayTimeout'),
         ),
       ).thenAnswer(
         (_) async => (events: events, timedOut: false, noRelays: false),
@@ -280,6 +281,7 @@ void main() {
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
             timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) => lookup.future);
         final repository = buildRepository();

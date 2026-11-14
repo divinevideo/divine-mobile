@@ -13,6 +13,7 @@ import 'relay/event_filter.dart';
 import 'relay/publish_outcome.dart';
 import 'relay/query_outcome.dart';
 import 'relay/query_result.dart';
+import 'relay/read_scope.dart';
 import 'relay/relay.dart';
 import 'relay/relay_diagnostics.dart';
 import 'relay/relay_pool.dart';
@@ -26,6 +27,14 @@ import 'utils/string_util.dart';
 
 class Nostr {
   late RelayPool _pool;
+
+  /// Ends each read in flight that took a `silentRelayTimeout`. Such a read
+  /// can run for a long cap, so it must not hold a closing client open.
+  final Set<void Function()> _longReadEnders = {};
+
+  /// Set by [beginClose] and [close]: a read that takes a `silentRelayTimeout`
+  /// from then on ends before it asks any relay.
+  bool _closing = false;
 
   NostrSigner nostrSigner;
 
@@ -290,16 +299,33 @@ class Nostr {
   ///
   /// [close] is the real teardown; this only has to run first, before the
   /// owner's first await. See [RelayPool.beginClose].
+  ///
+  /// It also ends every read in flight that took a `silentRelayTimeout`, as
+  /// one its relays did not finish, and makes such a read started later end
+  /// before asking any relay: it can run for a long cap, and nothing can use
+  /// what it finds once the client closes.
   void beginClose() {
+    _closing = true;
+    // The pool first: ending a read releases its query, and only a closing
+    // pool refuses the reconnect that release can start for a silent relay.
     _pool.beginClose();
+    _endLongReads();
   }
 
   void close() {
     // Idempotent, and already done by an owner that called [beginClose] first;
     // repeated here so a direct [close] closes the same window.
+    _closing = true;
     _pool.beginClose();
+    _endLongReads();
     _pool.removeAll();
     nostrSigner.close();
+  }
+
+  void _endLongReads() {
+    for (final end in [..._longReadEnders]) {
+      end();
+    }
   }
 
   void addInitQuery(
@@ -365,12 +391,28 @@ class Nostr {
   /// complete the read — see [RelayPool.query]. Such a read then runs to its
   /// deadline rather than completing on the relays that answered first.
   ///
+  /// Set [silentRelayTimeout] to let the deadline be a generous cap: the read
+  /// then also ends, as one the relays did not finish, once a relay that
+  /// still owes its answer has shown no sign of life for that long, or has
+  /// left the pool. A relay that keeps sending, for this read or for the
+  /// requests queued ahead of it on the same socket, is waited for until the
+  /// deadline, and a socket that reconnects starts the bound again. Such a
+  /// read also ends when its client begins closing, or at once when it starts
+  /// after that. However it ends early, it reports [QueryEnd.deadline]; when
+  /// silence ended it, the completion line names the relay. Keep the bound
+  /// longer than [RelayPool.authHandshakeWindow]: a relay sends nothing while
+  /// its NIP-42 handshake completes.
+  ///
+  /// A read started inside a [ReadScope] ends the same way when its owner ends
+  /// that scope, or at once when the scope had already ended.
+  ///
   /// A read that ends any other way than a complete, uncapped answer gets one
   /// [RelayDiagnosticSite.queryCompletion] line: from the pool for a read it
   /// saw, and from here under [RelayDiagnostic.clientScope] for one whose
   /// deadline had already passed, which never reaches the pool.
   ///
-  /// Throws [ArgumentError] when [filters] is empty.
+  /// Throws [ArgumentError] when [filters] is empty, or when
+  /// [silentRelayTimeout] is not positive.
   /// Optional collection budgets bound retained network events, including
   /// relays ignoring REQ limits. Excess events mark the result possibly capped.
   /// These budgets do not change socket frame decoding or normal callers.
@@ -383,6 +425,7 @@ class Nostr {
     Duration timeout = const Duration(seconds: 5),
     DateTime? deadline,
     bool requireAllRelaysSettled = false,
+    Duration? silentRelayTimeout,
     int? maxCollectedEvents,
     int? maxCollectedBytes,
   }) async {
@@ -394,6 +437,7 @@ class Nostr {
       sendAfterAuth: sendAfterAuth,
       deadline: deadline ?? clock.now().add(timeout),
       requireAllRelaysSettled: requireAllRelaysSettled,
+      silentRelayTimeout: silentRelayTimeout,
       maxCollectedEvents: maxCollectedEvents,
       maxCollectedBytes: maxCollectedBytes,
     );
@@ -635,9 +679,10 @@ class Nostr {
   }
 
   /// Runs one read for [readEvents], its wrappers and [readAllEvents]. It
-  /// says whether the caller's deadline is what ended it, what each relay
-  /// sent, as the pool counted it, which relays may have been capped without
-  /// sending anything, and which relays took the REQ: null when the deadline
+  /// says whether one of the caller's bounds ended it (its deadline, its
+  /// silence bound, or the client beginning to close), what each relay sent,
+  /// as the pool counted it, which relays may have been capped without
+  /// sending anything, and which relays took the REQ: null when such a bound
   /// ended the read, which may be before the fan-out finished.
   Future<
     ({
@@ -656,6 +701,7 @@ class Nostr {
     required bool sendAfterAuth,
     required DateTime deadline,
     required bool requireAllRelaysSettled,
+    Duration? silentRelayTimeout,
     int? maxCollectedEvents,
     int? maxCollectedBytes,
   }) async {
@@ -664,6 +710,13 @@ class Nostr {
     // rejected the same way whichever path it takes.
     if (filters.isEmpty) {
       throw ArgumentError('No filters given', 'filters');
+    }
+    if (silentRelayTimeout != null && silentRelayTimeout <= Duration.zero) {
+      throw ArgumentError.value(
+        silentRelayTimeout,
+        'silentRelayTimeout',
+        'must be positive',
+      );
     }
 
     // A deadline that has already passed ends the read before it starts. The
@@ -675,7 +728,13 @@ class Nostr {
     // same answer the timer below would have given.
     final subscriptionId = id ?? StringUtil.rndSecureNameStr(16);
     final now = clock.now();
-    if (!deadline.isAfter(now)) {
+    // A long read that starts once its client is closing ends the same way:
+    // nothing it found could be used, and it must not hold the close open.
+    final closing = silentRelayTimeout != null && _closing;
+    // So does a read whose owner already ended its scope.
+    final scope = ReadScope.current;
+    final scopeEnded = scope?.isEnded ?? false;
+    if (closing || scopeEnded || !deadline.isAfter(now)) {
       // The pool files a completion line for every read it sees; this one
       // it never will, so the line is filed here — under [clientScope],
       // which exists so a layer above the pool cannot spend the pool's
@@ -686,10 +745,15 @@ class Nostr {
           site: RelayDiagnosticSite.queryCompletion,
           level: RelayDiagnosticLevel.warning,
           relayUrl: RelayDiagnostic.clientScope,
-          message:
-              'Query $subscriptionId ended deadline before any REQ was '
-              'written: the deadline had already passed by '
-              '${now.difference(deadline).inMilliseconds}ms',
+          message: closing
+              ? 'Query $subscriptionId ended deadline before any REQ was '
+                    'written: its client is closing'
+              : scopeEnded
+              ? 'Query $subscriptionId ended deadline before any REQ was '
+                    'written: its owner had ended its reads'
+              : 'Query $subscriptionId ended deadline before any REQ was '
+                    'written: the deadline had already passed by '
+                    '${now.difference(deadline).inMilliseconds}ms',
         ),
       );
       // Growable, like every other exit: the normal path hands back
@@ -717,25 +781,33 @@ class Nostr {
     final ended = Completer<QueryOutcome>();
     var endedAtDeadline = false;
 
-    void endAtDeadline() {
+    // Ends the read on one of the caller's bounds: its deadline, its silence
+    // bound ([silence] names the relay), its client beginning to close, or its
+    // owner ending its [ReadScope].
+    void endRead({QuerySilence? silence}) {
       // The pool hands its outcome over synchronously as it completes the
       // read, so an [ended] already completed means the pool finished first.
       if (ended.isCompleted) return;
       endedAtDeadline = true;
       // Judged before unsubscribing, which forgets how each relay stood. A
       // null means something other than a completion dropped the pool's
-      // record of the read, such as an unsubscribe of its id; the deadline is
-      // still what ended it.
-      final outcome = _pool.reportQueryDeadline(subscriptionId);
+      // record of the read, such as an unsubscribe of its id; the caller's
+      // bound is still what ended it.
+      final outcome = _pool.reportQueryDeadline(
+        subscriptionId,
+        silence: silence,
+      );
       unsubscribe(subscriptionId);
       ended.complete(outcome ?? const QueryOutcome(endedBy: QueryEnd.deadline));
     }
 
     // A deadline already past fires at once: a Timer treats it as zero.
-    final deadlineTimer = Timer(
-      deadline.difference(clock.now()),
-      endAtDeadline,
-    );
+    final deadlineTimer = Timer(deadline.difference(clock.now()), endRead);
+    final silenceTimer = silentRelayTimeout == null
+        ? null
+        : _watchForSilentRelay(subscriptionId, silentRelayTimeout, endRead);
+    if (silentRelayTimeout != null) _longReadEnders.add(endRead);
+    final leaveScope = scope?.onEnd(endRead);
     try {
       final fanout = _pool.query(
         filters,
@@ -804,7 +876,36 @@ class Nostr {
       );
     } finally {
       deadlineTimer.cancel();
+      silenceTimer?.cancel();
+      _longReadEnders.remove(endRead);
+      leaveScope?.call();
     }
+  }
+
+  /// Calls [endRead] once a relay still owing [subscriptionId] its answer has
+  /// shown no sign of life for [bound], checking about once a second on a
+  /// clock that wall-clock jumps cannot move.
+  Timer _watchForSilentRelay(
+    String subscriptionId,
+    Duration bound,
+    void Function({QuerySilence? silence}) endRead,
+  ) {
+    final sinceStart = clock.stopwatch()..start();
+    const everySecond = Duration(seconds: 1);
+    return Timer.periodic(bound < everySecond ? bound : everySecond, (timer) {
+      if (sinceStart.elapsed < bound) return;
+      final silent = _pool.relaySilentOnQuery(subscriptionId, quietFor: bound);
+      if (silent != null) {
+        timer.cancel();
+        endRead(
+          silence: (
+            relayUrl: silent.relayUrl,
+            bound: bound,
+            leftPool: silent.leftPool,
+          ),
+        );
+      }
+    });
   }
 
   /// Sends a COUNT request (NIP-45) to relays and returns the count.

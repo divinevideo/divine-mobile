@@ -82,6 +82,7 @@ void main() {
             named: 'acceptRelayClosedWhenOthersAnswered',
           ),
           timeout: any(named: 'timeout'),
+          silentRelayTimeout: any(named: 'silentRelayTimeout'),
         ),
       ).thenAnswer(
         (_) async =>
