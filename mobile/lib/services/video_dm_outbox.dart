@@ -437,7 +437,14 @@ class VideoDmOutbox {
     }
     try {
       return await isArchivedVine(path);
-    } on Exception {
+    } on Exception catch (error) {
+      // The type only: a file error's message can quote the gallery path.
+      Log.warning(
+        'Archived-Vine lookup failed (${error.runtimeType}); sending the clip '
+        "and leaving the decision to the recipient's check",
+        name: _logName,
+        category: LogCategory.video,
+      );
       return true;
     }
   }
@@ -489,7 +496,7 @@ class VideoDmOutbox {
     } on FileSystemException catch (error) {
       // The message only: the exception's path names the plaintext file.
       Log.warning(
-        'Video DM $id file could not be read: ${error.message} '
+        'Video DM $id file could not be read or written: ${error.message} '
         '(${error.osError?.message})',
         name: _logName,
         category: LogCategory.video,

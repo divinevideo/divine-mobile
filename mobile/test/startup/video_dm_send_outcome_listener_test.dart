@@ -12,6 +12,7 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/services/video_dm_outbox.dart';
 import 'package:openvine/startup/video_dm_send_outcome_listener.dart';
+import 'package:unified_logger/unified_logger.dart' show LogCaptureService;
 
 class _FakeOutbox extends Fake implements VideoDmOutbox {
   final controller = StreamController<VideoDmSendOutcome>.broadcast();
@@ -91,6 +92,37 @@ void main() {
         expect(find.text(entry.value.$2()), findsOneWidget);
       });
     }
+
+    testWidgets('logs a result it has no messenger to show on', (
+      tester,
+    ) async {
+      await LogCaptureService().clearAllLogs();
+      final provider = StateProvider<VideoDmOutbox>((ref) => outbox);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            videoDmOutboxProvider.overrideWith((ref) => ref.watch(provider)),
+          ],
+          child: const VideoDmSendOutcomeListener(child: SizedBox()),
+        ),
+      );
+
+      outbox.controller.add(
+        _outcome(VideoDmOutcomeStatus.failed, sent: 1, total: 3),
+      );
+      await tester.pump();
+
+      expect(
+        [
+          for (final entry in LogCaptureService().getRecentLogs())
+            entry.message,
+        ],
+        contains(
+          'Video DM send outcome failed (1 of 3 sent) not shown: '
+          'no root messenger',
+        ),
+      );
+    });
 
     testWidgets('announces the result to screen readers', (tester) async {
       final provider = StateProvider<VideoDmOutbox>((ref) => outbox);

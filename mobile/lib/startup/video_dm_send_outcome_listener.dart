@@ -19,7 +19,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// The outbox keeps sending after the conversation screen closes, so the
 /// result cannot be shown by that screen. Resolves the messenger and
 /// localization from [NavigatorKeys.root], since this widget is mounted above
-/// the app's `MaterialApp`. An outcome with no root context is dropped.
+/// the app's `MaterialApp`. An outcome with no root context is dropped, with a
+/// log line.
 ///
 /// Resubscribes when [videoDmOutboxProvider] hands out a new outbox (an
 /// account switch).
@@ -53,10 +54,22 @@ class _VideoDmSendOutcomeListenerState
 
   void _show(VideoDmSendOutcome outcome) {
     final context = NavigatorKeys.root.currentContext;
-    if (context == null || !context.mounted) return;
-    final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations);
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (l10n == null || messenger == null) return;
+    final l10n = context == null || !context.mounted
+        ? null
+        : Localizations.of<AppLocalizations>(context, AppLocalizations);
+    final messenger = context == null || l10n == null
+        ? null
+        : ScaffoldMessenger.maybeOf(context);
+    if (context == null || l10n == null || messenger == null) {
+      Log.warning(
+        'Video DM send outcome ${outcome.status.name} '
+        '(${outcome.sentCount} of ${outcome.total} sent) not shown: '
+        'no root messenger',
+        name: 'VideoDmSendOutcomeListener',
+        category: LogCategory.ui,
+      );
+      return;
+    }
 
     final (message, isError) = switch (outcome) {
       VideoDmSendOutcome(isPartial: true) => (

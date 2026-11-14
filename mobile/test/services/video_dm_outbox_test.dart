@@ -16,6 +16,7 @@ import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/video_dm_outbox.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:unified_logger/unified_logger.dart' show LogCaptureService;
 
 class _MockDmVideoSendService extends Mock implements DmVideoSendService {}
 
@@ -916,6 +917,7 @@ void main() {
         test(
           'leaves the decision to the recipient when the Vine lookup fails',
           () async {
+            await LogCaptureService().clearAllLogs();
             outbox = createOutbox(
               clipVerifier: () => verifier,
               isArchivedVine: (_) async =>
@@ -928,6 +930,13 @@ void main() {
 
             expect(sentPaths, equals([_clipPath('clip-a')]));
             expect(outcomes.single.status, equals(VideoDmOutcomeStatus.sent));
+            final logged = [
+              for (final entry in LogCaptureService().getRecentLogs())
+                entry.message,
+            ].join('\n');
+            expect(logged, contains('Archived-Vine lookup failed'));
+            // A file error's message can quote the gallery path.
+            expect(logged, isNot(contains('no relay took the read')));
           },
         );
       });
