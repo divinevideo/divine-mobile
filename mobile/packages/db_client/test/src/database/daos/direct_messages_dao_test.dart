@@ -2789,6 +2789,211 @@ void main() {
         expect(await dao.clearUnowned(), equals(2));
         expect(await dao.countMessages(conversationId1), equals(2));
       });
+
+      group('a queued delete for everyone (#9772)', () {
+        /// The retractions the sender still waits on: the retry queue.
+        const queued = ['q_pending', 'q_unconfirmed', 'q_blocked'];
+
+        Future<void> insertFrom(
+          String id, {
+          required String sender,
+          required String? owner,
+        }) async {
+          final inserted = await dao.insertMessage(
+            id: id,
+            conversationId: conversationId1,
+            senderPubkey: sender,
+            content: id,
+            createdAt: 1700000001,
+            giftWrapId: 'gw_${id}_$owner',
+            ownerPubkey: owner,
+          );
+          expect(inserted, isTrue);
+        }
+
+        Future<void> retract(String id, {required String? owner}) async {
+          expect(
+            await dao.markMessageDeletionPending(
+              id,
+              deletionRumorJson: '{"kind":5,"e":"$id"}',
+              ownerPubkey: owner,
+            ),
+            isTrue,
+          );
+        }
+
+        /// Account A's rows in every state the cleanup must tell apart, an
+        /// unattributed queued retraction, and account B's own queue.
+        Future<void> seed() async {
+          for (final id in [...queued, 'q_sent', 'own_plain']) {
+            await insertFrom(id, sender: userA, owner: userA);
+          }
+          await insertFrom('peer_deleted', sender: userB, owner: userA);
+          await insertFrom('legacy_pending', sender: userA, owner: '');
+          await insertFrom('b_pending', sender: userB, owner: userB);
+          for (final id in [...queued, 'q_sent']) {
+            await retract(id, owner: userA);
+          }
+          await retract('legacy_pending', owner: '');
+          await retract('b_pending', owner: userB);
+          expect(
+            await dao.markMessageDeletionUnconfirmed(
+              'q_unconfirmed',
+              ownerPubkey: userA,
+            ),
+            isTrue,
+          );
+          expect(
+            await dao.markMessageDeletionBlocked(
+              'q_blocked',
+              restoreToThread: true,
+              ownerPubkey: userA,
+            ),
+            isTrue,
+          );
+          expect(
+            await dao.markMessageDeletionSent('q_sent', ownerPubkey: userA),
+            isTrue,
+          );
+          // A peer's deletion applied locally is not this account's to send.
+          expect(
+            await dao.markMessageDeleted('peer_deleted', ownerPubkey: userA),
+            isTrue,
+          );
+        }
+
+        Future<List<String>> idsOwnedBy(String? owner) async => [
+          for (final row
+              in await database.select(database.directMessages).get())
+            if (row.ownerPubkey == owner) row.id,
+        ];
+
+        test('a plain switch keeps only the leaving account queue', () async {
+          await seed();
+
+          final deleted = await dao.clearForAccountSwitch(
+            userA,
+            keepQueuedRetractions: true,
+          );
+
+          expect(deleted, equals(4));
+          expect(await idsOwnedBy(userA), unorderedEquals(queued));
+          expect(await idsOwnedBy(''), isEmpty);
+          expect(await idsOwnedBy(userB), equals(['b_pending']));
+          final kept = await dao.getMessageById(
+            'q_blocked',
+            ownerPubkey: userA,
+          );
+          expect(kept!.deletionRumorJson, equals('{"kind":5,"e":"q_blocked"}'));
+          expect(kept.deletionPublishStatus, equals('deletion_blocked'));
+        });
+
+        test('a destructive switch still deletes the queue', () async {
+          await seed();
+
+          await dao.clearForAccountSwitch(userA);
+
+          expect(await idsOwnedBy(userA), isEmpty);
+          expect(await idsOwnedBy(userB), equals(['b_pending']));
+        });
+
+        test('exact-owner deletion keeps the queue when asked', () async {
+          await seed();
+
+          final deleted = await dao.deleteAllForOwner(
+            userA,
+            keepQueuedRetractions: true,
+          );
+
+          expect(deleted, equals(3));
+          expect(await idsOwnedBy(userA), unorderedEquals(queued));
+          expect(await idsOwnedBy(''), equals(['legacy_pending']));
+          expect(await idsOwnedBy(userB), equals(['b_pending']));
+        });
+
+        test(
+          'exact-owner deletion still deletes the queue by default',
+          () async {
+            await seed();
+
+            await dao.deleteAllForOwner(userA);
+
+            expect(await idsOwnedBy(userA), isEmpty);
+          },
+        );
+
+        test('the incoming account never sees the kept queue', () async {
+          await seed();
+          await dao.clearForAccountSwitch(userA, keepQueuedRetractions: true);
+
+          expect(
+            [
+              for (final row in await dao.getRetryableOwnMessageDeletions(
+                ownerPubkey: userB,
+              ))
+                row.id,
+            ],
+            equals(['b_pending']),
+          );
+          expect(
+            [
+              for (final row in await dao.getMessagesForConversation(
+                conversationId1,
+                ownerPubkey: userB,
+              ))
+                row.id,
+            ],
+            equals(['b_pending']),
+          );
+          expect(
+            await dao.getMessageById('q_pending', ownerPubkey: userB),
+            isNull,
+          );
+          expect(
+            [
+              for (final row in await dao.getRetryableOwnMessageDeletions(
+                ownerPubkey: userA,
+              ))
+                row.id,
+            ],
+            unorderedEquals(['q_pending', 'q_unconfirmed']),
+            reason: 'the leaving account still finds its own queue',
+          );
+        });
+      });
+
+      group('deleteForOwnersNotIn', () {
+        test(
+          'deletes the rows of accounts the device no longer knows',
+          () async {
+            await insert('msg_a', userA);
+            await insert('msg_b', userB);
+            await insert('msg_null', null);
+            await insert('msg_empty', '');
+
+            final deleted = await dao.deleteForOwnersNotIn({userB});
+
+            expect(deleted, equals(1));
+            expect(
+              [
+                for (final row
+                    in await database.select(database.directMessages).get())
+                  row.id,
+              ],
+              unorderedEquals(['msg_b', 'msg_null', 'msg_empty']),
+              reason: 'unattributed rows are left to the boundary cleanup',
+            );
+          },
+        );
+
+        test('deletes nothing when every owner is known', () async {
+          await insert('msg_a', userA);
+          await insert('msg_b', userB);
+
+          expect(await dao.deleteForOwnersNotIn({userA, userB}), equals(0));
+          expect(await dao.countMessages(conversationId1), equals(2));
+        });
+      });
     });
 
     group('ownerPubkey scoping', () {

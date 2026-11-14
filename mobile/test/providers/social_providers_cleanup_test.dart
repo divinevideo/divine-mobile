@@ -906,6 +906,222 @@ void main() {
       });
     });
 
+    group('a queued delete for everyone (#9772)', () {
+      /// The retractions the sender still sees in the thread: the queue.
+      const queued = ['r-pending', 'r-unconfirmed', 'r-blocked'];
+
+      Future<void> insert(
+        String id, {
+        required String sender,
+        required String? owner,
+      }) async {
+        final inserted = await db.directMessagesDao.insertMessage(
+          id: id,
+          conversationId: _dmConversationId,
+          senderPubkey: sender,
+          content: 'message $id',
+          createdAt: 1700000000,
+          giftWrapId: 'wrap-$id-$owner',
+          ownerPubkey: owner,
+        );
+        expect(inserted, isTrue);
+      }
+
+      Future<void> retract(String id, {String? owner = _pubkeyA}) async {
+        final queuedRow = await db.directMessagesDao.markMessageDeletionPending(
+          id,
+          deletionRumorJson: '{"kind":5,"e":"$id"}',
+          ownerPubkey: owner,
+        );
+        expect(queuedRow, isTrue);
+      }
+
+      /// Account A's DM rows in every state a switch has to tell apart, and
+      /// one row of account B's.
+      Future<void> seed() async {
+        for (final id in [
+          ...queued,
+          'r-sent',
+          'own-message',
+        ]) {
+          await insert(id, sender: _pubkeyA, owner: _pubkeyA);
+        }
+        await insert('from-peer', sender: _pubkeyB, owner: _pubkeyA);
+        await insert('r-legacy', sender: _pubkeyA, owner: '');
+        await insert('b-message', sender: _pubkeyA, owner: _pubkeyB);
+        for (final id in [...queued, 'r-sent']) {
+          await retract(id);
+        }
+        await retract('r-legacy', owner: '');
+        final dao = db.directMessagesDao;
+        expect(
+          await dao.markMessageDeletionUnconfirmed(
+            'r-unconfirmed',
+            ownerPubkey: _pubkeyA,
+          ),
+          isTrue,
+        );
+        expect(
+          await dao.markMessageDeletionBlocked(
+            'r-blocked',
+            restoreToThread: true,
+            ownerPubkey: _pubkeyA,
+          ),
+          isTrue,
+        );
+        expect(
+          await dao.markMessageDeletionSent('r-sent', ownerPubkey: _pubkeyA),
+          isTrue,
+        );
+        await db.conversationsDao.upsertConversation(
+          id: _dmConversationId,
+          participantPubkeys: jsonEncode([_pubkeyA, _pubkeyB]),
+          isGroup: false,
+          createdAt: 1700000000,
+          lastMessageTimestamp: 1700000000,
+          ownerPubkey: _pubkeyA,
+        );
+        expect(
+          [
+            for (final row in await dao.getRetryableOwnMessageDeletions(
+              ownerPubkey: _pubkeyA,
+            ))
+              row.id,
+          ],
+          unorderedEquals(['r-pending', 'r-unconfirmed', 'r-legacy']),
+          reason: 'precondition: the retry sweep has work for account A',
+        );
+      }
+
+      Future<List<DirectMessageRow>> rowsOwnedBy(String owner) async => [
+        for (final row in await db.select(db.directMessages).get())
+          if (row.ownerPubkey == owner) row,
+      ];
+
+      /// [unattributedLeft] is the departed-account path, which never touches
+      /// unattributed rows because another session may be live (#8587).
+      Future<void> expectQueueKeptForA({bool unattributedLeft = false}) async {
+        final kept = await rowsOwnedBy(_pubkeyA);
+        expect(
+          [for (final row in kept) row.id],
+          unorderedEquals(queued),
+          reason:
+              "the leaving account's queued retractions are its only copy "
+              'of the kind-5 it still has to send',
+        );
+        for (final row in kept) {
+          expect(row.deletionRumorJson, equals('{"kind":5,"e":"${row.id}"}'));
+        }
+        expect(
+          [
+            for (final row
+                in await db.directMessagesDao.getRetryableOwnMessageDeletions(
+                  ownerPubkey: _pubkeyA,
+                ))
+              row.id,
+          ],
+          unorderedEquals([
+            'r-pending',
+            'r-unconfirmed',
+            if (unattributedLeft) 'r-legacy',
+          ]),
+        );
+        expect(
+          [for (final row in await rowsOwnedBy('')) row.id],
+          unattributedLeft ? equals(['r-legacy']) : isEmpty,
+          reason: 'an unattributed row never crosses an account boundary',
+        );
+        expect(
+          [for (final row in await rowsOwnedBy(_pubkeyB)) row.id],
+          equals(['b-message']),
+        );
+      }
+
+      test('survives a plain account switch', () async {
+        await seed();
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        await subscription.read().onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+        await expectQueueKeptForA();
+      });
+
+      test('survives a sign-out finished at a later sign-in', () async {
+        await seed();
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        await subscription.read().onDepartedAccountDmCleanup!(_pubkeyA);
+
+        await expectQueueKeptForA(unattributedLeft: true);
+      });
+
+      test('is swept once the account is no longer on the device', () async {
+        await seed();
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await subscription.read().onDatabaseCleanup!(userPubkey: _pubkeyA);
+        expect(
+          [for (final row in await rowsOwnedBy(_pubkeyA)) row.id],
+          unorderedEquals(queued),
+          reason: 'precondition: the switch kept the queue',
+        );
+        await prefs.setString(
+          kKnownAccountsKey,
+          jsonEncode([
+            KnownAccount(
+              pubkeyHex: _pubkeyB,
+              authSource: AuthenticationSource.importedKeys,
+              addedAt: DateTime.utc(2026),
+              lastUsedAt: DateTime.utc(2026),
+            ).toJson(),
+          ]),
+        );
+        await prefs.setString('current_user_pubkey_hex', _pubkeyB);
+
+        await subscription.read().sweepRowsOfUnknownAccounts();
+
+        expect(await rowsOwnedBy(_pubkeyA), isEmpty);
+        expect(
+          [for (final row in await rowsOwnedBy(_pubkeyB)) row.id],
+          equals(['b-message']),
+        );
+      });
+
+      for (final removal in ['erase', 'forget']) {
+        test('goes with the account on $removal', () async {
+          await seed();
+          final subscription = container.listen(
+            userDataCleanupServiceProvider,
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+
+          await subscription.read().onDatabaseCleanup!(
+            userPubkey: _pubkeyA,
+            deleteUserData: removal == 'erase',
+            forgetAccount: removal == 'forget',
+          );
+
+          expect(await rowsOwnedBy(_pubkeyA), isEmpty);
+          expect(
+            [for (final row in await rowsOwnedBy(_pubkeyB)) row.id],
+            equals(['b-message']),
+          );
+        });
+      }
+    });
+
     test(
       'an account switch clears live watch history before it can be saved',
       () async {

@@ -1880,6 +1880,25 @@ void main() {
         expect(sweeps, isEmpty);
       });
 
+      test('sweeps kept direct messages with the same accounts kept '
+          '(#9772)', () async {
+        final messageSweeps = <Set<String>>[];
+        service
+          ..onConversationSweep = null
+          ..onDirectMessageSweep = (keep) async {
+            messageSweeps.add(keep);
+            return 0;
+          };
+        await rememberAccounts([knownPubkey]);
+        await prefs.setString('current_user_pubkey_hex', activePubkey);
+
+        await service.sweepRowsOfUnknownAccounts();
+
+        expect(messageSweeps, [
+          {knownPubkey, activePubkey},
+        ]);
+      });
+
       test('sweeps queued views with the same accounts kept', () async {
         final viewSweeps = <Set<String>>[];
         service.onQueuedViewSweep = (keep) async {

@@ -249,9 +249,13 @@ queued view (#10290).
 Owner-scoped rows can also be kept on purpose. `conversations` rows survive a
 switch or sign-out while the device still knows the account, so its chats come
 back read instead of waiting for a read marker that may be outside the first
-download (#10276). They are deleted when the account is removed from the device
-or deleted, and `UserDataCleanupService.sweepRowsOfUnknownAccounts` deletes
-conversations and queued views whose owner is no longer a known account.
+download (#10276). The account's own queued delete-for-everyone retractions
+(`direct_messages` rows in `DirectMessagesDao.retractionsShownToSender`) stay
+too: each row is the only copy of a kind-5 the account still has to send, and
+the retry sweep sends it once the account is back (#9772). Both are deleted when
+the account is removed from the device or deleted, and
+`UserDataCleanupService.sweepRowsOfUnknownAccounts` deletes conversations,
+kept messages and queued views whose owner is no longer a known account.
 Keeping is only safe because every read filters by owner.
 
 Enforced by `check_prefs_key_classification.sh`; see AGENTS.md.

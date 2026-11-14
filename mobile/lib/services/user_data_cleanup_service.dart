@@ -112,6 +112,13 @@ class UserDataCleanupService {
   /// it deleted. Set by the provider layer which has access to DAOs.
   Future<int> Function(Set<String> keepOwnerPubkeys)? onConversationSweep;
 
+  /// Optional callback that deletes every DM row owned by an account outside
+  /// the given pubkeys, and returns how many it deleted. After a plain switch
+  /// those rows are the account's queued delete-for-everyone retractions
+  /// (#9772). Its DM sync cursors went with the switch, so a later sign-in
+  /// downloads its history again. Set by the provider layer.
+  Future<int> Function(Set<String> keepOwnerPubkeys)? onDirectMessageSweep;
+
   /// Optional callback that deletes queued kind 22236 view events, except
   /// those owned by the given pubkeys, and returns how many it deleted. Only
   /// the owning account can sign them, so they are useless once the device
@@ -125,17 +132,19 @@ class UserDataCleanupService {
   Future<int> Function(Set<String> keepOwnerPubkeys)? onKeptDmVideoSweep;
 
   /// Deletes what is kept for accounts this device no longer knows: DM
-  /// conversations, queued view events and received video DMs.
+  /// conversations, queued retractions, queued view events and received video
+  /// DMs.
   ///
   /// A switch or sign-out keeps the departing account's rows for its return
-  /// (#10276, #10290), but an account can later leave the known-accounts
-  /// list without its own cleanup running: pruned as no longer restorable, or
-  /// removed by a sign-out that failed part-way. Keeps the known accounts and
-  /// the active one. Skipped when the list was never written or cannot be
-  /// decoded, so an unreadable list never counts as "no accounts". Never
-  /// throws.
+  /// (#10276, #10290, #9772), but an account can later leave the
+  /// known-accounts list without its own cleanup running: pruned as no longer
+  /// restorable, or removed by a sign-out that failed part-way. Keeps the
+  /// known accounts and the active one. Skipped when the list was never
+  /// written or cannot be decoded, so an unreadable list never counts as "no
+  /// accounts". Never throws.
   Future<void> sweepRowsOfUnknownAccounts() async {
     if (onConversationSweep == null &&
+        onDirectMessageSweep == null &&
         onQueuedViewSweep == null &&
         onKeptDmVideoSweep == null) {
       return;
@@ -160,6 +169,7 @@ class UserDataCleanupService {
       return;
     }
     await _sweepUnknownOwners(onConversationSweep, keep, 'conversations');
+    await _sweepUnknownOwners(onDirectMessageSweep, keep, 'kept DM rows');
     await _sweepUnknownOwners(onQueuedViewSweep, keep, 'queued view events');
     await _sweepUnknownOwners(onKeptDmVideoSweep, keep, 'kept video DMs');
   }
