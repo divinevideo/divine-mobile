@@ -53,7 +53,7 @@ Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_
 - **Transform:** crop (locked to the video's aspect ratio), rotate by 90°, flip.
 - **Shape mask:** show the clip only inside a shape (see Shape mask below). Freeze frames take one too.
 - **Extract audio:** moves the clip's sound to its own track and mutes the clip.
-- **Save to library:** renders the trimmed clip, with the visual overlays that were over it, into a standalone clip in the library. Flashing effects and every sound track (music, voice-over, extracted audio) are left out, so a clip whose sound was extracted is saved silent.
+- **Save to library:** renders the trimmed clip, with the visual overlays that were over it, into a standalone clip in the library. Flashing effects and the sound tracks (music, voice-over) are left out. A clip whose sound was extracted keeps it, at the extracted track's volume and EQ but without its fades or voice effect, while that track still follows the clip; once the sound is moved or sped up, or the clip is split or turned into a boomerang, and for a clip with a speed curve, it is saved silent.
 - **Add clips** from the library or the camera.
 - **Volume** per clip, up to 300 % (see [Audio](#audio)). Long-pressing any volume control mutes all clips, detached clips and sound tracks, or unmutes them if everything is already muted, as one undo step.
 - **EQ:** ten octave bands of the clip's own sound (see [Audio](#audio)). Extract audio carries the setting over to the new sound track.
