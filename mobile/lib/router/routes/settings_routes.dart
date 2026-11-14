@@ -243,14 +243,13 @@ class BadgeVideosRouteData extends GoRouteData with $BadgeVideosRouteData {
   final Object? $extra;
 
   @override
-  Widget build(BuildContext context, GoRouterState state) {
-    final coordinate = BadgeCoordinate.tryParse(naddr);
-    if (coordinate == null) return const BadgesScreen();
-    return BadgeVideosScreen(
+  Widget build(BuildContext context, GoRouterState state) => _badgeScreen(
+    naddr,
+    (coordinate) => BadgeVideosScreen(
       coordinate: coordinate,
       seed: extraAs<BadgeVideosSeed>($extra),
-    );
-  }
+    ),
+  );
 }
 
 @TypedGoRoute<BadgeEditRouteData>(
