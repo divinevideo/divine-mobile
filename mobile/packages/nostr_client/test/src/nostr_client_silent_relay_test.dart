@@ -353,6 +353,54 @@ void main() {
       });
     });
 
+    test('a display read waiting for a query slot reports timedOut, not an '
+        'empty answer, when its scope ends', () {
+      fakeAsync((async) {
+        final relay = _Relay(
+          _answeringUrl,
+          events: events,
+          othersAfter: const Duration(seconds: 30),
+        );
+        final h = _client(async, [relay]);
+        for (var i = 0; i < NostrClient.maxConcurrentQueries; i++) {
+          unawaited(
+            h.client.readEvents(
+              [
+                Filter(kinds: const [EventKind.contactList]),
+              ],
+              useCache: false,
+              timeout: const Duration(seconds: 40),
+            ),
+          );
+        }
+        async.flushMicrotasks();
+        final scope = ReadScope();
+        ({List<Event> events, bool timedOut, bool noRelays})? read;
+        unawaited(
+          scope
+              .run(
+                () => h.client.queryEventsDetailed(
+                  [_page],
+                  subscriptionId: 'queued_display',
+                  useCache: false,
+                ),
+              )
+              .then((r) => read = r),
+        );
+        async.elapse(const Duration(milliseconds: 500));
+
+        scope.end();
+        async.flushMicrotasks();
+
+        expect(read, isNotNull);
+        expect(read!.events, isEmpty);
+        expect(read!.noRelays, isFalse);
+        expect(read!.timedOut, isTrue);
+        async.elapse(const Duration(seconds: 70));
+        expect(relay.reqs, isNot(contains('queued_display')));
+      });
+    });
+
     test('a read waiting for relays to reconnect ends at once when its scope '
         'ends', () {
       fakeAsync((async) {

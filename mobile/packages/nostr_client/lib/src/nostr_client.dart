@@ -1486,10 +1486,12 @@ class NostrClient {
         skippedReason = poolClosedReason;
         timedOutOverride = requireAllRelaysSettled;
       } on _ReadEndedWhileQueued {
+        // Unlike a closing pool, this is no answer for a display read either:
+        // it reports `timedOut` as the same read ended in flight does, so a
+        // caller that memoizes an empty answer does not keep this one.
         skippedReason =
             'its owner ended its reads while it waited for a query-pool '
             'slot, so the read was skipped';
-        timedOutOverride = requireAllRelaysSettled;
       } on _QueryPoolWaitExpired {
         // `Pool`'s own `timeout:` cannot express the acquisition half: it is
         // an inactivity timer reset on every acquire and release, so a busy
