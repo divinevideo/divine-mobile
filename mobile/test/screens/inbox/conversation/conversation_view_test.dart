@@ -6521,6 +6521,39 @@ void main() {
         );
       });
 
+      testWidgets('the clips of one batch read top to bottom in pick order', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              // One batch: both share a request time.
+              pendingVideoSends: [
+                pendingVideo(id: 'clip-first'),
+                pendingVideo(id: 'clip-second'),
+              ],
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          tester
+              .getTopLeft(
+                find.byKey(const ValueKey('pending-video-clip-first')),
+              )
+              .dy,
+          lessThan(
+            tester
+                .getTopLeft(
+                  find.byKey(const ValueKey('pending-video-clip-second')),
+                )
+                .dy,
+          ),
+        );
+      });
+
       testWidgets('a pending entry renders in a thread with no messages yet', (
         tester,
       ) async {
