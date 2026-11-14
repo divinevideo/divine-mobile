@@ -101,21 +101,6 @@ void main() {
   late List<List<List<String>>> sentTags;
   var idCounter = 0;
 
-  setUpAll(() {
-    registerFallbackValue(File('/tmp/fallback.mp4'));
-    registerFallbackValue((DmVideoSendPhase _) {});
-    registerFallbackValue((double _) {});
-  });
-
-  setUp(() {
-    service = _MockDmVideoSendService();
-    sends = [];
-    sentPaths = [];
-    sentTags = [];
-    readFrame = (_) async => null;
-    idCounter = 0;
-  });
-
   VideoDmOutbox createOutbox({
     ClipProvenanceVerifier? Function()? clipVerifier,
     Future<void> Function(List<DivineVideoClip> clips)? signOwnRecordings,
@@ -209,6 +194,21 @@ void main() {
   }
 
   group(VideoDmOutbox, () {
+    setUpAll(() {
+      registerFallbackValue(File('/tmp/fallback.mp4'));
+      registerFallbackValue((DmVideoSendPhase _) {});
+      registerFallbackValue((double _) {});
+    });
+
+    setUp(() {
+      service = _MockDmVideoSendService();
+      sends = [];
+      sentPaths = [];
+      sentTags = [];
+      readFrame = (_) async => null;
+      idCounter = 0;
+    });
+
     group('sendVideo', () {
       setUp(() {
         stubControlledSend();
