@@ -150,5 +150,57 @@ $extra
         });
       }
     });
+
+    group('abiFilters', () {
+      test('fails on a list that drops 32-bit', () {
+        final result = run(
+          gradle(extra: '        ndk { abiFilters += listOf("arm64-v8a") }'),
+        );
+
+        expect(result.exitCode, equals(1));
+        expect(result.stdout, contains('configures abiFilters'));
+      });
+
+      test('fails on a removal that names armeabi-v7a', () {
+        final result = run(
+          gradle(extra: '        ndk { abiFilters -= "armeabi-v7a" }'),
+        );
+
+        expect(result.exitCode, equals(1));
+        expect(result.stdout, contains('configures abiFilters'));
+      });
+
+      test('fails on any edit, even a wrapped list naming every ABI', () {
+        final result = run(
+          gradle(
+            extra: '''
+        ndk {
+            abiFilters += listOf(
+                "armeabi-v7a", "arm64-v8a", "x86_64"
+            )
+        }''',
+          ),
+        );
+
+        expect(result.exitCode, equals(1));
+        expect(result.stdout, contains('configures abiFilters'));
+      });
+
+      test('ignores abiFilters named in a comment', () {
+        final result = run(
+          gradle(extra: '        // No abiFilters: Play splits the AAB.'),
+        );
+
+        expect(result.exitCode, equals(0), reason: '${result.stdout}');
+      });
+
+      test('prints the source line it rejects', () {
+        final result = run(
+          gradle(extra: '        ndk { abiFilters.remove("x86_64") }'),
+        );
+
+        expect(result.stdout, contains('abiFilters.remove("x86_64")'));
+      });
+    });
   });
 }

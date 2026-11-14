@@ -377,7 +377,7 @@
 # One Play AAB must reach every device the previous release did. A Nov 2026
 # 1.0.29 upload dropped ~16k devices because the artifact lost its 32-bit
 # (armeabi-v7a) slice. This freezes the Gradle-level narrowings: minSdk rising
-# above 28 (c2pa_flutter-pinned) and an abiFilters list that omits armeabi-v7a.
+# above 28 (c2pa_flutter-pinned) and any abiFilters edit to Flutter's ABI set.
 # A --target-platform on a Shorebird Android build is asserted by
 # .github/scripts/tests/test_codemagic_shorebird_config.py, because this job
 # skips a codemagic.yaml-only change. Not `native`: an edit to the script alone

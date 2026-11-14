@@ -27,7 +27,8 @@ Two static checks freeze the three config-level regressions:
 - `mobile/scripts/check_android_device_support.sh` (Mobile CI `Guards` job)
   reads `android/app/build.gradle.kts`:
   1. `minSdk` rising above 28.
-  2. An `abiFilters` list that omits `armeabi-v7a`.
+  2. Any `abiFilters` setting. Flutter's Gradle plugin already sets all three
+     ABIs, so the app's Gradle file has no reason to touch them.
 - `test_android_shorebird_builds_target_every_abi` in
   `.github/scripts/tests/test_codemagic_shorebird_config.py` (Mobile CI
   `CI Configuration Tests` job) reads `codemagic.yaml`:

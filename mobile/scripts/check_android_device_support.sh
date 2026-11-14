@@ -17,9 +17,10 @@
 #      raising it drops older-OS users with no Google requirement to do so. Only
 #      `minSdk = <number>` is read: any other line naming minSdk fails, because
 #      a symbolic value such as flutter.minSdkVersion cannot be checked here.
-#   2. If android/app/build.gradle.kts sets `abiFilters`, it must keep
-#      armeabi-v7a (32-bit) — an abiFilters list that omits it narrows the ABI
-#      set the AAB ships.
+#   2. android/app/build.gradle.kts must not touch `abiFilters`. Flutter's
+#      Gradle plugin sets them to armeabi-v7a, arm64-v8a and x86_64 when it is
+#      applied, so this file has no reason to, and editing them is how the AAB
+#      loses an ABI. Any reference outside a comment fails.
 #
 # The third way, `--target-platform` on a Shorebird Android build in
 # codemagic.yaml, is asserted by
@@ -74,18 +75,20 @@ while IFS= read -r hit; do
 done <<< "$min_hits"
 
 # ---------------------------------------------------------------------------
-# 2. abiFilters must keep 32-bit, if present at all
+# 2. abiFilters stay Flutter's
 # ---------------------------------------------------------------------------
-while IFS= read -r line; do
-  [ -z "$line" ] && continue
-  if ! echo "$line" | grep -q 'armeabi-v7a'; then
-    echo "❌ abiFilters in $gradle omits armeabi-v7a (32-bit):"
-    echo "     $line"
-    echo "   A narrowing abiFilters drops 32-bit devices from the AAB."
-    echo "   Keep armeabi-v7a, or remove abiFilters to ship every ABI."
-    fail=1
-  fi
-done < <(grep -nE 'abiFilters' "$gradle" || true)
+abi_hits="$(printf '%s\n' "$code" | grep -nE 'abiFilters' || true)"
+if [ -n "$abi_hits" ]; then
+  echo "❌ $gradle configures abiFilters:"
+  while IFS= read -r hit; do
+    lineno="${hit%%:*}"
+    echo "     $lineno: $(sed -n "${lineno}p" "$gradle")"
+  done <<< "$abi_hits"
+  echo "   Flutter's Gradle plugin already sets armeabi-v7a, arm64-v8a and"
+  echo "   x86_64; editing abiFilters here is how the Play AAB loses an ABI."
+  echo "   Remove it, or update this guard and the doc together."
+  fail=1
+fi
 
 if [ "$fail" -ne 0 ]; then
   echo
@@ -95,4 +98,4 @@ if [ "$fail" -ne 0 ]; then
   exit 1
 fi
 
-echo "✅ Android device support intact: minSdk <= 28, 32-bit ABI preserved."
+echo "✅ Android device support intact: minSdk <= 28, Flutter's ABI set untouched."
