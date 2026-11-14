@@ -29,10 +29,10 @@ class _MoreActionsSection extends ConsumerWidget {
   final bool isDeletePending;
   final Future<void> Function()? onSaveOriginal;
   final Future<void> Function() onSaveWithWatermark;
-  final VoidCallback onAddToList;
+  final Future<void> Function() onAddToList;
   final VoidCallback onCopyLink;
   final VoidCallback onShareVia;
-  final VoidCallback? onEditVideo;
+  final Future<void> Function()? onEditVideo;
   final Future<void> Function()? onDeleteVideo;
   final Future<void> Function()? onCrosspost;
   final VoidCallback onCrosspostShown;
@@ -54,28 +54,22 @@ class _MoreActionsSection extends ConsumerWidget {
     );
 
     final actions = <VideoActionRowItem>[
-      if (onEditVideo != null)
-        VideoActionRowItem(
-          icon: DivineIconName.pencilSimpleLine,
-          label: context.l10n.shareMenuEditVideo,
-          onTap: onEditVideo!,
-          isDisabled: isDeletePending,
+      if (onEditVideo case final onEdit?)
+        editOwnerVideoActionItem(
+          context,
+          onEdit: onEdit,
+          isDeletePending: isDeletePending,
         ),
-      if (onDeleteVideo != null)
-        VideoActionRowItem(
-          icon: DivineIconName.trash,
-          label: context.l10n.shareMenuDeleteVideo,
-          onTap: onDeleteVideo!,
-          isPending: isDeletePending,
+      if (onDeleteVideo case final onDelete?)
+        deleteOwnerVideoActionItem(
+          context,
+          onDelete: onDelete,
+          isDeletePending: isDeletePending,
         ),
-      // `unknown` deliberately renders as "Save": an unresolved read must not
-      // claim the video is unsaved, and "Save" is the pre-existing wording.
-      VideoActionRowItem(
-        icon: DivineIconName.bookmarkSimple,
-        label: isSaved
-            ? context.l10n.shareSheetRemoveFromSaved
-            : context.l10n.shareSheetSave,
-        onTap: () => contentActions.add(const VideoContentSaveRequested()),
+      saveVideoActionItem(
+        context,
+        bloc: contentActions,
+        isSaved: isSaved,
         isPending: isSavePending,
       ),
       if (onSaveOriginal != null)
@@ -91,15 +85,7 @@ class _MoreActionsSection extends ConsumerWidget {
             : context.l10n.shareSheetSaveVideo,
         onTap: onSaveWithWatermark,
       ),
-      if (canAddToClips)
-        VideoActionRowItem(
-          icon: DivineIconName.filmSlate,
-          label: context.l10n.shareSheetAddToClips,
-          onTap: () => _runShareDetached(
-            requestAddToClips(context),
-            'request add to clips',
-          ),
-        ),
+      if (canAddToClips) addToClipsActionItem(context),
       if (onCrosspost != null)
         VideoActionRowItem(
           icon: DivineIconName.arrowsClockwise,
@@ -107,11 +93,7 @@ class _MoreActionsSection extends ConsumerWidget {
           onTap: () => unawaited(onCrosspost!.call()),
           onShown: onCrosspostShown,
         ),
-      VideoActionRowItem(
-        icon: DivineIconName.listPlus,
-        label: context.l10n.shareSheetAddToList,
-        onTap: onAddToList,
-      ),
+      addToListActionItem(context, onAddToList: onAddToList),
       VideoActionRowItem(
         icon: DivineIconName.linkSimple,
         label: context.l10n.shareSheetCopy,
@@ -123,18 +105,8 @@ class _MoreActionsSection extends ConsumerWidget {
         onTap: onShareVia,
       ),
       if (showDebugTools) ...[
-        VideoActionRowItem(
-          icon: DivineIconName.bracketsAngle,
-          label: context.l10n.shareSheetEventJson,
-          onTap: () =>
-              contentActions.add(const VideoContentCopyEventJsonRequested()),
-        ),
-        VideoActionRowItem(
-          icon: DivineIconName.copySimple,
-          label: context.l10n.shareSheetEventId,
-          onTap: () =>
-              contentActions.add(const VideoContentCopyEventIdRequested()),
-        ),
+        copyEventJsonActionItem(context, bloc: contentActions),
+        copyEventIdActionItem(context, bloc: contentActions),
       ],
     ];
 

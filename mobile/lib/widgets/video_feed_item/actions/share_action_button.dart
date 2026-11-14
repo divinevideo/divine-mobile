@@ -33,7 +33,6 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
-import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -42,15 +41,14 @@ import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/utils/watermark_text_resolver.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
 import 'package:openvine/widgets/find_people_sheet.dart';
-import 'package:openvine/widgets/owner_video_actions_sheet.dart';
 import 'package:openvine/widgets/save_original_progress_sheet.dart';
-import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/video_feed_item/actions/actions.dart';
 import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
+import 'package:openvine/widgets/video_feed_item/actions/video_content_action_items.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_rules.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -255,15 +253,17 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       isOwnContent: isOwnContent,
       canAddToClips: showAddVideoToClips,
       onFindPeople: _handleFindPeople,
-      onAddToList: _handleAddToList,
-      onEditVideo: isOwnContent ? _handleEditVideo : null,
+      onAddToList: () => openAddToList(context, widget.video),
+      onEditVideo: switch (_ownerVideoActionsCubit) {
+        null => null,
+        final cubit => () => openOwnerVideoEditor(context, widget.video, cubit),
+      },
       onDeleteVideo: switch (_ownerVideoActionsCubit) {
         null => null,
-        final cubit => () => confirmAndDeleteOwnerVideo(
-          context: context,
-          video: widget.video,
-          cubit: cubit,
-          onDeleted: () async => dismissSheet(context),
+        final cubit => () => deleteOwnerVideoFromSheet(
+          context,
+          widget.video,
+          cubit,
         ),
       },
       onSaveOriginal: isOwnContent ? _handleSaveOriginal : null,
@@ -478,31 +478,6 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     }
   }
 
-  void _handleAddToList() {
-    _runShareDetached(
-      presentAfterSheetDismiss<void>(
-        context,
-        (hostContext) => showSelectListSheet(hostContext, video: widget.video),
-      ),
-      'present list picker sheet',
-    );
-  }
-
-  void _handleEditVideo() {
-    if (_ownerVideoActionsCubit?.isDeleteInProgress(widget.video.id) ?? false) {
-      return;
-    }
-    _runShareDetached(
-      presentAfterSheetDismiss<void>(context, (hostContext) {
-        return VideoMetadataEditRouteData(
-          videoId: widget.video.id,
-          $extra: widget.video,
-        ).push<void>(hostContext);
-      }),
-      'open video metadata editor',
-    );
-  }
-
   bool _isUserOwnContent() {
     try {
       final authService = ref.read(authServiceProvider);
@@ -623,8 +598,8 @@ class _UnifiedShareSheetView extends StatelessWidget {
   final bool isOwnContent;
   final bool canAddToClips;
   final VoidCallback onFindPeople;
-  final VoidCallback onAddToList;
-  final VoidCallback? onEditVideo;
+  final Future<void> Function() onAddToList;
+  final Future<void> Function()? onEditVideo;
   final Future<void> Function()? onDeleteVideo;
   final Future<void> Function()? onSaveOriginal;
   final Future<void> Function() onSaveWithWatermark;

@@ -1,7 +1,6 @@
 // ABOUTME: Action row in the video info sheet: edit, delete, save, add to
 // ABOUTME: clips, add to list and debug copies, shared with the share sheet.
 
-import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -10,24 +9,9 @@ import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dar
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
-import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/router/routes/video_routes.dart';
-import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/widgets/owner_video_actions_sheet.dart';
-import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
-import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
-import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
+import 'package:openvine/widgets/video_feed_item/actions/video_content_action_items.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_rules.dart';
-
-void _runDetached(Future<void> operation, String description) {
-  runDetached(
-    operation,
-    description,
-    logName: 'MetadataActionsSection',
-    category: LogCategory.ui,
-  );
-}
 
 /// Content actions for [video] in the info sheet.
 ///
@@ -77,86 +61,37 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
         context.select<OwnerVideoActionsCubit, bool>(
           (cubit) => cubit.isDeleteInProgress(video.id),
         );
-    final l10n = context.l10n;
-
     final actions = <VideoActionRowItem>[
       if (ownerCubit != null) ...[
-        VideoActionRowItem(
-          icon: DivineIconName.pencilSimpleLine,
-          label: l10n.shareMenuEditVideo,
-          onTap: () => _editVideo(context, ownerCubit),
-          isDisabled: isDeletePending,
+        editOwnerVideoActionItem(
+          context,
+          onEdit: () => openOwnerVideoEditor(context, video, ownerCubit),
+          isDeletePending: isDeletePending,
         ),
-        VideoActionRowItem(
-          icon: DivineIconName.trash,
-          label: l10n.shareMenuDeleteVideo,
-          onTap: () => _runDetached(
-            confirmAndDeleteOwnerVideo(
-              context: context,
-              video: video,
-              cubit: ownerCubit,
-              onDeleted: () async => dismissSheet(context),
-            ),
-            'delete own video',
-          ),
-          isPending: isDeletePending,
+        deleteOwnerVideoActionItem(
+          context,
+          onDelete: () => deleteOwnerVideoFromSheet(context, video, ownerCubit),
+          isDeletePending: isDeletePending,
         ),
       ],
-      // `unknown` deliberately renders as "Save": an unresolved read must not
-      // claim the video is unsaved.
-      VideoActionRowItem(
-        icon: DivineIconName.bookmarkSimple,
-        label: isSaved ? l10n.shareSheetRemoveFromSaved : l10n.shareSheetSave,
-        onTap: () => contentActions.add(const VideoContentSaveRequested()),
+      saveVideoActionItem(
+        context,
+        bloc: contentActions,
+        isSaved: isSaved,
         isPending: isSavePending,
       ),
       if (canAddVideoToClips(video: video, isOwnContent: ownerCubit != null))
-        VideoActionRowItem(
-          icon: DivineIconName.filmSlate,
-          label: l10n.shareSheetAddToClips,
-          onTap: () =>
-              _runDetached(requestAddToClips(context), 'request add to clips'),
-        ),
-      VideoActionRowItem(
-        icon: DivineIconName.listPlus,
-        label: l10n.shareSheetAddToList,
-        onTap: () => _runDetached(
-          presentAfterSheetDismiss<void>(
-            context,
-            (hostContext) => showSelectListSheet(hostContext, video: video),
-          ),
-          'present list picker sheet',
-        ),
+        addToClipsActionItem(context),
+      addToListActionItem(
+        context,
+        onAddToList: () => openAddToList(context, video),
       ),
       if (showDebugTools) ...[
-        VideoActionRowItem(
-          icon: DivineIconName.bracketsAngle,
-          label: l10n.shareSheetEventJson,
-          onTap: () =>
-              contentActions.add(const VideoContentCopyEventJsonRequested()),
-        ),
-        VideoActionRowItem(
-          icon: DivineIconName.copySimple,
-          label: l10n.shareSheetEventId,
-          onTap: () =>
-              contentActions.add(const VideoContentCopyEventIdRequested()),
-        ),
+        copyEventJsonActionItem(context, bloc: contentActions),
+        copyEventIdActionItem(context, bloc: contentActions),
       ],
     ];
 
     return VideoActionRow(actions: actions);
-  }
-
-  void _editVideo(BuildContext context, OwnerVideoActionsCubit ownerCubit) {
-    if (ownerCubit.isDeleteInProgress(widget.video.id)) return;
-    _runDetached(
-      presentAfterSheetDismiss<void>(context, (hostContext) {
-        return VideoMetadataEditRouteData(
-          videoId: widget.video.id,
-          $extra: widget.video,
-        ).push<void>(hostContext);
-      }),
-      'open video metadata editor',
-    );
   }
 }
