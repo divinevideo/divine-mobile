@@ -119,6 +119,7 @@ class ConversationState extends Equatable {
     this.awaitingRetraction = const <String>{},
     this.lastPartialSend,
     this.pendingOutgoing = const <OutgoingDm>[],
+    this.pendingVideoSends = const <OutgoingVideoDm>[],
   });
 
   final ConversationStatus status;
@@ -168,6 +169,29 @@ class ConversationState extends Equatable {
   /// it, marked [OutgoingWrapStatus.cancelled], as the record behind
   /// [DmDeliveryStatus.notSentToEveryone].
   final List<OutgoingDm> pendingOutgoing;
+
+  /// This conversation's outgoing video DMs, projected from
+  /// `VideoDmOutbox.watchConversation` in request order. Render
+  /// [displayedVideoSends], which hides the ones already on screen as rows.
+  final List<OutgoingVideoDm> pendingVideoSends;
+
+  /// The pending video bubbles to render, newest request first so index 0
+  /// sits at the bottom of the reversed thread.
+  ///
+  /// A sent entry is dropped once its row is in [messages]: from then on the
+  /// row is the bubble. Until the row arrives the entry keeps the slot, so
+  /// the handoff never leaves the video off screen or shows it twice.
+  List<OutgoingVideoDm> get displayedVideoSends {
+    if (pendingVideoSends.isEmpty) return const [];
+    final messageIds = {for (final message in messages) message.id};
+    final displayed = [
+      for (final entry in pendingVideoSends)
+        if (entry.phase != OutgoingVideoDmPhase.sent ||
+            !messageIds.contains(entry.rumorEventId))
+          entry,
+    ]..sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+    return List.unmodifiable(displayed);
+  }
 
   /// Lookup by either the durable queue handle or the wire rumor id.
   ///
@@ -413,6 +437,7 @@ class ConversationState extends Equatable {
     Set<String>? awaitingRetraction,
     PartialSend? lastPartialSend,
     List<OutgoingDm>? pendingOutgoing,
+    List<OutgoingVideoDm>? pendingVideoSends,
     bool clearLastPartialSend = false,
   }) {
     return ConversationState(
@@ -424,6 +449,7 @@ class ConversationState extends Equatable {
           ? null
           : (lastPartialSend ?? this.lastPartialSend),
       pendingOutgoing: pendingOutgoing ?? this.pendingOutgoing,
+      pendingVideoSends: pendingVideoSends ?? this.pendingVideoSends,
     );
   }
 
@@ -435,6 +461,7 @@ class ConversationState extends Equatable {
     awaitingRetraction,
     lastPartialSend,
     pendingOutgoing,
+    pendingVideoSends,
   ];
 }
 
