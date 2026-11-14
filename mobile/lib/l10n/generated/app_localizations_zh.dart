@@ -4272,7 +4272,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundsShareCoverSheetTitle => '声音封面';
 
   @override
-  String get soundsImportUnsupportedFormat => '不支持该文件类型。请选择音频文件。';
+  String get soundsImportUnsupportedFormat =>
+      '不支持该文件类型。请使用 MP3、M4A、AAC、WAV 或 FLAC 文件。';
 
   @override
   String get soundsImportUnreadable => '无法读取该音频文件。';
@@ -14242,7 +14243,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundUploadChooseFile => '选择音频文件';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC、M4A、MP3 或 WAV';
+  String get soundUploadSupportedFormats => 'AAC、M4A、MP3、WAV 或 FLAC';
 
   @override
   String get soundUploadChangeFile => '更换';

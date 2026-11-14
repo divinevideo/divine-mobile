@@ -4567,7 +4567,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'Jenis fail itu tidak disokong. Pilih fail audio.';
+      'Jenis fail itu tidak disokong. Cuba MP3, M4A, AAC, WAV atau FLAC.';
 
   @override
   String get soundsImportUnreadable => 'Fail audio itu tidak dapat dibaca.';
@@ -15133,7 +15133,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get soundUploadChooseFile => 'Pilih fail audio';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 atau WAV';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV atau FLAC';
 
   @override
   String get soundUploadChangeFile => 'Tukar';

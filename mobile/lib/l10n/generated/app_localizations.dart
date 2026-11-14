@@ -7693,10 +7693,10 @@ abstract class AppLocalizations {
   /// **'Sound cover'**
   String get soundsShareCoverSheetTitle;
 
-  /// Shown when the picked file's extension is not a supported audio container.
+  /// Shown when the picked file is not one of the audio formats the app imports. Names the formats in audioPickerExtensions; keep the two in sync.
   ///
   /// In en, this message translates to:
-  /// **'That file type isn\'t supported. Pick an audio file.'**
+  /// **'That file type isn\'t supported. Try MP3, M4A, AAC, WAV or FLAC.'**
   String get soundsImportUnsupportedFormat;
 
   /// Shown when the picked file exists but cannot be opened or decoded as audio.
@@ -25317,10 +25317,10 @@ abstract class AppLocalizations {
   /// **'Choose an audio file'**
   String get soundUploadChooseFile;
 
-  /// Hint under the file picker listing the accepted audio formats. The format names stay as written.
+  /// Hint under the file picker listing the accepted audio formats. The format names stay as written. Names the formats in audioPickerExtensions; keep the two in sync.
   ///
   /// In en, this message translates to:
-  /// **'AAC, M4A, MP3, or WAV'**
+  /// **'AAC, M4A, MP3, WAV, or FLAC'**
   String get soundUploadSupportedFormats;
 
   /// Small button next to the picked audio file that opens the file picker again.

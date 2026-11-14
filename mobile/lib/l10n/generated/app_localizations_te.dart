@@ -4737,7 +4737,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'ఆ ఫైల్ రకానికి మద్దతు లేదు. ఒక ఆడియో ఫైల్‌ను ఎంచుకోండి.';
+      'ఆ ఫైల్ రకానికి మద్దతు లేదు. MP3, M4A, AAC, WAV లేదా FLAC ప్రయత్నించండి.';
 
   @override
   String get soundsImportUnreadable => 'ఆ ఆడియో ఫైల్‌ను చదవడం సాధ్యపడలేదు.';
@@ -15500,7 +15500,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get soundUploadChooseFile => 'ఆడియో ఫైల్‌ను ఎంచుకోండి';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 లేదా WAV';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV లేదా FLAC';
 
   @override
   String get soundUploadChangeFile => 'మార్చండి';

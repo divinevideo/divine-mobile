@@ -4571,7 +4571,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'Den filtypen stöds inte. Välj en ljudfil.';
+      'Den filtypen stöds inte. Testa MP3, M4A, AAC, WAV eller FLAC.';
 
   @override
   String get soundsImportUnreadable => 'Ljudfilen kunde inte läsas.';
@@ -15150,7 +15150,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get soundUploadChooseFile => 'Välj en ljudfil';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 eller WAV';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV eller FLAC';
 
   @override
   String get soundUploadChangeFile => 'Byt';

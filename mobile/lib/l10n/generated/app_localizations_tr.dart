@@ -4514,7 +4514,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'Bu dosya türü desteklenmiyor. Bir ses dosyası seç.';
+      'Bu dosya türü desteklenmiyor. MP3, M4A, AAC, WAV veya FLAC dene.';
 
   @override
   String get soundsImportUnreadable => 'Bu ses dosyası okunamadı.';
@@ -15059,7 +15059,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get soundUploadChooseFile => 'Bir ses dosyası seç';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 veya WAV';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV veya FLAC';
 
   @override
   String get soundUploadChangeFile => 'Değiştir';

@@ -4468,7 +4468,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'ይህ የፋይል አይነት አይደገፍም። የድምፅ ፋይል ይምረጡ።';
+      'ይህ የፋይል አይነት አይደገፍም። MP3፣ M4A፣ AAC፣ WAV ወይም FLAC ይሞክሩ።';
 
   @override
   String get soundsImportUnreadable => 'ያ የድምፅ ፋይል ሊነበብ አልቻለም።';
@@ -14770,7 +14770,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get soundUploadChooseFile => 'የኦዲዮ ፋይል ይምረጡ';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC፣ M4A፣ MP3 ወይም WAV';
+  String get soundUploadSupportedFormats => 'AAC፣ M4A፣ MP3፣ WAV ወይም FLAC';
 
   @override
   String get soundUploadChangeFile => 'ይቀይሩ';
