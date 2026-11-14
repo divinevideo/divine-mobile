@@ -5007,6 +5007,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get navProfile => 'Profilo';
 
   @override
+  String get navProfileLongPressHint => 'Segnala un bug';
+
+  @override
   String get navMyProfile => 'Il mio profilo';
 
   @override

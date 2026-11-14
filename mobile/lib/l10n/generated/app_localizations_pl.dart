@@ -5085,6 +5085,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'Zgłoś błąd';
+
+  @override
   String get navMyProfile => 'Mój profil';
 
   @override

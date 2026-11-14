@@ -4995,6 +4995,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get navProfile => 'Профил';
 
   @override
+  String get navProfileLongPressHint => 'Докладвай за грешка';
+
+  @override
   String get navMyProfile => 'Моят профил';
 
   @override

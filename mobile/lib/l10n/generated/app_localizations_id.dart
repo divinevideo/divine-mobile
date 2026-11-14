@@ -4865,6 +4865,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'Laporkan bug';
+
+  @override
   String get navMyProfile => 'Profilku';
 
   @override

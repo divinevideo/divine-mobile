@@ -1703,6 +1703,7 @@
   "navExplore": "Upptäck",
   "navInbox": "Inkorg",
   "navProfile": "Profil",
+  "navProfileLongPressHint": "Rapportera en bugg",
   "navMyProfile": "Min profil",
   "navNotifications": "Aviseringar",
   "navOpenCamera": "Öppna kamera",

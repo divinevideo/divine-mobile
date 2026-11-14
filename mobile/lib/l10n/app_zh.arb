@@ -2416,6 +2416,7 @@
   "navExplore": "探索",
   "navInbox": "私信",
   "navProfile": "我的",
+  "navProfileLongPressHint": "报告 Bug",
   "navMyProfile": "我的主页",
   "navNotifications": "通知",
   "navOpenCamera": "打开相机",

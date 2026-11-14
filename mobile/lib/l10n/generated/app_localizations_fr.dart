@@ -5022,6 +5022,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'Signaler un bug';
+
+  @override
   String get navMyProfile => 'Mon profil';
 
   @override

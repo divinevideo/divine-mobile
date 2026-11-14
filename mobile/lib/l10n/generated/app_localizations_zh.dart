@@ -4621,6 +4621,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navProfile => '我的';
 
   @override
+  String get navProfileLongPressHint => '报告 Bug';
+
+  @override
   String get navMyProfile => '我的主页';
 
   @override

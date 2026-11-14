@@ -4936,6 +4936,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'Laporkan pepijat';
+
+  @override
   String get navMyProfile => 'Profil Saya';
 
   @override

@@ -4943,6 +4943,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navProfile => 'الملف الشخصي';
 
   @override
+  String get navProfileLongPressHint => 'الإبلاغ عن خطأ';
+
+  @override
   String get navMyProfile => 'ملفي الشخصي';
 
   @override

@@ -4904,6 +4904,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get navProfile => 'Hồ sơ';
 
   @override
+  String get navProfileLongPressHint => 'Báo lỗi';
+
+  @override
   String get navMyProfile => 'Hồ sơ của tôi';
 
   @override

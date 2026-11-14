@@ -1288,6 +1288,7 @@
   "navExplore": "Tuklasin",
   "navInbox": "Inbox",
   "navProfile": "Profile",
+  "navProfileLongPressHint": "Mag-report ng bug",
   "navMyProfile": "Profile Ko",
   "navNotifications": "Mga notification",
   "navOpenCamera": "Buksan ang camera",

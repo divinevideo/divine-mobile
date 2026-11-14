@@ -1707,6 +1707,7 @@
   "navExplore": "Explorar",
   "navInbox": "Bandeja",
   "navProfile": "Perfil",
+  "navProfileLongPressHint": "Reportar un bug",
   "navMyProfile": "Mi perfil",
   "navNotifications": "Notificaciones",
   "navOpenCamera": "Abrir cámara",

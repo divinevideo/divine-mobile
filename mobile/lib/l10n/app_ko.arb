@@ -1239,6 +1239,7 @@
   "navExplore": "둘러보기",
   "navInbox": "받은편지함",
   "navProfile": "프로필",
+  "navProfileLongPressHint": "버그 신고하기",
   "navMyProfile": "내 프로필",
   "navNotifications": "알림",
   "navOpenCamera": "카메라 열기",

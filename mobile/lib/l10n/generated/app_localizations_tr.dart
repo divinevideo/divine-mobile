@@ -4883,6 +4883,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'Hata bildir';
+
+  @override
   String get navMyProfile => 'Profilim';
 
   @override

@@ -1703,6 +1703,7 @@
   "navExplore": "Ontdekken",
   "navInbox": "Inbox",
   "navProfile": "Profiel",
+  "navProfileLongPressHint": "Bug melden",
   "navMyProfile": "Mijn profiel",
   "navNotifications": "Meldingen",
   "navOpenCamera": "Camera openen",

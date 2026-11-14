@@ -4938,6 +4938,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'Rapportera en bugg';
+
+  @override
   String get navMyProfile => 'Min profil';
 
   @override

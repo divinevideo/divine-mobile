@@ -1703,6 +1703,7 @@
   "navExplore": "Esplora",
   "navInbox": "Inbox",
   "navProfile": "Profilo",
+  "navProfileLongPressHint": "Segnala un bug",
   "navMyProfile": "Il mio profilo",
   "navNotifications": "Notifiche",
   "navOpenCamera": "Apri fotocamera",

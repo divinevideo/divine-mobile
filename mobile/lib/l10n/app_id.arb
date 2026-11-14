@@ -1700,6 +1700,7 @@
   "navExplore": "Jelajahi",
   "navInbox": "Kotak Masuk",
   "navProfile": "Profil",
+  "navProfileLongPressHint": "Laporkan bug",
   "navMyProfile": "Profilku",
   "navNotifications": "Notifikasi",
   "navOpenCamera": "Buka kamera",

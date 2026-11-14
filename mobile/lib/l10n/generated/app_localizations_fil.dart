@@ -4973,6 +4973,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get navProfile => 'Profile';
 
   @override
+  String get navProfileLongPressHint => 'Mag-report ng bug';
+
+  @override
   String get navMyProfile => 'Profile Ko';
 
   @override

@@ -3421,6 +3421,10 @@
   "navExplore": "Explore",
   "navInbox": "Inbox",
   "navProfile": "Profile",
+  "navProfileLongPressHint": "Report a bug",
+  "@navProfileLongPressHint": {
+    "description": "TalkBack hint on the Profile tab of the bottom bar; Android reads it as 'Double-tap and hold to <hint>'. Holding the tab opens the bug report form. Use the same grammatical form as inboxConversationTileLongPressHint in each locale."
+  },
   "navMyProfile": "My Profile",
   "navNotifications": "Notifications",
   "navOpenCamera": "Open camera",

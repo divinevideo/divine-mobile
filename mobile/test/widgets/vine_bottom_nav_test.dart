@@ -1,6 +1,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -12,6 +13,7 @@ import 'package:openvine/blocs/profile_feed/profile_tab_retap_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
@@ -687,6 +689,198 @@ void main() {
             tester,
             'Failed to open camera with auto-record from bottom navigation: '
             'Bad state: push failed',
+          );
+        });
+      });
+    });
+
+    group('profile tab hold', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      late MockGoRouter router;
+
+      setUp(() {
+        router = MockGoRouter();
+        when(
+          () => router.push<Object?>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async => null);
+      });
+
+      testWidgets('a press-and-hold opens Report a Bug, marked as the hold', (
+        tester,
+      ) async {
+        await pumpSubjectWithRouter(tester, router);
+        await tester.longPress(find.bySemanticsIdentifier('profile_tab'));
+        await tester.pump();
+        verify(
+          () => router.push<Object?>(
+            RoutePaths.supportReportBugFromProfileHold,
+            extra: any(named: 'extra'),
+          ),
+        ).called(1);
+        verifyNever(() => router.go(any(), extra: any(named: 'extra')));
+      });
+
+      testWidgets('a tap does not open the report', (tester) async {
+        await pumpSubjectWithRouter(tester, router);
+        await tester.tap(find.bySemanticsIdentifier('profile_tab'));
+        await tester.pump();
+        verifyNever(
+          () => router.push<Object?>(
+            RoutePaths.supportReportBugFromProfileHold,
+            extra: any(named: 'extra'),
+          ),
+        );
+      });
+
+      // Review Focus 1
+      testWidgets('holding while already on Profile opens the report and does '
+          'not retry the profile', (tester) async {
+        await pumpSubjectWithRouter(tester, router, currentIndex: 3);
+        await tester.longPress(find.bySemanticsIdentifier('profile_tab'));
+        await tester.pump();
+        verify(
+          () => router.push<Object?>(
+            RoutePaths.supportReportBugFromProfileHold,
+            extra: any(named: 'extra'),
+          ),
+        ).called(1);
+        expect(profileRetapCubit.state, isZero);
+      });
+
+      testWidgets('gives a light haptic when the hold registers', (
+        tester,
+      ) async {
+        final calls = <MethodCall>[];
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          (call) async {
+            calls.add(call);
+            return null;
+          },
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            SystemChannels.platform,
+            null,
+          ),
+        );
+        await pumpSubjectWithRouter(tester, router);
+        await tester.longPress(find.bySemanticsIdentifier('profile_tab'));
+        await tester.pump();
+        expect(
+          calls,
+          contains(
+            isMethodCall(
+              'HapticFeedback.vibrate',
+              arguments: 'HapticFeedbackType.lightImpact',
+            ),
+          ),
+        );
+      });
+
+      testWidgets(
+        'tells TalkBack the hold reports a bug, listed once',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          await pumpSubjectWithRouter(tester, router);
+          final data = tester
+              .getSemantics(find.bySemanticsIdentifier('profile_tab'))
+              .getSemanticsData();
+          final actions = data.customSemanticsActionIds!.map(
+            CustomSemanticsAction.getAction,
+          );
+          expect(data.hasAction(SemanticsAction.longPress), isTrue);
+          expect(
+            actions
+                .singleWhere((a) => a!.action == SemanticsAction.longPress)!
+                .hint,
+            l10n.navProfileLongPressHint,
+          );
+          expect(
+            actions.where((a) => a!.label == l10n.supportReportBug),
+            isEmpty,
+          );
+          handle.dispose();
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.android),
+      );
+
+      testWidgets(
+        'offers VoiceOver a Report a Bug action that opens the report',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          await pumpSubjectWithRouter(tester, router);
+          final node = tester.getSemantics(
+            find.bySemanticsIdentifier('profile_tab'),
+          );
+          final id = CustomSemanticsAction.getIdentifier(
+            CustomSemanticsAction(label: l10n.supportReportBug),
+          );
+          expect(
+            node.getSemanticsData().customSemanticsActionIds,
+            contains(id),
+          );
+          node.owner!.performAction(node.id, SemanticsAction.customAction, id);
+          await tester.pump();
+          verify(
+            () => router.push<Object?>(
+              RoutePaths.supportReportBugFromProfileHold,
+              extra: any(named: 'extra'),
+            ),
+          ).called(1);
+          handle.dispose();
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      );
+
+      group('when opening the report fails', () {
+        late CrashReporter originalReporter;
+        late _RecordingCrashReporter reporter;
+        late LogCaptureService logCapture;
+
+        setUp(() async {
+          originalReporter = detachedFailureReporter;
+          reporter = _RecordingCrashReporter();
+          detachedFailureReporter = reporter;
+          logCapture = LogCaptureService();
+          await logCapture.clearAllLogs();
+          when(
+            () => router.push<Object?>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) async => throw StateError('push failed'));
+        });
+
+        tearDown(() async {
+          detachedFailureReporter = originalReporter;
+          await logCapture.clearAllLogs();
+        });
+
+        testWidgets('a press-and-hold logs and reports the failure', (
+          tester,
+        ) async {
+          await pumpSubjectWithRouter(tester, router);
+
+          await tester.longPress(find.bySemanticsIdentifier('profile_tab'));
+          await tester.pump();
+
+          expect(tester.takeException(), isNull);
+          final logs = logCapture
+              .getRecentLogs()
+              .where((entry) => entry.name == 'Navigation')
+              .where((entry) => entry.level == LogLevel.error);
+          expect(logs, hasLength(1));
+          expect(logs.single.category, LogCategory.ui);
+          expect(
+            logs.single.message,
+            'Failed to open the bug report from bottom navigation: '
+            'Bad state: push failed',
+          );
+          expect(
+            reporter.recordedErrors.single,
+            isA<Reportable<Object>>().having(
+              (r) => r.unwrap(),
+              'unwrap',
+              isA<StateError>(),
+            ),
           );
         });
       });
