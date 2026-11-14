@@ -269,11 +269,15 @@ schema is classified in
 
 - `salvageableLocalOnlyTables`: copied. Losing a row here loses something the
   user did (a draft, a queued report, a removed conversation).
+- `partiallySalvagedTables`: copied through a filter, for a cache that also
+  holds a few rows with no other copy. `direct_messages` keeps the queued own
+  retractions and `conversations` the conversations they are sent in (#9772);
+  the rest resyncs.
 - `tablesDroppedBySalvage`: left empty. Caches that resync, and ledgers that
   only mean something beside rows that are themselves dropped.
 
-A new table must go into one of the two; `connection_native_test.dart` fails on
-a table that is in neither (#10105). A table that describes dropped rows goes
+A new table must go into one of the three; `connection_native_test.dart` fails
+on a table that is in none (#10105). A table that describes dropped rows goes
 with them: `processed_gift_wraps` records which gift wraps needed no message
 row, so copying it while `direct_messages` is rebuilt from the relays would
 make the rebuild skip them.
@@ -288,5 +292,5 @@ Before approving a data/storage change, confirm:
 - durable local data has migration and recovery behavior
 - new Hive usage has a written justification
 - Drift schema changes are represented as real migrations
-- a new Drift table is in `salvageableLocalOnlyTables` or
-  `tablesDroppedBySalvage`
+- a new Drift table is in `salvageableLocalOnlyTables`,
+  `partiallySalvagedTables` or `tablesDroppedBySalvage`

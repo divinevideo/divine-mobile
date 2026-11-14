@@ -1362,12 +1362,179 @@ void main() {
       final schema = db.allTables.map((t) => t.actualTableName).toList()
         ..sort();
 
-      // A table in neither list comes back empty without anyone having
-      // decided that. Put a new table in `salvageableLocalOnlyTables` when its
-      // rows have no other copy, in `tablesDroppedBySalvage` when they resync.
+      // A table in no list comes back empty without anyone having decided
+      // that. Put a new table in `salvageableLocalOnlyTables` when its rows
+      // have no other copy, in `tablesDroppedBySalvage` when they resync, and
+      // in `partiallySalvagedTables` when only some of its rows are the only
+      // copy.
       expect(
-        [...salvageableLocalOnlyTables, ...tablesDroppedBySalvage]..sort(),
+        [
+          ...salvageableLocalOnlyTables,
+          ...partiallySalvagedTables.keys,
+          ...tablesDroppedBySalvage,
+        ]..sort(),
         equals(schema),
+      );
+    });
+
+    test('reads no index for the rows it copies in part (#9772)', () async {
+      final drift = AppDatabase(
+        NativeDatabase(
+          File(dbPath),
+          setup: (rawDb) => applyCipherKey(rawDb, validKey),
+        ),
+      );
+      await drift.customSelect('SELECT 1;').get();
+      await drift.close();
+      final db = sqlite3.open(dbPath);
+      addTearDown(db.close);
+      applyCipherKey(db, validKey);
+
+      // A salvage runs because a b-tree is damaged, and reading a table never
+      // walks an index. A filter the planner answers from an index would read
+      // the damaged one and stop the copy early.
+      final indexed = <String, List<String>>{
+        for (final MapEntry(key: table, value: where)
+            in partiallySalvagedTables.entries)
+          table: [
+            for (final step in db.select(
+              'EXPLAIN QUERY PLAN ${salvageSelectSql(table, where: where)}',
+            ))
+              if ((step['detail'] as String).contains('INDEX'))
+                step['detail'] as String,
+          ],
+      };
+      expect(
+        indexed,
+        equals({
+          for (final table in partiallySalvagedTables.keys) table: <String>[],
+        }),
+      );
+    });
+
+    test('keeps the queued own retractions and the conversations they are '
+        'sent in (#9772)', () async {
+      const owner =
+          '1111111111111111111111111111111111111111111111111111111111111111';
+      const peer =
+          '2222222222222222222222222222222222222222222222222222222222222222';
+      final drift = AppDatabase(
+        NativeDatabase(
+          File(dbPath),
+          setup: (rawDb) => applyCipherKey(rawDb, validKey),
+        ),
+      );
+      final messages = drift.directMessagesDao;
+      Future<void> insert(String id, String conversation, String sender) =>
+          messages.insertMessage(
+            id: id,
+            conversationId: conversation,
+            senderPubkey: sender,
+            content: id,
+            createdAt: 1700000000,
+            giftWrapId: 'gw_$id',
+            ownerPubkey: owner,
+          );
+      const queued = ['pending', 'unconfirmed', 'blocked'];
+      for (final id in [...queued, 'delivered', 'plain']) {
+        await insert(id, 'room', owner);
+      }
+      await insert('from_peer', 'other', peer);
+      for (final id in [...queued, 'delivered']) {
+        await messages.markMessageDeletionPending(
+          id,
+          deletionRumorJson: '{"kind":5}',
+          ownerPubkey: owner,
+        );
+      }
+      // Every state goes through the DAO, so the salvage filter's status
+      // names are pinned to the ones the DAO writes.
+      await messages.markMessageDeletionUnconfirmed(
+        'unconfirmed',
+        ownerPubkey: owner,
+      );
+      await messages.markMessageDeletionBlocked(
+        'blocked',
+        restoreToThread: true,
+        ownerPubkey: owner,
+      );
+      await messages.markMessageDeletionSent('delivered', ownerPubkey: owner);
+      // An unattributed row never matches its sender, so it is not salvaged.
+      await messages.insertMessage(
+        id: 'unattributed',
+        conversationId: 'room',
+        senderPubkey: owner,
+        content: 'unattributed',
+        createdAt: 1700000000,
+        giftWrapId: 'gw_unattributed',
+      );
+      expect(
+        await messages.markMessageDeletionPending(
+          'unattributed',
+          deletionRumorJson: '{"kind":5}',
+          ownerPubkey: '',
+        ),
+        isTrue,
+      );
+      for (final (id, conversationOwner) in [
+        ('room', owner),
+        ('other', owner),
+        // Same id, another account: its room is not the one being retracted.
+        ('room', peer),
+      ]) {
+        await drift.conversationsDao.upsertConversation(
+          id: id,
+          participantPubkeys: '["$owner","$peer"]',
+          isGroup: false,
+          createdAt: 1700000000,
+          ownerPubkey: conversationOwner,
+        );
+      }
+      await drift.close();
+      final damaged = sqlite3.open(dbPath);
+      try {
+        applyCipherKey(damaged, validKey);
+        _orphanIndexPages(damaged);
+      } finally {
+        damaged.close();
+      }
+      expect(
+        await encryptedDatabaseOpensWithKey(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        ),
+        isFalse,
+        reason: 'precondition: the database must fail the integrity check',
+      );
+
+      expect(
+        await salvageCorruptEncryptedDatabase(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        ),
+        isTrue,
+      );
+
+      final salvaged = sqlite3.open(dbPath);
+      addTearDown(salvaged.close);
+      applyCipherKey(salvaged, validKey);
+      List<(String, String)> rowsOf(String table) => [
+        for (final row in salvaged.select(
+          'SELECT id, owner_pubkey FROM "$table";',
+        ))
+          (row['id'] as String, row['owner_pubkey'] as String),
+      ];
+      expect(
+        rowsOf('direct_messages'),
+        unorderedEquals([for (final id in queued) (id, owner)]),
+        reason:
+            'an unsent retraction has no copy on any relay; the rest of the '
+            'DM history is downloaded again',
+      );
+      expect(
+        rowsOf('conversations'),
+        equals([('room', owner)]),
+        reason: 'the retry reads its recipients from the conversation',
       );
     });
   });
