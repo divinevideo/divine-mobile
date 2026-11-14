@@ -24,12 +24,31 @@ import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/connection_status_service.dart';
+import 'package:openvine/services/video_dm_outbox.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockDmRepository extends Mock implements DmRepository {}
 
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockVideoDmOutbox extends Mock implements VideoDmOutbox {}
+
+/// Pushes [page] when tapped, so a test can leave and re-enter it.
+class _ConversationOpener extends StatelessWidget {
+  const _ConversationOpener({required this.page});
+
+  final Widget page;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onTap: () => Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => page)),
+    child: const SizedBox.expand(),
+  );
+}
 
 /// The real service arms a 30s periodic timer in its constructor, which
 /// would still be pending when the tree is torn down.
@@ -145,6 +164,57 @@ void main() {
         await tester.pump();
 
         expect(find.byType(ConversationView), findsOneWidget);
+      });
+
+      testWidgets('the pending bubble is shown again after the page is '
+          'popped and re-pushed while the outbox still holds it', (
+        tester,
+      ) async {
+        final outbox = _MockVideoDmOutbox();
+        final entry = OutgoingVideoDm(
+          id: 'video-1',
+          conversationId: testConversationId,
+          recipientPubkey: otherPubkey,
+          localPath: '/tmp/clip.mp4',
+          requestedAt: DateTime(2026, 11, 13),
+          phase: OutgoingVideoDmPhase.uploading,
+          uploadProgress: 0.5,
+        );
+        when(
+          () => outbox.watchConversation(testConversationId),
+        ).thenAnswer((_) => Stream.value([entry]));
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: const _ConversationOpener(
+              page: ConversationPage(
+                conversationId: testConversationId,
+                participantPubkeys: [otherPubkey],
+              ),
+            ),
+            mockAuthService: mockAuthService,
+            additionalOverrides: [
+              isDmRestrictedProvider.overrideWithValue(false),
+              dmRepositoryProvider.overrideWithValue(mockDmRepository),
+              videoDmOutboxProvider.overrideWithValue(outbox),
+              fetchUserProfileProvider(
+                otherPubkey,
+              ).overrideWith((ref) async => null),
+            ],
+          ),
+        );
+
+        await tester.tap(find.byType(_ConversationOpener));
+        await tester.pumpAndSettle();
+        expect(find.byType(PendingVideoBubble), findsOneWidget);
+
+        tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+        await tester.pumpAndSettle();
+        expect(find.byType(ConversationView), findsNothing);
+
+        await tester.tap(find.byType(_ConversationOpener));
+        await tester.pumpAndSettle();
+        expect(find.byType(PendingVideoBubble), findsOneWidget);
+        verify(() => outbox.watchConversation(testConversationId)).called(2);
       });
 
       // Those three actions are for message requests. Opening a chat already
