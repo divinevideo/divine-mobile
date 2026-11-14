@@ -1062,6 +1062,12 @@ class NostrClient {
   /// relay that sent `CLOSED` carries a category: one whose NIP-42 gate shut
   /// before it sent a frame counts as closed without one.
   ///
+  /// [silentRelayTimeout] turns [timeout] into a cap for a read that may
+  /// legitimately take long: the read also ends, unfinished, once a relay that
+  /// still owes its answer has sent no frame at all for that long. A relay
+  /// still sending, for this read or the requests queued ahead of it, is
+  /// waited for. See [Nostr.readEvents].
+  ///
   /// `noRelays` says nothing was asked, whatever the flag. It covers a client
   /// with no connected relay and no temp relay, a client already disposed when
   /// the call arrived, and a fan-out no relay took — the last of which a
@@ -1098,6 +1104,7 @@ class NostrClient {
     Duration timeout = const Duration(seconds: 5),
     bool requireAllRelaysSettled = false,
     bool acceptRelayClosedWhenOthersAnswered = false,
+    Duration? silentRelayTimeout,
   }) async {
     final first = await _read(
       filters,
@@ -1109,6 +1116,7 @@ class NostrClient {
       useQueryPool: useQueryPool,
       timeout: timeout,
       requireAllRelaysSettled: requireAllRelaysSettled,
+      silentRelayTimeout: silentRelayTimeout,
     );
     // Only a read that would otherwise report `timedOut` has anything for
     // the refusals to settle.
@@ -1180,6 +1188,7 @@ class NostrClient {
     bool useQueryPool = true,
     Duration timeout = const Duration(seconds: 5),
     bool requireAllRelaysSettled = false,
+    Duration? silentRelayTimeout,
     int? maxCollectedEvents,
     int? maxCollectedBytes,
   }) async {
@@ -1193,6 +1202,7 @@ class NostrClient {
       useQueryPool: useQueryPool,
       timeout: timeout,
       requireAllRelaysSettled: requireAllRelaysSettled,
+      silentRelayTimeout: silentRelayTimeout,
       maxCollectedEvents: maxCollectedEvents,
       maxCollectedBytes: maxCollectedBytes,
     );
@@ -1244,6 +1254,7 @@ class NostrClient {
     required bool useQueryPool,
     required Duration timeout,
     required bool requireAllRelaysSettled,
+    Duration? silentRelayTimeout,
     int? maxCollectedEvents,
     int? maxCollectedBytes,
   }) async {
@@ -1369,6 +1380,7 @@ class NostrClient {
       sendAfterAuth: sendAfterAuth,
       deadline: deadline,
       requireAllRelaysSettled: requireAllRelaysSettled,
+      silentRelayTimeout: silentRelayTimeout,
       maxCollectedEvents: maxCollectedEvents,
       maxCollectedBytes: maxCollectedBytes,
     );
