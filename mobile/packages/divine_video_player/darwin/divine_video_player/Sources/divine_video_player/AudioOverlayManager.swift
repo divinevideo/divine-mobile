@@ -3,8 +3,9 @@ import AVFoundation
 /// Manages audio overlay tracks that play alongside the main video.
 ///
 /// Each overlay is an independent `AVPlayer` instance positioned and
-/// synced to the main video timeline. Drift correction keeps audio
-/// aligned within ``driftThreshold``.
+/// synced to the main video timeline. Drift correction keeps audio aligned
+/// within ``AudioOverlaySeekLead/driftThresholdSec``, its seeks aimed ahead
+/// by the time a seek stands still; see ``AudioOverlaySeekLead``.
 ///
 /// A track's ``AudioOverlayFade`` and ``AudioOverlayVolumeCurve`` are played
 /// by an `AVAudioMix` on its player item, whose volume ramps run in the
@@ -20,8 +21,12 @@ final class AudioOverlayManager {
 
     private let log = DivineVideoPlayerLog.shared
     private var overlays: [AudioOverlayEntry] = []
-    private let driftThreshold: Double = 0.25
     private let logName = "AudioOverlayManager"
+
+    /// How long seeks stand still, learned across tracks set again: the
+    /// editor sets them anew on every confirmed change.
+    private var seekLead = AudioOverlaySeekLead()
+    private var seekCount = 0
 
     /// Equalized copies of the stretches the tracks play, by source,
     /// stretch and equalizer. Kept while a track plays one, so tracks set
@@ -337,6 +342,7 @@ final class AudioOverlayManager {
         entry.player.pause()
         entry.isActive = false
         entry.player.replaceCurrentItem(with: makeItem(url: file.url, for: entry))
+        entry.pendingSeek = nil
         entry.playingStartSec = file.startSec
         entry.playingEqualizer = equalizer
         entry.mixInputs = nil
@@ -378,10 +384,22 @@ final class AudioOverlayManager {
                 "Audio overlay track \(entry.trackIndex): resuming at speed \(speed * entry.speed)",
                 name: logName
             )
-            entry.player.play()
-            entry.player.rate = Float(speed * entry.speed)
+            play(entry, rate: speed * entry.speed)
             reportStatusIfChanged(for: entry, context: "resume")
         }
+    }
+
+    /// Plays `entry` at [rate].
+    ///
+    /// The rate goes in as the player's default rate, which `play()` starts
+    /// at. Starting at 1 and changing the rate straight after left the
+    /// clock of a track at its own speed standing still for over 0.7 s, often
+    /// until it was seeked again, in up to 11 of 16 starts after a seek:
+    /// measured on macOS for a 0.8x track on a Bluetooth route. At 1x, and
+    /// started this way at any rate, it never did.
+    private func play(_ entry: AudioOverlayEntry, rate: Double) {
+        entry.player.defaultRate = Float(rate)
+        entry.player.play()
     }
 
     /// Pauses all overlay players and marks them inactive.
@@ -403,6 +421,7 @@ final class AudioOverlayManager {
     /// Updates playback speed on currently active overlay players.
     func setSpeed(_ speed: Double) {
         for entry in overlays where entry.isActive {
+            entry.player.defaultRate = Float(speed * entry.speed)
             entry.player.rate = Float(speed * entry.speed)
         }
     }
@@ -441,36 +460,40 @@ final class AudioOverlayManager {
                     continue
                 }
 
+                let rate = speed * entry.speed
                 if !entry.isActive {
-                    let audioTime = CMTime(
-                        seconds: expectedAudioSec - entry.playingStartSec, preferredTimescale: 600)
                     log.info(
                         "Audio overlay track \(entry.trackIndex): starting playback " +
-                            "at \(expectedAudioSec)s, speed \(speed * entry.speed)",
+                            "at \(expectedAudioSec)s, speed \(rate), " +
+                            "aimed \(seekLead.aheadSec(rate: rate))s ahead",
                         name: logName
                     )
-                    seek(entry, to: audioTime, reason: "playback start")
-                    entry.player.play()
-                    entry.player.rate = Float(speed * entry.speed)
+                    seekOntoPicture(
+                        entry, atSec: expectedAudioSec, rate: rate, reason: "playback start")
+                    play(entry, rate: rate)
                     entry.isActive = true
                     reportStatusIfChanged(for: entry, context: "playback start")
                 } else {
                     // Correct drift, measured in video time: that is how far
                     // the sound is off the picture, whatever the track's speed.
-                    let actualSec =
-                        CMTimeGetSeconds(entry.player.currentTime()) + entry.playingStartSec
-                    let drift = entry.videoSec(ofFileSec: abs(expectedAudioSec - actualSec))
-                    if drift > driftThreshold {
-                        #if DEBUG
-                        print(
-                            "[AudioOverlay] track \(entry.trackIndex): " +
-                                "drift correction \(drift)s"
+                    let playerSec = CMTimeGetSeconds(entry.player.currentTime())
+                    let behindSec = expectedAudioSec - (playerSec + entry.playingStartSec)
+                    if seekLead.needsSeek(
+                        behindSec: behindSec,
+                        trackSpeed: entry.speed,
+                        rate: rate,
+                        playerSec: playerSec,
+                        pending: &entry.pendingSeek,
+                        now: ProcessInfo.processInfo.systemUptime
+                    ) {
+                        log.debug(
+                            "Audio overlay track \(entry.trackIndex): " +
+                                "\(entry.videoSec(ofFileSec: behindSec))s behind the picture, " +
+                                "seeking \(seekLead.aheadSec(rate: rate))s ahead",
+                            name: logName
                         )
-                        #endif
-                        let audioTime = CMTime(
-                            seconds: expectedAudioSec - entry.playingStartSec,
-                            preferredTimescale: 600)
-                        seek(entry, to: audioTime, reason: "drift correction")
+                        seekOntoPicture(
+                            entry, atSec: expectedAudioSec, rate: rate, reason: "drift correction")
                     }
                 }
             } else {
@@ -641,7 +664,37 @@ final class AudioOverlayManager {
         CMTime(seconds: max(seconds, 0), preferredTimescale: 44_100)
     }
 
-    private func seek(_ entry: AudioOverlayEntry, to time: CMTime, reason: String) {
+    /// Seeks `entry` to where its sound belongs at the picture, [audioSec]
+    /// of its source, aimed ahead by what it plays while the seek stands
+    /// still at [rate]; see ``AudioOverlaySeekLead``.
+    private func seekOntoPicture(
+        _ entry: AudioOverlayEntry,
+        atSec audioSec: Double,
+        rate: Double,
+        reason: String
+    ) {
+        let targetSec = max(audioSec + seekLead.aheadSec(rate: rate) - entry.playingStartSec, 0)
+        seekCount += 1
+        let id = seekCount
+        entry.pendingSeek = AudioOverlayPendingSeek(
+            id: id, targetSec: targetSec, issuedAt: ProcessInfo.processInfo.systemUptime)
+        seek(entry, to: CMTime(seconds: targetSec, preferredTimescale: 600), reason: reason) {
+            [weak entry] completed in
+            guard let entry, entry.pendingSeek?.id == id else { return }
+            if completed {
+                entry.pendingSeek?.landed = true
+            } else {
+                entry.pendingSeek = nil
+            }
+        }
+    }
+
+    private func seek(
+        _ entry: AudioOverlayEntry,
+        to time: CMTime,
+        reason: String,
+        onCompletion: ((Bool) -> Void)? = nil
+    ) {
         entry.player.seek(
             to: time,
             toleranceBefore: .zero,
@@ -652,6 +705,7 @@ final class AudioOverlayManager {
             // overlay state happens on the main queue, so hop back before
             // touching the entry's last-reported status fields.
             DispatchQueue.main.async {
+                onCompletion?(completed)
                 guard let self, let entry else { return }
                 let message = "Audio overlay track \(entry.trackIndex): " +
                     "\(reason) seek completed=\(completed)"
@@ -749,6 +803,8 @@ final class AudioOverlayEntry {
     var playingStartSec: Double = 0
     /// Whether the track waits, silent, for its first equalized copy.
     var isAwaitingEqualizer = false
+    /// The seek of its player that has not played yet, if any.
+    var pendingSeek: AudioOverlayPendingSeek?
     /// Bumped by every equalizer change, so a render still running belongs
     /// to the latest.
     var equalizerGeneration = 0
