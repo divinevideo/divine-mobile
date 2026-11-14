@@ -66,7 +66,6 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
         editOwnerVideoActionItem(
           context,
           onEdit: () => openOwnerVideoEditor(context, video, ownerCubit),
-          isDeletePending: isDeletePending,
         ),
         deleteOwnerVideoActionItem(
           context,
@@ -92,6 +91,6 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
       ],
     ];
 
-    return VideoActionRow(actions: actions);
+    return VideoActionRow(actions: actions, isLocked: isDeletePending);
   }
 }

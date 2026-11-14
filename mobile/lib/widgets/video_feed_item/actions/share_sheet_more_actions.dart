@@ -55,11 +55,7 @@ class _MoreActionsSection extends ConsumerWidget {
 
     final actions = <VideoActionRowItem>[
       if (onEditVideo case final onEdit?)
-        editOwnerVideoActionItem(
-          context,
-          onEdit: onEdit,
-          isDeletePending: isDeletePending,
-        ),
+        editOwnerVideoActionItem(context, onEdit: onEdit),
       if (onDeleteVideo case final onDelete?)
         deleteOwnerVideoActionItem(
           context,
@@ -113,6 +109,7 @@ class _MoreActionsSection extends ConsumerWidget {
     return VideoActionRow(
       title: context.l10n.shareSheetMoreActions,
       actions: actions,
+      isLocked: isDeletePending,
     );
   }
 }

@@ -262,6 +262,26 @@ void main() {
         },
       );
 
+      testWidgets(
+        'holds Save and Add to clips while the video is being deleted',
+        (tester) async {
+          stubContentActions();
+          final ownerCubit = stubbedOwnerCubit() as _MockOwnerVideoActionsCubit;
+          when(() => ownerCubit.isDeleteInProgress(any())).thenReturn(true);
+          await tester.pumpWidget(
+            buildSubject(video: _video(), ownerCubit: ownerCubit),
+          );
+
+          await tester.tap(find.text(l10n.shareSheetSave));
+          await tester.tap(find.text(l10n.shareSheetAddToClips));
+          // The delete spinner never settles; give a sheet time to open.
+          await tester.pump(const Duration(seconds: 1));
+
+          verifyNever(() => contentActions.add(any()));
+          expect(find.byType(ClipTitleSheet), findsNothing);
+        },
+      );
+
       testWidgets('tapping Save requests a bookmark toggle', (tester) async {
         stubContentActions();
         await tester.pumpWidget(buildSubject(video: _classicVine));

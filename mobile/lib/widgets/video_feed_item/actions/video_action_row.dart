@@ -35,12 +35,22 @@ class VideoActionRowItem {
 /// A horizontally scrolling row of [VideoActionRowItem]s with an optional
 /// heading above it.
 class VideoActionRow extends StatelessWidget {
-  const VideoActionRow({required this.actions, this.title, super.key});
+  const VideoActionRow({
+    required this.actions,
+    this.title,
+    this.isLocked = false,
+    super.key,
+  });
 
   final List<VideoActionRowItem> actions;
 
   /// Heading shown above the row; no heading is rendered when null.
   final String? title;
+
+  /// Whether an operation in flight holds the whole row, such as a delete
+  /// that closes the sheet when it finishes. Every action not already pending
+  /// is disabled, so none can close the sheet first and lose the outcome.
+  final bool isLocked;
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +86,8 @@ class VideoActionRow extends StatelessWidget {
                   label: action.label,
                   onTap: action.onTap,
                   isPending: action.isPending,
-                  isDisabled: action.isDisabled,
+                  isDisabled:
+                      action.isDisabled || (isLocked && !action.isPending),
                 );
                 final onShown = action.onShown;
                 if (onShown == null) return circle;

@@ -38,6 +38,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
+import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
@@ -70,6 +71,9 @@ class _MockVideoClipImportService extends Mock
     implements VideoClipImportService {}
 
 class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
+
+class _MockContentDeletionService extends Mock
+    implements ContentDeletionService {}
 
 class _MockCrosspostingApiClient extends Mock
     implements CrosspostingApiClient {}
@@ -118,6 +122,7 @@ void main() {
   });
   setUpAll(() {
     registerFallbackValue(_FakeVideoEvent());
+    registerFallbackValue(DeleteReason.personalChoice);
   });
 
   group(ShareActionButton, () {
@@ -1017,6 +1022,50 @@ void main() {
 
           expect(find.byType(SelectListSheetBody), findsOneWidget);
         });
+
+        testWidgets(
+          'holds the other actions while the video is being deleted',
+          (tester) async {
+            final deletionService = _MockContentDeletionService();
+            final deletion = Completer<DeleteResult>();
+            when(
+              () => deletionService.quickDelete(
+                video: any(named: 'video'),
+                reason: any(named: 'reason'),
+              ),
+            ).thenAnswer((_) => deletion.future);
+            _fakeListService = _MockCuratedListService();
+            when(
+              () => _fakeListService!.pickerListsForOwner(any()),
+            ).thenReturn(const []);
+            when(() => _fakeListService!.isCurrentSession).thenReturn(true);
+            await pumpOwnerSheet(
+              tester,
+              additionalOverrides: [
+                contentDeletionServiceProvider.overrideWith(
+                  (ref) async => deletionService,
+                ),
+              ],
+            );
+
+            await tester.tap(find.text(l10n.shareMenuDeleteVideo));
+            await tester.pumpAndSettle();
+            await tester.tap(find.text(l10n.shareMenuDelete));
+            // The delete spinner never settles, so pump past the dialog's exit
+            // and the sheet's would-be dismissal instead.
+            await tester.pump(const Duration(seconds: 1));
+            await tester.tap(find.text(l10n.shareSheetAddToList));
+            await tester.pump(const Duration(seconds: 1));
+
+            expect(find.byType(SelectListSheetBody), findsNothing);
+            expect(find.text(l10n.shareWithTitle), findsOneWidget);
+
+            deletion.complete(
+              DeleteResult.failure('rejected', DeleteFailureKind.relayRejected),
+            );
+            await tester.pumpAndSettle();
+          },
+        );
 
         testWidgets(
           'Save with Watermark does nothing when the sheet closes before '

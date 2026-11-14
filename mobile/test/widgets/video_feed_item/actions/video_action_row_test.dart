@@ -85,6 +85,69 @@ void main() {
       expect(taps, equals(0));
     });
 
+    testWidgets('ignores taps on a disabled action without a spinner', (
+      tester,
+    ) async {
+      var taps = 0;
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: VideoActionRow(
+            actions: [
+              VideoActionRowItem(
+                icon: DivineIconName.pencilSimpleLine,
+                label: 'Held',
+                onTap: () => taps++,
+                isDisabled: true,
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Held'));
+      await tester.pump();
+
+      expect(taps, equals(0));
+      expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+    });
+
+    testWidgets(
+      'a locked row ignores taps on every action and keeps the pending one '
+      'spinning',
+      (tester) async {
+        var taps = 0;
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: VideoActionRow(
+              isLocked: true,
+              actions: [
+                VideoActionRowItem(
+                  icon: DivineIconName.trash,
+                  label: 'Deleting',
+                  onTap: () => taps++,
+                  isPending: true,
+                ),
+                VideoActionRowItem(
+                  icon: DivineIconName.bookmarkSimple,
+                  label: 'Save',
+                  onTap: () => taps++,
+                ),
+              ],
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.text('Save'));
+        await tester.tap(find.text('Deleting'));
+        await tester.pump();
+
+        expect(taps, equals(0));
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+      },
+    );
+
     testWidgets('renders the title when one is given', (tester) async {
       await tester.pumpWidget(
         testMaterialApp(

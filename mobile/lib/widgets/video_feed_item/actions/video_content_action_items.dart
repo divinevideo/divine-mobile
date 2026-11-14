@@ -76,17 +76,18 @@ Future<void> deleteOwnerVideoFromSheet(
 VideoActionRowItem editOwnerVideoActionItem(
   BuildContext context, {
   required Future<void> Function() onEdit,
-  required bool isDeletePending,
 }) {
   return VideoActionRowItem(
     icon: DivineIconName.pencilSimpleLine,
     label: context.l10n.shareMenuEditVideo,
     onTap: () => _runActionDetached(onEdit(), 'open video metadata editor'),
-    isDisabled: isDeletePending,
   );
 }
 
 /// Deletes the viewer's own video through [onDelete].
+///
+/// Pass [isDeletePending] to the row's `isLocked` too, so no other action can
+/// close the sheet while the delete is still to report its outcome.
 VideoActionRowItem deleteOwnerVideoActionItem(
   BuildContext context, {
   required Future<void> Function() onDelete,
