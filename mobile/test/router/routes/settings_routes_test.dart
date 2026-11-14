@@ -1001,6 +1001,20 @@ void main() {
           isTrue,
         );
       });
+
+      testWidgets(
+        'records the screen the hold came from, and the screens before it',
+        (tester) async {
+          final context = await _scopedContext(tester, overrides());
+          final form = formAt(
+            RoutePaths.supportReportBugFromProfileHold,
+            context,
+          );
+
+          expect(form.currentScreen, equals('profile'));
+          expect(form.recentScreens, equals(['home', 'profile']));
+        },
+      );
     });
 
     group('developer options', () {
