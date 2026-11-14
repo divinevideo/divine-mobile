@@ -238,12 +238,13 @@ with its chat closed or the chat closed first, is dropped by the outbox itself:
 its row is already written, so the chat shows the row when it opens again.
 
 **Handoff.** `sendFileMessage` commits the message row before it returns, and
-the entry turns `sent` only after that return. Usually the entry is `sent`
-before its row is in `messages`, so the bubble stays up until the row arrives;
-then the entry is filtered out and acknowledged, with no gap. The row's stream
-can also win: `DmVideoSendService` deletes the ciphertext after the commit and
-before it returns, and in that window the row and the still-publishing bubble
-both show, until the outbox marks the entry sent a moment later.
+the entry turns `sent`, with its `rumorEventId`, as soon as the send result
+reaches the outbox — `DmVideoSendService` deletes the ciphertext after the
+commit but does not wait for that delete before returning. The row's tick
+comes back later, through db_client's background-isolate connection, after
+the microtask chain that carries the result, so the entry is `sent` before
+its row is in `messages` and the bubble stays up until the row arrives; then
+the entry is filtered out and acknowledged. No gap, no duplicate, no jump.
 
 **New events**, so the composer goes UI → bloc → outbox and never reaches the
 outbox directly:

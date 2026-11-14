@@ -9,6 +9,7 @@ import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_preview.dart';
+import 'package:openvine/utils/detached_future.dart';
 
 /// Progress stages reported by [DmVideoSendService.sendVideo].
 ///
@@ -122,7 +123,19 @@ class DmVideoSendService {
         extraTags: extraTags,
       );
     } finally {
-      await _deleteCiphertextQuietly(enc.ciphertextFile);
+      // Detached, never awaited: `sendFileMessage` commits the message row
+      // before it returns, and the outbox marks the entry sent only when this
+      // future completes. Awaiting the delete here held that flip across real
+      // file I/O while the row was already live, so the thread could render
+      // the row and the pending bubble together — the handoff's "shows twice"
+      // anti-goal. Fire-and-forget keeps both stream ticks in one event-loop
+      // turn. Deletion stays best-effort and can never mask the send result.
+      runDetached(
+        _deleteCiphertextQuietly(enc.ciphertextFile),
+        'delete the video DM ciphertext file',
+        logName: 'DmVideoSendService',
+        category: LogCategory.video,
+      );
     }
   }
 

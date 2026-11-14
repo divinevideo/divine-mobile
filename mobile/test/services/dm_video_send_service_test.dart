@@ -2,6 +2,7 @@
 // ABOUTME: Verifies encrypt -> upload -> sendFileMessage order, exact
 // ABOUTME: DmFileMetadata fields, and ciphertext temp-file cleanup.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
@@ -29,6 +30,8 @@ class _MockDmRepository extends Mock implements DmRepository {}
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
 
 class _MockDmVideoEncryption extends Mock implements DmVideoEncryption {}
+
+class _MockFile extends Mock implements File {}
 
 const _recipientPubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
@@ -204,7 +207,78 @@ void main() {
         expect(sentMetadata!.blurhash, 'LEHV6nWB2yk8');
         expect(sentMetadata!.thumbnailUrl, isNull);
 
+        // The delete is fire-and-forget now, so the sent flip is not held
+        // across it (see the handoff ordering test below); wait for the
+        // cleanup instead of requiring it to predate the result.
+        await pumpEventQueue();
         expect(ciphertext.existsSync(), isFalse);
+      },
+    );
+
+    test(
+      'returns the send result without waiting for the ciphertext delete, so '
+      'the persisted row and the pending bubble cannot render together at '
+      'the handoff',
+      () async {
+        final videoFile = File('${tempDir.path}/clip.mp4')
+          ..writeAsBytesSync(const [9, 9, 9]);
+        final ciphertext = _MockFile();
+        final deleteCalled = Completer<void>();
+        final deleteGate = Completer<FileSystemEntity>();
+        when(ciphertext.delete).thenAnswer((_) {
+          if (!deleteCalled.isCompleted) deleteCalled.complete();
+          return deleteGate.future;
+        });
+        when(() => encryption.encryptFile(videoFile)).thenAnswer(
+          (_) async => EncryptedVideoFile(
+            ciphertextFile: ciphertext,
+            key: _key,
+            nonce: _nonce,
+            ciphertextHash: _ciphertextHash,
+            plaintextHash: _plaintextHash,
+            ciphertextSize: 4,
+          ),
+        );
+        when(
+          () => blossom.uploadEncryptedFile(ciphertextFile: ciphertext),
+        ).thenAnswer(
+          (_) async => const BlossomUploadResult(
+            success: true,
+            videoId: _ciphertextHash,
+            url: _fileUrl,
+          ),
+        );
+        when(
+          () => dmRepository.sendFileMessage(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            fileUrl: any(named: 'fileUrl'),
+            fileMetadata: any(named: 'fileMetadata'),
+            extraTags: any(named: 'extraTags'),
+          ),
+        ).thenAnswer(
+          (_) async => NIP17SendResult.success(
+            rumorEventId: 'rumor-1',
+            messageEventId: 'wrap-1',
+            recipientPubkey: _recipientPubkey,
+          ),
+        );
+
+        final result = await createService()
+            .sendVideo(
+              recipientPubkey: _recipientPubkey,
+              videoFile: videoFile,
+              mimeType: 'video/mp4',
+            )
+            .timeout(const Duration(seconds: 10));
+
+        expect(result.success, isTrue);
+        // The result came back while the delete is still open: `sendFileMessage`
+        // has committed the message row, and the outbox's sent flip (which
+        // drops the pending bubble) now follows without file I/O in between.
+        await deleteCalled.future;
+        expect(deleteGate.isCompleted, isFalse);
+
+        deleteGate.complete(ciphertext);
       },
     );
 
