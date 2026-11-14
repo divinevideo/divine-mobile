@@ -123,6 +123,13 @@ class _DmInboxTabsPrototypeViewState extends State<_DmInboxTabsPrototypeView>
     _showMessage('Reported and removed from your requests.');
   }
 
+  void _reportOfficial(String pubkey) {
+    _cubit.reportOfficial(pubkey);
+    _showMessage(
+      'Prototype: reported ${_cubit.fixtures.displayNameFor(pubkey)}. Nothing was sent.',
+    );
+  }
+
   void _block(String pubkey) {
     _cubit.block(pubkey);
     _showMessage('Blocked ${_cubit.fixtures.displayNameFor(pubkey)}.');
@@ -142,6 +149,7 @@ class _DmInboxTabsPrototypeViewState extends State<_DmInboxTabsPrototypeView>
       onNotSpam: _markNotSpam,
       onDelete: _delete,
       onReport: _report,
+      onReportOfficial: _reportOfficial,
       onBlock: _block,
     );
 
@@ -219,6 +227,7 @@ class _RowActions {
     required this.onNotSpam,
     required this.onDelete,
     required this.onReport,
+    required this.onReportOfficial,
     required this.onBlock,
   });
 
@@ -228,6 +237,7 @@ class _RowActions {
   final ValueChanged<String> onNotSpam;
   final ValueChanged<String> onDelete;
   final ValueChanged<String> onReport;
+  final ValueChanged<String> onReportOfficial;
   final ValueChanged<String> onBlock;
 }
 
@@ -456,6 +466,7 @@ class _BucketList extends StatelessWidget {
           // A pinned official row keeps official semantics inside Inbox.
           bucket: isPinned ? DmInboxBucket.official : bucket,
           revealed: session.isRevealed(conversation.id),
+          reportedOfficial: session.reportedOfficial,
           explained: explained.contains(conversation.id),
           actions: actions,
         );
@@ -546,6 +557,7 @@ class _ConversationRow extends StatelessWidget {
     required this.settings,
     required this.bucket,
     required this.revealed,
+    required this.reportedOfficial,
     required this.explained,
     required this.actions,
   });
@@ -560,6 +572,7 @@ class _ConversationRow extends StatelessWidget {
   final DmPrototypeSettings settings;
   final DmInboxBucket bucket;
   final bool revealed;
+  final Set<String> reportedOfficial;
   final bool explained;
   final _RowActions actions;
 
@@ -573,7 +586,9 @@ class _ConversationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.vineColors;
-    final title = fixtures.titleFor(conversation);
+    final title = _isOfficial
+        ? fixtures.officialTitleFor(conversation)
+        : fixtures.titleFor(conversation);
     final verdict = this.verdict;
 
     return Container(
@@ -608,12 +623,28 @@ class _ConversationRow extends StatelessWidget {
                 isOfficial: _isOfficial,
                 concealed: _concealed,
                 timestamp: _relativeTime(),
-                officialIdentity: _isOfficial
-                    ? verdict?.officialIdentity
-                    : null,
               ),
             ),
           ),
+          if (_isOfficial && verdict != null)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: _detailsInset),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 8,
+                children: [
+                  for (final MapEntry(key: pubkey, value: identity)
+                      in verdict.officialParticipants.entries)
+                    _OfficialParticipantActions(
+                      name: fixtures.displayNameFor(pubkey),
+                      identity: identity,
+                      reported: reportedOfficial.contains(pubkey),
+                      onReport: () => actions.onReportOfficial(pubkey),
+                      onBlock: () => actions.onBlock(pubkey),
+                    ),
+                ],
+              ),
+            ),
           if (_isScored && verdict != null)
             Padding(
               padding: const EdgeInsetsDirectional.only(start: _detailsInset),
@@ -651,7 +682,6 @@ class _RowHeader extends StatelessWidget {
     required this.isOfficial,
     required this.concealed,
     required this.timestamp,
-    required this.officialIdentity,
   });
 
   final DmConversation conversation;
@@ -659,12 +689,10 @@ class _RowHeader extends StatelessWidget {
   final bool isOfficial;
   final bool concealed;
   final String timestamp;
-  final DivineOfficialIdentity? officialIdentity;
 
   @override
   Widget build(BuildContext context) {
     final unread = !conversation.isRead;
-    final identity = officialIdentity;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 14,
@@ -686,7 +714,6 @@ class _RowHeader extends StatelessWidget {
                 concealed: concealed,
                 unread: unread,
               ),
-              if (identity != null) _OfficialFooter(identity: identity),
             ],
           ),
         ),
@@ -792,33 +819,60 @@ class _Avatar extends StatelessWidget {
   }
 }
 
-class _OfficialFooter extends StatelessWidget {
-  const _OfficialFooter({required this.identity});
+class _OfficialParticipantActions extends StatelessWidget {
+  const _OfficialParticipantActions({
+    required this.name,
+    required this.identity,
+    required this.reported,
+    required this.onReport,
+    required this.onBlock,
+  });
 
+  final String name;
   final DivineOfficialIdentity identity;
+  final bool reported;
+  final VoidCallback onReport;
+  final VoidCallback onBlock;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.vineColors;
-    return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Row(
-        spacing: 8,
-        children: [
-          Text(
-            identity.label,
-            style: VineTheme.labelSmallFont(color: colors.accentBrand),
-          ),
-          Flexible(
-            child: Text(
-              identity.isBlockable
-                  ? 'Reportable · blockable'
-                  : 'Reportable · cannot be blocked',
-              style: VineTheme.labelSmallFont(color: colors.onSurfaceMuted),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 6,
+      children: [
+        Text(
+          '$name · ${identity.label}',
+          style: VineTheme.labelSmallFont(color: colors.accentBrand),
+        ),
+        Text(
+          identity.isBlockable
+              ? 'Reportable · blockable'
+              : 'Reportable · cannot be blocked',
+          style: VineTheme.labelSmallFont(color: colors.onSurfaceMuted),
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            DivineButton(
+              label: reported ? 'Reported' : 'Report',
+              size: DivineButtonSize.small,
+              type: DivineButtonType.secondary,
+              semanticLabel: reported ? 'Reported $name' : 'Report $name',
+              onPressed: reported ? null : onReport,
             ),
-          ),
-        ],
-      ),
+            if (identity.isBlockable)
+              DivineButton(
+                label: 'Block',
+                size: DivineButtonSize.small,
+                type: DivineButtonType.secondary,
+                semanticLabel: 'Block $name',
+                onPressed: onBlock,
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -1347,8 +1401,9 @@ extension on DmInboxBucket {
 
   String? get headerCopy => switch (this) {
     DmInboxBucket.official =>
-      'Messages from Divine about your account, reports, and safety. These '
-          'always arrive here and cannot be blocked.',
+      'Every other participant in these conversations is an official Divine '
+          'account or team member. You can report anyone here and block '
+          'individual team members. Operational accounts cannot be blocked.',
     DmInboxBucket.inbox => null,
     DmInboxBucket.requests =>
       'People you have not replied to. Open one to read it — nothing here is '

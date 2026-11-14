@@ -82,6 +82,130 @@ void main() {
       }
     }
 
+    group('official room policy', () {
+      testWidgets('mixed first contact stays concealed with ordinary actions', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          await pumpScreen(tester);
+          await openTab(tester, 'Requests');
+          final row = rowOf('Ines Duarte and 1 other');
+          expect(row, findsOneWidget);
+          expect(
+            find.bySemanticsLabel(
+              'Message request from Ines Duarte and 1 other, content hidden. Tap to open.',
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.bySemanticsLabel(
+              'Message request from Divine Support and 1 other, content hidden. Tap to open.',
+            ),
+            findsNothing,
+          );
+          expect(find.text('Synthetic mixed-room message'), findsNothing);
+          expect(
+            find
+                .descendant(of: row, matching: find.byType(DivineIcon))
+                .evaluate()
+                .map((e) => (e.widget as DivineIcon).icon),
+            isNot(contains(DivineIconName.sealCheckFill)),
+          );
+          expect(
+            find.descendant(of: row, matching: find.text('Report')),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(of: row, matching: find.text('Delete')),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(of: row, matching: find.text('Block')),
+            findsNothing,
+          );
+          await tester.tap(find.text('Ines Duarte and 1 other'));
+          await tester.pumpAndSettle();
+          expect(find.text('Synthetic mixed-room message'), findsOneWidget);
+        } finally {
+          semantics.dispose();
+        }
+      });
+
+      for (final pinned in [false, true]) {
+        testWidgets(
+          'official actions target participants in ${pinned ? 'Inbox' : 'Official'}',
+          (tester) async {
+            final semantics = tester.ensureSemantics();
+            try {
+              await pumpScreen(tester);
+              if (pinned) {
+                await saveTuningWith(tester, 'Official gets its own tab');
+              } else {
+                await openTab(tester, 'Official');
+              }
+              const title = 'Divine Support, Liz';
+              final group = rowOf(title);
+              expect(group, findsOneWidget);
+              expect(
+                find.text('Synthetic official group message'),
+                findsOneWidget,
+              );
+              Finder action(String label) => find.descendant(
+                of: group,
+                matching: find.bySemanticsLabel(label),
+              );
+              expect(action('Report Divine Support'), findsOneWidget);
+              expect(action('Report Liz'), findsOneWidget);
+              expect(action('Block Divine Support'), findsNothing);
+              expect(action('Block Liz'), findsOneWidget);
+              // Each participant names their role once, beside their name.
+              expect(
+                find.descendant(
+                  of: group,
+                  matching: find.text('Liz · Divine team'),
+                ),
+                findsOneWidget,
+              );
+              bool canTap(String label) => find.semantics
+                  .byLabel(label)
+                  .evaluate()
+                  .any(
+                    (node) => node.getSemanticsData().hasAction(
+                      SemanticsAction.tap,
+                    ),
+                  );
+              expect(canTap('Report Divine Support'), isTrue);
+              await tester.tap(action('Report Divine Support'));
+              await tester.pumpAndSettle();
+              expect(group, findsOneWidget);
+              expect(
+                find.text(
+                  'Prototype: reported Divine Support. Nothing was sent.',
+                ),
+                findsOneWidget,
+              );
+              expect(action('Reported Divine Support'), findsOneWidget);
+              expect(canTap('Reported Divine Support'), isFalse);
+              await tester.tap(action('Report Liz'));
+              await tester.pumpAndSettle();
+              expect(group, findsOneWidget);
+              expect(action('Reported Liz'), findsOneWidget);
+              expect(action('Reported Divine Support'), findsOneWidget);
+              expect(rowOf('Liz'), findsOneWidget);
+              await tester.tap(action('Block Liz'));
+              await tester.pumpAndSettle();
+              expect(group, findsNothing);
+              expect(rowOf('Liz'), findsNothing);
+              expect(rowOf('Divine Support'), findsOneWidget);
+            } finally {
+              semantics.dispose();
+            }
+          },
+        );
+      }
+    });
+
     group('renders', () {
       testWidgets('shows all four tabs', (tester) async {
         await pumpScreen(tester);
@@ -175,6 +299,9 @@ void main() {
 
         expect(find.text('Priya Raman'), findsOneWidget);
         expect(tester.takeException(), isNull);
+        await openTab(tester, 'Official');
+        expect(find.text('Divine Support, Liz'), findsOneWidget);
+        expect(tester.takeException(), isNull);
       });
     });
 
@@ -248,7 +375,7 @@ void main() {
         expect(badgeOn('Inbox'), equals('Inbox|4'));
       });
 
-      testWidgets('shows official messages unconcealed and unblockable', (
+      testWidgets('shows official previews and role-specific capability copy', (
         tester,
       ) async {
         await pumpScreen(tester);
@@ -266,7 +393,7 @@ void main() {
         );
         expect(
           find.descendant(
-            of: rowOf('Liz · Divine team'),
+            of: rowOf('Liz'),
             matching: find.text('Reportable · blockable'),
           ),
           findsOneWidget,

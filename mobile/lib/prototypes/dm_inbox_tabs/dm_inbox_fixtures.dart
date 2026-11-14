@@ -78,16 +78,33 @@ class DmInboxFixtures {
     return DmMessageSignals.none;
   }
 
-  /// Name shown on a row: the counterparty, or "A and N others" for a group.
+  /// Ordinary row title: the counterparty, or "A and N others" for a group.
   String titleFor(DmConversation conversation) {
     final others = conversation.participantPubkeys
         .where((pk) => pk != userPubkey)
         .toList();
     if (others.isEmpty) return 'Unknown sender';
     if (others.length == 1) return displayNameFor(others.first);
+    // Mixed rooms lead with a non-official participant, independent of key order.
+    final leading = others.firstWhere(
+      (pk) => !officialIdentities.containsKey(pk),
+      orElse: () => others.first,
+    );
     final rest = others.length - 1;
-    return '${displayNameFor(others.first)} and '
+    return '${displayNameFor(leading)} and '
         '${rest == 1 ? '1 other' : '$rest others'}';
+  }
+
+  /// Official row title: every counterparty's name, deduplicated and in
+  /// pubkey order.
+  String officialTitleFor(DmConversation conversation) {
+    final others =
+        conversation.participantPubkeys
+            .where((pk) => pk != userPubkey)
+            .toSet()
+            .toList()
+          ..sort();
+    return others.map(displayNameFor).join(', ');
   }
 
   static DmInboxFixtures build() => _build();
@@ -134,13 +151,13 @@ DmInboxFixtures _build() {
     );
   }
 
-  // Official senders never reach the scorer, so their signals are unused.
+  // Unknown signals stay neutral when these accounts appear in mixed rooms.
   sender(_hqPubkey, 'DivineHQ', DmSenderSignals.unknown);
   sender(_supportPubkey, 'Divine Support', DmSenderSignals.unknown);
   sender(_trustSafetyPubkey, 'Divine Trust & Safety', DmSenderSignals.unknown);
   sender(_moderationPubkey, 'Divine Moderation', DmSenderSignals.unknown);
-  sender(_lizTeamPubkey, 'Liz · Divine team', DmSenderSignals.unknown);
-  sender(_rabbleTeamPubkey, 'Rabble · Divine team', DmSenderSignals.unknown);
+  sender(_lizTeamPubkey, 'Liz', DmSenderSignals.unknown);
+  sender(_rabbleTeamPubkey, 'Rabble', DmSenderSignals.unknown);
 
   // Known, trusted people.
   sender(
@@ -569,6 +586,19 @@ DmInboxFixtures _build() {
       hoursAgo: 8,
       containsLink: true,
       isRead: false,
+    ),
+
+    // Official room policy: a mixed room is an ordinary request; an
+    // all-official group stays Official.
+    conversation(
+      otherSeeds: ['h8', _supportPubkey],
+      preview: 'Synthetic mixed-room message',
+      hoursAgo: 1,
+    ),
+    conversation(
+      otherSeeds: [_supportPubkey, _lizTeamPubkey],
+      preview: 'Synthetic official group message',
+      hoursAgo: 3,
     ),
   ];
 

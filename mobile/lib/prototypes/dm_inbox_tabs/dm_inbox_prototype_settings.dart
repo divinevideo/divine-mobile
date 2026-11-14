@@ -12,8 +12,8 @@ enum OfficialPlacement {
   ownTab,
 
   /// Official is pinned to the top of Inbox. Matches "official messages go
-  /// directly to the inbox" literally, still visually distinct, still
-  /// unblockable.
+  /// directly to the inbox" literally and stays visually distinct;
+  /// operational accounts stay unblockable.
   pinnedInInbox,
 }
 
