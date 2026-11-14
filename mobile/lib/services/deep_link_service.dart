@@ -544,6 +544,21 @@ class DeepLinkService {
     'saved-videos': DeepLinkType.savedVideos,
   };
 
+  /// Path prefixes the `divine://` scheme may address beyond `saved-videos`.
+  ///
+  /// Mirrors the universal-link claims in the served apple-app-site-association
+  /// files, so the custom scheme reaches exactly what a web page can already
+  /// reach over https. Challenge links are an explicit test-build exception;
+  /// their hosting/browser fallback and OS delivery are not yet shipped.
+  static const customSchemeRoutablePrefixes = <String>{
+    if (challengesTestEnabled) 'challenges',
+    'video',
+    'profile',
+    'hashtag',
+    'search',
+    'list',
+  };
+
   static DeepLink _parseCustomSchemeAppRoute(Uri uri) {
     final segments = uri.pathSegments;
     if (challengesTestEnabled &&
@@ -553,6 +568,25 @@ class DeepLinkService {
       return DeepLink(
         type: DeepLinkType.challenge,
         challengeNaddr: segments[1],
+      );
+    }
+    final routeSegments = segments.where((s) => s.isNotEmpty).toList();
+    if (routeSegments.length >= 2 &&
+        routeSegments.first != 'challenges' &&
+        customSchemeRoutablePrefixes.contains(routeSegments.first)) {
+      // Typed here rather than left to the router: on iOS and macOS the link
+      // arrives through the deep-link stream, never as the router's location,
+      // so an untyped one was dropped. Parsed as the https link it mirrors so
+      // the two forms cannot drift.
+      return parseDeepLink(
+        Uri(
+          scheme: 'https',
+          host: 'divine.video',
+          pathSegments: routeSegments,
+          queryParameters: uri.queryParameters.isEmpty
+              ? null
+              : uri.queryParameters,
+        ).toString(),
       );
     }
     final type = segments.length == 1
