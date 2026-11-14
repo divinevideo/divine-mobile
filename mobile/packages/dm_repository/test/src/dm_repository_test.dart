@@ -10844,6 +10844,31 @@ void main() {
         },
       );
 
+      test(
+        'heals a poisoned oldest boundary under a drain already latched '
+        'complete, with no subscription opened first',
+        () async {
+          // The install the unrepaired seed left behind: its drain read only
+          // 1970 and latched complete. Unless the repair runs before the
+          // completion check, the drain returns without reading a page.
+          final capturedUntil = <int?>[];
+          stubFiniteHistory(const <Event>[], capturedUntil);
+
+          final syncState = _FakeDmSyncState()
+            ..oldestOverride = 100
+            ..drainCompleteOverride = true
+            ..drainCoveredOwnInboxOverride = true
+            ..drainVersionOverride = DmSyncState.currentDrainVersion;
+          final repository = createRepository(syncState: syncState);
+          final before = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          await repository.backfillHistoryIfNeeded();
+          final after = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+          expect(capturedUntil, isNotEmpty);
+          expect(capturedUntil.first, inInclusiveRange(before, after));
+        },
+      );
+
       // The fast kind-10050 read cannot tell "the account advertises nothing"
       // from "a relay stayed silent": a connected relay that never answers is
       // skipped after the settle window and the read still reports success.
