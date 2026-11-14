@@ -16,8 +16,10 @@ import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
+import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -720,10 +722,22 @@ void main() {
         verifyNever(() => router.go(any(), extra: any(named: 'extra')));
       });
 
-      testWidgets('a tap does not open the report', (tester) async {
+      testWidgets('a tap still opens the profile, not the report', (
+        tester,
+      ) async {
+        const ownPubkeyHex =
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(ownPubkeyHex);
         await pumpSubjectWithRouter(tester, router);
         await tester.tap(find.bySemanticsIdentifier('profile_tab'));
         await tester.pump();
+        verify(
+          () => router.go(
+            ProfileScreenRouter.pathForNpub(
+              NostrKeyUtils.encodePubKey(ownPubkeyHex),
+            ),
+          ),
+        ).called(1);
         verifyNever(
           () => router.push<Object?>(
             RoutePaths.supportReportBugFromProfileHold,
@@ -799,6 +813,29 @@ void main() {
             actions.where((a) => a!.label == l10n.supportReportBug),
             isEmpty,
           );
+          handle.dispose();
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.android),
+      );
+
+      testWidgets(
+        "TalkBack's double-tap and hold opens the report, marked as the hold",
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          await pumpSubjectWithRouter(tester, router);
+          final node = tester.getSemantics(
+            find.bySemanticsIdentifier('profile_tab'),
+          );
+
+          node.owner!.performAction(node.id, SemanticsAction.longPress);
+          await tester.pump();
+
+          verify(
+            () => router.push<Object?>(
+              RoutePaths.supportReportBugFromProfileHold,
+              extra: any(named: 'extra'),
+            ),
+          ).called(1);
           handle.dispose();
         },
         variant: TargetPlatformVariant.only(TargetPlatform.android),
