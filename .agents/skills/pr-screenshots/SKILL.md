@@ -16,9 +16,12 @@ version: 1.0.0
 **Core principle:** you can produce real-app screenshots end to end yourself.
 Run this branch on an iOS simulator against the repo's local Docker stack,
 with throwaway accounts that exist only there. Drive the app with Maestro and
-`idb`, capture with `simctl`, and host the images in a secret gist. Nothing
-touches production relays or real accounts. Apart from the trust check in step 0,
-ask the maintainer nothing for this.
+`idb`, capture with `simctl`, and host the images in a secret gist. The app
+talks only to the local relay, and the accounts exist only there. A LOCAL build
+still reaches a few production HTTPS services (the identity verifier, supporter
+status, share short links, crossposting), so avoid driving those flows unless
+the PR needs them. Apart from the trust check in step 0, ask the maintainer
+nothing for this.
 
 `<skill-dir>` below is the directory containing this file. Each run keeps its
 scratch files (logs, keys, flows, screenshots) in a folder of its own, so
