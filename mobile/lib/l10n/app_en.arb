@@ -5782,6 +5782,10 @@
   "bugReportExpectedBehaviorLabel": "Expected Behavior",
   "bugReportExpectedBehaviorHint": "What should have happened instead?",
   "bugReportDiagnosticsNotice": "Device info and logs will be included automatically.",
+  "bugReportProfileHoldTip": "Shortcut: when the bottom bar is showing, press and hold your profile picture to report a bug from any screen.",
+  "@bugReportProfileHoldTip": {
+    "description": "Muted line at the bottom of the Report a Bug form, shown unless the form was opened by holding the Profile tab. The tab shows the user's profile picture, not a word. Some people reach this form while the bottom bar is hidden, so keep the 'when the bottom bar is showing' condition. Avoid left/right wording (RTL locales)."
+  },
   "bugReportSuccessMessage": "Thank you! We've received your report and will use it to make Divine better.",
   "bugReportAttachImages": "Attach images",
   "bugReportImagesCount": "{count} of {max} images selected",

@@ -3970,6 +3970,7 @@
   "bugReportExpectedBehaviorLabel": "Beklenen Davranış",
   "bugReportExpectedBehaviorHint": "Bunun yerine ne olmalıydı?",
   "bugReportDiagnosticsNotice": "Cihaz bilgileri ve günlükler otomatik olarak eklenecek.",
+  "bugReportProfileHoldTip": "Kısayol: alt çubuk görünürken, herhangi bir ekrandan hata bildirmek için profil fotoğrafına basılı tut.",
   "bugReportSuccessMessage": "Teşekkürler! Raporunu aldık ve Divine'i daha iyi yapmak için kullanacağız.",
   "bugReportSendFailed": "Hata raporu gönderilemedi. Lütfen daha sonra tekrar dene.",
   "featureRequestSendRequest": "İsteği Gönder",

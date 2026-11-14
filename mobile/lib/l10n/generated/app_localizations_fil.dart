@@ -8217,6 +8217,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Awtomatikong isasama ang device info at logs.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Shortcut: kapag nakikita ang bottom bar, pindutin nang matagal ang larawan mo sa profile para mag-report ng bug mula sa kahit anong screen.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Salamat! Natanggap namin ang report mo at gagamitin namin ito para mas gumanda ang Divine.';
 

@@ -123,6 +123,7 @@ void main() {
     Future<void> openFlow(
       WidgetTester tester, {
       SubmitBugReportAction submitBugReport = _submitFails,
+      bool showProfileHoldTip = true,
     }) async {
       final router = GoRouter(
         routes: [
@@ -145,6 +146,7 @@ void main() {
               userPubkey: _pubkeyHex,
               submitBugReport: submitBugReport,
               buildLogsSummary: (_) async => null,
+              showProfileHoldTip: showProfileHoldTip,
             ),
           ),
         ],
@@ -567,6 +569,21 @@ void main() {
       await tester.pump();
 
       expect(buttonFor(tester, l10n.bugReportSendReport).onPressed, isNotNull);
+    });
+
+    testWidgets('teaches the Profile-tab shortcut when opened another way', (
+      tester,
+    ) async {
+      await openFlow(tester);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.bugReportProfileHoldTip), findsOneWidget);
+    });
+
+    testWidgets('skips the tip when the hold opened the form', (tester) async {
+      await openFlow(tester, showProfileHoldTip: false);
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(find.text(l10n.bugReportProfileHoldTip), findsNothing);
+      expect(find.text(l10n.bugReportDiagnosticsNotice), findsOneWidget);
     });
   });
 

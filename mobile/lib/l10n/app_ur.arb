@@ -4045,6 +4045,7 @@
   "bugReportExpectedBehaviorLabel": "متوقع برتاؤ",
   "bugReportExpectedBehaviorHint": "اس کے بجائے کیا ہونا چاہیے تھا؟",
   "bugReportDiagnosticsNotice": "ڈیوائس کی معلومات اور لاگز خودکار طور پر شامل ہوں گے۔",
+  "bugReportProfileHoldTip": "شارٹ کٹ: جب نیچے موجود بار دکھائی دے تو کسی بھی اسکرین سے بگ کی رپورٹ کرنے کے لیے اپنی پروفائل تصویر کو دبا کر رکھیں۔",
   "bugReportSuccessMessage": "شکریہ! ہمیں آپ کی رپورٹ مل گئی ہے اور ہم اسے Divine کو بہتر بنانے کے لیے استعمال کریں گے۔",
   "bugReportAttachImages": "تصاویر منسلک کریں",
   "bugReportImagesCount": "{max} میں سے {count} تصاویر منتخب",

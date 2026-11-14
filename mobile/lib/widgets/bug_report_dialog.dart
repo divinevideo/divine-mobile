@@ -34,6 +34,7 @@ class BugReportScreen extends StatefulWidget {
     this.userPubkey,
     this.submitBugReport,
     this.buildLogsSummary = buildLogsSummaryOffMain,
+    this.showProfileHoldTip = true,
   });
 
   static const routeName = 'support-report-bug';
@@ -45,6 +46,12 @@ class BugReportScreen extends StatefulWidget {
   final String? userPubkey;
   final SubmitBugReportAction? submitBugReport;
   final BuildLogsSummary buildLogsSummary;
+
+  /// Whether to teach the Profile-tab hold shortcut at the bottom of the form.
+  ///
+  /// False when that hold opened the form, since the tip would only repeat
+  /// what the user just did.
+  final bool showProfileHoldTip;
 
   @override
   State<BugReportScreen> createState() => _BugReportScreenState();
@@ -74,6 +81,7 @@ class _BugReportScreenState extends State<BugReportScreen> {
         currentScreen: widget.currentScreen,
         recentScreens: widget.recentScreens,
         userPubkey: widget.userPubkey,
+        showProfileHoldTip: widget.showProfileHoldTip,
       ),
     );
   }
@@ -103,12 +111,14 @@ class _BugReportView extends StatelessWidget {
     this.currentScreen,
     this.recentScreens = const [],
     this.userPubkey,
+    this.showProfileHoldTip = true,
   });
 
   final BugReportFields fields;
   final String? currentScreen;
   final List<String> recentScreens;
   final String? userPubkey;
+  final bool showProfileHoldTip;
 
   @override
   Widget build(BuildContext context) {
@@ -203,6 +213,13 @@ class _BugReportView extends StatelessWidget {
                           color: context.vineColors.mutedText,
                         ),
                       ),
+                      if (showProfileHoldTip)
+                        Text(
+                          l10n.bugReportProfileHoldTip,
+                          style: VineTheme.bodySmallFont(
+                            color: context.vineColors.mutedText,
+                          ),
+                        ),
                     ],
                   ),
                 ),

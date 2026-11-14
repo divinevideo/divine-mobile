@@ -7673,6 +7673,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get bugReportDiagnosticsNotice => '设备信息和日志会自动附上。';
 
   @override
+  String get bugReportProfileHoldTip => '快捷方式：当底部栏显示时，长按你的头像，就能在任意页面报告 Bug。';
+
+  @override
   String get bugReportSuccessMessage => '谢谢！我们已收到你的报告，会用它来把 Divine 做得更好。';
 
   @override

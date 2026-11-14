@@ -4045,6 +4045,7 @@
   "bugReportExpectedBehaviorLabel": "Kelakuan Dijangka",
   "bugReportExpectedBehaviorHint": "Apa yang sepatutnya berlaku?",
   "bugReportDiagnosticsNotice": "Maklumat peranti dan log akan disertakan secara automatik.",
+  "bugReportProfileHoldTip": "Pintasan: apabila bar bawah kelihatan, tekan dan tahan gambar profil anda untuk melaporkan pepijat dari mana-mana skrin.",
   "bugReportSuccessMessage": "Terima kasih! Kami telah menerima laporan anda dan akan menggunakannya untuk menjadikan Divine lebih baik.",
   "bugReportAttachImages": "Lampirkan imej",
   "bugReportImagesCount": "{count} daripada {max} imej dipilih",

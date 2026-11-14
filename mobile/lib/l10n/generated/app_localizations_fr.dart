@@ -8283,6 +8283,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les infos de l\'appareil et les logs seront inclus automatiquement.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Raccourci : quand la barre du bas est visible, appuie longuement sur ta photo de profil pour signaler un bug depuis n\'importe quel écran.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Merci ! On a bien reçu ton rapport et on s\'en servira pour améliorer Divine.';
 

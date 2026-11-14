@@ -8121,6 +8121,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Thông tin thiết bị và nhật ký sẽ được đính kèm tự động.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Phím tắt: khi thanh dưới cùng đang hiển thị, hãy nhấn giữ ảnh đại diện của bạn để báo lỗi từ bất kỳ màn hình nào.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Cảm ơn bạn! Bọn mình đã nhận được báo cáo và sẽ dùng nó để làm Divine tốt hơn.';
 

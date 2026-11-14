@@ -8165,6 +8165,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Maklumat peranti dan log akan disertakan secara automatik.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Pintasan: apabila bar bawah kelihatan, tekan dan tahan gambar profil anda untuk melaporkan pepijat dari mana-mana skrin.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Terima kasih! Kami telah menerima laporan anda dan akan menggunakannya untuk menjadikan Divine lebih baik.';
 

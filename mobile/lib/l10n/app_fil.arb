@@ -2733,6 +2733,7 @@
       }
     }
   },
+  "bugReportProfileHoldTip": "Shortcut: kapag nakikita ang bottom bar, pindutin nang matagal ang larawan mo sa profile para mag-report ng bug mula sa kahit anong screen.",
   "bugReportRemoveImage": "Alisin ang larawan",
   "bugReportUploadFailed": "Hindi namin na-upload ang piniling larawan. Subukan ulit o ipadala ang report nang wala ito.",
   "userPickerRemoveSelectionSemantics": "Alisin si {name}",

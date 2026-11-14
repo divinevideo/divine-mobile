@@ -8084,6 +8084,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Cihaz bilgileri ve günlükler otomatik olarak eklenecek.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Kısayol: alt çubuk görünürken, herhangi bir ekrandan hata bildirmek için profil fotoğrafına basılı tut.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Teşekkürler! Raporunu aldık ve Divine\'i daha iyi yapmak için kullanacağız.';
 

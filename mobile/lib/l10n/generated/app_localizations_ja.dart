@@ -7748,6 +7748,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get bugReportDiagnosticsNotice => 'デバイス情報とログは自動で添付されるよ。';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'ショートカット: 下のバーが表示されているときは、プロフィール画像を長押しすると、どの画面からでもバグを報告できます。';
+
+  @override
   String get bugReportSuccessMessage => 'ありがとう！レポートを受け取ったよ。Divine をよくするのに使うね。';
 
   @override

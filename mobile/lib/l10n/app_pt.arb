@@ -3970,6 +3970,7 @@
   "bugReportExpectedBehaviorLabel": "Comportamento esperado",
   "bugReportExpectedBehaviorHint": "O que deveria ter acontecido?",
   "bugReportDiagnosticsNotice": "Informações do dispositivo e logs serão incluídos automaticamente.",
+  "bugReportProfileHoldTip": "Atalho: quando a barra inferior estiver visível, pressione e segure sua foto de perfil para reportar um bug de qualquer tela.",
   "bugReportSuccessMessage": "Valeu! Recebemos seu relatório e vamos usar pra deixar o Divine melhor.",
   "bugReportSendFailed": "Falha ao enviar relatório de bug. Tente novamente mais tarde.",
   "featureRequestSendRequest": "Enviar pedido",

@@ -8075,6 +8075,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Info perangkat dan log akan disertakan otomatis.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Pintasan: saat bilah bawah terlihat, tekan lama foto profilmu untuk melaporkan bug dari layar mana pun.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Terima kasih! Laporanmu sudah kami terima dan akan kami pakai untuk membuat Divine lebih baik.';
 

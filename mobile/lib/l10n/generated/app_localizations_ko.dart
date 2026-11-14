@@ -7768,6 +7768,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get bugReportDiagnosticsNotice => '기기 정보와 로그가 자동으로 함께 보내져요.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      '바로가기: 하단 바가 보일 때 프로필 사진을 길게 누르면 어느 화면에서든 버그를 신고할 수 있어요.';
+
+  @override
   String get bugReportSuccessMessage =>
       '고마워요! 신고를 받았어요. Divine을 더 좋게 만드는 데 쓸게요.';
 

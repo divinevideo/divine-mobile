@@ -8270,6 +8270,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Geräteinfos und Logs werden automatisch beigelegt.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Shortcut: Wenn die untere Leiste zu sehen ist, halte dein Profilbild gedrückt, um von jedem Screen aus einen Bug zu melden.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Danke! Wir haben deinen Bericht erhalten und nutzen ihn, um Divine besser zu machen.';
 

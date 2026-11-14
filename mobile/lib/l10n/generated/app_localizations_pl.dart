@@ -8366,6 +8366,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Informacje o urządzeniu i logi zostaną dołączone automatycznie.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Skrót: gdy widać dolny pasek, przytrzymaj swoje zdjęcie profilowe, żeby zgłosić błąd z dowolnego ekranu.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Dzięki! Dostaliśmy twoje zgłoszenie i wykorzystamy je, żeby ulepszyć Divine.';
 

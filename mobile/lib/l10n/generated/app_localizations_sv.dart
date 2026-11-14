@@ -8155,6 +8155,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Enhetsinfo och loggar inkluderas automatiskt.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Genväg: när fältet längst ned syns, håll inne din profilbild för att rapportera en bugg från vilken skärm som helst.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Tack! Vi har fått din rapport och använder den för att göra Divine bättre.';
 

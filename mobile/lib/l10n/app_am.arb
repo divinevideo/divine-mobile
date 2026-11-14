@@ -2823,6 +2823,7 @@
   "bugReportExpectedBehaviorLabel": "የሚጠበቀው ባህሪ",
   "bugReportExpectedBehaviorHint": "በምትኩ ምን መሆን ነበረበት?",
   "bugReportDiagnosticsNotice": "የመሳሪያ መረጃ እና ሎጎች በራስ-ሰር ይካተታሉ።",
+  "bugReportProfileHoldTip": "አቋራጭ: የታችኛው አሞሌ በሚታይበት ጊዜ፣ ከማንኛውም ስክሪን ሳንካ ሪፖርት ለማድረግ የመገለጫ ፎቶዎን በረጅሙ ይጫኑ።",
   "bugReportSuccessMessage": "እናመሰግናለን! ሪፖርትዎን ተቀብለናል፣ Divineን ለማሻሻል እንጠቀምበታለን።",
   "bugReportSendFailed": "የሳንካ ሪፖርት መላክ አልተሳካም። እባክዎ ቆይተው ይሞክሩ።",
   "featureRequestSendRequest": "ጥያቄ ላክ",

@@ -7975,6 +7975,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get bugReportDiagnosticsNotice => 'የመሳሪያ መረጃ እና ሎጎች በራስ-ሰር ይካተታሉ።';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'አቋራጭ: የታችኛው አሞሌ በሚታይበት ጊዜ፣ ከማንኛውም ስክሪን ሳንካ ሪፖርት ለማድረግ የመገለጫ ፎቶዎን በረጅሙ ይጫኑ።';
+
+  @override
   String get bugReportSuccessMessage =>
       'እናመሰግናለን! ሪፖርትዎን ተቀብለናል፣ Divineን ለማሻሻል እንጠቀምበታለን።';
 

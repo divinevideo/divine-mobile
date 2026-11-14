@@ -8200,6 +8200,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Apparaatinfo en logs worden automatisch meegestuurd.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Snelkoppeling: als de balk onderaan zichtbaar is, houd je je profielfoto ingedrukt om vanaf elk scherm een bug te melden.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Dank je! We hebben je rapport ontvangen en gebruiken het om Divine beter te maken.';
 

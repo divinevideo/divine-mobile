@@ -8244,6 +8244,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Информацията за устройството и логовете ще се прикачат автоматично.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'Пряк път: когато долната лента се вижда, натисни и задръж профилната си снимка, за да докладваш за грешка от всеки екран.';
+
+  @override
   String get bugReportSuccessMessage =>
       'Благодарим ти! Получихме доклада ти и ще го използваме, за да направим Divine по-добро.';
 

@@ -13681,6 +13681,12 @@ abstract class AppLocalizations {
   /// **'Device info and logs will be included automatically.'**
   String get bugReportDiagnosticsNotice;
 
+  /// Muted line at the bottom of the Report a Bug form, shown unless the form was opened by holding the Profile tab. The tab shows the user's profile picture, not a word. Some people reach this form while the bottom bar is hidden, so keep the 'when the bottom bar is showing' condition. Avoid left/right wording (RTL locales).
+  ///
+  /// In en, this message translates to:
+  /// **'Shortcut: when the bottom bar is showing, press and hold your profile picture to report a bug from any screen.'**
+  String get bugReportProfileHoldTip;
+
   /// No description provided for @bugReportSuccessMessage.
   ///
   /// In en, this message translates to:

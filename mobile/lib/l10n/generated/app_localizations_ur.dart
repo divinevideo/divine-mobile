@@ -8166,6 +8166,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'ڈیوائس کی معلومات اور لاگز خودکار طور پر شامل ہوں گے۔';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'شارٹ کٹ: جب نیچے موجود بار دکھائی دے تو کسی بھی اسکرین سے بگ کی رپورٹ کرنے کے لیے اپنی پروفائل تصویر کو دبا کر رکھیں۔';
+
+  @override
   String get bugReportSuccessMessage =>
       'شکریہ! ہمیں آپ کی رپورٹ مل گئی ہے اور ہم اسے Divine کو بہتر بنانے کے لیے استعمال کریں گے۔';
 

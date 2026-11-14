@@ -3970,6 +3970,7 @@
   "bugReportExpectedBehaviorLabel": "期待していた動作",
   "bugReportExpectedBehaviorHint": "本来どうなるはずだった?",
   "bugReportDiagnosticsNotice": "デバイス情報とログは自動で添付されるよ。",
+  "bugReportProfileHoldTip": "ショートカット: 下のバーが表示されているときは、プロフィール画像を長押しすると、どの画面からでもバグを報告できます。",
   "bugReportSuccessMessage": "ありがとう！レポートを受け取ったよ。Divine をよくするのに使うね。",
   "bugReportSendFailed": "バグレポートの送信に失敗。あとでもう一回試してみて。",
   "featureRequestSendRequest": "リクエストを送信",

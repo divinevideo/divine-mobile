@@ -8171,6 +8171,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'ستُرفَق معلومات الجهاز والسجلات تلقائيًا.';
 
   @override
+  String get bugReportProfileHoldTip =>
+      'اختصار: عندما يكون الشريط السفلي ظاهرًا، يمكن الإبلاغ عن خطأ من أي شاشة بالضغط مطولًا على صورة ملفك الشخصي.';
+
+  @override
   String get bugReportSuccessMessage =>
       'شكرًا لك! استلمنا تقريرك وسنستخدمه لجعل Divine أفضل.';
 

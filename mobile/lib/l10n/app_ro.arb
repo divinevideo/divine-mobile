@@ -3970,6 +3970,7 @@
   "bugReportExpectedBehaviorLabel": "Comportament așteptat",
   "bugReportExpectedBehaviorHint": "Ce ar fi trebuit să se întâmple în schimb?",
   "bugReportDiagnosticsNotice": "Informațiile despre dispozitiv și jurnalele vor fi incluse automat.",
+  "bugReportProfileHoldTip": "Scurtătură: când bara de jos este vizibilă, ține apăsată poza ta de profil ca să raportezi un bug din orice ecran.",
   "bugReportSuccessMessage": "Mulțumim! Am primit raportul tău și îl vom folosi ca să facem Divine mai bun.",
   "bugReportSendFailed": "Trimiterea raportului de bug a eșuat. Încearcă din nou mai târziu.",
   "featureRequestSendRequest": "Trimite cererea",
