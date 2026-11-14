@@ -13,6 +13,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
+import 'package:openvine/services/video_dm_outbox.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 class _MockDmVideoSendService extends Mock implements DmVideoSendService {}
@@ -212,21 +213,6 @@ void main() {
           onPhase: any(named: 'onPhase'),
         ),
       ).called(1);
-    });
-  });
-
-  group(videoDmMimeTypeFor, () {
-    test('maps known video extensions to their MIME type', () {
-      expect(videoDmMimeTypeFor('/clips/a.mp4'), 'video/mp4');
-      expect(videoDmMimeTypeFor('/clips/a.MOV'), 'video/quicktime');
-      expect(videoDmMimeTypeFor('/clips/a.m4v'), 'video/x-m4v');
-      expect(videoDmMimeTypeFor('/clips/a.webm'), 'video/webm');
-      expect(videoDmMimeTypeFor('/clips/a.mkv'), 'video/x-matroska');
-    });
-
-    test('falls back to video/mp4 for an unknown extension', () {
-      expect(videoDmMimeTypeFor('/clips/a.unknown'), 'video/mp4');
-      expect(videoDmMimeTypeFor('/clips/noextension'), 'video/mp4');
     });
   });
 
