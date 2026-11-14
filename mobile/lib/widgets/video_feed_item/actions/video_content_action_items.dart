@@ -56,6 +56,8 @@ Future<void> openAddToList(BuildContext sheetContext, VideoEvent video) {
 /// Confirms and deletes the viewer's own [video], closing the sheet owning
 /// [sheetContext] before the outcome is reported, whether it succeeded or
 /// failed: a snackbar raised while the sheet is open lands underneath it.
+/// A route the user opened over the sheet meanwhile is left open, and the
+/// outcome is then reported beneath it.
 ///
 /// [sheetContext] must stay mounted for as long as the sheet is open: the
 /// outcome is reported through it after the network round trip.
@@ -64,12 +66,20 @@ Future<void> deleteOwnerVideoFromSheet(
   VideoEvent video,
   OwnerVideoActionsCubit cubit,
 ) {
+  // Only while the sheet is on top: dismissing pops the top route, which by
+  // then may be one the user opened over the sheet, such as an info sheet.
+  Future<void> dismissIfCurrent() async {
+    if (ModalRoute.of(sheetContext)?.isCurrent ?? true) {
+      dismissSheet(sheetContext);
+    }
+  }
+
   return confirmAndDeleteOwnerVideo(
     context: sheetContext,
     video: video,
     cubit: cubit,
-    onDeleted: () async => dismissSheet(sheetContext),
-    onFailed: () async => dismissSheet(sheetContext),
+    onDeleted: dismissIfCurrent,
+    onFailed: dismissIfCurrent,
   );
 }
 

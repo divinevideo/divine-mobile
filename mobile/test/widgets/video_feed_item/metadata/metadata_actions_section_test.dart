@@ -551,6 +551,47 @@ void main() {
       );
 
       testWidgets(
+        'leaves a route opened over the sheet while the delete ran',
+        (tester) async {
+          const coverText = 'covering route';
+          stubContentActions();
+          final ownerCubit = stubbedOwnerCubit() as _MockOwnerVideoActionsCubit;
+          final deleteStarted = Completer<OwnerVideoDeleteStart>();
+          when(
+            () => ownerCubit.deleteVideo(any()),
+          ).thenAnswer((_) => deleteStarted.future);
+          when(() => ownerCubit.cleanupCompletionFor(any())).thenReturn(null);
+
+          await openSheet(tester, video: _video(), ownerCubit: ownerCubit);
+          await tester.tap(find.text(l10n.shareMenuDeleteVideo));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.shareMenuDelete));
+          await tester.pumpAndSettle();
+          Navigator.of(tester.element(sheetList)).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const Scaffold(body: Text(coverText)),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          when(() => ownerCubit.state).thenReturn(
+            const OwnerVideoActionsState(
+              operations: {
+                _videoId: OwnerVideoOperationState(
+                  deleteStatus: OwnerVideoDeleteStatus.success,
+                  cleanupStatus: OwnerVideoCleanupStatus.confirmed,
+                ),
+              },
+            ),
+          );
+          deleteStarted.complete(OwnerVideoDeleteStart.started);
+          await tester.pumpAndSettle();
+
+          expect(find.text(coverText), findsOneWidget);
+        },
+      );
+
+      testWidgets(
         'logs an unexpected delete error instead of leaving it unhandled',
         (tester) async {
           stubContentActions();
