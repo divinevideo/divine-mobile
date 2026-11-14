@@ -15,30 +15,22 @@ COMPOSE_FILE="$ROOT/local_stack/docker-compose.yml"
 
 # Two runs that both find no stack would both start one, each recreating the
 # other's containers, so the check and the start hold a machine-wide lock.
-STACK_LOCK=/tmp/pr-screenshots-stack.lock
-announced_wait=false
-until mkdir "$STACK_LOCK" 2>/dev/null; do
-  holder=$(cat "$STACK_LOCK/pid" 2>/dev/null || true)
-  if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
-    # The sim_up.sh that held it died without releasing it.
-    rm -rf "$STACK_LOCK"
-    continue
-  fi
-  $announced_wait || echo "Waiting for another sim_up.sh (pid ${holder:-unknown}) to finish starting the stack..."
-  announced_wait=true
-  sleep 10
-done
-echo $$ > "$STACK_LOCK/pid"
-trap 'rm -rf "$STACK_LOCK"' EXIT
+# It is a kernel flock on fd 9, which this script keeps open: it is released
+# when the fd closes or the script dies, so no stale lock can outlive a run.
+exec 9>> /tmp/pr-screenshots-stack.lock
+if ! python3 -I -c 'import fcntl; fcntl.flock(9, fcntl.LOCK_EX | fcntl.LOCK_NB)' 2>/dev/null; then
+  echo "Waiting for another sim_up.sh to finish starting the stack..."
+  python3 -I -c 'import fcntl; fcntl.flock(9, fcntl.LOCK_EX)'
+fi
 
 # Every worktree's local_stack is the same compose project, so a stack another
 # session started is shared: reuse it rather than recreate its containers. A
 # failing `ps` (Docker not running) falls through to up.sh, which reports it.
-RUNNING_SERVICES=$(docker compose -f "$COMPOSE_FILE" ps --status running --services 2>/dev/null || true)
+RUNNING_SERVICES=$(docker compose -f "$COMPOSE_FILE" ps --status running --services 2>/dev/null 9>&- || true)
 if grep -qx funnelcake-proxy <<<"$RUNNING_SERVICES"; then
   STACK_STARTED=no
   echo "Reusing the local stack that is already running; leave it up at cleanup."
-  PAUSED_SERVICES=$(docker compose -f "$COMPOSE_FILE" ps --status paused --services 2>/dev/null || true)
+  PAUSED_SERVICES=$(docker compose -f "$COMPOSE_FILE" ps --status paused --services 2>/dev/null 9>&- || true)
   [ -z "$PAUSED_SERVICES" ] \
     || echo "warning: paused in the shared stack: $(paste -sd " " - <<<"$PAUSED_SERVICES"); another run may be mid-shot" >&2
   # A reused stack runs another checkout's local_stack, not this branch's.
@@ -60,14 +52,15 @@ else
   fi
 
   echo "Starting local stack (log: $LOG_DIR/stack.log)..."
-  if ! bash "$ROOT/local_stack/up.sh" > "$LOG_DIR/stack.log" 2>&1; then
+  # 9>&-: nothing this starts may keep holding the lock after the script releases it.
+  if ! bash "$ROOT/local_stack/up.sh" > "$LOG_DIR/stack.log" 2>&1 9>&-; then
     echo "warning: local_stack/up.sh failed; the end of $LOG_DIR/stack.log:" >&2
     tail -n 15 "$LOG_DIR/stack.log" >&2
   fi
   # Untuned, a video published now stays out of the REST feeds for up to
   # 15 minutes, so a failed up.sh must not skip this step.
   if ! grep -q 'refresh-interval tuning: applied=' "$LOG_DIR/stack.log"; then
-    docker compose -f "$COMPOSE_FILE" run --rm funnelcake-local-tuning >> "$LOG_DIR/stack.log" 2>&1 \
+    docker compose -f "$COMPOSE_FILE" run --rm funnelcake-local-tuning >> "$LOG_DIR/stack.log" 2>&1 9>&- \
       || { echo "error: refresh-interval tuning failed; see $LOG_DIR/stack.log" >&2; exit 1; }
   fi
 fi
@@ -80,8 +73,7 @@ STACK_LOG_HINT="see $LOG_DIR/stack.log"
 "${CURL_READY[@]}" http://localhost:43003/ || { echo "error: Blossom is not answering on :43003; $STACK_LOG_HINT" >&2; exit 1; }
 "${CURL_READY[@]}" http://localhost:47777/ || { echo "error: the relay is not answering on :47777; $STACK_LOG_HINT" >&2; exit 1; }
 # The stack is up, so a waiting run will now find it and reuse it.
-rm -rf "$STACK_LOCK"
-trap - EXIT
+exec 9>&-
 
 # A simulator of this run's own, so clearKeychain, the reinstall and the
 # status-bar override never land on a device someone else is using.
