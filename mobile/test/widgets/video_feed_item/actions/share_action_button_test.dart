@@ -724,7 +724,7 @@ void main() {
           await pumpSheet(tester);
 
           final bloc = tester
-              .element(find.text('Share with'))
+              .element(find.text(l10n.shareWithTitle))
               .read<VideoContentActionsBloc>();
           expect(bloc.isClosed, isFalse);
 
@@ -769,7 +769,7 @@ void main() {
               addressableId: any(named: 'addressableId'),
             ),
           ).called(1);
-          expect(find.text('Share with'), findsNothing);
+          expect(find.text(l10n.shareWithTitle), findsNothing);
           expect(find.text(l10n.shareAddedToBookmarks), findsOneWidget);
         });
 
@@ -923,7 +923,7 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(copied.single, startsWith('nevent1'));
-          expect(find.text('Share with'), findsNothing);
+          expect(find.text(l10n.shareWithTitle), findsNothing);
           expect(find.text(l10n.shareCopiedEventId), findsOneWidget);
         });
       });
