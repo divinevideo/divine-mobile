@@ -6,8 +6,8 @@ import 'dart:typed_data';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/outgoing_video_dm.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart';
-import 'package:openvine/services/video_dm_outbox.dart';
 
 /// Right-aligned bubble for an outgoing video while it is queued, preparing,
 /// uploading, publishing or failed.
