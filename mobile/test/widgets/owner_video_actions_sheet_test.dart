@@ -1,6 +1,9 @@
 // ABOUTME: Tests the shared owner-video action sheet helper.
 // ABOUTME: Pins the onDeleted contract that lets the two grids differ.
 
+import 'dart:async';
+
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -22,6 +25,28 @@ class _MockEnforcementRepository extends Mock
     implements CreatorDeleteEnforcementRepository {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
+
+/// Runs [onDispose] when its subtree leaves the tree.
+class _OnDispose extends StatefulWidget {
+  const _OnDispose({required this.onDispose, required this.child});
+
+  final VoidCallback onDispose;
+  final Widget child;
+
+  @override
+  State<_OnDispose> createState() => _OnDisposeState();
+}
+
+class _OnDisposeState extends State<_OnDispose> {
+  @override
+  void dispose() {
+    widget.onDispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
 
 void main() {
   group('showOwnerVideoActionsSheet', () {
@@ -158,6 +183,79 @@ void main() {
       await openSheetAndDelete(tester);
 
       expect(find.byType(SnackBar), findsOneWidget);
+    });
+
+    group('confirmAndDeleteOwnerVideo', () {
+      const sheetButton = 'delete from sheet';
+
+      testWidgets(
+        'still confirms the delete when onDeleted closes the sheet it was '
+        'started from',
+        (tester) async {
+          stubDelete(success: true);
+          // Holding cleanup open keeps the outcome on its first message, so
+          // the cleanup-completion snackbar cannot queue ahead of it.
+          final cleanup = Completer<CreatorDeleteEnforcementResult>();
+          when(
+            () => enforcementRepository.enforce(
+              any(),
+              deletionEvent: any(named: 'deletionEvent'),
+            ),
+          ).thenAnswer((_) => cleanup.future);
+          late BuildContext opener;
+          await tester.pumpWidget(
+            MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) {
+                    opener = context;
+                    return const SizedBox();
+                  },
+                ),
+              ),
+            ),
+          );
+          // onDeleted returns only once the sheet is gone, so the context the
+          // delete was started from is unmounted by the time it resolves.
+          final sheetDisposed = Completer<void>();
+          unawaited(
+            VineBottomSheet.show<void>(
+              context: opener,
+              body: _OnDispose(
+                onDispose: sheetDisposed.complete,
+                child: Builder(
+                  builder: (sheetContext) => TextButton(
+                    onPressed: () => confirmAndDeleteOwnerVideo(
+                      context: sheetContext,
+                      video: video,
+                      cubit: cubit,
+                      onDeleted: () {
+                        Navigator.of(sheetContext).pop();
+                        return sheetDisposed.future;
+                      },
+                    ),
+                    child: const Text(sheetButton),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(sheetButton));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.shareMenuDelete));
+          await tester.pumpAndSettle();
+
+          expect(find.text(sheetButton), findsNothing);
+          expect(
+            find.text(l10n.shareMenuDeleteCleanupInProgress),
+            findsOneWidget,
+          );
+        },
+      );
     });
   });
 }
