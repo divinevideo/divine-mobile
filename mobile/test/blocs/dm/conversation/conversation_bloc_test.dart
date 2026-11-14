@@ -3,6 +3,7 @@
 // ABOUTME: and state/event equality.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:db_client/db_client.dart';
@@ -11,9 +12,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/services/video_dm_outbox.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 class _MockDmRepository extends Mock implements DmRepository {}
+
+class _MockVideoDmOutbox extends Mock implements VideoDmOutbox {}
 
 /// Builds an [OutgoingDm] queue row for tests that exercise the
 /// [ConversationState.pendingOutgoing] projection slice. Defaults to a
@@ -92,9 +98,15 @@ void main() {
 
   group(ConversationBloc, () {
     late _MockDmRepository mockDmRepository;
+    late _MockVideoDmOutbox mockVideoOutbox;
 
     setUp(() {
       mockDmRepository = _MockDmRepository();
+      mockVideoOutbox = _MockVideoDmOutbox();
+      // No video sends in flight unless a test says otherwise.
+      when(
+        () => mockVideoOutbox.watchConversation(any()),
+      ).thenAnswer((_) => Stream.value(const <OutgoingVideoDm>[]));
       // Safe default for the post-send repaint re-read; failure tests that
       // care override it with the actual rows.
       when(
@@ -121,6 +133,7 @@ void main() {
     ConversationBloc buildBloc() => ConversationBloc(
       dmRepository: mockDmRepository,
       conversationId: conversationId,
+      videoOutbox: mockVideoOutbox,
     );
 
     test('initial state is correct', () {
@@ -2445,6 +2458,250 @@ void main() {
         errors: () => const <Object>[],
       );
     });
+
+    group('video sends', () {
+      setUpAll(() => registerFallbackValue(File('/documents/fallback.mp4')));
+
+      OutgoingVideoDm videoSend({
+        String id = 'video-1',
+        OutgoingVideoDmPhase phase = OutgoingVideoDmPhase.uploading,
+        String? rumorEventId,
+      }) => OutgoingVideoDm(
+        id: id,
+        conversationId: conversationId,
+        recipientPubkey: recipientPubkey,
+        localPath: '/documents/$id.mp4',
+        requestedAt: DateTime.utc(2026, 11, 13, 10),
+        phase: phase,
+        rumorEventId: rumorEventId,
+      );
+
+      void stubThread({
+        Stream<List<DmMessage>>? messages,
+        Stream<List<OutgoingVideoDm>>? videoSends,
+      }) {
+        when(
+          () => mockDmRepository.markConversationAsRead(conversationId),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockDmRepository.watchMessages(conversationId),
+        ).thenAnswer((_) => messages ?? Stream.value(const <DmMessage>[]));
+        when(
+          () => mockDmRepository.watchOutgoing(conversationId),
+        ).thenAnswer((_) => Stream.value(const <OutgoingDm>[]));
+        if (videoSends != null) {
+          when(
+            () => mockVideoOutbox.watchConversation(conversationId),
+          ).thenAnswer((_) => videoSends);
+        }
+      }
+
+      blocTest<ConversationBloc, ConversationState>(
+        "merges the outbox's entries for this conversation into state",
+        setUp: () => stubThread(
+          videoSends: Stream.value([videoSend()]),
+        ),
+        build: buildBloc,
+        act: (bloc) => bloc.add(const ConversationStarted()),
+        expect: () => [
+          const ConversationState(status: ConversationStatus.loading),
+          ConversationState(
+            status: ConversationStatus.loaded,
+            pendingVideoSends: [videoSend()],
+          ),
+        ],
+        verify: (_) {
+          verify(
+            () => mockVideoOutbox.watchConversation(conversationId),
+          ).called(1);
+        },
+      );
+
+      blocTest<ConversationBloc, ConversationState>(
+        'acknowledges a sent entry once its row is in messages',
+        setUp: () => stubThread(
+          messages: Stream.value([testMessage]),
+          videoSends: Stream.value([
+            videoSend(
+              phase: OutgoingVideoDmPhase.sent,
+              rumorEventId: messageId,
+            ),
+          ]),
+        ),
+        build: buildBloc,
+        act: (bloc) => bloc.add(const ConversationStarted()),
+        verify: (_) {
+          verify(() => mockVideoOutbox.acknowledge('video-1')).called(1);
+        },
+      );
+
+      blocTest<ConversationBloc, ConversationState>(
+        'does not acknowledge a sent entry before its row is in messages',
+        setUp: () => stubThread(
+          videoSends: Stream.value([
+            videoSend(
+              phase: OutgoingVideoDmPhase.sent,
+              rumorEventId: messageId,
+            ),
+          ]),
+        ),
+        build: buildBloc,
+        act: (bloc) => bloc.add(const ConversationStarted()),
+        verify: (bloc) {
+          expect(bloc.state.displayedVideoSends, hasLength(1));
+          verifyNever(() => mockVideoOutbox.acknowledge(any()));
+        },
+      );
+
+      test(
+        'the row and the sent entry arriving in one tick never show both',
+        () async {
+          final messages = StreamController<List<DmMessage>>();
+          final videoSends = StreamController<List<OutgoingVideoDm>>();
+          addTearDown(messages.close);
+          addTearDown(videoSends.close);
+          stubThread(messages: messages.stream, videoSends: videoSends.stream);
+
+          final bloc = buildBloc();
+          addTearDown(bloc.close);
+          final states = <ConversationState>[];
+          final subscription = bloc.stream.listen(states.add);
+          addTearDown(subscription.cancel);
+
+          bloc.add(const ConversationStarted());
+          messages.add(const <DmMessage>[]);
+          videoSends.add([videoSend()]);
+          await _waitForConversationState(
+            bloc,
+            (s) => s.displayedVideoSends.isNotEmpty,
+          );
+
+          // The send finishes: the outbox marks the entry sent and the
+          // persisted row lands, in the same turn.
+          videoSends.add([
+            videoSend(
+              phase: OutgoingVideoDmPhase.sent,
+              rumorEventId: messageId,
+            ),
+          ]);
+          messages.add([testMessage]);
+          await _waitForConversationState(
+            bloc,
+            (s) => s.messages.isNotEmpty,
+          );
+
+          final loaded = states
+              .where((s) => s.status == ConversationStatus.loaded)
+              .toList();
+          expect(loaded, isNotEmpty);
+          for (final state in loaded) {
+            final rowShown = state.messages.any((m) => m.id == messageId);
+            final bubbleShown = state.displayedVideoSends.any(
+              (e) => e.id == 'video-1',
+            );
+            expect(
+              rowShown != bubbleShown,
+              isTrue,
+              reason:
+                  'exactly one of the row and the pending bubble is shown '
+                  '(row: $rowShown, bubble: $bubbleShown)',
+            );
+          }
+          expect(
+            loaded.any(
+              (s) =>
+                  s.messages.isNotEmpty &&
+                  s.pendingVideoSends.any(
+                    (e) => e.phase == OutgoingVideoDmPhase.sent,
+                  ),
+            ),
+            isTrue,
+            reason: 'a state carries both the row and the sent entry',
+          );
+          verify(() => mockVideoOutbox.acknowledge('video-1')).called(1);
+        },
+      );
+
+      blocTest<ConversationBloc, ConversationState>(
+        '$ConversationVideoSendRequested calls outbox.sendVideo with this '
+        'conversationId',
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          ConversationVideoSendRequested(
+            recipientPubkey: recipientPubkey,
+            file: File('/documents/picked.mp4'),
+          ),
+        ),
+        expect: () => const <ConversationState>[],
+        verify: (_) {
+          final captured = verify(
+            () => mockVideoOutbox.sendVideo(
+              conversationId: conversationId,
+              recipientPubkey: recipientPubkey,
+              file: captureAny(named: 'file'),
+            ),
+          ).captured;
+          expect(captured.single, isA<File>());
+          expect(
+            (captured.single as File).path,
+            equals('/documents/picked.mp4'),
+          );
+        },
+      );
+
+      final clips = [
+        DivineVideoClip(
+          id: 'clip-1',
+          video: EditorVideo.file('/documents/clip-1.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime.utc(2026, 11, 13),
+          targetAspectRatio: AspectRatio.square,
+          originalAspectRatio: 9 / 16,
+        ),
+      ];
+
+      blocTest<ConversationBloc, ConversationState>(
+        '$ConversationClipsSendRequested calls outbox.sendClips with this '
+        'conversationId',
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          ConversationClipsSendRequested(
+            recipientPubkey: recipientPubkey,
+            clips: clips,
+          ),
+        ),
+        expect: () => const <ConversationState>[],
+        verify: (_) {
+          verify(
+            () => mockVideoOutbox.sendClips(
+              conversationId: conversationId,
+              recipientPubkey: recipientPubkey,
+              clips: clips,
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<ConversationBloc, ConversationState>(
+        '$ConversationVideoSendRetried calls outbox.retry with the id',
+        build: buildBloc,
+        act: (bloc) => bloc.add(const ConversationVideoSendRetried('video-1')),
+        expect: () => const <ConversationState>[],
+        verify: (_) {
+          verify(() => mockVideoOutbox.retry('video-1')).called(1);
+        },
+      );
+
+      blocTest<ConversationBloc, ConversationState>(
+        '$ConversationVideoSendRemoved calls outbox.remove with the id',
+        build: buildBloc,
+        act: (bloc) => bloc.add(const ConversationVideoSendRemoved('video-1')),
+        expect: () => const <ConversationState>[],
+        verify: (_) {
+          verify(() => mockVideoOutbox.remove('video-1')).called(1);
+        },
+      );
+    });
   });
 
   group(ConversationState, () {
@@ -2462,7 +2719,28 @@ void main() {
           <String>{},
           null,
           <OutgoingDm>[],
+          <OutgoingVideoDm>[],
         ]),
+      );
+    });
+
+    test('pendingVideoSends participates in equality and copyWith', () {
+      final entry = OutgoingVideoDm(
+        id: 'video-1',
+        conversationId: conversationId,
+        recipientPubkey: recipientPubkey,
+        localPath: '/documents/video-1.mp4',
+        requestedAt: DateTime.utc(2026, 11, 13),
+      );
+      final withEntry = const ConversationState().copyWith(
+        pendingVideoSends: [entry],
+      );
+
+      expect(withEntry.pendingVideoSends, equals([entry]));
+      expect(withEntry, isNot(equals(const ConversationState())));
+      expect(
+        withEntry.copyWith(status: ConversationStatus.loaded).pendingVideoSends,
+        equals([entry]),
       );
     });
 
@@ -2737,6 +3015,32 @@ void main() {
   });
 
   group(ConversationEvent, () {
+    group('video send events', () {
+      test('compare by value', () {
+        final file = File('/documents/picked.mp4');
+        expect(
+          ConversationVideoSendRequested(
+            recipientPubkey: recipientPubkey,
+            file: file,
+          ),
+          equals(
+            ConversationVideoSendRequested(
+              recipientPubkey: recipientPubkey,
+              file: file,
+            ),
+          ),
+        );
+        expect(
+          const ConversationVideoSendRetried('video-1'),
+          isNot(equals(const ConversationVideoSendRetried('video-2'))),
+        );
+        expect(
+          const ConversationVideoSendRemoved('video-1'),
+          equals(const ConversationVideoSendRemoved('video-1')),
+        );
+      });
+    });
+
     group(ConversationStarted, () {
       test('supports value equality', () {
         expect(

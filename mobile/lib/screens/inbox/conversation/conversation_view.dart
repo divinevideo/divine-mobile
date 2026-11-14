@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart'
     show DmRepository, SoundRequestMessageKind, parseSoundRequestMessage;
+import 'package:equatable/equatable.dart';
 import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,8 +19,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
-import 'package:openvine/blocs/clips_library/clips_library_bloc.dart'
-    show LibraryClipTypeFilter;
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
 import 'package:openvine/blocs/dm/dm_hidden_members.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
@@ -28,36 +27,32 @@ import 'package:openvine/blocs/dm/encrypted_video_save/encrypted_video_save_cubi
 import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
 import 'package:openvine/blocs/dm/restore_status/dm_restore_status_cubit.dart';
 import 'package:openvine/blocs/dm/shared_video_save/shared_video_save_cubit.dart';
-import 'package:openvine/blocs/dm/video_dm_send/video_dm_send_cubit.dart';
 import 'package:openvine/blocs/sound_requests/sound_requests_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/models/collaborator_invite.dart';
-import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/dm_clip_tag.dart';
+import 'package:openvine/models/outgoing_video_dm.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/clip_provenance_providers.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
+import 'package:openvine/screens/inbox/conversation/dm_clip_picker.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/sound_request_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_name_builder.dart';
-import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/collaborator_invite_parser.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/gallery_save_service.dart';
-import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -895,7 +890,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     // thread itself is the broken thing, so the copy points back at the inbox
     // rather than at the peer. No retry action: the bloc guard behind this
     // status is now a backstop rather than a path the UI still reaches —
-    // `_SendBarBody` is built only for a writable thread, which requires
+    // `_SendBar` is built only for a writable thread, which requires
     // participants.
     if (state.sendStatus == SendStatus.noRecipient) {
       final message = l10n.dmSendNoRecipientMessage;
@@ -1011,42 +1006,16 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
 /// OK-confirmed publish can legitimately run for tens of seconds on a slow
 /// relay or remote signer — freezing the composer for that window swallowed
 /// every follow-up message the user tried to type.
-class _SendBar extends ConsumerWidget {
+class _SendBar extends ConsumerStatefulWidget {
   const _SendBar({required this.participantPubkeys});
 
   final List<String> participantPubkeys;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Keyed on the service so an account switch that rebuilds the DM
-    // repository or Blossom client also rebuilds the cubit around them.
-    final service = ref.watch(dmVideoSendServiceProvider);
-    final clipVerifier = ref.watch(clipProvenanceVerifierProvider);
-    final clipImporter = ref.watch(videoClipImportServiceProvider);
-    return BlocProvider<VideoDmSendCubit>(
-      key: ValueKey((service, clipVerifier, clipImporter)),
-      create: (_) => VideoDmSendCubit(
-        service: service,
-        clipVerifier: clipVerifier,
-        signOwnRecordings: NativeProofModeService.signOwnRecordings,
-        isArchivedVine: (path) async =>
-            await clipImporter.findArchivedVine(File(path)) != null,
-      ),
-      child: _SendBarBody(participantPubkeys: participantPubkeys),
-    );
-  }
+  ConsumerState<_SendBar> createState() => _SendBarState();
 }
 
-class _SendBarBody extends ConsumerStatefulWidget {
-  const _SendBarBody({required this.participantPubkeys});
-
-  final List<String> participantPubkeys;
-
-  @override
-  ConsumerState<_SendBarBody> createState() => _SendBarBodyState();
-}
-
-class _SendBarBodyState extends ConsumerState<_SendBarBody> {
+class _SendBarState extends ConsumerState<_SendBar> {
   final _controller = TextEditingController();
 
   @override
@@ -1110,59 +1079,11 @@ class _SendBarBodyState extends ConsumerState<_SendBarBody> {
     final recipient = participantPubkeys.first;
     if (recipient.isEmpty) return;
 
-    final clips = await VineBottomSheet.show<List<DivineVideoClip>>(
-      context: context,
-      maxChildSize: 1,
-      initialChildSize: 0.9,
-      minChildSize: VineTheme.bottomSheetDismissFloor,
-      buildScrollBody: (scrollController) => LibraryScreen(
-        initialTabIndex: 1,
-        selectionMode: true,
-        clipTypeFilter: LibraryClipTypeFilter.video,
-        scrollController: scrollController,
-      ),
-    );
+    final clips = await ref.read(dmClipPickerProvider)(context);
     if (clips == null || clips.isEmpty || !mounted) return;
 
-    // The send outlives this screen, so everything needed to report it is
-    // captured now and the outcome goes to the app's messenger.
-    final messenger = ScaffoldMessenger.of(context);
-    final view = View.of(context);
-    final textDirection = Directionality.of(context);
-    final l10n = context.l10n;
-    final outcome = await context.read<VideoDmSendCubit>().sendClips(
-      recipientPubkey: recipient,
-      clips: clips,
-    );
-    if (outcome == null) return;
-
-    final (message, isError) = switch (outcome) {
-      ClipSendOutcome(isPartial: true) => (
-        l10n.dmClipsPartlySent(outcome.sentCount, outcome.total),
-        true,
-      ),
-      ClipSendOutcome(status: VideoDmSendStatus.sent) => (
-        l10n.dmVideoSent,
-        false,
-      ),
-      ClipSendOutcome(status: VideoDmSendStatus.tooLarge) => (
-        l10n.dmVideoTooLarge('$videoDmMaxMegabytes'),
-        true,
-      ),
-      ClipSendOutcome(status: VideoDmSendStatus.clipNotVerified) => (
-        l10n.dmClipSendNotVerified,
-        true,
-      ),
-      _ => (l10n.dmVideoSendFailed, true),
-    };
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(DivineSnackbarContainer.snackBar(message, error: isError));
-    runDetached(
-      SemanticsService.sendAnnouncement(view, message, textDirection),
-      'announce DM clip send outcome',
-      logName: 'ConversationView',
-      category: LogCategory.ui,
+    context.read<ConversationBloc>().add(
+      ConversationClipsSendRequested(recipientPubkey: recipient, clips: clips),
     );
   }
 
@@ -1191,87 +1112,37 @@ class _SendBarBodyState extends ConsumerState<_SendBarBody> {
     }
     if (picked == null || !mounted) return;
 
-    await context.read<VideoDmSendCubit>().send(
-      recipientPubkey: recipient,
-      videoFile: File(picked.path),
-    );
-  }
-
-  /// Surfaces the terminal outcome of a video DM send.
-  ///
-  /// Progress is the composer's spinner, so only terminal states need copy.
-  /// A failure would otherwise be silent: a send refused before the enqueue
-  /// leaves no bubble, so the spinner stopping is the only signal.
-  void _onVideoSendOutcome(BuildContext context, VideoDmSendState state) {
-    final l10n = context.l10n;
-    final (message, isError) = switch (state.status) {
-      VideoDmSendStatus.sent => (l10n.dmVideoSent, false),
-      VideoDmSendStatus.failed => (l10n.dmVideoSendFailed, true),
-      VideoDmSendStatus.tooLarge => (
-        l10n.dmVideoTooLarge('$videoDmMaxMegabytes'),
-        true,
+    context.read<ConversationBloc>().add(
+      ConversationVideoSendRequested(
+        recipientPubkey: recipient,
+        file: File(picked.path),
       ),
-      VideoDmSendStatus.clipNotVerified => (l10n.dmClipSendNotVerified, true),
-      VideoDmSendStatus.idle ||
-      VideoDmSendStatus.checking ||
-      VideoDmSendStatus.encrypting ||
-      VideoDmSendStatus.uploading ||
-      VideoDmSendStatus.sending => (null, false),
-    };
-    if (message == null) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(DivineSnackbarContainer.snackBar(message, error: isError));
-    // Per `accessibility.md`, async visible state changes must announce
-    // explicitly — Material's default SnackBar semantics are weaker than the
-    // written rule and not guaranteed across platforms.
-    runDetached(
-      SemanticsService.sendAnnouncement(
-        View.of(context),
-        message,
-        Directionality.of(context),
-      ),
-      'announce DM video send outcome',
-      logName: 'ConversationView',
-      category: LogCategory.ui,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isVideoSendBusy = context.select(
-      (VideoDmSendCubit cubit) => cubit.state.isSending,
-    );
     // An oversized rumor is refused before the enqueue, so it leaves no queue
     // row and no bubble to carry the failure (#7331). The bar has already
     // cleared itself by then, so put the text back: it is the only copy the
     // user has, and the fix they need is to shorten it.
-    return MultiBlocListener(
-      listeners: [
-        BlocListener<ConversationBloc, ConversationState>(
-          listenWhen: (previous, current) =>
-              previous.sendStatus != current.sendStatus &&
-              current.sendStatus == SendStatus.tooLong,
-          listener: (context, state) {
-            final rejected = _lastSubmitted;
-            if (rejected == null || _controller.text.isNotEmpty) return;
-            _controller.value = TextEditingValue(
-              text: rejected,
-              selection: TextSelection.collapsed(offset: rejected.length),
-            );
-          },
-        ),
-        BlocListener<VideoDmSendCubit, VideoDmSendState>(
-          listenWhen: (previous, current) => previous.status != current.status,
-          listener: _onVideoSendOutcome,
-        ),
-      ],
+    return BlocListener<ConversationBloc, ConversationState>(
+      listenWhen: (previous, current) =>
+          previous.sendStatus != current.sendStatus &&
+          current.sendStatus == SendStatus.tooLong,
+      listener: (context, state) {
+        final rejected = _lastSubmitted;
+        if (rejected == null || _controller.text.isNotEmpty) return;
+        _controller.value = TextEditingValue(
+          text: rejected,
+          selection: TextSelection.collapsed(offset: rejected.length),
+        );
+      },
       child: MessageInputBar(
         controller: _controller,
         // Video DMs address a single recipient; a group has none, so the
         // affordance is hidden rather than a dead tap.
         onAttachVideo: widget.participantPubkeys.length == 1 ? _onAttach : null,
-        isAttachVideoBusy: isVideoSendBusy,
         onSend: (text) {
           _lastSubmitted = text;
           context.read<ConversationBloc>().add(
@@ -1609,8 +1480,8 @@ class _ComposerSlotNotice extends StatelessWidget {
   }
 }
 
-/// Selects status and messages from the bloc and switches between loading,
-/// error, empty, and message-list states.
+/// Selects status, messages and pending video sends from the bloc and
+/// switches between loading, error, empty, and message-list states.
 class _ConversationContent extends StatelessWidget {
   const _ConversationContent({
     required this.currentPubkey,
@@ -1688,10 +1559,17 @@ class _ConversationContent extends StatelessWidget {
     return BlocSelector<
       ConversationBloc,
       ConversationState,
-      ({ConversationStatus status, List<DmMessage> messages})
+      ({
+        ConversationStatus status,
+        List<DmMessage> messages,
+        _PendingVideoSends videoSends,
+      })
     >(
-      selector: (state) =>
-          (status: state.status, messages: state.displayedMessages),
+      selector: (state) => (
+        status: state.status,
+        messages: state.displayedMessages,
+        videoSends: _PendingVideoSends(state.displayedVideoSends),
+      ),
       builder: (context, selected) {
         return switch (selected.status) {
           ConversationStatus.initial || ConversationStatus.loading => Center(
@@ -1708,7 +1586,7 @@ class _ConversationContent extends StatelessWidget {
             ),
           ),
           ConversationStatus.loaded =>
-            selected.messages.isEmpty
+            selected.messages.isEmpty && selected.videoSends.entries.isEmpty
                 ? (isUnresolved
                       ? const SizedBox.shrink()
                       : EmptyConversation(
@@ -1729,6 +1607,7 @@ class _ConversationContent extends StatelessWidget {
                         ))
                 : _MessageList(
                     messages: selected.messages,
+                    pendingVideoSends: selected.videoSends.entries,
                     currentPubkey: currentPubkey,
                     participantPubkeys: participantPubkeys,
                     blockedPubkeys: blockedPubkeys,
@@ -1745,6 +1624,19 @@ class _ConversationContent extends StatelessWidget {
       },
     );
   }
+}
+
+/// The pending video bubbles a thread shows, compared by contents.
+///
+/// [ConversationState.displayedVideoSends] builds a fresh list on every read,
+/// so selecting it bare would rebuild the thread on every emit.
+class _PendingVideoSends extends Equatable {
+  const _PendingVideoSends(this.entries);
+
+  final List<OutgoingVideoDm> entries;
+
+  @override
+  List<Object?> get props => [entries];
 }
 
 /// The video reference to render as a compact quoted preview above a reply's
@@ -1771,6 +1663,10 @@ DmSharedVideoRef? resolveQuotedVideoRef(
 DmSharedVideoRef? resolveOwnShareVideoRef(DmMessage message) =>
     message.replyToId == null ? message.sharedVideoRef : null;
 
+/// The list key of [entry]'s pending bubble; prefixed so it can never match
+/// a message id.
+String _pendingVideoKey(OutgoingVideoDm entry) => 'pending-video-${entry.id}';
+
 /// The emoji a double-tap-to-like publishes: the ❤️ that heads the DM quick
 /// reaction row ([kDefaultDmReactionEmojis]), reused verbatim so a double-tap
 /// and a picker ❤️ collapse to one reaction instead of two distinct rows
@@ -1780,6 +1676,7 @@ final String _doubleTapLikeEmoji = kDefaultDmReactionEmojis.first;
 class _MessageList extends StatelessWidget {
   const _MessageList({
     required this.messages,
+    required this.pendingVideoSends,
     required this.currentPubkey,
     required this.participantPubkeys,
     required this.blockedPubkeys,
@@ -1794,6 +1691,10 @@ class _MessageList extends StatelessWidget {
   });
 
   final List<DmMessage> messages;
+
+  /// Outgoing videos that have not landed as a message row yet, newest
+  /// first. They sit below [messages], at the newest end of the thread.
+  final List<OutgoingVideoDm> pendingVideoSends;
   final String currentPubkey;
   final List<String> participantPubkeys;
 
@@ -2148,6 +2049,13 @@ class _MessageList extends StatelessWidget {
       for (var index = 0; index < messages.length; index++)
         messages[index].id: index,
     };
+    // Pending video bubbles take the first indices, so the reversed list
+    // draws them at the bottom, and every message index is offset by them.
+    final pendingCount = pendingVideoSends.length;
+    final pendingIndexByKey = {
+      for (var index = 0; index < pendingCount; index++)
+        _pendingVideoKey(pendingVideoSends[index]): index,
+    };
     final isGroup = _isGroup;
 
     // A 1:1 thread's title is the author, so [senderDisplayName] names them.
@@ -2192,10 +2100,32 @@ class _MessageList extends StatelessWidget {
       // bottom: 8 stacks with the newest bubble's own 8 px bottom padding
       // for a 16 px gap to the scroll-view edge.
       padding: const EdgeInsets.only(top: 8, bottom: 8),
-      itemCount: messages.length,
-      findChildIndexCallback: (key) =>
-          key is ValueKey<String> ? messageIndexById[key.value] : null,
-      itemBuilder: (context, index) {
+      itemCount: pendingCount + messages.length,
+      findChildIndexCallback: (key) {
+        if (key is! ValueKey<String>) return null;
+        final pendingIndex = pendingIndexByKey[key.value];
+        if (pendingIndex != null) return pendingIndex;
+        final messageIndex = messageIndexById[key.value];
+        return messageIndex == null ? null : pendingCount + messageIndex;
+      },
+      itemBuilder: (context, itemIndex) {
+        if (itemIndex < pendingCount) {
+          final entry = pendingVideoSends[itemIndex];
+          return Padding(
+            key: ValueKey(_pendingVideoKey(entry)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: PendingVideoBubble(
+              entry: entry,
+              onRetry: () => context.read<ConversationBloc>().add(
+                ConversationVideoSendRetried(entry.id),
+              ),
+              onRemove: () => context.read<ConversationBloc>().add(
+                ConversationVideoSendRemoved(entry.id),
+              ),
+            ),
+          );
+        }
+        final index = itemIndex - pendingCount;
         final message = messages[index];
         final messageKey = ValueKey(message.id);
         final isSent = message.senderPubkey == currentPubkey;

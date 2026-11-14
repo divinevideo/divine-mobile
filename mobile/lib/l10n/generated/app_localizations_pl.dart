@@ -4111,6 +4111,31 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie można teraz sprawdzić tego klipu. Spróbuj ponownie za chwilę.';
 
   @override
+  String get dmPendingVideoWaiting => 'Waiting…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Preparing…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'Uploading $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Sending…';
+
+  @override
+  String get dmPendingVideoRemove => 'Remove';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return 'Sending video, $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+
+  @override
   String get dmClipSendNotVerified =>
       'Nie udało się potwierdzić, że ten klip nagrano kamerą Divine, więc nie można go wysłać jako klipu.';
 

@@ -3984,6 +3984,31 @@ class AppLocalizationsMs extends AppLocalizations {
       'Klip ini tidak dapat disemak sekarang. Cuba lagi sebentar nanti.';
 
   @override
+  String get dmPendingVideoWaiting => 'Waiting…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Preparing…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'Uploading $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Sending…';
+
+  @override
+  String get dmPendingVideoRemove => 'Remove';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return 'Sending video, $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+
+  @override
   String get dmClipSendNotVerified =>
       'Kami tidak dapat mengesahkan klip ini dirakam dengan kamera Divine, jadi ia tidak boleh dihantar sebagai klip.';
 

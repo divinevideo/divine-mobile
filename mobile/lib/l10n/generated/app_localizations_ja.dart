@@ -3740,6 +3740,31 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dmClipCheckUnavailable => '今はこのクリップを確認できません。少し経ってからもう一度お試しください';
 
   @override
+  String get dmPendingVideoWaiting => 'Waiting…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Preparing…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'Uploading $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Sending…';
+
+  @override
+  String get dmPendingVideoRemove => 'Remove';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return 'Sending video, $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+
+  @override
   String get dmClipSendNotVerified =>
       'このクリップがDivineのカメラで撮影されたことを確認できなかったため、クリップとして送信できません';
 

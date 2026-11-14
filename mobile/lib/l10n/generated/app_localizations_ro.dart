@@ -4114,6 +4114,31 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu putem verifica acest clip acum. Încearcă din nou puțin mai târziu.';
 
   @override
+  String get dmPendingVideoWaiting => 'Waiting…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Preparing…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'Uploading $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Sending…';
+
+  @override
+  String get dmPendingVideoRemove => 'Remove';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return 'Sending video, $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+
+  @override
   String get dmClipSendNotVerified =>
       'Nu am putut confirma că acest clip a fost filmat cu camera Divine, așa că nu poate fi trimis ca clip.';
 

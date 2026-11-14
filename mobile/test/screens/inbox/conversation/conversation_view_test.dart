@@ -6,7 +6,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 // `ProfileStats` here is the domain model from `models`, not the Drift
 // table class of the same name — the repository hides it the same way.
@@ -23,6 +22,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:models/models.dart' as models show AspectRatio;
 import 'package:openvine/blocs/dm/conversation/collaborator_invite_actions_cubit.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
 import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
@@ -30,6 +30,8 @@ import 'package:openvine/blocs/dm/restore_status/dm_restore_status_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/collaborator_invite.dart';
+import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/outgoing_video_dm.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
@@ -37,6 +39,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/watermark_download_provider.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_view.dart';
+import 'package:openvine/screens/inbox/conversation/dm_clip_picker.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
@@ -44,7 +47,6 @@ import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/auth_service.dart' show AuthState;
 import 'package:openvine/services/dm_video_blur_preference_service.dart';
 import 'package:openvine/services/dm_video_preview_memory.dart';
-import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/watermark_download_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -53,6 +55,7 @@ import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -91,10 +94,6 @@ class _MockContentBlocklistRepository extends Mock
 
 class _MockProfileReader extends Mock implements ProfileReader {}
 
-class _MockDmRepository extends Mock implements DmRepository {}
-
-class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
-
 /// Gallery picker stand-in: the real `ImagePicker` needs a platform plugin no
 /// test binding provides.
 class _FakeImagePicker extends ImagePicker {
@@ -108,33 +107,6 @@ class _FakeImagePicker extends ImagePicker {
     CameraDevice preferredCameraDevice = CameraDevice.rear,
     Duration? maxDuration,
   }) async => pickedVideo;
-}
-
-/// Drives the send lifecycle without touching crypto, Blossom, or relays.
-class _FakeVideoSendService extends DmVideoSendService {
-  _FakeVideoSendService({required this.result})
-    : super(
-        dmRepository: _MockDmRepository(),
-        blossom: _MockBlossomUploadService(),
-      );
-
-  final NIP17SendResult result;
-
-  @override
-  Future<NIP17SendResult> sendVideo({
-    required String recipientPubkey,
-    required File videoFile,
-    required String mimeType,
-    String? blurhash,
-    String? dimensions,
-    List<List<String>> extraTags = const [],
-    void Function(DmVideoSendPhase phase)? onPhase,
-  }) async {
-    onPhase?.call(DmVideoSendPhase.encrypting);
-    onPhase?.call(DmVideoSendPhase.uploading);
-    onPhase?.call(DmVideoSendPhase.sending);
-    return result;
-  }
 }
 
 class _MockAuthService extends MockAuthService {
@@ -268,7 +240,6 @@ void main() {
       Future<bool>? otherProfileVanishedFuture,
       bool isIdentityResolving = false,
       Stream<ConversationState>? stateStream,
-      DmVideoSendService? videoSendService,
       ImagePicker? videoPicker,
       ProfileReader? profileReadRepository,
       FollowRepository? followRepository,
@@ -337,8 +308,6 @@ void main() {
           followRelationshipProvider.overrideWith(
             (ref, pubkey) => Stream.value(FollowRelationship.mutual),
           ),
-          if (videoSendService != null)
-            dmVideoSendServiceProvider.overrideWithValue(videoSendService),
           if (videoPicker != null)
             dmVideoPickerProvider.overrideWithValue(videoPicker),
           ...extraOverrides,
@@ -6355,10 +6324,9 @@ void main() {
       });
     });
 
-    // Task A8 — the encrypted-video send only rendered progress (the composer
-    // spinner); a delivered or refused send had no copy of its own, so the
-    // failure was silent once the spinner stopped.
-    group('encrypted video DM send outcomes', () {
+    // Sending a video goes through ConversationBloc to the account's outbox,
+    // and the thread shows each outgoing video as a pending bubble.
+    group('encrypted video DM sends', () {
       late Directory tempDir;
 
       setUp(() {
@@ -6375,18 +6343,22 @@ void main() {
         return XFile(file.path);
       }
 
-      Future<void> attachVideo(
-        WidgetTester tester, {
-        required DmVideoSendService videoSendService,
-      }) async {
-        await tester.pumpWidget(
-          buildSubject(
-            state: const ConversationState(status: ConversationStatus.loaded),
-            videoSendService: videoSendService,
-            videoPicker: _FakeImagePicker(pickedVideo()),
-          ),
-        );
-        await tester.pump();
+      OutgoingVideoDm pendingVideo({
+        String id = 'video-1',
+        OutgoingVideoDmPhase phase = OutgoingVideoDmPhase.uploading,
+        OutgoingVideoDmFailure? failure,
+      }) => OutgoingVideoDm(
+        id: id,
+        conversationId: 'conversation-1',
+        recipientPubkey: otherPubkey,
+        localPath: '${tempDir.path}/clip.mp4',
+        requestedAt: now,
+        phase: phase,
+        uploadProgress: phase == OutgoingVideoDmPhase.uploading ? 0.42 : null,
+        failure: failure,
+      );
+
+      Future<void> attachGalleryVideo(WidgetTester tester) async {
         await tester.tap(
           find.bySemanticsIdentifier('dm_attach_video_button'),
         );
@@ -6415,32 +6387,212 @@ void main() {
         expect(find.text(l10n.dmAttachReuseNotice), findsOneWidget);
       });
 
-      testWidgets('confirms a delivered video DM', (tester) async {
-        await attachVideo(
+      testWidgets(
+        'picking a gallery video adds $ConversationVideoSendRequested',
+        (tester) async {
+          final picked = pickedVideo();
+          await tester.pumpWidget(
+            buildSubject(
+              state: const ConversationState(
+                status: ConversationStatus.loaded,
+              ),
+              videoPicker: _FakeImagePicker(picked),
+            ),
+          );
+          await tester.pump();
+
+          await attachGalleryVideo(tester);
+
+          verify(
+            () => mockBloc.add(
+              any(
+                that: isA<ConversationVideoSendRequested>()
+                    .having(
+                      (event) => event.recipientPubkey,
+                      'recipientPubkey',
+                      otherPubkey,
+                    )
+                    .having((event) => event.file.path, 'file', picked.path),
+              ),
+            ),
+          ).called(1);
+        },
+      );
+
+      group('picking clips from the library', () {
+        DivineVideoClip libraryClip(String id) => DivineVideoClip(
+          id: id,
+          video: EditorVideo.file('${tempDir.path}/$id.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime.utc(2026, 9, 28),
+          targetAspectRatio: models.AspectRatio.square,
+          originalAspectRatio: 9 / 16,
+        );
+
+        Future<void> attachLibraryClips(
+          WidgetTester tester,
+          List<DivineVideoClip>? picked,
+        ) async {
+          await tester.pumpWidget(
+            buildSubject(
+              state: const ConversationState(
+                status: ConversationStatus.loaded,
+              ),
+              extraOverrides: [
+                dmClipPickerProvider.overrideWithValue((_) async => picked),
+              ],
+            ),
+          );
+          await tester.pump();
+
+          await tester.tap(
+            find.bySemanticsIdentifier('dm_attach_video_button'),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.dmAttachClipFromLibrary));
+          await tester.pumpAndSettle();
+        }
+
+        testWidgets('adds $ConversationClipsSendRequested with the recipient '
+            'and the picked clips', (tester) async {
+          final clips = [libraryClip('clip-a'), libraryClip('clip-b')];
+
+          await attachLibraryClips(tester, clips);
+
+          verify(
+            () => mockBloc.add(
+              any(
+                that: isA<ConversationClipsSendRequested>()
+                    .having(
+                      (event) => event.recipientPubkey,
+                      'recipientPubkey',
+                      otherPubkey,
+                    )
+                    .having((event) => event.clips, 'clips', equals(clips)),
+              ),
+            ),
+          ).called(1);
+        });
+
+        testWidgets('adds nothing when the library is dismissed', (
           tester,
-          videoSendService: _FakeVideoSendService(
-            result: NIP17SendResult.success(
-              rumorEventId: 'a' * 64,
-              messageEventId: 'b' * 64,
-              recipientPubkey: otherPubkey,
+        ) async {
+          await attachLibraryClips(tester, null);
+
+          verifyNever(
+            () =>
+                mockBloc.add(any(that: isA<ConversationClipsSendRequested>())),
+          );
+        });
+      });
+
+      testWidgets('a pending entry renders as a $PendingVideoBubble at the '
+          'bottom of the thread', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              messages: [
+                DmMessage(
+                  id: 'c' * 64,
+                  conversationId: 'conversation-1',
+                  senderPubkey: currentPubkey,
+                  content: 'typed during the upload',
+                  createdAt: now.millisecondsSinceEpoch ~/ 1000,
+                  giftWrapId: 'd' * 64,
+                ),
+              ],
+              pendingVideoSends: [pendingVideo()],
             ),
           ),
         );
+        await tester.pump();
 
-        expect(find.text(l10n.dmVideoSent), findsOneWidget);
-        expect(find.text(l10n.dmVideoSendFailed), findsNothing);
-      });
-
-      testWidgets('surfaces a refused video DM send', (tester) async {
-        await attachVideo(
-          tester,
-          videoSendService: _FakeVideoSendService(
-            result: const NIP17SendResult.failure('upload failed'),
+        expect(
+          find.byKey(const ValueKey('pending-video-video-1')),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.dmPendingVideoUploading('42%')), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.byType(PendingVideoBubble)).dy,
+          greaterThan(
+            tester.getBottomLeft(find.text('typed during the upload')).dy,
           ),
         );
+      });
 
-        expect(find.text(l10n.dmVideoSendFailed), findsOneWidget);
-        expect(find.text(l10n.dmVideoSent), findsNothing);
+      testWidgets('a pending entry renders in a thread with no messages yet', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              pendingVideoSends: [pendingVideo()],
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(PendingVideoBubble), findsOneWidget);
+        expect(find.byType(EmptyConversation), findsNothing);
+      });
+
+      testWidgets('tapping Retry and Remove dispatches the matching events', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              pendingVideoSends: [
+                pendingVideo(
+                  phase: OutgoingVideoDmPhase.failed,
+                  failure: OutgoingVideoDmFailure.failed,
+                ),
+              ],
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.text(l10n.commonRetry));
+        await tester.pump();
+        verify(
+          () => mockBloc.add(const ConversationVideoSendRetried('video-1')),
+        ).called(1);
+
+        await tester.tap(find.text(l10n.dmPendingVideoRemove));
+        await tester.pump();
+        verify(
+          () => mockBloc.add(const ConversationVideoSendRemoved('video-1')),
+        ).called(1);
+      });
+
+      testWidgets('the attach button stays enabled while a video is sending', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              pendingVideoSends: [pendingVideo()],
+            ),
+            videoPicker: _FakeImagePicker(pickedVideo()),
+          ),
+        );
+        await tester.pump();
+
+        await attachGalleryVideo(tester);
+        await attachGalleryVideo(tester);
+
+        verify(
+          () => mockBloc.add(any(that: isA<ConversationVideoSendRequested>())),
+        ).called(2);
+        expect(
+          find.bySemanticsIdentifier('dm_attach_video_button'),
+          findsOneWidget,
+        );
       });
     });
 

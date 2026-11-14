@@ -6715,6 +6715,48 @@ abstract class AppLocalizations {
   /// **'Couldn\'t check this clip right now. Try again in a bit.'**
   String get dmClipCheckUnavailable;
 
+  /// Status line on an outgoing video in a DM conversation while it waits for the sends ahead of it.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting…'**
+  String get dmPendingVideoWaiting;
+
+  /// Status line on an outgoing video in a DM conversation while it is being checked and encrypted, before the upload starts.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing…'**
+  String get dmPendingVideoPreparing;
+
+  /// Status line on an outgoing video in a DM conversation while it uploads. {percent} is the share uploaded so far, already formatted for the locale with its percent sign (for example 42% in English, 42 % in French).
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading {percent}'**
+  String dmPendingVideoUploading(String percent);
+
+  /// Status line on an outgoing video in a DM conversation after the upload, while the message is being delivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get dmPendingVideoSending;
+
+  /// Button on an outgoing video in a DM conversation that failed to send. Removes it from the conversation without sending it.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get dmPendingVideoRemove;
+
+  /// Screen reader label for an outgoing video in a DM conversation that is uploading. {percent} is the share uploaded so far, already formatted for the locale with its percent sign (for example 42% in English, 42 % in French).
+  ///
+  /// In en, this message translates to:
+  /// **'Sending video, {percent}'**
+  String dmPendingVideoSemantics(String percent);
+
+  /// Screen reader label for an outgoing video in a DM conversation that failed to send.
+  ///
+  /// In en, this message translates to:
+  /// **'Video failed to send'**
+  String get dmPendingVideoFailedSemantics;
+
   /// SnackBar shown in the DM composer when a clip picked from the sender's own library has no valid Divine camera credential, so it is not sent: the recipient could never add it to their clips.
   ///
   /// In en, this message translates to:
