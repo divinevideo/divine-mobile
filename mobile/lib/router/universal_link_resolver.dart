@@ -116,7 +116,7 @@ String? customSchemeToRouterPath(Uri uri) {
   // Every allow-listed prefix is a `/prefix/value` shape, so a bare prefix
   // names no destination and must not fall through to the matcher.
   if (segments.length < 2 ||
-      !_customSchemeRoutablePrefixes.contains(segments.first)) {
+      !DeepLinkService.customSchemeRoutablePrefixes.contains(segments.first)) {
     return null;
   }
 
@@ -141,21 +141,6 @@ String? customSchemeToRouterPath(Uri uri) {
       ? '${canonical.path}?${canonical.query}'
       : canonical.path;
 }
-
-/// Path prefixes the `divine://` scheme may address beyond `saved-videos`.
-///
-/// Mirrors the universal-link claims in the served apple-app-site-association
-/// files, so the custom scheme reaches exactly what a web page can already
-/// reach over https. Challenge links are an explicit test-build exception;
-/// their hosting/browser fallback and OS delivery are not yet shipped.
-const _customSchemeRoutablePrefixes = <String>{
-  if (challengesTestEnabled) 'challenges',
-  'video',
-  'profile',
-  'hashtag',
-  'search',
-  'list',
-};
 
 /// Converts a universal-link [uri] into an internal GoRouter path.
 ///

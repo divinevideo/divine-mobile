@@ -748,6 +748,42 @@ void main() {
 
         expect(result.type, equals(DeepLinkType.unknown));
       });
+
+      // On iOS and macOS a divine:// link reaches the app through the
+      // deep-link stream, not as the router's location, so only a typed link
+      // navigates. An untyped one was dropped and the app opened on Home.
+      test('routes an authority-less video link like its https form', () {
+        final result = DeepLinkService.parseDeepLink('divine:///video/1062');
+
+        expect(result.type, equals(DeepLinkType.video));
+        expect(result.videoRef, equals('1062'));
+      });
+
+      test('keeps the author a custom-scheme video link names', () {
+        final author = 'a' * 64;
+
+        final result = DeepLinkService.parseDeepLink(
+          'divine:///video/1062?author=$author',
+        );
+
+        expect(result.type, equals(DeepLinkType.video));
+        expect(result.videoAuthor, equals(author));
+      });
+
+      test('routes an authority-less hashtag link like its https form', () {
+        final result = DeepLinkService.parseDeepLink('divine:///hashtag/vine');
+
+        expect(result.type, equals(DeepLinkType.hashtag));
+        expect(result.hashtag, equals('vine'));
+      });
+
+      test('rejects a multi-segment app route outside the allow-list', () {
+        final result = DeepLinkService.parseDeepLink(
+          'divine:///settings/help-about',
+        );
+
+        expect(result.type, equals(DeepLinkType.unknown));
+      });
     });
 
     group('Unknown URL Patterns', () {
