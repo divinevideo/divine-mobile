@@ -594,12 +594,16 @@ class DeepLinkService {
         : null;
 
     if (type == null) {
-      // Not a warning, and not necessarily the end of the road: the router's
+      // Not a warning, and not necessarily the end of the road: where the
+      // divine:// URI becomes the router's location (Android), the router's
       // allow-list resolves the universal-link claim paths that carry no
-      // DeepLinkType of their own. `AppRouter` logs the outcome either way.
+      // DeepLinkType of their own. On iOS and macOS the link arrives only
+      // through this stream, so an untyped path is dropped here.
+      // `AppRouter` logs the outcome either way.
       Log.debug(
         'No DeepLinkType for divine:// route, deferring to the router '
-        'allow-list: ${_describeUriForLogs(uri)}',
+        'allow-list where the URI becomes a location: '
+        '${_describeUriForLogs(uri)}',
         name: 'DeepLinkService',
         category: LogCategory.ui,
       );
