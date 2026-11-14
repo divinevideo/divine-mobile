@@ -44,6 +44,7 @@ void main() {
     late Directory caches;
     late SharedPreferences prefs;
     late StorageManagementService service;
+    late int budgetRefreshes;
 
     // Fixed so a file's age relative to the sweep's grace period is a property
     // of the test, not of how long the suite took to reach it.
@@ -54,6 +55,7 @@ void main() {
       Set<String> Function()? protectedPaths,
       Future<Directory> Function()? applicationSupportDirectoryProvider,
       Future<Directory> Function()? applicationCacheDirectoryProvider,
+      int playerCacheLimitBytes = kDefaultCacheMaxSizeBytes,
     }) => StorageManagementService(
       videoCache: videoCache,
       imageCache: imageCache,
@@ -69,6 +71,8 @@ void main() {
       fileLengthProvider: fileLengthProvider,
       now: () => now,
       protectedPaths: protectedPaths,
+      refreshMediaCacheBudget: () async => budgetRefreshes++,
+      playerCacheLimitBytes: playerCacheLimitBytes,
     );
 
     setUp(() async {
@@ -81,6 +85,7 @@ void main() {
       caches = Directory.systemTemp.createTempSync('storage_caches_');
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
+      budgetRefreshes = 0;
       when(() => videoCache.clearCache()).thenAnswer((_) async {});
       when(() => imageCache.clearCache()).thenAnswer((_) async {});
       when(() => imageCache.maxCacheSizeBytes).thenReturn(256 * 1024 * 1024);
@@ -201,6 +206,19 @@ void main() {
         expect(usage.transitionSeams.usedBytes, 42);
       });
 
+      test('reports the player budget the cache was created with', () async {
+        const launchBudget = 32 * 1024 * 1024;
+        writeFile('${caches.path}/divine_video_cache/1/2.0.3.v3.exo', 70);
+        service = buildService(playerCacheLimitBytes: launchBudget);
+
+        final usage = await service.cacheUsage();
+
+        expect(
+          usage.player,
+          const CacheUsageCategory(usedBytes: 70, limitBytes: launchBudget),
+        );
+      });
+
       test('reports an empty player cache when the platform has no cache '
           'directory', () async {
         writeFile('${temp.path}/openvine_video_cache/a.mp4', 100);
@@ -238,6 +256,15 @@ void main() {
     });
 
     group('clearCaches', () {
+      setUp(() {
+        when(
+          () => videoCache.enforceCacheLimits(force: any(named: 'force')),
+        ).thenAnswer((_) async {});
+        when(
+          () => imageCache.enforceCacheLimits(force: any(named: 'force')),
+        ).thenAnswer((_) async {});
+      });
+
       // The issue behind #7641: only three of the editor's temp patterns were
       // counted and cleared, so the routine clear reported a fraction of what
       // the temp directory held and reclaimed as little. Every pattern and
@@ -369,6 +396,36 @@ void main() {
         expect(active.existsSync(), isTrue);
         expect(stale.existsSync(), isFalse);
         expect(await service.cacheSizeBytes(), 0);
+      });
+
+      test('re-measures both caches before refreshing the budget after '
+          'clearing', () async {
+        final events = <String>[];
+        when(
+          () => videoCache.enforceCacheLimits(force: true),
+        ).thenAnswer((_) async => events.add('sweep-video'));
+        when(
+          () => imageCache.enforceCacheLimits(force: true),
+        ).thenAnswer((_) async => events.add('sweep-image'));
+        service = StorageManagementService(
+          videoCache: videoCache,
+          imageCache: imageCache,
+          clipLibrary: clipLibrary,
+          clipsDao: db.clipsDao,
+          draftsDao: db.draftsDao,
+          prefs: prefs,
+          temporaryDirectoryProvider: () async => temp,
+          documentsDirectoryProvider: () async => docs,
+          applicationCacheDirectoryProvider: () async => caches,
+          refreshMediaCacheBudget: () async => events.add('refresh-budget'),
+        );
+
+        await service.clearCaches();
+
+        expect(
+          events,
+          equals(['sweep-video', 'sweep-image', 'refresh-budget']),
+        );
       });
     });
 
@@ -668,8 +725,109 @@ void main() {
     group('cache limit', () {
       const oneGb = 1024 * 1024 * 1024;
 
+      setUp(() {
+        when(() => videoCache.hasMeasuredCacheBytes).thenReturn(true);
+        when(() => imageCache.hasMeasuredCacheBytes).thenReturn(true);
+        when(
+          () => videoCache.enforceCacheLimits(force: any(named: 'force')),
+        ).thenAnswer((_) async {});
+        when(
+          () => imageCache.enforceCacheLimits(force: any(named: 'force')),
+        ).thenAnswer((_) async {});
+      });
+
       test('videoCacheLimitBytes returns the default when unset', () {
         expect(service.videoCacheLimitBytes(), kCacheLimitDefaultBytes);
+      });
+
+      test('videoCacheLimitBytes returns the budget automatic sizing '
+          'applied when unset', () {
+        when(() => videoCache.maxCacheSizeBytes).thenReturn(64 * 1024 * 1024);
+
+        expect(service.videoCacheLimitBytes(), 64 * 1024 * 1024);
+      });
+
+      test(
+        'isVideoCacheLimitAutomatic is true until a size is fixed',
+        () async {
+          expect(service.isVideoCacheLimitAutomatic(), isTrue);
+
+          await prefs.setInt(kCacheLimitPrefKey, 3 * oneGb);
+
+          expect(service.isVideoCacheLimitAutomatic(), isFalse);
+        },
+      );
+
+      test('useAutomaticVideoCacheLimit forgets the fixed size and re-sizes '
+          'the caches', () async {
+        await prefs.setInt(kCacheLimitPrefKey, 3 * oneGb);
+
+        await service.useAutomaticVideoCacheLimit();
+
+        expect(prefs.containsKey(kCacheLimitPrefKey), isFalse);
+        expect(budgetRefreshes, equals(1));
+        verifyNever(
+          () => videoCache.enforceCacheLimits(force: any(named: 'force')),
+        );
+        verifyNever(
+          () => imageCache.enforceCacheLimits(force: any(named: 'force')),
+        );
+      });
+
+      test('useAutomaticVideoCacheLimit measures unmeasured caches before '
+          'refreshing the budget', () async {
+        await prefs.setInt(kCacheLimitPrefKey, 3 * oneGb);
+        when(() => videoCache.hasMeasuredCacheBytes).thenReturn(false);
+        when(() => imageCache.hasMeasuredCacheBytes).thenReturn(false);
+        final events = <String>[];
+        when(
+          () => videoCache.enforceCacheLimits(force: true),
+        ).thenAnswer((_) async => events.add('sweep-video'));
+        when(
+          () => imageCache.enforceCacheLimits(force: true),
+        ).thenAnswer((_) async => events.add('sweep-image'));
+        service = StorageManagementService(
+          videoCache: videoCache,
+          imageCache: imageCache,
+          clipLibrary: clipLibrary,
+          clipsDao: db.clipsDao,
+          draftsDao: db.draftsDao,
+          prefs: prefs,
+          temporaryDirectoryProvider: () async => temp,
+          documentsDirectoryProvider: () async => docs,
+          refreshMediaCacheBudget: () async => events.add('refresh-budget'),
+        );
+
+        await service.useAutomaticVideoCacheLimit();
+
+        expect(events, hasLength(3));
+        expect(
+          events.sublist(0, 2),
+          containsAll(['sweep-video', 'sweep-image']),
+        );
+        expect(events.last, equals('refresh-budget'));
+      });
+
+      test('useAutomaticVideoCacheLimit forgets the fixed size before it '
+          're-sizes', () async {
+        await prefs.setInt(kCacheLimitPrefKey, 3 * oneGb);
+        bool? fixedAtRefresh;
+        service = StorageManagementService(
+          videoCache: videoCache,
+          imageCache: imageCache,
+          clipLibrary: clipLibrary,
+          clipsDao: db.clipsDao,
+          draftsDao: db.draftsDao,
+          prefs: prefs,
+          temporaryDirectoryProvider: () async => temp,
+          documentsDirectoryProvider: () async => docs,
+          refreshMediaCacheBudget: () async =>
+              fixedAtRefresh = prefs.containsKey(kCacheLimitPrefKey),
+        );
+
+        await service.useAutomaticVideoCacheLimit();
+
+        expect(fixedAtRefresh, isFalse);
       });
 
       test('videoCacheLimitBytes returns the stored value', () async {
@@ -689,6 +847,30 @@ void main() {
         verify(() => videoCache.enforceCacheLimits(force: true)).called(1);
       });
 
+      test('setVideoCacheLimit re-sizes the caches once the fixed size is '
+          'saved', () async {
+        when(
+          () => videoCache.enforceCacheLimits(force: any(named: 'force')),
+        ).thenAnswer((_) async {});
+        int? savedAtRefresh;
+        service = StorageManagementService(
+          videoCache: videoCache,
+          imageCache: imageCache,
+          clipLibrary: clipLibrary,
+          clipsDao: db.clipsDao,
+          draftsDao: db.draftsDao,
+          prefs: prefs,
+          temporaryDirectoryProvider: () async => temp,
+          documentsDirectoryProvider: () async => docs,
+          refreshMediaCacheBudget: () async =>
+              savedAtRefresh = prefs.getInt(kCacheLimitPrefKey),
+        );
+
+        await service.setVideoCacheLimit(oneGb);
+
+        expect(savedAtRefresh, equals(oneGb));
+      });
+
       test('setVideoCacheLimit clamps below the minimum', () async {
         when(
           () => videoCache.enforceCacheLimits(force: any(named: 'force')),
@@ -697,6 +879,36 @@ void main() {
         await service.setVideoCacheLimit(1);
 
         expect(prefs.getInt(kCacheLimitPrefKey), kCacheLimitMinBytes);
+      });
+
+      test('setVideoCacheLimit measures an unmeasured image cache before '
+          'refreshing the budget', () async {
+        when(() => imageCache.hasMeasuredCacheBytes).thenReturn(false);
+        final events = <String>[];
+        when(
+          () => videoCache.enforceCacheLimits(force: true),
+        ).thenAnswer((_) async => events.add('sweep-video'));
+        when(
+          () => imageCache.enforceCacheLimits(force: true),
+        ).thenAnswer((_) async => events.add('sweep-image'));
+        service = StorageManagementService(
+          videoCache: videoCache,
+          imageCache: imageCache,
+          clipLibrary: clipLibrary,
+          clipsDao: db.clipsDao,
+          draftsDao: db.draftsDao,
+          prefs: prefs,
+          temporaryDirectoryProvider: () async => temp,
+          documentsDirectoryProvider: () async => docs,
+          refreshMediaCacheBudget: () async => events.add('refresh-budget'),
+        );
+
+        await service.setVideoCacheLimit(oneGb);
+
+        expect(
+          events,
+          equals(['sweep-video', 'sweep-image', 'refresh-budget']),
+        );
       });
     });
 

@@ -10815,6 +10815,28 @@
   "@settingsStorageMaxVideoCacheLabel": {
     "description": "Label above the slider that sets the maximum video-cache size."
   },
+  "settingsStorageAutoCacheTitle": "Size it automatically",
+  "@settingsStorageAutoCacheTitle": {
+    "description": "Label of the switch that lets the video cache size itself to how full the device's storage is."
+  },
+  "settingsStorageAutoCacheSubtitle": "Shrinks as your phone fills up, so Divine always leaves at least 15% of your storage free",
+  "@settingsStorageAutoCacheSubtitle": {
+    "description": "Explains the automatic video-cache size switch. The 15% is fixed by the app."
+  },
+  "settingsStorageAutoCacheUsing": "Using up to {size} for videos",
+  "@settingsStorageAutoCacheUsing": {
+    "description": "The video-cache size automatic sizing currently allows, e.g. 'Using up to 2.0 GB for videos'.",
+    "placeholders": {
+      "size": {
+        "type": "String",
+        "example": "2.0 GB"
+      }
+    }
+  },
+  "settingsStorageAutoCacheLowSpace": "Smaller than usual because your phone is low on space",
+  "@settingsStorageAutoCacheLowSpace": {
+    "description": "Shown under the automatic video-cache size when it has shrunk because the device's storage is nearly full."
+  },
   "settingsStorageApproxVideos": "{count, plural, =1{≈ {count} video} other{≈ {count} videos}}",
   "@settingsStorageApproxVideos": {
     "description": "Approximate number of videos that fit in the chosen cache size.",

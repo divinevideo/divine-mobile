@@ -43,22 +43,31 @@ class StorageCubit extends Cubit<StorageState>
       state.copyWith(
         cacheStatus: StorageCacheStatus.loading,
         videoCacheLimitBytes: _service.videoCacheLimitBytes(),
+        videoCacheLimitAutomatic: _service.isVideoCacheLimitAutomatic(),
       ),
     );
     try {
-      final usage = await _service.cacheUsage();
-      emit(
-        state.copyWith(
-          cacheStatus: StorageCacheStatus.ready,
-          cacheSizeBytes: usage.totalBytes,
-          cacheUsage: usage,
-          videoCacheLimitBytes: _service.videoCacheLimitBytes(),
-        ),
-      );
+      await _emitCacheUsage();
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emit(state.copyWith(cacheStatus: StorageCacheStatus.failure));
+      emitIfOpen(state.copyWith(cacheStatus: StorageCacheStatus.failure));
     }
+  }
+
+  /// Measures the caches and emits them with [status] and the limit in force.
+  Future<void> _emitCacheUsage({
+    StorageCacheStatus status = StorageCacheStatus.ready,
+  }) async {
+    final usage = await _service.cacheUsage();
+    emitIfOpen(
+      state.copyWith(
+        cacheStatus: status,
+        cacheSizeBytes: usage.totalBytes,
+        cacheUsage: usage,
+        videoCacheLimitBytes: _service.videoCacheLimitBytes(),
+        videoCacheLimitAutomatic: _service.isVideoCacheLimitAutomatic(),
+      ),
+    );
   }
 
   /// Measures the documents directory: what the user's clips, drafts and
@@ -115,41 +124,63 @@ class StorageCubit extends Cubit<StorageState>
       state.copyWith(
         cacheStatus: StorageCacheStatus.loading,
         videoCacheLimitBytes: bytes,
+        videoCacheLimitAutomatic: false,
       ),
     );
     try {
       await _service.setVideoCacheLimit(bytes);
-      final usage = await _service.cacheUsage();
-      emit(
-        state.copyWith(
-          cacheStatus: StorageCacheStatus.ready,
-          cacheSizeBytes: usage.totalBytes,
-          cacheUsage: usage,
-          videoCacheLimitBytes: _service.videoCacheLimitBytes(),
-        ),
-      );
+      await _emitCacheUsage();
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emit(state.copyWith(cacheStatus: StorageCacheStatus.failure));
+      emitIfOpen(state.copyWith(cacheStatus: StorageCacheStatus.failure));
     }
   }
 
-  /// Clears the caches, then refreshes the reported size.
+  /// Switches the video cache between sizing itself to the disk and a size
+  /// the user picks.
+  ///
+  /// Turning [automatic] off fixes the budget in force, raised to
+  /// [kCacheLimitMinBytes] when automatic sizing had shrunk it below the
+  /// slider's range.
+  Future<void> setVideoCacheLimitAutomatic({required bool automatic}) async {
+    if (!automatic) {
+      final bytes = state.videoCacheLimitBytes.clamp(
+        kCacheLimitMinBytes,
+        kCacheLimitMaxBytes,
+      );
+      return commitVideoCacheLimit(bytes);
+    }
+    emit(
+      state.copyWith(
+        cacheStatus: StorageCacheStatus.loading,
+        videoCacheLimitAutomatic: true,
+      ),
+    );
+    try {
+      await _service.useAutomaticVideoCacheLimit();
+      await _emitCacheUsage();
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      // The switch flipped ahead of the service; show where it really is.
+      emitIfOpen(
+        state.copyWith(
+          cacheStatus: StorageCacheStatus.failure,
+          videoCacheLimitBytes: _service.videoCacheLimitBytes(),
+          videoCacheLimitAutomatic: _service.isVideoCacheLimitAutomatic(),
+        ),
+      );
+    }
+  }
+
+  /// Clears the caches, then refreshes the reported size and budget.
   Future<void> clearCaches() async {
     emit(state.copyWith(cacheStatus: StorageCacheStatus.clearing));
     try {
       await _service.clearCaches();
-      final usage = await _service.cacheUsage();
-      emit(
-        state.copyWith(
-          cacheStatus: StorageCacheStatus.cleared,
-          cacheSizeBytes: usage.totalBytes,
-          cacheUsage: usage,
-        ),
-      );
+      await _emitCacheUsage(status: StorageCacheStatus.cleared);
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emit(state.copyWith(cacheStatus: StorageCacheStatus.failure));
+      emitIfOpen(state.copyWith(cacheStatus: StorageCacheStatus.failure));
     }
   }
 

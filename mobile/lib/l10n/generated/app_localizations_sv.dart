@@ -13928,6 +13928,22 @@ class AppLocalizationsSv extends AppLocalizations {
   String get settingsStorageMaxVideoCacheLabel => 'Maximal videocache';
 
   @override
+  String get settingsStorageAutoCacheTitle => 'Anpassa storleken automatiskt';
+
+  @override
+  String get settingsStorageAutoCacheSubtitle =>
+      'Krymper när din telefon blir full, så att Divine alltid lämnar minst 15 % av lagringsutrymmet ledigt';
+
+  @override
+  String settingsStorageAutoCacheUsing(String size) {
+    return 'Använder upp till $size för videor';
+  }
+
+  @override
+  String get settingsStorageAutoCacheLowSpace =>
+      'Mindre än vanligt eftersom din telefon har ont om utrymme';
+
+  @override
   String settingsStorageApproxVideos(int count) {
     return '≈ $count videor';
   }

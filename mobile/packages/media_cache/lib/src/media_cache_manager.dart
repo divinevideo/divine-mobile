@@ -455,6 +455,10 @@ class MediaCacheManager extends CacheManager {
   /// only ever costs one extra window-gated sweep, never a missed budget.
   int _knownCacheBytes = 0;
 
+  /// Whether [_knownCacheBytes] has been set from a directory walk rather
+  /// than only summed from this session's downloads.
+  bool _hasMeasuredCacheBytes = false;
+
   /// One-shot sweep armed when a download crosses the byte budget inside the
   /// throttle window, so the directory converges back under budget even if
   /// no further download ever lands (#8242). Cancelled by [close] and
@@ -467,7 +471,8 @@ class MediaCacheManager extends CacheManager {
   bool _directoryTotalNeedsResync = false;
 
   /// Runtime override for [MediaCacheConfig.maxCacheSizeBytes], set from a
-  /// user preference. `null` falls back to the config default.
+  /// user preference or automatic disk sizing. `null` falls back to the
+  /// config default.
   int? _maxCacheSizeBytesOverride;
 
   /// In-memory manifest for synchronous lookups.
@@ -517,6 +522,21 @@ class MediaCacheManager extends CacheManager {
 
   /// The configuration used by this cache manager.
   MediaCacheConfig get mediaConfig => _config;
+
+  /// Running estimate of the cache directory's on-disk bytes.
+  ///
+  /// Until a budgeted [enforceCacheLimits] pass walks the directory this is
+  /// only the bytes downloaded this session; see [hasMeasuredCacheBytes].
+  /// Every such pass re-syncs it to the walked total, and [clearCache] resets
+  /// it to zero. Cheap to read, so callers can size budgets without walking
+  /// the directory themselves.
+  int get knownCacheBytes => _knownCacheBytes;
+
+  /// Whether [knownCacheBytes] reflects the whole directory: true once a
+  /// budgeted [enforceCacheLimits] pass has walked it (counting what it could
+  /// read of any unreadable subtree), false again after [clearCache], which
+  /// removes only tracked entries and so leaves the total unknown.
+  bool get hasMeasuredCacheBytes => _hasMeasuredCacheBytes;
 
   /// The effective on-disk byte budget: the runtime override when set,
   /// otherwise [MediaCacheConfig.maxCacheSizeBytes].
@@ -1241,7 +1261,7 @@ class MediaCacheManager extends CacheManager {
       final budget = maxCacheSizeBytes;
       var evictedCount = 0;
       var evictedBytes = 0;
-      int? directoryBytes;
+      bool? overBudget;
       if (budget != null) {
         final evicted = await _evictToByteBudget(
           baseDir,
@@ -1251,14 +1271,20 @@ class MediaCacheManager extends CacheManager {
         );
         evictedCount = evicted.deletedCount;
         evictedBytes = evicted.deletedBytes;
-        directoryBytes = evicted.directoryBytes;
+        overBudget = evicted.directoryBytes > budget;
       }
       final elapsed = clock.now().difference(started);
+      // The budget and the directory total stay out of the line: the app
+      // sizes the budget from disk space, which iOS forbids sending off the
+      // device, and logs travel with bug reports.
       Log.info(
         'MediaCacheManager(${_config.cacheKey}): sweep reclaimed $reclaimed '
         'orphans, evicted $evictedCount files ($evictedBytes bytes)'
-        '${directoryBytes == null ? '' : '; directory $directoryBytes bytes '
-                  'of $budget budget'}'
+        '${switch (overBudget) {
+          null => '',
+          true => '; still over budget',
+          false => '; within budget',
+        }}'
         '; took ${elapsed.inMilliseconds}ms',
         name: 'MediaCache',
         category: LogCategory.video,
@@ -1391,6 +1417,7 @@ class MediaCacheManager extends CacheManager {
     }
     if (total <= budget) {
       _knownCacheBytes = total;
+      _hasMeasuredCacheBytes = true;
       _cancelTrailingSweep();
       return (
         deletedCount: 0,
@@ -1474,6 +1501,7 @@ class MediaCacheManager extends CacheManager {
     }
     if (aliasMapChanged) await _persistAliasMap();
     _knownCacheBytes = total;
+    _hasMeasuredCacheBytes = true;
     _cancelTrailingSweep();
     return (
       deletedCount: deletedCount,
@@ -1613,6 +1641,7 @@ class MediaCacheManager extends CacheManager {
     }
     _pendingCacheOperations.clear();
     _knownCacheBytes = 0;
+    _hasMeasuredCacheBytes = false;
     _cancelTrailingSweep();
   }
 
@@ -1635,6 +1664,7 @@ class MediaCacheManager extends CacheManager {
   void resetForTesting() {
     _cancelTrailingSweep();
     _knownCacheBytes = 0;
+    _hasMeasuredCacheBytes = false;
     _directoryTotalNeedsResync = false;
     _manifestInitialized = false;
     _cacheManifest.clear();

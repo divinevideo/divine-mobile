@@ -106,6 +106,9 @@ extension FlutterError: @retroactive Error {}
     // Physical RAM, which sizes Flutter's decoded-image cache (#10301).
     setupDeviceMemoryChannel(with: engineBridge)
 
+    // Disk capacity and free space, which size the media caches.
+    setupDeviceStorageChannel(with: engineBridge)
+
     NSLog("✅ AppDelegate: Implicit Flutter engine initialized with UIScene lifecycle")
   }
 
@@ -320,6 +323,45 @@ extension FlutterError: @retroactive Error {}
         result(FlutterMethodNotImplemented)
       }
     }
+  }
+
+  /// Device-storage platform channel.
+  ///
+  /// The Dart side reads the disk's capacity and free space to shrink the
+  /// media caches as the disk fills. Free space is the "important usage"
+  /// figure, which counts space iOS would purge on demand.
+  private func setupDeviceStorageChannel(with engineBridge: FlutterImplicitEngineBridge) {
+    let channel = FlutterMethodChannel(
+      name: "divine/device_storage",
+      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+    )
+
+    channel.setMethodCallHandler { (call, result) in
+      switch call.method {
+      case "getStorageSpace":
+        result(AppDelegate.deviceStorageSpace())
+
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  /// Capacity and free space of the volume holding the app's home directory,
+  /// or nil when the OS does not report them.
+  static func deviceStorageSpace() -> [String: Int]? {
+    let home = URL(fileURLWithPath: NSHomeDirectory())
+    guard
+      let values = try? home.resourceValues(forKeys: [
+        .volumeTotalCapacityKey,
+        .volumeAvailableCapacityForImportantUsageKey,
+      ]),
+      let total = values.volumeTotalCapacity,
+      let free = values.volumeAvailableCapacityForImportantUsage
+    else {
+      return nil
+    }
+    return ["totalBytes": total, "freeBytes": Int(clamping: free)]
   }
 
   private func setupZendeskChannel(with engineBridge: FlutterImplicitEngineBridge) {

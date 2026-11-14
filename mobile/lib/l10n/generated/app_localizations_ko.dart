@@ -13270,6 +13270,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get settingsStorageMaxVideoCacheLabel => '최대 동영상 캐시';
 
   @override
+  String get settingsStorageAutoCacheTitle => '크기 자동 조절';
+
+  @override
+  String get settingsStorageAutoCacheSubtitle =>
+      '휴대폰 저장 공간이 차면 줄어들어서, Divine은 항상 저장 공간의 15% 이상을 비워 둬요';
+
+  @override
+  String settingsStorageAutoCacheUsing(String size) {
+    return '동영상에 최대 $size 사용 중';
+  }
+
+  @override
+  String get settingsStorageAutoCacheLowSpace => '휴대폰 저장 공간이 부족해서 평소보다 작아요';
+
+  @override
   String settingsStorageApproxVideos(int count) {
     return '≈ 동영상 $count개';
   }

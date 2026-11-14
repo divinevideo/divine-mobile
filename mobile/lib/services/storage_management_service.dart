@@ -69,8 +69,9 @@ class CacheUsage extends Equatable {
   final CacheUsageCategory video;
 
   /// The native player's own disk cache: what ExoPlayer kept of the HTTP(S)
-  /// sources it streamed on Android, under its separate 500 MB budget. Empty
-  /// on other platforms, apart from what an older iOS build left behind.
+  /// sources it streamed on Android, under the budget it was created with at
+  /// launch (at most [kDefaultCacheMaxSizeBytes]). Empty on other platforms,
+  /// apart from what an older iOS build left behind.
   final CacheUsageCategory player;
 
   /// Image and thumbnail cache.
@@ -203,7 +204,10 @@ class StorageManagementService {
   /// mistaken for junk. The directory providers are injectable for tests and
   /// otherwise resolve the OS temp and documents directories.
   /// [protectedPaths] supplies upload inputs that must survive both a cache
-  /// clear and an orphan sweep.
+  /// clear and an orphan sweep. [refreshMediaCacheBudget] re-sizes the caches
+  /// to the disk whenever the user changes how the video cache is sized.
+  /// [playerCacheLimitBytes] is the budget the Android player cache was
+  /// created with, which [cacheUsage] reports.
   StorageManagementService({
     required MediaCacheManager videoCache,
     required MediaCacheManager imageCache,
@@ -211,6 +215,8 @@ class StorageManagementService {
     required ClipsDao clipsDao,
     required DraftsDao draftsDao,
     required SharedPreferences prefs,
+    required Future<void> Function() refreshMediaCacheBudget,
+    int playerCacheLimitBytes = kDefaultCacheMaxSizeBytes,
     @visibleForTesting Future<Directory> Function()? temporaryDirectoryProvider,
     @visibleForTesting Future<Directory> Function()? documentsDirectoryProvider,
     @visibleForTesting
@@ -226,6 +232,8 @@ class StorageManagementService {
        _clipsDao = clipsDao,
        _draftsDao = draftsDao,
        _prefs = prefs,
+       _refreshMediaCacheBudget = refreshMediaCacheBudget,
+       _playerCacheLimitBytes = playerCacheLimitBytes,
        _temporaryDirectoryProvider =
            temporaryDirectoryProvider ?? getTemporaryDirectory,
        _documentsDirectoryProvider =
@@ -245,6 +253,8 @@ class StorageManagementService {
   final ClipsDao _clipsDao;
   final DraftsDao _draftsDao;
   final SharedPreferences _prefs;
+  final Future<void> Function() _refreshMediaCacheBudget;
+  final int _playerCacheLimitBytes;
   final Future<Directory> Function() _temporaryDirectoryProvider;
   final Future<Directory> Function() _documentsDirectoryProvider;
   final Future<Directory> Function() _applicationSupportDirectoryProvider;
@@ -337,7 +347,7 @@ class StorageManagementService {
         usedBytes: playerCache == null
             ? 0
             : (await _dirSize(playerCache)).bytes,
-        limitBytes: kDefaultCacheMaxSizeBytes,
+        limitBytes: _playerCacheLimitBytes,
       ),
       images: CacheUsageCategory(
         usedBytes: (await _dirSize(
@@ -386,6 +396,18 @@ class StorageManagementService {
     for (final dir in _documentsCacheDirs) {
       await _deleteDirContents(Directory(p.join(docs.path, dir)));
     }
+    // `clearCache()` drops each cache's measured-bytes flag until the next
+    // forced sweep. Walk the just-emptied directories now so automatic sizing
+    // stays authoritative and re-sizes against the freed disk space.
+    await _guard(
+      () => _videoCache.enforceCacheLimits(force: true),
+      label: 'enforceCacheLimits',
+    );
+    await _guard(
+      () => _imageCache.enforceCacheLimits(force: true),
+      label: 'enforceCacheLimits',
+    );
+    await _guard(_refreshMediaCacheBudget, label: 'refreshMediaCacheBudget');
   }
 
   /// What the documents directory holds, split into the user's content and
@@ -609,20 +631,51 @@ class StorageManagementService {
     }
   }
 
-  /// The user-configured video-cache byte budget, or
-  /// [kCacheLimitDefaultBytes] when none is set.
+  /// Whether the video cache sizes itself to the disk, which it does until
+  /// the user fixes a size with [setVideoCacheLimit].
+  bool isVideoCacheLimitAutomatic() => !_prefs.containsKey(kCacheLimitPrefKey);
+
+  /// The video-cache byte budget in force: the size the user fixed, else the
+  /// video cache's current budget (automatic sizing's once it has run), else
+  /// [kCacheLimitDefaultBytes].
   int videoCacheLimitBytes() =>
-      _prefs.getInt(kCacheLimitPrefKey) ?? kCacheLimitDefaultBytes;
+      _prefs.getInt(kCacheLimitPrefKey) ??
+      _videoCache.maxCacheSizeBytes ??
+      kCacheLimitDefaultBytes;
+
+  /// Forgets the size the user fixed and re-sizes the caches to the disk.
+  Future<void> useAutomaticVideoCacheLimit() async {
+    await _prefs.remove(kCacheLimitPrefKey);
+    await _ensureCachesMeasured();
+    await _refreshMediaCacheBudget();
+  }
 
   /// Persists [bytes] (clamped to
   /// `[kCacheLimitMinBytes, kCacheLimitMaxBytes]`) as the video-cache budget,
   /// applies it, and trims immediately so a lowered limit shrinks the cache
-  /// right away.
+  /// right away. Then re-sizes the image cache through the budget refresh,
+  /// which also records the fixed mode for telemetry.
   Future<void> setVideoCacheLimit(int bytes) async {
     final clamped = bytes.clamp(kCacheLimitMinBytes, kCacheLimitMaxBytes);
     await _prefs.setInt(kCacheLimitPrefKey, clamped);
     _videoCache.maxCacheSizeBytes = clamped;
     await _videoCache.enforceCacheLimits(force: true);
+    if (!_imageCache.hasMeasuredCacheBytes) {
+      await _imageCache.enforceCacheLimits(force: true);
+    }
+    await _refreshMediaCacheBudget();
+  }
+
+  /// Ensures both download caches have a measured byte count before an
+  /// explicit user sizing change refreshes the budget, even when the detached
+  /// cold-start sweep has not finished yet.
+  Future<void> _ensureCachesMeasured() async {
+    await Future.wait([
+      if (!_videoCache.hasMeasuredCacheBytes)
+        _videoCache.enforceCacheLimits(force: true),
+      if (!_imageCache.hasMeasuredCacheBytes)
+        _imageCache.enforceCacheLimits(force: true),
+    ]);
   }
 
   Future<_DocumentsScan> _scanDocuments() async {
@@ -835,12 +888,15 @@ class StorageManagementService {
     }
   }
 
-  Future<void> _guard(Future<void> Function() action) async {
+  Future<void> _guard(
+    Future<void> Function() action, {
+    String label = 'clearCache',
+  }) async {
     try {
       await action();
     } on Object catch (error) {
       Log.warning(
-        '$_logName: clearCache failed: $error',
+        '$_logName: $label failed: $error',
         name: _logName,
         category: LogCategory.system,
       );

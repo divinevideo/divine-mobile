@@ -812,6 +812,7 @@ class _DeveloperOptionsScreenState
   Future<void> _switchFormat(VideoPlaybackFormat? format) async {
     await videoFormatPreference.setFormat(format);
     await openVineMediaCache.clearCache();
+    await openVineMediaCache.enforceCacheLimits(force: true);
 
     final videoEventService = ref.read(videoEventServiceProvider);
     videoEventService.clearVideoEvents();

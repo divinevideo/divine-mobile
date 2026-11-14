@@ -13084,6 +13084,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsStorageMaxVideoCacheLabel => '视频缓存上限';
 
   @override
+  String get settingsStorageAutoCacheTitle => '自动调整大小';
+
+  @override
+  String get settingsStorageAutoCacheSubtitle =>
+      '手机存储空间越满，缓存就越小，Divine 始终为你保留至少 15% 的可用存储空间';
+
+  @override
+  String settingsStorageAutoCacheUsing(String size) {
+    return '视频最多使用 $size';
+  }
+
+  @override
+  String get settingsStorageAutoCacheLowSpace => '你的手机空间不足，因此比平时小';
+
+  @override
   String settingsStorageApproxVideos(int count) {
     return '≈ $count 个视频';
   }

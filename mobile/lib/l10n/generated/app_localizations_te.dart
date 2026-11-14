@@ -14259,6 +14259,23 @@ class AppLocalizationsTe extends AppLocalizations {
   String get settingsStorageMaxVideoCacheLabel => 'గరిష్ట వీడియో కాష్';
 
   @override
+  String get settingsStorageAutoCacheTitle =>
+      'పరిమాణాన్ని ఆటోమేటిక్‌గా సర్దుబాటు చేయండి';
+
+  @override
+  String get settingsStorageAutoCacheSubtitle =>
+      'మీ ఫోన్ నిండుతున్న కొద్దీ ఇది తగ్గుతుంది, కాబట్టి Divine ఎప్పుడూ మీ స్టోరేజ్‌లో కనీసం 15% ఖాళీగా ఉంచుతుంది';
+
+  @override
+  String settingsStorageAutoCacheUsing(String size) {
+    return 'వీడియోల కోసం $size వరకు ఉపయోగిస్తోంది';
+  }
+
+  @override
+  String get settingsStorageAutoCacheLowSpace =>
+      'మీ ఫోన్‌లో స్థలం తక్కువగా ఉన్నందున సాధారణం కంటే చిన్నది';
+
+  @override
   String settingsStorageApproxVideos(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

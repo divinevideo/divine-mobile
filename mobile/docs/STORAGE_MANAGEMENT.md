@@ -154,8 +154,36 @@ Independent of the screen, these sweeps run on their own:
   (`VideoEditorConstants.autoSaveId`) are kept, because the Library lists them
   as clips with or without their draft row; trashed rows are left to the trash
   purge.
-- The media caches enforce their own byte budgets (`kCacheLimitDefaultBytes`,
-  adjustable on this screen; `kSeamCacheLimitBytes` for the seams).
+- The media caches enforce their own byte budgets (`kSeamCacheLimitBytes` for
+  the seams). The video, image and Android player caches are sized to the
+  disk by `automaticMediaCacheBudget` (`media_cache_budget.dart`):
+  `MediaCacheBudgetService` applies it to the video and image caches, and
+  `startupPlayerCacheBudgetBytes` to the Android player cache at launch, the
+  only time it can be sized. Each sits between a usable floor (128 MB in total
+  on Android, 96 MB where there is no player cache) and its ceiling
+  (`kCacheLimitDefaultBytes` for video), at whatever point leaves
+  `kAutoCacheReservedDiskFraction` (15%) of the disk free. What the video and
+  image caches already hold counts as space they may keep, so a full cache on
+  a roomy disk does not shrink; until a sweep has measured them
+  (`hasMeasuredCacheBytes`) — the startup sweep, or a forced sweep after a
+  clear — a reading can grow the budgets but not shrink them below their
+  current size, only down to their ceilings. The budget is applied after the
+  startup sweep, when the user changes the setting, when Settings → Storage's
+  *Clear cache* empties and re-measures both caches (the image-cache clears on
+  sign-out and the 18+ toggle, and the Developer Options format switch,
+  re-measure without re-reading the disk), and on return to the foreground at
+  most every five minutes. The player limit
+  Settings and bug reports show is the one configured at launch
+  (`playerCacheBudgetBytesProvider`). On this screen
+  "Size it automatically" is the default; turning it off fixes the video
+  cache to the slider (`kCacheLimitPrefKey`), and the image and player caches
+  keep following the disk. On Android each applied budget is recorded as
+  coarse labels (disk tier, free-space band, mode, video-budget band) on
+  Firebase Analytics user properties and Crashlytics keys. iOS reads disk
+  space under required reason E174.1, which forbids sending it, or anything
+  derived from it, off the device: there only the mode is recorded, bug
+  reports omit the video and image budgets, and log lines carry no budget or
+  disk figures (`diskSpaceMayLeaveDevice`; macOS is gated the same way).
 
 Apart from those two legacy leftovers, none of them touch a non-empty file
 under the documents root — that is what the sweep on this screen is for.

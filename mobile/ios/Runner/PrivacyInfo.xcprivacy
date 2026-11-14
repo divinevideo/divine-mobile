@@ -3,10 +3,16 @@
 <!--
   Divine app-target privacy manifest (#8803, #8850).
 
-  NSPrivacyAccessedAPITypes is intentionally EMPTY. It covers the Runner
-  target's OWN source only, and that source calls no required-reason API in a
-  Release build: the single UserDefaults call in AppDelegate.swift sits inside
-  `#if DEBUG` (the App Store screenshot bridge). Verified against the Release
+  NSPrivacyAccessedAPITypes covers the Runner target's OWN source only. Its one
+  entry is DiskSpace with reason E174.1: the divine/device_storage channel in
+  AppDelegate.swift reads the volume's total and important-usage capacity so
+  the media caches shrink, and trim, as the disk fills. The behaviour is
+  observable in Settings > Storage. E174.1 forbids sending what was read, or
+  anything derived from it, off the device, so the Dart side keeps disk space
+  and the cache budget out of analytics, crash keys and logs on iOS
+  (diskSpaceMayLeaveDevice in media_cache_budget_telemetry.dart). The single
+  UserDefaults call in AppDelegate.swift sits inside `#if DEBUG` (the App Store
+  screenshot bridge) and needs no declaration. Verified against the Release
   product: `strings` over build/ios/iphoneos/Runner.app/Runner finds zero
   occurrences of flutter.screenshot_initial_route, flutter.screenshot_seed_clips
   or SCREENSHOT_INITIAL_ROUTE.
@@ -37,7 +43,16 @@
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
 	<key>NSPrivacyAccessedAPITypes</key>
-	<array/>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>E174.1</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
 		<dict>

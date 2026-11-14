@@ -13584,6 +13584,22 @@ class AppLocalizationsAm extends AppLocalizations {
   String get settingsStorageMaxVideoCacheLabel => 'ከፍተኛ የቪዲዮ መሸጎጫ';
 
   @override
+  String get settingsStorageAutoCacheTitle => 'መጠኑን በራስ-ሰር ያስተካክሉ';
+
+  @override
+  String get settingsStorageAutoCacheSubtitle =>
+      'ስልክዎ ሲሞላ ይቀንሳል፣ ስለዚህ Divine ሁልጊዜ ቢያንስ 15% የማከማቻ ቦታዎን ነፃ ይተዋል';
+
+  @override
+  String settingsStorageAutoCacheUsing(String size) {
+    return 'እስከ $size ለቪዲዮዎች በመጠቀም ላይ';
+  }
+
+  @override
+  String get settingsStorageAutoCacheLowSpace =>
+      'ስልክዎ ቦታ እያለቀበት ስለሆነ ከተለመደው ያነሰ';
+
+  @override
   String settingsStorageApproxVideos(int count) {
     return '≈ $count ቪዲዮዎች';
   }

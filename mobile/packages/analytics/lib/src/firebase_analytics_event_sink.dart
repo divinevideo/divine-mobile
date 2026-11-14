@@ -50,6 +50,17 @@ class FirebaseAnalyticsEventSink
     await _analytics?.resetAnalyticsData();
   }
 
+  /// Sets user property [name] to [value] for later events, or clears it
+  /// when [value] is null. Properties obey the same consent gate as events:
+  /// while collection is off, nothing is recorded or sent. Values should be
+  /// coarse buckets, never identifying.
+  Future<void> setUserProperty({
+    required String name,
+    required String? value,
+  }) async {
+    await _analytics?.setUserProperty(name: name, value: value);
+  }
+
   @override
   Future<void> logEvent({
     required String name,

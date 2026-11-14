@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.StatFs
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Log
@@ -73,6 +74,7 @@ class MainActivity : FlutterFragmentActivity() {
         private const val INSTALL_SOURCE_CHANNEL = "divine/install_source"
         private const val INSTALL_SOURCE_TAG = "OpenVineInstallSource"
         private const val DEVICE_MEMORY_CHANNEL = "divine/device_memory"
+        private const val DEVICE_STORAGE_CHANNEL = "divine/device_storage"
     }
 
     private var navigationChannel: MethodChannel? = null
@@ -111,6 +113,9 @@ class MainActivity : FlutterFragmentActivity() {
 
         // Physical RAM, which sizes Flutter's decoded-image cache (#10301).
         setupDeviceMemoryChannel(flutterEngine)
+
+        // Disk capacity and free space, which size the media caches.
+        setupDeviceStorageChannel(flutterEngine)
 
         // Set up NIP-55 Android Signer plugin
         nostrSignerPlugin = NostrSignerPlugin(this, flutterEngine)
@@ -262,6 +267,32 @@ class MainActivity : FlutterFragmentActivity() {
                     // totalMem is 0 when the service is unavailable; Dart
                     // treats null as unknown and falls back to a fixed budget.
                     result.success(info.totalMem.takeIf { it > 0 })
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun setupDeviceStorageChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            DEVICE_STORAGE_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getStorageSpace" -> {
+                    // StatFs over the app's own files directory measures the
+                    // volume the caches actually write to. Dart treats null
+                    // as unknown and keeps the caches at their fixed maximum.
+                    val space = try {
+                        val stat = StatFs(filesDir.path)
+                        mapOf(
+                            "totalBytes" to stat.totalBytes,
+                            "freeBytes" to stat.availableBytes,
+                        )
+                    } catch (e: IllegalArgumentException) {
+                        null
+                    }
+                    result.success(space)
                 }
                 else -> result.notImplemented()
             }

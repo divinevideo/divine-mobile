@@ -14049,6 +14049,23 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsStorageMaxVideoCacheLabel => 'Cache de vídeos máximo';
 
   @override
+  String get settingsStorageAutoCacheTitle =>
+      'Ajustar o tamanho automaticamente';
+
+  @override
+  String get settingsStorageAutoCacheSubtitle =>
+      'Diminui conforme seu celular enche, para que o Divine sempre deixe pelo menos 15% do armazenamento livre';
+
+  @override
+  String settingsStorageAutoCacheUsing(String size) {
+    return 'Usando até $size para vídeos';
+  }
+
+  @override
+  String get settingsStorageAutoCacheLowSpace =>
+      'Menor que o normal porque seu celular está com pouco espaço';
+
+  @override
   String settingsStorageApproxVideos(int count) {
     return '≈ $count vídeos';
   }

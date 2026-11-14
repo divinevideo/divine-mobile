@@ -6777,6 +6777,10 @@
     "description": "Generic error shown when a storage operation fails."
   },
   "settingsStorageMaxVideoCacheLabel": "视频缓存上限",
+  "settingsStorageAutoCacheTitle": "自动调整大小",
+  "settingsStorageAutoCacheSubtitle": "手机存储空间越满，缓存就越小，Divine 始终为你保留至少 15% 的可用存储空间",
+  "settingsStorageAutoCacheUsing": "视频最多使用 {size}",
+  "settingsStorageAutoCacheLowSpace": "你的手机空间不足，因此比平时小",
   "settingsStorageApproxVideos": "≈ {count} 个视频",
   "@settingsStorageApproxVideos": {
     "description": "Approximate number of videos that fit in the chosen cache size.",

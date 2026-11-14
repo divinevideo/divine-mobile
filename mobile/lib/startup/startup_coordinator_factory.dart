@@ -17,14 +17,17 @@ import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/live_account_container.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
+import 'package:openvine/providers/media_cache_budget_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/services/bandwidth_tracker_service.dart';
+import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/notification_helpers.dart'
     show fcmPayloadWithMessageId, parseFcmPayload;
 import 'package:openvine/services/performance_monitoring_service.dart';
+import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/services/video_format_preference.dart';
 import 'package:openvine/startup/app_bootstrap.dart';
 import 'package:openvine/startup/startup_phases.dart';
@@ -33,7 +36,18 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/platform_support.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-StartupCoordinator createStartupCoordinator(ProviderContainer container) {
+typedef VideoCacheManifestInitializer = Future<void> Function({
+  required StartupPerformanceService startupPerformance,
+  required CrashReportingService crashReporting,
+  required Future<void> Function() refreshMediaCacheBudget,
+});
+
+StartupCoordinator createStartupCoordinator(
+  ProviderContainer container, {
+  @visibleForTesting
+  VideoCacheManifestInitializer videoCacheManifestInitializer =
+      initializeVideoCacheManifest,
+}) {
   final startupPerformance = container.read(startupPerformanceServiceProvider);
   final crashReporting = container.read(crashReportingServiceProvider);
   final coordinator = StartupCoordinator(crashReporter: crashReporting);
@@ -207,10 +221,15 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
   coordinator.registerService(
     name: 'VideoCacheManifest',
     phase: StartupPhase.essential,
-    initialize: () => initializeVideoCacheManifest(
-      startupPerformance: startupPerformance,
-      crashReporting: crashReporting,
-    ),
+    initialize: () {
+      final liveContainer = liveAccountContainer(container);
+      return videoCacheManifestInitializer(
+        startupPerformance: startupPerformance,
+        crashReporting: crashReporting,
+        refreshMediaCacheBudget: () =>
+            liveContainer().read(mediaCacheBudgetServiceProvider).refresh(),
+      );
+    },
     optional: true,
   );
 
@@ -354,7 +373,12 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
 
 @visibleForTesting
 StartupCoordinator createStartupCoordinatorForTesting(
-  ProviderContainer container,
-) {
-  return createStartupCoordinator(container);
+  ProviderContainer container, {
+  VideoCacheManifestInitializer videoCacheManifestInitializer =
+      initializeVideoCacheManifest,
+}) {
+  return createStartupCoordinator(
+    container,
+    videoCacheManifestInitializer: videoCacheManifestInitializer,
+  );
 }

@@ -19,6 +19,9 @@ void main() {
     setUp(() {
       diskCache = _MockMediaCacheManager();
       when(() => diskCache.clearCache()).thenAnswer((_) async {});
+      when(
+        () => diskCache.enforceCacheLimits(force: any(named: 'force')),
+      ).thenAnswer((_) async {});
     });
 
     testWidgets('drops live images and schedules a frame', (tester) async {
@@ -51,10 +54,13 @@ void main() {
       await tester.pump();
     });
 
-    testWidgets('empties the disk cache', (tester) async {
+    testWidgets('empties and re-measures the disk cache', (tester) async {
       await clearOpenVineImageCache(diskCache: diskCache);
 
-      verify(() => diskCache.clearCache()).called(1);
+      verifyInOrder([
+        () => diskCache.clearCache(),
+        () => diskCache.enforceCacheLimits(force: true),
+      ]);
       await tester.pump();
     });
   });

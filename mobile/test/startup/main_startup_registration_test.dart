@@ -1,14 +1,26 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/features/app/startup/startup_phase.dart';
+import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
+import 'package:openvine/providers/device_scope.dart';
+import 'package:openvine/providers/media_cache_budget_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
+import 'package:openvine/services/media_cache_budget.dart';
+import 'package:openvine/services/media_cache_budget_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/startup/app_bootstrap.dart' as bootstrap;
 import 'package:openvine/startup/startup_coordinator_factory.dart' as app;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
+
+class _MockDeviceScope extends Mock implements DeviceScope {}
+
+class _MockMediaCacheBudgetService extends Mock
+    implements MediaCacheBudgetService {}
 
 class _FakeUpdater implements ShorebirdUpdater {
   _FakeUpdater({this.status = UpdateStatus.upToDate, this.updateError});
@@ -218,6 +230,75 @@ void main() {
       expect(registration?.phase, StartupPhase.deferred);
       expect(registration?.optional, isTrue);
     });
+
+    testWidgets(
+      'VideoCacheManifest refreshes the live account container when an '
+      'account switch finishes before the detached sweep',
+      (tester) async {
+        final controller = AccountSwitchController();
+        final scope = _MockDeviceScope();
+        when(() => scope.switchController).thenReturn(controller);
+        final startupBudget = _MockMediaCacheBudgetService();
+        final nextBudget = _MockMediaCacheBudgetService();
+        when(
+          startupBudget.refresh,
+        ).thenAnswer((_) async => mediaCacheBudgetFloor);
+        when(nextBudget.refresh).thenAnswer((_) async => mediaCacheBudgetFloor);
+
+        final crashReporting = CrashReportingService();
+        final startupPerformance = StartupPerformanceService(
+          crashReporting: crashReporting,
+        );
+        final startup = ProviderContainer(
+          overrides: [
+            deviceScopeProvider.overrideWithValue(scope),
+            crashReportingServiceProvider.overrideWithValue(crashReporting),
+            startupPerformanceServiceProvider.overrideWithValue(
+              startupPerformance,
+            ),
+            mediaCacheBudgetServiceProvider.overrideWithValue(startupBudget),
+          ],
+        );
+        final next = ProviderContainer(
+          overrides: [
+            mediaCacheBudgetServiceProvider.overrideWithValue(nextBudget),
+          ],
+        );
+        addTearDown(next.dispose);
+
+        Future<void> Function()? refreshBudget;
+        final coordinator = app.createStartupCoordinatorForTesting(
+          startup,
+          videoCacheManifestInitializer:
+              ({
+                required startupPerformance,
+                required crashReporting,
+                required refreshMediaCacheBudget,
+              }) async {
+                refreshBudget = refreshMediaCacheBudget;
+              },
+        );
+
+        await tester.pumpWidget(
+          ContainerSwapHost(
+            initialContainer: startup,
+            controller: controller,
+            child: const SizedBox(),
+          ),
+        );
+        await coordinator
+            .serviceRegistrationForTesting('VideoCacheManifest')!
+            .initialize();
+
+        await controller.swapTo(next);
+        await tester.pump();
+
+        await refreshBudget!();
+
+        verifyNever(startupBudget.refresh);
+        verify(nextBudget.refresh).called(1);
+      },
+    );
   });
 }
 
