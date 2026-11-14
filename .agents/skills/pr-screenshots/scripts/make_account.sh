@@ -2,6 +2,8 @@
 # ABOUTME: Mints a throwaway Nostr account on the LOCAL relay only, so the app has someone to message or view.
 # ABOUTME: Usage: bash make_account.sh "Display Name"; prints the npub. The secret is written to $SCRATCH/keys/<pubkey>.sec.
 set -euo pipefail
+# The key file is only for this user, even under the /tmp fallback.
+umask 077
 
 NAME="${1:?usage: make_account.sh \"Display Name\"}"
 RELAY=ws://localhost:47777
@@ -9,7 +11,7 @@ KEY_DIR="${SCRATCH:?set SCRATCH to the scratch folder for this run, see SKILL.md
 mkdir -p "$KEY_DIR"
 
 SECRET=$(nak key generate)
-PUBKEY=$(nak key public "$SECRET")
+PUBKEY=$(printf '%s\n' "$SECRET" | nak key public)
 NPUB=$(nak encode npub "$PUBKEY")
 echo "$SECRET" > "$KEY_DIR/$PUBKEY.sec"
 
@@ -17,5 +19,6 @@ PROFILE=$(python3 -c 'import json, sys; print(json.dumps({"name": sys.argv[1], "
 # Deliberately no kind 10050: an inbox relay of ws://localhost is refused by the app,
 # so DMs to it fail. With none advertised, DMs fall back to the local relay.
 # perl alarm: nak can wait forever for an OK the relay never sends.
-perl -e 'alarm 30; exec @ARGV' nak event -k 0 -c "$PROFILE" --sec "$SECRET" "$RELAY" > /dev/null
+# The secret goes in through the environment, not the command line ps shows.
+NOSTR_SECRET_KEY="$SECRET" perl -e 'alarm 30; exec @ARGV' nak event -k 0 -c "$PROFILE" "$RELAY" > /dev/null
 echo "$NPUB"
