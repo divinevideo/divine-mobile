@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # ABOUTME: Starts the local Docker stack, boots an iOS simulator, and installs a LOCAL debug build of the app.
-# ABOUTME: Usage: bash sim_up.sh <worktree-root> [simulator name]; prints UDID=, BUNDLE_ID= and STACK_STARTED= on success.
+# ABOUTME: Usage: bash sim_up.sh <worktree-root> [device type]; prints UDID=, BUNDLE_ID= and STACK_STARTED= on success.
 set -euo pipefail
 
-ROOT="${1:?usage: sim_up.sh <worktree-root> [simulator name]}"
-SIM_NAME="${2:-iPhone 16 Pro}"
+ROOT="$(cd "${1:?usage: sim_up.sh <worktree-root> [device type]}" && pwd)"
+DEVICE_TYPE="${2:-iPhone 16 Pro}"
+SIM_NAME="pr-screenshots-$(basename "$ROOT")"
 LOG_DIR="${TMPDIR:-/tmp}/pr-screenshots"
 mkdir -p "$LOG_DIR"
 
@@ -48,15 +49,19 @@ fi
 curl -sf -o /dev/null http://localhost:43003/ || { echo "error: Blossom is not answering on :43003" >&2; exit 1; }
 curl -s -o /dev/null http://localhost:47777/ || { echo "error: the relay is not answering on :47777" >&2; exit 1; }
 
+# A simulator of this run's own, so clearKeychain, the reinstall and the
+# status-bar override never land on a device someone else is using.
 UDID=$(xcrun simctl list devices available -j | python3 -c '
 import json, sys
 name = sys.argv[1]
 devices = json.load(sys.stdin)["devices"]
-matches = [d for runtime in sorted(devices, reverse=True) for d in devices[runtime] if d["name"] == name]
-print(matches[0]["udid"] if matches else "")
+print(next((d["udid"] for runtime in devices.values() for d in runtime if d["name"] == name), ""))
 ' "$SIM_NAME")
-[ -n "$UDID" ] || { echo "error: no available simulator named '$SIM_NAME'" >&2; exit 1; }
-xcrun simctl boot "$UDID" 2>/dev/null || true
+if [ -z "$UDID" ]; then
+  UDID=$(xcrun simctl create "$SIM_NAME" "$DEVICE_TYPE") \
+    || { echo "error: could not create a '$DEVICE_TYPE' simulator; pass a type from 'xcrun simctl list devicetypes'" >&2; exit 1; }
+fi
+xcrun simctl bootstatus "$UDID" -b > /dev/null
 open -a Simulator
 xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
 
