@@ -880,11 +880,13 @@ class _VerifiedAccountsBlock extends StatelessWidget {
   }
 }
 
-/// Unique identifier display (NIP-05 or full npub with ellipsis).
+/// Unique identifier display (confirmed Divine username, NIP-05, or full npub
+/// with ellipsis).
 /// Uses profile accent color when available, falls back to vineGreen.
 /// Shows your own Divine username as its `username.divine.video` domain.
 /// Hides unverified NIP-05s for other profiles (potential impersonation).
-/// Tapping copies the subdomain URL only once the claim verifies.
+/// Tapping copies the subdomain URL only once ownership is confirmed, by the
+/// verified claim or by the name server's by-pubkey lookup.
 class _UniqueIdentifier extends ConsumerWidget {
   const _UniqueIdentifier({
     required this.userIdHex,
