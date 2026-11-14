@@ -838,6 +838,11 @@ const _giftWrapEventId2 =
 const _secondTargetRumorId =
     '16789012345678901234567890abcdef1234567890123456789012ab12c3d4e5';
 
+/// A plausible time to date history-drain fixtures from. The drain repairs a
+/// boundary below [DmSyncState.minPlausibleCreatedAt] and restarts from now
+/// before reading it, so a fixture dated near 1970 would not seed the drain.
+const _drainEpoch = 1600000000;
+
 /// Runs [future] to completion under [async], firing zero-delay timers, and
 /// returns its value.
 T _resolve<T>(FakeAsync async, Future<T> future) {
@@ -8352,7 +8357,7 @@ void main() {
           });
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
           await repository.backfillHistoryIfNeeded();
@@ -8417,7 +8422,7 @@ void main() {
           });
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
           await repository.startListening();
@@ -8486,7 +8491,7 @@ void main() {
           });
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
           await repository.startListening();
@@ -9801,7 +9806,7 @@ void main() {
           stubUnansweredHistory(noRelays: true);
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
@@ -9824,7 +9829,7 @@ void main() {
           stubUnansweredHistory(timedOut: true);
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
@@ -9844,7 +9849,7 @@ void main() {
           stubFiniteHistory(const <Event>[], capturedUntil);
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
@@ -9940,10 +9945,10 @@ void main() {
         () async {
           when(() => mockNostrClient.connectedRelayCount).thenReturn(2);
           final capturedUntil = <int?>[];
-          stubPartialThenExhausted([deletion(50)], capturedUntil);
+          stubPartialThenExhausted([deletion(_drainEpoch + 50)], capturedUntil);
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
@@ -9952,14 +9957,14 @@ void main() {
           // The run still pages below the partial page: the events the
           // answering relay DID hold are worth recovering now, and the page
           // after it is authoritative and empty.
-          expect(capturedUntil.first, 100);
-          expect(capturedUntil.last! < 50, isTrue);
+          expect(capturedUntil.first, _drainEpoch + 100);
+          expect(capturedUntil.last! < _drainEpoch + 50, isTrue);
 
           // The resume point is pinned at the top of the unsettled window and
           // never moves below it, so the next run re-requests that window
           // whole instead of resuming underneath it.
-          expect(syncState.persistedDrainCursors, [100]);
-          expect(syncState.drainCursorOverride, 100);
+          expect(syncState.persistedDrainCursors, [_drainEpoch + 100]);
+          expect(syncState.drainCursorOverride, _drainEpoch + 100);
 
           // And the authoritative empty page that followed cannot latch
           // completion over the gap.
@@ -9993,12 +9998,12 @@ void main() {
             }
             giftWrapPages++;
             return giftWrapPages == 1
-                ? partialPage([deletion(50)])
+                ? partialPage([deletion(_drainEpoch + 50)])
                 : unansweredPage(timedOut: true);
           });
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
@@ -10008,8 +10013,8 @@ void main() {
             giftWrapPages,
             DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1,
           );
-          expect(syncState.persistedDrainCursors, [100]);
-          expect(syncState.drainCursorOverride, 100);
+          expect(syncState.persistedDrainCursors, [_drainEpoch + 100]);
+          expect(syncState.drainCursorOverride, _drainEpoch + 100);
           expect(syncState.drainCompleteOverride, isFalse);
         },
       );
@@ -10020,10 +10025,10 @@ void main() {
         () async {
           when(() => mockNostrClient.connectedRelayCount).thenReturn(2);
           final capturedUntil = <int?>[];
-          stubPartialThenExhausted([deletion(50)], capturedUntil);
+          stubPartialThenExhausted([deletion(_drainEpoch + 50)], capturedUntil);
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
@@ -10034,14 +10039,14 @@ void main() {
           // _persistDecryptedGiftWrap and _handleNip04Event). The drain must
           // not depend on that boundary to find its way back: it seeds from
           // `historyDrainCursor ?? oldestSyncedAt ?? now`.
-          syncState.oldestOverride = 50;
+          syncState.oldestOverride = _drainEpoch + 50;
 
           capturedUntil.clear();
           await repository.backfillHistoryIfNeeded();
 
           // Seeded from the same boundary as the first run, not from below
           // the partial page — that window is requested again, whole.
-          expect(capturedUntil.first, 100);
+          expect(capturedUntil.first, _drainEpoch + 100);
         },
       );
 
@@ -10054,14 +10059,14 @@ void main() {
           stubFiniteHistory(const <Event>[], capturedUntil);
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
           await repository.backfillHistoryIfNeeded();
 
           // Queried once, got an authoritative empty page, completed.
-          expect(capturedUntil, [100]);
+          expect(capturedUntil, [_drainEpoch + 100]);
           expect(syncState.drainCompleteOverride, isTrue);
         },
       );
@@ -10074,7 +10079,7 @@ void main() {
           stubUnansweredHistory(timedOut: true);
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
@@ -10106,7 +10111,7 @@ void main() {
           stubUnansweredHistory(timedOut: true);
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
@@ -10116,18 +10121,18 @@ void main() {
           // `historyDrainCursor ?? oldestSyncedAt ?? now`, so a run that
           // defers without persisting anything comes back to whatever
           // oldestSyncedAt has become.
-          expect(syncState.drainCursorOverride, 100);
+          expect(syncState.drainCursorOverride, _drainEpoch + 100);
 
           // The live subscription keeps ingesting while the drain is deferred,
           // and recordSeen drags oldestSyncedAt below the window the drain
           // still owes.
-          syncState.oldestOverride = 50;
+          syncState.oldestOverride = _drainEpoch + 50;
 
           final capturedUntil = <int?>[];
           stubFiniteHistory(const <Event>[], capturedUntil);
           await repository.backfillHistoryIfNeeded();
 
-          expect(capturedUntil.first, 100);
+          expect(capturedUntil.first, _drainEpoch + 100);
         },
       );
 
@@ -10158,7 +10163,7 @@ void main() {
           });
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
@@ -10205,7 +10210,7 @@ void main() {
           ).thenAnswer((_) async => {'conv_floor': 1700000900});
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
@@ -10435,7 +10440,7 @@ void main() {
           ).thenAnswer((_) async {});
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(
             syncState: syncState,
@@ -10523,7 +10528,7 @@ void main() {
           });
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
@@ -10590,7 +10595,7 @@ void main() {
           ).thenAnswer((_) async => true);
 
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
@@ -10746,9 +10751,9 @@ void main() {
         'actual drain (#5202)',
         () async {
           final capturedUntil = <int?>[];
-          stubFiniteHistory([deletion(50)], capturedUntil);
+          stubFiniteHistory([deletion(_drainEpoch + 50)], capturedUntil);
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
@@ -10791,18 +10796,19 @@ void main() {
         () async {
           final capturedUntil = <int?>[];
           stubFiniteHistory([
-            deletion(50),
-            deletion(40),
-            deletion(30),
+            deletion(_drainEpoch + 50),
+            deletion(_drainEpoch + 40),
+            deletion(_drainEpoch + 30),
           ], capturedUntil);
 
-          final syncState = _FakeDmSyncState()..oldestOverride = 100;
+          final syncState = _FakeDmSyncState()
+            ..oldestOverride = _drainEpoch + 100;
           final repository = createRepository(syncState: syncState);
 
           await repository.backfillHistoryIfNeeded();
 
           // Seeded from oldestSyncedAt, then strictly decreasing.
-          expect(capturedUntil.first, 100);
+          expect(capturedUntil.first, _drainEpoch + 100);
           for (var i = 1; i < capturedUntil.length; i++) {
             expect(capturedUntil[i]! < capturedUntil[i - 1]!, isTrue);
           }
@@ -10812,6 +10818,54 @@ void main() {
           // drain completes cleanly.
           expect(syncState.persistedDrainCursors, isNotEmpty);
           expect(syncState.drainCursorOverride, isNull);
+        },
+      );
+
+      test(
+        'heals a poisoned oldest boundary before seeding the drain from it, '
+        'with no subscription opened first',
+        () async {
+          // A boundary below minPlausibleCreatedAt is what a build before the
+          // rumor clamp (#6368) could persist. Seeded from it, the first page
+          // asks only for events from the first minutes of 1970, finds none,
+          // and the drain latches complete having fetched no history.
+          final capturedUntil = <int?>[];
+          stubFiniteHistory(const <Event>[], capturedUntil);
+
+          final syncState = _FakeDmSyncState()..oldestOverride = 100;
+          final repository = createRepository(syncState: syncState);
+          final before = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          await repository.backfillHistoryIfNeeded();
+          final after = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+          expect(syncState.repairedPubkeys, equals([_validPubkeyA]));
+          // The repair re-arms the drain from its own clock reading.
+          expect(capturedUntil.first, inInclusiveRange(before, after));
+        },
+      );
+
+      test(
+        'heals a poisoned oldest boundary under a drain already latched '
+        'complete, with no subscription opened first',
+        () async {
+          // The install the unrepaired seed left behind: its drain read only
+          // 1970 and latched complete. Unless the repair runs before the
+          // completion check, the drain returns without reading a page.
+          final capturedUntil = <int?>[];
+          stubFiniteHistory(const <Event>[], capturedUntil);
+
+          final syncState = _FakeDmSyncState()
+            ..oldestOverride = 100
+            ..drainCompleteOverride = true
+            ..drainCoveredOwnInboxOverride = true
+            ..drainVersionOverride = DmSyncState.currentDrainVersion;
+          final repository = createRepository(syncState: syncState);
+          final before = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          await repository.backfillHistoryIfNeeded();
+          final after = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+          expect(capturedUntil, isNotEmpty);
+          expect(capturedUntil.first, inInclusiveRange(before, after));
         },
       );
 
@@ -10855,7 +10909,7 @@ void main() {
         test('defers completion when they could not be read', () async {
           stubSilentInboxRelay(conclusive: false);
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
 
           await createRepository(
@@ -10874,7 +10928,7 @@ void main() {
           () async {
             stubSilentInboxRelay(conclusive: false);
             final syncState = _FakeDmSyncState()
-              ..oldestOverride = 100
+              ..oldestOverride = _drainEpoch + 100
               ..drainVersionOverride = DmSyncState.currentDrainVersion;
 
             await createRepository(
@@ -10884,14 +10938,17 @@ void main() {
             // Without the pin the next run seeds from oldestSyncedAt,
             // which this
             // run's own persisted messages drag below the windows still owed.
-            expect(syncState.persistedDrainCursors, contains(100));
+            expect(
+              syncState.persistedDrainCursors,
+              contains(_drainEpoch + 100),
+            );
           },
         );
 
         test('still completes when they conclusively do not exist', () async {
           stubSilentInboxRelay(conclusive: true);
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 100
+            ..oldestOverride = _drainEpoch + 100
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
 
           await createRepository(
@@ -11058,7 +11115,8 @@ void main() {
             return answeredPage([deletion(until - 1)]);
           });
 
-          final syncState = _FakeDmSyncState()..oldestOverride = 1000000;
+          final syncState = _FakeDmSyncState()
+            ..oldestOverride = _drainEpoch + 1000000;
           final repository = createRepository(syncState: syncState);
 
           await repository.backfillHistoryIfNeeded();
@@ -11071,7 +11129,10 @@ void main() {
           expect(syncState.drainCompleteOverride, isFalse);
           expect(syncState.markedCompletePubkeys, isEmpty);
           expect(syncState.drainCursorOverride, isNotNull);
-          expect(syncState.drainCursorOverride, lessThan(1000000));
+          expect(
+            syncState.drainCursorOverride,
+            lessThan(_drainEpoch + 1000000),
+          );
           // The boundary is persisted after EVERY page (not just the last),
           // so an interruption at any point resumes from the latest page.
           expect(
@@ -11115,7 +11176,8 @@ void main() {
             return partialPage([deletion(until - 1)]);
           });
 
-          final syncState = _FakeDmSyncState()..oldestOverride = 1000000;
+          final syncState = _FakeDmSyncState()
+            ..oldestOverride = _drainEpoch + 1000000;
           final repository = createRepository(syncState: syncState);
 
           await repository.backfillHistoryIfNeeded();
@@ -11125,9 +11187,10 @@ void main() {
             DmHistoryDrainConfig.maxPages +
                 DmHistoryDrainConfig.unsettledPageRetriesPerRun,
           );
-          expect(syncState.persistedDrainCursors, [1000000]);
+          expect(syncState.persistedDrainCursors, [_drainEpoch + 1000000]);
 
-          const loopCursor = 1000000 - DmHistoryDrainConfig.maxPages;
+          const loopCursor =
+              _drainEpoch + 1000000 - DmHistoryDrainConfig.maxPages;
           final capLogs = LogCaptureService()
               .getRecentLogs()
               .where(
@@ -11139,7 +11202,10 @@ void main() {
           expect(capLogs, hasLength(1));
           expect(
             capLogs.single.message,
-            contains('will resume from the persisted cursor (1000000)'),
+            contains(
+              'will resume from the persisted cursor '
+              '(${_drainEpoch + 1000000})',
+            ),
           );
           expect(
             capLogs.single.message,
@@ -11152,20 +11218,23 @@ void main() {
         'resumes from the persisted drain cursor instead of oldestSyncedAt',
         () async {
           final capturedUntil = <int?>[];
-          stubFiniteHistory([deletion(40), deletion(30)], capturedUntil);
+          stubFiniteHistory([
+            deletion(_drainEpoch + 40),
+            deletion(_drainEpoch + 30),
+          ], capturedUntil);
 
           // A prior page-capped run advanced the cursor far below the live
           // subscription's oldestSyncedAt boundary.
           final syncState = _FakeDmSyncState()
-            ..oldestOverride = 1000
-            ..drainCursorOverride = 45
+            ..oldestOverride = _drainEpoch + 1000
+            ..drainCursorOverride = _drainEpoch + 45
             ..drainVersionOverride = DmSyncState.currentDrainVersion;
           final repository = createRepository(syncState: syncState);
 
           await repository.backfillHistoryIfNeeded();
 
-          // Seeded from the persisted cursor (45), not oldestSyncedAt (1000).
-          expect(capturedUntil.first, 45);
+          // Seeded from the persisted cursor, not from oldestSyncedAt.
+          expect(capturedUntil.first, _drainEpoch + 45);
           // The resumed run reaches EOSE and finally records completion.
           expect(syncState.drainCompleteOverride, isTrue);
           expect(syncState.markedCompletePubkeys, isNotEmpty);
@@ -11203,7 +11272,8 @@ void main() {
             throw Exception('relay boom');
           });
 
-          final syncState = _FakeDmSyncState()..oldestOverride = 1000;
+          final syncState = _FakeDmSyncState()
+            ..oldestOverride = _drainEpoch + 1000;
           final repository = createRepository(syncState: syncState);
 
           await repository.backfillHistoryIfNeeded();
@@ -11214,7 +11284,7 @@ void main() {
           expect(reporterCalls, isEmpty);
           final resumeCursor = syncState.drainCursorOverride;
           expect(resumeCursor, isNotNull);
-          expect(resumeCursor, lessThan(1000));
+          expect(resumeCursor, lessThan(_drainEpoch + 1000));
 
           // The next inbox open resumes from the persisted cursor (not
           // oldestSyncedAt) and finishes once the relay returns empty.
@@ -11245,7 +11315,8 @@ void main() {
             ),
           ).thenThrow(error);
 
-          final syncState = _FakeDmSyncState()..oldestOverride = 1000;
+          final syncState = _FakeDmSyncState()
+            ..oldestOverride = _drainEpoch + 1000;
           final repository = createRepository(syncState: syncState);
 
           await repository.backfillHistoryIfNeeded();
@@ -11275,7 +11346,8 @@ void main() {
             ),
           ).thenThrow(error);
 
-          final syncState = _FakeDmSyncState()..oldestOverride = 1000;
+          final syncState = _FakeDmSyncState()
+            ..oldestOverride = _drainEpoch + 1000;
           final repository = createRepository(syncState: syncState);
 
           await repository.backfillHistoryIfNeeded();
@@ -11302,7 +11374,8 @@ void main() {
             ),
           ).thenThrow(TimeoutException('relay read timed out'));
 
-          final syncState = _FakeDmSyncState()..oldestOverride = 1000;
+          final syncState = _FakeDmSyncState()
+            ..oldestOverride = _drainEpoch + 1000;
           final repository = createRepository(syncState: syncState);
 
           await repository.backfillHistoryIfNeeded();
@@ -11314,9 +11387,10 @@ void main() {
 
       test('shares one in-flight run across concurrent calls', () async {
         final capturedUntil = <int?>[];
-        stubFiniteHistory([deletion(50)], capturedUntil);
+        stubFiniteHistory([deletion(_drainEpoch + 50)], capturedUntil);
 
-        final syncState = _FakeDmSyncState()..oldestOverride = 100;
+        final syncState = _FakeDmSyncState()
+          ..oldestOverride = _drainEpoch + 100;
         final repository = createRepository(syncState: syncState);
 
         // Two simultaneous triggers (e.g. rapid inbox re-opens).
@@ -11325,16 +11399,22 @@ void main() {
           repository.backfillHistoryIfNeeded(),
         ]);
 
-        // A single drain pages until=100 → 50 → 49(empty) = 3 queries. Two
-        // overlapping drains would have doubled that and re-seeded at 100.
-        expect(capturedUntil, [100, 50, 49]);
+        // A single drain pages the seed, the event's stamp, then one below it
+        // (empty) = 3 queries. Two overlapping drains would have doubled that
+        // and re-seeded at the top.
+        expect(capturedUntil, [
+          _drainEpoch + 100,
+          _drainEpoch + 50,
+          _drainEpoch + 49,
+        ]);
         expect(syncState.drainCompleteOverride, isTrue);
       });
 
       test(
         'stale account-switch drain does not clear or process the new drain',
         () async {
-          final syncState = _FakeDmSyncState()..oldestOverride = 100;
+          final syncState = _FakeDmSyncState()
+            ..oldestOverride = _drainEpoch + 100;
           final repository = createRepository(syncState: syncState);
           final oldQueryStarted = Completer<void>();
           final newQueryStarted = Completer<void>();
@@ -11377,7 +11457,7 @@ void main() {
                     ['e', _rumorEventId],
                   ],
                   '',
-                  createdAt: 90,
+                  createdAt: _drainEpoch + 90,
                 ),
               ]);
             }
@@ -11533,7 +11613,7 @@ void main() {
         });
 
         final syncState = _FakeDmSyncState()
-          ..oldestOverride = 1000000
+          ..oldestOverride = _drainEpoch + 1000000
           ..drainVersionOverride = DmSyncState.currentDrainVersion;
         final repository = createRepository(syncState: syncState);
 
@@ -11575,7 +11655,8 @@ void main() {
       test(
         'a drain entered after listening stopped touches no state',
         () async {
-          final syncState = _FakeDmSyncState()..oldestOverride = 100;
+          final syncState = _FakeDmSyncState()
+            ..oldestOverride = _drainEpoch + 100;
           final repository = createRepository(syncState: syncState);
 
           await repository.stopListening();
@@ -11620,7 +11701,8 @@ void main() {
       test(
         'stopListening waits for the last persist before returning',
         () async {
-          final syncState = _FakeDmSyncState()..oldestOverride = 100;
+          final syncState = _FakeDmSyncState()
+            ..oldestOverride = _drainEpoch + 100;
           final persistStarted = Completer<void>();
           final persistRelease = Completer<void>();
 
@@ -11667,7 +11749,7 @@ void main() {
                           ['e', _rumorEventId],
                         ],
                         '',
-                        createdAt: 99,
+                        createdAt: _drainEpoch + 99,
                       ),
                     ]
                   : const <Event>[],
@@ -11804,7 +11886,7 @@ void main() {
       }
 
       _FakeDmSyncState armedSyncState() => _FakeDmSyncState()
-        ..oldestOverride = 100
+        ..oldestOverride = _drainEpoch + 100
         ..drainVersionOverride = DmSyncState.currentDrainVersion;
 
       /// Waits for the drain a relay-status emission started, without the
@@ -11844,7 +11926,7 @@ void main() {
               return answeredPage(const <Event>[]);
             }
             giftWrapPages++;
-            return partialPage([deletion(1000 - giftWrapPages)]);
+            return partialPage([deletion(_drainEpoch + 1000 - giftWrapPages)]);
           });
           final syncState = armedSyncState();
           final cursorBefore = syncState.oldestOverride;
@@ -12032,7 +12114,7 @@ void main() {
             stageGiftWrapPages++;
             if (stage == 0) return unansweredPage(noRelays: true);
             if (stage == 1 && stageGiftWrapPages == 1) {
-              return answeredPage([deletion(90)]);
+              return answeredPage([deletion(_drainEpoch + 90)]);
             }
             if (stage == 1) return unansweredPage(noRelays: true);
             return answeredPage(const <Event>[]);
@@ -12048,7 +12130,7 @@ void main() {
               ..elapse(delay)
               ..flushMicrotasks();
           }
-          expect(syncState.drainCursorOverride, 100);
+          expect(syncState.drainCursorOverride, _drainEpoch + 100);
           expect(syncState.markedCompletePubkeys, isEmpty);
 
           // A later manual run advances the durable boundary, then encounters
@@ -12057,7 +12139,7 @@ void main() {
           stageGiftWrapPages = 0;
           unawaited(repository.backfillHistoryIfNeeded());
           async.flushMicrotasks();
-          expect(syncState.drainCursorOverride, 90);
+          expect(syncState.drainCursorOverride, _drainEpoch + 90);
           expect(syncState.markedCompletePubkeys, isEmpty);
 
           stage = 2;
@@ -13460,7 +13542,7 @@ void main() {
             // reaches an authoritative empty page. Run 2 exhausts at once.
             return giftWrapPages <=
                     DmHistoryDrainConfig.unsettledPageRetriesPerRun + 1
-                ? partialPage([deletion(500)])
+                ? partialPage([deletion(_drainEpoch + 500)])
                 : answeredPage(const <Event>[]);
           });
           final syncState = armedSyncState();
@@ -13552,7 +13634,8 @@ void main() {
             }
             return answeredPage([deletion((filter.until ?? 1000) - 1)]);
           });
-          final syncState = armedSyncState()..oldestOverride = 100000;
+          final syncState = armedSyncState()
+            ..oldestOverride = _drainEpoch + 100000;
           final repository = createRepository(syncState: syncState);
 
           await repository.backfillHistoryIfNeeded();

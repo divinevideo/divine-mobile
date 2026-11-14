@@ -296,7 +296,8 @@ class DmSyncState {
   /// blackholed forever otherwise — the failure is silent, so the user has no
   /// way to attribute it and no recovery short of a reinstall or account
   /// switch. Called once per subscription start, before the `since:` filter
-  /// is derived.
+  /// is derived, and at the start of every history drain, before the drain
+  /// seeds from [oldestSyncedAt].
   ///
   /// Clearing the completion flag and seeding the resume cursor at now
   /// re-drains down through the window the poisoned live subscription missed;

@@ -40,6 +40,10 @@ const _privateKey =
 const _peerPubkey =
     'b1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
 
+/// A plausible floor for the history drain to seed from. One below
+/// [DmSyncState.minPlausibleCreatedAt] is repaired and re-armed from now.
+const _oldestSyncedAt = 1600000100;
+
 /// The outgoing NIP-04 recovery read, `authors:[self]` kind 4: the only read
 /// these stubs answer. The deletion recovery pass (#9468) is answered apart.
 final Matcher _nip04RecoveryRead = isA<List<nostr_filter.Filter>>().having(
@@ -66,9 +70,9 @@ void main() {
     // Keep diagnostic logging from arming a throttle timer inside FakeAsync.
     debugPrint = debugPrintSynchronously;
     SharedPreferences.setMockInitialValues({
-      'dm.oldestSyncedAt.$_pubkey': 100,
+      'dm.oldestSyncedAt.$_pubkey': _oldestSyncedAt,
       'dm.historyDrainVersion.$_pubkey': DmSyncState.currentDrainVersion,
-      'dm.oldestSyncedAt.$_peerPubkey': 100,
+      'dm.oldestSyncedAt.$_peerPubkey': _oldestSyncedAt,
       'dm.historyDrainVersion.$_peerPubkey': DmSyncState.currentDrainVersion,
     });
     syncState = DmSyncState(await SharedPreferences.getInstance());

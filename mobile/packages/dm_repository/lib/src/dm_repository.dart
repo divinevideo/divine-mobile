@@ -3168,6 +3168,10 @@ class DmRepository {
     // a refusal window's one reconnect sweep is already spent.
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
+    // Heal poisoned boundaries before the drain reads them, as startListening
+    // does: a drain can run before any subscription has opened, and one seeded
+    // from a floor below 2020 skips the real history and latches complete.
+    await syncState.repairPoisonedBoundaries(pubkey);
     // Run this before the ordinary version stamp: that ordering distinguishes
     // a pre-fix generation-5 install from a fresh install starting its first
     // drain on this build. See #8550 and #8646.
