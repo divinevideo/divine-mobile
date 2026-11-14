@@ -5113,6 +5113,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get navProfile => 'ప్రొఫైల్';
 
   @override
+  String get navProfileLongPressHint => 'బగ్‌ను నివేదించండి';
+
+  @override
   String get navMyProfile => 'నా ప్రొఫైల్';
 
   @override
@@ -8408,6 +8411,10 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get bugReportDiagnosticsNotice =>
       'పరికర సమాచారం మరియు లాగ్‌లు స్వయంచాలకంగా చేర్చబడతాయి.';
+
+  @override
+  String get bugReportProfileHoldTip =>
+      'షార్ట్‌కట్: దిగువన ఉన్న బార్ కనిపిస్తున్నప్పుడు, ఏ స్క్రీన్ నుండైనా బగ్‌ను నివేదించడానికి మీ ప్రొఫైల్ చిత్రాన్ని నొక్కి ఉంచండి.';
 
   @override
   String get bugReportSuccessMessage =>

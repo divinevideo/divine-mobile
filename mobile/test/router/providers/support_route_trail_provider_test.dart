@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:riverpod/misc.dart' show Override;
 
@@ -78,6 +79,15 @@ void main() {
 
       expect(snapshot.currentScreen, 'explore');
       expect(snapshot.recentScreens, ['explore']);
+    });
+
+    test('treats the hold-marked report location as support', () async {
+      final snapshot = await visit([
+        '/home/0',
+        RoutePaths.supportReportBugFromProfileHold,
+      ]);
+      expect(snapshot.currentScreen, 'home');
+      expect(snapshot.recentScreens, ['home']);
     });
 
     test('collapses consecutive duplicate route types', () async {

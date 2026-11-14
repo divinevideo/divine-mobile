@@ -558,10 +558,15 @@ RouteBase get $bugReportRouteData => GoRouteData.$route(
 
 mixin $BugReportRouteData on GoRouteData {
   static BugReportRouteData _fromState(GoRouterState state) =>
-      const BugReportRouteData();
+      BugReportRouteData(entry: state.uri.queryParameters['entry']);
+
+  BugReportRouteData get _self => this as BugReportRouteData;
 
   @override
-  String get location => GoRouteData.$location('/support-center/report-bug');
+  String get location => GoRouteData.$location(
+    '/support-center/report-bug',
+    queryParams: {if (_self.entry != null) 'entry': _self.entry},
+  );
 
   @override
   void go(BuildContext context) => context.go(location);

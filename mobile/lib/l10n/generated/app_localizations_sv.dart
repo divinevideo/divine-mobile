@@ -4938,6 +4938,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'Rapportera en bugg';
+
+  @override
   String get navMyProfile => 'Min profil';
 
   @override
@@ -8153,6 +8156,10 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get bugReportDiagnosticsNotice =>
       'Enhetsinfo och loggar inkluderas automatiskt.';
+
+  @override
+  String get bugReportProfileHoldTip =>
+      'Genväg: när fältet längst ned syns, håll inne din profilbild för att rapportera en bugg från vilken skärm som helst.';
 
   @override
   String get bugReportSuccessMessage =>

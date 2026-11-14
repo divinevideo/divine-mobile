@@ -97,6 +97,9 @@ final _locations = <String, List<String>>{
   'storageManagement': [RoutePaths.storageManagement],
   'supportCenter': [RoutePaths.supportCenter],
   'supportReportBug': [RoutePaths.supportReportBug],
+  'supportReportBugFromProfileHold': [
+    RoutePaths.supportReportBugFromProfileHold,
+  ],
   'videoEditor': [RoutePaths.videoEditor],
   'videoMetadata': [RoutePaths.videoMetadata],
   'videoRecorder': [RoutePaths.videoRecorder],
@@ -193,6 +196,10 @@ const _notLocations = {
   // A query parameter name, not a path; videoDetailForId with an author is
   // checked above.
   'videoAuthorQueryParameter',
+  // A query parameter name and its value, not paths; the whole location
+  // supportReportBugFromProfileHold is checked above.
+  'supportReportBugEntryParameter',
+  'supportReportBugProfileHoldEntry',
   // Not registered. The redirect and route normalizer rewrite them: `root`
   // to welcome or the home feed, `notifications` to /notifications/0.
   'notifications',

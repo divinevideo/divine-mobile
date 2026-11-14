@@ -4664,6 +4664,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navProfile => '프로필';
 
   @override
+  String get navProfileLongPressHint => '버그 신고하기';
+
+  @override
   String get navMyProfile => '내 프로필';
 
   @override
@@ -7766,6 +7769,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get bugReportDiagnosticsNotice => '기기 정보와 로그가 자동으로 함께 보내져요.';
+
+  @override
+  String get bugReportProfileHoldTip =>
+      '바로가기: 하단 바가 보일 때 프로필 사진을 길게 누르면 어느 화면에서든 버그를 신고할 수 있어요.';
 
   @override
   String get bugReportSuccessMessage =>

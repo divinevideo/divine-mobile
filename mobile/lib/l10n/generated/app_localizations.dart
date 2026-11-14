@@ -8287,6 +8287,12 @@ abstract class AppLocalizations {
   /// **'Profile'**
   String get navProfile;
 
+  /// TalkBack hint on the Profile tab of the bottom bar. Holding the tab opens the bug report form. Write a verb phrase completing Android's 'Double-tap and hold to …', in the register mobile/docs/LOCALIZATION_STYLE_GUIDE.md sets for the locale.
+  ///
+  /// In en, this message translates to:
+  /// **'Report a bug'**
+  String get navProfileLongPressHint;
+
   /// No description provided for @navMyProfile.
   ///
   /// In en, this message translates to:
@@ -13680,6 +13686,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Device info and logs will be included automatically.'**
   String get bugReportDiagnosticsNotice;
+
+  /// Muted line at the bottom of the Report a Bug form, shown unless the form was opened by holding the Profile tab. The tab shows the user's profile picture, not a word. Some people reach this form while the bottom bar is hidden, so keep the 'when the bottom bar is showing' condition. Avoid left/right wording (RTL locales).
+  ///
+  /// In en, this message translates to:
+  /// **'Shortcut: when the bottom bar is showing, press and hold your profile picture to report a bug from any screen.'**
+  String get bugReportProfileHoldTip;
 
   /// No description provided for @bugReportSuccessMessage.
   ///

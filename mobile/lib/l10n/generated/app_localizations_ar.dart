@@ -4943,6 +4943,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navProfile => 'الملف الشخصي';
 
   @override
+  String get navProfileLongPressHint => 'الإبلاغ عن خطأ';
+
+  @override
   String get navMyProfile => 'ملفي الشخصي';
 
   @override
@@ -8169,6 +8172,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get bugReportDiagnosticsNotice =>
       'ستُرفَق معلومات الجهاز والسجلات تلقائيًا.';
+
+  @override
+  String get bugReportProfileHoldTip =>
+      'اختصار: عندما يكون الشريط السفلي ظاهرًا، يمكن الإبلاغ عن خطأ من أي شاشة بالضغط مطولًا على صورة ملفك الشخصي.';
 
   @override
   String get bugReportSuccessMessage =>

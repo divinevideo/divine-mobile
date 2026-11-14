@@ -13,6 +13,7 @@ import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/go_router_page_name.dart';
+import 'package:openvine/router/ios_modal_page.dart';
 import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/dm_inbox_prototype_routes.dart';
@@ -335,20 +336,34 @@ class SupportCenterRouteData extends GoRouteData with $SupportCenterRouteData {
   name: BugReportScreen.routeName,
 )
 class BugReportRouteData extends GoRouteData with $BugReportRouteData {
-  const BugReportRouteData();
+  const BugReportRouteData({
+    @TypedQueryParameter(name: RoutePaths.supportReportBugEntryParameter)
+    this.entry,
+  });
 
+  /// How the form was opened; [RoutePaths.supportReportBugProfileHoldEntry]
+  /// marks the Profile-tab hold, and the form then skips its tip about it.
+  final String? entry;
+
+  /// Presents as a full-screen modal on iOS, so the edge swipe cannot dismiss
+  /// a half-written report.
   @override
-  Widget build(BuildContext context, GoRouterState state) {
+  Page<void> buildPage(BuildContext context, GoRouterState state) {
     // A typed route has no `Ref`, so the providers are read through the tree.
     final container = ProviderScope.containerOf(context, listen: false);
     final routeSnapshot = container
         .read(supportRouteTrailProvider.notifier)
         .snapshot;
-    return BugReportScreen(
-      bugReportService: container.read(bugReportServiceProvider),
-      currentScreen: routeSnapshot.currentScreen,
-      recentScreens: routeSnapshot.recentScreens,
-      userPubkey: container.read(authServiceProvider).currentPublicKeyHex,
+    return iosModalPage(
+      state: state,
+      child: BugReportScreen(
+        bugReportService: container.read(bugReportServiceProvider),
+        currentScreen: routeSnapshot.currentScreen,
+        recentScreens: routeSnapshot.recentScreens,
+        userPubkey: container.read(authServiceProvider).currentPublicKeyHex,
+        showProfileHoldTip:
+            entry != RoutePaths.supportReportBugProfileHoldEntry,
+      ),
     );
   }
 }

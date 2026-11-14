@@ -4954,6 +4954,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get navProfile => 'پروفائل';
 
   @override
+  String get navProfileLongPressHint => 'بگ کی رپورٹ کریں';
+
+  @override
   String get navMyProfile => 'میرا پروفائل';
 
   @override
@@ -8164,6 +8167,10 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get bugReportDiagnosticsNotice =>
       'ڈیوائس کی معلومات اور لاگز خودکار طور پر شامل ہوں گے۔';
+
+  @override
+  String get bugReportProfileHoldTip =>
+      'شارٹ کٹ: جب نیچے موجود بار دکھائی دے تو کسی بھی اسکرین سے بگ کی رپورٹ کرنے کے لیے اپنی پروفائل تصویر کو دبا کر رکھیں۔';
 
   @override
   String get bugReportSuccessMessage =>

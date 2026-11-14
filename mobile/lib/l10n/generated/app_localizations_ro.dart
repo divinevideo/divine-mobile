@@ -5088,6 +5088,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'Raportează un bug';
+
+  @override
   String get navMyProfile => 'Profilul meu';
 
   @override
@@ -8357,6 +8360,10 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get bugReportDiagnosticsNotice =>
       'Informațiile despre dispozitiv și jurnalele vor fi incluse automat.';
+
+  @override
+  String get bugReportProfileHoldTip =>
+      'Scurtătură: când bara de jos este vizibilă, ține apăsată poza ta de profil ca să raportezi un bug din orice ecran.';
 
   @override
   String get bugReportSuccessMessage =>

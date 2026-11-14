@@ -4865,6 +4865,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'Laporkan bug';
+
+  @override
   String get navMyProfile => 'Profilku';
 
   @override
@@ -8073,6 +8076,10 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get bugReportDiagnosticsNotice =>
       'Info perangkat dan log akan disertakan otomatis.';
+
+  @override
+  String get bugReportProfileHoldTip =>
+      'Pintasan: saat bilah bawah terlihat, tekan lama foto profilmu untuk melaporkan bug dari layar mana pun.';
 
   @override
   String get bugReportSuccessMessage =>

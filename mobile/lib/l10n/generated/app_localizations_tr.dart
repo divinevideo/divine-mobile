@@ -4883,6 +4883,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get navProfile => 'Profil';
 
   @override
+  String get navProfileLongPressHint => 'Hata bildir';
+
+  @override
   String get navMyProfile => 'Profilim';
 
   @override
@@ -8082,6 +8085,10 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get bugReportDiagnosticsNotice =>
       'Cihaz bilgileri ve günlükler otomatik olarak eklenecek.';
+
+  @override
+  String get bugReportProfileHoldTip =>
+      'Kısayol: alt çubuk görünürken, herhangi bir ekrandan hata bildirmek için profil fotoğrafına basılı tut.';
 
   @override
   String get bugReportSuccessMessage =>

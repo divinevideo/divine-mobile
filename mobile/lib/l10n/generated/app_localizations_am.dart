@@ -4826,6 +4826,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get navProfile => 'መገለጫ';
 
   @override
+  String get navProfileLongPressHint => 'ሳንካ ሪፖርት ያድርጉ';
+
+  @override
   String get navMyProfile => 'የእኔ መገለጫ';
 
   @override
@@ -7973,6 +7976,10 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get bugReportDiagnosticsNotice => 'የመሳሪያ መረጃ እና ሎጎች በራስ-ሰር ይካተታሉ።';
+
+  @override
+  String get bugReportProfileHoldTip =>
+      'አቋራጭ: የታችኛው አሞሌ በሚታይበት ጊዜ፣ ከማንኛውም ስክሪን ሳንካ ሪፖርት ለማድረግ የመገለጫ ፎቶዎን በረጅሙ ይጫኑ።';
 
   @override
   String get bugReportSuccessMessage =>

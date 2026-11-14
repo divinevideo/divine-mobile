@@ -4904,6 +4904,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get navProfile => 'Hồ sơ';
 
   @override
+  String get navProfileLongPressHint => 'Báo lỗi';
+
+  @override
   String get navMyProfile => 'Hồ sơ của tôi';
 
   @override
@@ -8119,6 +8122,10 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get bugReportDiagnosticsNotice =>
       'Thông tin thiết bị và nhật ký sẽ được đính kèm tự động.';
+
+  @override
+  String get bugReportProfileHoldTip =>
+      'Phím tắt: khi thanh dưới cùng đang hiển thị, hãy nhấn giữ ảnh đại diện của bạn để báo lỗi từ bất kỳ màn hình nào.';
 
   @override
   String get bugReportSuccessMessage =>
