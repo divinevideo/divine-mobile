@@ -1,7 +1,79 @@
 # Video actions in the info sheet
 
 Date: 2026-11-14, revised 2026-11-15 after Rabble's review of PR #11044
-Status: revision 2 — this section supersedes anything below it that conflicts
+Status: revision 3 — the newest revision section supersedes anything below it that conflicts
+
+## Revision 3 (2026-11-15) — remix consent, credit and takedown
+
+Rabble's direction: remixing is allowed by default; creators can block it on
+one video or on their whole account; creators can see every video that
+remixed theirs; a mean remix can be pulled down, through Trust & Safety for
+now. The Remix button label is "Remix this video" on every video (classic
+Vines included) — revision 2's "Remix this Vine" string is dropped.
+
+### Consent
+
+- **Default flips to allowed.** A video may be remixed unless its creator
+  said no. Per video: the event's `allow_video_reuse` tag — `false` blocks,
+  `true` or absent allows (today only an exact `true` allows). Per account:
+  a creator-wide block (below) overrides every video's tag.
+  - Videos published while the default was "off" carry an explicit
+    `allow_video_reuse=false` and stay blocked: the tag can't tell a
+    deliberate no from an untouched default, so the conservative reading
+    wins. Videos published before the tag existed (absent) become
+    remixable.
+  - A sound that forbids derivatives still forbids it
+    (`soundForbidsDerivatives`), unchanged.
+  - The editor's video-reuse toggle now defaults to on for new posts, and
+    stays editable on a published video through the existing edit flow.
+- **Account-wide block:** a setting in the creator's own settings ("Let
+  people remix my videos", default on). Stored as a field in the creator's
+  kind 0 profile so any client can read it with the profile it already
+  fetches; Divine reads it before offering Remix or Add to clips.
+  Builder's call: the exact field name (document it in
+  `docs/NOSTR_EVENT_TYPES.md`).
+- **Where consent is checked:** one shared rule (`canRemixVideo`, replacing
+  `canAddVideoToClips`) used by the Remix button, the share sheet's Add to
+  clips, and every other reuse entry point that calls the old rule. Own
+  videos are always remixable by their owner. Classic Vines follow the same
+  rule: their archived events carry no tag, so they are remixable unless the
+  creator's account blocks it. A Viner who cannot sign in to their imported
+  account asks Trust & Safety (see takedown).
+- **Not enforced against other Nostr clients.** This is a published
+  preference, honoured by Divine; server-side enforcement (like the audio
+  reuse decision in #8467) is later work.
+
+### Credit
+
+- Already true and kept: a clip imported from someone's video publishes a
+  `clip-source` `a` tag (the source's `34236:` coordinate) and `p` tag from
+  the clips on the timeline, separate from the editable Inspired-by field,
+  carried through split-screen and merge renders and preserved on metadata
+  edits. Removing the clip is the only way to drop it.
+- New: the editor's details screen shows a locked "Uses a clip from
+  @creator" row per credited creator, with no remove control.
+- New: a reply's info sheet shows its clip credits too (today a reply's
+  parent context replaces them in `creditedInspiredByPubkeys`).
+- New: tests that a video built from a reused clip publishes the credit
+  even when the Inspired-by field is cleared, and keeps it through a
+  metadata edit.
+
+### Seeing and pulling down remixes
+
+- **Remixes list.** A video's info sheet gets a "Remixes" section listing
+  videos whose `clip-source` `a` tag names it (relay `#a` query through a
+  repository method), newest first, shown when at least one exists.
+  Visible to everyone, so creators and viewers can both find them.
+- **Report a remix.** On a video whose clip credit names the viewer, the
+  info sheet offers "Report this remix", which opens the existing report
+  flow preselected for this case. It reaches Trust & Safety like any report;
+  T&S decides and removes. No automatic takedown.
+
+### Still from revision 2
+
+Remix button behaviour (import, open editor, web nudge, no duplicates,
+draft-safe), the From others Library tab in every picker, the slimmed info
+sheet actions, and screenshots in the PR.
 
 ## Revision 2 (2026-11-15)
 
@@ -67,7 +139,6 @@ five, and showed nothing on web.
 ### New copy (ARB keys, translated into every locale per
 `mobile/docs/LOCALIZATION_STYLE_GUIDE.md`, flagged for fluent review)
 
-- Remix this Vine
 - Remix this video
 - Remixing happens in the Divine app. (web snackbar)
 - Get the app (web snackbar action)
