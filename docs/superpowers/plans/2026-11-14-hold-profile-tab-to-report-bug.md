@@ -24,10 +24,10 @@ No new state, providers, packages or native code.
 - Supported range: Android 9 (API 28, `minSdk = 28`) through Android 17 (API 37); iOS 16 (deployment target 16.0) through iOS 27. No OS-version-specific code.
 - No new dependencies. PR 1 only removes `sensors_plus: ^7.0.0`.
 - Import `package:material_ui/material_ui.dart` or `package:flutter/widgets.dart`, never `package:flutter/material.dart`.
-- Navigate with `RoutePaths` members, never a literal path (`check_literal_navigation_paths.sh`). Edit the existing report `GoRoute`; add no new one (`check_hand_written_route_ceiling.sh`). `route_paths.dart` stays import-free.
+- Navigate with `RoutePaths` members, never a literal path (`check_literal_navigation_paths.sh`). Edit the existing typed `BugReportRouteData`; add no hand-written route (`check_hand_written_route_ceiling.sh`). `route_paths.dart` stays import-free.
 - Every new ARB key is read through `context.l10n` in the same commit, exists in all 23 `mobile/lib/l10n/app_*.arb` files, and is translated per `mobile/docs/LOCALIZATION_STYLE_GUIDE.md`.
-  - Indentation differs per file: `ms`, `ur`, `vi`, `zh` and `te` use 2 spaces, the rest use 4.
-  - `app_fil.arb` is alphabetical and has no `@` blocks.
+  - Every file uses 2-space indentation.
+  - Key order and `@` blocks follow each file's own existing shape: insert next to the neighbouring key and match it.
   - Insert each key by hand, file by file; never round-trip the JSON.
 - Fire-and-forget work goes through `runDetached`. Logs go through `Log.*`.
 - Widget tests use `appLocalizationsDelegates` and read copy through `AppLocalizations`, never hardcoded English. Every test sits in a `group`. No `Future.delayed`.
@@ -259,10 +259,10 @@ Run from `mobile/`:
 
 **Files:**
 - Modify: `mobile/lib/router/route_paths.dart` (after `supportReportBug`, line 112)
-- Modify: `mobile/lib/router/routes/settings_routes.dart:155-169` (the `BugReportScreen.path` route: `builder` → `pageBuilder`)
+- Modify: `mobile/lib/router/routes/settings_routes.dart` (`BugReportRouteData`: an `entry` query parameter, `build` → `buildPage`) and the regenerated `settings_routes.g.dart`
 - Modify: `mobile/test/router/route_locations_resolve_test.dart` (`_locations` and `_notLocations`)
 - Modify: `mobile/test/router/providers/support_route_trail_provider_test.dart`
-- Create: `mobile/test/router/routes/settings_routes_test.dart`
+- Modify: `mobile/test/router/routes/settings_routes_test.dart`
 
 **Interfaces:**
 - Consumes: `iosModalPage` (Task 2) and `BugReportScreen.showProfileHoldTip` (Task 3).
@@ -300,35 +300,32 @@ test('treats the hold-marked report location as support', () async {
 
 - [ ] **Step 4: Write the failing route tests**
 
-Create `test/router/routes/settings_routes_test.dart` with `group('settingsRoutes')` → `group('${BugReportScreen.path} route')`.
-
-Setup:
-- Build the routes with a `ProviderContainer` read of `Provider<List<RouteBase>>(settingsRoutes)`, with these overrides:
-  - `supportRouteTrailProvider.overrideWith(_EmptySupportRouteTrail.new)`, a `SupportRouteTrail` subclass whose `build()` returns `const []`;
-  - `bugReportServiceProvider.overrideWithValue(_MockBugReportService())`;
-  - `authServiceProvider.overrideWithValue(createMockAuthService())`.
-- Name the report route `reportRoute`: `routes.whereType<GoRoute>().singleWhere((r) => r.path == BugReportScreen.path)`.
-- Define a `pageFor(tester, location)` helper:
-  1. `await tester.pumpWidget(const SizedBox())`.
-  2. Call `reportRoute.pageBuilder!(tester.element(find.byType(SizedBox)), _FakeGoRouterState(...))`, where the fake carries `name: BugReportScreen.routeName`, `path: BugReportScreen.path` and `uri: Uri.parse(location)`.
+Add `group('bug report page')` to `test/router/routes/settings_routes_test.dart`, after `group('support forms')`, reusing the file's harness:
+- `overrides()` returns `authServiceProvider` and `bugReportServiceProvider` mocks with nothing stubbed, and `supportRouteTrailProvider.overrideWith(_FixedTrail.new)`.
+- `_page(location, context)` resolves `location` in the settings table and calls the route's `pageBuilder` with a context from `_scopedContext(tester, overrides())`. `formAt(location, context)` returns the `BugReportScreen` that page holds.
+- In `group('locations')`, add `BugReportRouteData(entry: RoutePaths.supportReportBugProfileHoldEntry)` with the expected location `RoutePaths.supportReportBugFromProfileHold`, the constant the bottom bar pushes.
+- `group('support forms')` reads the bug report through `_page`, since the route no longer implements `build`.
 
 The first test checks the iOS behaviour, not the flag. On a regular Cupertino
 page, a drag from the left edge pops the route; on the modal page it must not.
-Use the real route in a minimal `GoRouter`:
+Use the real route in a minimal `GoRouter` under a `ProviderScope`:
 
 ```dart
 testWidgets('on iOS an edge swipe does not close the report', (tester) async {
   final router = GoRouter(
     routes: [
       GoRoute(path: '/', builder: (_, _) => const Scaffold(body: Text('home'))),
-      reportRoute,
+      _routeNamed(BugReportScreen.routeName),
     ],
   );
   addTearDown(router.dispose);
-  await tester.pumpWidget(MaterialApp.router(
-    localizationsDelegates: appLocalizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    routerConfig: router,
+  await tester.pumpWidget(ProviderScope(
+    overrides: overrides(),
+    child: MaterialApp.router(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      routerConfig: router,
+    ),
   ));
   unawaited(router.push(RoutePaths.supportReportBug));
   await tester.pumpAndSettle();
@@ -341,30 +338,30 @@ testWidgets('on iOS an edge swipe does not close the report', (tester) async {
 }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
 testWidgets('keeps the regular page transition on Android', (tester) async {
-  final page = await pageFor(tester, RoutePaths.supportReportBug);
-  expect(page, isA<MaterialPage<void>>().having(
+  final context = await _scopedContext(tester, overrides());
+  expect(_page(BugReportScreen.path, context), isA<MaterialPage<void>>().having(
     (p) => p.fullscreenDialog, 'fullscreenDialog', isFalse));
 }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
 testWidgets('keeps its route name for page observers', (tester) async {
-  final page = await pageFor(tester, RoutePaths.supportReportBug);
-  expect(page.name, BugReportScreen.routeName);
+  final context = await _scopedContext(tester, overrides());
+  expect(_page(BugReportScreen.path, context).name, BugReportScreen.routeName);
 });
 
 testWidgets('hides the shortcut tip when the Profile-tab hold opened it', (
   tester,
 ) async {
-  final page = await pageFor(
-    tester,
-    RoutePaths.supportReportBugFromProfileHold,
-  ) as MaterialPage<void>;
-  expect((page.child as BugReportScreen).showProfileHoldTip, isFalse);
+  final context = await _scopedContext(tester, overrides());
+  expect(
+    formAt(RoutePaths.supportReportBugFromProfileHold, context)
+        .showProfileHoldTip,
+    isFalse,
+  );
 });
 
 testWidgets('shows the shortcut tip for every other way in', (tester) async {
-  final page =
-      await pageFor(tester, RoutePaths.supportReportBug) as MaterialPage<void>;
-  expect((page.child as BugReportScreen).showProfileHoldTip, isTrue);
+  final context = await _scopedContext(tester, overrides());
+  expect(formAt(BugReportScreen.path, context).showProfileHoldTip, isTrue);
 });
 ```
 
@@ -372,14 +369,16 @@ testWidgets('shows the shortcut tip for every other way in', (tester) async {
 
 Run: `mise exec -- flutter test test/router/routes/settings_routes_test.dart`
 Expected:
-- the `pageFor` tests fail because `route.pageBuilder` is null (the route still uses `builder`);
+- the file does not compile until `BugReportRouteData` takes `entry`; with only that added, the page tests fail because the route still implements `build`, so its `buildPage` returns go_router's `NoOpPage`;
 - the edge-swipe test fails because the swipe pops the form (`BugReportScreen` not found).
 
 - [ ] **Step 6: Implement**
 
-- Replace the route's `builder` with `pageBuilder: (_, state) => iosModalPage(state: state, child: BugReportScreen(...))`.
-- Keep the existing trail snapshot, service and pubkey reads.
-- Add `showProfileHoldTip: state.uri.queryParameters[RoutePaths.supportReportBugEntryParameter] != RoutePaths.supportReportBugProfileHoldEntry`.
+- Give `BugReportRouteData` the constructor parameter `{@TypedQueryParameter(name: RoutePaths.supportReportBugEntryParameter) this.entry}` and `final String? entry;`.
+- Override `buildPage` instead of `build`, returning `iosModalPage(state: state, child: BugReportScreen(...))`.
+- Keep the existing trail snapshot, service and pubkey reads through `ProviderScope.containerOf`.
+- Add `showProfileHoldTip: entry != RoutePaths.supportReportBugProfileHoldEntry`.
+- Regenerate with the full `mise exec -- dart run build_runner build --delete-conflicting-outputs` and commit `settings_routes.g.dart`.
 
 - [ ] **Step 7: Run the route-adjacent suites**
 
@@ -415,11 +414,11 @@ In `app_en.arb`, insert directly after `navProfile`:
 ```json
 "navProfileLongPressHint": "Report a bug",
 "@navProfileLongPressHint": {
-  "description": "TalkBack hint on the Profile tab of the bottom bar; Android reads it as 'Double-tap and hold to <hint>'. Holding the tab opens the bug report form. Use the same grammatical form as inboxConversationTileLongPressHint in each locale."
+  "description": "TalkBack hint on the Profile tab of the bottom bar. Holding the tab opens the bug report form. Write a verb phrase completing Android's 'Double-tap and hold to …', in the register mobile/docs/LOCALIZATION_STYLE_GUIDE.md sets for the locale."
 },
 ```
 
-Mirror it into the other 22 locales, using the grammatical form each locale already uses for `inboxConversationTileLongPressHint` (for example de "Unterhaltungsaktionen anzeigen"). Then run `mise exec -- flutter gen-l10n`.
+Mirror it into the other 22 locales, in the register `mobile/docs/LOCALIZATION_STYLE_GUIDE.md` sets for each locale rather than another key's form (`inboxConversationTileLongPressHint` is familiar in `am` and `te`, where the guide asks for the polite form). Then run `mise exec -- flutter gen-l10n`.
 
 - [ ] **Step 2: Write the failing tests**
 

@@ -111,7 +111,7 @@ the bottom bar.
   when the bar is not on screen.
 - Repo guards that apply: literal navigation paths are frozen at zero (use a
   `RoutePaths` member or builder), hand-written routes may not grow (this edits
-  an existing `GoRoute`, it adds none), orphaned ARB keys fail CI, every ARB key
+  the typed `BugReportRouteData`, it adds none), orphaned ARB keys fail CI, every ARB key
   is mirrored into all 23 locales or listed as known debt, and widget tests
   that render `context.l10n` use `appLocalizationsDelegates`.
 
@@ -160,8 +160,8 @@ have to move.
 
 ### Route (`mobile/lib/router/routes/settings_routes.dart`)
 
-- The existing `GoRoute(path: BugReportScreen.path, ...)` switches from
-  `builder` to `pageBuilder` and returns a `MaterialPage` with
+- The typed `BugReportRouteData` overrides `buildPage` instead of `build` and
+  returns a `MaterialPage` with
   `fullscreenDialog: true` on iOS only. On iOS that selects Cupertino's
   full-screen-dialog transition (slides up from the bottom, no back-swipe, the
   screen behind stays put). It stays `false` on Android, where Material would
@@ -172,7 +172,7 @@ have to move.
   `arguments` (path and query parameters), `restorationId: state.pageKey.value`.
   `fadeUpwardsPage` in `mobile/lib/router/fade_upwards_page.dart` is the
   in-repo model.
-- The builder reads the hold marker from the URL and passes
+- `buildPage` reads the hold marker, a typed query parameter, and passes
   `showProfileHoldTip` to `BugReportScreen` (true unless the marker is
   present). It keeps snapshotting `supportRouteTrailProvider` as today.
 - The marker is a query parameter, not `extra`: `extra` is a warm-start cache
@@ -193,8 +193,8 @@ have to move.
 ### Strings (`mobile/lib/l10n/app_*.arb`, 23 locales)
 
 - New: the TalkBack hint fragment that completes "Double-tap and hold to …"
-  (lowercase verb phrase, e.g. "report a bug"; see
-  `inboxConversationTileLongPressHint` for the house shape).
+  (a sentence-case verb phrase, e.g. "Report a bug", capitalised like
+  `inboxConversationTileLongPressHint`).
 - New: the tip line. The Profile tab shows the user's avatar and no word, so
   the copy must describe it ("your profile picture in the bottom bar"), not
   "the Profile tab". It must also stay true for people who cannot see the bar
@@ -203,8 +203,9 @@ have to move.
 - Reused: `supportReportBug` ("Report a Bug") as the VoiceOver action label.
 - Both new keys are read through `context.l10n` in the same change, mirrored
   into every `app_*.arb`, and translated following
-  `mobile/docs/LOCALIZATION_STYLE_GUIDE.md`. Watch the mixed ARB indentation
-  (some locales use 2 spaces, most use 4).
+  `mobile/docs/LOCALIZATION_STYLE_GUIDE.md`. Every ARB file uses 2-space
+  indentation; key order and `@` blocks follow each file's own shape, so
+  insert next to the neighbouring key and match it.
 
 ### Deleting the shake detector (separate PR)
 
