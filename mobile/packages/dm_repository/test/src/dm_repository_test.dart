@@ -856,8 +856,6 @@ T _resolve<T>(FakeAsync async, Future<T> future) {
   return value;
 }
 
-/// The outgoing NIP-04 recovery read, `authors:[self]` kind 4: the only read
-/// these stubs answer. The deletion recovery pass (#9468) is answered apart.
 /// Whether [invocation] is the account's own kind-10050 lookup, which reads
 /// through the same `queryEventsDetailed` stubs as the history pages.
 bool _readsOwnInboxList(Invocation invocation) =>
@@ -865,6 +863,8 @@ bool _readsOwnInboxList(Invocation invocation) =>
       (filter) => filter.kinds?.contains(EventKind.dmRelaysList) ?? false,
     );
 
+/// The outgoing NIP-04 recovery read, `authors:[self]` kind 4: the only read
+/// these stubs answer. The deletion recovery pass (#9468) is answered apart.
 final Matcher _nip04RecoveryRead = isA<List<nostr_filter.Filter>>().having(
   (filters) => filters.single.authors,
   'authors',

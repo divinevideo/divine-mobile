@@ -471,6 +471,11 @@ void main() {
         final pass = _firstPass(async, h);
 
         expect(pass.complete, isTrue);
+        expect(
+          relay.reqs.any((req) => _readsKind(req.$2, EventKind.dmRelaysList)),
+          isTrue,
+          reason: 'the delayed kind-10050 read was never sent',
+        );
         _tearDown(async, h);
       });
     });
@@ -497,6 +502,15 @@ void main() {
         final pass = _firstPass(async, h);
 
         expect(pass.complete, isTrue);
+        expect(
+          h.tempRelays.values.any(
+            (relay) => relay.reqs.any(
+              (req) => _readsKind(req.$2, EventKind.dmRelaysList),
+            ),
+          ),
+          isTrue,
+          reason: 'the listed inbox relay was never asked for the list',
+        );
         _tearDown(async, h);
       });
     });
@@ -520,6 +534,13 @@ void main() {
         relay.stopBeating();
 
         expect(pass.complete, isTrue);
+        for (final prefix in const ['dm_drain_nip04_', 'dm_drain_k5_']) {
+          expect(
+            relay.reqs.any((req) => req.$1.startsWith(prefix)),
+            isTrue,
+            reason: 'no $prefix read was sent',
+          );
+        }
         _tearDown(async, h);
       });
     });
@@ -549,6 +570,11 @@ void main() {
         relay.stopBeating();
 
         expect(h.syncState.belowWindowRequeryAt(_owner), isNotNull);
+        expect(
+          relay.reqs.any((req) => req.$1.startsWith('dm_requery')),
+          isTrue,
+          reason: 'the below-window re-read was never sent',
+        );
         _tearDown(async, h);
       });
     });
