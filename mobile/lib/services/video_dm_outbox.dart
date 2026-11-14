@@ -78,13 +78,14 @@ class _ClipBatchJob extends _OutboxJob {
 /// keeps reporting progress after the user leaves the chat.
 ///
 /// Requests are queued synchronously and run one at a time, first in first
-/// out. Each job reads the send service and clip verifier when it starts, so
-/// a job keeps the instances it started with. Nothing is persisted: [dispose]
-/// drops every entry, and a send already in flight finishes unobserved.
+/// out. The send service is read for each send and the clip verifier for
+/// each clip check, so every send goes through the instances current when it
+/// starts, even within one clip batch. Nothing is persisted: [dispose] stops
+/// publishing, and a send already in flight finishes unobserved.
 class VideoDmOutbox {
   /// Creates a [VideoDmOutbox].
   ///
-  /// [sendService] is read when each job starts. [readFrame] reads a card
+  /// [sendService] is read for each send. [readFrame] reads a card
   /// frame when an entry is created; [newId] and [now] stamp new entries.
   ///
   /// [clipVerifier] is read when each clip check starts; the check runs when
@@ -247,8 +248,8 @@ class VideoDmOutbox {
   /// Does nothing otherwise.
   void acknowledge(String id) => _drop(id, OutgoingVideoDmPhase.sent);
 
-  /// Stops publishing, drops every entry, and ignores sends that finish
-  /// afterwards. Safe to call more than once.
+  /// Stops publishing and ignores sends that finish afterwards. Safe to call
+  /// more than once.
   void dispose() {
     if (_disposed) return;
     _disposed = true;

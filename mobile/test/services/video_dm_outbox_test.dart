@@ -503,7 +503,7 @@ void main() {
       });
 
       test(
-        'dispose drops entries and ignores a send that finishes afterwards',
+        'dispose stops publishing and ignores a send that finishes afterwards',
         () async {
           final events = recordConversation('c1');
           final outcomes = recordOutcomes();
