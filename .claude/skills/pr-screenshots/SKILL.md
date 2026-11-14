@@ -97,7 +97,7 @@ create whatever else the screen needs yourself.
 | Notification permission sheet covers the app | `new_device_account.yaml` dismisses it. If it appears later, tap `Don’t Allow`. |
 | Every local upload finishes too fast to screenshot | Pause the Blossom proxy (see the quick reference), then capture. A long pause makes the send fail, which is useful for the failed-state shot. |
 | Seeded videos never load | The running stack was seeded for the Android emulator (`BLOSSOM_PUBLIC_URL` defaults to `10.0.2.2`). Only a stack `sim_up.sh` starts itself is seeded for the iOS simulator; publish your own videos instead. |
-| A profile header shows the previous profile's name | Known app bug: deep-linking to one profile over another reuses the name. Navigate home first if it matters for the shot. |
+| A profile header shows the previous profile's name | Known app bug (#11043): opening one profile over another reuses the name. Navigate Home first if it matters for the shot. Delete this row once #11043 is closed. |
 | `nak event` hangs | The relay never sent `OK`. The scripts wrap it in `perl -e 'alarm …'`. Do the same for ad-hoc calls. |
 | `bad math expression` in a zsh one-liner | `$GID` is a reserved integer in zsh. Use another variable name, e.g. `GIST_ID`. |
 | Build fails: a plugin "requires minimum platform version 16.0" | Flutter left the generated Swift package below iOS 16, which happens on a cold machine or a fresh worktree. The failed build repairs it, and `sim_up.sh` builds once more; if that fails too, see `.claude/rules/ios_build_troubleshooting.md` (cause 3). |
