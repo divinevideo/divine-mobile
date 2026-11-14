@@ -15,18 +15,27 @@ import 'package:openvine/widgets/video_feed_item/actions/video_content_action_ru
 
 /// Content actions for [video] in the info sheet.
 ///
-/// Reads the [VideoContentActionsBloc] the sheet provides, and treats the
-/// video as the viewer's own exactly when an [OwnerVideoActionsCubit] is
-/// provided too. Renders nothing without the bloc, so the sheet can still be
-/// built on its own.
+/// Reads the [VideoContentActionsBloc] the sheet provides, and the
+/// [OwnerVideoActionsCubit] it provides alongside when [isOwnVideo] is true.
+/// Renders nothing without the bloc, so the sheet can still be built on its
+/// own.
 ///
 /// Kept alive in the sheet's lazy list: its context drives flows that outlive
 /// a tap (delete, add to clips), and those must still close the sheet and
 /// report their outcome after the row has scrolled out of view.
 class MetadataActionsSection extends ConsumerStatefulWidget {
-  const MetadataActionsSection({required this.video, super.key});
+  const MetadataActionsSection({
+    required this.video,
+    this.isOwnVideo = false,
+    super.key,
+  });
 
   final VideoEvent video;
+
+  /// Whether the signed-in viewer owns [video], decided once by the sheet.
+  /// Only then are Edit and Delete offered; an owner cubit provided further
+  /// up the tree for some other video does not count.
+  final bool isOwnVideo;
 
   @override
   ConsumerState<MetadataActionsSection> createState() =>
@@ -45,7 +54,9 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
     final contentActions = context.read<VideoContentActionsBloc?>();
     if (contentActions == null) return const SizedBox.shrink();
 
-    final ownerCubit = context.read<OwnerVideoActionsCubit?>();
+    final ownerCubit = widget.isOwnVideo
+        ? context.read<OwnerVideoActionsCubit>()
+        : null;
     final showDebugTools = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.debugTools),
     );

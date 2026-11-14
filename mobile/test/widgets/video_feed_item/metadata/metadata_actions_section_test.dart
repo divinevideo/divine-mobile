@@ -111,7 +111,10 @@ void main() {
               BlocProvider<OwnerVideoActionsCubit>.value(value: ownerCubit),
           ],
           child: VideoContentActionsFeedbackListener(
-            child: MetadataActionsSection(video: video),
+            child: MetadataActionsSection(
+              video: video,
+              isOwnVideo: ownerCubit != null,
+            ),
           ),
         ),
       ),
@@ -187,6 +190,40 @@ void main() {
           );
         }
       });
+
+      testWidgets(
+        'no Edit or Delete from an owner cubit provided for a video the viewer '
+        'does not own',
+        (tester) async {
+          stubContentActions();
+          await tester.pumpWidget(
+            testMaterialApp(
+              additionalOverrides: [
+                isFeatureEnabledProvider(
+                  FeatureFlag.debugTools,
+                ).overrideWithValue(false),
+              ],
+              home: Scaffold(
+                body: MultiBlocProvider(
+                  providers: [
+                    BlocProvider<VideoContentActionsBloc>.value(
+                      value: contentActions,
+                    ),
+                    BlocProvider<OwnerVideoActionsCubit>.value(
+                      value: stubbedOwnerCubit(),
+                    ),
+                  ],
+                  child: MetadataActionsSection(video: _classicVine),
+                ),
+              ),
+            ),
+          );
+
+          expect(find.text(l10n.shareSheetSave), findsOneWidget);
+          expect(find.text(l10n.shareMenuEditVideo), findsNothing);
+          expect(find.text(l10n.shareMenuDeleteVideo), findsNothing);
+        },
+      );
 
       testWidgets(
         'Add to clips on the viewer own video, even without a reuse tag',
@@ -413,7 +450,10 @@ void main() {
                           ],
                           child: ListView(
                             children: [
-                              MetadataActionsSection(video: video),
+                              MetadataActionsSection(
+                                video: video,
+                                isOwnVideo: true,
+                              ),
                               const SizedBox(height: 4000),
                             ],
                           ),

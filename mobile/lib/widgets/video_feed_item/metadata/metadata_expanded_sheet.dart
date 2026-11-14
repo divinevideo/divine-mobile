@@ -100,6 +100,7 @@ class MetadataExpandedSheet extends StatelessWidget {
             child: _MetadataContent(
               video: video,
               scrollController: scrollController,
+              isOwnVideo: isOwnVideo,
             ),
           ),
         ),
@@ -155,10 +156,15 @@ class _VideoContentActionsScope extends ConsumerWidget {
 /// [scrollController] from [VineBottomSheet]'s [DraggableScrollableSheet].
 /// When used directly in tests, scrolls freely without a controller.
 class _MetadataContent extends StatelessWidget {
-  const _MetadataContent({required this.video, this.scrollController});
+  const _MetadataContent({
+    required this.video,
+    this.scrollController,
+    this.isOwnVideo = false,
+  });
 
   final VideoEvent video;
   final ScrollController? scrollController;
+  final bool isOwnVideo;
 
   @override
   Widget build(BuildContext context) {
@@ -174,7 +180,7 @@ class _MetadataContent extends StatelessWidget {
           variant: VideoReplyParentLinkVariant.metadata,
         ),
         MetadataStatsRow(video: video),
-        MetadataActionsSection(video: video),
+        MetadataActionsSection(video: video, isOwnVideo: isOwnVideo),
         MetadataCreatorSection(pubkey: video.pubkey),
         MetadataCollaboratorsSection(video: video),
         MetadataInspiredBySection(video: video),
