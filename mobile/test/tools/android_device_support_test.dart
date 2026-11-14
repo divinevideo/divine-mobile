@@ -149,6 +149,19 @@ $extra
           expect(result.stdout, contains('cannot read'));
         });
       }
+
+      for (final qualified in [
+        'android.defaultConfig.minSdk = 30',
+        'it.minSdk = 30',
+        'setMinSdkVersion(30)',
+      ]) {
+        test('fails on a later assignment beside minSdk = 28: $qualified', () {
+          final result = run(gradle(extra: '        $qualified'));
+
+          expect(result.exitCode, equals(1));
+          expect(result.stdout, contains('cannot read'));
+        });
+      }
     });
 
     group('abiFilters', () {

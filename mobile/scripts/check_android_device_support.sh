@@ -46,7 +46,9 @@ code="$(awk -f "$SCRIPT_DIR/lib/dart_code_only.awk" "$gradle")"
 # 1. minSdk floor (<= 28)
 # ---------------------------------------------------------------------------
 max_min_sdk=28
-min_hits="$(printf '%s\n' "$code" | grep -nE '(^|[^[:alnum:]_.])minSdk' || true)"
+# Any code naming minSdk counts, qualified or not (`defaultConfig.minSdk = 30`,
+# `setMinSdkVersion(30)`), so a later override cannot slip past a plain 28.
+min_hits="$(printf '%s\n' "$code" | grep -nE '[Mm]inSdk' || true)"
 if [ -z "$min_hits" ]; then
   echo "❌ No minSdk assignment in $gradle."
   fail=1
