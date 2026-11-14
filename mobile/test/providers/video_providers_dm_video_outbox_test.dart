@@ -134,5 +134,43 @@ void main() {
       expect(container.read(videoDmOutboxProvider), isNot(same(before)));
       expect(await done, isNotEmpty);
     });
+
+    test(
+      'refuses a send started after the account changed, before the outbox '
+      'rebuild lands',
+      () async {
+        final container = buildContainer();
+        final outbox = container.read(videoDmOutboxProvider);
+
+        // Switching only marks the outbox for rebuild; nothing has read it
+        // again, so its dispose has not landed — exactly the window a queued
+        // job used to be able to start in. Send immediately, with no provider
+        // read in between (a read flushes the rebuild).
+        container.read(_signedIn.notifier).state = second;
+        outbox.sendVideo(
+          conversationId: 'c',
+          recipientPubkey: first,
+          file: File('/v/a.mp4'),
+        );
+        await pumpEventQueue();
+        // Read after the send: the send service is what the lazy reader would
+        // have handed the job — the incoming account's, since reading it
+        // flushes the rebuild chain against the switched session.
+        final serviceAfterSwitch = container.read(dmVideoSendServiceProvider);
+
+        // Nothing was handed to any send service: the outgoing account's
+        // video never leaves under the incoming account's keys.
+        verifyNever(
+          () => serviceAfterSwitch.sendVideo(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            videoFile: any(named: 'videoFile'),
+            mimeType: any(named: 'mimeType'),
+            extraTags: any(named: 'extraTags'),
+            onPhase: any(named: 'onPhase'),
+            onUploadProgress: any(named: 'onUploadProgress'),
+          ),
+        );
+      },
+    );
   });
 }

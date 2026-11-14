@@ -496,10 +496,18 @@ final dmVideoSendServiceProvider = Provider<DmVideoSendService>((ref) {
 /// importer are read when a send runs, so a rebuild of the DM repository does
 /// not drop queued or in-flight sends. Rebuilt, and the old one disposed, when
 /// the account changes.
+///
+/// The rebuild is scheduled, not immediate, so a job queued by the outgoing
+/// account can start in the frame before it lands — the same provider lag
+/// [currentAccountIdProvider] documents for saved-sound imports. Each send
+/// therefore re-checks the account before it starts and refuses on a mismatch,
+/// instead of handing the outgoing account's video to the incoming account's
+/// send service.
 final videoDmOutboxProvider = Provider<VideoDmOutbox>((ref) {
-  ref.watch(currentAccountIdProvider);
+  final accountId = ref.watch(currentAccountIdProvider);
   final outbox = VideoDmOutbox(
     sendService: () => ref.read(dmVideoSendServiceProvider),
+    isAccountCurrent: () => ref.read(currentAccountIdProvider) == accountId,
     clipVerifier: () => ref.read(clipProvenanceVerifierProvider),
     signOwnRecordings: NativeProofModeService.signOwnRecordings,
     isArchivedVine: (path) async =>

@@ -101,6 +101,14 @@ class VideoDmOutbox {
   /// archived Vine, which the recipient adds too. Without it such a clip is
   /// held back like any other that fails the check.
   ///
+  /// [isAccountCurrent] tells whether the account this outbox was created for
+  /// is still the signed-in one. It is read when each send and each clip check
+  /// starts: an account switch only marks this outbox for rebuild, and the
+  /// rebuild (which disposes it) lands on a later frame, so a queued job can
+  /// otherwise start inside that window and hand the outgoing account's video
+  /// to the incoming account's send service. A job that finds the account
+  /// gone ends failed and sends nothing. Without it the check is skipped.
+  ///
   /// [reporter] receives the programming errors the outbox's work throws: a
   /// send, a clip check, a frame read or the worker. It defaults to the
   /// app-wide [detachedFailureReporter], read when each error is reported.
@@ -112,6 +120,7 @@ class VideoDmOutbox {
     ClipProvenanceVerifier? Function()? clipVerifier,
     Future<void> Function(List<DivineVideoClip> clips)? signOwnRecordings,
     ArchivedVineCheck? isArchivedVine,
+    bool Function()? isAccountCurrent,
     CrashReporter? reporter,
   }) : _sendService = sendService,
        _readFrame = readFrame,
@@ -120,6 +129,7 @@ class VideoDmOutbox {
        _clipVerifier = clipVerifier,
        _signOwnRecordings = signOwnRecordings,
        _isArchivedVine = isArchivedVine,
+       _isAccountCurrent = isAccountCurrent,
        _reporter = reporter;
 
   static const _logName = 'VideoDmOutbox';
@@ -131,6 +141,7 @@ class VideoDmOutbox {
   final ClipProvenanceVerifier? Function()? _clipVerifier;
   final Future<void> Function(List<DivineVideoClip> clips)? _signOwnRecordings;
   final ArchivedVineCheck? _isArchivedVine;
+  final bool Function()? _isAccountCurrent;
   final CrashReporter? _reporter;
 
   final BehaviorSubject<List<OutgoingVideoDm>> _entries =
@@ -355,6 +366,14 @@ class VideoDmOutbox {
     }
 
     final missing = batch.firstWhereOrNull((e) => _clipPath(e) == null);
+    if (_accountChanged) {
+      // The account switched away before the batch could start; sending now
+      // would sign the outgoing account's clips with the incoming account's
+      // keys. Fail the batch; the switch disposes this outbox's state anyway.
+      failBatch();
+      _emitOutcome(VideoDmOutcomeStatus.failed, sentCount: 0, total: total);
+      return;
+    }
     if (missing != null) {
       Log.warning(
         'Video DM clip batch not sent',
@@ -482,6 +501,12 @@ class VideoDmOutbox {
     final id = entry.id;
     _setPhase(id, OutgoingVideoDmPhase.encrypting);
     try {
+      if (_accountChanged) {
+        // The account switched away while this job waited its turn (see
+        // [VideoDmOutbox.isAccountCurrent]); refuse rather than send the
+        // outgoing account's file under the incoming account's keys.
+        return _markFailed(id, OutgoingVideoDmFailure.failed);
+      }
       final result = await _sendService().sendVideo(
         recipientPubkey: entry.recipientPubkey,
         videoFile: File(entry.localPath),
@@ -671,6 +696,10 @@ class VideoDmOutbox {
 
   OutgoingVideoDm? _entry(String id) =>
       _entries.value.firstWhereOrNull((entry) => entry.id == id);
+
+  /// Whether the outbox's account has been switched away since its creation.
+  /// False when no [VideoDmOutbox.isAccountCurrent] was supplied.
+  bool get _accountChanged => !(_isAccountCurrent?.call() ?? true);
 
   static String? _clipPath(OutgoingVideoDm entry) =>
       entry.clip?.video?.file?.path;

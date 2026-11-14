@@ -106,6 +106,7 @@ void main() {
     ClipProvenanceVerifier? Function()? clipVerifier,
     Future<void> Function(List<DivineVideoClip> clips)? signOwnRecordings,
     ArchivedVineCheck? isArchivedVine,
+    bool Function()? isAccountCurrent,
     CrashReporter? reporter,
   }) {
     final created = VideoDmOutbox(
@@ -116,6 +117,7 @@ void main() {
       clipVerifier: clipVerifier,
       signOwnRecordings: signOwnRecordings,
       isArchivedVine: isArchivedVine,
+      isAccountCurrent: isAccountCurrent,
       reporter: reporter,
     );
     addTearDown(created.dispose);
@@ -1609,6 +1611,91 @@ void main() {
           equals(OutgoingVideoDmPhase.encrypting),
         );
       });
+    });
+
+    group('account switch', () {
+      test(
+        'refuses to send under a different account and fails the entry',
+        () async {
+          stubAutoSend();
+          var accountIsOurs = true;
+          outbox = createOutbox(isAccountCurrent: () => accountIsOurs);
+          final events = recordConversation('c1');
+          final outcomes = recordOutcomes();
+
+          accountIsOurs = false;
+          sendVideo();
+          await pumpEventQueue();
+
+          expect(sentPaths, isEmpty);
+          expect(events.last.single.phase, equals(OutgoingVideoDmPhase.failed));
+          expect(
+            events.last.single.failure,
+            equals(OutgoingVideoDmFailure.failed),
+          );
+          expect(outcomes.single.status, equals(VideoDmOutcomeStatus.failed));
+          expect(outcomes.single.sentCount, 0);
+        },
+      );
+
+      test(
+        'a send queued behind a running one is refused once the account '
+        'changes',
+        () async {
+          stubControlledSend();
+          var accountIsOurs = true;
+          outbox = createOutbox(isAccountCurrent: () => accountIsOurs);
+          final events = recordConversation('c1');
+
+          sendVideo(path: '/v/running.mp4');
+          sendVideo(path: '/v/queued.mp4');
+          await pumpEventQueue();
+          expect(sends, hasLength(1));
+
+          accountIsOurs = false;
+          sends[0].completer.complete(_success('rumor-1'));
+          await pumpEventQueue();
+
+          expect(
+            sends,
+            hasLength(1),
+            reason:
+                'the queued send never reaches '
+                "the new account's send service",
+          );
+          final [running, queued] = events.last;
+          expect(running.phase, equals(OutgoingVideoDmPhase.sent));
+          expect(queued.phase, equals(OutgoingVideoDmPhase.failed));
+        },
+      );
+
+      test(
+        'refuses a clip batch before its check when the account changed, so '
+        'nothing is signed under the new account',
+        () async {
+          final verifier = _MockClipProvenanceVerifier();
+          var signed = false;
+          outbox = createOutbox(
+            clipVerifier: () => verifier,
+            signOwnRecordings: (_) async => signed = true,
+            isAccountCurrent: () => false,
+          );
+          final events = recordConversation('c1');
+          final outcomes = recordOutcomes();
+
+          sendClips([_clip('clip-a')]);
+          await pumpEventQueue();
+
+          expect(signed, isFalse);
+          verifyNever(() => verifier.verify(any()));
+          expect(sentPaths, isEmpty);
+          expect(
+            events.last.every((e) => e.phase == OutgoingVideoDmPhase.failed),
+            isTrue,
+          );
+          expect(outcomes.single.status, equals(VideoDmOutcomeStatus.failed));
+        },
+      );
     });
   });
 
