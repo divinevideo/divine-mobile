@@ -53,12 +53,12 @@ navigation map below before dumping.
 
 | Goal | Maestro |
 |---|---|
-| Own profile | `tapOn: {id: profile_tab}` — wait for `"Secure Your Account\n3"` (new account) as well as `"No videos yet"` |
+| Own profile | `tapOn: {id: profile_tab}` — wait for `id: profile_pending_action` (the "Secure Your Account" row of a new account) as well as `"No videos yet"`. Its label carries a count that changes while the profile loads, so wait on the id |
 | Edit profile | `tapOn: {id: edit_profile_button}` (a pencil icon; label "Edit Profile") |
 | Messages inbox | `tapOn: {id: inbox_tab}` opens **Notifications** first, then `tapOn: "Messages\nMessages"`; empty state is `"No messages yet"` |
 | Appearance → Light | from the own profile: `id: settings_button` → `id: settings_app_preferences_tile` → `"Appearance\nChoose how Divine looks on this device"` → `"Light"` (or `"Dark"`, `"System default"`); back out with `id: back_button` ×3 |
 | Someone's profile | `openLink: divine:///profile/<npub>` + optional `Open` |
-| DM thread | on their profile, `tapOn: "Message"`; composer `"Say something…"`, attach `"Attach video"` → `"Video from your gallery"`; send `"Send message"` |
+| DM thread | on their profile, `tapOn: "Message"`; composer `"Say something…"`. Text: type, then `tapOn: {id: dm_message_send_button}`, which appears only once there is text. Video: `tapOn: {id: dm_attach_video_button}` → `"Video from your gallery"`; picking a video sends it straight away |
 
 The magenta line above the tab bar marks the LOCAL environment; mention it in the
 caption rather than cropping it. The stack's seed adds a few synthetic videos;
@@ -93,7 +93,7 @@ create whatever else the screen needs yourself.
 | A `divine:///profile/…` link opens Home | The branch predates #11017, before which iOS dropped every `divine:///` route except saved videos and challenges. Check with `git merge-base --is-ancestor a04e156363b5be9269a2e806199daaa2a60a042e HEAD`; if it fails, reach the profile through search instead. |
 | Maestro asks which device to use, or drives another simulator | More than one device is booted. Pass `--device <UDID>` to every `maestro` call. |
 | Maestro `tapOn` fails inside the photo picker | The picker runs out of process. Use `idb ui tap` at point coordinates. |
-| Pressing Enter in the composer doesn't send | The field is multiline. Tap the `Send message` label. |
+| Pressing Enter in the composer doesn't send | The field is multiline. Tap `id: dm_message_send_button`. |
 | Notification permission sheet covers the app | `new_device_account.yaml` dismisses it. If it appears later, tap `Don’t Allow`. |
 | Every local upload finishes too fast to screenshot | Pause the Blossom proxy (see the quick reference), then capture. A long pause makes the send fail, which is useful for the failed-state shot. |
 | Seeded videos never load | The running stack was seeded for the Android emulator (`BLOSSOM_PUBLIC_URL` defaults to `10.0.2.2`). Only a stack `sim_up.sh` starts itself is seeded for the iOS simulator; publish your own videos instead. |
