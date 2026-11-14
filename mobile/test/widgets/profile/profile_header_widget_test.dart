@@ -73,9 +73,9 @@ import 'package:openvine/widgets/supporter_membership.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:profile_repository/profile_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skeletonizer/skeletonizer.dart';
-import 'package:verifier_client/verifier_client.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../helpers/finders.dart';
@@ -398,6 +398,7 @@ void main() {
       required String userIdHex,
       required bool isOwnProfile,
       int videoCount = 10,
+      ProfileRepository? profileRepository,
       UserProfile? profile,
       UserProfile? suppliedProfile,
       ProfileStats? profileStats,
@@ -551,6 +552,8 @@ void main() {
             mockFollowRepository: mockFollowRepository,
             supporterApiClient: supporterClient,
           ),
+          if (profileRepository != null)
+            profileReadRepositoryProvider.overrideWithValue(profileRepository),
           if (supporterRepository != null) ...[
             supporterRepositoryProvider.overrideWithValue(supporterRepository),
             supporterStoreBillingAvailableProvider.overrideWithValue(false),
@@ -2638,6 +2641,60 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byKey(const Key('profile-support-button')), findsOneWidget);
+      },
+    );
+
+    testWidgets('replaces a verified self-website with the username domain', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildTestWidget(
+          userIdHex: testUserHex,
+          isOwnProfile: false,
+          suppliedProfile: createTestProfile(
+            nip05: '_@alice.divine.video',
+            website: 'https://divine.video/profile/$testUserHex',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final row = tester.widget<ProfileWebsiteRow>(
+        find.byType(ProfileWebsiteRow),
+      );
+      expect(row.url, 'https://alice.divine.video');
+      expect(find.text('alice.divine.video'), findsOneWidget);
+      expect(find.text('@alice'), findsOneWidget);
+    });
+
+    testWidgets(
+      'recovers the owned handle without overwriting a custom website',
+      (
+        tester,
+      ) async {
+        final repository = createMockProfileRepository();
+        when(() => repository.lookupUsernameByPubkey(pubkeyHex: testUserHex))
+            .thenAnswer(
+              (_) async => const DivineUsernameFound(
+                name: 'Alice',
+                canonical: 'alice',
+              ),
+            );
+        await tester.pumpWidget(
+          buildTestWidget(
+            userIdHex: testUserHex,
+            isOwnProfile: false,
+            profileRepository: repository,
+            suppliedProfile: createTestProfile(
+              website: 'https://creator.example/shop',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('@alice'), findsOneWidget);
+        final row = tester.widget<ProfileWebsiteRow>(
+          find.byType(ProfileWebsiteRow),
+        );
+        expect(row.url, 'https://creator.example/shop');
       },
     );
 

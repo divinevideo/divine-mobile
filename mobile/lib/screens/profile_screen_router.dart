@@ -13,6 +13,7 @@ import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_scope.dart';
 import 'package:openvine/blocs/profile_feed/profile_tab_retap_cubit.dart';
+import 'package:openvine/blocs/profile_link/profile_link_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -190,6 +191,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
     final shareTextFn = l10n.profileShareText;
     final shareSubjectFn = l10n.profileShareSubject;
     final sharePositionOrigin = shareAnchorForContext(shareButtonContext);
+    final linkCubit = shareButtonContext.read<ProfileLinkCubit>();
 
     try {
       // Get profile info for better share text
@@ -203,6 +205,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
         ref,
         pubkey: userIdHex,
         profile: profile,
+        linkCubit: linkCubit,
       );
       if (!mounted) return;
       final shareText = shareTextFn(displayName, profileUrl);

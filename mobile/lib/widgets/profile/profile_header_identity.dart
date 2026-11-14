@@ -33,7 +33,9 @@ class _ProfileNameAndBio extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final website = profile?.website;
+    final website = context.select<ProfileLinkCubit, String?>(
+      (cubit) => cubit.state.link.website,
+    );
     final showWebsite = website?.isNotEmpty == true;
     // Every child except the badge row carries the horizontal inset. The
     // badge block spans the full width so its row can scroll edge-to-edge.
@@ -878,11 +880,13 @@ class _VerifiedAccountsBlock extends StatelessWidget {
   }
 }
 
-/// Unique identifier display (NIP-05 or full npub with ellipsis).
+/// Unique identifier display (confirmed Divine username, NIP-05, or full npub
+/// with ellipsis).
 /// Uses profile accent color when available, falls back to vineGreen.
 /// Shows your own Divine username as its `username.divine.video` domain.
 /// Hides unverified NIP-05s for other profiles (potential impersonation).
-/// Tapping copies the subdomain URL only once the claim verifies.
+/// Tapping copies the subdomain URL only once ownership is confirmed, by the
+/// verified claim or by the name server's by-pubkey lookup.
 class _UniqueIdentifier extends ConsumerWidget {
   const _UniqueIdentifier({
     required this.userIdHex,
@@ -900,8 +904,13 @@ class _UniqueIdentifier extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final resolvedLink = context.select<ProfileLinkCubit, ProfileLink>(
+      (cubit) => cubit.state.link,
+    );
     final nip05 = profile?.displayNip05;
-    final showProfileDomain = isOwnProfile && profile?.divineUsername != null;
+    final showProfileDomain =
+        isOwnProfile &&
+        (resolvedLink.username != null || profile?.divineUsername != null);
     final hasNip05 = nip05 != null && nip05.isNotEmpty;
     final npub = NostrKeyUtils.encodePubKey(userIdHex);
     final linkColor = context.vineColors.accentPositive;
@@ -923,7 +932,11 @@ class _UniqueIdentifier extends ConsumerWidget {
     // For other profiles: hide unverified NIP-05s (show npub instead)
     // For own profile: keep showing the claim, even when it failed
     final String displayText;
-    if (hasNip05) {
+    if (resolvedLink.username != null) {
+      displayText = isOwnProfile
+          ? '${resolvedLink.username}.divine.video'
+          : '@${resolvedLink.username}';
+    } else if (hasNip05) {
       if (verificationFailed && !isOwnProfile) {
         // Don't show unverified NIP-05s for other users - potential impersonation
         displayText = truncateNpubForDisplay(npub);
@@ -941,15 +954,10 @@ class _UniqueIdentifier extends ConsumerWidget {
       hint: context.l10n.authCopyUrl,
       child: GestureDetector(
         onTap: () {
-          final verifiedNip05 =
-              verificationStatus == Nip05VerificationStatus.verified
-              ? nip05
-              : null;
-          final profileUrl = buildProfileUrl(verifiedNip05, npub);
           _runProfileDetached(
             ClipboardUtils.copy(
               context,
-              profileUrl,
+              resolvedLink.url,
               message: context.l10n.profileLinkCopied,
             ),
             'copy profile link',
