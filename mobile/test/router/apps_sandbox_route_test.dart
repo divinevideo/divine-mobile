@@ -79,16 +79,13 @@ void main() {
       );
 
       final router = container.read(goRouterProvider);
-      router.go(
-        NostrAppSandboxScreen.pathForAppId('primal-app'),
-        extra: _sandboxApp(),
-      );
+      router.go('/apps/primal-app/sandbox', extra: _sandboxApp());
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(
         router.routeInformationProvider.value.uri.toString(),
-        NostrAppSandboxScreen.pathForAppId('primal-app'),
+        '/apps/primal-app/sandbox',
       );
     });
 
@@ -144,7 +141,7 @@ void main() {
         );
 
         final router = container.read(goRouterProvider);
-        router.go(NostrAppSandboxScreen.pathForAppId('primal-app'));
+        router.go('/apps/primal-app/sandbox');
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
@@ -206,7 +203,7 @@ void main() {
         );
 
         final router = container.read(goRouterProvider);
-        router.go(NostrAppSandboxScreen.pathForAppId('missing-app'));
+        router.go('/apps/missing-app/sandbox');
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
@@ -224,7 +221,7 @@ void main() {
         // URL or a browser refresh is the only way in (#3335).
         await _pumpRouterAt(
           tester,
-          WebIframeSandboxScreen.pathForAppId('primal-app'),
+          '/apps/primal-app/web-sandbox',
           approvedApps: [_sandboxApp()],
         );
 
@@ -237,7 +234,7 @@ void main() {
       (tester) async {
         await _pumpRouterAt(
           tester,
-          WebIframeSandboxScreen.pathForAppId('missing-app'),
+          '/apps/missing-app/web-sandbox',
           approvedApps: const [],
         );
 
@@ -252,7 +249,7 @@ void main() {
     ) async {
       await _pumpRouterAt(
         tester,
-        WebIframeSandboxScreen.pathForAppId('primal'),
+        '/apps/primal/web-sandbox',
         approvedApps: [_sandboxApp()],
       );
 

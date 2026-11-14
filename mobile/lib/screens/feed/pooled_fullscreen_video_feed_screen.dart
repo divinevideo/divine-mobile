@@ -180,16 +180,6 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
   /// Query parameter carrying the selected video's durable identity.
   static const videoQueryParameter = 'video';
 
-  /// Builds a lifecycle-restorable route for a pooled feed.
-  ///
-  /// The feed repository still travels in GoRouter `extra`, but the selected
-  /// video is also encoded in the URL so state restoration can fall back to the
-  /// reconstructible single-video route if iOS discards the in-memory args.
-  static String pathForVideoId(String videoId) => Uri(
-    path: path,
-    queryParameters: {videoQueryParameter: videoId},
-  ).toString();
-
   const PooledFullscreenVideoFeedScreen({
     required this.source,
     required this.feedRepository,

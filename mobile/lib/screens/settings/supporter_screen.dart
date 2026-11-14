@@ -20,7 +20,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 class SupporterScreen extends ConsumerWidget {
   static const routeName = 'supporter';
-  static const subpath = 'supporter';
   static const path = '/settings/supporter';
 
   const SupporterScreen({super.key});

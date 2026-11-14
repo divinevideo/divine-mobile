@@ -1,7 +1,8 @@
 // ABOUTME: Tests the video routes registered by videoRoutes.
-// ABOUTME: Pins their locations against the path builders and the named
-// ABOUTME: locations callers used, their order, pages and navigators, and how
-// ABOUTME: each route builds from its URL, with an extra or without one.
+// ABOUTME: Pins their locations against RoutePaths, the editor's path builder,
+// ABOUTME: spelled-out URLs and the named locations callers used, their order,
+// ABOUTME: pages and navigators, and how each route builds from its URL, with
+// ABOUTME: an extra or without one.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -240,8 +241,9 @@ void main() {
 
     group('locations', () {
       // Redirects, the route parser and page-context restoration still build
-      // these locations from RoutePaths and the screens' path builders, so the
-      // typed routes must produce the same URLs.
+      // these locations from RoutePaths, so the typed routes must produce the
+      // same URLs. The fullscreen feed has no RoutePaths builder, so its
+      // location is spelled out from the value.
       final builders =
           <(String, String Function(String), String Function(String))>[
             (
@@ -268,7 +270,8 @@ void main() {
               'fullscreen feed',
               (value) =>
                   PooledFullscreenVideoFeedRouteData(video: value).location,
-              PooledFullscreenVideoFeedScreen.pathForVideoId,
+              (value) =>
+                  '/pooled-video-feed?video=${Uri.encodeQueryComponent(value)}',
             ),
           ];
       for (final (label, typed, builder) in builders) {
@@ -279,25 +282,26 @@ void main() {
         }
       }
 
-      // These builders splice the value in unencoded, so they agree with the
-      // typed location only for the values callers pass: hex event ids, hex
-      // and npub keys, and the app's own draft ids. The round trip below is
-      // what proves the typed locations for every other value.
-      test('a post-analytics location matches pathForId for an event id', () {
+      // These pin the locations for the values callers pass: hex event ids,
+      // hex and npub keys, and the app's own draft ids. The editor builder
+      // splices the draft id in unencoded, so it agrees with the typed
+      // location only for ids like these. The round trip below is what
+      // proves the typed locations for every other value.
+      test('a post-analytics location nests the event id under analytics', () {
         expect(
           const PostAnalyticsDetailRouteData(videoId: _hexId).location,
-          equals(PostAnalyticsDetailScreen.pathForId(_hexId)),
+          equals('/creator-analytics/$_hexId'),
         );
       });
 
-      test('an original-sound location matches pathForPubkey for a key', () {
+      test('an original-sound location ends in the key', () {
         for (final pubkey in [
           _authorHex,
           NostrKeyUtils.encodePubKey(_authorHex),
         ]) {
           expect(
             OriginalSoundDetailRouteData(pubkey: pubkey).location,
-            equals(OriginalSoundDetailScreen.pathForPubkey(pubkey)),
+            equals('/original-sound/$pubkey'),
           );
         }
       });
@@ -1263,7 +1267,7 @@ void main() {
     group('a sound link', () {
       test('survives the round trip to the sound route', () {
         const soundId = 'a?b/c#d';
-        final location = SoundDetailScreen.pathForId(soundId);
+        final location = RoutePaths.soundDetailForId(soundId);
 
         // Raw, the `?` ended the path at `a`, so the link named a different
         // sound before it ever reached the router.

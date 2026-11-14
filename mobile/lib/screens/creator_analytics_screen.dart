@@ -1036,10 +1036,6 @@ class PostAnalyticsDetailScreen extends ConsumerStatefulWidget {
 
   static const routeName = 'creator-analytics-post';
   static const subpath = ':videoId';
-  static const path = '${CreatorAnalyticsScreen.path}/$subpath';
-
-  static String pathForId(String videoId) =>
-      '${CreatorAnalyticsScreen.path}/$videoId';
 
   final String videoId;
   final VideoPerformance? performance;

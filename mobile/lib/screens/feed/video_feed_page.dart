@@ -44,9 +44,6 @@ class VideoFeedPage extends ConsumerWidget {
   /// Route name for this screen.
   static const routeName = 'home';
 
-  /// Path for this route.
-  static const path = '/home';
-
   /// Path for this route with index.
   static const pathWithIndex = '/home/:index';
 

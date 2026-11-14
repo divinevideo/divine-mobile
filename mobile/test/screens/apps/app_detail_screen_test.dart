@@ -7,7 +7,6 @@ import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/apps/app_detail_screen.dart';
-import 'package:openvine/screens/apps/nostr_app_sandbox_screen.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../../helpers/go_router.dart';
@@ -83,7 +82,7 @@ void main() {
 
         final captured = verify(
           () => mockGoRouter.push<void>(
-            NostrAppSandboxScreen.pathForAppId('primal-app'),
+            '/apps/primal-app/sandbox',
             extra: captureAny(named: 'extra'),
           ),
         ).captured;

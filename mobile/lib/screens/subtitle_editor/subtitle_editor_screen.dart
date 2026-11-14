@@ -51,10 +51,6 @@ class SubtitleEditorScreen extends ConsumerStatefulWidget {
   /// GoRouter route name.
   static const routeName = 'subtitle-edit';
 
-  /// Returns the full path for a given video id.
-  static String pathFor(String videoId) =>
-      RoutePaths.subtitleEditorFor(videoId);
-
   /// The event id of the video whose subtitles are being edited.
   final String videoId;
 

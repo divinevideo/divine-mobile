@@ -166,7 +166,7 @@ void main() {
       expect(find.text('fullscreen feed'), findsOneWidget);
       expect(
         router.state.uri.toString(),
-        equals(PooledFullscreenVideoFeedScreen.pathForVideoId('video-2')),
+        equals('/pooled-video-feed?video=video-2'),
       );
     });
 
@@ -201,7 +201,7 @@ void main() {
 
       verify(
         () => router.push<void>(
-          PooledFullscreenVideoFeedScreen.pathForVideoId('video-2'),
+          '/pooled-video-feed?video=video-2',
           extra: any(named: 'extra'),
         ),
       ).called(1);

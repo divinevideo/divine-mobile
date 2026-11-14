@@ -24,10 +24,6 @@ void main() {
         expect(NotificationsPage.routeName, equals('notifications'));
       });
 
-      test('path is /notifications', () {
-        expect(NotificationsPage.path, equals('/notifications'));
-      });
-
       test('pathWithIndex includes :index parameter', () {
         expect(
           NotificationsPage.pathWithIndex,

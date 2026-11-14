@@ -87,7 +87,7 @@ void main() {
 
       await pump(
         tester,
-        location: PostAnalyticsDetailScreen.pathForId('v1'),
+        location: '/creator-analytics/v1',
         extra: performance,
       );
 
@@ -112,7 +112,7 @@ void main() {
         ),
       );
 
-      await pump(tester, location: PostAnalyticsDetailScreen.pathForId('v2'));
+      await pump(tester, location: '/creator-analytics/v2');
 
       expect(find.text('Post v2'), findsWidgets);
       verify(() => repository.fetchCreatorAnalytics(any())).called(1);

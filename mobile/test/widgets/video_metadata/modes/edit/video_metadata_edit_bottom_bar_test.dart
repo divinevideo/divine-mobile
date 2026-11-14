@@ -10,7 +10,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/repositories/creator_delete_enforcement_repository.dart';
-import 'package:openvine/screens/subtitle_editor/subtitle_editor_screen.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_metadata_update_service.dart';
@@ -98,7 +98,7 @@ void main() {
 
       verify(
         () => mockGoRouter.push<VideoEvent>(
-          SubtitleEditorScreen.pathFor(testVideo.id),
+          RoutePaths.subtitleEditorFor(testVideo.id),
           extra: testVideo,
         ),
       ).called(1);

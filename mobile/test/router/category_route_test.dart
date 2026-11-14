@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/screens/category_gallery_screen.dart';
@@ -42,13 +43,13 @@ class _FakeGoRouterState extends Fake implements GoRouterState {
 void main() {
   group('Category gallery routes', () {
     test('buildRoute preserves category gallery URLs', () {
-      final location = CategoryGalleryScreen.locationFor('animals');
+      final location = RoutePaths.categoryGalleryFor('animals');
 
       expect(buildRoute(parseRoute(location)), location);
     });
 
     test('parseRoute treats category gallery as its own route type', () {
-      final context = parseRoute(CategoryGalleryScreen.locationFor('animals'));
+      final context = parseRoute(RoutePaths.categoryGalleryFor('animals'));
 
       expect(context.type, RouteType.categoryGallery);
       expect(context.categoryName, 'animals');

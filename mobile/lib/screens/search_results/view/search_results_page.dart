@@ -65,12 +65,6 @@ class SearchResultsPage extends ConsumerStatefulWidget {
         '?$requestFocusQueryParameter=$requestFocusQueryValue';
   }
 
-  /// Build a path that opens search without a prefilled query.
-  static String pathForEmptyQuery({required bool requestFocusOnMount}) {
-    if (!requestFocusOnMount) return emptyPath;
-    return '$emptyPath?$requestFocusQueryParameter=$requestFocusQueryValue';
-  }
-
   /// Returns whether a routed prefilled search should claim keyboard focus.
   static bool requestFocusOnMountForRoute(Uri uri) =>
       uri.queryParameters[requestFocusQueryParameter] == requestFocusQueryValue;

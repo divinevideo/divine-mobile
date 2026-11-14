@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/widgets/video_feed_item/actions/edit_action_button.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -63,7 +63,7 @@ void main() {
           extra: captureAny(named: 'extra'),
         ),
       ).captured;
-      expect(pushed, [VideoMetadataEditScreen.pathFor(video.id), video]);
+      expect(pushed, [RoutePaths.videoMetadataEditFor(video.id), video]);
     });
 
     testWidgets('logs a failed push instead of leaking it', (tester) async {

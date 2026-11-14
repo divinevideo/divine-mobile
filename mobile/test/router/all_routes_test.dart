@@ -4,6 +4,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/notifications/view/notifications_page.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/apps/app_detail_screen.dart';
 import 'package:openvine/screens/apps/apps_directory_screen.dart';
@@ -267,15 +268,15 @@ void main() {
       addTearDown(container.dispose);
 
       final router = container.read(goRouterProvider);
-      router.go(AppDetailScreen.pathForSlug('primal'));
+      router.go(RoutePaths.appDetailForSlug('primal'));
       await tester.pumpAndSettle();
       expect(
         router.routeInformationProvider.value.uri.toString(),
-        AppDetailScreen.pathForSlug('primal'),
+        RoutePaths.appDetailForSlug('primal'),
       );
       expect(
         router.configuration
-            .findMatch(Uri.parse(AppDetailScreen.pathForSlug('primal')))
+            .findMatch(Uri.parse(RoutePaths.appDetailForSlug('primal')))
             .isError,
         isFalse,
         reason: 'route must resolve to a registered route, not the error route',
