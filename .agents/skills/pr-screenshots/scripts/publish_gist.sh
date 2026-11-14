@@ -51,7 +51,8 @@ fail() {
   fi
   exit 1
 }
-trap 'fail "publishing stopped at line $LINENO"' ERR
+# $LINENO names the enclosing loop under bash 3.2; the command itself is exact.
+trap 'fail "publishing stopped at: $BASH_COMMAND"' ERR
 
 git clone -q "https://gist.github.com/$GIST_ID.git" "$WORK/gist"
 for name in "${names[@]}"; do cp "$WORK/images/$name" "$WORK/gist/"; done
