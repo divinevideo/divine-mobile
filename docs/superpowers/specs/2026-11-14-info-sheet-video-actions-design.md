@@ -35,9 +35,12 @@ Vines included) — revision 2's "Remix this Vine" string is dropped.
 - **Where consent is checked:** one shared rule (`canRemixVideo`, replacing
   `canAddVideoToClips`) used by the Remix button, the share sheet's Add to
   clips, and every other reuse entry point that calls the old rule. Own
-  videos are always remixable by their owner. Classic Vines follow the same
-  rule: their archived events carry no tag, so they are remixable unless the
-  creator's account blocks it. A Viner who cannot sign in to their imported
+  videos are always remixable by their owner. Classic Vines (`isOriginalVine`) are
+  always ON by default (Rabble, 2026-11-15): any `allow_video_reuse` tag on
+  an archived Vine event is an import artefact, not the creator's choice,
+  and is ignored — the same stance the audio policy (#8464) takes on
+  imported `allow_audio_reuse` tags. Only the creator's account-wide block
+  turns a classic Vine off. A Viner who cannot sign in to their imported
   account asks Trust & Safety (see takedown).
 - **Not enforced against other Nostr clients.** This is a published
   preference, honoured by Divine; server-side enforcement (like the audio
