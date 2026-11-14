@@ -40,6 +40,16 @@ class _VideoDmSendOutcomeListenerState
   VideoDmOutbox? _outbox;
 
   @override
+  void initState() {
+    super.initState();
+    ref.listenManual<VideoDmOutbox>(
+      videoDmOutboxProvider,
+      (_, outbox) => _subscribeTo(outbox),
+      fireImmediately: true,
+    );
+  }
+
+  @override
   void dispose() {
     unawaited(_subscription?.cancel());
     super.dispose();
@@ -112,8 +122,5 @@ class _VideoDmSendOutcomeListenerState
   }
 
   @override
-  Widget build(BuildContext context) {
-    _subscribeTo(ref.watch(videoDmOutboxProvider));
-    return widget.child;
-  }
+  Widget build(BuildContext context) => widget.child;
 }
