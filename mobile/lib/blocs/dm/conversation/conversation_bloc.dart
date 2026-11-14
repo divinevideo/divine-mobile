@@ -126,8 +126,9 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     // list and render the "new conversation" card over a thread that has
     // history — `mayBeIncomplete` fails open to false while uncredentialed,
     // so nothing would even qualify it. `ConversationPage` re-keys this bloc
-    // on `(dmRepository, currentPubkey)`, so a later authenticated identity
-    // rebuilds it and re-dispatches this event against an owner-scoped instance.
+    // on `(conversationId, dmRepository, videoOutbox, currentPubkey)`, so a
+    // later authenticated identity rebuilds it and re-dispatches this event
+    // against an owner-scoped instance.
     if (_dmRepository.userPubkey.isEmpty) return;
 
     // Arm the one-time history drain here too, not just on inbox open.
@@ -171,7 +172,8 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
       onData: (tick) {
         // Mark as read only when this conversation's persisted message list
         // actually changed — a new (or edited/removed) message — not on ticks
-        // driven solely by the outgoing-queue stream or a bare re-emit.
+        // driven solely by the outgoing-queue or video-outbox stream, or a
+        // bare re-emit.
         //
         // Every tick previously fired markConversationAsRead, and the DAO's
         // conversations-table notification fans out to the badge cubit and the
@@ -179,9 +181,9 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
         // transition (pending → sent → delivered) and re-emit forced a
         // redundant recompute. A genuinely new incoming message always changes
         // `messages`, so this never leaves an unread uncleared while the
-        // conversation is open. `combineLatest2` re-emits the same `messages`
-        // instance on an outgoing-only tick, so the `identical` fast-path keeps
-        // that common case O(1).
+        // conversation is open. `combineLatest3` re-emits the same `messages`
+        // instance on an outgoing- or video-only tick, so the `identical`
+        // fast-path keeps that common case O(1).
         if (!_sameMessages(tick.messages, state.messages)) {
           unawaited(_dmRepository.markConversationAsRead(_conversationId));
         }
@@ -252,7 +254,8 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
 
   /// Whether two persisted-message lists carry the same messages in the same
   /// order. `DmMessage` is `Equatable`, so element comparison is by value.
-  /// The `identical` fast-path keeps the common outgoing-only tick O(1).
+  /// The `identical` fast-path keeps the common outgoing- or video-only tick
+  /// O(1).
   static bool _sameMessages(List<DmMessage> a, List<DmMessage> b) {
     if (identical(a, b)) return true;
     if (a.length != b.length) return false;
