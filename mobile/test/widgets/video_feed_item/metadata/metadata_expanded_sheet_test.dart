@@ -3010,6 +3010,51 @@ void main() {
     );
 
     testWidgetsWithSurfaceSize(
+      'labels a saved video on open, then closes and reports its removal',
+      (tester) async {
+        when(
+          bookmarksRepository.syncGlobalBookmarks,
+        ).thenAnswer((_) async => true);
+        when(
+          () => bookmarksRepository.hasUnreadablePrivateItems,
+        ).thenReturn(false);
+        when(
+          () => bookmarksRepository.isVideoBookmarkedGlobally(
+            any(),
+            addressableId: any(named: 'addressableId'),
+          ),
+        ).thenReturn(true);
+        when(
+          () => bookmarksRepository.toggleVideoInGlobalBookmarks(
+            any(),
+            addressableId: any(named: 'addressableId'),
+          ),
+        ).thenAnswer(
+          (_) async => const BookmarkToggleResult(
+            succeeded: true,
+            wasBookmarked: true,
+            isBookmarked: false,
+          ),
+        );
+
+        await openSheet(
+          tester,
+          video: _makeVideo(title: 'Classic', rawTags: {'platform': 'vine'}),
+          viewerPubkey: _thirdPartyViewer,
+        );
+
+        final l10n = _l10n(tester);
+        expect(find.text(l10n.shareSheetRemoveFromSaved), findsOneWidget);
+
+        await tester.tap(find.text(l10n.shareSheetRemoveFromSaved));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MetadataActionsSection), findsNothing);
+        expect(find.text(l10n.shareRemovedFromBookmarks), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
       'saves through the bookmarks repository that replaced the one the sheet '
       'opened with',
       (tester) async {

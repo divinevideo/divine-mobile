@@ -189,6 +189,22 @@ void main() {
       });
 
       testWidgets(
+        'Add to clips on the viewer own video, even without a reuse tag',
+        (tester) async {
+          stubContentActions();
+          final video = _video();
+          expect(video.allowVideoReuse, isFalse);
+          expect(video.isOriginalVine, isFalse);
+
+          await tester.pumpWidget(
+            buildSubject(video: video, ownerCubit: stubbedOwnerCubit()),
+          );
+
+          expect(find.text(l10n.shareSheetAddToClips), findsOneWidget);
+        },
+      );
+
+      testWidgets(
         'no Add to clips for another creator who does not allow reuse',
         (tester) async {
           stubContentActions();
