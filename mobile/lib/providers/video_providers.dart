@@ -2,6 +2,7 @@
 // ABOUTME: VideoEventService keystone + filters, publishers, repositories, sharing
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart' show TableUpdateQuery, UpdateKind;
@@ -19,6 +20,7 @@ import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/clip_provenance_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
@@ -38,6 +40,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/short_link_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
+import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/services/audio_reuse_consent_resolver.dart';
 import 'package:openvine/services/auth_service.dart' show AuthState;
 import 'package:openvine/services/broken_video_tracker.dart';
@@ -52,12 +55,14 @@ import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/event_api_client.dart';
 import 'package:openvine/services/event_router.dart';
 import 'package:openvine/services/feed_unavailability_gate.dart';
+import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/nsfw_content_filter.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/published_event_local_echo.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/subscribed_list_video_cache.dart';
 import 'package:openvine/services/subscription_manager.dart';
+import 'package:openvine/services/video_dm_outbox.dart';
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/video_event_resolver.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -482,6 +487,31 @@ final dmVideoSendServiceProvider = Provider<DmVideoSendService>((ref) {
     dmRepository: ref.watch(dmRepositoryProvider),
     blossom: ref.watch(blossomUploadServiceProvider),
   );
+});
+
+/// The signed-in account's outgoing video DMs, shared by every screen so a
+/// send keeps running when its conversation is closed.
+///
+/// Keyed on the account alone: the send service, clip verifier and clip
+/// importer are read when a send runs, so a rebuild of the DM repository does
+/// not drop queued or in-flight sends. Rebuilt, and the old one disposed, when
+/// the account changes.
+final videoDmOutboxProvider = Provider<VideoDmOutbox>((ref) {
+  ref.watch(currentAccountIdProvider);
+  final outbox = VideoDmOutbox(
+    sendService: () => ref.read(dmVideoSendServiceProvider),
+    clipVerifier: () => ref.read(clipProvenanceVerifierProvider),
+    signOwnRecordings: NativeProofModeService.signOwnRecordings,
+    isArchivedVine: (path) async =>
+        await ref
+            .read(videoClipImportServiceProvider)
+            .findArchivedVine(
+              File(path),
+            ) !=
+        null,
+  );
+  ref.onDispose(outbox.dispose);
+  return outbox;
 });
 
 /// Downloads and decrypts received encrypted video DMs.
