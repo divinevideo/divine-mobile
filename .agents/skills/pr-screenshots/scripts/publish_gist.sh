@@ -55,7 +55,12 @@ trap 'fail "publishing stopped at line $LINENO"' ERR
 git clone -q "https://gist.github.com/$GIST_ID.git" "$WORK/gist"
 for name in "${names[@]}"; do cp "$WORK/images/$name" "$WORK/gist/"; done
 git -C "$WORK/gist" add -- "${names[@]}"
-git -C "$WORK/gist" commit -q -m "Add screenshots"
+# Anyone with an image URL can clone the gist, so commit as the account's
+# noreply address rather than the local git name and email.
+IDENTITY=$(gh api user --jq '"\(.login) \(.id)"')
+LOGIN=${IDENTITY% *}
+git -C "$WORK/gist" -c user.name="$LOGIN" -c user.email="${IDENTITY#* }+$LOGIN@users.noreply.github.com" \
+  commit -q -m "Add screenshots"
 # Git alone has no login for gist.github.com; use gh's.
 git -C "$WORK/gist" -c credential.helper= -c credential.helper='!gh auth git-credential' push -q
 
