@@ -78,9 +78,47 @@ class _Relay extends Relay {
   }
 }
 
-({NostrClient client, List<_Relay> relays}) _client(
+/// A relay that takes every REQ and never answers one, while its socket keeps
+/// delivering a NOTICE every second, as one busy with other requests does.
+class _BusyRelay extends Relay {
+  _BusyRelay(String url) : super(url, RelayStatus(url));
+
+  final List<String> reqs = [];
+  Timer? _beat;
+
+  @override
+  Future<bool> doConnect() async {
+    relayStatus.connected = ClientConnected.connected;
+    _beat ??= Timer.periodic(const Duration(seconds: 1), (_) {
+      final dynamic result = onMessage!(this, ['NOTICE', 'busy']);
+      if (result is Future) unawaited(result);
+    });
+    return true;
+  }
+
+  @override
+  Future<void> disconnect() async {
+    _beat?.cancel();
+    relayStatus.connected = ClientConnected.disconnect;
+  }
+
+  @override
+  Future<bool> send(
+    List<dynamic> message, {
+    bool queueIfFailed = true,
+    bool skipReconnect = false,
+    DateTime? deadline,
+  }) async {
+    if (message.length > 2 && message[0] == 'REQ') {
+      reqs.add(message[1] as String);
+    }
+    return true;
+  }
+}
+
+({NostrClient client, List<Relay> relays}) _client(
   FakeAsync async,
-  List<_Relay> relays,
+  List<Relay> relays,
 ) {
   final nostr = Nostr(LocalNostrSigner(_key), [], (url) {
     throw StateError('no temp relays in this test: $url');
@@ -226,6 +264,38 @@ void main() {
         expect(relay.reqs, contains('history_page'));
         expect(result!.timedOut, isFalse);
         expect(result!.events, hasLength(3));
+      });
+    });
+  });
+
+  group('dispose with long reads in flight', () {
+    test('completes at once, though one long read was still waiting for a '
+        'query slot', () {
+      fakeAsync((async) {
+        final relay = _BusyRelay(_answeringUrl);
+        final h = _client(async, [relay]);
+        Future<void> longRead(String id) => h.client.queryEventsDetailed(
+          [_page],
+          subscriptionId: id,
+          useCache: false,
+          timeout: const Duration(seconds: 60),
+          requireAllRelaysSettled: true,
+          silentRelayTimeout: const Duration(seconds: 10),
+        );
+        for (var i = 0; i < NostrClient.maxConcurrentQueries; i++) {
+          unawaited(longRead('in_flight_$i'));
+        }
+        async.flushMicrotasks();
+        unawaited(longRead('queued'));
+        async.elapse(const Duration(seconds: 2));
+
+        var disposed = false;
+        unawaited(h.client.dispose().then((_) => disposed = true));
+        async.elapse(const Duration(seconds: 1));
+
+        expect(disposed, isTrue);
+        expect(relay.reqs, isNot(contains('queued')));
+        async.elapse(const Duration(seconds: 70));
       });
     });
   });

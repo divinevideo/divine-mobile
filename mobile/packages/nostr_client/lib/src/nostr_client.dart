@@ -1066,7 +1066,8 @@ class NostrClient {
   /// legitimately take long: the read also ends, unfinished, once a relay that
   /// still owes its answer has sent no frame at all for that long. A relay
   /// still sending, for this read or the requests queued ahead of it, is
-  /// waited for. See [Nostr.readEvents].
+  /// waited for. See [Nostr.readEvents]. Throws [ArgumentError] when it is not
+  /// positive.
   ///
   /// `noRelays` says nothing was asked, whatever the flag. It covers a client
   /// with no connected relay and no temp relay, a client already disposed when
@@ -1178,6 +1179,9 @@ class NostrClient {
   /// [maxCollectedEvents] and [maxCollectedBytes] optionally bound the SDK
   /// network collector. Use [useCache] false for a bounded returned batch;
   /// excess network events are discarded and reported as possibly capped.
+  ///
+  /// [silentRelayTimeout] works as on [queryEventsDetailed], and throws the
+  /// same [ArgumentError] when it is not positive.
   Future<QueryResult> readEvents(
     List<Filter> filters, {
     String? subscriptionId,
