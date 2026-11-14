@@ -52,7 +52,6 @@ fail() {
 }
 trap 'fail "publishing stopped at line $LINENO"' ERR
 
-OWNER=$(gh api user --jq .login)
 git clone -q "https://gist.github.com/$GIST_ID.git" "$WORK/gist"
 for name in "${names[@]}"; do cp "$WORK/images/$name" "$WORK/gist/"; done
 git -C "$WORK/gist" add -- "${names[@]}"
@@ -60,9 +59,16 @@ git -C "$WORK/gist" commit -q -m "Add screenshots"
 # Git alone has no login for gist.github.com; use gh's.
 git -C "$WORK/gist" -c credential.helper= -c credential.helper='!gh auth git-credential' push -q
 
+# Print the tags only once every URL answers, so a failure never leaves tags
+# pointing at the gist it just deleted.
+tags=()
 for name in "${names[@]}"; do
-  url="https://gist.githubusercontent.com/$OWNER/$GIST_ID/raw/$name"
-  status=$(curl -s -o /dev/null -w '%{http_code}' -L "$url")
+  # The API's raw_url carries the file's revision, so the image cannot change
+  # under a reviewed PR. A URL built from the commit SHA answers 404.
+  url=$(gh api "gists/$GIST_ID" --jq ".files[\"$name\"].raw_url")
+  if [ -z "$url" ] || [ "$url" = "null" ]; then fail "gist $GIST_ID has no $name"; fi
+  status=$(curl -s -o /dev/null -w '%{http_code}' -L --retry 3 --retry-delay 2 "$url")
   [ "$status" = "200" ] || fail "$url answered $status"
-  echo "<img src=\"$url\" width=\"240\">"
+  tags+=("<img src=\"$url\" width=\"240\">")
 done
+printf '%s\n' "${tags[@]}"
