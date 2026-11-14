@@ -35,11 +35,14 @@ Widget _host(
 }) => MaterialApp(
   localizationsDelegates: appLocalizationsDelegates,
   supportedLocales: AppLocalizations.supportedLocales,
+  // A thread scrolls, so a tall bubble is not clipped by the test surface.
   home: Scaffold(
-    body: PendingVideoBubble(
-      entry: entry,
-      onRetry: onRetry ?? () {},
-      onRemove: onRemove ?? () {},
+    body: SingleChildScrollView(
+      child: PendingVideoBubble(
+        entry: entry,
+        onRetry: onRetry ?? () {},
+        onRemove: onRemove ?? () {},
+      ),
     ),
   ),
 );
@@ -136,6 +139,98 @@ void main() {
 
         expect(find.byType(Image), findsNothing);
         expect(find.byType(DivineIcon), findsOneWidget);
+      });
+    });
+
+    group('overlay', () {
+      Finder warning() => find.byWidgetPredicate(
+        (w) => w is DivineIcon && w.icon == DivineIconName.warningCircle,
+      );
+
+      testWidgets('failed shows the warning icon instead of the ring', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _host(
+            _entry(
+              phase: OutgoingVideoDmPhase.failed,
+              failure: OutgoingVideoDmFailure.failed,
+            ),
+          ),
+        );
+
+        expect(warning(), findsOneWidget);
+        expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+      });
+
+      testWidgets('an in-flight video shows no warning icon', (tester) async {
+        await tester.pumpWidget(_host(_entry()));
+
+        expect(warning(), findsNothing);
+      });
+
+      testWidgets('sent renders without the overlay', (tester) async {
+        await tester.pumpWidget(
+          _host(_entry(phase: OutgoingVideoDmPhase.sent)),
+        );
+
+        expect(warning(), findsNothing);
+        expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+        expect(find.byType(Text), findsNothing);
+      });
+    });
+
+    group('large text', () {
+      Widget scaled(OutgoingVideoDm entry) => Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: _host(entry),
+        ),
+      );
+
+      testWidgets('a failed clip with two actions does not overflow', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          scaled(
+            _entry(
+              phase: OutgoingVideoDmPhase.failed,
+              failure: OutgoingVideoDmFailure.clipNotVerified,
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('a retryable failure at 2x does not overflow', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          scaled(
+            _entry(
+              phase: OutgoingVideoDmPhase.failed,
+              failure: OutgoingVideoDmFailure.failed,
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('uploading does not overflow', (tester) async {
+        await tester.pumpWidget(
+          scaled(
+            _entry(
+              phase: OutgoingVideoDmPhase.uploading,
+              uploadProgress: 0.42,
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
       });
     });
 
