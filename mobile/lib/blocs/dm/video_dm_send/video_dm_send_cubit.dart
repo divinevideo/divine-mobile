@@ -12,22 +12,7 @@ import 'package:openvine/models/dm_clip_tag.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
-
-/// Size limit for a picked video, in whole megabytes, for display copy.
-const int videoDmMaxMegabytes = dmVideoMaxPlaintextBytes ~/ (1024 * 1024);
-
-/// Maps a picked file's extension to the plaintext MIME type recorded in the
-/// kind 15 metadata, through [dmVideoMimeTypesByExtension]. Defaults to
-/// `video/mp4`, the format Divine itself sends.
-String videoDmMimeTypeFor(String path) {
-  final extension = path.split('.').last.toLowerCase();
-  return dmVideoMimeTypesByExtension[extension] ?? 'video/mp4';
-}
-
-/// Whether the file at `path` is the exact file of a published Vine post.
-///
-/// Throws when that cannot be told.
-typedef ArchivedVineCheck = Future<bool> Function(String path);
+import 'package:openvine/services/video_dm_outbox.dart';
 
 /// How a [VideoDmSendCubit.sendClips] call ended.
 class ClipSendOutcome extends Equatable {
@@ -304,17 +289,4 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
     if (status == state.status) return;
     emitIfOpen(VideoDmSendState(status: status));
   }
-}
-
-/// A send the pipeline refused or could not complete, carrying the
-/// repository's diagnostic reason for logs. Never shown to the user.
-class VideoDmSendFailure implements Exception {
-  /// Creates a [VideoDmSendFailure] with a diagnostic [reason].
-  const VideoDmSendFailure(this.reason);
-
-  /// Diagnostic text from the send result.
-  final String reason;
-
-  @override
-  String toString() => 'VideoDmSendFailure: $reason';
 }
