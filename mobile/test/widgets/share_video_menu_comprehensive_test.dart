@@ -470,7 +470,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(tester.widget<GestureDetector>(editGesture).onTap, isNotNull);
+      // A failed delete closes the sheet before reporting, so the error is
+      // not raised underneath it.
+      expect(find.text(l10n.shareMenuEditVideo), findsNothing);
+      expect(
+        find.text(l10n.shareMenuDeleteFailedRelayRejected),
+        findsOneWidget,
+      );
     });
 
     testWidgets('More actions row hides owner actions for non-owned videos', (

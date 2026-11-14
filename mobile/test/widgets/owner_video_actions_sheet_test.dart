@@ -256,6 +256,67 @@ void main() {
           );
         },
       );
+
+      testWidgets(
+        'reports a failed delete once onFailed has closed the sheet it was '
+        'started from',
+        (tester) async {
+          stubDelete(success: false);
+          late BuildContext opener;
+          await tester.pumpWidget(
+            MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) {
+                    opener = context;
+                    return const SizedBox();
+                  },
+                ),
+              ),
+            ),
+          );
+          final sheetDisposed = Completer<void>();
+          var deletedRan = false;
+          unawaited(
+            VineBottomSheet.show<void>(
+              context: opener,
+              body: _OnDispose(
+                onDispose: sheetDisposed.complete,
+                child: Builder(
+                  builder: (sheetContext) => TextButton(
+                    onPressed: () => confirmAndDeleteOwnerVideo(
+                      context: sheetContext,
+                      video: video,
+                      cubit: cubit,
+                      onDeleted: () async => deletedRan = true,
+                      onFailed: () {
+                        Navigator.of(sheetContext).pop();
+                        return sheetDisposed.future;
+                      },
+                    ),
+                    child: const Text(sheetButton),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(sheetButton));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.shareMenuDelete));
+          await tester.pumpAndSettle();
+
+          expect(deletedRan, isFalse);
+          expect(find.text(sheetButton), findsNothing);
+          expect(
+            find.text(l10n.shareMenuDeleteFailedRelayRejected),
+            findsOneWidget,
+          );
+        },
+      );
     });
   });
 }

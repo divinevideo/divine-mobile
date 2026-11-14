@@ -346,6 +346,55 @@ void main() {
             widget is ListView && widget.scrollDirection == Axis.vertical,
       );
 
+      // Pushes the section on its own route, standing in for the sheet, so the
+      // delete has a route to close and an opener to report on.
+      Future<void> openSheet(
+        WidgetTester tester, {
+        required VideoEvent video,
+        required OwnerVideoActionsCubit ownerCubit,
+      }) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            additionalOverrides: [
+              isFeatureEnabledProvider(
+                FeatureFlag.debugTools,
+              ).overrideWithValue(false),
+            ],
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => Scaffold(
+                        body: MultiBlocProvider(
+                          providers: [
+                            BlocProvider<VideoContentActionsBloc>.value(
+                              value: contentActions,
+                            ),
+                            BlocProvider<OwnerVideoActionsCubit>.value(
+                              value: ownerCubit,
+                            ),
+                          ],
+                          child: ListView(
+                            children: [
+                              MetadataActionsSection(video: video),
+                              const SizedBox(height: 4000),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  child: const Text(openSheetLabel),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text(openSheetLabel));
+        await tester.pumpAndSettle();
+      }
+
       testWidgets(
         'confirms and closes the sheet after the row scrolls out of view',
         (tester) async {
@@ -358,46 +407,7 @@ void main() {
           when(() => ownerCubit.cleanupCompletionFor(any())).thenReturn(null);
           final video = _video();
 
-          await tester.pumpWidget(
-            testMaterialApp(
-              additionalOverrides: [
-                isFeatureEnabledProvider(
-                  FeatureFlag.debugTools,
-                ).overrideWithValue(false),
-              ],
-              home: Scaffold(
-                body: Builder(
-                  builder: (context) => TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => Scaffold(
-                          body: MultiBlocProvider(
-                            providers: [
-                              BlocProvider<VideoContentActionsBloc>.value(
-                                value: contentActions,
-                              ),
-                              BlocProvider<OwnerVideoActionsCubit>.value(
-                                value: ownerCubit,
-                              ),
-                            ],
-                            child: ListView(
-                              children: [
-                                MetadataActionsSection(video: video),
-                                const SizedBox(height: 4000),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    child: const Text(openSheetLabel),
-                  ),
-                ),
-              ),
-            ),
-          );
-          await tester.tap(find.text(openSheetLabel));
-          await tester.pumpAndSettle();
+          await openSheet(tester, video: video, ownerCubit: ownerCubit);
 
           await tester.tap(find.text(l10n.shareMenuDeleteVideo));
           await tester.pumpAndSettle();
@@ -428,6 +438,37 @@ void main() {
             find.text(l10n.shareMenuDeleteCleanupConfirmed),
             findsOneWidget,
           );
+        },
+      );
+
+      testWidgets(
+        'closes the sheet before reporting a failed delete on its opener',
+        (tester) async {
+          stubContentActions();
+          final ownerCubit = stubbedOwnerCubit() as _MockOwnerVideoActionsCubit;
+          when(() => ownerCubit.deleteVideo(any())).thenAnswer((_) async {
+            when(() => ownerCubit.state).thenReturn(
+              const OwnerVideoActionsState(
+                operations: {
+                  _videoId: OwnerVideoOperationState(
+                    deleteStatus: OwnerVideoDeleteStatus.failure,
+                  ),
+                },
+              ),
+            );
+            return OwnerVideoDeleteStart.started;
+          });
+          final video = _video();
+
+          await openSheet(tester, video: video, ownerCubit: ownerCubit);
+          await tester.tap(find.text(l10n.shareMenuDeleteVideo));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.shareMenuDelete));
+          await tester.pumpAndSettle();
+
+          expect(sheetList, findsNothing);
+          expect(find.text(openSheetLabel), findsOneWidget);
+          expect(find.text(l10n.shareMenuDeleteFailedGeneric), findsOneWidget);
         },
       );
     });

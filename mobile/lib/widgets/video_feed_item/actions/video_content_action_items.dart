@@ -53,7 +53,8 @@ Future<void> openAddToList(BuildContext sheetContext, VideoEvent video) {
 }
 
 /// Confirms and deletes the viewer's own [video], closing the sheet owning
-/// [sheetContext] once the delete succeeds.
+/// [sheetContext] before the outcome is reported, whether it succeeded or
+/// failed: a snackbar raised while the sheet is open lands underneath it.
 ///
 /// [sheetContext] must stay mounted for as long as the sheet is open: the
 /// outcome is reported through it after the network round trip.
@@ -67,6 +68,7 @@ Future<void> deleteOwnerVideoFromSheet(
     video: video,
     cubit: cubit,
     onDeleted: () async => dismissSheet(sheetContext),
+    onFailed: () async => dismissSheet(sheetContext),
   );
 }
 
