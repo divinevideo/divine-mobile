@@ -13,6 +13,24 @@ LOG_DIR="${SCRATCH:?set SCRATCH to the scratch folder for this run, see SKILL.md
 export BLOSSOM_PUBLIC_URL=http://localhost:43003
 COMPOSE_FILE="$ROOT/local_stack/docker-compose.yml"
 
+# Two runs that both find no stack would both start one, each recreating the
+# other's containers, so the check and the start hold a machine-wide lock.
+STACK_LOCK=/tmp/pr-screenshots-stack.lock
+announced_wait=false
+until mkdir "$STACK_LOCK" 2>/dev/null; do
+  holder=$(cat "$STACK_LOCK/pid" 2>/dev/null || true)
+  if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+    # The sim_up.sh that held it died without releasing it.
+    rm -rf "$STACK_LOCK"
+    continue
+  fi
+  $announced_wait || echo "Waiting for another sim_up.sh (pid ${holder:-unknown}) to finish starting the stack..."
+  announced_wait=true
+  sleep 10
+done
+echo $$ > "$STACK_LOCK/pid"
+trap 'rm -rf "$STACK_LOCK"' EXIT
+
 # Every worktree's local_stack is the same compose project, so a stack another
 # session started is shared: reuse it rather than recreate its containers. A
 # failing `ps` (Docker not running) falls through to up.sh, which reports it.
@@ -56,6 +74,9 @@ STACK_LOG_HINT="see $LOG_DIR/stack.log"
 [ "$STACK_STARTED" = yes ] || STACK_LOG_HINT="the stack was already running, so check it with docker compose ps"
 "${CURL_READY[@]}" http://localhost:43003/ || { echo "error: Blossom is not answering on :43003; $STACK_LOG_HINT" >&2; exit 1; }
 "${CURL_READY[@]}" http://localhost:47777/ || { echo "error: the relay is not answering on :47777; $STACK_LOG_HINT" >&2; exit 1; }
+# The stack is up, so a waiting run will now find it and reuse it.
+rm -rf "$STACK_LOCK"
+trap - EXIT
 
 # A simulator of this run's own, so clearKeychain, the reinstall and the
 # status-bar override never land on a device someone else is using.
