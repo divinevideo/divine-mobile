@@ -4,6 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_layer_actions.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 
 void main() {
   group('socialStickerWidgetLayer', () {
@@ -33,6 +34,20 @@ void main() {
 
       expect(layer.interaction.enableRotate, isTrue);
       expect(layer.interaction.enableScale, isTrue);
+    });
+
+    test('places a replies sticker with no sample people who answered', () {
+      // The export captures the layer as the canvas shows it, so sample
+      // avatars here would be drawn into the posted video.
+      final layer = socialStickerWidgetLayer(
+        SocialStickerData.interactive(
+          SocialStickerKind.replies,
+          prompt: 'Reply with a video',
+        ),
+        width: 240,
+      );
+
+      expect((layer.widget as SocialStickerView).responses, isNull);
     });
   });
 }

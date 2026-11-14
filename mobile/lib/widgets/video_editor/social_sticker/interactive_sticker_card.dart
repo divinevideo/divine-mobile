@@ -19,12 +19,17 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 class StickerResponsePreview extends Equatable {
   const StickerResponsePreview({
     this.avatarUrl,
+    this.avatarColor,
     this.thumbnailUrl,
     this.isBlurred = false,
   });
 
   /// The avatar of whoever posted it, or `null` while there is none.
   final String? avatarUrl;
+
+  /// The color its avatar shows while it has no picture, or `null` for the
+  /// card's pale green.
+  final Color? avatarColor;
 
   /// Its thumbnail, or `null` when it has none.
   final String? thumbnailUrl;
@@ -34,7 +39,7 @@ class StickerResponsePreview extends Equatable {
   final bool isBlurred;
 
   @override
-  List<Object?> get props => [avatarUrl, thumbnailUrl, isBlurred];
+  List<Object?> get props => [avatarUrl, avatarColor, thumbnailUrl, isBlurred];
 }
 
 /// Who joined an Add yours or replied to a video, as its sticker shows it in
@@ -64,6 +69,18 @@ class StickerResponses extends Equatable {
 
 /// The most avatars an interactive card shows.
 const int maxStickerAvatars = 3;
+
+/// Who joined or replied in the editor's previews of an Add yours or replies
+/// sticker, which show it as viewers will see it once people answer: as
+/// many as the card shows avatars, each in its own color.
+const StickerResponses sampleStickerResponses = StickerResponses(
+  count: maxStickerAvatars,
+  latest: [
+    StickerResponsePreview(avatarColor: VineTheme.accentPink),
+    StickerResponsePreview(avatarColor: VineTheme.accentBlue),
+    StickerResponsePreview(avatarColor: VineTheme.accentYellow),
+  ],
+);
 
 /// The size of an avatar on a replies sticker.
 const double _avatarSize = 72;
@@ -490,7 +507,11 @@ class _Avatars extends StatelessWidget {
           for (final (index, response) in shown.indexed.toList().reversed)
             Positioned(
               left: index * step,
-              child: _Avatar(url: response.avatarUrl, size: size),
+              child: _Avatar(
+                url: response.avatarUrl,
+                color: response.avatarColor,
+                size: size,
+              ),
             ),
         ],
       ),
@@ -498,19 +519,21 @@ class _Avatars extends StatelessWidget {
   }
 }
 
-/// One round avatar with a white ring, pale green while it has no picture.
+/// One round avatar with a white ring, in [color] or pale green while it has
+/// no picture.
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.url, required this.size});
+  const _Avatar({required this.url, required this.color, required this.size});
 
   final String? url;
+  final Color? color;
   final double size;
 
   @override
   Widget build(BuildContext context) {
     final url = this.url;
-    const fallback = ColoredBox(
-      color: VineTheme.vineGreenLight,
-      child: SizedBox.expand(),
+    final fallback = ColoredBox(
+      color: color ?? VineTheme.vineGreenLight,
+      child: const SizedBox.expand(),
     );
     return Container(
       width: size,

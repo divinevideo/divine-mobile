@@ -1,5 +1,5 @@
 // ABOUTME: Tests the interactive sticker row of the sticker sheet: it offers the
-// ABOUTME: question, Add yours and replies, and no second interactive card.
+// ABOUTME: question, Add yours and replies with sample answers, and one card.
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +9,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_sheet_controls.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/interactive_sticker_card.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_kind_row.dart';
 
 void main() {
@@ -138,6 +139,21 @@ void main() {
             l10n.videoEditorSocialStickerReplies,
             l10n.videoEditorSocialStickerAddYours,
           ]),
+        );
+      });
+
+      testWidgets('replies and Add yours with sample people who answered', (
+        tester,
+      ) async {
+        await pump(tester);
+
+        expect(
+          find.text(l10n.videoStickerRepliesCount(maxStickerAvatars)),
+          findsOneWidget,
+        );
+        expect(
+          find.text(l10n.videoStickerAddYoursJoined(maxStickerAvatars)),
+          findsOneWidget,
         );
       });
 

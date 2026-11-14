@@ -33,6 +33,7 @@ class SocialStickerView extends StatelessWidget {
     required this.data,
     this.overFrames = false,
     this.countdownValue,
+    this.responses,
     super.key,
   });
 
@@ -48,6 +49,11 @@ class SocialStickerView extends StatelessWidget {
   /// Without one, a countdown on the editor canvas counts down by itself, as
   /// the player shows it, and shows its date anywhere else.
   final String? countdownValue;
+
+  /// Who joined an Add yours or replied, which its card shows, or `null` to
+  /// show no one, as the frames do; the editor's previews pass
+  /// [sampleStickerResponses].
+  final StickerResponses? responses;
 
   /// The date a countdown counts down to, written in its locale and clock the
   /// way the video shows it, such as "Jun 21, 2027 · 6:00 PM", in the
@@ -155,6 +161,7 @@ class SocialStickerView extends StatelessWidget {
             SocialStickerKind.replies => InteractiveStickerCard(
               data: data,
               overFrames: overFrames,
+              responses: responses,
             ),
             _ => StickerPill(
               palette: palette,
