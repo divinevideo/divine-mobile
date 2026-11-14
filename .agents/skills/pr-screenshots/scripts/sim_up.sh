@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ABOUTME: Starts the local Docker stack, boots an iOS simulator, and installs a LOCAL debug build of the app.
+# ABOUTME: Starts (or reuses) the local Docker stack, boots this run's own iOS simulator, and installs a LOCAL debug build.
 # ABOUTME: Usage: bash sim_up.sh <worktree-root> [device type]; prints UDID=, BUNDLE_ID= and STACK_STARTED= on success.
 set -euo pipefail
 
@@ -48,8 +48,10 @@ fi
 # :47777 is an nginx proxy that answers 502 while the relay behind it is down,
 # so require a 2xx (-f), and retry while the services are still starting.
 CURL_READY=(curl -sf --retry 15 --retry-delay 2 --retry-connrefused -o /dev/null)
-"${CURL_READY[@]}" http://localhost:43003/ || { echo "error: Blossom is not answering on :43003; see $LOG_DIR/stack.log" >&2; exit 1; }
-"${CURL_READY[@]}" http://localhost:47777/ || { echo "error: the relay is not answering on :47777; see $LOG_DIR/stack.log" >&2; exit 1; }
+STACK_LOG_HINT="see $LOG_DIR/stack.log"
+[ "$STACK_STARTED" = yes ] || STACK_LOG_HINT="the stack was already running, so check it with docker compose ps"
+"${CURL_READY[@]}" http://localhost:43003/ || { echo "error: Blossom is not answering on :43003; $STACK_LOG_HINT" >&2; exit 1; }
+"${CURL_READY[@]}" http://localhost:47777/ || { echo "error: the relay is not answering on :47777; $STACK_LOG_HINT" >&2; exit 1; }
 
 # A simulator of this run's own, so clearKeychain, the reinstall and the
 # status-bar override never land on a device someone else is using.

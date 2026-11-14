@@ -1,5 +1,5 @@
-# ABOUTME: Maestro flow that clears the app and creates a fresh device-only account (no Keycast, no email).
-# ABOUTME: Run: maestro test -e APP_ID=<bundle id> new_device_account.yaml
+# ABOUTME: Maestro flow that clears the keychain and the app, then creates a fresh device-only account (no Keycast, no email).
+# ABOUTME: Run: maestro --device <UDID> test -e APP_ID=<bundle id> new_device_account.yaml
 appId: ${APP_ID}
 ---
 # The Nostr key lives in the keychain, which clearState keeps; without this the
