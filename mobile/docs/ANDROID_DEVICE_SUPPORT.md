@@ -33,8 +33,8 @@ Two static checks freeze the three config-level regressions:
   `.github/scripts/tests/test_codemagic_shorebird_config.py` (Mobile CI
   `CI Configuration Tests` job) reads `codemagic.yaml`:
   3. `--target-platform` on a `shorebird release android` or
-     `shorebird patch android` command, which restricts which ABIs the Play AAB
-     contains.
+     `shorebird patch android` command, which drops Flutter's engine and app
+     code from the omitted ABIs (see below).
 
 The third lives in the Python suite because that job runs on every pull
 request, while the `Guards` job skips a change that touches only
@@ -43,7 +43,7 @@ request, while the `Guards` job skips a change that touches only
 Neither check can **inspect the built AAB** — they protect the repo, not the
 upload. The upload is covered by the runbook below.
 
-## Play upload runbook (the part the guard can't check)
+## Play upload runbook (the part the checks can't see)
 
 The repo builds **two different Android artifacts**, and mixing them up is how
 the Nov 2026 1.0.29 release lost ~16,000 devices:
@@ -53,8 +53,30 @@ the Nov 2026 1.0.29 release lost ~16,000 devices:
 - **The universal Shorebird AAB** (`shorebird release android`, the
   "Build Android AAB" Codemagic step) → for **Google Play**.
 
-Uploading a split APK — or a hand-built `--target-platform android-arm64` AAB —
-to Play gives Play a 64-bit-only artifact, which drops every 32-bit device.
+Uploading a split APK to Play gives Play a 64-bit-only artifact, which drops
+every 32-bit device. Play warns about that one (below).
+
+An AAB built with `--target-platform android-arm64` is worse, because Play does
+not warn. Flutter's Gradle plugin keeps `abiFilters` at all three ABIs whatever
+`--target-platform` says; the flag only leaves out `libflutter.so` and
+`libapp.so`. Third-party native libraries, such as C2PA's, still fill
+`base/lib/armeabi-v7a/`, so Play keeps serving 32-bit devices a build that
+crashes on launch.
+
+### Check an AAB's ABIs
+
+Run this on any AAB before it reaches Play, and on the one behind a
+device-support warning:
+
+```sh
+unzip -l app-release.aab | grep -E 'base/lib/[^/]+/lib(flutter|app)\.so'
+```
+
+Expect `libflutter.so` and `libapp.so` under each of `armeabi-v7a/`,
+`arm64-v8a/` and `x86_64/`. A missing pair is the regression; a directory that
+holds only other libraries does not count.
+
+### When Play warns
 
 When Play Console shows **"This release no longer supports N devices"**:
 
@@ -62,15 +84,11 @@ When Play Console shows **"This release no longer supports N devices"**:
    for existing installs on them.
 2. Open the warning's **"Check changes to your supported devices"** link and read
    the per-device **reason** (ABI / API level / required feature / OpenGL).
-3. If the reason is ABI, confirm the artifact:
-   ```sh
-   unzip -l app-<version>.aab | grep base/lib/
-   ```
-   Expect `armeabi-v7a/`, `arm64-v8a/`, `x86_64/`. A missing `armeabi-v7a/` is
-   the regression.
+3. If the reason is ABI, run the [ABI check](#check-an-aabs-abis) on the
+   draft's artifact.
 4. Replace the draft's artifact with the **universal Shorebird AAB** from
    Codemagic. The companion error **"You cannot remove all production APKs and
    App Bundles"** just means the draft is empty — it clears once the correct AAB
    is attached. Confirm `versionCode` is higher than the live release.
-5. The device-support warning should then disappear. If it persists, the AAB is
-   still 64-bit-only — re-run the `unzip` check before shipping.
+5. The device-support warning should then disappear. If it persists, run the
+   ABI check on the attached AAB before shipping.
