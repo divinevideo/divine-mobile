@@ -92,6 +92,20 @@ void main() {
       });
     }
 
+    testWidgets('announces the result to screen readers', (tester) async {
+      final provider = StateProvider<VideoDmOutbox>((ref) => outbox);
+      await pumpApp(tester, provider);
+
+      outbox.controller.add(_outcome(VideoDmOutcomeStatus.failed));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        tester.takeAnnouncements().single.message,
+        equals(l10n.dmVideoSendFailed),
+      );
+    });
+
     testWidgets('survives the outbox being replaced', (tester) async {
       final replacement = _FakeOutbox();
       addTearDown(replacement.controller.close);
