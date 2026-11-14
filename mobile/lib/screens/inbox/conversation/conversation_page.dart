@@ -181,6 +181,7 @@ class _ConversationBlocScope extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dmRepository = ref.watch(dmRepositoryProvider);
+    final videoOutbox = ref.watch(videoDmOutboxProvider);
     final reactionsRepository = ref.watch(dmReactionsRepositoryProvider);
     final inviteStateStore = ref.watch(collaboratorInviteStateStoreProvider);
     final inviteResponseService = ref.watch(
@@ -207,10 +208,16 @@ class _ConversationBlocScope extends ConsumerWidget {
         // ConversationPage's own BlocProvider above: `create:` here also
         // captures it, one-shot, in the initial ConversationStarted event.
         BlocProvider<ConversationBloc>(
-          key: ValueKey((conversationId, dmRepository, currentPubkey)),
+          key: ValueKey((
+            conversationId,
+            dmRepository,
+            videoOutbox,
+            currentPubkey,
+          )),
           create: (_) => ConversationBloc(
             dmRepository: dmRepository,
             conversationId: conversationId,
+            videoOutbox: videoOutbox,
           )..add(const ConversationStarted()),
         ),
         // Qualifies the empty state: `watchMessages` is a local DB stream, so

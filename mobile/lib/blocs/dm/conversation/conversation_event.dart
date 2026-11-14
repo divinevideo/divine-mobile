@@ -107,3 +107,61 @@ class ConversationOutgoingSendCancelled extends ConversationEvent {
   @override
   List<Object?> get props => [rumorId];
 }
+
+/// Send [file] to [recipientPubkey] as a video DM in this conversation,
+/// through the account's video outbox.
+class ConversationVideoSendRequested extends ConversationEvent {
+  const ConversationVideoSendRequested({
+    required this.recipientPubkey,
+    required this.file,
+  });
+
+  /// Hex public key of the recipient.
+  final String recipientPubkey;
+
+  /// The picked video file.
+  final File file;
+
+  @override
+  List<Object?> get props => [recipientPubkey, file];
+}
+
+/// Send library [clips] to [recipientPubkey] in this conversation, through
+/// the account's video outbox.
+class ConversationClipsSendRequested extends ConversationEvent {
+  const ConversationClipsSendRequested({
+    required this.recipientPubkey,
+    required this.clips,
+  });
+
+  /// Hex public key of the recipient.
+  final String recipientPubkey;
+
+  /// The picked library clips, in send order.
+  final List<DivineVideoClip> clips;
+
+  @override
+  List<Object?> get props => [recipientPubkey, clips];
+}
+
+/// Retry the failed outgoing video DM [id].
+class ConversationVideoSendRetried extends ConversationEvent {
+  const ConversationVideoSendRetried(this.id);
+
+  /// The outbox entry id.
+  final String id;
+
+  @override
+  List<Object?> get props => [id];
+}
+
+/// Discard the failed outgoing video DM [id].
+class ConversationVideoSendRemoved extends ConversationEvent {
+  const ConversationVideoSendRemoved(this.id);
+
+  /// The outbox entry id.
+  final String id;
+
+  @override
+  List<Object?> get props => [id];
+}

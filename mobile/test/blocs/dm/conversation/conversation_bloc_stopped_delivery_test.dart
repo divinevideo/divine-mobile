@@ -14,12 +14,24 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
+import 'package:openvine/services/video_dm_outbox.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockMessageService extends Mock implements NIP17MessageService {}
 
 class _FakeEvent extends Fake implements Event {}
+
+class _MockVideoDmOutbox extends Mock implements VideoDmOutbox {}
+
+/// An outbox with no video sends, so the thread is driven by its rows alone.
+VideoDmOutbox _idleVideoOutbox() {
+  final outbox = _MockVideoDmOutbox();
+  when(
+    () => outbox.watchConversation(any()),
+  ).thenAnswer((_) => Stream.value(const <OutgoingVideoDm>[]));
+  return outbox;
+}
 
 const _owner =
     'a4f5c1b2d3e4f5061728394a5b6c7d8e9f0a1b2c3d4e5f60718293a4b5c6d7e8';
@@ -212,6 +224,7 @@ void main() {
       final bloc = ConversationBloc(
         dmRepository: repository,
         conversationId: conversationId,
+        videoOutbox: _idleVideoOutbox(),
       );
       addTearDown(bloc.close);
       bloc.add(const ConversationStarted());
@@ -535,6 +548,7 @@ void main() {
           final reopened = ConversationBloc(
             dmRepository: repository,
             conversationId: thread.conversationId,
+            videoOutbox: _idleVideoOutbox(),
           );
           addTearDown(reopened.close);
           final reports = countStopReportsFrom(reopened);

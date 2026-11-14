@@ -7,6 +7,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
+import 'package:openvine/services/video_dm_outbox.dart';
 
 const _owner =
     '1111111111111111111111111111111111111111111111111111111111111111';
@@ -78,8 +79,85 @@ DmMessage _message({
   );
 }
 
+/// An outgoing video DM entry, as the outbox publishes it.
+OutgoingVideoDm _videoSend({
+  required String id,
+  required DateTime requestedAt,
+  OutgoingVideoDmPhase phase = OutgoingVideoDmPhase.uploading,
+  String? rumorEventId,
+}) {
+  return OutgoingVideoDm(
+    id: id,
+    conversationId: _groupConversationId,
+    recipientPubkey: _recipientB,
+    localPath: '/documents/$id.mp4',
+    requestedAt: requestedAt,
+    phase: phase,
+    rumorEventId: rumorEventId,
+  );
+}
+
 void main() {
   group(ConversationState, () {
+    group('displayedVideoSends', () {
+      const rowId =
+          '9999999999999999999999999999999999999999999999999999999999999999';
+      final sent = _videoSend(
+        id: 'video-sent',
+        requestedAt: DateTime.utc(2026, 11, 13, 10),
+        phase: OutgoingVideoDmPhase.sent,
+        rumorEventId: rowId,
+      );
+
+      test('hides a sent entry once its row is persisted, keeps it before', () {
+        final before = ConversationState(pendingVideoSends: [sent]);
+        final after = ConversationState(
+          messages: [_message(id: rowId)],
+          pendingVideoSends: [sent],
+        );
+
+        expect(before.displayedVideoSends, equals([sent]));
+        expect(after.displayedVideoSends, isEmpty);
+      });
+
+      test('keeps an unsent entry whose id happens to match no row', () {
+        final uploading = _videoSend(
+          id: 'video-uploading',
+          requestedAt: DateTime.utc(2026, 11, 13, 10),
+        );
+        final state = ConversationState(
+          messages: [_message(id: rowId)],
+          pendingVideoSends: [uploading],
+        );
+
+        expect(state.displayedVideoSends, equals([uploading]));
+      });
+
+      test('orders newest request first', () {
+        final older = _videoSend(
+          id: 'video-older',
+          requestedAt: DateTime.utc(2026, 11, 13, 9),
+        );
+        final newer = _videoSend(
+          id: 'video-newer',
+          requestedAt: DateTime.utc(2026, 11, 13, 11),
+          phase: OutgoingVideoDmPhase.failed,
+        );
+        final middle = _videoSend(
+          id: 'video-middle',
+          requestedAt: DateTime.utc(2026, 11, 13, 10),
+        );
+        final state = ConversationState(
+          pendingVideoSends: [older, newer, middle],
+        );
+
+        expect(
+          state.displayedVideoSends,
+          equals([newer, middle, older]),
+        );
+      });
+    });
+
     group('displayedMessages', () {
       const parentId =
           '7777777777777777777777777777777777777777777777777777777777777777';
