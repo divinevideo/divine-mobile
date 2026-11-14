@@ -25,57 +25,57 @@
 # runs on every PR, while the Guards job this guard runs in skips a PR that only
 # changes codemagic.yaml.
 #
-# Runs from mobile/ (the Guards job working directory). Not flagged `native`:
-# a change to this script alone has to re-run it, and `mobile/scripts/*` turns
-# on the app scope the Guards job needs without a detector entry.
+# Resolves its input from its own location, so it runs from any directory;
+# ANDROID_APP_GRADLE overrides the file for tests. Not flagged `native`: a
+# change to this script alone has to re-run it, and `mobile/scripts/*` turns on
+# the app scope the Guards job needs without a detector entry.
 set -euo pipefail
 
-gradle="android/app/build.gradle.kts"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+gradle="${ANDROID_APP_GRADLE:-$SCRIPT_DIR/../android/app/build.gradle.kts}"
 fail=0
+
+if [ ! -f "$gradle" ]; then
+  echo "❌ Cannot find the app Gradle file at $gradle." >&2
+  exit 1
+fi
 
 # ---------------------------------------------------------------------------
 # 1. minSdk floor (<= 28)
 # ---------------------------------------------------------------------------
-if [ ! -f "$gradle" ]; then
-  echo "❌ Missing $gradle."
+# Kotlin DSL: `minSdk = 28` (numeric) or `minSdk = flutter.minSdkVersion`.
+min_line="$(grep -nE '^[[:space:]]*minSdk[[:space:]]*=' "$gradle" || true)"
+if [ -z "$min_line" ]; then
+  echo "❌ Could not find a minSdk assignment in $gradle."
   fail=1
-else
-  # Kotlin DSL: `minSdk = 28` (numeric) or `minSdk = flutter.minSdkVersion`.
-  min_line="$(grep -nE '^[[:space:]]*minSdk[[:space:]]*=' "$gradle" || true)"
-  if [ -z "$min_line" ]; then
-    echo "❌ Could not find a minSdk assignment in $gradle."
-    fail=1
-  elif echo "$min_line" | grep -qE 'minSdk[[:space:]]*=[[:space:]]*[0-9]+'; then
-    min_value="$(echo "$min_line" | grep -oE '[0-9]+' | tail -1)"
-    if [ "$min_value" -gt 28 ]; then
-      echo "❌ minSdk is $min_value in $gradle; it must stay <= 28 (Android 9.0)."
-      echo "   28 is pinned by c2pa_flutter. Raising it drops older-OS users."
-      echo "   See mobile/docs/ANDROID_DEVICE_SUPPORT.md."
-      fail=1
-    fi
-  elif echo "$min_line" | grep -q 'flutter.minSdkVersion'; then
-    : # Flutter's default (24) is below the 28 floor — acceptable.
-  else
-    echo "❌ Could not read the minSdk value from: $min_line"
+elif echo "$min_line" | grep -qE 'minSdk[[:space:]]*=[[:space:]]*[0-9]+'; then
+  min_value="$(echo "$min_line" | grep -oE '[0-9]+' | tail -1)"
+  if [ "$min_value" -gt 28 ]; then
+    echo "❌ minSdk is $min_value in $gradle; it must stay <= 28 (Android 9.0)."
+    echo "   28 is pinned by c2pa_flutter. Raising it drops older-OS users."
+    echo "   See mobile/docs/ANDROID_DEVICE_SUPPORT.md."
     fail=1
   fi
+elif echo "$min_line" | grep -q 'flutter.minSdkVersion'; then
+  : # Flutter's default (24) is below the 28 floor — acceptable.
+else
+  echo "❌ Could not read the minSdk value from: $min_line"
+  fail=1
 fi
 
 # ---------------------------------------------------------------------------
 # 2. abiFilters must keep 32-bit, if present at all
 # ---------------------------------------------------------------------------
-if [ -f "$gradle" ]; then
-  while IFS= read -r line; do
-    [ -z "$line" ] && continue
-    if ! echo "$line" | grep -q 'armeabi-v7a'; then
-      echo "❌ abiFilters in $gradle omits armeabi-v7a (32-bit):"
-      echo "     $line"
-      echo "   A narrowing abiFilters drops 32-bit devices from the AAB."
-      echo "   Keep armeabi-v7a, or remove abiFilters to ship every ABI."
-      fail=1
-    fi
-  done < <(grep -nE 'abiFilters' "$gradle" || true)
-fi
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  if ! echo "$line" | grep -q 'armeabi-v7a'; then
+    echo "❌ abiFilters in $gradle omits armeabi-v7a (32-bit):"
+    echo "     $line"
+    echo "   A narrowing abiFilters drops 32-bit devices from the AAB."
+    echo "   Keep armeabi-v7a, or remove abiFilters to ship every ABI."
+    fail=1
+  fi
+done < <(grep -nE 'abiFilters' "$gradle" || true)
 
 if [ "$fail" -ne 0 ]; then
   echo
