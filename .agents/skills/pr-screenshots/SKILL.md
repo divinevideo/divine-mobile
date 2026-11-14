@@ -78,6 +78,7 @@ create whatever else the screen needs yourself.
 7. **Publish** with `publish_gist.sh`. Run `--dry-run` first to check the files. It prints each URL only after checking it answers 200. The gist is unlisted, not private: once its URLs are in a public PR, anyone can open them, and taking them out later does not undo that.
 8. **Write the PR section.** Add a table of states, the commit they were built from, one line on how they were captured (simulator, LOCAL stack, throwaway accounts, anything staged such as a paused container), and anything you noticed. On your own PR, also fix any "Not verified" text that the screenshots now contradict. Someone else's description is theirs: check authorship first (`AGENTS.md`, "Working On An Existing PR") and follow the "Put in PR" row above.
 9. **Clean up:**
+   - if you paused the Blossom proxy, unpause it (`docker compose -f local_stack/docker-compose.yml unpause blossom-proxy`): a paused container in the shared stack stalls every other session's uploads;
    - stop the stack (`cd mobile && mise run local_down`) only if `sim_up.sh` printed `STACK_STARTED=yes` and no other session has started using it since. Every worktree shares the one `local_stack` compose project, so `down` stops it for everyone;
    - `xcrun simctl delete <UDID>`, which removes this run's simulator, its data and the status-bar override;
    - for a detached worktree you made, `git worktree remove --force .worktrees/pr-<n>-screens`, which takes its `mobile/build` (about 4 GB) with it; in your own task worktree, delete `mobile/build`;

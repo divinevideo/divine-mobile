@@ -20,6 +20,9 @@ RUNNING_SERVICES=$(docker compose -f "$COMPOSE_FILE" ps --status running --servi
 if grep -qx funnelcake-proxy <<<"$RUNNING_SERVICES"; then
   STACK_STARTED=no
   echo "Reusing the local stack that is already running; leave it up at cleanup."
+  PAUSED_SERVICES=$(docker compose -f "$COMPOSE_FILE" ps --status paused --services 2>/dev/null || true)
+  [ -z "$PAUSED_SERVICES" ] \
+    || echo "warning: paused in the shared stack: $(paste -sd " " - <<<"$PAUSED_SERVICES"); another run may be mid-shot" >&2
 else
   STACK_STARTED=yes
   # Keycast mounts the gitignored local_stack/master.key, which only setup.sh
@@ -46,8 +49,9 @@ else
   fi
 fi
 # :47777 is an nginx proxy that answers 502 while the relay behind it is down,
-# so require a 2xx (-f), and retry while the services are still starting.
-CURL_READY=(curl -sf --retry 15 --retry-delay 2 --retry-connrefused -o /dev/null)
+# so require a 2xx (-f), and retry while the services are still starting. A
+# paused container accepts the connection and never answers, hence --max-time.
+CURL_READY=(curl -sf --max-time 5 --retry 15 --retry-delay 2 --retry-connrefused -o /dev/null)
 STACK_LOG_HINT="see $LOG_DIR/stack.log"
 [ "$STACK_STARTED" = yes ] || STACK_LOG_HINT="the stack was already running, so check it with docker compose ps"
 "${CURL_READY[@]}" http://localhost:43003/ || { echo "error: Blossom is not answering on :43003; $STACK_LOG_HINT" >&2; exit 1; }
