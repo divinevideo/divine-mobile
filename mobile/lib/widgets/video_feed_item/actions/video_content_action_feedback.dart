@@ -75,17 +75,50 @@ void showVideoContentActionFeedback(
     VideoContentActionFailure() => (l10n.shareActionFailed, true),
   };
 
+  dismissSheet(sheetContext);
   if (result case VideoContentCopiedToClipboard(:final text)) {
     runDetached(
-      Clipboard.setData(ClipboardData(text: text)),
+      _copyThenReport(
+        messenger,
+        text,
+        copiedText: snackText,
+        failedText: l10n.shareActionFailed,
+      ),
       'copy video content value to clipboard',
       logName: 'VideoContentActionFeedback',
       category: LogCategory.ui,
     );
+    return;
   }
-  dismissSheet(sheetContext);
   messenger.showSnackBar(
     DivineSnackbarContainer.snackBar(snackText, error: isError),
+  );
+}
+
+/// Copies [text], then confirms it only once the platform has taken it.
+Future<void> _copyThenReport(
+  ScaffoldMessengerState messenger,
+  String text, {
+  required String copiedText,
+  required String failedText,
+}) async {
+  var copied = true;
+  try {
+    await Clipboard.setData(ClipboardData(text: text));
+  } on PlatformException catch (error) {
+    copied = false;
+    Log.warning(
+      'Could not copy to the clipboard: $error',
+      name: 'VideoContentActionFeedback',
+      category: LogCategory.ui,
+    );
+  }
+  if (!messenger.mounted) return;
+  messenger.showSnackBar(
+    DivineSnackbarContainer.snackBar(
+      copied ? copiedText : failedText,
+      error: !copied,
+    ),
   );
 }
 
@@ -106,11 +139,16 @@ class VideoContentActionsFeedbackListener extends StatelessWidget {
           current.actionResult != null &&
           previous.actionResult != current.actionResult,
       listener: (context, state) {
-        if (!context.mounted || ModalRoute.of(context)?.isCurrent == false) {
-          return;
-        }
         final result = state.actionResult;
         if (result == null) return;
+        if (!context.mounted || ModalRoute.of(context)?.isCurrent == false) {
+          Log.info(
+            'Dropped a ${result.runtimeType}: a route covers the sheet',
+            name: 'VideoContentActionsFeedbackListener',
+            category: LogCategory.ui,
+          );
+          return;
+        }
         showVideoContentActionFeedback(context, result);
       },
       child: child,

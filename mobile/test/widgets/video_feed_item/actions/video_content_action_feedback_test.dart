@@ -143,6 +143,40 @@ void main() {
       expect(find.text(l10n.shareCopiedEventId), findsOneWidget);
     });
 
+    testWidgets('reports a copy the platform refused instead of confirming', (
+      tester,
+    ) async {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            throw PlatformException(code: 'unavailable');
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await pumpSheet(tester);
+
+      showVideoContentActionFeedback(
+        sheetContext,
+        VideoContentCopiedToClipboard(
+          kind: VideoContentCopiedKind.eventJson,
+          text: '{}',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(_sheetBodyText), findsNothing);
+      expect(find.text(l10n.shareCopiedEventJson), findsNothing);
+      expect(find.text(l10n.shareActionFailed), findsOneWidget);
+    });
+
     testWidgets('closes the sheet before reporting a failed action', (
       tester,
     ) async {
@@ -191,6 +225,46 @@ void main() {
 
       expect(find.text(_sheetBodyText), findsNothing);
       expect(find.text(l10n.shareRemovedFromBookmarks), findsOneWidget);
+    });
+
+    testWidgets('leaves a route pushed over the sheet open', (tester) async {
+      const coverText = 'covering route';
+      final results = StreamController<VideoContentActionsState>();
+      addTearDown(results.close);
+      whenListen(
+        bloc,
+        results.stream,
+        initialState: const VideoContentActionsState(),
+      );
+      late BuildContext sheetContext;
+      await _pumpOpenSheet(
+        tester,
+        body: (context) {
+          sheetContext = context;
+          return BlocProvider<VideoContentActionsBloc>.value(
+            value: bloc,
+            child: const VideoContentActionsFeedbackListener(
+              child: Text(_sheetBodyText),
+            ),
+          );
+        },
+      );
+      Navigator.of(sheetContext).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text(coverText)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      results.add(
+        VideoContentActionsState(
+          actionResult: VideoContentSaveResult(succeeded: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(coverText), findsOneWidget);
+      expect(find.text(l10n.shareAddedToBookmarks), findsNothing);
     });
   });
 
