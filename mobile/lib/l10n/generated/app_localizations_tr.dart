@@ -3934,6 +3934,31 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu klip şu an kontrol edilemiyor. Biraz sonra tekrar dene.';
 
   @override
+  String get dmPendingVideoWaiting => 'Waiting…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Preparing…';
+
+  @override
+  String dmPendingVideoUploading(int percent) {
+    return 'Uploading $percent%';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Sending…';
+
+  @override
+  String get dmPendingVideoRemove => 'Remove';
+
+  @override
+  String dmPendingVideoSemantics(int percent) {
+    return 'Sending video, $percent%';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+
+  @override
   String get dmClipSendNotVerified =>
       'Bu klibin Divine kamerasıyla çekildiğini doğrulayamadık, bu yüzden klip olarak gönderilemez.';
 

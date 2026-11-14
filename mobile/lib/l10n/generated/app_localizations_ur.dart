@@ -3997,6 +3997,31 @@ class AppLocalizationsUr extends AppLocalizations {
       'ابھی اس کلپ کی جانچ نہیں ہو سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
 
   @override
+  String get dmPendingVideoWaiting => 'Waiting…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Preparing…';
+
+  @override
+  String dmPendingVideoUploading(int percent) {
+    return 'Uploading $percent%';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Sending…';
+
+  @override
+  String get dmPendingVideoRemove => 'Remove';
+
+  @override
+  String dmPendingVideoSemantics(int percent) {
+    return 'Sending video, $percent%';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+
+  @override
   String get dmClipSendNotVerified =>
       'ہم تصدیق نہیں کر سکے کہ یہ کلپ Divine کیمرے سے بنی ہے، اس لیے اسے کلپ کے طور پر نہیں بھیجا جا سکتا۔';
 

@@ -3733,6 +3733,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmClipCheckUnavailable => '现在无法检查这个片段，请稍后再试。';
 
   @override
+  String get dmPendingVideoWaiting => 'Waiting…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Preparing…';
+
+  @override
+  String dmPendingVideoUploading(int percent) {
+    return 'Uploading $percent%';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Sending…';
+
+  @override
+  String get dmPendingVideoRemove => 'Remove';
+
+  @override
+  String dmPendingVideoSemantics(int percent) {
+    return 'Sending video, $percent%';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+
+  @override
   String get dmClipSendNotVerified => '无法确认这个片段是用 Divine 相机拍摄的，所以不能作为片段发送。';
 
   @override

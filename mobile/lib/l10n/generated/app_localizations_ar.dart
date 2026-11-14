@@ -3991,6 +3991,31 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر التحقق من هذا المقطع الآن. يُرجى المحاولة بعد قليل.';
 
   @override
+  String get dmPendingVideoWaiting => 'Waiting…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Preparing…';
+
+  @override
+  String dmPendingVideoUploading(int percent) {
+    return 'Uploading $percent%';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Sending…';
+
+  @override
+  String get dmPendingVideoRemove => 'Remove';
+
+  @override
+  String dmPendingVideoSemantics(int percent) {
+    return 'Sending video, $percent%';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+
+  @override
   String get dmClipSendNotVerified =>
       'تعذّر التأكد من أن هذا المقطع صُوّر بكاميرا Divine، لذا لا يمكن إرساله كمقطع.';
 

@@ -2749,6 +2749,46 @@
   "@dmClipCheckUnavailable": {
     "description": "SnackBar shown when the C2PA check on a received clip cannot run right now, for example offline with no cached trust list. Nothing was concluded about the clip, so the copy invites a retry."
   },
+  "dmPendingVideoWaiting": "Waiting…",
+  "@dmPendingVideoWaiting": {
+    "description": "Status line on an outgoing video in a DM conversation while it waits for the sends ahead of it."
+  },
+  "dmPendingVideoPreparing": "Preparing…",
+  "@dmPendingVideoPreparing": {
+    "description": "Status line on an outgoing video in a DM conversation while it is being checked and encrypted, before the upload starts."
+  },
+  "dmPendingVideoUploading": "Uploading {percent}%",
+  "@dmPendingVideoUploading": {
+    "description": "Status line on an outgoing video in a DM conversation while it uploads, with the percent uploaded so far.",
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "example": "42"
+      }
+    }
+  },
+  "dmPendingVideoSending": "Sending…",
+  "@dmPendingVideoSending": {
+    "description": "Status line on an outgoing video in a DM conversation after the upload, while the message is being delivered."
+  },
+  "dmPendingVideoRemove": "Remove",
+  "@dmPendingVideoRemove": {
+    "description": "Button on an outgoing video in a DM conversation that failed to send. Removes it from the conversation without sending it."
+  },
+  "dmPendingVideoSemantics": "Sending video, {percent}%",
+  "@dmPendingVideoSemantics": {
+    "description": "Screen reader label for an outgoing video in a DM conversation that is uploading, with the percent uploaded so far.",
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "example": "42"
+      }
+    }
+  },
+  "dmPendingVideoFailedSemantics": "Video failed to send",
+  "@dmPendingVideoFailedSemantics": {
+    "description": "Screen reader label for an outgoing video in a DM conversation that failed to send."
+  },
   "dmClipSendNotVerified": "We couldn't confirm this clip was shot with the Divine camera, so it can't be sent as a clip.",
   "@dmClipSendNotVerified": {
     "description": "SnackBar shown in the DM composer when a clip picked from the sender's own library has no valid Divine camera credential, so it is not sent: the recipient could never add it to their clips."

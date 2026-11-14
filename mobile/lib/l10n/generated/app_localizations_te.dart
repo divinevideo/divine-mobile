@@ -4135,6 +4135,31 @@ class AppLocalizationsTe extends AppLocalizations {
       'ప్రస్తుతం ఈ క్లిప్‌ను తనిఖీ చేయడం సాధ్యపడలేదు. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get dmPendingVideoWaiting => 'Waiting…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Preparing…';
+
+  @override
+  String dmPendingVideoUploading(int percent) {
+    return 'Uploading $percent%';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Sending…';
+
+  @override
+  String get dmPendingVideoRemove => 'Remove';
+
+  @override
+  String dmPendingVideoSemantics(int percent) {
+    return 'Sending video, $percent%';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+
+  @override
   String get dmClipSendNotVerified =>
       'ఈ క్లిప్ Divine కెమెరాతో చిత్రీకరించబడిందని నిర్ధారించలేకపోయాం, కాబట్టి దీన్ని క్లిప్‌గా పంపలేరు.';
 

@@ -4008,6 +4008,31 @@ class AppLocalizationsNl extends AppLocalizations {
       'Deze clip kan nu niet worden gecheckt. Probeer het zo nog eens.';
 
   @override
+  String get dmPendingVideoWaiting => 'Waiting…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Preparing…';
+
+  @override
+  String dmPendingVideoUploading(int percent) {
+    return 'Uploading $percent%';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Sending…';
+
+  @override
+  String get dmPendingVideoRemove => 'Remove';
+
+  @override
+  String dmPendingVideoSemantics(int percent) {
+    return 'Sending video, $percent%';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+
+  @override
   String get dmClipSendNotVerified =>
       'We konden niet bevestigen dat deze clip met de Divine-camera is gefilmd, dus hij kan niet als clip worden verstuurd.';
 
