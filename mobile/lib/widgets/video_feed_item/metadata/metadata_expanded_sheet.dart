@@ -1,21 +1,28 @@
 // ABOUTME: Expanded video metadata bottom sheet opened by the info button.
-// ABOUTME: Header (date + title + badges + description + tags), stats, creator,
-// ABOUTME: collaborators, inspired by, reposted by, sounds, links, verification.
-// ABOUTME: Read-only, no new BLoC needed.
+// ABOUTME: Header (date + title + badges + description + tags), stats, actions,
+// ABOUTME: creator, collaborators, inspired by, reposted by, sounds, links,
+// ABOUTME: verification. Actions run through the shared video actions blocs.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
+import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
+import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/proofmode_helpers.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
+import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
+import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_links_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_sounds_section.dart';
@@ -33,8 +40,10 @@ import 'package:time_formatter/time_formatter.dart';
 /// Uses [showVideoPausingVineBottomSheet] with `showHeader: false` so the
 /// title scrolls with the content rather than being pinned in a header bar.
 ///
-/// All data is read-only from [VideoEvent] and the existing
-/// [VideoInteractionsBloc] in the widget tree — no new BLoC is created.
+/// Metadata is read from [VideoEvent] and the existing
+/// [VideoInteractionsBloc] in the widget tree. The action row runs through a
+/// [VideoContentActionsBloc], plus an [OwnerVideoActionsCubit] when the viewer
+/// owns the video, both created by [show].
 ///
 /// Matches Figma node `15675:27353` ("metadata-expanded").
 class MetadataExpandedSheet extends StatelessWidget {
@@ -51,11 +60,25 @@ class MetadataExpandedSheet extends StatelessWidget {
   ///
   /// Creates a [VideoRepostersCubit] to fetch reposter pubkeys from the
   /// relay. The cubit is scoped to the modal and auto-closed on dismiss.
+  ///
+  /// Creates the action row's [VideoContentActionsBloc], and an
+  /// [OwnerVideoActionsCubit] when the signed-in viewer owns [video].
+  /// Ownership is decided once here, so the owner actions and their cubit
+  /// cannot disagree if auth changes while the sheet is open.
   static Future<void> show(BuildContext context, VideoEvent video) {
     final interactionsBloc = context.read<VideoInteractionsBloc>();
     final loopCounts = context.read<VideoLoopsCubit?>();
     final container = ProviderScope.containerOf(context, listen: false);
     final repostsRepository = container.read(repostsRepositoryProvider);
+    final authService = container.read(authServiceProvider);
+    final isOwnVideo =
+        authService.isAuthenticated &&
+        authService.currentPublicKeyHex == video.pubkey;
+    final relayUrl = container.read(currentEnvironmentProvider).relayUrl;
+    final bookmarksRepository = container.read(bookmarksRepositoryProvider);
+    final videoClipImportService = container.read(
+      videoClipImportServiceProvider,
+    );
 
     return context.showVideoPausingVineBottomSheet<void>(
       showHeader: false,
@@ -72,10 +95,31 @@ class MetadataExpandedSheet extends StatelessWidget {
               addressableId: video.addressableId,
             ),
           ),
+          BlocProvider<VideoContentActionsBloc>(
+            create: (_) => VideoContentActionsBloc(
+              video: video,
+              relayUrl: relayUrl,
+              bookmarksRepository: bookmarksRepository,
+              videoClipImportService: videoClipImportService,
+            )..add(const VideoContentBookmarkStatusRequested()),
+          ),
+          if (isOwnVideo)
+            BlocProvider<OwnerVideoActionsCubit>(
+              create: (_) => OwnerVideoActionsCubit(
+                contentDeletionService: () =>
+                    container.read(contentDeletionServiceProvider.future),
+                videoEventService: () =>
+                    container.read(videoEventServiceProvider),
+                enforcementRepository: () =>
+                    container.read(creatorDeleteEnforcementRepositoryProvider),
+              ),
+            ),
         ],
-        child: _MetadataContent(
-          video: video,
-          scrollController: scrollController,
+        child: VideoContentActionsFeedbackListener(
+          child: _MetadataContent(
+            video: video,
+            scrollController: scrollController,
+          ),
         ),
       ),
     );
@@ -112,6 +156,7 @@ class _MetadataContent extends StatelessWidget {
           variant: VideoReplyParentLinkVariant.metadata,
         ),
         MetadataStatsRow(video: video),
+        MetadataActionsSection(video: video),
         MetadataCreatorSection(pubkey: video.pubkey),
         MetadataCollaboratorsSection(video: video),
         MetadataInspiredBySection(video: video),

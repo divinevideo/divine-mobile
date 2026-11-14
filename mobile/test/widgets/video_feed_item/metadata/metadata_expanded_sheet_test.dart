@@ -5,6 +5,7 @@
 
 import 'dart:async';
 
+import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,18 +17,24 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
+import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_expanded_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_section.dart';
@@ -39,6 +46,7 @@ import 'package:openvine/widgets/video_feed_item/metadata/metadata_verification_
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_verification_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/video_reposters_cubit.dart';
 import 'package:openvine/widgets/video_recorder/modes/upload/upload_explainer_constants.dart';
+import 'package:reposts_repository/reposts_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -57,6 +65,13 @@ class _MockVideosRepository extends Mock implements VideosRepository {}
 
 class _MockCollaboratorConfirmationRepository extends Mock
     implements CollaboratorConfirmationRepository {}
+
+class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
+
+class _MockVideoClipImportService extends Mock
+    implements VideoClipImportService {}
+
+class _MockRepostsRepository extends Mock implements RepostsRepository {}
 
 /// Signs in a viewer who is neither the creator nor a collaborator.
 List<Override> _thirdPartyViewerOverrides({
@@ -2872,6 +2887,113 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Sounds'), findsOneWidget);
         expect(find.text('Original sound'), findsOneWidget);
+      },
+    );
+  });
+
+  group('$MetadataExpandedSheet.show', () {
+    late _MockBookmarksRepository bookmarksRepository;
+    late _MockRepostsRepository repostsRepository;
+
+    setUp(() {
+      bookmarksRepository = _MockBookmarksRepository();
+      when(
+        bookmarksRepository.syncGlobalBookmarks,
+      ).thenAnswer((_) async => false);
+      repostsRepository = _MockRepostsRepository();
+      when(
+        () => repostsRepository.fetchEventReposters(
+          eventId: any(named: 'eventId'),
+          addressableId: any(named: 'addressableId'),
+        ),
+      ).thenAnswer((_) async => const RepostersPage(pubkeys: []));
+    });
+
+    List<Override> sheetOverrides({required String viewerPubkey}) => [
+      authServiceProvider.overrideWithValue(
+        createMockAuthService(
+          authState: AuthState.authenticated,
+          currentPublicKeyHex: viewerPubkey,
+        ),
+      ),
+      bookmarksRepositoryProvider.overrideWith((ref) => bookmarksRepository),
+      videoClipImportServiceProvider.overrideWithValue(
+        _MockVideoClipImportService(),
+      ),
+      repostsRepositoryProvider.overrideWithValue(repostsRepository),
+      isFeatureEnabledProvider(FeatureFlag.debugTools).overrideWithValue(false),
+      fetchUserProfileProvider(
+        _creatorPubkey,
+      ).overrideWith((ref) async => _makeProfile(_creatorPubkey, 'Creator')),
+    ];
+
+    Future<void> openSheet(
+      WidgetTester tester, {
+      required VideoEvent video,
+      required String viewerPubkey,
+    }) async {
+      await tester.pumpWidget(
+        buildSubject(
+          providerOverrides: sheetOverrides(viewerPubkey: viewerPubkey),
+          child: Builder(
+            builder: (context) => TextButton(
+              onPressed: () =>
+                  unawaited(MetadataExpandedSheet.show(context, video)),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgetsWithSurfaceSize(
+      'renders the action row between the stats row and the creator',
+      (tester) async {
+        await openSheet(
+          tester,
+          video: _makeVideo(title: 'Classic', rawTags: {'platform': 'vine'}),
+          viewerPubkey: _thirdPartyViewer,
+        );
+
+        final l10n = _l10n(tester);
+        expect(find.text(l10n.shareSheetAddToClips), findsOneWidget);
+        expect(find.text(l10n.shareMenuEditVideo), findsNothing);
+
+        final statsY = tester
+            .getTopLeft(find.byType(MetadataStatsRow, skipOffstage: false))
+            .dy;
+        final actionsY = tester
+            .getTopLeft(
+              find.byType(MetadataActionsSection, skipOffstage: false),
+            )
+            .dy;
+        final creatorY = tester
+            .getTopLeft(
+              find.byType(MetadataCreatorSection, skipOffstage: false),
+            )
+            .dy;
+
+        expect(statsY, lessThan(actionsY));
+        expect(actionsY, lessThan(creatorY));
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'offers Edit and Delete on the viewer own video',
+      (
+        tester,
+      ) async {
+        await openSheet(
+          tester,
+          video: _makeVideo(title: 'Mine'),
+          viewerPubkey: _creatorPubkey,
+        );
+
+        final l10n = _l10n(tester);
+        expect(find.text(l10n.shareMenuEditVideo), findsOneWidget);
+        expect(find.text(l10n.shareMenuDeleteVideo), findsOneWidget);
       },
     );
   });
