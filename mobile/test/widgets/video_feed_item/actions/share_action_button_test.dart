@@ -9,6 +9,8 @@ import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:go_router/go_router.dart';
@@ -697,6 +699,7 @@ void main() {
         Future<void> pumpSheet(
           WidgetTester tester, {
           bool debugTools = false,
+          BookmarksRepository Function(Ref ref)? bookmarks,
         }) async {
           await tester.pumpWidget(
             testMaterialApp(
@@ -708,9 +711,12 @@ void main() {
                 videoSharingServiceProvider.overrideWith(
                   (ref) => mockVideoSharingService,
                 ),
-                bookmarksRepositoryProvider.overrideWithValue(
-                  bookmarksRepository,
-                ),
+                if (bookmarks == null)
+                  bookmarksRepositoryProvider.overrideWithValue(
+                    bookmarksRepository,
+                  )
+                else
+                  bookmarksRepositoryProvider.overrideWith(bookmarks),
                 isFeatureEnabledProvider(
                   FeatureFlag.debugTools,
                 ).overrideWith((ref) => debugTools),
@@ -777,6 +783,63 @@ void main() {
           expect(find.text(l10n.shareWithTitle), findsNothing);
           expect(find.text(l10n.shareAddedToBookmarks), findsOneWidget);
         });
+
+        testWidgets(
+          'saves through the bookmarks repository that replaced the one the '
+          'sheet opened with',
+          (tester) async {
+            stubBookmarkStatus(saved: false);
+            final replacement = _MockBookmarksRepository();
+            when(
+              replacement.syncGlobalBookmarks,
+            ).thenAnswer((_) async => false);
+            when(
+              () => replacement.isVideoBookmarkedGlobally(
+                any(),
+                addressableId: any(named: 'addressableId'),
+              ),
+            ).thenReturn(false);
+            when(
+              () => replacement.toggleVideoInGlobalBookmarks(
+                any(),
+                addressableId: any(named: 'addressableId'),
+              ),
+            ).thenAnswer(
+              (_) async => const BookmarkToggleResult(
+                succeeded: true,
+                wasBookmarked: false,
+                isBookmarked: true,
+              ),
+            );
+            final activeBookmarks = StateProvider<BookmarksRepository>(
+              (ref) => bookmarksRepository,
+            );
+            await pumpSheet(
+              tester,
+              bookmarks: (ref) => ref.watch(activeBookmarks),
+            );
+
+            ProviderScope.containerOf(
+              tester.element(find.text(l10n.shareWithTitle)),
+            ).read(activeBookmarks.notifier).state = replacement;
+            await tester.pumpAndSettle();
+            await tester.tap(find.text(l10n.shareSheetSave));
+            await tester.pumpAndSettle();
+
+            verify(
+              () => replacement.toggleVideoInGlobalBookmarks(
+                testVideo.id,
+                addressableId: any(named: 'addressableId'),
+              ),
+            ).called(1);
+            verifyNever(
+              () => bookmarksRepository.toggleVideoInGlobalBookmarks(
+                any(),
+                addressableId: any(named: 'addressableId'),
+              ),
+            );
+          },
+        );
 
         testWidgets('Add to clips prompts for a title on an own video', (
           tester,

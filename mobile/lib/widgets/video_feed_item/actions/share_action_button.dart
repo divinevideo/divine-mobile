@@ -26,11 +26,9 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
-import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
-import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/services/video_sharing_service.dart';
@@ -49,6 +47,7 @@ import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_items.dart';
+import 'package:openvine/widgets/video_feed_item/actions/video_content_actions_scope.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:openvine/widgets/watermark_download_progress_sheet.dart';
@@ -162,7 +161,6 @@ class _UnifiedShareSheet extends ConsumerStatefulWidget {
 class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
   final TextEditingController _messageController = TextEditingController();
   late final ShareSheetBloc _shareSheetBloc;
-  late final VideoContentActionsBloc _videoContentActionsBloc;
   OwnerVideoActionsCubit? _ownerVideoActionsCubit;
   VideoCrosspostCubit? _crosspostCubit;
   bool _crosspostRowExposed = false;
@@ -191,12 +189,6 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
           ref.read(authServiceProvider).currentPublicKeyHex ?? '',
       cacheManager: openVineImageCache,
     )..add(const ShareSheetContactsLoadRequested());
-    _videoContentActionsBloc = VideoContentActionsBloc(
-      video: widget.video,
-      relayUrl: ref.read(currentEnvironmentProvider).relayUrl,
-      bookmarksRepository: ref.read(bookmarksRepositoryProvider),
-      videoClipImportService: ref.read(videoClipImportServiceProvider),
-    )..add(const VideoContentBookmarkStatusRequested());
   }
 
   void _logCrosspostRowExposure() {
@@ -217,10 +209,6 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     _closeCubitIfPresent(_crosspostCubit, 'crosspost');
     _closeCubitIfPresent(_ownerVideoActionsCubit, 'owner video actions');
     _runShareDetached(_shareSheetBloc.close(), 'close share sheet bloc');
-    _runShareDetached(
-      _videoContentActionsBloc.close(),
-      'close video content actions bloc',
-    );
     _messageController.dispose();
     super.dispose();
   }
@@ -273,52 +261,53 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       ),
     };
 
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider.value(value: _shareSheetBloc),
-        BlocProvider.value(value: _videoContentActionsBloc),
-      ],
-      child: MultiBlocListener(
-        listeners: [
-          BlocListener<ShareSheetBloc, ShareSheetState>(
-            listenWhen: (prev, curr) =>
-                curr.actionResult != null &&
-                prev.actionResult != curr.actionResult,
-            listener: _handleActionResult,
-          ),
-          // Screen readers get no signal from the tick/composer swap when a
-          // recipient is added — announce it.
-          BlocListener<ShareSheetBloc, ShareSheetState>(
-            listenWhen: (prev, curr) =>
-                curr.selectedRecipients.length > prev.selectedRecipients.length,
-            listener: (context, state) {
-              _runShareDetached(
-                SemanticsService.sendAnnouncement(
-                  View.of(context),
-                  context.l10n.shareSelectedRecipientAnnouncement(
-                    // Non-null for every selectable row: `_ContactItem` and
-                    // `FindPeopleSheet` both resolve the name through
-                    // `dmPeerDisplayName` before handing the recipient over.
-                    state.selectedRecipients.last.displayName ??
-                        UserProfile.defaultDisplayNameFor(
-                          state.selectedRecipients.last.pubkey,
-                        ),
+    return BlocProvider.value(
+      value: _shareSheetBloc,
+      child: VideoContentActionsScope(
+        video: widget.video,
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<ShareSheetBloc, ShareSheetState>(
+              listenWhen: (prev, curr) =>
+                  curr.actionResult != null &&
+                  prev.actionResult != curr.actionResult,
+              listener: _handleActionResult,
+            ),
+            // Screen readers get no signal from the tick/composer swap when a
+            // recipient is added — announce it.
+            BlocListener<ShareSheetBloc, ShareSheetState>(
+              listenWhen: (prev, curr) =>
+                  curr.selectedRecipients.length >
+                  prev.selectedRecipients.length,
+              listener: (context, state) {
+                _runShareDetached(
+                  SemanticsService.sendAnnouncement(
+                    View.of(context),
+                    context.l10n.shareSelectedRecipientAnnouncement(
+                      // Non-null for every selectable row: `_ContactItem` and
+                      // `FindPeopleSheet` both resolve the name through
+                      // `dmPeerDisplayName` before handing the recipient over.
+                      state.selectedRecipients.last.displayName ??
+                          UserProfile.defaultDisplayNameFor(
+                            state.selectedRecipients.last.pubkey,
+                          ),
+                    ),
+                    Directionality.of(context),
                   ),
-                  Directionality.of(context),
-                ),
-                'announce selected share recipient',
-              );
+                  'announce selected share recipient',
+                );
+              },
+            ),
+          ],
+          child: VideoContentActionsFeedbackListener(
+            child: switch (_crosspostCubit) {
+              null => ownerAwareSheetView,
+              final cubit => BlocProvider<VideoCrosspostCubit>.value(
+                value: cubit,
+                child: ownerAwareSheetView,
+              ),
             },
           ),
-        ],
-        child: VideoContentActionsFeedbackListener(
-          child: switch (_crosspostCubit) {
-            null => ownerAwareSheetView,
-            final cubit => BlocProvider<VideoCrosspostCubit>.value(
-              value: cubit,
-              child: ownerAwareSheetView,
-            ),
-          },
         ),
       ),
     );

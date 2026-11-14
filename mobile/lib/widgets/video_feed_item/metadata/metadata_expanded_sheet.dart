@@ -15,13 +15,12 @@ import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/environment_provider.dart';
-import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/proofmode_helpers.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/video_feed_item/actions/owner_video_actions_setup.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
+import 'package:openvine/widgets/video_feed_item/actions/video_content_actions_scope.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_links_section.dart';
@@ -71,7 +70,6 @@ class MetadataExpandedSheet extends StatelessWidget {
     final container = ProviderScope.containerOf(context, listen: false);
     final repostsRepository = container.read(repostsRepositoryProvider);
     final isOwnVideo = isViewerOwnVideo(container, video);
-    final relayUrl = container.read(currentEnvironmentProvider).relayUrl;
 
     return context.showVideoPausingVineBottomSheet<void>(
       showHeader: false,
@@ -93,9 +91,8 @@ class MetadataExpandedSheet extends StatelessWidget {
               create: (_) => createOwnerVideoActionsCubit(container),
             ),
         ],
-        child: _VideoContentActionsScope(
+        child: VideoContentActionsScope(
           video: video,
-          relayUrl: relayUrl,
           child: VideoContentActionsFeedbackListener(
             child: _MetadataContent(
               video: video,
@@ -111,42 +108,6 @@ class MetadataExpandedSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _MetadataContent(video: video);
-  }
-}
-
-/// Provides the sheet's [VideoContentActionsBloc], built again whenever the
-/// bookmarks repository is replaced.
-///
-/// The repository is rebuilt, and the old one disposed, when the Nostr client
-/// is replaced, for instance when a restored session gains its signer while
-/// the sheet is open. A bloc holding the old one would save through a
-/// disposed client.
-class _VideoContentActionsScope extends ConsumerWidget {
-  const _VideoContentActionsScope({
-    required this.video,
-    required this.relayUrl,
-    required this.child,
-  });
-
-  final VideoEvent video;
-  final String relayUrl;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final bookmarksRepository = ref.watch(bookmarksRepositoryProvider);
-    return BlocProvider<VideoContentActionsBloc>(
-      key: ValueKey(bookmarksRepository),
-      create: (_) => VideoContentActionsBloc(
-        video: video,
-        relayUrl: relayUrl,
-        bookmarksRepository: bookmarksRepository,
-        // Read, not watched: it rebuilds on every content-filter change,
-        // which would reset the bloc mid-import.
-        videoClipImportService: ref.read(videoClipImportServiceProvider),
-      )..add(const VideoContentBookmarkStatusRequested()),
-      child: child,
-    );
   }
 }
 
