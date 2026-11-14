@@ -102,7 +102,7 @@ create whatever else the screen needs yourself.
 | `bad math expression` in a zsh one-liner | In zsh `GID` is the shell's group id, an integer, so assigning a gist id to it fails. Use another name, e.g. `GIST_ID`. |
 | Build fails: a plugin "requires minimum platform version 16.0" | Flutter left the generated Swift package below iOS 16, which happens on a cold machine or a fresh worktree. The failed build repairs it, and `sim_up.sh` builds once more; if that fails too, see `.claude/rules/ios_build_troubleshooting.md` (cause 3). |
 | `flutter pub get` fails with an rsync `mkdir … SourcePackages` error | It happens in a fresh worktree. `sim_up.sh` pre-creates `build/{ios,macos}/SourcePackages`. |
-| Disk fills | Free space dropped by about 8 GB during one build: `mobile/build`, DerivedData and caches. The stack's images add about 10 GB the first time. Check `df -h /System/Volumes/Data` first, and don't start with less than about 12 GB free. |
+| Disk fills | Free space dropped by about 8 GB during one build: `mobile/build`, DerivedData and caches. The stack's images add about 10 GB the first time. Check `df -h /System/Volumes/Data` first: start with about 12 GB free when the stack's images are already pulled, about 20 GB when they are not. |
 
 ## Never
 
