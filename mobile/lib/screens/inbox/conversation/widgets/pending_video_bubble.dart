@@ -4,6 +4,7 @@
 import 'dart:typed_data';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:intl/intl.dart' show NumberFormat;
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/outgoing_video_dm.dart';
@@ -42,7 +43,9 @@ class PendingVideoBubble extends StatelessWidget {
     final l10n = context.l10n;
     final isFailed = entry.phase == OutgoingVideoDmPhase.failed;
     final isUploading = entry.phase == OutgoingVideoDmPhase.uploading;
-    final percent = ((entry.uploadProgress ?? 0) * 100).round().clamp(0, 100);
+    final percent = NumberFormat.percentPattern(
+      l10n.localeName,
+    ).format((entry.uploadProgress ?? 0).clamp(0.0, 1.0));
     final statusText = switch (entry.phase) {
       OutgoingVideoDmPhase.queued => l10n.dmPendingVideoWaiting,
       OutgoingVideoDmPhase.checking ||

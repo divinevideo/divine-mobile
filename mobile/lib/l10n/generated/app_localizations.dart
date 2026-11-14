@@ -6727,11 +6727,11 @@ abstract class AppLocalizations {
   /// **'Preparing…'**
   String get dmPendingVideoPreparing;
 
-  /// Status line on an outgoing video in a DM conversation while it uploads, with the percent uploaded so far.
+  /// Status line on an outgoing video in a DM conversation while it uploads. {percent} is the share uploaded so far, already formatted for the locale with its percent sign (for example 42% in English, 42 % in French).
   ///
   /// In en, this message translates to:
-  /// **'Uploading {percent}%'**
-  String dmPendingVideoUploading(int percent);
+  /// **'Uploading {percent}'**
+  String dmPendingVideoUploading(String percent);
 
   /// Status line on an outgoing video in a DM conversation after the upload, while the message is being delivered.
   ///
@@ -6745,11 +6745,11 @@ abstract class AppLocalizations {
   /// **'Remove'**
   String get dmPendingVideoRemove;
 
-  /// Screen reader label for an outgoing video in a DM conversation that is uploading, with the percent uploaded so far.
+  /// Screen reader label for an outgoing video in a DM conversation that is uploading. {percent} is the share uploaded so far, already formatted for the locale with its percent sign (for example 42% in English, 42 % in French).
   ///
   /// In en, this message translates to:
-  /// **'Sending video, {percent}%'**
-  String dmPendingVideoSemantics(int percent);
+  /// **'Sending video, {percent}'**
+  String dmPendingVideoSemantics(String percent);
 
   /// Screen reader label for an outgoing video in a DM conversation that failed to send.
   ///

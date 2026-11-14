@@ -32,7 +32,9 @@ Widget _host(
   OutgoingVideoDm entry, {
   VoidCallback? onRetry,
   VoidCallback? onRemove,
+  Locale? locale,
 }) => MaterialApp(
+  locale: locale,
   localizationsDelegates: appLocalizationsDelegates,
   supportedLocales: AppLocalizations.supportedLocales,
   // A thread scrolls, so a tall bubble is not clipped by the test surface.
@@ -102,7 +104,7 @@ void main() {
           ),
         );
 
-        expect(find.text(l10n.dmPendingVideoUploading(42)), findsOneWidget);
+        expect(find.text(l10n.dmPendingVideoUploading('42%')), findsOneWidget);
         expect(_ring(tester).value, equals(0.42));
       });
 
@@ -113,8 +115,57 @@ void main() {
           _host(_entry(phase: OutgoingVideoDmPhase.uploading)),
         );
 
-        expect(find.text(l10n.dmPendingVideoUploading(0)), findsOneWidget);
+        expect(find.text(l10n.dmPendingVideoUploading('0%')), findsOneWidget);
       });
+
+      testWidgets('uploading formats the percent for the locale', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _host(
+            _entry(
+              phase: OutgoingVideoDmPhase.uploading,
+              uploadProgress: 0.42,
+            ),
+            locale: const Locale('fr'),
+          ),
+        );
+
+        // French puts a (narrow) no-break space before the percent sign.
+        expect(
+          find.textContaining(RegExp('42[\u00A0\u202F ]%')),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('uploading clamps progress past the end to 100 percent', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _host(
+            _entry(phase: OutgoingVideoDmPhase.uploading, uploadProgress: 1.5),
+          ),
+        );
+
+        expect(find.text(l10n.dmPendingVideoUploading('100%')), findsOneWidget);
+      });
+
+      for (final locale in AppLocalizations.supportedLocales) {
+        testWidgets('uploading renders a percent in $locale', (tester) async {
+          await tester.pumpWidget(
+            _host(
+              _entry(
+                phase: OutgoingVideoDmPhase.uploading,
+                uploadProgress: 0.42,
+              ),
+              locale: locale,
+            ),
+          );
+
+          expect(tester.takeException(), isNull);
+          expect(find.byType(PendingVideoBubble), findsOneWidget);
+        });
+      }
 
       testWidgets('publishing shows Sending', (tester) async {
         await tester.pumpWidget(
@@ -313,7 +364,7 @@ void main() {
         );
 
         expect(
-          find.bySemanticsLabel(l10n.dmPendingVideoSemantics(42)),
+          find.bySemanticsLabel(l10n.dmPendingVideoSemantics('42%')),
           findsOneWidget,
         );
         handle.dispose();

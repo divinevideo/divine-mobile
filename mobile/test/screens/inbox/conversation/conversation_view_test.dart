@@ -6441,7 +6441,7 @@ void main() {
           find.byKey(const ValueKey('pending-video-video-1')),
           findsOneWidget,
         );
-        expect(find.text(l10n.dmPendingVideoUploading(42)), findsOneWidget);
+        expect(find.text(l10n.dmPendingVideoUploading('42%')), findsOneWidget);
         expect(
           tester.getTopLeft(find.byType(PendingVideoBubble)).dy,
           greaterThan(
