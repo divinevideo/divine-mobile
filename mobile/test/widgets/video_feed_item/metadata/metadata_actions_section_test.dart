@@ -147,23 +147,45 @@ void main() {
         expect(find.text(l10n.shareSheetEventId), findsNothing);
       });
 
-      testWidgets('Edit and Delete before Save on the viewer own video', (
+      testWidgets('every action in order on the viewer own video', (
         tester,
       ) async {
         stubContentActions();
+        final video = _video(
+          tags: const [
+            ['allow_video_reuse', 'true'],
+          ],
+        );
+        expect(video.allowVideoReuse, isTrue);
+
         await tester.pumpWidget(
-          buildSubject(video: _video(), ownerCubit: stubbedOwnerCubit()),
+          buildSubject(
+            video: video,
+            ownerCubit: stubbedOwnerCubit(),
+            debugTools: true,
+          ),
         );
 
-        final editX = tester.getTopLeft(find.text(l10n.shareMenuEditVideo)).dx;
-        final deleteX = tester
-            .getTopLeft(find.text(l10n.shareMenuDeleteVideo))
-            .dx;
-        final saveX = tester.getTopLeft(find.text(l10n.shareSheetSave)).dx;
+        final labels = [
+          l10n.shareMenuEditVideo,
+          l10n.shareMenuDeleteVideo,
+          l10n.shareSheetSave,
+          l10n.shareSheetAddToClips,
+          l10n.shareSheetAddToList,
+          l10n.shareSheetEventJson,
+          l10n.shareSheetEventId,
+        ];
+        final xs = [
+          for (final label in labels) tester.getTopLeft(find.text(label)).dx,
+        ];
 
-        expect(editX, lessThan(deleteX));
-        expect(deleteX, lessThan(saveX));
-        expect(find.text(l10n.shareSheetAddToClips), findsOneWidget);
+        for (var i = 1; i < xs.length; i++) {
+          expect(
+            xs[i - 1],
+            lessThan(xs[i]),
+            reason: '${labels[i - 1]} should come before ${labels[i]}',
+          );
+        }
       });
 
       testWidgets(
