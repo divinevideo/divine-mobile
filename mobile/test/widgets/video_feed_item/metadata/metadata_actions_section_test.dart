@@ -1,6 +1,8 @@
 // ABOUTME: Tests for the action row in the video info sheet.
 // ABOUTME: Covers which actions show for whom, their order, and their effects.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -55,7 +57,10 @@ void main() {
 
   late _MockVideoContentActionsBloc contentActions;
 
-  setUpAll(() => registerFallbackValue(const VideoContentSaveRequested()));
+  setUpAll(() {
+    registerFallbackValue(const VideoContentSaveRequested());
+    registerFallbackValue(_classicVine);
+  });
 
   setUp(() {
     contentActions = _MockVideoContentActionsBloc();
@@ -268,6 +273,98 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.text(l10n.shareFailedToAddBookmark), findsOneWidget);
       });
+    });
+    group('owner delete', () {
+      const openSheetLabel = 'open sheet';
+      final sheetList = find.byWidgetPredicate(
+        (widget) =>
+            widget is ListView && widget.scrollDirection == Axis.vertical,
+      );
+
+      testWidgets(
+        'confirms and closes the sheet after the row scrolls out of view',
+        (tester) async {
+          stubContentActions();
+          final ownerCubit = stubbedOwnerCubit() as _MockOwnerVideoActionsCubit;
+          final deleteStarted = Completer<OwnerVideoDeleteStart>();
+          when(
+            () => ownerCubit.deleteVideo(any()),
+          ).thenAnswer((_) => deleteStarted.future);
+          when(() => ownerCubit.cleanupCompletionFor(any())).thenReturn(null);
+          final video = _video();
+
+          await tester.pumpWidget(
+            testMaterialApp(
+              additionalOverrides: [
+                isFeatureEnabledProvider(
+                  FeatureFlag.debugTools,
+                ).overrideWithValue(false),
+              ],
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => Scaffold(
+                          body: MultiBlocProvider(
+                            providers: [
+                              BlocProvider<VideoContentActionsBloc>.value(
+                                value: contentActions,
+                              ),
+                              BlocProvider<OwnerVideoActionsCubit>.value(
+                                value: ownerCubit,
+                              ),
+                            ],
+                            child: ListView(
+                              children: [
+                                MetadataActionsSection(video: video),
+                                const SizedBox(height: 4000),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    child: const Text(openSheetLabel),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.tap(find.text(openSheetLabel));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(l10n.shareMenuDeleteVideo));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.shareMenuDelete));
+          await tester.pumpAndSettle();
+          verify(() => ownerCubit.deleteVideo(video)).called(1);
+
+          // Scroll well past the list's cache extent while the delete runs.
+          await tester.drag(sheetList, const Offset(0, -3000));
+          await tester.pumpAndSettle();
+
+          when(() => ownerCubit.state).thenReturn(
+            const OwnerVideoActionsState(
+              operations: {
+                _videoId: OwnerVideoOperationState(
+                  deleteStatus: OwnerVideoDeleteStatus.success,
+                  cleanupStatus: OwnerVideoCleanupStatus.confirmed,
+                ),
+              },
+            ),
+          );
+          deleteStarted.complete(OwnerVideoDeleteStart.started);
+          await tester.pumpAndSettle();
+
+          expect(sheetList, findsNothing);
+          expect(find.text(openSheetLabel), findsOneWidget);
+          expect(
+            find.text(l10n.shareMenuDeleteCleanupConfirmed),
+            findsOneWidget,
+          );
+        },
+      );
     });
   });
 }

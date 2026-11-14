@@ -35,13 +35,29 @@ void _runDetached(Future<void> operation, String description) {
 /// video as the viewer's own exactly when an [OwnerVideoActionsCubit] is
 /// provided too. Renders nothing without the bloc, so the sheet can still be
 /// built on its own.
-class MetadataActionsSection extends ConsumerWidget {
+///
+/// Kept alive in the sheet's lazy list: its context drives flows that outlive
+/// a tap (delete, add to clips), and those must still close the sheet and
+/// report their outcome after the row has scrolled out of view.
+class MetadataActionsSection extends ConsumerStatefulWidget {
   const MetadataActionsSection({required this.video, super.key});
 
   final VideoEvent video;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MetadataActionsSection> createState() =>
+      _MetadataActionsSectionState();
+}
+
+class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final video = widget.video;
     final contentActions = context.read<VideoContentActionsBloc?>();
     if (contentActions == null) return const SizedBox.shrink();
 
@@ -132,12 +148,12 @@ class MetadataActionsSection extends ConsumerWidget {
   }
 
   void _editVideo(BuildContext context, OwnerVideoActionsCubit ownerCubit) {
-    if (ownerCubit.isDeleteInProgress(video.id)) return;
+    if (ownerCubit.isDeleteInProgress(widget.video.id)) return;
     _runDetached(
       presentAfterSheetDismiss<void>(context, (hostContext) {
         return VideoMetadataEditRouteData(
-          videoId: video.id,
-          $extra: video,
+          videoId: widget.video.id,
+          $extra: widget.video,
         ).push<void>(hostContext);
       }),
       'open video metadata editor',
