@@ -348,6 +348,36 @@ void main() {
   });
 
   group('UserProfileFound', () {
+    group('isOgDiviner', () {
+      final profile = UserProfileData.fromJson(_pubkey, const {'name': 'test'});
+
+      test('defaults to unknown through the base type', () {
+        final UserProfileResult result = UserProfileFound(profile: profile);
+
+        expect(result.isOgDiviner, isNull);
+      });
+
+      for (final value in <bool?>[true, false, null]) {
+        test('preserves $value in value identity', () {
+          final result = UserProfileFound(profile: profile, isOgDiviner: value);
+          final equal = UserProfileFound(profile: profile, isOgDiviner: value);
+
+          expect(result.isOgDiviner, value);
+          expect(result, equal);
+          expect(result.hashCode, equal.hashCode);
+          expect(result.toString(), contains('isOgDiviner: $value'));
+          for (final other in <bool?>[true, false, null]..remove(value)) {
+            final different = UserProfileFound(
+              profile: profile,
+              isOgDiviner: other,
+            );
+            expect(result, isNot(different));
+            expect(result.hashCode, isNot(different.hashCode));
+          }
+        });
+      }
+    });
+
     test('holds profile and optional sub-models', () {
       final profile = UserProfileData.fromJson(_pubkey, const {
         'name': 'alice',
@@ -374,6 +404,42 @@ void main() {
   });
 
   group('UserProfileNotPublished', () {
+    group('isOgDiviner', () {
+      test('defaults to unknown through the base type', () {
+        const UserProfileResult result = UserProfileNotPublished(
+          pubkey: _pubkey,
+        );
+
+        expect(result.isOgDiviner, isNull);
+      });
+
+      for (final value in <bool?>[true, false, null]) {
+        test('preserves $value in value identity', () {
+          final result = UserProfileNotPublished(
+            pubkey: _pubkey,
+            isOgDiviner: value,
+          );
+          final equal = UserProfileNotPublished(
+            pubkey: _pubkey,
+            isOgDiviner: value,
+          );
+
+          expect(result.isOgDiviner, value);
+          expect(result, equal);
+          expect(result.hashCode, equal.hashCode);
+          expect(result.toString(), contains('isOgDiviner: $value'));
+          for (final other in <bool?>[true, false, null]..remove(value)) {
+            final different = UserProfileNotPublished(
+              pubkey: _pubkey,
+              isOgDiviner: other,
+            );
+            expect(result, isNot(different));
+            expect(result.hashCode, isNot(different.hashCode));
+          }
+        });
+      }
+    });
+
     test('holds pubkey and optional sub-models', () {
       const social = ProfileSocialData(followerCount: 3, followingCount: 1);
 
@@ -433,6 +499,12 @@ void main() {
   });
 
   group(UserProfileVanished, () {
+    test('is never eligible through the base type', () {
+      const UserProfileResult result = UserProfileVanished(pubkey: _pubkey);
+
+      expect(result.isOgDiviner, isFalse);
+    });
+
     test('carries no social, stats, or engagement data', () {
       // Hard-nulled on the variant so a vanished account cannot have counters
       // cached for it even if a caller forgets to branch on the type.

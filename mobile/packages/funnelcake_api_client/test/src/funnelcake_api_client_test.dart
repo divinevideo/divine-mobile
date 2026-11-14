@@ -4660,6 +4660,63 @@ void main() {
     });
 
     group('getUserProfile', () {
+      group('isOgDiviner', () {
+        final cases = <String, Map<String, dynamic>>{
+          'true': {'is_og_diviner': true},
+          'false': {'is_og_diviner': false},
+          'absent': {},
+          'null': {'is_og_diviner': null},
+          'string': {'is_og_diviner': 'true'},
+          'number': {'is_og_diviner': 1},
+          'object': {'is_og_diviner': <String, dynamic>{}},
+          'list': {'is_og_diviner': <dynamic>[]},
+        };
+        for (final entry in cases.entries) {
+          for (final hasProfile in [true, false]) {
+            test('parses ${entry.key} with hasProfile=$hasProfile', () async {
+              final body = jsonEncode({
+                ...entry.value,
+                'profile': hasProfile ? {'name': 'test'} : null,
+              });
+              when(
+                () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+              ).thenAnswer((_) async => http.Response(body, 200));
+
+              final result = await client.getUserProfile(testPubkey);
+
+              expect(
+                result,
+                hasProfile
+                    ? isA<UserProfileFound>()
+                    : isA<UserProfileNotPublished>(),
+              );
+              final value = entry.value['is_og_diviner'];
+              expect(result!.isOgDiviner, value is bool ? value : null);
+            });
+          }
+        }
+
+        test('vanished suppresses a positive wire flag', () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => http.Response(
+              jsonEncode({
+                'profile': null,
+                'has_vanish_request': true,
+                'is_og_diviner': true,
+              }),
+              200,
+            ),
+          );
+
+          final result = await client.getUserProfile(testPubkey);
+
+          expect(result, isA<UserProfileVanished>());
+          expect(result!.isOgDiviner, isFalse);
+        });
+      });
+
       test('returns UserProfileFound on successful response', () async {
         const validResponse = '''
 {
@@ -5978,6 +6035,85 @@ void main() {
     }); // end group('getRecommendations')
 
     group('getBulkProfiles', () {
+      group('isOgDiviner', () {
+        final cases = <String, Map<String, dynamic>>{
+          'true': {'is_og_diviner': true},
+          'false': {'is_og_diviner': false},
+          'absent': {},
+          'null': {'is_og_diviner': null},
+          'string': {'is_og_diviner': 'true'},
+          'number': {'is_og_diviner': 1},
+          'object': {'is_og_diviner': <String, dynamic>{}},
+          'list': {'is_og_diviner': <dynamic>[]},
+        };
+        for (final entry in cases.entries) {
+          for (final hasProfile in [true, false]) {
+            test('parses ${entry.key} with hasProfile=$hasProfile', () async {
+              final body = jsonEncode({
+                'users': [
+                  {
+                    'pubkey': 'synthetic-pubkey',
+                    ...entry.value,
+                    'profile': hasProfile ? {'name': 'test'} : null,
+                  },
+                ],
+              });
+              when(
+                () => mockHttpClient.post(
+                  any(),
+                  headers: any(named: 'headers'),
+                  body: any(named: 'body'),
+                ),
+              ).thenAnswer((_) async => http.Response(body, 200));
+
+              final response = await client.getBulkProfiles([
+                'synthetic-pubkey',
+              ]);
+              final result = response.profiles['synthetic-pubkey'];
+
+              expect(
+                result,
+                hasProfile
+                    ? isA<UserProfileFound>()
+                    : isA<UserProfileNotPublished>(),
+              );
+              final value = entry.value['is_og_diviner'];
+              expect(result!.isOgDiviner, value is bool ? value : null);
+            });
+          }
+        }
+
+        test('vanished suppresses a positive wire flag', () async {
+          when(
+            () => mockHttpClient.post(
+              any(),
+              headers: any(named: 'headers'),
+              body: any(named: 'body'),
+            ),
+          ).thenAnswer(
+            (_) async => http.Response(
+              jsonEncode({
+                'users': [
+                  {
+                    'pubkey': 'synthetic-pubkey',
+                    'profile': null,
+                    'has_vanish_request': true,
+                    'is_og_diviner': true,
+                  },
+                ],
+              }),
+              200,
+            ),
+          );
+
+          final response = await client.getBulkProfiles(['synthetic-pubkey']);
+          final result = response.profiles['synthetic-pubkey'];
+
+          expect(result, isA<UserProfileVanished>());
+          expect(result!.isOgDiviner, isFalse);
+        });
+      });
+
       test('returns profiles on success', () async {
         const validResponse = '''
 {
