@@ -8,8 +8,8 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/outgoing_video_dm.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/pending_video_bubble.dart';
-import 'package:openvine/services/video_dm_outbox.dart';
 
 OutgoingVideoDm _entry({
   OutgoingVideoDmPhase phase = OutgoingVideoDmPhase.queued,
