@@ -17,7 +17,8 @@ version: 1.0.0
 Run this branch on an iOS simulator against the repo's local Docker stack,
 with throwaway accounts that exist only there. Drive the app with Maestro and
 `idb`, capture with `simctl`, and host the images in a secret gist. Nothing
-touches production relays or real accounts. Ask the maintainer nothing for this.
+touches production relays or real accounts. Apart from the trust check in step 0,
+ask the maintainer nothing for this.
 
 `<skill-dir>` below is the directory containing this file. Scratch files go in
 `$SCRATCH`: run `export SCRATCH="${TMPDIR:-/tmp}/pr-screenshots"; mkdir -p "$SCRATCH"`
@@ -62,6 +63,7 @@ so the feeds are empty — create whatever data the screen needs yourself.
 
 ## Steps
 
+0. **Check the PR may be built here.** Building runs the PR's own code on this machine: `local_stack/up.sh` and its compose file, the Podfile and the Xcode build phases. Go on only when the PR comes from a branch in this repository (`gh pr view <n> --json isCrossRepository` is `false`) or its author is an org member (`gh api orgs/divinevideo/members/<login>` answers 204), and the request came from the person running this session or an org member. Otherwise stop and say why: a pull request from anyone else is reviewed, not run (`AGENT_TRUST_BOUNDARY.md` in divine-context).
 1. **Work from the PR's own worktree.** Screenshots must come from the code under review.
 2. **`sim_up.sh`.** It sets `BLOSSOM_PUBLIC_URL=http://localhost:43003`, starts `local_stack/up.sh`, boots the simulator, pins the status bar to 9:41, builds with `--dart-define=DEFAULT_ENV=LOCAL`, and installs the app. The first build takes about 5 minutes. Run it in the background with output going to a file.
 3. **Sign in** with `new_device_account.yaml`. Its `clearState: true` gives you a fresh install every run, so never `simctl erase`.
