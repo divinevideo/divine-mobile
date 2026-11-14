@@ -14,6 +14,10 @@ class _MockDmVideoSendService extends Mock implements DmVideoSendService {}
 /// Stands in for the signed-in account, so a test can switch it.
 final _signedIn = StateProvider<String?>((_) => null);
 
+/// Stands in for an auth state change that keeps the same account, such as
+/// an OAuth signer refresh or the RPC capability coming up.
+final _authStateTick = StateProvider<int>((_) => 0);
+
 /// Stands in for whatever makes the DM repository rebuild.
 final _repositoryGeneration = StateProvider<int>((_) => 0);
 
@@ -21,10 +25,19 @@ void main() {
   final first = 'a' * 64;
   final second = 'b' * 64;
 
+  late int accountIdBuilds;
+
   ProviderContainer buildContainer() {
+    accountIdBuilds = 0;
     final container = ProviderContainer(
       overrides: [
-        currentAccountIdProvider.overrideWith((ref) => ref.watch(_signedIn)),
+        // Mirrors the real provider: rebuilt on every auth state change,
+        // returning the signed-in pubkey.
+        currentAccountIdProvider.overrideWith((ref) {
+          ref.watch(_authStateTick);
+          accountIdBuilds++;
+          return ref.watch(_signedIn);
+        }),
         dmVideoSendServiceProvider.overrideWith((ref) {
           ref.watch(_repositoryGeneration);
           return _MockDmVideoSendService();
@@ -48,6 +61,19 @@ void main() {
         container.read(dmVideoSendServiceProvider),
         isNot(same(serviceBefore)),
       );
+      expect(container.read(videoDmOutboxProvider), same(before));
+    });
+
+    test('keeps the same outbox across an auth state change that keeps the '
+        'account', () {
+      final container = buildContainer();
+      final before = container.read(videoDmOutboxProvider);
+      final buildsBefore = accountIdBuilds;
+
+      container.read(_authStateTick.notifier).state++;
+
+      expect(container.read(currentAccountIdProvider), equals(first));
+      expect(accountIdBuilds, greaterThan(buildsBefore));
       expect(container.read(videoDmOutboxProvider), same(before));
     });
 
