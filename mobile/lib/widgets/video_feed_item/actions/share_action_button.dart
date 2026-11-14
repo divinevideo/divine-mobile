@@ -6,12 +6,10 @@ import 'dart:async';
 
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
@@ -53,13 +51,16 @@ import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/video_feed_item/actions/actions.dart';
+import 'package:openvine/widgets/video_feed_item/actions/clip_title_sheet.dart';
+import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
+import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
+import 'package:openvine/widgets/video_feed_item/actions/video_content_action_rules.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:openvine/widgets/watermark_download_progress_sheet.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:unified_logger/unified_logger.dart';
-import 'package:visibility_detector/visibility_detector.dart';
 
 part 'share_sheet_header.dart';
 part 'share_sheet_message_input.dart';
@@ -235,41 +236,16 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     _runShareDetached(cubit.close(), 'close $name cubit');
   }
 
-  /// Dismisses the share sheet from a context inside it.
-  ///
-  /// Not `popModalIfMounted`: this sheet is dismissed from bloc listeners
-  /// rather than from a button, so it has to survive being reached while
-  /// GoRouter is out of the tree. It shares that helper's mounted guard —
-  /// `canPop` reads an inherited widget and `Navigator.of` walks ancestors,
-  /// and both throw on a context whose route is already gone (#6512).
-  void _safePop(BuildContext ctx) {
-    if (!ctx.mounted) {
-      return;
-    }
-    try {
-      if (ctx.canPop()) {
-        ctx.pop();
-        return;
-      }
-    } catch (_) {
-      // GoRouter context extensions throw when the router is not in the
-      // widget tree (e.g., inside modal bottom sheets). Fall through to
-      // the standard Navigator as a safe fallback.
-    }
-    Navigator.of(ctx).maybePop();
-  }
-
   @override
   Widget build(BuildContext context) {
     // Provider scope and owner actions must come from the same decision made
     // in initState. Auth can change while the sheet is open; recomputing here
     // could expose owner UI without installing its cubit.
     final isOwnContent = _ownerVideoActionsCubit != null;
-    final canAddVideoToClips =
-        (widget.video.isOriginalVine ||
-            isOwnContent ||
-            widget.video.allowVideoReuse) &&
-        !kIsWeb;
+    final showAddVideoToClips = canAddVideoToClips(
+      video: widget.video,
+      isOwnContent: isOwnContent,
+    );
 
     final sheetView = _UnifiedShareSheetView(
       video: widget.video,
@@ -281,7 +257,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       onDeleteVideo: isOwnContent ? _handleDeleteVideo : null,
       onSaveOriginal: isOwnContent ? _handleSaveOriginal : null,
       onSaveWithWatermark: _handleSaveWithWatermark,
-      onAddVideoToClips: canAddVideoToClips ? _handleAddVideoToClips : null,
+      onAddVideoToClips: showAddVideoToClips ? _handleAddVideoToClips : null,
       onCrosspost:
           isOwnContent &&
               ref.watch(crosspostingAvailabilityProvider) !=
@@ -366,7 +342,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         // The snackbar action outlives the sheet, so capture a context that
         // survives the pop for the conversation push.
         final hostContext = Navigator.of(context, rootNavigator: true).context;
-        _safePop(context);
+        dismissSheet(context);
         messenger.showSnackBar(
           DivineSnackbarContainer.snackBar(
             sharedWithText,
@@ -410,7 +386,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         // Read before the pop deactivates this context.
         final view = View.of(context);
         final textDirection = Directionality.of(context);
-        _safePop(context);
+        dismissSheet(context);
         messenger
           ..hideCurrentSnackBar()
           ..showSnackBar(
@@ -427,7 +403,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         // The whole send threw, so no recipient's outcome is known. Nothing
         // is kept open: a retry from here could deliver a second copy of
         // anything that did go out.
-        _safePop(context);
+        dismissSheet(context);
         messenger
           ..hideCurrentSnackBar()
           ..showSnackBar(
@@ -465,7 +441,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
                       ? context.l10n.shareFailedToRemoveBookmark
                       : context.l10n.shareFailedToAddBookmark,
               };
-        _safePop(context);
+        dismissSheet(context);
         messenger.showSnackBar(
           DivineSnackbarContainer.snackBar(snackText, error: !succeeded),
         );
@@ -478,7 +454,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
                 libraryTitle ?? context.l10n.shareSheetUntitledClip,
               )
             : context.l10n.shareSheetAddToClipsFailed;
-        _safePop(context);
+        dismissSheet(context);
         messenger.showSnackBar(
           DivineSnackbarContainer.snackBar(snackText, error: !succeeded),
         );
@@ -492,7 +468,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
           Clipboard.setData(ClipboardData(text: text)),
           'copy share value to clipboard',
         );
-        _safePop(context);
+        dismissSheet(context);
         messenger.showSnackBar(DivineSnackbarContainer.snackBar(snackText));
       case ShareSheetShareViaTriggered(
         :final shareUrl,
@@ -527,7 +503,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     final initialTitle = VideoClipImportService.defaultLibraryTitleFor(
       widget.video,
     );
-    final libraryTitle = await _ClipTitleSheet.show(
+    final libraryTitle = await ClipTitleSheet.show(
       context: context,
       initialTitle: initialTitle,
     );
@@ -552,7 +528,8 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
 
   void _handleAddToList() {
     _runShareDetached(
-      _presentAfterDismiss<void>(
+      presentAfterSheetDismiss<void>(
+        context,
         (hostContext) => showSelectListSheet(hostContext, video: widget.video),
       ),
       'present list picker sheet',
@@ -564,7 +541,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       return;
     }
     _runShareDetached(
-      _presentAfterDismiss<void>((hostContext) {
+      presentAfterSheetDismiss<void>(context, (hostContext) {
         return VideoMetadataEditRouteData(
           videoId: widget.video.id,
           $extra: widget.video,
@@ -601,7 +578,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         localizedOwnerVideoDeleteSuccessMessage(context, operation),
         error: operation.cleanupStatus == OwnerVideoCleanupStatus.failed,
       );
-      _safePop(context);
+      dismissSheet(context);
       messenger.showSnackBar(snackBar);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -665,7 +642,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     if (!mounted) return;
     final connections = state.connectedConnections;
     if (connections.isNotEmpty) {
-      await _presentAfterDismiss<void>((hostContext) {
+      await presentAfterSheetDismiss<void>(context, (hostContext) {
         return showCrosspostSheet(
           context: hostContext,
           video: widget.video,
@@ -676,12 +653,12 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     }
 
     final container = ProviderScope.containerOf(context, listen: false);
-    _safePop(context);
+    dismissSheet(context);
     await openCrosspostingSetup(container);
   }
 
   Future<void> _handleSaveOriginal() async {
-    await _presentAfterDismiss<void>((hostContext) {
+    await presentAfterSheetDismiss<void>(context, (hostContext) {
       return showSaveOriginalSheet(
         context: hostContext,
         video: widget.video,
@@ -699,141 +676,14 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       fallbackAuthorName: widget.video.displayAuthorName,
     );
 
-    await _presentAfterDismiss<void>((hostContext) {
+    if (!mounted) return;
+    await presentAfterSheetDismiss<void>(context, (hostContext) {
       return showWatermarkDownloadSheet(
         context: hostContext,
         video: widget.video,
         watermarkText: watermarkText,
       );
     });
-  }
-
-  /// Dismisses this sheet, then presents [presenter] from the root navigator.
-  ///
-  /// Callers may reach this after an `await`, when the sheet has already been
-  /// closed and disposed; reading [context] then throws, so it does nothing.
-  Future<T?> _presentAfterDismiss<T>(
-    Future<T?> Function(BuildContext hostContext) presenter,
-  ) async {
-    if (!mounted) return null;
-    final hostContext = Navigator.of(context, rootNavigator: true).context;
-    _safePop(context);
-    await Future<void>.delayed(Duration.zero);
-    if (!mounted || !hostContext.mounted) return null;
-    return presenter(hostContext);
-  }
-}
-
-class _ClipTitleSheet extends StatefulWidget {
-  const _ClipTitleSheet({required this.initialTitle});
-
-  final String initialTitle;
-
-  static Future<String?> show({
-    required BuildContext context,
-    required String initialTitle,
-  }) {
-    return VineBottomSheet.show<String>(
-      context: context,
-      showHeaderDivider: false,
-      body: _ClipTitleSheet(initialTitle: initialTitle),
-    );
-  }
-
-  @override
-  State<_ClipTitleSheet> createState() => _ClipTitleSheetState();
-}
-
-class _ClipTitleSheetState extends State<_ClipTitleSheet> {
-  late final TextEditingController _controller;
-
-  bool get _canSave => _controller.text.trim().isNotEmpty;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.initialTitle)
-      ..addListener(_onTitleChanged);
-  }
-
-  @override
-  void dispose() {
-    _controller
-      ..removeListener(_onTitleChanged)
-      ..dispose();
-    super.dispose();
-  }
-
-  void _onTitleChanged() => setState(() {});
-
-  void _save() {
-    final title = _controller.text.trim();
-    if (title.isEmpty) return;
-    Navigator.of(context).pop(title);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            20,
-            16,
-            16 + MediaQuery.viewInsetsOf(context).bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                context.l10n.shareSheetNameClipTitle,
-                textAlign: TextAlign.center,
-                style: VineTheme.headlineSmallFont(
-                  color: context.vineColors.primaryText,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                context.l10n.shareSheetNameClipSubtitle,
-                textAlign: TextAlign.center,
-                style: VineTheme.bodyLargeFont(
-                  color: context.vineColors.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 24),
-              DivineTextField(
-                controller: _controller,
-                labelText: context.l10n.shareSheetClipTitleLabel,
-                maxLength: 80,
-                maxLines: 1,
-                textInputAction: TextInputAction.done,
-                inputFormatters: [
-                  FilteringTextInputFormatter.singleLineFormatter,
-                ],
-                onSubmitted: (_) => _save(),
-                primaryWhenFilled: true,
-              ),
-              const SizedBox(height: 24),
-              DivineButton(
-                label: context.l10n.shareSheetSaveClip,
-                onPressed: _canSave ? _save : null,
-                expanded: true,
-              ),
-              const SizedBox(height: 12),
-              DivineButton(
-                label: context.l10n.commonCancel,
-                type: DivineButtonType.secondary,
-                onPressed: () => Navigator.of(context).pop(),
-                expanded: true,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 
