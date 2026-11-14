@@ -134,15 +134,17 @@ class VideoEditorClipLibrarySaveService {
   /// [clip] with its own sound turned back up when Extract audio moved that
   /// sound onto a track of its own.
   ///
-  /// Extracting mutes the clip and plays its sound from a track anchored to it,
+  /// Extracting mutes the clip and plays its sound from a track of its own,
   /// which [flattenClipForLibrary] would leave out with the rest of the session
   /// audio, saving a silent clip. The sound is still in the clip's file, so the
   /// saved clip plays it at that track's volume and equalizer. Effects only the
   /// track carries, such as fades or a voice effect, are not applied.
   ///
-  /// A clip that is not muted keeps its own volume. A clip with no extracted
-  /// track anchored to it stays muted: the user muted it, deleted its sound,
-  /// or moved that sound away from the picture.
+  /// A clip that is not muted keeps its own volume. A muted clip stays muted
+  /// unless an extracted track is still anchored to it. That stops being the
+  /// case once the user deletes, moves or changes the speed of that sound, or
+  /// splits the clip or turns it into a boomerang, and is never the case for a
+  /// clip extracted under a speed curve, whose track is not anchored.
   static DivineVideoClip withExtractedSound(
     DivineVideoClip clip,
     Iterable<AudioEvent> audioTracks,
