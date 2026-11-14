@@ -2,6 +2,9 @@
 # ABOUTME: Run: maestro test -e APP_ID=<bundle id> new_device_account.yaml
 appId: ${APP_ID}
 ---
+# The Nostr key lives in the keychain, which clearState keeps; without this the
+# app opens on "Continue as" the previous run's account.
+- clearKeychain
 - launchApp:
     clearState: true
 - extendedWaitUntil:
