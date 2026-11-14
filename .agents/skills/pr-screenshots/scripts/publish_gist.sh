@@ -11,14 +11,25 @@ shift
 
 WORK=$(mktemp -d "${SCRATCH:?set SCRATCH to the scratch folder for this run, see SKILL.md}/gist.XXXXXX")
 mkdir -p "$WORK/images"
+# Files are copied flat by name, so a duplicate name would overwrite an
+# earlier shot. APFS ignores case, so 01-Profile.png and 01-profile.png clash.
+names=()
+seen=" "
 for shot in "$@"; do
-  cp "$shot" "$WORK/images/"
+  name=$(basename "$shot")
+  [[ "$name" =~ ^[A-Za-z0-9._-]+\.png$ ]] \
+    || { echo "error: $shot: name screenshots NN-state.png (letters, digits, . _ -)" >&2; exit 2; }
+  folded=$(tr '[:upper:]' '[:lower:]' <<<"$name")
+  case "$seen" in *" $folded "*) echo "error: two screenshots are named $name" >&2; exit 2 ;; esac
+  seen="$seen$folded "
+  names+=("$name")
+  cp "$shot" "$WORK/images/$name"
   # Simulator shots are ~1200px wide; 600px keeps the PR readable and the gist small.
-  sips --resampleWidth 600 "$WORK/images/$(basename "$shot")" > /dev/null
+  sips --resampleWidth 600 "$WORK/images/$name" > /dev/null
 done
 
 if $DRY_RUN; then
-  for shot in "$WORK"/images/*.png; do echo "<img src=\"file://$shot\" width=\"240\">"; done
+  for name in "${names[@]}"; do echo "<img src=\"file://$WORK/images/$name\" width=\"240\">"; done
   exit 0
 fi
 
@@ -43,15 +54,14 @@ trap 'fail "publishing stopped at line $LINENO"' ERR
 
 OWNER=$(gh api user --jq .login)
 git clone -q "https://gist.github.com/$GIST_ID.git" "$WORK/gist"
-cp "$WORK"/images/*.png "$WORK/gist/"
-(cd "$WORK/gist" && git add ./*.png)
+for name in "${names[@]}"; do cp "$WORK/images/$name" "$WORK/gist/"; done
+git -C "$WORK/gist" add -- "${names[@]}"
 git -C "$WORK/gist" commit -q -m "Add screenshots"
 # Git alone has no login for gist.github.com; use gh's.
 git -C "$WORK/gist" -c credential.helper= -c credential.helper='!gh auth git-credential' push -q
 
-for shot in "$WORK"/images/*.png; do
-  file=$(basename "$shot")
-  url="https://gist.githubusercontent.com/$OWNER/$GIST_ID/raw/$file"
+for name in "${names[@]}"; do
+  url="https://gist.githubusercontent.com/$OWNER/$GIST_ID/raw/$name"
   status=$(curl -s -o /dev/null -w '%{http_code}' -L "$url")
   [ "$status" = "200" ] || fail "$url answered $status"
   echo "<img src=\"$url\" width=\"240\">"
