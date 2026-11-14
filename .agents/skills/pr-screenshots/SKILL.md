@@ -33,7 +33,7 @@ navigation map below before dumping.
 
 | Need | Do |
 |---|---|
-| App + backend running | `bash <skill-dir>/scripts/sim_up.sh <worktree-root>` → prints `UDID=` and `BUNDLE_ID=` |
+| App + backend running | `bash <skill-dir>/scripts/sim_up.sh <worktree-root>` → prints `UDID=`, `BUNDLE_ID=` and `STACK_STARTED=` |
 | Signed-in user | `maestro test -e APP_ID=<BUNDLE_ID> <skill-dir>/scripts/new_device_account.yaml` |
 | Someone to view or message | `bash <skill-dir>/scripts/make_account.sh "Sam Tester"` → npub |
 | Open a profile | Maestro `openLink: divine:///profile/<npub>` (three slashes), then `tapOn: {text: Open, optional: true}` |
@@ -41,7 +41,7 @@ navigation map below before dumping.
 | Tap inside the system photo picker | `idb ui tap --udid <UDID> <x> <y>` in **points** (pixels ÷ 3 on iPhone Pro) |
 | Add a video to Photos | `ffmpeg -f lavfi -i testsrc2=size=720x1280:rate=30:duration=6 -f lavfi -i sine=duration=6 -c:v libx264 -pix_fmt yuv420p -b:v 12M -c:a aac -shortest clip.mp4` then `xcrun simctl addmedia <UDID> clip.mp4` |
 | Dark / light | The app defaults to **Dark**, not System, so simulator appearance alone changes nothing. Switch in the app (see the navigation map), and also run `xcrun simctl ui <UDID> appearance light` so system sheets match |
-| Freeze an upload mid-way | `docker pause local_stack-blossom-proxy-1` before the send; `docker unpause` after the shot |
+| Freeze an upload mid-way | `docker compose -f local_stack/docker-compose.yml pause blossom-proxy` before the send; `… unpause blossom-proxy` straight after the shot. The stack is shared, so this freezes uploads for every session on it |
 | Capture | First wait for an element that loads **last**: "No videos yet" renders before the profile header, so wait for the header too. Then `xcrun simctl io <UDID> screenshot NN-state.png` and **Read the PNG** to check it shows what you claim |
 | Publish | `bash <skill-dir>/scripts/publish_gist.sh "PR <n> screenshots" NN-*.png` → `<img>` tags with verified raw URLs |
 | Put in PR | add a `## Screenshots` table of those tags with `gh pr edit <n> --body-file …` |
@@ -65,7 +65,7 @@ create whatever else the screen needs yourself.
 
 0. **Check the PR may be built here.** Building runs the PR's own code on this machine: `local_stack/up.sh` and its compose file, the Podfile and the Xcode build phases. Go on only when the PR comes from a branch in this repository (`gh pr view <n> --json isCrossRepository` is `false`) or its author is an org member (`gh api orgs/divinevideo/members/<login>` answers 204), and the request came from the person running this session or an org member. Otherwise stop and say why: a pull request from anyone else is reviewed, not run (`AGENT_TRUST_BOUNDARY.md` in divine-context).
 1. **Work from the PR's own worktree.** Screenshots must come from the code under review.
-2. **`sim_up.sh`.** It sets `BLOSSOM_PUBLIC_URL=http://localhost:43003`, writes the Keycast `master.key` a fresh worktree lacks, starts `local_stack/up.sh` and makes sure its refresh-interval tuning ran, boots the simulator, pins the status bar to 9:41, builds with `--dart-define=DEFAULT_ENV=LOCAL`, and installs the app. The first build takes about 5 minutes. Run it in the background with output going to a file.
+2. **`sim_up.sh`.** It reuses a local stack another session already started (printing `STACK_STARTED=no`); otherwise it sets `BLOSSOM_PUBLIC_URL=http://localhost:43003`, writes the Keycast `master.key` a fresh worktree lacks, starts `local_stack/up.sh` and makes sure its refresh-interval tuning ran. Then it boots the simulator, pins the status bar to 9:41, builds with `--dart-define=DEFAULT_ENV=LOCAL`, and installs the app. The first build takes about 5 minutes. Run it in the background with output going to a file.
 3. **Sign in** with `new_device_account.yaml`. It clears the keychain and the app's data before launch, so every run starts on a fresh welcome screen and no earlier account stays on the device; there is no need to `simctl erase`. `clearState` alone is not enough: the Nostr key lives in the keychain (`mobile/e2e/maestro/README.md`).
 4. **Create the other people the screen needs** with `make_account.sh`, then navigate. Write each step as a small Maestro flow. Run it with `perl -e 'alarm 240; exec @ARGV' maestro test flow.yaml` so a hung step cannot hang you. Write the flows in `$SCRATCH`, not in the repo.
 5. **Stage every state the PR claims, not just the happy path.** That includes in progress, failed, empty, after navigating away and back, and both appearances. A failure you produce for real, such as stopping a container, beats describing one.
@@ -73,7 +73,7 @@ create whatever else the screen needs yourself.
 7. **Publish** with `publish_gist.sh`. Run `--dry-run` first to check the files. It prints each URL only after checking it answers 200.
 8. **Write the PR section.** Add a table of states, one line on how they were captured (simulator, LOCAL stack, throwaway accounts, anything staged such as a paused container), and anything you noticed. Then fix any "Not verified" text that the screenshots now contradict. Check authorship before editing someone else's PR (`AGENTS.md`, "Working On An Existing PR").
 9. **Clean up:**
-   - `docker compose -f local_stack/docker-compose.yml down` (`local_stack` has no `down.sh`);
+   - stop the stack (`cd mobile && mise run local_down`) only if `sim_up.sh` printed `STACK_STARTED=yes` and no other session has started using it since. Every worktree shares the one `local_stack` compose project, so `down` stops it for everyone;
    - `xcrun simctl shutdown <UDID>`;
    - remove `mobile/build` (about 4 GB) and this worktree's Xcode output,
      `~/Library/Developer/Xcode/DerivedData/Runner-*`, about 2 GB. Check its
@@ -90,7 +90,8 @@ create whatever else the screen needs yourself.
 | Maestro `tapOn` fails inside the photo picker | The picker runs out of process. Use `idb ui tap` at point coordinates. |
 | Pressing Enter in the composer doesn't send | The field is multiline. Tap the `Send message` label. |
 | Notification permission sheet covers the app | `new_device_account.yaml` dismisses it. If it appears later, tap `Don’t Allow`. |
-| Every local upload finishes too fast to screenshot | `docker pause` the Blossom proxy, then capture. A long pause makes the send fail, which is useful for the failed-state shot. |
+| Every local upload finishes too fast to screenshot | Pause the Blossom proxy (see the quick reference), then capture. A long pause makes the send fail, which is useful for the failed-state shot. |
+| Seeded videos never load | The running stack was seeded for the Android emulator (`BLOSSOM_PUBLIC_URL` defaults to `10.0.2.2`). Only a stack `sim_up.sh` starts itself is seeded for the iOS simulator; publish your own videos instead. |
 | A profile header shows the previous profile's name | Known app bug: deep-linking to one profile over another reuses the name. Navigate home first if it matters for the shot. |
 | `nak event` hangs | The relay never sent `OK`. The scripts wrap it in `perl -e 'alarm …'`. Do the same for ad-hoc calls. |
 | `bad math expression` in a zsh one-liner | `$GID` is a reserved integer in zsh. Use another variable name, e.g. `GIST_ID`. |
