@@ -25,7 +25,6 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
@@ -45,6 +44,7 @@ import 'package:openvine/widgets/save_original_progress_sheet.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/video_feed_item/actions/actions.dart';
+import 'package:openvine/widgets/video_feed_item/actions/owner_video_actions_setup.dart';
 import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
@@ -171,14 +171,9 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
   @override
   void initState() {
     super.initState();
-    if (_isUserOwnContent()) {
-      _ownerVideoActionsCubit = OwnerVideoActionsCubit(
-        contentDeletionService: () =>
-            ref.read(contentDeletionServiceProvider.future),
-        videoEventService: () => ref.read(videoEventServiceProvider),
-        enforcementRepository: () =>
-            ref.read(creatorDeleteEnforcementRepositoryProvider),
-      );
+    final container = ProviderScope.containerOf(context, listen: false);
+    if (isViewerOwnVideo(container, widget.video)) {
+      _ownerVideoActionsCubit = createOwnerVideoActionsCubit(container);
       // Capture this owner's repository now; signing still waits for a tap.
       _crosspostCubit = VideoCrosspostCubit(
         repository: ref.read(crosspostingRepositoryProvider),
@@ -475,25 +470,6 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     );
     if (selectedUser != null && mounted) {
       _shareSheetBloc.add(ShareSheetRecipientToggled(selectedUser));
-    }
-  }
-
-  bool _isUserOwnContent() {
-    try {
-      final authService = ref.read(authServiceProvider);
-      if (!authService.isAuthenticated) return false;
-
-      final userPubkey = authService.currentPublicKeyHex;
-      if (userPubkey == null) return false;
-
-      return widget.video.pubkey == userPubkey;
-    } catch (e) {
-      Log.error(
-        'Error checking content ownership: $e',
-        name: 'ShareActionButton',
-        category: LogCategory.ui,
-      );
-      return false;
     }
   }
 

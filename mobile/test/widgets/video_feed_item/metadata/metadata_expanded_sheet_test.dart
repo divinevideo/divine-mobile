@@ -2909,12 +2909,16 @@ void main() {
       ).thenAnswer((_) async => const RepostersPage(pubkeys: []));
     });
 
-    List<Override> sheetOverrides({required String viewerPubkey}) => [
+    List<Override> sheetOverrides({
+      required String viewerPubkey,
+      MockAuthService? authService,
+    }) => [
       authServiceProvider.overrideWithValue(
-        createMockAuthService(
-          authState: AuthState.authenticated,
-          currentPublicKeyHex: viewerPubkey,
-        ),
+        authService ??
+            createMockAuthService(
+              authState: AuthState.authenticated,
+              currentPublicKeyHex: viewerPubkey,
+            ),
       ),
       bookmarksRepositoryProvider.overrideWith((ref) => bookmarksRepository),
       videoClipImportServiceProvider.overrideWithValue(
@@ -2994,6 +2998,42 @@ void main() {
         final l10n = _l10n(tester);
         expect(find.text(l10n.shareMenuEditVideo), findsOneWidget);
         expect(find.text(l10n.shareMenuDeleteVideo), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'opens without owner actions when the auth state cannot be read',
+      (tester) async {
+        final authService = createMockAuthService(
+          authState: AuthState.authenticated,
+          currentPublicKeyHex: _creatorPubkey,
+        );
+        when(() => authService.isAuthenticated).thenThrow(StateError('auth'));
+        final video = _makeVideo(title: 'Mine');
+
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: sheetOverrides(
+              viewerPubkey: _creatorPubkey,
+              authService: authService,
+            ),
+            child: Builder(
+              builder: (context) => TextButton(
+                onPressed: () =>
+                    unawaited(MetadataExpandedSheet.show(context, video)),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        final l10n = _l10n(tester);
+        expect(tester.takeException(), isNull);
+        expect(find.text(l10n.shareSheetSave), findsOneWidget);
+        expect(find.text(l10n.shareMenuEditVideo), findsNothing);
+        expect(find.text(l10n.shareMenuDeleteVideo), findsNothing);
       },
     );
   });

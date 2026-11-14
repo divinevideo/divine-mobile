@@ -15,12 +15,12 @@ import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/proofmode_helpers.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
+import 'package:openvine/widgets/video_feed_item/actions/owner_video_actions_setup.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
@@ -70,10 +70,7 @@ class MetadataExpandedSheet extends StatelessWidget {
     final loopCounts = context.read<VideoLoopsCubit?>();
     final container = ProviderScope.containerOf(context, listen: false);
     final repostsRepository = container.read(repostsRepositoryProvider);
-    final authService = container.read(authServiceProvider);
-    final isOwnVideo =
-        authService.isAuthenticated &&
-        authService.currentPublicKeyHex == video.pubkey;
+    final isOwnVideo = isViewerOwnVideo(container, video);
     final relayUrl = container.read(currentEnvironmentProvider).relayUrl;
     final bookmarksRepository = container.read(bookmarksRepositoryProvider);
     final videoClipImportService = container.read(
@@ -105,14 +102,7 @@ class MetadataExpandedSheet extends StatelessWidget {
           ),
           if (isOwnVideo)
             BlocProvider<OwnerVideoActionsCubit>(
-              create: (_) => OwnerVideoActionsCubit(
-                contentDeletionService: () =>
-                    container.read(contentDeletionServiceProvider.future),
-                videoEventService: () =>
-                    container.read(videoEventServiceProvider),
-                enforcementRepository: () =>
-                    container.read(creatorDeleteEnforcementRepositoryProvider),
-              ),
+              create: (_) => createOwnerVideoActionsCubit(container),
             ),
         ],
         child: VideoContentActionsFeedbackListener(
