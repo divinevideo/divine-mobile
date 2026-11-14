@@ -46,7 +46,7 @@ navigation map below before dumping.
 | Dark / light | The app defaults to **Dark**, not System, so simulator appearance alone changes nothing. Switch in the app (see the navigation map), and also run `xcrun simctl ui <UDID> appearance light` so system sheets match |
 | Freeze an upload mid-way | `docker compose -f local_stack/docker-compose.yml pause blossom-proxy` before the send; `… unpause blossom-proxy` straight after the shot. The stack is shared, so this freezes uploads for every session on it |
 | Capture | First wait for an element that loads **last**: "No videos yet" renders before the profile header, so wait for the header too. Then `xcrun simctl io <UDID> screenshot "$SCRATCH/NN-state.png"` and **Read the PNG** to check it shows what you claim |
-| Publish | `bash <skill-dir>/scripts/publish_gist.sh "PR <n> screenshots" "$SCRATCH/01-profile-dark.png" "$SCRATCH/02-profile-light.png"`, naming each file you checked rather than a glob that also catches retakes → `<img>` tags with verified raw URLs |
+| Publish | `bash <skill-dir>/scripts/publish_gist.sh "PR <n> screenshots at <sha>" "$SCRATCH/01-profile-dark.png" "$SCRATCH/02-profile-light.png"`, naming each file you checked rather than a glob that also catches retakes → `<img>` tags with verified raw URLs |
 | Put in PR | add a `## Screenshots` table of those tags with `gh pr edit <n> --body-file …` |
 
 ## Navigation map (debug build: bundle id `co.openvine.app.staging`)
@@ -67,19 +67,19 @@ create whatever else the screen needs yourself.
 ## Steps
 
 0. **Check the PR may be built here.** Building runs the PR's own code on this machine: `local_stack/up.sh` and its compose file, the Podfile and the Xcode build phases. Go on only when the PR comes from a branch in this repository (`gh pr view <n> --json isCrossRepository` is `false`) or its author is an org member (`gh api orgs/divinevideo/members/<login>` answers 204), and the request came from the person running this session or an org member. Otherwise stop and say why: a pull request from anyone else is reviewed, not run (`AGENT_TRUST_BOUNDARY.md` in divine-context).
-1. **Work from the PR's own worktree.** Screenshots must come from the code under review.
+1. **Build the PR's head in a worktree nobody else is using.** Screenshots must come from the code under review, and building in, or cleaning up, another session's checkout breaks its build. For your own PR, use your task worktree. Otherwise make a detached one at the head commit: take `gh pr view <n> --json headRefOid -q .headRefOid`, then `git fetch origin pull/<n>/head && git worktree add --detach .worktrees/pr-<n>-screens <sha>`. Keep that SHA; the PR section names it.
 2. **`sim_up.sh`.** It reuses a local stack another session already started (printing `STACK_STARTED=no`); otherwise it sets `BLOSSOM_PUBLIC_URL=http://localhost:43003`, writes the Keycast `master.key` a fresh worktree lacks, starts `local_stack/up.sh` and makes sure its refresh-interval tuning ran. Then it boots the simulator, pins the status bar to 9:41, builds with `--dart-define=DEFAULT_ENV=LOCAL`, and installs the app. The first build takes about 5 minutes. Run it in the background with output going to a file.
 3. **Sign in** with `new_device_account.yaml`. It clears the keychain and the app's data before launch, so every run starts on a fresh welcome screen and no earlier account stays on the device; there is no need to `simctl erase`. `clearState` alone is not enough: the Nostr key lives in the keychain (`mobile/e2e/maestro/README.md`).
 4. **Create the other people the screen needs** with `make_account.sh`, then navigate. Write each step as a small Maestro flow. Run it with `perl -e 'alarm 240; exec @ARGV' maestro --device <UDID> test flow.yaml` so a hung step cannot hang you. Write the flows in `$SCRATCH`, not in the repo.
 5. **Stage every state the PR claims, not just the happy path.** That includes in progress, failed, empty, after navigating away and back, and both appearances. A failure you produce for real, such as stopping a container, beats describing one.
 6. **Capture and look.** Read every PNG. Check that it shows the claimed state, and that no real names, keys or emails appear. The synthetic accounts are fine.
 7. **Publish** with `publish_gist.sh`. Run `--dry-run` first to check the files. It prints each URL only after checking it answers 200.
-8. **Write the PR section.** Add a table of states, one line on how they were captured (simulator, LOCAL stack, throwaway accounts, anything staged such as a paused container), and anything you noticed. Then fix any "Not verified" text that the screenshots now contradict. Check authorship before editing someone else's PR (`AGENTS.md`, "Working On An Existing PR").
+8. **Write the PR section.** Add a table of states, the commit they were built from, one line on how they were captured (simulator, LOCAL stack, throwaway accounts, anything staged such as a paused container), and anything you noticed. Then fix any "Not verified" text that the screenshots now contradict. Check authorship before editing someone else's PR (`AGENTS.md`, "Working On An Existing PR").
 9. **Clean up:**
    - stop the stack (`cd mobile && mise run local_down`) only if `sim_up.sh` printed `STACK_STARTED=yes` and no other session has started using it since. Every worktree shares the one `local_stack` compose project, so `down` stops it for everyone;
    - `xcrun simctl delete <UDID>`, which removes this run's simulator, its data and the status-bar override;
-   - remove `mobile/build` (about 4 GB) and this worktree's Xcode output,
-     `~/Library/Developer/Xcode/DerivedData/Runner-*`, about 2 GB. Check its
+   - for a detached worktree you made, `git worktree remove --force .worktrees/pr-<n>-screens`, which takes its `mobile/build` (about 4 GB) with it; in your own task worktree, delete `mobile/build`;
+   - delete this worktree's Xcode output, `~/Library/Developer/Xcode/DerivedData/Runner-*`, about 2 GB. Check its
      `info.plist` `WorkspacePath` points at this worktree before deleting;
    - `rm -rf "$SCRATCH"`, which takes the run's keys, flows, logs and screenshots with it.
 
