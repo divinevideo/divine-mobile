@@ -342,8 +342,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     private var videoHeight: Int = 0
     /// While paused after an exact seek or composition swap, AVPlayer can settle
     /// one decoded frame behind the requested time during preroll/texture
-    /// refresh. Keep reporting the requested timeline position until playback
-    /// catches up or another seek replaces it, so Dart's timeline does not drift.
+    /// refresh, and priming the paused frame steps one frame ahead before it
+    /// steps back (`nudgeOutputQueue`); each step lands later, and the time
+    /// observer reports it. Keep reporting the requested timeline position
+    /// until playback catches up or another seek replaces it, so Dart's
+    /// timeline does not drift.
     private var reportedPositionOverrideMs: Int64?
 
     /// Audio overlay manager for synchronized audio tracks.
@@ -614,7 +617,6 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
 
                 let requestedStartPositionMs = (args["startPositionMs"] as? NSNumber)?.int64Value
                 let startPositionMs = requestedStartPositionMs ?? 0
-                self.reportedPositionOverrideMs = requestedStartPositionMs
                 // Many encoded videos in the feed have 1 black leading
                 // frame at exactly time 0 — produced by the encoder
                 // before the first real I-frame. Landing on that frame
@@ -646,6 +648,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 } else {
                     startTime = leadingBlackFrameSkip
                 }
+                // A load with no requested start is pinned too: until its
+                // seek lands the new item reads zero, and priming its paused
+                // frame then steps it a frame on and back.
+                self.reportedPositionOverrideMs = requestedStartPositionMs
+                    ?? Int64(min(startTime.seconds, self.totalDuration).millisecondsClamped)
 
                 if let existing = self.player {
                     self.configureQueue(with: playerItem)
