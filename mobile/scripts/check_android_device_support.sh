@@ -14,7 +14,9 @@
 #
 # Two checks, both static:
 #   1. minSdk must stay <= 28 (Android 9.0). It is pinned at 28 by c2pa_flutter;
-#      raising it drops older-OS users with no Google requirement to do so.
+#      raising it drops older-OS users with no Google requirement to do so. Only
+#      `minSdk = <number>` is read: any other line naming minSdk fails, because
+#      a symbolic value such as flutter.minSdkVersion cannot be checked here.
 #   2. If android/app/build.gradle.kts sets `abiFilters`, it must keep
 #      armeabi-v7a (32-bit) — an abiFilters list that omits it narrows the ABI
 #      set the AAB ships.
@@ -40,28 +42,36 @@ if [ ! -f "$gradle" ]; then
   exit 1
 fi
 
+# Kotlin shares Dart's comment and string syntax, so the shared stripper keeps
+# a commented-out minSdk, or a number in a trailing comment, from being read.
+code="$(awk -f "$SCRIPT_DIR/lib/dart_code_only.awk" "$gradle")"
+
 # ---------------------------------------------------------------------------
 # 1. minSdk floor (<= 28)
 # ---------------------------------------------------------------------------
-# Kotlin DSL: `minSdk = 28` (numeric) or `minSdk = flutter.minSdkVersion`.
-min_line="$(grep -nE '^[[:space:]]*minSdk[[:space:]]*=' "$gradle" || true)"
-if [ -z "$min_line" ]; then
-  echo "❌ Could not find a minSdk assignment in $gradle."
+max_min_sdk=28
+min_hits="$(printf '%s\n' "$code" | grep -nE '(^|[^[:alnum:]_.])minSdk' || true)"
+if [ -z "$min_hits" ]; then
+  echo "❌ No minSdk assignment in $gradle."
   fail=1
-elif echo "$min_line" | grep -qE 'minSdk[[:space:]]*=[[:space:]]*[0-9]+'; then
-  min_value="$(echo "$min_line" | grep -oE '[0-9]+' | tail -1)"
-  if [ "$min_value" -gt 28 ]; then
-    echo "❌ minSdk is $min_value in $gradle; it must stay <= 28 (Android 9.0)."
+fi
+while IFS= read -r hit; do
+  [ -z "$hit" ] && continue
+  lineno="${hit%%:*}"
+  value="$(printf '%s\n' "${hit#*:}" |
+    sed -nE 's/^[[:space:]]*minSdk[[:space:]]*=[[:space:]]*([0-9]+)[[:space:]]*$/\1/p')"
+  if [ -z "$value" ]; then
+    echo "❌ $gradle:$lineno sets minSdk in a form this guard cannot read:"
+    echo "     $(sed -n "${lineno}p" "$gradle")"
+    echo "   Write it as \`minSdk = <number>\`."
+    fail=1
+  elif [ "$value" -gt "$max_min_sdk" ]; then
+    echo "❌ minSdk is $value at $gradle:$lineno; it must stay <= $max_min_sdk (Android 9.0)."
     echo "   28 is pinned by c2pa_flutter. Raising it drops older-OS users."
     echo "   See mobile/docs/ANDROID_DEVICE_SUPPORT.md."
     fail=1
   fi
-elif echo "$min_line" | grep -q 'flutter.minSdkVersion'; then
-  : # Flutter's default (24) is below the 28 floor — acceptable.
-else
-  echo "❌ Could not read the minSdk value from: $min_line"
-  fail=1
-fi
+done <<< "$min_hits"
 
 # ---------------------------------------------------------------------------
 # 2. abiFilters must keep 32-bit, if present at all
