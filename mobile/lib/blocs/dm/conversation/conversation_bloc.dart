@@ -430,7 +430,7 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     // `statusFor` short-circuits to `delivered` and no bubble is ever built,
     // so the send failed in complete silence. Refuse it here instead, with a
     // status the view can toast — a backstop rather than a reachable path:
-    // `_SendBarBody`, the only dispatcher of `ConversationMessageSent`, is
+    // `_SendBar`, the only dispatcher of `ConversationMessageSent`, is
     // built only for `DmThreadWritability.writable`, which requires
     // participants.
     if (event.recipientPubkeys.isEmpty) {

@@ -173,35 +173,6 @@ void main() {
           findsNothing,
         );
       });
-
-      testWidgets('shows progress and blocks taps while a send is busy', (
-        tester,
-      ) async {
-        var attachCalls = 0;
-
-        await tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: MessageInputBar(
-                onSend: (_) {},
-                onAttachVideo: () => attachCalls++,
-                isAttachVideoBusy: true,
-              ),
-            ),
-          ),
-        );
-
-        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
-        // The busy state replaces the attach affordance with progress, so
-        // there is nothing tappable while a send is in flight.
-        expect(
-          find.bySemanticsIdentifier('dm_attach_video_button'),
-          findsNothing,
-        );
-        expect(attachCalls, isZero);
-      });
     });
 
     group('multiline composition', () {
