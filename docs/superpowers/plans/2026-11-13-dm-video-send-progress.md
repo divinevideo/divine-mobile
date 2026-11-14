@@ -255,7 +255,7 @@ Run Flutter commands from `mobile/` with `mise exec -- … --no-pub`.
 
 **Files:**
 - Modify: `lib/providers/video_providers.dart` (next to `dmVideoSendServiceProvider`)
-- Test: `test/providers/video_dm_outbox_provider_test.dart`
+- Test: `test/providers/video_providers_dm_video_outbox_test.dart`
 
 **Interfaces:**
 - Produces: `final videoDmOutboxProvider = Provider<VideoDmOutbox>(...)`.
