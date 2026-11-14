@@ -313,6 +313,33 @@ void main() {
         expect(removed, equals(1));
       });
 
+      testWidgets('Retry and Remove meet the 48dp minimum tap target', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(
+          _host(
+            _entry(
+              phase: OutgoingVideoDmPhase.failed,
+              failure: OutgoingVideoDmFailure.failed,
+            ),
+          ),
+        );
+
+        for (final label in [l10n.commonRetry, l10n.dmPendingVideoRemove]) {
+          final size = tester.getSize(
+            find.ancestor(
+              of: find.text(label),
+              matching: find.byType(DivineButton),
+            ),
+          );
+          expect(size.width, greaterThanOrEqualTo(kMinInteractiveDimension));
+          expect(size.height, greaterThanOrEqualTo(kMinInteractiveDimension));
+        }
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        semantics.dispose();
+      });
+
       testWidgets('too large offers Remove only, with the size limit', (
         tester,
       ) async {
