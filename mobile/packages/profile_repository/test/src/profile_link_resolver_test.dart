@@ -20,6 +20,56 @@ void main() {
     eventId: 'synthetic-profile',
   );
 
+  test('link equality tracks the URL, owned username, and custom website', () {
+    const link = ProfileLink(
+      url: 'https://alice.divine.video',
+      username: 'alice',
+      website: 'https://creator.example/shop',
+    );
+    expect(
+      link,
+      const ProfileLink(
+        url: 'https://alice.divine.video',
+        username: 'alice',
+        website: 'https://creator.example/shop',
+      ),
+    );
+    expect(
+      link,
+      isNot(
+        const ProfileLink(
+          url: 'https://alice.divine.video',
+          username: 'alice',
+          website: 'https://creator.example/other',
+        ),
+      ),
+    );
+  });
+
+  test(
+    'metadata from another account cannot supply its username or website',
+    () async {
+      final resolver = ProfileLinkResolver(
+        verifyClaim: (_, _) async =>
+            throw StateError('unexpected verification'),
+        lookupUsername: (_) async => throw StateError('unexpected lookup'),
+      );
+      final link = await resolver.resolve(
+        pubkey: otherKey,
+        profile: profile(
+          nip05: '_@alice.divine.video',
+          website: 'https://creator.example/shop',
+        ),
+      );
+      expect(
+        link.url,
+        'https://divine.video/profile/${Nip19.encodePubKey(otherKey)}',
+      );
+      expect(link.username, isNull);
+      expect(link.website, isNull);
+    },
+  );
+
   for (final claim in [
     '_@alice.divine.video',
     'alice@divine.video',
