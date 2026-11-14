@@ -577,6 +577,24 @@ void main() {
         List<OutgoingVideoDm> entries,
       ) => [for (final entry in entries) (entry.phase, entry.failure)];
 
+      test('stops the rest of a batch when disposed mid-batch', () async {
+        stubControlledSend();
+        outbox = createOutbox();
+
+        sendClips([_clip('clip-a'), _clip('clip-b')]);
+        await pumpEventQueue();
+        expect(sends, hasLength(1));
+
+        outbox.dispose();
+        sends.single.completer.complete(_success('rumor-a'));
+        await pumpEventQueue();
+
+        expect(
+          sends.map((send) => send.videoFile.path),
+          equals([_clipPath('clip-a')]),
+        );
+      });
+
       test('an empty list is a no-op', () async {
         outbox = createOutbox(clipVerifier: () => verifier);
         final events = recordConversation('c1');
