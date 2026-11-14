@@ -90,6 +90,7 @@ create whatever else the screen needs yourself.
 | A video you just published is missing from the feeds or a profile grid | The stack's refresh-interval tuning did not run, so REST read models refresh every 5–60 minutes. `sim_up.sh` runs it even when `up.sh` fails; if you started the stack another way, run `docker compose -f local_stack/docker-compose.yml run --rm funnelcake-local-tuning`. |
 | DM send fails after the upload completes: "names only relays this device will not dial" | The recipient advertised a `ws://` kind-10050 inbox relay. `make_account.sh` publishes no 10050, so DMs fall back to the local relay. |
 | Deep link does nothing | Use `divine:///…` with an empty host. iOS shows an "Open in …?" sheet the first time, so tap `Open` with `optional: true`. |
+| A `divine:///profile/…` link opens Home | The branch predates #11017, before which iOS dropped every `divine:///` route except saved videos and challenges. Check with `git merge-base --is-ancestor a04e156363b5be9269a2e806199daaa2a60a042e HEAD`; if it fails, reach the profile through search instead. |
 | Maestro asks which device to use, or drives another simulator | More than one device is booted. Pass `--device <UDID>` to every `maestro` call. |
 | Maestro `tapOn` fails inside the photo picker | The picker runs out of process. Use `idb ui tap` at point coordinates. |
 | Pressing Enter in the composer doesn't send | The field is multiline. Tap the `Send message` label. |
