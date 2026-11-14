@@ -100,6 +100,7 @@ create whatever else the screen needs yourself.
 | A profile header shows the previous profile's name | Known app bug: deep-linking to one profile over another reuses the name. Navigate home first if it matters for the shot. |
 | `nak event` hangs | The relay never sent `OK`. The scripts wrap it in `perl -e 'alarm …'`. Do the same for ad-hoc calls. |
 | `bad math expression` in a zsh one-liner | `$GID` is a reserved integer in zsh. Use another variable name, e.g. `GIST_ID`. |
+| Build fails: a plugin "requires minimum platform version 16.0" | Flutter left the generated Swift package below iOS 16, which happens on a cold machine or a fresh worktree. The failed build repairs it, and `sim_up.sh` builds once more; if that fails too, see `.claude/rules/ios_build_troubleshooting.md` (cause 3). |
 | `flutter pub get` fails with an rsync `mkdir … SourcePackages` error | It happens in a fresh worktree. `sim_up.sh` pre-creates `build/{ios,macos}/SourcePackages`. |
 | Disk fills | Free space dropped by about 8 GB during one build: `mobile/build`, DerivedData and caches. The stack's images add about 10 GB the first time. Check `df -h /System/Volumes/Data` first, and don't start with less than about 12 GB free. |
 

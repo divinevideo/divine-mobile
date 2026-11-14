@@ -72,8 +72,21 @@ cd "$ROOT/mobile"
 # A fresh worktree's plugin copy step fails without these directories.
 mkdir -p build/ios/SourcePackages build/macos/SourcePackages
 mise exec -- flutter pub get > "$LOG_DIR/build.log" 2>&1
-mise exec -- flutter build ios --simulator --debug --no-pub --dart-define=DEFAULT_ENV=LOCAL >> "$LOG_DIR/build.log" 2>&1 \
-  || { echo "error: build failed; see $LOG_DIR/build.log" >&2; exit 1; }
+build_app() {
+  mise exec -- flutter build ios --simulator --debug --no-pub --dart-define=DEFAULT_ENV=LOCAL >> "$LOG_DIR/build.log" 2>&1
+}
+if ! build_app; then
+  # On a cold machine or fresh worktree Flutter can leave the generated Swift
+  # package below iOS 16. The failed build's scheme pre-action repairs it, so
+  # one retry succeeds (.claude/rules/ios_build_troubleshooting.md, cause 3).
+  if grep -q 'requires minimum platform version' "$LOG_DIR/build.log"; then
+    echo "Build hit the Swift package floor; building again..."
+    build_app || { echo "error: build failed twice; see $LOG_DIR/build.log" >&2; exit 1; }
+  else
+    echo "error: build failed; see $LOG_DIR/build.log" >&2
+    exit 1
+  fi
+fi
 xcrun simctl install "$UDID" build/ios/iphonesimulator/Runner.app
 BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" build/ios/iphonesimulator/Runner.app/Info.plist)
 
