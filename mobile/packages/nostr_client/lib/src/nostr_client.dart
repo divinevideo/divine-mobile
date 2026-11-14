@@ -1069,6 +1069,10 @@ class NostrClient {
   /// waited for. See [Nostr.readEvents]. Throws [ArgumentError] when it is not
   /// positive.
   ///
+  /// A read started inside a [ReadScope] ends, as one the relays did not
+  /// finish, when its owner ends that scope, including one still waiting for a
+  /// query-pool slot or for relays to reconnect.
+  ///
   /// `noRelays` says nothing was asked, whatever the flag. It covers a client
   /// with no connected relay and no temp relay, a client already disposed when
   /// the call arrived, and a fan-out no relay took — the last of which a
@@ -1263,6 +1267,7 @@ class NostrClient {
     int? maxCollectedBytes,
   }) async {
     final startedAt = clock.now();
+    final scope = ReadScope.current;
     // A disposed client's query pool is closed; querying it is a no-op
     // rather than an error. This is the common case (checked upfront to
     // skip pointless cache/reconnect work below) — the narrower re-check
@@ -1357,7 +1362,10 @@ class NostrClient {
         _hasRelayOutsidePool(effectiveTempRelays);
     if (_relayManager.connectedRelays.isEmpty && !canAnswerWithoutPool) {
       try {
-        await retryDisconnectedRelays().timeout(remainingPreparationTime());
+        await _unlessScopeEnds(
+          retryDisconnectedRelays(),
+          scope,
+        ).timeout(remainingPreparationTime());
       } on TimeoutException {
         // Reconnecting is best-effort: query whatever came up in the budget
         // rather than spending the caller's whole timeout dialling hosts that
@@ -1396,14 +1404,21 @@ class NostrClient {
 
     Future<QueryResult> runPooledWebSocketQuery(Pool pool) async {
       final acquisition = pool.request();
-      PoolResource resource;
+      PoolResource? resource;
       try {
-        resource = await acquisition.timeout(remainingPreparationTime());
+        resource = await _unlessScopeEnds(
+          acquisition,
+          scope,
+        ).timeout(remainingPreparationTime());
       } on TimeoutException {
         // package:pool cannot remove a waiter from its FIFO. Drain it when a
         // slot eventually reaches it, but never run the abandoned callback.
         unawaited(acquisition.then((resource) => resource.release()));
         throw const _QueryPoolWaitExpired();
+      }
+      if (resource == null) {
+        unawaited(acquisition.then((resource) => resource.release()));
+        throw const _ReadEndedWhileQueued();
       }
       // dispose() can run while this read is queued, and a closed `Pool`
       // still hands a queued request its slot. Asking the relays now would
@@ -1469,6 +1484,11 @@ class NostrClient {
       } on _QueryPoolClosedWhileQueued {
         // Nothing was asked here either, so it answers as the check above.
         skippedReason = poolClosedReason;
+        timedOutOverride = requireAllRelaysSettled;
+      } on _ReadEndedWhileQueued {
+        skippedReason =
+            'its owner ended its reads while it waited for a query-pool '
+            'slot, so the read was skipped';
         timedOutOverride = requireAllRelaysSettled;
       } on _QueryPoolWaitExpired {
         // `Pool`'s own `timeout:` cannot express the acquisition half: it is
@@ -2832,6 +2852,30 @@ class _QueryPoolWaitExpired implements Exception {
 /// ends without asking a relay.
 class _QueryPoolClosedWhileQueued implements Exception {
   const _QueryPoolClosedWhileQueued();
+}
+
+/// The read's [ReadScope] ended while it was queued for a slot, so the read
+/// ends without asking a relay.
+class _ReadEndedWhileQueued implements Exception {
+  const _ReadEndedWhileQueued();
+}
+
+/// [work]'s value, or null once [scope] ends first.
+///
+/// A read waiting to start must not hold its owner's stop for the rest of a
+/// long cap: [Nostr] ends it before it asks a relay, but only once it gets
+/// there.
+Future<T?> _unlessScopeEnds<T>(Future<T> work, ReadScope? scope) async {
+  if (scope == null) return work;
+  final ended = Completer<T?>();
+  final leave = scope.onEnd(() {
+    if (!ended.isCompleted) ended.complete(null);
+  });
+  try {
+    return await Future.any<T?>([work, ended.future]);
+  } finally {
+    leave();
+  }
 }
 
 const _invalidRelayCountSentinels = {

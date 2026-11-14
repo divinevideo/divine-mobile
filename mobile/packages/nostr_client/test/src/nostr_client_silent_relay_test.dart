@@ -116,7 +116,7 @@ class _BusyRelay extends Relay {
   }
 }
 
-({NostrClient client, List<Relay> relays}) _client(
+({NostrClient client, List<Relay> relays, RelayManager relayManager}) _client(
   FakeAsync async,
   List<Relay> relays,
 ) {
@@ -137,6 +137,7 @@ class _BusyRelay extends Relay {
   return (
     client: NostrClient.forTesting(nostr: nostr, relayManager: relayManager),
     relays: relays,
+    relayManager: relayManager,
   );
 }
 
@@ -296,6 +297,98 @@ void main() {
         expect(disposed, isTrue);
         expect(relay.reqs, isNot(contains('queued')));
         async.elapse(const Duration(seconds: 70));
+      });
+    });
+  });
+
+  group('reads in a ReadScope', () {
+    test('a read waiting for a query slot ends at once when its scope ends, '
+        'and is never sent', () {
+      fakeAsync((async) {
+        // Feed reads outside the scope hold every slot for 30 s.
+        final relay = _Relay(
+          _answeringUrl,
+          events: events,
+          othersAfter: const Duration(seconds: 30),
+        );
+        final h = _client(async, [relay]);
+        for (var i = 0; i < NostrClient.maxConcurrentQueries; i++) {
+          unawaited(
+            h.client.readEvents(
+              [
+                Filter(kinds: const [EventKind.contactList]),
+              ],
+              useCache: false,
+              timeout: const Duration(seconds: 40),
+            ),
+          );
+        }
+        async.flushMicrotasks();
+        final scope = ReadScope();
+        Duration? took;
+        final start = async.elapsed;
+        unawaited(
+          scope
+              .run(
+                () => h.client.readEvents(
+                  [_page],
+                  subscriptionId: 'queued',
+                  useCache: false,
+                  timeout: const Duration(seconds: 60),
+                  requireAllRelaysSettled: true,
+                  silentRelayTimeout: const Duration(seconds: 10),
+                ),
+              )
+              .then((_) => took = async.elapsed - start),
+        );
+        async.elapse(const Duration(seconds: 2));
+
+        scope.end();
+        async.flushMicrotasks();
+
+        expect(took, isNotNull);
+        expect(took, lessThan(const Duration(seconds: 3)));
+        async.elapse(const Duration(seconds: 70));
+        expect(relay.reqs, isNot(contains('queued')));
+      });
+    });
+
+    test('a read waiting for relays to reconnect ends at once when its scope '
+        'ends', () {
+      fakeAsync((async) {
+        final relay = _Relay(_answeringUrl, events: events);
+        final h = _client(async, [relay]);
+        final relayManager = h.relayManager;
+        when(() => relayManager.connectedRelays).thenReturn(const []);
+        when(
+          relayManager.retryDisconnectedRelays,
+        ).thenAnswer((_) => Completer<void>().future);
+        final scope = ReadScope();
+        Duration? took;
+        final start = async.elapsed;
+        unawaited(
+          scope
+              .run(
+                () => h.client.readEvents(
+                  [_page],
+                  subscriptionId: 'reconnecting',
+                  useCache: false,
+                  timeout: const Duration(seconds: 60),
+                  requireAllRelaysSettled: true,
+                  silentRelayTimeout: const Duration(seconds: 10),
+                ),
+              )
+              .then((_) => took = async.elapsed - start),
+        );
+        async.elapse(const Duration(seconds: 2));
+
+        scope.end();
+        async.flushMicrotasks();
+
+        expect(took, isNotNull);
+        expect(took, lessThan(const Duration(seconds: 3)));
+        async.elapse(const Duration(seconds: 70));
+        expect(relay.reqs, isNot(contains('reconnecting')));
       });
     });
   });
