@@ -9,6 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
@@ -19,6 +21,26 @@ class _MockDmVideoSendService extends Mock implements DmVideoSendService {}
 
 class _MockClipProvenanceVerifier extends Mock
     implements ClipProvenanceVerifier {}
+
+/// Records every error the outbox forwards to crash reporting.
+class _RecordingCrashReporter implements CrashReporter {
+  final errors = <(Object error, String? reason)>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    errors.add((error, reason));
+  }
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+}
 
 /// One `sendVideo` call the test drives by hand.
 class _PendingSend {
@@ -98,6 +120,7 @@ void main() {
     ClipProvenanceVerifier? Function()? clipVerifier,
     Future<void> Function(List<DivineVideoClip> clips)? signOwnRecordings,
     ArchivedVineCheck? isArchivedVine,
+    CrashReporter? reporter,
   }) {
     final created = VideoDmOutbox(
       sendService: () => service,
@@ -107,6 +130,7 @@ void main() {
       clipVerifier: clipVerifier,
       signOwnRecordings: signOwnRecordings,
       isArchivedVine: isArchivedVine,
+      reporter: reporter,
     );
     addTearDown(created.dispose);
     return created;
@@ -1040,6 +1064,103 @@ void main() {
 
         expect(sentPaths, isEmpty);
         expect(outcomes, isEmpty);
+      });
+    });
+
+    group('crash reporting', () {
+      late _RecordingCrashReporter reporter;
+
+      setUp(() {
+        reporter = _RecordingCrashReporter();
+      });
+
+      Matcher reportedStateError(String reason) => isA<(Object, String?)>()
+          .having(
+            (report) => report.$1,
+            'error',
+            isA<Reportable<Object>>().having(
+              (r) => r.unwrap(),
+              'unwrap',
+              isA<StateError>(),
+            ),
+          )
+          .having((report) => report.$2, 'reason', reason);
+
+      test('forwards a programming error from the send service', () async {
+        whenSendVideo().thenThrow(StateError('invariant broken'));
+        outbox = createOutbox(reporter: reporter);
+
+        sendVideo();
+        await pumpEventQueue();
+
+        expect(
+          reporter.errors,
+          equals([reportedStateError('VideoDmOutbox sendVideo')]),
+        );
+      });
+
+      test('does not forward a failure result', () async {
+        stubAutoSend((_) => const NIP17SendResult.failure('relay rejected'));
+        outbox = createOutbox(reporter: reporter);
+        final outcomes = recordOutcomes();
+
+        sendVideo();
+        await pumpEventQueue();
+
+        expect(outcomes.single.status, equals(VideoDmOutcomeStatus.failed));
+        expect(reporter.errors, isEmpty);
+      });
+
+      test('does not forward an unreadable file', () async {
+        whenSendVideo().thenAnswer(
+          (_) async => throw const FileSystemException(
+            'Cannot open file',
+            '/v/missing.mp4',
+          ),
+        );
+        outbox = createOutbox(reporter: reporter);
+        final outcomes = recordOutcomes();
+
+        sendVideo(path: '/v/missing.mp4');
+        await pumpEventQueue();
+
+        expect(outcomes.single.status, equals(VideoDmOutcomeStatus.failed));
+        expect(reporter.errors, isEmpty);
+      });
+
+      test('does not forward a video that is too large', () async {
+        whenSendVideo().thenThrow(const DmVideoTooLargeException(1 << 30));
+        outbox = createOutbox(reporter: reporter);
+        final outcomes = recordOutcomes();
+
+        sendVideo();
+        await pumpEventQueue();
+
+        expect(outcomes.single.status, equals(VideoDmOutcomeStatus.tooLarge));
+        expect(reporter.errors, isEmpty);
+      });
+
+      test('reports a clip check that throws under its own site', () async {
+        stubAutoSend();
+        final verifier = _MockClipProvenanceVerifier();
+        when(() => verifier.verify(any())).thenAnswer((invocation) async {
+          final path = invocation.positionalArguments.single as String;
+          if (path == _clipPath('clip-b')) throw StateError('bad manifest');
+          return _verified;
+        });
+        outbox = createOutbox(
+          clipVerifier: () => verifier,
+          reporter: reporter,
+        );
+
+        sendClips([_clip('clip-a'), _clip('clip-b')]);
+        await pumpEventQueue();
+
+        expect(
+          reporter.errors,
+          equals([reportedStateError('VideoDmOutbox checkClipBatch')]),
+        );
+        expect(sentPaths, isEmpty);
       });
     });
 

@@ -11,6 +11,7 @@ import 'package:models/models.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/dm_clip_tag.dart';
 import 'package:openvine/models/outgoing_video_dm.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
@@ -98,6 +99,10 @@ class VideoDmOutbox {
   /// [isArchivedVine] lets a clip with no credential through when it is an
   /// archived Vine, which the recipient adds too. Without it such a clip is
   /// held back like any other that fails the check.
+  ///
+  /// [reporter] receives the programming errors a send or a clip check
+  /// throws. It defaults to the app-wide [detachedFailureReporter], read when
+  /// each error is reported.
   VideoDmOutbox({
     required DmVideoSendService Function() sendService,
     DmVideoCardFrameReader readFrame = readDmVideoCardFrame,
@@ -106,13 +111,15 @@ class VideoDmOutbox {
     ClipProvenanceVerifier? Function()? clipVerifier,
     Future<void> Function(List<DivineVideoClip> clips)? signOwnRecordings,
     ArchivedVineCheck? isArchivedVine,
+    CrashReporter? reporter,
   }) : _sendService = sendService,
        _readFrame = readFrame,
        _newId = newId ?? const Uuid().v4,
        _now = now ?? DateTime.now,
        _clipVerifier = clipVerifier,
        _signOwnRecordings = signOwnRecordings,
-       _isArchivedVine = isArchivedVine;
+       _isArchivedVine = isArchivedVine,
+       _reporter = reporter;
 
   static const _logName = 'VideoDmOutbox';
 
@@ -123,6 +130,7 @@ class VideoDmOutbox {
   final ClipProvenanceVerifier? Function()? _clipVerifier;
   final Future<void> Function(List<DivineVideoClip> clips)? _signOwnRecordings;
   final ArchivedVineCheck? _isArchivedVine;
+  final CrashReporter? _reporter;
 
   final BehaviorSubject<List<OutgoingVideoDm>> _entries =
       BehaviorSubject<List<OutgoingVideoDm>>.seeded(const []);
@@ -254,6 +262,7 @@ class VideoDmOutbox {
     'read a video DM card frame',
     logName: _logName,
     category: LogCategory.video,
+    reporter: _reporter,
   );
 
   Future<void> _attachFrame(String id, File file) async {
@@ -270,6 +279,7 @@ class VideoDmOutbox {
       'run the video DM outbox',
       logName: _logName,
       category: LogCategory.video,
+      reporter: _reporter,
     );
   }
 
@@ -341,7 +351,12 @@ class VideoDmOutbox {
       try {
         rejected = await _firstRejectedClip(verifier, batch);
       } catch (error, stackTrace) {
-        _logUnexpected(batch.first.id, error, stackTrace);
+        _logUnexpected(
+          'Video DM clip batch ${batch.first.batchId} check',
+          error,
+          stackTrace,
+          site: 'checkClipBatch',
+        );
         failBatch();
         _emitOutcome(VideoDmOutcomeStatus.failed, sentCount: 0, total: total);
         return;
@@ -480,31 +495,35 @@ class VideoDmOutbox {
       );
       return _markFailed(id, OutgoingVideoDmFailure.failed);
     } catch (error, stackTrace) {
-      _logUnexpected(id, error, stackTrace);
+      _logUnexpected('Video DM $id', error, stackTrace, site: 'sendVideo');
       return _markFailed(id, OutgoingVideoDmFailure.failed);
     }
   }
 
-  /// Logs an error the pipeline does not classify, and forwards it to crash
-  /// reporting when it is a programming error, as [runDetached] does.
-  void _logUnexpected(String id, Object error, StackTrace stackTrace) {
+  /// Logs an error the pipeline does not classify for [subject], and forwards
+  /// it to crash reporting under [site] when it is a programming error, as
+  /// [runDetached] does.
+  void _logUnexpected(
+    String subject,
+    Object error,
+    StackTrace stackTrace, {
+    required String site,
+  }) {
     Log.error(
-      'Video DM $id failed: $error',
+      '$subject failed: $error',
       name: _logName,
       category: LogCategory.video,
       error: error,
       stackTrace: stackTrace,
     );
-    final reportable = asReportableError(
-      error,
-      context: '$_logName sendVideo',
-    );
+    final context = '$_logName $site';
+    final reportable = asReportableError(error, context: context);
     if (reportable == null) return;
     unawaited(
-      detachedFailureReporter.recordError(
+      (_reporter ?? detachedFailureReporter).recordError(
         reportable,
         stackTrace,
-        reason: sanitizeForCrashReport('$_logName sendVideo'),
+        reason: sanitizeForCrashReport(context),
       ),
     );
   }
