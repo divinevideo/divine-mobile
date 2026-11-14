@@ -87,9 +87,12 @@ When Play Console shows **"This release no longer supports N devices"**:
    the per-device **reason** (ABI / API level / required feature / OpenGL).
 3. If the reason is ABI, run the [ABI check](#check-an-aabs-abis) on the
    draft's artifact.
-4. Replace the draft's artifact with the **Shorebird AAB** from
-   Codemagic. The companion error **"You cannot remove all production APKs and
-   App Bundles"** just means the draft is empty — it clears once the correct AAB
-   is attached. Confirm `versionCode` is higher than the live release.
+4. Replace the draft's artifact with the **Shorebird AAB** Codemagic already
+   sent to the internal track: promote that internal-testing release, or attach
+   its bundle with **Add from library** in the release editor. Do not upload the
+   file again; Play has already used its `versionCode`. The companion error
+   **"You cannot remove all production APKs and App Bundles"** just means the
+   draft is empty — it clears once the correct AAB is attached. Confirm
+   `versionCode` is higher than the live release.
 5. The device-support warning should then disappear. If it persists, run the
    ABI check on the attached AAB before shipping.
