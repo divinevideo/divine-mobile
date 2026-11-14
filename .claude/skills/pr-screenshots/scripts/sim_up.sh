@@ -6,8 +6,7 @@ set -euo pipefail
 ROOT="$(cd "${1:?usage: sim_up.sh <worktree-root> [device type]}" && pwd)"
 DEVICE_TYPE="${2:-iPhone 16 Pro}"
 SIM_NAME="pr-screenshots-$(basename "$ROOT")"
-LOG_DIR="${TMPDIR:-/tmp}/pr-screenshots"
-mkdir -p "$LOG_DIR"
+LOG_DIR="${SCRATCH:?set SCRATCH to the scratch folder for this run, see SKILL.md}"
 
 # The seeder bakes this into the media URLs it mints; the iOS simulator reaches
 # the stack on localhost.

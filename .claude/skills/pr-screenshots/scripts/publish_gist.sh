@@ -9,7 +9,7 @@ DESCRIPTION="${1:?usage: publish_gist.sh [--dry-run] \"<description>\" shot.png 
 shift
 [ "$#" -gt 0 ] || { echo "error: no screenshots given" >&2; exit 2; }
 
-WORK=$(mktemp -d "${TMPDIR:-/tmp}/pr-screenshots-gist.XXXXXX")
+WORK=$(mktemp -d "${SCRATCH:?set SCRATCH to the scratch folder for this run, see SKILL.md}/gist.XXXXXX")
 mkdir -p "$WORK/images"
 for shot in "$@"; do
   cp "$shot" "$WORK/images/"

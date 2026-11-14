@@ -20,10 +20,13 @@ with throwaway accounts that exist only there. Drive the app with Maestro and
 touches production relays or real accounts. Apart from the trust check in step 0,
 ask the maintainer nothing for this.
 
-`<skill-dir>` below is the directory containing this file. Scratch files go in
-`$SCRATCH`: run `export SCRATCH="${TMPDIR:-/tmp}/pr-screenshots"; mkdir -p "$SCRATCH"`
-in every shell call. Agent shells often have no `$TMPDIR`, and a bare
-`$TMPDIR/...` then expands to a read-only `/...`.
+`<skill-dir>` below is the directory containing this file. Each run keeps its
+scratch files (logs, keys, flows, screenshots) in a folder of its own, so
+parallel sessions and earlier runs never mix screenshots or keys. Create it once
+with `mktemp -d "${TMPDIR:-/tmp}/pr-screenshots-<n>.XXXXXX"`, then start every
+shell call with `export SCRATCH=<the path it printed>`; the scripts refuse to run
+without it. Agent shells often have no `$TMPDIR`, and a bare `$TMPDIR/...` then
+expands to a read-only `/...`.
 
 Budget: about 5 minutes for the first build, about 1 minute to sign in, and about
 4 minutes to navigate and capture. A `maestro hierarchy` call takes 30–60s, so use the
@@ -39,11 +42,11 @@ navigation map below before dumping.
 | Open a profile | Maestro `openLink: divine:///profile/<npub>` (three slashes), then `tapOn: {text: Open, optional: true}` |
 | See what's tappable | `maestro --device <UDID> hierarchy` and grep `accessibilityText` or `resource-id`. A row with a subtitle is labelled `"Title\nSubtitle"`, so `tapOn: "Title"` fails; tap the full label or an id |
 | Tap inside the system photo picker | `idb ui tap --udid <UDID> <x> <y>` in **points** (pixels ÷ the screen scale: 3 on an iPhone Pro) |
-| Add a video to Photos | `ffmpeg -f lavfi -i testsrc2=size=720x1280:rate=30:duration=6 -f lavfi -i sine=duration=6 -c:v libx264 -pix_fmt yuv420p -b:v 12M -c:a aac -shortest clip.mp4` then `xcrun simctl addmedia <UDID> clip.mp4` |
+| Add a video to Photos | `ffmpeg -f lavfi -i testsrc2=size=720x1280:rate=30:duration=6 -f lavfi -i sine=duration=6 -c:v libx264 -pix_fmt yuv420p -b:v 12M -c:a aac -shortest "$SCRATCH/clip.mp4"` then `xcrun simctl addmedia <UDID> "$SCRATCH/clip.mp4"` |
 | Dark / light | The app defaults to **Dark**, not System, so simulator appearance alone changes nothing. Switch in the app (see the navigation map), and also run `xcrun simctl ui <UDID> appearance light` so system sheets match |
 | Freeze an upload mid-way | `docker compose -f local_stack/docker-compose.yml pause blossom-proxy` before the send; `… unpause blossom-proxy` straight after the shot. The stack is shared, so this freezes uploads for every session on it |
-| Capture | First wait for an element that loads **last**: "No videos yet" renders before the profile header, so wait for the header too. Then `xcrun simctl io <UDID> screenshot NN-state.png` and **Read the PNG** to check it shows what you claim |
-| Publish | `bash <skill-dir>/scripts/publish_gist.sh "PR <n> screenshots" NN-*.png` → `<img>` tags with verified raw URLs |
+| Capture | First wait for an element that loads **last**: "No videos yet" renders before the profile header, so wait for the header too. Then `xcrun simctl io <UDID> screenshot "$SCRATCH/NN-state.png"` and **Read the PNG** to check it shows what you claim |
+| Publish | `bash <skill-dir>/scripts/publish_gist.sh "PR <n> screenshots" "$SCRATCH/01-profile-dark.png" "$SCRATCH/02-profile-light.png"`, naming each file you checked rather than a glob that also catches retakes → `<img>` tags with verified raw URLs |
 | Put in PR | add a `## Screenshots` table of those tags with `gh pr edit <n> --body-file …` |
 
 ## Navigation map (debug build: bundle id `co.openvine.app.staging`)
@@ -78,7 +81,7 @@ create whatever else the screen needs yourself.
    - remove `mobile/build` (about 4 GB) and this worktree's Xcode output,
      `~/Library/Developer/Xcode/DerivedData/Runner-*`, about 2 GB. Check its
      `info.plist` `WorkspacePath` points at this worktree before deleting;
-   - `rm -rf "$SCRATCH/keys"`.
+   - `rm -rf "$SCRATCH"`, which takes the run's keys, flows, logs and screenshots with it.
 
 ## Gotchas (each one cost a real run)
 
