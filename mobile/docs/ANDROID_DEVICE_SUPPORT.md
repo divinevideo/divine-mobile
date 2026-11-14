@@ -50,8 +50,9 @@ the Nov 2026 1.0.29 release lost ~16,000 devices:
 
 - **Per-ABI split APKs** (`flutter build apk --split-per-abi`, e.g.
   `app-arm64-v8a-release.apk`) → for **Zapstore / direct download only**.
-- **The universal Shorebird AAB** (`shorebird release android`, the
-  "Build Android AAB" Codemagic step) → for **Google Play**.
+- **The Shorebird AAB** (`app-release.aab`, from `shorebird release android`
+  in the "Build Android AAB (Shorebird release)" Codemagic step) → for
+  **Google Play**.
 
 Uploading a split APK to Play gives Play a 64-bit-only artifact, which drops
 every 32-bit device. Play warns about that one (below).
@@ -86,7 +87,7 @@ When Play Console shows **"This release no longer supports N devices"**:
    the per-device **reason** (ABI / API level / required feature / OpenGL).
 3. If the reason is ABI, run the [ABI check](#check-an-aabs-abis) on the
    draft's artifact.
-4. Replace the draft's artifact with the **universal Shorebird AAB** from
+4. Replace the draft's artifact with the **Shorebird AAB** from
    Codemagic. The companion error **"You cannot remove all production APKs and
    App Bundles"** just means the draft is empty — it clears once the correct AAB
    is attached. Confirm `versionCode` is higher than the live release.

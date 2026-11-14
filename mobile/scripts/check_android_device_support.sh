@@ -2,18 +2,13 @@
 # Fails CI if an Android build change would silently narrow device support.
 #
 # Divine ships one Play AAB that must reach every device the previous release
-# reached. Play compares each upload against the live release and blocks a
-# release that "no longer supports N devices"; in Nov 2026 a 1.0.29 upload hit
-# exactly that — ~16k devices dropped — because the artifact had lost its
-# 32-bit (armeabi-v7a) slice. The repo config was fine; the regression was the
-# uploaded binary. This guard freezes the Gradle-level ways that regression
-# could become the default, so a future narrowing is caught in a PR instead of
-# at the Play upload step. It does NOT (and cannot) inspect the built AAB — see
-# mobile/docs/ANDROID_DEVICE_SUPPORT.md for the upload-time runbook that covers
-# the artifact itself.
+# reached. This guard freezes the Gradle-level ways to narrow that set, so a
+# narrowing is caught in a PR instead of by Play's "no longer supports N
+# devices" warning at upload. It cannot inspect the built AAB: the incident
+# behind it and the upload runbook are in mobile/docs/ANDROID_DEVICE_SUPPORT.md.
 #
 # Two checks, both static:
-#   1. minSdk must stay <= 28 (Android 9.0). It is pinned at 28 by c2pa_flutter;
+#   1. minSdk must stay <= 28 (Android 9.0), the lowest c2pa_flutter allows;
 #      raising it drops older-OS users with no Google requirement to do so. Only
 #      `minSdk = <number>` is read: any other line naming minSdk fails, because
 #      a symbolic value such as flutter.minSdkVersion cannot be checked here.
@@ -68,7 +63,7 @@ while IFS= read -r hit; do
     fail=1
   elif [ "$value" -gt "$max_min_sdk" ]; then
     echo "❌ minSdk is $value at $gradle:$lineno; it must stay <= $max_min_sdk (Android 9.0)."
-    echo "   28 is pinned by c2pa_flutter. Raising it drops older-OS users."
+    echo "   28 is the lowest c2pa_flutter allows. Raising it drops older-OS users."
     echo "   See mobile/docs/ANDROID_DEVICE_SUPPORT.md."
     fail=1
   fi
