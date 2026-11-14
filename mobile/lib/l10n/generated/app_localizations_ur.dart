@@ -4583,7 +4583,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'یہ فائل کی قسم سپورٹ نہیں ہے۔ کوئی آڈیو فائل منتخب کریں۔';
+      'یہ فائل کی قسم سپورٹ نہیں ہے۔ MP3، M4A، AAC، WAV یا FLAC آزمائیں۔';
 
   @override
   String get soundsImportUnreadable => 'وہ آڈیو فائل پڑھی نہیں جا سکی۔';
@@ -15132,7 +15132,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get soundUploadChooseFile => 'آڈیو فائل منتخب کریں';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC، M4A، MP3 یا WAV';
+  String get soundUploadSupportedFormats => 'AAC، M4A، MP3، WAV یا FLAC';
 
   @override
   String get soundUploadChangeFile => 'تبدیل کریں';

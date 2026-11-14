@@ -4310,7 +4310,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get soundsImportUnsupportedFormat =>
-      '지원하지 않는 파일 형식이에요. 오디오 파일을 골라 주세요.';
+      '지원하지 않는 파일 형식이에요. MP3, M4A, AAC, WAV, FLAC 파일을 골라 주세요.';
 
   @override
   String get soundsImportUnreadable => '그 오디오 파일을 읽을 수 없어요.';
@@ -14436,7 +14436,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundUploadChooseFile => '오디오 파일 선택';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 또는 WAV';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV 또는 FLAC';
 
   @override
   String get soundUploadChangeFile => '변경';

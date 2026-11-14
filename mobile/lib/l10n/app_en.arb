@@ -3104,9 +3104,9 @@
   "@soundsShareCoverSheetTitle": {
     "description": "Title of the sheet that offers camera, gallery and remove for the cover image of a sound being shared."
   },
-  "soundsImportUnsupportedFormat": "That file type isn't supported. Pick an audio file.",
+  "soundsImportUnsupportedFormat": "That file type isn't supported. Try MP3, M4A, AAC, WAV or FLAC.",
   "@soundsImportUnsupportedFormat": {
-    "description": "Shown when the picked file's extension is not a supported audio container."
+    "description": "Shown when the picked file is not one of the audio formats the app imports. Names the formats in audioPickerExtensions; keep the two in sync."
   },
   "soundsImportUnreadable": "That audio file couldn't be read.",
   "@soundsImportUnreadable": {
@@ -12142,9 +12142,9 @@
   },
   "settingsUpdateAvailable": "Update available",
   "soundUploadChooseFile": "Choose an audio file",
-  "soundUploadSupportedFormats": "AAC, M4A, MP3, or WAV",
+  "soundUploadSupportedFormats": "AAC, M4A, MP3, WAV, or FLAC",
   "@soundUploadSupportedFormats": {
-    "description": "Hint under the file picker listing the accepted audio formats. The format names stay as written."
+    "description": "Hint under the file picker listing the accepted audio formats. The format names stay as written. Names the formats in audioPickerExtensions; keep the two in sync."
   },
   "soundUploadChangeFile": "Change",
   "@soundUploadChangeFile": {

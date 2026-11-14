@@ -533,10 +533,25 @@ class _AudioSelectionBottomSheetState
       setState(() => _selectedItem = imported);
       await _togglePlayPause(enforcePlay: true);
     } on LocalAudioImportException catch (e) {
+      Log.warning(
+        'Audio import refused (${e.reason.name}): ${e.message}',
+        name: 'AudioSelectionBottomSheet',
+        category: LogCategory.ui,
+      );
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      final l10n = context.l10n;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(switch (e.reason) {
+            LocalAudioImportFailureReason.unsupportedType =>
+              l10n.soundsImportUnsupportedFormat,
+            LocalAudioImportFailureReason.unreadableSource ||
+            LocalAudioImportFailureReason.copyFailed ||
+            LocalAudioImportFailureReason.decodeFailed =>
+              l10n.soundsImportUnreadable,
+          }),
+        ),
+      );
     } catch (e, s) {
       Log.error(
         'Failed to import audio: $e',

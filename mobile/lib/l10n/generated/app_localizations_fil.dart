@@ -4602,7 +4602,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'Hindi suportado ang file type na iyan. Pumili ng audio file.';
+      'Hindi suportado ang file type na iyan. Subukan ang MP3, M4A, AAC, WAV o FLAC.';
 
   @override
   String get soundsImportUnreadable => 'Hindi mabasa ang audio file na iyan.';
@@ -15266,7 +15266,7 @@ class AppLocalizationsFil extends AppLocalizations {
   String get soundUploadChooseFile => 'Pumili ng audio file';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, o WAV';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV, o FLAC';
 
   @override
   String get soundUploadChangeFile => 'Palitan';

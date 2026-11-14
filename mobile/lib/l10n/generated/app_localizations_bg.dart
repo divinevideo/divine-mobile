@@ -4627,7 +4627,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'Този тип файл не се поддържа. Избери аудиофайл.';
+      'Този тип файл не се поддържа. Опитай с MP3, M4A, AAC, WAV или FLAC.';
 
   @override
   String get soundsImportUnreadable => 'Този аудиофайл не можа да се прочете.';
@@ -15278,7 +15278,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get soundUploadChooseFile => 'Избери аудиофайл';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 или WAV';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV или FLAC';
 
   @override
   String get soundUploadChangeFile => 'Смени';

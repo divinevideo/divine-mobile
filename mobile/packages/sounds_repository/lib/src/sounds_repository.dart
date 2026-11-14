@@ -79,7 +79,7 @@ class SoundsRepository {
   /// none of the sounds. NIP-01 tag filters are exact matches, so this
   /// enumerates the spellings rather than a prefix; it must stay a superset
   /// of what the app mints (`audio/wav`, `audio/mpeg`, `audio/mp4`,
-  /// `audio/aac`, `audio/webm`). The same list gates events client-side in
+  /// `audio/aac`, `audio/flac`, `audio/webm`). The same list gates events client-side in
   /// [isAudioFile], so a relay that ignores `#m` still cannot list a file.
   static const List<String> audioMimeTypes = [
     'audio/aac',
