@@ -19,8 +19,9 @@ import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card
 /// the text scale.
 ///
 /// The card and its text are one merged semantics node: while uploading it
-/// reads the percent, while failed it says so, and in the other in-flight
-/// phases it reads the status line. Retry and Remove stay separate buttons.
+/// reads the percent, while failed it says so and why, and in the other
+/// in-flight phases it reads the status line. Retry and Remove stay separate
+/// buttons.
 class PendingVideoBubble extends StatelessWidget {
   const PendingVideoBubble({
     required this.entry,
@@ -85,15 +86,19 @@ class PendingVideoBubble extends StatelessWidget {
               Semantics(
                 container: true,
                 label: semanticsLabel,
-                child: ExcludeSemantics(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    spacing: 8,
-                    children: [
-                      _PendingCard(entry: entry),
-                      if (statusText != null) _StatusText(statusText),
-                    ],
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  spacing: 8,
+                  children: [
+                    ExcludeSemantics(child: _PendingCard(entry: entry)),
+                    // A failure's line says why it failed, which the label
+                    // does not; in flight the label already reads it.
+                    if (statusText != null)
+                      ExcludeSemantics(
+                        excluding: !isFailed,
+                        child: _StatusText(statusText),
+                      ),
+                  ],
                 ),
               ),
               if (isFailed)

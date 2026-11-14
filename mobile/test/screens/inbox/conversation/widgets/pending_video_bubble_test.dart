@@ -412,23 +412,38 @@ void main() {
         handle.dispose();
       });
 
-      testWidgets('a failed video is labelled as failed', (tester) async {
-        final handle = tester.ensureSemantics();
-        await tester.pumpWidget(
-          _host(
-            _entry(
-              phase: OutgoingVideoDmPhase.failed,
-              failure: OutgoingVideoDmFailure.failed,
-            ),
-          ),
-        );
+      Finder bySemanticsLabelContaining(String text) =>
+          find.bySemanticsLabel(RegExp(RegExp.escape(text)));
 
-        expect(
-          find.bySemanticsLabel(l10n.dmPendingVideoFailedSemantics),
-          findsOneWidget,
-        );
-        handle.dispose();
-      });
+      for (final (failure, reason) in [
+        (OutgoingVideoDmFailure.failed, l10n.dmVideoSendFailed),
+        (
+          OutgoingVideoDmFailure.tooLarge,
+          l10n.dmVideoTooLarge('$videoDmMaxMegabytes'),
+        ),
+        (
+          OutgoingVideoDmFailure.clipNotVerified,
+          l10n.dmClipSendNotVerified,
+        ),
+      ]) {
+        testWidgets('a ${failure.name} video is labelled as failed, with why', (
+          tester,
+        ) async {
+          final handle = tester.ensureSemantics();
+          await tester.pumpWidget(
+            _host(_entry(phase: OutgoingVideoDmPhase.failed, failure: failure)),
+          );
+
+          // Without the reason, a screen reader cannot tell why Retry is
+          // missing once the snackbar is gone.
+          expect(
+            bySemanticsLabelContaining(l10n.dmPendingVideoFailedSemantics),
+            findsOneWidget,
+          );
+          expect(bySemanticsLabelContaining(reason), findsOneWidget);
+          handle.dispose();
+        });
+      }
     });
   });
 }
