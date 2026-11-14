@@ -1,0 +1,103 @@
+---
+name: pr-screenshots
+description: |
+  Use when a divine-mobile pull request changes something a user can see and
+  its description needs screenshots of the real app; when a maintainer or
+  reviewer asks for screenshots, visual evidence, or "show me it working";
+  or when you are tempted to substitute widget-test renders or to ask a
+  human to set up accounts or attach images. Covers iOS simulator + LOCAL
+  Docker stack + Maestro/idb + secret-gist hosting.
+author: Claude Code
+version: 1.0.0
+---
+
+# Real-app screenshots for a PR
+
+**Core principle:** you can produce real-app screenshots end to end yourself.
+Run this branch on an iOS simulator against the repo's local Docker stack,
+with throwaway accounts that exist only there. Drive the app with Maestro and
+`idb`, capture with `simctl`, and host the images in a secret gist. Nothing
+touches production relays or real accounts. Ask the maintainer nothing for this.
+
+`<skill-dir>` below is the directory containing this file. Scratch files go in
+`$SCRATCH`: run `export SCRATCH="${TMPDIR:-/tmp}/pr-screenshots"; mkdir -p "$SCRATCH"`
+in every shell call. Agent shells often have no `$TMPDIR`, and a bare
+`$TMPDIR/...` then expands to a read-only `/...`.
+
+Budget: about 5 minutes for the first build, about 1 minute to sign in, and about
+4 minutes to navigate and capture. A `maestro hierarchy` call takes 30–60s, so use the
+navigation map below before dumping.
+
+## Quick reference
+
+| Need | Do |
+|---|---|
+| App + backend running | `bash <skill-dir>/scripts/sim_up.sh <worktree-root>` → prints `UDID=` and `BUNDLE_ID=` |
+| Signed-in user | `maestro test -e APP_ID=<BUNDLE_ID> <skill-dir>/scripts/new_device_account.yaml` |
+| Someone to view or message | `bash <skill-dir>/scripts/make_account.sh "Sam Tester"` → npub |
+| Open a profile | Maestro `openLink: divine:///profile/<npub>` (three slashes), then `tapOn: {text: Open, optional: true}` |
+| See what's tappable | `maestro hierarchy` and grep `accessibilityText` or `resource-id`. A row with a subtitle is labelled `"Title\nSubtitle"`, so `tapOn: "Title"` fails; tap the full label or an id |
+| Tap inside the system photo picker | `idb ui tap --udid <UDID> <x> <y>` in **points** (pixels ÷ 3 on iPhone Pro) |
+| Add a video to Photos | `ffmpeg -f lavfi -i testsrc2=size=720x1280:rate=30:duration=6 -f lavfi -i sine=duration=6 -c:v libx264 -pix_fmt yuv420p -b:v 12M -c:a aac -shortest clip.mp4` then `xcrun simctl addmedia <UDID> clip.mp4` |
+| Dark / light | The app defaults to **Dark**, not System, so simulator appearance alone changes nothing. Switch in the app (see the navigation map), and also run `xcrun simctl ui <UDID> appearance light` so system sheets match |
+| Freeze an upload mid-way | `docker pause local_stack-blossom-proxy-1` before the send; `docker unpause` after the shot |
+| Capture | First wait for an element that loads **last**: "No videos yet" renders before the profile header, so wait for the header too. Then `xcrun simctl io <UDID> screenshot NN-state.png` and **Read the PNG** to check it shows what you claim |
+| Publish | `bash <skill-dir>/scripts/publish_gist.sh "PR <n> screenshots" NN-*.png` → `<img>` tags with verified raw URLs |
+| Put in PR | add a `## Screenshots` table of those tags with `gh pr edit <n> --body-file …` |
+
+## Navigation map (debug build: bundle id `co.openvine.app.staging`)
+
+| Goal | Maestro |
+|---|---|
+| Own profile | `tapOn: {id: profile_tab}` — wait for `"Secure Your Account\n3"` (new account) as well as `"No videos yet"` |
+| Edit profile | `tapOn: {id: edit_profile_button}` (a pencil icon; label "Edit Profile") |
+| Messages inbox | `tapOn: {id: inbox_tab}` opens **Notifications** first, then `tapOn: "Messages\nMessages"`; empty state is `"No messages yet"` |
+| Appearance → Light | from the own profile: `id: settings_button` → `id: settings_app_preferences_tile` → `"Appearance\nChoose how Divine looks on this device"` → `"Light"` (or `"Dark"`, `"System default"`); back out with `id: back_button` ×3 |
+| Someone's profile | `openLink: divine:///profile/<npub>` + optional `Open` |
+| DM thread | on their profile, `tapOn: "Message"`; composer `"Say something…"`, attach `"Attach video"` → `"Video from your gallery"`; send `"Send message"` |
+
+The magenta line above the tab bar marks the LOCAL environment; mention it in the
+caption rather than cropping it. `up.sh` stops at the Keycast failure before seeding,
+so the feeds are empty — create whatever data the screen needs yourself.
+
+## Steps
+
+1. **Work from the PR's own worktree.** Screenshots must come from the code under review.
+2. **`sim_up.sh`.** It sets `BLOSSOM_PUBLIC_URL=http://localhost:43003`, starts `local_stack/up.sh`, boots the simulator, pins the status bar to 9:41, builds with `--dart-define=DEFAULT_ENV=LOCAL`, and installs the app. The first build takes about 5 minutes. Run it in the background with output going to a file.
+3. **Sign in** with `new_device_account.yaml`. Its `clearState: true` gives you a fresh install every run, so never `simctl erase`.
+4. **Create the other people the screen needs** with `make_account.sh`, then navigate. Write each step as a small Maestro flow. Run it with `perl -e 'alarm 240; exec @ARGV' maestro test flow.yaml` so a hung step cannot hang you. Write the flows in `$SCRATCH`, not in the repo.
+5. **Stage every state the PR claims, not just the happy path.** That includes in progress, failed, empty, after navigating away and back, and both appearances. A failure you produce for real, such as stopping a container, beats describing one.
+6. **Capture and look.** Read every PNG. Check that it shows the claimed state, and that no real names, keys or emails appear. The synthetic accounts are fine.
+7. **Publish** with `publish_gist.sh`. Run `--dry-run` first to check the files. It prints each URL only after checking it answers 200.
+8. **Write the PR section.** Add a table of states, one line on how they were captured (simulator, LOCAL stack, throwaway accounts, anything staged such as a paused container), and anything you noticed. Then fix any "Not verified" text that the screenshots now contradict. Check authorship before editing someone else's PR (`AGENTS.md`, "Working On An Existing PR").
+9. **Clean up:**
+   - `docker compose -f local_stack/docker-compose.yml down` (`local_stack` has no `down.sh`);
+   - `xcrun simctl shutdown <UDID>`;
+   - remove `mobile/build` (about 4 GB) and this worktree's Xcode output,
+     `~/Library/Developer/Xcode/DerivedData/Runner-*`, about 2 GB. Check its
+     `info.plist` `WorkspacePath` points at this worktree before deleting;
+   - `rm -rf "$SCRATCH/keys"`.
+
+## Gotchas (each one cost a real run)
+
+| Symptom | Cause / fix |
+|---|---|
+| `local_stack/up.sh` exits 1 with Keycast `LoadKey("Is a directory")` | Doesn't matter: device-only accounts never call Keycast. `sim_up.sh` checks the relay and Blossom instead. |
+| DM send fails after the upload completes: "names only relays this device will not dial" | The recipient advertised a `ws://` kind-10050 inbox relay. `make_account.sh` publishes no 10050, so DMs fall back to the local relay. |
+| Deep link does nothing | Use `divine:///…` with an empty host. iOS shows an "Open in …?" sheet the first time, so tap `Open` with `optional: true`. |
+| Maestro `tapOn` fails inside the photo picker | The picker runs out of process. Use `idb ui tap` at point coordinates. |
+| Pressing Enter in the composer doesn't send | The field is multiline. Tap the `Send message` label. |
+| Notification permission sheet covers the app | `new_device_account.yaml` dismisses it. If it appears later, tap `Don’t Allow`. |
+| Every local upload finishes too fast to screenshot | `docker pause` the Blossom proxy, then capture. A long pause makes the send fail, which is useful for the failed-state shot. |
+| A profile header shows the previous profile's name | Known app bug: deep-linking to one profile over another reuses the name. Navigate home first if it matters for the shot. |
+| `nak event` hangs | The relay never sent `OK`. The scripts wrap it in `perl -e 'alarm …'`. Do the same for ad-hoc calls. |
+| `bad math expression` in a zsh one-liner | `$GID` is a reserved integer in zsh. Use another variable name, e.g. `GIST_ID`. |
+| `flutter pub get` fails with an rsync `mkdir … SourcePackages` error | It happens in a fresh worktree. `sim_up.sh` pre-creates `build/{ios,macos}/SourcePackages`. |
+| Disk fills | Free space dropped by about 8 GB during one build: `mobile/build`, DerivedData and caches. The stack's images add about 10 GB the first time. Check `df -h /System/Volumes/Data` first, and don't start with less than about 12 GB free. |
+
+## Never
+
+- Point the app at production, or publish test events to non-local relays.
+- Substitute widget-test or golden renders and call them screenshots. If real capture truly fails, say so with the error, and offer renders labelled as renders.
+- Push screenshots to the company repo: no orphan branches, no committed PNGs, no draft releases. The gist is the host.
+- Commit the Maestro flows or keys you write for one PR.
