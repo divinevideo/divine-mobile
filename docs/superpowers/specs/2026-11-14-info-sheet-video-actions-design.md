@@ -76,6 +76,39 @@ five, and showed nothing on web.
 Builder's call: exact key names (feature-prefixed), and whether the web
 message reads better as one sentence or two.
 
+### Decisions settled after the builder check (my calls, for Rabble to check)
+
+- **The autosaved session is kept as a draft, not overwritten.** The editor
+  has one autosave slot (`VideoEditorConstants.autoSaveId`), and the Remix
+  session's own autosave would overwrite it within a second. So before Remix
+  starts a session, an existing autosaved session is saved into Drafts as a
+  regular draft, then the session is cleared. Nothing is asked; nothing is
+  lost. (The Library's create-from-clips path discards the autosave today;
+  Remix deliberately does better and the Library path is left alone.)
+- **Every clip picker gets the From others tab:** the editor's add-clips
+  picker, the split-screen cell picker (reactions are what layouts are for),
+  and the DM attach-clip picker all open `LibraryScreen(selectionMode: true)`;
+  all three show Clips and From others.
+- **What counts as "from others":** a clip whose footage is someone else's
+  untouched video — a plain import (Add to clips, Remix, a received DM clip)
+  credited to another account. Clips the viewer made in the editor
+  (split-screen renders, merges, flattened saves) are the viewer's own even
+  when they carry other people's credits. If the clip model cannot already
+  tell a plain import from a derived clip, the builder adds the smallest
+  persisted marker that can, set at import time; clips imported before this
+  ships fall back to "single credit naming someone else".
+- **Duplicate check** matches only plain imports of this exact video
+  (`sourceEventId` or addressable coordinate), never derived clips.
+- **One selection across both tabs.** Clips and From others are one clip
+  grid state with an ownership scope per tab; a selection survives switching
+  tabs (as it survives switching category chips today), so "my take + a
+  Vine" can be selected together in the Library and in every picker. Category
+  chips, Archive and Deleted filter within the active tab.
+- **Leaving the editor unedited clears the Remix session.** If the viewer
+  backs out of the editor Remix opened without editing, the session is
+  cleared so the camera doesn't next open with the Vine on its timeline. An
+  edited session behaves like any editor session (autosave, Drafts).
+
 ### Non-goals (revision 2)
 
 - Changing the share sheet.
