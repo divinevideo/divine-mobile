@@ -647,8 +647,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 // no explicit start position was requested.
                 //
                 // 33ms ≈ 1 frame @ 30fps; videos in the feed are
-                // ~29.9fps. `toleranceAfter` lets AVPlayer snap to the
-                // next sync sample so we land on real content.
+                // ~29.9fps. The seek is exact: any tolerance before it
+                // lets AVPlayer snap back to the sync sample at zero,
+                // the black frame itself.
                 //
                 // Backend-side fix (proper solution): trim leading
                 // black frames during transcoding. Tracked separately.
