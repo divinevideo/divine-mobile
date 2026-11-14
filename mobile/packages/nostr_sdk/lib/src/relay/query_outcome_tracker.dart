@@ -114,6 +114,13 @@ class QueryOutcomeTracker {
     _fanoutFinished = true;
   }
 
+  /// The relays that took the `REQ` and have sent neither `EOSE` nor `CLOSED`
+  /// for it, each as the object most recently seen under its url.
+  List<Relay> get relaysOwingAnswer => [
+    for (final tally in _tallies.values)
+      if (tally.tookReq == true && tally.terminalFrame == null) tally.relay,
+  ];
+
   /// Records an `EVENT` frame [relay] sent for the query.
   ///
   /// [event] has already passed the query's filters, so a single-filter query
@@ -161,14 +168,16 @@ class QueryOutcomeTracker {
   /// the query's [RelayDiagnosticSite.queryCompletion] line.
   ///
   /// Set [atDeadline] when the caller's own deadline ended the query rather
-  /// than the pool. [pendingStateOf] says what a relay that has sent no
-  /// terminal frame can still be expected to do. A line is due once per
+  /// than the pool, and [silence] when the caller ended it early because
+  /// that relay had sent nothing for that long. [pendingStateOf] says what a
+  /// relay that has sent no terminal frame can still be expected to do. A line is due once per
   /// query, when it did not end [QueryEnd.complete] or may be capped: the
   /// call that produces it marks the query reported, and later calls return
   /// none.
   ({QueryOutcome outcome, RelayDiagnostic? diagnostic}) conclude({
     required bool atDeadline,
     required PendingRelayState Function(Relay relay) pendingStateOf,
+    ({String relayUrl, Duration bound})? silence,
   }) {
     final judgements = <_RelayTally, _Judgement>{
       for (final tally in _tallies.values)
@@ -232,7 +241,7 @@ class QueryOutcomeTracker {
         site: RelayDiagnosticSite.queryCompletion,
         level: _levelFor(outcome.endedBy),
         relayUrl: _lineRelayUrl(judgements),
-        message: _describe(outcome, judgements),
+        message: _describe(outcome, judgements, silence),
       ),
     );
   }
@@ -353,13 +362,14 @@ class QueryOutcomeTracker {
         .url;
   }
 
-  /// The line's text: relay urls, event counts including events outside the
-  /// filter and rejected ones, `CLOSED` reason prefixes and each filter's
-  /// kinds and limit. Never a pubkey, an event id, or a filter's ids,
-  /// authors or tag values.
+  /// The line's text: relay urls, the relay whose silence ended the read,
+  /// event counts including events outside the filter and rejected ones,
+  /// `CLOSED` reason prefixes and each filter's kinds and limit. Never a
+  /// pubkey, an event id, or a filter's ids, authors or tag values.
   String _describe(
     QueryOutcome outcome,
     Map<_RelayTally, _Judgement> judgements,
+    ({String relayUrl, Duration bound})? silence,
   ) {
     final elapsedMs = DateTime.now().difference(_startedAt).inMilliseconds;
     final events = _tallies.values.fold(0, (sum, tally) => sum + tally.events);
@@ -387,6 +397,9 @@ class QueryOutcomeTracker {
           '${elapsedMs}ms (events=$events, '
           'possiblyCapped=${outcome.possiblyCapped}, '
           'confirmedExhaustive=${outcome.confirmedExhaustive})',
+      if (silence != null)
+        'silent: ${silence.relayUrl} sent nothing for '
+            '${silence.bound.inMilliseconds}ms',
       'answered: ${_listOrNone(answered)}',
       'not answered: ${_listOrNone(notAnswered)}',
       if (notTaken.isNotEmpty) 'did not take the REQ: ${notTaken.join(', ')}',
