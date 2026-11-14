@@ -6,28 +6,31 @@
 # release that "no longer supports N devices"; in Nov 2026 a 1.0.29 upload hit
 # exactly that — ~16k devices dropped — because the artifact had lost its
 # 32-bit (armeabi-v7a) slice. The repo config was fine; the regression was the
-# uploaded binary. This guard freezes the three *config-level* ways that
-# regression could become the default, so a future narrowing is caught in a PR
-# instead of at the Play upload step. It does NOT (and cannot) inspect the
-# built AAB — see mobile/docs/ANDROID_DEVICE_SUPPORT.md for the upload-time
-# runbook that covers the artifact itself.
+# uploaded binary. This guard freezes the Gradle-level ways that regression
+# could become the default, so a future narrowing is caught in a PR instead of
+# at the Play upload step. It does NOT (and cannot) inspect the built AAB — see
+# mobile/docs/ANDROID_DEVICE_SUPPORT.md for the upload-time runbook that covers
+# the artifact itself.
 #
-# Three checks, all static:
+# Two checks, both static:
 #   1. minSdk must stay <= 28 (Android 9.0). It is pinned at 28 by c2pa_flutter;
 #      raising it drops older-OS users with no Google requirement to do so.
 #   2. If android/app/build.gradle.kts sets `abiFilters`, it must keep
 #      armeabi-v7a (32-bit) — an abiFilters list that omits it narrows the ABI
 #      set the AAB ships.
-#   3. The Shorebird AAB build in codemagic.yaml must not pass
-#      `--target-platform`, which restricts which ABIs `flutter build appbundle`
-#      produces and is the most likely way to ship a 64-bit-only AAB.
+#
+# The third way, `--target-platform` on a Shorebird Android build in
+# codemagic.yaml, is asserted by
+# .github/scripts/tests/test_codemagic_shorebird_config.py instead: that suite
+# runs on every PR, while the Guards job this guard runs in skips a PR that only
+# changes codemagic.yaml.
 #
 # Runs from mobile/ (the Guards job working directory). Not flagged `native`:
-# one of its inputs is the repo-root codemagic.yaml, not native platform config.
+# a change to this script alone has to re-run it, and `mobile/scripts/*` turns
+# on the app scope the Guards job needs without a detector entry.
 set -euo pipefail
 
 gradle="android/app/build.gradle.kts"
-codemagic="../codemagic.yaml"
 fail=0
 
 # ---------------------------------------------------------------------------
@@ -74,23 +77,6 @@ if [ -f "$gradle" ]; then
   done < <(grep -nE 'abiFilters' "$gradle" || true)
 fi
 
-# ---------------------------------------------------------------------------
-# 3. No --target-platform on the Shorebird AAB build
-# ---------------------------------------------------------------------------
-if [ ! -f "$codemagic" ]; then
-  echo "ℹ️  $codemagic not found from $(pwd); skipping --target-platform check."
-else
-  tp_hits="$(grep -nE '\-\-target-platform' "$codemagic" || true)"
-  if [ -n "$tp_hits" ]; then
-    echo "❌ codemagic.yaml passes --target-platform; this narrows the ABIs the"
-    echo "   Play AAB ships and can produce a 64-bit-only release:"
-    echo "$tp_hits" | sed 's/^/     /'
-    echo "   The Play AAB must build every ABI. See"
-    echo "   mobile/docs/ANDROID_DEVICE_SUPPORT.md."
-    fail=1
-  fi
-fi
-
 if [ "$fail" -ne 0 ]; then
   echo
   echo "Android device-support policy regressed. If a change here is genuinely"
@@ -99,4 +85,4 @@ if [ "$fail" -ne 0 ]; then
   exit 1
 fi
 
-echo "✅ Android device support intact: minSdk <= 28, 32-bit ABI preserved, no AAB platform restriction."
+echo "✅ Android device support intact: minSdk <= 28, 32-bit ABI preserved."

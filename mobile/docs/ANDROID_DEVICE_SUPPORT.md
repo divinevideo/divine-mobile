@@ -22,17 +22,25 @@ new ones.** There is no trade-off to make here.
 
 ## What narrows device support (and the guard that blocks it)
 
-`mobile/scripts/check_android_device_support.sh` (Mobile CI `Guards` job) freezes
-the three config-level regressions:
+Two static checks freeze the three config-level regressions:
 
-1. `minSdk` rising above 28.
-2. An `abiFilters` list in `android/app/build.gradle.kts` that omits
-   `armeabi-v7a`.
-3. `--target-platform` on the Shorebird AAB build in `codemagic.yaml`, which
-   restricts which ABIs the Play AAB contains.
+- `mobile/scripts/check_android_device_support.sh` (Mobile CI `Guards` job)
+  reads `android/app/build.gradle.kts`:
+  1. `minSdk` rising above 28.
+  2. An `abiFilters` list that omits `armeabi-v7a`.
+- `test_android_shorebird_builds_target_every_abi` in
+  `.github/scripts/tests/test_codemagic_shorebird_config.py` (Mobile CI
+  `CI Configuration Tests` job) reads `codemagic.yaml`:
+  3. `--target-platform` on a `shorebird release android` or
+     `shorebird patch android` command, which restricts which ABIs the Play AAB
+     contains.
 
-The guard is static and **cannot inspect the built AAB** — it protects the
-repo, not the upload. The upload is covered by the runbook below.
+The third lives in the Python suite because that job runs on every pull
+request, while the `Guards` job skips a change that touches only
+`codemagic.yaml`.
+
+Neither check can **inspect the built AAB** — they protect the repo, not the
+upload. The upload is covered by the runbook below.
 
 ## Play upload runbook (the part the guard can't check)
 
