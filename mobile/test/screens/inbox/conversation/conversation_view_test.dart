@@ -129,6 +129,7 @@ class _FakeVideoSendService extends DmVideoSendService {
     String? dimensions,
     List<List<String>> extraTags = const [],
     void Function(DmVideoSendPhase phase)? onPhase,
+    void Function(double fraction)? onUploadProgress,
   }) async {
     onPhase?.call(DmVideoSendPhase.encrypting);
     onPhase?.call(DmVideoSendPhase.uploading);
