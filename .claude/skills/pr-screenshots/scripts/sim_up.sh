@@ -33,11 +33,16 @@ if grep -qx funnelcake-proxy <<<"$RUNNING_SERVICES"; then
   PAUSED_SERVICES=$(docker compose -f "$COMPOSE_FILE" ps --status paused --services 2>/dev/null 9>&- || true)
   [ -z "$PAUSED_SERVICES" ] \
     || echo "warning: paused in the shared stack: $(paste -sd " " - <<<"$PAUSED_SERVICES"); another run may be mid-shot" >&2
-  # A reused stack runs another checkout's local_stack, not this branch's.
-  diff_rc=0
-  git -C "$ROOT" diff --quiet origin/main...HEAD -- local_stack 2>/dev/null || diff_rc=$?
-  [ "$diff_rc" -ne 1 ] \
-    || echo "warning: this branch changes local_stack/, which the running stack does not include; if the screenshots depend on it, stop the stack and run sim_up.sh again" >&2
+  # A reused stack runs the local_stack of the checkout that started it, so
+  # compare that checkout's committed local_stack with this branch's.
+  PROXY_ID=$(docker compose -f "$COMPOSE_FILE" ps -q funnelcake-proxy 2>/dev/null 9>&- || true)
+  RUNNING_DIR=$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' "$PROXY_ID" 2>/dev/null 9>&- || true)
+  if [ -n "$RUNNING_DIR" ]; then
+    RUNNING_TREE=$(git -C "$RUNNING_DIR" rev-parse HEAD:local_stack 2>/dev/null || true)
+    OUR_TREE=$(git -C "$ROOT" rev-parse HEAD:local_stack 2>/dev/null || true)
+    [ -z "$RUNNING_TREE" ] || [ "$RUNNING_TREE" = "$OUR_TREE" ] \
+      || echo "warning: the running stack was started from $RUNNING_DIR, whose local_stack/ differs from this branch's. If the screenshots depend on local_stack/, stop the stack only when nobody else is using it (SKILL.md step 9), then run sim_up.sh again" >&2
+  fi
 else
   STACK_STARTED=yes
   # Keycast mounts the gitignored local_stack/master.key, which only setup.sh
