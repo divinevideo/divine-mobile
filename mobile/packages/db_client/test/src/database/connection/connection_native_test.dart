@@ -1377,7 +1377,9 @@ void main() {
       );
     });
 
-    test('reads no index for the rows it copies in part (#9772)', () async {
+    /// The query plan steps of each filtered salvage read, by table: each
+    /// step's parent (0 for the outermost loop) and detail.
+    Future<Map<String, List<(int, String)>>> partialSalvagePlans() async {
       final drift = AppDatabase(
         NativeDatabase(
           File(dbPath),
@@ -1389,25 +1391,64 @@ void main() {
       final db = sqlite3.open(dbPath);
       addTearDown(db.close);
       applyCipherKey(db, validKey);
-
-      // A salvage runs because a b-tree is damaged, and reading a table never
-      // walks an index. A filter the planner answers from an index would read
-      // the damaged one and stop the copy early.
-      final indexed = <String, List<String>>{
+      return {
         for (final MapEntry(key: table, value: where)
             in partiallySalvagedTables.entries)
           table: [
             for (final step in db.select(
               'EXPLAIN QUERY PLAN ${salvageSelectSql(table, where: where)}',
             ))
-              if ((step['detail'] as String).contains('INDEX'))
-                step['detail'] as String,
+              (step['parent'] as int, step['detail'] as String),
           ],
       };
+    }
+
+    test('reads no index for the rows it copies in part (#9772)', () async {
+      final plans = await partialSalvagePlans();
+
+      // A salvage runs because a b-tree is damaged, and reading a table never
+      // walks an index. A filter the planner answers from an index would read
+      // the damaged one and stop the copy early.
       expect(
-        indexed,
+        {
+          for (final MapEntry(key: table, value: steps) in plans.entries)
+            table: [
+              for (final (_, detail) in steps)
+                if (detail.contains('INDEX')) detail,
+            ],
+        },
         equals({
           for (final table in partiallySalvagedTables.keys) table: <String>[],
+        }),
+      );
+    });
+
+    test('scans direct_messages once for the conversations it keeps '
+        '(#9772)', () async {
+      final plans = await partialSalvagePlans();
+      expect(
+        [for (final (_, detail) in plans['conversations']!) detail],
+        anyElement(startsWith('SCAN direct_messages')),
+        reason: 'precondition: the filter reads the messages it keeps',
+      );
+
+      // With no index to search, a filter evaluated per conversation scans
+      // every message once per conversation and stalls the startup recovery.
+      // SQLite plans a correlated EXISTS as a second top-level loop, and other
+      // correlated subqueries under a CORRELATED step.
+      expect(
+        {
+          for (final MapEntry(key: table, value: steps) in plans.entries)
+            table: [
+              for (final (parent, detail) in steps)
+                if ((parent == 0 && detail.startsWith('SCAN')) ||
+                    detail.contains('CORRELATED'))
+                  detail,
+            ],
+        },
+        equals({
+          for (final table in partiallySalvagedTables.keys)
+            table: ['SCAN $table'],
         }),
       );
     });

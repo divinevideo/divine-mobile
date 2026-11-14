@@ -270,14 +270,15 @@ const _queuedOwnRetractionSql =
 /// them never reached a relay. `conversations` keeps the conversations those
 /// retractions are sent in, which is where their retry reads its recipients:
 /// without it a group retraction has nobody to send to (#9772).
+///
+/// No filter correlates with its outer row: with no index to search, a
+/// correlated subquery scans `direct_messages` once per conversation.
 @visibleForTesting
 const partiallySalvagedTables = <String, String>{
   'direct_messages': _queuedOwnRetractionSql,
   'conversations':
-      'EXISTS (SELECT 1 FROM direct_messages NOT INDEXED '
-      'WHERE direct_messages.conversation_id = conversations.id '
-      'AND direct_messages.owner_pubkey = conversations.owner_pubkey '
-      'AND $_queuedOwnRetractionSql)',
+      '(id, owner_pubkey) IN (SELECT conversation_id, owner_pubkey '
+      'FROM direct_messages NOT INDEXED WHERE $_queuedOwnRetractionSql)',
 };
 
 /// Tables a salvage leaves empty on purpose. Each one refills, or only means
