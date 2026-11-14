@@ -17,11 +17,16 @@ Vines included) — revision 2's "Remix this Vine" string is dropped.
   said no. Per video: the event's `allow_video_reuse` tag — `false` blocks,
   `true` or absent allows (today only an exact `true` allows). Per account:
   a creator-wide block (below) overrides every video's tag.
-  - Videos published while the default was "off" carry an explicit
-    `allow_video_reuse=false` and stay blocked: the tag can't tell a
-    deliberate no from an untouched default, so the conservative reading
-    wins. Videos published before the tag existed (absent) become
-    remixable.
+  - Divine users' videos published while the default was "off" (since
+    #10467, 2026-10-26) carry an explicit `allow_video_reuse=false` and stay
+    off (Rabble, 2026-11-15). Videos published before the tag existed
+    (absent) become remixable.
+  - Production check (2026-11-15, internal read): 7,585,200 `platform=vine`
+    event revisions, none with `allow_video_reuse=false`; all 3,413 `false`
+    and 572 `true` revisions are Divine-made posts. So no archived Vine
+    needs republishing — classic Vines are remixable through the client
+    rule below. Republishing the archive is explicitly not part of this
+    work.
   - A sound that forbids derivatives still forbids it
     (`soundForbidsDerivatives`), unchanged.
   - The editor's video-reuse toggle now defaults to on for new posts, and
