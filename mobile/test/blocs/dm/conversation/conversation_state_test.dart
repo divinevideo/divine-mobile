@@ -156,6 +156,47 @@ void main() {
           equals([newer, middle, older]),
         );
       });
+
+      group('a clip batch requested at one instant', () {
+        final batchAt = DateTime.utc(2026, 11, 13, 10);
+        final first = _videoSend(id: 'clip-first', requestedAt: batchAt);
+        final second = _videoSend(id: 'clip-second', requestedAt: batchAt);
+        final third = _videoSend(id: 'clip-third', requestedAt: batchAt);
+
+        test('puts the first clip highest and the last at the bottom', () {
+          final state = ConversationState(
+            pendingVideoSends: [first, second, third],
+          );
+
+          // Index 0 is the bottom of the reversed thread.
+          expect(
+            state.displayedVideoSends,
+            equals([third, second, first]),
+          );
+        });
+
+        test('keeps the other clips in place when the first one lands', () {
+          final landed = _videoSend(
+            id: 'clip-first',
+            requestedAt: batchAt,
+            phase: OutgoingVideoDmPhase.sent,
+            rumorEventId: rowId,
+          );
+          final beforeRow = ConversationState(
+            pendingVideoSends: [landed, second, third],
+          );
+          final afterRow = ConversationState(
+            messages: [_message(id: rowId)],
+            pendingVideoSends: [landed, second, third],
+          );
+
+          expect(
+            beforeRow.displayedVideoSends,
+            equals([third, second, landed]),
+          );
+          expect(afterRow.displayedVideoSends, equals([third, second]));
+        });
+      });
     });
 
     group('displayedMessages', () {

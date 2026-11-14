@@ -176,7 +176,9 @@ class ConversationState extends Equatable {
   final List<OutgoingVideoDm> pendingVideoSends;
 
   /// The pending video bubbles to render, newest request first so index 0
-  /// sits at the bottom of the reversed thread.
+  /// sits at the bottom of the reversed thread. The clips of one batch share
+  /// a request time, so among equal times the later request sits lower: the
+  /// batch reads top to bottom in the order it was picked.
   ///
   /// A sent entry is dropped once its row is in [messages]: from then on the
   /// row is the bubble. Until the row arrives the entry keeps the slot, so
@@ -185,11 +187,16 @@ class ConversationState extends Equatable {
     if (pendingVideoSends.isEmpty) return const [];
     final messageIds = {for (final message in messages) message.id};
     final displayed = [
-      for (final entry in pendingVideoSends)
+      for (final entry in pendingVideoSends.reversed)
         if (entry.phase != OutgoingVideoDmPhase.sent ||
             !messageIds.contains(entry.rumorEventId))
           entry,
-    ]..sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+    ];
+    // Stable, so equal request times keep the reversed request order.
+    mergeSort(
+      displayed,
+      compare: (a, b) => b.requestedAt.compareTo(a.requestedAt),
+    );
     return List.unmodifiable(displayed);
   }
 
