@@ -1,5 +1,5 @@
 // ABOUTME: Bubble for an outgoing video DM that has not landed yet: its frame
-// ABOUTME: with a progress ring and status, or the failure with its actions.
+// ABOUTME: with a ring or warning icon, and its status or failure below.
 
 import 'dart:typed_data';
 
@@ -9,12 +9,17 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart';
 import 'package:openvine/services/video_dm_outbox.dart';
 
-/// Right-aligned card for an outgoing video while it is queued, preparing,
+/// Right-aligned bubble for an outgoing video while it is queued, preparing,
 /// uploading, publishing or failed.
 ///
-/// The card is one merged semantics node: while uploading it reads the
-/// percent, while failed it says so, and in the other in-flight phases it
-/// reads the status line shown on the card.
+/// The fixed-size card holds only the frame and a centred overlay: a progress
+/// ring, or a warning icon once the send failed. The status line, and for a
+/// failure its message and actions, sit below the card so they can grow with
+/// the text scale.
+///
+/// The card and its text are one merged semantics node: while uploading it
+/// reads the percent, while failed it says so, and in the other in-flight
+/// phases it reads the status line. Retry and Remove stay separate buttons.
 class PendingVideoBubble extends StatelessWidget {
   const PendingVideoBubble({
     required this.entry,
@@ -34,40 +39,112 @@ class PendingVideoBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final isFailed = entry.phase == OutgoingVideoDmPhase.failed;
+    final isUploading = entry.phase == OutgoingVideoDmPhase.uploading;
+    final percent = ((entry.uploadProgress ?? 0) * 100).round().clamp(0, 100);
+    final statusText = switch (entry.phase) {
+      OutgoingVideoDmPhase.queued => l10n.dmPendingVideoWaiting,
+      OutgoingVideoDmPhase.checking ||
+      OutgoingVideoDmPhase.encrypting => l10n.dmPendingVideoPreparing,
+      OutgoingVideoDmPhase.uploading => l10n.dmPendingVideoUploading(percent),
+      OutgoingVideoDmPhase.publishing => l10n.dmPendingVideoSending,
+      OutgoingVideoDmPhase.sent => null,
+      OutgoingVideoDmPhase.failed => switch (entry.failure) {
+        OutgoingVideoDmFailure.tooLarge => l10n.dmVideoTooLarge(
+          '$videoDmMaxMegabytes',
+        ),
+        OutgoingVideoDmFailure.clipNotVerified => l10n.dmClipSendNotVerified,
+        OutgoingVideoDmFailure.failed || null => l10n.dmVideoSendFailed,
+      },
+    };
+    final semanticsLabel = isFailed
+        ? l10n.dmPendingVideoFailedSemantics
+        : isUploading
+        ? l10n.dmPendingVideoSemantics(percent)
+        : statusText;
+
     return Align(
       alignment: AlignmentDirectional.centerEnd,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: context.vineColors.mediaCard,
-            borderRadius: BorderRadius.circular(encryptedVideoCardRadius + 4),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(encryptedVideoCardRadius),
-            child: SizedBox(
-              width: encryptedVideoCardWidth,
-              height: encryptedVideoCardHeight,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _PendingPreview(frame: entry.frame),
-                  const ColoredBox(color: VineTheme.scrim50),
-                  Center(
-                    child: isFailed
-                        ? _FailedOverlay(
-                            entry: entry,
-                            onRetry: onRetry,
-                            onRemove: onRemove,
-                          )
-                        : _ProgressOverlay(entry: entry),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: context.vineColors.mediaCard,
+          borderRadius: BorderRadius.circular(encryptedVideoCardRadius + 4),
+        ),
+        child: SizedBox(
+          width: encryptedVideoCardWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            spacing: 8,
+            children: [
+              Semantics(
+                container: true,
+                label: semanticsLabel,
+                child: ExcludeSemantics(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    spacing: 8,
+                    children: [
+                      _PendingCard(entry: entry),
+                      if (statusText != null) _StatusText(statusText),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+              if (isFailed)
+                _FailedActions(
+                  canRetry: entry.canRetry,
+                  onRetry: onRetry,
+                  onRemove: onRemove,
+                ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The fixed-size card: the frame, and over it a scrim with the ring or the
+/// warning icon. A sent video drops the overlay.
+class _PendingCard extends StatelessWidget {
+  const _PendingCard({required this.entry});
+
+  final OutgoingVideoDm entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final phase = entry.phase;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(encryptedVideoCardRadius),
+      child: SizedBox(
+        width: encryptedVideoCardWidth,
+        height: encryptedVideoCardHeight,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _PendingPreview(frame: entry.frame),
+            if (phase != OutgoingVideoDmPhase.sent) ...[
+              const ColoredBox(color: VineTheme.scrim50),
+              Center(
+                child: phase == OutgoingVideoDmPhase.failed
+                    ? const DivineIcon(
+                        icon: DivineIconName.warningCircle,
+                        size: 40,
+                        color: VineTheme.whiteText,
+                      )
+                    : DivineCircularProgressIndicator(
+                        value: phase == OutgoingVideoDmPhase.uploading
+                            ? (entry.uploadProgress ?? 0).clamp(0.0, 1.0)
+                            : null,
+                        color: VineTheme.whiteText,
+                        backgroundColor: VineTheme.scrim50,
+                      ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -87,12 +164,10 @@ class _PendingPreview extends StatelessWidget {
       return ColoredBox(
         color: context.vineColors.card,
         child: Center(
-          child: ExcludeSemantics(
-            child: DivineIcon(
-              icon: DivineIconName.playCircleFill,
-              color: context.vineColors.onSurfaceMuted,
-              size: 48,
-            ),
+          child: DivineIcon(
+            icon: DivineIconName.playCircleFill,
+            color: context.vineColors.onSurfaceMuted,
+            size: 48,
           ),
         ),
       );
@@ -107,107 +182,9 @@ class _PendingPreview extends StatelessWidget {
   }
 }
 
-/// Ring and status line for a send still in flight.
-class _ProgressOverlay extends StatelessWidget {
-  const _ProgressOverlay({required this.entry});
-
-  final OutgoingVideoDm entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final isUploading = entry.phase == OutgoingVideoDmPhase.uploading;
-    final percent = ((entry.uploadProgress ?? 0) * 100).round().clamp(0, 100);
-    final status = switch (entry.phase) {
-      OutgoingVideoDmPhase.queued => l10n.dmPendingVideoWaiting,
-      OutgoingVideoDmPhase.checking ||
-      OutgoingVideoDmPhase.encrypting => l10n.dmPendingVideoPreparing,
-      OutgoingVideoDmPhase.uploading => l10n.dmPendingVideoUploading(percent),
-      OutgoingVideoDmPhase.publishing ||
-      OutgoingVideoDmPhase.sent ||
-      OutgoingVideoDmPhase.failed => l10n.dmPendingVideoSending,
-    };
-    return Semantics(
-      container: true,
-      label: isUploading ? l10n.dmPendingVideoSemantics(percent) : status,
-      child: ExcludeSemantics(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          spacing: 12,
-          children: [
-            DivineCircularProgressIndicator(
-              value: isUploading ? percent / 100 : null,
-              color: VineTheme.whiteText,
-              backgroundColor: VineTheme.scrim50,
-            ),
-            _OverlayText(status),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Failure line with Retry (only when a retry could succeed) and Remove.
-class _FailedOverlay extends StatelessWidget {
-  const _FailedOverlay({
-    required this.entry,
-    required this.onRetry,
-    required this.onRemove,
-  });
-
-  final OutgoingVideoDm entry;
-  final VoidCallback onRetry;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final message = switch (entry.failure) {
-      OutgoingVideoDmFailure.tooLarge => l10n.dmVideoTooLarge(
-        '$videoDmMaxMegabytes',
-      ),
-      OutgoingVideoDmFailure.clipNotVerified => l10n.dmClipSendNotVerified,
-      OutgoingVideoDmFailure.failed || null => l10n.dmVideoSendFailed,
-    };
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 12,
-        children: [
-          Semantics(
-            container: true,
-            label: l10n.dmPendingVideoFailedSemantics,
-            child: ExcludeSemantics(child: _OverlayText(message)),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 8,
-            children: [
-              if (entry.canRetry)
-                DivineButton(
-                  label: l10n.commonRetry,
-                  size: DivineButtonSize.small,
-                  onPressed: onRetry,
-                ),
-              DivineButton(
-                label: l10n.dmPendingVideoRemove,
-                type: DivineButtonType.ghost,
-                size: DivineButtonSize.small,
-                onPressed: onRemove,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Text over the frame, which can be any colour, so it is white on the scrim.
-class _OverlayText extends StatelessWidget {
-  const _OverlayText(this.text);
+/// Status or failure line under the card.
+class _StatusText extends StatelessWidget {
+  const _StatusText(this.text);
 
   final String text;
 
@@ -215,8 +192,47 @@ class _OverlayText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      textAlign: TextAlign.center,
-      style: VineTheme.labelLargeFont(color: VineTheme.whiteText),
+      textAlign: TextAlign.end,
+      style: VineTheme.labelMediumFont(
+        color: context.vineColors.onSurfaceMuted,
+      ),
+    );
+  }
+}
+
+/// Retry (only when a retry could succeed) and Remove.
+class _FailedActions extends StatelessWidget {
+  const _FailedActions({
+    required this.canRetry,
+    required this.onRetry,
+    required this.onRemove,
+  });
+
+  final bool canRetry;
+  final VoidCallback onRetry;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Wrap(
+      alignment: WrapAlignment.end,
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (canRetry)
+          DivineButton(
+            label: l10n.commonRetry,
+            size: DivineButtonSize.small,
+            onPressed: onRetry,
+          ),
+        DivineButton(
+          label: l10n.dmPendingVideoRemove,
+          type: DivineButtonType.secondary,
+          size: DivineButtonSize.small,
+          onPressed: onRemove,
+        ),
+      ],
     );
   }
 }
