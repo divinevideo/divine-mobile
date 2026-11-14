@@ -131,6 +131,14 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// first frame (see [lapStartPastEmptyEdits]), otherwise nil.
     private var firstFrameStart: CMTime?
 
+    /// How far past zero a load with no start position starts: one frame at
+    /// 30 fps, past the black frame many feed videos open on (see
+    /// `handleSetClips`).
+    private static let leadingBlackFrameSkip = CMTime(value: 1, timescale: 30)
+
+    /// Where a load with no start position starts on the loaded item.
+    private var contentStart: CMTime { firstFrameStart ?? Self.leadingBlackFrameSkip }
+
     /// The longest empty edit ahead of the first frame that a looping clip is
     /// started past — the same bound Android applies.
     private static let maxLeadingEmptyEditSeconds = 0.1
@@ -390,15 +398,25 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         // delivers no frame, the seek landed on a time with no renderable
         // frame (e.g. exact boundary between composition segments). Retry
         // with a small tolerance to snap to the nearest decodable frame.
+        //
+        // A first frame that is only slow, as on a cold or streamed load,
+        // runs the window out too, at the load's start. Tolerance before it
+        // snaps back to the sync sample at zero, the black frame the load
+        // starts past, so the retry never reaches back beyond that start.
         output.onSeekStuck = { [weak self] stuckTime in
             // As in `rebuildQueueForLoopingChange`: `AVPlayerItem` raises on
             // a seek to an invalid time rather than ignoring it.
             guard let self, stuckTime.isNumeric,
                   self.player?.currentItem != nil else { return }
+            let tolerance = CMTime(value: 1, timescale: 10)
+            let pastContentStart = CMTimeMaximum(
+                .zero,
+                CMTimeSubtract(stuckTime, self.contentStart)
+            )
             self.player?.seek(
                 to: stuckTime,
-                toleranceBefore: CMTime(value: 1, timescale: 10),
-                toleranceAfter: CMTime(value: 1, timescale: 10)
+                toleranceBefore: CMTimeMinimum(tolerance, pastContentStart),
+                toleranceAfter: tolerance
             ) { [weak self] _ in
                 guard let self else { return }
                 let actualTime = self.player?.currentTime() ?? stuckTime
@@ -637,14 +655,11 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 //
                 // A clip already cut to its first frame starts exactly there,
                 // where every later lap starts too.
-                let leadingBlackFrameSkip = CMTime(value: 1, timescale: 30)
                 let startTime: CMTime
                 if startPositionMs > 0 {
                     startTime = CMTime(value: startPositionMs, timescale: 1000)
-                } else if let firstFrameStart = self.firstFrameStart {
-                    startTime = firstFrameStart
                 } else {
-                    startTime = leadingBlackFrameSkip
+                    startTime = self.contentStart
                 }
 
                 if let existing = self.player {
