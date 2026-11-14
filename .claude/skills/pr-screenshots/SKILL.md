@@ -38,7 +38,7 @@ navigation map below before dumping.
 
 | Need | Do |
 |---|---|
-| App + backend running | `bash <skill-dir>/scripts/sim_up.sh <worktree-root> [device type]` → prints `UDID=`, `BUNDLE_ID=` and `STACK_STARTED=`. It creates (or reuses) a simulator named `pr-screenshots-<worktree>`, an iPhone 16 Pro unless you pass another type from `xcrun simctl list devicetypes` |
+| App + backend running | After the trust check in step 0, which the script cannot make for you: `bash <skill-dir>/scripts/sim_up.sh <worktree-root> [device type]` → prints `UDID=`, `BUNDLE_ID=` and `STACK_STARTED=`. It creates (or reuses) a simulator named `pr-screenshots-<worktree>`, an iPhone 16 Pro unless you pass another type from `xcrun simctl list devicetypes` |
 | Signed-in user | `maestro --device <UDID> test -e APP_ID=<BUNDLE_ID> <skill-dir>/scripts/new_device_account.yaml` |
 | Someone to view or message | `bash <skill-dir>/scripts/make_account.sh "Sam Tester"` → npub |
 | Open a profile | Maestro `openLink: divine:///profile/<npub>` (three slashes), then `tapOn: {text: Open, optional: true}` |
