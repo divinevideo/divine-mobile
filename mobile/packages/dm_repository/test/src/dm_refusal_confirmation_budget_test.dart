@@ -138,6 +138,8 @@ void main() {
         subscriptionId: any(named: 'subscriptionId'),
         useCache: any(named: 'useCache'),
         requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        timeout: any(named: 'timeout'),
+        silentRelayTimeout: any(named: 'silentRelayTimeout'),
       ),
     ).thenAnswer(
       (_) async => const QueryResult(
@@ -157,6 +159,7 @@ void main() {
           named: 'acceptRelayClosedWhenOthersAnswered',
         ),
         timeout: any(named: 'timeout'),
+        silentRelayTimeout: any(named: 'silentRelayTimeout'),
       ),
     ).thenAnswer((inv) async {
       return (events: const <Event>[], timedOut: false, noRelays: false);
@@ -202,6 +205,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) async {
           reads++;
@@ -237,6 +242,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) async {
           reads++;
@@ -274,6 +281,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) async {
           reads++;
@@ -321,6 +330,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             reads++;
@@ -370,6 +381,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) async {
           reads++;
@@ -413,6 +426,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             reads++;
@@ -462,6 +477,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) {
             reads++;
@@ -503,6 +520,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) {
             reads++;
@@ -548,6 +567,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) {
             reads++;
@@ -631,6 +652,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((inv) async {
           reads++;
@@ -674,6 +697,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             reads++;
@@ -707,6 +732,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) async {
           reads++;
@@ -745,6 +772,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) async {
           reads++;
@@ -775,6 +804,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) {
           reads++;
@@ -823,6 +854,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) {
           reads++;
@@ -860,6 +893,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) {
           reads++;
@@ -898,6 +933,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) {
           reads++;
@@ -942,6 +979,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) async => refusal());
         final repository = makeRepository();
@@ -971,6 +1010,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) async {
           reads++;
@@ -1011,6 +1052,8 @@ void main() {
           subscriptionId: any(named: 'subscriptionId'),
           useCache: any(named: 'useCache'),
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          timeout: any(named: 'timeout'),
+          silentRelayTimeout: any(named: 'silentRelayTimeout'),
         ),
       ).thenAnswer((_) => answer(++reads));
     }

@@ -164,6 +164,7 @@ void main() {
           acceptRelayClosedWhenOthersAnswered: any(
             named: 'acceptRelayClosedWhenOthersAnswered',
           ),
+          silentRelayTimeout: any(named: 'silentRelayTimeout'),
         ),
       ).thenAnswer(
         (_) async =>

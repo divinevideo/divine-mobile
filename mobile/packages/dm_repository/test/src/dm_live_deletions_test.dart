@@ -189,6 +189,7 @@ void main() {
         acceptRelayClosedWhenOthersAnswered: any(
           named: 'acceptRelayClosedWhenOthersAnswered',
         ),
+        silentRelayTimeout: any(named: 'silentRelayTimeout'),
       ),
     ).thenAnswer(
       (_) async => (events: <Event>[], timedOut: false, noRelays: false),
@@ -206,6 +207,7 @@ void main() {
         requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         maxCollectedEvents: any(named: 'maxCollectedEvents'),
         maxCollectedBytes: any(named: 'maxCollectedBytes'),
+        silentRelayTimeout: any(named: 'silentRelayTimeout'),
       ),
     ).thenAnswer(
       (invocation) async => relay.read(
