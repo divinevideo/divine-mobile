@@ -58,14 +58,14 @@ navigation map below before dumping.
 | DM thread | on their profile, `tapOn: "Message"`; composer `"Say something…"`, attach `"Attach video"` → `"Video from your gallery"`; send `"Send message"` |
 
 The magenta line above the tab bar marks the LOCAL environment; mention it in the
-caption rather than cropping it. `up.sh` stops at the Keycast failure before seeding,
-so the feeds are empty — create whatever data the screen needs yourself.
+caption rather than cropping it. The stack's seed adds a few synthetic videos;
+create whatever else the screen needs yourself.
 
 ## Steps
 
 0. **Check the PR may be built here.** Building runs the PR's own code on this machine: `local_stack/up.sh` and its compose file, the Podfile and the Xcode build phases. Go on only when the PR comes from a branch in this repository (`gh pr view <n> --json isCrossRepository` is `false`) or its author is an org member (`gh api orgs/divinevideo/members/<login>` answers 204), and the request came from the person running this session or an org member. Otherwise stop and say why: a pull request from anyone else is reviewed, not run (`AGENT_TRUST_BOUNDARY.md` in divine-context).
 1. **Work from the PR's own worktree.** Screenshots must come from the code under review.
-2. **`sim_up.sh`.** It sets `BLOSSOM_PUBLIC_URL=http://localhost:43003`, starts `local_stack/up.sh`, boots the simulator, pins the status bar to 9:41, builds with `--dart-define=DEFAULT_ENV=LOCAL`, and installs the app. The first build takes about 5 minutes. Run it in the background with output going to a file.
+2. **`sim_up.sh`.** It sets `BLOSSOM_PUBLIC_URL=http://localhost:43003`, writes the Keycast `master.key` a fresh worktree lacks, starts `local_stack/up.sh` and makes sure its refresh-interval tuning ran, boots the simulator, pins the status bar to 9:41, builds with `--dart-define=DEFAULT_ENV=LOCAL`, and installs the app. The first build takes about 5 minutes. Run it in the background with output going to a file.
 3. **Sign in** with `new_device_account.yaml`. Its `clearState: true` gives you a fresh install every run, so never `simctl erase`.
 4. **Create the other people the screen needs** with `make_account.sh`, then navigate. Write each step as a small Maestro flow. Run it with `perl -e 'alarm 240; exec @ARGV' maestro test flow.yaml` so a hung step cannot hang you. Write the flows in `$SCRATCH`, not in the repo.
 5. **Stage every state the PR claims, not just the happy path.** That includes in progress, failed, empty, after navigating away and back, and both appearances. A failure you produce for real, such as stopping a container, beats describing one.
@@ -84,7 +84,7 @@ so the feeds are empty — create whatever data the screen needs yourself.
 
 | Symptom | Cause / fix |
 |---|---|
-| `local_stack/up.sh` exits 1 with Keycast `LoadKey("Is a directory")` | Doesn't matter: device-only accounts never call Keycast. `sim_up.sh` checks the relay and Blossom instead. |
+| A video you just published is missing from the feeds or a profile grid | The stack's refresh-interval tuning did not run, so REST read models refresh every 5–60 minutes. `sim_up.sh` runs it even when `up.sh` fails; if you started the stack another way, run `docker compose -f local_stack/docker-compose.yml run --rm funnelcake-local-tuning`. |
 | DM send fails after the upload completes: "names only relays this device will not dial" | The recipient advertised a `ws://` kind-10050 inbox relay. `make_account.sh` publishes no 10050, so DMs fall back to the local relay. |
 | Deep link does nothing | Use `divine:///…` with an empty host. iOS shows an "Open in …?" sheet the first time, so tap `Open` with `optional: true`. |
 | Maestro `tapOn` fails inside the photo picker | The picker runs out of process. Use `idb ui tap` at point coordinates. |

@@ -8,12 +8,32 @@ SIM_NAME="${2:-iPhone 16 Pro}"
 LOG_DIR="${TMPDIR:-/tmp}/pr-screenshots"
 mkdir -p "$LOG_DIR"
 
-# The iOS simulator reaches the stack on localhost; Blossom bakes this into media URLs.
+# The seeder bakes this into the media URLs it mints; the iOS simulator reaches
+# the stack on localhost.
 export BLOSSOM_PUBLIC_URL=http://localhost:43003
+COMPOSE_FILE="$ROOT/local_stack/docker-compose.yml"
+
+# Keycast mounts the gitignored local_stack/master.key, which only setup.sh
+# writes, and setup.sh also insists on adb. Without the file Docker mounts a
+# directory, Keycast dies and up.sh exits before its tuning and seed steps.
+# Prefer the main checkout's key: every worktree shares one Keycast database.
+KEY="$ROOT/local_stack/master.key"
+if [ ! -f "$KEY" ]; then
+  [ ! -d "$KEY" ] || rmdir "$KEY"
+  MAIN_KEY="$(git -C "$ROOT" worktree list --porcelain | sed -n '1s/^worktree //p')/local_stack/master.key"
+  if [ -f "$MAIN_KEY" ]; then cp "$MAIN_KEY" "$KEY"; else openssl rand 32 | base64 > "$KEY"; fi
+fi
+
 echo "Starting local stack (log: $LOG_DIR/stack.log)..."
 if ! bash "$ROOT/local_stack/up.sh" > "$LOG_DIR/stack.log" 2>&1; then
-  # Keycast often fails to start locally; device-only accounts never call it.
-  echo "warning: local_stack/up.sh reported a failure; checking the services screenshots need"
+  echo "warning: local_stack/up.sh failed; the end of $LOG_DIR/stack.log:" >&2
+  tail -n 15 "$LOG_DIR/stack.log" >&2
+fi
+# Untuned, a video published now stays out of the REST feeds for up to
+# 15 minutes, so a failed up.sh must not skip this step.
+if ! grep -q 'refresh-interval tuning: applied=' "$LOG_DIR/stack.log"; then
+  docker compose -f "$COMPOSE_FILE" run --rm funnelcake-local-tuning >> "$LOG_DIR/stack.log" 2>&1 \
+    || { echo "error: refresh-interval tuning failed; see $LOG_DIR/stack.log" >&2; exit 1; }
 fi
 curl -sf -o /dev/null http://localhost:43003/ || { echo "error: Blossom is not answering on :43003" >&2; exit 1; }
 curl -s -o /dev/null http://localhost:47777/ || { echo "error: the relay is not answering on :47777" >&2; exit 1; }
