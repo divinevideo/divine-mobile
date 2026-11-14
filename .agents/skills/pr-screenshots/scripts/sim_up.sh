@@ -41,6 +41,11 @@ if grep -qx funnelcake-proxy <<<"$RUNNING_SERVICES"; then
   PAUSED_SERVICES=$(docker compose -f "$COMPOSE_FILE" ps --status paused --services 2>/dev/null || true)
   [ -z "$PAUSED_SERVICES" ] \
     || echo "warning: paused in the shared stack: $(paste -sd " " - <<<"$PAUSED_SERVICES"); another run may be mid-shot" >&2
+  # A reused stack runs another checkout's local_stack, not this branch's.
+  diff_rc=0
+  git -C "$ROOT" diff --quiet origin/main...HEAD -- local_stack 2>/dev/null || diff_rc=$?
+  [ "$diff_rc" -ne 1 ] \
+    || echo "warning: this branch changes local_stack/, which the running stack does not include; if the screenshots depend on it, stop the stack and run sim_up.sh again" >&2
 else
   STACK_STARTED=yes
   # Keycast mounts the gitignored local_stack/master.key, which only setup.sh
