@@ -27,12 +27,11 @@ class ProfileLinkScope extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(profileReadRepositoryProvider);
     return _ProfileLinkOwner(
-      key: ValueKey((pubkey, repository, enabled)),
       pubkey: pubkey,
       profile: profile,
       enabled: enabled,
+      repository: ref.watch(profileReadRepositoryProvider),
       resolver: profileLinkResolverFor(ref),
       child: child,
     );
@@ -44,14 +43,17 @@ class _ProfileLinkOwner extends StatefulWidget {
     required this.pubkey,
     required this.profile,
     required this.enabled,
+    required this.repository,
     required this.resolver,
     required this.child,
-    super.key,
   });
 
   final String pubkey;
   final UserProfile? profile;
   final bool enabled;
+
+  /// Compared by identity only: a rebuilt repository re-resolves the link.
+  final ProfileReader? repository;
   final ProfileLinkResolver resolver;
   final Widget child;
 
@@ -60,24 +62,34 @@ class _ProfileLinkOwner extends StatefulWidget {
 }
 
 class _ProfileLinkOwnerState extends State<_ProfileLinkOwner> {
-  late final ProfileLinkCubit _cubit;
+  late ProfileLinkCubit _cubit;
 
   @override
   void initState() {
     super.initState();
-    _cubit = ProfileLinkCubit(
-      resolver: widget.resolver,
-      pubkey: widget.pubkey,
-      profile: widget.profile,
-    );
+    _cubit = _createCubit();
     _load();
   }
 
   @override
   void didUpdateWidget(_ProfileLinkOwner oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Swap the cubit instead of keying this widget: a key would remount the
+    // whole profile header below it and re-run every descendant's initState.
+    if (widget.pubkey != oldWidget.pubkey ||
+        widget.enabled != oldWidget.enabled ||
+        !identical(widget.repository, oldWidget.repository)) {
+      unawaited(_cubit.close());
+      _cubit = _createCubit();
+    }
     _load();
   }
+
+  ProfileLinkCubit _createCubit() => ProfileLinkCubit(
+    resolver: widget.resolver,
+    pubkey: widget.pubkey,
+    profile: widget.profile,
+  );
 
   void _load() {
     if (widget.enabled) {
