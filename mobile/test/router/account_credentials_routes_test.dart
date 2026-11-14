@@ -55,20 +55,17 @@ void main() {
 
     test('the gate lets a Divine-login account through', () {
       final container = buildContainer(AuthenticationSource.divineOAuth);
-      final redirect = Provider<String?>(
-        accountCredentialsRedirectIfUnavailable,
-      );
 
-      expect(container.read(redirect), isNull);
+      expect(accountCredentialsRedirectIfUnavailable(container), isNull);
     });
 
     test('the gate sends a key-only identity back to General Settings', () {
       final container = buildContainer(AuthenticationSource.importedKeys);
-      final redirect = Provider<String?>(
-        accountCredentialsRedirectIfUnavailable,
-      );
 
-      expect(container.read(redirect), GeneralSettingsScreen.path);
+      expect(
+        accountCredentialsRedirectIfUnavailable(container),
+        GeneralSettingsScreen.path,
+      );
     });
   });
 }

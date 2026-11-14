@@ -57,6 +57,9 @@ class SettingsScreen extends ConsumerStatefulWidget {
   static const routeName = 'settings';
   static const String path = RoutePaths.settings;
 
+  /// The route name of the Account destination, which opens [accountOnly].
+  static const accountRouteName = 'settings-account';
+
   const SettingsScreen({this.accountOnly = false, super.key});
 
   /// Reuses the account switcher for the Account destination and deep links.

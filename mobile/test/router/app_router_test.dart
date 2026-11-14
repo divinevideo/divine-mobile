@@ -495,35 +495,26 @@ void main() {
 
   group('feature-flagged settings routes', () {
     test('supporter route redirects when the Worker is not configured', () {
-      final redirectProvider = Provider<String?>(
-        supporterRedirectIfUnavailable,
-      );
       final container = ProviderContainer(
         overrides: [supporterApiConfiguredProvider.overrideWithValue(false)],
       );
       addTearDown(container.dispose);
 
-      expect(container.read(redirectProvider), SettingsScreen.path);
+      expect(supporterRedirectIfUnavailable(container), SettingsScreen.path);
     });
 
     test('supporter route is admitted by the compiled default', () {
       // No override: this is what a shipping build sees. The supporter flow is
       // no longer flag-gated, so the route has to resolve with no build
       // configuration at all.
-      final redirectProvider = Provider<String?>(
-        supporterRedirectIfUnavailable,
-      );
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
       expect(container.read(supporterApiConfiguredProvider), isTrue);
-      expect(container.read(redirectProvider), isNull);
+      expect(supporterRedirectIfUnavailable(container), isNull);
     });
 
     test('monetization settings route redirects when flag is off', () {
-      final redirectProvider = Provider<String?>(
-        monetizationLinksRedirectIfDisabled,
-      );
       final container = ProviderContainer(
         overrides: [
           featureFlagStateProvider.overrideWithValue(const {
@@ -533,13 +524,13 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      expect(container.read(redirectProvider), SettingsScreen.path);
+      expect(
+        monetizationLinksRedirectIfDisabled(container),
+        SettingsScreen.path,
+      );
     });
 
     test('monetization settings route stays available when flag is on', () {
-      final redirectProvider = Provider<String?>(
-        monetizationLinksRedirectIfDisabled,
-      );
       final container = ProviderContainer(
         overrides: [
           featureFlagStateProvider.overrideWithValue(const {
@@ -549,7 +540,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      expect(container.read(redirectProvider), isNull);
+      expect(monetizationLinksRedirectIfDisabled(container), isNull);
     });
   });
 

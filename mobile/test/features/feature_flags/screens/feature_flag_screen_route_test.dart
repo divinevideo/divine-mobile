@@ -18,8 +18,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockSharedPreferences extends Mock implements SharedPreferences {}
 
-final _settingsRoutesProvider = Provider<List<RouteBase>>(settingsRoutes);
-
 void main() {
   group('FeatureFlagScreen routing', () {
     late _MockSharedPreferences mockPrefs;
@@ -35,17 +33,6 @@ void main() {
         when(() => mockPrefs.containsKey('ff_${flag.name}')).thenReturn(false);
       }
     });
-
-    ProviderContainer buildContainer() {
-      final container = ProviderContainer(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(mockPrefs),
-          isDeveloperModeEnabledProvider.overrideWithValue(false),
-        ],
-      );
-      addTearDown(container.dispose);
-      return container;
-    }
 
     Future<void> pumpRouter(WidgetTester tester, GoRouter router) async {
       final container = ProviderContainer(
@@ -71,10 +58,9 @@ void main() {
     testWidgets(
       '${FeatureFlagScreen.path} resolves through the real settings routes',
       (tester) async {
-        final container = buildContainer();
         final router = GoRouter(
           initialLocation: FeatureFlagScreen.path,
-          routes: container.read(_settingsRoutesProvider),
+          routes: settingsRoutes(),
           errorBuilder: (_, _) =>
               const Scaffold(body: Text('UNRESOLVED-ROUTE')),
         );

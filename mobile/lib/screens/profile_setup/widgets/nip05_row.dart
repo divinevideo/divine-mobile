@@ -1,6 +1,6 @@
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_setup_rows.dart';
 import 'package:openvine/screens/settings/nip05_settings_screen.dart';
 
@@ -18,7 +18,7 @@ class Nip05Row extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProfileSelectRow(
       label: context.l10n.profileSetupUseOwnNip05,
-      onTap: () => context.pushNamed(Nip05SettingsScreen.routeName),
+      onTap: () => const Nip05SettingsRouteData().push<void>(context),
     );
   }
 }

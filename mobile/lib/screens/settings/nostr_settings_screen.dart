@@ -20,11 +20,11 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
 import 'package:openvine/screens/key_management_screen.dart';
 import 'package:openvine/screens/relay_diagnostic_screen.dart';
 import 'package:openvine/screens/relay_settings_screen.dart';
-import 'package:openvine/screens/settings/nip05_settings_screen.dart';
 import 'package:openvine/screens/settings/signature_verification_policy_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/utils/external_link_launcher.dart';
@@ -36,6 +36,10 @@ import 'package:unified_logger/unified_logger.dart';
 class NostrSettingsScreen extends ConsumerWidget {
   static const routeName = 'nostr-settings';
   static const String path = RoutePaths.nostrSettings;
+
+  /// The route name of the Connections destination, which opens
+  /// [networkOnly].
+  static const networkRouteName = 'settings-nostr-network';
 
   const NostrSettingsScreen({this.networkOnly = false, super.key});
 
@@ -143,7 +147,7 @@ class NostrAccountSettingsSection extends ConsumerWidget {
           icon: DivineIconName.globe,
           title: context.l10n.nostrSettingsNip05Address,
           subtitle: context.l10n.nostrSettingsNip05AddressSubtitle,
-          onTap: () => context.pushNamed(Nip05SettingsScreen.routeName),
+          onTap: () => const Nip05SettingsRouteData().push<void>(context),
         ),
         DivineListTile(
           icon: DivineIconName.downloadSimple,
@@ -287,7 +291,7 @@ class _SignatureVerificationTile extends ConsumerWidget {
       title: context.l10n.nostrSettingsSignatureVerification,
       subtitle: signatureVerificationPolicySubtitle(context, policy),
       onTap: () =>
-          context.pushNamed(SignatureVerificationPolicyScreen.routeName),
+          const SignatureVerificationPolicyRouteData().push<void>(context),
     );
   }
 }
