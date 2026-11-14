@@ -1070,6 +1070,26 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     XCTAssertEqual(try XCTUnwrap(instance.getPlayer()).rate, 0)
   }
 
+  func testPausedReloadOnlyReportsWhereItSettles() throws {
+    let reportsBeforeReload = registrar.fakeMessenger.sentMessages.count
+    _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
+    // Until its seek lands the new item reads zero, and priming its paused
+    // frame then steps it a frame on and back. The time observer reports
+    // each step as it lands.
+    try waitForState("the reloaded clip has a renderable frame") {
+      $0["isFirstFrameRendered"] as? Bool == true
+    }
+    RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+    let settled = try XCTUnwrap(latestState())
+    XCTAssertEqual(settled["status"] as? String, "paused")
+    let settledPosition = try XCTUnwrap(settled["positionMs"] as? Int)
+    let positions = states(since: reportsBeforeReload).compactMap { $0["positionMs"] as? Int }
+    XCTAssertEqual(
+      positions.filter { $0 != settledPosition }, [],
+      "a paused reload must not report the positions it passes through"
+    )
+  }
+
   func testPrerollCompletingAfterPlayDoesNotPausePlayback() throws {
     let instance = try XCTUnwrap(PlayerRegistry.shared.get(Self.playerId))
     let player = try XCTUnwrap(instance.getPlayer())
