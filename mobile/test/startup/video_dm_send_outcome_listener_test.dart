@@ -151,6 +151,8 @@ void main() {
       await tester.pump();
 
       outbox.controller.add(_outcome(VideoDmOutcomeStatus.failed));
+      // Two pumps, as for a shown result: the first only delivers the event.
+      await tester.pump();
       await tester.pump();
       expect(find.text(l10n.dmVideoSendFailed), findsNothing);
 
