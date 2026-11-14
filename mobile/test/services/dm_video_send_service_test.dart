@@ -512,6 +512,58 @@ void main() {
       },
     );
 
+    test('forwards Blossom upload progress to onUploadProgress', () async {
+      final videoFile = File('${tempDir.path}/clip.mp4')
+        ..writeAsBytesSync(const [9, 9, 9]);
+      final ciphertext = ciphertextFile();
+
+      when(() => encryption.encryptFile(videoFile)).thenAnswer(
+        (_) async => encryptedVideo(ciphertext),
+      );
+      when(
+        () => blossom.uploadEncryptedFile(
+          ciphertextFile: ciphertext,
+          onProgress: any(named: 'onProgress'),
+        ),
+      ).thenAnswer((invocation) async {
+        final onProgress =
+            invocation.namedArguments[#onProgress] as void Function(double)?;
+        onProgress
+          ?..call(0.1)
+          ..call(0.55)
+          ..call(1);
+        return const BlossomUploadResult(
+          success: true,
+          videoId: _ciphertextHash,
+          url: _fileUrl,
+        );
+      });
+      when(
+        () => dmRepository.sendFileMessage(
+          recipientPubkey: any(named: 'recipientPubkey'),
+          fileUrl: any(named: 'fileUrl'),
+          fileMetadata: any(named: 'fileMetadata'),
+        ),
+      ).thenAnswer(
+        (_) async => NIP17SendResult.success(
+          rumorEventId: 'rumor-1',
+          messageEventId: 'wrap-1',
+          recipientPubkey: _recipientPubkey,
+        ),
+      );
+
+      final fractions = <double>[];
+      final result = await createService().sendVideo(
+        recipientPubkey: _recipientPubkey,
+        videoFile: videoFile,
+        mimeType: 'video/mp4',
+        onUploadProgress: fractions.add,
+      );
+
+      expect(result.success, isTrue);
+      expect(fractions, equals([0.1, 0.55, 1.0]));
+    });
+
     test('reports encrypt, upload, then send phases in order', () async {
       final videoFile = File('${tempDir.path}/clip.mp4')
         ..writeAsBytesSync(const [9, 9, 9]);

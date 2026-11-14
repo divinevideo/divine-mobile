@@ -62,6 +62,9 @@ class DmVideoSendService {
   /// encryption, before upload, before the NIP-17 send) so a caller can render
   /// progress. It is never invoked for a stage that has not started.
   ///
+  /// [onUploadProgress], when supplied, receives the ciphertext upload's
+  /// completion fraction (0.0 to 1.0) as Blossom reports it.
+  ///
   /// [extraTags] are forwarded to [DmRepository.sendFileMessage], e.g. the
   /// marker that identifies a Divine camera clip.
   @useResult
@@ -73,6 +76,7 @@ class DmVideoSendService {
     String? dimensions,
     List<List<String>> extraTags = const [],
     void Function(DmVideoSendPhase phase)? onPhase,
+    void Function(double fraction)? onUploadProgress,
   }) async {
     onPhase?.call(DmVideoSendPhase.encrypting);
     final enc = await _encryption.encryptFile(videoFile);
@@ -85,6 +89,7 @@ class DmVideoSendService {
       onPhase?.call(DmVideoSendPhase.uploading);
       final upload = await _blossom.uploadEncryptedFile(
         ciphertextFile: enc.ciphertextFile,
+        onProgress: onUploadProgress,
       );
       if (!upload.success || upload.videoId == null) {
         return NIP17SendResult.failure(
