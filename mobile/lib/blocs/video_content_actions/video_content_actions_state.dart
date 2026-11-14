@@ -76,6 +76,7 @@ enum VideoBookmarkStatus { unknown, saved, notSaved }
 class VideoContentActionsState extends Equatable {
   const VideoContentActionsState({
     this.isSaving = false,
+    this.isImportingClip = false,
     this.bookmarkStatus = VideoBookmarkStatus.unknown,
     this.actionResult,
   });
@@ -87,6 +88,12 @@ class VideoContentActionsState extends Equatable {
   /// show that it is working rather than sitting inert (#7073).
   final bool isSaving;
 
+  /// Whether the video is being added to the viewer's clips.
+  ///
+  /// The import downloads the video before it can report anything, so the
+  /// action shows that it is working instead of sitting inert.
+  final bool isImportingClip;
+
   /// Whether this video is already globally bookmarked, per a reconciled read.
   final VideoBookmarkStatus bookmarkStatus;
 
@@ -96,12 +103,14 @@ class VideoContentActionsState extends Equatable {
 
   VideoContentActionsState copyWith({
     bool? isSaving,
+    bool? isImportingClip,
     VideoBookmarkStatus? bookmarkStatus,
     VideoContentActionResult? actionResult,
     bool clearActionResult = false,
   }) {
     return VideoContentActionsState(
       isSaving: isSaving ?? this.isSaving,
+      isImportingClip: isImportingClip ?? this.isImportingClip,
       bookmarkStatus: bookmarkStatus ?? this.bookmarkStatus,
       actionResult: clearActionResult
           ? null
@@ -110,5 +119,10 @@ class VideoContentActionsState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [isSaving, bookmarkStatus, actionResult];
+  List<Object?> get props => [
+    isSaving,
+    isImportingClip,
+    bookmarkStatus,
+    actionResult,
+  ];
 }

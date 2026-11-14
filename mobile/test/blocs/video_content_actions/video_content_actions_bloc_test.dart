@@ -574,6 +574,30 @@ void main() {
         mockImporter = _MockVideoClipImportService();
       });
 
+      test(
+        'reports the import as running until the importer finishes',
+        () async {
+          final importCompleter = Completer<VideoClipImportResult>();
+          when(
+            () => mockImporter.importToLibrary(
+              any(),
+              libraryTitle: any(named: 'libraryTitle'),
+            ),
+          ).thenAnswer((_) => importCompleter.future);
+          final bloc = createBloc(videoClipImportService: mockImporter);
+          addTearDown(bloc.close);
+
+          expect(bloc.state.isImportingClip, isFalse);
+          bloc.add(const VideoContentAddToClipsRequested());
+          await pumpEventQueue();
+          expect(bloc.state.isImportingClip, isTrue);
+
+          importCompleter.complete(VideoClipImportSuccess(_clip()));
+          await pumpEventQueue();
+          expect(bloc.state.isImportingClip, isFalse);
+        },
+      );
+
       blocTest<VideoContentActionsBloc, VideoContentActionsState>(
         'emits import success when video is added to clips',
         setUp: () {
@@ -594,17 +618,30 @@ void main() {
           ),
         ),
         expect: () => [
-          isA<VideoContentActionsState>().having(
-            (state) => state.actionResult,
-            'actionResult',
-            isA<VideoContentClipImportResult>()
-                .having((result) => result.succeeded, 'succeeded', isTrue)
-                .having(
-                  (result) => result.libraryTitle,
-                  'libraryTitle',
-                  'My local cut',
-                ),
-          ),
+          isA<VideoContentActionsState>()
+              .having(
+                (state) => state.isImportingClip,
+                'isImportingClip',
+                isTrue,
+              )
+              .having((state) => state.actionResult, 'actionResult', isNull),
+          isA<VideoContentActionsState>()
+              .having(
+                (state) => state.isImportingClip,
+                'isImportingClip',
+                isFalse,
+              )
+              .having(
+                (state) => state.actionResult,
+                'actionResult',
+                isA<VideoContentClipImportResult>()
+                    .having((result) => result.succeeded, 'succeeded', isTrue)
+                    .having(
+                      (result) => result.libraryTitle,
+                      'libraryTitle',
+                      'My local cut',
+                    ),
+              ),
         ],
         verify: (_) {
           verify(
@@ -633,15 +670,28 @@ void main() {
         build: () => createBloc(videoClipImportService: mockImporter),
         act: (bloc) => bloc.add(const VideoContentAddToClipsRequested()),
         expect: () => [
-          isA<VideoContentActionsState>().having(
-            (state) => state.actionResult,
-            'actionResult',
-            isA<VideoContentClipImportResult>().having(
-              (result) => result.succeeded,
-              'succeeded',
-              isFalse,
-            ),
-          ),
+          isA<VideoContentActionsState>()
+              .having(
+                (state) => state.isImportingClip,
+                'isImportingClip',
+                isTrue,
+              )
+              .having((state) => state.actionResult, 'actionResult', isNull),
+          isA<VideoContentActionsState>()
+              .having(
+                (state) => state.isImportingClip,
+                'isImportingClip',
+                isFalse,
+              )
+              .having(
+                (state) => state.actionResult,
+                'actionResult',
+                isA<VideoContentClipImportResult>().having(
+                  (result) => result.succeeded,
+                  'succeeded',
+                  isFalse,
+                ),
+              ),
         ],
       );
 
@@ -650,15 +700,28 @@ void main() {
         build: createBloc,
         act: (bloc) => bloc.add(const VideoContentAddToClipsRequested()),
         expect: () => [
-          isA<VideoContentActionsState>().having(
-            (state) => state.actionResult,
-            'actionResult',
-            isA<VideoContentClipImportResult>().having(
-              (result) => result.succeeded,
-              'succeeded',
-              isFalse,
-            ),
-          ),
+          isA<VideoContentActionsState>()
+              .having(
+                (state) => state.isImportingClip,
+                'isImportingClip',
+                isTrue,
+              )
+              .having((state) => state.actionResult, 'actionResult', isNull),
+          isA<VideoContentActionsState>()
+              .having(
+                (state) => state.isImportingClip,
+                'isImportingClip',
+                isFalse,
+              )
+              .having(
+                (state) => state.actionResult,
+                'actionResult',
+                isA<VideoContentClipImportResult>().having(
+                  (result) => result.succeeded,
+                  'succeeded',
+                  isFalse,
+                ),
+              ),
         ],
       );
 
@@ -682,15 +745,28 @@ void main() {
           ),
         ],
         expect: () => [
-          isA<VideoContentActionsState>().having(
-            (state) => state.actionResult,
-            'actionResult',
-            isA<VideoContentClipImportResult>().having(
-              (result) => result.succeeded,
-              'succeeded',
-              isFalse,
-            ),
-          ),
+          isA<VideoContentActionsState>()
+              .having(
+                (state) => state.isImportingClip,
+                'isImportingClip',
+                isTrue,
+              )
+              .having((state) => state.actionResult, 'actionResult', isNull),
+          isA<VideoContentActionsState>()
+              .having(
+                (state) => state.isImportingClip,
+                'isImportingClip',
+                isFalse,
+              )
+              .having(
+                (state) => state.actionResult,
+                'actionResult',
+                isA<VideoContentClipImportResult>().having(
+                  (result) => result.succeeded,
+                  'succeeded',
+                  isFalse,
+                ),
+              ),
         ],
       );
     });

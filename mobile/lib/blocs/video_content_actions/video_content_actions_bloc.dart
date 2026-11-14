@@ -234,6 +234,10 @@ class VideoContentActionsBloc
     VideoContentAddToClipsRequested event,
     Emitter<VideoContentActionsState> emit,
   ) async {
+    // Emitted before the import so the action shows progress while the video
+    // downloads.
+    emit(state.copyWith(isImportingClip: true, clearActionResult: true));
+
     final importer = _videoClipImportService;
     if (importer == null) {
       Log.warning(
@@ -243,6 +247,7 @@ class VideoContentActionsBloc
       );
       emit(
         state.copyWith(
+          isImportingClip: false,
           actionResult: VideoContentClipImportResult(succeeded: false),
         ),
       );
@@ -254,8 +259,11 @@ class VideoContentActionsBloc
         _video,
         libraryTitle: event.libraryTitle,
       );
+      if (isClosed) return;
+
       emit(
         state.copyWith(
+          isImportingClip: false,
           actionResult: VideoContentClipImportResult(
             succeeded: result is VideoClipImportSuccess,
             libraryTitle: result is VideoClipImportSuccess
@@ -275,8 +283,11 @@ class VideoContentActionsBloc
         name: 'VideoContentActionsBloc',
         category: LogCategory.ui,
       );
+      if (isClosed) return;
+
       emit(
         state.copyWith(
+          isImportingClip: false,
           actionResult: VideoContentClipImportResult(succeeded: false),
         ),
       );

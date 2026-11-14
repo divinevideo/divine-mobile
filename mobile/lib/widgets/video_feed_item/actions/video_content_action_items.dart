@@ -3,6 +3,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
@@ -120,13 +121,19 @@ VideoActionRowItem saveVideoActionItem(
 
 /// Asks for a clip title, then adds the video to the viewer's clips.
 ///
-/// [context] must sit below the sheet's [VideoContentActionsBloc].
+/// Shows as pending while the import runs. [context] must be the building
+/// context of a widget below the sheet's [VideoContentActionsBloc]: the item
+/// subscribes it to the import progress.
 VideoActionRowItem addToClipsActionItem(BuildContext context) {
+  final isImporting = context.select(
+    (VideoContentActionsBloc bloc) => bloc.state.isImportingClip,
+  );
   return VideoActionRowItem(
     icon: DivineIconName.filmSlate,
     label: context.l10n.shareSheetAddToClips,
     onTap: () =>
         _runActionDetached(requestAddToClips(context), 'request add to clips'),
+    isPending: isImporting,
   );
 }
 

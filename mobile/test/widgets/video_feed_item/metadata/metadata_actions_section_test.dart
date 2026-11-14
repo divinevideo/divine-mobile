@@ -66,10 +66,16 @@ void main() {
     contentActions = _MockVideoContentActionsBloc();
   });
 
-  void stubContentActions({bool isSaving = false}) {
-    when(
-      () => contentActions.state,
-    ).thenReturn(VideoContentActionsState(isSaving: isSaving));
+  void stubContentActions({
+    bool isSaving = false,
+    bool isImportingClip = false,
+  }) {
+    when(() => contentActions.state).thenReturn(
+      VideoContentActionsState(
+        isSaving: isSaving,
+        isImportingClip: isImportingClip,
+      ),
+    );
     when(() => contentActions.defaultClipTitle).thenReturn(_defaultClipTitle);
   }
 
@@ -182,6 +188,28 @@ void main() {
 
         expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
       });
+
+      testWidgets('a spinner on Add to clips while the clip is importing', (
+        tester,
+      ) async {
+        stubContentActions(isImportingClip: true);
+        await tester.pumpWidget(buildSubject(video: _classicVine));
+
+        final addToClipsItem = find
+            .ancestor(
+              of: find.text(l10n.shareSheetAddToClips),
+              matching: find.byType(GestureDetector),
+            )
+            .first;
+        expect(
+          find.descendant(
+            of: addToClipsItem,
+            matching: find.byType(DivineCircularProgressIndicator),
+          ),
+          findsOneWidget,
+        );
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+      });
     });
 
     group('interactions', () {
@@ -196,6 +224,21 @@ void main() {
 
         verifyNever(() => contentActions.add(any()));
       });
+
+      testWidgets(
+        'tapping Add to clips while it is importing prompts nothing',
+        (
+          tester,
+        ) async {
+          stubContentActions(isImportingClip: true);
+          await tester.pumpWidget(buildSubject(video: _classicVine));
+
+          await tester.tap(find.text(l10n.shareSheetAddToClips));
+          await tester.pump();
+
+          expect(find.byType(ClipTitleSheet), findsNothing);
+        },
+      );
 
       testWidgets('tapping Save requests a bookmark toggle', (tester) async {
         stubContentActions();

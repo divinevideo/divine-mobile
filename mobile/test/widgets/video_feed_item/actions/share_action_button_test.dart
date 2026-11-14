@@ -33,6 +33,7 @@ import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
+import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
@@ -40,6 +41,7 @@ import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart'
 import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
+import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
 import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
@@ -63,6 +65,9 @@ class _MockRankingSignalsLoader extends Mock
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockVideoSharingService extends Mock implements VideoSharingService {}
+
+class _MockVideoClipImportService extends Mock
+    implements VideoClipImportService {}
 
 class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
 
@@ -808,6 +813,81 @@ void main() {
 
           expect(find.text(l10n.shareSheetNameClipTitle), findsOneWidget);
           expect(find.text(testVideo.title!), findsWidgets);
+        });
+
+        testWidgets('Add to clips shows a spinner while the clip imports', (
+          tester,
+        ) async {
+          stubBookmarkStatus(saved: false);
+          final importer = _MockVideoClipImportService();
+          final importCompleter = Completer<VideoClipImportResult>();
+          when(
+            () => importer.importToLibrary(
+              any(),
+              libraryTitle: any(named: 'libraryTitle'),
+            ),
+          ).thenAnswer((_) => importCompleter.future);
+          await tester.pumpWidget(
+            testMaterialApp(
+              home: Scaffold(body: ShareActionButton(video: testVideo)),
+              additionalOverrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  mockRankingSignalsLoader,
+                ),
+                videoSharingServiceProvider.overrideWith(
+                  (ref) => mockVideoSharingService,
+                ),
+                bookmarksRepositoryProvider.overrideWithValue(
+                  bookmarksRepository,
+                ),
+                videoClipImportServiceProvider.overrideWithValue(importer),
+              ],
+              mockAuthService: createMockAuthService(
+                authState: AuthState.authenticated,
+                currentPublicKeyHex: ownPubkey,
+              ),
+              mockProfileRepository: mockProfileRepository,
+              mockFollowRepository: mockFollowRepository,
+            ),
+          );
+          await tester.tap(find.byType(ShareActionButton));
+          await tester.pumpAndSettle();
+
+          await scrollUntilTappable(
+            tester,
+            find.text(l10n.shareSheetAddToClips),
+            200,
+            scrollable: moreActionsRow(l10n),
+          );
+          await tester.tap(find.text(l10n.shareSheetAddToClips));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.shareSheetSaveClip));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+
+          final addToClipsItem = find
+              .ancestor(
+                of: find.text(l10n.shareSheetAddToClips),
+                matching: find.byType(GestureDetector),
+              )
+              .first;
+          expect(
+            find.descendant(
+              of: addToClipsItem,
+              matching: find.byType(DivineCircularProgressIndicator),
+            ),
+            findsOneWidget,
+          );
+
+          importCompleter.complete(
+            const VideoClipImportFailure(
+              VideoClipImportFailureReason.downloadFailed,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+          expect(find.text(l10n.shareSheetAddToClipsFailed), findsOneWidget);
         });
 
         testWidgets('Event ID copies the nevent and closes the sheet', (
