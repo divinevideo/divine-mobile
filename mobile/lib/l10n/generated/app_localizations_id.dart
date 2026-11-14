@@ -3923,8 +3923,8 @@ class AppLocalizationsId extends AppLocalizations {
   String get dmPendingVideoPreparing => 'Preparing…';
 
   @override
-  String dmPendingVideoUploading(int percent) {
-    return 'Uploading $percent%';
+  String dmPendingVideoUploading(String percent) {
+    return 'Uploading $percent';
   }
 
   @override
@@ -3934,8 +3934,8 @@ class AppLocalizationsId extends AppLocalizations {
   String get dmPendingVideoRemove => 'Remove';
 
   @override
-  String dmPendingVideoSemantics(int percent) {
-    return 'Sending video, $percent%';
+  String dmPendingVideoSemantics(String percent) {
+    return 'Sending video, $percent';
   }
 
   @override
