@@ -595,7 +595,7 @@ class _UnifiedShareSheetView extends StatelessWidget {
             // Lift the content above the keyboard so the message TextField
             // stays visible when a recipient is selected. Without this the
             // sheet is anchored at the screen bottom and the field hides
-            // behind the keyboard. Mirrors _ClipTitleSheet below.
+            // behind the keyboard, as ClipTitleSheet does.
             padding: EdgeInsets.only(
               bottom: MediaQuery.viewInsetsOf(context).bottom,
             ),

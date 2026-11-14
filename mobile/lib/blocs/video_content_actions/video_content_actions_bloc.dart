@@ -65,10 +65,6 @@ class VideoContentActionsBloc
     addError(Reportable(error, context: context), stackTrace);
   }
 
-  // --------------------------------------------------------------------------
-  // Bookmark status (picks the save/remove row before it is tapped)
-  // --------------------------------------------------------------------------
-
   /// Resolves [VideoContentActionsState.bookmarkStatus] from a relay-reconciled read.
   ///
   /// Uses the non-authoritative [BookmarksRepository.syncGlobalBookmarks] rather
@@ -130,10 +126,6 @@ class VideoContentActionsBloc
       );
     }
   }
-
-  // --------------------------------------------------------------------------
-  // Save to bookmarks
-  // --------------------------------------------------------------------------
 
   Future<void> _onSaveRequested(
     VideoContentSaveRequested event,
@@ -223,10 +215,6 @@ class VideoContentActionsBloc
       );
     }
   }
-
-  // --------------------------------------------------------------------------
-  // Add video to clips
-  // --------------------------------------------------------------------------
 
   Future<void> _onAddToClipsRequested(
     VideoContentAddToClipsRequested event,

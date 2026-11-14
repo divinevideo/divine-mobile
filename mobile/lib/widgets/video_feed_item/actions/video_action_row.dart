@@ -21,7 +21,8 @@ class VideoActionRowItem {
   final String label;
   final VoidCallback onTap;
 
-  /// Called when the item first becomes visible in the row.
+  /// Called on each visibility change while any part of the item is
+  /// visible; callers that log an exposure dedupe it themselves.
   final VoidCallback? onShown;
 
   /// Whether the action is mid-flight, so the circle shows a spinner and stops

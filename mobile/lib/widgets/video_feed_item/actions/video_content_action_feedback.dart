@@ -1,5 +1,5 @@
-// ABOUTME: Shared UI feedback for per-video content actions (save, clips, copy).
-// ABOUTME: Closes the sheet the action was tapped in, then reports the outcome.
+// ABOUTME: Feedback for per-video content actions: closes the sheet, reports.
+// ABOUTME: Also hosts the clip-title prompt that starts an Add to clips.
 
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:divine_ui/divine_ui.dart';

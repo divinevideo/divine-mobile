@@ -66,7 +66,8 @@ video". The share sheet stays the place for "send this somewhere".
 - Snackbars raised while a sheet is open land under it
   (`.claude/rules/ui_theming.md`). The share sheet closes itself before
   showing feedback or presenting the next screen (`_presentAfterDismiss`,
-  `_safePop`); the info sheet follows the same pattern.
+  `_safePop`); the info sheet follows the same pattern, for a failed delete
+  too. Only the clip-title prompt and the delete confirmation open over it.
 - Strings: reuse the existing `shareSheet*` / `shareMenu*` ARB keys. No new
   copy is needed unless the builder adds a section label (see below).
 - Existing guards apply (raw TextStyle/colors ceilings, post-close emit,
@@ -123,8 +124,8 @@ Rabble picked A.
   outweigh the extra query; the repository serializes syncs. Revisit if it
   shows up in relay load.
 - Emits status enums plus one-shot results for the UI (snackbar text,
-  clipboard), mirroring how `ShareSheetActionResult` works today. Uses
-  `CloseGuardedEmit`.
+  clipboard), mirroring how `ShareSheetActionResult` works today. Every
+  emit stays inside a handler's own emitter, which `close()` cancels.
 - `ShareSheetBloc` drops those handlers, events and results. The share sheet
   provides the new cubit alongside its bloc and wires the same buttons to it.
   Its existing tests for those behaviours move to the cubit's tests.
@@ -158,8 +159,9 @@ Rabble picked A.
   `ShareSheetBloc` (moved tests, not rewritten from scratch where possible).
 - Widget tests for the info sheet action row: which actions show for a
   classic Vine, an own video, a reuse-allowed video, a plain other-person
-  video, and with debug tools on; tapping Add to clips imports and shows the
-  success snackbar.
+  video, and with debug tools on; tapping Add to clips prompts for a title and
+  requests the import. The shared feedback tests cover the import's
+  snackbar.
 - Share sheet tests keep passing with the actions routed to the shared cubit.
 - Run the guards and `flutter analyze`; check whether an info-sheet golden
   exists under `test/goldens/` and update it on the runner if so.

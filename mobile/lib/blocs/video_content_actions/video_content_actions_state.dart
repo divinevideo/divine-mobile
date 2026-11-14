@@ -1,21 +1,25 @@
 // ABOUTME: State and one-shot action results for VideoContentActionsBloc
-// ABOUTME: Carries save progress, bookmark status, and the last action result
+// ABOUTME: Carries save and clip-import progress, bookmark status and results
 
 part of 'video_content_actions_bloc.dart';
 
 /// One-shot result of a content action, consumed by a BlocListener.
+///
+/// Constructors are deliberately non-const and the hierarchy is not
+/// Equatable: each result is a distinct instance, so two identical-looking
+/// results in a row (two failed copies, say) still both reach the listener.
 sealed class VideoContentActionResult {
   VideoContentActionResult();
 }
 
-/// Consolidates save success and failure into a single class, using
-/// [succeeded] to distinguish the outcome.
+/// Outcome of a bookmark toggle; [succeeded] tells success from failure.
 ///
 /// When [succeeded] is true, [removed] tells the UI whether the video was
 /// removed from global bookmarks (toggle off) vs added (toggle on).
 ///
-/// [wasBookmarkedBeforeToggle] is set for every attempt. When [succeeded]
-/// is false, the UI uses it to show an add-specific vs remove-specific error.
+/// [wasBookmarkedBeforeToggle] is set for every attempt that reached the
+/// repository. When [succeeded] is false, the UI uses it to show an
+/// add-specific vs remove-specific error.
 class VideoContentSaveResult extends VideoContentActionResult {
   VideoContentSaveResult({
     required this.succeeded,
@@ -97,8 +101,8 @@ class VideoContentActionsState extends Equatable {
   /// Whether this video is already globally bookmarked, per a reconciled read.
   final VideoBookmarkStatus bookmarkStatus;
 
-  /// One-shot action result for BlocListener consumption.
-  /// Cleared on next state emission.
+  /// Last one-shot action result, for BlocListener consumption. Kept until
+  /// the next result, or until a save or clip import starts.
   final VideoContentActionResult? actionResult;
 
   VideoContentActionsState copyWith({

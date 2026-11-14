@@ -1,5 +1,5 @@
 // ABOUTME: Shared edit/pin/delete action sheet for a video the viewer owns.
-// ABOUTME: Used by the profile grid, the composable grid and the share sheet.
+// ABOUTME: Also hosts the confirm-and-delete flow both video sheets reuse.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';

@@ -27,7 +27,7 @@ class VideoContentSaveRequested extends VideoContentActionsEvent {
   const VideoContentSaveRequested();
 }
 
-/// Add a video (classic Vine or own video) to the local clip library.
+/// Add the video to the viewer's local clip library.
 class VideoContentAddToClipsRequested extends VideoContentActionsEvent {
   const VideoContentAddToClipsRequested({this.libraryTitle});
 

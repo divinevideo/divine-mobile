@@ -1,4 +1,4 @@
-// ABOUTME: Rules deciding which content actions a video offers a viewer.
+// ABOUTME: Decides whether a video offers Add to clips to a viewer.
 // ABOUTME: Shared by the share sheet and the video info sheet.
 
 import 'package:flutter/foundation.dart';

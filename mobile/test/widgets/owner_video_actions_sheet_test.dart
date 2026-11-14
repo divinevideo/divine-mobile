@@ -1,5 +1,5 @@
 // ABOUTME: Tests the shared owner-video action sheet helper.
-// ABOUTME: Pins the onDeleted contract that lets the two grids differ.
+// ABOUTME: Pins the onDeleted/onFailed contract for grids and closing sheets.
 
 import 'dart:async';
 

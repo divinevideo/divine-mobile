@@ -17,12 +17,12 @@
 - Edit / Delete visible only when the viewer owns the video, decided once when the sheet opens (an `OwnerVideoActionsCubit` is provided iff owned).
 - Event JSON / Event ID visible only when `isFeatureEnabledProvider(FeatureFlag.debugTools)` is true.
 - Info sheet order: Edit, Delete, Save, Add to clips, Add to list, Event JSON, Event ID. Placed after `MetadataStatsRow`, before `MetadataCreatorSection`. No heading.
-- Every action closes the sheet it was tapped in before showing a snackbar or presenting the next screen.
+- Every action closes the sheet it was tapped in before showing a snackbar or presenting the next screen; only the clip-title prompt and the delete confirmation open over it. While any content action runs, the rest of the row is disabled, so no other row action can close the sheet first.
 - Share sheet keeps every action it has today, including download, Save to gallery and Crosspost. Info sheet does not get download, Save to gallery or Crosspost.
 - No new ARB keys. Reuse `shareSheet*`, `shareMenu*`, `share*` keys.
 - Files under `lib/**/widgets/**` must not import `package:openvine/services/...` (`check_ui_service_boundary.sh`; new files may not be added to its baseline).
 - New files may not contain raw `TextStyle(`, raw colors, or `Future.delayed` (per-file ceilings fail on new keys). Use `VineTheme.*Font()` and `context.vineColors.*`; wait for a frame with `WidgetsBinding.instance.endOfFrame`. Lock lowered ceilings in the same commit with `UPDATE_BASELINE=1 bash scripts/check_<name>.sh`.
-- State holds status enums and one-shot results, never error strings. Blocs mix in `CloseGuardedEmit`.
+- State holds status enums and one-shot results, never error strings. Every emit stays inside a handler's own emitter, so the bloc needs no `CloseGuardedEmit`.
 - Every test file's declarations live in `group()`s; widget tests use `testMaterialApp` / `appLocalizationsDelegates`.
 
 ## Review Focus
@@ -46,11 +46,11 @@ Move, don't rewrite: the handler bodies come from `lib/blocs/share_sheet/share_s
 
 **Interfaces:**
 - Produces:
-  - `VideoContentActionsBloc({required VideoEvent video, required String relayUrl, BookmarksRepository? bookmarksRepository, VideoClipImportService? videoClipImportService})`, `extends Bloc<VideoContentActionsEvent, VideoContentActionsState> with CloseGuardedEmit<VideoContentActionsState>`.
+  - `VideoContentActionsBloc({required VideoEvent video, required String relayUrl, BookmarksRepository? bookmarksRepository, VideoClipImportService? videoClipImportService})`, `extends Bloc<VideoContentActionsEvent, VideoContentActionsState>`.
   - `String get defaultClipTitle` → `VideoClipImportService.defaultLibraryTitleFor(video)` (so widgets never import the service).
   - Events (sealed `VideoContentActionsEvent extends Equatable`): `VideoContentBookmarkStatusRequested()`, `VideoContentSaveRequested()`, `VideoContentAddToClipsRequested({String? libraryTitle})`, `VideoContentCopyEventJsonRequested()`, `VideoContentCopyEventIdRequested()`. Same transformers as today (`droppable()` for status, save, add to clips).
   - `enum VideoBookmarkStatus { unknown, saved, notSaved }` (moved doc comment from `ShareSheetBookmarkStatus`).
-  - `VideoContentActionsState({bool isSaving = false, VideoBookmarkStatus bookmarkStatus = VideoBookmarkStatus.unknown, VideoContentActionResult? actionResult})` with `copyWith(..., bool clearActionResult = false)`.
+  - `VideoContentActionsState({bool isSaving = false, bool isImportingClip = false, VideoBookmarkStatus bookmarkStatus = VideoBookmarkStatus.unknown, VideoContentActionResult? actionResult})` with `copyWith(..., bool clearActionResult = false)`.
   - Sealed non-const `VideoContentActionResult` with: `VideoContentSaveResult({required bool succeeded, bool removed = false, bool wasBookmarkedBeforeToggle = false, BookmarkToggleFailure? failure})`, `VideoContentClipImportResult({required bool succeeded, String? libraryTitle})`, `VideoContentCopiedToClipboard({required VideoContentCopiedKind kind, required String text})` with `enum VideoContentCopiedKind { eventJson, eventId }`, `VideoContentActionFailure()`.
   - `abstract class VideoContentActionsReportableSites` with the five handler names.
 
@@ -159,7 +159,7 @@ Also: `defaultClipTitle` returns the video's title for a titled video.
 
 **Interfaces:**
 - Consumes: Tasks 1–3 (`VideoContentActionsBloc`, `VideoActionRow`, `VideoActionRowItem`, `canAddVideoToClips`, `requestAddToClips`, `presentAfterSheetDismiss`, `dismissSheet`, `confirmAndDeleteOwnerVideo`, `VideoContentActionsFeedbackListener`).
-- Produces: `class MetadataActionsSection extends ConsumerWidget` — `MetadataActionsSection({required VideoEvent video})`. Renders `SizedBox.shrink()` when no `VideoContentActionsBloc` is provided (keeps the `@visibleForTesting` constructor path working). `isOwnContent` = `context.read<OwnerVideoActionsCubit?>() != null`.
+- Produces: `class MetadataActionsSection extends ConsumerStatefulWidget`, kept alive in the sheet's lazy list so a running delete or import can still report — `MetadataActionsSection({required VideoEvent video, bool isOwnVideo = false})`. Renders `SizedBox.shrink()` when no `VideoContentActionsBloc` is provided (keeps the `@visibleForTesting` constructor path working). Owner actions show when `isOwnVideo`, which the sheet decides once, reading the `OwnerVideoActionsCubit` it provides alongside.
 
 - [ ] **Step 1: Write failing tests** (pump the section inside `testMaterialApp` with `BlocProvider<VideoContentActionsBloc>` from a mocked bloc and, for own videos, a mocked `OwnerVideoActionsCubit`; override `isFeatureEnabledProvider`):
   - classic Vine, not own: shows Save, Add to clips, Add to list; no Edit/Delete, no Event JSON.

@@ -176,8 +176,8 @@ void main() {
 
     group('VideoContentSaveRequested', () {
       // The save handler emits a pending state before it touches the
-      // network, then the terminal result, so every expectation below opens
-      // with this one and asserts the flag is cleared on the way out.
+      // network, then the terminal result, so each expectation below opens
+      // with this one.
       final savePending = isA<VideoContentActionsState>()
           .having((s) => s.isSaving, 'isSaving', isTrue)
           .having((s) => s.actionResult, 'actionResult', isNull);
@@ -563,10 +563,6 @@ void main() {
       );
     });
 
-    // -----------------------------------------------------------------------
-    // Add video to clips
-    // -----------------------------------------------------------------------
-
     group('VideoContentAddToClipsRequested', () {
       late _MockVideoClipImportService mockImporter;
 
@@ -771,10 +767,6 @@ void main() {
       );
     });
 
-    // -----------------------------------------------------------------------
-    // Copy link
-    // -----------------------------------------------------------------------
-
     group('VideoContentCopyEventJsonRequested', () {
       blocTest<VideoContentActionsBloc, VideoContentActionsState>(
         'emits $VideoContentCopiedToClipboard with formatted JSON',
@@ -818,10 +810,6 @@ void main() {
         ],
       );
     });
-
-    // -----------------------------------------------------------------------
-    // Copy event ID
-    // -----------------------------------------------------------------------
 
     group('VideoContentCopyEventIdRequested', () {
       blocTest<VideoContentActionsBloc, VideoContentActionsState>(
