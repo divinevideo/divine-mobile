@@ -7,7 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Drives `scripts/check_android_device_support.sh` against synthetic
 /// `build.gradle.kts` fixtures through `ANDROID_APP_GRADLE`, so each verdict
-/// is pinned without depending on the real file's current contents.
+/// is pinned independently of the real file. One test runs the default path,
+/// which reads the real file.
 void main() {
   group('check_android_device_support', () {
     late Directory tmp;
@@ -167,7 +168,10 @@ $extra
     group('abiFilters', () {
       test('fails on a list that drops 32-bit', () {
         final result = run(
-          gradle(extra: '        ndk { abiFilters += listOf("arm64-v8a") }'),
+          gradle(
+            extra:
+                '        ndk { abiFilters.clear(); abiFilters += "arm64-v8a" }',
+          ),
         );
 
         expect(result.exitCode, equals(1));

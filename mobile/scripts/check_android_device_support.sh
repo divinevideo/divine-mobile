@@ -2,7 +2,7 @@
 # Fails CI if an Android build change would silently narrow device support.
 #
 # Divine ships one Play AAB that must reach every device the previous release
-# reached. This guard freezes the Gradle-level ways to narrow that set, so a
+# reached. This guard freezes two Gradle-level ways to narrow that set, so a
 # narrowing is caught in a PR instead of by Play's "no longer supports N
 # devices" warning at upload. It cannot inspect the built AAB: the incident
 # behind it and the upload runbook are in mobile/docs/ANDROID_DEVICE_SUPPORT.md.
@@ -17,7 +17,10 @@
 #      applied, so this file has no reason to, and editing them is how the AAB
 #      loses an ABI. Any reference outside a comment fails.
 #
-# The third way, `--target-platform` on a Shorebird Android build in
+# Not covered: a packaging.jniLibs exclude can also drop an ABI's libraries;
+# the Gradle file's own comment there warns against wildcards.
+#
+# A third way, `--target-platform` on a Shorebird Android build in
 # codemagic.yaml, is asserted by
 # .github/scripts/tests/test_codemagic_shorebird_config.py instead: that suite
 # runs on every PR, while the Guards job this guard runs in skips a PR that only
@@ -38,8 +41,9 @@ if [ ! -f "$gradle" ]; then
   exit 1
 fi
 
-# Kotlin shares Dart's comment and string syntax, so the shared stripper keeps
-# a commented-out minSdk, or a number in a trailing comment, from being read.
+# Kotlin comments match Dart's, so the shared stripper keeps a commented-out
+# minSdk, or a number in a trailing comment, from being read. It reads `\` in a
+# Kotlin """ raw string as an escape, which this file has no use for.
 code="$(awk -f "$SCRIPT_DIR/lib/dart_code_only.awk" "$gradle")"
 
 # ---------------------------------------------------------------------------

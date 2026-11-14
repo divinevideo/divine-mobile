@@ -11,7 +11,7 @@ and a wrong upload — do not recur.
 
 | Lever | Value | Why |
 |---|---|---|
-| `minSdk` | **28 (Android 9.0)** | Pinned by `c2pa_flutter` (ProofMode/C2PA). It is **not** a Google requirement, and Google does not ask us to raise it. Our own telemetry (Nov 2026) puts only ~0.5% of active users on Android 9 and under 2% on Android 9–10, but we keep the floor as low as the C2PA dependency allows. |
+| `minSdk` | **28 (Android 9.0)** | The lowest `c2pa_flutter` (ProofMode/C2PA) allows; its own `minSdk` is 28. It is **not** a Google requirement, and Google does not ask us to raise it. Our own telemetry (Nov 2026) puts only ~0.5% of active users on Android 9 and under 2% on Android 9–10, but we keep the floor as low as the C2PA dependency allows. |
 | ABIs | **`armeabi-v7a` (32-bit) + `arm64-v8a` (64-bit) + `x86_64`** | 64-bit is a Google requirement; 32-bit is ours, to keep low-end/budget devices. `flutter build appbundle` ships all three by default — we do not restrict them. |
 | `targetSdk` / `compileSdk` | **36 (Android 16)** via Flutter's default | Google requires app updates to target a recent API (API 36 since 31 Aug 2026). Raising `targetSdk` is a behavioral/compliance change and **drops no devices**. We track `flutter.targetSdkVersion`; do not pin a lower value. |
 | Delivery | AAB, Play splits per device | Each device downloads only its ABI/density slice. |
