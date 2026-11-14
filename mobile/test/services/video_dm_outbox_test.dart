@@ -121,16 +121,18 @@ void main() {
     return created;
   }
 
-  When<Future<NIP17SendResult>> whenSendVideo() => when(
-    () => service.sendVideo(
-      recipientPubkey: any(named: 'recipientPubkey'),
-      videoFile: any(named: 'videoFile'),
-      mimeType: any(named: 'mimeType'),
-      extraTags: any(named: 'extraTags'),
-      onPhase: any(named: 'onPhase'),
-      onUploadProgress: any(named: 'onUploadProgress'),
-    ),
-  );
+  Future<NIP17SendResult> anySendVideoOn(_MockDmVideoSendService mock) =>
+      mock.sendVideo(
+        recipientPubkey: any(named: 'recipientPubkey'),
+        videoFile: any(named: 'videoFile'),
+        mimeType: any(named: 'mimeType'),
+        extraTags: any(named: 'extraTags'),
+        onPhase: any(named: 'onPhase'),
+        onUploadProgress: any(named: 'onUploadProgress'),
+      );
+
+  When<Future<NIP17SendResult>> whenSendVideo() =>
+      when(() => anySendVideoOn(service));
 
   /// Answers every send at once: with [answer] for its path when given,
   /// otherwise with a success. Records each path and its extra tags.
@@ -247,6 +249,25 @@ void main() {
             onUploadProgress: any(named: 'onUploadProgress'),
           ),
         ).called(1);
+      });
+
+      test('reads the send service when each send starts', () async {
+        sendVideo(path: '/v/first.mp4');
+        final firstService = service;
+        // The DM repository rebuilt while the first send was running.
+        service = _MockDmVideoSendService();
+        stubControlledSend();
+        sendVideo(path: '/v/second.mp4');
+
+        sends.single.completer.complete(_success('rumor-1'));
+        await pumpEventQueue();
+
+        expect(
+          sends.map((send) => send.videoFile.path),
+          equals(['/v/first.mp4', '/v/second.mp4']),
+        );
+        verify(() => anySendVideoOn(firstService)).called(1);
+        verify(() => anySendVideoOn(service)).called(1);
       });
 
       test(

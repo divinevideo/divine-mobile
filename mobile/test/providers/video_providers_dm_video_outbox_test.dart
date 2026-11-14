@@ -1,10 +1,14 @@
 // ABOUTME: Verifies the video DM outbox is one instance per signed-in account
 // ABOUTME: and survives a rebuild of the services it sends through.
 
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart' show StateProvider;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show NIP17SendResult;
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
@@ -50,6 +54,12 @@ void main() {
   }
 
   group('videoDmOutboxProvider', () {
+    setUpAll(() {
+      registerFallbackValue(File('/tmp/fallback.mp4'));
+      registerFallbackValue((DmVideoSendPhase _) {});
+      registerFallbackValue((double _) {});
+    });
+
     test('keeps the same outbox when the DM repository rebuilds', () {
       final container = buildContainer();
       final before = container.read(videoDmOutboxProvider);
@@ -75,6 +85,42 @@ void main() {
       expect(container.read(currentAccountIdProvider), equals(first));
       expect(accountIdBuilds, greaterThan(buildsBefore));
       expect(container.read(videoDmOutboxProvider), same(before));
+    });
+
+    test('sends through the send service that is current when the send '
+        'starts', () {
+      final container = buildContainer();
+      final outbox = container.read(videoDmOutboxProvider);
+      container.read(_repositoryGeneration.notifier).state++;
+      final current =
+          container.read(dmVideoSendServiceProvider) as _MockDmVideoSendService;
+      when(
+        () => current.sendVideo(
+          recipientPubkey: any(named: 'recipientPubkey'),
+          videoFile: any(named: 'videoFile'),
+          mimeType: any(named: 'mimeType'),
+          extraTags: any(named: 'extraTags'),
+          onPhase: any(named: 'onPhase'),
+          onUploadProgress: any(named: 'onUploadProgress'),
+        ),
+      ).thenAnswer((_) => Completer<NIP17SendResult>().future);
+
+      outbox.sendVideo(
+        conversationId: 'c',
+        recipientPubkey: second,
+        file: File('/v/a.mp4'),
+      );
+
+      verify(
+        () => current.sendVideo(
+          recipientPubkey: second,
+          videoFile: any(named: 'videoFile'),
+          mimeType: any(named: 'mimeType'),
+          extraTags: any(named: 'extraTags'),
+          onPhase: any(named: 'onPhase'),
+          onUploadProgress: any(named: 'onUploadProgress'),
+        ),
+      ).called(1);
     });
 
     test('builds a new outbox and disposes the old one when the account '
