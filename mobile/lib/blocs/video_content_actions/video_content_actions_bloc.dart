@@ -9,7 +9,6 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
-import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_content_actions/reportable_sites.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
@@ -24,8 +23,7 @@ part 'video_content_actions_state.dart';
 /// Emits [VideoContentActionResult] as one-shot side effects for the UI to
 /// handle (snackbars, clipboard).
 class VideoContentActionsBloc
-    extends Bloc<VideoContentActionsEvent, VideoContentActionsState>
-    with CloseGuardedEmit<VideoContentActionsState> {
+    extends Bloc<VideoContentActionsEvent, VideoContentActionsState> {
   VideoContentActionsBloc({
     required VideoEvent video,
     required String relayUrl,
