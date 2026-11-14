@@ -141,16 +141,40 @@ class VideoDmOutbox {
   bool _working = false;
   bool _disposed = false;
 
+  /// Listener count per conversation. A sent entry is only kept while its
+  /// conversation is watched: its row is already written, so a chat opened
+  /// later shows the row instead.
+  final Map<String, int> _watchers = {};
+
   /// The current entries of [conversationId], in request order. Emits the
   /// current list on listen, then on every change to that conversation.
-  Stream<List<OutgoingVideoDm>> watchConversation(String conversationId) =>
-      _entries.stream
-          .map(
-            (entries) => List<OutgoingVideoDm>.unmodifiable(
-              entries.where((e) => e.conversationId == conversationId),
-            ),
-          )
-          .distinct(const ListEquality<OutgoingVideoDm>().equals);
+  ///
+  /// When its last listener cancels, the conversation's sent entries are
+  /// dropped.
+  Stream<List<OutgoingVideoDm>> watchConversation(String conversationId) {
+    final entries = _entries.stream
+        .map(
+          (entries) => List<OutgoingVideoDm>.unmodifiable(
+            entries.where((e) => e.conversationId == conversationId),
+          ),
+        )
+        .distinct(const ListEquality<OutgoingVideoDm>().equals);
+    return Stream.multi((controller) {
+      _watchers.update(conversationId, (count) => count + 1, ifAbsent: () => 1);
+      final subscription = entries.listen(
+        controller.addSync,
+        onError: controller.addErrorSync,
+        onDone: controller.closeSync,
+      );
+      controller
+        ..onPause = subscription.pause
+        ..onResume = subscription.resume
+        ..onCancel = () {
+          _unwatch(conversationId);
+          return subscription.cancel();
+        };
+    });
+  }
 
   /// One event per finished request. Broadcast, with no replay.
   Stream<VideoDmSendOutcome> get outcomes => _outcomes.stream;
@@ -475,6 +499,9 @@ class VideoDmOutbox {
             rumorEventId: () => rumorEventId,
           ),
         );
+        if (!_watchers.containsKey(entry.conversationId)) {
+          _dropSent(entry.conversationId);
+        }
         return null;
       }
       Log.warning(
@@ -617,6 +644,29 @@ class VideoDmOutbox {
       for (final entry in entries)
         if (entry.id != id) entry,
     ]);
+  }
+
+  void _unwatch(String conversationId) {
+    final remaining = (_watchers[conversationId] ?? 1) - 1;
+    if (remaining > 0) {
+      _watchers[conversationId] = remaining;
+      return;
+    }
+    _watchers.remove(conversationId);
+    _dropSent(conversationId);
+  }
+
+  /// Removes the sent entries of [conversationId].
+  void _dropSent(String conversationId) {
+    if (_disposed) return;
+    final entries = _entries.value;
+    final kept = [
+      for (final entry in entries)
+        if (entry.conversationId != conversationId ||
+            entry.phase != OutgoingVideoDmPhase.sent)
+          entry,
+    ];
+    if (kept.length != entries.length) _entries.add(kept);
   }
 
   OutgoingVideoDm? _entry(String id) =>

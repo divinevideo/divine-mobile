@@ -1543,6 +1543,73 @@ void main() {
         expect(events.last, equals([failed, running]));
       });
     });
+
+    group('sent entries nobody watches', () {
+      setUp(stubControlledSend);
+
+      Future<List<OutgoingVideoDm>> currentEntries(String conversationId) {
+        final events = recordConversation(conversationId);
+        return pumpEventQueue().then((_) => events.last);
+      }
+
+      test('are dropped when the send finishes with its chat closed', () async {
+        outbox = createOutbox();
+        sendVideo();
+        await pumpEventQueue();
+
+        sends.single.completer.complete(_success('rumor-a'));
+        await pumpEventQueue();
+
+        expect(await currentEntries('c1'), isEmpty);
+      });
+
+      test('are dropped when the last watcher of their chat leaves', () async {
+        outbox = createOutbox();
+        final subscription = outbox.watchConversation('c1').listen((_) {});
+        sendVideo();
+        await pumpEventQueue();
+        sends.single.completer.complete(_success('rumor-a'));
+        await pumpEventQueue();
+
+        await subscription.cancel();
+        await pumpEventQueue();
+
+        expect(await currentEntries('c1'), isEmpty);
+      });
+
+      test('are kept while another watcher of their chat remains', () async {
+        outbox = createOutbox();
+        final kept = recordConversation('c1');
+        final leaving = outbox.watchConversation('c1').listen((_) {});
+        sendVideo();
+        await pumpEventQueue();
+        sends.single.completer.complete(_success('rumor-a'));
+        await pumpEventQueue();
+
+        await leaving.cancel();
+        await pumpEventQueue();
+
+        expect(
+          kept.last.single.phase,
+          equals(OutgoingVideoDmPhase.sent),
+        );
+      });
+
+      test('do not take entries still in flight with them', () async {
+        outbox = createOutbox();
+        final subscription = outbox.watchConversation('c1').listen((_) {});
+        sendVideo();
+        await pumpEventQueue();
+
+        await subscription.cancel();
+        await pumpEventQueue();
+
+        expect(
+          (await currentEntries('c1')).single.phase,
+          equals(OutgoingVideoDmPhase.encrypting),
+        );
+      });
+    });
   });
 
   group(videoDmMimeTypeFor, () {

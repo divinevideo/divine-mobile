@@ -233,6 +233,9 @@ getter `displayedVideoSends`. The getter drops any `sent` entry whose
 `rumorEventId` is already in `messages`; that's the same rule
 `displayedMessages` applies to text queue rows. When the bloc sees a `sent`
 entry whose row has arrived, it calls `outbox.acknowledge(id)`.
+A `sent` entry whose conversation nobody watches, because the send finished
+with its chat closed or the chat closed first, is dropped by the outbox itself:
+its row is already written, so the chat shows the row when it opens again.
 
 **Handoff.** `sendFileMessage` commits the message row before it returns, and
 the entry turns `sent` only after that return. Usually the entry is `sent`
