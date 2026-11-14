@@ -72,10 +72,6 @@ class MetadataExpandedSheet extends StatelessWidget {
     final repostsRepository = container.read(repostsRepositoryProvider);
     final isOwnVideo = isViewerOwnVideo(container, video);
     final relayUrl = container.read(currentEnvironmentProvider).relayUrl;
-    final bookmarksRepository = container.read(bookmarksRepositoryProvider);
-    final videoClipImportService = container.read(
-      videoClipImportServiceProvider,
-    );
 
     return context.showVideoPausingVineBottomSheet<void>(
       showHeader: false,
@@ -92,23 +88,19 @@ class MetadataExpandedSheet extends StatelessWidget {
               addressableId: video.addressableId,
             ),
           ),
-          BlocProvider<VideoContentActionsBloc>(
-            create: (_) => VideoContentActionsBloc(
-              video: video,
-              relayUrl: relayUrl,
-              bookmarksRepository: bookmarksRepository,
-              videoClipImportService: videoClipImportService,
-            )..add(const VideoContentBookmarkStatusRequested()),
-          ),
           if (isOwnVideo)
             BlocProvider<OwnerVideoActionsCubit>(
               create: (_) => createOwnerVideoActionsCubit(container),
             ),
         ],
-        child: VideoContentActionsFeedbackListener(
-          child: _MetadataContent(
-            video: video,
-            scrollController: scrollController,
+        child: _VideoContentActionsScope(
+          video: video,
+          relayUrl: relayUrl,
+          child: VideoContentActionsFeedbackListener(
+            child: _MetadataContent(
+              video: video,
+              scrollController: scrollController,
+            ),
           ),
         ),
       ),
@@ -118,6 +110,42 @@ class MetadataExpandedSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _MetadataContent(video: video);
+  }
+}
+
+/// Provides the sheet's [VideoContentActionsBloc], built again whenever the
+/// bookmarks repository is replaced.
+///
+/// The repository is rebuilt, and the old one disposed, when the Nostr client
+/// is replaced, for instance when a restored session gains its signer while
+/// the sheet is open. A bloc holding the old one would save through a
+/// disposed client.
+class _VideoContentActionsScope extends ConsumerWidget {
+  const _VideoContentActionsScope({
+    required this.video,
+    required this.relayUrl,
+    required this.child,
+  });
+
+  final VideoEvent video;
+  final String relayUrl;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bookmarksRepository = ref.watch(bookmarksRepositoryProvider);
+    return BlocProvider<VideoContentActionsBloc>(
+      key: ValueKey(bookmarksRepository),
+      create: (_) => VideoContentActionsBloc(
+        video: video,
+        relayUrl: relayUrl,
+        bookmarksRepository: bookmarksRepository,
+        // Read, not watched: it rebuilds on every content-filter change,
+        // which would reset the bloc mid-import.
+        videoClipImportService: ref.read(videoClipImportServiceProvider),
+      )..add(const VideoContentBookmarkStatusRequested()),
+      child: child,
+    );
   }
 }
 

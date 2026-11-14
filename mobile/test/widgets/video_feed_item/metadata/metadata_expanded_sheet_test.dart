@@ -10,6 +10,7 @@ import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -2912,6 +2913,7 @@ void main() {
     List<Override> sheetOverrides({
       required String viewerPubkey,
       MockAuthService? authService,
+      BookmarksRepository Function(Ref ref)? bookmarks,
     }) => [
       authServiceProvider.overrideWithValue(
         authService ??
@@ -2920,7 +2922,9 @@ void main() {
               currentPublicKeyHex: viewerPubkey,
             ),
       ),
-      bookmarksRepositoryProvider.overrideWith((ref) => bookmarksRepository),
+      bookmarksRepositoryProvider.overrideWith(
+        bookmarks ?? (ref) => bookmarksRepository,
+      ),
       videoClipImportServiceProvider.overrideWithValue(
         _MockVideoClipImportService(),
       ),
@@ -2935,10 +2939,14 @@ void main() {
       WidgetTester tester, {
       required VideoEvent video,
       required String viewerPubkey,
+      BookmarksRepository Function(Ref ref)? bookmarks,
     }) async {
       await tester.pumpWidget(
         buildSubject(
-          providerOverrides: sheetOverrides(viewerPubkey: viewerPubkey),
+          providerOverrides: sheetOverrides(
+            viewerPubkey: viewerPubkey,
+            bookmarks: bookmarks,
+          ),
           child: Builder(
             builder: (context) => TextButton(
               onPressed: () =>
@@ -2998,6 +3006,67 @@ void main() {
         final l10n = _l10n(tester);
         expect(find.text(l10n.shareMenuEditVideo), findsOneWidget);
         expect(find.text(l10n.shareMenuDeleteVideo), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'saves through the bookmarks repository that replaced the one the sheet '
+      'opened with',
+      (tester) async {
+        final video = _makeVideo(
+          title: 'Classic',
+          rawTags: {'platform': 'vine'},
+        );
+        final replacement = _MockBookmarksRepository();
+        when(replacement.syncGlobalBookmarks).thenAnswer((_) async => false);
+        when(
+          () => replacement.isVideoBookmarkedGlobally(
+            any(),
+            addressableId: any(named: 'addressableId'),
+          ),
+        ).thenReturn(false);
+        when(
+          () => replacement.toggleVideoInGlobalBookmarks(
+            any(),
+            addressableId: any(named: 'addressableId'),
+          ),
+        ).thenAnswer(
+          (_) async => const BookmarkToggleResult(
+            succeeded: true,
+            wasBookmarked: false,
+            isBookmarked: true,
+          ),
+        );
+        final activeBookmarks = StateProvider<BookmarksRepository>(
+          (ref) => bookmarksRepository,
+        );
+
+        await openSheet(
+          tester,
+          video: video,
+          viewerPubkey: _thirdPartyViewer,
+          bookmarks: (ref) => ref.watch(activeBookmarks),
+        );
+        ProviderScope.containerOf(
+          tester.element(find.byType(MetadataActionsSection)),
+        ).read(activeBookmarks.notifier).state = replacement;
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(_l10n(tester).shareSheetSave));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => replacement.toggleVideoInGlobalBookmarks(
+            video.id,
+            addressableId: any(named: 'addressableId'),
+          ),
+        ).called(1);
+        verifyNever(
+          () => bookmarksRepository.toggleVideoInGlobalBookmarks(
+            any(),
+            addressableId: any(named: 'addressableId'),
+          ),
+        );
       },
     );
 
