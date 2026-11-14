@@ -110,6 +110,20 @@ abstract final class RoutePaths {
   static const questionAnswer = '$questionAnswerBase/:pubkey';
   static const supportCenter = '/support-center';
   static const supportReportBug = '/support-center/report-bug';
+
+  /// Query that marks a Report a Bug opened by holding the Profile tab.
+  ///
+  /// The form then skips its tip about that shortcut.
+  static const supportReportBugEntryParameter = 'entry';
+
+  /// Value of [supportReportBugEntryParameter] for the Profile-tab hold.
+  static const supportReportBugProfileHoldEntry = 'profile-hold';
+
+  /// Report a Bug as opened by holding the Profile tab.
+  static const supportReportBugFromProfileHold =
+      '$supportReportBug?$supportReportBugEntryParameter='
+      '$supportReportBugProfileHoldEntry';
+
   static const videoDetailBase = '/video';
 
   /// Query that holds a video route to one author.

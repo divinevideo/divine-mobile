@@ -1,6 +1,7 @@
 // ABOUTME: Tests the settings routes registered by settingsRoutes.
 // ABOUTME: Pins paths, names, nesting, badge locations, redirects, provider
-// ABOUTME: reads, the Account Status hint and the developer-options slide.
+// ABOUTME: reads, the Account Status hint, the developer-options slide, and
+// ABOUTME: the bug report's iOS modal page and Profile-hold marker.
 
 import 'dart:async';
 
@@ -26,6 +27,7 @@ import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/router/providers/support_route_trail_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
@@ -138,6 +140,12 @@ GoRouter _settingsRouter() {
 Widget _build(String location, {Object? extra, BuildContext? context}) {
   final (:route, :state) = _resolve(location, extra: extra);
   return route.builder!(context ?? _FakeBuildContext(), state);
+}
+
+/// The page the route [location] matches builds, read through [context].
+Page<dynamic> _page(String location, BuildContext context) {
+  final (:route, :state) = _resolve(location);
+  return route.pageBuilder!(context, state);
 }
 
 /// Where the route [location] matches redirects, read through [context].
@@ -336,6 +344,14 @@ void main() {
         (const AccountStatusRouteData(), '/settings/account-status'),
         (const SupportCenterRouteData(), '/support-center'),
         (const BugReportRouteData(), '/support-center/report-bug'),
+        // The bottom bar pushes the constant, so the typed hold location must
+        // match it.
+        (
+          const BugReportRouteData(
+            entry: RoutePaths.supportReportBugProfileHoldEntry,
+          ),
+          RoutePaths.supportReportBugFromProfileHold,
+        ),
         (const FeatureRequestRouteData(), '/support-center/request-feature'),
         (const LegalRouteData(), '/legal'),
         (const ContentPreferencesRouteData(), '/content-preferences'),
@@ -855,7 +871,7 @@ void main() {
         final context = await scope(tester);
 
         expect(
-          _build(BugReportScreen.path, context: context),
+          (_page(BugReportScreen.path, context) as MaterialPage<void>).child,
           isA<BugReportScreen>()
               .having(
                 (s) => s.bugReportService,
@@ -886,6 +902,103 @@ void main() {
             'userPubkey',
             syntheticOtherTestPubkey,
           ),
+        );
+      });
+    });
+
+    group('bug report page', () {
+      // The page reads these through the tree; nothing on them is stubbed.
+      List<Override> overrides() => [
+        authServiceProvider.overrideWithValue(_MockAuthService()),
+        bugReportServiceProvider.overrideWithValue(_MockBugReportService()),
+        supportRouteTrailProvider.overrideWith(_FixedTrail.new),
+      ];
+
+      /// The form the page at [location] holds.
+      BugReportScreen formAt(String location, BuildContext context) =>
+          (_page(location, context) as MaterialPage<void>).child
+              as BugReportScreen;
+
+      testWidgets('on iOS an edge swipe does not close the report', (
+        tester,
+      ) async {
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) => const Scaffold(body: Text('home')),
+            ),
+            _routeNamed(BugReportScreen.routeName),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: overrides(),
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
+          ),
+        );
+        unawaited(router.push(RoutePaths.supportReportBug));
+        await tester.pumpAndSettle();
+        expect(find.byType(BugReportScreen), findsOneWidget);
+
+        await tester.dragFrom(const Offset(2, 300), const Offset(600, 0));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BugReportScreen), findsOneWidget);
+      }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+
+      testWidgets('keeps the regular page transition on Android', (
+        tester,
+      ) async {
+        final context = await _scopedContext(tester, overrides());
+
+        expect(
+          _page(BugReportScreen.path, context),
+          isA<MaterialPage<void>>().having(
+            (page) => page.fullscreenDialog,
+            'fullscreenDialog',
+            isFalse,
+          ),
+        );
+      }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+      testWidgets('keeps its route name for page observers', (tester) async {
+        final context = await _scopedContext(tester, overrides());
+
+        expect(
+          _page(BugReportScreen.path, context).name,
+          BugReportScreen.routeName,
+        );
+      });
+
+      testWidgets(
+        'hides the shortcut tip when the Profile-tab hold opened it',
+        (tester) async {
+          final context = await _scopedContext(tester, overrides());
+
+          expect(
+            formAt(
+              RoutePaths.supportReportBugFromProfileHold,
+              context,
+            ).showProfileHoldTip,
+            isFalse,
+          );
+        },
+      );
+
+      testWidgets('shows the shortcut tip for every other way in', (
+        tester,
+      ) async {
+        final context = await _scopedContext(tester, overrides());
+
+        expect(
+          formAt(BugReportScreen.path, context).showProfileHoldTip,
+          isTrue,
         );
       });
     });
