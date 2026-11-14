@@ -54,6 +54,23 @@ void main() {
         }
       });
 
+      test(
+        'accepts an upper-case spelling of the current and retired keys',
+        () {
+          expect(
+            isModerationAccount(kModerationPubkeyHex.toUpperCase()),
+            isTrue,
+          );
+          for (final retired in kLegacyModerationPubkeys) {
+            expect(
+              isModerationAccount(retired.toUpperCase()),
+              isTrue,
+              reason: 'upper-case $retired is the same identity',
+            );
+          }
+        },
+      );
+
       test('rejects an unrelated pubkey', () {
         expect(isModerationAccount(kHqAccount.pubkeyHex), isFalse);
       });
@@ -76,6 +93,27 @@ void main() {
       // whole support lane offline.
       test('rejects the current key', () {
         expect(isRetiredModerationAccount(kModerationPubkeyHex), isFalse);
+      });
+
+      // A contact list stores `p` tags verbatim, so the same identity can
+      // arrive as upper-case hex (#8351). Membership must not care, or a
+      // retired key is still offered as a recipient (#9711).
+      test('accepts an upper-case spelling of every retired key', () {
+        expect(kLegacyModerationPubkeys, isNotEmpty);
+        for (final retired in kLegacyModerationPubkeys) {
+          expect(
+            isRetiredModerationAccount(retired.toUpperCase()),
+            isTrue,
+            reason: 'upper-case $retired must be recognised as retired',
+          );
+        }
+      });
+
+      test('still rejects an upper-case spelling of the current key', () {
+        expect(
+          isRetiredModerationAccount(kModerationPubkeyHex.toUpperCase()),
+          isFalse,
+        );
       });
 
       test('rejects an unrelated pubkey', () {
@@ -189,6 +227,21 @@ void main() {
         expect(
           presentationOf(kHqAccount.pubkeyHex),
           ModerationPresentation.ordinary,
+        );
+      });
+
+      test('an upper-case spelling classifies by the same custody', () {
+        expect(
+          presentationOf(kModerationPubkeyHex.toUpperCase()),
+          ModerationPresentation.official,
+        );
+        expect(
+          presentationOf(unrecoveredKey.toUpperCase()),
+          ModerationPresentation.official,
+        );
+        expect(
+          presentationOf(archivedKey.toUpperCase()),
+          ModerationPresentation.former,
         );
       });
 

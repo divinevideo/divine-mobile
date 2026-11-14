@@ -252,8 +252,19 @@ final List<String> kLegacyModerationPubkeys = List.unmodifiable([
 /// signs today is treated exactly like one predating the rotation. See
 /// `mobile/docs/RETIRED_MODERATION_KEYS.md`.
 bool isModerationAccount(String pubkeyHex) =>
-    pubkeyHex == kModerationPubkeyHex ||
-    kLegacyModerationPubkeys.contains(pubkeyHex);
+    _sameIdentity(pubkeyHex, kModerationPubkeyHex) ||
+    kLegacyModerationPubkeys.any((key) => _sameIdentity(key, pubkeyHex));
+
+/// Whether two pubkey hex strings address the same identity, whatever case
+/// each carries.
+///
+/// Case-insensitive because a pubkey that reaches Divine from another client
+/// may be upper-case hex (#8351): contact lists carry `p` tags verbatim, and
+/// the follow repository validates hex without normalizing it. Identity
+/// compares lowercase first, the way `shouldShowSpecialProfileCheckmark`
+/// tests team-register membership.
+bool _sameIdentity(String first, String second) =>
+    first.toLowerCase() == second.toLowerCase();
 
 /// Which presentation [pubkeyHex] gets: official branding follows recorded
 /// custody (#9963).
@@ -266,9 +277,11 @@ ModerationPresentation moderationPresentationOf(
   String pubkeyHex, {
   List<RetiredModerationKey> retiredKeys = kRetiredModerationKeys,
 }) {
-  if (pubkeyHex == kModerationPubkeyHex) return ModerationPresentation.official;
+  if (_sameIdentity(pubkeyHex, kModerationPubkeyHex)) {
+    return ModerationPresentation.official;
+  }
   for (final key in retiredKeys) {
-    if (key.pubkeyHex == pubkeyHex) {
+    if (_sameIdentity(key.pubkeyHex, pubkeyHex)) {
       return key.custody.canStillSign
           ? ModerationPresentation.former
           : ModerationPresentation.official;
@@ -294,4 +307,4 @@ ModerationPresentation moderationPresentationOf(
 /// is why each [kRetiredModerationKeys] entry records its own custody in
 /// code — mirrored in `mobile/docs/RETIRED_MODERATION_KEYS.md`'s register.
 bool isRetiredModerationAccount(String pubkeyHex) =>
-    kLegacyModerationPubkeys.contains(pubkeyHex);
+    kLegacyModerationPubkeys.any((key) => _sameIdentity(key, pubkeyHex));

@@ -233,6 +233,35 @@ void main() {
         ],
       );
 
+      // A contact list stores `p` tags verbatim, so the retired key can
+      // arrive as upper-case hex — the same hazard the viewer filter above
+      // handles. It is the same identity and stays omitted (#9711).
+      blocTest<NewMessageSearchBloc, NewMessageSearchState>(
+        'omits a followed retired key stored as upper-case hex from contacts',
+        setUp: () {
+          when(() => mockFollowRepo.followingPubkeys).thenReturn([
+            retired.toUpperCase(),
+          ]);
+          when(
+            () => mockProfileRepo.getCachedProfile(
+              pubkey: retired.toUpperCase(),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                createTestProfile(retired.toUpperCase(), 'Mod Retired'),
+          );
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const NewMessageSearchStarted()),
+        expect: () => [
+          isA<NewMessageSearchState>().having(
+            (s) => s.contacts,
+            'contacts',
+            isEmpty,
+          ),
+        ],
+      );
+
       blocTest<NewMessageSearchBloc, NewMessageSearchState>(
         "omits a retired key from network results found by Divine's name",
         setUp: () {

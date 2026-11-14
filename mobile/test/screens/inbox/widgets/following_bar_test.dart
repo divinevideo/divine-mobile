@@ -303,6 +303,40 @@ void main() {
           expect(wordmarkFinder(), findsNothing);
         });
       }
+
+      // A contact list stores `p` tags verbatim, so the retired key can
+      // arrive as upper-case hex — the same hazard the viewer filter beside
+      // it handles (#8351). It is the same identity and stays out (#9711).
+      testWidgets(
+        'leaves a followed retired key stored as upper-case hex out',
+        (
+          tester,
+        ) async {
+          final upper = shippedRetiredKey.toUpperCase();
+          await tester.pumpWidget(
+            buildSubject(
+              state: MyFollowingState(
+                status: MyFollowingStatus.success,
+                followingPubkeys: [upper, pubkey1],
+              ),
+              additionalOverrides: [
+                looksOfficial(upper),
+                fetchUserProfileProvider(pubkey1).overrideWith(
+                  (ref) async =>
+                      createTestProfile(pubkey: pubkey1, displayName: 'Alice'),
+                ),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          // The control: the ordinary account beside it is still offered.
+          expect(find.text('Alice'), findsOneWidget);
+          expect(find.text('Looks Official'), findsNothing);
+          expect(find.text(l10n.inboxSupportRowTitle), findsNothing);
+          expect(wordmarkFinder(), findsNothing);
+        },
+      );
     });
 
     group('deleted accounts', () {
