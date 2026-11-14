@@ -4,7 +4,6 @@
 
 import 'dart:async';
 
-import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +14,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
+import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/constants/semantic_ids.dart';
@@ -35,25 +35,22 @@ import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
-import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
-import 'package:openvine/utils/delete_result_localization.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/utils/owner_video_cleanup_feedback.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/utils/watermark_text_resolver.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
 import 'package:openvine/widgets/find_people_sheet.dart';
-import 'package:openvine/widgets/owner_video_delete_confirmation_dialog.dart';
+import 'package:openvine/widgets/owner_video_actions_sheet.dart';
 import 'package:openvine/widgets/save_original_progress_sheet.dart';
 import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:openvine/widgets/video_feed_item/actions/actions.dart';
-import 'package:openvine/widgets/video_feed_item/actions/clip_title_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
+import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_rules.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -168,6 +165,7 @@ class _UnifiedShareSheet extends ConsumerStatefulWidget {
 class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
   final TextEditingController _messageController = TextEditingController();
   late final ShareSheetBloc _shareSheetBloc;
+  late final VideoContentActionsBloc _videoContentActionsBloc;
   OwnerVideoActionsCubit? _ownerVideoActionsCubit;
   VideoCrosspostCubit? _crosspostCubit;
   bool _crosspostRowExposed = false;
@@ -189,24 +187,24 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         eventId: widget.video.id,
       );
     }
-    _shareSheetBloc =
-        ShareSheetBloc(
-            video: widget.video,
-            relayUrl: ref.read(currentEnvironmentProvider).relayUrl,
-            videoSharingService: widget.videoSharingService,
-            profileRepository: widget.profileRepository,
-            followRepository: ref.read(followRepositoryProvider),
-            rankingSignalsLoader: ref.read(userRankingSignalsLoaderProvider),
-            // Empty when signed out: no viewer to exclude, and an empty
-            // string never matches a real pubkey (#8351).
-            currentUserPubkey:
-                ref.read(authServiceProvider).currentPublicKeyHex ?? '',
-            bookmarksRepository: ref.read(bookmarksRepositoryProvider),
-            cacheManager: openVineImageCache,
-            videoClipImportService: ref.read(videoClipImportServiceProvider),
-          )
-          ..add(const ShareSheetContactsLoadRequested())
-          ..add(const ShareSheetBookmarkStatusRequested());
+    _shareSheetBloc = ShareSheetBloc(
+      video: widget.video,
+      videoSharingService: widget.videoSharingService,
+      profileRepository: widget.profileRepository,
+      followRepository: ref.read(followRepositoryProvider),
+      rankingSignalsLoader: ref.read(userRankingSignalsLoaderProvider),
+      // Empty when signed out: no viewer to exclude, and an empty
+      // string never matches a real pubkey (#8351).
+      currentUserPubkey:
+          ref.read(authServiceProvider).currentPublicKeyHex ?? '',
+      cacheManager: openVineImageCache,
+    )..add(const ShareSheetContactsLoadRequested());
+    _videoContentActionsBloc = VideoContentActionsBloc(
+      video: widget.video,
+      relayUrl: ref.read(currentEnvironmentProvider).relayUrl,
+      bookmarksRepository: ref.read(bookmarksRepositoryProvider),
+      videoClipImportService: ref.read(videoClipImportServiceProvider),
+    )..add(const VideoContentBookmarkStatusRequested());
   }
 
   void _logCrosspostRowExposure() {
@@ -227,6 +225,10 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     _closeCubitIfPresent(_crosspostCubit, 'crosspost');
     _closeCubitIfPresent(_ownerVideoActionsCubit, 'owner video actions');
     _runShareDetached(_shareSheetBloc.close(), 'close share sheet bloc');
+    _runShareDetached(
+      _videoContentActionsBloc.close(),
+      'close video content actions bloc',
+    );
     _messageController.dispose();
     super.dispose();
   }
@@ -251,13 +253,21 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       video: widget.video,
       messageController: _messageController,
       isOwnContent: isOwnContent,
+      canAddToClips: showAddVideoToClips,
       onFindPeople: _handleFindPeople,
       onAddToList: _handleAddToList,
       onEditVideo: isOwnContent ? _handleEditVideo : null,
-      onDeleteVideo: isOwnContent ? _handleDeleteVideo : null,
+      onDeleteVideo: switch (_ownerVideoActionsCubit) {
+        null => null,
+        final cubit => () => confirmAndDeleteOwnerVideo(
+          context: context,
+          video: widget.video,
+          cubit: cubit,
+          onDeleted: () async => dismissSheet(context),
+        ),
+      },
       onSaveOriginal: isOwnContent ? _handleSaveOriginal : null,
       onSaveWithWatermark: _handleSaveWithWatermark,
-      onAddVideoToClips: showAddVideoToClips ? _handleAddVideoToClips : null,
       onCrosspost:
           isOwnContent &&
               ref.watch(crosspostingAvailabilityProvider) !=
@@ -274,8 +284,11 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       ),
     };
 
-    return BlocProvider.value(
-      value: _shareSheetBloc,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: _shareSheetBloc),
+        BlocProvider.value(value: _videoContentActionsBloc),
+      ],
       child: MultiBlocListener(
         listeners: [
           BlocListener<ShareSheetBloc, ShareSheetState>(
@@ -309,13 +322,15 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
             },
           ),
         ],
-        child: switch (_crosspostCubit) {
-          null => ownerAwareSheetView,
-          final cubit => BlocProvider<VideoCrosspostCubit>.value(
-            value: cubit,
-            child: ownerAwareSheetView,
-          ),
-        },
+        child: VideoContentActionsFeedbackListener(
+          child: switch (_crosspostCubit) {
+            null => ownerAwareSheetView,
+            final cubit => BlocProvider<VideoCrosspostCubit>.value(
+              value: cubit,
+              child: ownerAwareSheetView,
+            ),
+          },
+        ),
       ),
     );
   }
@@ -412,57 +427,9 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
               error: true,
             ),
           );
-      case ShareSheetSaveResult(
-        :final succeeded,
-        :final removed,
-        :final wasBookmarkedBeforeToggle,
-        :final failure,
-      ):
-        // "Failed to add bookmark" names no recovery for the state the user is
-        // almost certainly in, and after a long blocking wait that matters
-        // more, not less. Both network-shaped failures are worded that way:
-        // the read runs with requireAllRelaysSettled, so a single slow relay
-        // reports timedOut while the device is merely degraded, not offline.
-        // An unreadable private list names neither add nor remove: the
-        // repository refused because it cannot tell which one Save would be.
-        // Everything else keeps today's copy.
-        final snackText = succeeded
-            ? (removed
-                  ? context.l10n.shareRemovedFromBookmarks
-                  : context.l10n.shareAddedToBookmarks)
-            : switch (failure) {
-                BookmarkToggleFailure.couldNotReachRelays ||
-                BookmarkToggleFailure.timedOut =>
-                  context.l10n.profileSetupNoRelaysConnected,
-                BookmarkToggleFailure.privateItemsUnreadable =>
-                  context.l10n.shareBookmarkPrivateItemsLocked,
-                _ =>
-                  wasBookmarkedBeforeToggle
-                      ? context.l10n.shareFailedToRemoveBookmark
-                      : context.l10n.shareFailedToAddBookmark,
-              };
-        dismissSheet(context);
-        messenger.showSnackBar(
-          DivineSnackbarContainer.snackBar(snackText, error: !succeeded),
-        );
-      case ShareSheetVideoClipImportResult(
-        :final succeeded,
-        :final libraryTitle,
-      ):
-        final snackText = succeeded
-            ? context.l10n.shareSheetSavedClipToClips(
-                libraryTitle ?? context.l10n.shareSheetUntitledClip,
-              )
-            : context.l10n.shareSheetAddToClipsFailed;
-        dismissSheet(context);
-        messenger.showSnackBar(
-          DivineSnackbarContainer.snackBar(snackText, error: !succeeded),
-        );
       case ShareSheetCopiedToClipboard(:final kind, :final text):
         final snackText = switch (kind) {
           ShareSheetCopiedKind.postLink => context.l10n.shareCopiedPostLink,
-          ShareSheetCopiedKind.eventJson => context.l10n.shareCopiedEventJson,
-          ShareSheetCopiedKind.eventId => context.l10n.shareCopiedEventId,
         };
         _runShareDetached(
           Clipboard.setData(ClipboardData(text: text)),
@@ -497,21 +464,6 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
           ),
         );
     }
-  }
-
-  Future<void> _handleAddVideoToClips() async {
-    final initialTitle = VideoClipImportService.defaultLibraryTitleFor(
-      widget.video,
-    );
-    final libraryTitle = await ClipTitleSheet.show(
-      context: context,
-      initialTitle: initialTitle,
-    );
-    if (!mounted || libraryTitle == null) return;
-
-    _shareSheetBloc.add(
-      ShareSheetAddVideoToClipsRequested(libraryTitle: libraryTitle),
-    );
   }
 
   Future<void> _handleFindPeople() async {
@@ -549,47 +501,6 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
       }),
       'open video metadata editor',
     );
-  }
-
-  Future<void> _handleDeleteVideo() async {
-    final confirmed = await showOwnerVideoDeleteConfirmationDialog(context);
-    if (confirmed && mounted) {
-      await _deleteVideo();
-    }
-  }
-
-  Future<void> _deleteVideo() async {
-    final ownerVideoActionsCubit = _ownerVideoActionsCubit;
-    if (ownerVideoActionsCubit == null) return;
-    final start = await ownerVideoActionsCubit.deleteVideo(widget.video);
-    if (start == OwnerVideoDeleteStart.busy) return;
-
-    if (!mounted) return;
-
-    final operation = ownerVideoActionsCubit.state.forVideo(widget.video.id);
-    if (operation.deleteStatus == OwnerVideoDeleteStatus.success) {
-      showOwnerVideoCleanupCompletion(
-        context,
-        ownerVideoActionsCubit,
-        widget.video.id,
-      );
-      final messenger = ScaffoldMessenger.of(context);
-      final snackBar = DivineSnackbarContainer.snackBar(
-        localizedOwnerVideoDeleteSuccessMessage(context, operation),
-        error: operation.cleanupStatus == OwnerVideoCleanupStatus.failed,
-      );
-      dismissSheet(context);
-      messenger.showSnackBar(snackBar);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        DivineSnackbarContainer.snackBar(
-          operation.deleteResult == null
-              ? context.l10n.shareMenuDeleteFailedGeneric
-              : localizedDeleteFailureMessage(context, operation.deleteResult!),
-          error: true,
-        ),
-      );
-    }
   }
 
   bool _isUserOwnContent() {
@@ -696,11 +607,11 @@ class _UnifiedShareSheetView extends StatelessWidget {
     required this.video,
     required this.messageController,
     required this.isOwnContent,
+    required this.canAddToClips,
     required this.onFindPeople,
     required this.onAddToList,
     required this.onSaveWithWatermark,
     required this.onCrosspostShown,
-    this.onAddVideoToClips,
     this.onEditVideo,
     this.onDeleteVideo,
     this.onSaveOriginal,
@@ -710,13 +621,13 @@ class _UnifiedShareSheetView extends StatelessWidget {
   final VideoEvent video;
   final TextEditingController messageController;
   final bool isOwnContent;
+  final bool canAddToClips;
   final VoidCallback onFindPeople;
   final VoidCallback onAddToList;
   final VoidCallback? onEditVideo;
   final Future<void> Function()? onDeleteVideo;
   final Future<void> Function()? onSaveOriginal;
   final Future<void> Function() onSaveWithWatermark;
-  final VoidCallback? onAddVideoToClips;
   final Future<void> Function()? onCrosspost;
   final VoidCallback onCrosspostShown;
 
@@ -791,15 +702,12 @@ class _UnifiedShareSheetView extends StatelessWidget {
                       _MoreActionsSection(
                         video: video,
                         isOwnContent: isOwnContent,
-                        isSavePending: state.isSaving,
+                        canAddToClips: canAddToClips,
                         isDeletePending: isDeletePending,
-                        bookmarkStatus: state.bookmarkStatus,
                         onCrosspost: onCrosspost,
                         onCrosspostShown: onCrosspostShown,
-                        onSave: () => bloc.add(const ShareSheetSaveRequested()),
                         onSaveOriginal: onSaveOriginal,
                         onSaveWithWatermark: onSaveWithWatermark,
-                        onAddVideoToClips: onAddVideoToClips,
                         onEditVideo: onEditVideo,
                         onDeleteVideo: onDeleteVideo,
                         onAddToList: onAddToList,
@@ -807,10 +715,6 @@ class _UnifiedShareSheetView extends StatelessWidget {
                             bloc.add(const ShareSheetCopyLinkRequested()),
                         onShareVia: () =>
                             bloc.add(const ShareSheetShareViaRequested()),
-                        onCopyEventJson: () =>
-                            bloc.add(const ShareSheetCopyEventJsonRequested()),
-                        onCopyEventId: () =>
-                            bloc.add(const ShareSheetCopyEventIdRequested()),
                       ),
                     ],
                     const SizedBox(height: 8),

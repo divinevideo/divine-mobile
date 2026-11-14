@@ -42,32 +42,6 @@ class ShareSheetSendRequested extends ShareSheetEvent {
   List<Object?> get props => [message];
 }
 
-/// Save video to bookmarks.
-class ShareSheetSaveRequested extends ShareSheetEvent {
-  const ShareSheetSaveRequested();
-}
-
-/// Resolve whether this video is already globally bookmarked.
-///
-/// Dispatched on sheet open so the row can name the direction its tap will
-/// take — "Save" when it adds, "Remove from saved" when it removes. The
-/// toggle decides its direction from its own authoritative reconcile, so this
-/// read only labels the affordance — it never becomes the base of a replacing
-/// publish.
-class ShareSheetBookmarkStatusRequested extends ShareSheetEvent {
-  const ShareSheetBookmarkStatusRequested();
-}
-
-/// Add a video (classic Vine or own video) to the local clip library.
-class ShareSheetAddVideoToClipsRequested extends ShareSheetEvent {
-  const ShareSheetAddVideoToClipsRequested({this.libraryTitle});
-
-  final String? libraryTitle;
-
-  @override
-  List<Object?> get props => [libraryTitle];
-}
-
 /// Copy share link to clipboard.
 class ShareSheetCopyLinkRequested extends ShareSheetEvent {
   const ShareSheetCopyLinkRequested();
@@ -76,14 +50,4 @@ class ShareSheetCopyLinkRequested extends ShareSheetEvent {
 /// Share externally via platform share sheet.
 class ShareSheetShareViaRequested extends ShareSheetEvent {
   const ShareSheetShareViaRequested();
-}
-
-/// Copy event JSON to clipboard.
-class ShareSheetCopyEventJsonRequested extends ShareSheetEvent {
-  const ShareSheetCopyEventJsonRequested();
-}
-
-/// Copy event ID (nevent) to clipboard.
-class ShareSheetCopyEventIdRequested extends ShareSheetEvent {
-  const ShareSheetCopyEventIdRequested();
 }

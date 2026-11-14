@@ -142,7 +142,6 @@ void main() {
         );
         final sheet = ShareSheetBloc(
           video: video,
-          relayUrl: 'wss://relay.example',
           videoSharingService: sharing,
           profileRepository: profiles,
           followRepository: _FollowRepository(),

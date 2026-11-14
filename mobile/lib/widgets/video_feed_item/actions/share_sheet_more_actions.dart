@@ -8,20 +8,15 @@ class _MoreActionsSection extends ConsumerWidget {
   const _MoreActionsSection({
     required this.video,
     required this.isOwnContent,
-    required this.bookmarkStatus,
-    required this.onSave,
+    required this.canAddToClips,
     required this.onSaveWithWatermark,
     required this.onAddToList,
     required this.onCopyLink,
     required this.onShareVia,
-    required this.onCopyEventJson,
-    required this.onCopyEventId,
     required this.onCrosspostShown,
-    this.isSavePending = false,
     this.isDeletePending = false,
     this.onEditVideo,
     this.onDeleteVideo,
-    this.onAddVideoToClips,
     this.onSaveOriginal,
     this.onCrosspost,
   });
@@ -29,21 +24,16 @@ class _MoreActionsSection extends ConsumerWidget {
   final VideoEvent video;
   final bool isOwnContent;
 
-  /// Whether the bookmark toggle is mid-flight (#7073).
-  final bool isSavePending;
+  /// Whether Add to clips is offered for this video.
+  final bool canAddToClips;
   final bool isDeletePending;
-  final ShareSheetBookmarkStatus bookmarkStatus;
-  final VoidCallback onSave;
   final Future<void> Function()? onSaveOriginal;
   final Future<void> Function() onSaveWithWatermark;
   final VoidCallback onAddToList;
   final VoidCallback onCopyLink;
   final VoidCallback onShareVia;
-  final VoidCallback onCopyEventJson;
-  final VoidCallback onCopyEventId;
   final VoidCallback? onEditVideo;
   final Future<void> Function()? onDeleteVideo;
-  final VoidCallback? onAddVideoToClips;
   final Future<void> Function()? onCrosspost;
   final VoidCallback onCrosspostShown;
 
@@ -53,7 +43,15 @@ class _MoreActionsSection extends ConsumerWidget {
       isFeatureEnabledProvider(FeatureFlag.debugTools),
     );
 
-    final isSaved = bookmarkStatus == ShareSheetBookmarkStatus.saved;
+    final contentActions = context.read<VideoContentActionsBloc>();
+    // Whether the bookmark toggle is mid-flight (#7073).
+    final isSavePending = context.select(
+      (VideoContentActionsBloc bloc) => bloc.state.isSaving,
+    );
+    final isSaved = context.select(
+      (VideoContentActionsBloc bloc) =>
+          bloc.state.bookmarkStatus == VideoBookmarkStatus.saved,
+    );
 
     final actions = <VideoActionRowItem>[
       if (onEditVideo != null)
@@ -77,7 +75,7 @@ class _MoreActionsSection extends ConsumerWidget {
         label: isSaved
             ? context.l10n.shareSheetRemoveFromSaved
             : context.l10n.shareSheetSave,
-        onTap: onSave,
+        onTap: () => contentActions.add(const VideoContentSaveRequested()),
         isPending: isSavePending,
       ),
       if (onSaveOriginal != null)
@@ -93,11 +91,14 @@ class _MoreActionsSection extends ConsumerWidget {
             : context.l10n.shareSheetSaveVideo,
         onTap: onSaveWithWatermark,
       ),
-      if (onAddVideoToClips != null)
+      if (canAddToClips)
         VideoActionRowItem(
           icon: DivineIconName.filmSlate,
           label: context.l10n.shareSheetAddToClips,
-          onTap: onAddVideoToClips!,
+          onTap: () => _runShareDetached(
+            requestAddToClips(context),
+            'request add to clips',
+          ),
         ),
       if (onCrosspost != null)
         VideoActionRowItem(
@@ -125,12 +126,14 @@ class _MoreActionsSection extends ConsumerWidget {
         VideoActionRowItem(
           icon: DivineIconName.bracketsAngle,
           label: context.l10n.shareSheetEventJson,
-          onTap: onCopyEventJson,
+          onTap: () =>
+              contentActions.add(const VideoContentCopyEventJsonRequested()),
         ),
         VideoActionRowItem(
           icon: DivineIconName.copySimple,
           label: context.l10n.shareSheetEventId,
-          onTap: onCopyEventId,
+          onTap: () =>
+              contentActions.add(const VideoContentCopyEventIdRequested()),
         ),
       ],
     ];

@@ -7,12 +7,6 @@
 abstract class ShareSheetBlocReportableSites {
   static const String onContactsLoadRequested = '_onContactsLoadRequested';
   static const String onSendRequested = '_onSendRequested';
-  static const String onBookmarkStatusRequested = '_onBookmarkStatusRequested';
-  static const String onSaveRequested = '_onSaveRequested';
-  static const String onAddVideoToClipsRequested =
-      '_onAddVideoToClipsRequested';
   static const String onCopyLinkRequested = '_onCopyLinkRequested';
   static const String onShareViaRequested = '_onShareViaRequested';
-  static const String onCopyEventJsonRequested = '_onCopyEventJsonRequested';
-  static const String onCopyEventIdRequested = '_onCopyEventIdRequested';
 }

@@ -80,50 +80,14 @@ class ShareSheetSendFailure extends ShareSheetActionResult {
   ShareSheetSendFailure();
 }
 
-/// Consolidates the former ShareSheetSaveSuccess and ShareSheetSaveFailure
-/// into a single class, using [succeeded] to distinguish the outcome.
-///
-/// When [succeeded] is true, [removed] tells the UI whether the video was
-/// removed from global bookmarks (toggle off) vs added (toggle on).
-///
-/// [wasBookmarkedBeforeToggle] is set for every attempt. When [succeeded]
-/// is false, the UI uses it to show an add-specific vs remove-specific error.
-class ShareSheetSaveResult extends ShareSheetActionResult {
-  ShareSheetSaveResult({
-    required this.succeeded,
-    this.removed = false,
-    this.wasBookmarkedBeforeToggle = false,
-    this.failure,
-  });
-
-  final bool succeeded;
-
-  /// Meaningful only when [succeeded] is true: user turned the bookmark off.
-  final bool removed;
-
-  /// Whether the video was already globally bookmarked before this toggle.
-  final bool wasBookmarkedBeforeToggle;
-
-  /// Why the toggle failed, so the sheet can say "couldn't reach the network"
-  /// instead of a generic error. `null` when [succeeded] is true.
-  final BookmarkToggleFailure? failure;
-}
-
-class ShareSheetVideoClipImportResult extends ShareSheetActionResult {
-  ShareSheetVideoClipImportResult({required this.succeeded, this.libraryTitle});
-
-  final bool succeeded;
-  final String? libraryTitle;
-}
-
-/// Generic failure for utility actions (copy link, share via, etc.).
+/// Generic failure for utility actions (copy link, share via).
 /// Error details are logged by the BLoC; the UI shows a generic message.
 class ShareSheetActionFailure extends ShareSheetActionResult {
   ShareSheetActionFailure();
 }
 
 /// What content was copied, so the UI can pick the localized message.
-enum ShareSheetCopiedKind { postLink, eventJson, eventId }
+enum ShareSheetCopiedKind { postLink }
 
 class ShareSheetCopiedToClipboard extends ShareSheetActionResult {
   ShareSheetCopiedToClipboard({required this.kind, required this.text});
@@ -157,15 +121,6 @@ class ShareSheetShareViaTriggered extends ShareSheetActionResult {
   final String? subject;
 }
 
-/// Whether the video is already in the user's global (kind 10003) bookmarks.
-///
-/// Starts [unknown] and stays there until a relay-reconciled read resolves it.
-/// [unknown] must render as the plain "Save" affordance rather than as
-/// [notSaved]: the two are indistinguishable to a reader, but conflating them
-/// would let an unresolved read claim the video is not bookmarked — which is
-/// exactly the mislabel this state exists to prevent.
-enum ShareSheetBookmarkStatus { unknown, saved, notSaved }
-
 /// State for the share sheet.
 class ShareSheetState extends Equatable {
   const ShareSheetState({
@@ -173,8 +128,6 @@ class ShareSheetState extends Equatable {
     this.contacts = const [],
     this.selectedRecipients = const [],
     this.isSending = false,
-    this.isSaving = false,
-    this.bookmarkStatus = ShareSheetBookmarkStatus.unknown,
     this.actionResult,
   });
 
@@ -189,16 +142,6 @@ class ShareSheetState extends Equatable {
 
   /// Whether a send operation is in progress.
   final bool isSending;
-
-  /// Whether a bookmark save/remove is in progress.
-  ///
-  /// The toggle reconciles kind 10003 with the relay, signs, and waits for the
-  /// publish to be accepted before it can report anything, so the sheet has to
-  /// show that it is working rather than sitting inert (#7073).
-  final bool isSaving;
-
-  /// Whether this video is already globally bookmarked, per a reconciled read.
-  final ShareSheetBookmarkStatus bookmarkStatus;
 
   /// One-shot action result for BlocListener consumption.
   /// Cleared on next state emission.
@@ -216,8 +159,6 @@ class ShareSheetState extends Equatable {
     List<ShareableUser>? contacts,
     List<ShareableUser>? selectedRecipients,
     bool? isSending,
-    bool? isSaving,
-    ShareSheetBookmarkStatus? bookmarkStatus,
     ShareSheetActionResult? actionResult,
     bool clearActionResult = false,
   }) {
@@ -226,8 +167,6 @@ class ShareSheetState extends Equatable {
       contacts: contacts ?? this.contacts,
       selectedRecipients: selectedRecipients ?? this.selectedRecipients,
       isSending: isSending ?? this.isSending,
-      isSaving: isSaving ?? this.isSaving,
-      bookmarkStatus: bookmarkStatus ?? this.bookmarkStatus,
       actionResult: clearActionResult
           ? null
           : (actionResult ?? this.actionResult),
@@ -240,8 +179,6 @@ class ShareSheetState extends Equatable {
     contacts,
     selectedRecipients,
     isSending,
-    isSaving,
-    bookmarkStatus,
     actionResult,
   ];
 }
