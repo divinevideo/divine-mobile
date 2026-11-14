@@ -17,6 +17,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockRelayManager extends Mock implements RelayManager {}
 
+class _MockNip17MessageService extends Mock implements NIP17MessageService {}
+
 class _InlineVerifyWorker implements DmVerifyWorker {
   @override
   Future<bool> verifyPart(Event event) async => event.isValid && event.isSigned;
@@ -346,6 +348,12 @@ const _Timing _eightSecondsLate = (
   eose: true,
 );
 
+const _Timing _fiftySecondsLate = (
+  firstFrame: Duration(seconds: 50),
+  perEvent: Duration.zero,
+  eose: true,
+);
+
 const _Timing _neverAnswered = (
   firstFrame: Duration.zero,
   perEvent: Duration.zero,
@@ -389,6 +397,25 @@ Future<void> _establish(SharedPreferences prefs, int wire) async {
     _owner,
     DmSyncState.currentGroupRecoveryVersion,
   );
+}
+
+/// Starts the first drain pass, calls [DmRepository.stopListening] [after] in,
+/// and returns how long the stop took on the fake clock, or null if it had
+/// not returned 60 s later.
+Duration? _stopDuringRestore(
+  FakeAsync async,
+  _Harness h, {
+  Duration after = const Duration(seconds: 8),
+}) {
+  unawaited(h.repository.backfillHistoryIfNeeded());
+  async.elapse(after);
+  Duration? took;
+  final start = async.elapsed;
+  unawaited(
+    h.repository.stopListening().then((_) => took = async.elapsed - start),
+  );
+  async.elapse(const Duration(seconds: 60));
+  return took;
 }
 
 void main() {
@@ -616,6 +643,157 @@ void main() {
         expect(pass.complete, isFalse);
         expect(pass.took, greaterThanOrEqualTo(const Duration(seconds: 25)));
         expect(pass.took, lessThan(const Duration(seconds: 45)));
+        _tearDown(async, h);
+      });
+    });
+  });
+
+  group('stopListening during a restore held by a slow relay', () {
+    test('returns at once while a page is still being answered, and closes '
+        'its REQ', () {
+      fakeAsync((async) {
+        final relay = _TimedRelay(
+          _poolRelayUrl,
+          store: history,
+          heartbeat: const Duration(seconds: 1),
+          timingFor: _pages(_fiftySecondsLate),
+        );
+        final h = _harness(async, pooled: relay, prefs: prefs);
+
+        final took = _stopDuringRestore(async, h);
+        relay.stopBeating();
+
+        final pageReqs = [
+          for (final (subId, filters) in relay.reqs)
+            if (subId.startsWith('dm_drain_') &&
+                _readsKind(filters, EventKind.giftWrap))
+              subId,
+        ];
+        expect(pageReqs, isNotEmpty);
+        expect(took, isNotNull);
+        expect(took, lessThan(const Duration(seconds: 1)));
+        expect(relay.closes, contains(pageReqs.last));
+        _tearDown(async, h);
+      });
+    });
+
+    test('returns at once while an end-of-restore recovery pass is still '
+        'being answered, and closes its REQ', () {
+      fakeAsync((async) {
+        final relay = _TimedRelay(
+          _poolRelayUrl,
+          store: history.take(20).toList(),
+          heartbeat: const Duration(seconds: 1),
+          timingFor: _reads(const ['dm_drain_nip04_'], _fiftySecondsLate),
+        );
+        final h = _harness(async, pooled: relay, prefs: prefs);
+
+        final took = _stopDuringRestore(async, h);
+        relay.stopBeating();
+
+        final passReqs = [
+          for (final (subId, _) in relay.reqs)
+            if (subId.startsWith('dm_drain_nip04_')) subId,
+        ];
+        expect(passReqs, isNotEmpty);
+        expect(took, isNotNull);
+        expect(took, lessThan(const Duration(seconds: 1)));
+        expect(relay.closes, contains(passReqs.last));
+        _tearDown(async, h);
+      });
+    });
+
+    test("returns at once while the account's own kind-10050 list is still "
+        'being read', () {
+      fakeAsync((async) {
+        final relay = _TimedRelay(
+          _poolRelayUrl,
+          store: [...history.take(20), _ownInboxList()],
+          heartbeat: const Duration(seconds: 1),
+          timingFor: _inboxList(_fiftySecondsLate),
+        );
+        final h = _harness(async, pooled: relay, prefs: prefs);
+
+        final took = _stopDuringRestore(async, h);
+        relay.stopBeating();
+
+        expect(
+          relay.reqs.any((req) => _readsKind(req.$2, EventKind.dmRelaysList)),
+          isTrue,
+          reason: 'the held kind-10050 read was never sent',
+        );
+        expect(took, isNotNull);
+        expect(took, lessThan(const Duration(seconds: 1)));
+        _tearDown(async, h);
+      });
+    });
+
+    test("closes the outgoing account's held page read at once when the "
+        'account switches', () {
+      fakeAsync((async) {
+        final relay = _TimedRelay(
+          _poolRelayUrl,
+          store: history,
+          heartbeat: const Duration(seconds: 1),
+          timingFor: _pages(_fiftySecondsLate),
+        );
+        final h = _harness(async, pooled: relay, prefs: prefs);
+        unawaited(h.repository.backfillHistoryIfNeeded());
+        async.elapse(const Duration(seconds: 8));
+        final pageReqs = [
+          for (final (subId, filters) in relay.reqs)
+            if (subId.startsWith('dm_drain_') &&
+                _readsKind(filters, EventKind.giftWrap))
+              subId,
+        ];
+        expect(pageReqs, isNotEmpty);
+
+        h.repository.setCredentials(
+          userPubkey: _sender,
+          signer: LocalNostrSigner(_senderKey),
+          messageService: _MockNip17MessageService(),
+        );
+        async.flushMicrotasks();
+
+        expect(relay.closes, contains(pageReqs.last));
+        relay.stopBeating();
+        _tearDown(async, h);
+      });
+    });
+
+    test('closes a catch-up debt read still being answered when listening '
+        'stops', () {
+      fakeAsync((async) {
+        final relay = _TimedRelay(
+          _poolRelayUrl,
+          store: history,
+          heartbeat: const Duration(seconds: 1),
+          timingFor: _reads(const ['dm_catchup_'], _fiftySecondsLate),
+        );
+        final h = _harness(async, pooled: relay, prefs: prefs);
+        unawaited(
+          h.syncState.addCatchUpDebt(_owner, [
+            DmCatchUpDebt(
+              relay: _poolRelayUrl,
+              floor: _now() - 86400,
+              until: _now() - 3600,
+            ),
+          ]),
+        );
+        async.flushMicrotasks();
+        unawaited(h.repository.startListening());
+        async.elapse(const Duration(seconds: 8));
+        final walkReqs = [
+          for (final (subId, _) in relay.reqs)
+            if (subId.startsWith('dm_catchup_')) subId,
+        ];
+        expect(walkReqs, isNotEmpty);
+
+        unawaited(h.repository.stopListening());
+        async.flushMicrotasks();
+
+        expect(relay.closes, contains(walkReqs.last));
+        relay.stopBeating();
         _tearDown(async, h);
       });
     });

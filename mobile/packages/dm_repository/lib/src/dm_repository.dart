@@ -47,6 +47,7 @@ import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/nostr.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/relay/query_result.dart';
+import 'package:nostr_sdk/relay/read_scope.dart';
 import 'package:nostr_sdk/relay/relay_type.dart';
 import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
@@ -1273,6 +1274,13 @@ class DmRepository {
   /// launch overlapping drains. Cleared when the drain settles.
   Future<void>? _historyDrain;
 
+  /// The reads of the restore and the catch-up walk in this session. Ending
+  /// it closes every one still waiting on a relay, so a stop is not held up
+  /// to [DmHistoryDrainConfig.pageReadCap] by a slow page (#9472), and a read
+  /// abandoned by the stop cannot outlive it under a subscription id the next
+  /// session reuses.
+  ReadScope _sessionReads = ReadScope();
+
   /// The in-flight failed-decrypt retry pass, shared by concurrent callers so
   /// repeated [retryPendingDecryptions] calls (every inbox open, plus
   /// load-more / blocklist re-dispatches) never run overlapping passes that
@@ -1509,6 +1517,7 @@ class DmRepository {
     // so the incoming user's startListening() is not blocked at its entry
     // guard by the outgoing user's still-resolving subscribe. See #4974.
     _resetGeneration++;
+    _endSessionReads();
     _backgroundDeliveryTail = Future<void>.value();
     _subscribing = false;
     _disposed = true;
@@ -2981,8 +2990,10 @@ class DmRepository {
       }
       return existing;
     }
-    final drain = _runHistoryDrain(
-      allowRefusalConfirmation: allowRefusalConfirmation,
+    final drain = _sessionReads.run(
+      () => _runHistoryDrain(
+        allowRefusalConfirmation: allowRefusalConfirmation,
+      ),
     );
     _historyDrain = drain;
     _historyDrainCanConfirmRefusal = allowRefusalConfirmation;
@@ -3038,6 +3049,13 @@ class DmRepository {
   /// while the live-subscription path had already moved on to the token.
   bool _ingestSessionEnded(String pubkey, int generation) =>
       _disposed || _userPubkey != pubkey || _resetGeneration != generation;
+
+  /// Ends the outgoing session's restore and catch-up reads, and gives the
+  /// next session a scope of its own.
+  void _endSessionReads() {
+    _sessionReads.end();
+    _sessionReads = ReadScope();
+  }
 
   Future<void> _runPendingDecryptRetry() async {
     // Same shape as the drain: deleteExhausted below is a write, and it runs
@@ -3739,6 +3757,7 @@ class DmRepository {
     // so its post-await continuation bails instead of re-opening the
     // subscription (or completing a publish) after the stop. See #4974.
     _resetGeneration++;
+    _endSessionReads();
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _liveCatchUp?.cancelHoldLimit();
@@ -3995,7 +4014,8 @@ class DmRepository {
     }
     _readingCatchUpDebt = true;
     unawaited(
-      _walkCatchUpDebt(catchUp, syncState)
+      _sessionReads
+          .run(() => _walkCatchUpDebt(catchUp, syncState))
           .catchError((Object error, StackTrace stackTrace) {
             // Relay and storage failures are expected and leave the debt for
             // the next walk; a broken invariant is reported.
