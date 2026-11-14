@@ -345,6 +345,7 @@ void main() {
           acceptRelayClosedWhenOthersAnswered: any(
             named: 'acceptRelayClosedWhenOthersAnswered',
           ),
+          silentRelayTimeout: any(named: 'silentRelayTimeout'),
         ),
       ).thenAnswer(
         (invocation) async => answerLookup(
@@ -1474,6 +1475,7 @@ void main() {
                 acceptRelayClosedWhenOthersAnswered: any(
                   named: 'acceptRelayClosedWhenOthersAnswered',
                 ),
+                silentRelayTimeout: any(named: 'silentRelayTimeout'),
               ),
             ).thenAnswer((invocation) async {
               await gate.future;

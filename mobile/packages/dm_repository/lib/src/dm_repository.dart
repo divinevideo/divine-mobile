@@ -164,9 +164,20 @@ abstract class DmHistoryDrainConfig {
 
   /// Additional attempts shared by the whole drain run when a page does not
   /// fully settle. This is deliberately a run budget, not a per-page budget:
-  /// one bad relay must not multiply the 5-second query deadline by every
-  /// page in a large history. See #9030.
+  /// one bad relay must not multiply a page's wait, up to [pageReadCap], by
+  /// every page in a large history. See #9030.
   static const int unsettledPageRetriesPerRun = 2;
+
+  /// Longest one history read waits for a relay that is still answering it:
+  /// streaming the page, or busy with the requests queued ahead of it on the
+  /// same socket. A relay that has gone silent ends the wait sooner, after
+  /// [pageSilenceBound]. A page is large and the drain runs in the
+  /// background, so a slow answer is worth waiting for. See #9472.
+  static const Duration pageReadCap = Duration(seconds: 60);
+
+  /// How long a relay that owes a history read its answer may send nothing at
+  /// all, for any request on its socket, before the read counts as unanswered.
+  static const Duration pageSilenceBound = Duration(seconds: 10);
 
   /// Automatic retries after a drain defers. A relay reconnect can resume the
   /// drain sooner and cancels the retry, except while an ambiguous refusal
@@ -263,6 +274,12 @@ const int _dmInboxOutboxRelayCap = 4;
 /// `timedOut`, which is `failed`, which does not publish — so erring short errs
 /// toward not overwriting. See #8212.
 const Duration _ownDmInboxAuthoritativeTimeout = Duration(seconds: 3);
+
+/// Outer bound on history restore's own-inbox read: its legs end themselves
+/// by [DmHistoryDrainConfig.pageReadCap], so this only catches one that does
+/// not, and follows the cap if it changes.
+final Duration _historyInboxReadBudget =
+    DmHistoryDrainConfig.pageReadCap + const Duration(seconds: 5);
 
 /// Hard backstop on a single NIP-17 message publish (wrap build + recipient
 /// wrap OK-confirm + self-wrap). On timeout the send is reported as a soft,
@@ -1974,6 +1991,7 @@ class DmRepository {
       pubkey,
       requireAuthoritative: true,
       source: _DmRelayListSource.selfAuthored,
+      forHistory: true,
       listedRelays: [
         if (divineRelay != null && isRelayUrlAllowed(divineRelay)) divineRelay,
         ...?memoRelays,
@@ -2271,6 +2289,8 @@ class DmRepository {
         // every DM read once it rejects AUTH. Ambiguous refusals still leave
         // the page unanswered (#9468).
         acceptRelayClosedWhenOthersAnswered: true,
+        timeout: DmHistoryDrainConfig.pageReadCap,
+        silentRelayTimeout: DmHistoryDrainConfig.pageSilenceBound,
       );
       return (
         events: result.events,
@@ -2291,6 +2311,8 @@ class DmRepository {
       tempRelays: [onlyRelay],
       relayTypes: const [RelayType.temp],
       requireAllRelaysSettled: true,
+      timeout: DmHistoryDrainConfig.pageReadCap,
+      silentRelayTimeout: DmHistoryDrainConfig.pageSilenceBound,
     );
     return (
       events: result.events,
@@ -2712,6 +2734,8 @@ class DmRepository {
           useCache: false,
           tempRelays: tempRelays,
           requireAllRelaysSettled: true,
+          timeout: DmHistoryDrainConfig.pageReadCap,
+          silentRelayTimeout: DmHistoryDrainConfig.pageSilenceBound,
         );
         final events = result.events;
         final ambiguousRefusals = <String>{
@@ -6311,8 +6335,12 @@ class DmRepository {
     // the user's own list says it lives. History restore passes Divine's
     // inbox relay and the relays its held list names (#8528).
     List<String> listedRelays = const [],
+    // History restore reads with the history-page policy instead of the
+    // short budgets the send path and the publish need (#9472).
+    bool forHistory = false,
   }) async {
     final elapsed = Stopwatch()..start();
+    final budget = forHistory ? _historyInboxReadBudget : inboxResolutionBudget;
     try {
       final isRecipient = source == _DmRelayListSource.remote;
       final filter = [
@@ -6378,9 +6406,14 @@ class DmRepository {
             useCache: !requireAuthoritative && !isRecipient,
             requireAllRelaysSettled:
                 requireAuthoritative || source == _DmRelayListSource.remote,
-            timeout: requireAuthoritative
+            timeout: forHistory
+                ? DmHistoryDrainConfig.pageReadCap
+                : requireAuthoritative
                 ? _ownDmInboxAuthoritativeTimeout
                 : _dmInboxQueryTimeout,
+            silentRelayTimeout: forHistory
+                ? DmHistoryDrainConfig.pageSilenceBound
+                : null,
           ),
         ),
         if (lookupRelays.isNotEmpty)
@@ -6402,7 +6435,12 @@ class DmRepository {
               tempRelays: listedLeg,
               relayTypes: const [RelayType.temp],
               requireAllRelaysSettled: true,
-              timeout: _ownDmInboxAuthoritativeTimeout,
+              timeout: forHistory
+                  ? DmHistoryDrainConfig.pageReadCap
+                  : _ownDmInboxAuthoritativeTimeout,
+              silentRelayTimeout: forHistory
+                  ? DmHistoryDrainConfig.pageSilenceBound
+                  : null,
             ),
           ),
         if (advertisedRelay != null)
@@ -6417,9 +6455,7 @@ class DmRepository {
             ),
           ),
       ];
-      final legs = await Future.wait(queryFutures).timeout(
-        inboxResolutionBudget,
-      );
+      final legs = await Future.wait(queryFutures).timeout(budget);
       final results = [for (final leg in legs) leg.read];
       final events = [for (final result in results) ...result.events];
       // The advertised leg, when asked, is queued last.
@@ -6581,7 +6617,7 @@ class DmRepository {
       // The detailed result preserves that distinction for every caller.
       Log.warning(
         'DM inbox resolution for ${pubkeyForLogs(pubkey)} exceeded '
-        '${inboxResolutionBudget.inMilliseconds}ms; treating as unread',
+        '${budget.inMilliseconds}ms; treating as unread',
         category: LogCategory.system,
       );
       return (

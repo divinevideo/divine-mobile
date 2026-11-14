@@ -231,6 +231,7 @@ void main() {
         acceptRelayClosedWhenOthersAnswered: any(
           named: 'acceptRelayClosedWhenOthersAnswered',
         ),
+        silentRelayTimeout: any(named: 'silentRelayTimeout'),
       ),
     ).thenAnswer((invocation) async {
       final filters =
@@ -260,6 +261,8 @@ void main() {
         tempRelays: any(named: 'tempRelays'),
         relayTypes: any(named: 'relayTypes'),
         requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        timeout: any(named: 'timeout'),
+        silentRelayTimeout: any(named: 'silentRelayTimeout'),
       ),
     ).thenAnswer((invocation) async {
       final filters =

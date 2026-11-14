@@ -858,6 +858,13 @@ T _resolve<T>(FakeAsync async, Future<T> future) {
 
 /// The outgoing NIP-04 recovery read, `authors:[self]` kind 4: the only read
 /// these stubs answer. The deletion recovery pass (#9468) is answered apart.
+/// Whether [invocation] is the account's own kind-10050 lookup, which reads
+/// through the same `queryEventsDetailed` stubs as the history pages.
+bool _readsOwnInboxList(Invocation invocation) =>
+    (invocation.positionalArguments.first as List<nostr_filter.Filter>).any(
+      (filter) => filter.kinds?.contains(EventKind.dmRelaysList) ?? false,
+    );
+
 final Matcher _nip04RecoveryRead = isA<List<nostr_filter.Filter>>().having(
   (filters) => filters.single.authors,
   'authors',
@@ -959,6 +966,7 @@ void main() {
             named: 'acceptRelayClosedWhenOthersAnswered',
           ),
           timeout: any(named: 'timeout'),
+          silentRelayTimeout: any(named: 'silentRelayTimeout'),
         ),
       ).thenAnswer((_) async => answeredList(const <Event>[]));
 
@@ -1220,6 +1228,7 @@ void main() {
           named: 'acceptRelayClosedWhenOthersAnswered',
         ),
         timeout: any(named: 'timeout'),
+        silentRelayTimeout: any(named: 'silentRelayTimeout'),
       ),
     ).thenAnswer((_) async => answeredList(const <Event>[]));
 
@@ -1232,6 +1241,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer(
           (_) async => const QueryResult(
@@ -2685,6 +2696,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -2808,6 +2821,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -3380,6 +3395,8 @@ void main() {
                 tempRelays: any(named: 'tempRelays'),
                 relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+                silentRelayTimeout: any(named: 'silentRelayTimeout'),
               ),
             ).thenAnswer(
               (_) async =>
@@ -3454,6 +3471,8 @@ void main() {
                 tempRelays: any(named: 'tempRelays'),
                 relayTypes: any(named: 'relayTypes'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+                silentRelayTimeout: any(named: 'silentRelayTimeout'),
               ),
             ).thenAnswer(
               (_) async =>
@@ -3566,6 +3585,8 @@ void main() {
               tempRelays: any(named: 'tempRelays'),
               relayTypes: any(named: 'relayTypes'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((invocation) async {
             final filter =
@@ -6765,6 +6786,7 @@ void main() {
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
             timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).called(1);
         verifyNever(
@@ -7188,6 +7210,7 @@ void main() {
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
             timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) async => answeredList(events));
       }
@@ -7224,6 +7247,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) => stalledRead.future);
 
@@ -7400,6 +7424,7 @@ void main() {
                       named: 'acceptRelayClosedWhenOthersAnswered',
                     ),
                     timeout: any(named: 'timeout'),
+                    silentRelayTimeout: any(named: 'silentRelayTimeout'),
                   ),
                 ).captured.single
                 as List<nostr_filter.Filter>;
@@ -7425,6 +7450,7 @@ void main() {
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
             timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenThrow(Exception('relay down'));
         final repository = createRepository();
@@ -7453,6 +7479,7 @@ void main() {
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
             timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer(
           (_) async => answeredList([
@@ -7502,6 +7529,7 @@ void main() {
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
             timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((_) async => answer);
       }
@@ -7544,6 +7572,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((invocation) async {
             final temp =
@@ -7625,6 +7654,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((invocation) async {
             final temp =
@@ -7751,6 +7781,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((invocation) {
             queries.add(invocation);
@@ -8184,6 +8215,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((invocation) async {
             queryTempRelays.add(
@@ -8229,6 +8261,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer(
             (_) async => answeredList([
@@ -8330,6 +8363,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -8398,6 +8432,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -8463,6 +8498,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -8531,6 +8567,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) {
             resolveCalls++;
@@ -8864,6 +8901,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer(
             (_) async => answeredList([
@@ -8958,6 +8996,7 @@ void main() {
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
             timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         );
         verifyNever(
@@ -8985,6 +9024,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenThrow(Exception('relay down'));
 
@@ -9019,6 +9059,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((invocation) async {
             // Count the pool leg only; the advertised relay has nothing.
@@ -9089,6 +9130,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -9139,6 +9181,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async => answer);
         }
@@ -9171,6 +9214,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((invocation) async {
             final tempRelays =
@@ -9305,6 +9349,7 @@ void main() {
                   named: 'requireAllRelaysSettled',
                 ),
                 timeout: any(named: 'timeout'),
+                silentRelayTimeout: any(named: 'silentRelayTimeout'),
               ),
             ).captured;
 
@@ -9455,6 +9500,7 @@ void main() {
                   named: 'requireAllRelaysSettled',
                 ),
                 timeout: any(named: 'timeout'),
+                silentRelayTimeout: any(named: 'silentRelayTimeout'),
               ),
             ).captured;
 
@@ -9496,6 +9542,7 @@ void main() {
                   named: 'acceptRelayClosedWhenOthersAnswered',
                 ),
                 timeout: any(named: 'timeout'),
+                silentRelayTimeout: any(named: 'silentRelayTimeout'),
               ),
             ).thenAnswer((invocation) async {
               // Count the pool leg only; the advertised relay has nothing.
@@ -9554,6 +9601,7 @@ void main() {
                   named: 'acceptRelayClosedWhenOthersAnswered',
                 ),
                 timeout: any(named: 'timeout'),
+                silentRelayTimeout: any(named: 'silentRelayTimeout'),
               ),
             ).thenAnswer((_) async {
               final event = published;
@@ -9607,6 +9655,7 @@ void main() {
                   named: 'acceptRelayClosedWhenOthersAnswered',
                 ),
                 timeout: any(named: 'timeout'),
+                silentRelayTimeout: any(named: 'silentRelayTimeout'),
               ),
             ).thenAnswer((_) async => answeredList(const <Event>[]));
 
@@ -9648,6 +9697,7 @@ void main() {
                   named: 'acceptRelayClosedWhenOthersAnswered',
                 ),
                 timeout: any(named: 'timeout'),
+                silentRelayTimeout: any(named: 'silentRelayTimeout'),
               ),
             ).thenAnswer((_) => read.future);
 
@@ -9686,6 +9736,7 @@ void main() {
                   named: 'acceptRelayClosedWhenOthersAnswered',
                 ),
                 timeout: any(named: 'timeout'),
+                silentRelayTimeout: any(named: 'silentRelayTimeout'),
               ),
             ).thenAnswer((_) => read.future);
             final signer = _MockNostrSigner();
@@ -9744,6 +9795,8 @@ void main() {
             acceptRelayClosedWhenOthersAnswered: any(
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((inv) async {
           final filters =
@@ -9784,10 +9837,15 @@ void main() {
             acceptRelayClosedWhenOthersAnswered: any(
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
-        ).thenAnswer(
-          (_) async => unansweredPage(noRelays: noRelays, timedOut: timedOut),
-        );
+        ).thenAnswer((inv) async {
+          // The own kind-10050 lookup reads through queryEventsDetailed too.
+          // Answer it as the catch-all does, so only the pages go unanswered.
+          if (_readsOwnInboxList(inv)) return answeredList(const <Event>[]);
+          return unansweredPage(noRelays: noRelays, timedOut: timedOut);
+        });
       }
 
       test(
@@ -9864,6 +9922,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).captured;
 
@@ -9891,6 +9950,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).called(1);
         },
@@ -9914,6 +9975,8 @@ void main() {
             acceptRelayClosedWhenOthersAnswered: any(
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((inv) async {
           final filter =
@@ -9983,6 +10046,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -10143,6 +10208,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             capturedFilters.addAll(
@@ -10194,6 +10261,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async => answeredPage(const <Event>[]));
           // The drain recovered the user's own last-sent message in this convo.
@@ -10341,6 +10410,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -10365,6 +10436,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async => answeredPage(const <Event>[]));
 
@@ -10491,6 +10564,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer(
             (_) async =>
@@ -10506,6 +10581,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -10559,6 +10636,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             nip04Pages++;
@@ -10580,6 +10659,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async => answeredPage(const <Event>[]));
           when(
@@ -10834,6 +10915,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((invocation) async {
             final filters =
@@ -10926,6 +11008,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer(
             (_) async => answeredList([
@@ -10968,6 +11051,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async => answeredList(const <Event>[]));
 
@@ -11004,6 +11088,8 @@ void main() {
             acceptRelayClosedWhenOthersAnswered: any(
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         );
       });
@@ -11023,6 +11109,8 @@ void main() {
             acceptRelayClosedWhenOthersAnswered: any(
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         );
       });
@@ -11042,6 +11130,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -11098,6 +11188,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -11186,6 +11278,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -11242,8 +11336,15 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
-          ).thenThrow(error);
+          ).thenAnswer((inv) async {
+            // Only the pages fail: the own kind-10050 lookup is answered as
+            // the catch-all answers it.
+            if (_readsOwnInboxList(inv)) return answeredList(const <Event>[]);
+            throw error;
+          });
 
           final syncState = _FakeDmSyncState()..oldestOverride = 1000;
           final repository = createRepository(syncState: syncState);
@@ -11272,6 +11373,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenThrow(error);
 
@@ -11299,6 +11402,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenThrow(TimeoutException('relay read timed out'));
 
@@ -11352,6 +11457,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -11510,6 +11617,8 @@ void main() {
             acceptRelayClosedWhenOthersAnswered: any(
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((inv) async {
           final filter =
@@ -11648,6 +11757,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -11787,6 +11898,8 @@ void main() {
             acceptRelayClosedWhenOthersAnswered: any(
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((inv) async {
           final filter =
@@ -11835,6 +11948,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -11904,6 +12019,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -11951,6 +12068,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -12021,6 +12140,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -12081,6 +12202,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             nip04Reads++;
@@ -12123,6 +12246,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             deletionReads++;
@@ -12162,6 +12287,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             nip04Reads++;
@@ -12201,6 +12328,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             nip04Reads++;
@@ -12277,6 +12406,8 @@ void main() {
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: any(named: 'useCache'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+                silentRelayTimeout: any(named: 'silentRelayTimeout'),
               ),
             ).thenAnswer((_) async {
               nip04Reads++;
@@ -12313,6 +12444,8 @@ void main() {
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer(
           (_) async => const QueryResult(
@@ -12363,6 +12496,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) {
             nip04Reads++;
@@ -12423,6 +12558,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             final relay = refusingRelays[nip04Reads++];
@@ -12471,6 +12608,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             final relay = refusingRelays[nip04Reads++];
@@ -12527,6 +12666,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             final relay = refusingRelays[nip04Reads++];
@@ -12571,6 +12712,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             final category = categories[nip04Reads++];
@@ -12619,6 +12762,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer(
             (_) async => QueryResult(
@@ -12666,6 +12811,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             nip04Reads++;
@@ -12732,6 +12879,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             nip04Reads++;
@@ -12791,6 +12940,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -12814,6 +12965,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             nip04Reads++;
@@ -12897,6 +13050,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -12920,6 +13075,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             nip04Reads++;
@@ -12999,6 +13156,8 @@ void main() {
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: any(named: 'useCache'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                timeout: any(named: 'timeout'),
+                silentRelayTimeout: any(named: 'silentRelayTimeout'),
               ),
             ).thenAnswer((_) {
               nip04Reads++;
@@ -13072,6 +13231,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) {
             nip04Reads++;
@@ -13121,6 +13282,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             nip04Reads++;
@@ -13166,6 +13329,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             nip04Reads++;
@@ -13226,6 +13391,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer(
             (_) async =>
@@ -13243,6 +13410,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -13447,6 +13616,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -13488,6 +13659,8 @@ void main() {
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async {
             nip04Pages++;
@@ -13510,6 +13683,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async => answeredPage(const <Event>[]));
           final syncState = armedSyncState();
@@ -13542,6 +13717,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filter =
@@ -13704,6 +13881,8 @@ void main() {
             acceptRelayClosedWhenOthersAnswered: any(
               named: 'acceptRelayClosedWhenOthersAnswered',
             ),
+            timeout: any(named: 'timeout'),
+            silentRelayTimeout: any(named: 'silentRelayTimeout'),
           ),
         ).thenAnswer((inv) async {
           final filters =
@@ -14376,6 +14555,8 @@ void main() {
               acceptRelayClosedWhenOthersAnswered: any(
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
+              timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((inv) async {
             final filters =
@@ -17314,6 +17495,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async => answer);
         }
@@ -20582,6 +20764,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer(
             (invocation) async {
@@ -21675,6 +21858,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async => answer);
         }
@@ -21855,6 +22039,7 @@ void main() {
                   named: 'acceptRelayClosedWhenOthersAnswered',
                 ),
                 timeout: any(named: 'timeout'),
+                silentRelayTimeout: any(named: 'silentRelayTimeout'),
               ),
             ).thenAnswer((invocation) async {
               final filters = invocation.positionalArguments.first as List;
@@ -27867,6 +28052,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async => unansweredList(noRelays: true));
           stubSendRumor(
@@ -29442,6 +29628,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((invocation) async {
             final filters =
@@ -31039,6 +31226,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((invocation) async {
             final filters = invocation.positionalArguments.first as List;
@@ -31163,6 +31351,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async => unansweredList(timedOut: true));
           stubSendRumor(
@@ -31985,6 +32174,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer((_) async => unansweredList(noRelays: true));
           when(
@@ -32860,6 +33050,7 @@ void main() {
                 named: 'acceptRelayClosedWhenOthersAnswered',
               ),
               timeout: any(named: 'timeout'),
+              silentRelayTimeout: any(named: 'silentRelayTimeout'),
             ),
           ).thenAnswer(
             (_) async => answeredList([
