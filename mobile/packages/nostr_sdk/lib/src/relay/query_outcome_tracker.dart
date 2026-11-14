@@ -168,16 +168,16 @@ class QueryOutcomeTracker {
   /// the query's [RelayDiagnosticSite.queryCompletion] line.
   ///
   /// Set [atDeadline] when the caller's own deadline ended the query rather
-  /// than the pool, and [silence] when the caller ended it early because
-  /// that relay had sent nothing for that long. [pendingStateOf] says what a
-  /// relay that has sent no terminal frame can still be expected to do. A line is due once per
-  /// query, when it did not end [QueryEnd.complete] or may be capped: the
-  /// call that produces it marks the query reported, and later calls return
-  /// none.
+  /// than the pool, and [silence] when the caller ended it early because a
+  /// relay owing its answer went quiet or left the pool. [pendingStateOf]
+  /// says what a relay that has sent no terminal frame can still be expected
+  /// to do. A line is due once per query, when it did not end
+  /// [QueryEnd.complete] or may be capped: the call that produces it marks
+  /// the query reported, and later calls return none.
   ({QueryOutcome outcome, RelayDiagnostic? diagnostic}) conclude({
     required bool atDeadline,
     required PendingRelayState Function(Relay relay) pendingStateOf,
-    ({String relayUrl, Duration bound})? silence,
+    QuerySilence? silence,
   }) {
     final judgements = <_RelayTally, _Judgement>{
       for (final tally in _tallies.values)
@@ -369,7 +369,7 @@ class QueryOutcomeTracker {
   String _describe(
     QueryOutcome outcome,
     Map<_RelayTally, _Judgement> judgements,
-    ({String relayUrl, Duration bound})? silence,
+    QuerySilence? silence,
   ) {
     final elapsedMs = DateTime.now().difference(_startedAt).inMilliseconds;
     final events = _tallies.values.fold(0, (sum, tally) => sum + tally.events);
@@ -398,8 +398,10 @@ class QueryOutcomeTracker {
           'possiblyCapped=${outcome.possiblyCapped}, '
           'confirmedExhaustive=${outcome.confirmedExhaustive})',
       if (silence != null)
-        'silent: ${silence.relayUrl} sent nothing for '
-            '${silence.bound.inMilliseconds}ms',
+        silence.leftPool
+            ? 'silent: ${silence.relayUrl} left the pool before answering'
+            : 'silent: ${silence.relayUrl} sent nothing for '
+                  '${silence.bound.inMilliseconds}ms',
       'answered: ${_listOrNone(answered)}',
       'not answered: ${_listOrNone(notAnswered)}',
       if (notTaken.isNotEmpty) 'did not take the REQ: ${notTaken.join(', ')}',

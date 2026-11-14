@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:nostr_sdk/relay/client_connected.dart';
 
+import '../support/fake_web_socket.dart';
+
 const _key = '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
 
 /// When a relay starts answering a REQ, how far apart its events arrive, and
@@ -20,18 +22,21 @@ typedef _Answer = ({Duration first, Duration every, bool eose});
 ///
 /// Like a real socket it delivers nothing once disconnected, and it reports
 /// each connection change through [Relay.relayStatusCallback], as `RelayBase`
-/// does.
+/// does. With [refusal] it answers every REQ with that `CLOSED` reason instead.
 class _ScheduledRelay extends Relay {
   _ScheduledRelay(
     String url, {
     required this.events,
     required this.answer,
     this.busyEvery,
+    this.refusal,
   }) : super(url, RelayStatus(url));
 
   final List<Event> events;
   final _Answer answer;
   final Duration? busyEvery;
+  final String? refusal;
+  final List<String> reqs = [];
   final List<Timer> _timers = [];
 
   @override
@@ -61,6 +66,14 @@ class _ScheduledRelay extends Relay {
   }) async {
     if (message.length > 1 && message[0] == 'REQ') {
       final subId = message[1] as String;
+      reqs.add(subId);
+      final reason = refusal;
+      if (reason != null) {
+        _timers.add(
+          Timer(answer.first, () => _deliver(['CLOSED', subId, reason])),
+        );
+        return true;
+      }
       var at = answer.first;
       for (final event in events) {
         final frame = ['EVENT', subId, event.toJson()];
@@ -278,7 +291,8 @@ void main() {
             eose: false,
           ),
         );
-        final nostr = _nostr(async, [original]);
+        final lines = <RelayDiagnostic>[];
+        final nostr = _nostr(async, [original], diagnosticsSink: lines.add);
         final read = _startRead(async, nostr);
         async.elapse(const Duration(seconds: 9));
         // What the relay manager does on resume: drop the relay object and
@@ -298,6 +312,10 @@ void main() {
         expect(read.result!.isComplete, isFalse);
         expect(read.result!.events, hasLength(9));
         expect(read.took, lessThan(const Duration(seconds: 12)));
+        expect(
+          lines.map((line) => line.message),
+          contains(contains('silent: $url left the pool before answering')),
+        );
       });
     });
 
@@ -327,6 +345,59 @@ void main() {
         expect(read.result!.isComplete, isTrue);
         expect(read.result!.events, hasLength(5));
         expect(read.took, greaterThanOrEqualTo(const Duration(seconds: 15)));
+      });
+    });
+
+    test('ends a long read that starts after its client began closing, '
+        'without asking a relay', () {
+      fakeAsync((async) {
+        final streaming = _ScheduledRelay(
+          'wss://streaming.example',
+          events: events.take(10).toList(),
+          answer: (
+            first: const Duration(seconds: 3),
+            every: const Duration(seconds: 3),
+            eose: true,
+          ),
+        );
+        final nostr = _nostr(async, [streaming]);
+
+        nostr.beginClose();
+        final read = _startRead(async, nostr);
+        async.flushMicrotasks();
+
+        expect(read.result, isNotNull);
+        expect(read.result!.isComplete, isFalse);
+        expect(read.took, Duration.zero);
+        expect(streaming.reqs, isNot(contains('history_page')));
+        async.elapse(const Duration(seconds: 60));
+        streaming.stop();
+      });
+    });
+
+    test('counts a relay parked behind NIP-42 with no handshake under way as '
+        'silent', () {
+      fakeAsync((async) {
+        final answering = _ScheduledRelay(
+          'wss://answering.example',
+          events: events.take(5).toList(),
+          answer: (first: Duration.zero, every: Duration.zero, eose: true),
+        );
+        final gated = _ScheduledRelay(
+          'wss://gated.example',
+          events: const [],
+          answer: (
+            first: const Duration(milliseconds: 5),
+            every: Duration.zero,
+            eose: false,
+          ),
+          refusal: 'auth-required: sign in to read',
+        );
+
+        final read = _read(async, [answering, gated]);
+
+        expect(read.result.isComplete, isFalse);
+        expect(read.took, lessThan(const Duration(seconds: 12)));
       });
     });
 
@@ -452,5 +523,45 @@ void main() {
         throwsArgumentError,
       );
     });
+  });
+
+  group('Nostr.beginClose with long reads in flight', () {
+    test(
+      'ends them without reconnecting a relay that never answered',
+      () async {
+        const url = 'wss://relay.example';
+        final nostr = Nostr(
+          LocalNostrSigner(_key),
+          [],
+          (url) => throw StateError('no temp relays in this test: $url'),
+        );
+        final factory = FakeWebSocketChannelFactory();
+        await nostr.relayPool.add(
+          RelayBase(url, RelayStatus(url), channelFactory: factory),
+        );
+        // The repair of a relay that never answered waits this long after the
+        // REQ, on the wall clock; a read that old is what closing meets.
+        nostr.relayPool.minQueryAgeBeforeRepair = Duration.zero;
+        final read = nostr.readEvents(
+          [
+            Filter(kinds: const [EventKind.textNote]).toJson(),
+          ],
+          timeout: const Duration(seconds: 60),
+          requireAllRelaysSettled: true,
+          silentRelayTimeout: const Duration(seconds: 10),
+        );
+        await pumpEventQueue();
+        expect(factory.createdChannels, hasLength(1));
+
+        nostr.beginClose();
+        final result = await read;
+        await pumpEventQueue();
+
+        expect(result.isComplete, isFalse);
+        expect(factory.createdChannels, hasLength(1));
+        nostr.close();
+        await pumpEventQueue();
+      },
+    );
   });
 }

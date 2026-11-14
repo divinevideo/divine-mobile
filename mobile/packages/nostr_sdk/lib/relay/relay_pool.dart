@@ -219,15 +219,18 @@ class RelayPool {
   /// Armed settle windows, keyed by subscription id.
   final Map<String, Timer> _querySettleTimers = {};
 
-  /// When each relay object last showed it is alive: its last frame of any
-  /// kind, or the moment its socket (re)connected.
+  /// When each relay object last showed it is alive, on [_monotonic]: its
+  /// last frame of any kind, or the moment its socket (re)connected.
   ///
   /// Stamped for every frame, whichever request it belongs to, because a relay
   /// busy answering the reads queued ahead of one on the same socket is still
   /// answering, and on connect, because a fresh socket has had no chance to
   /// send anything yet. Per object rather than per url: a replacement object
-  /// for the url is a different socket. Read by [relaySilentOnQuerySince].
-  final Expando<DateTime> _lastHeardAt = Expando<DateTime>('relayLastHeardAt');
+  /// for the url is a different socket. Read by [relaySilentOnQuery].
+  final Expando<Duration> _lastHeardAt = Expando<Duration>('relayLastHeardAt');
+
+  /// The clock [_lastHeardAt] is kept on, immune to wall-clock jumps.
+  final Stopwatch _monotonic = clock.stopwatch()..start();
 
   /// One-shot queries that opted out of [querySettleWindow].
   ///
@@ -1371,22 +1374,36 @@ class RelayPool {
     _armQuerySettleWindow(subId);
   }
 
-  /// The url of a relay that owes [subId] its answer and has shown no sign of
-  /// life since [quietSince], or null while every such relay is still heard
-  /// from.
+  /// A relay that owes [subId] its answer and has shown no sign of life for
+  /// [quietFor], or null while every such relay is still heard from.
   ///
   /// A relay owes the answer from taking the REQ until it sends `EOSE` or
-  /// `CLOSED`. One part-way through its answer, or still answering the
-  /// requests queued ahead of this one on the same socket, keeps sending
+  /// `CLOSED`, and while a `CLOSED auth-required` leaves the REQ parked for the
+  /// replay after NIP-42. One part-way through its answer, or still answering
+  /// the requests queued ahead of this one on the same socket, keeps sending
   /// frames; only one that has gone quiet stops, and only time tells the two
-  /// apart. A relay the pool no longer holds, removed or replaced by a fresh
-  /// object for its url, can never answer, so it counts as silent at once.
-  String? relaySilentOnQuerySince(String subId, DateTime quietSince) {
-    final owing = _queryOutcomes[subId]?.relaysOwingAnswer ?? const [];
+  /// apart. A relay mid-handshake is not silent. A relay the pool no longer
+  /// holds, removed or replaced by a fresh object for its url, can never
+  /// answer, so it counts as silent at once.
+  ({String relayUrl, bool leftPool})? relaySilentOnQuery(
+    String subId, {
+    required Duration quietFor,
+  }) {
+    final owing = <Relay>{
+      ...?_queryOutcomes[subId]?.relaysOwingAnswer,
+      for (final relay in [..._relaysSnapshot(), ..._tempRelaysSnapshot()])
+        if ((_queriesParkedForAuth[relay.url]?.contains(subId) ?? false) &&
+            relay.checkQuery(subId))
+          relay,
+    };
+    final now = _monotonic.elapsed;
     for (final relay in owing) {
-      if (!_holdsRelay(relay)) return relay.url;
+      if (!_holdsRelay(relay)) return (relayUrl: relay.url, leftPool: true);
+      if (_hasLiveAuthHandshake(relay)) continue;
       final heard = _lastHeardAt[relay];
-      if (heard == null || !heard.isAfter(quietSince)) return relay.url;
+      if (heard == null || now - heard >= quietFor) {
+        return (relayUrl: relay.url, leftPool: false);
+      }
     }
     return null;
   }
@@ -1631,7 +1648,7 @@ class RelayPool {
     relay.relayStatusCallback = () {
       previous?.call();
       if (relay.relayStatus.connected == ClientConnected.connected) {
-        _lastHeardAt[relay] = clock.now();
+        _lastHeardAt[relay] = _monotonic.elapsed;
       }
       // NIP-42 state belongs to one socket: `authed` is reset on connect and a
       // fresh connection re-challenges from scratch. Carrying either marker
@@ -1820,7 +1837,7 @@ class RelayPool {
   }
 
   Future<void> _onEvent(Relay relay, List<dynamic> json) async {
-    _lastHeardAt[relay] = clock.now();
+    _lastHeardAt[relay] = _monotonic.elapsed;
     final messageType = _stringAt(relay, json, 0, 'message type');
     if (messageType == null) return;
 
@@ -3320,10 +3337,7 @@ class RelayPool {
   /// Returns null when the pool holds no record of [id]: it has completed or
   /// been unsubscribed, or it was started with neither `onComplete` nor
   /// `onOutcome`.
-  QueryOutcome? reportQueryDeadline(
-    String id, {
-    ({String relayUrl, Duration bound})? silence,
-  }) {
+  QueryOutcome? reportQueryDeadline(String id, {QuerySilence? silence}) {
     final tracker = _queryOutcomes[id];
     if (tracker == null) return null;
     return _concludeQueryOutcome(
@@ -3339,7 +3353,7 @@ class RelayPool {
     String subId,
     QueryOutcomeTracker tracker, {
     required bool atDeadline,
-    ({String relayUrl, Duration bound})? silence,
+    QuerySilence? silence,
   }) {
     final concluded = tracker.conclude(
       atDeadline: atDeadline,
