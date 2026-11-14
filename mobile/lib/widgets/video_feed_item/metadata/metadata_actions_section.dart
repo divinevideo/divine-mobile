@@ -62,6 +62,9 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
     final isSavePending = context.select(
       (VideoContentActionsBloc bloc) => bloc.state.isSaving,
     );
+    final isImporting = context.select(
+      (VideoContentActionsBloc bloc) => bloc.state.isImportingClip,
+    );
     final isSaved = context.select(
       (VideoContentActionsBloc bloc) =>
           bloc.state.bookmarkStatus == VideoBookmarkStatus.saved,
@@ -104,6 +107,9 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
       ],
     ];
 
-    return VideoActionRow(actions: actions, isLocked: isDeletePending);
+    return VideoActionRow(
+      actions: actions,
+      isLocked: isDeletePending || isSavePending || isImporting,
+    );
   }
 }

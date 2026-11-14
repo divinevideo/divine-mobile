@@ -48,9 +48,10 @@ class VideoActionRow extends StatelessWidget {
   /// Heading shown above the row; no heading is rendered when null.
   final String? title;
 
-  /// Whether an operation in flight holds the whole row, such as a delete
-  /// that closes the sheet when it finishes. Every action not already pending
-  /// is disabled, so none can close the sheet first and lose the outcome.
+  /// Whether an action in flight holds the whole row. Each one closes the
+  /// sheet when it finishes, so a second action started meanwhile would close
+  /// it first and lose the outcome. Every action not already pending is
+  /// disabled.
   final bool isLocked;
 
   @override

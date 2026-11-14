@@ -895,6 +895,73 @@ void main() {
           },
         );
 
+        testWidgets('holds Delete while a clip imports', (
+          tester,
+        ) async {
+          stubBookmarkStatus(saved: false);
+          final importer = _MockVideoClipImportService();
+          final importCompleter = Completer<VideoClipImportResult>();
+          when(
+            () => importer.importToLibrary(
+              any(),
+              libraryTitle: any(named: 'libraryTitle'),
+            ),
+          ).thenAnswer((_) => importCompleter.future);
+          await tester.pumpWidget(
+            testMaterialApp(
+              home: Scaffold(body: ShareActionButton(video: testVideo)),
+              additionalOverrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  mockRankingSignalsLoader,
+                ),
+                videoSharingServiceProvider.overrideWith(
+                  (ref) => mockVideoSharingService,
+                ),
+                bookmarksRepositoryProvider.overrideWithValue(
+                  bookmarksRepository,
+                ),
+                videoClipImportServiceProvider.overrideWithValue(importer),
+              ],
+              mockAuthService: createMockAuthService(
+                authState: AuthState.authenticated,
+                currentPublicKeyHex: ownPubkey,
+              ),
+              mockProfileRepository: mockProfileRepository,
+              mockFollowRepository: mockFollowRepository,
+            ),
+          );
+          await tester.tap(find.byType(ShareActionButton));
+          await tester.pumpAndSettle();
+
+          await scrollUntilTappable(
+            tester,
+            find.text(l10n.shareSheetAddToClips),
+            200,
+            scrollable: moreActionsRow(l10n),
+          );
+          await tester.tap(find.text(l10n.shareSheetAddToClips));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.shareSheetSaveClip));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+
+          // Back to the start of the row, where Delete is. The import spinner
+          // never settles, so pump a fixed time rather than settling.
+          await tester.drag(moreActionsRow(l10n), const Offset(1000, 0));
+          await tester.pump(const Duration(milliseconds: 500));
+          await tester.tap(find.text(l10n.shareMenuDeleteVideo));
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(find.text(l10n.shareMenuDelete), findsNothing);
+
+          importCompleter.complete(
+            const VideoClipImportFailure(
+              VideoClipImportFailureReason.downloadFailed,
+            ),
+          );
+          await tester.pumpAndSettle();
+        });
+
         testWidgets('Add to clips shows a spinner while the clip imports', (
           tester,
         ) async {

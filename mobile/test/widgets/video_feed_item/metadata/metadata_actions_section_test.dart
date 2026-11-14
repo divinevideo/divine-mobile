@@ -335,6 +335,25 @@ void main() {
         },
       );
 
+      testWidgets(
+        'holds Delete and Add to clips while a save is in flight',
+        (tester) async {
+          stubContentActions(isSaving: true);
+          await tester.pumpWidget(
+            buildSubject(video: _video(), ownerCubit: stubbedOwnerCubit()),
+          );
+
+          await tester.tap(find.text(l10n.shareMenuDeleteVideo));
+          await tester.tap(find.text(l10n.shareSheetAddToClips));
+          // The save spinner never settles; give a dialog or sheet time to
+          // open.
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(find.text(l10n.shareMenuDelete), findsNothing);
+          expect(find.byType(ClipTitleSheet), findsNothing);
+        },
+      );
+
       testWidgets('tapping Save requests a bookmark toggle', (tester) async {
         stubContentActions();
         await tester.pumpWidget(buildSubject(video: _classicVine));

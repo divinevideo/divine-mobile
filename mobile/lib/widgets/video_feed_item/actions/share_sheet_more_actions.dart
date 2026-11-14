@@ -44,6 +44,9 @@ class _MoreActionsSection extends ConsumerWidget {
     final isSavePending = context.select(
       (VideoContentActionsBloc bloc) => bloc.state.isSaving,
     );
+    final isImporting = context.select(
+      (VideoContentActionsBloc bloc) => bloc.state.isImportingClip,
+    );
     final isSaved = context.select(
       (VideoContentActionsBloc bloc) =>
           bloc.state.bookmarkStatus == VideoBookmarkStatus.saved,
@@ -109,7 +112,7 @@ class _MoreActionsSection extends ConsumerWidget {
     return VideoActionRow(
       title: context.l10n.shareSheetMoreActions,
       actions: actions,
-      isLocked: isDeletePending,
+      isLocked: isDeletePending || isSavePending || isImporting,
     );
   }
 }

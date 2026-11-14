@@ -87,8 +87,8 @@ VideoActionRowItem editOwnerVideoActionItem(
 
 /// Deletes the viewer's own video through [onDelete].
 ///
-/// Pass [isDeletePending] to the row's `isLocked` too, so no other action can
-/// close the sheet while the delete is still to report its outcome.
+/// Lock the row while [isDeletePending], as `VideoActionRow.isLocked`
+/// describes, so no other row action closes the sheet before it reports.
 VideoActionRowItem deleteOwnerVideoActionItem(
   BuildContext context, {
   required Future<void> Function() onDelete,
