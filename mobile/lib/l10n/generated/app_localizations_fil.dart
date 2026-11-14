@@ -10106,7 +10106,7 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'I-wrap sa gilid';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Outline at anino';
+  String get videoEditorTextEffectsSemanticLabel => 'Istilo ng teksto';
 
   @override
   String get videoEditorTextOutline => 'Outline';
@@ -10125,6 +10125,30 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'Kulay ng anino';
+
+  @override
+  String get videoEditorTextLineHeight => 'Taas ng linya';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Pagitan ng mga titik';
+
+  @override
+  String get videoEditorTextBold => 'Bold';
+
+  @override
+  String get videoEditorTextItalic => 'Italic';
+
+  @override
+  String get videoEditorTextUnderline => 'Underline';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Strikethrough';
+
+  @override
+  String get videoEditorTextUppercase => 'Lahat malalaking titik';
+
+  @override
+  String get videoEditorTextCurve => 'Kurba';
 
   @override
   String get videoEditorTextFillSolid => 'Solid';

@@ -10137,7 +10137,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Ajustar a los bordes';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Contorno y sombra';
+  String get videoEditorTextEffectsSemanticLabel => 'Estilo de texto';
 
   @override
   String get videoEditorTextOutline => 'Contorno';
@@ -10156,6 +10156,30 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'Color de la sombra';
+
+  @override
+  String get videoEditorTextLineHeight => 'Interlineado';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Espaciado entre letras';
+
+  @override
+  String get videoEditorTextBold => 'Negrita';
+
+  @override
+  String get videoEditorTextItalic => 'Cursiva';
+
+  @override
+  String get videoEditorTextUnderline => 'Subrayado';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Tachado';
+
+  @override
+  String get videoEditorTextUppercase => 'Mayúsculas';
+
+  @override
+  String get videoEditorTextCurve => 'Curva';
 
   @override
   String get videoEditorTextFillSolid => 'Sólido';

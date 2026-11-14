@@ -92,14 +92,6 @@ void main() {
       expect(DivineIconName.pushPin.assetPath, 'assets/icon/push_pin.svg');
     });
 
-    test('textOutlineShadow maps to its duo icon', () {
-      expect(DivineIconName.textOutlineShadow.fileName, 'text_outline_shadow');
-      expect(
-        DivineIconName.textOutlineShadow.assetPath,
-        'assets/icon/text_outline_shadow.svg',
-      );
-    });
-
     test('chatCircleFill maps to its fill icon', () {
       expect(DivineIconName.chatCircleFill.fileName, 'chat_circle_fill');
       expect(

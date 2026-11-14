@@ -9988,7 +9988,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Xuống dòng ở mép';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Viền và bóng';
+  String get videoEditorTextEffectsSemanticLabel => 'Kiểu văn bản';
 
   @override
   String get videoEditorTextOutline => 'Viền';
@@ -10007,6 +10007,30 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'Màu bóng';
+
+  @override
+  String get videoEditorTextLineHeight => 'Chiều cao dòng';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Giãn cách chữ';
+
+  @override
+  String get videoEditorTextBold => 'In đậm';
+
+  @override
+  String get videoEditorTextItalic => 'In nghiêng';
+
+  @override
+  String get videoEditorTextUnderline => 'Gạch chân';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Gạch ngang';
+
+  @override
+  String get videoEditorTextUppercase => 'Viết hoa tất cả';
+
+  @override
+  String get videoEditorTextCurve => 'Uốn cong';
 
   @override
   String get videoEditorTextFillSolid => 'Đơn sắc';

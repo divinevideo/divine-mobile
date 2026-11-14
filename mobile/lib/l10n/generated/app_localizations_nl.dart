@@ -10078,7 +10078,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Afbreken bij de rand';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Contour en schaduw';
+  String get videoEditorTextEffectsSemanticLabel => 'Tekststijl';
 
   @override
   String get videoEditorTextOutline => 'Contour';
@@ -10097,6 +10097,30 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'Schaduwkleur';
+
+  @override
+  String get videoEditorTextLineHeight => 'Regelhoogte';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Letterafstand';
+
+  @override
+  String get videoEditorTextBold => 'Vet';
+
+  @override
+  String get videoEditorTextItalic => 'Cursief';
+
+  @override
+  String get videoEditorTextUnderline => 'Onderstrepen';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Doorhalen';
+
+  @override
+  String get videoEditorTextUppercase => 'Hoofdletters';
+
+  @override
+  String get videoEditorTextCurve => 'Kromming';
 
   @override
   String get videoEditorTextFillSolid => 'Effen';

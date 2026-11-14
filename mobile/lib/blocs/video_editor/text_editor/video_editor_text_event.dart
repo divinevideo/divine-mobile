@@ -84,6 +84,18 @@ class VideoEditorTextEffectsChanged extends VideoEditorTextEvent {
   List<Object?> get props => [effects];
 }
 
+/// Triggered when the line height, letter spacing, weight, slant, decoration
+/// or capitals change.
+class VideoEditorTextFormattingChanged extends VideoEditorTextEvent {
+  const VideoEditorTextFormattingChanged(this.formatting);
+
+  /// The new formatting.
+  final TextFormatting formatting;
+
+  @override
+  List<Object?> get props => [formatting];
+}
+
 /// Triggered when the letters get a color gradient, or a single color again
 /// when [gradient] is `null`.
 class VideoEditorTextGradientChanged extends VideoEditorTextEvent {
@@ -116,6 +128,7 @@ class VideoEditorTextInitFromLayer extends VideoEditorTextEvent {
     required this.backgroundStyle,
     required this.selectedFontIndex,
     this.effects = TextEffects.none,
+    this.formatting = TextFormatting.none,
     this.gradient,
   });
 
@@ -137,6 +150,10 @@ class VideoEditorTextInitFromLayer extends VideoEditorTextEvent {
   /// The outline and shadow the layer draws.
   final TextEffects effects;
 
+  /// The line height, letter spacing, weight, slant, decoration and capitals
+  /// of the layer.
+  final TextFormatting formatting;
+
   /// The color gradient that fills the letters of the layer, if any.
   final TextGradient? gradient;
 
@@ -148,6 +165,7 @@ class VideoEditorTextInitFromLayer extends VideoEditorTextEvent {
     backgroundStyle,
     selectedFontIndex,
     effects,
+    formatting,
     gradient,
   ];
 }

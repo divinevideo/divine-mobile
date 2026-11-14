@@ -16964,7 +16964,7 @@ abstract class AppLocalizations {
   /// No description provided for @videoEditorTextEffectsSemanticLabel.
   ///
   /// In en, this message translates to:
-  /// **'Outline and shadow'**
+  /// **'Text style'**
   String get videoEditorTextEffectsSemanticLabel;
 
   /// No description provided for @videoEditorTextOutline.
@@ -17002,6 +17002,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shadow color'**
   String get videoEditorTextShadowColor;
+
+  /// Label and slider name in the video editor's text style panel: the height of each line of a text, as a multiple of its font size.
+  ///
+  /// In en, this message translates to:
+  /// **'Line height'**
+  String get videoEditorTextLineHeight;
+
+  /// Label and slider name in the video editor's text style panel: extra space between the letters of a text.
+  ///
+  /// In en, this message translates to:
+  /// **'Letter spacing'**
+  String get videoEditorTextLetterSpacing;
+
+  /// Toggle in the video editor's text style panel that sets the letters of a text in bold.
+  ///
+  /// In en, this message translates to:
+  /// **'Bold'**
+  String get videoEditorTextBold;
+
+  /// Toggle in the video editor's text style panel that sets the letters of a text in italics.
+  ///
+  /// In en, this message translates to:
+  /// **'Italic'**
+  String get videoEditorTextItalic;
+
+  /// Toggle in the video editor's text style panel that underlines a text.
+  ///
+  /// In en, this message translates to:
+  /// **'Underline'**
+  String get videoEditorTextUnderline;
+
+  /// Toggle in the video editor's text style panel that draws a line through a text.
+  ///
+  /// In en, this message translates to:
+  /// **'Strikethrough'**
+  String get videoEditorTextStrikethrough;
+
+  /// Toggle in the video editor's text style panel that shows a text in capital letters, keeping the letters as typed.
+  ///
+  /// In en, this message translates to:
+  /// **'All caps'**
+  String get videoEditorTextUppercase;
+
+  /// Label and slider name in the video editor's text style panel that bends the lines of a text into an arc: up into an arch, or down into a bowl.
+  ///
+  /// In en, this message translates to:
+  /// **'Curve'**
+  String get videoEditorTextCurve;
 
   /// Tab in the text color panel of the video editor that fills the letters with a single color.
   ///

@@ -11,6 +11,7 @@ class VideoEditorTextState extends Equatable {
     this.showFontSelector = false,
     this.showColorPicker = false,
     this.effects = TextEffects.none,
+    this.formatting = TextFormatting.none,
     this.showEffectsPanel = false,
     this.gradient,
     this.lastGradient,
@@ -47,8 +48,12 @@ class VideoEditorTextState extends Equatable {
   /// The outline and shadow drawn around the text.
   final TextEffects effects;
 
-  /// Whether the outline and shadow panel is currently shown (replaces
-  /// keyboard).
+  /// The line height, letter spacing, weight, slant, decoration and capitals
+  /// of the text.
+  final TextFormatting formatting;
+
+  /// Whether the text style panel — outline, shadow and formatting — is
+  /// currently shown (replaces keyboard).
   final bool showEffectsPanel;
 
   /// The color gradient that fills the letters in place of [color], or
@@ -79,6 +84,7 @@ class VideoEditorTextState extends Equatable {
     bool? showFontSelector,
     bool? showColorPicker,
     TextEffects? effects,
+    TextFormatting? formatting,
     bool? showEffectsPanel,
     TextGradient? gradient,
     bool clearGradient = false,
@@ -93,6 +99,7 @@ class VideoEditorTextState extends Equatable {
       showFontSelector: showFontSelector ?? this.showFontSelector,
       showColorPicker: showColorPicker ?? this.showColorPicker,
       effects: effects ?? this.effects,
+      formatting: formatting ?? this.formatting,
       showEffectsPanel: showEffectsPanel ?? this.showEffectsPanel,
       gradient: clearGradient ? null : gradient ?? this.gradient,
       lastGradient: lastGradient ?? this.lastGradient,
@@ -109,6 +116,7 @@ class VideoEditorTextState extends Equatable {
     showFontSelector,
     showColorPicker,
     effects,
+    formatting,
     showEffectsPanel,
     gradient,
     lastGradient,

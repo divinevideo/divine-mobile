@@ -10036,7 +10036,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Balut teks di tepi';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Garis luar dan bayang';
+  String get videoEditorTextEffectsSemanticLabel => 'Gaya teks';
 
   @override
   String get videoEditorTextOutline => 'Garis luar';
@@ -10055,6 +10055,30 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'Warna bayang';
+
+  @override
+  String get videoEditorTextLineHeight => 'Ketinggian baris';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Jarak huruf';
+
+  @override
+  String get videoEditorTextBold => 'Tebal';
+
+  @override
+  String get videoEditorTextItalic => 'Condong';
+
+  @override
+  String get videoEditorTextUnderline => 'Garis bawah';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Garis lorek';
+
+  @override
+  String get videoEditorTextUppercase => 'Huruf besar semua';
+
+  @override
+  String get videoEditorTextCurve => 'Lengkungan';
 
   @override
   String get videoEditorTextFillSolid => 'Padu';

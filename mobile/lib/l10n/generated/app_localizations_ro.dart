@@ -10256,7 +10256,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Încadrare la margini';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Contur și umbră';
+  String get videoEditorTextEffectsSemanticLabel => 'Stilul textului';
 
   @override
   String get videoEditorTextOutline => 'Contur';
@@ -10275,6 +10275,30 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'Culoarea umbrei';
+
+  @override
+  String get videoEditorTextLineHeight => 'Înălțimea rândului';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Spațierea literelor';
+
+  @override
+  String get videoEditorTextBold => 'Aldin';
+
+  @override
+  String get videoEditorTextItalic => 'Cursiv';
+
+  @override
+  String get videoEditorTextUnderline => 'Subliniat';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Tăiat';
+
+  @override
+  String get videoEditorTextUppercase => 'Majuscule';
+
+  @override
+  String get videoEditorTextCurve => 'Curbură';
 
   @override
   String get videoEditorTextFillSolid => 'Uniformă';

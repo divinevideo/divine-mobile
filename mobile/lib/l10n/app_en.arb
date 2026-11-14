@@ -7386,13 +7386,45 @@
   "@videoEditorTextWrapAtEdges": {
     "description": "Video editor toolbar chip shown for a text that runs past the video edges. Tapping it makes the text wrap at the edges of the video again."
   },
-  "videoEditorTextEffectsSemanticLabel": "Outline and shadow",
+  "videoEditorTextEffectsSemanticLabel": "Text style",
   "videoEditorTextOutline": "Outline",
   "videoEditorTextOutlineThickness": "Outline thickness",
   "videoEditorTextOutlineColor": "Outline color",
   "videoEditorTextShadow": "Shadow",
   "videoEditorTextShadowStrength": "Shadow strength",
   "videoEditorTextShadowColor": "Shadow color",
+  "videoEditorTextLineHeight": "Line height",
+  "@videoEditorTextLineHeight": {
+    "description": "Label and slider name in the video editor's text style panel: the height of each line of a text, as a multiple of its font size."
+  },
+  "videoEditorTextLetterSpacing": "Letter spacing",
+  "@videoEditorTextLetterSpacing": {
+    "description": "Label and slider name in the video editor's text style panel: extra space between the letters of a text."
+  },
+  "videoEditorTextBold": "Bold",
+  "@videoEditorTextBold": {
+    "description": "Toggle in the video editor's text style panel that sets the letters of a text in bold."
+  },
+  "videoEditorTextItalic": "Italic",
+  "@videoEditorTextItalic": {
+    "description": "Toggle in the video editor's text style panel that sets the letters of a text in italics."
+  },
+  "videoEditorTextUnderline": "Underline",
+  "@videoEditorTextUnderline": {
+    "description": "Toggle in the video editor's text style panel that underlines a text."
+  },
+  "videoEditorTextStrikethrough": "Strikethrough",
+  "@videoEditorTextStrikethrough": {
+    "description": "Toggle in the video editor's text style panel that draws a line through a text."
+  },
+  "videoEditorTextUppercase": "All caps",
+  "@videoEditorTextUppercase": {
+    "description": "Toggle in the video editor's text style panel that shows a text in capital letters, keeping the letters as typed."
+  },
+  "videoEditorTextCurve": "Curve",
+  "@videoEditorTextCurve": {
+    "description": "Label and slider name in the video editor's text style panel that bends the lines of a text into an arc: up into an arch, or down into a bowl."
+  },
   "videoEditorTextFillSolid": "Solid",
   "@videoEditorTextFillSolid": {
     "description": "Tab in the text color panel of the video editor that fills the letters with a single color."

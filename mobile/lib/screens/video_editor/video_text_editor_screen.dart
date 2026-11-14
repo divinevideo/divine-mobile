@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/text_effects.dart';
+import 'package:openvine/models/video_editor/text_formatting.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_color_panel.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_effects_panel.dart';
@@ -76,6 +77,7 @@ class _VideoTextEditorScreenState extends State<VideoTextEditorScreen> {
         backgroundStyle: layer.colorMode,
         selectedFontIndex: max(0, fontIndex),
         effects: TextEffects.of(layer),
+        formatting: TextFormatting.of(layer),
         gradient: layer.hasGradient ? layer.gradient : null,
       ),
     );
@@ -185,14 +187,15 @@ class _BottomPanel extends StatelessWidget {
                 child: showFontSelector
                     ? VideoEditorTextFontSelector(
                         onFontSelected: (textStyle) {
-                          // The font's style carries no shadows; keep the ones
-                          // the text already has.
-                          final effects = context
+                          // The font's style carries no shadows or
+                          // formatting; keep the ones the text already has.
+                          final state = context
                               .read<VideoEditorTextBloc>()
-                              .state
-                              .effects;
+                              .state;
                           editorKey.currentState?.setTextStyle(
-                            effects.applyToStyle(textStyle),
+                            state.effects.applyToStyle(
+                              state.formatting.applyToStyle(textStyle),
+                            ),
                           );
                         },
                       )
@@ -326,6 +329,10 @@ class _KeyboardHeightPanelState extends State<_KeyboardHeightPanel>
   /// Threshold to consider keyboard as "open".
   static const double _keyboardThreshold = 100.0;
 
+  /// The share of the screen height a panel may take before the keyboard's
+  /// height is known.
+  static const double _panelScreenShare = 0.4;
+
   /// Stores the last known keyboard height for smooth transitions.
   double _lastKeyboardHeight = 0.0;
 
@@ -400,8 +407,16 @@ class _KeyboardHeightPanelState extends State<_KeyboardHeightPanel>
 
     Widget content;
     if (widget.showBottomPanel) {
-      // Panel visible → panel determines its own height
-      content = widget.child;
+      // A panel takes at most the keyboard's room and scrolls beyond it, so
+      // the text stays in view where it was while typing. Before the keyboard
+      // has shown, a share of the screen stands in for it.
+      final maxHeight = _lastKeyboardHeight > _keyboardThreshold
+          ? effectiveHeight
+          : MediaQuery.sizeOf(context).height * _panelScreenShare;
+      content = ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: widget.child,
+      );
     } else {
       content = SizedBox(height: effectiveHeight, width: double.infinity);
     }

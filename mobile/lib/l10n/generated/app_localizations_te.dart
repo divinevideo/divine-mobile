@@ -10297,7 +10297,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'అంచుల వద్ద చుట్టండి';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'అంచు గీత మరియు నీడ';
+  String get videoEditorTextEffectsSemanticLabel => 'టెక్స్ట్ శైలి';
 
   @override
   String get videoEditorTextOutline => 'అంచు గీత';
@@ -10316,6 +10316,30 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'నీడ రంగు';
+
+  @override
+  String get videoEditorTextLineHeight => 'లైన్ ఎత్తు';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'అక్షరాల మధ్య దూరం';
+
+  @override
+  String get videoEditorTextBold => 'బోల్డ్';
+
+  @override
+  String get videoEditorTextItalic => 'ఇటాలిక్';
+
+  @override
+  String get videoEditorTextUnderline => 'అండర్‌లైన్';
+
+  @override
+  String get videoEditorTextStrikethrough => 'స్ట్రైక్‌త్రూ';
+
+  @override
+  String get videoEditorTextUppercase => 'అన్నీ పెద్ద అక్షరాలు';
+
+  @override
+  String get videoEditorTextCurve => 'వంపు';
 
   @override
   String get videoEditorTextFillSolid => 'ఒకే రంగు';

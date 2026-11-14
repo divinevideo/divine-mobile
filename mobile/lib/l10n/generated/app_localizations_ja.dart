@@ -9564,7 +9564,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => '端で折り返す';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => '縁取りと影';
+  String get videoEditorTextEffectsSemanticLabel => 'テキストスタイル';
 
   @override
   String get videoEditorTextOutline => '縁取り';
@@ -9583,6 +9583,30 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => '影の色';
+
+  @override
+  String get videoEditorTextLineHeight => '行の高さ';
+
+  @override
+  String get videoEditorTextLetterSpacing => '文字間隔';
+
+  @override
+  String get videoEditorTextBold => '太字';
+
+  @override
+  String get videoEditorTextItalic => '斜体';
+
+  @override
+  String get videoEditorTextUnderline => '下線';
+
+  @override
+  String get videoEditorTextStrikethrough => '取り消し線';
+
+  @override
+  String get videoEditorTextUppercase => 'すべて大文字';
+
+  @override
+  String get videoEditorTextCurve => 'カーブ';
 
   @override
   String get videoEditorTextFillSolid => '単色';

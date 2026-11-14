@@ -10123,7 +10123,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => 'Пренасяне до краищата';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => 'Контур и сянка';
+  String get videoEditorTextEffectsSemanticLabel => 'Стил на текста';
 
   @override
   String get videoEditorTextOutline => 'Контур';
@@ -10142,6 +10142,30 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'Цвят на сянката';
+
+  @override
+  String get videoEditorTextLineHeight => 'Височина на реда';
+
+  @override
+  String get videoEditorTextLetterSpacing => 'Разстояние между буквите';
+
+  @override
+  String get videoEditorTextBold => 'Получер';
+
+  @override
+  String get videoEditorTextItalic => 'Курсив';
+
+  @override
+  String get videoEditorTextUnderline => 'Подчертаване';
+
+  @override
+  String get videoEditorTextStrikethrough => 'Зачеркване';
+
+  @override
+  String get videoEditorTextUppercase => 'Главни букви';
+
+  @override
+  String get videoEditorTextCurve => 'Извиване';
 
   @override
   String get videoEditorTextFillSolid => 'Плътен';

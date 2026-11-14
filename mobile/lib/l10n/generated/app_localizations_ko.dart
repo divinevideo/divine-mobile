@@ -9582,7 +9582,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => '가장자리에서 줄 바꿈';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => '외곽선 및 그림자';
+  String get videoEditorTextEffectsSemanticLabel => '텍스트 스타일';
 
   @override
   String get videoEditorTextOutline => '외곽선';
@@ -9601,6 +9601,30 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => '그림자 색상';
+
+  @override
+  String get videoEditorTextLineHeight => '줄 높이';
+
+  @override
+  String get videoEditorTextLetterSpacing => '자간';
+
+  @override
+  String get videoEditorTextBold => '굵게';
+
+  @override
+  String get videoEditorTextItalic => '기울임꼴';
+
+  @override
+  String get videoEditorTextUnderline => '밑줄';
+
+  @override
+  String get videoEditorTextStrikethrough => '취소선';
+
+  @override
+  String get videoEditorTextUppercase => '모두 대문자';
+
+  @override
+  String get videoEditorTextCurve => '곡선';
 
   @override
   String get videoEditorTextFillSolid => '단색';

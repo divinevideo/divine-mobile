@@ -9478,7 +9478,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTextWrapAtEdges => '在边缘换行';
 
   @override
-  String get videoEditorTextEffectsSemanticLabel => '描边和阴影';
+  String get videoEditorTextEffectsSemanticLabel => '文字样式';
 
   @override
   String get videoEditorTextOutline => '描边';
@@ -9497,6 +9497,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => '阴影颜色';
+
+  @override
+  String get videoEditorTextLineHeight => '行高';
+
+  @override
+  String get videoEditorTextLetterSpacing => '字间距';
+
+  @override
+  String get videoEditorTextBold => '粗体';
+
+  @override
+  String get videoEditorTextItalic => '斜体';
+
+  @override
+  String get videoEditorTextUnderline => '下划线';
+
+  @override
+  String get videoEditorTextStrikethrough => '删除线';
+
+  @override
+  String get videoEditorTextUppercase => '全部大写';
+
+  @override
+  String get videoEditorTextCurve => '弯曲';
 
   @override
   String get videoEditorTextFillSolid => '纯色';
