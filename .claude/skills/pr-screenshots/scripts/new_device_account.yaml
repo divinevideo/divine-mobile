@@ -11,6 +11,8 @@ appId: ${APP_ID}
     visible:
       id: create_account_button
     timeout: 60000
+# Same taps as mobile/e2e/maestro/tests/loginFreshInstall.yaml, which the PR
+# smoke lane keeps current: if one stops matching, copy the change from there.
 - tapOn:
     id: create_account_button
 - tapOn:
