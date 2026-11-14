@@ -19,8 +19,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
-import 'package:openvine/blocs/clips_library/clips_library_bloc.dart'
-    show LibraryClipTypeFilter;
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
 import 'package:openvine/blocs/dm/dm_hidden_members.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
@@ -34,7 +32,6 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/models/collaborator_invite.dart';
-import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/dm_clip_tag.dart';
 import 'package:openvine/models/outgoing_video_dm.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -45,13 +42,13 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
+import 'package:openvine/screens/inbox/conversation/dm_clip_picker.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/sound_request_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_name_builder.dart';
-import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/collaborator_invite_parser.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
@@ -1082,18 +1079,7 @@ class _SendBarState extends ConsumerState<_SendBar> {
     final recipient = participantPubkeys.first;
     if (recipient.isEmpty) return;
 
-    final clips = await VineBottomSheet.show<List<DivineVideoClip>>(
-      context: context,
-      maxChildSize: 1,
-      initialChildSize: 0.9,
-      minChildSize: VineTheme.bottomSheetDismissFloor,
-      buildScrollBody: (scrollController) => LibraryScreen(
-        initialTabIndex: 1,
-        selectionMode: true,
-        clipTypeFilter: LibraryClipTypeFilter.video,
-        scrollController: scrollController,
-      ),
-    );
+    final clips = await ref.read(dmClipPickerProvider)(context);
     if (clips == null || clips.isEmpty || !mounted) return;
 
     context.read<ConversationBloc>().add(
