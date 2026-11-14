@@ -37,6 +37,7 @@ class _ScheduledRelay extends Relay {
   final Duration? busyEvery;
   final String? refusal;
   final List<String> reqs = [];
+  final List<String> closes = [];
   final List<Timer> _timers = [];
 
   @override
@@ -64,7 +65,9 @@ class _ScheduledRelay extends Relay {
     bool skipReconnect = false,
     DateTime? deadline,
   }) async {
-    if (message.length > 1 && message[0] == 'REQ') {
+    if (message.length > 1 && message[0] == 'CLOSE') {
+      closes.add(message[1] as String);
+    } else if (message.length > 1 && message[0] == 'REQ') {
       final subId = message[1] as String;
       reqs.add(subId);
       final reason = refusal;
@@ -137,30 +140,32 @@ class _PendingRead {
   Duration? took;
 }
 
-/// Starts the read under test, a full-settlement read capped at 60 s.
+/// Starts the read under test, a full-settlement read capped at 60 s, inside
+/// [scope] when one is given.
 _PendingRead _startRead(
   FakeAsync async,
   Nostr nostr, {
   Duration silentRelayTimeout = const Duration(seconds: 10),
+  String id = 'history_page',
+  ReadScope? scope,
 }) {
   final read = _PendingRead();
   final start = async.elapsed;
+  Future<QueryResult> run() => nostr.readEvents(
+    [
+      Filter(kinds: const [EventKind.textNote]).toJson(),
+    ],
+    id: id,
+    timeout: const Duration(seconds: 60),
+    requireAllRelaysSettled: true,
+    silentRelayTimeout: silentRelayTimeout,
+  );
   unawaited(
-    nostr
-        .readEvents(
-          [
-            Filter(kinds: const [EventKind.textNote]).toJson(),
-          ],
-          id: 'history_page',
-          timeout: const Duration(seconds: 60),
-          requireAllRelaysSettled: true,
-          silentRelayTimeout: silentRelayTimeout,
-        )
-        .then((r) {
-          read
-            ..result = r
-            ..took = async.elapsed - start;
-        }),
+    (scope == null ? run() : scope.run(run)).then((r) {
+      read
+        ..result = r
+        ..took = async.elapsed - start;
+    }),
   );
   return read;
 }
@@ -563,5 +568,78 @@ void main() {
         await pumpEventQueue();
       },
     );
+  });
+
+  group(ReadScope, () {
+    /// A relay that streams ten events three seconds apart, so a read of it
+    /// is still running 25 s in.
+    _ScheduledRelay slowStream() => _ScheduledRelay(
+      'wss://streaming.example',
+      events: events.take(10).toList(),
+      answer: (
+        first: const Duration(seconds: 3),
+        every: const Duration(seconds: 3),
+        eose: true,
+      ),
+    );
+
+    test('ends a read started inside it when it ends, and closes its REQ', () {
+      fakeAsync((async) {
+        final streaming = slowStream();
+        final nostr = _nostr(async, [streaming]);
+        final scope = ReadScope();
+        final read = _startRead(async, nostr, scope: scope);
+        async.elapse(const Duration(seconds: 5));
+
+        scope.end();
+        async.flushMicrotasks();
+
+        expect(read.result, isNotNull);
+        expect(read.result!.isComplete, isFalse);
+        expect(read.result!.events, hasLength(1));
+        expect(read.took, lessThan(const Duration(seconds: 6)));
+        expect(streaming.closes, contains('history_page'));
+        async.elapse(const Duration(seconds: 60));
+        streaming.stop();
+      });
+    });
+
+    test('ends a read started inside it once it has ended, without asking a '
+        'relay', () {
+      fakeAsync((async) {
+        final streaming = slowStream();
+        final nostr = _nostr(async, [streaming]);
+        final scope = ReadScope()..end();
+
+        final read = _startRead(async, nostr, scope: scope);
+        async.flushMicrotasks();
+
+        expect(read.result, isNotNull);
+        expect(read.result!.isComplete, isFalse);
+        expect(read.took, Duration.zero);
+        expect(streaming.reqs, isNot(contains('history_page')));
+        async.elapse(const Duration(seconds: 60));
+        streaming.stop();
+      });
+    });
+
+    test('leaves a read started outside it running', () {
+      fakeAsync((async) {
+        final streaming = slowStream();
+        final nostr = _nostr(async, [streaming]);
+        final scope = ReadScope();
+        final inside = _startRead(async, nostr, id: 'inside', scope: scope);
+        final outside = _startRead(async, nostr, id: 'outside');
+        async.elapse(const Duration(seconds: 5));
+
+        scope.end();
+        async.elapse(const Duration(seconds: 60));
+        streaming.stop();
+
+        expect(inside.result!.isComplete, isFalse);
+        expect(outside.result!.isComplete, isTrue);
+        expect(outside.result!.events, hasLength(10));
+      });
+    });
   });
 }

@@ -13,6 +13,7 @@ import 'relay/event_filter.dart';
 import 'relay/publish_outcome.dart';
 import 'relay/query_outcome.dart';
 import 'relay/query_result.dart';
+import 'relay/read_scope.dart';
 import 'relay/relay.dart';
 import 'relay/relay_diagnostics.dart';
 import 'relay/relay_pool.dart';
@@ -402,6 +403,9 @@ class Nostr {
   /// longer than [RelayPool.authHandshakeWindow]: a relay sends nothing while
   /// its NIP-42 handshake completes.
   ///
+  /// A read started inside a [ReadScope] ends the same way when its owner ends
+  /// that scope, or at once when the scope had already ended.
+  ///
   /// A read that ends any other way than a complete, uncapped answer gets one
   /// [RelayDiagnosticSite.queryCompletion] line: from the pool for a read it
   /// saw, and from here under [RelayDiagnostic.clientScope] for one whose
@@ -727,7 +731,10 @@ class Nostr {
     // A long read that starts once its client is closing ends the same way:
     // nothing it found could be used, and it must not hold the close open.
     final closing = silentRelayTimeout != null && _closing;
-    if (closing || !deadline.isAfter(now)) {
+    // So does a read whose owner already ended its scope.
+    final scope = ReadScope.current;
+    final scopeEnded = scope?.isEnded ?? false;
+    if (closing || scopeEnded || !deadline.isAfter(now)) {
       // The pool files a completion line for every read it sees; this one
       // it never will, so the line is filed here — under [clientScope],
       // which exists so a layer above the pool cannot spend the pool's
@@ -741,6 +748,9 @@ class Nostr {
           message: closing
               ? 'Query $subscriptionId ended deadline before any REQ was '
                     'written: its client is closing'
+              : scopeEnded
+              ? 'Query $subscriptionId ended deadline before any REQ was '
+                    'written: its owner had ended its reads'
               : 'Query $subscriptionId ended deadline before any REQ was '
                     'written: the deadline had already passed by '
                     '${now.difference(deadline).inMilliseconds}ms',
@@ -772,7 +782,8 @@ class Nostr {
     var endedAtDeadline = false;
 
     // Ends the read on one of the caller's bounds: its deadline, its silence
-    // bound ([silence] names the relay), or its client beginning to close.
+    // bound ([silence] names the relay), its client beginning to close, or its
+    // owner ending its [ReadScope].
     void endRead({QuerySilence? silence}) {
       // The pool hands its outcome over synchronously as it completes the
       // read, so an [ended] already completed means the pool finished first.
@@ -796,6 +807,7 @@ class Nostr {
         ? null
         : _watchForSilentRelay(subscriptionId, silentRelayTimeout, endRead);
     if (silentRelayTimeout != null) _longReadEnders.add(endRead);
+    final leaveScope = scope?.onEnd(endRead);
     try {
       final fanout = _pool.query(
         filters,
@@ -866,6 +878,7 @@ class Nostr {
       deadlineTimer.cancel();
       silenceTimer?.cancel();
       _longReadEnders.remove(endRead);
+      leaveScope?.call();
     }
   }
 
