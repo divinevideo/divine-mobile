@@ -5133,6 +5133,13 @@ void main() {
           // Only now does the still land — strictly after the switch.
           captureGate.complete();
           await pumpEventQueue();
+          // The dropped still is deleted in the background with nothing to
+          // await, and the real delete can outlast a few event-loop turns on a
+          // loaded CI runner, so wait for the file itself.
+          await TestHelpers.waitForCondition(
+            () => !File(framePath).existsSync(),
+            description: 'the dropped still is deleted',
+          );
         },
         verify: (bloc) {
           // The switch discarded the session and moved the recorder off

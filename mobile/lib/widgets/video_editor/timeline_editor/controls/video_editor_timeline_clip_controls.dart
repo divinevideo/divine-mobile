@@ -722,6 +722,9 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       return;
     }
     final clipId = state.clips[state.currentClipIndex].id;
+    // Read before the await below: an extracted sound lives here, not on the
+    // clip, and the saved clip needs it back.
+    final audioTracks = context.read<TimelineOverlayBloc>().state.audioTracks;
 
     // Whatever sits over the clip — text, stickers, drawings, filters, tune,
     // blur — has to be baked in too, so the saved clip looks the way it looks
@@ -758,7 +761,11 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     bloc.add(
       // Bind the request to this clip so the render still targets the intended
       // clip even if the selection changes while it runs.
-      ClipEditorSaveClipToLibraryRequested(clipId: clipId, overlays: overlays),
+      ClipEditorSaveClipToLibraryRequested(
+        clipId: clipId,
+        overlays: overlays,
+        audioTracks: audioTracks,
+      ),
     );
   }
 

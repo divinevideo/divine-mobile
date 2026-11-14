@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
@@ -44,7 +45,9 @@ class VideoEditorClipLibrarySaveService {
   /// flashing effects, which are left out. Pass `null` (or an empty snapshot)
   /// to render the bare video. Only *visual* overlays are baked
   /// — session audio (background music, voice-over) spans the whole project
-  /// timeline and is deliberately not carried onto a single saved clip.
+  /// timeline and is deliberately not carried onto a single saved clip. The
+  /// clip's own sound is the exception, even after Extract audio moved it onto
+  /// a track: see [withExtractedSound].
   ///
   /// [renderId] keys the native progress/cancel stream.
   ///
@@ -126,6 +129,36 @@ class VideoEditorClipLibrarySaveService {
             )
           : null,
     );
+  }
+
+  /// [clip] with its own sound turned back up when Extract audio moved that
+  /// sound onto a track of its own.
+  ///
+  /// Extracting mutes the clip and plays its sound from a track of its own,
+  /// which [flattenClipForLibrary] would leave out with the rest of the session
+  /// audio, saving a silent clip. The sound is still in the clip's file, so the
+  /// saved clip plays it at that track's volume and equalizer. Effects only the
+  /// track carries, such as fades or a voice effect, are not applied.
+  ///
+  /// A clip that is not muted keeps its own volume. A muted clip stays muted
+  /// unless an extracted track is still anchored to it. That stops being the
+  /// case once the user deletes, moves or changes the speed of that sound, or
+  /// splits the clip or turns it into a boomerang, and is never the case for a
+  /// clip extracted under a speed curve, whose track is not anchored.
+  static DivineVideoClip withExtractedSound(
+    DivineVideoClip clip,
+    Iterable<AudioEvent> audioTracks,
+  ) {
+    if (clip.volume > 0) return clip;
+
+    AudioEvent? sound;
+    for (final track in audioTracks) {
+      if (!track.isLocalExtracted || track.anchorClipId != clip.id) continue;
+      if (sound == null || track.volume > sound.volume) sound = track;
+    }
+    if (sound == null) return clip;
+
+    return clip.copyWith(volume: sound.volume, equalizer: sound.equalizer);
   }
 
   /// Deletes the files a [flattenClipForLibrary] result left in the documents
