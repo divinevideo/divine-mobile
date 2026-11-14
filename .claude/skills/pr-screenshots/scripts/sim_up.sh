@@ -98,7 +98,8 @@ echo "Building a LOCAL debug app (log: $LOG_DIR/build.log)..."
 cd "$ROOT/mobile"
 # A fresh worktree's plugin copy step fails without these directories.
 mkdir -p build/ios/SourcePackages build/macos/SourcePackages
-mise exec -- flutter pub get > "$LOG_DIR/build.log" 2>&1
+mise exec -- flutter pub get > "$LOG_DIR/build.log" 2>&1 \
+  || { echo "error: flutter pub get failed; see $LOG_DIR/build.log" >&2; exit 1; }
 build_app() {
   mise exec -- flutter build ios --simulator --debug --no-pub --dart-define=DEFAULT_ENV=LOCAL >> "$LOG_DIR/build.log" 2>&1
 }
