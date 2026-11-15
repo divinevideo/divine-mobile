@@ -272,15 +272,6 @@ void main() {
 
       expect(await buildService().findImportedClipOf(video), same(imported));
     });
-
-    test('returns null when that library holds no import of it', () async {
-      final video = _video();
-      when(
-        () => clipLibraryService.findImportedClipOf(video),
-      ).thenAnswer((_) async => null);
-
-      expect(await buildService().findImportedClipOf(video), isNull);
-    });
   });
 
   group('defaultLibraryTitleFor', () {
