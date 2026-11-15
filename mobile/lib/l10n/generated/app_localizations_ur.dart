@@ -4099,6 +4099,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get remixWebGetTheApp => 'ایپ حاصل کریں';
 
   @override
+  String get metadataRemixesLabel => 'ری مکسز';
+
+  @override
+  String get metadataReportRemix => 'اس ری مکس کی رپورٹ کریں';
+
+  @override
   String get shareSheetAddToList => 'فہرست میں شامل کریں';
 
   @override

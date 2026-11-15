@@ -4110,6 +4110,12 @@ class AppLocalizationsNl extends AppLocalizations {
   String get remixWebGetTheApp => 'Download de app';
 
   @override
+  String get metadataRemixesLabel => 'Remixes';
+
+  @override
+  String get metadataReportRemix => 'Deze remix rapporteren';
+
+  @override
   String get shareSheetAddToList => 'Toevoegen aan lijst';
 
   @override

@@ -6877,6 +6877,18 @@ abstract class AppLocalizations {
   /// **'Get the app'**
   String get remixWebGetTheApp;
 
+  /// Section header in the video info sheet listing the videos that use a clip of this video.
+  ///
+  /// In en, this message translates to:
+  /// **'Remixes'**
+  String get metadataRemixesLabel;
+
+  /// Action in the video info sheet, shown only to the creator whose clip this video uses: opens the report flow so Trust & Safety can review the remix.
+  ///
+  /// In en, this message translates to:
+  /// **'Report this remix'**
+  String get metadataReportRemix;
+
   /// No description provided for @shareSheetAddToList.
   ///
   /// In en, this message translates to:

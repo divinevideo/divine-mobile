@@ -2884,6 +2884,14 @@
   "@remixWebGetTheApp": {
     "description": "Snackbar action next to 'Remixing happens in the Divine app.'; opens the app download page."
   },
+  "metadataRemixesLabel": "Remixes",
+  "@metadataRemixesLabel": {
+    "description": "Section header in the video info sheet listing the videos that use a clip of this video."
+  },
+  "metadataReportRemix": "Report this remix",
+  "@metadataReportRemix": {
+    "description": "Action in the video info sheet, shown only to the creator whose clip this video uses: opens the report flow so Trust & Safety can review the remix."
+  },
   "shareSheetAddToList": "Add to List",
   "shareSheetCopy": "Copy",
   "shareSheetShareVia": "Share via",

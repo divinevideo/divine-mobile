@@ -3838,6 +3838,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get remixWebGetTheApp => 'アプリを入手';
 
   @override
+  String get metadataRemixesLabel => 'リミックス';
+
+  @override
+  String get metadataReportRemix => 'このリミックスを報告';
+
+  @override
   String get shareSheetAddToList => 'リストに追加';
 
   @override

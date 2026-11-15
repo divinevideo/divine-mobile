@@ -3855,6 +3855,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get remixWebGetTheApp => '앱 받기';
 
   @override
+  String get metadataRemixesLabel => '리믹스';
+
+  @override
+  String get metadataReportRemix => '이 리믹스 신고';
+
+  @override
   String get shareSheetAddToList => '리스트에 추가';
 
   @override

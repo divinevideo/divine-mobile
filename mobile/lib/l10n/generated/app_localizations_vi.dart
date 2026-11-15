@@ -4062,6 +4062,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get remixWebGetTheApp => 'Tải ứng dụng';
 
   @override
+  String get metadataRemixesLabel => 'Bản remix';
+
+  @override
+  String get metadataReportRemix => 'Báo cáo bản remix này';
+
+  @override
   String get shareSheetAddToList => 'Thêm vào danh sách';
 
   @override

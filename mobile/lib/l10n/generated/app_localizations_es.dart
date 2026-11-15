@@ -4147,6 +4147,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get remixWebGetTheApp => 'Descargá la app';
 
   @override
+  String get metadataRemixesLabel => 'Remezclas';
+
+  @override
+  String get metadataReportRemix => 'Reportar esta remezcla';
+
+  @override
   String get shareSheetAddToList => 'Agregar a lista';
 
   @override

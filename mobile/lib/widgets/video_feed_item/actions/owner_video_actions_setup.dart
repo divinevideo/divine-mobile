@@ -1,4 +1,4 @@
-// ABOUTME: Ownership check and owner actions cubit shared by the share sheet
+// ABOUTME: Viewer checks and the owner actions cubit shared by the share sheet
 // ABOUTME: and the video info sheet, so both decide and build them the same way.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,27 +8,47 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Whether the signed-in viewer created [video].
+/// The signed-in viewer's hex pubkey, or null when no one is signed in.
 ///
-/// An auth state that cannot be read counts as "not the owner": owner actions
-/// are withheld rather than letting the failure escape the sheet opening.
-bool isViewerOwnVideo(ProviderContainer container, VideoEvent video) {
+/// An auth state that cannot be read counts as signed out: viewer-only
+/// actions are withheld rather than letting the failure escape the sheet
+/// opening.
+String? signedInViewerPubkey(ProviderContainer container) {
   try {
     final authService = container.read(authServiceProvider);
-    if (!authService.isAuthenticated) return false;
+    if (!authService.isAuthenticated) return null;
 
-    final userPubkey = authService.currentPublicKeyHex;
-    if (userPubkey == null) return false;
-
-    return video.pubkey == userPubkey;
+    return authService.currentPublicKeyHex;
   } catch (e) {
     Log.error(
       'Error checking content ownership: $e',
       name: 'OwnerVideoActionsSetup',
       category: LogCategory.ui,
     );
-    return false;
+    return null;
   }
+}
+
+/// Whether the signed-in viewer created [video].
+///
+/// An auth state that cannot be read counts as "not the owner": owner actions
+/// are withheld rather than letting the failure escape the sheet opening.
+bool isViewerOwnVideo(ProviderContainer container, VideoEvent video) =>
+    isVideoByViewer(video, signedInViewerPubkey(container));
+
+/// Whether [viewerPubkey], the signed-in viewer, created [video].
+bool isVideoByViewer(VideoEvent video, String? viewerPubkey) =>
+    viewerPubkey != null && video.pubkey == viewerPubkey;
+
+/// Whether [video], posted by someone else, credits a clip of one of the
+/// videos of [viewerPubkey], the signed-in viewer.
+bool isRemixOfViewersVideo(VideoEvent video, String? viewerPubkey) {
+  if (viewerPubkey == null) return false;
+  final viewer = viewerPubkey.toLowerCase();
+  if (video.pubkey.toLowerCase() == viewer) return false;
+  return video.clipSourceCredits.any(
+    (credit) => credit.authorPubkey.toLowerCase() == viewer,
+  );
 }
 
 /// Builds the [OwnerVideoActionsCubit] for a sheet acting on the viewer's own

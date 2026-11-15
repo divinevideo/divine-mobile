@@ -4150,6 +4150,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get remixWebGetTheApp => 'Изтегли приложението';
 
   @override
+  String get metadataRemixesLabel => 'Ремикси';
+
+  @override
+  String get metadataReportRemix => 'Докладвай този ремикс';
+
+  @override
   String get shareSheetAddToList => 'Добави към списъка';
 
   @override

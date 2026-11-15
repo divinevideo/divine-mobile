@@ -1,5 +1,6 @@
 // ABOUTME: Action row in the video info sheet: edit and delete on the viewer's
-// ABOUTME: own video, and save; opens a remix the sheet's button asked for.
+// ABOUTME: own video, save, and report on a remix of theirs; opens a remix the
+// ABOUTME: sheet's button asked for.
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,7 +17,8 @@ import 'package:openvine/widgets/video_feed_item/metadata/metadata_remix_button.
 import 'package:unified_logger/unified_logger.dart';
 
 /// Content actions for [video] in the info sheet: Edit and Delete on the
-/// viewer's own video, then Save.
+/// viewer's own video, then Save, then Report this remix when [video] uses a
+/// clip of one of the viewer's videos.
 ///
 /// The sheet's [MetadataRemixButton] stands in for Add to clips. Add to list
 /// and the debug copies stay in the share sheet. When the remix the button
@@ -34,6 +36,7 @@ class MetadataActionsSection extends ConsumerStatefulWidget {
   const MetadataActionsSection({
     required this.video,
     this.isOwnVideo = false,
+    this.isRemixOfViewersVideo = false,
     super.key,
   });
 
@@ -43,6 +46,10 @@ class MetadataActionsSection extends ConsumerStatefulWidget {
   /// Only then are Edit and Delete offered; an owner cubit provided further
   /// up the tree for some other video does not count.
   final bool isOwnVideo;
+
+  /// Whether [video] uses a clip of one of the signed-in viewer's videos,
+  /// decided once by the sheet. Only then is Report this remix offered.
+  final bool isRemixOfViewersVideo;
 
   @override
   ConsumerState<MetadataActionsSection> createState() =>
@@ -101,6 +108,8 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
         isSaved: isSaved,
         isPending: isSavePending,
       ),
+      if (widget.isRemixOfViewersVideo)
+        reportRemixActionItem(context, video: video),
     ];
 
     return BlocListener<VideoContentActionsBloc, VideoContentActionsState>(

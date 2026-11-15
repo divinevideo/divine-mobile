@@ -4087,6 +4087,12 @@ class AppLocalizationsMs extends AppLocalizations {
   String get remixWebGetTheApp => 'Dapatkan aplikasi';
 
   @override
+  String get metadataRemixesLabel => 'Remix';
+
+  @override
+  String get metadataReportRemix => 'Laporkan remix ini';
+
+  @override
   String get shareSheetAddToList => 'Tambah ke Senarai';
 
   @override

@@ -4038,6 +4038,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get remixWebGetTheApp => 'Uygulamayı indir';
 
   @override
+  String get metadataRemixesLabel => 'Remiksler';
+
+  @override
+  String get metadataReportRemix => 'Bu remiksi bildir';
+
+  @override
   String get shareSheetAddToList => 'Listeye Ekle';
 
   @override

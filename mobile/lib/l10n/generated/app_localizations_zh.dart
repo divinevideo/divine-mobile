@@ -3829,6 +3829,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get remixWebGetTheApp => '获取应用';
 
   @override
+  String get metadataRemixesLabel => '混剪';
+
+  @override
+  String get metadataReportRemix => '举报此混剪';
+
+  @override
   String get shareSheetAddToList => '加入列表';
 
   @override

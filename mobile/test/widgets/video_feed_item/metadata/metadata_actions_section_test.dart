@@ -27,6 +27,7 @@ import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_remix_button.dart';
@@ -137,6 +138,7 @@ void main() {
     VideoContentActionsBloc Function()? createBloc,
     OwnerVideoActionsCubit? ownerCubit,
     bool debugTools = false,
+    bool isRemixOfViewersVideo = false,
   }) {
     return testMaterialApp(
       additionalOverrides: [
@@ -160,6 +162,7 @@ void main() {
             child: MetadataActionsSection(
               video: video,
               isOwnVideo: ownerCubit != null,
+              isRemixOfViewersVideo: isRemixOfViewersVideo,
             ),
           ),
         ),
@@ -274,6 +277,30 @@ void main() {
           expect(find.text(l10n.shareMenuDeleteVideo), findsNothing);
         },
       );
+
+      testWidgets('Save, then Report this remix, on a remix of the viewer', (
+        tester,
+      ) async {
+        stubContentActions();
+        await tester.pumpWidget(
+          buildSubject(video: _classicVine, isRemixOfViewersVideo: true),
+        );
+
+        expect(
+          tester.getTopLeft(find.text(l10n.shareSheetSave)).dx,
+          lessThan(tester.getTopLeft(find.text(l10n.metadataReportRemix)).dx),
+        );
+      });
+
+      testWidgets('no Report this remix on a video that is not one', (
+        tester,
+      ) async {
+        stubContentActions();
+        await tester.pumpWidget(buildSubject(video: _classicVine));
+
+        expect(find.text(l10n.shareSheetSave), findsOneWidget);
+        expect(find.text(l10n.metadataReportRemix), findsNothing);
+      });
 
       testWidgets('a spinner on Save while the bookmark toggle is in flight', (
         tester,
@@ -575,6 +602,69 @@ void main() {
           expect(find.text(l10n.shareMenuDeleteFailedGeneric), findsOneWidget);
         },
       );
+    });
+
+    group('report remix', () {
+      testWidgets('closes the sheet, then opens the report flow', (
+        tester,
+      ) async {
+        stubContentActions();
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, _) => Scaffold(
+                body: TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => Scaffold(
+                        body: BlocProvider<VideoContentActionsBloc>.value(
+                          value: contentActions,
+                          child: MetadataActionsSection(
+                            video: _classicVine,
+                            isRemixOfViewersVideo: true,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  child: const Text('open sheet'),
+                ),
+              ),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          testProviderScope(
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.tap(find.text('open sheet'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(l10n.metadataReportRemix));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MetadataActionsSection), findsNothing);
+        expect(find.byType(ReportContentDialog), findsOneWidget);
+      });
+
+      testWidgets('is held while another action runs', (tester) async {
+        stubContentActions(isPreparingRemix: true);
+        await tester.pumpWidget(
+          buildSubject(video: _classicVine, isRemixOfViewersVideo: true),
+        );
+
+        await tester.tap(find.text(l10n.metadataReportRemix));
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(find.byType(ReportContentDialog), findsNothing);
+      });
     });
 
     group('remix', () {

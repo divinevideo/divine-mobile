@@ -4006,6 +4006,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get remixWebGetTheApp => 'መተግበሪያውን ያግኙ';
 
   @override
+  String get metadataRemixesLabel => 'ቅልቅሎች';
+
+  @override
+  String get metadataReportRemix => 'ይህን ቅልቅል ሪፖርት ያድርጉ';
+
+  @override
   String get shareSheetAddToList => 'ወደ ዝርዝር ያክሉ';
 
   @override

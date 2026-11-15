@@ -4119,6 +4119,12 @@ class AppLocalizationsFil extends AppLocalizations {
   String get remixWebGetTheApp => 'Kunin ang app';
 
   @override
+  String get metadataRemixesLabel => 'Mga remix';
+
+  @override
+  String get metadataReportRemix => 'I-report ang remix na ito';
+
+  @override
   String get shareSheetAddToList => 'Idagdag sa List';
 
   @override

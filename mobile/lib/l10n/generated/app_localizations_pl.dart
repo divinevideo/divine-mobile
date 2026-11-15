@@ -4215,6 +4215,12 @@ class AppLocalizationsPl extends AppLocalizations {
   String get remixWebGetTheApp => 'Pobierz aplikację';
 
   @override
+  String get metadataRemixesLabel => 'Remiksy';
+
+  @override
+  String get metadataReportRemix => 'Zgłoś ten remiks';
+
+  @override
   String get shareSheetAddToList => 'Dodaj do listy';
 
   @override

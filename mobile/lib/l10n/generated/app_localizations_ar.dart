@@ -4097,6 +4097,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get remixWebGetTheApp => 'تنزيل التطبيق';
 
   @override
+  String get metadataRemixesLabel => 'إعادات المزج';
+
+  @override
+  String get metadataReportRemix => 'الإبلاغ عن إعادة المزج هذه';
+
+  @override
   String get shareSheetAddToList => 'إضافة إلى قائمة';
 
   @override

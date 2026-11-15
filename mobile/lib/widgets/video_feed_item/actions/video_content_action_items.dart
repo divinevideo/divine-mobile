@@ -12,6 +12,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/owner_video_actions_sheet.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
@@ -131,6 +132,26 @@ VideoActionRowItem saveVideoActionItem(
         : context.l10n.shareSheetSave,
     onTap: () => bloc.add(const VideoContentSaveRequested()),
     isPending: isPending,
+  );
+}
+
+/// Closes the sheet owning [context], then opens the report flow for
+/// [video], a remix of one of the viewer's videos, so they can ask Trust &
+/// Safety to take it down.
+VideoActionRowItem reportRemixActionItem(
+  BuildContext context, {
+  required VideoEvent video,
+}) {
+  return VideoActionRowItem(
+    icon: DivineIconName.flag,
+    label: context.l10n.metadataReportRemix,
+    onTap: () => _runActionDetached(
+      presentAfterSheetDismiss<void>(
+        context,
+        (hostContext) => ReportContentDialog.show(hostContext, video: video),
+      ),
+      'report a remix',
+    ),
   );
 }
 

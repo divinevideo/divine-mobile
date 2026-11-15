@@ -4219,6 +4219,12 @@ class AppLocalizationsRo extends AppLocalizations {
   String get remixWebGetTheApp => 'Descarcă aplicația';
 
   @override
+  String get metadataRemixesLabel => 'Remixuri';
+
+  @override
+  String get metadataReportRemix => 'Raportează acest remix';
+
+  @override
   String get shareSheetAddToList => 'Adaugă la listă';
 
   @override

@@ -4238,6 +4238,12 @@ class AppLocalizationsTe extends AppLocalizations {
   String get remixWebGetTheApp => 'యాప్ పొందండి';
 
   @override
+  String get metadataRemixesLabel => 'రీమిక్స్‌లు';
+
+  @override
+  String get metadataReportRemix => 'ఈ రీమిక్స్‌ను నివేదించండి';
+
+  @override
   String get shareSheetAddToList => 'జాబితాకు జోడించండి';
 
   @override

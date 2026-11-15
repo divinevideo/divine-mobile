@@ -40,6 +40,7 @@ import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_secti
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_expanded_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_remix_button.dart';
+import 'package:openvine/widgets/video_feed_item/metadata/metadata_remixes_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_sounds_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_stats_row.dart';
@@ -54,6 +55,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+import 'package:video_responses_repository/video_responses_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -78,6 +80,9 @@ class _MockRemixConsentRepository extends Mock
     implements RemixConsentRepository {}
 
 class _MockRepostsRepository extends Mock implements RepostsRepository {}
+
+class _MockVideoResponsesRepository extends Mock
+    implements VideoResponsesRepository {}
 
 /// Signs in a viewer who is neither the creator nor a collaborator.
 List<Override> _thirdPartyViewerOverrides({
@@ -2900,8 +2905,13 @@ void main() {
   group('$MetadataExpandedSheet.show', () {
     late _MockBookmarksRepository bookmarksRepository;
     late _MockRepostsRepository repostsRepository;
+    late _MockVideoResponsesRepository videoResponsesRepository;
 
     setUp(() {
+      videoResponsesRepository = _MockVideoResponsesRepository();
+      when(
+        () => videoResponsesRepository.fetchRemixesOf(any()),
+      ).thenAnswer((_) async => const []);
       bookmarksRepository = _MockBookmarksRepository();
       when(
         bookmarksRepository.syncGlobalBookmarks,
@@ -2939,6 +2949,9 @@ void main() {
       if (remixConsent != null)
         remixConsentRepositoryProvider.overrideWith(remixConsent),
       repostsRepositoryProvider.overrideWithValue(repostsRepository),
+      videoResponsesRepositoryProvider.overrideWithValue(
+        videoResponsesRepository,
+      ),
       isFeatureEnabledProvider(
         FeatureFlag.debugTools,
       ).overrideWithValue(debugTools),
@@ -3071,6 +3084,80 @@ void main() {
         final l10n = _l10n(tester);
         expect(find.text(l10n.shareMenuEditVideo), findsOneWidget);
         expect(find.text(l10n.shareMenuDeleteVideo), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'lists the remixes of the video between Inspired by and Reposted by',
+      (tester) async {
+        final video = _makeVideo(title: 'Source', addressableDTag: 'source-d');
+        final remix = VideoEvent(
+          id: '4444444444444444444444444444444444444444444444444444444444444444',
+          pubkey: _thirdPartyViewer,
+          createdAt: 1700000100,
+          content: 'A remix',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1700000100 * 1000),
+          authorName: 'Remixer',
+        );
+        when(
+          () => videoResponsesRepository.fetchRemixesOf(video.addressableId!),
+        ).thenAnswer((_) async => [remix]);
+
+        await openSheet(tester, video: video, viewerPubkey: _creatorPubkey);
+
+        final l10n = _l10n(tester);
+        expect(find.text(l10n.metadataRemixesLabel), findsOneWidget);
+        expect(find.text('Remixer'), findsOneWidget);
+        double topOf(Type type) =>
+            tester.getTopLeft(find.byType(type, skipOffstage: false)).dy;
+        expect(
+          topOf(MetadataInspiredBySection),
+          lessThanOrEqualTo(topOf(MetadataRemixesSection)),
+        );
+        expect(
+          topOf(MetadataRemixesSection),
+          lessThan(topOf(MetadataRepostedBySection)),
+        );
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'offers Report this remix to the creator the remix credits',
+      (tester) async {
+        await openSheet(
+          tester,
+          video: _makeVideo(
+            title: 'A remix',
+            clipSourceCredits: [
+              ClipSourceCredit.fromAddressableId(
+                addressableId: '34236:$_inspiredByPubkey:source-d',
+              ),
+            ],
+          ),
+          viewerPubkey: _inspiredByPubkey,
+        );
+
+        expect(find.text(_l10n(tester).metadataReportRemix), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'offers no Report this remix to a viewer the remix does not credit',
+      (tester) async {
+        await openSheet(
+          tester,
+          video: _makeVideo(
+            title: 'A remix',
+            clipSourceCredits: [
+              ClipSourceCredit.fromAddressableId(
+                addressableId: '34236:$_inspiredByPubkey:source-d',
+              ),
+            ],
+          ),
+          viewerPubkey: _thirdPartyViewer,
+        );
+
+        expect(find.text(_l10n(tester).metadataReportRemix), findsNothing);
       },
     );
 

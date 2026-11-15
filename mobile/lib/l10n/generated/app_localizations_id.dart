@@ -4018,6 +4018,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get remixWebGetTheApp => 'Dapatkan aplikasinya';
 
   @override
+  String get metadataRemixesLabel => 'Remix';
+
+  @override
+  String get metadataReportRemix => 'Laporkan remix ini';
+
+  @override
   String get shareSheetAddToList => 'Tambah ke Daftar';
 
   @override

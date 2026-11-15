@@ -4092,6 +4092,12 @@ class AppLocalizationsSv extends AppLocalizations {
   String get remixWebGetTheApp => 'Hämta appen';
 
   @override
+  String get metadataRemixesLabel => 'Remixar';
+
+  @override
+  String get metadataReportRemix => 'Rapportera den här remixen';
+
+  @override
   String get shareSheetAddToList => 'Lägg till i lista';
 
   @override

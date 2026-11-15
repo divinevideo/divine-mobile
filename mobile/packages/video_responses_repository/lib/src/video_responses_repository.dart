@@ -226,6 +226,49 @@ class VideoResponsesRepository {
     );
   }
 
+  /// The videos that use a clip of the video at [addressableId]: those whose
+  /// `a` tag marked `clip-source` names it. The newest version of each, the
+  /// newest first, from at most [limit] read.
+  ///
+  /// A video naming it in an `a` tag for anything else, such as being
+  /// inspired by it, answering its Add yours or replying to it, is left out.
+  /// A read that fails or finds nothing gives an empty list, as does an
+  /// [addressableId] that is not an address.
+  Future<List<VideoEvent>> fetchRemixesOf(
+    String addressableId, {
+    int limit = 50,
+  }) async {
+    if (!RepliesCuration.isAddress(addressableId)) return const [];
+    final read = await _nostrClient.readEvents([
+      Filter(
+        kinds: [NIP71VideoKinds.addressableShortVideo],
+        a: [addressableId],
+        limit: limit,
+      ),
+    ]);
+    final newestByAddress = <String, VideoEvent>{};
+    for (final event in read.events) {
+      final VideoEvent remix;
+      try {
+        remix = VideoEvent.fromNostrEvent(event);
+      } on Object {
+        // Not a video this app can show.
+        continue;
+      }
+      final usesClip = remix.clipSourceCredits.any(
+        (credit) => credit.addressableId == addressableId,
+      );
+      if (!usesClip || remix.addressableId == addressableId) continue;
+      final key = remix.addressableId ?? remix.id;
+      final kept = newestByAddress[key];
+      if (kept == null || remix.createdAt > kept.createdAt) {
+        newestByAddress[key] = remix;
+      }
+    }
+    return newestByAddress.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
   /// Whether the video at [chainRoot] starts an Add yours chain with
   /// [hashtag]: it carries an Add yours of its own with that hashtag, not one
   /// answering another video's.

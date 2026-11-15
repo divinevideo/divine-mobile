@@ -1,7 +1,8 @@
 // ABOUTME: Expanded video metadata bottom sheet opened by the info button.
 // ABOUTME: Header (date + title + badges + description + tags), stats, remix,
-// ABOUTME: actions, creator, collaborators, inspired by, reposted by, sounds, links,
-// ABOUTME: verification. Actions run through the shared video actions blocs.
+// ABOUTME: actions, creator, collaborators, inspired by, remixes, reposted by,
+// ABOUTME: sounds, links, verification. Actions run through the shared video
+// ABOUTME: actions blocs.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -25,11 +26,13 @@ import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_secti
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_links_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_remix_button.dart';
+import 'package:openvine/widgets/video_feed_item/metadata/metadata_remixes_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_sounds_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_stats_row.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_tags_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_user_chips.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_verification_section.dart';
+import 'package:openvine/widgets/video_feed_item/metadata/video_remixes_cubit.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/video_reposters_cubit.dart';
 import 'package:openvine/widgets/video_reply_parent_link.dart';
 import 'package:time_formatter/time_formatter.dart';
@@ -60,19 +63,26 @@ class MetadataExpandedSheet extends StatelessWidget {
   /// a separate widget tree without access to the video feed's providers.
   ///
   /// Creates a [VideoRepostersCubit] to fetch reposter pubkeys from the
-  /// relay. The cubit is scoped to the modal and auto-closed on dismiss.
+  /// relay, and a [VideoRemixesCubit] to read the videos that use a clip of
+  /// [video]. Both are scoped to the modal and auto-closed on dismiss.
   ///
   /// Creates the [VideoContentActionsBloc] the remix button and the action row
   /// share, and an [OwnerVideoActionsCubit] when the signed-in viewer owns
   /// [video].
-  /// Ownership is decided once here, so the owner actions and their cubit
-  /// cannot disagree if auth changes while the sheet is open.
+  /// Ownership, and whether [video] is a remix of one of the viewer's videos,
+  /// are decided once here, so the actions offered and their cubit cannot
+  /// disagree if auth changes while the sheet is open.
   static Future<void> show(BuildContext context, VideoEvent video) {
     final interactionsBloc = context.read<VideoInteractionsBloc>();
     final loopCounts = context.read<VideoLoopsCubit?>();
     final container = ProviderScope.containerOf(context, listen: false);
     final repostsRepository = container.read(repostsRepositoryProvider);
-    final isOwnVideo = isViewerOwnVideo(container, video);
+    final videoResponsesRepository = container.read(
+      videoResponsesRepositoryProvider,
+    );
+    final viewerPubkey = signedInViewerPubkey(container);
+    final isOwnVideo = isVideoByViewer(video, viewerPubkey);
+    final isRemixOfViewers = isRemixOfViewersVideo(video, viewerPubkey);
 
     return context.showVideoPausingVineBottomSheet<void>(
       showHeader: false,
@@ -89,6 +99,12 @@ class MetadataExpandedSheet extends StatelessWidget {
               addressableId: video.addressableId,
             ),
           ),
+          BlocProvider<VideoRemixesCubit>(
+            create: (_) => VideoRemixesCubit(
+              videoResponsesRepository: videoResponsesRepository,
+              addressableId: video.addressableId,
+            ),
+          ),
           if (isOwnVideo)
             BlocProvider<OwnerVideoActionsCubit>(
               create: (_) => createOwnerVideoActionsCubit(container),
@@ -101,6 +117,7 @@ class MetadataExpandedSheet extends StatelessWidget {
               video: video,
               scrollController: scrollController,
               isOwnVideo: isOwnVideo,
+              isRemixOfViewersVideo: isRemixOfViewers,
             ),
           ),
         ),
@@ -124,11 +141,13 @@ class _MetadataContent extends StatelessWidget {
     required this.video,
     this.scrollController,
     this.isOwnVideo = false,
+    this.isRemixOfViewersVideo = false,
   });
 
   final VideoEvent video;
   final ScrollController? scrollController;
   final bool isOwnVideo;
+  final bool isRemixOfViewersVideo;
 
   @override
   Widget build(BuildContext context) {
@@ -145,10 +164,15 @@ class _MetadataContent extends StatelessWidget {
         ),
         MetadataStatsRow(video: video),
         MetadataRemixButton(video: video, isOwnVideo: isOwnVideo),
-        MetadataActionsSection(video: video, isOwnVideo: isOwnVideo),
+        MetadataActionsSection(
+          video: video,
+          isOwnVideo: isOwnVideo,
+          isRemixOfViewersVideo: isRemixOfViewersVideo,
+        ),
         MetadataCreatorSection(pubkey: video.pubkey),
         MetadataCollaboratorsSection(video: video),
         MetadataInspiredBySection(video: video),
+        MetadataRemixesSection(video: video),
         MetadataRepostedBySection(video: video),
         MetadataSoundsSection(video: video),
         MetadataLinksSection(video: video),
