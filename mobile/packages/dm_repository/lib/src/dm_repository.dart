@@ -2261,6 +2261,10 @@ class DmRepository {
   /// and the drain reads it as exhaustion. `requireAllRelaysSettled` is what
   /// makes a relay's `CLOSED` refusal and a partial fan-out surface as
   /// `timedOut` rather than completing on whichever relays did answer. #8209.
+  ///
+  /// [subscriptionId] names the read; each call asks under its own id built
+  /// from it ([dmReadAttemptSubscriptionId]), so a retry or a later restore
+  /// is never settled by a late answer to an earlier REQ. #11025.
   Future<
     ({
       List<Event> events,
@@ -2279,6 +2283,7 @@ class DmRepository {
     String? onlyRelay,
     List<String>? tempRelays,
   }) async {
+    final attemptId = dmReadAttemptSubscriptionId(subscriptionId);
     final filter = nostr_filter.Filter(
       kinds: kinds,
       p: [pubkey],
@@ -2289,7 +2294,7 @@ class DmRepository {
     if (onlyRelay == null) {
       final result = await _nostrClient.queryEventsDetailed(
         [filter],
-        subscriptionId: subscriptionId,
+        subscriptionId: attemptId,
         useCache: false,
         tempRelays: tempRelays,
         requireAllRelaysSettled: true,
@@ -2315,7 +2320,7 @@ class DmRepository {
     // page can still be incomplete.
     final result = await _nostrClient.readEvents(
       [filter],
-      subscriptionId: subscriptionId,
+      subscriptionId: attemptId,
       useCache: false,
       tempRelays: [onlyRelay],
       relayTypes: const [RelayType.temp],
@@ -2739,7 +2744,7 @@ class DmRepository {
         final pageKey = pageKeyBase + page;
         final result = await _nostrClient.readEvents(
           [filterFor(cursor)],
-          subscriptionId: subscriptionIdFor(page),
+          subscriptionId: dmReadAttemptSubscriptionId(subscriptionIdFor(page)),
           useCache: false,
           tempRelays: tempRelays,
           requireAllRelaysSettled: true,
@@ -3420,7 +3425,7 @@ class DmRepository {
               // the window would be skipped by the events it did return.
               await syncState.setHistoryDrainCursor(pubkey, cursor);
               Log.warning(
-                'DM history drain request $subscriptionId saw an empty page '
+                'DM history drain page $subscriptionId saw an empty page '
                 'that no relay answered for '
                 '${pubkeyForLogs(pubkey)}; holding the resume cursor at '
                 '$cursor and deferring completion to the next inbox open.',
@@ -3457,7 +3462,7 @@ class DmRepository {
             // already dragged below the window we still need to re-read.
             await syncState.setHistoryDrainCursor(pubkey, cursor);
             Log.warning(
-              'DM history drain request $subscriptionId saw a page not every '
+              'DM history drain page $subscriptionId saw a page not every '
               'relay settled for '
               '${pubkeyForLogs(pubkey)}; holding the resume cursor at '
               '$cursor and deferring completion to the next inbox open.',

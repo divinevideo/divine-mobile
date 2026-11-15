@@ -147,8 +147,10 @@ void main() {
           invocation.namedArguments[#subscriptionId] as String?;
       // Only the first page of the NIP-17 history drain carries events; every
       // other query is answered and empty.
+      final firstPage = RegExp.escape(dmHistoryDrainSubscriptionId(_owner, 0));
       final isFirstDrainPage =
-          subscriptionId == dmHistoryDrainSubscriptionId(_owner, 0);
+          subscriptionId != null &&
+          RegExp('^${firstPage}_[0-9a-z]+\$').hasMatch(subscriptionId);
       return (
         events: isFirstDrainPage ? historyPage : const <Event>[],
         timedOut: false,

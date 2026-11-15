@@ -680,7 +680,10 @@ void main() {
         // Page 0 was answered after the timer armed, so its refusal did not
         // recur across the delay. Confirming it would mark restore complete
         // without ever reading page 1.
-        expect(pages.last, endsWith('_0'));
+        expect(
+          pages.last,
+          startsWith('${dmNip04DrainSubscriptionId(_pubkey, 0)}_'),
+        );
         expect(syncState.historyDrainComplete(_pubkey), isFalse);
       });
     });

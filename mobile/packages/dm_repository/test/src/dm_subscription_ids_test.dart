@@ -12,6 +12,18 @@ const _otherPubkey =
 
 void main() {
   group('DM subscription ids', () {
+    test('each REQ of a read gets an id of its own that names the read', () {
+      final readId = dmHistoryDrainSubscriptionId(_pubkey, 0);
+      final attempts = [
+        for (var i = 0; i < 100; i++) dmReadAttemptSubscriptionId(readId),
+      ];
+
+      expect(attempts.toSet(), hasLength(attempts.length));
+      for (final id in attempts) {
+        expect(id, startsWith('${readId}_'));
+      }
+    });
+
     test("every id fits NIP-01's 64-character cap", () {
       final ids = <String>[
         dmInboxSubscriptionId(_pubkey),
@@ -32,7 +44,7 @@ void main() {
         ],
       ];
 
-      for (final id in ids) {
+      for (final id in [...ids, ...ids.map(dmReadAttemptSubscriptionId)]) {
         expect(
           id.length,
           lessThanOrEqualTo(nip01MaxSubscriptionIdLength),
