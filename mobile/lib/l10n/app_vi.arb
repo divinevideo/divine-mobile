@@ -3383,6 +3383,7 @@
   "libraryWebUnavailableDescription": "Bản nháp và clip được lưu trên thiết bị của bạn, nên hãy mở Divine trên điện thoại để quản lý chúng.",
   "libraryTabDrafts": "Bản nháp",
   "libraryTabClips": "Clip",
+  "libraryTabFromOthers": "Từ người khác",
   "libraryDeleteSelectedClipsTooltip": "Xóa clip đã chọn",
   "libraryCloseSemanticLabel": "Đóng thư viện",
   "libraryStopSelectingClipsSemanticLabel": "Dừng chọn clip",

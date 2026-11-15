@@ -6868,6 +6868,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryTabClips => 'Clips';
 
   @override
+  String get libraryTabFromOthers => 'From others';
+
+  @override
   String get libraryScheduledSectionTitle => 'Scheduled';
 
   @override

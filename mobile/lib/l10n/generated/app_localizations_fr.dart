@@ -6876,6 +6876,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get libraryTabClips => 'Clips';
 
   @override
+  String get libraryTabFromOthers => 'Des autres';
+
+  @override
   String get libraryScheduledSectionTitle => 'Programmés';
 
   @override

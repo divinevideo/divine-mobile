@@ -4829,6 +4829,10 @@
   "libraryWebUnavailableDescription": "Drafts and clips are saved on your device, so open Divine on your phone to manage them.",
   "libraryTabDrafts": "Drafts",
   "libraryTabClips": "Clips",
+  "libraryTabFromOthers": "From others",
+  "@libraryTabFromOthers": {
+    "description": "Library tab listing clips imported from other people's videos, such as classic Vines, kept apart from the user's own clips."
+  },
   "libraryScheduledSectionTitle": "Scheduled",
   "@libraryScheduledSectionTitle": {
     "description": "Header of the section above the drafts list that shows posts scheduled for a later time (#3538)."

@@ -2297,6 +2297,7 @@
   "videoClipSemanticHintPreview": "タップしてプレビュー",
   "libraryClipDuration": "{seconds}秒",
   "libraryTabClips": "クリップ",
+  "libraryTabFromOthers": "他の人から",
   "libraryTabDrafts": "下書き",
   "libraryWebUnavailableDescription": "下書きとクリップは端末に保存されます。管理するにはスマートフォンでDivineを開いてください。",
   "libraryWebUnavailableHeadline": "ライブラリはモバイルアプリで利用できます",

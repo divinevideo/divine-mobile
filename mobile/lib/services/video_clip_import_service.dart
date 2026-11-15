@@ -239,6 +239,7 @@ class VideoClipImportService {
       targetAspectRatio: targetAspectRatio,
       contributorPubkeys: contributorPubkeys,
       beforeSave: beforeSave,
+      importedSource: true,
     );
   }
 
@@ -448,6 +449,9 @@ class VideoClipImportService {
   /// is never credited.
   ///
   /// [videoHash] is [source]'s SHA-256 when the caller already computed it.
+  ///
+  /// [importedSource] marks the clip as footage someone sent rather than the
+  /// device's own coming back (see [DivineVideoClip.importedSource]).
   Future<VideoClipImportResult> _importVerifiedClip({
     required File source,
     required String clipId,
@@ -457,6 +461,7 @@ class VideoClipImportService {
     String? videoHash,
     models.AspectRatio? targetAspectRatio,
     Future<void> Function()? beforeSave,
+    bool importedSource = false,
   }) async {
     final documentsPath = await _getDocumentsPath();
     if (documentsPath.isEmpty) {
@@ -539,6 +544,7 @@ class VideoClipImportService {
             targetAspectRatio ?? _targetAspectRatioForRatio(actualRatio),
         ghostFramePath: ghostFramePath,
         proofManifestJson: jsonEncode(proof.toJson()),
+        importedSource: importedSource,
         sourceCredits: [
           if (author != null && author != owner)
             models.ClipSourceCredit(
@@ -668,6 +674,7 @@ class VideoClipImportService {
       originalAspectRatio: actualRatio ?? 1,
       targetAspectRatio: _targetAspectRatioFor(video, actualRatio),
       ghostFramePath: ghostFramePath,
+      importedSource: true,
       sourceAuthorPubkey: video.pubkey,
       sourceEventId: video.id,
       sourceAddressableId: video.addressableId,

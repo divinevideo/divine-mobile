@@ -76,6 +76,7 @@ class DivineVideoClip {
     this.galleryBackup,
     this.assetRecoveryAttempts = 0,
     this.stickerRegions = const [],
+    this.importedSource = false,
     String? sourceAuthorPubkey,
     String? sourceEventId,
     String? sourceAddressableId,
@@ -104,6 +105,46 @@ class DivineVideoClip {
 
   /// Whether this clip was added from a received video DM.
   bool get isFromDirectMessage => id.startsWith(receivedDmClipIdPrefix);
+
+  /// How the ids of clips imported before [importedSource] existed start: a
+  /// published video, a classic Vine, and a clip received in a DM.
+  static const _legacyImportIdPrefixes = <String>[
+    'video_',
+    'classic_vine_',
+    receivedDmClipIdPrefix,
+  ];
+
+  /// How the ids of clips the editor renders from other clips start: a merge,
+  /// a flattened library save, a split-screen layout, and a recording. They
+  /// copy the credits of their inputs but are the user's own work.
+  static const _derivedIdPrefixes = <String>[
+    'merged_',
+    'clip_library_',
+    'split_layout_',
+    'clip_',
+  ];
+
+  /// Whether this clip is footage imported into the library as it was
+  /// published or sent, rather than recorded or rendered here.
+  ///
+  /// [importedSource] says so for clips saved since it existed. A clip
+  /// stored before then is told by its id, which every import path derived
+  /// from its origin. A clip rendered from others never counts, whatever it
+  /// carries.
+  bool get isImportedClip {
+    if (_derivedIdPrefixes.any(id.startsWith)) return false;
+    return importedSource || _legacyImportIdPrefixes.any(id.startsWith);
+  }
+
+  /// Whether this clip is someone else's untouched footage, as the account
+  /// [viewerPubkey] sees it: imported, and crediting a first author other
+  /// than that account.
+  ///
+  /// An import crediting nobody is footage the viewer recorded coming back.
+  bool isFromOthers(String? viewerPubkey) {
+    final author = sourceAuthorPubkey;
+    return isImportedClip && author != null && author != viewerPubkey;
+  }
 
   /// Rendered video for a normal clip, or `null` for a stop-motion clip whose
   /// source of truth is [stopMotionFrames] (an mp4 is rendered on demand at
@@ -460,6 +501,12 @@ class DivineVideoClip {
     thumbnailPath: keyed.thumbnailPath,
     thumbnailTimestamp: keyed.thumbnailTimestamp,
   );
+
+  /// Whether this clip was imported as published or sent: a published
+  /// video, a classic Vine, or a clip received in a DM. Edits of the clip keep
+  /// it; renders that combine clips into a new one do not. See
+  /// [isImportedClip] for clips stored before it existed.
+  final bool importedSource;
 
   /// All factual source credits carried by this clip.
   ///
@@ -853,6 +900,7 @@ class DivineVideoClip {
     // rest of a merged clip's credits.
     List<model.ClipSourceCredit>? sourceCredits,
     bool clearSourceCredits = false,
+    bool? importedSource,
   }) {
     final isNewLogicalClip = id != null && id != this.id;
     final nextSourceCredits = clearSourceCredits
@@ -954,6 +1002,7 @@ class DivineVideoClip {
           ? 0
           : (assetRecoveryAttempts ?? this.assetRecoveryAttempts),
       stickerRegions: stickerRegions ?? this.stickerRegions,
+      importedSource: importedSource ?? this.importedSource,
       sourceCredits: nextSourceCredits,
     );
   }
@@ -1030,6 +1079,7 @@ class DivineVideoClip {
         'assetRecoveryAttempts': assetRecoveryAttempts,
       if (stickerRegions.isNotEmpty)
         'stickerRegions': [for (final region in stickerRegions) region.toTag()],
+      if (importedSource) 'importedSource': true,
       if (sourceAuthorPubkey != null) 'sourceAuthorPubkey': sourceAuthorPubkey,
       if (sourceEventId != null) 'sourceEventId': sourceEventId,
       if (sourceAddressableId != null)
@@ -1238,6 +1288,7 @@ class DivineVideoClip {
         useOriginalPath: useOriginalPath,
       ),
       assetRecoveryAttempts: json['assetRecoveryAttempts'] as int? ?? 0,
+      importedSource: json['importedSource'] == true,
       sourceAuthorPubkey: json['sourceAuthorPubkey'] as String?,
       sourceEventId: json['sourceEventId'] as String?,
       sourceAddressableId: json['sourceAddressableId'] as String?,

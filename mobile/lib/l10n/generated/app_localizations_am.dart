@@ -6624,6 +6624,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get libraryTabClips => 'ክሊፖች';
 
   @override
+  String get libraryTabFromOthers => 'ከሌሎች';
+
+  @override
   String get libraryScheduledSectionTitle => 'የታቀዱ';
 
   @override

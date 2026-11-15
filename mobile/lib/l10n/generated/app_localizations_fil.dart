@@ -6821,6 +6821,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get libraryTabClips => 'Mga Clip';
 
   @override
+  String get libraryTabFromOthers => 'Mula sa iba';
+
+  @override
   String get libraryScheduledSectionTitle => 'Naka-schedule';
 
   @override

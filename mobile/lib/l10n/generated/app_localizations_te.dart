@@ -6984,6 +6984,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get libraryTabClips => 'క్లిప్‌లు';
 
   @override
+  String get libraryTabFromOthers => 'ఇతరుల నుండి';
+
+  @override
   String get libraryScheduledSectionTitle => 'షెడ్యూల్ చేసినవి';
 
   @override

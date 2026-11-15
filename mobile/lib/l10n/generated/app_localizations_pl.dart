@@ -6955,6 +6955,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get libraryTabClips => 'Klify';
 
   @override
+  String get libraryTabFromOthers => 'Od innych';
+
+  @override
   String get libraryScheduledSectionTitle => 'Zaplanowane';
 
   @override

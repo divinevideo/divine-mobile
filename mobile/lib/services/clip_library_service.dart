@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
-import 'package:models/models.dart' show NativeProofData;
+import 'package:models/models.dart' show NativeProofData, VideoEvent;
 import 'package:openvine/constants/clip_library_constants.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/clip_category.dart';
@@ -250,6 +250,27 @@ class ClipLibraryService {
       );
       return [];
     }
+  }
+
+  /// The newest clip outside the trash imported from [video], or null when
+  /// the library holds none.
+  ///
+  /// An import is matched by its first credit naming [video]'s event id or
+  /// its addressable coordinate, so an import of an earlier edit of the same
+  /// post counts too. Clips the editor rendered from an import carry its
+  /// credit as well but are not the import (see
+  /// [DivineVideoClip.isImportedClip]).
+  Future<DivineVideoClip?> findImportedClipOf(VideoEvent video) async {
+    final addressableId = video.addressableId;
+    for (final clip in await getAllClips()) {
+      if (!clip.isImportedClip) continue;
+      if (clip.sourceEventId == video.id ||
+          (addressableId != null &&
+              clip.sourceAddressableId == addressableId)) {
+        return clip;
+      }
+    }
+    return null;
   }
 
   /// Deserialize a single clip [row], returning `null` (and logging) when the

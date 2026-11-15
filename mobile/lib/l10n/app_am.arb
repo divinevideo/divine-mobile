@@ -2647,6 +2647,7 @@
   "libraryWebUnavailableDescription": "ረቂቆች እና ክሊፖች በመሳሪያዎ ላይ ተቀምጠዋል፣ስለዚህ እነሱን ለማስተዳደር በስልክዎ ላይ Divineን ይክፈቱ።",
   "libraryTabDrafts": "ረቂቆች",
   "libraryTabClips": "ክሊፖች",
+  "libraryTabFromOthers": "ከሌሎች",
   "libraryDeleteSelectedClipsTooltip": "የተመረጡ ቅንጥቦችን ሰርዝ",
   "libraryCloseSemanticLabel": "ቤተ-መጻሕፍቱን ዝጋ",
   "libraryStopSelectingClipsSemanticLabel": "ቅንጥቦችን መምረጥ አቁም",

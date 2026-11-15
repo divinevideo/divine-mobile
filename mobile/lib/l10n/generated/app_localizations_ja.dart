@@ -6422,6 +6422,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get libraryTabClips => 'クリップ';
 
   @override
+  String get libraryTabFromOthers => '他の人から';
+
+  @override
   String get libraryScheduledSectionTitle => '予約投稿';
 
   @override

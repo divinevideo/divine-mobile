@@ -101,7 +101,7 @@ void main() {
         LibraryScreen.soundsPath,
       );
 
-      expect(screen.initialTabIndex, equals(2));
+      expect(screen.initialTabIndex, equals(LibraryScreen.soundsTabIndex));
     });
 
     group(LibraryScreen.clipsOnlyPath, () {

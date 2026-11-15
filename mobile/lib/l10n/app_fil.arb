@@ -1687,6 +1687,7 @@
   "libraryWebUnavailableDescription": "Naka-save sa device mo ang mga draft at clip, kaya buksan ang Divine sa phone mo para i-manage ang mga ito.",
   "libraryTabDrafts": "Mga Draft",
   "libraryTabClips": "Mga Clip",
+  "libraryTabFromOthers": "Mula sa iba",
   "libraryDeleteSelectedClipsTooltip": "Burahin ang mga napiling clip",
   "libraryCloseSemanticLabel": "Isara ang library",
   "libraryStopSelectingClipsSemanticLabel": "Ihinto ang pagpili ng mga clip",

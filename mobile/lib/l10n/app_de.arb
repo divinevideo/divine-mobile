@@ -2307,6 +2307,7 @@
   "videoClipSemanticHintPreview": "Tippen für Vorschau",
   "libraryClipDuration": "{seconds} Sek",
   "libraryTabClips": "Clips",
+  "libraryTabFromOthers": "Von anderen",
   "libraryTabDrafts": "Entwürfe",
   "libraryWebUnavailableDescription": "Entwürfe und Clips werden auf deinem Gerät gespeichert. Öffne Divine auf dem Smartphone, um sie zu verwalten.",
   "libraryWebUnavailableHeadline": "Mediathek ist in der mobilen App",

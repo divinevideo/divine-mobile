@@ -2315,6 +2315,7 @@
   "videoClipSemanticHintPreview": "Toca para previsualizar",
   "libraryClipDuration": "{seconds} s",
   "libraryTabClips": "Clips",
+  "libraryTabFromOthers": "De otros",
   "libraryTabDrafts": "Borradores",
   "libraryWebUnavailableDescription": "Los borradores y clips se guardan en tu dispositivo; abre Divine en el teléfono para gestionarlos.",
   "libraryWebUnavailableHeadline": "La biblioteca está en la app móvil",

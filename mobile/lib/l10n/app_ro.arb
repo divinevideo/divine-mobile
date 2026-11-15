@@ -2307,6 +2307,7 @@
   "videoClipSemanticHintPreview": "Atinge pentru previzualizare",
   "libraryClipDuration": "{seconds} s",
   "libraryTabClips": "Clipuri",
+  "libraryTabFromOthers": "De la alții",
   "libraryTabDrafts": "Ciorne",
   "libraryWebUnavailableDescription": "Ciornele și clipurile sunt pe dispozitivul tău — deschide Divine pe telefon ca să le gestionezi.",
   "libraryWebUnavailableHeadline": "Biblioteca e în aplicația mobilă",

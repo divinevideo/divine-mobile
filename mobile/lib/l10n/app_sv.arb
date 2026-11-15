@@ -2307,6 +2307,7 @@
   "videoClipSemanticHintPreview": "Tryck för förhandsgranskning",
   "libraryClipDuration": "{seconds} s",
   "libraryTabClips": "Klipp",
+  "libraryTabFromOthers": "Från andra",
   "libraryTabDrafts": "Utkast",
   "libraryWebUnavailableDescription": "Utkast och klipp sparas på enheten — öppna Divine i mobilen för att hantera dem.",
   "libraryWebUnavailableHeadline": "Biblioteket finns i mobilappen",

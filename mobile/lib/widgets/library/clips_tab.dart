@@ -36,6 +36,7 @@ class ClipsTab extends StatelessWidget {
     required this.backgroundColor,
     this.selectionEnabled = true,
     this.clips,
+    this.scope,
     this.targetAspectRatio,
     this.scrollController,
     this.gridTopPadding = 0,
@@ -45,6 +46,14 @@ class ClipsTab extends StatelessWidget {
 
   /// Optional externally provided clip order.
   final List<DivineVideoClip>? clips;
+
+  /// The [ClipOwnershipScope] this tab stands for, or `null` when it shows
+  /// whatever scope the bloc has.
+  ///
+  /// The library's two clip tabs share one bloc, so only the one whose scope
+  /// the bloc shows has clips to draw. The other stays blank while a swipe
+  /// brings it into view, rather than showing the wrong tab's clips.
+  final ClipOwnershipScope? scope;
 
   /// Whether tapping a clip should toggle selection.
   final bool selectionEnabled;
@@ -90,6 +99,7 @@ class ClipsTab extends StatelessWidget {
         Expanded(
           child: _ClipsBody(
             clips: clips,
+            scope: scope,
             selectionEnabled: selectionEnabled,
             showRecordButton: showRecordButton,
             backgroundColor: backgroundColor,
@@ -157,6 +167,7 @@ class _CategoryChipRow extends StatelessWidget {
 class _ClipsBody extends StatelessWidget {
   const _ClipsBody({
     required this.clips,
+    required this.scope,
     required this.selectionEnabled,
     required this.showRecordButton,
     required this.backgroundColor,
@@ -166,6 +177,7 @@ class _ClipsBody extends StatelessWidget {
   });
 
   final List<DivineVideoClip>? clips;
+  final ClipOwnershipScope? scope;
   final bool selectionEnabled;
   final bool showRecordButton;
   final Color backgroundColor;
@@ -180,6 +192,9 @@ class _ClipsBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ClipsLibraryBloc, ClipsLibraryState>(
       builder: (context, state) {
+        if (scope != null && scope != state.scope) {
+          return const SizedBox.shrink();
+        }
         final content = _FilterContent(
           state: state,
           clips: clips,

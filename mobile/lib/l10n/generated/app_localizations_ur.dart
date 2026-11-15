@@ -6783,6 +6783,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get libraryTabClips => 'کلپس';
 
   @override
+  String get libraryTabFromOthers => 'دوسروں سے';
+
+  @override
   String get libraryScheduledSectionTitle => 'شیڈول شدہ';
 
   @override

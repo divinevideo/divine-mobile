@@ -2307,6 +2307,7 @@
   "videoClipSemanticHintPreview": "Dotknij, aby podejrzeć",
   "libraryClipDuration": "{seconds} s",
   "libraryTabClips": "Klify",
+  "libraryTabFromOthers": "Od innych",
   "libraryTabDrafts": "Wersje robocze",
   "libraryWebUnavailableDescription": "Wersje robocze i klipy są na urządzeniu — otwórz Divine w telefonie, żeby nimi zarządzać.",
   "libraryWebUnavailableHeadline": "Biblioteka jest w aplikacji mobilnej",

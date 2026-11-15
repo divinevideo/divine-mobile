@@ -1843,6 +1843,7 @@
   "videoClipSemanticHintPreview": "탭하여 미리보기",
   "libraryClipDuration": "{seconds}초",
   "libraryTabClips": "클립",
+  "libraryTabFromOthers": "다른 사람에게서",
   "libraryTabDrafts": "임시 저장",
   "libraryWebUnavailableDescription": "임시 저장과 클립은 기기에 저장됩니다. 관리하려면 휴대폰에서 Divine을 열어 주세요.",
   "libraryWebUnavailableHeadline": "라이브러리는 모바일 앱에서 이용할 수 있어요",

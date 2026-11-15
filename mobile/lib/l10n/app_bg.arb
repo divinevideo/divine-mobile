@@ -2395,6 +2395,7 @@
   "libraryWebUnavailableDescription": "Черновите и клиповете се пазят на устройството ти, затова отвори Divine на телефона си, за да ги управляваш.",
   "libraryTabDrafts": "Чернови",
   "libraryTabClips": "Клипове",
+  "libraryTabFromOthers": "От други",
   "libraryDeleteSelectedClipsTooltip": "Изтрийте избраните клипове",
   "libraryCloseSemanticLabel": "Затвори библиотеката",
   "libraryStopSelectingClipsSemanticLabel": "Спри избора на клипове",

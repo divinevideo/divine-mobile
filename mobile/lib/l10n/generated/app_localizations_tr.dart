@@ -6712,6 +6712,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get libraryTabClips => 'Klipler';
 
   @override
+  String get libraryTabFromOthers => 'Başkalarından';
+
+  @override
   String get libraryScheduledSectionTitle => 'Zamanlanmış';
 
   @override

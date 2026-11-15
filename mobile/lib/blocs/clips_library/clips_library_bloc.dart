@@ -19,7 +19,8 @@ part 'clips_library_state.dart';
 /// BLoC for the clip library grid and the clip pickers built on it.
 ///
 /// Loads clips and categories from [ClipLibraryService] and owns what the
-/// grid shows: the active [ClipLibraryFilter], the sort order, the column
+/// grid shows: the active [ClipLibraryFilter] and [ClipOwnershipScope], the
+/// sort order, the column
 /// count and the selection, including drag selection and the limits a picker
 /// sets. It also trashes, restores, deletes, files and archives clips and
 /// manages categories. Saving clips to the gallery is `ClipGallerySaveCubit`'s
@@ -32,6 +33,8 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     bool allowsMixedClipTypes = false,
     bool allowsMixedAspectRatios = false,
     int? maxSelectedClips,
+    String? viewerPubkey,
+    ClipOwnershipScope? scope,
   }) : _clipLibraryService = clipLibraryService,
        _sharedPreferences = sharedPreferences,
        super(
@@ -41,6 +44,8 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
            allowsMixedClipTypes: allowsMixedClipTypes,
            allowsMixedAspectRatios: allowsMixedAspectRatios,
            maxSelectedClips: maxSelectedClips,
+           viewerPubkey: viewerPubkey,
+           scope: scope,
          ),
        ) {
     on<ClipsLibraryLoadRequested>(_onLoadRequested, transformer: droppable());
@@ -68,6 +73,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     on<ClipsLibraryHardDeleteClip>(_onHardDeleteClip, transformer: droppable());
     on<ClipsLibraryEmptyTrash>(_onEmptyTrash, transformer: droppable());
     on<ClipsLibraryFilterChanged>(_onFilterChanged);
+    on<ClipsLibraryScopeChanged>(_onScopeChanged);
     on<ClipsLibraryCategoryCreated>(
       _onCategoryCreated,
       transformer: sequential(),
@@ -107,8 +113,14 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     return clips.where(clipTypeFilter.matches).toList();
   }
 
-  Future<List<DivineVideoClip>> _getFilteredTrashedClips() async =>
-      _applyTypeFilter(await _clipLibraryService.getTrashedClips());
+  /// The trashed clips of the active [ClipsLibraryState.scope] that
+  /// [clipTypeFilter] admits.
+  Future<List<DivineVideoClip>> _getFilteredTrashedClips() async => [
+    for (final clip in _applyTypeFilter(
+      await _clipLibraryService.getTrashedClips(),
+    ))
+      if (state.scopeAdmits(clip)) clip,
+  ];
 
   static ClipSort _readPersistedSort(SharedPreferences prefs) {
     final saved = prefs.getString(_sortPrefsKey);
@@ -156,12 +168,23 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     return sorted;
   }
 
-  /// Returns the clips [filter] admits, sorted by [sort].
-  static List<DivineVideoClip> _visibleClips(
+  /// Returns the clips [filter] and the [scope] admit, sorted by [sort].
+  ///
+  /// [scope] defaults to the active one.
+  List<DivineVideoClip> _visibleClips(
     List<DivineVideoClip> clips,
     ClipLibraryFilter filter,
-    ClipSort sort,
-  ) => _applySort(clips.where(filter.admits).toList(), sort);
+    ClipSort sort, {
+    ClipOwnershipScope? scope,
+  }) {
+    final shownScope = scope ?? state.scope;
+    return _applySort([
+      for (final clip in clips)
+        if (filter.admits(clip) &&
+            (shownScope?.admits(clip, state.viewerPubkey) ?? true))
+          clip,
+    ], sort);
+  }
 
   /// Total duration of the clips in [ids], ignoring ids [clips] has no clip
   /// for.
@@ -846,6 +869,34 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     if (event.filter is ClipLibraryTrashFilter) {
       add(const ClipsLibraryTrashLoadRequested());
     }
+  }
+
+  void _onScopeChanged(
+    ClipsLibraryScopeChanged event,
+    Emitter<ClipsLibraryState> emit,
+  ) {
+    if (event.scope == state.scope) return;
+
+    // Unlike the trash boundary, a scope is only another view of the same
+    // clips: a pick can take the user's own takes and others' clips together.
+    emit(
+      state.copyWith(
+        scope: event.scope,
+        sortedClips: _visibleClips(
+          state.clips,
+          state.filter,
+          state.clipSort,
+          scope: event.scope,
+        ),
+        // The other scope's trash must not show while this one's loads.
+        trashedClips: state.isShowingTrash ? const [] : null,
+        clearOrganizeResult: true,
+        // See [_onFilterChanged]: the list a drag runs over has changed.
+        clearDragSelection: true,
+      ),
+    );
+
+    if (state.isShowingTrash) add(const ClipsLibraryTrashLoadRequested());
   }
 
   Future<void> _onCategoryCreated(

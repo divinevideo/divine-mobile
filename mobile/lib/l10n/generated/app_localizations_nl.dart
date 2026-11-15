@@ -6808,6 +6808,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get libraryTabClips => 'Clips';
 
   @override
+  String get libraryTabFromOthers => 'Van anderen';
+
+  @override
   String get libraryScheduledSectionTitle => 'Gepland';
 
   @override

@@ -6777,6 +6777,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get libraryTabClips => 'مقاطع';
 
   @override
+  String get libraryTabFromOthers => 'من الآخرين';
+
+  @override
   String get libraryScheduledSectionTitle => 'المجدولة';
 
   @override

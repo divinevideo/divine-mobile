@@ -6445,6 +6445,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get libraryTabClips => '클립';
 
   @override
+  String get libraryTabFromOthers => '다른 사람에게서';
+
+  @override
   String get libraryScheduledSectionTitle => '예약';
 
   @override

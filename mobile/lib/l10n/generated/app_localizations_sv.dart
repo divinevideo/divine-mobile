@@ -6773,6 +6773,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get libraryTabClips => 'Klipp';
 
   @override
+  String get libraryTabFromOthers => 'Från andra';
+
+  @override
   String get libraryScheduledSectionTitle => 'Schemalagda';
 
   @override

@@ -88,7 +88,9 @@ class LibrarySoundsRouteData extends GoRouteData with $LibrarySoundsRouteData {
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       fadeUpwardsPage(
         state: state,
-        child: const LibraryScreen(initialTabIndex: 2),
+        child: const LibraryScreen(
+          initialTabIndex: LibraryScreen.soundsTabIndex,
+        ),
       );
 }
 

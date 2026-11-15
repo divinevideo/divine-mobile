@@ -2307,6 +2307,7 @@
   "videoClipSemanticHintPreview": "Toque para visualizar",
   "libraryClipDuration": "{seconds} s",
   "libraryTabClips": "Clipes",
+  "libraryTabFromOthers": "De outras pessoas",
   "libraryTabDrafts": "Rascunhos",
   "libraryWebUnavailableDescription": "Rascunhos e clipes ficam no seu dispositivo — abra o Divine no celular para gerenciá-los.",
   "libraryWebUnavailableHeadline": "A biblioteca fica no app móvel",

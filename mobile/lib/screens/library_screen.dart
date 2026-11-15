@@ -38,16 +38,61 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Which tabs the library shows.
 enum LibraryTabsMode {
-  /// Drafts, Clips and Sounds — the standalone library.
+  /// Drafts, Clips, From others and Sounds — the standalone library.
   allTabs,
 
-  /// Drafts and Clips. Opened from the recorder, where a saved sound is not
-  /// something the current session can pick up.
+  /// Drafts, Clips and From others. Opened from the recorder, where a saved
+  /// sound is not something the current session can pick up.
   withoutSounds,
 }
 
-/// A tab the library can show, in bar order.
-enum _LibraryTab { drafts, clips, sounds }
+/// A tab the library can show, in bar order. [LibraryScreen.initialTabIndex]
+/// indexes this order.
+enum _LibraryTab {
+  drafts,
+  clips,
+  fromOthers,
+  sounds;
+
+  /// Whose clips the grid shows on this tab, or `null` for a tab without
+  /// the clip grid.
+  ClipOwnershipScope? get clipScope => switch (this) {
+    _LibraryTab.clips => ClipOwnershipScope.own,
+    _LibraryTab.fromOthers => ClipOwnershipScope.fromOthers,
+    _LibraryTab.drafts || _LibraryTab.sounds => null,
+  };
+}
+
+/// Tabs the library shows, in bar order.
+///
+/// Selection mode renders inside a sheet that only adds clips, so it keeps
+/// just the two clip tabs; the other modes differ only in the Sounds tab.
+List<_LibraryTab> _libraryTabs({
+  required bool selectionMode,
+  required LibraryTabsMode tabsMode,
+}) {
+  if (selectionMode) return const [_LibraryTab.clips, _LibraryTab.fromOthers];
+  return switch (tabsMode) {
+    LibraryTabsMode.allTabs => _LibraryTab.values,
+    LibraryTabsMode.withoutSounds => const [
+      _LibraryTab.drafts,
+      _LibraryTab.clips,
+      _LibraryTab.fromOthers,
+    ],
+  };
+}
+
+/// Position in [tabs] of the tab [initialTabIndex] names, falling back to
+/// Clips when this mode does not show it.
+int _initialTabPosition(List<_LibraryTab> tabs, int initialTabIndex) {
+  final tab =
+      _LibraryTab.values[initialTabIndex.clamp(
+        0,
+        _LibraryTab.values.length - 1,
+      )];
+  final position = tabs.indexOf(tab);
+  return position >= 0 ? position : tabs.indexOf(_LibraryTab.clips);
+}
 
 class LibraryScreen extends ConsumerWidget {
   /// Route name for drafts path.
@@ -74,6 +119,18 @@ class LibraryScreen extends ConsumerWidget {
   /// Path for sounds route.
   static const String soundsPath = RoutePaths.librarySounds;
 
+  /// [initialTabIndex] of the Drafts tab.
+  static const draftsTabIndex = 0;
+
+  /// [initialTabIndex] of the Clips tab.
+  static const clipsTabIndex = 1;
+
+  /// [initialTabIndex] of the From others tab.
+  static const fromOthersTabIndex = 2;
+
+  /// [initialTabIndex] of the Sounds tab.
+  static const soundsTabIndex = 3;
+
   const LibraryScreen({
     super.key,
     this.initialTabIndex = 0,
@@ -88,15 +145,15 @@ class LibraryScreen extends ConsumerWidget {
     this.maxSelectedClips,
   });
 
-  /// Index of the tab to show when the screen opens.
-  ///
-  /// `0` = Drafts, `1` = Clips, `2` = Sounds.
+  /// Index of the tab to show when the screen opens: [draftsTabIndex],
+  /// [clipsTabIndex], [fromOthersTabIndex] or [soundsTabIndex]. A tab the
+  /// current mode does not show opens Clips instead.
   final int initialTabIndex;
 
   /// When true, enables multi-select mode for adding clips to the editor.
   ///
   /// In selection mode:
-  /// - Only the Clips tab is shown (no Drafts tab)
+  /// - Only the Clips and From others tabs are shown
   /// - Clips can be multi-selected via [ClipsLibraryBloc]
   /// - A header shows remaining duration and "Add" button
   /// - Selected clips are added to the video editor on confirmation
@@ -145,6 +202,8 @@ class LibraryScreen extends ConsumerWidget {
 
     final clipLibraryService = ref.watch(clipLibraryServiceProvider);
     final draftStorageService = ref.watch(draftStorageServiceProvider);
+    final tabs = _libraryTabs(selectionMode: selectionMode, tabsMode: tabsMode);
+    final initialTab = tabs[_initialTabPosition(tabs, initialTabIndex)];
 
     final view = _LibraryView(
       initialTabIndex: initialTabIndex,
@@ -175,6 +234,11 @@ class LibraryScreen extends ConsumerWidget {
               allowsMixedClipTypes: allowsMixedClipTypes,
               allowsMixedAspectRatios: cropGuideAspectRatio != null,
               maxSelectedClips: maxSelectedClips,
+              // The account the library service lists clips for, so a clip
+              // counts as someone else's under the same identity that scopes
+              // the library itself.
+              viewerPubkey: clipLibraryService.ownerPubkey,
+              scope: initialTab.clipScope ?? ClipOwnershipScope.own,
             )..add(
               ClipsLibraryLoadRequested(
                 preSelectedIds: editorClipIds,
@@ -244,33 +308,23 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
 
   late int _activeTabIndex;
 
-  /// Tabs of the current mode, in bar order.
-  ///
-  /// Selection mode renders inside a sheet that only adds clips, so it drops
-  /// the bar entirely; the other modes differ only in the Sounds tab.
-  List<_LibraryTab> get _tabs {
-    if (widget.selectionMode) return const [_LibraryTab.clips];
-    return switch (widget.tabsMode) {
-      LibraryTabsMode.allTabs => [
-        _LibraryTab.drafts,
-        _LibraryTab.clips,
-        _LibraryTab.sounds,
-      ],
-      LibraryTabsMode.withoutSounds => const [
-        _LibraryTab.drafts,
-        _LibraryTab.clips,
-      ],
-    };
-  }
+  /// Tabs of the current mode, in bar order. See [_libraryTabs].
+  List<_LibraryTab> get _tabs => _libraryTabs(
+    selectionMode: widget.selectionMode,
+    tabsMode: widget.tabsMode,
+  );
 
   @override
   int get tabCount => _tabs.length;
 
   @override
-  int get initialTabIndex => widget.initialTabIndex.clamp(0, tabCount - 1);
+  int get initialTabIndex => _initialTabPosition(_tabs, widget.initialTabIndex);
 
-  bool get _isClipsTabActive =>
-      _tabs[_activeTabIndex.clamp(0, _tabs.length - 1)] == _LibraryTab.clips;
+  _LibraryTab get _activeTab =>
+      _tabs[_activeTabIndex.clamp(0, _tabs.length - 1)];
+
+  /// Whether the active tab shows the clip grid: Clips or From others.
+  bool get _isClipsTabActive => _activeTab.clipScope != null;
 
   bool get _shouldAutoOpenSelectionMode =>
       !widget.selectionMode && widget.tabsMode == LibraryTabsMode.withoutSounds;
@@ -319,7 +373,10 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
 
     final clipsBloc = context.read<ClipsLibraryBloc>();
     final clipsState = clipsBloc.state;
-    // Leaving the Clips tab drops a selection the user opened themselves. An
+    if (_activeTab.clipScope case final scope?) {
+      clipsBloc.add(ClipsLibraryScopeChanged(scope));
+    }
+    // Leaving the clip tabs drops a selection the user opened themselves. An
     // auto-opened one mirrors the recorder session that sent us here, so
     // clearing it on a peek at Drafts would lose that session's clips.
     if (!widget.selectionMode &&
@@ -956,36 +1013,36 @@ class _LibraryContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (!selectionMode) const SizedBox(height: 12),
-        if (!selectionMode)
-          TabBar(
-            controller: tabController,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            padding: const EdgeInsetsDirectional.only(start: 16),
-            indicatorColor: VineTheme.tabIndicatorGreen,
-            indicatorWeight: 4,
-            indicatorSize: TabBarIndicatorSize.tab,
-            dividerColor: VineTheme.transparent,
-            labelColor: context.vineColors.primaryText,
-            unselectedLabelColor: context.vineColors.onSurfaceMuted,
-            labelPadding: const EdgeInsets.symmetric(horizontal: 14),
-            labelStyle: VineTheme.titleMediumFont(
-              color: context.vineColors.primaryText,
-            ),
-            unselectedLabelStyle: VineTheme.titleMediumFont(
-              color: context.vineColors.onSurfaceMuted,
-            ),
-            tabs: [
-              for (final tab in tabs)
-                Tab(
-                  text: switch (tab) {
-                    _LibraryTab.drafts => context.l10n.libraryTabDrafts,
-                    _LibraryTab.clips => context.l10n.libraryTabClips,
-                    _LibraryTab.sounds => context.l10n.soundsTitle,
-                  },
-                ),
-            ],
+        TabBar(
+          controller: tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          padding: const EdgeInsetsDirectional.only(start: 16),
+          indicatorColor: VineTheme.tabIndicatorGreen,
+          indicatorWeight: 4,
+          indicatorSize: TabBarIndicatorSize.tab,
+          dividerColor: VineTheme.transparent,
+          labelColor: context.vineColors.primaryText,
+          unselectedLabelColor: context.vineColors.onSurfaceMuted,
+          labelPadding: const EdgeInsets.symmetric(horizontal: 14),
+          labelStyle: VineTheme.titleMediumFont(
+            color: context.vineColors.primaryText,
           ),
+          unselectedLabelStyle: VineTheme.titleMediumFont(
+            color: context.vineColors.onSurfaceMuted,
+          ),
+          tabs: [
+            for (final tab in tabs)
+              Tab(
+                text: switch (tab) {
+                  _LibraryTab.drafts => context.l10n.libraryTabDrafts,
+                  _LibraryTab.clips => context.l10n.libraryTabClips,
+                  _LibraryTab.fromOthers => context.l10n.libraryTabFromOthers,
+                  _LibraryTab.sounds => context.l10n.soundsTitle,
+                },
+              ),
+          ],
+        ),
         if (!selectionMode) const SizedBox(height: 2),
         Expanded(
           child: selectionMode
@@ -1220,6 +1277,11 @@ class _LibraryWebUnavailableScreen extends StatelessWidget {
   }
 }
 
+/// The picker's clip grid with its confirm footer.
+///
+/// One grid for both clip tabs: it follows the bloc's scope, which the tab
+/// bar sets. A second grid would attach the sheet's [scrollController] to two
+/// scroll views at once.
 class _SelectionBody extends StatelessWidget {
   const _SelectionBody({
     required this.onCreate,
@@ -1321,8 +1383,9 @@ class _TabBodyState extends State<_TabBody> {
                 showRecordButton: false,
                 showScheduledSection: widget.showScheduledSection,
               ),
-              _LibraryTab.clips => ClipsTab(
+              _LibraryTab.clips || _LibraryTab.fromOthers => ClipsTab(
                 clips: widget.clips,
+                scope: tab.clipScope,
                 selectionEnabled: widget.selectionEnabled,
                 targetAspectRatio: widget.targetAspectRatio,
                 showRecordButton: false,

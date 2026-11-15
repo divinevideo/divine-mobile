@@ -185,6 +185,7 @@ void main() {
         '34236:classic-vine-author-pubkey:vine-123',
       );
       expect(success.clip.sourceRelayHint, 'wss://relay.divine.video');
+      expect(success.clip.importedSource, isTrue);
       expect(
         File(success.clip.requireVideo.file!.path).readAsBytesSync(),
         sourceVideo.readAsBytesSync(),
@@ -200,6 +201,7 @@ void main() {
       expect(captured.sourceEventId, success.clip.sourceEventId);
       expect(captured.sourceAddressableId, success.clip.sourceAddressableId);
       expect(captured.sourceRelayHint, success.clip.sourceRelayHint);
+      expect(captured.importedSource, isTrue);
     });
 
     test('uses an explicit user title when importing to the library', () async {
@@ -816,6 +818,7 @@ void main() {
         expect(clip.targetAspectRatio, equals(models.AspectRatio.square));
         expect(clip.originalAspectRatio, closeTo(9 / 16, 0.0001));
         expect(clip.sourceAuthorPubkey, equals(_senderPubkey));
+        expect(clip.importedSource, isTrue);
         expect(
           models.NativeProofData.fromJson(
             jsonDecode(clip.proofManifestJson!) as Map<String, dynamic>,
@@ -1354,6 +1357,7 @@ void main() {
         expect(clip.sourceAuthorPubkey, equals(vine.pubkey));
         expect(clip.sourceEventId, equals(vine.id));
         expect(clip.sourceAddressableId, equals(vine.addressableId));
+        expect(clip.importedSource, isTrue);
         expect(clip.targetAspectRatio, equals(models.AspectRatio.square));
         expect(clip.duration, equals(const Duration(milliseconds: 6200)));
         expect(clip.libraryTitle, equals('classic vine'));
@@ -1524,7 +1528,10 @@ void main() {
         contributorPubkeys: [_ownerPubkey],
       );
 
-      expect((result as VideoClipImportSuccess).clip.sourceCredits, isEmpty);
+      final clip = (result as VideoClipImportSuccess).clip;
+      expect(clip.sourceCredits, isEmpty);
+      // The device's own footage coming back is not someone else's clip.
+      expect(clip.importedSource, isFalse);
     });
 
     test('credits everyone else its signed history names', () async {

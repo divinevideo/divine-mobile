@@ -282,7 +282,22 @@ void main() {
         false,
         false,
         null,
+        null,
+        null,
       ]);
+    });
+
+    test('copyWith switches the scope and keeps the viewer', () {
+      const state = ClipsLibraryState(
+        scope: ClipOwnershipScope.own,
+        viewerPubkey: 'viewer',
+      );
+
+      final switched = state.copyWith(scope: ClipOwnershipScope.fromOthers);
+
+      expect(switched.scope, ClipOwnershipScope.fromOthers);
+      expect(switched.viewerPubkey, 'viewer');
+      expect(switched.copyWith().scope, ClipOwnershipScope.fromOthers);
     });
   });
 

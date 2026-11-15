@@ -2297,6 +2297,7 @@
   "videoClipSemanticHintPreview": "انقر للمعاينة",
   "libraryClipDuration": "{seconds} ث",
   "libraryTabClips": "مقاطع",
+  "libraryTabFromOthers": "من الآخرين",
   "libraryTabDrafts": "مسودات",
   "libraryWebUnavailableDescription": "تُحفظ المسودات والمقاطع على جهازك. افتح Divine على هاتفك لإدارتها.",
   "libraryWebUnavailableHeadline": "المكتبة متوفّرة في التطبيق على الجوال",

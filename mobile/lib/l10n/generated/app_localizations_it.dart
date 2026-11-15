@@ -6860,6 +6860,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get libraryTabClips => 'Clip';
 
   @override
+  String get libraryTabFromOthers => 'Da altri';
+
+  @override
   String get libraryScheduledSectionTitle => 'Programmati';
 
   @override

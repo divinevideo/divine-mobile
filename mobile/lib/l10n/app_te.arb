@@ -3921,6 +3921,7 @@
   "libraryWebUnavailableDescription": "చిత్తుప్రతులు మరియు క్లిప్‌లు మీ పరికరంలో సేవ్ చేయబడ్డాయి, కాబట్టి వాటిని నిర్వహించడానికి మీ ఫోన్‌లో Divineని తెరవండి.",
   "libraryTabDrafts": "చిత్తుప్రతులు",
   "libraryTabClips": "క్లిప్‌లు",
+  "libraryTabFromOthers": "ఇతరుల నుండి",
   "libraryDeleteSelectedClipsTooltip": "ఎంచుకున్న క్లిప్‌లను తొలగించండి",
   "libraryCloseSemanticLabel": "లైబ్రరీని మూసివేయండి",
   "@libraryCloseSemanticLabel": {

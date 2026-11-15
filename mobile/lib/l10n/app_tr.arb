@@ -2304,6 +2304,7 @@
   "videoClipSemanticHintPreview": "Önizlemek için dokun",
   "libraryClipDuration": "{seconds} sn",
   "libraryTabClips": "Klipler",
+  "libraryTabFromOthers": "Başkalarından",
   "libraryTabDrafts": "Taslaklar",
   "libraryWebUnavailableDescription": "Taslaklar ve klipler cihazında saklanır; yönetmek için Divine’ı telefonda aç.",
   "libraryWebUnavailableHeadline": "Kitaplık mobil uygulamada",

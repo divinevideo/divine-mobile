@@ -2307,6 +2307,7 @@
   "videoClipSemanticHintPreview": "Appuyer pour afficher l'aperçu",
   "libraryClipDuration": "{seconds} s",
   "libraryTabClips": "Clips",
+  "libraryTabFromOthers": "Des autres",
   "libraryTabDrafts": "Brouillons",
   "libraryWebUnavailableDescription": "Les brouillons et clips sont enregistrés sur ton appareil : ouvre Divine sur ton téléphone pour les gérer.",
   "libraryWebUnavailableHeadline": "La bibliothèque est dans l’appli mobile",

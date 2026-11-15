@@ -59,6 +59,12 @@ Operations that take a clip id (`getClipById`, trashing, restoring, deleting, fi
 
 [`ClipRecoveryService`](../lib/services/clip_recovery_service.dart) is a developer-only tool for recordings the library can no longer show: rows stored under another owner, and files whose rows are gone.
 
+## Clips and From others
+
+Clips imported from other people sit in their own tab, From others, so the Clips tab holds the user's own footage. The two tabs share one `ClipsLibraryBloc`, which shows one `ClipOwnershipScope` at a time. A clip is from others (`DivineVideoClip.isFromOthers`) when it is an import and its first credit names someone other than the library's account. An import is a clip saved by `importToLibrary`, `importReceivedClip` or `importReceivedVine`, which set `importedSource`. Clips stored before that field existed are recognised by their id prefix (`video_`, `classic_vine_`, `dm_clip_`). Clips the editor renders from others' footage (merges, flattened saves, split-screen layouts) are the user's own work and stay in Clips, whatever credits they carry. A gallery import is never from others.
+
+Filters, the trash and emptying it apply within the active tab. A selection survives switching tabs, so a pick can hold the user's own take and someone else's Vine. The pickers show both tabs too; the chroma-key picker has no tabs and shows every clip. `ClipLibraryService.findImportedClipOf` finds the newest import of a published video.
+
 ## Organizing
 
 The grid shows one filter at a time (`ClipLibraryFilter`):
@@ -129,9 +135,9 @@ Of the ways footage comes in from outside the app, a clip received in a direct m
 
 | From | Code | Shows |
 |---|---|---|
-| Library routes | `RoutePaths.libraryDrafts`, `RoutePaths.libraryClips`, `RoutePaths.librarySounds` in [`library_routes.dart`](../lib/router/routes/library_routes.dart) | Drafts, Clips and Sounds tabs |
-| Recorder | `openRecorderLibrary`, `RoutePaths.libraryClipsOnly` | Drafts and Clips; clips of the recording mode's type only |
-| Editor, adding clips | `LibraryScreen(selectionMode: true, allowsMixedClipTypes: true)` in a sheet | Clips tab as a picker; timeline clips pre-selected |
+| Library routes | `RoutePaths.libraryDrafts`, `RoutePaths.libraryClips`, `RoutePaths.librarySounds` in [`library_routes.dart`](../lib/router/routes/library_routes.dart) | Drafts, Clips, From others and Sounds tabs |
+| Recorder | `openRecorderLibrary`, `RoutePaths.libraryClipsOnly` | Drafts, Clips and From others; clips of the recording mode's type only |
+| Editor, adding clips | `LibraryScreen(selectionMode: true, allowsMixedClipTypes: true)` in a sheet | Clips and From others tabs as a picker; timeline clips pre-selected |
 | Editor, split-screen cell | `_pickLayoutCellClips` in [`video_editor_screen.dart`](../lib/screens/video_editor/video_editor_screen.dart) | Picker with the cell's crop on each thumbnail |
 | Chroma-key backdrop | `showChromaKeyClipPicker` | A single-clip picker of video clips, with its own `ClipsLibraryBloc` |
 | Direct message | `_onAttachClip` in [`conversation_view.dart`](../lib/screens/inbox/conversation/conversation_view.dart) | Picker of video clips; the picked clips are sent |

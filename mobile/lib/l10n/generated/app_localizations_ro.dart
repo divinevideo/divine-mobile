@@ -6956,6 +6956,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get libraryTabClips => 'Clipuri';
 
   @override
+  String get libraryTabFromOthers => 'De la alții';
+
+  @override
   String get libraryScheduledSectionTitle => 'Programate';
 
   @override

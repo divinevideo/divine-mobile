@@ -9,7 +9,9 @@ import 'dart:ui' show Color;
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' as models show AspectRatio;
+import 'package:models/models.dart'
+    as models
+    show AspectRatio, ClipSourceCredit, VideoEvent;
 import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/clip_library_constants.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -1079,6 +1081,127 @@ void main() {
 
         final clips = await service.getAllClips();
         expect(clips.map((c) => c.id), ['valid_clip']);
+      });
+    });
+
+    group('findImportedClipOf', () {
+      const vineAuthor =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const vineEventId =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+
+      final vine = models.VideoEvent(
+        id: vineEventId,
+        pubkey: vineAuthor,
+        createdAt: 1451606400,
+        content: 'classic vine',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(
+          1451606400 * 1000,
+          isUtc: true,
+        ),
+        videoUrl: 'https://cdn.example.com/classic.mp4',
+        rawTags: const {'platform': 'vine'},
+        vineId: 'vine-123',
+        addressableDTag: 'vine-123',
+      );
+
+      DivineVideoClip clipOf({
+        required String id,
+        required DateTime recordedAt,
+        bool importedSource = true,
+        String? eventId = vineEventId,
+        String? addressableId,
+      }) => DivineVideoClip(
+        id: id,
+        video: EditorVideo.file('/tmp/$id.mp4'),
+        duration: const Duration(seconds: 6),
+        recordedAt: recordedAt,
+        targetAspectRatio: .square,
+        originalAspectRatio: 1,
+        importedSource: importedSource,
+        sourceCredits: [
+          models.ClipSourceCredit(
+            authorPubkey: vineAuthor,
+            eventId: eventId,
+            addressableId: addressableId,
+          ),
+        ],
+      );
+
+      test('returns null when nothing was imported from the video', () async {
+        expect(await service.findImportedClipOf(vine), isNull);
+      });
+
+      test('returns the clip imported from the video', () async {
+        await service.saveClip(
+          clipOf(id: 'classic_vine_vine-123_1', recordedAt: DateTime(2026)),
+        );
+
+        final found = await service.findImportedClipOf(vine);
+
+        expect(found?.id, 'classic_vine_vine-123_1');
+      });
+
+      test("matches an import by the video's addressable id", () async {
+        await service.saveClip(
+          clipOf(
+            id: 'classic_vine_vine-123_1',
+            recordedAt: DateTime(2026),
+            eventId: 'an-older-edit-of-the-post',
+            addressableId: vine.addressableId,
+          ),
+        );
+
+        final found = await service.findImportedClipOf(vine);
+
+        expect(vine.addressableId, isNotNull);
+        expect(found?.id, 'classic_vine_vine-123_1');
+      });
+
+      test('returns the newest of several imports', () async {
+        await service.saveClip(
+          clipOf(id: 'classic_vine_vine-123_1', recordedAt: DateTime(2025)),
+        );
+        await service.saveClip(
+          clipOf(id: 'classic_vine_vine-123_2', recordedAt: DateTime(2026)),
+        );
+
+        final found = await service.findImportedClipOf(vine);
+
+        expect(found?.id, 'classic_vine_vine-123_2');
+      });
+
+      test('ignores a derived clip carrying the same credit', () async {
+        await service.saveClip(
+          clipOf(
+            id: 'merged_1',
+            recordedAt: DateTime(2026),
+            importedSource: false,
+          ),
+        );
+
+        expect(await service.findImportedClipOf(vine), isNull);
+      });
+
+      test('ignores a trashed import', () async {
+        await service.saveClip(
+          clipOf(id: 'classic_vine_vine-123_1', recordedAt: DateTime(2026)),
+        );
+        await service.softDelete('classic_vine_vine-123_1');
+
+        expect(await service.findImportedClipOf(vine), isNull);
+      });
+
+      test('ignores an import of another video', () async {
+        await service.saveClip(
+          clipOf(
+            id: 'classic_vine_other_1',
+            recordedAt: DateTime(2026),
+            eventId: 'another-event-id',
+          ),
+        );
+
+        expect(await service.findImportedClipOf(vine), isNull);
       });
     });
 

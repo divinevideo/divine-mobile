@@ -6699,6 +6699,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get libraryTabClips => 'Klip';
 
   @override
+  String get libraryTabFromOthers => 'Dari orang lain';
+
+  @override
   String get libraryScheduledSectionTitle => 'Terjadwal';
 
   @override

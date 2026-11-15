@@ -2307,6 +2307,7 @@
   "videoClipSemanticHintPreview": "Tocca per l'anteprima",
   "libraryClipDuration": "{seconds} s",
   "libraryTabClips": "Clip",
+  "libraryTabFromOthers": "Da altri",
   "libraryTabDrafts": "Bozze",
   "libraryWebUnavailableDescription": "Bozze e clip sono salvate sul dispositivo: apri Divine sul telefono per gestirle.",
   "libraryWebUnavailableHeadline": "La libreria è nell’app mobile",

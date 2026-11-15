@@ -11473,6 +11473,12 @@ abstract class AppLocalizations {
   /// **'Clips'**
   String get libraryTabClips;
 
+  /// Library tab listing clips imported from other people's videos, such as classic Vines, kept apart from the user's own clips.
+  ///
+  /// In en, this message translates to:
+  /// **'From others'**
+  String get libraryTabFromOthers;
+
   /// Header of the section above the drafts list that shows posts scheduled for a later time (#3538).
   ///
   /// In en, this message translates to:

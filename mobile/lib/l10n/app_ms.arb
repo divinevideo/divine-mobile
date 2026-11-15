@@ -3383,6 +3383,7 @@
   "libraryWebUnavailableDescription": "Draf dan klip disimpan pada peranti anda, jadi buka Divine pada telefon anda untuk mengurusnya.",
   "libraryTabDrafts": "Draf",
   "libraryTabClips": "Klip",
+  "libraryTabFromOthers": "Daripada orang lain",
   "libraryDeleteSelectedClipsTooltip": "Padam klip dipilih",
   "libraryCloseSemanticLabel": "Tutup pustaka",
   "libraryStopSelectingClipsSemanticLabel": "Berhenti memilih klip",

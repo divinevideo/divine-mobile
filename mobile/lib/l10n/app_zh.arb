@@ -3383,6 +3383,7 @@
   "libraryWebUnavailableDescription": "草稿和片段都保存在你的设备上，打开手机上的 Divine 就能管理它们。",
   "libraryTabDrafts": "草稿",
   "libraryTabClips": "片段",
+  "libraryTabFromOthers": "来自他人",
   "libraryDeleteSelectedClipsTooltip": "删除选中片段",
   "libraryCloseSemanticLabel": "关闭素材库",
   "libraryStopSelectingClipsSemanticLabel": "停止选择片段",
