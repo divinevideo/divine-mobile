@@ -4083,6 +4083,15 @@ class AppLocalizationsAr extends AppLocalizations {
       'يمكن للآخرين استخدام فيديوهاتك كمقاطع في منشوراتهم.';
 
   @override
+  String get remixThisVideo => 'إعادة مزج هذا الفيديو';
+
+  @override
+  String get remixWebAppNudge => 'تتم إعادة المزج في تطبيق Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'تنزيل التطبيق';
+
+  @override
   String get shareSheetAddToList => 'إضافة إلى قائمة';
 
   @override

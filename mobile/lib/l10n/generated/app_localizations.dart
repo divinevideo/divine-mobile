@@ -6853,6 +6853,24 @@ abstract class AppLocalizations {
   /// **'Others can use your videos as clips in their own posts.'**
   String get remixSettingAllowSubtitle;
 
+  /// Full-width button in the video info sheet: imports the video into the viewer's clips and opens the editor with it, so they can make a new video from it.
+  ///
+  /// In en, this message translates to:
+  /// **'Remix this video'**
+  String get remixThisVideo;
+
+  /// Snackbar shown on the web when someone taps 'Remix this video': remixing needs the mobile app.
+  ///
+  /// In en, this message translates to:
+  /// **'Remixing happens in the Divine app.'**
+  String get remixWebAppNudge;
+
+  /// Snackbar action next to 'Remixing happens in the Divine app.'; opens the app download page.
+  ///
+  /// In en, this message translates to:
+  /// **'Get the app'**
+  String get remixWebGetTheApp;
+
   /// No description provided for @shareSheetAddToList.
   ///
   /// In en, this message translates to:

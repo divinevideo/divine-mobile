@@ -4201,6 +4201,15 @@ class AppLocalizationsPl extends AppLocalizations {
       'Inni mogą używać twoich filmów jako klipów we własnych postach.';
 
   @override
+  String get remixThisVideo => 'Zremiksuj ten film';
+
+  @override
+  String get remixWebAppNudge => 'Remiksy tworzy się w aplikacji Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Pobierz aplikację';
+
+  @override
   String get shareSheetAddToList => 'Dodaj do listy';
 
   @override

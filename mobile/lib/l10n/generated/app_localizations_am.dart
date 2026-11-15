@@ -3992,6 +3992,15 @@ class AppLocalizationsAm extends AppLocalizations {
       'ሌሎች ቪዲዮዎችዎን በራሳቸው ልጥፎች ውስጥ እንደ ቅንጥብ መጠቀም ይችላሉ።';
 
   @override
+  String get remixThisVideo => 'ይህን ቪዲዮ ይቀላቅሉ';
+
+  @override
+  String get remixWebAppNudge => 'መቀላቀል የሚከናወነው በDivine መተግበሪያ ውስጥ ነው።';
+
+  @override
+  String get remixWebGetTheApp => 'መተግበሪያውን ያግኙ';
+
+  @override
   String get shareSheetAddToList => 'ወደ ዝርዝር ያክሉ';
 
   @override

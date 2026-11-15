@@ -1,6 +1,6 @@
 // ABOUTME: Expanded video metadata bottom sheet opened by the info button.
-// ABOUTME: Header (date + title + badges + description + tags), stats, actions,
-// ABOUTME: creator, collaborators, inspired by, reposted by, sounds, links,
+// ABOUTME: Header (date + title + badges + description + tags), stats, remix,
+// ABOUTME: actions, creator, collaborators, inspired by, reposted by, sounds, links,
 // ABOUTME: verification. Actions run through the shared video actions blocs.
 
 import 'package:divine_ui/divine_ui.dart';
@@ -24,6 +24,7 @@ import 'package:openvine/widgets/video_feed_item/actions/video_content_actions_s
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_links_section.dart';
+import 'package:openvine/widgets/video_feed_item/metadata/metadata_remix_button.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_sounds_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_stats_row.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_tags_section.dart';
@@ -40,9 +41,10 @@ import 'package:time_formatter/time_formatter.dart';
 /// title scrolls with the content rather than being pinned in a header bar.
 ///
 /// Metadata is read from [VideoEvent] and the existing
-/// [VideoInteractionsBloc] in the widget tree. The action row runs through a
-/// [VideoContentActionsBloc], plus an [OwnerVideoActionsCubit] when the viewer
-/// owns the video, both created by [show].
+/// [VideoInteractionsBloc] in the widget tree. The remix button and the action
+/// row run through a [VideoContentActionsBloc], plus an
+/// [OwnerVideoActionsCubit] when the viewer owns the video, both created by
+/// [show].
 ///
 /// Matches Figma node `15675:27353` ("metadata-expanded").
 class MetadataExpandedSheet extends StatelessWidget {
@@ -60,8 +62,9 @@ class MetadataExpandedSheet extends StatelessWidget {
   /// Creates a [VideoRepostersCubit] to fetch reposter pubkeys from the
   /// relay. The cubit is scoped to the modal and auto-closed on dismiss.
   ///
-  /// Creates the action row's [VideoContentActionsBloc], and an
-  /// [OwnerVideoActionsCubit] when the signed-in viewer owns [video].
+  /// Creates the [VideoContentActionsBloc] the remix button and the action row
+  /// share, and an [OwnerVideoActionsCubit] when the signed-in viewer owns
+  /// [video].
   /// Ownership is decided once here, so the owner actions and their cubit
   /// cannot disagree if auth changes while the sheet is open.
   static Future<void> show(BuildContext context, VideoEvent video) {
@@ -141,6 +144,7 @@ class _MetadataContent extends StatelessWidget {
           variant: VideoReplyParentLinkVariant.metadata,
         ),
         MetadataStatsRow(video: video),
+        MetadataRemixButton(video: video, isOwnVideo: isOwnVideo),
         MetadataActionsSection(video: video, isOwnVideo: isOwnVideo),
         MetadataCreatorSection(pubkey: video.pubkey),
         MetadataCollaboratorsSection(video: video),

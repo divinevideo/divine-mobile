@@ -4153,6 +4153,15 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les autres peuvent utiliser tes vidéos comme clips dans leurs propres publications.';
 
   @override
+  String get remixThisVideo => 'Remixer cette vidéo';
+
+  @override
+  String get remixWebAppNudge => 'Le remix, ça se passe dans l\'app Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Télécharger l\'app';
+
+  @override
   String get shareSheetAddToList => 'Ajouter à une liste';
 
   @override

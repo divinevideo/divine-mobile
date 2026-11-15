@@ -941,6 +941,278 @@ void main() {
       );
     });
 
+    group('VideoContentRemixRequested', () {
+      late _MockVideoClipImportService mockImporter;
+      late DivineVideoClip importedClip;
+      late Completer<VideoClipImportResult> importGate;
+
+      setUp(() {
+        mockImporter = _MockVideoClipImportService();
+        importGate = Completer<VideoClipImportResult>();
+        importedClip = _clip(libraryTitle: 'Test Video');
+        when(
+          () => mockImporter.findImportedClipOf(any()),
+        ).thenAnswer((_) async => null);
+        when(
+          () => mockImporter.importToLibrary(
+            any(),
+            libraryTitle: any(named: 'libraryTitle'),
+          ),
+        ).thenAnswer((_) async => VideoClipImportSuccess(importedClip));
+      });
+
+      final preparing = isA<VideoContentActionsState>()
+          .having((s) => s.isPreparingRemix, 'isPreparingRemix', isTrue)
+          .having((s) => s.actionResult, 'actionResult', isNull);
+
+      Matcher readyWith(Object clip) => isA<VideoContentActionsState>()
+          .having((s) => s.isPreparingRemix, 'isPreparingRemix', isFalse)
+          .having(
+            (s) => s.actionResult,
+            'actionResult',
+            isA<VideoContentRemixReady>().having((r) => r.clip, 'clip', clip),
+          );
+
+      Matcher refusedWith(RemixConsent consent) =>
+          isA<VideoContentActionsState>()
+              .having((s) => s.isPreparingRemix, 'isPreparingRemix', isFalse)
+              .having(
+                (s) => s.actionResult,
+                'actionResult',
+                isA<VideoContentRemixRefused>().having(
+                  (r) => r.consent,
+                  'consent',
+                  consent,
+                ),
+              );
+
+      final importFailed = isA<VideoContentActionsState>()
+          .having((s) => s.isPreparingRemix, 'isPreparingRemix', isFalse)
+          .having(
+            (s) => s.actionResult,
+            'actionResult',
+            isA<VideoContentClipImportResult>().having(
+              (r) => r.succeeded,
+              'succeeded',
+              isFalse,
+            ),
+          );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        "imports another creator's video under its default title and "
+        'reports it ready',
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) => bloc.add(const VideoContentRemixRequested()),
+        expect: () => [preparing, readyWith(same(importedClip))],
+        verify: (_) {
+          verify(
+            () => mockRemixConsentRepository.consentFor(testVideo.pubkey),
+          ).called(1);
+          verify(
+            () => mockImporter.importToLibrary(
+              testVideo,
+              libraryTitle: 'Test Video',
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'reuses the clip an earlier import left in the library',
+        setUp: () {
+          when(
+            () => mockImporter.findImportedClipOf(any()),
+          ).thenAnswer((_) async => importedClip);
+        },
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) => bloc.add(const VideoContentRemixRequested()),
+        expect: () => [preparing, readyWith(same(importedClip))],
+        verify: (_) {
+          verify(() => mockImporter.findImportedClipOf(testVideo)).called(1);
+          verifyNever(
+            () => mockImporter.importToLibrary(
+              any(),
+              libraryTitle: any(named: 'libraryTitle'),
+            ),
+          );
+        },
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'imports once across two remixes of the same video',
+        setUp: () {
+          DivineVideoClip? inLibrary;
+          when(
+            () => mockImporter.findImportedClipOf(any()),
+          ).thenAnswer((_) async => inLibrary);
+          when(
+            () => mockImporter.importToLibrary(
+              any(),
+              libraryTitle: any(named: 'libraryTitle'),
+            ),
+          ).thenAnswer((_) async {
+            inLibrary = importedClip;
+            return VideoClipImportSuccess(importedClip);
+          });
+        },
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) async {
+          bloc.add(const VideoContentRemixRequested());
+          await pumpEventQueue();
+          bloc.add(const VideoContentRemixRequested());
+        },
+        expect: () => [
+          preparing,
+          readyWith(same(importedClip)),
+          preparing,
+          readyWith(same(importedClip)),
+        ],
+        verify: (_) => verify(
+          () => mockImporter.importToLibrary(
+            any(),
+            libraryTitle: any(named: 'libraryTitle'),
+          ),
+        ).called(1),
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'refuses without looking up or importing when the creator blocks '
+        'remixing',
+        setUp: () {
+          when(
+            () => mockRemixConsentRepository.consentFor(any()),
+          ).thenAnswer((_) async => RemixConsent.blocked);
+        },
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) => bloc.add(const VideoContentRemixRequested()),
+        expect: () => [preparing, refusedWith(RemixConsent.blocked)],
+        verify: (_) => verifyZeroInteractions(mockImporter),
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'refuses as unknown when consent cannot be read',
+        setUp: () {
+          when(
+            () => mockRemixConsentRepository.consentFor(any()),
+          ).thenAnswer((_) async => RemixConsent.unknown);
+        },
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) => bloc.add(const VideoContentRemixRequested()),
+        expect: () => [preparing, refusedWith(RemixConsent.unknown)],
+        verify: (_) => verifyZeroInteractions(mockImporter),
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        "remixes a blocked account's video when it is the viewer's own",
+        setUp: () {
+          when(
+            () => mockRemixConsentRepository.consentFor(any()),
+          ).thenAnswer((_) async => RemixConsent.blocked);
+        },
+        build: () => createBloc(
+          videoClipImportService: mockImporter,
+          viewerPubkey: testVideo.pubkey,
+        ),
+        act: (bloc) => bloc.add(const VideoContentRemixRequested()),
+        expect: () => [preparing, readyWith(same(importedClip))],
+        verify: (_) =>
+            verifyNever(() => mockRemixConsentRepository.consentFor(any())),
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'reports a failed import when the video cannot be imported',
+        setUp: () {
+          when(
+            () => mockImporter.importToLibrary(
+              any(),
+              libraryTitle: any(named: 'libraryTitle'),
+            ),
+          ).thenAnswer(
+            (_) async => const VideoClipImportFailure(
+              VideoClipImportFailureReason.downloadFailed,
+            ),
+          );
+        },
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) => bloc.add(const VideoContentRemixRequested()),
+        expect: () => [preparing, importFailed],
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'reports a failed import when no importer is wired',
+        build: createBloc,
+        act: (bloc) => bloc.add(const VideoContentRemixRequested()),
+        expect: () => [preparing, importFailed],
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'reports a failed import and the error when the import throws',
+        setUp: () {
+          when(
+            () => mockImporter.importToLibrary(
+              any(),
+              libraryTitle: any(named: 'libraryTitle'),
+            ),
+          ).thenThrow(StateError('broken invariant'));
+        },
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) => bloc.add(const VideoContentRemixRequested()),
+        errors: () => [
+          isA<Reportable<Object>>().having(
+            (error) => error.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        ],
+        expect: () => [preparing, importFailed],
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'drops a second remix request while the first is in flight',
+        build: () {
+          when(
+            () => mockImporter.importToLibrary(
+              any(),
+              libraryTitle: any(named: 'libraryTitle'),
+            ),
+          ).thenAnswer((_) => importGate.future);
+          return createBloc(videoClipImportService: mockImporter);
+        },
+        act: (bloc) async {
+          bloc
+            ..add(const VideoContentRemixRequested())
+            ..add(const VideoContentRemixRequested());
+          await pumpEventQueue();
+          importGate.complete(VideoClipImportSuccess(importedClip));
+        },
+        expect: () => [preparing, readyWith(same(importedClip))],
+        verify: (_) => verify(
+          () => mockImporter.importToLibrary(
+            any(),
+            libraryTitle: any(named: 'libraryTitle'),
+          ),
+        ).called(1),
+      );
+
+      test('counts a remix being prepared as an action in flight', () {
+        expect(
+          const VideoContentActionsState(isPreparingRemix: true)
+              .isActionInFlight,
+          isTrue,
+        );
+        expect(
+          const VideoContentActionsState(isSaving: true).isActionInFlight,
+          isTrue,
+        );
+        expect(
+          const VideoContentActionsState(isImportingClip: true)
+              .isActionInFlight,
+          isTrue,
+        );
+        expect(const VideoContentActionsState().isActionInFlight, isFalse);
+      });
+    });
+
     group('VideoContentCopyEventJsonRequested', () {
       blocTest<VideoContentActionsBloc, VideoContentActionsState>(
         'emits $VideoContentCopiedToClipboard with formatted JSON',

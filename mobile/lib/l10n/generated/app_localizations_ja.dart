@@ -3824,6 +3824,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get remixSettingAllowSubtitle => '他の人があなたの動画をクリップとして自分の投稿に使えます。';
 
   @override
+  String get remixThisVideo => 'この動画をリミックス';
+
+  @override
+  String get remixWebAppNudge => 'リミックスはDivineアプリで行えます。';
+
+  @override
+  String get remixWebGetTheApp => 'アプリを入手';
+
+  @override
   String get shareSheetAddToList => 'リストに追加';
 
   @override

@@ -4004,6 +4004,15 @@ class AppLocalizationsId extends AppLocalizations {
       'Orang lain bisa memakai videomu sebagai klip di postingan mereka sendiri.';
 
   @override
+  String get remixThisVideo => 'Remix video ini';
+
+  @override
+  String get remixWebAppNudge => 'Remix dilakukan di aplikasi Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Dapatkan aplikasinya';
+
+  @override
   String get shareSheetAddToList => 'Tambah ke Daftar';
 
   @override

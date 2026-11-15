@@ -4205,6 +4205,15 @@ class AppLocalizationsRo extends AppLocalizations {
       'Alții îți pot folosi videoclipurile drept clipuri în propriile postări.';
 
   @override
+  String get remixThisVideo => 'Remixează acest videoclip';
+
+  @override
+  String get remixWebAppNudge => 'Remixurile se fac în aplicația Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Descarcă aplicația';
+
+  @override
   String get shareSheetAddToList => 'Adaugă la listă';
 
   @override

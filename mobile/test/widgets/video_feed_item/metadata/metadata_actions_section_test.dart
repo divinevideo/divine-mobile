@@ -6,7 +6,9 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -15,9 +17,18 @@ import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/widgets/video_feed_item/actions/clip_title_sheet.dart';
+import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
+import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
+import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/screens/video_editor/video_editor_screen.dart';
+import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_section.dart';
+import 'package:pro_video_editor/pro_video_editor.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
 
@@ -28,11 +39,34 @@ class _MockVideoContentActionsBloc
 class _MockOwnerVideoActionsCubit extends MockCubit<OwnerVideoActionsState>
     implements OwnerVideoActionsCubit {}
 
+class _MockDraftStorageService extends Mock implements DraftStorageService {}
+
+/// Clears the clip manager the way the real teardown does.
+class _FakeVideoPublishNotifier extends VideoPublishNotifier {
+  @override
+  VideoPublishProviderState build() => const VideoPublishProviderState();
+
+  @override
+  Future<void> clearAll({bool keepAutosavedDraft = false}) =>
+      ref.read(clipManagerProvider.notifier).clearSessionClips();
+}
+
+/// Keeps the clip manager's autosave hooks from reaching real storage.
+class _FakeVideoEditorNotifier extends VideoEditorNotifier {
+  @override
+  VideoEditorProviderState build() => VideoEditorProviderState();
+
+  @override
+  void invalidateFinalRenderedClip() {}
+
+  @override
+  void triggerAutosave() {}
+}
+
 const _videoId =
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 const _creatorPubkey =
     'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
-const _defaultClipTitle = 'Classic clip';
 
 VideoEvent _video({
   Map<String, String> rawTags = const {},
@@ -68,15 +102,14 @@ void main() {
 
   void stubContentActions({
     bool isSaving = false,
-    bool isImportingClip = false,
+    bool isPreparingRemix = false,
   }) {
     when(() => contentActions.state).thenReturn(
       VideoContentActionsState(
         isSaving: isSaving,
-        isImportingClip: isImportingClip,
+        isPreparingRemix: isPreparingRemix,
       ),
     );
-    when(() => contentActions.defaultClipTitle).thenReturn(_defaultClipTitle);
   }
 
   OwnerVideoActionsCubit stubbedOwnerCubit() {
@@ -135,22 +168,24 @@ void main() {
         expect(find.text(l10n.shareSheetSave), findsNothing);
       });
 
-      testWidgets('Save, Add to clips and Add to list for a classic Vine', (
+      testWidgets('only Save on another creator classic Vine', (
         tester,
       ) async {
         stubContentActions();
-        await tester.pumpWidget(buildSubject(video: _classicVine));
+        await tester.pumpWidget(
+          buildSubject(video: _classicVine, debugTools: true),
+        );
 
         expect(find.text(l10n.shareSheetSave), findsOneWidget);
-        expect(find.text(l10n.shareSheetAddToClips), findsOneWidget);
-        expect(find.text(l10n.shareSheetAddToList), findsOneWidget);
+        expect(find.text(l10n.shareSheetAddToClips), findsNothing);
+        expect(find.text(l10n.shareSheetAddToList), findsNothing);
         expect(find.text(l10n.shareMenuEditVideo), findsNothing);
         expect(find.text(l10n.shareMenuDeleteVideo), findsNothing);
         expect(find.text(l10n.shareSheetEventJson), findsNothing);
         expect(find.text(l10n.shareSheetEventId), findsNothing);
       });
 
-      testWidgets('every action in order on the viewer own video', (
+      testWidgets('Edit, Delete and Save in order on the viewer own video', (
         tester,
       ) async {
         stubContentActions();
@@ -173,10 +208,6 @@ void main() {
           l10n.shareMenuEditVideo,
           l10n.shareMenuDeleteVideo,
           l10n.shareSheetSave,
-          l10n.shareSheetAddToClips,
-          l10n.shareSheetAddToList,
-          l10n.shareSheetEventJson,
-          l10n.shareSheetEventId,
         ];
         final xs = [
           for (final label in labels) tester.getTopLeft(find.text(label)).dx,
@@ -189,6 +220,12 @@ void main() {
             reason: '${labels[i - 1]} should come before ${labels[i]}',
           );
         }
+        // The remix button stands in for Add to clips; the rest stay in the
+        // share sheet.
+        expect(find.text(l10n.shareSheetAddToClips), findsNothing);
+        expect(find.text(l10n.shareSheetAddToList), findsNothing);
+        expect(find.text(l10n.shareSheetEventJson), findsNothing);
+        expect(find.text(l10n.shareSheetEventId), findsNothing);
       });
 
       testWidgets(
@@ -225,72 +262,12 @@ void main() {
         },
       );
 
-      testWidgets(
-        'Add to clips on the viewer own video, even when its tag declines reuse',
-        (tester) async {
-          stubContentActions();
-          final video = _video(
-            tags: const [
-              ['allow_video_reuse', 'false'],
-            ],
-          );
-          expect(video.allowVideoReuse, isFalse);
-          expect(video.isOriginalVine, isFalse);
-
-          await tester.pumpWidget(
-            buildSubject(video: video, ownerCubit: stubbedOwnerCubit()),
-          );
-
-          expect(find.text(l10n.shareSheetAddToClips), findsOneWidget);
-        },
-      );
-
-      testWidgets(
-        'no Add to clips for another creator who does not allow reuse',
-        (tester) async {
-          stubContentActions();
-          final video = _video(
-            tags: const [
-              ['allow_video_reuse', 'false'],
-            ],
-          );
-          expect(video.allowVideoReuse, isFalse);
-
-          await tester.pumpWidget(buildSubject(video: video));
-
-          expect(find.text(l10n.shareSheetSave), findsOneWidget);
-          expect(find.text(l10n.shareSheetAddToClips), findsNothing);
-        },
-      );
-
       testWidgets('a spinner on Save while the bookmark toggle is in flight', (
         tester,
       ) async {
         stubContentActions(isSaving: true);
         await tester.pumpWidget(buildSubject(video: _classicVine));
 
-        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
-      });
-
-      testWidgets('a spinner on Add to clips while the clip is importing', (
-        tester,
-      ) async {
-        stubContentActions(isImportingClip: true);
-        await tester.pumpWidget(buildSubject(video: _classicVine));
-
-        final addToClipsItem = find
-            .ancestor(
-              of: find.text(l10n.shareSheetAddToClips),
-              matching: find.byType(GestureDetector),
-            )
-            .first;
-        expect(
-          find.descendant(
-            of: addToClipsItem,
-            matching: find.byType(DivineCircularProgressIndicator),
-          ),
-          findsOneWidget,
-        );
         expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
       });
     });
@@ -308,59 +285,52 @@ void main() {
         verifyNever(() => contentActions.add(any()));
       });
 
-      testWidgets(
-        'tapping Add to clips while it is importing prompts nothing',
-        (
-          tester,
-        ) async {
-          stubContentActions(isImportingClip: true);
-          await tester.pumpWidget(buildSubject(video: _classicVine));
+      testWidgets('holds Save while the video is being deleted', (
+        tester,
+      ) async {
+        stubContentActions();
+        final ownerCubit = stubbedOwnerCubit() as _MockOwnerVideoActionsCubit;
+        when(() => ownerCubit.isDeleteInProgress(any())).thenReturn(true);
+        await tester.pumpWidget(
+          buildSubject(video: _video(), ownerCubit: ownerCubit),
+        );
 
-          await tester.tap(find.text(l10n.shareSheetAddToClips));
-          await tester.pump();
+        await tester.tap(find.text(l10n.shareSheetSave));
+        // The delete spinner never settles.
+        await tester.pump(const Duration(seconds: 1));
 
-          expect(find.byType(ClipTitleSheet), findsNothing);
-        },
-      );
+        verifyNever(() => contentActions.add(any()));
+      });
 
-      testWidgets(
-        'holds Save and Add to clips while the video is being deleted',
-        (tester) async {
-          stubContentActions();
-          final ownerCubit = stubbedOwnerCubit() as _MockOwnerVideoActionsCubit;
-          when(() => ownerCubit.isDeleteInProgress(any())).thenReturn(true);
-          await tester.pumpWidget(
-            buildSubject(video: _video(), ownerCubit: ownerCubit),
-          );
+      testWidgets('holds Delete while a save is in flight', (tester) async {
+        stubContentActions(isSaving: true);
+        await tester.pumpWidget(
+          buildSubject(video: _video(), ownerCubit: stubbedOwnerCubit()),
+        );
 
-          await tester.tap(find.text(l10n.shareSheetSave));
-          await tester.tap(find.text(l10n.shareSheetAddToClips));
-          // The delete spinner never settles; give a sheet time to open.
-          await tester.pump(const Duration(seconds: 1));
+        await tester.tap(find.text(l10n.shareMenuDeleteVideo));
+        // The save spinner never settles; give a dialog time to open.
+        await tester.pump(const Duration(seconds: 1));
 
-          verifyNever(() => contentActions.add(any()));
-          expect(find.byType(ClipTitleSheet), findsNothing);
-        },
-      );
+        expect(find.text(l10n.shareMenuDelete), findsNothing);
+      });
 
-      testWidgets(
-        'holds Delete and Add to clips while a save is in flight',
-        (tester) async {
-          stubContentActions(isSaving: true);
-          await tester.pumpWidget(
-            buildSubject(video: _video(), ownerCubit: stubbedOwnerCubit()),
-          );
+      testWidgets('holds Edit, Delete and Save while a remix is prepared', (
+        tester,
+      ) async {
+        stubContentActions(isPreparingRemix: true);
+        await tester.pumpWidget(
+          buildSubject(video: _video(), ownerCubit: stubbedOwnerCubit()),
+        );
 
-          await tester.tap(find.text(l10n.shareMenuDeleteVideo));
-          await tester.tap(find.text(l10n.shareSheetAddToClips));
-          // The save spinner never settles; give a dialog or sheet time to
-          // open.
-          await tester.pump(const Duration(seconds: 1));
+        await tester.tap(find.text(l10n.shareSheetSave));
+        await tester.tap(find.text(l10n.shareMenuDeleteVideo));
+        await tester.tap(find.text(l10n.shareMenuEditVideo));
+        await tester.pump(const Duration(seconds: 1));
 
-          expect(find.text(l10n.shareMenuDelete), findsNothing);
-          expect(find.byType(ClipTitleSheet), findsNothing);
-        },
-      );
+        verifyNever(() => contentActions.add(any()));
+        expect(find.text(l10n.shareMenuDelete), findsNothing);
+      });
 
       testWidgets('tapping Save requests a bookmark toggle', (tester) async {
         stubContentActions();
@@ -371,63 +341,6 @@ void main() {
 
         verify(
           () => contentActions.add(const VideoContentSaveRequested()),
-        ).called(1);
-      });
-
-      testWidgets('debug tools show Event JSON and copy the Event ID', (
-        tester,
-      ) async {
-        stubContentActions();
-        await tester.pumpWidget(
-          buildSubject(video: _classicVine, debugTools: true),
-        );
-
-        expect(find.text(l10n.shareSheetEventJson), findsOneWidget);
-        expect(find.text(l10n.shareSheetEventId), findsOneWidget);
-
-        await tester.tap(find.text(l10n.shareSheetEventId));
-        await tester.pump();
-
-        verify(
-          () => contentActions.add(const VideoContentCopyEventIdRequested()),
-        ).called(1);
-      });
-
-      testWidgets('debug tools copy the Event JSON', (tester) async {
-        stubContentActions();
-        await tester.pumpWidget(
-          buildSubject(video: _classicVine, debugTools: true),
-        );
-
-        await tester.tap(find.text(l10n.shareSheetEventJson));
-        await tester.pump();
-
-        verify(
-          () => contentActions.add(const VideoContentCopyEventJsonRequested()),
-        ).called(1);
-      });
-
-      testWidgets('Add to clips prompts with the default title and adds it', (
-        tester,
-      ) async {
-        stubContentActions();
-        await tester.pumpWidget(buildSubject(video: _classicVine));
-
-        await tester.tap(find.text(l10n.shareSheetAddToClips));
-        await tester.pumpAndSettle();
-
-        expect(find.byType(ClipTitleSheet), findsOneWidget);
-        expect(find.text(_defaultClipTitle), findsOneWidget);
-
-        await tester.tap(find.text(l10n.shareSheetSaveClip));
-        await tester.pumpAndSettle();
-
-        verify(
-          () => contentActions.add(
-            const VideoContentAddToClipsRequested(
-              libraryTitle: _defaultClipTitle,
-            ),
-          ),
         ).called(1);
       });
 
@@ -649,6 +562,146 @@ void main() {
           expect(find.text(l10n.shareMenuDeleteFailedGeneric), findsOneWidget);
         },
       );
+    });
+
+    group('remix', () {
+      const openSheetLabel = 'open sheet';
+      const coverText = 'covering route';
+      const editorLabel = 'editor';
+      final remixClip = DivineVideoClip(
+        id: 'classic_vine_remix',
+        video: EditorVideo.file('/tmp/classic_vine_remix.mp4'),
+        duration: const Duration(seconds: 6),
+        recordedAt: DateTime.utc(2026),
+        targetAspectRatio: .square,
+        originalAspectRatio: 1,
+      );
+      final sheetList = find.byWidgetPredicate(
+        (widget) =>
+            widget is ListView && widget.scrollDirection == Axis.vertical,
+      );
+
+      late StreamController<VideoContentActionsState> results;
+      late ProviderContainer container;
+      late _MockDraftStorageService draftStorage;
+
+      setUp(() {
+        results = StreamController<VideoContentActionsState>();
+        whenListen(
+          contentActions,
+          results.stream,
+          initialState: const VideoContentActionsState(),
+        );
+        draftStorage = _MockDraftStorageService();
+        when(() => draftStorage.draftExists(any()))
+            .thenAnswer((_) async => false);
+      });
+
+      tearDown(() => results.close());
+
+      // Pushes the section in a scrolling list on its own route, standing in
+      // for the sheet, under a router that knows the editor.
+      Future<void> openSheet(WidgetTester tester) async {
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, _) => Scaffold(
+                body: TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => Scaffold(
+                        body: BlocProvider<VideoContentActionsBloc>.value(
+                          value: contentActions,
+                          child: ListView(
+                            children: [
+                              MetadataActionsSection(video: _classicVine),
+                              const SizedBox(height: 4000),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  child: const Text(openSheetLabel),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: VideoEditorScreen.path,
+              builder: (_, _) => const Scaffold(body: Text(editorLabel)),
+            ),
+          ],
+        );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              isFeatureEnabledProvider(
+                FeatureFlag.debugTools,
+              ).overrideWithValue(false),
+              draftStorageServiceProvider.overrideWithValue(draftStorage),
+              videoPublishProvider.overrideWith(_FakeVideoPublishNotifier.new),
+              videoEditorProvider.overrideWith(_FakeVideoEditorNotifier.new),
+            ],
+            child: Consumer(
+              builder: (context, ref, _) {
+                container = ProviderScope.containerOf(context);
+                return MaterialApp.router(
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  routerConfig: router,
+                );
+              },
+            ),
+          ),
+        );
+        await tester.tap(find.text(openSheetLabel));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets(
+        'opens the editor with a remix that became ready after the row '
+        'scrolled out of view',
+        (tester) async {
+          await openSheet(tester);
+          await tester.drag(sheetList, const Offset(0, -3000));
+          await tester.pumpAndSettle();
+
+          results.add(
+            VideoContentActionsState(
+              actionResult: VideoContentRemixReady(clip: remixClip),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(sheetList, findsNothing);
+          expect(find.text(editorLabel), findsOneWidget);
+          expect(container.read(clipManagerProvider).clips, [remixClip]);
+        },
+      );
+
+      testWidgets('leaves a route opened over the sheet meanwhile', (
+        tester,
+      ) async {
+        await openSheet(tester);
+        Navigator.of(tester.element(sheetList)).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text(coverText)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        results.add(
+          VideoContentActionsState(
+            actionResult: VideoContentRemixReady(clip: remixClip),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(coverText), findsOneWidget);
+        expect(find.text(editorLabel), findsNothing);
+        expect(container.read(clipManagerProvider).clips, isEmpty);
+      });
     });
   });
 }

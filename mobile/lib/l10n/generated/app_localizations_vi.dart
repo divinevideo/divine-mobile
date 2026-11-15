@@ -4048,6 +4048,15 @@ class AppLocalizationsVi extends AppLocalizations {
       'Người khác có thể dùng video của bạn làm clip trong bài đăng của họ.';
 
   @override
+  String get remixThisVideo => 'Remix video này';
+
+  @override
+  String get remixWebAppNudge => 'Bạn có thể remix trong ứng dụng Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Tải ứng dụng';
+
+  @override
   String get shareSheetAddToList => 'Thêm vào danh sách';
 
   @override

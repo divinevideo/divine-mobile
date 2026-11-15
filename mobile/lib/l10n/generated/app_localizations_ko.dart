@@ -3841,6 +3841,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get remixSettingAllowSubtitle => '다른 사람들이 내 영상을 자기 게시물의 클립으로 쓸 수 있어요.';
 
   @override
+  String get remixThisVideo => '이 영상 리믹스하기';
+
+  @override
+  String get remixWebAppNudge => '리믹스는 Divine 앱에서 할 수 있어요.';
+
+  @override
+  String get remixWebGetTheApp => '앱 받기';
+
+  @override
   String get shareSheetAddToList => '리스트에 추가';
 
   @override

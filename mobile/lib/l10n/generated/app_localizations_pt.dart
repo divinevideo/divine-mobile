@@ -4120,6 +4120,15 @@ class AppLocalizationsPt extends AppLocalizations {
       'Outras pessoas podem usar seus vídeos como clipes nos próprios posts.';
 
   @override
+  String get remixThisVideo => 'Remixar este vídeo';
+
+  @override
+  String get remixWebAppNudge => 'Os remixes são feitos no app do Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Baixar o app';
+
+  @override
   String get shareSheetAddToList => 'Adicionar à lista';
 
   @override

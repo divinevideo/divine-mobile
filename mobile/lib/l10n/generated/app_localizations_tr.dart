@@ -4024,6 +4024,15 @@ class AppLocalizationsTr extends AppLocalizations {
       'Başkaları videolarını kendi gönderilerinde klip olarak kullanabilir.';
 
   @override
+  String get remixThisVideo => 'Bu videoyu remiksle';
+
+  @override
+  String get remixWebAppNudge => 'Remiks Divine uygulamasında yapılır.';
+
+  @override
+  String get remixWebGetTheApp => 'Uygulamayı indir';
+
+  @override
   String get shareSheetAddToList => 'Listeye Ekle';
 
   @override

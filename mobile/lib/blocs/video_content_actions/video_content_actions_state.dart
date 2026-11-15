@@ -1,5 +1,5 @@
 // ABOUTME: State and one-shot action results for VideoContentActionsBloc
-// ABOUTME: Carries save and clip-import progress, bookmark status and results
+// ABOUTME: Carries save, clip-import and remix progress, bookmark status and results
 
 part of 'video_content_actions_bloc.dart';
 
@@ -59,6 +59,14 @@ class VideoContentRemixRefused extends VideoContentActionResult {
   final RemixConsent consent;
 }
 
+/// The video is in the viewer's clip library as [clip], ready to open in the
+/// editor. Not feedback: the info sheet opens the editor with it.
+class VideoContentRemixReady extends VideoContentActionResult {
+  VideoContentRemixReady({required this.clip});
+
+  final DivineVideoClip clip;
+}
+
 /// What content was copied, so the UI can pick the localized message.
 enum VideoContentCopiedKind { eventJson, eventId }
 
@@ -92,6 +100,7 @@ class VideoContentActionsState extends Equatable {
   const VideoContentActionsState({
     this.isSaving = false,
     this.isImportingClip = false,
+    this.isPreparingRemix = false,
     this.bookmarkStatus = VideoBookmarkStatus.unknown,
     this.actionResult,
   });
@@ -109,16 +118,25 @@ class VideoContentActionsState extends Equatable {
   /// action shows that it is working instead of sitting inert.
   final bool isImportingClip;
 
+  /// Whether a remix is being prepared: the consent check, then finding or
+  /// importing the clip the editor opens with.
+  final bool isPreparingRemix;
+
+  /// Whether a content action is running. Each one closes the sheet when it
+  /// finishes, so while one runs the sheet holds the others.
+  bool get isActionInFlight => isSaving || isImportingClip || isPreparingRemix;
+
   /// Whether this video is already globally bookmarked, per a reconciled read.
   final VideoBookmarkStatus bookmarkStatus;
 
   /// Last one-shot action result, for BlocListener consumption. Kept until
-  /// the next result, or until a save or clip import starts.
+  /// the next result, or until a save, clip import or remix starts.
   final VideoContentActionResult? actionResult;
 
   VideoContentActionsState copyWith({
     bool? isSaving,
     bool? isImportingClip,
+    bool? isPreparingRemix,
     VideoBookmarkStatus? bookmarkStatus,
     VideoContentActionResult? actionResult,
     bool clearActionResult = false,
@@ -126,6 +144,7 @@ class VideoContentActionsState extends Equatable {
     return VideoContentActionsState(
       isSaving: isSaving ?? this.isSaving,
       isImportingClip: isImportingClip ?? this.isImportingClip,
+      isPreparingRemix: isPreparingRemix ?? this.isPreparingRemix,
       bookmarkStatus: bookmarkStatus ?? this.bookmarkStatus,
       actionResult: clearActionResult
           ? null
@@ -137,6 +156,7 @@ class VideoContentActionsState extends Equatable {
   List<Object?> get props => [
     isSaving,
     isImportingClip,
+    isPreparingRemix,
     bookmarkStatus,
     actionResult,
   ];

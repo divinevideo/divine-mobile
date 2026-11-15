@@ -13,8 +13,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
+import 'package:pro_video_editor/pro_video_editor.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
 
@@ -204,6 +206,30 @@ void main() {
 
       expect(find.text(_sheetBodyText), findsNothing);
       expect(find.text(l10n.remixConsentCheckFailed), findsOneWidget);
+    });
+
+    testWidgets('leaves the sheet open and silent for a remix that is ready', (
+      tester,
+    ) async {
+      await pumpSheet(tester);
+
+      showVideoContentActionFeedback(
+        sheetContext,
+        VideoContentRemixReady(
+          clip: DivineVideoClip(
+            id: 'remix-clip',
+            video: EditorVideo.file('/tmp/remix.mp4'),
+            duration: const Duration(seconds: 6),
+            recordedAt: DateTime.utc(2026),
+            targetAspectRatio: .square,
+            originalAspectRatio: 1,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(_sheetBodyText), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
     });
 
     testWidgets('closes the sheet before reporting a failed action', (

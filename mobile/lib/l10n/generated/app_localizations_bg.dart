@@ -4136,6 +4136,15 @@ class AppLocalizationsBg extends AppLocalizations {
       'Другите могат да използват твоите видеа като клипове в своите публикации.';
 
   @override
+  String get remixThisVideo => 'Ремиксирай това видео';
+
+  @override
+  String get remixWebAppNudge => 'Ремиксирането става в приложението Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Изтегли приложението';
+
+  @override
   String get shareSheetAddToList => 'Добави към списъка';
 
   @override

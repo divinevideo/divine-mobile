@@ -4224,6 +4224,15 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఇతరులు మీ వీడియోలను వారి స్వంత పోస్ట్‌లలో క్లిప్‌లుగా ఉపయోగించవచ్చు.';
 
   @override
+  String get remixThisVideo => 'ఈ వీడియోను రీమిక్స్ చేయండి';
+
+  @override
+  String get remixWebAppNudge => 'రీమిక్స్ Divine యాప్‌లో జరుగుతుంది.';
+
+  @override
+  String get remixWebGetTheApp => 'యాప్ పొందండి';
+
+  @override
   String get shareSheetAddToList => 'జాబితాకు జోడించండి';
 
   @override

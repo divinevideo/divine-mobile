@@ -4133,6 +4133,15 @@ class AppLocalizationsEs extends AppLocalizations {
       'Otras personas pueden usar tus videos como clips en sus propias publicaciones.';
 
   @override
+  String get remixThisVideo => 'Remezclá este video';
+
+  @override
+  String get remixWebAppNudge => 'Las remezclas se hacen en la app de Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Descargá la app';
+
+  @override
   String get shareSheetAddToList => 'Agregar a lista';
 
   @override

@@ -4085,6 +4085,15 @@ class AppLocalizationsUr extends AppLocalizations {
       'دوسرے لوگ آپ کی ویڈیوز کو اپنی پوسٹس میں کلپس کے طور پر استعمال کر سکتے ہیں۔';
 
   @override
+  String get remixThisVideo => 'اس ویڈیو کو ری مکس کریں';
+
+  @override
+  String get remixWebAppNudge => 'ری مکس Divine ایپ میں ہوتا ہے۔';
+
+  @override
+  String get remixWebGetTheApp => 'ایپ حاصل کریں';
+
+  @override
   String get shareSheetAddToList => 'فہرست میں شامل کریں';
 
   @override

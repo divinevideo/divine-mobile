@@ -262,6 +262,27 @@ void main() {
     });
   });
 
+  group('findImportedClipOf', () {
+    test('finds the import in the library the service imports into', () async {
+      final video = _video();
+      final imported = _FakeDivineVideoClip();
+      when(
+        () => clipLibraryService.findImportedClipOf(video),
+      ).thenAnswer((_) async => imported);
+
+      expect(await buildService().findImportedClipOf(video), same(imported));
+    });
+
+    test('returns null when that library holds no import of it', () async {
+      final video = _video();
+      when(
+        () => clipLibraryService.findImportedClipOf(video),
+      ).thenAnswer((_) async => null);
+
+      expect(await buildService().findImportedClipOf(video), isNull);
+    });
+  });
+
   group('defaultLibraryTitleFor', () {
     test('uses a timestamp fallback when metadata has no title text', () {
       final title = VideoClipImportService.defaultLibraryTitleFor(

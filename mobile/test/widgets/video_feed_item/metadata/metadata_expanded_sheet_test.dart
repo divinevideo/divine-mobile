@@ -39,6 +39,7 @@ import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_expanded_sheet.dart';
+import 'package:openvine/widgets/video_feed_item/metadata/metadata_remix_button.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_sounds_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_stats_row.dart';
@@ -2920,6 +2921,7 @@ void main() {
       BookmarksRepository Function(Ref ref)? bookmarks,
       VideoClipImportService? videoClipImportService,
       RemixConsentRepository? Function(Ref ref)? remixConsent,
+      bool debugTools = false,
     }) => [
       authServiceProvider.overrideWithValue(
         authService ??
@@ -2937,7 +2939,9 @@ void main() {
       if (remixConsent != null)
         remixConsentRepositoryProvider.overrideWith(remixConsent),
       repostsRepositoryProvider.overrideWithValue(repostsRepository),
-      isFeatureEnabledProvider(FeatureFlag.debugTools).overrideWithValue(false),
+      isFeatureEnabledProvider(
+        FeatureFlag.debugTools,
+      ).overrideWithValue(debugTools),
       fetchUserProfileProvider(
         _creatorPubkey,
       ).overrideWith((ref) async => _makeProfile(_creatorPubkey, 'Creator')),
@@ -2969,7 +2973,8 @@ void main() {
     }
 
     testWidgetsWithSurfaceSize(
-      'renders the action row between the stats row and the creator',
+      'renders the remix button, then the action row, between the stats row '
+      'and the creator',
       (tester) async {
         await openSheet(
           tester,
@@ -2978,11 +2983,15 @@ void main() {
         );
 
         final l10n = _l10n(tester);
-        expect(find.text(l10n.shareSheetAddToClips), findsOneWidget);
+        expect(find.text(l10n.remixThisVideo), findsOneWidget);
+        expect(find.text(l10n.shareSheetAddToClips), findsNothing);
         expect(find.text(l10n.shareMenuEditVideo), findsNothing);
 
         final statsY = tester
             .getTopLeft(find.byType(MetadataStatsRow, skipOffstage: false))
+            .dy;
+        final remixY = tester
+            .getTopLeft(find.byType(MetadataRemixButton, skipOffstage: false))
             .dy;
         final actionsY = tester
             .getTopLeft(
@@ -2995,8 +3004,56 @@ void main() {
             )
             .dy;
 
-        expect(statsY, lessThan(actionsY));
+        expect(statsY, lessThan(remixY));
+        expect(remixY, lessThan(actionsY));
         expect(actionsY, lessThan(creatorY));
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'offers only Remix, Edit, Delete and Save on the viewer own video, '
+      'with debug tools on',
+      (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: sheetOverrides(
+              viewerPubkey: _creatorPubkey,
+              debugTools: true,
+            ),
+            child: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => unawaited(
+                  MetadataExpandedSheet.show(
+                    context,
+                    _makeVideo(title: 'Mine'),
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        final l10n = _l10n(tester);
+        final labels = [
+          l10n.shareMenuEditVideo,
+          l10n.shareMenuDeleteVideo,
+          l10n.shareSheetSave,
+        ];
+        final remixY = tester.getTopLeft(find.text(l10n.remixThisVideo)).dy;
+        final xs = <double>[];
+        for (final label in labels) {
+          final topLeft = tester.getTopLeft(find.text(label));
+          expect(remixY, lessThan(topLeft.dy), reason: 'Remix above $label');
+          xs.add(topLeft.dx);
+        }
+        expect(xs, orderedEquals([...xs]..sort()));
+        expect(find.text(l10n.shareSheetAddToClips), findsNothing);
+        expect(find.text(l10n.shareSheetAddToList), findsNothing);
+        expect(find.text(l10n.shareSheetEventJson), findsNothing);
+        expect(find.text(l10n.shareSheetEventId), findsNothing);
       },
     );
 
@@ -3124,7 +3181,7 @@ void main() {
     );
 
     testWidgetsWithSurfaceSize(
-      'refuses Add to clips when the creator blocks remixing',
+      'refuses a remix when the creator blocks remixing',
       (tester) async {
         final importer = _MockVideoClipImportService();
         final consent = _MockRemixConsentRepository();
@@ -3156,9 +3213,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = _l10n(tester);
-        await tester.tap(find.text(l10n.shareSheetAddToClips));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.shareSheetSaveClip));
+        await tester.tap(find.text(l10n.remixThisVideo));
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.remixBlockedByCreator), findsOneWidget);
@@ -3212,9 +3267,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = _l10n(tester);
-        await tester.tap(find.text(l10n.shareSheetAddToClips));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.shareSheetSaveClip));
+        await tester.tap(find.text(l10n.remixThisVideo));
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.remixBlockedByCreator), findsOneWidget);

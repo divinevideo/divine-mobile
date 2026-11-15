@@ -188,6 +188,13 @@ class VideoClipImportService {
     }
   }
 
+  /// The clip an earlier [importToLibrary] of [video] left in the library
+  /// this service imports into, or null when it holds none.
+  ///
+  /// See [ClipLibraryService.findImportedClipOf] for what counts as one.
+  Future<DivineVideoClip?> findImportedClipOf(models.VideoEvent video) =>
+      _clipLibraryService.findImportedClipOf(video);
+
   /// Imports a clip received in a direct message into the library.
   ///
   /// [source] must already have passed the C2PA camera-capture check; the

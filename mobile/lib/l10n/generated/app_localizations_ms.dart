@@ -4073,6 +4073,15 @@ class AppLocalizationsMs extends AppLocalizations {
       'Orang lain boleh menggunakan video anda sebagai klip dalam siaran mereka sendiri.';
 
   @override
+  String get remixThisVideo => 'Remix video ini';
+
+  @override
+  String get remixWebAppNudge => 'Remix dibuat dalam aplikasi Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Dapatkan aplikasi';
+
+  @override
   String get shareSheetAddToList => 'Tambah ke Senarai';
 
   @override

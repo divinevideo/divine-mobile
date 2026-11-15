@@ -17,7 +17,9 @@ import 'package:unified_logger/unified_logger.dart';
 /// Reports [result] for the sheet owning [sheetContext].
 ///
 /// The sheet is dismissed first: a snackbar raised while it is open lands on
-/// the opener's scaffold, underneath the sheet.
+/// the opener's scaffold, underneath the sheet. A [VideoContentRemixReady] is
+/// not feedback — the info sheet opens the editor with it — so it leaves the
+/// sheet alone.
 void showVideoContentActionFeedback(
   BuildContext sheetContext,
   VideoContentActionResult result,
@@ -80,7 +82,9 @@ void showVideoContentActionFeedback(
       false,
     ),
     VideoContentActionFailure() => (l10n.shareActionFailed, true),
+    VideoContentRemixReady() => (null, false),
   };
+  if (snackText == null) return;
 
   dismissSheet(sheetContext);
   if (result case VideoContentCopiedToClipboard(:final text)) {

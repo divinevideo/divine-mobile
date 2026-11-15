@@ -2863,6 +2863,18 @@
   "@remixSettingAllowSubtitle": {
     "description": "Settings switch subtitle under 'Let people remix my videos'."
   },
+  "remixThisVideo": "Remix this video",
+  "@remixThisVideo": {
+    "description": "Full-width button in the video info sheet: imports the video into the viewer's clips and opens the editor with it, so they can make a new video from it."
+  },
+  "remixWebAppNudge": "Remixing happens in the Divine app.",
+  "@remixWebAppNudge": {
+    "description": "Snackbar shown on the web when someone taps 'Remix this video': remixing needs the mobile app."
+  },
+  "remixWebGetTheApp": "Get the app",
+  "@remixWebGetTheApp": {
+    "description": "Snackbar action next to 'Remixing happens in the Divine app.'; opens the app download page."
+  },
   "shareSheetAddToList": "Add to List",
   "shareSheetCopy": "Copy",
   "shareSheetShareVia": "Share via",

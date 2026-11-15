@@ -4078,6 +4078,15 @@ class AppLocalizationsSv extends AppLocalizations {
       'Andra kan använda dina videor som klipp i sina egna inlägg.';
 
   @override
+  String get remixThisVideo => 'Remixa den här videon';
+
+  @override
+  String get remixWebAppNudge => 'Remixa gör du i Divine-appen.';
+
+  @override
+  String get remixWebGetTheApp => 'Hämta appen';
+
+  @override
   String get shareSheetAddToList => 'Lägg till i lista';
 
   @override

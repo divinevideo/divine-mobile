@@ -1,4 +1,4 @@
-// ABOUTME: BLoC for per-video content actions (save, add to clips, copy)
+// ABOUTME: BLoC for per-video content actions (save, add to clips, remix, copy)
 // ABOUTME: Shared by sheets that act on one video's bookmark, clip, and event
 
 import 'dart:convert';
@@ -10,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/blocs/video_content_actions/reportable_sites.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
@@ -19,7 +20,7 @@ part 'video_content_actions_event.dart';
 part 'video_content_actions_state.dart';
 
 /// BLoC for the per-video content actions: save to bookmarks, add to the clip
-/// library, and copy the event JSON or event ID.
+/// library, get a remix ready, and copy the event JSON or event ID.
 ///
 /// Emits [VideoContentActionResult] as one-shot side effects for the UI to
 /// handle (snackbars, clipboard).
@@ -46,6 +47,10 @@ class VideoContentActionsBloc
     );
     on<VideoContentAddToClipsRequested>(
       _onAddToClipsRequested,
+      transformer: droppable(),
+    );
+    on<VideoContentRemixRequested>(
+      _onRemixRequested,
       transformer: droppable(),
     );
     on<VideoContentCopyEventJsonRequested>(_onCopyEventJsonRequested);
@@ -300,6 +305,78 @@ class VideoContentActionsBloc
           actionResult: VideoContentClipImportResult(succeeded: false),
         ),
       );
+    }
+  }
+
+  /// Checks consent as Add to clips does, then emits [VideoContentRemixReady]
+  /// with the clip the editor opens with. An import that fails reports as a
+  /// failed Add to clips would.
+  Future<void> _onRemixRequested(
+    VideoContentRemixRequested event,
+    Emitter<VideoContentActionsState> emit,
+  ) async {
+    emit(state.copyWith(isPreparingRemix: true, clearActionResult: true));
+
+    final consent = await _remixConsent();
+    if (isClosed) return;
+    if (consent != RemixConsent.allowed) {
+      emit(
+        state.copyWith(
+          isPreparingRemix: false,
+          actionResult: VideoContentRemixRefused(consent: consent),
+        ),
+      );
+      return;
+    }
+
+    final clip = await _remixClip();
+    if (isClosed) return;
+    emit(
+      state.copyWith(
+        isPreparingRemix: false,
+        actionResult: clip == null
+            ? VideoContentClipImportResult(succeeded: false)
+            : VideoContentRemixReady(clip: clip),
+      ),
+    );
+  }
+
+  /// The clip a remix of this video opens with: the one an earlier import
+  /// left in the library, or else a fresh import under [defaultClipTitle].
+  ///
+  /// Returns null when the video could not be imported.
+  Future<DivineVideoClip?> _remixClip() async {
+    final importer = _videoClipImportService;
+    if (importer == null) {
+      Log.warning(
+        'Video clip importer unavailable — cannot remix',
+        name: 'VideoContentActionsBloc',
+        category: LogCategory.ui,
+      );
+      return null;
+    }
+
+    try {
+      final earlierImport = await importer.findImportedClipOf(_video);
+      if (earlierImport != null) return earlierImport;
+
+      final result = await importer.importToLibrary(
+        _video,
+        libraryTitle: defaultClipTitle,
+      );
+      return result is VideoClipImportSuccess ? result.clip : null;
+    } catch (e, stackTrace) {
+      _addUnexpectedError(
+        e,
+        stackTrace,
+        VideoContentActionsReportableSites.onRemixRequested,
+      );
+      Log.error(
+        'Failed to prepare the remix clip: $e',
+        name: 'VideoContentActionsBloc',
+        category: LogCategory.ui,
+      );
+      return null;
     }
   }
 
