@@ -4,7 +4,8 @@
 set -euo pipefail
 
 ROOT="$(cd "${1:?usage: sim_up.sh <worktree-root> [device type]}" && pwd)"
-# Whether this run wrote local_stack/master.key, which cleanup then removes.
+# Whether this run wrote local_stack/master.key: no, copied or generated.
+# SKILL.md step 9 removes a copied one once the stack is down.
 MASTER_KEY_CREATED=no
 DEVICE_TYPE="${2:-iPhone 16 Pro}"
 SIM_NAME="pr-screenshots-$(basename "$ROOT")"
@@ -94,10 +95,14 @@ else
   if [ ! -f "$KEY" ]; then
     [ ! -d "$KEY" ] || rmdir "$KEY"
     MAIN_KEY="$(git -C "$ROOT" worktree list --porcelain | sed -n '1s/^worktree //p')/local_stack/master.key"
+    # Decided before the write: in the main checkout KEY and MAIN_KEY are one file.
+    if [ -f "$MAIN_KEY" ]; then MASTER_KEY_CREATED=copied; else MASTER_KEY_CREATED=generated; fi
     # The key encrypts Keycast's data, so only this user may read it.
-    (umask 077; if [ -f "$MAIN_KEY" ]; then cp "$MAIN_KEY" "$KEY"; else openssl rand 32 | base64 > "$KEY"; fi)
-    MASTER_KEY_CREATED=yes
-    if [ ! -f "$MAIN_KEY" ] && docker volume inspect local_stack_keycast-pg-data > /dev/null 2>&1 9>&-; then
+    (umask 077; if [ "$MASTER_KEY_CREATED" = copied ]; then cp "$MAIN_KEY" "$KEY"; else openssl rand 32 | base64 > "$KEY"; fi)
+    # Printed now as well as at the end, so a run that fails below still
+    # reports the key it left behind.
+    echo "MASTER_KEY_CREATED=$MASTER_KEY_CREATED"
+    if [ "$MASTER_KEY_CREATED" = generated ] && docker volume inspect local_stack_keycast-pg-data > /dev/null 2>&1 9>&-; then
       echo "warning: generated a new Keycast master.key, but the existing Keycast database volume was made with another key, so Keycast may fail to read it. Device-only accounts never call Keycast; email sign-in does" >&2
     fi
   fi
