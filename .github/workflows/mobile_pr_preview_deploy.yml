@@ -64,19 +64,21 @@ jobs:
             const pr = selectPreviewPr({
               run, pulls, repoFullName: context.payload.repository.full_name,
             });
-            if (!pr) {
-              // The PR head moved or the PR changed after this build, so the
+            if (!pr || pr.state !== 'open' || pr.draft) {
+              // The PR head moved, closed or became a draft after this build, so the
               // artifact is stale. Skip quietly, as the freshness check did.
               const heads = pulls.map((value) => `#${value.number}@${value.head.sha}`);
               core.setOutput('matched', 'false');
               core.setOutput(
                 'skip_reason',
-                `No PR still points at run head ${run.head_sha} (candidates: ${heads.join(', ') || 'none'})`,
+                `No ready PR still points at run head ${run.head_sha} (candidates: ${heads.join(', ') || 'none'})`,
               );
               return;
             }
             const metadata = JSON.parse(fs.readFileSync('artifact/pr-web-preview-metadata.json', 'utf8'));
-            if (!/^[a-f0-9]{40}$/.test(metadata.build_sha)) throw new Error('Invalid build SHA');
+            if (typeof metadata.build_sha !== 'string' || !/^[a-f0-9]{40}$/.test(metadata.build_sha)) {
+              throw new Error('Invalid build SHA');
+            }
             const { data: commit } = await github.rest.git.getCommit({
               owner: context.repo.owner, repo: context.repo.repo,
               commit_sha: metadata.build_sha,
@@ -107,10 +109,13 @@ jobs:
         if: ${{ steps.metadata.outputs.matched == 'true' }}
         id: freshness
         uses: actions/github-script@v9
+        env:
+          PR_NUMBER: ${{ steps.metadata.outputs.pr_number }}
+          ARTIFACT_SHA: ${{ steps.metadata.outputs.head_sha }}
         with:
           script: |
-            const prNumber = Number('${{ steps.metadata.outputs.pr_number }}');
-            const artifactSha = '${{ steps.metadata.outputs.head_sha }}';
+            const prNumber = Number(process.env.PR_NUMBER);
+            const artifactSha = process.env.ARTIFACT_SHA;
 
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
@@ -165,9 +170,11 @@ jobs:
       - name: Minimize outdated preview comments
         if: ${{ steps.freshness.outputs.deployable == 'true' }}
         uses: actions/github-script@v9
+        env:
+          PR_NUMBER: ${{ steps.metadata.outputs.pr_number }}
         with:
           script: |
-            const prNumber = Number('${{ steps.metadata.outputs.pr_number }}');
+            const prNumber = Number(process.env.PR_NUMBER);
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -219,9 +226,10 @@ jobs:
         uses: actions/github-script@v9
         env:
           PREVIEW_COMMENT_FILE: ${{ steps.blocked_comment.outputs.comment_file }}
+          PR_NUMBER: ${{ steps.metadata.outputs.pr_number }}
         with:
           script: |
-            const prNumber = Number('${{ steps.metadata.outputs.pr_number }}');
+            const prNumber = Number(process.env.PR_NUMBER);
             const fs = require('fs');
             const body = fs.readFileSync(process.env.PREVIEW_COMMENT_FILE, 'utf8');
 
@@ -278,9 +286,10 @@ jobs:
         uses: actions/github-script@v9
         env:
           PREVIEW_COMMENT_FILE: ${{ steps.deployed_comment.outputs.comment_file }}
+          PR_NUMBER: ${{ steps.metadata.outputs.pr_number }}
         with:
           script: |
-            const prNumber = Number('${{ steps.metadata.outputs.pr_number }}');
+            const prNumber = Number(process.env.PR_NUMBER);
             const fs = require('fs');
             const body = fs.readFileSync(process.env.PREVIEW_COMMENT_FILE, 'utf8');
 

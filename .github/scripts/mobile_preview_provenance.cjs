@@ -62,6 +62,7 @@ function previewProvenance({
 
   const build = metadata.build_sha;
   if (
+    typeof build !== 'string' ||
     !SHA_PATTERN.test(build) ||
     commit.sha !== build ||
     commit.parents.length !== 2 ||
