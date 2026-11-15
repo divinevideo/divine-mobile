@@ -38,4 +38,33 @@ void main() {
       expect(shouldSuspendDownloadsAtLaunch(null), isFalse);
     });
   });
+
+  group('resizeMediaCachesOnResume', () {
+    test('refreshes the cache budget when the app resumes', () async {
+      var refreshes = 0;
+
+      resizeMediaCachesOnResume(
+        AppLifecycleState.resumed,
+        refreshIfStale: () async => refreshes++,
+      );
+      await pumpEventQueue();
+
+      expect(refreshes, equals(1));
+    });
+
+    test('leaves the budget alone for every other lifecycle state', () async {
+      var refreshes = 0;
+
+      for (final state in AppLifecycleState.values) {
+        if (state == AppLifecycleState.resumed) continue;
+        resizeMediaCachesOnResume(
+          state,
+          refreshIfStale: () async => refreshes++,
+        );
+      }
+      await pumpEventQueue();
+
+      expect(refreshes, isZero);
+    });
+  });
 }

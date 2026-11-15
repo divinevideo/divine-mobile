@@ -58,6 +58,18 @@ void main() {
       verify(() => analytics.setAnalyticsCollectionEnabled(true)).called(1);
     });
 
+    test('forwards user properties to Firebase Analytics', () async {
+      when(
+        () => analytics.setUserProperty(name: 'storage_total', value: '128gb'),
+      ).thenAnswer((_) async {});
+
+      await sink.setUserProperty(name: 'storage_total', value: '128gb');
+
+      verify(
+        () => analytics.setUserProperty(name: 'storage_total', value: '128gb'),
+      ).called(1);
+    });
+
     test('clears the accumulated Firebase analytics identity', () async {
       when(analytics.resetAnalyticsData).thenAnswer((_) async {});
 

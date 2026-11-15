@@ -13841,6 +13841,22 @@ class AppLocalizationsTr extends AppLocalizations {
   String get settingsStorageMaxVideoCacheLabel => 'Maksimum video önbelleği';
 
   @override
+  String get settingsStorageAutoCacheTitle => 'Boyutu otomatik ayarla';
+
+  @override
+  String get settingsStorageAutoCacheSubtitle =>
+      'Telefonun doldukça küçülerek depolama alanını boş tutmaya yardımcı olur.';
+
+  @override
+  String settingsStorageAutoCacheUsing(String size) {
+    return 'Videolar için en fazla $size kullanılıyor';
+  }
+
+  @override
+  String get settingsStorageAutoCacheLowSpace =>
+      'Telefonunda yer azaldığı için normalden küçük';
+
+  @override
   String settingsStorageApproxVideos(int count) {
     return '≈ $count video';
   }

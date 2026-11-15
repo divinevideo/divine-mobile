@@ -3,6 +3,8 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/media_cache_budget_provider.dart';
+import 'package:openvine/providers/player_cache_budget_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
@@ -32,6 +34,10 @@ final storageManagementServiceProvider = Provider<StorageManagementService>(
       clipsDao: db.clipsDao,
       draftsDao: db.draftsDao,
       prefs: ref.watch(sharedPreferencesProvider),
+      refreshMediaCacheBudget: () async {
+        await ref.read(mediaCacheBudgetServiceProvider).refresh();
+      },
+      playerCacheLimitBytes: ref.watch(playerCacheBudgetBytesProvider),
       protectedPaths: () => {
         for (final upload in uploadManager.pendingUploads)
           if (upload.status != UploadStatus.published) ...[

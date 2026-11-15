@@ -33,5 +33,7 @@ Future<void> clearOpenVineImageCache({
   // Clear all image entries, not only thumbnails, so revoked adult-media auth
   // cannot survive in live ImageProviders or shared cache-manager files.
   clearDecodedImageCache(includeLiveImages: true);
-  await (diskCache ?? openVineImageCache).clearCache();
+  final cache = diskCache ?? openVineImageCache;
+  await cache.clearCache();
+  await cache.enforceCacheLimits(force: true);
 }

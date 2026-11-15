@@ -3,6 +3,8 @@
 
 import 'package:app_update_repository/app_update_repository.dart';
 import 'package:db_client/db_client.dart';
+import 'package:divine_video_player/divine_video_player.dart'
+    show kDefaultCacheMaxSizeBytes;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/notifications/providers/announcement_providers.dart';
 import 'package:openvine/notifications/services/announcement_store.dart';
@@ -17,6 +19,7 @@ import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/feed_mode_persistence_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/log_message_batcher_provider.dart';
+import 'package:openvine/providers/player_cache_budget_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
@@ -71,6 +74,7 @@ class DeviceScope {
     this.databaseCorruptionService,
     this.installSource = InstallSource.sideload,
     this.shorebirdAvailable = false,
+    this.playerCacheBudgetBytes = kDefaultCacheMaxSizeBytes,
     this.accountOverrides = const [],
     AccountStateWriteBarrier? accountStateWrites,
   }) : accountStateWrites = accountStateWrites ?? AccountStateWriteBarrier();
@@ -147,6 +151,10 @@ class DeviceScope {
   /// check constructs; `false` for a plain `flutter build` or `flutter run`.
   final bool shorebirdAvailable;
 
+  /// The byte budget the Android player cache was created with at launch;
+  /// see [playerCacheBudgetBytesProvider].
+  final int playerCacheBudgetBytes;
+
   /// Extra overrides applied to every account container.
   ///
   /// Production leaves this empty. Tests use it for container-wide fakes that
@@ -169,6 +177,7 @@ class DeviceScope {
     ),
     installSourceProvider.overrideWithValue(installSource),
     shorebirdAvailableProvider.overrideWithValue(shorebirdAvailable),
+    playerCacheBudgetBytesProvider.overrideWithValue(playerCacheBudgetBytes),
     startupPerformanceServiceProvider.overrideWithValue(startupPerformance),
     crashReportingServiceProvider.overrideWithValue(crashReporting),
     logMessageBatcherProvider.overrideWithValue(logMessageBatcher),

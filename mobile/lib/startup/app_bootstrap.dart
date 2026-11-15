@@ -6,7 +6,7 @@ import 'dart:async';
 import 'package:app_update_repository/app_update_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart'
-    show DivineVideoPlayerController;
+    show DivineVideoPlayerController, kDefaultCacheMaxSizeBytes;
 import 'package:dm_repository/dm_repository.dart' show DmSyncState;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -37,6 +37,7 @@ import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/media_cache_budget_provider.dart';
 import 'package:openvine/repositories/shorebird_patch_repository.dart';
 import 'package:openvine/services/app_engagement_store.dart';
 import 'package:openvine/services/build_provenance_service.dart';
@@ -47,9 +48,11 @@ import 'package:openvine/services/database_corruption_service.dart';
 import 'package:openvine/services/database_encryption_bootstrap.dart';
 import 'package:openvine/services/database_recovery_store.dart';
 import 'package:openvine/services/device_memory_service.dart';
+import 'package:openvine/services/device_storage_service.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/install_source_service.dart';
 import 'package:openvine/services/locale_preference_service.dart';
+import 'package:openvine/services/media_cache_budget.dart';
 import 'package:openvine/services/pro_video_editor_log_forwarder.dart';
 import 'package:openvine/services/screenshot_mode_service.dart';
 import 'package:openvine/services/secure_storage_options.dart';
@@ -232,14 +235,25 @@ Future<void> startOpenVineApp({
   // They initialize automatically when a DivineVideoPlayerController is
   // first created.
 
-  // Configure the Android player's disk cache (500 MB, LRU eviction). It is
+  // Configure the Android player's disk cache (LRU eviction), sized to the
+  // disk between kPlayerCacheFloorBytes and kDefaultCacheMaxSizeBytes. It is
   // Android-only: AVFoundation never reads a URLCache, so the Apple plugin
   // has nothing to configure (#8029). Skip on web/Linux/Windows —
   // divine_video_player has no native plugin on those targets and
   // `configureCache` is a bare method-channel call.
+  // Kept for the container below, so Settings → Storage and bug reports show
+  // the player limit actually in force rather than its ceiling.
+  var playerCacheBudgetBytes = kDefaultCacheMaxSizeBytes;
   await configureVideoPlayerCacheForStartup(
     skip: !hasNativeVideoPlayer,
-    configureCache: DivineVideoPlayerController.configureCache,
+    configureCache: () async {
+      final bytes = await startupPlayerCacheBudgetBytes(
+        readStorageSpace: const DeviceStorageService().storageSpace,
+        ceiling: appMediaCacheBudgetCeiling(),
+      );
+      if (bytes > 0) playerCacheBudgetBytes = bytes;
+      await DivineVideoPlayerController.configureCache(maxSizeBytes: bytes);
+    },
   );
 
   // Dispose any zombie native players from a previous Dart VM (e.g. hot
@@ -745,6 +759,7 @@ Future<void> startOpenVineApp({
     // local release build for performance collection (#7302).
     shorebirdAvailable:
         (startupShorebirdUpdater ??= ShorebirdUpdater()).isAvailable,
+    playerCacheBudgetBytes: playerCacheBudgetBytes,
     accountOverrides: [
       // Screenshot mode: lead the 01_classics OG-Viner row with returning
       // Vine OGs who all have avatars, so the marketing shot has no

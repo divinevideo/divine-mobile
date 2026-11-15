@@ -7716,6 +7716,10 @@
     "description": "Generic error shown when a storage operation fails."
   },
   "settingsStorageMaxVideoCacheLabel": "గరిష్ట వీడియో కాష్",
+  "settingsStorageAutoCacheTitle": "పరిమాణాన్ని ఆటోమేటిక్‌గా సర్దుబాటు చేయండి",
+  "settingsStorageAutoCacheSubtitle": "మీ ఫోన్ నిండుతున్న కొద్దీ, స్టోరేజ్‌లో ఖాళీ స్థలం ఉండేందుకు సహాయపడేలా తగ్గుతుంది.",
+  "settingsStorageAutoCacheUsing": "వీడియోల కోసం {size} వరకు ఉపయోగిస్తోంది",
+  "settingsStorageAutoCacheLowSpace": "మీ ఫోన్‌లో స్థలం తక్కువగా ఉన్నందున సాధారణం కంటే చిన్నది",
   "@settingsStorageMaxVideoCacheLabel": {
     "description": "Label above the slider that sets the maximum video-cache size."
   },

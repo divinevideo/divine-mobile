@@ -14212,6 +14212,22 @@ class AppLocalizationsPl extends AppLocalizations {
       'Maksymalna pamięć podręczna wideo';
 
   @override
+  String get settingsStorageAutoCacheTitle => 'Dobieraj rozmiar automatycznie';
+
+  @override
+  String get settingsStorageAutoCacheSubtitle =>
+      'Zmniejsza się, gdy telefon się zapełnia, pomagając zachować wolne miejsce.';
+
+  @override
+  String settingsStorageAutoCacheUsing(String size) {
+    return 'Do $size na filmy';
+  }
+
+  @override
+  String get settingsStorageAutoCacheLowSpace =>
+      'Mniejszy niż zwykle, bo w telefonie kończy się miejsce';
+
+  @override
   String settingsStorageApproxVideos(int count) {
     return '≈ $count filmów';
   }

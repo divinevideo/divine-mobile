@@ -220,7 +220,7 @@ void dispose() {
 ```
 
 ### Video Player Cache Limits
-The project uses a 500 MB LRU disk cache for video content. Don't override this without profiling on low-end devices. Large caches cause storage pressure on older phones.
+The feed media cache (`kCacheLimitDefaultBytes`, 2 GB) and the Android player cache (`kDefaultCacheMaxSizeBytes`, 500 MB) are ceilings: `automaticMediaCacheBudget` shrinks them toward their floors to keep `kAutoCacheReservedDiskFraction` of the disk free. Change sizing through those constants, and only with profiling on low-end devices.
 
 ### Image Cache Tuning
 Startup sizes Flutter's decoded-image cache by device RAM in `mobile/lib/startup/image_cache_budget.dart`: RAM / 48, clamped to 96–256 MB, and 128 MB when RAM is unknown (web, desktop, or a failed channel call). The divisor and the bounds are `AppConstants.imageCache*`; change the budget through them. Another `imageCache.maximumSizeBytes` assignment anywhere else silently overrides it on every device. Flutter's own default (1000 entries, 100 MiB) applies only until startup sets it.

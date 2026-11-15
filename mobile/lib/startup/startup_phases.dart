@@ -26,6 +26,7 @@ import 'package:openvine/services/seed_media_cleanup_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:openvine/startup/timed_startup_task.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/library_audio_migration.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -159,9 +160,24 @@ Future<void> configurePlaybackAudioSession() async {
 
 Future<void> initializeHiveStorage() => HiveStorageService.initialize();
 
+/// Sweeps the media caches, then sizes them to the disk.
+///
+/// The sweeps come first because they measure what each cache holds, which
+/// [refreshBudget] counts as space the caches may keep. Sizing before then
+/// would count the caches as empty and trim them further than the disk needs.
+@visibleForTesting
+Future<void> sweepThenBudgetMediaCaches({
+  required List<Future<void> Function()> sweeps,
+  required Future<void> Function() refreshBudget,
+}) async {
+  await Future.wait([for (final sweep in sweeps) sweep()]);
+  await refreshBudget();
+}
+
 Future<void> initializeVideoCacheManifest({
   required StartupPerformanceService startupPerformance,
   required CrashReportingService crashReporting,
+  required Future<void> Function() refreshMediaCacheBudget,
 }) async {
   if (kIsWeb) return;
 
@@ -173,10 +189,20 @@ Future<void> initializeVideoCacheManifest({
     task: () async {
       try {
         await initializeMediaCache();
-        // Trim the image cache back under its byte budget too (unawaited so
-        // it never blocks startup). The video cache is handled inside
-        // initializeMediaCache().
-        unawaited(openVineImageCache.enforceCacheLimits());
+        // Reclaim leaked files, trim both caches under their budgets, then
+        // size them to the disk — detached so it never blocks startup.
+        runDetached(
+          sweepThenBudgetMediaCaches(
+            sweeps: [
+              openVineMediaCache.enforceCacheLimits,
+              openVineImageCache.enforceCacheLimits,
+            ],
+            refreshBudget: refreshMediaCacheBudget,
+          ),
+          'sweep and size the media caches',
+          logName: 'Main',
+          category: LogCategory.storage,
+        );
       } catch (e) {
         Log.error(
           '[STARTUP] Video cache initialization failed: $e',

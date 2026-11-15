@@ -24,6 +24,7 @@ import 'package:openvine/providers/crash_reporting_provider.dart';
 import 'package:openvine/providers/deep_link_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/foreground_idle_warmup_provider.dart';
+import 'package:openvine/providers/media_cache_budget_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/deep_link_coordinator.dart';
@@ -145,6 +146,23 @@ MemoryTelemetryService createAppMemoryTelemetryService({
 @visibleForTesting
 bool shouldSuspendDownloadsAtLaunch(AppLifecycleState? state) =>
     state != null && state != AppLifecycleState.resumed;
+
+/// Re-sizes the media caches when the app returns to the foreground: other
+/// apps may have filled the disk while this one was away. The refresh skips
+/// itself when the last one is recent.
+@visibleForTesting
+void resizeMediaCachesOnResume(
+  AppLifecycleState state, {
+  required Future<void> Function() refreshIfStale,
+}) {
+  if (state != AppLifecycleState.resumed) return;
+  runDetached(
+    refreshIfStale(),
+    'resize the media caches',
+    logName: 'DivineApp',
+    category: LogCategory.storage,
+  );
+}
 
 class _DivineAppState extends ConsumerState<DivineApp>
     with WidgetsBindingObserver {
@@ -350,6 +368,11 @@ class _DivineAppState extends ConsumerState<DivineApp>
       openVineMediaCache.resumeDownloads();
       openVineImageCache.resumeDownloads();
     }
+    resizeMediaCachesOnResume(
+      state,
+      refreshIfStale: () =>
+          ref.read(mediaCacheBudgetServiceProvider).refreshIfStale(),
+    );
     _sampleMemory('lifecycle');
   }
 
