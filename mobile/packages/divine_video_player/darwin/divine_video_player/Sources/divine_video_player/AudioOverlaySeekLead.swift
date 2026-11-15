@@ -41,13 +41,32 @@ struct AudioOverlaySeekLead {
         (stallSec[Self.key(rate)] ?? 0) * rate
     }
 
+    /// A seek at [rate] onto [sec] of the player's file, the place the sound
+    /// belongs now, aimed ``aheadSec(rate:)`` past it. It keeps the stall it
+    /// assumed, so what it measures is its own stall, whatever other tracks
+    /// have learned since.
+    func seek(id: Int, onto sec: Double, rate: Double, issuedAt: TimeInterval)
+        -> AudioOverlayPendingSeek
+    {
+        let stall = stallSec[Self.key(rate)] ?? 0
+        return AudioOverlayPendingSeek(
+            id: id,
+            targetSec: max(sec + stall * rate, 0),
+            rate: rate,
+            assumedStallSec: stall,
+            issuedAt: issuedAt
+        )
+    }
+
     /// Whether a playing sound, [behindSec] seconds of its file behind where
     /// it belongs, is to be seeked onto the picture.
     ///
     /// While its [pending] seek has yet to play it is left alone, for up to
     /// ``restartTimeoutSec``. Once its clock has moved past the seek's target,
-    /// how far behind it still is was the stall of that seek, learned for
-    /// the next seek at [rate].
+    /// the stall the seek assumed plus how far behind the sound still is was
+    /// that seek's stall, kept for the next seek at its rate. Tracks that
+    /// seek together at one rate each measure their own stall, so they teach
+    /// the same value instead of adding up.
     mutating func needsSeek(
         behindSec: Double,
         trackSpeed: Double,
@@ -60,9 +79,11 @@ struct AudioOverlaySeekLead {
         if let seek = pending {
             if seek.landed, playerSec > seek.targetSec + Self.resumedSec {
                 pending = nil
-                let key = Self.key(rate)
-                let stall = (stallSec[key] ?? 0) + behindSec / rate
-                if abs(behindSec / rate) <= Self.maxStallSec {
+                // A rate changed since the seek plays its file at another
+                // pace than the one its stall was assumed for.
+                let key = Self.key(seek.rate)
+                if key == Self.key(rate), abs(behindSec / rate) <= Self.maxStallSec {
+                    let stall = seek.assumedStallSec + behindSec / rate
                     stallSec[key] = min(max(stall, 0), Self.maxStallSec)
                 }
             } else if now - seek.issuedAt < Self.restartTimeoutSec {
@@ -83,6 +104,10 @@ struct AudioOverlayPendingSeek {
     let id: Int
     /// Where it seeks to, in the time of the file the player has.
     let targetSec: Double
+    /// The player rate it was issued at.
+    let rate: Double
+    /// The stall it was aimed past, in seconds of wall time.
+    let assumedStallSec: Double
     /// When it was issued, in seconds of system uptime.
     let issuedAt: TimeInterval
     /// Whether it completed. An interrupted seek is dropped instead.

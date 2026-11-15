@@ -673,12 +673,16 @@ final class AudioOverlayManager {
         rate: Double,
         reason: String
     ) {
-        let targetSec = max(audioSec + seekLead.aheadSec(rate: rate) - entry.playingStartSec, 0)
         seekCount += 1
         let id = seekCount
-        entry.pendingSeek = AudioOverlayPendingSeek(
-            id: id, targetSec: targetSec, issuedAt: ProcessInfo.processInfo.systemUptime)
-        seek(entry, to: CMTime(seconds: targetSec, preferredTimescale: 600), reason: reason) {
+        let pending = seekLead.seek(
+            id: id,
+            onto: audioSec - entry.playingStartSec,
+            rate: rate,
+            issuedAt: ProcessInfo.processInfo.systemUptime
+        )
+        entry.pendingSeek = pending
+        seek(entry, to: CMTime(seconds: pending.targetSec, preferredTimescale: 600), reason: reason) {
             [weak entry] completed in
             guard let entry, entry.pendingSeek?.id == id else { return }
             if completed {
