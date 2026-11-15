@@ -128,7 +128,10 @@ Both are Divine conventions. The app writes each one as `true` or `false` on
 every publish and metadata edit, so an edit keeps an explicit decline. Video
 reuse is allowed by default: a missing tag, `true` or any value other than the
 exact `false` leaves the video remixable. Archived Vines (`platform` = `vine`)
-and the viewer's own videos can be remixed whatever the tag says. A post
+and the viewer's own videos can be remixed whatever the tag says, unless the
+author's kind 0 sets `divine_allow_video_reuse` to `false` (see
+[`NOSTR_EVENT_TYPES.md`](../../docs/NOSTR_EVENT_TYPES.md#kind-0---user-profiles-nip-01)),
+which overrides the tag for everyone but the author. A post
 that uses such a clip credits its source with the `clip-source` markers above.
 Publishing lives in `mobile/lib/services/video_event_publisher.dart` and
 `mobile/lib/services/video_metadata_update_service.dart`; parsing in

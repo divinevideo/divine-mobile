@@ -123,13 +123,14 @@ When the library loads, video clips missing a thumbnail or ghost frame get them 
 | Stop motion | `StopMotionSessionStore`, each still as it is taken ([`CAMERA_ARCHITECTURE.md`](CAMERA_ARCHITECTURE.md#modes)) |
 | Saving one clip from the editor timeline | [`VideoEditorClipLibrarySaveService`](../lib/services/video_editor/video_editor_clip_library_save_service.dart), which renders the trimmed part, with its visual overlays, into a new file; `ClipEditorBloc` then saves it through `ClipManagerNotifier.saveClipToLibrary` |
 | Share sheet, "Add to clips" | `VideoClipImportService.importToLibrary`, for classic Vines, the user's own videos and any video that allows reuse |
+| Info sheet, "Remix this video" | `VideoContentActionsBloc` reuses the newest earlier import of the video (`VideoClipImportService.findImportedClipOf`), or else imports it with `importToLibrary`, then `openRemixInEditor` opens the editor on that clip |
 | Direct messages | `VideoClipImportService.importReceivedClip` and `importReceivedVine` ([`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#in-the-library)) |
 | Device gallery | `VideoClipImportService.importGalleryClip` ([`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#back-from-the-gallery)) |
 | A clip the editor creates, such as a split-screen layout render | The editor's autosave draft, which `getAllClips` lists as library clips (see [Rows](#rows)) |
 | Developer recovery tool | `ClipRecoveryService`, which saves recovered recordings back (see [Accounts](#accounts)) |
 | Earlier builds | `ClipLibraryService.migrateOldClips`, which moves the old SharedPreferences store into Drift at startup (see [Startup and background work](#startup-and-background-work)) |
 
-Of the ways footage comes in from outside the app, a clip received in a direct message and a clip brought back from the gallery get in only after the C2PA check described in [`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#the-c2pa-check). A received file that carries no credentials gets in only if it is the exact file of an archived Vine, matched by its file hash. The share sheet's "Add to clips" brings in a published video with no check.
+Of the ways footage comes in from outside the app, a clip received in a direct message and a clip brought back from the gallery get in only after the C2PA check described in [`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#the-c2pa-check). A received file that carries no credentials gets in only if it is the exact file of an archived Vine, matched by its file hash. The share sheet's "Add to clips" and the info sheet's "Remix this video" bring in a published video with no C2PA check, but only once `VideoContentActionsBloc` has checked the creator's consent: first the video's own rule (`canRemixVideo`), then the creator's account-wide block (`RemixConsentRepository`). The user's own videos skip both checks.
 
 ## Where the library opens
 
