@@ -228,8 +228,9 @@ class VideoClipImportService {
   /// cannot be determined, the import fails with
   /// [VideoClipImportFailureReason.sourceLookupFailed] rather than guess.
   ///
-  /// The first credited account, unless it is the library's own, must let
-  /// others use its videos as clips: otherwise the import fails with
+  /// The first credited account, unless it is the library's own or the
+  /// sender's, must let others use its videos as clips: otherwise the import
+  /// fails with
   /// [VideoClipImportFailureReason.remixBlocked], or with
   /// [VideoClipImportFailureReason.remixConsentUnknown] when that cannot be
   /// read, before anything is copied.
@@ -302,7 +303,8 @@ class VideoClipImportService {
   /// other file fails with [VideoClipImportFailureReason.notArchivedVine],
   /// and one that cannot be told with
   /// [VideoClipImportFailureReason.sourceLookupFailed]. A viner other than
-  /// the library's own account who blocks remixing refuses it with
+  /// the library's own account or [senderPubkey] who blocks remixing refuses
+  /// it with
   /// [VideoClipImportFailureReason.remixBlocked], and one whose consent
   /// cannot be read with [VideoClipImportFailureReason.remixConsentUnknown].
   ///
@@ -313,6 +315,7 @@ class VideoClipImportService {
   Future<VideoClipImportResult> importReceivedVine({
     required File source,
     required String messageId,
+    required String senderPubkey,
     Future<void> Function()? beforeSave,
   }) async {
     final documentsPath = await _getDocumentsPath();
@@ -353,7 +356,10 @@ class VideoClipImportService {
         VideoClipImportFailureReason.notArchivedVine,
       );
     }
-    final refusal = await _remixRefusal(vine.pubkey);
+    final refusal = await _remixRefusal(
+      vine.pubkey,
+      senderPubkey: senderPubkey,
+    );
     if (refusal != null) return VideoClipImportFailure(refusal);
 
     final written = <String>[];
@@ -457,17 +463,22 @@ class VideoClipImportService {
   /// Why footage credited to [authorPubkey] may not enter this library, or
   /// null when it may.
   ///
-  /// Footage crediting nobody, or the library's own account, is never asked
-  /// about. Anyone else must let others use their videos as clips: a block is
-  /// [VideoClipImportFailureReason.remixBlocked], and an answer that could not
-  /// be read — including no reader at all — is
+  /// Footage crediting nobody, the library's own account, or [senderPubkey]
+  /// — a creator who sent their own footage chose to share it — is never
+  /// asked about. Anyone else must let others use their videos as clips: a
+  /// block is [VideoClipImportFailureReason.remixBlocked], and an answer that
+  /// could not be read — including no reader at all — is
   /// [VideoClipImportFailureReason.remixConsentUnknown].
   Future<VideoClipImportFailureReason?> _remixRefusal(
-    String? authorPubkey,
-  ) async {
+    String? authorPubkey, {
+    String? senderPubkey,
+  }) async {
     if (authorPubkey == null) return null;
     final owner = _clipLibraryService.ownerPubkey;
     if (owner != null && pubkeysEqual(authorPubkey, owner)) return null;
+    if (senderPubkey != null && pubkeysEqual(authorPubkey, senderPubkey)) {
+      return null;
+    }
 
     final readConsent = _readRemixConsent;
     final RemixConsent consent;
@@ -533,9 +544,10 @@ class VideoClipImportService {
   /// [importedSource] marks the clip as footage someone sent rather than the
   /// device's own coming back (see [DivineVideoClip.importedSource]).
   ///
-  /// With [checkRemixConsent], footage whose first credit would go to another
-  /// account is refused, before anything is copied, unless that account lets
-  /// others use its videos as clips (see [_remixRefusal]).
+  /// With [checkRemixConsent], footage whose first credit would go to an
+  /// account other than the library's or [senderPubkey] is refused, before
+  /// anything is copied, unless that account lets others use its videos as
+  /// clips (see [_remixRefusal]).
   Future<VideoClipImportResult> _importVerifiedClip({
     required File source,
     required String clipId,
@@ -585,7 +597,10 @@ class VideoClipImportService {
       // never published credits the person who sent it.
       final author = post?.pubkey ?? published?.ownerPubkey ?? senderPubkey;
       if (checkRemixConsent) {
-        final refusal = await _remixRefusal(author);
+        final refusal = await _remixRefusal(
+          author,
+          senderPubkey: senderPubkey,
+        );
         if (refusal != null) return VideoClipImportFailure(refusal);
       }
 

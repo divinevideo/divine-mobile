@@ -252,15 +252,18 @@ from there, keeps its exact file.
 A creator can turn off **Let people remix my videos**, which writes
 `divine_allow_video_reuse: false` to their kind 0 (see
 `docs/NOSTR_EVENT_TYPES.md`). The feed's **Add to clips** and **Remix this
-video** refuse such a creator's videos, and so do both received imports: before
-anything is copied, `importReceivedClip` checks the account it would credit
-first — the sender, or whoever published a forwarded post — and
-`importReceivedVine` checks the viner, through the same
-`RemixConsentRepository` the feed uses. A blocking account turns the clip away
-with "This creator doesn't allow remixes."; an account whose setting cannot be
-read turns it away with the retry message the feed shows. Footage crediting
-the recipient's own account is never checked. Only the first credit is
-checked; accounts the signed history names after it are not asked.
+video** refuse such a creator's videos, and so do both received imports when
+someone else forwards that creator's footage: before anything is copied,
+`importReceivedClip` checks the account it would credit first — whoever
+published a forwarded post — and `importReceivedVine` checks the viner,
+through the same `RemixConsentRepository` the feed uses. A blocking account
+turns the clip away with "This creator doesn't allow remixes."; an account
+whose setting cannot be read turns it away with the retry message the feed
+shows. Footage a creator sends themselves — their own recording, post or Vine,
+credited to the sender — is let in whatever their setting says, since sending
+it is the creator choosing to share it. Footage crediting the recipient's own
+account is never checked either. Only the first credit is checked; accounts
+the signed history names after it are not asked.
 
 ## Back from the gallery
 

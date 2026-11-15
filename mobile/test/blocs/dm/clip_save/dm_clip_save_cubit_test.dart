@@ -81,6 +81,7 @@ void main() {
       () => importService.importReceivedVine(
         source: any(named: 'source'),
         messageId: any(named: 'messageId'),
+        senderPubkey: any(named: 'senderPubkey'),
         beforeSave: any(named: 'beforeSave'),
       ),
     ).thenAnswer((_) async => result);
@@ -213,11 +214,13 @@ void main() {
               () => importService.importReceivedVine(
                 source: captureAny(named: 'source'),
                 messageId: captureAny(named: 'messageId'),
+                senderPubkey: captureAny(named: 'senderPubkey'),
                 beforeSave: any(named: 'beforeSave'),
               ),
             ).captured;
             expect((captured[0] as File).path, equals(_decryptedPath));
             expect(captured[1], equals(_clipMessage().id));
+            expect(captured[2], equals(_clipMessage().senderPubkey));
             verify(() => store.releaseVideo(any())).called(1);
           },
         );

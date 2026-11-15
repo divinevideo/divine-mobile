@@ -38,6 +38,7 @@ typedef ReceivedClipImporterResolver = ReceivedClipImporter Function();
 typedef ReceivedVineImporter = Future<VideoClipImportResult> Function({
   required File source,
   required String messageId,
+  required String senderPubkey,
   Future<void> Function()? beforeSave,
 });
 
@@ -94,8 +95,9 @@ class DmClipSaveState extends Equatable {
 /// Divine camera capture or a signed edit of captures, or, for a file with no
 /// credential at all, when it is the exact file of a published Vine post, so
 /// a clip library never holds footage whose origin is unknown or generated.
-/// Footage credited to another account is added only when that account lets
-/// others use its videos as clips, which the import checks.
+/// Footage credited to an account other than the recipient or the sender is
+/// added only when that account lets others use its videos as clips, which
+/// the import checks.
 /// The video comes from the [DmVideoStore] of the account signed in when the
 /// save starts, held until the library has its own copy.
 class DmClipSaveCubit extends Cubit<DmClipSaveState>
@@ -176,6 +178,7 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
           result = await importVine(
             source: video,
             messageId: message.id,
+            senderPubkey: message.senderPubkey,
             beforeSave: stillReceived,
           );
         } else if (!provenance.isVerified) {
