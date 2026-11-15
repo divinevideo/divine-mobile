@@ -8,7 +8,7 @@ description: |
   human to set up accounts or attach images. Covers iOS simulator + LOCAL
   Docker stack + Maestro/idb + secret-gist hosting.
 author: Claude Code
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Real-app screenshots for a PR
@@ -31,21 +31,21 @@ without it. Agent shells often have no `$TMPDIR`, and a bare `$TMPDIR/...` then
 expands to a read-only `/...`.
 
 Budget: about 5 minutes for the first build, about 1 minute to sign in, and about
-4 minutes to navigate and capture. A `maestro hierarchy` call takes 30–60s, so use the
+4 minutes to navigate and capture. A `maestro hierarchy` call takes 15–60s, so use the
 navigation map below before dumping.
 
 ## Quick reference
 
 | Need | Do |
 |---|---|
-| App + backend running | After the trust check in step 0, which the script cannot make for you: `bash <skill-dir>/scripts/sim_up.sh <worktree-root> [device type]` → prints `UDID=`, `BUNDLE_ID=` and `STACK_STARTED=`. It creates (or reuses) a simulator named `pr-screenshots-<worktree>`, an iPhone 16 Pro unless you pass another type from `xcrun simctl list devicetypes` |
+| App + backend running | After the trust check in step 0, which the script cannot make for you: `bash <skill-dir>/scripts/sim_up.sh <worktree-root> [device type]` → prints `UDID=`, `BUNDLE_ID=`, `STACK_STARTED=` and `MASTER_KEY_CREATED=` (keep the last two for cleanup). It creates (or reuses) a simulator named `pr-screenshots-<worktree>`, an iPhone 16 Pro unless you pass another type from `xcrun simctl list devicetypes` |
 | Signed-in user | `maestro --device <UDID> test -e APP_ID=<BUNDLE_ID> <skill-dir>/scripts/new_device_account.yaml` |
 | Someone to view or message | `bash <skill-dir>/scripts/make_account.sh "Sam Tester"` → npub |
 | Open a profile | Maestro `openLink: divine:///profile/<npub>` (three slashes), then `tapOn: {text: Open, optional: true}` |
 | See what's tappable | `maestro --device <UDID> hierarchy` and grep `accessibilityText` or `resource-id`. A row with a subtitle is labelled `"Title\nSubtitle"`, so `tapOn: "Title"` fails; tap the full label or an id |
 | Tap inside the system photo picker | `idb ui tap --udid <UDID> <x> <y>` in **points** (pixels ÷ the screen scale: 3 on an iPhone Pro) |
 | Add a video to Photos | `ffmpeg -f lavfi -i testsrc2=size=720x1280:rate=30:duration=6 -f lavfi -i sine=duration=6 -c:v libx264 -pix_fmt yuv420p -b:v 12M -c:a aac -shortest "$SCRATCH/clip.mp4"` then `xcrun simctl addmedia <UDID> "$SCRATCH/clip.mp4"` |
-| Dark / light | The app defaults to **Dark**, not System, so simulator appearance alone changes nothing. Switch in the app (see the navigation map), and also run `xcrun simctl ui <UDID> appearance light` so system sheets match |
+| Dark / light | The app defaults to **Dark**, not System, so simulator appearance alone changes nothing; switch light in the app (see the navigation map). The simulator itself starts in **Light**, so also run `xcrun simctl ui <UDID> appearance dark` for dark shots, or `light` for light ones, so the keyboard and system sheets match |
 | Freeze an upload mid-way | `docker compose -f local_stack/docker-compose.yml pause blossom-proxy` before the send; `… unpause blossom-proxy` straight after the shot. The stack is shared, so this freezes uploads for every session on it |
 | Capture | First wait for an element that loads **last**: "No videos yet" renders before the profile header, so wait for the header too. Then `xcrun simctl io <UDID> screenshot "$SCRATCH/NN-state.png"` and **Read the PNG** to check it shows what you claim |
 | Publish | `bash <skill-dir>/scripts/publish_gist.sh "PR <n> screenshots at <sha>" "$SCRATCH/01-profile-dark.png" "$SCRATCH/02-profile-light.png"`, naming each file you checked rather than a glob that also catches retakes → `<img>` tags with verified raw URLs |
@@ -59,16 +59,17 @@ navigation map below before dumping.
 | Edit profile | `tapOn: {id: edit_profile_button}` (a pencil icon; label "Edit Profile") |
 | Messages inbox | `tapOn: {id: inbox_tab}` opens **Notifications** first, then `tapOn: "Messages\nMessages"`; empty state is `"No messages yet"` |
 | Appearance → Light | from the own profile: `id: settings_button` → `id: settings_app_preferences_tile` → `"Appearance\nChoose how Divine looks on this device"` → `"Light"` (or `"Dark"`, `"System default"`); back out with `id: back_button` ×3 |
-| Someone's profile | `openLink: divine:///profile/<npub>` + optional `Open` |
-| DM thread | on their profile, `tapOn: "Message"`; composer `"Say something…"`. Text: type, then `tapOn: {id: dm_message_send_button}`, which appears only once there is text. Video: `tapOn: {id: dm_attach_video_button}` → `"Video from your gallery"`; picking a video sends it straight away |
+| Someone's profile | `openLink: divine:///profile/<npub>` + optional `Open`. It opens full screen with no tab bar; leave it with `tapOn: {id: profile_back_button}`, not `back_button` |
+| DM thread | on their profile, `tapOn: "Message"` (a mail icon with that label, not a text button); composer `"Say something…"`; leave with `tapOn: {id: back_button}`. A sent bubble is labelled `"<time>\n<text>"` (e.g. `"Now\nhello"`), so wait for it with a regex: `extendedWaitUntil: {visible: ".*hello.*"}`. Text: type, then `tapOn: {id: dm_message_send_button}`, which appears only once there is text. Video: `tapOn: {id: dm_attach_video_button}` → `"Video from your gallery"`; picking a video sends it straight away |
 
-The magenta line above the tab bar marks the LOCAL environment; mention it in the
-caption rather than cropping it. The stack's seed adds a few synthetic videos;
+The magenta line above the tab bar marks the LOCAL environment; where it is on screen,
+mention it in the caption rather than cropping it. Screens without the tab bar, such as
+a DM thread or a deep-linked profile, do not show it. The stack's seed adds a few synthetic videos;
 create whatever else the screen needs yourself.
 
 ## Steps
 
-0. **Check the PR may be built here.** Building runs the PR's own code on this machine: `local_stack/up.sh` and its compose file, the Podfile and the Xcode build phases. Go on only when the PR comes from a branch in this repository (`gh pr view <n> --json isCrossRepository` is `false`) or its author is an org member (`gh api orgs/divinevideo/members/<login>` answers 204), and the request came from the person running this session or an org member. Otherwise stop and say why: a pull request from anyone else is reviewed, not run (`AGENT_TRUST_BOUNDARY.md` in divine-context).
+0. **Check the PR may be built here.** Building runs the PR's own code on this machine: `local_stack/up.sh` and its compose file, the Podfile and the Xcode build phases. Go on only when the PR comes from a branch in this repository (`gh pr view <n> --json isCrossRepository` is `false`) or its author is an org member (`gh api orgs/divinevideo/members/<login>` answers 204), and the request came from the person running this session or an org member. With no PR yet, the same test applies to the branch: your own branch in this repository, asked for by the person running this session, is cleared. Otherwise stop and say why: a pull request from anyone else is reviewed, not run (`AGENT_TRUST_BOUNDARY.md` in divine-context).
 1. **Build the PR's head in a worktree nobody else is using.** Screenshots must come from the code under review, and building in, or cleaning up, another session's checkout breaks its build. For your own PR, use your task worktree. Otherwise make a detached one at the head commit: take `gh pr view <n> --json headRefOid -q .headRefOid`, then `git fetch origin pull/<n>/head && git worktree add --detach .worktrees/pr-<n>-screens <sha>`. Keep that SHA; the PR section names it.
 2. **`sim_up.sh`.** It waits while another run is starting the stack, then reuses a local stack another session already started (printing `STACK_STARTED=no`, and a warning when the running stack's `local_stack/` differs from this branch's); otherwise it sets `BLOSSOM_PUBLIC_URL=http://localhost:43003`, writes the Keycast `master.key` a fresh worktree lacks, starts `local_stack/up.sh` and makes sure its refresh-interval tuning ran. Then it boots this run's own simulator, pins the status bar to 9:41, builds with `--dart-define=DEFAULT_ENV=LOCAL`, and installs the app. The first build takes about 5 minutes. Run it in the background with output going to a file.
 3. **Sign in** with `new_device_account.yaml`. It clears the keychain and the app's data before launch, so every run starts on a fresh welcome screen and no earlier account stays on the device; there is no need to `simctl erase`. `clearState` alone is not enough: the Nostr key lives in the keychain (`mobile/e2e/maestro/README.md`).
@@ -80,7 +81,9 @@ create whatever else the screen needs yourself.
 9. **Clean up:**
    - if you paused the Blossom proxy, unpause it (`docker compose -f local_stack/docker-compose.yml unpause blossom-proxy`): a paused container in the shared stack stalls every other session's uploads;
    - stop the stack (`cd mobile && mise run local_down`) only if `sim_up.sh` printed `STACK_STARTED=yes` and nobody else is using it: `xcrun simctl list devices booted` shows no other `pr-screenshots-` simulator, and no other session is running local-stack tests. Every worktree shares the one `local_stack` compose project, so `down` stops it for everyone;
+   - if `sim_up.sh` printed `MASTER_KEY_CREATED=yes` and you stopped the stack, delete `local_stack/master.key` in the worktree you built from. It is gitignored, so `git status` will not remind you; leave it while the stack still runs, because Keycast reads it from there;
    - `xcrun simctl delete <UDID>`, which removes this run's simulator, its data and the status-bar override;
+   - delete the Maestro artifacts this run left in `~/.maestro/tests/<timestamp>/`, the folders whose logs name your UDID: `grep -rl <UDID> ~/.maestro/tests | xargs -n1 dirname | sort -u` lists them;
    - for a detached worktree you made, `git worktree remove --force .worktrees/pr-<n>-screens`, which takes its `mobile/build` (about 4 GB) with it; in your own task worktree, delete `mobile/build`;
    - delete this worktree's Xcode output, `~/Library/Developer/Xcode/DerivedData/Runner-*`, about 2 GB. Check its
      `info.plist` `WorkspacePath` points at this worktree before deleting;
@@ -94,6 +97,7 @@ create whatever else the screen needs yourself.
 | DM send fails after the upload completes: "names only relays this device will not dial" | The recipient advertised a `ws://` kind-10050 inbox relay. `make_account.sh` publishes no 10050, so DMs fall back to the local relay. |
 | Deep link does nothing | Use `divine:///…` with an empty host. iOS shows an "Open in …?" sheet the first time, so tap `Open` with `optional: true`. |
 | A `divine:///profile/…` link opens Home | The branch predates #11017, before which iOS dropped every `divine:///` route except saved videos and challenges. Check with `git merge-base --is-ancestor a04e156363b5be9269a2e806199daaa2a60a042e HEAD`; if it fails, reach the profile through search instead. |
+| `sim_up.sh` stops with "Docker is not answering" | Docker Desktop is hung: `docker info` never returns, and every later call would wait forever. Quit Docker Desktop; if `com.docker.backend` lingers, `pkill -TERM -f com.docker.backend`; then `open -a Docker` and run `sim_up.sh` again. |
 | Maestro asks which device to use, or drives another simulator | More than one device is booted. Pass `--device <UDID>` to every `maestro` call. |
 | Maestro `tapOn` fails inside the photo picker | The picker runs out of process. Use `idb ui tap` at point coordinates. |
 | Pressing Enter in the composer doesn't send | The field is multiline. Tap `id: dm_message_send_button`. |
@@ -113,3 +117,4 @@ create whatever else the screen needs yourself.
 - Substitute widget-test or golden renders and call them screenshots. If real capture truly fails, say so with the error, and offer renders labelled as renders.
 - Push screenshots to the company repo: no orphan branches, no committed PNGs, no draft releases. The gist is the host.
 - Commit the Maestro flows or keys you write for one PR.
+- Put a secret key on a command line, e.g. `nak event --sec <key>` or `nak key public <key>`, even for a throwaway account. `ps` shows every argument to every process on the machine, and to your own transcript if you list processes while debugging a hang. Pass it through `NOSTR_SECRET_KEY` or stdin, as `make_account.sh` does, and never print it.

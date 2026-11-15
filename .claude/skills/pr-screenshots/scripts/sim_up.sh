@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # ABOUTME: Starts (or reuses) the local Docker stack, boots this run's own iOS simulator, and installs a LOCAL debug build.
-# ABOUTME: Usage: bash sim_up.sh <worktree-root> [device type]; prints UDID=, BUNDLE_ID= and STACK_STARTED= on success.
+# ABOUTME: Usage: bash sim_up.sh <worktree-root> [device type]; prints UDID=, BUNDLE_ID=, STACK_STARTED= and MASTER_KEY_CREATED=.
 set -euo pipefail
 
 ROOT="$(cd "${1:?usage: sim_up.sh <worktree-root> [device type]}" && pwd)"
+# Whether this run wrote local_stack/master.key, which cleanup then removes.
+MASTER_KEY_CREATED=no
 DEVICE_TYPE="${2:-iPhone 16 Pro}"
 SIM_NAME="pr-screenshots-$(basename "$ROOT")"
 LOG_DIR="${SCRATCH:?set SCRATCH to the scratch folder for this run, see SKILL.md}"
@@ -12,6 +14,11 @@ LOG_DIR="${SCRATCH:?set SCRATCH to the scratch folder for this run, see SKILL.md
 # the stack on localhost.
 export BLOSSOM_PUBLIC_URL=http://localhost:43003
 COMPOSE_FILE="$ROOT/local_stack/docker-compose.yml"
+
+# A hung Docker Desktop answers no API call, so every docker command below,
+# including the one run while holding the stack lock, would wait forever.
+perl -e 'alarm 20; exec @ARGV' docker info > /dev/null 2>&1 \
+  || { echo "error: Docker is not answering within 20s. Restart Docker Desktop (quit it; if com.docker.backend lingers, pkill -TERM -f com.docker.backend; then open -a Docker) and run sim_up.sh again" >&2; exit 1; }
 
 # Two runs that both find no stack would both start one, each recreating the
 # other's containers, so the check and the start hold a machine-wide lock.
@@ -65,7 +72,12 @@ else
   if [ ! -f "$KEY" ]; then
     [ ! -d "$KEY" ] || rmdir "$KEY"
     MAIN_KEY="$(git -C "$ROOT" worktree list --porcelain | sed -n '1s/^worktree //p')/local_stack/master.key"
-    if [ -f "$MAIN_KEY" ]; then cp "$MAIN_KEY" "$KEY"; else openssl rand 32 | base64 > "$KEY"; fi
+    # The key encrypts Keycast's data, so only this user may read it.
+    (umask 077; if [ -f "$MAIN_KEY" ]; then cp "$MAIN_KEY" "$KEY"; else openssl rand 32 | base64 > "$KEY"; fi)
+    MASTER_KEY_CREATED=yes
+    if [ ! -f "$MAIN_KEY" ] && docker volume inspect local_stack_keycast-pg-data > /dev/null 2>&1 9>&-; then
+      echo "warning: generated a new Keycast master.key, but the existing Keycast database volume was made with another key, so Keycast may fail to read it. Device-only accounts never call Keycast; email sign-in does" >&2
+    fi
   fi
 
   echo "Starting local stack (log: $LOG_DIR/stack.log)..."
@@ -134,3 +146,4 @@ BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" build/ios/ipho
 echo "UDID=$UDID"
 echo "BUNDLE_ID=$BUNDLE_ID"
 echo "STACK_STARTED=$STACK_STARTED"
+echo "MASTER_KEY_CREATED=$MASTER_KEY_CREATED"
