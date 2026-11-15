@@ -3,7 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
-    show AudioEvent, AudioExternalSource, AudioLicenseMetadata, VineSound;
+    show
+        AudioEvent,
+        AudioExternalSource,
+        AudioLicenseMetadata,
+        ClipSourceCredit,
+        VineSound;
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/publishing_ideas/publishing_ideas.dart';
@@ -14,7 +19,10 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_caption_field.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_clip_credits.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_content_warning_selector.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_inspired_by_input.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_tags_selector.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -32,12 +40,18 @@ void main() {
       bool enableIdeas = false,
       bool publishingIdeasEnabled = false,
       VideoReplyContext? replyContext,
+      List<ClipSourceCredit> clipCredits = const [],
     }) {
       return ProviderScope(
         overrides: [
-          authServiceProvider.overrideWithValue(createMockAuthService()),
+          authServiceProvider.overrideWithValue(
+            createMockAuthService(currentPublicKeyHex: _viewer),
+          ),
           videoEditorProvider.overrideWith(
-            () => _MockVideoEditorNotifier(state ?? VideoEditorProviderState()),
+            () => _MockVideoEditorNotifier(
+              state ?? VideoEditorProviderState(),
+              clipCredits: clipCredits,
+            ),
           ),
           isFeatureEnabledProvider(
             FeatureFlag.publishingIdeas,
@@ -391,6 +405,61 @@ void main() {
       );
     });
 
+    group('clip credits', () {
+      double gapBetweenInspiredByAndContentWarning(WidgetTester tester) {
+        Rect boxOf(Finder child) => tester.getRect(
+          find.ancestor(of: child, matching: find.byType(ClipRRect)).first,
+        );
+        final inspiredBy = boxOf(find.byType(VideoMetadataInspiredByInput));
+        final contentWarning = boxOf(
+          find.byType(VideoMetadataContentWarningSelector),
+        );
+        return contentWarning.top - inspiredBy.bottom;
+      }
+
+      testWidgets('keeps the normal gap when no other creator is credited', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        expect(gapBetweenInspiredByAndContentWarning(tester), equals(16));
+        expect(find.byType(VideoMetadataClipCredits), findsNothing);
+      });
+
+      testWidgets('keeps the normal gap when only the viewer is credited', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(clipCredits: [_credit(_viewer)]),
+        );
+        await tester.pumpAndSettle();
+
+        expect(gapBetweenInspiredByAndContentWarning(tester), equals(16));
+        expect(find.byType(VideoMetadataClipCredits), findsNothing);
+      });
+
+      testWidgets('shows the credit row when another creator is credited', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(clipCredits: [_credit(_author)]),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(VideoMetadataFormFields)),
+        );
+        expect(find.byType(VideoMetadataClipCredits), findsOneWidget);
+        expect(
+          find.textContaining(
+            l10n.videoMetadataClipCreditRow('').trim(),
+          ),
+          findsOneWidget,
+        );
+      });
+    });
+
     group('video reuse toggle', () {
       testWidgets('starts on and turns off when tapped', (tester) async {
         final mockNotifier = _MockVideoEditorNotifier(
@@ -485,10 +554,22 @@ void main() {
   });
 }
 
+const _viewer =
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const _author =
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+
+ClipSourceCredit _credit(String author) =>
+    ClipSourceCredit.fromAddressableId(addressableId: '34236:$author:clip');
+
 class _MockVideoEditorNotifier extends VideoEditorNotifier {
-  _MockVideoEditorNotifier(this._state);
+  _MockVideoEditorNotifier(this._state, {this.clipCredits = const []});
 
   final VideoEditorProviderState _state;
+  final List<ClipSourceCredit> clipCredits;
+
+  @override
+  List<ClipSourceCredit> get clipSourceCredits => clipCredits;
 
   String? lastTitle;
   String? lastDescription;

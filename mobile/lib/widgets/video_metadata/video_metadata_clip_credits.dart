@@ -21,8 +21,12 @@ class VideoMetadataClipCredits extends ConsumerWidget {
   /// Creates the clip credit rows.
   const VideoMetadataClipCredits({super.key});
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  /// The other creators credited by the clips on the timeline, each once.
+  ///
+  /// Watches the timeline, so a caller rebuilds when a clip is added or
+  /// removed. The post form uses it to leave the row out entirely when nobody
+  /// else is credited, so the empty row does not take a `spacing` gap.
+  static List<String> creditedCreators(WidgetRef ref) {
     // The timeline is the source of truth; watching it rebuilds the rows when
     // a clip is added or removed.
     ref.watch(clipManagerProvider.select((state) => state.clips));
@@ -35,6 +39,12 @@ class VideoMetadataClipCredits extends ConsumerWidget {
       if (pubkeys.any((pubkey) => pubkeysEqual(pubkey, author))) continue;
       pubkeys.add(author);
     }
+    return pubkeys;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pubkeys = creditedCreators(ref);
     if (pubkeys.isEmpty) return const SizedBox.shrink();
 
     return Column(

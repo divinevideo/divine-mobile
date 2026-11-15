@@ -137,6 +137,10 @@ class _VideoMetadataFormFieldsState
     final showIdeas =
         widget.enableIdeas &&
         ref.watch(isFeatureEnabledProvider(FeatureFlag.publishingIdeas));
+    // Gated for the same reason: most posts credit nobody else.
+    final showClipCredits = VideoMetadataClipCredits.creditedCreators(
+      ref,
+    ).isNotEmpty;
 
     return Padding(
       padding: const .symmetric(horizontal: 16),
@@ -193,7 +197,8 @@ class _VideoMetadataFormFieldsState
           if (widget.enableInspiredBy)
             const _InputWrapper(child: VideoMetadataInspiredByInput()),
 
-          const _InputWrapper(child: VideoMetadataClipCredits()),
+          if (showClipCredits)
+            const _InputWrapper(child: VideoMetadataClipCredits()),
 
           if (widget.enableContentWarning)
             const _InputWrapper(child: VideoMetadataContentWarningSelector()),
