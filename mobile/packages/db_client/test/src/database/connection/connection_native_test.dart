@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:db_client/db_client.dart' show AppDatabase;
+import 'package:db_client/db_client.dart' show AppDatabase, DirectMessagesDao;
 import 'package:db_client/src/database/connection/connection_native.dart';
 import 'package:db_client/src/database/connection/database_backup_retention.dart';
 import 'package:db_client/src/database/connection/database_integrity.dart';
@@ -1453,6 +1453,39 @@ void main() {
       );
     });
 
+    /// Damages the closed database at [dbPath], salvages it, and opens the
+    /// result.
+    Future<Database> salvageDamagedDatabase() async {
+      final damaged = sqlite3.open(dbPath);
+      try {
+        applyCipherKey(damaged, validKey);
+        _orphanIndexPages(damaged);
+      } finally {
+        damaged.close();
+      }
+      expect(
+        await encryptedDatabaseOpensWithKey(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        ),
+        isFalse,
+        reason: 'precondition: the database must fail the integrity check',
+      );
+
+      expect(
+        await salvageCorruptEncryptedDatabase(
+          rawKeyHex: validKey,
+          databasePath: dbPath,
+        ),
+        isTrue,
+      );
+
+      final salvaged = sqlite3.open(dbPath);
+      addTearDown(salvaged.close);
+      applyCipherKey(salvaged, validKey);
+      return salvaged;
+    }
+
     test('keeps the queued own retractions and the conversations they are '
         'sent in (#9772)', () async {
       const owner =
@@ -1532,33 +1565,8 @@ void main() {
         );
       }
       await drift.close();
-      final damaged = sqlite3.open(dbPath);
-      try {
-        applyCipherKey(damaged, validKey);
-        _orphanIndexPages(damaged);
-      } finally {
-        damaged.close();
-      }
-      expect(
-        await encryptedDatabaseOpensWithKey(
-          rawKeyHex: validKey,
-          databasePath: dbPath,
-        ),
-        isFalse,
-        reason: 'precondition: the database must fail the integrity check',
-      );
 
-      expect(
-        await salvageCorruptEncryptedDatabase(
-          rawKeyHex: validKey,
-          databasePath: dbPath,
-        ),
-        isTrue,
-      );
-
-      final salvaged = sqlite3.open(dbPath);
-      addTearDown(salvaged.close);
-      applyCipherKey(salvaged, validKey);
+      final salvaged = await salvageDamagedDatabase();
       List<(String, String)> rowsOf(String table) => [
         for (final row in salvaged.select(
           'SELECT id, owner_pubkey FROM "$table";',
@@ -1576,6 +1584,59 @@ void main() {
         rowsOf('conversations'),
         equals([('room', owner)]),
         reason: 'the retry reads its recipients from the conversation',
+      );
+    });
+
+    test('keeps an own retraction in every state the sender still sees '
+        '(#9772)', () async {
+      const owner =
+          '1111111111111111111111111111111111111111111111111111111111111111';
+      final drift = AppDatabase(
+        NativeDatabase(
+          File(dbPath),
+          setup: (rawDb) => applyCipherKey(rawDb, validKey),
+        ),
+      );
+      final messages = drift.directMessagesDao;
+      // The salvage filter spells the statuses out in SQL. Writing each one
+      // from the DAO's list fails a status added there but not to the filter.
+      const queued = DirectMessagesDao.retractionsShownToSender;
+      for (final id in [...queued, 'delivered']) {
+        await messages.insertMessage(
+          id: id,
+          conversationId: 'room',
+          senderPubkey: owner,
+          content: id,
+          createdAt: 1700000000,
+          giftWrapId: 'gw_$id',
+          ownerPubkey: owner,
+        );
+        await messages.markMessageDeletionPending(
+          id,
+          deletionRumorJson: '{"kind":5}',
+          ownerPubkey: owner,
+        );
+      }
+      for (final status in queued) {
+        await drift.customStatement(
+          'UPDATE direct_messages SET deletion_publish_status = ? '
+          'WHERE id = ?;',
+          [status, status],
+        );
+      }
+      await messages.markMessageDeletionSent('delivered', ownerPubkey: owner);
+      await drift.close();
+
+      final salvaged = await salvageDamagedDatabase();
+      expect(
+        [
+          for (final row in salvaged.select(
+            'SELECT id, deletion_publish_status FROM direct_messages;',
+          ))
+            (row['id'] as String, row['deletion_publish_status'] as String?),
+        ],
+        unorderedEquals([for (final status in queued) (status, status)]),
+        reason: 'a delivered retraction resyncs; a queued one has no copy',
       );
     });
   });
