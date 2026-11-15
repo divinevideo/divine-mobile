@@ -702,7 +702,10 @@ ProfileReader? profileReadRepository(Ref ref) {
 RemixConsentRepository? remixConsentRepository(Ref ref) {
   final reader = ref.watch(profileReadRepositoryProvider);
   if (reader == null) return null;
-  return RemixConsentRepository(profileRepository: reader);
+  return RemixConsentRepository(
+    profileRepository: reader,
+    defaultRelayUrl: ref.watch(currentEnvironmentProvider).relayUrl,
+  );
 }
 
 /// Shared construction for [profileRepository] and [profileReadRepository].

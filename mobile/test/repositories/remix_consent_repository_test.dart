@@ -15,6 +15,7 @@ void main() {
         'b1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
     const otherPubkey =
         'c1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
+    const defaultRelayUrl = 'wss://relay.divine.test';
 
     late _MockProfileRepository profileRepository;
     late RemixConsentRepository repository;
@@ -41,10 +42,20 @@ void main() {
     void stubFresh(Future<UserProfile?> Function() answer) =>
         stubRead(() async => (profile: await answer(), conclusive: true));
 
+    void stubDefaultRelayRead(Future<FreshProfileRead> Function() answer) {
+      when(
+        () => profileRepository.readRawProfileFromRelay(
+          pubkey: authorPubkey,
+          relayUrl: defaultRelayUrl,
+        ),
+      ).thenAnswer((_) => answer());
+    }
+
     setUp(() {
       profileRepository = _MockProfileRepository();
       repository = RemixConsentRepository(
         profileRepository: profileRepository,
+        defaultRelayUrl: defaultRelayUrl,
       );
     });
 
@@ -111,12 +122,98 @@ void main() {
         );
       });
 
-      test('is unknown when the kind 0 read is inconclusive', () async {
-        stubRead(() async => (profile: null, conclusive: false));
+      test(
+        'does not ask the default relay again after a conclusive read',
+        () async {
+          stubRead(() async => (profile: null, conclusive: true));
 
-        expect(
-          await repository.consentFor(authorPubkey),
-          RemixConsent.unknown,
+          await repository.consentFor(authorPubkey);
+
+          verifyNever(
+            () => profileRepository.readRawProfileFromRelay(
+              pubkey: any(named: 'pubkey'),
+              relayUrl: any(named: 'relayUrl'),
+            ),
+          );
+        },
+      );
+
+      group('when another relay leaves the read inconclusive', () {
+        setUp(() => stubRead(() async => (profile: null, conclusive: false)));
+
+        test('is allowed when the default relay confirms no kind 0', () async {
+          stubDefaultRelayRead(() async => (profile: null, conclusive: true));
+
+          expect(
+            await repository.consentFor(authorPubkey),
+            RemixConsent.allowed,
+          );
+        });
+
+        test('is unknown when the default relay does not answer', () async {
+          stubDefaultRelayRead(() async => (profile: null, conclusive: false));
+
+          expect(
+            await repository.consentFor(authorPubkey),
+            RemixConsent.unknown,
+          );
+        });
+
+        test('is blocked when the default relay holds a JSON false', () async {
+          stubDefaultRelayRead(
+            () async => (
+              profile: profileWith(const {divineAllowVideoReuseKey: false}),
+              conclusive: true,
+            ),
+          );
+
+          expect(
+            await repository.consentFor(authorPubkey),
+            RemixConsent.blocked,
+          );
+        });
+
+        test(
+          'is allowed when the default relay kind 0 does not block',
+          () async {
+            stubDefaultRelayRead(
+              () async => (
+                profile: profileWith(const {'name': 'alice'}),
+                conclusive: true,
+              ),
+            );
+
+            expect(
+              await repository.consentFor(authorPubkey),
+              RemixConsent.allowed,
+            );
+          },
+        );
+
+        test('is unknown when the default relay read throws', () async {
+          stubDefaultRelayRead(() async => throw Exception('socket closed'));
+
+          expect(
+            await repository.consentFor(authorPubkey),
+            RemixConsent.unknown,
+          );
+        });
+
+        test(
+          'is unknown when the default relay answers for someone else',
+          () async {
+            stubDefaultRelayRead(
+              () async => (
+                profile: profileWith(const {}, pubkey: otherPubkey),
+                conclusive: true,
+              ),
+            );
+
+            expect(
+              await repository.consentFor(authorPubkey),
+              RemixConsent.unknown,
+            );
+          },
         );
       });
 

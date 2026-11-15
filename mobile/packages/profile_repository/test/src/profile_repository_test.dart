@@ -644,6 +644,137 @@ void main() {
       });
     });
 
+    group('readRawProfileFromRelay', () {
+      const relayUrl = 'wss://relay.example.test';
+
+      void stubRelayRead({
+        List<Event> events = const [],
+        bool timedOut = false,
+        bool noRelays = false,
+      }) {
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
+        );
+      }
+
+      test('asks only the named relay, settled and uncached', () async {
+        stubRelayRead(events: [mockProfileEvent]);
+
+        final read = await profileRepository.readRawProfileFromRelay(
+          pubkey: testPubkey,
+          relayUrl: relayUrl,
+        );
+
+        expect(read.profile?.pubkey, testPubkey);
+        expect(read.conclusive, isTrue);
+        final filters =
+            verify(
+                  () => mockNostrClient.queryEventsDetailed(
+                    captureAny(),
+                    tempRelays: [relayUrl],
+                    relayTypes: [RelayType.temp],
+                    useCache: false,
+                    requireAllRelaysSettled: true,
+                  ),
+                ).captured.single
+                as List<Filter>;
+        expect(filters.single.kinds, [0]);
+        expect(filters.single.authors, [testPubkey]);
+      });
+
+      test('reports a miss the relay answered as conclusive', () async {
+        stubRelayRead();
+
+        final read = await profileRepository.readRawProfileFromRelay(
+          pubkey: testPubkey,
+          relayUrl: relayUrl,
+        );
+
+        expect(read.profile, isNull);
+        expect(read.conclusive, isTrue);
+      });
+
+      test(
+        'reports a timed-out read as inconclusive, events and all',
+        () async {
+          stubRelayRead(events: [mockProfileEvent], timedOut: true);
+
+          final read = await profileRepository.readRawProfileFromRelay(
+            pubkey: testPubkey,
+            relayUrl: relayUrl,
+          );
+
+          expect(read.profile, isNull);
+          expect(read.conclusive, isFalse);
+        },
+      );
+
+      test('reports a read no relay took as inconclusive', () async {
+        stubRelayRead(noRelays: true);
+
+        final read = await profileRepository.readRawProfileFromRelay(
+          pubkey: testPubkey,
+          relayUrl: relayUrl,
+        );
+
+        expect(read.conclusive, isFalse);
+      });
+
+      test('reports a failed read as inconclusive', () async {
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenThrow(Exception('socket closed'));
+
+        final read = await profileRepository.readRawProfileFromRelay(
+          pubkey: testPubkey,
+          relayUrl: relayUrl,
+        );
+
+        expect(read.profile, isNull);
+        expect(read.conclusive, isFalse);
+      });
+
+      test('never looks up a blocked account', () async {
+        final blocking = ProfileRepository(
+          nostrClient: mockNostrClient,
+          userProfilesDao: mockUserProfilesDao,
+          httpClient: mockHttpClient,
+          blockFilter: (pubkey) => pubkey == testPubkey,
+        );
+
+        final read = await blocking.readRawProfileFromRelay(
+          pubkey: testPubkey,
+          relayUrl: relayUrl,
+        );
+
+        expect(read.profile, isNull);
+        expect(read.conclusive, isFalse);
+        verifyNever(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        );
+      });
+    });
+
     group('fetchFreshProfile', () {
       /// Stubs both relay and indexer to return nothing, so tests that
       /// only care about one layer can focus on that.

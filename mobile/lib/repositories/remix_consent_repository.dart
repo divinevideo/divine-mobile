@@ -25,24 +25,34 @@ enum RemixConsent {
 /// Only a relay-fetched raw kind 0 carries custom keys — a REST-built profile
 /// rebuilds `rawData` from typed fields alone — so the check always reads one
 /// fresh and never trusts a cached projection, which would silently answer
-/// "allowed" for a blocked account. Only a read that every relay answered
-/// can prove the author has no kind 0.
+/// "allowed" for a blocked account.
+///
+/// Only Divine writes the key, and it publishes every kind 0 to the app's
+/// default relay. So when one silent third-party relay leaves the wider read
+/// inconclusive — the common case for classic Vine authors with no kind 0 —
+/// a full answer from the default relay alone settles it.
 class RemixConsentRepository {
-  /// Creates a repository that reads kind 0 through [profileRepository].
+  /// Creates a repository that reads kind 0 through [profileRepository], and
+  /// falls back to [defaultRelayUrl] alone when the wider read is
+  /// inconclusive.
   ///
   /// Only signer-free reads are made, so a [ProfileReader] is enough.
-  RemixConsentRepository({required ProfileReader profileRepository})
-    : _profileRepository = profileRepository;
+  RemixConsentRepository({
+    required ProfileReader profileRepository,
+    required String defaultRelayUrl,
+  }) : _profileRepository = profileRepository,
+       _defaultRelayUrl = defaultRelayUrl;
 
   final ProfileReader _profileRepository;
+  final String _defaultRelayUrl;
 
   /// Whether the author of [authorPubkey] allows others to remix their videos.
   ///
   /// An author who confirmably never published a kind 0 cannot have blocked
-  /// anything, so that is [RemixConsent.allowed]. Returns
-  /// [RemixConsent.unknown] when the read throws, is inconclusive (a relay
-  /// timed out, refused, or none was connected), or returns another
-  /// account's profile.
+  /// anything, so that is [RemixConsent.allowed]. A miss is confirmed by a
+  /// read every relay answered, or failing that by the default relay alone.
+  /// Returns [RemixConsent.unknown] when the reads throw, neither is
+  /// conclusive, or they return another account's profile.
   Future<RemixConsent> consentFor(String authorPubkey) async {
     final FreshProfileRead read;
     try {
@@ -59,6 +69,29 @@ class RemixConsentRepository {
       return RemixConsent.unknown;
     }
 
+    if (read.conclusive || read.profile != null) {
+      return _consentFrom(read, authorPubkey);
+    }
+
+    final FreshProfileRead defaultRelayRead;
+    try {
+      defaultRelayRead = await _profileRepository.readRawProfileFromRelay(
+        pubkey: authorPubkey,
+        relayUrl: _defaultRelayUrl,
+      );
+    } on Exception catch (e) {
+      Log.warning(
+        'Remix consent read from $_defaultRelayUrl failed for '
+        '${pubkeyForLogs(authorPubkey)}: $e',
+        name: 'RemixConsentRepository',
+        category: LogCategory.relay,
+      );
+      return RemixConsent.unknown;
+    }
+    return _consentFrom(defaultRelayRead, authorPubkey);
+  }
+
+  RemixConsent _consentFrom(FreshProfileRead read, String authorPubkey) {
     final profile = read.profile;
     if (profile == null && read.conclusive) return RemixConsent.allowed;
     if (profile == null || profile.pubkey != authorPubkey) {

@@ -44,11 +44,15 @@ save re-seeds from the freshest relay copy so they survive edits):
   "Let people remix my videos" setting writes it: turning the setting off
   writes `false`, turning it back on removes the key. Readers must fetch the
   author's raw kind 0 (`readFreshProfile(requireRawKind0: true)`) — REST
-  profile projections drop custom keys. A confirmed-missing kind 0 (every
-  relay answered and none holds one) counts as allowed, since an account with
-  no profile cannot have blocked anything. Readers fail closed, refusing the
-  remix with a retry message, only when the read is inconclusive (a relay
-  timed out or refused, none was connected) or throws.
+  profile projections drop custom keys. A confirmed-missing kind 0 counts as
+  allowed, since an account with no profile cannot have blocked anything. A
+  miss is confirmed when every relay answered and none holds one, or, when
+  another relay leaves that read inconclusive, when the app's default Divine
+  relay alone answers in full (`readRawProfileFromRelay`): only Divine writes
+  the key, and it publishes every kind 0 there. A `false` the default relay
+  holds blocks in the same way. Readers fail closed, refusing the remix with a
+  retry message, only when neither read is conclusive (a relay timed out or
+  refused, none was connected) or a read throws.
 
 ### Kind 16 - Generic Reposts (NIP-18)
 **Required for:** Video repost functionality

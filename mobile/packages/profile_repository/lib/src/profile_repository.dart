@@ -13,7 +13,7 @@ import 'package:http/http.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
-import 'package:nostr_sdk/nostr_sdk.dart' show Event, Filter, Nip19;
+import 'package:nostr_sdk/nostr_sdk.dart' show Event, Filter, Nip19, RelayType;
 import 'package:profile_repository/profile_repository.dart';
 import 'package:profile_repository/src/identity_event_selection.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -960,6 +960,39 @@ class ProfileRepository implements ProfileReader {
     requireRawKind0: requireRawKind0,
     rawKind0RetryDelays: rawKind0RetryDelays,
   );
+
+  @override
+  Future<FreshProfileRead> readRawProfileFromRelay({
+    required String pubkey,
+    required String relayUrl,
+  }) async {
+    // A blocked account is never looked up, so its miss proves nothing.
+    if (_blockFilter?.call(pubkey) ?? false) {
+      return (profile: null, conclusive: false);
+    }
+    try {
+      final read = await _nostrClient.queryEventsDetailed(
+        [
+          Filter(kinds: [0], authors: [pubkey], limit: 1),
+        ],
+        tempRelays: [relayUrl],
+        relayTypes: const [RelayType.temp],
+        useCache: false,
+        requireAllRelaysSettled: true,
+      );
+      if (read.timedOut || read.noRelays) {
+        return (profile: null, conclusive: false);
+      }
+      return (profile: _newestKind0Profile(read.events), conclusive: true);
+    } on Exception catch (e) {
+      Log.warning(
+        'Kind 0 read from $relayUrl failed: $e',
+        name: 'ProfileRepository.readRawProfileFromRelay',
+        category: LogCategory.relay,
+      );
+      return (profile: null, conclusive: false);
+    }
+  }
 
   /// Reads optional raw Kind 0 metadata without delaying the ordinary REST
   /// profile read. Accepts partial relay results; unsafe as a publish seed.
