@@ -13,6 +13,7 @@ String? audioMimeTypeForPath(String path) =>
       '.m4a' => 'audio/mp4',
       '.mp3' => 'audio/mpeg',
       '.wav' => 'audio/wav',
+      '.flac' => 'audio/flac',
       '.weba' || '.webm' => 'audio/webm',
       _ => null,
     };

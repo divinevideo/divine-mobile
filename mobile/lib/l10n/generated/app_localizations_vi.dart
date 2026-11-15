@@ -4562,7 +4562,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'Loại tệp đó không được hỗ trợ. Hãy chọn một tệp âm thanh.';
+      'Loại tệp đó không được hỗ trợ. Hãy thử MP3, M4A, AAC, WAV hoặc FLAC.';
 
   @override
   String get soundsImportUnreadable => 'Không đọc được tệp âm thanh đó.';
@@ -15118,7 +15118,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get soundUploadChooseFile => 'Chọn tệp âm thanh';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 hoặc WAV';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV hoặc FLAC';
 
   @override
   String get soundUploadChangeFile => 'Đổi';

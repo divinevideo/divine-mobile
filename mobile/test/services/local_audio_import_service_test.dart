@@ -94,6 +94,25 @@ void main() {
       },
     );
 
+    test('imports a FLAC file as audio/flac', () async {
+      final source = File('${sourceDir.path}/Field Recording.flac');
+      await source.writeAsBytes([1, 2, 3, 4]);
+      final service = LocalAudioImportService(
+        storageRootProvider: () async => storageDir,
+        durationResolver: (_) async => const Duration(seconds: 12),
+      );
+
+      final event = await service.importAudioFile(
+        sourcePath: source.path,
+        displayName: 'Field Recording.flac',
+      );
+
+      expect(event.mimeType, equals('audio/flac'));
+      expect(event.title, equals('Field Recording'));
+      expect(event.duration, equals(12));
+      expect(File(event.localFilePath!).existsSync(), isTrue);
+    });
+
     test('rejects unsupported audio extensions without copying', () async {
       final source = File('${sourceDir.path}/notes.txt');
       await source.writeAsString('not audio');

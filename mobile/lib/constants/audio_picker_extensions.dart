@@ -10,7 +10,11 @@ import 'package:file_selector/file_selector.dart';
 /// maps to `video/webm`, which would list every video, so both are left
 /// out. A file with either extension arriving by another route is still
 /// accepted by the import service.
-const audioPickerExtensions = ['aac', 'm4a', 'mp3', 'wav'];
+///
+/// The pickers filter by `audio/*` and `public.audio` on mobile, so any
+/// audio file can be chosen there; a format missing here is still offered
+/// and then refused. `soundsImportUnsupportedFormat` names these formats.
+const audioPickerExtensions = ['aac', 'm4a', 'mp3', 'wav', 'flac'];
 
 /// The type group `AudioFilePickerService` opens the picker on.
 ///

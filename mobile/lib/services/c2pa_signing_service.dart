@@ -672,6 +672,7 @@ class C2paSigningService {
       'mp3' => 'audio/mpeg',
       'aac' => 'audio/aac',
       'wav' => 'audio/wav',
+      'flac' => 'audio/flac',
       'mov' => 'video/quicktime',
       _ => switch (source.kind) {
         C2paSourceKind.image => 'image/jpeg',

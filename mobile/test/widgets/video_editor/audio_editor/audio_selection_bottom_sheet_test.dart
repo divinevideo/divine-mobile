@@ -8,6 +8,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,6 +30,7 @@ import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/services/audio_file_picker_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/local_audio_import_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_category_bar.dart';
@@ -80,6 +82,9 @@ class _MockContentBlocklistRepository extends Mock
 
 class _MockAudioFilePickerService extends Mock
     implements AudioFilePickerService {}
+
+class _MockLocalAudioImportService extends Mock
+    implements LocalAudioImportService {}
 
 /// A playback service that answers every call the selection overlay makes,
 /// so a test can assert on selection rather than on playback plumbing.
@@ -154,6 +159,8 @@ void main() {
       bool? consentResult,
       Completer<bool>? pendingConsent,
       AudioFilePickerService? audioFilePicker,
+      Future<XFile?> Function()? pickAudioFile,
+      LocalAudioImportService? localAudioImportService,
       Set<String> blockedSoundAuthors = const {},
       double spaceBelow = 0,
       Locale? locale,
@@ -276,6 +283,8 @@ void main() {
                     child: AudioSelectionBottomSheet(
                       scrollController: scrollController,
                       audioService: audioService,
+                      pickAudioFile: pickAudioFile,
+                      localAudioImportService: localAudioImportService,
                     ),
                   ),
                   // What a host lays out below the picker, as the recorder
@@ -458,6 +467,63 @@ void main() {
         expect(find.text(l10n.exploreTabPopular), findsWidgets);
         expect(find.text(l10n.exploreTabNew), findsWidgets);
         expect(find.text(l10n.videoEditorAudioCategoryMySounds), findsWidgets);
+      });
+    });
+
+    group('Import', () {
+      Future<void> importRefused(
+        WidgetTester tester,
+        LocalAudioImportFailureReason reason,
+      ) async {
+        final importService = _MockLocalAudioImportService();
+        when(
+          () => importService.importAudioFile(
+            sourcePath: any(named: 'sourcePath'),
+            displayName: any(named: 'displayName'),
+          ),
+        ).thenAnswer(
+          (_) async => throw LocalAudioImportException(
+            'English service message',
+            reason: reason,
+          ),
+        );
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: const AsyncValue.data([]),
+            pickAudioFile: () async => XFile('/picked/song.ogg'),
+            localAudioImportService: importService,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryMySounds));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorAudioImportAudio));
+        await tester.pump();
+      }
+
+      testWidgets('names the supported formats when the type is refused', (
+        tester,
+      ) async {
+        await importRefused(
+          tester,
+          LocalAudioImportFailureReason.unsupportedType,
+        );
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.soundsImportUnsupportedFormat), findsOneWidget);
+        expect(find.text('English service message'), findsNothing);
+      });
+
+      testWidgets('says the file could not be read when decoding fails', (
+        tester,
+      ) async {
+        await importRefused(tester, LocalAudioImportFailureReason.decodeFailed);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.soundsImportUnreadable), findsOneWidget);
+        expect(find.text('English service message'), findsNothing);
       });
     });
 

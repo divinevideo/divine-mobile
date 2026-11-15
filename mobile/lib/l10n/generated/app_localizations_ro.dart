@@ -4742,7 +4742,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get soundsImportUnsupportedFormat =>
-      'Acest tip de fișier nu este acceptat. Alege un fișier audio.';
+      'Acest tip de fișier nu este acceptat. Încearcă MP3, M4A, AAC, WAV sau FLAC.';
 
   @override
   String get soundsImportUnreadable => 'Fișierul audio nu a putut fi citit.';
@@ -15483,7 +15483,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get soundUploadChooseFile => 'Alege un fișier audio';
 
   @override
-  String get soundUploadSupportedFormats => 'AAC, M4A, MP3 sau WAV';
+  String get soundUploadSupportedFormats => 'AAC, M4A, MP3, WAV sau FLAC';
 
   @override
   String get soundUploadChangeFile => 'Schimbă';
