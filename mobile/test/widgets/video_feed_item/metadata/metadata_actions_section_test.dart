@@ -226,10 +226,14 @@ void main() {
       );
 
       testWidgets(
-        'Add to clips on the viewer own video, even without a reuse tag',
+        'Add to clips on the viewer own video, even when its tag declines reuse',
         (tester) async {
           stubContentActions();
-          final video = _video();
+          final video = _video(
+            tags: const [
+              ['allow_video_reuse', 'false'],
+            ],
+          );
           expect(video.allowVideoReuse, isFalse);
           expect(video.isOriginalVine, isFalse);
 

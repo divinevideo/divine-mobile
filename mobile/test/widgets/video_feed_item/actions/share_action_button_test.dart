@@ -888,6 +888,19 @@ void main() {
           'a classic Vine, or open to reuse',
           (tester) async {
             stubBookmarkStatus(saved: false);
+            testVideo = VideoEvent(
+              id: testVideo.id,
+              pubkey: testVideo.pubkey,
+              createdAt: testVideo.createdAt,
+              content: testVideo.content,
+              timestamp: testVideo.timestamp,
+              videoUrl: testVideo.videoUrl,
+              title: testVideo.title,
+              nostrEventTags: const [
+                ['allow_video_reuse', 'false'],
+              ],
+            );
+            expect(testVideo.allowVideoReuse, isFalse);
             await pumpSheet(tester);
 
             expect(find.text(l10n.shareSheetAddToList), findsOneWidget);

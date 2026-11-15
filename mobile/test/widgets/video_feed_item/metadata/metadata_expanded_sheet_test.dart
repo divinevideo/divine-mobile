@@ -2919,7 +2919,7 @@ void main() {
       MockAuthService? authService,
       BookmarksRepository Function(Ref ref)? bookmarks,
       VideoClipImportService? videoClipImportService,
-      RemixConsentRepository? remixConsentRepository,
+      RemixConsentRepository? Function(Ref ref)? remixConsent,
     }) => [
       authServiceProvider.overrideWithValue(
         authService ??
@@ -2934,10 +2934,8 @@ void main() {
       videoClipImportServiceProvider.overrideWithValue(
         videoClipImportService ?? _MockVideoClipImportService(),
       ),
-      if (remixConsentRepository != null)
-        remixConsentRepositoryProvider.overrideWithValue(
-          remixConsentRepository,
-        ),
+      if (remixConsent != null)
+        remixConsentRepositoryProvider.overrideWith(remixConsent),
       repostsRepositoryProvider.overrideWithValue(repostsRepository),
       isFeatureEnabledProvider(FeatureFlag.debugTools).overrideWithValue(false),
       fetchUserProfileProvider(
@@ -3143,7 +3141,7 @@ void main() {
             providerOverrides: sheetOverrides(
               viewerPubkey: _thirdPartyViewer,
               videoClipImportService: importer,
-              remixConsentRepository: consent,
+              remixConsent: (ref) => consent,
             ),
             child: Builder(
               builder: (context) => TextButton(
@@ -3165,6 +3163,63 @@ void main() {
 
         expect(find.text(l10n.remixBlockedByCreator), findsOneWidget);
         verify(() => consent.consentFor(_creatorPubkey)).called(1);
+        verifyZeroInteractions(importer);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'checks consent through the remix consent repository that replaced the '
+      'one the sheet opened with',
+      (tester) async {
+        final importer = _MockVideoClipImportService();
+        final original = _MockRemixConsentRepository();
+        when(
+          () => original.consentFor(any()),
+        ).thenAnswer((_) async => RemixConsent.allowed);
+        final replacement = _MockRemixConsentRepository();
+        when(
+          () => replacement.consentFor(any()),
+        ).thenAnswer((_) async => RemixConsent.blocked);
+        final activeConsent = StateProvider<RemixConsentRepository>(
+          (ref) => original,
+        );
+        final video = _makeVideo(
+          title: 'Classic',
+          rawTags: {'platform': 'vine'},
+        );
+
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: sheetOverrides(
+              viewerPubkey: _thirdPartyViewer,
+              videoClipImportService: importer,
+              remixConsent: (ref) => ref.watch(activeConsent),
+            ),
+            child: Builder(
+              builder: (context) => TextButton(
+                onPressed: () =>
+                    unawaited(MetadataExpandedSheet.show(context, video)),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        ProviderScope.containerOf(
+          tester.element(find.byType(MetadataActionsSection)),
+        ).read(activeConsent.notifier).state = replacement;
+        await tester.pumpAndSettle();
+
+        final l10n = _l10n(tester);
+        await tester.tap(find.text(l10n.shareSheetAddToClips));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.shareSheetSaveClip));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.remixBlockedByCreator), findsOneWidget);
+        verify(() => replacement.consentFor(_creatorPubkey)).called(1);
+        verifyNever(() => original.consentFor(any()));
         verifyZeroInteractions(importer);
       },
     );
