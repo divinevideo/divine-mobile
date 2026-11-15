@@ -47,7 +47,7 @@ const _publishSeedRelayTimeout = Duration(seconds: 4);
 /// `conclusive` is false when the read could not rule out a copy it never
 /// saw: a relay stayed silent or refused the REQ, none took it, or the read
 /// threw. Only a conclusive miss means no Kind 0 exists to be replaced.
-typedef _ProfileRead = ({UserProfile? profile, bool conclusive});
+typedef _ProfileRead = FreshProfileRead;
 
 // Caps NIP-50 user search. The relay query has a slightly shorter inner
 // budget and returns partial results on SDK timeout; the outer guard is a
@@ -949,6 +949,17 @@ class ProfileRepository implements ProfileReader {
     );
     return read.profile;
   }
+
+  @override
+  Future<FreshProfileRead> readFreshProfile({
+    required String pubkey,
+    bool requireRawKind0 = false,
+    List<Duration> rawKind0RetryDelays = const [],
+  }) => _readFreshProfile(
+    pubkey: pubkey,
+    requireRawKind0: requireRawKind0,
+    rawKind0RetryDelays: rawKind0RetryDelays,
+  );
 
   /// Reads optional raw Kind 0 metadata without delaying the ordinary REST
   /// profile read. Accepts partial relay results; unsafe as a publish seed.

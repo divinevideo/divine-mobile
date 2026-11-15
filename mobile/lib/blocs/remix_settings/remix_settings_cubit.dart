@@ -16,7 +16,9 @@ typedef RemixProfileSaved = FutureOr<void> Function(UserProfile profile);
 /// Loads and saves whether others may remix the signed-in account's videos.
 ///
 /// Follows `MonetizationLinksSettingsCubit`: a kind 0 replaces the previous
-/// one whole, so only a strict raw kind 0 read can seed the publish.
+/// one whole, so only a strict raw kind 0 read can seed the publish. An
+/// account that confirmably has no kind 0 loads as allowed with no seed, and
+/// a save then publishes its first kind 0.
 class RemixSettingsCubit extends Cubit<RemixSettingsState>
     with CloseGuardedEmit<RemixSettingsState> {
   RemixSettingsCubit({
@@ -45,10 +47,17 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
     }
     emit(state.copyWith(loadStatus: RemixSettingsLoadStatus.loading));
     try {
-      final profile = await repository.fetchFreshProfile(
+      final read = await repository.readFreshProfile(
         pubkey: pubkey,
         requireRawKind0: true,
       );
+      final profile = read.profile;
+      // An account that confirmably has no kind 0 has blocked nothing; it
+      // loads as allowed so the creator can still turn remixing off.
+      if (profile == null && read.conclusive) {
+        emitIfOpen(state.copyWith(loadStatus: RemixSettingsLoadStatus.ready));
+        return;
+      }
       if (profile == null || profile.pubkey != pubkey) {
         emitIfOpen(
           state.copyWith(loadStatus: RemixSettingsLoadStatus.failure),
@@ -77,7 +86,6 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
     if (isClosed ||
         !state.canEdit ||
         repository == null ||
-        currentProfile == null ||
         allow == state.allowVideoReuse) {
       return;
     }
@@ -97,11 +105,11 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
         category: LogCategory.system,
       );
       final saved = await repository.saveProfileEvent(
-        displayName: currentProfile.displayName ?? currentProfile.name ?? '',
-        about: currentProfile.about,
-        website: currentProfile.website,
-        picture: currentProfile.picture,
-        banner: currentProfile.banner,
+        displayName: currentProfile?.displayName ?? currentProfile?.name ?? '',
+        about: currentProfile?.about,
+        website: currentProfile?.website,
+        picture: currentProfile?.picture,
+        banner: currentProfile?.banner,
         allowVideoReuse: allow,
         currentProfile: currentProfile,
       );

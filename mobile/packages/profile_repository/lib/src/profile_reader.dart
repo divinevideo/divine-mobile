@@ -4,6 +4,14 @@
 import 'package:models/models.dart';
 import 'package:profile_repository/profile_repository.dart';
 
+/// A fresh profile read, and whether an empty answer can be trusted.
+///
+/// `conclusive` is false when the read could not rule out a profile it never
+/// saw: a relay stayed silent or refused the REQ, none was connected, the
+/// read threw, or the pubkey is blocked. A null `profile` with `conclusive`
+/// true means the account has confirmably published no Kind 0.
+typedef FreshProfileRead = ({UserProfile? profile, bool conclusive});
+
 /// The subset of [ProfileRepository] that reads profile data without ever
 /// signing or publishing.
 ///
@@ -73,6 +81,18 @@ abstract interface class ProfileReader {
   /// or an indeterminate relay/API result; use [isConfirmedMissing] to
   /// distinguish them.
   Future<UserProfile?> fetchFreshProfile({
+    required String pubkey,
+    bool requireRawKind0,
+    List<Duration> rawKind0RetryDelays,
+  });
+
+  /// [fetchFreshProfile], also reporting whether a `null` profile is a
+  /// confirmed absence or an indeterminate read.
+  ///
+  /// Use it where a missing profile and an unreadable one must be treated
+  /// differently — for example a consent check that fails closed only when
+  /// the answer is genuinely unknown.
+  Future<FreshProfileRead> readFreshProfile({
     required String pubkey,
     bool requireRawKind0,
     List<Duration> rawKind0RetryDelays,

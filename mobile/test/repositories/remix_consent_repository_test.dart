@@ -29,14 +29,17 @@ void main() {
       eventId: 'e' * 64,
     );
 
-    void stubFresh(Future<UserProfile?> Function() answer) {
+    void stubRead(Future<FreshProfileRead> Function() answer) {
       when(
-        () => profileRepository.fetchFreshProfile(
+        () => profileRepository.readFreshProfile(
           pubkey: authorPubkey,
           requireRawKind0: true,
         ),
       ).thenAnswer((_) => answer());
     }
+
+    void stubFresh(Future<UserProfile?> Function() answer) =>
+        stubRead(() async => (profile: await answer(), conclusive: true));
 
     setUp(() {
       profileRepository = _MockProfileRepository();
@@ -83,7 +86,7 @@ void main() {
         await repository.consentFor(authorPubkey);
 
         verify(
-          () => profileRepository.fetchFreshProfile(
+          () => profileRepository.readFreshProfile(
             pubkey: authorPubkey,
             requireRawKind0: true,
           ),
@@ -99,8 +102,17 @@ void main() {
         );
       });
 
-      test('is unknown when no raw kind 0 comes back', () async {
-        stubFresh(() async => null);
+      test('is allowed when the author confirmably has no kind 0', () async {
+        stubRead(() async => (profile: null, conclusive: true));
+
+        expect(
+          await repository.consentFor(authorPubkey),
+          RemixConsent.allowed,
+        );
+      });
+
+      test('is unknown when the kind 0 read is inconclusive', () async {
+        stubRead(() async => (profile: null, conclusive: false));
 
         expect(
           await repository.consentFor(authorPubkey),

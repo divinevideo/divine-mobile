@@ -22,6 +22,7 @@ class RemixSettingsState extends Equatable {
   final RemixSettingsLoadStatus loadStatus;
 
   /// The signed-in account's raw kind 0, the seed for the next publish.
+  /// Null when the account confirmably has no kind 0 yet.
   final UserProfile? currentProfile;
 
   /// What the switch shows. Flipped optimistically while a save is in flight
@@ -36,7 +37,7 @@ class RemixSettingsState extends Equatable {
 
   bool get isReady => loadStatus == RemixSettingsLoadStatus.ready;
   bool get isSaving => saveStatus == RemixSettingsSaveStatus.saving;
-  bool get canEdit => isReady && !isSaving && currentProfile != null;
+  bool get canEdit => isReady && !isSaving;
 
   RemixSettingsState copyWith({
     RemixSettingsLoadStatus? loadStatus,

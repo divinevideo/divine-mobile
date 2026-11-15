@@ -43,9 +43,12 @@ save re-seeds from the freshest relay copy so they survive edits):
   video's own `allow_video_reuse` tag. Only the creator's own
   "Let people remix my videos" setting writes it: turning the setting off
   writes `false`, turning it back on removes the key. Readers must fetch the
-  author's raw kind 0 (`fetchFreshProfile(requireRawKind0: true)`) — REST
-  profile projections drop custom keys — and fail closed, refusing the remix
-  with a retry message, when that read fails.
+  author's raw kind 0 (`readFreshProfile(requireRawKind0: true)`) — REST
+  profile projections drop custom keys. A confirmed-missing kind 0 (every
+  relay answered and none holds one) counts as allowed, since an account with
+  no profile cannot have blocked anything. Readers fail closed, refusing the
+  remix with a retry message, only when the read is inconclusive (a relay
+  timed out or refused, none was connected) or throws.
 
 ### Kind 16 - Generic Reposts (NIP-18)
 **Required for:** Video repost functionality

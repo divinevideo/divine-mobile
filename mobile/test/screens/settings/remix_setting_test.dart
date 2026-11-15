@@ -44,11 +44,11 @@ void main() {
     setUp(() {
       repository = _MockProfileRepository();
       when(
-        () => repository.fetchFreshProfile(
+        () => repository.readFreshProfile(
           pubkey: _pubkey,
           requireRawKind0: true,
         ),
-      ).thenAnswer((_) async => _profile());
+      ).thenAnswer((_) async => (profile: _profile(), conclusive: true));
     });
 
     void stubSave(Future<UserProfile> Function() answer) {
@@ -97,11 +97,14 @@ void main() {
 
       testWidgets('reflects a blocked account', (tester) async {
         when(
-          () => repository.fetchFreshProfile(
+          () => repository.readFreshProfile(
             pubkey: _pubkey,
             requireRawKind0: true,
           ),
-        ).thenAnswer((_) async => _profile(allowVideoReuse: false));
+        ).thenAnswer(
+          (_) async =>
+              (profile: _profile(allowVideoReuse: false), conclusive: true),
+        );
 
         await pumpSetting(tester);
 
@@ -109,10 +112,26 @@ void main() {
         expect(remixSwitch(tester).onChanged, isNotNull);
       });
 
-      testWidgets('stays disabled until the profile is read', (tester) async {
-        final read = Completer<UserProfile?>();
+      testWidgets('is on and editable for an account with no kind 0', (
+        tester,
+      ) async {
         when(
-          () => repository.fetchFreshProfile(
+          () => repository.readFreshProfile(
+            pubkey: _pubkey,
+            requireRawKind0: true,
+          ),
+        ).thenAnswer((_) async => (profile: null, conclusive: true));
+
+        await pumpSetting(tester);
+
+        expect(remixSwitch(tester).value, isTrue);
+        expect(remixSwitch(tester).onChanged, isNotNull);
+      });
+
+      testWidgets('stays disabled until the profile is read', (tester) async {
+        final read = Completer<FreshProfileRead>();
+        when(
+          () => repository.readFreshProfile(
             pubkey: _pubkey,
             requireRawKind0: true,
           ),
@@ -121,7 +140,7 @@ void main() {
         await pumpSetting(tester);
 
         expect(remixSwitch(tester).onChanged, isNull);
-        read.complete(_profile());
+        read.complete((profile: _profile(), conclusive: true));
         await tester.pumpAndSettle();
         expect(remixSwitch(tester).onChanged, isNotNull);
       });

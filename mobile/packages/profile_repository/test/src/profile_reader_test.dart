@@ -59,6 +59,15 @@ class _ExhaustiveReader implements ProfileReader {
     List<Duration> rawKind0RetryDelays = const [],
   }) async => null;
 
+  // Widened consciously: the same unauthenticated read as fetchFreshProfile,
+  // also reporting whether an empty answer is authoritative.
+  @override
+  Future<FreshProfileRead> readFreshProfile({
+    required String pubkey,
+    bool requireRawKind0 = false,
+    List<Duration> rawKind0RetryDelays = const [],
+  }) async => (profile: null, conclusive: false);
+
   // Widened consciously: this queries public Kind 0 metadata without signing
   // or publishing, and keeps display partial reads separate from save seeds.
   @override

@@ -25,7 +25,8 @@ enum RemixConsent {
 /// Only a relay-fetched raw kind 0 carries custom keys — a REST-built profile
 /// rebuilds `rawData` from typed fields alone — so the check always reads one
 /// fresh and never trusts a cached projection, which would silently answer
-/// "allowed" for a blocked account.
+/// "allowed" for a blocked account. Only a read that every relay answered
+/// can prove the author has no kind 0.
 class RemixConsentRepository {
   /// Creates a repository that reads kind 0 through [profileRepository].
   ///
@@ -37,12 +38,15 @@ class RemixConsentRepository {
 
   /// Whether the author of [authorPubkey] allows others to remix their videos.
   ///
-  /// Returns [RemixConsent.unknown] when the fresh kind 0 read throws, finds
-  /// no raw kind 0, or returns another account's profile.
+  /// An author who confirmably never published a kind 0 cannot have blocked
+  /// anything, so that is [RemixConsent.allowed]. Returns
+  /// [RemixConsent.unknown] when the read throws, is inconclusive (a relay
+  /// timed out, refused, or none was connected), or returns another
+  /// account's profile.
   Future<RemixConsent> consentFor(String authorPubkey) async {
-    final UserProfile? profile;
+    final FreshProfileRead read;
     try {
-      profile = await _profileRepository.fetchFreshProfile(
+      read = await _profileRepository.readFreshProfile(
         pubkey: authorPubkey,
         requireRawKind0: true,
       );
@@ -55,9 +59,11 @@ class RemixConsentRepository {
       return RemixConsent.unknown;
     }
 
+    final profile = read.profile;
+    if (profile == null && read.conclusive) return RemixConsent.allowed;
     if (profile == null || profile.pubkey != authorPubkey) {
       Log.info(
-        'No raw kind 0 for ${pubkeyForLogs(authorPubkey)}; '
+        'No conclusive raw kind 0 for ${pubkeyForLogs(authorPubkey)}; '
         'remix consent unknown',
         name: 'RemixConsentRepository',
         category: LogCategory.relay,

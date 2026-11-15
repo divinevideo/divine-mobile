@@ -594,6 +594,56 @@ void main() {
       );
     });
 
+    group('readFreshProfile', () {
+      test('reports a raw Kind 0 every relay answered as conclusive', () async {
+        stubRelaysServeProfileEvent();
+
+        final read = await profileRepository.readFreshProfile(
+          pubkey: testPubkey,
+          requireRawKind0: true,
+        );
+
+        expect(read.profile?.pubkey, testPubkey);
+        expect(read.conclusive, isTrue);
+      });
+
+      test('reports a miss every relay answered as conclusive', () async {
+        stubRawRelayRead();
+
+        final read = await profileRepository.readFreshProfile(
+          pubkey: testPubkey,
+          requireRawKind0: true,
+        );
+
+        expect(read.profile, isNull);
+        expect(read.conclusive, isTrue);
+      });
+
+      test('reports a timed-out miss as inconclusive', () async {
+        stubRawRelayRead(timedOut: true);
+
+        final read = await profileRepository.readFreshProfile(
+          pubkey: testPubkey,
+          requireRawKind0: true,
+        );
+
+        expect(read.profile, isNull);
+        expect(read.conclusive, isFalse);
+      });
+
+      test('reports a miss with no relay connected as inconclusive', () async {
+        stubRawRelayRead(noRelays: true);
+
+        final read = await profileRepository.readFreshProfile(
+          pubkey: testPubkey,
+          requireRawKind0: true,
+        );
+
+        expect(read.profile, isNull);
+        expect(read.conclusive, isFalse);
+      });
+    });
+
     group('fetchFreshProfile', () {
       /// Stubs both relay and indexer to return nothing, so tests that
       /// only care about one layer can focus on that.
