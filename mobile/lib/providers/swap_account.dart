@@ -307,6 +307,7 @@ Future<void> swapAccount({
     final keyStorage = container.read(secureKeyStorageProvider);
     SecureKeyContainer? previousPrimary;
     var outgoingDmIngestQuiesced = false;
+    var outgoingVideoSendsQuiesced = false;
     var targetSubmitted = false;
     final incomingAuth = container.read(authServiceProvider);
     CuratedListService? suspendedOutgoingLists;
@@ -335,6 +336,14 @@ Future<void> swapAccount({
       ensureOutgoingCurrent();
       // Before sign-in, because sign-in is what runs the identity-change
       // cleanup that wipes the shared DM tables. See #7318.
+      if (current != null && current.exists(videoDmOutboxProvider)) {
+        outgoingVideoSendsQuiesced = true;
+        // The outgoing auth object still owns its old pubkey until container
+        // disposal. Cancel uploads and discard its queue before shared DM
+        // cleanup; an irreversible publication must finish writing first.
+        await current.read(videoDmOutboxProvider).quiesce();
+        ensureOutgoingCurrent();
+      }
       outgoingDmIngestQuiesced = await _quiesceOutgoingDmIngest(current);
       ensureOutgoingCurrent();
       await _pruneOutgoingDmVideos(current);
@@ -464,6 +473,11 @@ Future<void> swapAccount({
           stackTrace: rollbackStack,
         );
       } finally {
+        if (outgoingVideoSendsQuiesced && current != null) {
+          // A failed switch leaves this container active. Give it a fresh
+          // outbox; cancelled attempts can never rejoin the restored queue.
+          current.invalidate(videoDmOutboxProvider);
+        }
         // Never re-enable the retired service: old ACKs must remain invalid
         // even when this failed switch restores the same account.
         if (current != null && current.exists(curatedListsStateProvider)) {

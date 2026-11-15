@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
@@ -44,12 +45,15 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/dm_video_send_cancellation.dart';
+import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/push_notification_session_coordinator.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
+import 'package:openvine/services/video_dm_outbox.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 // Override lives in riverpod's misc barrel; flutter_riverpod does not
@@ -72,6 +76,30 @@ class _MockDmRepository extends Mock implements DmRepository {}
 class _MockCuratedListService extends Mock implements CuratedListService {}
 
 class _MockDmVideoStore extends Mock implements DmVideoStore {}
+
+class _ControlledVideoSend extends Fake implements DmVideoSendService {
+  final result = Completer<NIP17SendResult>();
+  final paths = <String>[];
+  DmVideoSendCancellation? attempt;
+
+  @override
+  Future<NIP17SendResult> sendVideo({
+    required String recipientPubkey,
+    required File videoFile,
+    required String mimeType,
+    String? blurhash,
+    String? dimensions,
+    List<List<String>> extraTags = const [],
+    void Function(DmVideoSendPhase)? onPhase,
+    void Function(double)? onUploadProgress,
+    DmVideoSendCancellation? cancellation,
+  }) {
+    paths.add(videoFile.path);
+    attempt = cancellation;
+    onPhase?.call(DmVideoSendPhase.uploading);
+    return result.future;
+  }
+}
 
 class _FakeCuratedListsState extends CuratedListsState {
   _FakeCuratedListsState(this._fakeService);
@@ -1400,6 +1428,122 @@ void main() {
   });
 
   group('DM lifecycle', () {
+    testWidgets(
+      'cancels outgoing uploads and drops queued videos before target sign-in',
+      (tester) async {
+        final service = _ControlledVideoSend();
+        final outbox = VideoDmOutbox(
+          sendService: () => service,
+          readFrame: (_) async => null,
+          isAccountCurrent: () =>
+              currentAuthService.currentPublicKeyHex == leavingHex,
+        );
+        addTearDown(outbox.dispose);
+        final initial = await pumpHost(
+          tester,
+          accountOverrides: [videoDmOutboxProvider.overrideWithValue(outbox)],
+        );
+        initial.read(videoDmOutboxProvider);
+        outbox.sendVideo(
+          conversationId: 'chat',
+          recipientPubkey: targetHex,
+          file: File('/v/one.mp4'),
+        );
+        outbox.sendVideo(
+          conversationId: 'chat',
+          recipientPubkey: targetHex,
+          file: File('/v/two.mp4'),
+        );
+        await tester.pump();
+        expect(service.paths, ['/v/one.mp4']);
+        bool? cancelledBeforeSignIn;
+        String? ownerAtSignIn;
+        await driveSwap(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            signIn: (_, _) async {
+              // The outgoing auth object still names its original owner at the
+              // incoming sign-in boundary. A pubkey check alone cannot quiesce it.
+              ownerAtSignIn = currentAuthService.currentPublicKeyHex;
+              cancelledBeforeSignIn =
+                  service.attempt!.uploadCancelToken.isCancelled;
+              service.result.complete(
+                NIP17SendResult.success(
+                  rumorEventId: 'sent',
+                  messageEventId: 'wrap',
+                  recipientPubkey: targetHex,
+                ),
+              );
+            },
+          ),
+        );
+        expect(ownerAtSignIn, leavingHex);
+        expect(cancelledBeforeSignIn, isTrue);
+        expect(service.paths, ['/v/one.mp4']);
+      },
+    );
+
+    testWidgets(
+      'failed switch replaces the stopped video queue for the restored account',
+      (tester) async {
+        final built = <VideoDmOutbox>[];
+        final service = _ControlledVideoSend();
+        final initial = await pumpHost(
+          tester,
+          accountOverrides: [
+            videoDmOutboxProvider.overrideWith((ref) {
+              final outbox = VideoDmOutbox(
+                sendService: () => service,
+                readFrame: (_) async => null,
+              );
+              ref.onDispose(outbox.dispose);
+              built.add(outbox);
+              return outbox;
+            }),
+          ],
+        );
+        final original = initial.read(videoDmOutboxProvider);
+        await driveSwap(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            signIn: (_, _) async => throw _FakeSignInException(),
+          ),
+          expected: throwsA(isA<_FakeSignInException>()),
+        );
+        final restored = initial.read(videoDmOutboxProvider);
+        expect(restored, isNot(same(original)));
+        original.sendVideo(
+          conversationId: 'chat',
+          recipientPubkey: targetHex,
+          file: File('/v/old.mp4'),
+        );
+        restored.sendVideo(
+          conversationId: 'chat',
+          recipientPubkey: targetHex,
+          file: File('/v/new.mp4'),
+        );
+        await tester.pump();
+        expect(service.paths, ['/v/new.mp4']);
+        service.result.complete(
+          NIP17SendResult.success(
+            rumorEventId: 'restored',
+            messageEventId: 'wrap',
+            recipientPubkey: targetHex,
+          ),
+        );
+        await tester.pump();
+        for (final outbox in built) {
+          outbox.dispose();
+        }
+      },
+    );
+
     testWidgets('quiesces outgoing DM persistence before target sign-in', (
       tester,
     ) async {
