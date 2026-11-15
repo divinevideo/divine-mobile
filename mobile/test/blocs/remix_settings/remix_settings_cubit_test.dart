@@ -16,23 +16,29 @@ class _MockProfileRepository extends Mock implements ProfileRepository {}
 const _pubkey =
     'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
 
-UserProfile _profile({bool? allowVideoReuse, String pubkey = _pubkey}) =>
-    UserProfile(
-      pubkey: pubkey,
-      displayName: 'Creator',
-      about: 'bio',
-      website: 'https://creator.example',
-      picture: 'https://cdn.example/p.png',
-      banner: '#112233',
-      rawData: {
-        'display_name': 'Creator',
-        'about': 'bio',
-        'custom_field': 'kept',
-        divineAllowVideoReuseKey: ?allowVideoReuse,
-      },
-      createdAt: DateTime(2026),
-      eventId: 'a' * 64,
-    );
+UserProfile _profile({
+  bool? allowVideoReuse,
+  String pubkey = _pubkey,
+  String displayName = 'Creator',
+  String about = 'bio',
+  DateTime? createdAt,
+  String? eventId,
+}) => UserProfile(
+  pubkey: pubkey,
+  displayName: displayName,
+  about: about,
+  website: 'https://creator.example',
+  picture: 'https://cdn.example/p.png',
+  banner: '#112233',
+  rawData: {
+    'display_name': displayName,
+    'about': about,
+    'custom_field': 'kept',
+    divineAllowVideoReuseKey: ?allowVideoReuse,
+  },
+  createdAt: createdAt ?? DateTime(2026),
+  eventId: eventId ?? 'a' * 64,
+);
 
 void main() {
   group(RemixSettingsCubit, () {
@@ -60,6 +66,18 @@ void main() {
     void stubRead(Future<UserProfile?> Function() answer) => stubReadResult(
       () async => (profile: await answer(), conclusive: true),
     );
+
+    /// Answers successive reads in order: the load first, then each save.
+    void stubReads(List<FreshProfileRead> reads) {
+      final pending = [...reads];
+      stubReadResult(() async => pending.removeAt(0));
+    }
+
+    void stubCached(UserProfile? profile) {
+      when(
+        () => repository.getCachedProfile(pubkey: _pubkey),
+      ).thenAnswer((_) async => profile);
+    }
 
     void stubSave(Future<UserProfile> Function(bool? allow) answer) {
       when(
@@ -95,9 +113,8 @@ void main() {
         act: (cubit) => cubit.load(),
         expect: () => [
           const RemixSettingsState(loadStatus: RemixSettingsLoadStatus.loading),
-          RemixSettingsState(
+          const RemixSettingsState(
             loadStatus: RemixSettingsLoadStatus.ready,
-            currentProfile: _profile(allowVideoReuse: false),
             allowVideoReuse: false,
           ),
         ],
@@ -116,10 +133,7 @@ void main() {
         act: (cubit) => cubit.load(),
         expect: () => [
           const RemixSettingsState(loadStatus: RemixSettingsLoadStatus.loading),
-          RemixSettingsState(
-            loadStatus: RemixSettingsLoadStatus.ready,
-            currentProfile: _profile(),
-          ),
+          const RemixSettingsState(loadStatus: RemixSettingsLoadStatus.ready),
         ],
       );
 
@@ -138,7 +152,6 @@ void main() {
                 RemixSettingsLoadStatus.ready,
               )
               .having((s) => s.allowVideoReuse, 'allowVideoReuse', isTrue)
-              .having((s) => s.currentProfile, 'currentProfile', isNull)
               .having((s) => s.canEdit, 'canEdit', isTrue),
         ],
       );
@@ -190,7 +203,7 @@ void main() {
       setUp(() => stubRead(() async => _profile()));
 
       blocTest<RemixSettingsCubit, RemixSettingsState>(
-        'publishes the block from the loaded profile',
+        'publishes the block over the current profile',
         setUp: () =>
             stubSave((allow) async => _profile(allowVideoReuse: allow)),
         build: buildCubit,
@@ -199,16 +212,14 @@ void main() {
           await cubit.setAllowVideoReuse(false);
         },
         skip: 2,
-        expect: () => [
+        expect: () => const [
           RemixSettingsState(
             loadStatus: RemixSettingsLoadStatus.ready,
-            currentProfile: _profile(),
             allowVideoReuse: false,
             saveStatus: RemixSettingsSaveStatus.saving,
           ),
           RemixSettingsState(
             loadStatus: RemixSettingsLoadStatus.ready,
-            currentProfile: _profile(allowVideoReuse: false),
             allowVideoReuse: false,
           ),
         ],
@@ -229,9 +240,48 @@ void main() {
       );
 
       blocTest<RemixSettingsCubit, RemixSettingsState>(
+        'publishes the fields of an edit made elsewhere since the load',
+        setUp: () {
+          final edited = _profile(
+            displayName: 'Renamed',
+            about: 'new bio',
+            createdAt: DateTime(2026, 2),
+            eventId: 'b' * 64,
+          );
+          stubReads([
+            (profile: _profile(), conclusive: true),
+            (profile: edited, conclusive: true),
+          ]);
+          stubSave((allow) async => _profile(allowVideoReuse: allow));
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.setAllowVideoReuse(false);
+        },
+        verify: (_) => verify(
+          () => repository.saveProfileEvent(
+            displayName: 'Renamed',
+            about: 'new bio',
+            website: 'https://creator.example',
+            picture: 'https://cdn.example/p.png',
+            banner: '#112233',
+            allowVideoReuse: false,
+            currentProfile: _profile(
+              displayName: 'Renamed',
+              about: 'new bio',
+              createdAt: DateTime(2026, 2),
+              eventId: 'b' * 64,
+            ),
+          ),
+        ).called(1),
+      );
+
+      blocTest<RemixSettingsCubit, RemixSettingsState>(
         'publishes a first kind 0 when the account has none',
         setUp: () {
           stubReadResult(() async => (profile: null, conclusive: true));
+          stubCached(null);
           stubSave((allow) async => _profile(allowVideoReuse: allow));
         },
         build: buildCubit,
@@ -240,10 +290,9 @@ void main() {
           await cubit.setAllowVideoReuse(false);
         },
         skip: 3,
-        expect: () => [
+        expect: () => const [
           RemixSettingsState(
             loadStatus: RemixSettingsLoadStatus.ready,
-            currentProfile: _profile(allowVideoReuse: false),
             allowVideoReuse: false,
           ),
         ],
@@ -253,6 +302,70 @@ void main() {
             allowVideoReuse: false,
           ),
         ).called(1),
+      );
+
+      blocTest<RemixSettingsCubit, RemixSettingsState>(
+        'seeds a first kind 0 from the cached profile, not empty fields',
+        setUp: () {
+          stubReadResult(() async => (profile: null, conclusive: true));
+          stubCached(_profile());
+          stubSave((allow) async => _profile(allowVideoReuse: allow));
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.setAllowVideoReuse(false);
+        },
+        verify: (_) => verify(
+          () => repository.saveProfileEvent(
+            displayName: 'Creator',
+            about: 'bio',
+            website: 'https://creator.example',
+            picture: 'https://cdn.example/p.png',
+            banner: '#112233',
+            allowVideoReuse: false,
+            currentProfile: _profile(),
+          ),
+        ).called(1),
+      );
+
+      blocTest<RemixSettingsCubit, RemixSettingsState>(
+        'refuses the save and reverts when the re-read is inconclusive',
+        setUp: () {
+          stubReads([
+            (profile: _profile(), conclusive: true),
+            (profile: null, conclusive: false),
+          ]);
+          stubSave((allow) async => _profile(allowVideoReuse: allow));
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.setAllowVideoReuse(false);
+        },
+        skip: 3,
+        errors: () => [isA<ProfilePublishFailedException>()],
+        expect: () => const [
+          RemixSettingsState(
+            loadStatus: RemixSettingsLoadStatus.ready,
+            saveStatus: RemixSettingsSaveStatus.failure,
+            failure: RemixSettingsSaveFailure.publishFailed,
+          ),
+        ],
+        verify: (_) {
+          verifyNever(
+            () => repository.saveProfileEvent(
+              displayName: any(named: 'displayName'),
+              about: any(named: 'about'),
+              website: any(named: 'website'),
+              picture: any(named: 'picture'),
+              banner: any(named: 'banner'),
+              allowVideoReuse: any(named: 'allowVideoReuse'),
+              currentProfile: any(named: 'currentProfile'),
+            ),
+          );
+          expect(savedProfiles, isEmpty);
+        },
       );
 
       blocTest<RemixSettingsCubit, RemixSettingsState>(
@@ -267,10 +380,9 @@ void main() {
         },
         skip: 3,
         errors: () => [isA<ProfilePublishFailedException>()],
-        expect: () => [
+        expect: () => const [
           RemixSettingsState(
             loadStatus: RemixSettingsLoadStatus.ready,
-            currentProfile: _profile(),
             saveStatus: RemixSettingsSaveStatus.failure,
             failure: RemixSettingsSaveFailure.publishFailed,
           ),
@@ -290,10 +402,9 @@ void main() {
         },
         skip: 3,
         errors: () => [isA<NoRelaysConnectedException>()],
-        expect: () => [
+        expect: () => const [
           RemixSettingsState(
             loadStatus: RemixSettingsLoadStatus.ready,
-            currentProfile: _profile(),
             saveStatus: RemixSettingsSaveStatus.failure,
             failure: RemixSettingsSaveFailure.noRelays,
           ),
