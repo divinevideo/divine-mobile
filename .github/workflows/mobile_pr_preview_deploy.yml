@@ -64,7 +64,17 @@ jobs:
             const pr = selectPreviewPr({
               run, pulls, repoFullName: context.payload.repository.full_name,
             });
-            if (!pr) throw new Error('Preview run must identify one matching PR');
+            if (!pr) {
+              // The PR head moved or the PR changed after this build, so the
+              // artifact is stale. Skip quietly, as the freshness check did.
+              const heads = pulls.map((value) => `#${value.number}@${value.head.sha}`);
+              core.setOutput('matched', 'false');
+              core.setOutput(
+                'skip_reason',
+                `No PR still points at run head ${run.head_sha} (candidates: ${heads.join(', ') || 'none'})`,
+              );
+              return;
+            }
             const metadata = JSON.parse(fs.readFileSync('artifact/pr-web-preview-metadata.json', 'utf8'));
             if (!/^[a-f0-9]{40}$/.test(metadata.build_sha)) throw new Error('Invalid build SHA');
             const { data: commit } = await github.rest.git.getCommit({
@@ -85,6 +95,7 @@ jobs:
             const provenance = previewProvenance({
               run, pr, metadata, commit, firstParentComparison, associatedPulls,
             });
+            core.setOutput('matched', 'true');
             core.setOutput('pr_number', provenance.prNumber);
             core.setOutput('head_ref', provenance.headRef);
             core.setOutput('head_sha', provenance.headSha);
@@ -93,6 +104,7 @@ jobs:
             core.setOutput('deploy_commit_message', `PR #${provenance.prNumber} preview head=${provenance.headSha} build=${provenance.buildSha}`);
 
       - name: Check artifact freshness against current PR head
+        if: ${{ steps.metadata.outputs.matched == 'true' }}
         id: freshness
         uses: actions/github-script@v9
         with:
@@ -116,12 +128,22 @@ jobs:
 
       - name: Skip stale preview artifact
         if: ${{ steps.freshness.outputs.deployable != 'true' }}
+        env:
+          SKIP_REASON: ${{ steps.metadata.outputs.skip_reason }}
+          PR_STATE: ${{ steps.freshness.outputs.pr_state }}
+          PR_DRAFT: ${{ steps.freshness.outputs.is_draft }}
+          ARTIFACT_SHA: ${{ steps.metadata.outputs.head_sha }}
+          CURRENT_SHA: ${{ steps.freshness.outputs.current_sha }}
         run: |
           echo "Skipping stale preview artifact."
-          echo "PR state: ${{ steps.freshness.outputs.pr_state }}"
-          echo "PR draft: ${{ steps.freshness.outputs.is_draft }}"
-          echo "Artifact SHA: ${{ steps.metadata.outputs.head_sha }}"
-          echo "Current PR SHA: ${{ steps.freshness.outputs.current_sha }}"
+          if [ -n "$SKIP_REASON" ]; then
+            echo "$SKIP_REASON"
+          else
+            echo "PR state: $PR_STATE"
+            echo "PR draft: $PR_DRAFT"
+            echo "Artifact SHA: $ARTIFACT_SHA"
+            echo "Current PR SHA: $CURRENT_SHA"
+          fi
 
       - name: Extract preview site
         if: ${{ steps.freshness.outputs.deployable == 'true' }}
