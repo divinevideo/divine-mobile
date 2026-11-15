@@ -1,5 +1,5 @@
-// ABOUTME: Decides whether a video offers Add to clips to a viewer.
-// ABOUTME: Shared by the share sheet and the video info sheet.
+// ABOUTME: Decides whether a video's creator lets a viewer reuse it as a clip.
+// ABOUTME: Read by VideoContentActionsBloc and by the sheets that offer Remix.
 
 import 'package:models/models.dart';
 

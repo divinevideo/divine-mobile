@@ -3,7 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
-import 'package:openvine/widgets/video_feed_item/actions/video_content_action_rules.dart';
+import 'package:openvine/blocs/video_content_actions/video_content_action_rules.dart';
 
 VideoEvent _video({
   Map<String, String> rawTags = const {},

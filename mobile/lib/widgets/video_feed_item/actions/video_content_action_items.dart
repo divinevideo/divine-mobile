@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
+import 'package:openvine/blocs/video_content_actions/video_content_action_rules.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/routes/video_routes.dart';
@@ -17,7 +18,6 @@ import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
-import 'package:openvine/widgets/video_feed_item/actions/video_content_action_rules.dart';
 
 void _runActionDetached(Future<void> operation, String description) {
   runDetached(

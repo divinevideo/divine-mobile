@@ -851,6 +851,24 @@ void main() {
       );
 
       blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'refuses without reading consent when the video declines reuse',
+        setUp: () {
+          testVideo = testVideo.copyWith(
+            nostrEventTags: const [
+              ['allow_video_reuse', 'false'],
+            ],
+          );
+        },
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) => bloc.add(const VideoContentAddToClipsRequested()),
+        expect: () => [checking, refusedWith(RemixConsent.blocked)],
+        verify: (_) {
+          verifyNever(() => mockRemixConsentRepository.consentFor(any()));
+          verifyZeroInteractions(mockImporter);
+        },
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
         'refuses without importing when consent cannot be read',
         setUp: () {
           when(
@@ -1160,6 +1178,24 @@ void main() {
         act: (bloc) => bloc.add(const VideoContentRemixRequested()),
         expect: () => [preparing, refusedWith(RemixConsent.blocked)],
         verify: (_) => verifyZeroInteractions(mockImporter),
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'refuses without reading consent when the video declines reuse',
+        setUp: () {
+          testVideo = testVideo.copyWith(
+            nostrEventTags: const [
+              ['allow_video_reuse', 'false'],
+            ],
+          );
+        },
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) => bloc.add(const VideoContentRemixRequested()),
+        expect: () => [preparing, refusedWith(RemixConsent.blocked)],
+        verify: (_) {
+          verifyNever(() => mockRemixConsentRepository.consentFor(any()));
+          verifyZeroInteractions(mockImporter);
+        },
       );
 
       blocTest<VideoContentActionsBloc, VideoContentActionsState>(
