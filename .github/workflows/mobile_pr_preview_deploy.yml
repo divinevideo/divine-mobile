@@ -36,32 +36,86 @@ jobs:
           name: mobile-pr-preview
           path: artifact
 
-      - name: Extract preview metadata
+      - name: Resolve preview provenance from the originating run
         id: metadata
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          metadata = json.loads(Path("artifact/pr-web-preview-metadata.json").read_text())
-          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
-              output.write(f"pr_number={metadata['pr_number']}\n")
-              output.write(f"head_ref={metadata['head_ref']}\n")
-              output.write(f"head_sha={metadata['head_sha']}\n")
-              output.write(f"preview_branch=pr-{metadata['pr_number']}\n")
-              output.write(
-                  f"deploy_commit_message=PR #{metadata['pr_number']} preview deploy for {metadata['head_sha']}\n"
-              )
-          PY
-
-      - name: Check artifact freshness against current PR head
-        id: freshness
         uses: actions/github-script@v9
         with:
           script: |
-            const prNumber = Number('${{ steps.metadata.outputs.pr_number }}');
-            const artifactSha = '${{ steps.metadata.outputs.head_sha }}';
+            const fs = require('fs');
+            const {
+              previewProvenance, selectPreviewPr,
+            } = require('./.github/scripts/mobile_preview_provenance.cjs');
+            const { data: run } = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner, repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id,
+            });
+            // PR identity comes from GitHub. Artifact-owned PR/head fields are ignored.
+            const associatedPulls = run.pull_requests.length ? run.pull_requests : await github.paginate(
+              github.rest.repos.listPullRequestsAssociatedWithCommit,
+              { owner: context.repo.owner, repo: context.repo.repo, commit_sha: run.head_sha },
+            );
+            const pulls = [];
+            for (const candidate of associatedPulls) {
+              const { data: value } = await github.rest.pulls.get({
+                owner: context.repo.owner, repo: context.repo.repo, pull_number: candidate.number,
+              });
+              pulls.push(value);
+            }
+            const pr = selectPreviewPr({
+              run, pulls, repoFullName: context.payload.repository.full_name,
+            });
+            if (!pr || pr.state !== 'open' || pr.draft) {
+              // The PR head moved, closed or became a draft after this build, so the
+              // artifact is stale. Skip quietly, as the freshness check did.
+              const heads = pulls.map((value) => `#${value.number}@${value.head.sha}`);
+              core.setOutput('matched', 'false');
+              core.setOutput(
+                'skip_reason',
+                `No ready PR still points at run head ${run.head_sha} (candidates: ${heads.join(', ') || 'none'})`,
+              );
+              return;
+            }
+            const metadata = JSON.parse(fs.readFileSync('artifact/pr-web-preview-metadata.json', 'utf8'));
+            if (typeof metadata.build_sha !== 'string' || !/^[a-f0-9]{40}$/.test(metadata.build_sha)) {
+              throw new Error('Invalid build SHA');
+            }
+            const { data: commit } = await github.rest.git.getCommit({
+              owner: context.repo.owner, repo: context.repo.repo,
+              commit_sha: metadata.build_sha,
+            });
+            // GitHub merges the PR head into main's tip at event time, so the
+            // first parent need only be a commit main contains.
+            let firstParentComparison;
+            const firstParent = commit.parents.length === 2 ? commit.parents[0].sha : '';
+            if (/^[a-f0-9]{40}$/.test(firstParent)) {
+              const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({
+                owner: context.repo.owner, repo: context.repo.repo,
+                basehead: `${firstParent}...main`, per_page: 1,
+              });
+              firstParentComparison = comparison.status;
+            }
+            const provenance = previewProvenance({
+              run, pr, metadata, commit, firstParentComparison, associatedPulls,
+            });
+            core.setOutput('matched', 'true');
+            core.setOutput('pr_number', provenance.prNumber);
+            core.setOutput('head_ref', provenance.headRef);
+            core.setOutput('head_sha', provenance.headSha);
+            core.setOutput('build_sha', provenance.buildSha);
+            core.setOutput('preview_branch', `pr-${provenance.prNumber}`);
+            core.setOutput('deploy_commit_message', `PR #${provenance.prNumber} preview head=${provenance.headSha} build=${provenance.buildSha}`);
+
+      - name: Check artifact freshness against current PR head
+        if: ${{ steps.metadata.outputs.matched == 'true' }}
+        id: freshness
+        uses: actions/github-script@v9
+        env:
+          PR_NUMBER: ${{ steps.metadata.outputs.pr_number }}
+          ARTIFACT_SHA: ${{ steps.metadata.outputs.head_sha }}
+        with:
+          script: |
+            const prNumber = Number(process.env.PR_NUMBER);
+            const artifactSha = process.env.ARTIFACT_SHA;
 
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
@@ -79,12 +133,22 @@ jobs:
 
       - name: Skip stale preview artifact
         if: ${{ steps.freshness.outputs.deployable != 'true' }}
+        env:
+          SKIP_REASON: ${{ steps.metadata.outputs.skip_reason }}
+          PR_STATE: ${{ steps.freshness.outputs.pr_state }}
+          PR_DRAFT: ${{ steps.freshness.outputs.is_draft }}
+          ARTIFACT_SHA: ${{ steps.metadata.outputs.head_sha }}
+          CURRENT_SHA: ${{ steps.freshness.outputs.current_sha }}
         run: |
           echo "Skipping stale preview artifact."
-          echo "PR state: ${{ steps.freshness.outputs.pr_state }}"
-          echo "PR draft: ${{ steps.freshness.outputs.is_draft }}"
-          echo "Artifact SHA: ${{ steps.metadata.outputs.head_sha }}"
-          echo "Current PR SHA: ${{ steps.freshness.outputs.current_sha }}"
+          if [ -n "$SKIP_REASON" ]; then
+            echo "$SKIP_REASON"
+          else
+            echo "PR state: $PR_STATE"
+            echo "PR draft: $PR_DRAFT"
+            echo "Artifact SHA: $ARTIFACT_SHA"
+            echo "Current PR SHA: $CURRENT_SHA"
+          fi
 
       - name: Extract preview site
         if: ${{ steps.freshness.outputs.deployable == 'true' }}
@@ -106,9 +170,11 @@ jobs:
       - name: Minimize outdated preview comments
         if: ${{ steps.freshness.outputs.deployable == 'true' }}
         uses: actions/github-script@v9
+        env:
+          PR_NUMBER: ${{ steps.metadata.outputs.pr_number }}
         with:
           script: |
-            const prNumber = Number('${{ steps.metadata.outputs.pr_number }}');
+            const prNumber = Number(process.env.PR_NUMBER);
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -160,9 +226,10 @@ jobs:
         uses: actions/github-script@v9
         env:
           PREVIEW_COMMENT_FILE: ${{ steps.blocked_comment.outputs.comment_file }}
+          PR_NUMBER: ${{ steps.metadata.outputs.pr_number }}
         with:
           script: |
-            const prNumber = Number('${{ steps.metadata.outputs.pr_number }}');
+            const prNumber = Number(process.env.PR_NUMBER);
             const fs = require('fs');
             const body = fs.readFileSync(process.env.PREVIEW_COMMENT_FILE, 'utf8');
 
@@ -219,9 +286,10 @@ jobs:
         uses: actions/github-script@v9
         env:
           PREVIEW_COMMENT_FILE: ${{ steps.deployed_comment.outputs.comment_file }}
+          PR_NUMBER: ${{ steps.metadata.outputs.pr_number }}
         with:
           script: |
-            const prNumber = Number('${{ steps.metadata.outputs.pr_number }}');
+            const prNumber = Number(process.env.PR_NUMBER);
             const fs = require('fs');
             const body = fs.readFileSync(process.env.PREVIEW_COMMENT_FILE, 'utf8');
 

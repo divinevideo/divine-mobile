@@ -75,6 +75,8 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           tar -C build -czf pr-web-preview-site.tar.gz web
+          PR_BUILD_SHA="$(git rev-parse HEAD)"
+          export PR_BUILD_SHA
           python3 - <<'PY'
           import json
           import os
@@ -84,6 +86,7 @@ jobs:
                   "pr_number": os.environ["PR_NUMBER"],
                   "head_ref": os.environ["PR_HEAD_REF"],
                   "head_sha": os.environ["PR_HEAD_SHA"],
+                  "build_sha": os.environ["PR_BUILD_SHA"],
               }, output)
           PY
 
