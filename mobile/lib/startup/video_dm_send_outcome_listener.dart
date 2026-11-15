@@ -151,7 +151,6 @@ class _VideoDmSendOutcomeListenerState
       return;
     }
 
-    if (_isVisible(context, outcome.conversationId)) return;
     String chatName;
     try {
       chatName = await (widget.resolveChatName ?? _chatName)(context, outcome);
@@ -163,10 +162,7 @@ class _VideoDmSendOutcomeListenerState
       );
       chatName = UserProfile.defaultDisplayNameFor(outcome.recipientPubkey);
     }
-    if (!mounted ||
-        !context.mounted ||
-        generation != _generation ||
-        _isVisible(context, outcome.conversationId)) {
+    if (!mounted || !context.mounted || generation != _generation) {
       return;
     }
     final (resultMessage, isError) = switch (outcome) {
@@ -193,9 +189,11 @@ class _VideoDmSendOutcomeListenerState
     };
 
     final message = l10n.dmVideoOutcomeInChat(chatName, resultMessage);
-    messenger.showSnackBar(
-      DivineSnackbarContainer.snackBar(message, error: isError),
-    );
+    if (!_isVisible(context, outcome.conversationId)) {
+      messenger.showSnackBar(
+        DivineSnackbarContainer.snackBar(message, error: isError),
+      );
+    }
     // Per `accessibility.md`, async visible state changes announce
     // explicitly; Material's default SnackBar semantics are weaker.
     runDetached(

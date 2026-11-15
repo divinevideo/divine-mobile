@@ -131,7 +131,7 @@ void main() {
       expect(find.text(l10n.dmVideoSendFailed), findsNothing);
     });
 
-    testWidgets('skips snackbar and announcement when its chat is visible', (
+    testWidgets('announces the visible chat outcome once without a snackbar', (
       tester,
     ) async {
       final router = GoRouter(
@@ -163,7 +163,10 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(find.byType(SnackBar), findsNothing);
-      expect(tester.takeAnnouncements(), isEmpty);
+      expect(
+        tester.takeAnnouncements().single.message,
+        l10n.dmVideoOutcomeInChat('Test chat', l10n.dmVideoSendFailed),
+      );
       // A different chat still reports the result while this one is visible.
       outbox.controller.add(
         _outcome(VideoDmOutcomeStatus.sent, sent: 1, conversationId: 'other'),
