@@ -2417,9 +2417,9 @@ class NostrClient {
   ///
   /// With [requireDefaultRelay], success also needs [defaultRelayUrl]'s
   /// `OK true`: a Kind 0 that other relays accepted but the default relay
-  /// refused or never answered is [PublishFailed]. When the pool does not
-  /// include the default relay, the event is sent to it alone after the pool
-  /// accepts it.
+  /// rejected is [PublishFailed]. When the default relay did not answer the
+  /// pool publish in time, was unreachable, or is not in the pool, the event
+  /// is sent to it alone after the pool accepts it, and that answer decides.
   Future<PublishResult> sendProfileAwaitOk({
     required Map<String, dynamic> profileContent,
     List<List<String>> tags = const [],
@@ -2460,7 +2460,12 @@ class NostrClient {
 
   /// Whether [defaultRelayUrl] accepted [event], given the pool's [outcome].
   ///
-  /// A default relay the pool publish never targeted is sent [event] alone.
+  /// Only an explicit rejection in [outcome] is final. A default relay that
+  /// had not answered when the pool publish settled — which completes shortly
+  /// after the first `OK`, so a slower relay that accepted can still be listed
+  /// as silent — or that was unreachable or never targeted, is sent [event]
+  /// alone, and its answer decides. A relay that already stored the event
+  /// acknowledges the duplicate with `OK true`.
   Future<bool> _defaultRelayAccepted(
     Event event,
     PublishOutcome outcome,
@@ -2470,12 +2475,7 @@ class NostrClient {
         (normalizeRelayUrl(url) ?? url) == defaultRelay;
 
     if (outcome.acceptedBy.any(isDefault)) return true;
-    final targeted = [
-      ...outcome.rejectedBy.keys,
-      ...outcome.noResponseFrom,
-      ...outcome.unreachableTargets,
-    ].any(isDefault);
-    if (targeted) return false;
+    if (outcome.rejectedBy.keys.any(isDefault)) return false;
 
     final direct = await publishEventAwaitOk(
       event,

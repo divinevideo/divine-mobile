@@ -4344,21 +4344,69 @@ void main() {
         );
       });
 
-      test(
-        'returns PublishFailed when the default relay stays silent',
-        () async {
-          stubPoolPublish(
-            const PublishOutcome(
-              eventId: 'kind0',
-              acceptedBy: [otherRelay],
-              rejectedBy: {},
-              noResponseFrom: [defaultRelay],
-            ),
-          );
+      for (final (label, unanswered) in const [
+        (
+          'stays silent',
+          PublishOutcome(
+            eventId: 'kind0',
+            acceptedBy: [otherRelay],
+            rejectedBy: {},
+            noResponseFrom: [defaultRelay],
+          ),
+        ),
+        (
+          'could not be reached',
+          PublishOutcome(
+            eventId: 'kind0',
+            acceptedBy: [otherRelay],
+            rejectedBy: {},
+            noResponseFrom: [],
+            unreachableTargets: [defaultRelay],
+          ),
+        ),
+      ]) {
+        group('when the default relay $label in the pool publish', () {
+          test('sends the event to the default relay alone and returns '
+              'PublishSuccess once it accepts', () async {
+            stubPoolPublish(unanswered);
+            stubDefaultRelayPublish(
+              const PublishOutcome(
+                eventId: 'kind0',
+                acceptedBy: [defaultRelay],
+                rejectedBy: {},
+                noResponseFrom: [],
+              ),
+            );
 
-          expect(await send(), isA<PublishFailed>());
-        },
-      );
+            expect(await send(), isA<PublishSuccess>());
+            verify(
+              () => mockNostr.sendEventAwaitOk(
+                any(),
+                tempRelays: [defaultRelay],
+                targetRelays: [defaultRelay],
+                timeout: any(named: 'timeout'),
+              ),
+            ).called(1);
+          });
+
+          test(
+            'returns PublishFailed when the default relay rejects the resend',
+            () async {
+              stubPoolPublish(unanswered);
+              stubDefaultRelayPublish(
+                const PublishOutcome(
+                  eventId: 'kind0',
+                  acceptedBy: [],
+                  rejectedBy: {defaultRelay: 'blocked: policy'},
+                  noResponseFrom: [],
+                ),
+              );
+
+              expect(await send(), isA<PublishFailed>());
+            },
+          );
+        });
+      }
 
       group('when the pool does not include the default relay', () {
         const poolOnlyOther = PublishOutcome(
