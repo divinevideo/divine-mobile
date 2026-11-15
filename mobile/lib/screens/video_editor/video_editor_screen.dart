@@ -142,6 +142,10 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
   static const originQueryParameter = 'from';
 
   /// Value of [originQueryParameter] for an entry from the Library screen.
+  ///
+  /// A remix started from a video's info sheet passes it too, deliberately
+  /// counting as a library-origin session. Its only effect is the
+  /// abandoned-creation analytics event when the editor closes.
   static const libraryOrigin = 'library';
 
   /// Builds the editor location, optionally for an existing [draftId].
@@ -644,7 +648,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       initialChildSize: 0.9,
       minChildSize: VineTheme.bottomSheetDismissFloor,
       buildScrollBody: (scrollController) => LibraryScreen(
-        initialTabIndex: 1,
+        initialTabIndex: LibraryScreen.clipsTabIndex,
         selectionMode: true,
         allowsMixedClipTypes: true,
         editorClips: currentClips,
@@ -737,7 +741,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       initialChildSize: 0.9,
       minChildSize: VineTheme.bottomSheetDismissFloor,
       buildScrollBody: (scrollController) => LibraryScreen(
-        initialTabIndex: 1,
+        initialTabIndex: LibraryScreen.clipsTabIndex,
         selectionMode: true,
         allowsMixedClipTypes: true,
         scrollController: scrollController,
