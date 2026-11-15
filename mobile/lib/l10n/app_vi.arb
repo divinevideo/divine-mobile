@@ -2323,7 +2323,7 @@
     "description": "Semantic label for the author's circular profile avatar on feed video metadata. Screen reader only."
   },
   "feedForYouEmpty": "Bảng tin Dành cho bạn đang trống.\nKhám phá video và theo dõi nhà sáng tạo để định hình nó.",
-  "feedFollowingEmpty": "Chưa có video từ người bạn theo dõi.\nTìm nhà sáng tạo bạn thích và theo dõi họ nhé.",
+  "feedFollowingNothingNew": "Không có gì mới từ người bạn theo dõi.\nTìm thêm nhà sáng tạo bạn thích và theo dõi họ nhé.",
   "feedLatestEmpty": "Chưa có video mới.\nQuay lại sau nhé.",
   "feedClassicEmpty": "Chưa có Vine kinh điển nào.\nQuay lại sau nhé.",
   "feedExploreVideos": "Khám phá video",

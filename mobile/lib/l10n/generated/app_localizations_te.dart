@@ -4957,8 +4957,8 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీ కోసం మీ ఫీడ్ ఖాళీగా ఉంది.\nవీడియోలను అన్వేషించండి మరియు దానిని ఆకృతి చేయడానికి సృష్టికర్తలను అనుసరించండి.';
 
   @override
-  String get feedFollowingEmpty =>
-      'మీరు అనుసరించే వ్యక్తుల నుండి ఇంకా వీడియోలు లేవు.\nమీకు నచ్చిన సృష్టికర్తలను కనుగొని వారిని అనుసరించండి.';
+  String get feedFollowingNothingNew =>
+      'మీరు అనుసరించే వ్యక్తుల నుండి కొత్తగా ఏమీ లేదు.\nమీకు నచ్చిన మరిన్ని సృష్టికర్తలను కనుగొని వారిని అనుసరించండి.';
 
   @override
   String get feedLatestEmpty =>

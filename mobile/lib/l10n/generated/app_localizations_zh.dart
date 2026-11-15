@@ -4476,7 +4476,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get feedForYouEmpty => '你的“为你推荐”还是空的。\n去逛逛视频、关注些创作者，它就会越来越懂你。';
 
   @override
-  String get feedFollowingEmpty => '你关注的人还没有发视频。\n去找找喜欢的创作者，关注他们吧。';
+  String get feedFollowingNothingNew => '你关注的人暂时没有新视频。\n去找找更多喜欢的创作者，关注他们吧。';
 
   @override
   String get feedLatestEmpty => '还没有新视频。\n过会儿再来看看。';

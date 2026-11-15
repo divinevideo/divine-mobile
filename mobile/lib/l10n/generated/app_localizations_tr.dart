@@ -4728,8 +4728,8 @@ class AppLocalizationsTr extends AppLocalizations {
       'Sana Özel akışın boş.\nVideolar keşfet ve içerik üreticileri takip ederek akışını şekillendir.';
 
   @override
-  String get feedFollowingEmpty =>
-      'Takip ettiğin kişilerden henüz video yok.\nBeğendiğin içerik üreticilerini bulup takip et.';
+  String get feedFollowingNothingNew =>
+      'Takip ettiğin kişilerden yeni bir şey yok.\nBeğendiğin daha fazla içerik üreticisini bulup takip et.';
 
   @override
   String get feedLatestEmpty =>

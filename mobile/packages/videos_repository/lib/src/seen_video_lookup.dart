@@ -1,10 +1,21 @@
 // ABOUTME: Flutter-free seen-video lookup port used by feed freshness policy.
-// ABOUTME: Lets app-layer persistence influence repository ordering.
+// ABOUTME: Lets app-layer seen history decide which videos feeds still show.
 
 import 'package:models/models.dart';
 
-/// Default window used to move recently watched candidates later.
-const Duration defaultRecentlySeenVideoWindow = Duration(hours: 24);
+/// How long a video the viewer has seen stays out of feeds.
+///
+/// Matches how long the app keeps seen history, so a feed never shows a video
+/// the viewer has already seen while that history remembers it. Profiles and
+/// search do not apply it: a seen video is always findable there.
+const Duration seenVideoExclusionWindow = Duration(days: 365);
+
+/// Consecutive pages a feed reads past when every video on them was seen.
+///
+/// A viewer who has seen everything recent would otherwise walk the whole
+/// feed history in one load. Hitting this budget ends the read: the viewer is
+/// caught up as far as the feed is willing to look.
+const int maxSeenOnlyFeedPages = 8;
 
 /// Function signature for checking whether a video was seen recently.
 typedef WasVideoSeenRecently = bool Function(String videoId, {Duration within});
@@ -30,47 +41,18 @@ class SeenVideoLookup {
   Future<void> ensureInitialized() => initialize?.call() ?? Future.value();
 }
 
-/// Returns candidates with not-recently-seen videos first.
+/// Filters out videos seen within [recencyWindow] entirely (drop, not demote).
 ///
-/// Recently seen videos are appended instead of dropped so small candidate
-/// pools still produce a feed. Neutral name — used across home surfaces.
-List<VideoEvent> prioritizeNotRecentlySeenVideos(
-  Iterable<VideoEvent> videos, {
-  SeenVideoLookup? seenVideoLookup,
-  Duration recencyWindow = defaultRecentlySeenVideoWindow,
-}) {
-  final candidates = videos is List<VideoEvent> ? videos : videos.toList();
-  if (seenVideoLookup == null || candidates.length < 2) return candidates;
-
-  final notRecentlySeen = <VideoEvent>[];
-  final recentlySeen = <VideoEvent>[];
-
-  for (final video in candidates) {
-    if (video.id.isNotEmpty &&
-        seenVideoLookup.wasSeenRecently(video.id, within: recencyWindow)) {
-      recentlySeen.add(video);
-    } else {
-      notRecentlySeen.add(video);
-    }
-  }
-
-  if (notRecentlySeen.isEmpty || recentlySeen.isEmpty) return candidates;
-  return [...notRecentlySeen, ...recentlySeen];
-}
-
-/// Filters out recently-seen videos entirely (drop, not demote).
-///
-/// Used for classics/discovery where inventory is effectively unlimited and
-/// repeating the same leaderboard top would otherwise trap heavy viewers.
-/// Returns all candidates if none were recently seen. By default it also
-/// retains all candidates when every candidate was seen, so callers with a
+/// Feeds use it so a video the viewer has already seen does not come back
+/// while they browse. Returns all candidates if none were seen. By default it
+/// also retains all candidates when every candidate was seen, so callers with a
 /// finite candidate pool do not accidentally create an empty feed. Callers
 /// that can fetch deeper may set [retainAllWhenAllSeen] to `false` and decide
 /// how to recover from an empty filtered page themselves.
 List<VideoEvent> filterOutRecentlySeenVideos(
   Iterable<VideoEvent> videos, {
   SeenVideoLookup? seenVideoLookup,
-  Duration recencyWindow = defaultRecentlySeenVideoWindow,
+  Duration recencyWindow = seenVideoExclusionWindow,
   bool retainAllWhenAllSeen = true,
 }) {
   final candidates = videos is List<VideoEvent> ? videos : videos.toList();

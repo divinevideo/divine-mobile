@@ -2323,7 +2323,7 @@
     "description": "Semantic label for the author's circular profile avatar on feed video metadata. Screen reader only."
   },
   "feedForYouEmpty": "Suapan Untuk Anda kosong.\nTerokai video dan ikut pencipta untuk membentuknya.",
-  "feedFollowingEmpty": "Belum ada video daripada orang yang anda ikuti.\nCari pencipta yang anda suka dan ikuti mereka.",
+  "feedFollowingNothingNew": "Tiada yang baharu daripada orang yang anda ikuti.\nCari lebih ramai pencipta yang anda suka dan ikuti mereka.",
   "feedLatestEmpty": "Belum ada video baharu.\nSemak semula tidak lama lagi.",
   "feedClassicEmpty": "Belum ada Vine klasik.\nSemak semula tidak lama lagi.",
   "feedExploreVideos": "Terokai Video",

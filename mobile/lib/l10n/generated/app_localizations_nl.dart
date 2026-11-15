@@ -4809,8 +4809,8 @@ class AppLocalizationsNl extends AppLocalizations {
       'Je Voor jou-feed is leeg.\nVerken video\'s en volg makers om hem vorm te geven.';
 
   @override
-  String get feedFollowingEmpty =>
-      'Nog geen video\'s van mensen die je volgt.\nVind makers die je leuk vindt en volg ze.';
+  String get feedFollowingNothingNew =>
+      'Niets nieuws van mensen die je volgt.\nVind meer makers die je leuk vindt en volg ze.';
 
   @override
   String get feedLatestEmpty =>

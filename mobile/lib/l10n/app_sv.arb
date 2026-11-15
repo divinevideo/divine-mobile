@@ -1626,7 +1626,7 @@
   },
   "videoAuthorAvatarSemanticLabel": "Skapares avatar",
   "feedForYouEmpty": "Ditt För dig-flöde är tomt.\nUtforska videor och följ kreatörer för att forma det.",
-  "feedFollowingEmpty": "Inga videor från personer du följer än.\nHitta kreatörer du gillar och följ dem.",
+  "feedFollowingNothingNew": "Inget nytt från personer du följer.\nHitta fler kreatörer du gillar och följ dem.",
   "feedLatestEmpty": "Inga nya videor än.\nTitta in igen snart.",
   "feedClassicEmpty": "Inga klassiker än.\nTitta in igen snart.",
   "feedExploreVideos": "Upptäck videor",

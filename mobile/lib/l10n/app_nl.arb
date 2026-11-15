@@ -1626,7 +1626,7 @@
   },
   "videoAuthorAvatarSemanticLabel": "Avatar van maker",
   "feedForYouEmpty": "Je Voor jou-feed is leeg.\nVerken video's en volg makers om hem vorm te geven.",
-  "feedFollowingEmpty": "Nog geen video's van mensen die je volgt.\nVind makers die je leuk vindt en volg ze.",
+  "feedFollowingNothingNew": "Niets nieuws van mensen die je volgt.\nVind meer makers die je leuk vindt en volg ze.",
   "feedLatestEmpty": "Nog geen nieuwe video's.\nKom binnenkort terug.",
   "feedClassicEmpty": "Nog geen klassiekers.\nKom binnenkort terug.",
   "feedExploreVideos": "Video's verkennen",

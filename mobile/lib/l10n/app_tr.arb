@@ -1623,7 +1623,7 @@
   },
   "videoAuthorAvatarSemanticLabel": "Yazar avatarı",
   "feedForYouEmpty": "Sana Özel akışın boş.\nVideolar keşfet ve içerik üreticileri takip ederek akışını şekillendir.",
-  "feedFollowingEmpty": "Takip ettiğin kişilerden henüz video yok.\nBeğendiğin içerik üreticilerini bulup takip et.",
+  "feedFollowingNothingNew": "Takip ettiğin kişilerden yeni bir şey yok.\nBeğendiğin daha fazla içerik üreticisini bulup takip et.",
   "feedLatestEmpty": "Henüz yeni video yok.\nYakında tekrar kontrol et.",
   "feedClassicEmpty": "Henüz klasik yok.\nYakında tekrar kontrol et.",
   "feedExploreVideos": "Videoları Keşfet",

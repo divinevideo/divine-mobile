@@ -4786,8 +4786,8 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ditt För dig-flöde är tomt.\nUtforska videor och följ kreatörer för att forma det.';
 
   @override
-  String get feedFollowingEmpty =>
-      'Inga videor från personer du följer än.\nHitta kreatörer du gillar och följ dem.';
+  String get feedFollowingNothingNew =>
+      'Inget nytt från personer du följer.\nHitta fler kreatörer du gillar och följ dem.';
 
   @override
   String get feedLatestEmpty => 'Inga nya videor än.\nTitta in igen snart.';

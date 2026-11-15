@@ -4933,8 +4933,8 @@ class AppLocalizationsPl extends AppLocalizations {
       'Twój kanał Dla Ciebie jest pusty.\nOdkrywaj filmy i obserwuj twórców, aby go ukształtować.';
 
   @override
-  String get feedFollowingEmpty =>
-      'Brak filmów od osób, które obserwujesz.\nZnajdź twórców, których lubisz i zacznij ich obserwować.';
+  String get feedFollowingNothingNew =>
+      'Nic nowego od osób, które obserwujesz.\nZnajdź więcej twórców, których lubisz, i zacznij ich obserwować.';
 
   @override
   String get feedLatestEmpty => 'Brak nowych filmów.\nWróć tu wkrótce.';

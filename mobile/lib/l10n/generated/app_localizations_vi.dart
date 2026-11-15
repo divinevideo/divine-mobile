@@ -4751,8 +4751,8 @@ class AppLocalizationsVi extends AppLocalizations {
       'Bảng tin Dành cho bạn đang trống.\nKhám phá video và theo dõi nhà sáng tạo để định hình nó.';
 
   @override
-  String get feedFollowingEmpty =>
-      'Chưa có video từ người bạn theo dõi.\nTìm nhà sáng tạo bạn thích và theo dõi họ nhé.';
+  String get feedFollowingNothingNew =>
+      'Không có gì mới từ người bạn theo dõi.\nTìm thêm nhà sáng tạo bạn thích và theo dõi họ nhé.';
 
   @override
   String get feedLatestEmpty => 'Chưa có video mới.\nQuay lại sau nhé.';

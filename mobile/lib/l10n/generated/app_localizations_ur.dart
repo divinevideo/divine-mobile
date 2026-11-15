@@ -4799,8 +4799,8 @@ class AppLocalizationsUr extends AppLocalizations {
       'آپ کا \'آپ کے لیے\' فیڈ خالی ہے۔\nاسے سنوارنے کے لیے ویڈیوز دریافت کریں اور کریئیٹرز کو فالو کریں۔';
 
   @override
-  String get feedFollowingEmpty =>
-      'آپ کے فالو کردہ لوگوں کی ابھی کوئی ویڈیو نہیں۔\nاپنے پسندیدہ کریئیٹرز تلاش کریں اور انہیں فالو کریں۔';
+  String get feedFollowingNothingNew =>
+      'آپ کے فالو کردہ لوگوں کی طرف سے کچھ نیا نہیں۔\nمزید پسندیدہ کریئیٹرز تلاش کریں اور انہیں فالو کریں۔';
 
   @override
   String get feedLatestEmpty => 'ابھی کوئی نئی ویڈیو نہیں۔\nجلد دوبارہ دیکھیں۔';

@@ -34,7 +34,7 @@ void main() {
       ),
     ).thenAnswer((_) async => directPage);
     when(
-      () => videos.createBadgeVideoPager(any(), prioritizeUnseen: true),
+      () => videos.createBadgeVideoPager(any(), hideSeen: true),
     ).thenReturn(pager);
     when(pager.loadMore).thenAnswer((_) async => <VideoEvent>[]);
     when(() => pager.hasMore).thenReturn(true);
@@ -96,7 +96,7 @@ void main() {
         when(replacement.loadMore).thenAnswer((_) async => []);
         when(() => replacement.hasMore).thenReturn(false);
         when(
-          () => videos.createBadgeVideoPager(any(), prioritizeUnseen: true),
+          () => videos.createBadgeVideoPager(any(), hideSeen: true),
         ).thenReturn(replacement);
         await load(feed);
         old.complete([]);
@@ -219,7 +219,7 @@ void main() {
         settled.complete(true);
         await expectLater(pending, throwsA(isA<FollowingReadSuperseded>()));
         verifyNever(
-          () => videos.createBadgeVideoPager(any(), prioritizeUnseen: true),
+          () => videos.createBadgeVideoPager(any(), hideSeen: true),
         );
       });
 
@@ -239,7 +239,7 @@ void main() {
           final pending = load(feed);
           await Future<void>.value();
           verifyNever(
-            () => videos.createBadgeVideoPager(any(), prioritizeUnseen: true),
+            () => videos.createBadgeVideoPager(any(), hideSeen: true),
           );
           direct = ['1' * 64];
           known = true;
@@ -249,7 +249,7 @@ void main() {
             () => videos.createBadgeVideoPager([
               '1' * 64,
               '2' * 64,
-            ], prioritizeUnseen: true),
+            ], hideSeen: true),
           ).called(1);
         },
       );
@@ -352,7 +352,7 @@ void main() {
         initialized.complete();
         await expectLater(pending, throwsA(isA<FollowingReadSuperseded>()));
         verifyNever(
-          () => videos.createBadgeVideoPager(any(), prioritizeUnseen: true),
+          () => videos.createBadgeVideoPager(any(), hideSeen: true),
         );
       });
       test(
@@ -373,7 +373,7 @@ void main() {
             throwsA(isA<FollowingAuthorsUnavailable>()),
           );
           verifyNever(
-            () => videos.createBadgeVideoPager(any(), prioritizeUnseen: true),
+            () => videos.createBadgeVideoPager(any(), hideSeen: true),
           );
         },
       );
@@ -391,7 +391,7 @@ void main() {
           throwsA(isA<FollowingAuthorsUnavailable>()),
         );
         verifyNever(
-          () => videos.createBadgeVideoPager(any(), prioritizeUnseen: true),
+          () => videos.createBadgeVideoPager(any(), hideSeen: true),
         );
       });
     });

@@ -8023,11 +8023,11 @@ abstract class AppLocalizations {
   /// **'Your For You feed is empty.\nExplore videos and follow creators to shape it.'**
   String get feedForYouEmpty;
 
-  /// No description provided for @feedFollowingEmpty.
+  /// No description provided for @feedFollowingNothingNew.
   ///
   /// In en, this message translates to:
-  /// **'No videos from people you follow yet.\nFind creators you like and follow them.'**
-  String get feedFollowingEmpty;
+  /// **'Nothing new from people you follow.\nFind more creators you like and follow them.'**
+  String get feedFollowingNothingNew;
 
   /// No description provided for @feedLatestEmpty.
   ///

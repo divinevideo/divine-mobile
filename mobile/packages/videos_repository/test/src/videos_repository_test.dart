@@ -181,7 +181,7 @@ void main() {
         );
       });
 
-      test('Following badge pages retain recently seen demotion', () async {
+      test('Following badge pages hide videos the viewer has seen', () async {
         final client = MockFunnelcakeApiClient();
         when(() => client.isAvailable).thenReturn(true);
         final seen = _createVideoStats(
@@ -222,8 +222,8 @@ void main() {
         );
         final pager = repo.createBadgeVideoPager([
           'a' * 64,
-        ], prioritizeUnseen: true);
-        expect((await pager.loadMore()).map((v) => v.id), [fresh.id, seen.id]);
+        ], hideSeen: true);
+        expect((await pager.loadMore()).map((v) => v.id), [fresh.id]);
       });
 
       test('factory preserves event-time order across chunk buffers', () async {
@@ -15210,7 +15210,7 @@ void main() {
       });
 
       test(
-        'moves recently seen recommendations after unseen candidates',
+        'drops recommendations the viewer has seen',
         () async {
           final recentlySeen = _createVideoStats(
             id: 'recently-seen-video',
@@ -15256,15 +15256,13 @@ void main() {
             limit: 10,
           );
 
-          expect(result.videos.map((video) => video.id), [
-            'unseen-video',
-            'recently-seen-video',
-          ]);
+          expect(result.videos.map((video) => video.id), ['unseen-video']);
         },
       );
 
       test(
-        'keeps recently seen recommendations as fallback when all are seen',
+        'falls back to unseen popular videos when every recommendation was '
+        'seen',
         () async {
           final firstSeen = _createVideoStats(
             id: 'first-seen-video',
@@ -15295,12 +15293,29 @@ void main() {
             ),
           );
 
+          when(
+            () => mockFunnelcakeClient.getWatchingVideos(
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              firstSeen,
+              _createVideoStats(
+                id: 'unseen-popular-video',
+                pubkey: 'unseen-popular-pubkey',
+                dTag: 'unseen-popular-dtag',
+                videoUrl: 'https://example.com/unseen-popular.mp4',
+              ),
+            ],
+          );
+
           final repo = VideosRepository(
             nostrClient: mockNostrClient,
             funnelcakeApiClient: mockFunnelcakeClient,
             seenVideoLookup: SeenVideoLookup(
-              wasSeenRecently: (_, {within = const Duration(hours: 24)}) =>
-                  true,
+              wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+                  id != 'unseen-popular-video',
             ),
           );
 
@@ -15310,14 +15325,13 @@ void main() {
           );
 
           expect(result.videos.map((video) => video.id), [
-            'first-seen-video',
-            'second-seen-video',
+            'unseen-popular-video',
           ]);
         },
       );
 
       test(
-        'waits for seen lookup initialization before freshness ordering',
+        'waits for seen lookup initialization before dropping seen videos',
         () async {
           final recentlySeen = _createVideoStats(
             id: 'recently-seen-video',
@@ -15376,10 +15390,7 @@ void main() {
           initializeCompleter.complete();
           final result = await resultFuture;
 
-          expect(result.videos.map((video) => video.id), [
-            'unseen-video',
-            'recently-seen-video',
-          ]);
+          expect(result.videos.map((video) => video.id), ['unseen-video']);
         },
       );
 
@@ -15453,8 +15464,6 @@ void main() {
 
           expect(result.videos.map((video) => video.id), [
             'deeper-unseen-video',
-            'first-seen-video',
-            'second-seen-video',
           ]);
           expect(result.paginationCursor, equals('page-3'));
           expect(result.hasMore, isTrue);
@@ -15464,7 +15473,8 @@ void main() {
       );
 
       test(
-        'orders cursor pages while preserving pagination metadata',
+        'drops seen videos from cursor pages while preserving pagination '
+        'metadata',
         () async {
           final requestedCursors = <String?>[];
           when(
@@ -15521,10 +15531,7 @@ void main() {
           expect(requestedCursors, ['cursor-1']);
           expect(result.paginationCursor, 'next-cursor-1');
           expect(result.hasMore, isTrue);
-          expect(result.videos.map((video) => video.id), [
-            'unseen-cursor-1',
-            'recently-seen-cursor-1',
-          ]);
+          expect(result.videos.map((video) => video.id), ['unseen-cursor-1']);
         },
       );
 
@@ -15751,7 +15758,7 @@ void main() {
         },
       );
 
-      test('reorders cached recommendations when seen state changes', () async {
+      test('drops cached recommendations seen since caching', () async {
         final first = _createVideoStats(
           id: 'first-video',
           pubkey: 'first-pubkey',
@@ -15808,10 +15815,7 @@ void main() {
           'first-video',
           'second-video',
         ]);
-        expect(cached.videos.map((video) => video.id), [
-          'second-video',
-          'first-video',
-        ]);
+        expect(cached.videos.map((video) => video.id), ['second-video']);
         expect(cached.paginationCursor, equals('page-2'));
         expect(cached.hasMore, isTrue);
         verify(
@@ -16136,7 +16140,6 @@ void main() {
 
           expect(result.videos.map((video) => video.id), [
             'unseen-popular-video',
-            'seen-popular-video',
           ]);
           verify(
             () => mockFunnelcakeClient.getWatchingVideos(limit: 10),

@@ -163,8 +163,9 @@ void main() {
     });
 
     testWidgets(
-      'uses localized Following copy for an empty Following no-follow feed',
+      'says the viewer follows no one for an empty Following no-follow feed',
       (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
         await tester.pumpWidget(
           _buildEmptyFeedSubject(
             const VideoFeedBlocState(
@@ -175,13 +176,8 @@ void main() {
           ),
         );
 
-        expect(
-          find.text(
-            'No videos from people you follow yet.\n'
-            'Find creators you like and follow them.',
-          ),
-          findsOneWidget,
-        );
+        expect(find.text(l10n.feedNoFollowedUsers), findsOneWidget);
+        expect(find.text(l10n.feedFollowingNothingNew), findsNothing);
         expect(find.text('Explore Videos'), findsOneWidget);
       },
     );
@@ -226,37 +222,34 @@ void main() {
       expect(find.text(l10n.feedForYouEmpty), findsNothing);
     });
 
-    testWidgets('uses localized Following copy for an empty Following feed', (
-      tester,
-    ) async {
-      final router = _MockGoRouter();
-      when(() => router.go(any())).thenReturn(null);
+    testWidgets(
+      'says nothing new for an empty Following feed, which covers a viewer '
+      'who has seen everything',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final router = _MockGoRouter();
+        when(() => router.go(any())).thenReturn(null);
 
-      await tester.pumpWidget(
-        _buildEmptyFeedSubject(
-          const VideoFeedBlocState(
-            status: VideoFeedStatus.success,
-            mode: FeedMode.following,
+        await tester.pumpWidget(
+          _buildEmptyFeedSubject(
+            const VideoFeedBlocState(
+              status: VideoFeedStatus.success,
+              mode: FeedMode.following,
+            ),
+            router: router,
           ),
-          router: router,
-        ),
-      );
+        );
 
-      expect(
-        find.text(
-          'No videos from people you follow yet.\n'
-          'Find creators you like and follow them.',
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('Explore Videos'), findsOneWidget);
-      expect(find.byType(DivineButton), findsOneWidget);
-      expect(find.textContaining('following feed'), findsNothing);
+        expect(find.text(l10n.feedFollowingNothingNew), findsOneWidget);
+        expect(find.text('Explore Videos'), findsOneWidget);
+        expect(find.byType(DivineButton), findsOneWidget);
+        expect(find.textContaining('following feed'), findsNothing);
 
-      await tester.tap(find.text('Explore Videos'));
+        await tester.tap(find.text('Explore Videos'));
 
-      verify(() => router.go(ExploreScreen.pathForTab('popular'))).called(1);
-    });
+        verify(() => router.go(ExploreScreen.pathForTab('popular'))).called(1);
+      },
+    );
 
     testWidgets(
       "says a followed people list's members have posted nothing, rather "
@@ -278,7 +271,7 @@ void main() {
         );
 
         expect(find.text(l10n.peopleListsNoVideosSubtitle), findsOneWidget);
-        expect(find.text(l10n.feedFollowingEmpty), findsNothing);
+        expect(find.text(l10n.feedFollowingNothingNew), findsNothing);
         expect(find.text(l10n.feedExploreVideos), findsOneWidget);
       },
     );

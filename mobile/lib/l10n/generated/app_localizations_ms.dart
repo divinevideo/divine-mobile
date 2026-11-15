@@ -4781,8 +4781,8 @@ class AppLocalizationsMs extends AppLocalizations {
       'Suapan Untuk Anda kosong.\nTerokai video dan ikut pencipta untuk membentuknya.';
 
   @override
-  String get feedFollowingEmpty =>
-      'Belum ada video daripada orang yang anda ikuti.\nCari pencipta yang anda suka dan ikuti mereka.';
+  String get feedFollowingNothingNew =>
+      'Tiada yang baharu daripada orang yang anda ikuti.\nCari lebih ramai pencipta yang anda suka dan ikuti mereka.';
 
   @override
   String get feedLatestEmpty =>

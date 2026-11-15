@@ -4820,8 +4820,8 @@ class AppLocalizationsFil extends AppLocalizations {
       'Walang laman ang For You feed mo.\nMag-explore ng video at mag-follow ng creators para mahubog ito.';
 
   @override
-  String get feedFollowingEmpty =>
-      'Wala pang video mula sa mga taong fino-follow mo.\nHumanap ng creators na gusto mo at i-follow sila.';
+  String get feedFollowingNothingNew =>
+      'Walang bago mula sa mga taong fino-follow mo.\nHumanap ng iba pang creators na gusto mo at i-follow sila.';
 
   @override
   String get feedLatestEmpty => 'Wala pang bagong video.\nBumalik mamaya.';

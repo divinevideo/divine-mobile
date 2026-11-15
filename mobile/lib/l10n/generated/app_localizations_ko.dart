@@ -4516,8 +4516,8 @@ class AppLocalizationsKo extends AppLocalizations {
       '추천 피드가 비어 있어요.\n동영상을 탐색하고 크리에이터를 팔로우해 피드를 만들어보세요.';
 
   @override
-  String get feedFollowingEmpty =>
-      '아직 팔로우한 사람들의 동영상이 없어요.\n마음에 드는 크리에이터를 찾아 팔로우해 보세요.';
+  String get feedFollowingNothingNew =>
+      '팔로우한 사람들의 새 동영상이 없어요.\n마음에 드는 크리에이터를 더 찾아 팔로우해 보세요.';
 
   @override
   String get feedLatestEmpty => '아직 새로운 동영상이 없어요.\n잠시 후 다시 확인해 주세요.';
