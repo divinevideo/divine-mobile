@@ -314,8 +314,7 @@ void main() {
         cancellation.cancel('upload stalled');
         expect((await result).success, isFalse);
         await adapter.cancelled.future;
-        // A transport settling after cancellation must not turn the result
-        // into success.
+        // Settles the request the cancellation left pending.
         adapter.response.complete(ResponseBody.fromString('{}', 201));
       });
 
