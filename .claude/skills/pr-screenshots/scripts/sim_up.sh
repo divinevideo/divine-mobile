@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # ABOUTME: Starts (or reuses) the local Docker stack, boots this run's own iOS simulator, and installs a LOCAL debug build.
-# ABOUTME: Usage: bash sim_up.sh <worktree-root> [device type]; prints UDID=, BUNDLE_ID= and STACK_STARTED= on success.
+# ABOUTME: Usage: bash sim_up.sh <worktree-root> [device type]; prints UDID=, BUNDLE_ID=, STACK_STARTED= and MASTER_KEY_CREATED=.
 set -euo pipefail
 
 ROOT="$(cd "${1:?usage: sim_up.sh <worktree-root> [device type]}" && pwd)"
+# Whether this run wrote local_stack/master.key: no, copied or generated.
+# SKILL.md step 9 removes a copied one once the stack is down.
+MASTER_KEY_CREATED=no
 DEVICE_TYPE="${2:-iPhone 16 Pro}"
 SIM_NAME="pr-screenshots-$(basename "$ROOT")"
 LOG_DIR="${SCRATCH:?set SCRATCH to the scratch folder for this run, see SKILL.md}"
@@ -13,13 +16,39 @@ LOG_DIR="${SCRATCH:?set SCRATCH to the scratch folder for this run, see SKILL.md
 export BLOSSOM_PUBLIC_URL=http://localhost:43003
 COMPOSE_FILE="$ROOT/local_stack/docker-compose.yml"
 
+command -v python3 > /dev/null || { echo "error: sim_up.sh needs python3 on PATH" >&2; exit 1; }
+
+# A hung Docker Desktop answers no API call, so every docker command below,
+# including those run while holding the stack lock, would wait forever. The
+# docker CLI is a Go program, and Go ignores SIGALRM, so an alarm cannot stop
+# it; Python's subprocess timeout kills it instead.
+docker_rc=0
+python3 -I -c 'import subprocess, sys
+with open(sys.argv[1], "w") as log:
+    try: rc = subprocess.run(["docker", "info"], stdout=subprocess.DEVNULL, stderr=log, timeout=20).returncode
+    except FileNotFoundError: rc = 127
+    except subprocess.TimeoutExpired: rc = 124
+sys.exit(rc)' "$LOG_DIR/docker-info.log" || docker_rc=$?
+case "$docker_rc" in
+  0) ;;
+  124)
+    echo "error: Docker is not answering within 20s. Restart Docker Desktop (quit it; if com.docker.backend lingers, pkill -TERM -f com.docker.backend; then open -a Docker) and run sim_up.sh again" >&2
+    exit 1 ;;
+  127)
+    echo "error: sim_up.sh needs docker on PATH" >&2
+    exit 1 ;;
+  *)
+    echo "error: docker info failed. If Docker Desktop is not running, start it (open -a Docker), wait for it, and run sim_up.sh again. docker info said:" >&2
+    tail -n 3 "$LOG_DIR/docker-info.log" >&2 || true
+    exit 1 ;;
+esac
+
 # Two runs that both find no stack would both start one, each recreating the
 # other's containers, so the check and the start hold a machine-wide lock.
 # It is a kernel flock on fd 9, released when every holder of the fd has closed
 # it or died. up.sh and the tuning run inherit the fd, so killing this script
 # mid-start does not free the lock while the start it began is still running.
 STACK_LOCK=/tmp/pr-screenshots-stack.lock
-command -v python3 > /dev/null || { echo "error: sim_up.sh needs python3 on PATH" >&2; exit 1; }
 exec 9>> "$STACK_LOCK" \
   || { echo "error: cannot open $STACK_LOCK; if it is a directory or another user's file, remove it" >&2; exit 1; }
 # Exit 75 means another run holds the lock; anything else is a real failure.
@@ -36,8 +65,9 @@ elif [ "$lock_rc" -ne 0 ]; then
 fi
 
 # Every worktree's local_stack is the same compose project, so a stack another
-# session started is shared: reuse it rather than recreate its containers. A
-# failing `ps` (Docker not running) falls through to up.sh, which reports it.
+# session started is shared: reuse it rather than recreate its containers.
+# Docker answered above, so a failing `ps` falls through to up.sh, which
+# reports it.
 RUNNING_SERVICES=$(docker compose -f "$COMPOSE_FILE" ps --status running --services 2>/dev/null 9>&- || true)
 if grep -qx funnelcake-proxy <<<"$RUNNING_SERVICES"; then
   STACK_STARTED=no
@@ -65,7 +95,16 @@ else
   if [ ! -f "$KEY" ]; then
     [ ! -d "$KEY" ] || rmdir "$KEY"
     MAIN_KEY="$(git -C "$ROOT" worktree list --porcelain | sed -n '1s/^worktree //p')/local_stack/master.key"
-    if [ -f "$MAIN_KEY" ]; then cp "$MAIN_KEY" "$KEY"; else openssl rand 32 | base64 > "$KEY"; fi
+    # Decided before the write: in the main checkout KEY and MAIN_KEY are one file.
+    if [ -f "$MAIN_KEY" ]; then MASTER_KEY_CREATED=copied; else MASTER_KEY_CREATED=generated; fi
+    # The key encrypts Keycast's data, so only this user may read it.
+    (umask 077; if [ "$MASTER_KEY_CREATED" = copied ]; then cp "$MAIN_KEY" "$KEY"; else openssl rand 32 | base64 > "$KEY"; fi)
+    # Printed now as well as at the end, so a run that fails below still
+    # reports the key it left behind.
+    echo "MASTER_KEY_CREATED=$MASTER_KEY_CREATED"
+    if [ "$MASTER_KEY_CREATED" = generated ] && docker volume inspect local_stack_keycast-pg-data > /dev/null 2>&1 9>&-; then
+      echo "warning: generated a new Keycast master.key, but the existing Keycast database volume was made with another key, so Keycast may fail to read it. Device-only accounts never call Keycast; email sign-in does" >&2
+    fi
   fi
 
   echo "Starting local stack (log: $LOG_DIR/stack.log)..."
@@ -134,3 +173,4 @@ BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" build/ios/ipho
 echo "UDID=$UDID"
 echo "BUNDLE_ID=$BUNDLE_ID"
 echo "STACK_STARTED=$STACK_STARTED"
+echo "MASTER_KEY_CREATED=$MASTER_KEY_CREATED"
