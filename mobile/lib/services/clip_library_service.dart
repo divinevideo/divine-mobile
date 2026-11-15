@@ -252,8 +252,8 @@ class ClipLibraryService {
     }
   }
 
-  /// The newest clip outside the trash imported from [video], or null when
-  /// the library holds none.
+  /// The newest clip outside the trash imported from [video] whose video file
+  /// is still on disk, or null when the library holds none.
   ///
   /// An import is matched by its first credit naming [video]'s event id or
   /// its addressable coordinate, so an import of an earlier edit of the same
@@ -264,7 +264,8 @@ class ClipLibraryService {
   /// but are not the import (see [DivineVideoClip.isImportedClip]), and the
   /// halves of a split keep its flag and credit while holding part of it. Those
   /// live in the autosave and other drafts, so draft rows are not read; a
-  /// trimmed copy that reached the library is skipped too.
+  /// trimmed copy that reached the library is skipped too, and so is an import
+  /// whose file is gone, since the editor would open it on missing footage.
   Future<DivineVideoClip?> findImportedClipOf(VideoEvent video) async {
     final addressableId = video.addressableId;
     final rows = await _clipsDao.getLibraryClips(ownerPubkey: ownerPubkey);
@@ -276,17 +277,22 @@ class ClipLibraryService {
       // but keeps its composite row id; only [saveClip] writes the plain id.
       if (clip == null || row.id != clip.id) continue;
       if (!clip.isImportedClip || !_holdsWholeFootage(clip)) continue;
-      if (clip.sourceEventId == video.id ||
-          (addressableId != null &&
-              clip.sourceAddressableId == addressableId)) {
-        matches.add(clip);
-      }
+      final isOfVideo =
+          clip.sourceEventId == video.id ||
+          (addressableId != null && clip.sourceAddressableId == addressableId);
+      if (isOfVideo && !await _isMissingVideoFile(clip)) matches.add(clip);
     }
     if (matches.isEmpty) return null;
     return matches.reduce(
       (newest, clip) =>
           clip.recordedAt.isAfter(newest.recordedAt) ? clip : newest,
     );
+  }
+
+  /// Whether [clip] has no video file on disk to play.
+  static Future<bool> _isMissingVideoFile(DivineVideoClip clip) async {
+    final video = clip.video;
+    return video == null || _isMissingFile(await video.safeFilePath());
   }
 
   /// Whether [clip] plays its file from the start to the end, as an import

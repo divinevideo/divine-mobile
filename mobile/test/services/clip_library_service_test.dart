@@ -1105,28 +1105,52 @@ void main() {
         addressableDTag: 'vine-123',
       );
 
+      late Directory documentsDir;
+      late PathProviderPlatform originalPathProvider;
+
+      setUp(() {
+        documentsDir = Directory.systemTemp.createTempSync('clip_import_');
+        originalPathProvider = PathProviderPlatform.instance;
+        PathProviderPlatform.instance = MockPathProviderPlatform()
+          ..setApplicationDocumentsPath(documentsDir.path);
+      });
+
+      tearDown(() {
+        PathProviderPlatform.instance = originalPathProvider;
+        if (documentsDir.existsSync()) {
+          documentsDir.deleteSync(recursive: true);
+        }
+      });
+
+      /// A clip imported from [vine], with its video file written to disk
+      /// unless [videoOnDisk] is false.
       DivineVideoClip clipOf({
         required String id,
         required DateTime recordedAt,
         bool importedSource = true,
         String? eventId = vineEventId,
         String? addressableId,
-      }) => DivineVideoClip(
-        id: id,
-        video: EditorVideo.file('/tmp/$id.mp4'),
-        duration: const Duration(seconds: 6),
-        recordedAt: recordedAt,
-        targetAspectRatio: .square,
-        originalAspectRatio: 1,
-        importedSource: importedSource,
-        sourceCredits: [
-          models.ClipSourceCredit(
-            authorPubkey: vineAuthor,
-            eventId: eventId,
-            addressableId: addressableId,
-          ),
-        ],
-      );
+        bool videoOnDisk = true,
+      }) {
+        final videoFile = File(p.join(documentsDir.path, '$id.mp4'));
+        if (videoOnDisk) videoFile.writeAsBytesSync(const [0, 1, 2, 3]);
+        return DivineVideoClip(
+          id: id,
+          video: EditorVideo.file(videoFile.path),
+          duration: const Duration(seconds: 6),
+          recordedAt: recordedAt,
+          targetAspectRatio: .square,
+          originalAspectRatio: 1,
+          importedSource: importedSource,
+          sourceCredits: [
+            models.ClipSourceCredit(
+              authorPubkey: vineAuthor,
+              eventId: eventId,
+              addressableId: addressableId,
+            ),
+          ],
+        );
+      }
 
       test('returns null when nothing was imported from the video', () async {
         expect(await service.findImportedClipOf(vine), isNull);
@@ -1270,6 +1294,38 @@ void main() {
 
         expect(await service.findImportedClipOf(vine), isNull);
       });
+
+      test('ignores an import whose video file is gone', () async {
+        await service.saveClip(
+          clipOf(
+            id: 'classic_vine_vine-123_1',
+            recordedAt: DateTime(2026),
+            videoOnDisk: false,
+          ),
+        );
+
+        expect(await service.findImportedClipOf(vine), isNull);
+      });
+
+      test(
+        'returns an older import when the newest one has lost its file',
+        () async {
+          await service.saveClip(
+            clipOf(id: 'classic_vine_vine-123_1', recordedAt: DateTime(2025)),
+          );
+          await service.saveClip(
+            clipOf(
+              id: 'classic_vine_vine-123_2',
+              recordedAt: DateTime(2026),
+              videoOnDisk: false,
+            ),
+          );
+
+          final found = await service.findImportedClipOf(vine);
+
+          expect(found?.id, 'classic_vine_vine-123_1');
+        },
+      );
 
       test('ignores an import of another video', () async {
         await service.saveClip(
