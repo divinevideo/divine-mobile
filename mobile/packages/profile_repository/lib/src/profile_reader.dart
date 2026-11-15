@@ -98,16 +98,19 @@ abstract interface class ProfileReader {
     List<Duration> rawKind0RetryDelays,
   });
 
-  /// Reads the newest raw Kind 0 for [pubkey] from [relayUrl] alone.
+  /// Reads the newest raw Kind 0 for [pubkey] straight from the relays: every
+  /// connected relay, or [onlyRelayUrl] alone when it is given.
   ///
-  /// `conclusive` is true only when that one relay answered in full, so a
-  /// null `profile` then means the relay holds no Kind 0 for the account. A
-  /// partial answer is reported as inconclusive with no profile. For a caller
-  /// that trusts a specific relay to hold a key only its own client writes,
-  /// where the wider [readFreshProfile] would be undone by one silent relay.
-  Future<FreshProfileRead> readRawProfileFromRelay({
+  /// Skips REST, the local cache and the session miss memos, and caches
+  /// nothing. `conclusive` is true only when every asked relay answered in
+  /// full, so a null `profile` then means none of them holds a Kind 0 for the
+  /// account. An incomplete read still reports the newest Kind 0 it saw, with
+  /// `conclusive` false: a sighting that a newer copy may supersede, which is
+  /// enough to honour a flag the account set but never to seed a publish —
+  /// [fetchFreshProfile] with `requireRawKind0` is the strict read for that.
+  Future<FreshProfileRead> readRawProfileFromRelays({
     required String pubkey,
-    required String relayUrl,
+    String? onlyRelayUrl,
   });
 
   /// Reads raw Kind 0 metadata for display, returning the first valid relay

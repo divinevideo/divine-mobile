@@ -68,12 +68,12 @@ class _ExhaustiveReader implements ProfileReader {
     List<Duration> rawKind0RetryDelays = const [],
   }) async => (profile: null, conclusive: false);
 
-  // Widened consciously: a single-relay Kind 0 query, read without signing
-  // or publishing — the same invariant as readFreshProfile.
+  // Widened consciously: a relay Kind 0 query, read without signing or
+  // publishing — the same invariant as readFreshProfile.
   @override
-  Future<FreshProfileRead> readRawProfileFromRelay({
+  Future<FreshProfileRead> readRawProfileFromRelays({
     required String pubkey,
-    required String relayUrl,
+    String? onlyRelayUrl,
   }) async => (profile: null, conclusive: false);
 
   // Widened consciously: this queries public Kind 0 metadata without signing

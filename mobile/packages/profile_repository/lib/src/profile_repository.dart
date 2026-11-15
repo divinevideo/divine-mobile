@@ -962,9 +962,9 @@ class ProfileRepository implements ProfileReader {
   );
 
   @override
-  Future<FreshProfileRead> readRawProfileFromRelay({
+  Future<FreshProfileRead> readRawProfileFromRelays({
     required String pubkey,
-    required String relayUrl,
+    String? onlyRelayUrl,
   }) async {
     // A blocked account is never looked up, so its miss proves nothing.
     if (_blockFilter?.call(pubkey) ?? false) {
@@ -975,19 +975,22 @@ class ProfileRepository implements ProfileReader {
         [
           Filter(kinds: [0], authors: [pubkey], limit: 1),
         ],
-        tempRelays: [relayUrl],
-        relayTypes: const [RelayType.temp],
+        tempRelays: onlyRelayUrl == null ? null : [onlyRelayUrl],
+        relayTypes: onlyRelayUrl == null
+            ? RelayType.all
+            : const [RelayType.temp],
         useCache: false,
         requireAllRelaysSettled: true,
       );
-      if (read.timedOut || read.noRelays) {
-        return (profile: null, conclusive: false);
-      }
-      return (profile: _newestKind0Profile(read.events), conclusive: true);
+      return (
+        profile: _newestKind0Profile(read.events),
+        conclusive: !read.timedOut && !read.noRelays,
+      );
     } on Exception catch (e) {
       Log.warning(
-        'Kind 0 read from $relayUrl failed: $e',
-        name: 'ProfileRepository.readRawProfileFromRelay',
+        'Kind 0 read from ${onlyRelayUrl ?? 'the connected relays'} '
+        'failed: $e',
+        name: 'ProfileRepository.readRawProfileFromRelays',
         category: LogCategory.relay,
       );
       return (profile: null, conclusive: false);

@@ -644,7 +644,7 @@ void main() {
       });
     });
 
-    group('readRawProfileFromRelay', () {
+    group('readRawProfileFromRelays', () {
       const relayUrl = 'wss://relay.example.test';
 
       void stubRelayRead({
@@ -665,12 +665,11 @@ void main() {
         );
       }
 
-      test('asks only the named relay, settled and uncached', () async {
+      test('asks every connected relay, settled and uncached', () async {
         stubRelayRead(events: [mockProfileEvent]);
 
-        final read = await profileRepository.readRawProfileFromRelay(
+        final read = await profileRepository.readRawProfileFromRelays(
           pubkey: testPubkey,
-          relayUrl: relayUrl,
         );
 
         expect(read.profile?.pubkey, testPubkey);
@@ -679,8 +678,10 @@ void main() {
             verify(
                   () => mockNostrClient.queryEventsDetailed(
                     captureAny(),
-                    tempRelays: [relayUrl],
-                    relayTypes: [RelayType.temp],
+                    // ignore: avoid_redundant_argument_values, pins the default
+                    tempRelays: null,
+                    // ignore: avoid_redundant_argument_values, pins the default
+                    relayTypes: RelayType.all,
                     useCache: false,
                     requireAllRelaysSettled: true,
                   ),
@@ -690,12 +691,33 @@ void main() {
         expect(filters.single.authors, [testPubkey]);
       });
 
-      test('reports a miss the relay answered as conclusive', () async {
+      test('asks only the named relay when given one', () async {
+        stubRelayRead(events: [mockProfileEvent]);
+
+        final read = await profileRepository.readRawProfileFromRelays(
+          pubkey: testPubkey,
+          onlyRelayUrl: relayUrl,
+        );
+
+        expect(read.profile?.pubkey, testPubkey);
+        expect(read.conclusive, isTrue);
+        verify(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            tempRelays: [relayUrl],
+            relayTypes: [RelayType.temp],
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).called(1);
+      });
+
+      test('reports a miss the relays answered as conclusive', () async {
         stubRelayRead();
 
-        final read = await profileRepository.readRawProfileFromRelay(
+        final read = await profileRepository.readRawProfileFromRelays(
           pubkey: testPubkey,
-          relayUrl: relayUrl,
+          onlyRelayUrl: relayUrl,
         );
 
         expect(read.profile, isNull);
@@ -703,16 +725,15 @@ void main() {
       });
 
       test(
-        'reports a timed-out read as inconclusive, events and all',
+        'reports what a timed-out read saw, marked inconclusive',
         () async {
           stubRelayRead(events: [mockProfileEvent], timedOut: true);
 
-          final read = await profileRepository.readRawProfileFromRelay(
+          final read = await profileRepository.readRawProfileFromRelays(
             pubkey: testPubkey,
-            relayUrl: relayUrl,
           );
 
-          expect(read.profile, isNull);
+          expect(read.profile?.pubkey, testPubkey);
           expect(read.conclusive, isFalse);
         },
       );
@@ -720,11 +741,11 @@ void main() {
       test('reports a read no relay took as inconclusive', () async {
         stubRelayRead(noRelays: true);
 
-        final read = await profileRepository.readRawProfileFromRelay(
+        final read = await profileRepository.readRawProfileFromRelays(
           pubkey: testPubkey,
-          relayUrl: relayUrl,
         );
 
+        expect(read.profile, isNull);
         expect(read.conclusive, isFalse);
       });
 
@@ -739,9 +760,9 @@ void main() {
           ),
         ).thenThrow(Exception('socket closed'));
 
-        final read = await profileRepository.readRawProfileFromRelay(
+        final read = await profileRepository.readRawProfileFromRelays(
           pubkey: testPubkey,
-          relayUrl: relayUrl,
+          onlyRelayUrl: relayUrl,
         );
 
         expect(read.profile, isNull);
@@ -756,9 +777,9 @@ void main() {
           blockFilter: (pubkey) => pubkey == testPubkey,
         );
 
-        final read = await blocking.readRawProfileFromRelay(
+        final read = await blocking.readRawProfileFromRelays(
           pubkey: testPubkey,
-          relayUrl: relayUrl,
+          onlyRelayUrl: relayUrl,
         );
 
         expect(read.profile, isNull);
