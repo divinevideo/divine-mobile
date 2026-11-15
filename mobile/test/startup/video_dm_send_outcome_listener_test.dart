@@ -305,6 +305,39 @@ void main() {
       );
     });
 
+    testWidgets(
+      'drops an outcome whose chat name arrives after the outbox is replaced',
+      (tester) async {
+        final replacement = _FakeOutbox();
+        addTearDown(replacement.controller.close);
+        final name = Completer<String>();
+        var lookups = 0;
+        final provider = StateProvider<VideoDmOutbox>((ref) => outbox);
+        await pumpApp(
+          tester,
+          provider,
+          resolveChatName: (_, _) {
+            lookups++;
+            return name.future;
+          },
+        );
+
+        outbox.controller.add(_outcome(VideoDmOutcomeStatus.failed));
+        await tester.pump();
+        expect(lookups, 1);
+        ProviderScope.containerOf(
+          tester.element(find.byType(Scaffold)),
+        ).read(provider.notifier).state = replacement;
+        await tester.pump();
+        name.complete('Test chat');
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(SnackBar), findsNothing);
+        expect(tester.takeAnnouncements(), isEmpty);
+      },
+    );
+
     testWidgets('logs a result it has no messenger to show on', (
       tester,
     ) async {
