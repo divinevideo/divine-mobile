@@ -6829,7 +6829,7 @@ abstract class AppLocalizations {
   /// **'Couldn\'t add to clips'**
   String get shareSheetAddToClipsFailed;
 
-  /// Snackbar shown when a creator has blocked remixing on their whole account, so their video can't be added to clips.
+  /// Snackbar shown when a creator doesn't let others reuse their video, by blocking remixing on their account or on that video, so it can't be remixed or added to clips.
   ///
   /// In en, this message translates to:
   /// **'This creator doesn\'t allow remixes.'**

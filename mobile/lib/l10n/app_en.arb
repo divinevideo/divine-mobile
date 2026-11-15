@@ -2849,7 +2849,7 @@
   },
   "remixBlockedByCreator": "This creator doesn't allow remixes.",
   "@remixBlockedByCreator": {
-    "description": "Snackbar shown when a creator has blocked remixing on their whole account, so their video can't be added to clips."
+    "description": "Snackbar shown when a creator doesn't let others reuse their video, by blocking remixing on their account or on that video, so it can't be remixed or added to clips."
   },
   "remixConsentCheckFailed": "Couldn't check whether this video can be remixed. Try again.",
   "@remixConsentCheckFailed": {
