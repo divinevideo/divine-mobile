@@ -63,8 +63,8 @@ class _RemixRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.vineColors;
-    // Funnelcake sends the author along; a remix read from the relays
-    // carries none, so its profile is read.
+    // Remixes are read from the relays, and a relay event names no author,
+    // so the profile is read unless the event already carries a name.
     final name =
         remix.authorName ??
         ref
