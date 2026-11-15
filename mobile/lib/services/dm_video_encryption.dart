@@ -117,8 +117,7 @@ class DmVideoEncryption {
   /// larger than [dmVideoMaxPlaintextBytes].
   ///
   /// The read, both hashes, the encryption and the write run on a background
-  /// isolate: in pure Dart they take seconds for a phone-sized clip, which on
-  /// the calling isolate froze the UI for the whole time.
+  /// isolate, so a large clip does not block the calling isolate.
   Future<EncryptedVideoFile> encryptFile(File plaintextFile) async {
     final size = await plaintextFile.length();
     if (size > dmVideoMaxPlaintextBytes) {
@@ -162,8 +161,9 @@ class DmVideoEncryption {
 /// Encrypts the file at `plaintextPath` and writes `ciphertext || GCM tag` to
 /// `outputDirectoryPath`, named by its own hash.
 ///
-/// Top-level so [compute] can run it on a background isolate. Only paths,
-/// hashes and the key material cross back, never the video bytes.
+/// Top-level so the isolate message carries only `job`, not the service. It
+/// reads and writes the file itself, so the video bytes never cross the
+/// isolate boundary in either direction.
 Future<
   ({
     String ciphertextPath,

@@ -53,20 +53,9 @@ class FileEncryption {
       nonce: nonce,
     );
 
-    // Combine ciphertext + MAC (GCM tag) into a single blob for upload.
-    // The MAC is appended by the cryptography package in secretBox. Copied
-    // into one preallocated buffer: `cipherText + mac.bytes` builds an
-    // untyped List<int>, one pointer-sized slot per byte, before copying it
-    // again, which took ~250 ms per 20 MB against ~1 ms for this.
-    final cipherText = secretBox.cipherText;
-    final macBytes = secretBox.mac.bytes;
-    final ciphertextWithMac = Uint8List(cipherText.length + macBytes.length)
-      ..setRange(0, cipherText.length, cipherText)
-      ..setRange(
-        cipherText.length,
-        cipherText.length + macBytes.length,
-        macBytes,
-      );
+    // ciphertext || 16-byte GCM tag in one preallocated buffer; avoid
+    // `cipherText + mac.bytes`, which boxes every byte into a List<int>.
+    final ciphertextWithMac = secretBox.concatenation(nonce: false);
 
     final keyBytes = await secretKey.extractBytes();
 
