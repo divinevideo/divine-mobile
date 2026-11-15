@@ -821,6 +821,55 @@ void main() {
       });
 
       testWidgets(
+        'leaves a route opened over the sheet while the autosave is checked',
+        (tester) async {
+          final sessionClip = DivineVideoClip(
+            id: 'earlier_session_clip',
+            video: EditorVideo.file('/tmp/earlier_session_clip.mp4'),
+            duration: const Duration(seconds: 6),
+            recordedAt: DateTime.utc(2026),
+            targetAspectRatio: .square,
+            originalAspectRatio: 1,
+          );
+          final autosaveCheck = Completer<bool>();
+          when(
+            () => draftStorage.draftExists(any()),
+          ).thenAnswer((_) => autosaveCheck.future);
+          await openSheet(tester);
+          container
+              .read(clipManagerProvider.notifier)
+              .insertClip(0, sessionClip);
+
+          results.add(
+            VideoContentActionsState(
+              actionResult: VideoContentRemixReady(clip: remixClip),
+            ),
+          );
+          await tester.pump();
+          verify(() => draftStorage.draftExists(any())).called(1);
+
+          // The launcher is waiting on storage when the user opens a route.
+          Navigator.of(tester.element(sheetList)).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const Scaffold(body: Text(coverText)),
+            ),
+          );
+          await tester.pumpAndSettle();
+          autosaveCheck.complete(false);
+          await tester.pumpAndSettle();
+
+          expect(find.text(coverText), findsOneWidget);
+          expect(pops.count, 0);
+          expect(editorBuilds, 0);
+          // Given up before the session was cleared.
+          expect(container.read(clipManagerProvider).clips, [sessionClip]);
+          verify(
+            () => contentActions.add(const VideoContentRemixLaunchFinished()),
+          ).called(1);
+        },
+      );
+
+      testWidgets(
         'holds Remix and the row until the editor opens, then opens it once',
         (tester) async {
           final video = _video();

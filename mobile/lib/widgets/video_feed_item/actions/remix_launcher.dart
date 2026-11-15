@@ -25,6 +25,10 @@ import 'package:unified_logger/unified_logger.dart';
 /// draft, so it stays in the Drafts tab. If that save fails nothing is
 /// cleared: the sheet closes with a failure message and the session is kept.
 ///
+/// Gives up without opening the editor when, once the autosave is safe, a
+/// route the user opened covers the sheet or the sheet is already closing:
+/// dismissing it then would close that other route instead.
+///
 /// Backing out of the editor is its usual save-or-discard prompt: a timeline
 /// with a credited clip counts as edited.
 Future<void> openRemixInEditor(
@@ -69,10 +73,10 @@ Future<void> openRemixInEditor(
     }
     return;
   }
-  if (!sheetContext.mounted) return;
+  if (!sheetContext.mounted || !_isSheetOnTop(sheetContext)) return;
 
   await videoPublish.clearAll();
-  if (!sheetContext.mounted) return;
+  if (!sheetContext.mounted || !_isSheetOnTop(sheetContext)) return;
   clipManager.insertClip(0, clip);
 
   await presentAfterSheetDismiss<void>(sheetContext, (hostContext) async {
@@ -86,4 +90,16 @@ Future<void> openRemixInEditor(
       category: LogCategory.video,
     );
   });
+}
+
+/// Whether the sheet owning the mounted [sheetContext] is the top route, so
+/// dismissing it closes the sheet and nothing else.
+bool _isSheetOnTop(BuildContext sheetContext) {
+  if (ModalRoute.of(sheetContext)?.isCurrent ?? false) return true;
+  Log.info(
+    'Dropped a remix launch: a route covers the sheet, or it is closing',
+    name: 'RemixLauncher',
+    category: LogCategory.video,
+  );
+  return false;
 }
