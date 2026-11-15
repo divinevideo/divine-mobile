@@ -115,10 +115,16 @@ class SelectListCubit extends Cubit<SelectListState>
   String? _mutationCoordinate(String listId) =>
       _ownedList(listId)?.authorScopedId;
 
-  bool _permissionRecoveryBlocks(Set<String> ids) => _ownedLists(
-    _service,
-    _openingOwnerPubkey,
-  ).any((list) => ids.contains(list.id) && list.hasPendingPermissionRecovery);
+  bool _permissionRecoveryBlocks(Set<String> ids) =>
+      _ownedLists(
+        _service,
+        _openingOwnerPubkey,
+      ).any(
+        (list) =>
+            ids.contains(list.id) &&
+            (list.hasPendingPermissionRecovery ||
+                list.hasPendingPermissionDraft),
+      );
 
   SelectListStatus _recoveryRequired() {
     emitIfOpen(state.copyWith(status: SelectListStatus.recoveryPendingSync));
@@ -301,7 +307,10 @@ class SelectListCubit extends Cubit<SelectListState>
     }
     if (_writesPaused()) return;
     if (state.lists.none(
-      (list) => list.id == listId && !list.hasPendingPermissionRecovery,
+      (list) =>
+          list.id == listId &&
+          !list.hasPendingPermissionRecovery &&
+          !list.hasPendingPermissionDraft,
     )) {
       return;
     }
@@ -456,6 +465,12 @@ class SelectListCubit extends Cubit<SelectListState>
       return;
     }
     if (_writesPaused()) return;
+    // Membership delivery cannot consent to a saved visibility/permission edit.
+    if (_ownedLists(_service, _openingOwnerPubkey).any(
+      (list) => list.id == listId && list.hasPendingPermissionDraft,
+    )) {
+      return;
+    }
     if (state.isSaving ||
         !_canMutate(listId) ||
         !state.pendingSyncListIds.contains(listId)) {

@@ -256,6 +256,9 @@ void main() {
           allowedCollaborators: any(named: 'allowedCollaborators'),
           onLocalSaved: any(named: 'onLocalSaved'),
           onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+          previousAllowedCollaborators: any(
+            named: 'previousAllowedCollaborators',
+          ),
         ),
       ).thenAnswer((invocation) {
         (invocation.namedArguments[#onLocalSaved] as void Function()?)?.call();
@@ -357,6 +360,9 @@ void main() {
               allowedCollaborators: any(named: 'allowedCollaborators'),
               onLocalSaved: any(named: 'onLocalSaved'),
               onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+              previousAllowedCollaborators: any(
+                named: 'previousAllowedCollaborators',
+              ),
             ),
           ).thenAnswer((invocation) async {
             expect(invocation.namedArguments[#onLocalSaved], isNull);
@@ -406,6 +412,9 @@ void main() {
             allowedCollaborators: any(named: 'allowedCollaborators'),
             onLocalSaved: any(named: 'onLocalSaved'),
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         );
       },
@@ -926,6 +935,9 @@ void main() {
             ),
             onLocalSaved: any(named: 'onLocalSaved'),
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         ).called(1),
       );
@@ -947,6 +959,9 @@ void main() {
             allowedCollaborators: const [],
             onLocalSaved: any(named: 'onLocalSaved'),
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         ).called(1),
       );
@@ -969,6 +984,9 @@ void main() {
             allowedCollaborators: const [],
             onLocalSaved: any(named: 'onLocalSaved'),
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         ).called(1),
       );

@@ -87,6 +87,42 @@ class _Harness {
     when(() => auth.currentPublicKeyHex).thenReturn(owner);
     when(() => auth.committedAccountActivationReceipt).thenReturn(receipt);
     when(() => client.signer).thenReturn(signer);
+    registerFallbackValue(Duration.zero);
+    when(
+      () => client.queryEventsDetailed(
+        any(),
+        useCache: false,
+        requireAllRelaysSettled: true,
+        timeout: any(named: 'timeout'),
+      ),
+    ).thenAnswer((invocation) async {
+      var completed = false;
+      final events = <Event>[];
+      final filters = invocation.positionalArguments.single as List<Filter>;
+      try {
+        await for (final event
+            in relay(
+              Invocation.method(
+                #subscribe,
+                [filters],
+                {
+                  #closeOnEose: true,
+                  #onEose: () => completed = true,
+                },
+              ),
+            ).timeout(
+              invocation.namedArguments[#timeout] as Duration,
+              onTimeout: (sink) => sink.close(),
+            )) {
+          if (filters.any((filter) => filter.checkEvent(event))) {
+            events.add(event);
+          }
+        }
+      } on Object {
+        completed = false;
+      }
+      return (events: events, timedOut: !completed, noRelays: false);
+    });
     when(
       () => client.subscribe(
         any(),
@@ -633,6 +669,13 @@ void main() {
         h.signed.clear();
         expect(h.service.isInitialized, isTrue);
         expect(h.service.getDefaultList()!.videoEventIds, [_video]);
+        expect(
+          await h.service.removeVideoFromList(_defaultId, _video),
+          isFalse,
+        );
+        expect(h.signed, isEmpty);
+        h.relay = (invocation) =>
+            completedOwnedListSnapshot(invocation, [event]);
         expect(await h.service.removeVideoFromList(_defaultId, _video), isTrue);
         expect(h.signed.single.isSigned, isTrue);
       },

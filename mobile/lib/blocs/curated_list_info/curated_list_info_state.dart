@@ -47,11 +47,15 @@ class CuratedListInfoState extends Equatable {
     this.collaboratorPubkeys = const [],
     this.wasPublic,
     this.needsSync = false,
+    this.hasRelayConflict = false,
+    this.confirmDiscardDraft = false,
     this.permissionRecoveryPending = false,
+    this.permissionDraftPending = false,
     this.recoveryReadOnly = false,
     this.storedCollaborators = const [],
     this.visibilityEdited = false,
     this.collaboratorsEdited = false,
+    this.collaboratorEditBaseline,
     this.lastAttemptWasSync = false,
   });
 
@@ -76,8 +80,17 @@ class CuratedListInfoState extends Equatable {
   /// The existing Sync now action has publication or deletion work to deliver.
   final bool needsSync;
 
+  /// Local edits and a retained relay revision cannot be reconciled safely.
+  final bool hasRelayConflict;
+
+  /// The owner is considering an explicit, destructive local recovery choice.
+  final bool confirmDiscardDraft;
+
   /// An acknowledged permission change blocks unrelated edits until settled.
   final bool permissionRecoveryPending;
+
+  /// Offline permission intent awaits explicit Sync, without claiming acceptance.
+  final bool permissionDraftPending;
 
   /// Saved recovery records need verified repair before any mutation is safe.
   final bool recoveryReadOnly;
@@ -87,12 +100,19 @@ class CuratedListInfoState extends Equatable {
   final bool visibilityEdited;
   final bool collaboratorsEdited;
 
+  /// Permissions when the current collaborator draft began, until it is reset.
+  final List<String>? collaboratorEditBaseline;
+
   /// Whether delivery refresh may settle the most recent failed attempt.
   final bool lastAttemptWasSync;
 
   /// Whether fields and permissions may be edited.
   bool get canEdit =>
-      !isSaving && !permissionRecoveryPending && !recoveryReadOnly;
+      !isSaving &&
+      !permissionDraftPending &&
+      !permissionRecoveryPending &&
+      !recoveryReadOnly &&
+      !hasRelayConflict;
 
   /// Whether the form edits an existing list rather than creating one.
   bool get isEditing => wasPublic != null;
@@ -132,11 +152,15 @@ class CuratedListInfoState extends Equatable {
     List<String>? collaboratorPubkeys,
     bool? wasPublic,
     bool? needsSync,
+    bool? hasRelayConflict,
+    bool? confirmDiscardDraft,
     bool? permissionRecoveryPending,
+    bool? permissionDraftPending,
     bool? recoveryReadOnly,
     List<String>? storedCollaborators,
     bool? visibilityEdited,
     bool? collaboratorsEdited,
+    List<String>? collaboratorEditBaseline,
     bool? lastAttemptWasSync,
   }) {
     return CuratedListInfoState(
@@ -147,12 +171,19 @@ class CuratedListInfoState extends Equatable {
       collaboratorPubkeys: collaboratorPubkeys ?? this.collaboratorPubkeys,
       wasPublic: wasPublic ?? this.wasPublic,
       needsSync: needsSync ?? this.needsSync,
+      hasRelayConflict: hasRelayConflict ?? this.hasRelayConflict,
+      confirmDiscardDraft: confirmDiscardDraft ?? this.confirmDiscardDraft,
       permissionRecoveryPending:
           permissionRecoveryPending ?? this.permissionRecoveryPending,
+      permissionDraftPending:
+          permissionDraftPending ?? this.permissionDraftPending,
       recoveryReadOnly: recoveryReadOnly ?? this.recoveryReadOnly,
       storedCollaborators: storedCollaborators ?? this.storedCollaborators,
       visibilityEdited: visibilityEdited ?? this.visibilityEdited,
       collaboratorsEdited: collaboratorsEdited ?? this.collaboratorsEdited,
+      collaboratorEditBaseline: collaboratorsEdited == false
+          ? null
+          : collaboratorEditBaseline ?? this.collaboratorEditBaseline,
       lastAttemptWasSync: lastAttemptWasSync ?? this.lastAttemptWasSync,
     );
   }
@@ -166,11 +197,15 @@ class CuratedListInfoState extends Equatable {
     collaboratorPubkeys,
     wasPublic,
     needsSync,
+    hasRelayConflict,
+    confirmDiscardDraft,
     permissionRecoveryPending,
+    permissionDraftPending,
     recoveryReadOnly,
     storedCollaborators,
     visibilityEdited,
     collaboratorsEdited,
+    collaboratorEditBaseline,
     lastAttemptWasSync,
   ];
 }

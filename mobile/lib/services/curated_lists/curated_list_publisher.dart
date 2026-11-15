@@ -86,6 +86,8 @@ class CuratedListPublisher {
           _recovery.needsRepair(owner)) {
         return false;
       }
+      final signingSource = _findList(target.authorScopedId);
+      if (signingSource == null) return false;
       final event =
           signedRetry ??
           await _gateway.signList(
@@ -110,7 +112,11 @@ class CuratedListPublisher {
       if (!_owns(owner) || !_isPublicationAuthorized(target)) return false;
 
       var current = _findList(target.authorScopedId);
-      if (current == null || current.pubkey != owner) return false;
+      if (current == null ||
+          current.pubkey != owner ||
+          current != signingSource) {
+        return false;
+      }
       final acknowledged = current.pendingVisibility?.relayAccepted == true
           ? current.pendingVisibility
           : null;
@@ -146,7 +152,8 @@ class CuratedListPublisher {
       // the barrier reported its operation cancelled.
       if (!_owns(owner) ||
           !_isPublicationAuthorized(target) ||
-          _recovery.needsRepair(owner)) {
+          _recovery.needsRepair(owner) ||
+          _findList(target.authorScopedId) != sending) {
         return false;
       }
       if (changesPermissions && evidenceTicket == null) return false;
@@ -275,6 +282,8 @@ class CuratedListPublisher {
         isCollaborative: target.isCollaborative,
         allowedCollaborators: target.allowedCollaborators,
         pendingRepublish: false,
+        clearLocalEditDraft: true,
+        hasRelayConflict: false,
         clearPendingVisibility: true,
         pendingPlaintextEventIds: plaintextIds.toList(growable: false),
       );

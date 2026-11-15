@@ -51,8 +51,20 @@ class _ListInfoFormState extends State<ListInfoForm> {
   @override
   Widget build(BuildContext context) {
     return BlocListener<CuratedListInfoCubit, CuratedListInfoState>(
-      listenWhen: (previous, current) => !previous.canClose && current.canClose,
-      listener: (context, _) => context.popModalIfMounted(),
+      listenWhen: (previous, current) =>
+          (!previous.canClose && current.canClose) ||
+          (previous.confirmDiscardDraft &&
+              !current.confirmDiscardDraft &&
+              !current.hasRelayConflict &&
+              current.status == CuratedListInfoStatus.editing),
+      listener: (context, state) {
+        if (state.canClose) {
+          context.popModalIfMounted();
+        } else {
+          _nameController.text = state.name;
+          _descriptionController.text = state.description;
+        }
+      },
       // The scroll view ends at the keyboard rather than running behind it,
       // so a field being typed in is scrolled into view above it.
       child: Padding(
@@ -155,9 +167,12 @@ class _RecoveryMessage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ListInfoRecoveryPendingMessage(
-            permissionRecoveryPending: state.permissionRecoveryPending,
-          ),
+          if (state.hasRelayConflict || state.permissionDraftPending)
+            const _ConflictRecovery()
+          else
+            ListInfoRecoveryPendingMessage(
+              permissionRecoveryPending: state.permissionRecoveryPending,
+            ),
           DivineButton(
             label: context.l10n.listRetrySync,
             type: DivineButtonType.link,
@@ -172,6 +187,57 @@ class _RecoveryMessage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ConflictRecovery extends StatelessWidget {
+  const _ConflictRecovery();
+
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<CuratedListInfoCubit>();
+    final state = context.watch<CuratedListInfoCubit>().state;
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          liveRegion: true,
+          child: Text(
+            state.confirmDiscardDraft
+                ? l10n.listDiscardDraftConfirmation
+                : state.hasRelayConflict
+                ? l10n.listConflictNotice
+                : l10n.listRecoveryPending,
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.onSurfaceVariant,
+            ),
+          ),
+        ),
+        DivineButton(
+          label: state.confirmDiscardDraft
+              ? l10n.listDiscardLocalEdits
+              : l10n.listUseLatestVersion,
+          type: DivineButtonType.link,
+          onPressed: state.isSaving
+              ? null
+              : state.confirmDiscardDraft
+              ? () => runDetached(
+                  cubit.discardDraftAndAdoptRelay(),
+                  'adopt synced list',
+                  logName: 'ListInfoForm',
+                  category: LogCategory.ui,
+                )
+              : cubit.requestDiscardDraft,
+        ),
+        if (state.confirmDiscardDraft)
+          DivineButton(
+            label: l10n.commonCancel,
+            type: DivineButtonType.link,
+            onPressed: state.isSaving ? null : cubit.cancelDiscardDraft,
+          ),
+      ],
     );
   }
 }
