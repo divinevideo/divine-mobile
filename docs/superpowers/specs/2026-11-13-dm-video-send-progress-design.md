@@ -1,6 +1,6 @@
 # Video DM send progress that survives leaving the chat
 
-Status: approved by Rabble, 2026-11-13.
+Status: approved by Rabble, 2026-11-13; review decisions updated 2026-11-15.
 
 ## Why
 
@@ -42,8 +42,9 @@ in the app.
 - **Survives in-app navigation**: leaving the conversation, switching tabs or
   opening other screens neither stops the send nor loses its state. Reopening
   the conversation shows the bubble in its current state.
-- **Outcome is always reported**: a snackbar on success and on every failure
-  kind, shown wherever the user is in the app.
+- **Outcome is always reported**: a chat-named snackbar outside the originating
+  conversation, and one screen-reader announcement wherever the user is. The
+  visible conversation already shows the result on its bubble.
 - **Failures are recoverable from the bubble**: a failed bubble offers
   **Retry** and **Remove**.
 - Gallery videos and library clips (including multi-clip selections) both go
@@ -54,7 +55,8 @@ in the app.
 - **Surviving app kill or OS suspension.** In-flight sends live in memory. If
   the app is killed, the send is lost, the same as today. (Decided by Rabble:
   in-app navigation only.)
-- **Cancelling an in-flight send.** No cancel button in v1.
+- **Manual cancellation controls.** No cancel button in v1; expiry and session
+  teardown cancel preparation and uploads automatically.
 - **Group threads.** Video DMs are 1:1 only today; the attach affordance is
   hidden in groups, and that stays.
 - **Protocol changes.** The kind 15 event, encryption, tags and Blossom upload
@@ -64,8 +66,8 @@ in the app.
 
 ## Anti-goals
 
-- A bubble that disappears and reappears, or jumps position, when the send
-  finishes.
+- A bubble that disappears and reappears, or duplicates its persisted message,
+  when the send finishes. Failed-bubble placement remains as described below.
 - A second copy of the send pipeline. The existing encrypt/upload/publish code
   (`DmVideoSendService`) and the clip checks are moved and reused, not
   rewritten.
@@ -120,14 +122,26 @@ Nostr session goes from identity-known to ready, or its client is
 regenerated, and each such rebuild would silently wipe in-flight sends.
 
 Instead the outbox gets reader callbacks for the send service, the clip
-verifier and the clip importer. The send service is read for each send and
-the clip verifier for each clip check, so a send uses the instances current
-when it starts, even within one clip batch. A send already running keeps the
-instances it started with.
+verifier and the clip importer. Sends wait up to two minutes for the originating
+account's `nostrReady` session with its matching active client before reading the
+send service. Readiness changes alone do not rebuild the outbox. A send uses
+the instances current when it starts, even within one clip batch, and rechecks
+account ownership before upload and publication.
 
-Disposal (account switch) stops publishing state and drops all entries. A send
-already mid-flight is not cancelled (it can't be today) and its result is
-discarded: the same behaviour as now.
+Preparation has a 30-minute deadline. A PUT with no increasing progress for two
+minutes is cancelled through Dio; a fallback server gets its own progress
+high-water mark and inactivity window. Repeated or decreasing progress on the
+same PUT does not keep it alive. These limits are named and injectable; the
+plaintext limit remains 100 MiB. Expiry produces the existing failed bubble and
+Retry/Remove, reports no programming error, and releases the global FIFO.
+Late encryption/upload results cannot publish or change a retried entry, and
+ciphertext cleanup remains best-effort and detached from delivery.
+
+Disposal cancels preparation/uploads and drops entries. Once repository
+publication begins, watchdogs stop and its delivery result is preserved. Before
+incoming sign-in clears shared DM rows, account switching quiesces the outgoing
+outbox: it cancels uploads, discards queued sends and waits for any publication
+already underway. A failed switch gives the restored account a fresh outbox.
 
 **Entry model.** `OutgoingVideoDm` (Equatable, immutable):
 
@@ -244,7 +258,8 @@ commit but does not wait for that delete before returning. The row's tick
 comes back later, through db_client's background-isolate connection, after
 the microtask chain that carries the result, so the entry is `sent` before
 its row is in `messages` and the bubble stays up until the row arrives; then
-the entry is filtered out and acknowledged. No gap, no duplicate, no jump.
+the entry is filtered out and acknowledged, without a gap or duplicate. When
+failed entries coexist, message ordering follows the placement rule below.
 
 **New events**, so the composer goes UI → bloc → outbox and never reaches the
 outbox directly:
@@ -258,9 +273,9 @@ outbox directly:
 the newest end of the thread (the bottom), in `requestedAt` order, below every persisted message and
 text bubble. A text message typed during an upload therefore appears *above*
 the pending video. When the video's row lands, its `createdAt` is "now", so it
-takes the same bottom position. Nothing jumps. *(Builder's call.)* A failed
-bubble stays pinned at the bottom until it is retried or removed, so it stays
-in view rather than being scrolled away. In the reversed `ListView`,
+moves into the persisted-message section. A newer completed send can therefore
+move above an older failed bubble. Rabble accepted this placement in review:
+failed bubbles remain below persisted messages until retried or removed. In the reversed `ListView`,
 these are the first `displayedVideoSends.length` indices, offset before
 `displayedMessages`, and keyed by `ValueKey('pending-video-$id')`.
 
@@ -308,14 +323,19 @@ right-aligned like own media.
 
 - The copy mapping is exactly today's `_onAttachClip` switch: sent / partly
   sent / too large / not verified / failed.
-- It sends the same `SemanticsService.sendAnnouncement`.
+- Outcomes carry their conversation and recipient identity; the UI resolves the
+  chat name through cached profile, vanished-account and moderation conventions.
+- Snackbars name the chat and queue behind existing snackbars, preserving Undo.
+  The originating visible chat gets no redundant snackbar.
+- It sends exactly one `SemanticsService.sendAnnouncement` for each outcome,
+  including when the originating chat is visible.
 - If no context is available, the outcome is dropped. The bubble still shows
   the state.
 
 ### Copy (new ARB keys)
 
-Mirrored to all locales, or listed as known untranslated debt, as the l10n
-rules require:
+All pending-video strings below and `dmVideoOutcomeInChat` are translated in
+all 23 shipped locales, with generated outputs updated:
 
 - `dmPendingVideoWaiting`: "Waiting…"
 - `dmPendingVideoPreparing`: "Preparing…"
@@ -325,8 +345,8 @@ rules require:
 - `dmPendingVideoRemove`: "Remove"
 - `dmPendingVideoSemantics` / `dmPendingVideoFailedSemantics`
 
-Existing keys are reused for every outcome message, and Retry reuses
-`commonRetry`.
+`dmVideoOutcomeInChat` formats the chat name with an existing outcome message;
+Retry reuses `commonRetry`.
 
 ## Testing
 

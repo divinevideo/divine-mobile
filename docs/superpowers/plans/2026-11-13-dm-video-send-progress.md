@@ -18,7 +18,10 @@ deleted, and its logic moves into the outbox.
 rxdart, mocktail, bloc_test.
 
 **Spec:** `docs/superpowers/specs/2026-11-13-dm-video-send-progress-design.md`
-(approved by Rabble 2026-11-13). Read it before any task.
+(approved by Rabble 2026-11-13, with review decisions updated 2026-11-15).
+The current spec includes cancellation/deadlines, signer readiness, outgoing
+account quiescence and chat-named notifications; it supersedes the initial
+lifetime and notification assumptions in the tasks below. Read it before any task.
 
 All paths below are relative to `mobile/` unless they start with `docs/`.
 Run Flutter commands from `mobile/` with `mise exec -- … --no-pub`.
