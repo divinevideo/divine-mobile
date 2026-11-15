@@ -230,6 +230,30 @@ test('returns null when no PR matches, such as after the head moved', () => {
   }
 });
 
+test('skips deleted source repositories without matching absent repository identities', () => {
+  const pr = candidate();
+  pr.head.repo = null;
+  assert.equal(select([pr]), null);
+  const run = input().run;
+  run.head_repository = null;
+  assert.equal(
+    selectPreviewPr({
+      run,
+      pulls: [candidate()],
+      repoFullName: 'divinevideo/divine-mobile',
+    }),
+    null,
+  );
+  assert.equal(
+    selectPreviewPr({
+      run,
+      pulls: [pr],
+      repoFullName: 'divinevideo/divine-mobile',
+    }),
+    null,
+  );
+});
+
 test('throws when more than one PR matches the run', () => {
   assert.throws(() => select([candidate(), candidate({ number: 4 })]), {
     message: 'Preview run matches more than one PR',
@@ -335,6 +359,10 @@ test('workflow skips stale, closed and draft PRs before inspecting their artifac
     },
     (v) => {
       v.pr.state = 'closed';
+    },
+    (v) => {
+      v.pr.state = 'closed';
+      v.pr.head.repo = null;
     },
     (v) => {
       v.pr.draft = true;

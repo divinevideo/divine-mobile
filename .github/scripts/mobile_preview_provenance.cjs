@@ -23,6 +23,8 @@ function isGitHubTestMerge(commit) {
 function selectPreviewPr({ run, pulls, repoFullName }) {
   const matches = pulls.filter(
     (pr) =>
+      pr.head.repo?.id != null &&
+      run.head_repository?.id != null &&
       pr.base.repo.full_name === repoFullName &&
       pr.base.ref === 'main' &&
       pr.head.sha === run.head_sha &&
