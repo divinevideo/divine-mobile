@@ -710,7 +710,7 @@ final class RemixConsentRepositoryProvider
 }
 
 String _$remixConsentRepositoryHash() =>
-    r'270db5feb8e3df5c7d7bbaa42d220a3306e272f5';
+    r'8d7e7f61b7d49020b393e0e3c6ce6e2ced27e050';
 
 /// Curation Service - manages NIP-51 video curation sets
 

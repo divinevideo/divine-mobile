@@ -705,7 +705,8 @@ RemixConsentRepository? remixConsentRepository(Ref ref) {
   final nostrClient = ref.watch(nostrServiceProvider);
   return RemixConsentRepository(
     profileRepository: reader,
-    defaultRelayUrl: ref.watch(currentEnvironmentProvider).relayUrl,
+    // The same default relay a remix-setting save must reach.
+    defaultRelayUrl: nostrClient.defaultRelayUrl,
     connectedRelayUrls: () => nostrClient.connectedRelays,
   );
 }

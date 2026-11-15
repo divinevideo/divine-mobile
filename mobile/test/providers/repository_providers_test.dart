@@ -542,17 +542,13 @@ void main() {
       required String relayUrl,
       List<String> connectedRelays = const [],
     }) {
-      final environment = _MockEnvironmentConfig();
-      when(() => environment.relayUrl).thenReturn(relayUrl);
       final client = _MockNostrClient();
+      when(() => client.defaultRelayUrl).thenReturn(relayUrl);
       when(() => client.connectedRelays).thenReturn(connectedRelays);
       final container = ProviderContainer(
         overrides: [
           profileReadRepositoryProvider.overrideWithValue(reader),
           nostrServiceProvider.overrideWithValue(client),
-          currentEnvironmentProvider.overrideWith(
-            () => _TestEnvironment(environment),
-          ),
         ],
       );
       addTearDown(container.dispose);
@@ -568,7 +564,7 @@ void main() {
       expect(container.read(remixConsentRepositoryProvider), isNull);
     });
 
-    test("asks the environment's relay as the default relay", () async {
+    test("asks the Nostr client's default relay", () async {
       const relayUrl = 'wss://relay.staging.example.com';
       final reader = _MockProfileReader();
       when(
