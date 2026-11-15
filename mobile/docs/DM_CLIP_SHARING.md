@@ -247,6 +247,21 @@ neither can be told apart from other footage and both stay out. A Vine added
 to clips from the feed, sent from the clip library or saved to the gallery
 from there, keeps its exact file.
 
+### The credited creator's remix setting
+
+A creator can turn off **Let people remix my videos**, which writes
+`divine_allow_video_reuse: false` to their kind 0 (see
+`docs/NOSTR_EVENT_TYPES.md`). The feed's **Add to clips** and **Remix this
+video** refuse such a creator's videos, and so do both received imports: before
+anything is copied, `importReceivedClip` checks the account it would credit
+first — the sender, or whoever published a forwarded post — and
+`importReceivedVine` checks the viner, through the same
+`RemixConsentRepository` the feed uses. A blocking account turns the clip away
+with "This creator doesn't allow remixes."; an account whose setting cannot be
+read turns it away with the retry message the feed shows. Footage crediting
+the recipient's own account is never checked. Only the first credit is
+checked; accounts the signed history names after it are not asked.
+
 ## Back from the gallery
 
 Saving a clip to the gallery, from the clip library, from a received video's

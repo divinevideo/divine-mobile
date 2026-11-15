@@ -73,6 +73,11 @@ Future<void> addReceivedClipToLibrary(
     DmClipSaveStatus.saved => (l10n.videoEditorClipSavedSuccess, false),
     DmClipSaveStatus.notVerified => (l10n.dmClipNotVerified, true),
     DmClipSaveStatus.checkUnavailable => (l10n.dmClipCheckUnavailable, true),
+    DmClipSaveStatus.remixBlocked => (l10n.remixBlockedByCreator, true),
+    DmClipSaveStatus.remixConsentUnknown => (
+      l10n.remixConsentCheckFailed,
+      true,
+    ),
     DmClipSaveStatus.failed => (l10n.shareSheetAddToClipsFailed, true),
   };
   if (text == null) return;

@@ -38,8 +38,9 @@ save re-seeds from the freshest relay copy so they survive edits):
 - `divine_monetization_links` - Support and subscription links shown on the
   profile.
 - `divine_allow_video_reuse` - Account-wide remix block. JSON `false` means
-  nobody else may use this account's videos as clips ("Add to clips" and
-  "Remix this video" refuse); absent or `true` means remixing follows each
+  nobody else may use this account's videos as clips ("Add to clips",
+  "Remix this video", and adding a clip received in a direct message that
+  credits the account all refuse); absent or `true` means remixing follows each
   video's own `allow_video_reuse` tag. Only the creator's own
   "Let people remix my videos" setting writes it: turning the setting off
   writes `false`, turning it back on removes the key. That save only succeeds

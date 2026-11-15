@@ -238,6 +238,38 @@ void main() {
         );
 
         blocTest<DmClipSaveCubit, DmClipSaveState>(
+          'keeps out a Vine whose viner blocks remixes',
+          setUp: () => stubVineImport(
+            const VideoClipImportFailure(
+              VideoClipImportFailureReason.remixBlocked,
+            ),
+          ),
+          build: buildCubit,
+          act: (cubit) => cubit.save(_clipMessage()),
+          expect: () => const [
+            DmClipSaveState(status: DmClipSaveStatus.checking),
+            DmClipSaveState(status: DmClipSaveStatus.remixBlocked),
+          ],
+          errors: () => const <Object>[],
+        );
+
+        blocTest<DmClipSaveCubit, DmClipSaveState>(
+          "keeps out a Vine whose viner's consent cannot be read",
+          setUp: () => stubVineImport(
+            const VideoClipImportFailure(
+              VideoClipImportFailureReason.remixConsentUnknown,
+            ),
+          ),
+          build: buildCubit,
+          act: (cubit) => cubit.save(_clipMessage()),
+          expect: () => const [
+            DmClipSaveState(status: DmClipSaveStatus.checking),
+            DmClipSaveState(status: DmClipSaveStatus.remixConsentUnknown),
+          ],
+          errors: () => const <Object>[],
+        );
+
+        blocTest<DmClipSaveCubit, DmClipSaveState>(
           'reports it as unchecked when the Vine lookup could not run',
           setUp: () => stubVineImport(
             const VideoClipImportFailure(
@@ -375,6 +407,41 @@ void main() {
           DmClipSaveState(status: DmClipSaveStatus.checkUnavailable),
         ],
       );
+
+      for (final (reason, status) in const [
+        (
+          VideoClipImportFailureReason.remixBlocked,
+          DmClipSaveStatus.remixBlocked,
+        ),
+        (
+          VideoClipImportFailureReason.remixConsentUnknown,
+          DmClipSaveStatus.remixConsentUnknown,
+        ),
+      ]) {
+        blocTest<DmClipSaveCubit, DmClipSaveState>(
+          'reports ${status.name} when the import refuses with ${reason.name}',
+          setUp: () {
+            stubVerification(ClipProvenanceStatus.verified);
+            when(
+              () => importService.importReceivedClip(
+                source: any(named: 'source'),
+                messageId: any(named: 'messageId'),
+                senderPubkey: any(named: 'senderPubkey'),
+                c2paManifestId: any(named: 'c2paManifestId'),
+                targetAspectRatio: any(named: 'targetAspectRatio'),
+                beforeSave: any(named: 'beforeSave'),
+              ),
+            ).thenAnswer((_) async => VideoClipImportFailure(reason));
+          },
+          build: buildCubit,
+          act: (cubit) => cubit.save(_clipMessage()),
+          expect: () => [
+            const DmClipSaveState(status: DmClipSaveStatus.checking),
+            DmClipSaveState(status: status),
+          ],
+          errors: () => const <Object>[],
+        );
+      }
 
       blocTest<DmClipSaveCubit, DmClipSaveState>(
         'refuses a file type the C2PA reader is not given',

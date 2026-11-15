@@ -64,6 +64,14 @@ enum DmClipSaveStatus {
   /// The check could not run right now; nothing is known about the clip.
   checkUnavailable,
 
+  /// The account credited as the clip's creator does not let others use its
+  /// videos as clips, so it was not added.
+  remixBlocked,
+
+  /// Whether the account credited as the clip's creator lets others use its
+  /// videos as clips could not be read, so it was not added. Try again later.
+  remixConsentUnknown,
+
   /// Downloading, decrypting or saving failed. Reported through `addError`.
   failed,
 }
@@ -86,6 +94,8 @@ class DmClipSaveState extends Equatable {
 /// Divine camera capture or a signed edit of captures, or, for a file with no
 /// credential at all, when it is the exact file of a published Vine post, so
 /// a clip library never holds footage whose origin is unknown or generated.
+/// Footage credited to another account is added only when that account lets
+/// others use its videos as clips, which the import checks.
 /// The video comes from the [DmVideoStore] of the account signed in when the
 /// save starts, held until the library has its own copy.
 class DmClipSaveCubit extends Cubit<DmClipSaveState>
@@ -200,6 +210,14 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
           // to credit, could not be checked; like a check that could not run,
           // try again later.
           return DmClipSaveStatus.checkUnavailable;
+        case VideoClipImportFailure(
+          reason: VideoClipImportFailureReason.remixBlocked,
+        ):
+          return DmClipSaveStatus.remixBlocked;
+        case VideoClipImportFailure(
+          reason: VideoClipImportFailureReason.remixConsentUnknown,
+        ):
+          return DmClipSaveStatus.remixConsentUnknown;
         case VideoClipImportFailure(:final reason):
           addError(DmClipImportFailure(reason), StackTrace.current);
           return DmClipSaveStatus.failed;
