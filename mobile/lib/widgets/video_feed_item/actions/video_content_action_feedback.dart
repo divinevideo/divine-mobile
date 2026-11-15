@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_feed_item/actions/clip_title_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
@@ -64,6 +65,12 @@ void showVideoContentActionFeedback(
             )
           : l10n.shareSheetAddToClipsFailed,
       !succeeded,
+    ),
+    VideoContentRemixRefused(:final consent) => (
+      consent == RemixConsent.blocked
+          ? l10n.remixBlockedByCreator
+          : l10n.remixConsentCheckFailed,
+      true,
     ),
     VideoContentCopiedToClipboard(:final kind) => (
       switch (kind) {

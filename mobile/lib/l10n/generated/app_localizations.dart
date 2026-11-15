@@ -6829,6 +6829,30 @@ abstract class AppLocalizations {
   /// **'Couldn\'t add to clips'**
   String get shareSheetAddToClipsFailed;
 
+  /// Snackbar shown when a creator has blocked remixing on their whole account, so their video can't be added to clips.
+  ///
+  /// In en, this message translates to:
+  /// **'This creator doesn\'t allow remixes.'**
+  String get remixBlockedByCreator;
+
+  /// Snackbar shown when the creator's profile could not be read to check whether their video may be remixed; the action was refused and can be retried.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check whether this video can be remixed. Try again.'**
+  String get remixConsentCheckFailed;
+
+  /// Settings switch title: when off, nobody else can use the signed-in creator's videos as clips.
+  ///
+  /// In en, this message translates to:
+  /// **'Let people remix my videos'**
+  String get remixSettingAllowTitle;
+
+  /// Settings switch subtitle under 'Let people remix my videos'.
+  ///
+  /// In en, this message translates to:
+  /// **'Others can use your videos as clips in their own posts.'**
+  String get remixSettingAllowSubtitle;
+
   /// No description provided for @shareSheetAddToList.
   ///
   /// In en, this message translates to:

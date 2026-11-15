@@ -1813,6 +1813,10 @@
   "@shareSheetAddToClipsFailed": {
     "description": "Snackbar shown when importing a classic Vine into the clip library fails"
   },
+  "remixBlockedByCreator": "ይህ ፈጣሪ መቀላቀልን አይፈቅድም።",
+  "remixConsentCheckFailed": "ይህ ቪዲዮ መቀላቀል ይችል እንደሆነ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።",
+  "remixSettingAllowTitle": "ሌሎች ቪዲዮዎቼን እንዲቀላቅሉ መፍቀድ",
+  "remixSettingAllowSubtitle": "ሌሎች ቪዲዮዎችዎን በራሳቸው ልጥፎች ውስጥ እንደ ቅንጥብ መጠቀም ይችላሉ።",
   "shareSheetAddToList": "ወደ ዝርዝር ያክሉ",
   "shareSheetCopy": "ቅዳ",
   "shareSheetShareVia": "በ በኩል አጋራ",

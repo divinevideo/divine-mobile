@@ -4033,6 +4033,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Không thêm được vào clip';
 
   @override
+  String get remixBlockedByCreator => 'Nhà sáng tạo này không cho phép remix.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Không kiểm tra được video này có thể remix hay không. Hãy thử lại.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'Cho phép người khác remix video của tôi';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Người khác có thể dùng video của bạn làm clip trong bài đăng của họ.';
+
+  @override
   String get shareSheetAddToList => 'Thêm vào danh sách';
 
   @override

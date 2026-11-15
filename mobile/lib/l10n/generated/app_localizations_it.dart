@@ -4125,6 +4125,21 @@ class AppLocalizationsIt extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Impossibile aggiungere ai clip';
 
   @override
+  String get remixBlockedByCreator => 'Questa persona non consente i remix.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Impossibile verificare se questo video si può remixare. Riprova.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'Permetti ad altri di remixare i miei video';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Altri possono usare i tuoi video come clip nei propri post.';
+
+  @override
   String get shareSheetAddToList => 'Aggiungi a lista';
 
   @override

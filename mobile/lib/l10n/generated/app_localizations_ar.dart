@@ -4069,6 +4069,20 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'تعذّرت الإضافة إلى المقاطع';
 
   @override
+  String get remixBlockedByCreator => 'لا يسمح صانع المحتوى هذا بإعادة المزج.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'تعذّر التحقق مما إذا كان يمكن إعادة مزج هذا الفيديو. يُرجى إعادة المحاولة.';
+
+  @override
+  String get remixSettingAllowTitle => 'السماح للآخرين بإعادة مزج فيديوهاتي';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'يمكن للآخرين استخدام فيديوهاتك كمقاطع في منشوراتهم.';
+
+  @override
   String get shareSheetAddToList => 'إضافة إلى قائمة';
 
   @override

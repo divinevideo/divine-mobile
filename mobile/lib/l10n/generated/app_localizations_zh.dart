@@ -3803,6 +3803,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareSheetAddToClipsFailed => '无法加入片段库';
 
   @override
+  String get remixBlockedByCreator => '该创作者不允许混剪。';
+
+  @override
+  String get remixConsentCheckFailed => '无法确认此视频能否混剪。请重试。';
+
+  @override
+  String get remixSettingAllowTitle => '允许他人混剪我的视频';
+
+  @override
+  String get remixSettingAllowSubtitle => '其他人可以把你的视频作为片段用在自己的帖子里。';
+
+  @override
   String get shareSheetAddToList => '加入列表';
 
   @override

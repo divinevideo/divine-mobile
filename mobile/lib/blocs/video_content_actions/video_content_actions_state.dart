@@ -48,6 +48,17 @@ class VideoContentClipImportResult extends VideoContentActionResult {
   final String? libraryTitle;
 }
 
+/// Add to clips was refused because the creator's consent is not a yes.
+///
+/// [consent] is [RemixConsent.blocked] when the creator blocks remixing on
+/// their account, or [RemixConsent.unknown] when their profile could not be
+/// read and the user should try again.
+class VideoContentRemixRefused extends VideoContentActionResult {
+  VideoContentRemixRefused({required this.consent});
+
+  final RemixConsent consent;
+}
+
 /// What content was copied, so the UI can pick the localized message.
 enum VideoContentCopiedKind { eventJson, eventId }
 

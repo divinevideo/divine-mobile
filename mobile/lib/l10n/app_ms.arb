@@ -1966,6 +1966,10 @@
   "@shareSheetAddToClipsFailed": {
     "description": "Snackbar shown when importing a classic Vine into the clip library fails"
   },
+  "remixBlockedByCreator": "Pencipta ini tidak membenarkan remix.",
+  "remixConsentCheckFailed": "Tidak dapat menyemak sama ada video ini boleh di-remix. Cuba lagi.",
+  "remixSettingAllowTitle": "Benarkan orang lain me-remix video saya",
+  "remixSettingAllowSubtitle": "Orang lain boleh menggunakan video anda sebagai klip dalam siaran mereka sendiri.",
   "shareSheetAddToList": "Tambah ke Senarai",
   "shareSheetCopy": "Salin",
   "shareSheetShareVia": "Kongsi melalui",

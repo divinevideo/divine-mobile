@@ -4058,6 +4058,21 @@ class AppLocalizationsMs extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Tidak dapat menambah ke klip';
 
   @override
+  String get remixBlockedByCreator => 'Pencipta ini tidak membenarkan remix.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Tidak dapat menyemak sama ada video ini boleh di-remix. Cuba lagi.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'Benarkan orang lain me-remix video saya';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Orang lain boleh menggunakan video anda sebagai klip dalam siaran mereka sendiri.';
+
+  @override
   String get shareSheetAddToList => 'Tambah ke Senarai';
 
   @override

@@ -193,6 +193,29 @@ void main() {
     group('drivePendingSave', () {
       setUp(stubRelaysHoldNoProfile);
 
+      test('replays a queued allowVideoReuse into the publish', () async {
+        await repository.enqueuePendingSave(
+          const PendingProfileSave(
+            pubkey: pubkey,
+            displayName: 'Alice',
+            allowVideoReuse: false,
+          ),
+          claimConfirmed: true,
+        );
+
+        final outcome = await repository.drivePendingSave(pubkey);
+
+        expect(outcome, PendingSaveDriveOutcome.confirmed);
+        final captured =
+            verify(
+                  () => nostrClient.sendProfileAwaitOk(
+                    profileContent: captureAny(named: 'profileContent'),
+                  ),
+                ).captured.single
+                as Map<String, dynamic>;
+        expect(captured[divineAllowVideoReuseKey], isFalse);
+      });
+
       test('returns noPendingSave when the slot is empty', () async {
         expect(
           await repository.drivePendingSave(pubkey),

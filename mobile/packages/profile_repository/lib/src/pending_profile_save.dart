@@ -27,6 +27,7 @@ class PendingProfileSave {
     this.picture,
     this.banner,
     this.monetizationLinks,
+    this.allowVideoReuse,
   });
 
   /// Reconstructs a payload from its [toJson] map.
@@ -45,6 +46,7 @@ class PendingProfileSave {
       monetizationLinks: links
           ?.map((e) => MonetizationLink.fromJson(e as Map<String, dynamic>))
           .toList(),
+      allowVideoReuse: json['allowVideoReuse'] as bool?,
     );
   }
 
@@ -84,6 +86,10 @@ class PendingProfileSave {
   /// them untouched.
   final List<MonetizationLink>? monetizationLinks;
 
+  /// Whether others may use this account's videos as clips, or null to leave
+  /// the profile's current answer untouched.
+  final bool? allowVideoReuse;
+
   /// Whether this save requests a divine.video username that must be claimed
   /// on the name server before the kind-0 publish.
   bool get requiresClaim => username != null && username!.trim().isNotEmpty;
@@ -103,6 +109,7 @@ class PendingProfileSave {
       'monetizationLinks': monetizationLinks!
           .map((link) => link.toJson())
           .toList(),
+    if (allowVideoReuse != null) 'allowVideoReuse': allowVideoReuse,
   };
 
   /// Encodes the payload to the JSON string stored in the slot.

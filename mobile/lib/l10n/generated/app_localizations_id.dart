@@ -3990,6 +3990,20 @@ class AppLocalizationsId extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Tidak dapat menambahkan ke klip';
 
   @override
+  String get remixBlockedByCreator => 'Kreator ini tidak mengizinkan remix.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Tidak bisa memeriksa apakah video ini boleh di-remix. Coba lagi.';
+
+  @override
+  String get remixSettingAllowTitle => 'Izinkan orang lain me-remix videoku';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Orang lain bisa memakai videomu sebagai klip di postingan mereka sendiri.';
+
+  @override
   String get shareSheetAddToList => 'Tambah ke Daftar';
 
   @override

@@ -1,5 +1,5 @@
-// ABOUTME: Provides a sheet's VideoContentActionsBloc for one video, built
-// ABOUTME: again whenever the bookmarks repository is replaced. Both sheets use it.
+// ABOUTME: Provides a sheet's VideoContentActionsBloc for one video, built again
+// ABOUTME: when a repository it captures is replaced. Both sheets use it.
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,8 +15,10 @@ import 'package:openvine/providers/video_clip_import_provider.dart';
 ///
 /// The bookmarks repository is rebuilt, and the old one disposed, when the
 /// Nostr client is replaced, for instance when a restored session gains its
-/// signer while a sheet is open. The bloc is keyed on the repository so it is
-/// rebuilt with it rather than saving through a disposed client.
+/// signer while a sheet is open. The remix consent repository is rebuilt with
+/// the profile reader it wraps. The bloc is keyed on both repositories so it
+/// is rebuilt with them rather than saving or checking consent through a
+/// replaced client.
 class VideoContentActionsScope extends ConsumerWidget {
   const VideoContentActionsScope({
     required this.video,
@@ -30,8 +32,9 @@ class VideoContentActionsScope extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bookmarksRepository = ref.watch(bookmarksRepositoryProvider);
+    final remixConsentRepository = ref.watch(remixConsentRepositoryProvider);
     return BlocProvider<VideoContentActionsBloc>(
-      key: ValueKey(bookmarksRepository),
+      key: ValueKey((bookmarksRepository, remixConsentRepository)),
       create: (_) => VideoContentActionsBloc(
         video: video,
         relayUrl: ref.read(currentEnvironmentProvider).relayUrl,
@@ -39,6 +42,8 @@ class VideoContentActionsScope extends ConsumerWidget {
         // Read, not watched: it rebuilds on every content-filter change,
         // which would reset the bloc mid-import.
         videoClipImportService: ref.read(videoClipImportServiceProvider),
+        remixConsentRepository: remixConsentRepository,
+        viewerPubkey: ref.read(authServiceProvider).currentPublicKeyHex,
       )..add(const VideoContentBookmarkStatusRequested()),
       child: child,
     );

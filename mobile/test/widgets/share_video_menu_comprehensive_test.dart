@@ -21,6 +21,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/repositories/creator_delete_enforcement_repository.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
@@ -49,6 +50,9 @@ class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockVideoClipImportService extends Mock
     implements VideoClipImportService {}
+
+class _MockRemixConsentRepository extends Mock
+    implements RemixConsentRepository {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
 
@@ -97,6 +101,7 @@ void main() {
   late _MockVideoSharingService mockVideoSharingService;
   late _MockProfileRepository mockProfileRepository;
   late _MockVideoClipImportService mockVideoClipImportService;
+  late _MockRemixConsentRepository mockRemixConsentRepository;
 
   setUpAll(() {
     registerFallbackValue(_FakeVideoEvent());
@@ -118,6 +123,7 @@ void main() {
     mockBookmarksRepository = _MockBookmarksRepository();
     mockVideoSharingService = _MockVideoSharingService();
     mockVideoClipImportService = _MockVideoClipImportService();
+    mockRemixConsentRepository = _MockRemixConsentRepository();
     _FakeCuratedListsState.fakeLists = [];
 
     when(
@@ -160,6 +166,12 @@ void main() {
   });
 
   group('Unified share sheet', () {
+    setUp(() {
+      when(
+        () => mockRemixConsentRepository.consentFor(any()),
+      ).thenAnswer((_) async => RemixConsent.allowed);
+    });
+
     Widget buildSubject({
       bool debugToolsEnabled = true,
       VideoEvent? video,
@@ -190,6 +202,9 @@ void main() {
           videoEventServiceProvider.overrideWithValue(videoEventService),
         videoClipImportServiceProvider.overrideWithValue(
           mockVideoClipImportService,
+        ),
+        remixConsentRepositoryProvider.overrideWithValue(
+          mockRemixConsentRepository,
         ),
         curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
         isFeatureEnabledProvider(
@@ -361,9 +376,13 @@ void main() {
     );
 
     testWidgets(
-      'More actions row hides Add to clips for non-classic, non-own videos',
+      'More actions row hides Add to clips for videos whose creator declined',
       (tester) async {
-        await tester.pumpWidget(buildSubject());
+        await tester.pumpWidget(
+          buildSubject(
+            video: _testVideo(rawTags: const {'allow_video_reuse': 'false'}),
+          ),
+        );
         await tester.tap(find.byType(ShareActionButton));
         await tester.pumpAndSettle();
 
@@ -518,6 +537,43 @@ void main() {
         ),
       ).called(1);
     });
+
+    testWidgets(
+      'tapping Add to clips on a blocked account says so and imports nothing',
+      (tester) async {
+        when(
+          () => mockRemixConsentRepository.consentFor(any()),
+        ).thenAnswer((_) async => RemixConsent.blocked);
+        final classicVideo = _testVideo(
+          rawTags: const {'platform': 'vine'},
+          vineId: 'classic-vine-id',
+        );
+
+        await tester.pumpWidget(buildSubject(video: classicVideo));
+        await tester.tap(find.byType(ShareActionButton));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Add to clips'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Save clip'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            lookupAppLocalizations(const Locale('en')).remixBlockedByCreator,
+          ),
+          findsOneWidget,
+        );
+        verify(
+          () => mockRemixConsentRepository.consentFor(classicVideo.pubkey),
+        ).called(1);
+        verifyNever(
+          () => mockVideoClipImportService.importToLibrary(
+            any(),
+            libraryTitle: any(named: 'libraryTitle'),
+          ),
+        );
+      },
+    );
 
     testWidgets('tapping Save shows success snackbar', (tester) async {
       when(

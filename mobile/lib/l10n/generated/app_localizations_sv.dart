@@ -4063,6 +4063,21 @@ class AppLocalizationsSv extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Kunde inte lägga till i klipp';
 
   @override
+  String get remixBlockedByCreator =>
+      'Den här kreatören tillåter inte remixer.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Kunde inte kontrollera om videon får remixas. Försök igen.';
+
+  @override
+  String get remixSettingAllowTitle => 'Låt andra remixa mina videor';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Andra kan använda dina videor som klipp i sina egna inlägg.';
+
+  @override
   String get shareSheetAddToList => 'Lägg till i lista';
 
   @override

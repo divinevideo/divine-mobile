@@ -16,6 +16,10 @@ import 'package:nostr_sdk/event.dart';
 import 'package:text_sanitizer/text_sanitizer.dart';
 import 'package:unique_names_generator/unique_names_generator.dart';
 
+/// Kind 0 content key a creator sets to JSON `false` to stop others using
+/// their videos as clips. Absent or `true` means remixing is allowed.
+const divineAllowVideoReuseKey = 'divine_allow_video_reuse';
+
 /// Model representing a Nostr user profile from kind 0 events
 @immutable
 class UserProfile {
@@ -271,6 +275,13 @@ class UserProfile {
 
   List<MonetizationLink> get monetizationLinks =>
       parseMonetizationLinks(rawData[divineMonetizationLinksKey]);
+
+  /// Whether this creator lets others use their videos as clips.
+  ///
+  /// Only a JSON `false` under [divineAllowVideoReuseKey] blocks remixing; a
+  /// missing key or any other value allows it. Profiles built from the REST
+  /// API carry no custom keys, so only a raw kind 0 read answers this.
+  bool get allowsVideoReuse => rawData[divineAllowVideoReuseKey] != false;
 
   List<MonetizationLink> get enabledMonetizationLinks =>
       monetizationLinks.where((link) => link.enabled).toList(growable: false);

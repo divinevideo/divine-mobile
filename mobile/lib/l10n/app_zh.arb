@@ -1966,6 +1966,10 @@
   "@shareSheetAddToClipsFailed": {
     "description": "Snackbar shown when importing a classic Vine into the clip library fails"
   },
+  "remixBlockedByCreator": "该创作者不允许混剪。",
+  "remixConsentCheckFailed": "无法确认此视频能否混剪。请重试。",
+  "remixSettingAllowTitle": "允许他人混剪我的视频",
+  "remixSettingAllowSubtitle": "其他人可以把你的视频作为片段用在自己的帖子里。",
   "shareSheetAddToList": "加入列表",
   "shareSheetCopy": "复制",
   "shareSheetShareVia": "分享方式",

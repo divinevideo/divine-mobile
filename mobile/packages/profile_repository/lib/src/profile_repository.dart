@@ -1488,6 +1488,11 @@ class ProfileRepository implements ProfileReader {
   /// surfaces as a failure rather than a false success. After a confirmed
   /// publish, the profile is cached locally for immediate subsequent reads.
   ///
+  /// [allowVideoReuse] `false` writes [divineAllowVideoReuseKey] as JSON
+  /// `false`, blocking others from remixing this account's videos; `true`
+  /// removes the key, since absence already means allowed; null leaves the
+  /// seed's value alone.
+  ///
   /// Throws [NoRelaysConnectedException] when no relays are connected.
   /// Throws [ProfilePublishFailedException] when relays were reached but none
   /// confirmed the event (rejection, timeout, or a send failure such as the
@@ -1506,6 +1511,7 @@ class ProfileRepository implements ProfileReader {
     String? picture,
     String? banner,
     Iterable<MonetizationLink>? monetizationLinks,
+    bool? allowVideoReuse,
     UserProfile? currentProfile,
   }) async {
     // External NIP-05 takes precedence when provided.
@@ -1571,6 +1577,12 @@ class ProfileRepository implements ProfileReader {
       } else {
         newContent[divineMonetizationLinksKey] = encoded;
       }
+    }
+
+    if (allowVideoReuse == false) {
+      newContent[divineAllowVideoReuseKey] = false;
+    } else if (allowVideoReuse == true) {
+      newContent.remove(divineAllowVideoReuseKey);
     }
 
     // Every other key — lud16, lud06, website, bot, NIP-39 `i` tags,
@@ -1762,6 +1774,7 @@ class ProfileRepository implements ProfileReader {
         picture: payload.picture,
         banner: payload.banner,
         monetizationLinks: payload.monetizationLinks,
+        allowVideoReuse: payload.allowVideoReuse,
         currentProfile: currentProfile,
       );
       await dao.clear(pubkey, generation: generation);

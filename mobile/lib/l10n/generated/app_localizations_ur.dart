@@ -4071,6 +4071,20 @@ class AppLocalizationsUr extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'کلپس میں شامل نہیں ہو سکا';
 
   @override
+  String get remixBlockedByCreator => 'یہ کریئیٹر ری مکس کی اجازت نہیں دیتے۔';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'یہ معلوم نہیں ہو سکا کہ اس ویڈیو کو ری مکس کیا جا سکتا ہے یا نہیں۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get remixSettingAllowTitle => 'دوسروں کو میری ویڈیوز ری مکس کرنے دیں';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'دوسرے لوگ آپ کی ویڈیوز کو اپنی پوسٹس میں کلپس کے طور پر استعمال کر سکتے ہیں۔';
+
+  @override
   String get shareSheetAddToList => 'فہرست میں شامل کریں';
 
   @override

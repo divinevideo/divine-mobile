@@ -28,6 +28,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
@@ -71,6 +72,9 @@ class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
 
 class _MockVideoClipImportService extends Mock
     implements VideoClipImportService {}
+
+class _MockRemixConsentRepository extends Mock
+    implements RemixConsentRepository {}
 
 class _MockRepostsRepository extends Mock implements RepostsRepository {}
 
@@ -2914,6 +2918,8 @@ void main() {
       required String viewerPubkey,
       MockAuthService? authService,
       BookmarksRepository Function(Ref ref)? bookmarks,
+      VideoClipImportService? videoClipImportService,
+      RemixConsentRepository? remixConsentRepository,
     }) => [
       authServiceProvider.overrideWithValue(
         authService ??
@@ -2926,8 +2932,12 @@ void main() {
         bookmarks ?? (ref) => bookmarksRepository,
       ),
       videoClipImportServiceProvider.overrideWithValue(
-        _MockVideoClipImportService(),
+        videoClipImportService ?? _MockVideoClipImportService(),
       ),
+      if (remixConsentRepository != null)
+        remixConsentRepositoryProvider.overrideWithValue(
+          remixConsentRepository,
+        ),
       repostsRepositoryProvider.overrideWithValue(repostsRepository),
       isFeatureEnabledProvider(FeatureFlag.debugTools).overrideWithValue(false),
       fetchUserProfileProvider(
@@ -3112,6 +3122,50 @@ void main() {
             addressableId: any(named: 'addressableId'),
           ),
         );
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'refuses Add to clips when the creator blocks remixing',
+      (tester) async {
+        final importer = _MockVideoClipImportService();
+        final consent = _MockRemixConsentRepository();
+        when(
+          () => consent.consentFor(_creatorPubkey),
+        ).thenAnswer((_) async => RemixConsent.blocked);
+        final video = _makeVideo(
+          title: 'Classic',
+          rawTags: {'platform': 'vine'},
+        );
+
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: sheetOverrides(
+              viewerPubkey: _thirdPartyViewer,
+              videoClipImportService: importer,
+              remixConsentRepository: consent,
+            ),
+            child: Builder(
+              builder: (context) => TextButton(
+                onPressed: () =>
+                    unawaited(MetadataExpandedSheet.show(context, video)),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        final l10n = _l10n(tester);
+        await tester.tap(find.text(l10n.shareSheetAddToClips));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.shareSheetSaveClip));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.remixBlockedByCreator), findsOneWidget);
+        verify(() => consent.consentFor(_creatorPubkey)).called(1);
+        verifyZeroInteractions(importer);
       },
     );
 

@@ -4118,6 +4118,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'No se pudo agregar a clips';
 
   @override
+  String get remixBlockedByCreator => 'Esta persona no permite remezclas.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'No pudimos comprobar si este video se puede remezclar. Probá de nuevo.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'Permitir que otras personas remezclen mis videos';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Otras personas pueden usar tus videos como clips en sus propias publicaciones.';
+
+  @override
   String get shareSheetAddToList => 'Agregar a lista';
 
   @override

@@ -4190,6 +4190,21 @@ class AppLocalizationsRo extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Nu s-a putut adăuga la clipuri';
 
   @override
+  String get remixBlockedByCreator => 'Această persoană nu permite remixuri.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Nu am putut verifica dacă acest videoclip poate fi remixat. Încearcă din nou.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'Permite altora să-mi remixeze videoclipurile';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Alții îți pot folosi videoclipurile drept clipuri în propriile postări.';
+
+  @override
   String get shareSheetAddToList => 'Adaugă la listă';
 
   @override

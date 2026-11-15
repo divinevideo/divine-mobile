@@ -2936,6 +2936,71 @@ void main() {
         expect(captured.containsKey(divineMonetizationLinksKey), isFalse);
       });
 
+      group('allowVideoReuse', () {
+        Map<String, dynamic> capturedContent() {
+          return verify(
+                () => mockNostrClient.sendProfileAwaitOk(
+                  profileContent: captureAny(named: 'profileContent'),
+                ),
+              ).captured.single
+              as Map<String, dynamic>;
+        }
+
+        test(
+          'writes false without dropping unrelated rawData',
+          () async {
+            final currentProfile = await createCurrentProfile({
+              'display_name': 'Old Name',
+              'custom_field': 'preserved',
+              'lud16': 'alice@example.com',
+            });
+
+            await profileRepository.saveProfileEvent(
+              displayName: 'Old Name',
+              currentProfile: currentProfile,
+              allowVideoReuse: false,
+            );
+
+            final captured = capturedContent();
+            expect(captured[divineAllowVideoReuseKey], isFalse);
+            expect(captured['custom_field'], 'preserved');
+            expect(captured['lud16'], 'alice@example.com');
+          },
+        );
+
+        test('removes the key when reuse is allowed again', () async {
+          final currentProfile = await createCurrentProfile({
+            'display_name': 'Old Name',
+            divineAllowVideoReuseKey: false,
+          });
+
+          await profileRepository.saveProfileEvent(
+            displayName: 'Old Name',
+            currentProfile: currentProfile,
+            allowVideoReuse: true,
+          );
+
+          final captured = capturedContent();
+          expect(captured.containsKey(divineAllowVideoReuseKey), isFalse);
+        });
+
+        test('preserves an existing value when omitted', () async {
+          final currentProfile = await createCurrentProfile({
+            'display_name': 'Old Name',
+            divineAllowVideoReuseKey: false,
+          });
+
+          await profileRepository.saveProfileEvent(
+            displayName: 'New Name',
+            currentProfile: currentProfile,
+          );
+
+          final captured = capturedContent();
+          expect(captured['display_name'], 'New Name');
+          expect(captured[divineAllowVideoReuseKey], isFalse);
+        });
+      });
+
       test('removes website key when empty string is passed', () async {
         final currentProfile = await createCurrentProfile({
           'display_name': 'Old Name',

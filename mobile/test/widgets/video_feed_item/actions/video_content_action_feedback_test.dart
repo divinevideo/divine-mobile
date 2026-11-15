@@ -13,6 +13,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -175,6 +176,34 @@ void main() {
       expect(find.text(_sheetBodyText), findsNothing);
       expect(find.text(l10n.shareCopiedEventJson), findsNothing);
       expect(find.text(l10n.shareActionFailed), findsOneWidget);
+    });
+
+    testWidgets('says the creator does not allow remixes', (tester) async {
+      await pumpSheet(tester);
+
+      showVideoContentActionFeedback(
+        sheetContext,
+        VideoContentRemixRefused(consent: RemixConsent.blocked),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(_sheetBodyText), findsNothing);
+      expect(find.text(l10n.remixBlockedByCreator), findsOneWidget);
+    });
+
+    testWidgets('asks to retry when consent could not be checked', (
+      tester,
+    ) async {
+      await pumpSheet(tester);
+
+      showVideoContentActionFeedback(
+        sheetContext,
+        VideoContentRemixRefused(consent: RemixConsent.unknown),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(_sheetBodyText), findsNothing);
+      expect(find.text(l10n.remixConsentCheckFailed), findsOneWidget);
     });
 
     testWidgets('closes the sheet before reporting a failed action', (

@@ -4121,6 +4121,21 @@ class AppLocalizationsBg extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Не можа да се добави към клипове';
 
   @override
+  String get remixBlockedByCreator => 'Този автор не позволява ремикси.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Не успяхме да проверим дали това видео може да се ремиксира. Опитай отново.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'Позволи на другите да ремиксират моите видеа';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Другите могат да използват твоите видеа като клипове в своите публикации.';
+
+  @override
   String get shareSheetAddToList => 'Добави към списъка';
 
   @override

@@ -3812,6 +3812,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'クリップに追加できませんでした';
 
   @override
+  String get remixBlockedByCreator => 'このクリエイターはリミックスを許可していません。';
+
+  @override
+  String get remixConsentCheckFailed => 'この動画をリミックスできるか確認できませんでした。もう一度お試しください。';
+
+  @override
+  String get remixSettingAllowTitle => '自分の動画のリミックスを許可';
+
+  @override
+  String get remixSettingAllowSubtitle => '他の人があなたの動画をクリップとして自分の投稿に使えます。';
+
+  @override
   String get shareSheetAddToList => 'リストに追加';
 
   @override

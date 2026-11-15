@@ -4008,6 +4008,22 @@ class AppLocalizationsTr extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Kliplere eklenemedi';
 
   @override
+  String get remixBlockedByCreator =>
+      'Bu içerik üreticisi remikse izin vermiyor.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Bu videonun remikslenip remikslenemeyeceği kontrol edilemedi. Tekrar dene.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'Başkalarının videolarımı remikslemesine izin ver';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Başkaları videolarını kendi gönderilerinde klip olarak kullanabilir.';
+
+  @override
   String get shareSheetAddToList => 'Listeye Ekle';
 
   @override

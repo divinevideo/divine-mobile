@@ -11,6 +11,7 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/blocs/video_content_actions/reportable_sites.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -29,10 +30,14 @@ class VideoContentActionsBloc
     required String relayUrl,
     BookmarksRepository? bookmarksRepository,
     VideoClipImportService? videoClipImportService,
+    RemixConsentRepository? remixConsentRepository,
+    String? viewerPubkey,
   }) : _video = video,
        _relayUrl = relayUrl,
        _bookmarksRepository = bookmarksRepository,
        _videoClipImportService = videoClipImportService,
+       _remixConsentRepository = remixConsentRepository,
+       _viewerPubkey = viewerPubkey,
        super(const VideoContentActionsState()) {
     on<VideoContentSaveRequested>(_onSaveRequested, transformer: droppable());
     on<VideoContentBookmarkStatusRequested>(
@@ -51,6 +56,12 @@ class VideoContentActionsBloc
   final String _relayUrl;
   final BookmarksRepository? _bookmarksRepository;
   final VideoClipImportService? _videoClipImportService;
+  final RemixConsentRepository? _remixConsentRepository;
+
+  /// The signed-in viewer, or null when signed out. A viewer may always use
+  /// their own videos, so only someone else's video needs the creator's
+  /// consent.
+  final String? _viewerPubkey;
 
   /// Default library title for adding this video to clips, so widgets do not
   /// need to import the import service.
@@ -240,6 +251,18 @@ class VideoContentActionsBloc
       return;
     }
 
+    final consent = await _remixConsent();
+    if (isClosed) return;
+    if (consent != RemixConsent.allowed) {
+      emit(
+        state.copyWith(
+          isImportingClip: false,
+          actionResult: VideoContentRemixRefused(consent: consent),
+        ),
+      );
+      return;
+    }
+
     try {
       final result = await importer.importToLibrary(
         _video,
@@ -277,6 +300,44 @@ class VideoContentActionsBloc
           actionResult: VideoContentClipImportResult(succeeded: false),
         ),
       );
+    }
+  }
+
+  /// Whether the creator lets the viewer use this video as a clip.
+  ///
+  /// The viewer's own video skips the check. Anything that prevents a
+  /// confident answer — no repository wired, a failed read, an unexpected
+  /// throw — comes back [RemixConsent.unknown], so the import fails closed.
+  Future<RemixConsent> _remixConsent() async {
+    final viewerPubkey = _viewerPubkey;
+    if (viewerPubkey != null && viewerPubkey == _video.pubkey) {
+      return RemixConsent.allowed;
+    }
+
+    final repository = _remixConsentRepository;
+    if (repository == null) {
+      Log.warning(
+        'Remix consent repository unavailable — refusing the import',
+        name: 'VideoContentActionsBloc',
+        category: LogCategory.ui,
+      );
+      return RemixConsent.unknown;
+    }
+
+    try {
+      return await repository.consentFor(_video.pubkey);
+    } catch (e, stackTrace) {
+      _addUnexpectedError(
+        e,
+        stackTrace,
+        VideoContentActionsReportableSites.remixConsent,
+      );
+      Log.error(
+        'Remix consent check failed: $e',
+        name: 'VideoContentActionsBloc',
+        category: LogCategory.ui,
+      );
+      return RemixConsent.unknown;
     }
   }
 

@@ -4209,6 +4209,21 @@ class AppLocalizationsTe extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'క్లిప్‌లకు జోడించడం సాధ్యపడలేదు';
 
   @override
+  String get remixBlockedByCreator => 'ఈ క్రియేటర్ రీమిక్స్‌లను అనుమతించరు.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'ఈ వీడియోను రీమిక్స్ చేయవచ్చో లేదో తనిఖీ చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'నా వీడియోలను రీమిక్స్ చేయడానికి ఇతరులను అనుమతించండి';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'ఇతరులు మీ వీడియోలను వారి స్వంత పోస్ట్‌లలో క్లిప్‌లుగా ఉపయోగించవచ్చు.';
+
+  @override
   String get shareSheetAddToList => 'జాబితాకు జోడించండి';
 
   @override

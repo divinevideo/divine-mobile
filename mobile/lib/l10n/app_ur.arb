@@ -1966,6 +1966,10 @@
   "@shareSheetAddToClipsFailed": {
     "description": "Snackbar shown when importing a classic Vine into the clip library fails"
   },
+  "remixBlockedByCreator": "یہ کریئیٹر ری مکس کی اجازت نہیں دیتے۔",
+  "remixConsentCheckFailed": "یہ معلوم نہیں ہو سکا کہ اس ویڈیو کو ری مکس کیا جا سکتا ہے یا نہیں۔ دوبارہ کوشش کریں۔",
+  "remixSettingAllowTitle": "دوسروں کو میری ویڈیوز ری مکس کرنے دیں",
+  "remixSettingAllowSubtitle": "دوسرے لوگ آپ کی ویڈیوز کو اپنی پوسٹس میں کلپس کے طور پر استعمال کر سکتے ہیں۔",
   "shareSheetAddToList": "فہرست میں شامل کریں",
   "shareSheetCopy": "کاپی کریں",
   "shareSheetShareVia": "کے ذریعے شیئر کریں",
