@@ -15,9 +15,17 @@ LOG_DIR="${SCRATCH:?set SCRATCH to the scratch folder for this run, see SKILL.md
 export BLOSSOM_PUBLIC_URL=http://localhost:43003
 COMPOSE_FILE="$ROOT/local_stack/docker-compose.yml"
 
+command -v python3 > /dev/null || { echo "error: sim_up.sh needs python3 on PATH" >&2; exit 1; }
+
 # A hung Docker Desktop answers no API call, so every docker command below,
-# including the one run while holding the stack lock, would wait forever.
-perl -e 'alarm 20; exec @ARGV' docker info > /dev/null 2>&1 \
+# including those run while holding the stack lock, would wait forever. The
+# docker CLI is a Go program, and Go ignores SIGALRM, so an alarm cannot stop
+# it; Python's subprocess timeout kills it instead.
+python3 -I -c 'import subprocess, sys
+try: rc = subprocess.run(["docker", "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20).returncode
+except FileNotFoundError: rc = 127
+except subprocess.TimeoutExpired: rc = 124
+sys.exit(rc)' \
   || { echo "error: Docker is not answering within 20s. Restart Docker Desktop (quit it; if com.docker.backend lingers, pkill -TERM -f com.docker.backend; then open -a Docker) and run sim_up.sh again" >&2; exit 1; }
 
 # Two runs that both find no stack would both start one, each recreating the
@@ -26,7 +34,6 @@ perl -e 'alarm 20; exec @ARGV' docker info > /dev/null 2>&1 \
 # it or died. up.sh and the tuning run inherit the fd, so killing this script
 # mid-start does not free the lock while the start it began is still running.
 STACK_LOCK=/tmp/pr-screenshots-stack.lock
-command -v python3 > /dev/null || { echo "error: sim_up.sh needs python3 on PATH" >&2; exit 1; }
 exec 9>> "$STACK_LOCK" \
   || { echo "error: cannot open $STACK_LOCK; if it is a directory or another user's file, remove it" >&2; exit 1; }
 # Exit 75 means another run holds the lock; anything else is a real failure.
