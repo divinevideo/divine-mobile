@@ -24,6 +24,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// session replaces. When it holds clips it is first saved as a new regular
 /// draft, so it stays in the Drafts tab. If that save fails nothing is
 /// cleared: the sheet closes with a failure message and the session is kept.
+/// An [Error] while keeping the session is rethrown after that message, so
+/// it reaches crash reporting.
 ///
 /// Gives up without opening the editor when, once the autosave is safe, a
 /// route the user opened covers the sheet or the sheet is already closing:
@@ -71,6 +73,9 @@ Future<void> openRemixInEditor(
     if (sheetContext.mounted) {
       showVideoContentActionFeedback(sheetContext, VideoContentActionFailure());
     }
+    // A programming fault rather than a storage failure: the caller's
+    // runDetached reports it.
+    if (e is Error) rethrow;
     return;
   }
   if (!sheetContext.mounted || !_isSheetOnTop(sheetContext)) return;

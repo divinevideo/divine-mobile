@@ -989,6 +989,29 @@ void main() {
         ).called(1);
       });
 
+      testWidgets(
+        'ends the launch when keeping the autosave throws an Error',
+        (tester) async {
+          when(
+            () => draftStorage.draftExists(any()),
+          ).thenThrow(StateError('broken autosave id'));
+          await openSheet(tester);
+
+          results.add(
+            VideoContentActionsState(
+              actionResult: VideoContentRemixReady(clip: remixClip),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          expect(editorBuilds, 0);
+          verify(
+            () => contentActions.add(const VideoContentRemixLaunchFinished()),
+          ).called(1);
+        },
+      );
+
       testWidgets('ends the launch once the editor has opened', (
         tester,
       ) async {

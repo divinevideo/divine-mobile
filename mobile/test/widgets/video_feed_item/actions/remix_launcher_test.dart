@@ -119,6 +119,7 @@ void main() {
     late _FakeVideoPublishNotifier publish;
     late ProviderContainer container;
     late List<Uri> editorLocations;
+    late List<Object> launchErrors;
 
     setUpAll(() {
       registerFallbackValue(_autosave(clips: const []));
@@ -128,6 +129,7 @@ void main() {
       draftStorage = _MockDraftStorageService();
       calls = <String>[];
       editorLocations = <Uri>[];
+      launchErrors = <Object>[];
       publish = _FakeVideoPublishNotifier(calls);
       when(
         () => draftStorage.draftExists(VideoEditorConstants.autoSaveId),
@@ -158,7 +160,14 @@ void main() {
                   builder: (_) => Consumer(
                     builder: (sheetContext, ref, _) => TextButton(
                       onPressed: () =>
-                          openRemixInEditor(sheetContext, ref, remixClip),
+                          openRemixInEditor(
+                            sheetContext,
+                            ref,
+                            remixClip,
+                          ).then<void>(
+                            (_) {},
+                            onError: (Object error) => launchErrors.add(error),
+                          ),
                       child: const Text(remixLabel),
                     ),
                   ),
@@ -319,6 +328,28 @@ void main() {
         expect(find.text(editorLabel), findsNothing);
         expect(find.text(remixLabel), findsNothing);
         expect(find.text(l10n.shareActionFailed), findsOneWidget);
+        expect(launchErrors, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'shows the failure, then rethrows an Error from keeping the session',
+      (tester) async {
+        stubAutosave(_autosave(clips: [sessionClip]));
+        when(
+          () => draftStorage.saveDraft(any()),
+        ).thenThrow(StateError('draft without an id'));
+
+        await tester.pumpWidget(buildSubject());
+        container.read(clipManagerProvider.notifier).insertClip(0, sessionClip);
+
+        await remixFromSheet(tester);
+
+        expect(launchErrors, [isA<StateError>()]);
+        expect(find.text(l10n.shareActionFailed), findsOneWidget);
+        expect(calls, isEmpty);
+        expect(container.read(clipManagerProvider).clips, [sessionClip]);
+        expect(find.text(editorLabel), findsNothing);
       },
     );
   });
