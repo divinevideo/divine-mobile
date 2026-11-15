@@ -45,6 +45,12 @@ void main() {
       expect(video.allowVideoReuse, isTrue);
     });
 
+    test('is true for a differently-cased true marker', () {
+      final video = VideoEvent.fromNostrEvent(buildEvent(marker: 'TRUE'));
+
+      expect(video.allowVideoReuse, isTrue);
+    });
+
     test('survives a JSON-cache round-trip that drops nostrEventTags', () {
       final original = VideoEvent.fromNostrEvent(buildEvent(marker: 'true'));
 
