@@ -42,8 +42,24 @@ void main() {
       expect(video.audioReuseConsent, AudioReuseConsent.declined);
     });
 
+    test('reads a grant in another case or padded with whitespace', () {
+      for (final marker in ['TRUE', ' True ']) {
+        final video = VideoEvent.fromNostrEvent(buildEvent(marker: marker));
+
+        expect(video.allowAudioReuse, isTrue, reason: marker);
+        expect(video.audioReuseConsent, AudioReuseConsent.granted);
+      }
+    });
+
+    test('reads a decline in another case', () {
+      final video = VideoEvent.fromNostrEvent(buildEvent(marker: 'FALSE'));
+
+      expect(video.allowAudioReuse, isFalse);
+      expect(video.audioReuseConsent, AudioReuseConsent.declined);
+    });
+
     test('treats a malformed marker as invalid rather than absent', () {
-      final video = VideoEvent.fromNostrEvent(buildEvent(marker: 'TRUE'));
+      final video = VideoEvent.fromNostrEvent(buildEvent(marker: 'maybe'));
 
       expect(video.allowAudioReuse, isFalse);
       expect(video.audioReuseConsent, AudioReuseConsent.invalid);

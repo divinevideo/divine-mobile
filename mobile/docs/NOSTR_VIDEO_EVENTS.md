@@ -125,9 +125,13 @@ This is a Divine convention. The app hides the lines from the caption it shows (
 | `allow_video_reuse` | `["allow_video_reuse", "false"]` | The creator does not let others remix the video (add it to their clips and post it). |
 
 Both are Divine conventions. The app writes each one as `true` or `false` on
-every publish and metadata edit, so an edit keeps an explicit decline. Video
-reuse is allowed by default: a missing tag, `true` or any value other than the
-exact `false` leaves the video remixable. Archived Vines (`platform` = `vine`)
+every publish and metadata edit, so an edit keeps an explicit decline. Readers
+follow Postel's law and read both tags the same way
+(`ReuseConsent.fromMarker`): whitespace and letter case are ignored, so
+`FALSE` declines and `TRUE` grants, and a value that is neither `true` nor
+`false` counts as no consent. Video reuse is allowed by default: a missing tag
+or `true` leaves the video remixable, while `false` in any case or an
+unreadable value does not. Audio reuse needs an explicit `true`. Archived Vines (`platform` = `vine`)
 and the viewer's own videos can be remixed whatever the tag says, unless the
 author's kind 0 sets `divine_allow_video_reuse` to `false` (see
 [`NOSTR_EVENT_TYPES.md`](../../docs/NOSTR_EVENT_TYPES.md#kind-0---user-profiles-nip-01)),

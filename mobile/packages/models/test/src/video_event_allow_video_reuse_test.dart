@@ -39,16 +39,47 @@ void main() {
       expect(video.allowVideoReuse, isFalse);
     });
 
-    test('is true for a malformed marker', () {
+    test('is false for a decline in another case', () {
       final video = VideoEvent.fromNostrEvent(buildEvent(marker: 'FALSE'));
 
-      expect(video.allowVideoReuse, isTrue);
+      expect(video.allowVideoReuse, isFalse);
+      expect(video.videoReuseConsent, ReuseConsent.declined);
     });
 
-    test('is true for a differently-cased true marker', () {
+    test('is false for a decline padded with whitespace', () {
+      final video = VideoEvent.fromNostrEvent(buildEvent(marker: ' False '));
+
+      expect(video.allowVideoReuse, isFalse);
+      expect(video.videoReuseConsent, ReuseConsent.declined);
+    });
+
+    test('is true for a grant in another case', () {
       final video = VideoEvent.fromNostrEvent(buildEvent(marker: 'TRUE'));
 
       expect(video.allowVideoReuse, isTrue);
+      expect(video.videoReuseConsent, ReuseConsent.granted);
+    });
+
+    test('is false for a marker that is neither true nor false', () {
+      final video = VideoEvent.fromNostrEvent(buildEvent(marker: 'maybe'));
+
+      expect(video.allowVideoReuse, isFalse);
+      expect(video.videoReuseConsent, ReuseConsent.invalid);
+    });
+
+    test('reports an absent marker as unspecified', () {
+      final video = VideoEvent.fromNostrEvent(buildEvent());
+
+      expect(video.videoReuseConsent, ReuseConsent.unspecified);
+    });
+
+    test('reads a decline from rawTags after a JSON-cache round-trip', () {
+      final original = VideoEvent.fromNostrEvent(buildEvent(marker: 'FALSE'));
+
+      final restored = VideoEvent.fromJson(original.toJson());
+
+      expect(restored.nostrEventTags, isEmpty);
+      expect(restored.allowVideoReuse, isFalse);
     });
 
     test('survives a JSON-cache round-trip that drops nostrEventTags', () {
