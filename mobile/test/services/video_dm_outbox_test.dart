@@ -270,11 +270,20 @@ void main() {
       outbox.retry(entries.last.single.id);
       await tester.pump();
       expect(sends, hasLength(2));
+      // Uploading is the one phase that takes progress, so a late callback
+      // from the old attempt would show here if it were let through.
+      sends.last.onPhase!(DmVideoSendPhase.uploading);
+      await tester.pump();
+      expect(entries.last.single.phase, OutgoingVideoDmPhase.uploading);
+      old.onUploadProgress!(0.9);
+      old.onPhase!(DmVideoSendPhase.encrypting);
+      await tester.pump();
+      expect(entries.last.single.uploadProgress, isNull);
+      expect(entries.last.single.phase, OutgoingVideoDmPhase.uploading);
       old.onPhase!(DmVideoSendPhase.sending);
-      old.onUploadProgress!(1);
       old.completer.complete(_success('late'));
       await tester.pump();
-      expect(entries.last.single.phase, OutgoingVideoDmPhase.encrypting);
+      expect(entries.last.single.phase, OutgoingVideoDmPhase.uploading);
       expect(outcomes, hasLength(1));
       sends.last.completer.complete(_success('retried'));
       await tester.pump();
