@@ -1758,56 +1758,70 @@ void main() {
       },
     );
 
-    testWidgetsWithSurfaceSize('keeps the content credit on a reply', (
-      tester,
-    ) async {
-      VideoEvent video({required bool reply}) => _makeVideo(
-        inspiredByNpub: normalizeToNpub(_collaborator1),
-        clipSourceCredits: const [
-          ClipSourceCredit(
-            authorPubkey: _collaborator2,
-            addressableId: '34236:$_collaborator2:reused-clip',
+    testWidgetsWithSurfaceSize(
+      'keeps the content and clip credits on a reply, not the inspiring video',
+      (
+        tester,
+      ) async {
+        VideoEvent video({required bool reply}) => _makeVideo(
+          inspiredByNpub: normalizeToNpub(_collaborator1),
+          inspiredByVideo: const InspiredByInfo(
+            addressableId: '34236:$_inspiredByPubkey:inspiring-d',
           ),
-        ],
-        nostrEventTags: reply
-            ? const [
-                ['E', _parentEventId],
-                ['K', '34236'],
-              ]
-            : const [],
-      );
-      Widget subject(VideoEvent video) => buildSubject(
-        providerOverrides: [
-          fetchUserProfileProvider(_collaborator1).overrideWith(
-            (ref) async => _makeProfile(_collaborator1, 'Referenced Creator'),
-          ),
-          fetchUserProfileProvider(_collaborator2).overrideWith(
-            (ref) async => _makeProfile(_collaborator2, 'Clip Source Creator'),
-          ),
-        ],
-        child: MetadataInspiredBySection(video: video),
-      );
+          clipSourceCredits: const [
+            ClipSourceCredit(
+              authorPubkey: _collaborator2,
+              addressableId: '34236:$_collaborator2:reused-clip',
+            ),
+          ],
+          nostrEventTags: reply
+              ? const [
+                  ['E', _parentEventId],
+                  ['K', '34236'],
+                ]
+              : const [],
+        );
+        Widget subject(VideoEvent video) => buildSubject(
+          providerOverrides: [
+            fetchUserProfileProvider(_collaborator1).overrideWith(
+              (ref) async => _makeProfile(_collaborator1, 'Referenced Creator'),
+            ),
+            fetchUserProfileProvider(_collaborator2).overrideWith(
+              (ref) async =>
+                  _makeProfile(_collaborator2, 'Clip Source Creator'),
+            ),
+            fetchUserProfileProvider(_inspiredByPubkey).overrideWith(
+              (ref) async => _makeProfile(_inspiredByPubkey, 'Inspiring Video'),
+            ),
+          ],
+          child: MetadataInspiredBySection(video: video),
+        );
 
-      // Positive control: off a reply the same sources render both credits.
-      await tester.pumpWidget(subject(video(reply: false)));
-      await tester.pumpAndSettle();
-      final l10n = _l10n(tester);
-      expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
-      expect(find.text('Referenced Creator'), findsOneWidget);
-      expect(find.text('Clip Source Creator'), findsOneWidget);
+        // Positive control: off a reply the same sources render all credits.
+        await tester.pumpWidget(subject(video(reply: false)));
+        await tester.pumpAndSettle();
+        final l10n = _l10n(tester);
+        expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
+        expect(find.text('Referenced Creator'), findsOneWidget);
+        expect(find.text('Clip Source Creator'), findsOneWidget);
+        expect(find.text('Inspiring Video'), findsOneWidget);
 
-      await tester.pumpWidget(subject(video(reply: true)));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(subject(video(reply: true)));
+        await tester.pumpAndSettle();
 
-      expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
-      expect(find.text('Referenced Creator'), findsOneWidget);
-      expect(find.text('Clip Source Creator'), findsNothing);
+        // A reply's parent context replaces the inspiring-video credit; the
+        // clip it reuses is still credited.
+        expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
+        expect(find.text('Referenced Creator'), findsOneWidget);
+        expect(find.text('Clip Source Creator'), findsOneWidget);
+        expect(find.text('Inspiring Video'), findsNothing);
 
-      // Unmount explicitly and let Riverpod run its zero-duration disposal
-      // task before the test binding checks for leaked timers.
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(milliseconds: 1));
-    });
+        // Unmount explicitly and let Riverpod run its zero-duration disposal
+        // task before the test binding checks for leaked timers.
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 1));
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
