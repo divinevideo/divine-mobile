@@ -871,7 +871,13 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
                     userPubkey,
                   );
                 }
-                await db.directMessagesDao.clearForAccountSwitch(userPubkey);
+                // An account that can come back keeps its queued retractions:
+                // each row is the only copy of a kind-5 it still has to send,
+                // and nothing on the relays can restore it (#9772).
+                await db.directMessagesDao.clearForAccountSwitch(
+                  userPubkey,
+                  keepQueuedRetractions: !deleteUserData && !forgetAccount,
+                );
                 if (deleteUserData || forgetAccount) {
                   await db.conversationsDao.clearForAccountSwitch(userPubkey);
                 } else {
@@ -1175,7 +1181,11 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
     await DmSyncState(prefs).clear(owner);
     await db.transaction(() async {
       await db.conversationsDao.retainMessageIdsForAccountSwitch(owner);
-      await db.directMessagesDao.deleteAllForOwner(owner);
+      // Its queued retractions stay, as on a plain sign-out (#9772).
+      await db.directMessagesDao.deleteAllForOwner(
+        owner,
+        keepQueuedRetractions: true,
+      );
       await db.conversationsDao.pinReadCursorsToLatestMessage(
         owner,
         nowSeconds: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -1219,11 +1229,13 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
 
   service
     ..onConversationSweep = db.conversationsDao.deleteForOwnersNotIn
+    ..onDirectMessageSweep = db.directMessagesDao.deleteForOwnersNotIn
     ..onQueuedViewSweep = db.pendingViewEventsDao.deleteForUsersNotIn
     ..onKeptDmVideoSweep = DmVideoStore.sweepOwners;
-  // Kept conversations and queued views outlive their account when it leaves
-  // the known-accounts list without its own cleanup; collect those once per
-  // launch as well as after every account cleanup (#10276, #10290).
+  // Kept conversations, retractions and queued views outlive their account
+  // when it leaves the known-accounts list without its own cleanup; collect
+  // those once per launch as well as after every account cleanup (#10276,
+  // #10290, #9772).
   runProviderDetached(
     service.sweepRowsOfUnknownAccounts(),
     'sweep rows of accounts no longer on this device',

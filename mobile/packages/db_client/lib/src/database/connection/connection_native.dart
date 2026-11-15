@@ -242,9 +242,10 @@ const _salvageSuffix = '.corruption_salvage';
 /// Tables a salvage copies: their rows have no other copy, so a row dropped
 /// here is lost.
 ///
-/// Every table of the schema is listed here or in [tablesDroppedBySalvage].
-/// `connection_native_test.dart` fails on a table that is in neither, so a new
-/// one cannot be left out by accident (#10105).
+/// Every table of the schema is listed here, in [partiallySalvagedTables] or
+/// in [tablesDroppedBySalvage]. `connection_native_test.dart` fails on a table
+/// that is in none of them, so a new one cannot be left out by accident
+/// (#10105).
 ///
 /// `outgoing_dms` and `dm_message_reactions` are kept: an unsent outbound
 /// message or a `failed`/`pending` reaction (`gift_wrap_id IS NULL`) was never
@@ -276,10 +277,10 @@ const _salvageSuffix = '.corruption_salvage';
 /// the account-scoped store so recovery cannot discard the user's outbox.
 ///
 /// This overlaps the [_localOnlyDataQueries] legacy-migration probe but is not
-/// identical: salvage drops `direct_messages` / `conversations` (re-drainable)
-/// and copies tables the probe does not check, such as `dm_message_reactions`
-/// (#10114). A new local-only table added to one list should be considered for
-/// the other.
+/// identical: salvage keeps only part of `direct_messages` / `conversations`
+/// (re-drainable) and copies tables the probe does not check, such as
+/// `dm_message_reactions` (#10114). A new local-only table added to one list
+/// should be considered for the other.
 @visibleForTesting
 const salvageableLocalOnlyTables = <String>[
   'drafts',
@@ -309,6 +310,34 @@ const salvageableLocalOnlyTables = <String>[
   'vanished_profiles',
 ];
 
+/// An own retraction still waiting on a confirmed delivery or a Try again:
+/// `DirectMessagesDao.retractionsShownToSender`, as SQL. The row holds the
+/// only copy of a kind-5 no relay has yet (#9772).
+const _queuedOwnRetractionSql =
+    'sender_pubkey = owner_pubkey '
+    'AND deletion_rumor_json IS NOT NULL '
+    'AND deletion_publish_status IN '
+    "('deletion_pending', 'deletion_unconfirmed', 'deletion_blocked')";
+
+/// Tables a salvage copies in part: the rows each filter names have no other
+/// copy, and the rest resync like [tablesDroppedBySalvage].
+///
+/// `direct_messages` keeps the queued own retractions: a history rebuilt from
+/// the relays would show their messages again, because the kind-5 that hides
+/// them never reached a relay. `conversations` keeps the conversations those
+/// retractions are sent in, which is where their retry reads its recipients:
+/// without it a group retraction has nobody to send to (#9772).
+///
+/// No filter correlates with its outer row: with no index to search, a
+/// correlated subquery scans `direct_messages` once per conversation.
+@visibleForTesting
+const partiallySalvagedTables = <String, String>{
+  'direct_messages': _queuedOwnRetractionSql,
+  'conversations':
+      '(id, owner_pubkey) IN (SELECT conversation_id, owner_pubkey '
+      'FROM direct_messages NOT INDEXED WHERE $_queuedOwnRetractionSql)',
+};
+
 /// Tables a salvage leaves empty on purpose. Each one refills, or only means
 /// something beside rows that are themselves dropped.
 @visibleForTesting
@@ -329,11 +358,10 @@ const tablesDroppedBySalvage = <String>[
   'identity_verifications',
   // DM history. It is rebuilt from the gift wraps on relays: the app-layer
   // recovery clears the DM sync state after a salvage. Wraps still waiting for
-  // a decrypt retry are fetched again with it.
-  'direct_messages',
-  'conversations',
+  // a decrypt retry are fetched again with it. `direct_messages` and
+  // `conversations` keep the rows [partiallySalvagedTables] names.
   'pending_gift_wraps',
-  // Must go with the DM history above. It records wraps that needed no message
+  // Must go with the DM history. It records wraps that needed no message
   // row given the rows that existed then; kept without those rows, the rebuild
   // would skip them, and a message its sender deleted would be shown again.
   'processed_gift_wraps',
@@ -431,6 +459,15 @@ bool _buildSalvageCopy({
     for (final table in salvageableLocalOnlyTables) {
       _copySalvageableRows(source: source, target: target, table: table);
     }
+    for (final MapEntry(key: table, value: where)
+        in partiallySalvagedTables.entries) {
+      _copySalvageableRows(
+        source: source,
+        target: target,
+        table: table,
+        where: where,
+      );
+    }
     target.execute('COMMIT;');
     return true;
   } on SqliteException {
@@ -470,14 +507,17 @@ void _copyDatabaseSchema({
 /// drafts/clips this exists to save. A cursor yields every row up to the
 /// corrupt page, then
 /// `moveNext()` throws and the readable prefix is kept.
+///
+/// [where] limits the copy to the rows it names ([partiallySalvagedTables]).
 void _copySalvageableRows({
   required CommonDatabase source,
   required CommonDatabase target,
   required String table,
+  String? where,
 }) {
   final CommonPreparedStatement select;
   try {
-    select = source.prepare('SELECT * FROM "$table";');
+    select = source.prepare(salvageSelectSql(table, where: where));
   } on SqliteException {
     return;
   }
@@ -499,6 +539,16 @@ void _copySalvageableRows({
     select.close();
   }
 }
+
+/// The statement a salvage reads [table] with, limited to [where] when given.
+///
+/// A filtered read is `NOT INDEXED`, and so is every subquery of a filter in
+/// [partiallySalvagedTables]: the database is being salvaged because a b-tree
+/// is damaged, and only a table scan avoids walking an index.
+@visibleForTesting
+String salvageSelectSql(String table, {String? where}) => where == null
+    ? 'SELECT * FROM "$table";'
+    : 'SELECT * FROM "$table" NOT INDEXED WHERE $where;';
 
 /// Advances [cursor], treating a mid-iteration corruption as end-of-data so the
 /// readable prefix already copied is kept.

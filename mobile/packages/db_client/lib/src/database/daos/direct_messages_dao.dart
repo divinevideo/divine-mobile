@@ -1005,22 +1005,82 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
   ///
   /// Ambiguous rows must never cross an account boundary and become visible to
   /// the incoming account. Rows owned by every other known account survive.
-  Future<int> clearForAccountSwitch(String ownerPubkey) {
+  ///
+  /// [keepQueuedRetractions] keeps the departing account's own retractions in
+  /// [retractionsShownToSender]: the row is the only copy of a kind-5 the
+  /// account still has to send when it comes back (#9772). A plain switch sets
+  /// it; removing the account from the device does not.
+  Future<int> clearForAccountSwitch(
+    String ownerPubkey, {
+    bool keepQueuedRetractions = false,
+  }) {
     return (delete(directMessages)..where(
           (t) =>
-              t.ownerPubkey.equals(ownerPubkey) |
+              (t.ownerPubkey.equals(ownerPubkey) &
+                  _cleanupMayDelete(t, ownerPubkey, keepQueuedRetractions)) |
               t.ownerPubkey.isNull() |
               t.ownerPubkey.equals(''),
         ))
         .go();
   }
 
-  /// Deletes only messages owned by [ownerPubkey].
-  Future<int> deleteAllForOwner(String ownerPubkey) {
-    return (delete(
-      directMessages,
-    )..where((t) => t.ownerPubkey.equals(ownerPubkey))).go();
+  /// Deletes only messages owned by [ownerPubkey], keeping its own queued
+  /// retractions when [keepQueuedRetractions] is set, as
+  /// [clearForAccountSwitch] does.
+  Future<int> deleteAllForOwner(
+    String ownerPubkey, {
+    bool keepQueuedRetractions = false,
+  }) {
+    return (delete(directMessages)..where(
+          (t) =>
+              t.ownerPubkey.equals(ownerPubkey) &
+              _cleanupMayDelete(t, ownerPubkey, keepQueuedRetractions),
+        ))
+        .go();
   }
+
+  /// Deletes every message owned by an account outside [keepOwnerPubkeys].
+  ///
+  /// Collects the retractions a plain switch keeps once their account is no
+  /// longer known on the device (#9772). Unattributed legacy rows (`''` or
+  /// `NULL` owner) are left to the account-boundary cleanup. Returns the number
+  /// of messages deleted.
+  Future<int> deleteForOwnersNotIn(Set<String> keepOwnerPubkeys) {
+    return (delete(directMessages)..where(
+          (t) =>
+              t.ownerPubkey.isNotNull() &
+              t.ownerPubkey.equals('').not() &
+              t.ownerPubkey.isNotIn(keepOwnerPubkeys),
+        ))
+        .go();
+  }
+
+  /// `true` for a row a cleanup of [ownerPubkey] may delete: every row, or,
+  /// with [keepQueuedRetractions], every row but the owner's queued
+  /// retractions.
+  Expression<bool> _cleanupMayDelete(
+    $DirectMessagesTable t,
+    String ownerPubkey,
+    bool keepQueuedRetractions,
+  ) {
+    if (!keepQueuedRetractions) return const Constant(true);
+    return _queuedOwnRetraction(t, ownerPubkey).not();
+  }
+
+  /// [ownerPubkey]'s own retraction still waiting on a confirmed delivery or
+  /// a Try again: it holds the kind-5 rumor, and the owner sent the message.
+  /// `is_deleted` is not read: a blocked retraction is restored to the thread
+  /// and still keeps its rumor for the Try again.
+  ///
+  /// Never NULL, so [_cleanupMayDelete] can negate it.
+  Expression<bool> _queuedOwnRetraction(
+    $DirectMessagesTable t,
+    String ownerPubkey,
+  ) =>
+      t.senderPubkey.equals(ownerPubkey) &
+      t.deletionRumorJson.isNotNull() &
+      t.deletionPublishStatus.isNotNull() &
+      t.deletionPublishStatus.isIn(retractionsShownToSender);
 
   /// Deletes only unattributed legacy rows when the departing account is
   /// unknown, preserving every row with a valid owner.
