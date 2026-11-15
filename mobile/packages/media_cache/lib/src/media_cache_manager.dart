@@ -1261,7 +1261,6 @@ class MediaCacheManager extends CacheManager {
       final budget = maxCacheSizeBytes;
       var evictedCount = 0;
       var evictedBytes = 0;
-      bool? overBudget;
       if (budget != null) {
         final evicted = await _evictToByteBudget(
           baseDir,
@@ -1271,21 +1270,15 @@ class MediaCacheManager extends CacheManager {
         );
         evictedCount = evicted.deletedCount;
         evictedBytes = evicted.deletedBytes;
-        overBudget = evicted.directoryBytes > budget;
       }
       final elapsed = clock.now().difference(started);
-      // The budget and the directory total stay out of the line: the app
-      // sizes the budget from disk space, which iOS forbids sending off the
-      // device, and logs travel with bug reports.
+      // Keep budget values and comparisons out of exported logs: the app
+      // sizes the budget from disk-space readings, and logs travel with
+      // bug reports.
       Log.info(
         'MediaCacheManager(${_config.cacheKey}): sweep reclaimed $reclaimed '
-        'orphans, evicted $evictedCount files ($evictedBytes bytes)'
-        '${switch (overBudget) {
-          null => '',
-          true => '; still over budget',
-          false => '; within budget',
-        }}'
-        '; took ${elapsed.inMilliseconds}ms',
+        'orphans, evicted $evictedCount files ($evictedBytes bytes); '
+        'took ${elapsed.inMilliseconds}ms',
         name: 'MediaCache',
         category: LogCategory.video,
       );
@@ -1369,12 +1362,11 @@ class MediaCacheManager extends CacheManager {
     return reclaimed;
   }
 
-  /// Returns what it deleted plus the directory's post-eviction byte total,
-  /// which also re-syncs [_knownCacheBytes] and disarms any pending trailing
+  /// Returns what it deleted, re-syncs [_knownCacheBytes] to the directory's
+  /// post-eviction byte total, and disarms any pending trailing
   /// sweep — after this pass, only a fresh download can arm one again, so an
   /// over-budget residue of undeletable bytes cannot spin sweeps in a loop.
-  Future<({int deletedCount, int deletedBytes, int directoryBytes})>
-  _evictToByteBudget(
+  Future<({int deletedCount, int deletedBytes})> _evictToByteBudget(
     String baseDir,
     List<CacheObject> objects,
     int budget,
@@ -1422,7 +1414,6 @@ class MediaCacheManager extends CacheManager {
       return (
         deletedCount: 0,
         deletedBytes: 0,
-        directoryBytes: total,
       );
     }
 
@@ -1506,7 +1497,6 @@ class MediaCacheManager extends CacheManager {
     return (
       deletedCount: deletedCount,
       deletedBytes: deletedBytes,
-      directoryBytes: total,
     );
   }
 

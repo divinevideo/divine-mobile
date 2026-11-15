@@ -746,7 +746,8 @@ void main() {
                     message.contains('sweep reclaimed'),
               );
 
-      test('leaves the budget and the directory total out', () async {
+      test('leaves the budget, directory total, and budget classification '
+          'out when within budget', () async {
         const budget = 987654;
         const fileBytes = 4321;
         final (manager, dir) = build(maxCacheSizeBytes: budget);
@@ -759,21 +760,37 @@ void main() {
 
         final lines = sweepLines(manager).toList();
         expect(lines, hasLength(1));
-        expect(lines.single, contains('within budget'));
+        expect(
+          lines.single,
+          contains(
+            'sweep reclaimed 0 orphans, evicted 0 files (0 bytes); took ',
+          ),
+        );
+        expect(lines.single, isNot(contains('budget')));
         expect(lines.single, isNot(contains('$budget')));
         expect(lines.single, isNot(contains('$fileBytes')));
       });
 
-      test('says so when the directory is still over budget', () async {
-        final (manager, dir) = build(maxCacheSizeBytes: 10);
-        // Untracked and unmanaged, so it counts but cannot be evicted.
-        writeFile(dir, 'externally-managed.bin', 25);
-        when(repo.getAllObjects).thenAnswer((_) async => []);
+      test(
+        'leaves the budget classification out when still over budget',
+        () async {
+          final (manager, dir) = build(maxCacheSizeBytes: 10);
+          // Untracked and unmanaged, so it counts but cannot be evicted.
+          writeFile(dir, 'externally-managed.bin', 25);
+          when(repo.getAllObjects).thenAnswer((_) async => []);
 
-        await manager.enforceCacheLimits();
+          await manager.enforceCacheLimits();
 
-        expect(sweepLines(manager).single, contains('still over budget'));
-      });
+          final line = sweepLines(manager).single;
+          expect(
+            line,
+            contains(
+              'sweep reclaimed 0 orphans, evicted 0 files (0 bytes); took ',
+            ),
+          );
+          expect(line, isNot(contains('budget')));
+        },
+      );
     });
 
     group('directory-total byte budget', () {
