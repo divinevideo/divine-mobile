@@ -138,9 +138,9 @@ Of the ways footage comes in from outside the app, a clip received in a direct m
 | Library routes | `RoutePaths.libraryDrafts`, `RoutePaths.libraryClips`, `RoutePaths.librarySounds` in [`library_routes.dart`](../lib/router/routes/library_routes.dart) | Drafts, Clips, From others and Sounds tabs |
 | Recorder | `openRecorderLibrary`, `RoutePaths.libraryClipsOnly` | Drafts, Clips and From others; clips of the recording mode's type only |
 | Editor, adding clips | `LibraryScreen(selectionMode: true, allowsMixedClipTypes: true)` in a sheet | Clips and From others tabs as a picker; timeline clips pre-selected |
-| Editor, split-screen cell | `_pickLayoutCellClips` in [`video_editor_screen.dart`](../lib/screens/video_editor/video_editor_screen.dart) | Picker with the cell's crop on each thumbnail |
+| Editor, split-screen cell | `_pickLayoutCellClips` in [`video_editor_screen.dart`](../lib/screens/video_editor/video_editor_screen.dart) | Clips and From others tabs as a picker, with the cell's crop on each thumbnail |
 | Chroma-key backdrop | `showChromaKeyClipPicker` | A single-clip picker of video clips, with its own `ClipsLibraryBloc` |
-| Direct message | `_onAttachClip` in [`conversation_view.dart`](../lib/screens/inbox/conversation/conversation_view.dart) | Picker of video clips; the picked clips are sent |
+| Direct message | `_onAttachClip` in [`conversation_view.dart`](../lib/screens/inbox/conversation/conversation_view.dart) | Clips and From others tabs as a picker of video clips; the picked clips are sent |
 
 ## Tests
 
