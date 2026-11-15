@@ -39,6 +39,34 @@ class _PendingAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+/// Exercises the actual Dio request path across custom-to-default fallback.
+class _FallbackAdapter implements HttpClientAdapter {
+  _FallbackAdapter({required this.events, required this.hash});
+
+  final List<Object> events;
+  final String hash;
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? body,
+    Future<void>? cancelFuture,
+  ) async {
+    events.add(('put', options.uri.host));
+    options.onSendProgress?.call(16, 32);
+    return ResponseBody.fromString(
+      jsonEncode({'sha256': hash, 'url': 'https://fallback.example/$hash'}),
+      options.uri.host == 'custom.example' ? 500 : 201,
+      headers: {
+        Headers.contentTypeHeader: ['application/json'],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
 const _testPublicKey =
     '0223456789abcdef0123456789abcdef0123456789abcdef'
     '0123456789abcdef';
@@ -166,6 +194,92 @@ void main() {
           expect(tags, contains(equals(['x', ctHash])));
         },
       );
+
+      for (final cancelFallback in [false, true]) {
+        test(
+          cancelFallback
+              ? 'attempt callback can cancel before the fallback signs or PUTs'
+              : 'announces each server attempt before signing and PUT progress',
+          () async {
+            SharedPreferences.setMockInitialValues({
+              'blossom_server_url': 'https://custom.example',
+              'use_blossom_upload': true,
+            });
+            final directory = Directory.systemTemp.createTempSync(
+              'encrypted-fallback',
+            );
+            addTearDown(() => directory.delete(recursive: true));
+            final file = File('${directory.path}/ciphertext');
+            final bytes = List<int>.filled(32, 7);
+            await file.writeAsBytes(bytes);
+            final hash = HashUtil.sha256Hash(bytes);
+            final events = <Object>[];
+            var attempt = 0;
+            when(() => mockAuthProvider.isAuthenticated).thenReturn(true);
+            when(
+              () => mockAuthProvider.createAndSignEvent(
+                kind: any(named: 'kind'),
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+              ),
+            ).thenAnswer((invocation) async {
+              events.add(('sign', attempt));
+              return _signedEvent(
+                _testPublicKey,
+                invocation.namedArguments[#kind] as int,
+                invocation.namedArguments[#tags] as List<List<String>>,
+                invocation.namedArguments[#content] as String,
+              );
+            });
+            final dio = Dio()
+              ..httpClientAdapter = _FallbackAdapter(
+                events: events,
+                hash: hash,
+              );
+            addTearDown(dio.close);
+            final cancellation = CancelToken();
+            final result =
+                await BlossomUploadService(
+                  authProvider: mockAuthProvider,
+                  dio: dio,
+                  defaultServerUrl: 'https://fallback.example',
+                ).uploadEncryptedFile(
+                  ciphertextFile: file,
+                  cancelToken: cancellation,
+                  onUploadAttempt: () {
+                    attempt++;
+                    events.add(('attempt', attempt));
+                    if (cancelFallback && attempt == 2) {
+                      cancellation.cancel('stop before fallback');
+                    }
+                  },
+                  onProgress: (fraction) {
+                    events.add(('progress', attempt, fraction));
+                  },
+                );
+
+            expect(events, [
+              ('progress', 0, 0.1),
+              ('attempt', 1),
+              ('sign', 1),
+              ('put', 'custom.example'),
+              ('progress', 1, 0.55),
+              ('attempt', 2),
+              if (!cancelFallback) ...[
+                ('sign', 2),
+                ('put', 'fallback.example'),
+                ('progress', 2, 0.55),
+                ('progress', 2, 1.0),
+              ],
+            ]);
+            expect(result.success, !cancelFallback);
+            if (!cancelFallback) {
+              expect(result.videoId, hash);
+              expect(result.url, 'https://fallback.example/$hash');
+            }
+          },
+        );
+      }
 
       test('cancellation reaches the pending Dio transport', () async {
         final adapter = _PendingAdapter();
