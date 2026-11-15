@@ -1490,6 +1490,51 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     return true;
   }
 
+  /// Keeps the autosaved session as a new regular draft, so a session that
+  /// replaces the autosave does not lose it to the Drafts tab.
+  ///
+  /// First persists a debounced autosave that has not fired yet and waits for
+  /// autosaves in flight, so the copy is the session as last edited. Copies
+  /// only an autosave holding clips. The copy gets a fresh id and shares the
+  /// autosave's files; it keeps the challenge and post time, because this is
+  /// the same session moving to the Drafts tab rather than a duplicate
+  /// project.
+  ///
+  /// Throws when the draft store fails; nothing is deleted, so the autosave
+  /// is still there.
+  Future<void> keepAutosaveAsDraft() async {
+    // Their failures are logged where they happen; the copy below reads
+    // whatever row is on disk either way.
+    await flushPendingAutosave().then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    final inFlight = _waitingAutosave ?? _runningAutosave;
+    if (inFlight != null) {
+      await inFlight.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+    }
+
+    if (!await _draftService.draftExists(VideoEditorConstants.autoSaveId)) {
+      return;
+    }
+    final autosave = await _draftService.getDraftById(
+      VideoEditorConstants.autoSaveId,
+    );
+    if (autosave == null || autosave.clips.isEmpty) return;
+    await _draftService.saveDraft(
+      autosave.duplicate().copyWith(
+        challengeContext: autosave.challengeContext,
+        scheduledAt: autosave.scheduledAt,
+        skipUpdateLastModified: true,
+      ),
+    );
+    Log.info(
+      'Kept the autosaved session as draft before it was replaced',
+      name: 'VideoEditorNotifier',
+      category: .video,
+    );
+  }
+
   /// Delete the autosaved draft from local storage.
   ///
   /// Called when the user explicitly discards the autosaved session or
