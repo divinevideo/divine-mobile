@@ -8,42 +8,28 @@ class _MoreActionsSection extends ConsumerWidget {
   const _MoreActionsSection({
     required this.video,
     required this.isOwnContent,
-    required this.bookmarkStatus,
-    required this.onSave,
     required this.onSaveWithWatermark,
     required this.onAddToList,
     required this.onCopyLink,
     required this.onShareVia,
-    required this.onCopyEventJson,
-    required this.onCopyEventId,
     required this.onCrosspostShown,
-    this.isSavePending = false,
     this.isDeletePending = false,
     this.onEditVideo,
     this.onDeleteVideo,
-    this.onAddVideoToClips,
     this.onSaveOriginal,
     this.onCrosspost,
   });
 
   final VideoEvent video;
   final bool isOwnContent;
-
-  /// Whether the bookmark toggle is mid-flight (#7073).
-  final bool isSavePending;
   final bool isDeletePending;
-  final ShareSheetBookmarkStatus bookmarkStatus;
-  final VoidCallback onSave;
   final Future<void> Function()? onSaveOriginal;
   final Future<void> Function() onSaveWithWatermark;
-  final VoidCallback onAddToList;
+  final Future<void> Function() onAddToList;
   final VoidCallback onCopyLink;
   final VoidCallback onShareVia;
-  final VoidCallback onCopyEventJson;
-  final VoidCallback onCopyEventId;
-  final VoidCallback? onEditVideo;
+  final Future<void> Function()? onEditVideo;
   final Future<void> Function()? onDeleteVideo;
-  final VoidCallback? onAddVideoToClips;
   final Future<void> Function()? onCrosspost;
   final VoidCallback onCrosspostShown;
 
@@ -53,248 +39,80 @@ class _MoreActionsSection extends ConsumerWidget {
       isFeatureEnabledProvider(FeatureFlag.debugTools),
     );
 
-    final isSaved = bookmarkStatus == ShareSheetBookmarkStatus.saved;
+    final contentActions = context.read<VideoContentActionsBloc>();
+    // Whether the bookmark toggle is mid-flight (#7073).
+    final isSavePending = context.select(
+      (VideoContentActionsBloc bloc) => bloc.state.isSaving,
+    );
+    final isImporting = context.select(
+      (VideoContentActionsBloc bloc) => bloc.state.isImportingClip,
+    );
+    final isSaved = context.select(
+      (VideoContentActionsBloc bloc) =>
+          bloc.state.bookmarkStatus == VideoBookmarkStatus.saved,
+    );
 
-    final actions = <_ActionData>[
-      if (onEditVideo != null)
-        _ActionData(
-          icon: DivineIconName.pencilSimpleLine,
-          label: context.l10n.shareMenuEditVideo,
-          onTap: onEditVideo!,
-          isDisabled: isDeletePending,
+    final actions = <VideoActionRowItem>[
+      if (onEditVideo case final onEdit?)
+        editOwnerVideoActionItem(context, onEdit: onEdit),
+      if (onDeleteVideo case final onDelete?)
+        deleteOwnerVideoActionItem(
+          context,
+          onDelete: onDelete,
+          isDeletePending: isDeletePending,
         ),
-      if (onDeleteVideo != null)
-        _ActionData(
-          icon: DivineIconName.trash,
-          label: context.l10n.shareMenuDeleteVideo,
-          onTap: onDeleteVideo!,
-          isPending: isDeletePending,
-        ),
-      // `unknown` deliberately renders as "Save": an unresolved read must not
-      // claim the video is unsaved, and "Save" is the pre-existing wording.
-      _ActionData(
-        icon: DivineIconName.bookmarkSimple,
-        label: isSaved
-            ? context.l10n.shareSheetRemoveFromSaved
-            : context.l10n.shareSheetSave,
-        onTap: onSave,
+      saveVideoActionItem(
+        context,
+        bloc: contentActions,
+        isSaved: isSaved,
         isPending: isSavePending,
       ),
       if (onSaveOriginal != null)
-        _ActionData(
+        VideoActionRowItem(
           icon: DivineIconName.downloadSimple,
           label: context.l10n.shareSheetSaveToGallery,
           onTap: () => onSaveOriginal!.call(),
         ),
-      _ActionData(
+      VideoActionRowItem(
         icon: DivineIconName.downloadSimple,
         label: isOwnContent
             ? context.l10n.shareSheetSaveWithWatermark
             : context.l10n.shareSheetSaveVideo,
         onTap: onSaveWithWatermark,
       ),
-      if (onAddVideoToClips != null)
-        _ActionData(
-          icon: DivineIconName.filmSlate,
-          label: context.l10n.shareSheetAddToClips,
-          onTap: onAddVideoToClips!,
-        ),
+      ?addToClipsActionItem(
+        context,
+        video: video,
+        isOwnContent: isOwnContent,
+      ),
       if (onCrosspost != null)
-        _ActionData(
+        VideoActionRowItem(
           icon: DivineIconName.arrowsClockwise,
           label: context.l10n.shareSheetCrosspost,
           onTap: () => unawaited(onCrosspost!.call()),
           onShown: onCrosspostShown,
         ),
-      _ActionData(
-        icon: DivineIconName.listPlus,
-        label: context.l10n.shareSheetAddToList,
-        onTap: onAddToList,
-      ),
-      _ActionData(
+      addToListActionItem(context, onAddToList: onAddToList),
+      VideoActionRowItem(
         icon: DivineIconName.linkSimple,
         label: context.l10n.shareSheetCopy,
         onTap: onCopyLink,
       ),
-      _ActionData(
+      VideoActionRowItem(
         icon: DivineIconName.shareFat,
         label: context.l10n.shareSheetShareVia,
         onTap: onShareVia,
       ),
       if (showDebugTools) ...[
-        _ActionData(
-          icon: DivineIconName.bracketsAngle,
-          label: context.l10n.shareSheetEventJson,
-          onTap: onCopyEventJson,
-        ),
-        _ActionData(
-          icon: DivineIconName.copySimple,
-          label: context.l10n.shareSheetEventId,
-          onTap: onCopyEventId,
-        ),
+        copyEventJsonActionItem(context, bloc: contentActions),
+        copyEventIdActionItem(context, bloc: contentActions),
       ],
     ];
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        spacing: 12,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              context.l10n.shareSheetMoreActions,
-              style: TextStyle(
-                color: context.vineColors.primaryText,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          SizedBox(
-            height: 86,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: actions.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 4),
-              itemBuilder: (context, index) {
-                final action = actions[index];
-                final circle = _ActionCircle(
-                  icon: action.icon,
-                  label: action.label,
-                  onTap: action.onTap,
-                  isPending: action.isPending,
-                  isDisabled: action.isDisabled,
-                );
-                final onShown = action.onShown;
-                if (onShown == null) return circle;
-                return VisibilityDetector(
-                  key: ValueKey(onShown),
-                  onVisibilityChanged: (info) {
-                    if (info.visibleFraction > 0) onShown();
-                  },
-                  child: circle,
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionData {
-  const _ActionData({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isPending = false,
-    this.isDisabled = false,
-    this.onShown,
-  });
-
-  final DivineIconName icon;
-  final String label;
-  final VoidCallback onTap;
-  final VoidCallback? onShown;
-
-  /// Whether the action is mid-flight, so the circle shows a spinner and stops
-  /// responding to taps.
-  final bool isPending;
-
-  /// Whether another operation temporarily prevents this action.
-  final bool isDisabled;
-}
-
-class _ActionCircle extends StatelessWidget {
-  const _ActionCircle({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isPending = false,
-    this.isDisabled = false,
-  });
-
-  final DivineIconName icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool isPending;
-
-  /// Disables the action without presenting it as the pending operation.
-  final bool isDisabled;
-
-  static const double _circleSize = 48;
-  static const double _iconSize = 22;
-
-  @override
-  Widget build(BuildContext context) {
-    final bgColor = isDisabled
-        ? context.vineColors.surfaceContainer
-        : VineTheme.vineGreen.withValues(alpha: 0.15);
-    final iconColor = isDisabled
-        ? context.vineColors.secondaryText
-        : context.vineColors.accentPositive;
-
-    return Semantics(
-      button: true,
-      label: label,
-      enabled: !isPending && !isDisabled,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: isPending || isDisabled ? null : onTap,
-        child: SizedBox(
-          width: 68,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 6,
-            children: [
-              Container(
-                width: _circleSize,
-                height: _circleSize,
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: isPending
-                      // Same footprint as the icon it replaces, so the row does
-                      // not reflow while the save is in flight. Mirrors the
-                      // send button in share_sheet_message_input.dart.
-                      ? SizedBox.square(
-                          dimension: _iconSize,
-                          child: DivineCircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              iconColor,
-                            ),
-                          ),
-                        )
-                      : DivineIcon(
-                          icon: icon,
-                          size: _iconSize,
-                          color: iconColor,
-                        ),
-                ),
-              ),
-              Text(
-                label,
-                style: TextStyle(
-                  color: context.vineColors.secondaryText,
-                  fontSize: 11,
-                ),
-                textScaler: TextScaler.noScaling,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
+    return VideoActionRow(
+      title: context.l10n.shareSheetMoreActions,
+      actions: actions,
+      isLocked: isDeletePending || isSavePending || isImporting,
     );
   }
 }

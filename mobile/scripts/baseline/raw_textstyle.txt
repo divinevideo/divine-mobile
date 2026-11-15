@@ -67,7 +67,6 @@ lib/widgets/video_editor/audio_editor/audio_editor_selection_overlay.dart	1
 lib/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart	2
 lib/widgets/video_feed_item/actions/share_sheet_header.dart	2
 lib/widgets/video_feed_item/actions/share_sheet_message_input.dart	2
-lib/widgets/video_feed_item/actions/share_sheet_more_actions.dart	2
 lib/widgets/video_feed_item/actions/share_with_section.dart	3
 lib/widgets/video_feed_item/content_warning_helpers.dart	2
 lib/widgets/video_feed_item/list_attribution_chip.dart	1

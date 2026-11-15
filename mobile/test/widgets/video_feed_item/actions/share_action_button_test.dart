@@ -5,9 +5,12 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
+import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:go_router/go_router.dart';
@@ -16,10 +19,13 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/share_sheet/share_sheet_bloc.dart';
+import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_cubit.dart';
 import 'package:openvine/blocs/video_crosspost/video_crosspost_state.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
@@ -29,13 +35,16 @@ import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
+import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
+import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
+import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
 import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
@@ -48,6 +57,7 @@ import 'package:visibility_detector/visibility_detector.dart';
 import '../../../helpers/go_router.dart';
 import '../../../helpers/recording_consumption_analytics.dart';
 import '../../../helpers/retired_key_custody.dart';
+import '../../../helpers/scroll.dart';
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
@@ -58,6 +68,14 @@ class _MockRankingSignalsLoader extends Mock
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockVideoSharingService extends Mock implements VideoSharingService {}
+
+class _MockVideoClipImportService extends Mock
+    implements VideoClipImportService {}
+
+class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
+
+class _MockContentDeletionService extends Mock
+    implements ContentDeletionService {}
 
 class _MockCrosspostingApiClient extends Mock
     implements CrosspostingApiClient {}
@@ -106,6 +124,7 @@ void main() {
   });
   setUpAll(() {
     registerFallbackValue(_FakeVideoEvent());
+    registerFallbackValue(DeleteReason.personalChoice);
   });
 
   group(ShareActionButton, () {
@@ -645,6 +664,417 @@ void main() {
         expect(find.text('Save with Watermark'), findsOneWidget);
       });
 
+      group('content actions', () {
+        late AppLocalizations l10n;
+        late _MockBookmarksRepository bookmarksRepository;
+
+        setUp(() {
+          l10n = lookupAppLocalizations(const Locale('en'));
+          bookmarksRepository = _MockBookmarksRepository();
+        });
+
+        /// The horizontal "More actions" row, found through its Save entry.
+        Finder moreActionsRow(AppLocalizations l10n) => find
+            .ancestor(
+              of: find.text(l10n.shareSheetSave),
+              matching: find.byType(Scrollable),
+            )
+            .first;
+
+        void stubBookmarkStatus({required bool saved}) {
+          when(
+            bookmarksRepository.syncGlobalBookmarks,
+          ).thenAnswer((_) async => true);
+          when(
+            () => bookmarksRepository.hasUnreadablePrivateItems,
+          ).thenReturn(false);
+          when(
+            () => bookmarksRepository.isVideoBookmarkedGlobally(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
+          ).thenReturn(saved);
+        }
+
+        Future<void> pumpSheet(
+          WidgetTester tester, {
+          bool debugTools = false,
+          BookmarksRepository Function(Ref ref)? bookmarks,
+        }) async {
+          await tester.pumpWidget(
+            testMaterialApp(
+              home: Scaffold(body: ShareActionButton(video: testVideo)),
+              additionalOverrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  mockRankingSignalsLoader,
+                ),
+                videoSharingServiceProvider.overrideWith(
+                  (ref) => mockVideoSharingService,
+                ),
+                if (bookmarks == null)
+                  bookmarksRepositoryProvider.overrideWithValue(
+                    bookmarksRepository,
+                  )
+                else
+                  bookmarksRepositoryProvider.overrideWith(bookmarks),
+                isFeatureEnabledProvider(
+                  FeatureFlag.debugTools,
+                ).overrideWith((ref) => debugTools),
+              ],
+              mockAuthService: createMockAuthService(),
+              mockProfileRepository: mockProfileRepository,
+            ),
+          );
+          await tester.tap(find.byType(ShareActionButton));
+          await tester.pumpAndSettle();
+        }
+
+        testWidgets('provides the shared video actions bloc and closes it on '
+            'dispose', (tester) async {
+          stubBookmarkStatus(saved: false);
+          await pumpSheet(tester);
+
+          final bloc = tester
+              .element(find.text(l10n.shareWithTitle))
+              .read<VideoContentActionsBloc>();
+          expect(bloc.isClosed, isFalse);
+
+          await tester.pumpWidget(const SizedBox());
+
+          expect(bloc.isClosed, isTrue);
+        });
+
+        testWidgets('labels Save from the reconciled bookmark status', (
+          tester,
+        ) async {
+          stubBookmarkStatus(saved: true);
+          await pumpSheet(tester);
+
+          expect(find.text(l10n.shareSheetRemoveFromSaved), findsOneWidget);
+          expect(find.text(l10n.shareSheetSave), findsNothing);
+        });
+
+        testWidgets('Save toggles the bookmark, closes the sheet and '
+            'confirms', (tester) async {
+          stubBookmarkStatus(saved: false);
+          when(
+            () => bookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
+          ).thenAnswer(
+            (_) async => const BookmarkToggleResult(
+              succeeded: true,
+              wasBookmarked: false,
+              isBookmarked: true,
+            ),
+          );
+          await pumpSheet(tester);
+
+          await tester.tap(find.text(l10n.shareSheetSave));
+          await tester.pumpAndSettle();
+
+          verify(
+            () => bookmarksRepository.toggleVideoInGlobalBookmarks(
+              testVideo.id,
+              addressableId: any(named: 'addressableId'),
+            ),
+          ).called(1);
+          expect(find.text(l10n.shareWithTitle), findsNothing);
+          expect(find.text(l10n.shareAddedToBookmarks), findsOneWidget);
+        });
+
+        testWidgets(
+          'saves through the bookmarks repository that replaced the one the '
+          'sheet opened with',
+          (tester) async {
+            stubBookmarkStatus(saved: false);
+            final replacement = _MockBookmarksRepository();
+            when(
+              replacement.syncGlobalBookmarks,
+            ).thenAnswer((_) async => false);
+            when(
+              () => replacement.isVideoBookmarkedGlobally(
+                any(),
+                addressableId: any(named: 'addressableId'),
+              ),
+            ).thenReturn(false);
+            when(
+              () => replacement.toggleVideoInGlobalBookmarks(
+                any(),
+                addressableId: any(named: 'addressableId'),
+              ),
+            ).thenAnswer(
+              (_) async => const BookmarkToggleResult(
+                succeeded: true,
+                wasBookmarked: false,
+                isBookmarked: true,
+              ),
+            );
+            final activeBookmarks = StateProvider<BookmarksRepository>(
+              (ref) => bookmarksRepository,
+            );
+            await pumpSheet(
+              tester,
+              bookmarks: (ref) => ref.watch(activeBookmarks),
+            );
+
+            ProviderScope.containerOf(
+              tester.element(find.text(l10n.shareWithTitle)),
+            ).read(activeBookmarks.notifier).state = replacement;
+            await tester.pumpAndSettle();
+            await tester.tap(find.text(l10n.shareSheetSave));
+            await tester.pumpAndSettle();
+
+            verify(
+              () => replacement.toggleVideoInGlobalBookmarks(
+                testVideo.id,
+                addressableId: any(named: 'addressableId'),
+              ),
+            ).called(1);
+            verifyNever(
+              () => bookmarksRepository.toggleVideoInGlobalBookmarks(
+                any(),
+                addressableId: any(named: 'addressableId'),
+              ),
+            );
+          },
+        );
+
+        testWidgets('Add to clips prompts for a title on an own video', (
+          tester,
+        ) async {
+          stubBookmarkStatus(saved: false);
+          await tester.pumpWidget(
+            testMaterialApp(
+              home: Scaffold(body: ShareActionButton(video: testVideo)),
+              additionalOverrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  mockRankingSignalsLoader,
+                ),
+                videoSharingServiceProvider.overrideWith(
+                  (ref) => mockVideoSharingService,
+                ),
+                bookmarksRepositoryProvider.overrideWithValue(
+                  bookmarksRepository,
+                ),
+              ],
+              mockAuthService: createMockAuthService(
+                authState: AuthState.authenticated,
+                currentPublicKeyHex: ownPubkey,
+              ),
+              mockProfileRepository: mockProfileRepository,
+              mockFollowRepository: mockFollowRepository,
+            ),
+          );
+          await tester.tap(find.byType(ShareActionButton));
+          await tester.pumpAndSettle();
+
+          await scrollUntilTappable(
+            tester,
+            find.text(l10n.shareSheetAddToClips),
+            200,
+            scrollable: moreActionsRow(l10n),
+          );
+          await tester.tap(find.text(l10n.shareSheetAddToClips));
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.shareSheetNameClipTitle), findsOneWidget);
+          expect(find.text(testVideo.title!), findsWidgets);
+        });
+
+        testWidgets(
+          'offers no Add to clips on a video that is not the viewer own, '
+          'a classic Vine, or open to reuse',
+          (tester) async {
+            stubBookmarkStatus(saved: false);
+            await pumpSheet(tester);
+
+            expect(find.text(l10n.shareSheetAddToList), findsOneWidget);
+            expect(find.text(l10n.shareSheetAddToClips), findsNothing);
+          },
+        );
+
+        testWidgets('holds Delete while a clip imports', (
+          tester,
+        ) async {
+          stubBookmarkStatus(saved: false);
+          final importer = _MockVideoClipImportService();
+          final importCompleter = Completer<VideoClipImportResult>();
+          when(
+            () => importer.importToLibrary(
+              any(),
+              libraryTitle: any(named: 'libraryTitle'),
+            ),
+          ).thenAnswer((_) => importCompleter.future);
+          await tester.pumpWidget(
+            testMaterialApp(
+              home: Scaffold(body: ShareActionButton(video: testVideo)),
+              additionalOverrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  mockRankingSignalsLoader,
+                ),
+                videoSharingServiceProvider.overrideWith(
+                  (ref) => mockVideoSharingService,
+                ),
+                bookmarksRepositoryProvider.overrideWithValue(
+                  bookmarksRepository,
+                ),
+                videoClipImportServiceProvider.overrideWithValue(importer),
+              ],
+              mockAuthService: createMockAuthService(
+                authState: AuthState.authenticated,
+                currentPublicKeyHex: ownPubkey,
+              ),
+              mockProfileRepository: mockProfileRepository,
+              mockFollowRepository: mockFollowRepository,
+            ),
+          );
+          await tester.tap(find.byType(ShareActionButton));
+          await tester.pumpAndSettle();
+
+          await scrollUntilTappable(
+            tester,
+            find.text(l10n.shareSheetAddToClips),
+            200,
+            scrollable: moreActionsRow(l10n),
+          );
+          await tester.tap(find.text(l10n.shareSheetAddToClips));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.shareSheetSaveClip));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+
+          // Back to the start of the row, where Delete is. The import spinner
+          // never settles, so pump a fixed time rather than settling.
+          await tester.drag(moreActionsRow(l10n), const Offset(1000, 0));
+          await tester.pump(const Duration(milliseconds: 500));
+          await tester.tap(find.text(l10n.shareMenuDeleteVideo));
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(find.text(l10n.shareMenuDelete), findsNothing);
+
+          importCompleter.complete(
+            const VideoClipImportFailure(
+              VideoClipImportFailureReason.downloadFailed,
+            ),
+          );
+          await tester.pumpAndSettle();
+        });
+
+        testWidgets('Add to clips shows a spinner while the clip imports', (
+          tester,
+        ) async {
+          stubBookmarkStatus(saved: false);
+          final importer = _MockVideoClipImportService();
+          final importCompleter = Completer<VideoClipImportResult>();
+          when(
+            () => importer.importToLibrary(
+              any(),
+              libraryTitle: any(named: 'libraryTitle'),
+            ),
+          ).thenAnswer((_) => importCompleter.future);
+          await tester.pumpWidget(
+            testMaterialApp(
+              home: Scaffold(body: ShareActionButton(video: testVideo)),
+              additionalOverrides: [
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  mockRankingSignalsLoader,
+                ),
+                videoSharingServiceProvider.overrideWith(
+                  (ref) => mockVideoSharingService,
+                ),
+                bookmarksRepositoryProvider.overrideWithValue(
+                  bookmarksRepository,
+                ),
+                videoClipImportServiceProvider.overrideWithValue(importer),
+              ],
+              mockAuthService: createMockAuthService(
+                authState: AuthState.authenticated,
+                currentPublicKeyHex: ownPubkey,
+              ),
+              mockProfileRepository: mockProfileRepository,
+              mockFollowRepository: mockFollowRepository,
+            ),
+          );
+          await tester.tap(find.byType(ShareActionButton));
+          await tester.pumpAndSettle();
+
+          await scrollUntilTappable(
+            tester,
+            find.text(l10n.shareSheetAddToClips),
+            200,
+            scrollable: moreActionsRow(l10n),
+          );
+          await tester.tap(find.text(l10n.shareSheetAddToClips));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.shareSheetSaveClip));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+
+          final addToClipsItem = find
+              .ancestor(
+                of: find.text(l10n.shareSheetAddToClips),
+                matching: find.byType(GestureDetector),
+              )
+              .first;
+          expect(
+            find.descendant(
+              of: addToClipsItem,
+              matching: find.byType(DivineCircularProgressIndicator),
+            ),
+            findsOneWidget,
+          );
+
+          importCompleter.complete(
+            const VideoClipImportFailure(
+              VideoClipImportFailureReason.downloadFailed,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.shareWithTitle), findsNothing);
+          expect(find.text(l10n.shareSheetAddToClipsFailed), findsOneWidget);
+        });
+
+        testWidgets('Event ID copies the nevent and closes the sheet', (
+          tester,
+        ) async {
+          final copied = <String>[];
+          tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            SystemChannels.platform,
+            (call) async {
+              if (call.method == 'Clipboard.setData') {
+                copied.add((call.arguments as Map)['text'] as String);
+              }
+              return null;
+            },
+          );
+          addTearDown(
+            () =>
+                tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+                  SystemChannels.platform,
+                  null,
+                ),
+          );
+          stubBookmarkStatus(saved: false);
+          await pumpSheet(tester, debugTools: true);
+
+          await scrollUntilTappable(
+            tester,
+            find.text(l10n.shareSheetEventId),
+            200,
+            scrollable: moreActionsRow(l10n),
+          );
+          await tester.tap(find.text(l10n.shareSheetEventId));
+          await tester.pumpAndSettle();
+
+          expect(copied.single, startsWith('nevent1'));
+          expect(find.text(l10n.shareWithTitle), findsNothing);
+          expect(find.text(l10n.shareCopiedEventId), findsOneWidget);
+        });
+      });
+
       group('owner actions', () {
         late AppLocalizations l10n;
 
@@ -734,6 +1164,50 @@ void main() {
 
           expect(find.byType(SelectListSheetBody), findsOneWidget);
         });
+
+        testWidgets(
+          'holds the other actions while the video is being deleted',
+          (tester) async {
+            final deletionService = _MockContentDeletionService();
+            final deletion = Completer<DeleteResult>();
+            when(
+              () => deletionService.quickDelete(
+                video: any(named: 'video'),
+                reason: any(named: 'reason'),
+              ),
+            ).thenAnswer((_) => deletion.future);
+            _fakeListService = _MockCuratedListService();
+            when(
+              () => _fakeListService!.pickerListsForOwner(any()),
+            ).thenReturn(const []);
+            when(() => _fakeListService!.isCurrentSession).thenReturn(true);
+            await pumpOwnerSheet(
+              tester,
+              additionalOverrides: [
+                contentDeletionServiceProvider.overrideWith(
+                  (ref) async => deletionService,
+                ),
+              ],
+            );
+
+            await tester.tap(find.text(l10n.shareMenuDeleteVideo));
+            await tester.pumpAndSettle();
+            await tester.tap(find.text(l10n.shareMenuDelete));
+            // The delete spinner never settles, so pump past the dialog's exit
+            // and the sheet's would-be dismissal instead.
+            await tester.pump(const Duration(seconds: 1));
+            await tester.tap(find.text(l10n.shareSheetAddToList));
+            await tester.pump(const Duration(seconds: 1));
+
+            expect(find.byType(SelectListSheetBody), findsNothing);
+            expect(find.text(l10n.shareWithTitle), findsOneWidget);
+
+            deletion.complete(
+              DeleteResult.failure('rejected', DeleteFailureKind.relayRejected),
+            );
+            await tester.pumpAndSettle();
+          },
+        );
 
         testWidgets(
           'Save with Watermark does nothing when the sheet closes before '

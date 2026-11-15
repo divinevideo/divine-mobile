@@ -1,25 +1,21 @@
 // ABOUTME: BLoC for the unified share sheet
 // ABOUTME: Manages contact loading, recipient selection, video sharing,
-// ABOUTME: and one-shot actions (save, copy, share via)
+// ABOUTME: and one-shot actions (copy link, share via)
 
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:bloc_concurrency/bloc_concurrency.dart';
-import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:models/models.dart';
-import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/share_sheet/reportable_sites.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
-import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -35,7 +31,7 @@ part 'share_sheet_state.dart';
 ///   messaged users in closeness order)
 /// - Recipient selection (select-then-send: tapping a contact only selects;
 ///   the DM goes out on an explicit [ShareSheetSendRequested])
-/// - One-shot actions (save, copy link, copy JSON, copy event ID, share via)
+/// - One-shot actions (copy link, share via)
 ///
 /// Emits [ShareSheetActionResult] as one-shot side effects for the UI
 /// to handle (snackbars, clipboard, sheet dismissal).
@@ -43,38 +39,23 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
     with CloseGuardedEmit<ShareSheetState> {
   ShareSheetBloc({
     required VideoEvent video,
-    required String relayUrl,
     required VideoSharingService videoSharingService,
     required ProfileReader profileRepository,
     required FollowRepository followRepository,
     required UserRankingSignalsLoader rankingSignalsLoader,
     required String currentUserPubkey,
-    BookmarksRepository? bookmarksRepository,
     BaseCacheManager? cacheManager,
-    VideoClipImportService? videoClipImportService,
   }) : _video = video,
-       _relayUrl = relayUrl,
        _videoSharingService = videoSharingService,
        _profileRepository = profileRepository,
        _followRepository = followRepository,
        _rankingSignalsLoader = rankingSignalsLoader,
        _currentUserPubkey = currentUserPubkey,
-       _bookmarksRepository = bookmarksRepository,
        _cacheManager = cacheManager,
-       _videoClipImportService = videoClipImportService,
        super(const ShareSheetState()) {
     on<ShareSheetContactsLoadRequested>(_onContactsLoadRequested);
     on<ShareSheetRecipientToggled>(_onRecipientToggled);
     on<ShareSheetSendRequested>(_onSendRequested, transformer: droppable());
-    on<ShareSheetSaveRequested>(_onSaveRequested, transformer: droppable());
-    on<ShareSheetBookmarkStatusRequested>(
-      _onBookmarkStatusRequested,
-      transformer: droppable(),
-    );
-    on<ShareSheetAddVideoToClipsRequested>(
-      _onAddVideoToClipsRequested,
-      transformer: droppable(),
-    );
     on<ShareSheetCopyLinkRequested>(
       _onCopyLinkRequested,
       transformer: droppable(),
@@ -83,20 +64,15 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       _onShareViaRequested,
       transformer: droppable(),
     );
-    on<ShareSheetCopyEventJsonRequested>(_onCopyEventJsonRequested);
-    on<ShareSheetCopyEventIdRequested>(_onCopyEventIdRequested);
   }
 
   final VideoEvent _video;
-  final String _relayUrl;
   final VideoSharingService _videoSharingService;
   final ProfileReader _profileRepository;
   final FollowRepository _followRepository;
   final UserRankingSignalsLoader _rankingSignalsLoader;
   final String _currentUserPubkey;
-  final BookmarksRepository? _bookmarksRepository;
   final BaseCacheManager? _cacheManager;
-  final VideoClipImportService? _videoClipImportService;
 
   void _addUnexpectedError(
     Object error,
@@ -496,222 +472,6 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
   }
 
   // --------------------------------------------------------------------------
-  // Bookmark status (picks the save/remove row before it is tapped)
-  // --------------------------------------------------------------------------
-
-  /// Resolves [ShareSheetState.bookmarkStatus] from a relay-reconciled read.
-  ///
-  /// Uses the non-authoritative [BookmarksRepository.syncGlobalBookmarks] rather
-  /// than the full-settlement form the toggle pays for. `requireAuthoritative`
-  /// exists to stop a partially-read list from becoming the base of a
-  /// replacing publish; a label publishes nothing, and the toggle reconciles
-  /// authoritatively again before it acts. `ProfileSavedVideosBloc` reads
-  /// bookmark state for display the same way.
-  ///
-  /// The status is left [ShareSheetBookmarkStatus.unknown] when the read is
-  /// inconclusive. Claiming "not saved" on a failed read is the mislabel this
-  /// handler exists to remove.
-  Future<void> _onBookmarkStatusRequested(
-    ShareSheetBookmarkStatusRequested event,
-    Emitter<ShareSheetState> emit,
-  ) async {
-    final bookmarksRepository = _bookmarksRepository;
-    if (bookmarksRepository == null || isClosed) return;
-
-    try {
-      final reconciled = await bookmarksRepository.syncGlobalBookmarks();
-      if (isClosed ||
-          !reconciled ||
-          state.bookmarkStatus != ShareSheetBookmarkStatus.unknown) {
-        return;
-      }
-
-      // A list whose private items stayed encrypted cannot answer this: the
-      // video may well be bookmarked inside `content`. Leaving the status
-      // unresolved is the same call the inconclusive-read path makes above.
-      if (bookmarksRepository.hasUnreadablePrivateItems) return;
-
-      emit(
-        state.copyWith(
-          bookmarkStatus:
-              bookmarksRepository.isVideoBookmarkedGlobally(
-                _video.id,
-                addressableId: _video.addressableId,
-              )
-              ? ShareSheetBookmarkStatus.saved
-              : ShareSheetBookmarkStatus.notSaved,
-        ),
-      );
-    } catch (e, stackTrace) {
-      _addUnexpectedError(
-        e,
-        stackTrace,
-        ShareSheetBlocReportableSites.onBookmarkStatusRequested,
-      );
-      Log.warning(
-        'Could not resolve bookmark status: $e',
-        name: 'ShareSheetBloc',
-        category: LogCategory.ui,
-      );
-      Log.debug(
-        'Bookmark status stack trace: $stackTrace',
-        name: 'ShareSheetBloc',
-        category: LogCategory.ui,
-      );
-    }
-  }
-
-  // --------------------------------------------------------------------------
-  // Save to bookmarks
-  // --------------------------------------------------------------------------
-
-  Future<void> _onSaveRequested(
-    ShareSheetSaveRequested event,
-    Emitter<ShareSheetState> emit,
-  ) async {
-    // Emitted before the toggle deliberately: it is a relay reconcile + sign
-    // + publish, and emitting after it would leave the sheet inert for the
-    // whole window, which is the bug (#7073).
-    emit(state.copyWith(isSaving: true, clearActionResult: true));
-
-    final bookmarksRepository = _bookmarksRepository;
-    if (bookmarksRepository == null) {
-      Log.warning(
-        'Bookmark service unavailable — cannot save',
-        name: 'ShareSheetBloc',
-        category: LogCategory.ui,
-      );
-      emit(
-        state.copyWith(
-          isSaving: false,
-          actionResult: ShareSheetSaveResult(succeeded: false),
-        ),
-      );
-      return;
-    }
-
-    // Best-effort guess, used only to word the message if the toggle throws
-    // before it can report the reconciled state.
-    var wasBookmarked = bookmarksRepository.isVideoBookmarkedGlobally(
-      _video.id,
-      addressableId: _video.addressableId,
-    );
-    try {
-      // On the success path the direction comes from the toggle's own
-      // reconciled read rather than the guess above — the two disagree when
-      // the video was bookmarked on another device, and the sheet would then
-      // claim the wrong outcome.
-      // The coordinate keeps the bookmark on the video across edits, which
-      // republish it under a new event id (#7135).
-      final result = await bookmarksRepository.toggleVideoInGlobalBookmarks(
-        _video.id,
-        addressableId: _video.addressableId,
-      );
-      if (isClosed) return;
-
-      wasBookmarked = result.wasBookmarked;
-      emit(
-        state.copyWith(
-          isSaving: false,
-          // Only a succeeded toggle reconciled with the relay. On failure
-          // `isBookmarked` falls back to the pre-toggle guess, so adopting it
-          // would launder a stale local read into a confident label.
-          bookmarkStatus: result.succeeded
-              ? (result.isBookmarked
-                    ? ShareSheetBookmarkStatus.saved
-                    : ShareSheetBookmarkStatus.notSaved)
-              : state.bookmarkStatus,
-          actionResult: ShareSheetSaveResult(
-            succeeded: result.succeeded,
-            removed: result.succeeded && result.wasBookmarked,
-            wasBookmarkedBeforeToggle: result.wasBookmarked,
-            failure: result.failure,
-          ),
-        ),
-      );
-    } catch (e, stackTrace) {
-      _addUnexpectedError(
-        e,
-        stackTrace,
-        ShareSheetBlocReportableSites.onSaveRequested,
-      );
-      Log.error(
-        'Failed to toggle bookmark: $e',
-        name: 'ShareSheetBloc',
-        category: LogCategory.ui,
-      );
-      if (isClosed) return;
-
-      emit(
-        state.copyWith(
-          isSaving: false,
-          actionResult: ShareSheetSaveResult(
-            succeeded: false,
-            wasBookmarkedBeforeToggle: wasBookmarked,
-          ),
-        ),
-      );
-    }
-  }
-
-  // --------------------------------------------------------------------------
-  // Add video to clips
-  // --------------------------------------------------------------------------
-
-  Future<void> _onAddVideoToClipsRequested(
-    ShareSheetAddVideoToClipsRequested event,
-    Emitter<ShareSheetState> emit,
-  ) async {
-    final importer = _videoClipImportService;
-    if (importer == null) {
-      Log.warning(
-        'Video clip importer unavailable',
-        name: 'ShareSheetBloc',
-        category: LogCategory.ui,
-      );
-      emit(
-        state.copyWith(
-          actionResult: ShareSheetVideoClipImportResult(succeeded: false),
-        ),
-      );
-      return;
-    }
-
-    try {
-      final result = await importer.importToLibrary(
-        _video,
-        libraryTitle: event.libraryTitle,
-      );
-      emit(
-        state.copyWith(
-          actionResult: ShareSheetVideoClipImportResult(
-            succeeded: result is VideoClipImportSuccess,
-            libraryTitle: result is VideoClipImportSuccess
-                ? result.clip.libraryTitle
-                : null,
-          ),
-        ),
-      );
-    } catch (e, stackTrace) {
-      _addUnexpectedError(
-        e,
-        stackTrace,
-        ShareSheetBlocReportableSites.onAddVideoToClipsRequested,
-      );
-      Log.error(
-        'Failed to import video clip: $e',
-        name: 'ShareSheetBloc',
-        category: LogCategory.ui,
-      );
-      emit(
-        state.copyWith(
-          actionResult: ShareSheetVideoClipImportResult(succeeded: false),
-        ),
-      );
-    }
-  }
-
-  // --------------------------------------------------------------------------
   // Copy / Share actions (BLoC generates data, UI handles platform calls)
   // --------------------------------------------------------------------------
 
@@ -808,66 +568,6 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         category: LogCategory.ui,
       );
       if (isClosed || emit.isDone) return;
-      emit(state.copyWith(actionResult: ShareSheetActionFailure()));
-    }
-  }
-
-  void _onCopyEventJsonRequested(
-    ShareSheetCopyEventJsonRequested event,
-    Emitter<ShareSheetState> emit,
-  ) {
-    try {
-      final json = const JsonEncoder.withIndent('  ').convert(_video.toJson());
-      emit(
-        state.copyWith(
-          actionResult: ShareSheetCopiedToClipboard(
-            kind: ShareSheetCopiedKind.eventJson,
-            text: json,
-          ),
-        ),
-      );
-    } catch (e, stackTrace) {
-      _addUnexpectedError(
-        e,
-        stackTrace,
-        ShareSheetBlocReportableSites.onCopyEventJsonRequested,
-      );
-      Log.error(
-        'Failed to generate event JSON: $e',
-        name: 'ShareSheetBloc',
-        category: LogCategory.ui,
-      );
-      emit(state.copyWith(actionResult: ShareSheetActionFailure()));
-    }
-  }
-
-  void _onCopyEventIdRequested(
-    ShareSheetCopyEventIdRequested event,
-    Emitter<ShareSheetState> emit,
-  ) {
-    try {
-      final nevent = NIP19Tlv.encodeNevent(
-        Nevent(id: _video.id, author: _video.pubkey, relays: [_relayUrl]),
-      );
-      emit(
-        state.copyWith(
-          actionResult: ShareSheetCopiedToClipboard(
-            kind: ShareSheetCopiedKind.eventId,
-            text: nevent,
-          ),
-        ),
-      );
-    } catch (e, stackTrace) {
-      _addUnexpectedError(
-        e,
-        stackTrace,
-        ShareSheetBlocReportableSites.onCopyEventIdRequested,
-      );
-      Log.error(
-        'Failed to generate event ID: $e',
-        name: 'ShareSheetBloc',
-        category: LogCategory.ui,
-      );
       emit(state.copyWith(actionResult: ShareSheetActionFailure()));
     }
   }

@@ -1,5 +1,5 @@
 // ABOUTME: Shared edit/pin/delete action sheet for a video the viewer owns.
-// ABOUTME: Used by the profile grid and the composable (mixed-owner) grid.
+// ABOUTME: Also hosts the confirm-and-delete flow both video sheets reuse.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
@@ -103,7 +103,7 @@ Future<void> showOwnerVideoActionsSheet({
     case _OwnerVideoAction.pin:
       pinAction!.onTap();
     case _OwnerVideoAction.delete:
-      await _confirmAndDelete(
+      await confirmAndDeleteOwnerVideo(
         context: context,
         video: video,
         cubit: cubit,
@@ -118,11 +118,17 @@ Future<void> showOwnerVideoActionsSheet({
 ///
 /// Every surface reports through [DivineSnackbarContainer] with the same
 /// localized copy, so a delete reads identically wherever it was started.
-Future<void> _confirmAndDelete({
+///
+/// [onDeleted] runs after a successful delete and before the confirmation
+/// snackbar; [onFailed] runs after a failed one and before its error
+/// snackbar. Either may close the sheet [context] belongs to; the snackbar
+/// still appears on the messenger captured before it ran.
+Future<void> confirmAndDeleteOwnerVideo({
   required BuildContext context,
   required VideoEvent video,
   required OwnerVideoActionsCubit cubit,
-  required Future<void> Function()? onDeleted,
+  Future<void> Function()? onDeleted,
+  Future<void> Function()? onFailed,
 }) async {
   final confirmed = await showOwnerVideoDeleteConfirmationDialog(context);
   if (!confirmed || !context.mounted) return;
@@ -133,26 +139,23 @@ Future<void> _confirmAndDelete({
 
   final operation = cubit.state.forVideo(video.id);
   final messenger = ScaffoldMessenger.of(context);
+  final succeeded = operation.deleteStatus == OwnerVideoDeleteStatus.success;
 
-  if (operation.deleteStatus != OwnerVideoDeleteStatus.success) {
-    messenger.showSnackBar(
-      DivineSnackbarContainer.snackBar(
-        operation.deleteResult == null
-            ? context.l10n.shareMenuDeleteFailedGeneric
-            : localizedDeleteFailureMessage(context, operation.deleteResult!),
-        error: true,
-      ),
-    );
-    return;
-  }
-
-  showOwnerVideoCleanupCompletion(context, cubit, video.id);
-  await onDeleted?.call();
-  if (!context.mounted) return;
-  messenger.showSnackBar(
-    DivineSnackbarContainer.snackBar(
-      localizedOwnerVideoDeleteSuccessMessage(context, operation),
-      error: operation.cleanupStatus == OwnerVideoCleanupStatus.failed,
-    ),
-  );
+  if (succeeded) showOwnerVideoCleanupCompletion(context, cubit, video.id);
+  // Built before the callback runs: a caller may close the sheet [context]
+  // belongs to, and the localized copy cannot be read once it is unmounted.
+  final snackBar = succeeded
+      ? DivineSnackbarContainer.snackBar(
+          localizedOwnerVideoDeleteSuccessMessage(context, operation),
+          error: operation.cleanupStatus == OwnerVideoCleanupStatus.failed,
+        )
+      : DivineSnackbarContainer.snackBar(
+          operation.deleteResult == null
+              ? context.l10n.shareMenuDeleteFailedGeneric
+              : localizedDeleteFailureMessage(context, operation.deleteResult!),
+          error: true,
+        );
+  await (succeeded ? onDeleted : onFailed)?.call();
+  if (!messenger.mounted) return;
+  messenger.showSnackBar(snackBar);
 }
