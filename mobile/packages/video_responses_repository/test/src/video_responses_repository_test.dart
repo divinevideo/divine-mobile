@@ -690,10 +690,7 @@ void main() {
             ),
           ]);
 
-          final remixes = await repository().fetchRemixesOf(
-            _rootAddress,
-            limit: 20,
-          );
+          final remixes = await repository().fetchRemixesOf(_rootAddress);
 
           expect(
             remixes.map((video) => video.id),
@@ -710,7 +707,70 @@ void main() {
             equals([NIP71VideoKinds.addressableShortVideo]),
           );
           expect(filter.a, equals([_rootAddress]));
-          expect(filter.limit, equals(20));
+          expect(
+            filter.limit,
+            equals(VideoResponsesRepository.maxRemixReferencesRead),
+          );
+        },
+      );
+
+      test(
+        'finds remixes past the first 50 videos that name it otherwise',
+        () async {
+          relayAnswers([
+            for (var i = 0; i < 60; i++)
+              remix(500 + i, createdAt: 9000 + i, marker: 'mention'),
+            remix(401, createdAt: 1000),
+            remix(402, createdAt: 2000),
+          ]);
+
+          final remixes = await repository().fetchRemixesOf(_rootAddress);
+
+          expect(
+            remixes.map((video) => video.id),
+            equals([_hex(402), _hex(401)]),
+          );
+          expect(VideoResponsesRepository.maxRemixReferencesRead, equals(200));
+        },
+      );
+
+      test('shows at most [limit] remixes, the newest', () async {
+        relayAnswers([
+          for (var i = 0; i < 55; i++) remix(600 + i, createdAt: 1000 + i),
+        ]);
+
+        final remixes = await repository().fetchRemixesOf(_rootAddress);
+
+        expect(remixes, hasLength(50));
+        expect(remixes.first.id, equals(_hex(654)));
+      });
+
+      test(
+        "leaves out what the viewer's filter does, then takes the limit",
+        () async {
+          relayAnswers([
+            remix(401, createdAt: 1000),
+            remix(402, createdAt: 2000),
+            remix(403, createdAt: 3000),
+            // Not a remix: never handed to the filter.
+            remix(404, createdAt: 4000, marker: 'mention'),
+          ]);
+          final seen = <String>[];
+
+          final remixes = await repository().fetchRemixesOf(
+            _rootAddress,
+            limit: 1,
+            filter: (videos) {
+              seen.addAll(videos.map((video) => video.id));
+              return [
+                for (final video in videos)
+                  if (video.id != _hex(403)) video,
+              ];
+            },
+          );
+
+          expect(seen, unorderedEquals([_hex(401), _hex(402), _hex(403)]));
+          expect(remixes.map((video) => video.id), equals([_hex(402)]));
         },
       );
 

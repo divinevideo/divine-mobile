@@ -16,6 +16,7 @@ import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/proofmode_helpers.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
@@ -64,7 +65,8 @@ class MetadataExpandedSheet extends StatelessWidget {
   ///
   /// Creates a [VideoRepostersCubit] to fetch reposter pubkeys from the
   /// relay, and a [VideoRemixesCubit] to read the videos that use a clip of
-  /// [video]. Both are scoped to the modal and auto-closed on dismiss.
+  /// [video], through the viewer's [stickerResponsesFilterProvider] as the
+  /// sheet opens. Both are scoped to the modal and auto-closed on dismiss.
   ///
   /// Creates the [VideoContentActionsBloc] the remix button and the action row
   /// share, and an [OwnerVideoActionsCubit] when the signed-in viewer owns
@@ -80,6 +82,7 @@ class MetadataExpandedSheet extends StatelessWidget {
     final videoResponsesRepository = container.read(
       videoResponsesRepositoryProvider,
     );
+    final remixesFilter = container.read(stickerResponsesFilterProvider);
     final viewerPubkey = signedInViewerPubkey(container);
     final isOwnVideo = isVideoByViewer(video, viewerPubkey);
     final isRemixOfViewers = isRemixOfViewersVideo(video, viewerPubkey);
@@ -103,6 +106,7 @@ class MetadataExpandedSheet extends StatelessWidget {
             create: (_) => VideoRemixesCubit(
               videoResponsesRepository: videoResponsesRepository,
               addressableId: video.addressableId,
+              filter: remixesFilter,
             ),
           ),
           if (isOwnVideo)

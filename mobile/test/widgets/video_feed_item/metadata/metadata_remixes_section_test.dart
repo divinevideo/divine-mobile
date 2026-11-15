@@ -128,6 +128,50 @@ void main() {
       });
     });
 
+    group('content warnings', () {
+      testWidgets('blurs the thumbnail of a remix the viewer is warned about', (
+        tester,
+      ) async {
+        when(() => cubit.state).thenReturn(
+          VideoRemixesState(
+            remixes: [
+              _remix().copyWith(warnLabels: const ['nudity']),
+              _remix(
+                id: '3333333333333333333333333333333333333333333333333333333333333333',
+                authorName: 'Unwarned',
+              ),
+            ],
+            isLoading: false,
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject(_source(), remixes: cubit));
+
+        final rowOf = find.ancestor(
+          of: find.text('Remixer'),
+          matching: find.byType(Row),
+        );
+        final unwarnedRow = find.ancestor(
+          of: find.text('Unwarned'),
+          matching: find.byType(Row),
+        );
+        expect(
+          find.descendant(
+            of: rowOf.first,
+            matching: find.byType(ImageFiltered),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: unwarnedRow.first,
+            matching: find.byType(ImageFiltered),
+          ),
+          findsNothing,
+        );
+      });
+    });
+
     group('navigation', () {
       testWidgets('closes the sheet, then opens the tapped remix', (
         tester,

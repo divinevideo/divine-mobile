@@ -33,6 +33,7 @@ import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
+import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -83,6 +84,8 @@ class _MockRepostsRepository extends Mock implements RepostsRepository {}
 
 class _MockVideoResponsesRepository extends Mock
     implements VideoResponsesRepository {}
+
+class _MockVideoEventService extends Mock implements VideoEventService {}
 
 /// Signs in a viewer who is neither the creator nor a collaborator.
 List<Override> _thirdPartyViewerOverrides({
@@ -2920,12 +2923,33 @@ void main() {
     late _MockBookmarksRepository bookmarksRepository;
     late _MockRepostsRepository repostsRepository;
     late _MockVideoResponsesRepository videoResponsesRepository;
+    late _MockVideoEventService videoEventService;
+
+    setUpAll(() => registerFallbackValue(_makeVideo()));
 
     setUp(() {
       videoResponsesRepository = _MockVideoResponsesRepository();
       when(
-        () => videoResponsesRepository.fetchRemixesOf(any()),
+        () => videoResponsesRepository.fetchRemixesOf(
+          any(),
+          filter: any(named: 'filter'),
+        ),
       ).thenAnswer((_) async => const []);
+      // The viewer's real remixes filter runs over these two.
+      videoEventService = _MockVideoEventService();
+      when(
+        () => videoEventService.removedVideoIds,
+      ).thenAnswer((_) => const Stream.empty());
+      when(() => videoEventService.shouldHideVideo(any())).thenReturn(false);
+      when(
+        () => mockVideosRepository.applyContentPreferences(
+          any(),
+          includeFeedShape: any(named: 'includeFeedShape'),
+        ),
+      ).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.single as List<VideoEvent>,
+      );
       bookmarksRepository = _MockBookmarksRepository();
       when(
         bookmarksRepository.syncGlobalBookmarks,
@@ -2966,6 +2990,7 @@ void main() {
       videoResponsesRepositoryProvider.overrideWithValue(
         videoResponsesRepository,
       ),
+      videoEventServiceProvider.overrideWithValue(videoEventService),
       isFeatureEnabledProvider(
         FeatureFlag.debugTools,
       ).overrideWithValue(debugTools),
@@ -2973,6 +2998,22 @@ void main() {
         _creatorPubkey,
       ).overrideWith((ref) async => _makeProfile(_creatorPubkey, 'Creator')),
     ];
+
+    /// Answers the remixes read for [video] with [remixes], passed through the
+    /// viewer's filter the sheet hands the read, as the repository does.
+    void answerRemixes(VideoEvent video, List<VideoEvent> remixes) {
+      when(
+        () => videoResponsesRepository.fetchRemixesOf(
+          video.addressableId!,
+          filter: any(named: 'filter'),
+        ),
+      ).thenAnswer((invocation) async {
+        final filter =
+            invocation.namedArguments[#filter]
+                as List<VideoEvent> Function(List<VideoEvent>);
+        return filter(remixes);
+      });
+    }
 
     Future<void> openSheet(
       WidgetTester tester, {
@@ -3113,9 +3154,7 @@ void main() {
           timestamp: DateTime.fromMillisecondsSinceEpoch(1700000100 * 1000),
           authorName: 'Remixer',
         );
-        when(
-          () => videoResponsesRepository.fetchRemixesOf(video.addressableId!),
-        ).thenAnswer((_) async => [remix]);
+        answerRemixes(video, [remix]);
 
         await openSheet(tester, video: video, viewerPubkey: _creatorPubkey);
 
@@ -3132,6 +3171,62 @@ void main() {
           topOf(MetadataRemixesSection),
           lessThan(topOf(MetadataRepostedBySection)),
         );
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'leaves out blocked and deleted remixes and blurs a warned one',
+      (tester) async {
+        final video = _makeVideo(title: 'Source', addressableDTag: 'source-d');
+        VideoEvent remix(String digit, String name) => VideoEvent(
+          id: digit * 64,
+          pubkey: _thirdPartyViewer,
+          createdAt: 1700000100,
+          content: '',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1700000100 * 1000),
+          authorName: name,
+        );
+        final blocked = remix('5', 'Blocked remixer');
+        final deleted = remix('6', 'Deleted remix');
+        final warned = remix('7', 'Warned remix');
+        final plain = remix('8', 'Plain remix');
+        answerRemixes(video, [blocked, deleted, warned, plain]);
+        // Blocks and deletions both hide a video for the viewer.
+        when(
+          () => videoEventService.shouldHideVideo(
+            any(that: isIn([blocked, deleted])),
+          ),
+        ).thenReturn(true);
+        when(
+          () => mockVideosRepository.applyContentPreferences(
+            any(),
+            includeFeedShape: false,
+          ),
+        ).thenAnswer(
+          (invocation) =>
+              (invocation.positionalArguments.single as List<VideoEvent>)
+                  .map(
+                    (remix) => remix == warned
+                        ? remix.copyWith(warnLabels: const ['nudity'])
+                        : remix,
+                  )
+                  .toList(),
+        );
+
+        await openSheet(tester, video: video, viewerPubkey: _creatorPubkey);
+
+        expect(find.text('Blocked remixer'), findsNothing);
+        expect(find.text('Deleted remix'), findsNothing);
+        expect(find.text('Plain remix'), findsOneWidget);
+        expect(find.text('Warned remix'), findsOneWidget);
+        Finder blurIn(String name) => find.descendant(
+          of: find
+              .ancestor(of: find.text(name), matching: find.byType(Row))
+              .first,
+          matching: find.byType(ImageFiltered),
+        );
+        expect(blurIn('Warned remix'), findsOneWidget);
+        expect(blurIn('Plain remix'), findsNothing);
       },
     );
 

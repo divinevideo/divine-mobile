@@ -130,6 +130,10 @@ class VideoResponsesRepository {
   /// The most responses one read from the relays asks for.
   static const int maxResponsesRead = 500;
 
+  /// The most videos naming a video in an `a` tag that one read for its
+  /// remixes asks for.
+  static const int maxRemixReferencesRead = 200;
+
   /// The marker on the `a` tag an Add yours answer names its chain with.
   static const String _mentionMarker = 'mention';
 
@@ -228,22 +232,30 @@ class VideoResponsesRepository {
 
   /// The videos that use a clip of the video at [addressableId]: those whose
   /// `a` tag marked `clip-source` names it. The newest version of each, the
-  /// newest first, from at most [limit] read.
+  /// newest first, at most [limit] of them (50 unless given).
   ///
-  /// A video naming it in an `a` tag for anything else, such as being
-  /// inspired by it, answering its Add yours or replying to it, is left out.
+  /// The relays are asked for up to [maxRemixReferencesRead] (200) videos
+  /// naming it in any `a` tag, since the clip-source marker is checked here:
+  /// a video naming it for anything else, such as being inspired by it,
+  /// answering its Add yours or replying to it, is left out, and a read sized
+  /// to [limit] would let those crowd out its remixes.
+  ///
+  /// [filter], the viewer's, runs on the remixes before [limit] is taken, so
+  /// one it leaves out does not take a place.
+  ///
   /// A read that fails or finds nothing gives an empty list, as does an
   /// [addressableId] that is not an address.
   Future<List<VideoEvent>> fetchRemixesOf(
     String addressableId, {
     int limit = 50,
+    List<VideoEvent> Function(List<VideoEvent> remixes)? filter,
   }) async {
     if (!RepliesCuration.isAddress(addressableId)) return const [];
     final read = await _nostrClient.readEvents([
       Filter(
         kinds: [NIP71VideoKinds.addressableShortVideo],
         a: [addressableId],
-        limit: limit,
+        limit: maxRemixReferencesRead,
       ),
     ]);
     final newestByAddress = <String, VideoEvent>{};
@@ -265,8 +277,10 @@ class VideoResponsesRepository {
         newestByAddress[key] = remix;
       }
     }
-    return newestByAddress.values.toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final remixes = newestByAddress.values.toList();
+    return (List.of(
+      filter?.call(remixes) ?? remixes,
+    )..sort((a, b) => b.createdAt.compareTo(a.createdAt))).take(limit).toList();
   }
 
   /// Whether the video at [chainRoot] starts an Add yours chain with

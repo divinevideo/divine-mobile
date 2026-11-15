@@ -24,6 +24,8 @@ VideoEvent _remix(String id) => VideoEvent(
   timestamp: DateTime.fromMillisecondsSinceEpoch(1000000),
 );
 
+List<VideoEvent> _keepAll(List<VideoEvent> remixes) => remixes;
+
 void main() {
   group(VideoRemixesCubit, () {
     late _MockVideoResponsesRepository repository;
@@ -36,12 +38,13 @@ void main() {
       'emits the remixes the repository reads',
       setUp: () {
         when(
-          () => repository.fetchRemixesOf(_address),
+          () => repository.fetchRemixesOf(_address, filter: _keepAll),
         ).thenAnswer((_) async => [_remix('a'), _remix('b')]);
       },
       build: () => VideoRemixesCubit(
         videoResponsesRepository: repository,
         addressableId: _address,
+        filter: _keepAll,
       ),
       expect: () => [
         VideoRemixesState(
@@ -55,34 +58,41 @@ void main() {
       final cubit = VideoRemixesCubit(
         videoResponsesRepository: repository,
         addressableId: null,
+        filter: _keepAll,
       );
       addTearDown(cubit.close);
 
       expect(cubit.state, equals(const VideoRemixesState(isLoading: false)));
-      verifyNever(() => repository.fetchRemixesOf(any()));
+      verifyNever(
+        () => repository.fetchRemixesOf(any(), filter: any(named: 'filter')),
+      );
     });
 
     test('reads nothing for an empty address', () {
       final cubit = VideoRemixesCubit(
         videoResponsesRepository: repository,
         addressableId: '',
+        filter: _keepAll,
       );
       addTearDown(cubit.close);
 
       expect(cubit.state, equals(const VideoRemixesState(isLoading: false)));
-      verifyNever(() => repository.fetchRemixesOf(any()));
+      verifyNever(
+        () => repository.fetchRemixesOf(any(), filter: any(named: 'filter')),
+      );
     });
 
     blocTest<VideoRemixesCubit, VideoRemixesState>(
       'emits no remixes and reports the error when the read throws',
       setUp: () {
         when(
-          () => repository.fetchRemixesOf(_address),
+          () => repository.fetchRemixesOf(_address, filter: _keepAll),
         ).thenAnswer((_) async => throw Exception('relay down'));
       },
       build: () => VideoRemixesCubit(
         videoResponsesRepository: repository,
         addressableId: _address,
+        filter: _keepAll,
       ),
       expect: () => const [VideoRemixesState(isLoading: false)],
       errors: () => [isA<Exception>()],
@@ -91,11 +101,12 @@ void main() {
     test('does not emit when closed before the read finishes', () async {
       final read = Completer<List<VideoEvent>>();
       when(
-        () => repository.fetchRemixesOf(_address),
+        () => repository.fetchRemixesOf(_address, filter: _keepAll),
       ).thenAnswer((_) => read.future);
       final cubit = VideoRemixesCubit(
         videoResponsesRepository: repository,
         addressableId: _address,
+        filter: _keepAll,
       );
       final states = <VideoRemixesState>[];
       final subscription = cubit.stream.listen(states.add);
