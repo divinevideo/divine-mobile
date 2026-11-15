@@ -1171,6 +1171,85 @@ void main() {
         expect(found?.id, 'classic_vine_vine-123_2');
       });
 
+      test(
+        'returns the newest import whatever order they were saved in',
+        () async {
+          await service.saveClip(
+            clipOf(id: 'classic_vine_vine-123_b', recordedAt: DateTime(2026)),
+          );
+          await service.saveClip(
+            clipOf(id: 'classic_vine_vine-123_a', recordedAt: DateTime(2025)),
+          );
+
+          final found = await service.findImportedClipOf(vine);
+
+          expect(found?.id, 'classic_vine_vine-123_b');
+        },
+      );
+
+      test('ignores a merged clip that kept the import flag', () async {
+        await service.saveClip(
+          clipOf(id: 'merged_2', recordedAt: DateTime(2026)),
+        );
+
+        expect(await service.findImportedClipOf(vine), isNull);
+      });
+
+      test('ignores the halves of a split import in the autosave', () async {
+        final draftService = DraftStorageService(
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        );
+        // The editor's split copies the import, keeping its flag and credit.
+        final import = clipOf(
+          id: 'classic_vine_vine-123_1',
+          recordedAt: DateTime(2026),
+        );
+        await draftService.saveDraft(
+          DivineVideoDraft.create(
+            id: VideoEditorConstants.autoSaveId,
+            clips: [
+              import.copyWith(
+                id: '1767225600000000_start',
+                duration: const Duration(seconds: 3),
+              ),
+              import.copyWith(
+                id: '1767225600000000_end',
+                trimStart: const Duration(seconds: 3),
+                minTrimStart: const Duration(seconds: 3),
+              ),
+            ],
+            title: '',
+            description: '',
+            hashtags: const {},
+            selectedApproach: '',
+          ),
+        );
+        expect(
+          (await service.getAllClips()).map((c) => c.id),
+          containsAll(['1767225600000000_start', '1767225600000000_end']),
+        );
+
+        expect(await service.findImportedClipOf(vine), isNull);
+      });
+
+      test(
+        'ignores a trimmed copy of an import saved to the library',
+        () async {
+          await service.saveClip(
+            clipOf(
+              id: '1767225600000000_end',
+              recordedAt: DateTime(2026),
+            ).copyWith(
+              trimStart: const Duration(seconds: 3),
+              minTrimStart: const Duration(seconds: 3),
+            ),
+          );
+
+          expect(await service.findImportedClipOf(vine), isNull);
+        },
+      );
+
       test('ignores a derived clip carrying the same credit', () async {
         await service.saveClip(
           clipOf(

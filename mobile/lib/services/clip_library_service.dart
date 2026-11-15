@@ -257,21 +257,44 @@ class ClipLibraryService {
   ///
   /// An import is matched by its first credit naming [video]'s event id or
   /// its addressable coordinate, so an import of an earlier edit of the same
-  /// post counts too. Clips the editor rendered from an import carry its
-  /// credit as well but are not the import (see
-  /// [DivineVideoClip.isImportedClip]).
+  /// post counts too.
+  ///
+  /// Only the import itself qualifies: a library row holding the footage
+  /// whole. Clips the editor rendered from an import carry its credit as well
+  /// but are not the import (see [DivineVideoClip.isImportedClip]), and the
+  /// halves of a split keep its flag and credit while holding part of it. Those
+  /// live in the autosave and other drafts, so draft rows are not read; a
+  /// trimmed copy that reached the library is skipped too.
   Future<DivineVideoClip?> findImportedClipOf(VideoEvent video) async {
     final addressableId = video.addressableId;
-    for (final clip in await getAllClips()) {
-      if (!clip.isImportedClip) continue;
+    final rows = await _clipsDao.getLibraryClips(ownerPubkey: ownerPubkey);
+    final documentsPath = await getDocumentsPath();
+    final matches = <DivineVideoClip>[];
+    for (final row in rows) {
+      final clip = _tryParseClipRow(row, documentsPath, label: 'clip');
+      // A copy the recorder's delete detached from a draft has no draft id
+      // but keeps its composite row id; only [saveClip] writes the plain id.
+      if (clip == null || row.id != clip.id) continue;
+      if (!clip.isImportedClip || !_holdsWholeFootage(clip)) continue;
       if (clip.sourceEventId == video.id ||
           (addressableId != null &&
               clip.sourceAddressableId == addressableId)) {
-        return clip;
+        matches.add(clip);
       }
     }
-    return null;
+    if (matches.isEmpty) return null;
+    return matches.reduce(
+      (newest, clip) =>
+          clip.recordedAt.isAfter(newest.recordedAt) ? clip : newest,
+    );
   }
+
+  /// Whether [clip] plays its file from the start to the end, as an import
+  /// does until the editor trims or splits it.
+  static bool _holdsWholeFootage(DivineVideoClip clip) =>
+      clip.trimStart == Duration.zero &&
+      clip.trimEnd == Duration.zero &&
+      clip.minTrimStart == Duration.zero;
 
   /// Deserialize a single clip [row], returning `null` (and logging) when the
   /// row is corrupt so one bad clip can't abort the whole list load.
