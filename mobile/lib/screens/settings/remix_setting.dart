@@ -95,8 +95,11 @@ class RemixSettingView extends StatelessWidget {
               : null,
         ),
         RemixSettingsLoadStatus.failure => const _RemixSettingLoadFailure(),
-        RemixSettingsLoadStatus.initial ||
         RemixSettingsLoadStatus.loading => const _RemixSettingLoading(),
+        // No account or profile repository yet, so no read has started. A
+        // spinner here would turn forever; the row appears once the provider
+        // re-keys the cubit with something to read.
+        RemixSettingsLoadStatus.initial => const SizedBox.shrink(),
       },
     );
   }

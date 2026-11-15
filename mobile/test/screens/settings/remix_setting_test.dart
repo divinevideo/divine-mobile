@@ -160,6 +160,37 @@ void main() {
         expect(remixSwitch(tester).onChanged, isNotNull);
       });
 
+      testWidgets('shows nothing that animates when no account can be read', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: const Scaffold(body: RemixSetting()),
+            mockAuthService: createMockAuthService(
+              authState: AuthState.authenticated,
+            ),
+            mockProfileRepository: repository,
+            additionalOverrides: [
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.authenticated,
+              ),
+            ],
+          ),
+        );
+        // A pending row must not spin forever: with no account to read,
+        // the load never starts.
+        await tester.pumpAndSettle();
+
+        expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+        expect(find.byType(DivineSwitch), findsNothing);
+        verifyNever(
+          () => repository.readFreshProfile(
+            pubkey: any(named: 'pubkey'),
+            requireRawKind0: any(named: 'requireRawKind0'),
+          ),
+        );
+      });
+
       testWidgets('a failed read hides the switch and offers a retry', (
         tester,
       ) async {
