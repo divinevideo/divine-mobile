@@ -65,7 +65,18 @@ void main() {
       ).thenAnswer((_) => answer());
     }
 
-    Future<void> pumpSetting(WidgetTester tester) async {
+    void stubRead(Future<FreshProfileRead> Function() answer) {
+      when(
+        () => repository.readFreshProfile(
+          pubkey: _pubkey,
+          requireRawKind0: true,
+        ),
+      ).thenAnswer((_) => answer());
+    }
+
+    /// [settle] is false while a read is pending: the spinner animates
+    /// forever, so `pumpAndSettle` would never return.
+    Future<void> pumpSetting(WidgetTester tester, {bool settle = true}) async {
       await tester.pumpWidget(
         testMaterialApp(
           home: const Scaffold(body: RemixSetting()),
@@ -81,7 +92,11 @@ void main() {
           ],
         ),
       );
-      await tester.pumpAndSettle();
+      if (settle) {
+        await tester.pumpAndSettle();
+      } else {
+        await tester.pump();
+      }
     }
 
     DivineSwitch remixSwitch(WidgetTester tester) =>
@@ -128,25 +143,64 @@ void main() {
         expect(remixSwitch(tester).onChanged, isNotNull);
       });
 
-      testWidgets('stays disabled until the profile is read', (tester) async {
+      testWidgets('shows a spinner, not the switch, until the profile is '
+          'read', (tester) async {
         final read = Completer<FreshProfileRead>();
-        when(
-          () => repository.readFreshProfile(
-            pubkey: _pubkey,
-            requireRawKind0: true,
-          ),
-        ).thenAnswer((_) => read.future);
+        stubRead(() => read.future);
+
+        await pumpSetting(tester, settle: false);
+
+        expect(find.byType(DivineSwitch), findsNothing);
+        expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+        read.complete(
+          (profile: _profile(allowVideoReuse: false), conclusive: true),
+        );
+        await tester.pumpAndSettle();
+        expect(remixSwitch(tester).value, isFalse);
+        expect(remixSwitch(tester).onChanged, isNotNull);
+      });
+
+      testWidgets('a failed read hides the switch and offers a retry', (
+        tester,
+      ) async {
+        stubRead(() async => (profile: null, conclusive: false));
 
         await pumpSetting(tester);
 
-        expect(remixSwitch(tester).onChanged, isNull);
-        read.complete((profile: _profile(), conclusive: true));
-        await tester.pumpAndSettle();
-        expect(remixSwitch(tester).onChanged, isNotNull);
+        expect(find.byType(DivineSwitch), findsNothing);
+        expect(find.text(l10n.commonSomethingWentWrong), findsOneWidget);
+        expect(
+          find.widgetWithText(DivineButton, l10n.commonRetry),
+          findsOneWidget,
+        );
       });
     });
 
     group('interactions', () {
+      testWidgets('retry reads the profile again and shows the switch', (
+        tester,
+      ) async {
+        final reads = <FreshProfileRead>[
+          (profile: null, conclusive: false),
+          (profile: _profile(allowVideoReuse: false), conclusive: true),
+        ];
+        stubRead(() async => reads.removeAt(0));
+        await pumpSetting(tester);
+        expect(find.byType(DivineSwitch), findsNothing);
+
+        await tester.tap(find.widgetWithText(DivineButton, l10n.commonRetry));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => repository.readFreshProfile(
+            pubkey: _pubkey,
+            requireRawKind0: true,
+          ),
+        ).called(2);
+        expect(remixSwitch(tester).value, isFalse);
+        expect(find.text(l10n.commonSomethingWentWrong), findsNothing);
+      });
+
       testWidgets('turning it off publishes the block', (tester) async {
         stubSave(() async => _profile(allowVideoReuse: false));
         await pumpSetting(tester);

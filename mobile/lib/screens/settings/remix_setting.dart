@@ -51,7 +51,8 @@ class RemixSetting extends ConsumerWidget {
   }
 }
 
-/// View: the switch, plus the snackbar when a save fails.
+/// View: the switch once the stored answer is read, a retry when the read
+/// fails, plus the snackbar when a save fails.
 class RemixSettingView extends StatelessWidget {
   @visibleForTesting
   const RemixSettingView({super.key});
@@ -78,17 +79,70 @@ class RemixSettingView extends StatelessWidget {
             ),
           );
       },
-      child: DivineSwitchTile(
-        leadingIcon: DivineIconName.filmSlate,
-        title: context.l10n.remixSettingAllowTitle,
-        subtitle: context.l10n.remixSettingAllowSubtitle,
-        value: state.allowVideoReuse,
-        // Disabled until the stored answer is read, and while a publish is in
-        // flight, so a second flip cannot land on an unconfirmed one.
-        onChanged: state.canEdit
-            ? (value) =>
-                  context.read<RemixSettingsCubit>().setAllowVideoReuse(value)
-            : null,
+      // The switch defaults to on, so showing it before the stored answer is
+      // read would tell a creator who blocked remixing that it is allowed.
+      child: switch (state.loadStatus) {
+        RemixSettingsLoadStatus.ready => DivineSwitchTile(
+          leadingIcon: DivineIconName.filmSlate,
+          title: context.l10n.remixSettingAllowTitle,
+          subtitle: context.l10n.remixSettingAllowSubtitle,
+          value: state.allowVideoReuse,
+          // Disabled while a publish is in flight, so a second flip cannot
+          // land on an unconfirmed one.
+          onChanged: state.canEdit
+              ? (value) =>
+                    context.read<RemixSettingsCubit>().setAllowVideoReuse(value)
+              : null,
+        ),
+        RemixSettingsLoadStatus.failure => const _RemixSettingLoadFailure(),
+        RemixSettingsLoadStatus.initial ||
+        RemixSettingsLoadStatus.loading => const _RemixSettingLoading(),
+      },
+    );
+  }
+}
+
+class _RemixSettingLoading extends StatelessWidget {
+  const _RemixSettingLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: DivineCircularProgressIndicator(
+          semanticsLabel: context.l10n.commonLoading,
+        ),
+      ),
+    );
+  }
+}
+
+class _RemixSettingLoadFailure extends StatelessWidget {
+  const _RemixSettingLoadFailure();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        spacing: 8,
+        children: [
+          Text(
+            context.l10n.remixSettingAllowTitle,
+            style: VineTheme.titleMediumFont(color: colors.primaryText),
+          ),
+          Text(
+            context.l10n.commonSomethingWentWrong,
+            style: VineTheme.bodyMediumFont(color: colors.mutedText),
+          ),
+          DivineButton(
+            label: context.l10n.commonRetry,
+            type: DivineButtonType.secondary,
+            onPressed: () => context.read<RemixSettingsCubit>().load(),
+          ),
+        ],
       ),
     );
   }

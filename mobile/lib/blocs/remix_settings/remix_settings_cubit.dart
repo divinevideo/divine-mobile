@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/blocs/remix_settings/remix_settings_reportable_sites.dart';
 import 'package:openvine/blocs/remix_settings/remix_settings_state.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -36,8 +37,8 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
   final String? _pubkey;
   final RemixProfileSaved _onProfileSaved;
 
-  /// Reads the account's raw kind 0. The switch stays disabled until this
-  /// succeeds, so it never offers a flip away from a value it has not shown.
+  /// Reads the account's raw kind 0. The switch is not shown until this
+  /// succeeds, so it never offers a flip away from a value it has not read.
   Future<void> load() async {
     final repository = _repository;
     final pubkey = _pubkey;
@@ -61,6 +62,14 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
         return;
       }
       if (profile == null || profile.pubkey != pubkey) {
+        final reason = profile == null
+            ? 'the read was inconclusive'
+            : 'the answer belonged to another account';
+        Log.warning(
+          'Could not read the kind 0 for ${pubkeyForLogs(pubkey)}: $reason',
+          name: 'RemixSettingsCubit',
+          category: LogCategory.system,
+        );
         emitIfOpen(
           state.copyWith(loadStatus: RemixSettingsLoadStatus.failure),
         );
@@ -75,6 +84,15 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
     } on Exception catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
+      emit(state.copyWith(loadStatus: RemixSettingsLoadStatus.failure));
+    } catch (error, stackTrace) {
+      // Anything else is a defect; ending in failure keeps retry possible,
+      // since the guard above refuses to load while still `loading`.
+      if (isClosed) return;
+      addError(
+        Reportable(error, context: RemixSettingsReportableSites.load),
+        stackTrace,
+      );
       emit(state.copyWith(loadStatus: RemixSettingsLoadStatus.failure));
     }
   }
@@ -137,7 +155,10 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
       _revert(
         previous,
         RemixSettingsSaveFailure.publishFailed,
-        Reportable(error, context: 'setAllowVideoReuse'),
+        Reportable(
+          error,
+          context: RemixSettingsReportableSites.setAllowVideoReuse,
+        ),
         stackTrace,
       );
     }

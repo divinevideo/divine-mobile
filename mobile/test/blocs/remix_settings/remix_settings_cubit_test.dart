@@ -9,6 +9,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/remix_settings/remix_settings_cubit.dart';
 import 'package:openvine/blocs/remix_settings/remix_settings_state.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
@@ -188,6 +189,41 @@ void main() {
         expect: () => [
           const RemixSettingsState(loadStatus: RemixSettingsLoadStatus.loading),
           const RemixSettingsState(loadStatus: RemixSettingsLoadStatus.failure),
+        ],
+      );
+
+      blocTest<RemixSettingsCubit, RemixSettingsState>(
+        'fails, reports and can retry when the read throws an Error',
+        setUp: () {
+          var reads = 0;
+          stubReadResult(() async {
+            if (reads++ == 0) throw StateError('broken read');
+            return (
+              profile: _profile(allowVideoReuse: false),
+              conclusive: true,
+            );
+          });
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.load();
+        },
+        errors: () => [
+          isA<Reportable<Object>>().having(
+            (r) => r.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        ],
+        expect: () => const [
+          RemixSettingsState(loadStatus: RemixSettingsLoadStatus.loading),
+          RemixSettingsState(loadStatus: RemixSettingsLoadStatus.failure),
+          RemixSettingsState(loadStatus: RemixSettingsLoadStatus.loading),
+          RemixSettingsState(
+            loadStatus: RemixSettingsLoadStatus.ready,
+            allowVideoReuse: false,
+          ),
         ],
       );
 
