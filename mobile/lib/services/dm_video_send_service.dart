@@ -76,8 +76,7 @@ class DmVideoSendService {
   }) async {
     onPhase?.call(DmVideoSendPhase.encrypting);
     final enc = await _encryption.encryptFile(videoFile);
-    // Read while the ciphertext uploads, which takes far longer. Not before
-    // encrypting: that holds this isolate and would use up the read's limit.
+    // Read the optional preview alongside the upload after encryption succeeds.
     final preview = blurhash == null && dimensions == null
         ? _readPreview(videoFile)
         : Future.value((blurhash: blurhash, dimensions: dimensions));

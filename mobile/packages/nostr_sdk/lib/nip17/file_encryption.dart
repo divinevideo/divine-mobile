@@ -53,11 +53,9 @@ class FileEncryption {
       nonce: nonce,
     );
 
-    // Combine ciphertext + MAC (GCM tag) into a single blob for upload.
-    // The MAC is appended by the cryptography package in secretBox.
-    final ciphertextWithMac = Uint8List.fromList(
-      secretBox.cipherText + secretBox.mac.bytes,
-    );
+    // ciphertext || 16-byte GCM tag in one preallocated buffer; avoid
+    // `cipherText + mac.bytes`, which boxes every byte into a List<int>.
+    final ciphertextWithMac = secretBox.concatenation(nonce: false);
 
     final keyBytes = await secretKey.extractBytes();
 
