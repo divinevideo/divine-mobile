@@ -9,9 +9,19 @@ import 'package:flutter_riverpod/legacy.dart' show StateProvider;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show NIP17SendResult;
+import 'package:nostr_client/nostr_client.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/services/dm_video_send_cancellation.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {}
+
+class _TestSession extends NostrSession {
+  @override
+  NostrSessionReadiness build() => const NostrSessionReadiness.signedOut();
+}
 
 class _MockDmVideoSendService extends Mock implements DmVideoSendService {}
 
@@ -30,11 +40,23 @@ void main() {
   final second = 'b' * 64;
 
   late int accountIdBuilds;
+  final client = _MockNostrClient();
+
+  void ready(ProviderContainer container, String pubkey) {
+    when(() => client.hasKeys).thenReturn(true);
+    when(() => client.publicKey).thenReturn(pubkey);
+    container
+        .read(nostrSessionProvider.notifier)
+        .update(
+          NostrSessionReadiness.nostrReady(pubkey: pubkey, client: client),
+        );
+  }
 
   ProviderContainer buildContainer() {
     accountIdBuilds = 0;
     final container = ProviderContainer(
       overrides: [
+        nostrSessionProvider.overrideWith(_TestSession.new),
         // Mirrors the real provider: rebuilt on every auth state change,
         // returning the signed-in pubkey.
         currentAccountIdProvider.overrideWith((ref) {
@@ -50,6 +72,7 @@ void main() {
     );
     addTearDown(container.dispose);
     container.read(_signedIn.notifier).state = first;
+    ready(container, first);
     return container;
   }
 
@@ -58,7 +81,57 @@ void main() {
       registerFallbackValue(File('/tmp/fallback.mp4'));
       registerFallbackValue((DmVideoSendPhase _) {});
       registerFallbackValue((double _) {});
+      registerFallbackValue(DmVideoSendCancellation()..finish());
     });
+
+    test(
+      'waits for the originating signer before reading the send service',
+      () async {
+        final container = buildContainer();
+        container
+            .read(nostrSessionProvider.notifier)
+            .update(
+              NostrSessionReadiness.identityKnown(pubkey: first),
+            );
+        final outbox = container.read(videoDmOutboxProvider);
+        outbox.sendVideo(
+          conversationId: 'c',
+          recipientPubkey: second,
+          file: File('/v/a.mp4'),
+        );
+        await pumpEventQueue();
+        expect(container.exists(dmVideoSendServiceProvider), isFalse);
+        container.read(_repositoryGeneration.notifier).state++;
+        final current = container.read(
+          dmVideoSendServiceProvider,
+        ) as _MockDmVideoSendService;
+        when(
+          () => current.sendVideo(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            videoFile: any(named: 'videoFile'),
+            mimeType: any(named: 'mimeType'),
+            extraTags: any(named: 'extraTags'),
+            onPhase: any(named: 'onPhase'),
+            onUploadProgress: any(named: 'onUploadProgress'),
+            cancellation: any(named: 'cancellation'),
+          ),
+        ).thenAnswer((_) => Completer<NIP17SendResult>().future);
+        ready(container, first);
+        await pumpEventQueue();
+        expect(container.read(videoDmOutboxProvider), same(outbox));
+        verify(
+          () => current.sendVideo(
+            recipientPubkey: second,
+            videoFile: any(named: 'videoFile'),
+            mimeType: any(named: 'mimeType'),
+            extraTags: any(named: 'extraTags'),
+            onPhase: any(named: 'onPhase'),
+            onUploadProgress: any(named: 'onUploadProgress'),
+            cancellation: any(named: 'cancellation'),
+          ),
+        ).called(1);
+      },
+    );
 
     test('keeps the same outbox when the DM repository rebuilds', () {
       final container = buildContainer();
@@ -88,7 +161,7 @@ void main() {
     });
 
     test('sends through the send service that is current when the send '
-        'starts', () {
+        'starts', () async {
       final container = buildContainer();
       final outbox = container.read(videoDmOutboxProvider);
       container.read(_repositoryGeneration.notifier).state++;
@@ -102,6 +175,7 @@ void main() {
           extraTags: any(named: 'extraTags'),
           onPhase: any(named: 'onPhase'),
           onUploadProgress: any(named: 'onUploadProgress'),
+          cancellation: any(named: 'cancellation'),
         ),
       ).thenAnswer((_) => Completer<NIP17SendResult>().future);
 
@@ -111,6 +185,7 @@ void main() {
         file: File('/v/a.mp4'),
       );
 
+      await pumpEventQueue();
       verify(
         () => current.sendVideo(
           recipientPubkey: second,
@@ -119,6 +194,7 @@ void main() {
           extraTags: any(named: 'extraTags'),
           onPhase: any(named: 'onPhase'),
           onUploadProgress: any(named: 'onUploadProgress'),
+          cancellation: any(named: 'cancellation'),
         ),
       ).called(1);
     });
@@ -168,6 +244,7 @@ void main() {
             extraTags: any(named: 'extraTags'),
             onPhase: any(named: 'onPhase'),
             onUploadProgress: any(named: 'onUploadProgress'),
+            cancellation: any(named: 'cancellation'),
           ),
         );
       },

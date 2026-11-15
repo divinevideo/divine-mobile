@@ -50,6 +50,7 @@ import 'package:openvine/services/dead_media_feed_guard.dart';
 import 'package:openvine/services/dm_video_blur_preference_service.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_preview_memory.dart';
+import 'package:openvine/services/dm_video_send_cancellation.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/event_api_client.dart';
@@ -505,9 +506,37 @@ final dmVideoSendServiceProvider = Provider<DmVideoSendService>((ref) {
 /// send service.
 final videoDmOutboxProvider = Provider<VideoDmOutbox>((ref) {
   final accountId = ref.watch(currentAccountIdProvider);
+  final readinessChanges = StreamController<NostrSessionReadiness>.broadcast(
+    sync: true,
+  );
+  bool ownsSession() =>
+      accountId != null && ref.read(currentAccountIdProvider) == accountId;
+  Future<void> waitUntilReady(DmVideoSendCancellation attempt) async {
+    final ready = Completer<void>();
+    void check(NostrSessionReadiness session) {
+      if (!ownsSession() ||
+          session.phase == NostrSessionPhase.signedOut ||
+          session.phase == NostrSessionPhase.tearingDown ||
+          session.pubkey != accountId) {
+        attempt.cancel('originating session ended');
+      } else if (session.isReadyForActiveClient && !ready.isCompleted) {
+        ready.complete();
+      }
+    }
+
+    final subscription = readinessChanges.stream.listen(check);
+    try {
+      check(ref.read(nostrSessionProvider));
+      await attempt.waitFor(ready.future);
+    } finally {
+      await subscription.cancel();
+    }
+  }
+
   final outbox = VideoDmOutbox(
     sendService: () => ref.read(dmVideoSendServiceProvider),
-    isAccountCurrent: () => ref.read(currentAccountIdProvider) == accountId,
+    isAccountCurrent: ownsSession,
+    waitUntilReady: waitUntilReady,
     clipVerifier: () => ref.read(clipProvenanceVerifierProvider),
     signOwnRecordings: NativeProofModeService.signOwnRecordings,
     isArchivedVine: (path) async =>
@@ -518,7 +547,18 @@ final videoDmOutboxProvider = Provider<VideoDmOutbox>((ref) {
             ) !=
         null,
   );
-  ref.onDispose(outbox.dispose);
+  ref.listen<NostrSessionReadiness>(nostrSessionProvider, (_, session) {
+    readinessChanges.add(session);
+    if (session.phase == NostrSessionPhase.signedOut ||
+        session.phase == NostrSessionPhase.tearingDown ||
+        session.pubkey != accountId) {
+      outbox.cancelPendingSends();
+    }
+  });
+  ref.onDispose(() {
+    outbox.dispose();
+    unawaited(readinessChanges.close());
+  });
   return outbox;
 });
 
