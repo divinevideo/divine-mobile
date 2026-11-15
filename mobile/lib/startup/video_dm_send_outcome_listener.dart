@@ -188,7 +188,12 @@ class _VideoDmSendOutcomeListenerState
       ),
     };
 
-    final message = l10n.dmVideoOutcomeInChat(chatName, resultMessage);
+    // The name is the peer's own text: isolate it so its bidi controls cannot
+    // reorder the result that follows it.
+    final message = l10n.dmVideoOutcomeInChat(
+      '\u2068$chatName\u2069',
+      resultMessage,
+    );
     if (!_isVisible(context, outcome.conversationId)) {
       messenger.showSnackBar(
         DivineSnackbarContainer.snackBar(message, error: isError),

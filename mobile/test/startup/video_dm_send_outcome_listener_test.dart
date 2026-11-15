@@ -55,6 +55,11 @@ void main() {
 
   tearDown(() => outbox.controller.close());
 
+  /// The text shown for [outcome] in [chat], whose name the listener isolates
+  /// from the surrounding bidi context.
+  String inChat(String chat, String outcome) =>
+      l10n.dmVideoOutcomeInChat('\u2068$chat\u2069', outcome);
+
   Future<void> pumpApp(
     WidgetTester tester,
     StateProvider<VideoDmOutbox> p, {
@@ -112,7 +117,7 @@ void main() {
         await tester.pump();
 
         expect(
-          find.text(l10n.dmVideoOutcomeInChat('Test chat', entry.value.$2())),
+          find.text(inChat('Test chat', entry.value.$2())),
           findsOneWidget,
         );
       });
@@ -131,7 +136,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump();
-      final outcome = l10n.dmVideoOutcomeInChat(
+      final outcome = inChat(
         'Test chat',
         l10n.dmVideoSendFailed,
       );
@@ -177,7 +182,7 @@ void main() {
       expect(find.byType(SnackBar), findsNothing);
       expect(
         tester.takeAnnouncements().single.message,
-        l10n.dmVideoOutcomeInChat('Test chat', l10n.dmVideoSendFailed),
+        inChat('Test chat', l10n.dmVideoSendFailed),
       );
       // A different chat still reports the result while this one is visible.
       outbox.controller.add(
@@ -186,7 +191,7 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(
-        find.text(l10n.dmVideoOutcomeInChat('Test chat', l10n.dmVideoSent)),
+        find.text(inChat('Test chat', l10n.dmVideoSent)),
         findsOneWidget,
       );
     });
@@ -201,7 +206,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.text(
-          l10n.dmVideoOutcomeInChat('Test chat', l10n.dmVideoSendFailed),
+          inChat('Test chat', l10n.dmVideoSendFailed),
         ),
         findsOneWidget,
       );
@@ -211,7 +216,7 @@ void main() {
       messenger.removeCurrentSnackBar();
       await tester.pumpAndSettle();
       expect(
-        find.text(l10n.dmVideoOutcomeInChat('Test chat', l10n.dmVideoSent)),
+        find.text(inChat('Test chat', l10n.dmVideoSent)),
         findsOneWidget,
       );
     });
@@ -256,7 +261,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           find.text(
-            l10n.dmVideoOutcomeInChat('Camera friend', l10n.dmVideoSent),
+            inChat('Camera friend', l10n.dmVideoSent),
           ),
           findsOneWidget,
         );
@@ -268,7 +273,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           find.text(
-            l10n.dmVideoOutcomeInChat(
+            inChat(
               l10n.profileDeletedAccountName,
               l10n.dmVideoSendFailed,
             ),
@@ -296,7 +301,7 @@ void main() {
 
       expect(
         find.text(
-          l10n.dmVideoOutcomeInChat(
+          inChat(
             UserProfile.defaultDisplayNameFor('1' * 64),
             l10n.dmVideoSendFailed,
           ),
@@ -337,6 +342,20 @@ void main() {
         expect(tester.takeAnnouncements(), isEmpty);
       },
     );
+
+    testWidgets('isolates bidi controls in the chat name', (tester) async {
+      const name = 'evil\u202Ename';
+      final provider = StateProvider<VideoDmOutbox>((ref) => outbox);
+      await pumpApp(tester, provider, resolveChatName: (_, _) async => name);
+
+      outbox.controller.add(_outcome(VideoDmOutcomeStatus.failed));
+      await tester.pump();
+      await tester.pump();
+
+      const isolated = '\u2068$name\u2069';
+      expect(find.textContaining(isolated), findsOneWidget);
+      expect(tester.takeAnnouncements().single.message, contains(isolated));
+    });
 
     testWidgets('logs a result it has no messenger to show on', (
       tester,
@@ -379,7 +398,7 @@ void main() {
 
       expect(
         tester.takeAnnouncements().single.message,
-        equals(l10n.dmVideoOutcomeInChat('Test chat', l10n.dmVideoSendFailed)),
+        equals(inChat('Test chat', l10n.dmVideoSendFailed)),
       );
     });
 
@@ -406,7 +425,7 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(
-        find.text(l10n.dmVideoOutcomeInChat('Test chat', l10n.dmVideoSent)),
+        find.text(inChat('Test chat', l10n.dmVideoSent)),
         findsOneWidget,
       );
     });
