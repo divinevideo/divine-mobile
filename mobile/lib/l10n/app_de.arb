@@ -5646,7 +5646,7 @@
   "settingsStorageError": "Etwas ist schiefgelaufen",
   "settingsStorageMaxVideoCacheLabel": "Maximaler Video-Cache",
   "settingsStorageAutoCacheTitle": "Automatisch anpassen",
-  "settingsStorageAutoCacheSubtitle": "Schrumpft, wenn dein Handy voll wird, damit Divine immer mindestens 15 % deines Speichers frei lässt",
+  "settingsStorageAutoCacheSubtitle": "Schrumpft, wenn dein Handy voller wird, um Speicherplatz freizuhalten.",
   "settingsStorageAutoCacheUsing": "Bis zu {size} für Videos",
   "settingsStorageAutoCacheLowSpace": "Kleiner als sonst, weil dein Handy fast voll ist",
   "settingsStorageApproxVideos": "≈ {count} Videos",

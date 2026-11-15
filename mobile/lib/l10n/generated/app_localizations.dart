@@ -23355,10 +23355,10 @@ abstract class AppLocalizations {
   /// **'Size it automatically'**
   String get settingsStorageAutoCacheTitle;
 
-  /// Explains the automatic video-cache size switch. The 15% is fixed by the app.
+  /// Explains that automatic caching shrinks as storage fills up to help preserve free space; it does not guarantee a fixed amount of free storage.
   ///
   /// In en, this message translates to:
-  /// **'Shrinks as your phone fills up, so Divine always leaves at least 15% of your storage free'**
+  /// **'Shrinks as your phone fills up to help keep storage free.'**
   String get settingsStorageAutoCacheSubtitle;
 
   /// The video-cache size automatic sizing currently allows, e.g. 'Using up to 2.0 GB for videos'.

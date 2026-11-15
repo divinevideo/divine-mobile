@@ -14027,7 +14027,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'Lumiliit habang napupuno ang phone mo, kaya laging nag-iiwan ang Divine ng at least 15% na libreng storage';
+      'Lumiliit habang napupuno ang phone mo para makatulong na may matirang libreng storage.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

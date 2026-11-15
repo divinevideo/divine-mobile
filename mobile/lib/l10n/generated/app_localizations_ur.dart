@@ -13896,7 +13896,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'آپ کا فون بھرنے کے ساتھ یہ چھوٹا ہوتا جاتا ہے، تاکہ Divine ہمیشہ آپ کی اسٹوریج کا کم از کم 15% خالی چھوڑے';
+      'آپ کا فون بھرنے کے ساتھ یہ چھوٹا ہوتا جاتا ہے تاکہ اسٹوریج میں جگہ خالی رکھنے میں مدد ملے۔';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

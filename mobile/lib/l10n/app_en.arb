@@ -10799,9 +10799,9 @@
   "@settingsStorageAutoCacheTitle": {
     "description": "Label of the switch that lets the video cache size itself to how full the device's storage is."
   },
-  "settingsStorageAutoCacheSubtitle": "Shrinks as your phone fills up, so Divine always leaves at least 15% of your storage free",
+  "settingsStorageAutoCacheSubtitle": "Shrinks as your phone fills up to help keep storage free.",
   "@settingsStorageAutoCacheSubtitle": {
-    "description": "Explains the automatic video-cache size switch. The 15% is fixed by the app."
+    "description": "Explains that automatic caching shrinks as storage fills up to help preserve free space; it does not guarantee a fixed amount of free storage."
   },
   "settingsStorageAutoCacheUsing": "Using up to {size} for videos",
   "@settingsStorageAutoCacheUsing": {

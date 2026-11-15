@@ -14201,7 +14201,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'Zmniejsza się, gdy telefon się zapełnia, więc Divine zawsze zostawia co najmniej 15% wolnego miejsca';
+      'Zmniejsza się, gdy telefon się zapełnia, pomagając zachować wolne miejsce.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

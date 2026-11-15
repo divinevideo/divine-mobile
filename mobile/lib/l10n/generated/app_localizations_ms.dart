@@ -13900,7 +13900,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'Mengecil apabila telefon anda semakin penuh, jadi Divine sentiasa meninggalkan sekurang-kurangnya 15% storan anda kosong';
+      'Mengecil apabila telefon anda semakin penuh untuk membantu mengekalkan ruang storan kosong.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

@@ -13258,7 +13258,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      '휴대폰 저장 공간이 차면 줄어들어서, Divine은 항상 저장 공간의 15% 이상을 비워 둬요';
+      '휴대폰 저장 공간이 차면 줄어들어 여유 공간을 확보하는 데 도움을 줘요.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

@@ -5646,7 +5646,7 @@
   "settingsStorageError": "Algo deu errado",
   "settingsStorageMaxVideoCacheLabel": "Cache de vídeos máximo",
   "settingsStorageAutoCacheTitle": "Ajustar o tamanho automaticamente",
-  "settingsStorageAutoCacheSubtitle": "Diminui conforme seu celular enche, para que o Divine sempre deixe pelo menos 15% do armazenamento livre",
+  "settingsStorageAutoCacheSubtitle": "Diminui conforme seu celular enche para ajudar a manter espaço livre.",
   "settingsStorageAutoCacheUsing": "Usando até {size} para vídeos",
   "settingsStorageAutoCacheLowSpace": "Menor que o normal porque seu celular está com pouco espaço",
   "settingsStorageApproxVideos": "≈ {count} vídeos",

@@ -14070,7 +14070,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'Schrumpft, wenn dein Handy voll wird, damit Divine immer mindestens 15 % deines Speichers frei lässt';
+      'Schrumpft, wenn dein Handy voller wird, um Speicherplatz freizuhalten.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

@@ -6782,7 +6782,7 @@
   },
   "settingsStorageMaxVideoCacheLabel": "Bộ nhớ đệm video tối đa",
   "settingsStorageAutoCacheTitle": "Tự động điều chỉnh dung lượng",
-  "settingsStorageAutoCacheSubtitle": "Thu nhỏ khi điện thoại của bạn đầy dần, để Divine luôn chừa trống ít nhất 15% bộ nhớ",
+  "settingsStorageAutoCacheSubtitle": "Thu nhỏ khi điện thoại của bạn đầy dần để giúp giữ dung lượng trống.",
   "settingsStorageAutoCacheUsing": "Dùng tối đa {size} cho video",
   "settingsStorageAutoCacheLowSpace": "Nhỏ hơn bình thường vì điện thoại của bạn sắp hết dung lượng",
   "settingsStorageApproxVideos": "≈ {count} video",

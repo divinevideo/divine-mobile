@@ -6782,7 +6782,7 @@
   },
   "settingsStorageMaxVideoCacheLabel": "زیادہ سے زیادہ ویڈیو کیش",
   "settingsStorageAutoCacheTitle": "سائز خودکار طور پر طے کریں",
-  "settingsStorageAutoCacheSubtitle": "آپ کا فون بھرنے کے ساتھ یہ چھوٹا ہوتا جاتا ہے، تاکہ Divine ہمیشہ آپ کی اسٹوریج کا کم از کم 15% خالی چھوڑے",
+  "settingsStorageAutoCacheSubtitle": "آپ کا فون بھرنے کے ساتھ یہ چھوٹا ہوتا جاتا ہے تاکہ اسٹوریج میں جگہ خالی رکھنے میں مدد ملے۔",
   "settingsStorageAutoCacheUsing": "ویڈیوز کے لیے {size} تک استعمال ہو رہا ہے",
   "settingsStorageAutoCacheLowSpace": "معمول سے چھوٹا کیونکہ آپ کے فون میں جگہ کم ہے",
   "settingsStorageApproxVideos": "≈ {count} ویڈیوز",

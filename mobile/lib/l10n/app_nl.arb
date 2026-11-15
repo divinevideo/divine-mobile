@@ -5646,7 +5646,7 @@
   "settingsStorageError": "Er ging iets mis",
   "settingsStorageMaxVideoCacheLabel": "Maximale videocache",
   "settingsStorageAutoCacheTitle": "Grootte automatisch aanpassen",
-  "settingsStorageAutoCacheSubtitle": "Krimpt als je telefoon voller raakt, zodat Divine altijd minstens 15% van je opslag vrij laat",
+  "settingsStorageAutoCacheSubtitle": "Krimpt als je telefoon voller raakt om opslagruimte vrij te helpen houden.",
   "settingsStorageAutoCacheUsing": "Tot {size} voor video's",
   "settingsStorageAutoCacheLowSpace": "Kleiner dan normaal omdat je telefoon bijna vol is",
   "settingsStorageApproxVideos": "≈ {count} video's",

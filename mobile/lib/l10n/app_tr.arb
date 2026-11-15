@@ -5646,7 +5646,7 @@
   "settingsStorageError": "Bir şeyler ters gitti",
   "settingsStorageMaxVideoCacheLabel": "Maksimum video önbelleği",
   "settingsStorageAutoCacheTitle": "Boyutu otomatik ayarla",
-  "settingsStorageAutoCacheSubtitle": "Telefonun doldukça küçülür, böylece Divine depolama alanının her zaman en az %15'ini boş bırakır",
+  "settingsStorageAutoCacheSubtitle": "Telefonun doldukça küçülerek depolama alanını boş tutmaya yardımcı olur.",
   "settingsStorageAutoCacheUsing": "Videolar için en fazla {size} kullanılıyor",
   "settingsStorageAutoCacheLowSpace": "Telefonunda yer azaldığı için normalden küçük",
   "settingsStorageApproxVideos": "≈ {count} video",

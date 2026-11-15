@@ -14132,7 +14132,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'Se réduit à mesure que ton téléphone se remplit, pour que Divine laisse toujours au moins 15 % de ton stockage libre';
+      'Se réduit à mesure que ton téléphone se remplit pour aider à garder de l’espace libre.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

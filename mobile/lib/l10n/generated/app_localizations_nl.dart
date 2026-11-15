@@ -13977,7 +13977,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'Krimpt als je telefoon voller raakt, zodat Divine altijd minstens 15% van je opslag vrij laat';
+      'Krimpt als je telefoon voller raakt om opslagruimte vrij te helpen houden.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

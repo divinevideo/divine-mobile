@@ -13806,7 +13806,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'Mengecil saat ponselmu makin penuh, jadi Divine selalu menyisakan setidaknya 15% penyimpananmu';
+      'Mengecil saat ponselmu makin penuh untuk membantu menjaga ruang penyimpanan tetap tersedia.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

@@ -5646,7 +5646,7 @@
   "settingsStorageError": "Något gick fel",
   "settingsStorageMaxVideoCacheLabel": "Maximal videocache",
   "settingsStorageAutoCacheTitle": "Anpassa storleken automatiskt",
-  "settingsStorageAutoCacheSubtitle": "Krymper när din telefon blir full, så att Divine alltid lämnar minst 15 % av lagringsutrymmet ledigt",
+  "settingsStorageAutoCacheSubtitle": "Krymper när din telefon fylls för att hjälpa till att hålla lagringsutrymme ledigt.",
   "settingsStorageAutoCacheUsing": "Använder upp till {size} för videor",
   "settingsStorageAutoCacheLowSpace": "Mindre än vanligt eftersom din telefon har ont om utrymme",
   "settingsStorageApproxVideos": "≈ {count} videor",

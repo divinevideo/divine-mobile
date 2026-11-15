@@ -13850,7 +13850,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'Thu nhỏ khi điện thoại của bạn đầy dần, để Divine luôn chừa trống ít nhất 15% bộ nhớ';
+      'Thu nhỏ khi điện thoại của bạn đầy dần để giúp giữ dung lượng trống.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

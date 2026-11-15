@@ -5763,7 +5763,7 @@
   "settingsStorageError": "Нещо се обърка",
   "settingsStorageMaxVideoCacheLabel": "Максимален кеш за видео",
   "settingsStorageAutoCacheTitle": "Автоматичен размер",
-  "settingsStorageAutoCacheSubtitle": "Намалява, докато телефонът ти се пълни, така че Divine винаги оставя поне 15% от хранилището ти свободни",
+  "settingsStorageAutoCacheSubtitle": "Намалява, докато телефонът ти се пълни, за да помогне да остане свободно място.",
   "settingsStorageAutoCacheUsing": "Използва до {size} за видеа",
   "settingsStorageAutoCacheLowSpace": "По-малко от обикновено, защото телефонът ти е почти пълен",
   "settingsStorageApproxVideos": "≈ {count} видеа",

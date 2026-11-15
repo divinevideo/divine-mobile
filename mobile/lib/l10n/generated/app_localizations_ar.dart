@@ -13928,7 +13928,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'يتقلّص مع امتلاء الهاتف، حتى يترك Divine دائمًا 15% على الأقل من مساحة التخزين فارغة';
+      'يتقلّص مع امتلاء هاتفك للمساعدة في إبقاء مساحة تخزين فارغة.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

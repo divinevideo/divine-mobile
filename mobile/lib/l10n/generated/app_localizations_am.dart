@@ -13572,7 +13572,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'ስልክዎ ሲሞላ ይቀንሳል፣ ስለዚህ Divine ሁልጊዜ ቢያንስ 15% የማከማቻ ቦታዎን ነፃ ይተዋል';
+      'ስልክዎ ሲሞላ ነፃ የማከማቻ ቦታ እንዲኖር ለማገዝ ይቀንሳል።';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

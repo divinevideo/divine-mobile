@@ -14039,7 +14039,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'Diminui conforme seu celular enche, para que o Divine sempre deixe pelo menos 15% do armazenamento livre';
+      'Diminui conforme seu celular enche para ajudar a manter espaço livre.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

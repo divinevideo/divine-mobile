@@ -14203,7 +14203,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'Se micșorează pe măsură ce telefonul se umple, ca Divine să lase mereu liber cel puțin 15% din spațiul tău de stocare';
+      'Se micșorează pe măsură ce telefonul se umple, ca să ajute la păstrarea spațiului liber.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

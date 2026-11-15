@@ -13236,7 +13236,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'スマホの空き容量が減ると小さくなり、Divine は常にストレージの15%以上を空けておきます';
+      'スマホの空き容量が減ると小さくなり、空き容量の確保を助けます。';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

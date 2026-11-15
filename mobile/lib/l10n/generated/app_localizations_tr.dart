@@ -13830,7 +13830,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'Telefonun doldukça küçülür, böylece Divine depolama alanının her zaman en az %15\'ini boş bırakır';
+      'Telefonun doldukça küçülerek depolama alanını boş tutmaya yardımcı olur.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

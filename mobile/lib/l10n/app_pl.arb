@@ -5646,7 +5646,7 @@
   "settingsStorageError": "Coś poszło nie tak",
   "settingsStorageMaxVideoCacheLabel": "Maksymalna pamięć podręczna wideo",
   "settingsStorageAutoCacheTitle": "Dobieraj rozmiar automatycznie",
-  "settingsStorageAutoCacheSubtitle": "Zmniejsza się, gdy telefon się zapełnia, więc Divine zawsze zostawia co najmniej 15% wolnego miejsca",
+  "settingsStorageAutoCacheSubtitle": "Zmniejsza się, gdy telefon się zapełnia, pomagając zachować wolne miejsce.",
   "settingsStorageAutoCacheUsing": "Do {size} na filmy",
   "settingsStorageAutoCacheLowSpace": "Mniejszy niż zwykle, bo w telefonie kończy się miejsce",
   "settingsStorageApproxVideos": "≈ {count} filmów",

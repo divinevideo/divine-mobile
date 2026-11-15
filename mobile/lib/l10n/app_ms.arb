@@ -6782,7 +6782,7 @@
   },
   "settingsStorageMaxVideoCacheLabel": "Cache video maksimum",
   "settingsStorageAutoCacheTitle": "Saiz automatik",
-  "settingsStorageAutoCacheSubtitle": "Mengecil apabila telefon anda semakin penuh, jadi Divine sentiasa meninggalkan sekurang-kurangnya 15% storan anda kosong",
+  "settingsStorageAutoCacheSubtitle": "Mengecil apabila telefon anda semakin penuh untuk membantu mengekalkan ruang storan kosong.",
   "settingsStorageAutoCacheUsing": "Menggunakan sehingga {size} untuk video",
   "settingsStorageAutoCacheLowSpace": "Lebih kecil daripada biasa kerana ruang telefon anda hampir habis",
   "settingsStorageApproxVideos": "≈ {count} video",

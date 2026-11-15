@@ -13917,7 +13917,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get settingsStorageAutoCacheSubtitle =>
-      'Krymper när din telefon blir full, så att Divine alltid lämnar minst 15 % av lagringsutrymmet ledigt';
+      'Krymper när din telefon fylls för att hjälpa till att hålla lagringsutrymme ledigt.';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {

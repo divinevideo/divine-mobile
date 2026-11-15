@@ -4666,7 +4666,7 @@
   "settingsStorageError": "May nangyaring mali",
   "settingsStorageMaxVideoCacheLabel": "Pinakamataas na cache ng video",
   "settingsStorageAutoCacheTitle": "Awtomatikong i-size",
-  "settingsStorageAutoCacheSubtitle": "Lumiliit habang napupuno ang phone mo, kaya laging nag-iiwan ang Divine ng at least 15% na libreng storage",
+  "settingsStorageAutoCacheSubtitle": "Lumiliit habang napupuno ang phone mo para makatulong na may matirang libreng storage.",
   "settingsStorageAutoCacheUsing": "Gumagamit ng hanggang {size} para sa mga video",
   "settingsStorageAutoCacheLowSpace": "Mas maliit kaysa karaniwan kasi paubos na ang space ng phone mo",
   "settingsStorageApproxVideos": "≈ {count} video",

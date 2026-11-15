@@ -13071,8 +13071,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsStorageAutoCacheTitle => '自动调整大小';
 
   @override
-  String get settingsStorageAutoCacheSubtitle =>
-      '手机存储空间越满，缓存就越小，Divine 始终为你保留至少 15% 的可用存储空间';
+  String get settingsStorageAutoCacheSubtitle => '手机存储空间越满，缓存就越小，帮助保留可用空间。';
 
   @override
   String settingsStorageAutoCacheUsing(String size) {
