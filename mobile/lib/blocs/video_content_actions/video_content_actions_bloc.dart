@@ -9,6 +9,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/video_content_actions/reportable_sites.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -401,7 +402,7 @@ class VideoContentActionsBloc
   /// throw — comes back [RemixConsent.unknown], so the import fails closed.
   Future<RemixConsent> _remixConsent() async {
     final viewerPubkey = _viewerPubkey;
-    if (viewerPubkey != null && viewerPubkey == _video.pubkey) {
+    if (viewerPubkey != null && pubkeysEqual(viewerPubkey, _video.pubkey)) {
       return RemixConsent.allowed;
     }
 

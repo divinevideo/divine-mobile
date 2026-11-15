@@ -132,6 +132,11 @@ void main() {
       expect(isVideoByViewer(_video(), _creatorPubkey), isTrue);
     });
 
+    test('matches the viewer whatever the pubkey case', () {
+      expect(_creatorPubkey, isNot(_creatorPubkey.toUpperCase()));
+      expect(isVideoByViewer(_video(), _creatorPubkey.toUpperCase()), isTrue);
+    });
+
     test('returns false for another viewer or none', () {
       expect(isVideoByViewer(_video(), _otherPubkey), isFalse);
       expect(isVideoByViewer(_video(), null), isFalse);

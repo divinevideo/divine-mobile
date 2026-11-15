@@ -906,6 +906,24 @@ void main() {
       );
 
       blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        "treats the viewer's own video as theirs whatever the pubkey's case",
+        setUp: () {
+          when(
+            () => mockRemixConsentRepository.consentFor(any()),
+          ).thenAnswer((_) async => RemixConsent.blocked);
+        },
+        build: () => createBloc(
+          videoClipImportService: mockImporter,
+          viewerPubkey: testVideo.pubkey.toUpperCase(),
+        ),
+        act: (bloc) => bloc.add(const VideoContentAddToClipsRequested()),
+        verify: (_) {
+          expect(testVideo.pubkey, isNot(testVideo.pubkey.toUpperCase()));
+          verifyNever(() => mockRemixConsentRepository.consentFor(any()));
+        },
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
         "imports a blocked account's video when it is the viewer's own",
         setUp: () {
           when(

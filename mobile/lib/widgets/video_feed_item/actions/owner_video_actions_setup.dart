@@ -3,6 +3,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_delete_enforcement_providers.dart';
@@ -38,16 +39,15 @@ bool isViewerOwnVideo(ProviderContainer container, VideoEvent video) =>
 
 /// Whether [viewerPubkey], the signed-in viewer, created [video].
 bool isVideoByViewer(VideoEvent video, String? viewerPubkey) =>
-    viewerPubkey != null && video.pubkey == viewerPubkey;
+    viewerPubkey != null && pubkeysEqual(video.pubkey, viewerPubkey);
 
 /// Whether [video], posted by someone else, credits a clip of one of the
 /// videos of [viewerPubkey], the signed-in viewer.
 bool isRemixOfViewersVideo(VideoEvent video, String? viewerPubkey) {
   if (viewerPubkey == null) return false;
-  final viewer = viewerPubkey.toLowerCase();
-  if (video.pubkey.toLowerCase() == viewer) return false;
+  if (isVideoByViewer(video, viewerPubkey)) return false;
   return video.clipSourceCredits.any(
-    (credit) => credit.authorPubkey.toLowerCase() == viewer,
+    (credit) => pubkeysEqual(credit.authorPubkey, viewerPubkey),
   );
 }
 
