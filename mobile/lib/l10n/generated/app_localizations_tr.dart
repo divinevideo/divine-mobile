@@ -3934,6 +3934,31 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu klip şu an kontrol edilemiyor. Biraz sonra tekrar dene.';
 
   @override
+  String get dmPendingVideoWaiting => 'Bekliyor…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Hazırlanıyor…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'Yükleniyor $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Gönderiliyor…';
+
+  @override
+  String get dmPendingVideoRemove => 'Kaldır';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return 'Video gönderiliyor, $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Video gönderilemedi';
+
+  @override
   String get dmClipSendNotVerified =>
       'Bu klibin Divine kamerasıyla çekildiğini doğrulayamadık, bu yüzden klip olarak gönderilemez.';
 
@@ -16071,4 +16096,9 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'Gönderimin kabul edilmedi. E-posta adresini kontrol et, videoyu yeniden kaydet veya e-posta kullan.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

@@ -3960,6 +3960,31 @@ class AppLocalizationsVi extends AppLocalizations {
       'Hiện không kiểm tra được clip này. Thử lại sau một lát nhé.';
 
   @override
+  String get dmPendingVideoWaiting => 'Đang chờ…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Đang chuẩn bị…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'Đang tải lên $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Đang gửi…';
+
+  @override
+  String get dmPendingVideoRemove => 'Gỡ bỏ';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return 'Đang gửi video, $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Không gửi được video';
+
+  @override
   String get dmClipSendNotVerified =>
       'Chúng tôi không thể xác nhận clip này được quay bằng camera Divine, nên không thể gửi dưới dạng clip.';
 
@@ -16091,4 +16116,9 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'Nội dung gửi chưa được chấp nhận. Hãy kiểm tra địa chỉ email, quay lại video hoặc dùng email.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

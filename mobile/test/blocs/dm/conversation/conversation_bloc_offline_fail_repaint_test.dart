@@ -12,8 +12,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
+import 'package:openvine/services/video_dm_outbox.dart';
 
 class _MockDmRepository extends Mock implements DmRepository {}
+
+class _MockVideoDmOutbox extends Mock implements VideoDmOutbox {}
+
+/// An outbox with no video sends, so the thread is driven by its rows alone.
+VideoDmOutbox _idleVideoOutbox() {
+  final outbox = _MockVideoDmOutbox();
+  when(
+    () => outbox.watchConversation(any()),
+  ).thenAnswer((_) => Stream.value(const <OutgoingVideoDm>[]));
+  return outbox;
+}
 
 void main() {
   const ownerPubkey =
@@ -125,6 +137,7 @@ void main() {
         final bloc = ConversationBloc(
           dmRepository: repo,
           conversationId: conversationId,
+          videoOutbox: _idleVideoOutbox(),
         );
         addTearDown(bloc.close);
 

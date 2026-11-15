@@ -3733,6 +3733,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmClipCheckUnavailable => '现在无法检查这个片段，请稍后再试。';
 
   @override
+  String get dmPendingVideoWaiting => '等待中…';
+
+  @override
+  String get dmPendingVideoPreparing => '准备中…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return '正在上传 $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => '发送中…';
+
+  @override
+  String get dmPendingVideoRemove => '移除';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return '正在发送视频，$percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => '视频发送失败';
+
+  @override
   String get dmClipSendNotVerified => '无法确认这个片段是用 Divine 相机拍摄的，所以不能作为片段发送。';
 
   @override
@@ -15205,4 +15230,9 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       '提交未被接受。请检查邮箱地址、重新录制视频，或改用电子邮件。';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat：$outcome';
+  }
 }

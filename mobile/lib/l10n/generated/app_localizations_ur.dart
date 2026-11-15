@@ -3997,6 +3997,31 @@ class AppLocalizationsUr extends AppLocalizations {
       'ابھی اس کلپ کی جانچ نہیں ہو سکی۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔';
 
   @override
+  String get dmPendingVideoWaiting => 'انتظار جاری ہے…';
+
+  @override
+  String get dmPendingVideoPreparing => 'تیار ہو رہا ہے…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'اپ لوڈ ہو رہا ہے $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'بھیجا جا رہا ہے…';
+
+  @override
+  String get dmPendingVideoRemove => 'ہٹائیں';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return 'ویڈیو بھیجی جا رہی ہے، $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'ویڈیو نہیں بھیجی جا سکی';
+
+  @override
   String get dmClipSendNotVerified =>
       'ہم تصدیق نہیں کر سکے کہ یہ کلپ Divine کیمرے سے بنی ہے، اس لیے اسے کلپ کے طور پر نہیں بھیجا جا سکتا۔';
 
@@ -16146,4 +16171,9 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'آپ کی جمع کرائی گئی معلومات قبول نہیں ہوئیں۔ اپنا ای میل پتہ چیک کریں، ویڈیو دوبارہ ریکارڈ کریں، یا ای میل استعمال کریں۔';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

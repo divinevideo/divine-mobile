@@ -2,6 +2,7 @@
 // ABOUTME: Verifies encrypt -> upload -> sendFileMessage order, exact
 // ABOUTME: DmFileMetadata fields, and ciphertext temp-file cleanup.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
@@ -13,6 +14,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_preview.dart';
+import 'package:openvine/services/dm_video_send_cancellation.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 // Not exported from pro_video_editor's barrel. Imported by path so the test
 // can subclass MethodChannelProVideoEditor without its EventChannel setup.
@@ -29,6 +31,26 @@ class _MockDmRepository extends Mock implements DmRepository {}
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
 
 class _MockDmVideoEncryption extends Mock implements DmVideoEncryption {}
+
+class _MockFile extends Mock implements File {}
+
+// Observe real filesystem completion without making the send await cleanup.
+class _ObservedCiphertextFile extends _MockFile {
+  _ObservedCiphertextFile(File file, {Future<void>? deleteGate}) {
+    when(lengthSync).thenAnswer((_) => file.lengthSync());
+    when(existsSync).thenAnswer((_) => file.existsSync());
+    when(delete).thenAnswer((_) async {
+      deleteStarted.complete();
+      if (deleteGate != null) await deleteGate;
+      final result = await file.delete();
+      deleted.complete();
+      return result;
+    });
+  }
+
+  final deleteStarted = Completer<void>();
+  final deleted = Completer<void>();
+}
 
 const _recipientPubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
@@ -68,9 +90,12 @@ void main() {
     }
   });
 
-  File ciphertextFile() =>
-      File('${tempDir.path}/$_ciphertextHash')
-        ..writeAsBytesSync(const [1, 2, 3, 4]);
+  _ObservedCiphertextFile ciphertextFile({Future<void>? deleteGate}) =>
+      _ObservedCiphertextFile(
+        File('${tempDir.path}/$_ciphertextHash')
+          ..writeAsBytesSync(const [1, 2, 3, 4]),
+        deleteGate: deleteGate,
+      );
 
   EncryptedVideoFile encryptedVideo(File file) => EncryptedVideoFile(
     ciphertextFile: file,
@@ -204,7 +229,76 @@ void main() {
         expect(sentMetadata!.blurhash, 'LEHV6nWB2yk8');
         expect(sentMetadata!.thumbnailUrl, isNull);
 
+        // Cleanup is detached from the sent flip; wait for actual file I/O.
+        await ciphertext.deleted.future;
         expect(ciphertext.existsSync(), isFalse);
+      },
+    );
+
+    test(
+      'returns the send result without waiting for the ciphertext delete, so '
+      'the persisted row and the pending bubble cannot render together at '
+      'the handoff',
+      () async {
+        final videoFile = File('${tempDir.path}/clip.mp4')
+          ..writeAsBytesSync(const [9, 9, 9]);
+        final ciphertext = _MockFile();
+        final deleteCalled = Completer<void>();
+        final deleteGate = Completer<FileSystemEntity>();
+        when(ciphertext.delete).thenAnswer((_) {
+          if (!deleteCalled.isCompleted) deleteCalled.complete();
+          return deleteGate.future;
+        });
+        when(() => encryption.encryptFile(videoFile)).thenAnswer(
+          (_) async => EncryptedVideoFile(
+            ciphertextFile: ciphertext,
+            key: _key,
+            nonce: _nonce,
+            ciphertextHash: _ciphertextHash,
+            plaintextHash: _plaintextHash,
+            ciphertextSize: 4,
+          ),
+        );
+        when(
+          () => blossom.uploadEncryptedFile(ciphertextFile: ciphertext),
+        ).thenAnswer(
+          (_) async => const BlossomUploadResult(
+            success: true,
+            videoId: _ciphertextHash,
+            url: _fileUrl,
+          ),
+        );
+        when(
+          () => dmRepository.sendFileMessage(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            fileUrl: any(named: 'fileUrl'),
+            fileMetadata: any(named: 'fileMetadata'),
+            extraTags: any(named: 'extraTags'),
+          ),
+        ).thenAnswer(
+          (_) async => NIP17SendResult.success(
+            rumorEventId: 'rumor-1',
+            messageEventId: 'wrap-1',
+            recipientPubkey: _recipientPubkey,
+          ),
+        );
+
+        final result = await createService()
+            .sendVideo(
+              recipientPubkey: _recipientPubkey,
+              videoFile: videoFile,
+              mimeType: 'video/mp4',
+            )
+            .timeout(const Duration(seconds: 10));
+
+        expect(result.success, isTrue);
+        // The result came back while the delete is still open: `sendFileMessage`
+        // has committed the message row, and the outbox's sent flip (which
+        // drops the pending bubble) now follows without file I/O in between.
+        await deleteCalled.future;
+        expect(deleteGate.isCompleted, isFalse);
+
+        deleteGate.complete(ciphertext);
       },
     );
 
@@ -389,6 +483,137 @@ void main() {
       });
     });
 
+    test(
+      'cancellation during encryption deletes late ciphertext without upload',
+      () async {
+        final video = File('${tempDir.path}/late.mp4');
+        final encrypted = Completer<EncryptedVideoFile>();
+        when(() => encryption.encryptFile(video))
+            .thenAnswer((_) => encrypted.future);
+        final attempt = DmVideoSendCancellation();
+        addTearDown(attempt.finish);
+        final result = createService().sendVideo(
+          recipientPubkey: _recipientPubkey,
+          videoFile: video,
+          mimeType: 'video/mp4',
+          cancellation: attempt,
+        );
+        final failure = expectLater(
+          result,
+          throwsA(isA<DmVideoSendCancelled>()),
+        );
+        attempt.cancel('expired');
+        final ciphertext = ciphertextFile();
+        encrypted.complete(encryptedVideo(ciphertext));
+        await failure;
+        await ciphertext.deleted.future;
+        expect(ciphertext.existsSync(), isFalse);
+        verifyZeroInteractions(blossom);
+        verifyZeroInteractions(dmRepository);
+      },
+    );
+
+    test(
+      'account loss after upload prevents publication and cleans ciphertext',
+      () async {
+        final video = File('${tempDir.path}/switch.mp4');
+        final ciphertext = ciphertextFile();
+        var current = true;
+        when(() => encryption.encryptFile(video))
+            .thenAnswer((_) async => encryptedVideo(ciphertext));
+        when(
+          () => blossom.uploadEncryptedFile(
+            ciphertextFile: ciphertext,
+            cancelToken: any(named: 'cancelToken'),
+            onUploadAttempt: any(named: 'onUploadAttempt'),
+            onProgress: any(named: 'onProgress'),
+          ),
+        ).thenAnswer((_) async {
+          current = false;
+          return const BlossomUploadResult(
+            success: true,
+            videoId: _ciphertextHash,
+            url: _fileUrl,
+          );
+        });
+        final attempt = DmVideoSendCancellation(
+          isAccountCurrent: () => current,
+        );
+        addTearDown(attempt.finish);
+        await expectLater(
+          createService().sendVideo(
+            recipientPubkey: _recipientPubkey,
+            videoFile: video,
+            mimeType: 'video/mp4',
+            cancellation: attempt,
+          ),
+          throwsA(isA<DmVideoSendCancelled>()),
+        );
+        await ciphertext.deleted.future;
+        expect(ciphertext.existsSync(), isFalse);
+        verifyZeroInteractions(dmRepository);
+      },
+    );
+
+    test(
+      'cancellation deletes ciphertext while an upload future is still pending',
+      () async {
+        final video = File('${tempDir.path}/stalled.mp4');
+        final deleteGate = Completer<void>();
+        final ciphertext = ciphertextFile(deleteGate: deleteGate.future);
+        final upload = Completer<BlossomUploadResult>();
+        final uploadStarted = Completer<void>();
+        when(() => encryption.encryptFile(video))
+            .thenAnswer((_) async => encryptedVideo(ciphertext));
+        when(
+          () => blossom.uploadEncryptedFile(
+            ciphertextFile: ciphertext,
+            cancelToken: any(named: 'cancelToken'),
+            onUploadAttempt: any(named: 'onUploadAttempt'),
+            onProgress: any(named: 'onProgress'),
+          ),
+        ).thenAnswer((_) {
+          uploadStarted.complete();
+          return upload.future;
+        });
+        final attempt = DmVideoSendCancellation();
+        addTearDown(attempt.finish);
+        final result = createService().sendVideo(
+          recipientPubkey: _recipientPubkey,
+          videoFile: video,
+          mimeType: 'video/mp4',
+          cancellation: attempt,
+        );
+        final failure = expectLater(
+          result,
+          throwsA(isA<DmVideoSendCancelled>()),
+        );
+        await uploadStarted.future;
+        attempt.cancel('disposed');
+        try {
+          await ciphertext.deleteStarted.future;
+          expect(ciphertext.existsSync(), isTrue);
+          expect(upload.isCompleted, isFalse);
+          deleteGate.complete();
+          await ciphertext.deleted.future;
+          expect(ciphertext.existsSync(), isFalse);
+          expect(upload.isCompleted, isFalse);
+          verifyZeroInteractions(dmRepository);
+        } finally {
+          if (!deleteGate.isCompleted) deleteGate.complete();
+          upload.complete(
+            const BlossomUploadResult(
+              success: true,
+              videoId: _ciphertextHash,
+              url: _fileUrl,
+            ),
+          );
+          await failure;
+        }
+        verifyZeroInteractions(dmRepository);
+      },
+    );
+
     test('upload failure skips sendFileMessage and still cleans up', () async {
       final videoFile = File('${tempDir.path}/clip.mp4')
         ..writeAsBytesSync(const [9, 9, 9]);
@@ -422,6 +647,7 @@ void main() {
           fileMetadata: any(named: 'fileMetadata'),
         ),
       );
+      await ciphertext.deleted.future;
       expect(ciphertext.existsSync(), isFalse);
     });
 
@@ -456,6 +682,7 @@ void main() {
             fileMetadata: any(named: 'fileMetadata'),
           ),
         );
+        await ciphertext.deleted.future;
         expect(ciphertext.existsSync(), isFalse);
       },
     );
@@ -508,6 +735,58 @@ void main() {
         );
       },
     );
+
+    test('forwards Blossom upload progress to onUploadProgress', () async {
+      final videoFile = File('${tempDir.path}/clip.mp4')
+        ..writeAsBytesSync(const [9, 9, 9]);
+      final ciphertext = ciphertextFile();
+
+      when(() => encryption.encryptFile(videoFile)).thenAnswer(
+        (_) async => encryptedVideo(ciphertext),
+      );
+      when(
+        () => blossom.uploadEncryptedFile(
+          ciphertextFile: ciphertext,
+          onProgress: any(named: 'onProgress'),
+        ),
+      ).thenAnswer((invocation) async {
+        final onProgress =
+            invocation.namedArguments[#onProgress] as void Function(double)?;
+        onProgress
+          ?..call(0.1)
+          ..call(0.55)
+          ..call(1);
+        return const BlossomUploadResult(
+          success: true,
+          videoId: _ciphertextHash,
+          url: _fileUrl,
+        );
+      });
+      when(
+        () => dmRepository.sendFileMessage(
+          recipientPubkey: any(named: 'recipientPubkey'),
+          fileUrl: any(named: 'fileUrl'),
+          fileMetadata: any(named: 'fileMetadata'),
+        ),
+      ).thenAnswer(
+        (_) async => NIP17SendResult.success(
+          rumorEventId: 'rumor-1',
+          messageEventId: 'wrap-1',
+          recipientPubkey: _recipientPubkey,
+        ),
+      );
+
+      final fractions = <double>[];
+      final result = await createService().sendVideo(
+        recipientPubkey: _recipientPubkey,
+        videoFile: videoFile,
+        mimeType: 'video/mp4',
+        onUploadProgress: fractions.add,
+      );
+
+      expect(result.success, isTrue);
+      expect(fractions, equals([0.1, 0.55, 1.0]));
+    });
 
     test('reports encrypt, upload, then send phases in order', () async {
       final videoFile = File('${tempDir.path}/clip.mp4')

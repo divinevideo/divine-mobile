@@ -3756,6 +3756,31 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dmClipCheckUnavailable => '지금은 이 클립을 확인할 수 없어요. 잠시 후 다시 시도해 주세요.';
 
   @override
+  String get dmPendingVideoWaiting => '대기 중…';
+
+  @override
+  String get dmPendingVideoPreparing => '준비 중…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return '업로드 중 $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => '전송 중…';
+
+  @override
+  String get dmPendingVideoRemove => '삭제';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return '동영상 전송 중, $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => '동영상을 보내지 못했어요';
+
+  @override
   String get dmClipSendNotVerified =>
       '이 클립이 Divine 카메라로 촬영된 것을 확인할 수 없어서 클립으로 보낼 수 없어요.';
 
@@ -15410,4 +15435,9 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       '제출이 승인되지 않았어요. 이메일 주소를 확인하거나, 동영상을 다시 촬영하거나, 이메일을 이용해 주세요.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

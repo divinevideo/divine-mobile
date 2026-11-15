@@ -4114,6 +4114,32 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu putem verifica acest clip acum. Încearcă din nou puțin mai târziu.';
 
   @override
+  String get dmPendingVideoWaiting => 'În așteptare…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Se pregătește…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'Se încarcă $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Se trimite…';
+
+  @override
+  String get dmPendingVideoRemove => 'Elimină';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return 'Se trimite videoclipul, $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics =>
+      'Videoclipul nu a putut fi trimis';
+
+  @override
   String get dmClipSendNotVerified =>
       'Nu am putut confirma că acest clip a fost filmat cu camera Divine, așa că nu poate fi trimis ca clip.';
 
@@ -16469,4 +16495,9 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'Trimiterea nu a fost acceptată. Verifică adresa de e-mail, înregistrează din nou videoclipul sau folosește e-mailul.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

@@ -4044,6 +4044,32 @@ class AppLocalizationsDe extends AppLocalizations {
       'Der Clip lässt sich gerade nicht prüfen. Versuch es gleich nochmal.';
 
   @override
+  String get dmPendingVideoWaiting => 'Warten…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Wird vorbereitet…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'Wird hochgeladen: $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Wird gesendet…';
+
+  @override
+  String get dmPendingVideoRemove => 'Entfernen';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return 'Video wird gesendet, $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics =>
+      'Video konnte nicht gesendet werden';
+
+  @override
   String get dmClipSendNotVerified =>
       'Wir konnten nicht bestätigen, dass der Clip mit der Divine-Kamera gedreht wurde, deshalb kann er nicht als Clip gesendet werden.';
 
@@ -16337,4 +16363,9 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'Deine Einreichung wurde nicht angenommen. Prüfe deine E-Mail-Adresse, nimm das Video erneut auf oder nutze E-Mail.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

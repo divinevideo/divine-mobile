@@ -6631,19 +6631,19 @@ abstract class AppLocalizations {
   /// **'Couldn\'t open this video'**
   String get dmVideoUnavailable;
 
-  /// SnackBar shown in a DM conversation after an encrypted video DM reaches the recipient's relays. It states delivery only: it must not claim the video can be revoked, or that it cannot be saved or forwarded.
+  /// SnackBar shown anywhere in the app after an encrypted video DM reaches the recipient's relays. It states delivery only: it must not claim the video can be revoked, or that it cannot be saved or forwarded.
   ///
   /// In en, this message translates to:
   /// **'Video sent'**
   String get dmVideoSent;
 
-  /// SnackBar shown in a DM conversation when an encrypted video DM fails to upload or send. The composer stays usable, so the user can attach the video again.
+  /// SnackBar shown anywhere in the app, and the status line under the failed video in the conversation, when an encrypted video DM fails to upload or send. The failed video offers Retry.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t send video'**
   String get dmVideoSendFailed;
 
-  /// SnackBar shown in a DM conversation when the picked video exceeds the encrypted video DM size limit, before anything is uploaded.
+  /// SnackBar shown anywhere in the app, and the status line under the failed video in the conversation, when the picked video exceeds the encrypted video DM size limit, before anything is uploaded.
   ///
   /// In en, this message translates to:
   /// **'That video\'s too big to send. Pick one under {maxMegabytes} MB'**
@@ -6715,7 +6715,49 @@ abstract class AppLocalizations {
   /// **'Couldn\'t check this clip right now. Try again in a bit.'**
   String get dmClipCheckUnavailable;
 
-  /// SnackBar shown in the DM composer when a clip picked from the sender's own library has no valid Divine camera credential, so it is not sent: the recipient could never add it to their clips.
+  /// Status line on an outgoing video in a DM conversation while it waits for the sends ahead of it.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting…'**
+  String get dmPendingVideoWaiting;
+
+  /// Status line on an outgoing video in a DM conversation while it is being checked and encrypted, before the upload starts.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing…'**
+  String get dmPendingVideoPreparing;
+
+  /// Status line on an outgoing video in a DM conversation while it uploads. {percent} is the share uploaded so far, already formatted for the locale with its percent sign (for example 42% in English, 42 % in French).
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading {percent}'**
+  String dmPendingVideoUploading(String percent);
+
+  /// Status line on an outgoing video in a DM conversation after the upload, while the message is being delivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get dmPendingVideoSending;
+
+  /// Button on an outgoing video in a DM conversation that failed to send. Removes it from the conversation without sending it.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get dmPendingVideoRemove;
+
+  /// Screen reader label for an outgoing video in a DM conversation that is uploading. {percent} is the share uploaded so far, already formatted for the locale with its percent sign (for example 42% in English, 42 % in French).
+  ///
+  /// In en, this message translates to:
+  /// **'Sending video, {percent}'**
+  String dmPendingVideoSemantics(String percent);
+
+  /// Screen reader label for an outgoing video in a DM conversation that failed to send.
+  ///
+  /// In en, this message translates to:
+  /// **'Video failed to send'**
+  String get dmPendingVideoFailedSemantics;
+
+  /// SnackBar shown anywhere in the app, and the status line under the failed clip in the conversation, when a clip picked from the sender's own library has no valid Divine camera credential, so it is not sent: the recipient could never add it to their clips.
   ///
   /// In en, this message translates to:
   /// **'We couldn\'t confirm this clip was shot with the Divine camera, so it can\'t be sent as a clip.'**
@@ -26936,6 +26978,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your submission wasn\'t accepted. Check your email, retake the video, or use email instead.'**
   String get minorAccountReviewRecordConsentRejected;
+
+  /// Video DM outcome shown outside its conversation. The chat is resolved through the same identity presentation as the inbox.
+  ///
+  /// In en, this message translates to:
+  /// **'{chat}: {outcome}'**
+  String dmVideoOutcomeInChat(String chat, String outcome);
 }
 
 class _AppLocalizationsDelegate

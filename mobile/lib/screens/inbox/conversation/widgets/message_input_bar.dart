@@ -68,7 +68,6 @@ class MessageInputBar extends StatefulWidget {
     this.clearOnSend = true,
     this.textCapitalization = TextCapitalization.none,
     this.onAttachVideo,
-    this.isAttachVideoBusy = false,
     super.key,
   });
 
@@ -87,11 +86,6 @@ class MessageInputBar extends StatefulWidget {
   ///
   /// The button is not rendered when this is `null`.
   final VoidCallback? onAttachVideo;
-
-  /// Whether an attached video is currently being encrypted/uploaded/sent.
-  ///
-  /// While busy the affordance shows a progress indicator and ignores taps.
-  final bool isAttachVideoBusy;
 
   /// Optional externally-owned controller.
   ///
@@ -168,25 +162,14 @@ class _MessageInputBarState extends State<MessageInputBar> {
                   ),
                   child: SizedBox.square(
                     dimension: 40,
-                    child: widget.isAttachVideoBusy
-                        ? Center(
-                            child: SizedBox.square(
-                              dimension: 20,
-                              child: DivineCircularProgressIndicator(
-                                strokeWidth: 2,
-                                semanticsLabel:
-                                    context.l10n.libraryPreparingVideo,
-                              ),
-                            ),
-                          )
-                        : DivineIconButton(
-                            icon: DivineIconName.videoCamera,
-                            type: DivineIconButtonType.ghostSecondary,
-                            size: DivineIconButtonSize.small,
-                            onPressed: widget.onAttachVideo,
-                            semanticLabel: context.l10n.dmAttachVideo,
-                            semanticIdentifier: 'dm_attach_video_button',
-                          ),
+                    child: DivineIconButton(
+                      icon: DivineIconName.videoCamera,
+                      type: DivineIconButtonType.ghostSecondary,
+                      size: DivineIconButtonSize.small,
+                      onPressed: widget.onAttachVideo,
+                      semanticLabel: context.l10n.dmAttachVideo,
+                      semanticIdentifier: 'dm_attach_video_button',
+                    ),
                   ),
                 ),
               // Text input

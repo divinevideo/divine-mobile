@@ -6420,5 +6420,13 @@
   "minorAccountReviewVideoSubmittedBody": "ቪዲዮዎ ለግምገማ ተልኳል።",
   "minorAccountReviewVideoSubmittedTitle": "ቪዲዮው ተልኳል",
   "minorAccountReviewRecordConsentPrivacyBody": "ቪዲዮዎ ለግምገማ በግል ወደ Divine ድጋፍ እና እምነትና ደህንነት ቡድኖች ይላካል። አይታተምም ወይም ከሌሎች ተጠቃሚዎች ጋር አይጋራም።",
-  "minorAccountReviewRecordConsentRejected": "የላኩት አልተቀበለም። የኢሜይል አድራሻዎን ያረጋግጡ፣ ቪዲዮውን እንደገና ይቅረጹ ወይም በኢሜይል ይላኩ።"
+  "minorAccountReviewRecordConsentRejected": "የላኩት አልተቀበለም። የኢሜይል አድራሻዎን ያረጋግጡ፣ ቪዲዮውን እንደገና ይቅረጹ ወይም በኢሜይል ይላኩ።",
+  "dmPendingVideoWaiting": "በመጠባበቅ ላይ…",
+  "dmPendingVideoPreparing": "በማዘጋጀት ላይ…",
+  "dmPendingVideoUploading": "በመስቀል ላይ {percent}",
+  "dmPendingVideoSending": "በመላክ ላይ…",
+  "dmPendingVideoRemove": "ማስወገድ",
+  "dmPendingVideoSemantics": "ቪዲዮ በመላክ ላይ፣ {percent}",
+  "dmPendingVideoFailedSemantics": "ቪዲዮው አልተላከም",
+  "dmVideoOutcomeInChat": "{chat}፦ {outcome}"
 }

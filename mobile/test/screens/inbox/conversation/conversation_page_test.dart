@@ -3,6 +3,7 @@
 // ABOUTME: to ConversationView via BlocProvider.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
@@ -24,12 +25,32 @@ import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/connection_status_service.dart';
+import 'package:openvine/services/dm_video_send_service.dart';
+import 'package:openvine/services/video_dm_outbox.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
 
 class _MockDmRepository extends Mock implements DmRepository {}
 
 class _MockAuthService extends Mock implements AuthService {}
+
+class _MockDmVideoSendService extends Mock implements DmVideoSendService {}
+
+/// Pushes [page] when tapped, so a test can leave and re-enter it.
+class _ConversationOpener extends StatelessWidget {
+  const _ConversationOpener({required this.page});
+
+  final Widget page;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onTap: () => Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => page)),
+    child: const SizedBox.expand(),
+  );
+}
 
 /// The real service arms a 30s periodic timer in its constructor, which
 /// would still be pending when the tree is torn down.
@@ -145,6 +166,94 @@ void main() {
         await tester.pump();
 
         expect(find.byType(ConversationView), findsOneWidget);
+      });
+
+      testWidgets('a send keeps running and shows again after the page is '
+          'popped and re-pushed', (tester) async {
+        registerFallbackValue(File('/tmp/fallback.mp4'));
+        registerFallbackValue((DmVideoSendPhase _) {});
+        registerFallbackValue((double _) {});
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final sendService = _MockDmVideoSendService();
+        final result = Completer<NIP17SendResult>();
+        void Function(DmVideoSendPhase)? onPhase;
+        void Function(double)? onUploadProgress;
+        when(
+          () => sendService.sendVideo(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            videoFile: any(named: 'videoFile'),
+            mimeType: any(named: 'mimeType'),
+            extraTags: any(named: 'extraTags'),
+            onPhase: any(named: 'onPhase'),
+            onUploadProgress: any(named: 'onUploadProgress'),
+            cancellation: any(named: 'cancellation'),
+          ),
+        ).thenAnswer((invocation) {
+          onPhase =
+              invocation.namedArguments[#onPhase]
+                  as void Function(DmVideoSendPhase)?;
+          onUploadProgress =
+              invocation.namedArguments[#onUploadProgress]
+                  as void Function(double)?;
+          return result.future;
+        });
+        final outbox = VideoDmOutbox(
+          sendService: () => sendService,
+          readFrame: (_) async => null,
+        );
+        addTearDown(outbox.dispose);
+        outbox.sendVideo(
+          conversationId: testConversationId,
+          recipientPubkey: otherPubkey,
+          file: File('/tmp/clip.mp4'),
+        );
+        onPhase!(DmVideoSendPhase.uploading);
+        onUploadProgress!(0.5);
+
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: const _ConversationOpener(
+              page: ConversationPage(
+                conversationId: testConversationId,
+                participantPubkeys: [otherPubkey],
+              ),
+            ),
+            mockAuthService: mockAuthService,
+            additionalOverrides: [
+              isDmRestrictedProvider.overrideWithValue(false),
+              dmRepositoryProvider.overrideWithValue(mockDmRepository),
+              videoDmOutboxProvider.overrideWithValue(outbox),
+              fetchUserProfileProvider(
+                otherPubkey,
+              ).overrideWith((ref) async => null),
+            ],
+          ),
+        );
+
+        await tester.tap(find.byType(_ConversationOpener));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.dmPendingVideoUploading('50%')), findsOneWidget);
+
+        tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+        await tester.pumpAndSettle();
+        expect(find.byType(ConversationView), findsNothing);
+
+        await tester.tap(find.byType(_ConversationOpener));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.dmPendingVideoUploading('50%')), findsOneWidget);
+
+        result.complete(
+          NIP17SendResult.success(
+            rumorEventId: 'rumor-1',
+            messageEventId: 'wrap-1',
+            recipientPubkey: otherPubkey,
+          ),
+        );
+        await tester.pumpAndSettle();
+        // Sent while its row has not arrived: the bubble stays, without its
+        // upload status.
+        expect(find.text(l10n.dmPendingVideoUploading('50%')), findsNothing);
+        expect(find.byType(PendingVideoBubble), findsOneWidget);
       });
 
       // Those three actions are for message requests. Opening a chat already

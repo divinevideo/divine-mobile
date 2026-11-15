@@ -3984,6 +3984,31 @@ class AppLocalizationsMs extends AppLocalizations {
       'Klip ini tidak dapat disemak sekarang. Cuba lagi sebentar nanti.';
 
   @override
+  String get dmPendingVideoWaiting => 'Menunggu…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Menyediakan…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'Memuat naik $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Menghantar…';
+
+  @override
+  String get dmPendingVideoRemove => 'Alih keluar';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return 'Menghantar video, $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Video gagal dihantar';
+
+  @override
   String get dmClipSendNotVerified =>
       'Kami tidak dapat mengesahkan klip ini dirakam dengan kamera Divine, jadi ia tidak boleh dihantar sebagai klip.';
 
@@ -16145,4 +16170,9 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'Penyerahan anda tidak diterima. Semak alamat e-mel anda, rakam semula video atau gunakan e-mel.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

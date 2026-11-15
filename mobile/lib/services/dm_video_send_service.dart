@@ -1,6 +1,7 @@
 // ABOUTME: Orchestrates sending an encrypted video as a NIP-17 kind 15 DM.
 // ABOUTME: Encrypts the file, uploads the ciphertext, and sends the metadata.
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
@@ -9,6 +10,8 @@ import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_preview.dart';
+import 'package:openvine/services/dm_video_send_cancellation.dart';
+import 'package:openvine/utils/detached_future.dart';
 
 /// Progress stages reported by [DmVideoSendService.sendVideo].
 ///
@@ -62,6 +65,9 @@ class DmVideoSendService {
   /// encryption, before upload, before the NIP-17 send) so a caller can render
   /// progress. It is never invoked for a stage that has not started.
   ///
+  /// [onUploadProgress], when supplied, receives the ciphertext upload's
+  /// completion fraction (0.0 to 1.0) as Blossom reports it.
+  ///
   /// [extraTags] are forwarded to [DmRepository.sendFileMessage], e.g. the
   /// marker that identifies a Divine camera clip.
   @useResult
@@ -73,18 +79,39 @@ class DmVideoSendService {
     String? dimensions,
     List<List<String>> extraTags = const [],
     void Function(DmVideoSendPhase phase)? onPhase,
+    void Function(double fraction)? onUploadProgress,
+    DmVideoSendCancellation? cancellation,
   }) async {
+    cancellation?.throwIfCancelled();
     onPhase?.call(DmVideoSendPhase.encrypting);
     final enc = await _encryption.encryptFile(videoFile);
-    // Read the optional preview alongside the upload after encryption succeeds.
-    final preview = blurhash == null && dimensions == null
-        ? _readPreview(videoFile)
-        : Future.value((blurhash: blurhash, dimensions: dimensions));
     try {
-      onPhase?.call(DmVideoSendPhase.uploading);
-      final upload = await _blossom.uploadEncryptedFile(
-        ciphertextFile: enc.ciphertextFile,
+      cancellation?.throwIfCancelled();
+      // Read alongside the upload. Observe errors immediately even if an
+      // interrupted upload returns before the preview settles.
+      final preview = blurhash == null && dimensions == null
+          ? _readPreview(videoFile)
+          : Future.value((blurhash: blurhash, dimensions: dimensions));
+      unawaited(
+        preview.then<void>((_) {}, onError: (Object _, StackTrace _) {}),
       );
+      cancellation?.startUpload();
+      onPhase?.call(DmVideoSendPhase.uploading);
+      final uploading = _blossom.uploadEncryptedFile(
+        ciphertextFile: enc.ciphertextFile,
+        onProgress: cancellation == null
+            ? onUploadProgress
+            : (fraction) {
+                if (!cancellation.isActive) return;
+                cancellation.uploadProgress(fraction);
+                onUploadProgress?.call(fraction);
+              },
+        cancelToken: cancellation?.uploadCancelToken,
+        onUploadAttempt: cancellation?.startUploadAttempt,
+      );
+      final upload = await (cancellation?.waitFor(uploading) ?? uploading);
+      cancellation?.throwIfCancelled();
+      cancellation?.finishUpload();
       if (!upload.success || upload.videoId == null) {
         return NIP17SendResult.failure(
           upload.errorMessage ?? 'Encrypted upload failed',
@@ -95,7 +122,8 @@ class DmVideoSendService {
           upload.url ??
           '${BlossomUploadService.defaultBlossomServer}/${upload.videoId}';
 
-      final hints = await preview;
+      final hints = await (cancellation?.waitFor(preview) ?? preview);
+      cancellation?.beginPublication();
       onPhase?.call(DmVideoSendPhase.sending);
       return await _dmRepository.sendFileMessage(
         recipientPubkey: recipientPubkey,
@@ -117,7 +145,19 @@ class DmVideoSendService {
         extraTags: extraTags,
       );
     } finally {
-      await _deleteCiphertextQuietly(enc.ciphertextFile);
+      // Detached, never awaited: `sendFileMessage` commits the message row
+      // before it returns, and the outbox marks the entry sent only when this
+      // future completes. Awaiting the delete here held that flip across real
+      // file I/O while the row was already live, so the thread could render
+      // the row and the pending bubble together — the handoff's "shows twice"
+      // anti-goal. Fire-and-forget keeps both stream ticks in one event-loop
+      // turn. Deletion stays best-effort and can never mask the send result.
+      runDetached(
+        _deleteCiphertextQuietly(enc.ciphertextFile),
+        'delete the video DM ciphertext file',
+        logName: 'DmVideoSendService',
+        category: LogCategory.video,
+      );
     }
   }
 

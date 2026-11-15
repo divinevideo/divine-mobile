@@ -3,40 +3,51 @@
 // ABOUTME: and real-time message streaming.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:bloc/bloc.dart';
 import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'package:collection/collection.dart';
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/reportable_sites.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/services/video_dm_outbox.dart';
 import 'package:rxdart/rxdart.dart';
 
 part 'conversation_event.dart';
 part 'conversation_state.dart';
 
-/// Tuple emitted by the dual-stream subscription in [_onStarted]. Carries
-/// both reactive slices through a single [emit.forEach] so the
+/// Tuple emitted by the combined subscription in [_onStarted]. Carries
+/// every reactive slice through a single [emit.forEach] so the
 /// `restartable()` transformer keeps lifecycle handling identical to the
 /// previous single-stream shape.
 class _ConversationTick extends Equatable {
-  const _ConversationTick(this.messages, this.pendingOutgoing);
+  const _ConversationTick(
+    this.messages,
+    this.pendingOutgoing,
+    this.pendingVideoSends,
+  );
 
   final List<DmMessage> messages;
   final List<OutgoingDm> pendingOutgoing;
+  final List<OutgoingVideoDm> pendingVideoSends;
 
   @override
-  List<Object?> get props => [messages, pendingOutgoing];
+  List<Object?> get props => [messages, pendingOutgoing, pendingVideoSends];
 }
 
 class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
   ConversationBloc({
     required DmRepository dmRepository,
     required String conversationId,
+    required VideoDmOutbox videoOutbox,
   }) : _dmRepository = dmRepository,
        _conversationId = conversationId,
+       _videoOutbox = videoOutbox,
        super(const ConversationState()) {
     on<ConversationStarted>(_onStarted, transformer: restartable());
     // Sends are optimistic and independent per rumor: `sequential()` made
@@ -79,10 +90,28 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
       _onOutgoingSendCancelled,
       transformer: sequential(),
     );
+    // The outbox queues and runs video sends itself; these only forward.
+    on<ConversationVideoSendRequested>(
+      _onVideoSendRequested,
+      transformer: sequential(),
+    );
+    on<ConversationClipsSendRequested>(
+      _onClipsSendRequested,
+      transformer: sequential(),
+    );
+    on<ConversationVideoSendRetried>(
+      _onVideoSendRetried,
+      transformer: sequential(),
+    );
+    on<ConversationVideoSendRemoved>(
+      _onVideoSendRemoved,
+      transformer: sequential(),
+    );
   }
 
   final DmRepository _dmRepository;
   final String _conversationId;
+  final VideoDmOutbox _videoOutbox;
 
   Future<void> _onStarted(
     ConversationStarted event,
@@ -97,8 +126,9 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     // list and render the "new conversation" card over a thread that has
     // history — `mayBeIncomplete` fails open to false while uncredentialed,
     // so nothing would even qualify it. `ConversationPage` re-keys this bloc
-    // on `(dmRepository, currentPubkey)`, so a later authenticated identity
-    // rebuilds it and re-dispatches this event against an owner-scoped instance.
+    // on `(conversationId, dmRepository, videoOutbox, currentPubkey)`, so a
+    // later authenticated identity rebuilds it and re-dispatches this event
+    // against an owner-scoped instance.
     if (_dmRepository.userPubkey.isEmpty) return;
 
     // Arm the one-time history drain here too, not just on inbox open.
@@ -121,10 +151,19 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     // race that #4193 patched AND an app kill mid-send (the latter is
     // the epic #3912 acceptance criterion the previous in-memory slice
     // could not meet).
+    //
+    // `watchConversation` adds the outgoing video DMs, which live in the
+    // account's outbox rather than the database until their row is written.
     final ticks =
-        Rx.combineLatest2<List<DmMessage>, List<OutgoingDm>, _ConversationTick>(
+        Rx.combineLatest3<
+          List<DmMessage>,
+          List<OutgoingDm>,
+          List<OutgoingVideoDm>,
+          _ConversationTick
+        >(
           _dmRepository.watchMessages(_conversationId),
           _dmRepository.watchOutgoing(_conversationId),
+          _videoOutbox.watchConversation(_conversationId),
           _ConversationTick.new,
         );
 
@@ -133,7 +172,8 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
       onData: (tick) {
         // Mark as read only when this conversation's persisted message list
         // actually changed — a new (or edited/removed) message — not on ticks
-        // driven solely by the outgoing-queue stream or a bare re-emit.
+        // driven solely by the outgoing-queue or video-outbox stream, or a
+        // bare re-emit.
         //
         // Every tick previously fired markConversationAsRead, and the DAO's
         // conversations-table notification fans out to the badge cubit and the
@@ -141,12 +181,13 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
         // transition (pending → sent → delivered) and re-emit forced a
         // redundant recompute. A genuinely new incoming message always changes
         // `messages`, so this never leaves an unread uncleared while the
-        // conversation is open. `combineLatest2` re-emits the same `messages`
-        // instance on an outgoing-only tick, so the `identical` fast-path keeps
-        // that common case O(1).
+        // conversation is open. `combineLatest3` re-emits the same `messages`
+        // instance on an outgoing- or video-only tick, so the `identical`
+        // fast-path keeps that common case O(1).
         if (!_sameMessages(tick.messages, state.messages)) {
           unawaited(_dmRepository.markConversationAsRead(_conversationId));
         }
+        _acknowledgeDeliveredVideos(tick);
         final refused = _refusedRetractions(tick.messages);
         final confirmed = _confirmedRetractions(tick.messages);
         final completed = {...refused, ...confirmed};
@@ -154,6 +195,7 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
           status: ConversationStatus.loaded,
           messages: tick.messages,
           pendingOutgoing: tick.pendingOutgoing,
+          pendingVideoSends: tick.pendingVideoSends,
           awaitingRetraction: completed.isEmpty
               ? state.awaitingRetraction
               : state.awaitingRetraction.difference(completed),
@@ -168,9 +210,52 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     );
   }
 
+  /// Releases each sent video entry whose row is in this tick's messages.
+  /// The state already hides it behind the row; acknowledging lets the outbox
+  /// drop it. Repeats are no-ops in the outbox.
+  void _acknowledgeDeliveredVideos(_ConversationTick tick) {
+    if (tick.pendingVideoSends.isEmpty) return;
+    final messageIds = {for (final message in tick.messages) message.id};
+    for (final entry in tick.pendingVideoSends) {
+      if (entry.phase == OutgoingVideoDmPhase.sent &&
+          messageIds.contains(entry.rumorEventId)) {
+        _videoOutbox.acknowledge(entry.id);
+      }
+    }
+  }
+
+  void _onVideoSendRequested(
+    ConversationVideoSendRequested event,
+    Emitter<ConversationState> emit,
+  ) => _videoOutbox.sendVideo(
+    conversationId: _conversationId,
+    recipientPubkey: event.recipientPubkey,
+    file: event.file,
+  );
+
+  void _onClipsSendRequested(
+    ConversationClipsSendRequested event,
+    Emitter<ConversationState> emit,
+  ) => _videoOutbox.sendClips(
+    conversationId: _conversationId,
+    recipientPubkey: event.recipientPubkey,
+    clips: event.clips,
+  );
+
+  void _onVideoSendRetried(
+    ConversationVideoSendRetried event,
+    Emitter<ConversationState> emit,
+  ) => _videoOutbox.retry(event.id);
+
+  void _onVideoSendRemoved(
+    ConversationVideoSendRemoved event,
+    Emitter<ConversationState> emit,
+  ) => _videoOutbox.remove(event.id);
+
   /// Whether two persisted-message lists carry the same messages in the same
   /// order. `DmMessage` is `Equatable`, so element comparison is by value.
-  /// The `identical` fast-path keeps the common outgoing-only tick O(1).
+  /// The `identical` fast-path keeps the common outgoing- or video-only tick
+  /// O(1).
   static bool _sameMessages(List<DmMessage> a, List<DmMessage> b) {
     if (identical(a, b)) return true;
     if (a.length != b.length) return false;
@@ -349,7 +434,7 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
     // `statusFor` short-circuits to `delivered` and no bubble is ever built,
     // so the send failed in complete silence. Refuse it here instead, with a
     // status the view can toast — a backstop rather than a reachable path:
-    // `_SendBarBody`, the only dispatcher of `ConversationMessageSent`, is
+    // `_SendBar`, the only dispatcher of `ConversationMessageSent`, is
     // built only for `DmThreadWritability.writable`, which requires
     // participants.
     if (event.recipientPubkeys.isEmpty) {

@@ -4015,6 +4015,31 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi ma-check ang clip na ito ngayon. Subukan ulit mamaya.';
 
   @override
+  String get dmPendingVideoWaiting => 'Naghihintay…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Inihahanda…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'Ina-upload $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Ipinapadala…';
+
+  @override
+  String get dmPendingVideoRemove => 'Alisin';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return 'Ipinapadala ang video, $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Hindi naipadala ang video';
+
+  @override
   String get dmClipSendNotVerified =>
       'Hindi namin makumpirma na kinunan ang clip na ito gamit ang Divine camera, kaya hindi ito maipapadala bilang clip.';
 
@@ -16283,4 +16308,9 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'Hindi tinanggap ang ipinasa mo. Suriin ang email mo, i-record muli ang video, o gumamit ng email.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

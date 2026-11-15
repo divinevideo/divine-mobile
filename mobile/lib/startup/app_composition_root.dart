@@ -45,6 +45,7 @@ import 'package:openvine/services/mention_resolution_service.dart';
 import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/startup/upload_failure_listener.dart';
+import 'package:openvine/startup/video_dm_send_outcome_listener.dart';
 import 'package:openvine/widgets/app_lifecycle_handler.dart';
 import 'package:openvine/widgets/app_shell_badge_scope.dart';
 import 'package:openvine/widgets/geo_blocking_gate.dart';
@@ -216,9 +217,11 @@ class AppCompositionRoot extends ConsumerWidget {
             },
             child: UpdateDialogListener(
               child: UploadFailureListener(
-                child: GeoBlockingGate(
-                  child: AppLifecycleHandler(
-                    child: SoundRequestsScope(child: child),
+                child: VideoDmSendOutcomeListener(
+                  child: GeoBlockingGate(
+                    child: AppLifecycleHandler(
+                      child: SoundRequestsScope(child: child),
+                    ),
                   ),
                 ),
               ),

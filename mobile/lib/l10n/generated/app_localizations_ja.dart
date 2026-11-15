@@ -3740,6 +3740,31 @@ class AppLocalizationsJa extends AppLocalizations {
   String get dmClipCheckUnavailable => '今はこのクリップを確認できません。少し経ってからもう一度お試しください';
 
   @override
+  String get dmPendingVideoWaiting => '待機中…';
+
+  @override
+  String get dmPendingVideoPreparing => '準備中…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'アップロード中 $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => '送信中…';
+
+  @override
+  String get dmPendingVideoRemove => '削除';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return '動画を送信中、$percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => '動画を送信できませんでした';
+
+  @override
   String get dmClipSendNotVerified =>
       'このクリップがDivineのカメラで撮影されたことを確認できなかったため、クリップとして送信できません';
 
@@ -15394,4 +15419,9 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       '送信内容が受け付けられませんでした。メールアドレスを確認するか、動画を撮り直すか、メールをご利用ください。';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat：$outcome';
+  }
 }

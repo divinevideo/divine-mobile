@@ -4047,6 +4047,31 @@ class AppLocalizationsBg extends AppLocalizations {
       'Не можем да проверим клипа в момента. Опитай пак след малко.';
 
   @override
+  String get dmPendingVideoWaiting => 'Изчакване…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Подготовка…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'Качване $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Изпращане…';
+
+  @override
+  String get dmPendingVideoRemove => 'Премахни';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return 'Изпращане на видео, $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Видеото не беше изпратено';
+
+  @override
   String get dmClipSendNotVerified =>
       'Не успяхме да потвърдим, че клипът е заснет с камерата на Divine, затова не може да се изпрати като клип.';
 
@@ -16295,4 +16320,9 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'Изпратеното не беше прието. Провери имейл адреса си, запиши видеото отново или използвай имейл.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

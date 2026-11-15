@@ -6367,5 +6367,13 @@
   "minorAccountReviewVideoSubmittedBody": "Je video is ingediend voor beoordeling.",
   "minorAccountReviewVideoSubmittedTitle": "Video ingediend",
   "minorAccountReviewRecordConsentPrivacyBody": "Je video wordt vertrouwelijk naar de teams voor ondersteuning en vertrouwen en veiligheid van Divine gestuurd voor beoordeling. De video wordt niet gepubliceerd of met andere gebruikers gedeeld.",
-  "minorAccountReviewRecordConsentRejected": "Je inzending is niet geaccepteerd. Controleer je e-mailadres, neem de video opnieuw op of gebruik e-mail."
+  "minorAccountReviewRecordConsentRejected": "Je inzending is niet geaccepteerd. Controleer je e-mailadres, neem de video opnieuw op of gebruik e-mail.",
+  "dmPendingVideoWaiting": "Wachten…",
+  "dmPendingVideoPreparing": "Voorbereiden…",
+  "dmPendingVideoUploading": "Uploaden {percent}",
+  "dmPendingVideoSending": "Versturen…",
+  "dmPendingVideoRemove": "Verwijderen",
+  "dmPendingVideoSemantics": "Video versturen, {percent}",
+  "dmPendingVideoFailedSemantics": "Video kon niet worden verstuurd",
+  "dmVideoOutcomeInChat": "{chat}: {outcome}"
 }

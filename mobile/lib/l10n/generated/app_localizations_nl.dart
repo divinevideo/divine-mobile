@@ -4008,6 +4008,31 @@ class AppLocalizationsNl extends AppLocalizations {
       'Deze clip kan nu niet worden gecheckt. Probeer het zo nog eens.';
 
   @override
+  String get dmPendingVideoWaiting => 'Wachten…';
+
+  @override
+  String get dmPendingVideoPreparing => 'Voorbereiden…';
+
+  @override
+  String dmPendingVideoUploading(String percent) {
+    return 'Uploaden $percent';
+  }
+
+  @override
+  String get dmPendingVideoSending => 'Versturen…';
+
+  @override
+  String get dmPendingVideoRemove => 'Verwijderen';
+
+  @override
+  String dmPendingVideoSemantics(String percent) {
+    return 'Video versturen, $percent';
+  }
+
+  @override
+  String get dmPendingVideoFailedSemantics => 'Video kon niet worden verstuurd';
+
+  @override
   String get dmClipSendNotVerified =>
       'We konden niet bevestigen dat deze clip met de Divine-camera is gefilmd, dus hij kan niet als clip worden verstuurd.';
 
@@ -16232,4 +16257,9 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'Je inzending is niet geaccepteerd. Controleer je e-mailadres, neem de video opnieuw op of gebruik e-mail.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

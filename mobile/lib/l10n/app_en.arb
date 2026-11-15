@@ -2689,15 +2689,15 @@
   },
   "dmVideoSent": "Video sent",
   "@dmVideoSent": {
-    "description": "SnackBar shown in a DM conversation after an encrypted video DM reaches the recipient's relays. It states delivery only: it must not claim the video can be revoked, or that it cannot be saved or forwarded."
+    "description": "SnackBar shown anywhere in the app after an encrypted video DM reaches the recipient's relays. It states delivery only: it must not claim the video can be revoked, or that it cannot be saved or forwarded."
   },
   "dmVideoSendFailed": "Couldn't send video",
   "@dmVideoSendFailed": {
-    "description": "SnackBar shown in a DM conversation when an encrypted video DM fails to upload or send. The composer stays usable, so the user can attach the video again."
+    "description": "SnackBar shown anywhere in the app, and the status line under the failed video in the conversation, when an encrypted video DM fails to upload or send. The failed video offers Retry."
   },
   "dmVideoTooLarge": "That video's too big to send. Pick one under {maxMegabytes} MB",
   "@dmVideoTooLarge": {
-    "description": "SnackBar shown in a DM conversation when the picked video exceeds the encrypted video DM size limit, before anything is uploaded.",
+    "description": "SnackBar shown anywhere in the app, and the status line under the failed video in the conversation, when the picked video exceeds the encrypted video DM size limit, before anything is uploaded.",
     "placeholders": {
       "maxMegabytes": {
         "type": "String",
@@ -2749,9 +2749,49 @@
   "@dmClipCheckUnavailable": {
     "description": "SnackBar shown when the C2PA check on a received clip cannot run right now, for example offline with no cached trust list. Nothing was concluded about the clip, so the copy invites a retry."
   },
+  "dmPendingVideoWaiting": "Waiting…",
+  "@dmPendingVideoWaiting": {
+    "description": "Status line on an outgoing video in a DM conversation while it waits for the sends ahead of it."
+  },
+  "dmPendingVideoPreparing": "Preparing…",
+  "@dmPendingVideoPreparing": {
+    "description": "Status line on an outgoing video in a DM conversation while it is being checked and encrypted, before the upload starts."
+  },
+  "dmPendingVideoUploading": "Uploading {percent}",
+  "@dmPendingVideoUploading": {
+    "description": "Status line on an outgoing video in a DM conversation while it uploads. {percent} is the share uploaded so far, already formatted for the locale with its percent sign (for example 42% in English, 42 % in French).",
+    "placeholders": {
+      "percent": {
+        "type": "String",
+        "example": "42%"
+      }
+    }
+  },
+  "dmPendingVideoSending": "Sending…",
+  "@dmPendingVideoSending": {
+    "description": "Status line on an outgoing video in a DM conversation after the upload, while the message is being delivered."
+  },
+  "dmPendingVideoRemove": "Remove",
+  "@dmPendingVideoRemove": {
+    "description": "Button on an outgoing video in a DM conversation that failed to send. Removes it from the conversation without sending it."
+  },
+  "dmPendingVideoSemantics": "Sending video, {percent}",
+  "@dmPendingVideoSemantics": {
+    "description": "Screen reader label for an outgoing video in a DM conversation that is uploading. {percent} is the share uploaded so far, already formatted for the locale with its percent sign (for example 42% in English, 42 % in French).",
+    "placeholders": {
+      "percent": {
+        "type": "String",
+        "example": "42%"
+      }
+    }
+  },
+  "dmPendingVideoFailedSemantics": "Video failed to send",
+  "@dmPendingVideoFailedSemantics": {
+    "description": "Screen reader label for an outgoing video in a DM conversation that failed to send."
+  },
   "dmClipSendNotVerified": "We couldn't confirm this clip was shot with the Divine camera, so it can't be sent as a clip.",
   "@dmClipSendNotVerified": {
-    "description": "SnackBar shown in the DM composer when a clip picked from the sender's own library has no valid Divine camera credential, so it is not sent: the recipient could never add it to their clips."
+    "description": "SnackBar shown anywhere in the app, and the status line under the failed clip in the conversation, when a clip picked from the sender's own library has no valid Divine camera credential, so it is not sent: the recipient could never add it to their clips."
   },
   "dmAttachReuseNotice": "They can add what you send to their clips and post it. You'll get credit.",
   "@dmAttachReuseNotice": {
@@ -13270,5 +13310,17 @@
   "minorAccountReviewVideoSubmittedBody": "Your video has been submitted for review.",
   "minorAccountReviewVideoSubmittedTitle": "Video submitted",
   "minorAccountReviewRecordConsentPrivacyBody": "Your video goes privately to Divine Support and Trust & Safety for review. It is not published or shared with other users.",
-  "minorAccountReviewRecordConsentRejected": "Your submission wasn't accepted. Check your email, retake the video, or use email instead."
+  "minorAccountReviewRecordConsentRejected": "Your submission wasn't accepted. Check your email, retake the video, or use email instead.",
+  "dmVideoOutcomeInChat": "{chat}: {outcome}",
+  "@dmVideoOutcomeInChat": {
+    "description": "Video DM outcome shown outside its conversation. The chat is resolved through the same identity presentation as the inbox.",
+    "placeholders": {
+      "chat": {
+        "type": "String"
+      },
+      "outcome": {
+        "type": "String"
+      }
+    }
+  }
 }
