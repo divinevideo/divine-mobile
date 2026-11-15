@@ -47,12 +47,17 @@ class VideoMetadataClipCredits extends ConsumerWidget {
     final pubkeys = creditedCreators(ref);
     if (pubkeys.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 8,
-      children: [
-        for (final pubkey in pubkeys) _ClipCreditRow(pubkey: pubkey),
-      ],
+    // Inset like VideoMetadataSelectionTile, the other tiles in the form box.
+    return Padding(
+      padding: const .all(16),
+      child: Column(
+        mainAxisSize: .min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 8,
+        children: [
+          for (final pubkey in pubkeys) _ClipCreditRow(pubkey: pubkey),
+        ],
+      ),
     );
   }
 }

@@ -67,7 +67,13 @@ Widget _build(
     child: const MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: VideoMetadataClipCredits()),
+      home: Scaffold(
+        // Top-aligned so the credits take their own height, as in the form.
+        body: Align(
+          alignment: Alignment.topCenter,
+          child: VideoMetadataClipCredits(),
+        ),
+      ),
     ),
   );
 }
@@ -149,6 +155,25 @@ void main() {
         find.textContaining(NostrKeyUtils.encodePubKey(_viewer)),
         findsNothing,
       );
+    });
+
+    testWidgets('insets the rows like the other tiles in the form', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _build([
+          _clip('one', const [_author]),
+        ]),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final box = tester.getRect(find.byType(VideoMetadataClipCredits));
+      final row = tester.getRect(find.byType(Row));
+      expect(row.left - box.left, equals(16));
+      expect(box.right - row.right, equals(16));
+      expect(row.top - box.top, equals(16));
+      expect(box.bottom - row.bottom, equals(16));
     });
 
     testWidgets('has no tappable control and exposes the text to semantics', (
