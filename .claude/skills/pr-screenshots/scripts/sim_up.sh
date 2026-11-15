@@ -21,12 +21,26 @@ command -v python3 > /dev/null || { echo "error: sim_up.sh needs python3 on PATH
 # including those run while holding the stack lock, would wait forever. The
 # docker CLI is a Go program, and Go ignores SIGALRM, so an alarm cannot stop
 # it; Python's subprocess timeout kills it instead.
+docker_rc=0
 python3 -I -c 'import subprocess, sys
-try: rc = subprocess.run(["docker", "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20).returncode
-except FileNotFoundError: rc = 127
-except subprocess.TimeoutExpired: rc = 124
-sys.exit(rc)' \
-  || { echo "error: Docker is not answering within 20s. Restart Docker Desktop (quit it; if com.docker.backend lingers, pkill -TERM -f com.docker.backend; then open -a Docker) and run sim_up.sh again" >&2; exit 1; }
+with open(sys.argv[1], "w") as log:
+    try: rc = subprocess.run(["docker", "info"], stdout=subprocess.DEVNULL, stderr=log, timeout=20).returncode
+    except FileNotFoundError: rc = 127
+    except subprocess.TimeoutExpired: rc = 124
+sys.exit(rc)' "$LOG_DIR/docker-info.log" || docker_rc=$?
+case "$docker_rc" in
+  0) ;;
+  124)
+    echo "error: Docker is not answering within 20s. Restart Docker Desktop (quit it; if com.docker.backend lingers, pkill -TERM -f com.docker.backend; then open -a Docker) and run sim_up.sh again" >&2
+    exit 1 ;;
+  127)
+    echo "error: sim_up.sh needs docker on PATH" >&2
+    exit 1 ;;
+  *)
+    echo "error: docker info failed. If Docker Desktop is not running, start it (open -a Docker), wait for it, and run sim_up.sh again. docker info said:" >&2
+    tail -n 3 "$LOG_DIR/docker-info.log" >&2 || true
+    exit 1 ;;
+esac
 
 # Two runs that both find no stack would both start one, each recreating the
 # other's containers, so the check and the start hold a machine-wide lock.
@@ -50,8 +64,9 @@ elif [ "$lock_rc" -ne 0 ]; then
 fi
 
 # Every worktree's local_stack is the same compose project, so a stack another
-# session started is shared: reuse it rather than recreate its containers. A
-# failing `ps` (Docker not running) falls through to up.sh, which reports it.
+# session started is shared: reuse it rather than recreate its containers.
+# Docker answered above, so a failing `ps` falls through to up.sh, which
+# reports it.
 RUNNING_SERVICES=$(docker compose -f "$COMPOSE_FILE" ps --status running --services 2>/dev/null 9>&- || true)
 if grep -qx funnelcake-proxy <<<"$RUNNING_SERVICES"; then
   STACK_STARTED=no

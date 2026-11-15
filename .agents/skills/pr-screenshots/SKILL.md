@@ -97,7 +97,8 @@ create whatever else the screen needs yourself.
 | DM send fails after the upload completes: "names only relays this device will not dial" | The recipient advertised a `ws://` kind-10050 inbox relay. `make_account.sh` publishes no 10050, so DMs fall back to the local relay. |
 | Deep link does nothing | Use `divine:///…` with an empty host. iOS shows an "Open in …?" sheet the first time, so tap `Open` with `optional: true`. |
 | A `divine:///profile/…` link opens Home | The branch predates #11017, before which iOS dropped every `divine:///` route except saved videos and challenges. Check with `git merge-base --is-ancestor a04e156363b5be9269a2e806199daaa2a60a042e HEAD`; if it fails, reach the profile through search instead. |
-| `sim_up.sh` stops with "Docker is not answering" | Docker Desktop is hung: `docker info` never returns, and every later call would wait forever. Quit Docker Desktop; if `com.docker.backend` lingers, `pkill -TERM -f com.docker.backend`; then `open -a Docker` and run `sim_up.sh` again. |
+| `sim_up.sh` stops with "Docker is not answering within 20s" | Docker Desktop is hung: `docker info` never returns, and every later call would wait forever. Quit Docker Desktop; if `com.docker.backend` lingers, `pkill -TERM -f com.docker.backend`; then `open -a Docker` and run `sim_up.sh` again. |
+| `sim_up.sh` stops with "docker info failed" | Usually Docker Desktop is not running. `open -a Docker`, wait until `docker info` answers, and run `sim_up.sh` again; the lines after the error are what `docker info` reported. |
 | Maestro asks which device to use, or drives another simulator | More than one device is booted. Pass `--device <UDID>` to every `maestro` call. |
 | Maestro `tapOn` fails inside the photo picker | The picker runs out of process. Use `idb ui tap` at point coordinates. |
 | Pressing Enter in the composer doesn't send | The field is multiline. Tap `id: dm_message_send_button`. |
