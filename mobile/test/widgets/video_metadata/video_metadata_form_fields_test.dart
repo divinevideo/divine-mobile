@@ -385,7 +385,7 @@ void main() {
     });
 
     group('video reuse toggle', () {
-      testWidgets('starts off and turns on when tapped', (tester) async {
+      testWidgets('starts on and turns off when tapped', (tester) async {
         final mockNotifier = _MockVideoEditorNotifier(
           VideoEditorProviderState(),
         );
@@ -413,7 +413,7 @@ void main() {
           DivineSwitchTile,
           l10n.videoMetadataVideoReuseTitle,
         );
-        expect(tester.widget<DivineSwitchTile>(tile).value, isFalse);
+        expect(tester.widget<DivineSwitchTile>(tile).value, isTrue);
 
         await tester.ensureVisible(tile);
         await tester.pumpAndSettle();
@@ -422,8 +422,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(mockNotifier.lastAllowVideoReuse, isTrue);
-        expect(tester.widget<DivineSwitchTile>(tile).value, isTrue);
+        expect(mockNotifier.lastAllowVideoReuse, isFalse);
+        expect(tester.widget<DivineSwitchTile>(tile).value, isFalse);
       });
 
       testWidgets('is locked off when the sound forbids derivatives', (
@@ -432,7 +432,6 @@ void main() {
         await tester.pumpWidget(
           buildWidget(
             state: VideoEditorProviderState(
-              allowVideoReuse: true,
               selectedSound: AudioEvent(
                 id: 'external_provider_freesound_42',
                 pubkey: AudioEvent.externalProviderMarker,

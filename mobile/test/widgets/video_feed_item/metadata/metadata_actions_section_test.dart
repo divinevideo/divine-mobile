@@ -245,7 +245,11 @@ void main() {
         'no Add to clips for another creator who does not allow reuse',
         (tester) async {
           stubContentActions();
-          final video = _video();
+          final video = _video(
+            tags: const [
+              ['allow_video_reuse', 'false'],
+            ],
+          );
           expect(video.allowVideoReuse, isFalse);
 
           await tester.pumpWidget(buildSubject(video: video));

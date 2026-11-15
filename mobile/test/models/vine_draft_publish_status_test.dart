@@ -126,12 +126,52 @@ void main() {
         lastModified: now,
         publishStatus: PublishStatus.draft,
         publishAttempts: 0,
-        allowVideoReuse: true,
       );
 
       final restored = DivineVideoDraft.fromJson(draft.toJson(), '/path/to');
 
       expect(restored.allowVideoReuse, isTrue);
+    });
+
+    test('restores allowVideoReuse true for a draft saved without it', () {
+      final now = DateTime.now();
+      final json = DivineVideoDraft(
+        id: 'legacy_draft',
+        clips: const [],
+        title: 'Legacy',
+        description: '',
+        hashtags: const {},
+        selectedApproach: 'native',
+        createdAt: now,
+        lastModified: now,
+        publishStatus: PublishStatus.draft,
+        publishAttempts: 0,
+      ).toJson()..remove('allowVideoReuse');
+
+      final restored = DivineVideoDraft.fromJson(json, '/path/to');
+
+      expect(restored.allowVideoReuse, isTrue);
+    });
+
+    test('keeps a stored allowVideoReuse false', () {
+      final now = DateTime.now();
+      final draft = DivineVideoDraft(
+        id: 'declined_draft',
+        clips: const [],
+        title: 'Declined',
+        description: '',
+        hashtags: const {},
+        selectedApproach: 'native',
+        createdAt: now,
+        lastModified: now,
+        publishStatus: PublishStatus.draft,
+        publishAttempts: 0,
+        allowVideoReuse: false,
+      );
+
+      final restored = DivineVideoDraft.fromJson(draft.toJson(), '/path/to');
+
+      expect(restored.allowVideoReuse, isFalse);
     });
 
     test('should serialize publishError when present', () {

@@ -1,5 +1,5 @@
 // ABOUTME: Tests for the rules deciding which content actions a video offers.
-// ABOUTME: Covers the add-to-clips visibility rule, including the web exclusion.
+// ABOUTME: Covers the remix consent rule: absent tag allows, an explicit false declines.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
@@ -22,63 +22,65 @@ VideoEvent _video({
 }
 
 void main() {
-  group('canAddVideoToClips', () {
-    test('is true for a classic Vine', () {
-      expect(
-        canAddVideoToClips(
-          video: _video(rawTags: const {'platform': 'vine'}),
-          isOwnContent: false,
-          isWeb: false,
-        ),
-        isTrue,
-      );
-    });
-
-    test('is true for the viewer own video', () {
-      expect(
-        canAddVideoToClips(
-          video: _video(),
-          isOwnContent: true,
-          isWeb: false,
-        ),
-        isTrue,
-      );
+  group('canRemixVideo', () {
+    test('is true when the video carries no reuse tag', () {
+      expect(canRemixVideo(video: _video(), isOwnContent: false), isTrue);
     });
 
     test('is true when the creator allows video reuse', () {
       expect(
-        canAddVideoToClips(
+        canRemixVideo(
           video: _video(
             tags: const [
               ['allow_video_reuse', 'true'],
             ],
           ),
           isOwnContent: false,
-          isWeb: false,
         ),
         isTrue,
       );
     });
 
-    test('is false for a plain video from someone else', () {
+    test('is false when the creator declines video reuse', () {
       expect(
-        canAddVideoToClips(
-          video: _video(),
+        canRemixVideo(
+          video: _video(
+            tags: const [
+              ['allow_video_reuse', 'false'],
+            ],
+          ),
           isOwnContent: false,
-          isWeb: false,
         ),
         isFalse,
       );
     });
 
-    test('is false on web even for the viewer own video', () {
+    test('is true for a classic Vine even when its tag says false', () {
       expect(
-        canAddVideoToClips(
-          video: _video(),
-          isOwnContent: true,
-          isWeb: true,
+        canRemixVideo(
+          video: _video(
+            rawTags: const {'platform': 'vine'},
+            tags: const [
+              ['allow_video_reuse', 'false'],
+            ],
+          ),
+          isOwnContent: false,
         ),
-        isFalse,
+        isTrue,
+      );
+    });
+
+    test('is true for the viewer own video even when its tag says false', () {
+      expect(
+        canRemixVideo(
+          video: _video(
+            tags: const [
+              ['allow_video_reuse', 'false'],
+            ],
+          ),
+          isOwnContent: true,
+        ),
+        isTrue,
       );
     });
   });

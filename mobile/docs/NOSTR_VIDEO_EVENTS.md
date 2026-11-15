@@ -122,12 +122,13 @@ This is a Divine convention. The app hides the lines from the caption it shows (
 | Tag | Format | Description |
 |-----|--------|-------------|
 | `allow_audio_reuse` | `["allow_audio_reuse", "true"]` | The creator lets others reuse the video's audio. |
-| `allow_video_reuse` | `["allow_video_reuse", "true"]` | The creator lets others add the video to their clips and post it. |
+| `allow_video_reuse` | `["allow_video_reuse", "false"]` | The creator does not let others remix the video (add it to their clips and post it). |
 
 Both are Divine conventions. The app writes each one as `true` or `false` on
-every publish and metadata edit, so an edit keeps an explicit decline; only the
-exact value `true` grants reuse. Archived Vines (`platform` = `vine`) and the
-viewer's own videos can be added to clips without `allow_video_reuse`. A post
+every publish and metadata edit, so an edit keeps an explicit decline. Video
+reuse is allowed by default: a missing tag, `true` or any value other than the
+exact `false` leaves the video remixable. Archived Vines (`platform` = `vine`)
+and the viewer's own videos can be remixed whatever the tag says. A post
 that uses such a clip credits its source with the `clip-source` markers above.
 Publishing lives in `mobile/lib/services/video_event_publisher.dart` and
 `mobile/lib/services/video_metadata_update_service.dart`; parsing in

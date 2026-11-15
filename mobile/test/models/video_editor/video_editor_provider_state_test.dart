@@ -5,6 +5,12 @@ import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 void main() {
+  group('VideoEditorProviderState.allowVideoReuse', () {
+    test('defaults to on for a new post', () {
+      expect(VideoEditorProviderState().allowVideoReuse, isTrue);
+    });
+  });
+
   group('VideoEditorProviderState.offersVideoReuse', () {
     AudioEvent sound({bool allowsDerivatives = true}) => AudioEvent(
       id: 'external_provider_sound',
@@ -38,15 +44,17 @@ void main() {
           },
         );
 
-    test('does not offer reuse unless the creator opts in', () {
-      final state = VideoEditorProviderState(selectedSound: sound());
+    test('does not offer reuse once the creator opts out', () {
+      final state = VideoEditorProviderState(
+        allowVideoReuse: false,
+        selectedSound: sound(),
+      );
 
       expect(state.offersVideoReuse, isFalse);
     });
 
     test('offers reuse when all selected and timeline sounds allow it', () {
       final state = VideoEditorProviderState(
-        allowVideoReuse: true,
         selectedSound: sound(),
         editorEditingParameters: parameters([sound(), sound()]),
       );
@@ -57,7 +65,6 @@ void main() {
 
     test('locks reuse when the selected sound forbids derivatives', () {
       final state = VideoEditorProviderState(
-        allowVideoReuse: true,
         selectedSound: sound(allowsDerivatives: false),
         editorEditingParameters: parameters([sound()]),
       );
@@ -68,7 +75,6 @@ void main() {
 
     test('locks reuse when a later timeline sound forbids derivatives', () {
       final state = VideoEditorProviderState(
-        allowVideoReuse: true,
         editorEditingParameters: parameters([
           sound(),
           sound(allowsDerivatives: false),
@@ -81,7 +87,6 @@ void main() {
 
     test('a selected sound cannot hide a restricted timeline sound', () {
       final state = VideoEditorProviderState(
-        allowVideoReuse: true,
         selectedSound: sound(),
         editorEditingParameters: parameters([
           sound(allowsDerivatives: false),
@@ -94,7 +99,6 @@ void main() {
 
     test('removing the restricted track restores the creator choice', () {
       final state = VideoEditorProviderState(
-        allowVideoReuse: true,
         editorEditingParameters: parameters([
           sound(allowsDerivatives: false),
         ]),

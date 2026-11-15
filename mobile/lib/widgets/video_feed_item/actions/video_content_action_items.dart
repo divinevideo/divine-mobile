@@ -2,6 +2,7 @@
 // ABOUTME: offer; each sheet picks their order and adds its own actions.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
@@ -134,7 +135,8 @@ VideoActionRowItem saveVideoActionItem(
 }
 
 /// Asks for a clip title, then adds [video] to the viewer's clips, or null
-/// when [canAddVideoToClips] does not allow it for this viewer.
+/// when [canRemixVideo] does not allow it for this viewer, or on web, where
+/// clip import is unavailable.
 ///
 /// Shows as pending while the import runs. [context] must be the building
 /// context of a widget below the sheet's [VideoContentActionsBloc]: the item
@@ -144,7 +146,7 @@ VideoActionRowItem? addToClipsActionItem(
   required VideoEvent video,
   required bool isOwnContent,
 }) {
-  if (!canAddVideoToClips(video: video, isOwnContent: isOwnContent)) {
+  if (kIsWeb || !canRemixVideo(video: video, isOwnContent: isOwnContent)) {
     return null;
   }
   final isImporting = context.select(

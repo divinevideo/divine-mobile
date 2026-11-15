@@ -32,7 +32,6 @@ DivineVideoDraft _createDraft() => DivineVideoDraft(
   sourceDraftId: 'draft_source',
   expireTime: const Duration(days: 7),
   allowAudioReuse: true,
-  allowVideoReuse: true,
   proofManifestJson: '{"videoHash":"abc"}',
   editorStateHistory: const {'foo': 'bar'},
   editorEditingParameters: const {'brightness': 0.5},

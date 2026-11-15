@@ -27,10 +27,10 @@ void main() {
       expect(video.allowVideoReuse, isTrue);
     });
 
-    test('is false when the event omits the marker', () {
+    test('is true when the event omits the marker', () {
       final video = VideoEvent.fromNostrEvent(buildEvent());
 
-      expect(video.allowVideoReuse, isFalse);
+      expect(video.allowVideoReuse, isTrue);
     });
 
     test('is false for an explicit decline', () {
@@ -39,10 +39,10 @@ void main() {
       expect(video.allowVideoReuse, isFalse);
     });
 
-    test('is false for a malformed marker', () {
-      final video = VideoEvent.fromNostrEvent(buildEvent(marker: 'TRUE'));
+    test('is true for a malformed marker', () {
+      final video = VideoEvent.fromNostrEvent(buildEvent(marker: 'FALSE'));
 
-      expect(video.allowVideoReuse, isFalse);
+      expect(video.allowVideoReuse, isTrue);
     });
 
     test('survives a JSON-cache round-trip that drops nostrEventTags', () {
