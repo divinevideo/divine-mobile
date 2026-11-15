@@ -156,8 +156,8 @@ VideoActionRowItem reportRemixActionItem(
 }
 
 /// Asks for a clip title, then adds [video] to the viewer's clips, or null
-/// when [canRemixVideo] does not allow it for this viewer, or on web, where
-/// clip import is unavailable.
+/// when [canRemixVideo] does not allow it for this viewer, or on the web
+/// ([isWeb]), where clip import is unavailable.
 ///
 /// Shows as pending while the import runs. [context] must be the building
 /// context of a widget below the sheet's [VideoContentActionsBloc]: the item
@@ -166,8 +166,9 @@ VideoActionRowItem? addToClipsActionItem(
   BuildContext context, {
   required VideoEvent video,
   required bool isOwnContent,
+  bool isWeb = kIsWeb,
 }) {
-  if (kIsWeb || !canRemixVideo(video: video, isOwnContent: isOwnContent)) {
+  if (isWeb || !canRemixVideo(video: video, isOwnContent: isOwnContent)) {
     return null;
   }
   final isImporting = context.select(
