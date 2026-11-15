@@ -17,6 +17,22 @@ function isGitHubTestMerge(commit) {
   );
 }
 
+// Picks the PR an originating build run belongs to from fetched PR objects.
+// Returns null when none matches, which happens when the PR head moved after
+// the build, and throws when the run is ambiguous.
+function selectPreviewPr({ run, pulls, repoFullName }) {
+  const matches = pulls.filter(
+    (pr) =>
+      pr.base.repo.full_name === repoFullName &&
+      pr.base.ref === 'main' &&
+      pr.head.sha === run.head_sha &&
+      pr.head.ref === run.head_branch &&
+      pr.head.repo.id === run.head_repository.id,
+  );
+  if (matches.length > 1) throw Error('Preview run matches more than one PR');
+  return matches[0] ?? null;
+}
+
 function previewProvenance({
   run,
   pr,
@@ -64,4 +80,4 @@ function previewProvenance({
   };
 }
 
-module.exports = { previewProvenance };
+module.exports = { previewProvenance, selectPreviewPr };

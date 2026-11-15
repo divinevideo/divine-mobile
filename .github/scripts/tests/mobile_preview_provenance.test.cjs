@@ -1,6 +1,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { previewProvenance } = require('../mobile_preview_provenance.cjs');
+const {
+  previewProvenance,
+  selectPreviewPr,
+} = require('../mobile_preview_provenance.cjs');
 
 const head = 'a'.repeat(40);
 const base = 'b'.repeat(40);
@@ -64,20 +67,62 @@ test('rejects a first parent that main does not contain', () => {
   }
 });
 
-test('rejects mismatched head/repository, unassociated PRs and unrelated build commits', () => {
-  const alterations = [
-    (v) => { v.pr.head.sha = 'd'.repeat(40); },
-    (v) => { v.pr.head.repo.id = 2; },
-    (v) => { v.run.pull_requests = []; },
-    (v) => { v.commit.parents = [{ sha: base }, { sha: 'e'.repeat(40) }]; },
-    (v) => { v.run.path = 'untrusted.yml'; },
-    (v) => { v.metadata.build_sha = 'x\noutput=value'; },
-  ];
-  for (const alter of alterations) {
-    const v = input();
-    alter(v);
-    assert.throws(() => previewProvenance(v));
+const RUN_MISMATCH = { message: 'Preview run does not match PR' };
+const MERGE_INVALID = { message: 'Preview merge provenance is invalid' };
+
+const assertRejects = (alter, expected) => {
+  const v = input();
+  alter(v);
+  assert.throws(() => previewProvenance(v), expected);
+};
+
+test('rejects runs that are not a successful pull_request preview build', () => {
+  assertRejects((v) => { v.run.event = 'pull_request_target'; }, RUN_MISMATCH);
+  assertRejects((v) => { v.run.conclusion = 'failure'; }, RUN_MISMATCH);
+  assertRejects((v) => { v.run.path = 'untrusted.yml'; }, RUN_MISMATCH);
+});
+
+test('rejects a PR the run is not associated with', () => {
+  // Association path: the run names a different PR.
+  assertRejects((v) => { v.run.pull_requests = [{ number: 4, base: { sha: base } }]; }, RUN_MISMATCH);
+  // Fallback path: commit-associated PRs name a different PR.
+  assertRejects((v) => {
+    v.run.pull_requests = [];
+    v.associatedPulls = [{ number: 4 }];
+  }, RUN_MISMATCH);
+  // Fallback is only for runs without pull_requests.
+  assertRejects((v) => {
+    v.run.pull_requests = [{ number: 4, base: { sha: base } }];
+    v.associatedPulls = [{ number: 3 }];
+  }, RUN_MISMATCH);
+  assertRejects((v) => { v.run.pull_requests = []; }, RUN_MISMATCH);
+});
+
+test('rejects a PR whose head or base differs from the run', () => {
+  assertRejects((v) => { v.pr.head.sha = 'd'.repeat(40); }, RUN_MISMATCH);
+  assertRejects((v) => { v.pr.head.ref = 'other'; }, RUN_MISMATCH);
+  assertRejects((v) => { v.pr.head.repo.id = 2; }, RUN_MISMATCH);
+  assertRejects((v) => { v.pr.base.ref = 'release'; }, RUN_MISMATCH);
+});
+
+test('rejects a build SHA that is not a full lowercase hex SHA', () => {
+  for (const malformed of ['x\noutput=value', built.slice(0, 39), built.toUpperCase()]) {
+    // The commit echoes the malformed value so only the SHA pattern rejects it.
+    assertRejects((v) => {
+      v.metadata.build_sha = malformed;
+      v.commit.sha = malformed;
+    }, MERGE_INVALID);
   }
+});
+
+test('rejects build commits that are not a two-parent merge of the run head', () => {
+  assertRejects((v) => { v.commit.sha = 'd'.repeat(40); }, MERGE_INVALID);
+  assertRejects((v) => {
+    v.commit.parents = [{ sha: mainTip }, { sha: head }, { sha: 'e'.repeat(40) }];
+  }, MERGE_INVALID);
+  assertRejects((v) => {
+    v.commit.parents = [{ sha: mainTip }, { sha: 'e'.repeat(40) }];
+  }, MERGE_INVALID);
 });
 
 test('uses trusted commit-associated PRs when fork runs omit pull_requests', () => {
@@ -101,4 +146,47 @@ test('requires a GitHub-signed test merge on the fork path', () => {
       message: 'Preview merge provenance is invalid',
     });
   }
+});
+
+const candidate = (overrides = {}) => ({
+  number: 3,
+  base: { ref: 'main', repo: { full_name: 'divinevideo/divine-mobile' } },
+  head: { sha: head, ref: 'feature', repo: { id: 1 } },
+  ...overrides,
+});
+
+const select = (pulls) =>
+  selectPreviewPr({
+    run: input().run,
+    pulls,
+    repoFullName: 'divinevideo/divine-mobile',
+  });
+
+test('selects the one PR matching the run', () => {
+  const match = candidate();
+  const stale = candidate({ number: 5 });
+  stale.head = { ...stale.head, sha: 'd'.repeat(40) };
+  assert.equal(select([stale, match]), match);
+});
+
+test('returns null when no PR matches, such as after the head moved', () => {
+  assert.equal(select([]), null);
+  const c = candidate();
+  for (const alter of [
+    (p) => { p.base.repo.full_name = 'attacker/divine-mobile'; },
+    (p) => { p.base.ref = 'release'; },
+    (p) => { p.head.sha = 'd'.repeat(40); },
+    (p) => { p.head.ref = 'other'; },
+    (p) => { p.head.repo.id = 2; },
+  ]) {
+    const p = structuredClone(c);
+    alter(p);
+    assert.equal(select([p]), null);
+  }
+});
+
+test('throws when more than one PR matches the run', () => {
+  assert.throws(() => select([candidate(), candidate({ number: 4 })]), {
+    message: 'Preview run matches more than one PR',
+  });
 });

@@ -42,7 +42,9 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const { previewProvenance } = require('./.github/scripts/mobile_preview_provenance.cjs');
+            const {
+              previewProvenance, selectPreviewPr,
+            } = require('./.github/scripts/mobile_preview_provenance.cjs');
             const { data: run } = await github.rest.actions.getWorkflowRun({
               owner: context.repo.owner, repo: context.repo.repo,
               run_id: context.payload.workflow_run.id,
@@ -52,18 +54,17 @@ jobs:
               github.rest.repos.listPullRequestsAssociatedWithCommit,
               { owner: context.repo.owner, repo: context.repo.repo, commit_sha: run.head_sha },
             );
-            const candidates = [];
+            const pulls = [];
             for (const candidate of associatedPulls) {
               const { data: value } = await github.rest.pulls.get({
                 owner: context.repo.owner, repo: context.repo.repo, pull_number: candidate.number,
               });
-              if (value.base.repo.full_name === context.payload.repository.full_name &&
-                  value.base.ref === 'main' && value.head.sha === run.head_sha &&
-                  value.head.ref === run.head_branch && value.head.repo.id === run.head_repository.id)
-                candidates.push(value);
+              pulls.push(value);
             }
-            if (candidates.length !== 1) throw new Error('Preview run must identify one matching PR');
-            const pr = candidates[0];
+            const pr = selectPreviewPr({
+              run, pulls, repoFullName: context.payload.repository.full_name,
+            });
+            if (!pr) throw new Error('Preview run must identify one matching PR');
             const metadata = JSON.parse(fs.readFileSync('artifact/pr-web-preview-metadata.json', 'utf8'));
             if (!/^[a-f0-9]{40}$/.test(metadata.build_sha)) throw new Error('Invalid build SHA');
             const { data: commit } = await github.rest.git.getCommit({
