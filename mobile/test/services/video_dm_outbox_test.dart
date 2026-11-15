@@ -934,6 +934,42 @@ void main() {
         );
       });
 
+      testWidgets(
+        'waits for the signer before signing or checking, and fails the '
+        'batch when it never comes',
+        (tester) async {
+          when(() => verifier.verify(any())).thenAnswer((_) async => _verified);
+          var signed = false;
+          final reporter = _RecordingCrashReporter();
+          outbox = createOutbox(
+            clipVerifier: () => verifier,
+            signOwnRecordings: (_) async => signed = true,
+            reporter: reporter,
+            waitUntilReady: (_) => Completer<void>().future,
+          );
+          final events = recordConversation('c1');
+          final outcomes = recordOutcomes();
+
+          sendClips([_clip('clip-a'), _clip('clip-b')]);
+          await tester.pump();
+
+          expect(signed, isFalse);
+          verifyNever(() => verifier.verify(any()));
+          expect(outcomes, isEmpty);
+
+          await tester.pump(videoDmSignerReadinessTimeout);
+
+          expect(events.last, hasLength(2));
+          expect(events.last.every((entry) => entry.canRetry), isTrue);
+          expect(outcomes.single.status, VideoDmOutcomeStatus.failed);
+          expect(outcomes.single.sentCount, 0);
+          expect(signed, isFalse);
+          verifyNever(() => verifier.verify(any()));
+          expect(sentPaths, isEmpty);
+          expect(reporter.errors, isEmpty);
+        },
+      );
+
       test('reads a card frame for each clip', () async {
         final readPaths = <String>[];
         readFrame = (file) async {
