@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_flight_transition.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
@@ -20,9 +22,16 @@ const _landing = Rect.fromLTWH(0, 200, 400, 400);
 const _pageCorners = BorderRadius.vertical(bottom: Radius.circular(24));
 
 class _Page extends StatelessWidget {
-  const _Page({this.showsVideo = true, this.roundedCover = false});
+  const _Page({
+    this.showsVideo = true,
+    this.roundedCover = false,
+    this.bottomBar = false,
+  });
 
   final bool showsVideo;
+
+  /// Whether the video sits above a 100 px bar, as over a comment bar.
+  final bool bottomBar;
 
   /// Whether the video covers the page, which rounds its bottom corners,
   /// instead of being letterboxed.
@@ -41,7 +50,7 @@ class _Page extends StatelessWidget {
         ),
       );
     }
-    return ColoredBox(
+    final video = ColoredBox(
       color: const Color(0xFF000000),
       child: showsVideo
           ? const VideoTileTransitionTarget(
@@ -51,6 +60,13 @@ class _Page extends StatelessWidget {
               child: SizedBox.expand(),
             )
           : null,
+    );
+    if (!bottomBar) return video;
+    return Column(
+      children: [
+        Expanded(child: video),
+        const SizedBox(height: 100),
+      ],
     );
   }
 }
@@ -65,8 +81,10 @@ class _Harness extends StatelessWidget {
     this.origin,
     this.pageShowsVideo = true,
     this.pageRoundedCover = false,
+    this.pageBottomBar = false,
     this.disableAnimations = false,
     this.tileAlignment = Alignment.center,
+    this.tileScrim = false,
     this.onTileContext,
   });
 
@@ -79,8 +97,12 @@ class _Harness extends StatelessWidget {
   final VideoTileOrigin? origin;
   final bool pageShowsVideo;
   final bool pageRoundedCover;
+  final bool pageBottomBar;
   final bool disableAnimations;
   final Alignment tileAlignment;
+
+  /// Whether the tile darkens its bottom 40 px with a scrim.
+  final bool tileScrim;
   final ValueChanged<BuildContext>? onTileContext;
 
   @override
@@ -103,7 +125,7 @@ class _Harness extends StatelessWidget {
                   builder: (tileContext) {
                     onTileContext?.call(tileContext);
                     final provider = tileImageProvider;
-                    return VideoTileThumbnailBoundary(
+                    final thumbnail = VideoTileThumbnailBoundary(
                       child: provider == null
                           ? RawImage(
                               image: image,
@@ -116,6 +138,23 @@ class _Harness extends StatelessWidget {
                               alignment: tileAlignment,
                             ),
                     );
+                    if (!tileScrim) return thumbnail;
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        thumbnail,
+                        const Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: 40,
+                          child: VideoTileScrimBoundary(
+                            opacity: 0.5,
+                            child: SizedBox.expand(),
+                          ),
+                        ),
+                      ],
+                    );
                   },
                 ),
               ),
@@ -127,6 +166,7 @@ class _Harness extends StatelessWidget {
                   child: _Page(
                     showsVideo: pageShowsVideo,
                     roundedCover: pageRoundedCover,
+                    bottomBar: pageBottomBar,
                   ),
                 ),
               ),
@@ -147,10 +187,6 @@ Finder get _picture => find.descendant(
 Future<void> _pumpToLastFlightFrame(WidgetTester tester) =>
     tester.pump(VideoTileFlightTransition.openDuration);
 
-/// Pumps to the end of the flight, before the page fades in.
-Future<void> _pumpToEndOfFlight(WidgetTester tester) =>
-    tester.pump(VideoTileFlightTransition.flightDuration);
-
 bool _pageHasLanded(WidgetTester tester) =>
     VideoTileTransitionScope.hasLandedOf(tester.element(find.byType(_Page)));
 
@@ -159,6 +195,29 @@ BorderRadiusGeometry? _pictureCorners(WidgetTester tester) => tester
       find.ancestor(of: _picture, matching: find.byType(ClipRRect)),
     )
     .borderRadius;
+
+VideoTileFlightFrame? _flightFrame(WidgetTester tester) =>
+    VideoTileTransitionScope.flightOf(
+      tester.element(find.byType(_Page)),
+    )!.value;
+
+VideoTileScrimPainter _scrims(WidgetTester tester) =>
+    tester
+            .widget<CustomPaint>(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is CustomPaint &&
+                    widget.painter is VideoTileScrimPainter,
+              ),
+            )
+            .painter!
+        as VideoTileScrimPainter;
+
+Matcher _rectCloseTo(Rect expected) => isA<Rect>()
+    .having((r) => r.left, 'left', closeTo(expected.left, 0.01))
+    .having((r) => r.top, 'top', closeTo(expected.top, 0.01))
+    .having((r) => r.right, 'right', closeTo(expected.right, 0.01))
+    .having((r) => r.bottom, 'bottom', closeTo(expected.bottom, 0.01));
 
 double _pageOpacity(WidgetTester tester) => tester
     .widget<Opacity>(
@@ -175,6 +234,7 @@ void main() {
       WidgetTester tester, {
       double? letterboxAspectRatio,
       Alignment tileAlignment = Alignment.center,
+      bool tileScrim = false,
     }) async {
       tester.view.physicalSize = _screenSize;
       tester.view.devicePixelRatio = 1;
@@ -195,6 +255,7 @@ void main() {
         _Harness(
           image: image,
           tileAlignment: tileAlignment,
+          tileScrim: tileScrim,
           onTileContext: (c) => tileContext = c,
         ),
       );
@@ -237,24 +298,51 @@ void main() {
         await tester.pumpAndSettle();
       });
 
-      testWidgets('fades the page in only once the picture has landed', (
-        tester,
-      ) async {
+      testWidgets('fades the page in as the picture flies', (tester) async {
         final origin = await pumpTile(tester);
         controller.forward();
         await tester.pumpWidget(
           _Harness(image: image, animation: controller, origin: origin),
         );
-
-        await _pumpToEndOfFlight(tester);
-
-        expect(tester.getRect(_picture), equals(_landing));
         expect(_pageOpacity(tester), equals(0));
 
-        await tester.pump(VideoTileFlightTransition.pageFadeDuration ~/ 2);
+        await tester.pump(VideoTileFlightTransition.openDuration ~/ 2);
 
-        expect(tester.getRect(_picture), equals(_landing));
         expect(_pageOpacity(tester), allOf(greaterThan(0), lessThan(1)));
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('shows the page only around the video and inside the clip', (
+        tester,
+      ) async {
+        final origin = await pumpTile(tester);
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(
+            image: image,
+            animation: controller,
+            origin: origin,
+            pageBottomBar: true,
+          ),
+        );
+        // The page's frame is known once it has been laid out.
+        await tester.pump(const Duration(milliseconds: 1));
+        final shown = tester
+            .widget<ClipPath>(
+              find.ancestor(
+                of: find.byType(_Page),
+                matching: find.byType(ClipPath),
+              ),
+            )
+            .clipper!
+            .getClip(_screenSize);
+
+        // The bar below the video fades in from the start...
+        expect(shown.contains(const Offset(200, 750)), isTrue);
+        // ...while the video's part of the page shows only where the clip
+        // has grown, which starts as the tile.
+        expect(shown.contains(_tileRect.center), isTrue);
+        expect(shown.contains(const Offset(300, 500)), isFalse);
         await tester.pumpAndSettle();
       });
 
@@ -425,7 +513,7 @@ void main() {
           ),
         );
         await tester.pump(
-          VideoTileFlightTransition.flightDuration -
+          VideoTileFlightTransition.openDuration -
               const Duration(milliseconds: 100),
         );
 
@@ -560,6 +648,185 @@ void main() {
       });
     });
 
+    group('controls', () {
+      testWidgets('start hidden, clipped to the tile', (tester) async {
+        final origin = await pumpTile(tester);
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(image: image, animation: controller, origin: origin),
+        );
+
+        final frame = _flightFrame(tester)!;
+        expect(frame.opacity, equals(0));
+        expect(
+          frame.clip,
+          equals(RRect.fromRectAndRadius(_tileRect, const Radius.circular(4))),
+        );
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('stay over the same part of the picture as it flies', (
+        tester,
+      ) async {
+        final origin = await pumpTile(tester);
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(image: image, animation: controller, origin: origin),
+        );
+
+        await tester.pump(VideoTileFlightTransition.openDuration ~/ 2);
+
+        // Where the picture draws its whole image, which it crops to the
+        // rect at its alignment.
+        final rect = tester.getRect(_picture);
+        final alignment = tester.widget<RawImage>(_picture).alignment;
+        final scale = math.max(rect.width, rect.height) / image.width;
+        final imageRect = (alignment as Alignment).inscribe(
+          Size(image.width * scale, image.height * scale),
+          rect,
+        );
+        final frame = _flightFrame(tester)!;
+        expect(
+          MatrixUtils.transformRect(frame.transform, _landing),
+          _rectCloseTo(imageRect),
+        );
+        expect(frame.opacity, allOf(greaterThan(0), lessThan(1)));
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('reach the page as the picture lands', (tester) async {
+        final origin = await pumpTile(tester);
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(image: image, animation: controller, origin: origin),
+        );
+
+        await _pumpToLastFlightFrame(tester);
+
+        final frame = _flightFrame(tester)!;
+        expect(
+          MatrixUtils.transformRect(frame.transform, _landing),
+          _rectCloseTo(_landing),
+        );
+        expect(frame.opacity, equals(1));
+        expect(
+          frame.clip,
+          equals(
+            RRect.fromRectAndRadius(
+              Offset.zero & _screenSize,
+              Radius.zero,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('stop flying once the page has the picture', (tester) async {
+        final origin = await pumpTile(tester);
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(image: image, animation: controller, origin: origin),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(_flightFrame(tester), isNull);
+      });
+
+      testWidgets('fly back with the picture on close', (tester) async {
+        final origin = await pumpTile(tester);
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(image: image, animation: controller, origin: origin),
+        );
+        await tester.pumpAndSettle();
+
+        controller.reverse();
+        await tester.pump();
+
+        expect(_flightFrame(tester)?.opacity, equals(1));
+        await tester.pumpAndSettle();
+      });
+    });
+
+    group('scrims', () {
+      testWidgets("start from the tile's bottom scrim", (tester) async {
+        final origin = await pumpTile(tester, tileScrim: true);
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(
+            image: image,
+            tileScrim: true,
+            animation: controller,
+            origin: origin,
+          ),
+        );
+
+        final scrims = _scrims(tester);
+        expect(
+          scrims.bottom.rect,
+          _rectCloseTo(Rect.fromLTRB(20, _tileRect.bottom - 40, 140, 280)),
+        );
+        expect(scrims.bottom.opacity, equals(0.5));
+        expect(scrims.top.opacity, equals(0));
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('start clear when the tile has no scrim', (tester) async {
+        final origin = await pumpTile(tester);
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(image: image, animation: controller, origin: origin),
+        );
+
+        expect(_scrims(tester).bottom.opacity, equals(0));
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets("land as the player's", (tester) async {
+        final origin = await pumpTile(tester, tileScrim: true);
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(
+            image: image,
+            tileScrim: true,
+            animation: controller,
+            origin: origin,
+          ),
+        );
+
+        await _pumpToLastFlightFrame(tester);
+
+        final scrims = _scrims(tester);
+        final height = _screenSize.height;
+        expect(
+          scrims.bottom.rect,
+          _rectCloseTo(
+            Rect.fromLTRB(
+              0,
+              height * (1 - VideoOverlayScrims.bottomHeightFactor),
+              _screenSize.width,
+              height,
+            ),
+          ),
+        );
+        expect(scrims.bottom.opacity, equals(VideoOverlayScrims.bottomOpacity));
+        expect(
+          scrims.top.rect,
+          _rectCloseTo(
+            Rect.fromLTWH(
+              0,
+              0,
+              _screenSize.width,
+              height * VideoOverlayScrims.topHeightFactor,
+            ),
+          ),
+        );
+        expect(scrims.top.opacity, equals(VideoOverlayScrims.topOpacity));
+        await tester.pumpAndSettle();
+      });
+    });
+
     group('closing', () {
       testWidgets('flies the picture back into the tile', (tester) async {
         final origin = await pumpTile(tester);
@@ -572,28 +839,17 @@ void main() {
         controller.reverse();
         await tester.pump();
         expect(tester.getRect(_picture), equals(_landing));
-
-        // The page fades out first, with the picture still in place.
-        final fadeOut =
-            VideoTileFlightTransition.closeDuration -
-            VideoTileFlightTransition.closeFlightDuration;
-        await tester.pump(fadeOut);
-        // The picture has barely started back: the close duration is the
-        // flight's stretched to a whole microsecond, so not exactly on it.
-        final landed = tester.getRect(_picture);
-        expect(landed.top, closeTo(_landing.top, 1));
-        expect(landed.width, closeTo(_landing.width, 1));
-        expect(_pageOpacity(tester), closeTo(0, 0.01));
+        expect(_pageOpacity(tester), equals(1));
 
         await tester.pump(
-          VideoTileFlightTransition.closeFlightDuration -
+          VideoTileFlightTransition.closeDuration -
               const Duration(milliseconds: 1),
         );
 
         final rect = tester.getRect(_picture);
         expect(rect.center.dx, closeTo(_tileRect.center.dx, 1));
         expect(rect.center.dy, closeTo(_tileRect.center.dy, 1));
-        expect(_pageOpacity(tester), equals(0));
+        expect(_pageOpacity(tester), closeTo(0, 0.01));
         await tester.pumpAndSettle();
       });
 
@@ -635,10 +891,7 @@ void main() {
         // Nothing to read from a tile that is gone, so no picture flies.
         expect(_picture, findsNothing);
 
-        await tester.pump(
-          VideoTileFlightTransition.closeDuration -
-              VideoTileFlightTransition.closeFlightDuration,
-        );
+        await tester.pump(VideoTileFlightTransition.closeDuration);
         expect(_pageOpacity(tester), equals(0));
         await tester.pumpAndSettle();
       });
@@ -670,6 +923,52 @@ void main() {
         );
         await tester.pumpAndSettle();
       });
+    });
+  });
+
+  group('contentTransform', () {
+    test('leaves what lands where it is', () {
+      final transform = contentTransform(
+        content: const Size(300, 300),
+        landing: _landing,
+        rect: _landing,
+        alignment: Alignment.center,
+      );
+
+      expect(MatrixUtils.transformRect(transform, _landing), equals(_landing));
+    });
+
+    test('moves the landing frame to where the image covers the rect', () {
+      // A portrait video, covering a page a little narrower than it, flown
+      // into a square tile that keeps the top of the frame.
+      final transform = contentTransform(
+        content: const Size(90, 160),
+        landing: const Rect.fromLTWH(0, 0, 400, 800),
+        rect: const Rect.fromLTWH(20, 100, 120, 120),
+        alignment: Alignment.topCenter,
+      );
+
+      // The image covers the page at 450 x 800, centred; in the tile it is
+      // 120 wide and starts at the tile's top.
+      expect(
+        MatrixUtils.transformRect(
+          transform,
+          const Rect.fromLTWH(-25, 0, 450, 800),
+        ),
+        _rectCloseTo(const Rect.fromLTWH(20, 100, 120, 160 * 120 / 90)),
+      );
+    });
+
+    test('is the identity for an empty rect', () {
+      expect(
+        contentTransform(
+          content: const Size(90, 160),
+          landing: _landing,
+          rect: Rect.zero,
+          alignment: Alignment.center,
+        ),
+        equals(Matrix4.identity()),
+      );
     });
   });
 }

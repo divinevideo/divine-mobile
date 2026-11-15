@@ -482,7 +482,10 @@ class _VideoItem extends StatelessWidget {
               left: 0,
               right: 0,
               bottom: 0,
-              child: _VideoInfoSection(video: video, index: index),
+              child: VideoTileScrimBoundary(
+                opacity: VineTheme.scrim50.a,
+                child: _VideoInfoSection(video: video, index: index),
+              ),
             ),
             if (isSelected case final isSelected?)
               PositionedDirectional(

@@ -22,6 +22,28 @@ class VideoTileThumbnailBoundary extends StatelessWidget {
   Widget build(BuildContext context) => RepaintBoundary(child: child);
 }
 
+/// Marks the scrim a grid tile darkens the bottom of its thumbnail with, so
+/// the player's own scrim can grow out of it.
+///
+/// The scrim fades from clear at its top to [opacity] of black at its bottom.
+class VideoTileScrimBoundary extends StatelessWidget {
+  /// Marks [child], the scrim.
+  const VideoTileScrimBoundary({
+    required this.opacity,
+    required this.child,
+    super.key,
+  });
+
+  /// How dark the scrim is at its bottom edge.
+  final double opacity;
+
+  /// The scrim.
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => child;
+}
+
 /// Where a fullscreen video was opened from.
 ///
 /// Holds the tapped thumbnail's render objects rather than a fixed rect, so
@@ -34,8 +56,11 @@ class VideoTileOrigin {
     required this.letterboxAspectRatio,
     required RenderRepaintBoundary boundary,
     required RenderImage? image,
+    required RenderBox? scrim,
+    required this.scrimOpacity,
   }) : _boundary = boundary,
        _image = image,
+       _scrim = scrim,
        alignment = image == null
            ? Alignment.center
            : image.alignment.resolve(image.textDirection);
@@ -55,18 +80,27 @@ class VideoTileOrigin {
     double? letterboxAspectRatio,
     double borderRadius = 4,
   }) {
-    final boundaryElement = _findBoundary(tileContext);
+    final boundaryElement = _findWidget<VideoTileThumbnailBoundary>(
+      tileContext,
+    );
     final boundary = boundaryElement?.findRenderObject();
     if (boundaryElement == null || boundary is! RenderRepaintBoundary) {
       return null;
     }
     final image = _findImage(boundary);
+    final scrimElement = _findWidget<VideoTileScrimBoundary>(tileContext);
+    final scrim = scrimElement?.findRenderObject();
     final origin = VideoTileOrigin._(
       videoId: videoId,
       borderRadius: borderRadius,
       letterboxAspectRatio: letterboxAspectRatio,
       boundary: boundary,
       image: image,
+      scrim: scrim is RenderBox ? scrim : null,
+      scrimOpacity: switch (scrimElement?.widget) {
+        VideoTileScrimBoundary(:final opacity) => opacity,
+        _ => 0,
+      },
     );
     if (origin.rect == null) return null;
     origin
@@ -100,8 +134,12 @@ class VideoTileOrigin {
   /// is [Alignment.center].
   final Alignment alignment;
 
+  /// How dark the tile's scrim is at its bottom edge, or 0 when it has none.
+  final double scrimOpacity;
+
   final RenderRepaintBoundary _boundary;
   final RenderImage? _image;
+  final RenderBox? _scrim;
 
   ui.Image? _taken;
 
@@ -141,6 +179,14 @@ class VideoTileOrigin {
     return painted.intersect(tile);
   }
 
+  /// Where the tile's bottom scrim is on screen now, in global coordinates,
+  /// or `null` when the tile has none or has left the screen.
+  Rect? get scrimRect {
+    final scrim = _scrim;
+    if (scrim == null || !scrim.attached || !scrim.hasSize) return null;
+    return scrim.localToGlobal(Offset.zero) & scrim.size;
+  }
+
   /// The tile's picture as it was tapped, or `null` when it could not be read
   /// or was already taken. The caller owns the image and must dispose it.
   ui.Image? takeImage() {
@@ -174,11 +220,11 @@ class VideoTileOrigin {
     }
   }
 
-  static Element? _findBoundary(BuildContext context) {
+  static Element? _findWidget<T extends Widget>(BuildContext context) {
     Element? found;
     void visit(Element element) {
       if (found != null) return;
-      if (element.widget is VideoTileThumbnailBoundary) {
+      if (element.widget is T) {
         found = element;
         return;
       }

@@ -17,6 +17,7 @@ class _Tile extends StatelessWidget {
     this.fit = BoxFit.cover,
     this.alignment = Alignment.center,
     this.withBoundary = true,
+    this.withScrim = false,
     this.onContext,
   });
 
@@ -28,6 +29,9 @@ class _Tile extends StatelessWidget {
   final BoxFit fit;
   final AlignmentGeometry alignment;
   final bool withBoundary;
+
+  /// Whether the tile darkens its bottom 40 px with a scrim.
+  final bool withScrim;
   final ValueChanged<BuildContext>? onContext;
 
   @override
@@ -48,9 +52,26 @@ class _Tile extends StatelessWidget {
             child: Builder(
               builder: (tileContext) {
                 onContext?.call(tileContext);
-                return withBoundary
+                final picture = withBoundary
                     ? VideoTileThumbnailBoundary(child: thumbnail)
                     : thumbnail;
+                if (!withScrim) return picture;
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    picture,
+                    const Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 40,
+                      child: VideoTileScrimBoundary(
+                        opacity: 0.5,
+                        child: SizedBox.expand(),
+                      ),
+                    ),
+                  ],
+                );
               },
             ),
           ),
@@ -100,6 +121,60 @@ void main() {
         );
 
         expect(VideoTileOrigin.capture(tileContext, videoId: 'v'), isNull);
+      });
+    });
+
+    group('scrim', () {
+      testWidgets("reads the tile's scrim and how dark it is", (tester) async {
+        late BuildContext tileContext;
+        await tester.pumpWidget(
+          _Tile(
+            rect: _tileRect,
+            withScrim: true,
+            onContext: (c) => tileContext = c,
+          ),
+        );
+
+        final origin = VideoTileOrigin.capture(tileContext, videoId: 'v')!;
+
+        expect(
+          origin.scrimRect,
+          equals(Rect.fromLTRB(20, _tileRect.bottom - 40, 140, 280)),
+        );
+        expect(origin.scrimOpacity, equals(0.5));
+      });
+
+      testWidgets('is absent for a tile without one', (tester) async {
+        late BuildContext tileContext;
+        await tester.pumpWidget(
+          _Tile(rect: _tileRect, onContext: (c) => tileContext = c),
+        );
+
+        final origin = VideoTileOrigin.capture(tileContext, videoId: 'v')!;
+
+        expect(origin.scrimRect, isNull);
+        expect(origin.scrimOpacity, equals(0));
+      });
+
+      testWidgets('follows the tile when it moves', (tester) async {
+        late BuildContext tileContext;
+        await tester.pumpWidget(
+          _Tile(
+            rect: _tileRect,
+            withScrim: true,
+            onContext: (c) => tileContext = c,
+          ),
+        );
+        final origin = VideoTileOrigin.capture(tileContext, videoId: 'v')!;
+
+        await tester.pumpWidget(
+          _Tile(rect: _tileRect.translate(0, -60), withScrim: true),
+        );
+
+        expect(
+          origin.scrimRect,
+          equals(const Rect.fromLTRB(20, 180, 140, 220)),
+        );
       });
     });
 

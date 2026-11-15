@@ -17,6 +17,24 @@ Rect letterboxedVideoRect(Rect viewport, double? aspectRatio) {
   ).shift(viewport.topLeft);
 }
 
+/// Where a fullscreen player shows a video, in some ancestor's coordinates.
+@immutable
+class VideoTileLanding {
+  /// The frame showing the video, inside [page].
+  const VideoTileLanding({required this.media, required this.page});
+
+  /// Where the video is drawn, with the corners it is clipped to.
+  final RRect media;
+
+  /// The page the video is drawn on, with its corners: the controls over the
+  /// video are laid out across it.
+  final RRect page;
+
+  /// This landing moved by [offset].
+  VideoTileLanding shift(Offset offset) =>
+      VideoTileLanding(media: media.shift(offset), page: page.shift(offset));
+}
+
 /// Wraps one page of a fullscreen video feed and reports where its video is
 /// drawn, for a [VideoTileTransitionScope] above it.
 ///
@@ -81,9 +99,10 @@ class _VideoTileTransitionTargetState extends State<VideoTileTransitionTarget> {
     super.dispose();
   }
 
-  /// Where the video is drawn, with the corners it is clipped to, in
-  /// [ancestor]'s coordinates, or `null` before the page is laid out.
-  RRect? mediaShapeIn(RenderBox ancestor) {
+  /// Where the video and its page are drawn, with the corners they are
+  /// clipped to, in [ancestor]'s coordinates, or `null` before the page is
+  /// laid out.
+  VideoTileLanding? landingIn(RenderBox ancestor) {
     final page = context.findRenderObject();
     if (page is! RenderBox || !page.attached || !page.hasSize) return null;
     if (!ancestor.attached) return null;
@@ -95,13 +114,16 @@ class _VideoTileTransitionTargetState extends State<VideoTileTransitionTarget> {
       viewport,
       widget.coversViewport ? null : widget.aspectRatio,
     );
-    return _roundedByClips(media, page, ancestor);
+    return VideoTileLanding(
+      media: _roundedByClips(media, page, ancestor),
+      page: _roundedByClips(viewport, page, ancestor),
+    );
   }
 
-  /// [media] with each corner that sits in the corner of a rounded clip
+  /// [rect] with each corner that sits in the corner of a rounded clip
   /// above [page], up to and including [ancestor], rounded like that clip.
   static RRect _roundedByClips(
-    Rect media,
+    Rect rect,
     RenderObject page,
     RenderBox ancestor,
   ) {
@@ -126,23 +148,23 @@ class _VideoTileTransitionTargetState extends State<VideoTileTransitionTarget> {
         Offset.zero & node.size,
       );
       final radius = node.borderRadius.resolve(node.textDirection);
-      if (topLeft == Radius.zero && meets(media.topLeft, clip.topLeft)) {
+      if (topLeft == Radius.zero && meets(rect.topLeft, clip.topLeft)) {
         topLeft = radius.topLeft;
       }
-      if (topRight == Radius.zero && meets(media.topRight, clip.topRight)) {
+      if (topRight == Radius.zero && meets(rect.topRight, clip.topRight)) {
         topRight = radius.topRight;
       }
       if (bottomLeft == Radius.zero &&
-          meets(media.bottomLeft, clip.bottomLeft)) {
+          meets(rect.bottomLeft, clip.bottomLeft)) {
         bottomLeft = radius.bottomLeft;
       }
       if (bottomRight == Radius.zero &&
-          meets(media.bottomRight, clip.bottomRight)) {
+          meets(rect.bottomRight, clip.bottomRight)) {
         bottomRight = radius.bottomRight;
       }
     }
     return RRect.fromRectAndCorners(
-      media,
+      rect,
       topLeft: topLeft,
       topRight: topRight,
       bottomLeft: bottomLeft,
@@ -164,13 +186,13 @@ class VideoTileTransitionTargets {
   // mid-flight whenever that happened.
   final _targets = <String, Set<_VideoTileTransitionTargetState>>{};
 
-  /// Where the page shows [videoId], with the corners it clips it to, in
-  /// [ancestor]'s coordinates, or `null` when it does not show it yet.
-  RRect? mediaShapeOf(String videoId, RenderBox ancestor) {
+  /// Where the page shows [videoId], in [ancestor]'s coordinates, or `null`
+  /// when it does not show it yet.
+  VideoTileLanding? landingOf(String videoId, RenderBox ancestor) {
     for (final target
         in _targets[videoId] ?? const <_VideoTileTransitionTargetState>{}) {
-      final shape = target.mediaShapeIn(ancestor);
-      if (shape != null) return shape;
+      final landing = target.landingIn(ancestor);
+      if (landing != null) return landing;
     }
     return null;
   }
@@ -186,15 +208,41 @@ class VideoTileTransitionTargets {
   }
 }
 
+/// Where the page's controls are drawn in one frame of a tile's picture
+/// flying over it.
+@immutable
+class VideoTileFlightFrame {
+  /// A frame of the flight.
+  const VideoTileFlightFrame({
+    required this.transform,
+    required this.clip,
+    required this.opacity,
+  });
+
+  /// Maps where the page lays its controls out, in global coordinates, to
+  /// where they are drawn now: the transform that also places the flying
+  /// picture's image, so the controls stay over the same part of it.
+  final Matrix4 transform;
+
+  /// What of the page shows now, in global coordinates: growing from the
+  /// tile to the page.
+  final RRect clip;
+
+  /// How far the controls have faded in.
+  final double opacity;
+}
+
 /// Hands [targets] to the [VideoTileTransitionTarget]s in [child], and tells
 /// the page in [child] whether a tile's picture is flying over it.
 class VideoTileTransitionScope
     extends InheritedNotifier<ValueListenable<bool>> {
   /// Collects the targets in [child] into [targets]; [landed] is whether the
-  /// picture has handed over to the page.
+  /// picture has handed over to the page, and [flight] where the page's
+  /// controls fly with it.
   const VideoTileTransitionScope({
     required this.targets,
     required ValueListenable<bool> landed,
+    required this.flight,
     required super.child,
     super.key,
   }) : super(notifier: landed);
@@ -202,14 +250,25 @@ class VideoTileTransitionScope
   /// Where the targets register.
   final VideoTileTransitionTargets targets;
 
+  /// The current frame of the flight, or `null` while no picture flies.
+  final ValueListenable<VideoTileFlightFrame?> flight;
+
+  /// The flight the page in [context] takes part in, or `null` outside a
+  /// tile transition. Reading it does not rebuild [context] when a frame
+  /// changes; listen to it for that.
+  static ValueListenable<VideoTileFlightFrame?>? flightOf(
+    BuildContext context,
+  ) =>
+      context.getInheritedWidgetOfExactType<VideoTileTransitionScope>()?.flight;
+
   /// Whether the page in [context] is free to play and show its controls:
   /// `false` while a tile's picture flies over it, on the way in or out, and
   /// `true` once it has landed or when no picture flies at all.
   ///
   /// Holding playback until the picture lands lets it hand over to the
   /// video's first frame rather than to a frame further on, and holding the
-  /// controls lets them fade in over the video instead of appearing at once
-  /// from under the picture.
+  /// controls lets their copy flying with the picture hand over to them in
+  /// the same place.
   static bool hasLandedOf(BuildContext context) =>
       context
           .dependOnInheritedWidgetOfExactType<VideoTileTransitionScope>()
@@ -220,5 +279,22 @@ class VideoTileTransitionScope
   @override
   bool updateShouldNotify(VideoTileTransitionScope oldWidget) =>
       super.updateShouldNotify(oldWidget) ||
-      !identical(targets, oldWidget.targets);
+      !identical(targets, oldWidget.targets) ||
+      !identical(flight, oldWidget.flight);
+}
+
+/// Marks the copy of the page's controls that flies with a tile's picture.
+///
+/// The transition draws the picture's scrims itself, between the picture and
+/// the controls, so a control that carries its own scrim leaves it out here.
+class VideoTileFlightCopy extends InheritedWidget {
+  /// Marks [child] as flying.
+  const VideoTileFlightCopy({required super.child, super.key});
+
+  /// Whether [context] is in the flying copy of the controls.
+  static bool isIn(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<VideoTileFlightCopy>() != null;
+
+  @override
+  bool updateShouldNotify(VideoTileFlightCopy oldWidget) => false;
 }

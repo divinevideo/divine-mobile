@@ -420,6 +420,11 @@ void main() {
         tappedOrigin?.rect,
         equals(tester.getRect(find.byType(VideoTileThumbnailBoundary).at(1))),
       );
+      // ...and its scrim out of the tile's.
+      expect(
+        tappedOrigin?.scrimRect,
+        equals(tester.getRect(find.byType(VideoTileScrimBoundary).at(1))),
+      );
     });
 
     testWidgets('uses correct grid parameters', (tester) async {

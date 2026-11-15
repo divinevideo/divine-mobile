@@ -1,20 +1,21 @@
 // ABOUTME: Route transition that flies a grid tile's picture to where the
 // ABOUTME: fullscreen player shows the video, and back into the tile on pop.
 
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
+import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
 
 /// Flies [origin]'s picture from its tile to the frame the page shows the
-/// video in as [animation] runs forward, then fades the page in behind it;
-/// running in reverse, fades the page out and flies the picture back.
+/// video in as [animation] runs forward, and back into the tile in reverse.
 ///
-/// The two phases run one after the other, split at [flightShare] of the
-/// animation, so the player never shows behind a picture still on its way.
-/// [openDuration] and [closeDuration] are the route durations that keep the
-/// flight at [flightDuration] and [closeFlightDuration].
+/// The page fades in as the picture flies, but only around the video, such
+/// as its comment bar, and inside a clip growing from the tile to the page:
+/// the player never shows behind the picture still on its way, and the page
+/// is whole the moment the picture lands.
 ///
 /// The frame is whatever the page's [VideoTileTransitionTarget] reports, so a
 /// letterboxed square video lands on its letterboxed band rather than filling
@@ -31,12 +32,18 @@ import 'package:openvine/widgets/video_tile_transition/video_tile_transition_tar
 /// small enough for the two to look alike. Closing flies the player-size one
 /// too, as it starts out at the player's size.
 ///
-/// Once the page has faded in, the picture is removed at once, uncovering the
+/// The page's controls fly with the picture, fading in as it grows: each
+/// [VideoTileFlightFrame] places them with the transform that places the
+/// picture's image, so they stay over the same part of it. Between the
+/// picture and the controls, the tile's bottom scrim grows into the player's,
+/// and the player's top scrim darkens in.
+///
+/// Once the picture has landed, it is removed at once, uncovering the
 /// player's own poster or video in the same place: fading it out would show
 /// both pictures at once, doubling anything that has moved since the poster.
 /// The page holds its playback and controls until then, through
 /// [VideoTileTransitionScope], so the video starts from where the picture
-/// shows it and the controls fade in over it.
+/// shows it and the controls take over from their flying copy.
 class VideoTileFlightTransition extends StatefulWidget {
   /// Creates the transition for one route.
   const VideoTileFlightTransition({
@@ -55,39 +62,11 @@ class VideoTileFlightTransition extends StatefulWidget {
   /// The page.
   final Widget child;
 
-  static const _flightMs = 280;
-  static const _pageFadeMs = 150;
-
   /// How long the picture takes to fly from the tile to the player.
-  static const flightDuration = Duration(milliseconds: _flightMs);
-
-  /// How long the page takes to fade in once the picture has landed.
-  static const pageFadeDuration = Duration(milliseconds: _pageFadeMs);
+  static const openDuration = Duration(milliseconds: 280);
 
   /// How long the picture takes to fly back into the tile on close.
-  static const closeFlightDuration = Duration(milliseconds: 250);
-
-  /// The route's duration when opening: the flight, then the page fade.
-  static const openDuration = Duration(milliseconds: _flightMs + _pageFadeMs);
-
-  /// The share of the animation, at its tile end, the flight takes. The page
-  /// stays hidden for it and fades over the rest.
-  static const double flightShare = _flightMs / (_flightMs + _pageFadeMs);
-
-  /// The route's duration when closing, which keeps the flight back at
-  /// [closeFlightDuration] and fades the page out over the same share as it
-  /// faded in.
-  static final closeDuration = Duration(
-    microseconds: (closeFlightDuration.inMicroseconds / flightShare).round(),
-  );
-
-  /// How the page's opacity follows the animation: hidden for the flight,
-  /// then fading in.
-  static const pageFadeInterval = Interval(
-    flightShare,
-    1,
-    curve: Curves.easeOut,
-  );
+  static const closeDuration = Duration(milliseconds: 250);
 
   @override
   State<VideoTileFlightTransition> createState() =>
@@ -97,16 +76,8 @@ class VideoTileFlightTransition extends StatefulWidget {
 class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
   late final CurvedAnimation _motion = CurvedAnimation(
     parent: widget.animation,
-    curve: const Interval(
-      0,
-      VideoTileFlightTransition.flightShare,
-      curve: Curves.easeOutCubic,
-    ),
-    reverseCurve: const Interval(
-      0,
-      VideoTileFlightTransition.flightShare,
-      curve: Curves.easeInCubic,
-    ),
+    curve: Curves.easeOutCubic,
+    reverseCurve: Curves.easeInCubic,
   );
 
   final _targets = VideoTileTransitionTargets();
@@ -123,9 +94,11 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     },
   );
 
-  RRect? _lastLanding;
+  VideoTileLanding? _lastLanding;
 
   final _landed = ValueNotifier<bool>(false);
+
+  final _flight = ValueNotifier<VideoTileFlightFrame?>(null);
 
   /// Whether the route has started opening. Its first frame can be built
   /// offstage, for hero measurement, with the animation standing in as
@@ -180,31 +153,35 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     widget.animation.removeStatusListener(_onStatus);
     _motion.dispose();
     _landed.dispose();
+    _flight.dispose();
     _releasePicture();
     _playerSizeStream?.removeListener(_playerSizeListener);
     _playerSize?.dispose();
     super.dispose();
   }
 
-  /// Where the page shows the video, with its corners, in screen
-  /// coordinates.
+  /// Where the page shows the video, and the page itself, with their
+  /// corners, in screen coordinates.
   ///
   /// Until the page has built the layer that shows the video, which can take
   /// a good part of the flight, the frame is predicted from the video's
   /// dimensions. Once found, it is kept while the page swaps the layers that
   /// show the video, rather than aiming elsewhere for those frames.
-  RRect _landing(Rect screen) {
+  VideoTileLanding _landing(Rect screen) {
     final page = _pageKey.currentContext?.findRenderObject();
     if (page is RenderBox && page.attached) {
-      final shape = _targets.mediaShapeOf(widget.origin.videoId, page);
-      if (shape != null) {
-        _lastLanding = shape.shift(page.localToGlobal(Offset.zero));
+      final landing = _targets.landingOf(widget.origin.videoId, page);
+      if (landing != null) {
+        _lastLanding = landing.shift(page.localToGlobal(Offset.zero));
       }
     }
     return _lastLanding ??
-        RRect.fromRectAndRadius(
-          letterboxedVideoRect(screen, widget.origin.letterboxAspectRatio),
-          Radius.zero,
+        VideoTileLanding(
+          media: RRect.fromRectAndRadius(
+            letterboxedVideoRect(screen, widget.origin.letterboxAspectRatio),
+            Radius.zero,
+          ),
+          page: RRect.fromRectAndRadius(screen, Radius.zero),
         );
   }
 
@@ -213,6 +190,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     final page = VideoTileTransitionScope(
       targets: _targets,
       landed: _landed,
+      flight: _flight,
       child: KeyedSubtree(key: _pageKey, child: widget.child),
     );
     if (MediaQuery.disableAnimationsOf(context)) {
@@ -232,14 +210,15 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
               height: screen.height / 3,
             );
         final landing = _landing(screen);
-        final rect = Rect.lerp(from, landing.outerRect, progress)!;
+        final media = landing.media.outerRect;
+        final rect = Rect.lerp(from, media, progress)!;
         final borderRadius = BorderRadius.lerp(
           BorderRadius.circular(widget.origin.borderRadius),
           BorderRadius.only(
-            topLeft: landing.tlRadius,
-            topRight: landing.trRadius,
-            bottomLeft: landing.blRadius,
-            bottomRight: landing.brRadius,
+            topLeft: landing.media.tlRadius,
+            topRight: landing.media.trRadius,
+            bottomLeft: landing.media.blRadius,
+            bottomRight: landing.media.brRadius,
           ),
           progress,
         )!;
@@ -253,18 +232,47 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
             : _playerSize?.image ?? _picture;
         final status = widget.animation.status;
         final flying =
-            status == AnimationStatus.forward ||
-            status == AnimationStatus.reverse;
+            picture != null &&
+            (status == AnimationStatus.forward ||
+                status == AnimationStatus.reverse);
+        final transform = contentTransform(
+          content: picture == null
+              ? media.size
+              : Size(picture.width.toDouble(), picture.height.toDouble()),
+          landing: media,
+          rect: rect,
+          alignment: alignment,
+        );
+        final clip = RRect.lerp(
+          RRect.fromRectAndRadius(
+            from,
+            Radius.circular(widget.origin.borderRadius),
+          ),
+          landing.page,
+          progress,
+        )!;
+        // The page's controls rebuild from this while they fly, which is
+        // allowed during this build: they are below it.
+        _flight.value = flying
+            ? VideoTileFlightFrame(
+                transform: transform,
+                clip: clip,
+                opacity: progress,
+              )
+            : null;
         return Stack(
           fit: StackFit.expand,
           children: [
             Opacity(
-              opacity: VideoTileFlightTransition.pageFadeInterval.transform(
-                widget.animation.value,
-              ),
-              child: page,
+              opacity: progress,
+              child: flying
+                  ? ClipPath(
+                      clipper: _PageReveal(page: landing.page, flight: clip),
+                      child: page,
+                    )
+                  : page,
             ),
-            if (picture != null && flying)
+            if (flying) ...[
               Positioned.fromRect(
                 rect: rect,
                 child: IgnorePointer(
@@ -278,9 +286,201 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
                   ),
                 ),
               ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: VideoTileScrimPainter(
+                      clip: clip,
+                      top: VideoTileScrimBand(
+                        rect: MatrixUtils.transformRect(
+                          transform,
+                          _playerTopScrim(landing.page.outerRect, screen),
+                        ),
+                        opacity: VideoOverlayScrims.topOpacity * progress,
+                      ),
+                      bottom: _bottomScrim(
+                        landing: MatrixUtils.transformRect(
+                          transform,
+                          _playerBottomScrim(landing.page.outerRect, screen),
+                        ),
+                        from: from,
+                        rect: rect,
+                        progress: progress,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         );
       },
     );
   }
+
+  /// The bottom scrim [progress] of the way from the tile's, carried along
+  /// with the picture, to the player's at [landing].
+  VideoTileScrimBand _bottomScrim({
+    required Rect landing,
+    required Rect from,
+    required Rect rect,
+    required double progress,
+  }) {
+    final tileScrim = widget.origin.scrimRect;
+    final start = tileScrim == null || from.isEmpty
+        ? landing
+        : Rect.fromLTRB(
+            rect.left + (tileScrim.left - from.left) / from.width * rect.width,
+            rect.top + (tileScrim.top - from.top) / from.height * rect.height,
+            rect.left + (tileScrim.right - from.left) / from.width * rect.width,
+            rect.top +
+                (tileScrim.bottom - from.top) / from.height * rect.height,
+          );
+    return VideoTileScrimBand(
+      rect: Rect.lerp(start, landing, progress)!,
+      opacity: ui.lerpDouble(
+        tileScrim == null ? 0 : widget.origin.scrimOpacity,
+        VideoOverlayScrims.bottomOpacity,
+        progress,
+      )!,
+    );
+  }
+
+  /// Where the player draws its top scrim across [page].
+  static Rect _playerTopScrim(Rect page, Rect screen) => Rect.fromLTWH(
+    page.left,
+    page.top,
+    page.width,
+    screen.height * VideoOverlayScrims.topHeightFactor,
+  );
+
+  /// Where the player draws its bottom scrim across [page].
+  static Rect _playerBottomScrim(Rect page, Rect screen) => Rect.fromLTRB(
+    page.left,
+    page.bottom - screen.height * VideoOverlayScrims.bottomHeightFactor,
+    page.right,
+    page.bottom,
+  );
+}
+
+/// Shows the page around [page], where the video is, and inside [flight],
+/// the clip growing from the tile to the page.
+class _PageReveal extends CustomClipper<Path> {
+  const _PageReveal({required this.page, required this.flight});
+
+  final RRect page;
+  final RRect flight;
+
+  @override
+  Path getClip(Size size) => Path.combine(
+    PathOperation.union,
+    Path.combine(
+      PathOperation.difference,
+      Path()..addRect(Offset.zero & size),
+      Path()..addRRect(page),
+    ),
+    Path()..addRRect(flight),
+  );
+
+  @override
+  bool shouldReclip(_PageReveal oldClipper) =>
+      page != oldClipper.page || flight != oldClipper.flight;
+}
+
+/// The transform that moves what is drawn over [content] covering [landing],
+/// centered, to where it is when [content] covers [rect] at [alignment]: the
+/// flying picture's image, and with it the controls laid out over the video.
+@visibleForTesting
+Matrix4 contentTransform({
+  required Size content,
+  required Rect landing,
+  required Rect rect,
+  required Alignment alignment,
+}) {
+  if (content.isEmpty || landing.isEmpty || rect.isEmpty) {
+    return Matrix4.identity();
+  }
+  Rect cover(Rect box, Alignment alignment) => alignment.inscribe(
+    content * math.max(box.width / content.width, box.height / content.height),
+    box,
+  );
+  final from = cover(landing, Alignment.center);
+  final to = cover(rect, alignment);
+  final scale = to.width / from.width;
+  return Matrix4.identity()
+    ..translateByDouble(to.left, to.top, 0, 1)
+    ..scaleByDouble(scale, scale, 1, 1)
+    ..translateByDouble(-from.left, -from.top, 0, 1);
+}
+
+/// A scrim fading from clear to [opacity] of [VideoOverlayScrims.color]
+/// across [rect], towards its outer edge.
+@immutable
+@visibleForTesting
+class VideoTileScrimBand {
+  /// A scrim over [rect].
+  const VideoTileScrimBand({required this.rect, required this.opacity});
+
+  /// Where the scrim is, in global coordinates.
+  final Rect rect;
+
+  /// How dark it is at its outer edge.
+  final double opacity;
+}
+
+/// Paints the flying picture's top and bottom scrims inside [clip].
+@visibleForTesting
+class VideoTileScrimPainter extends CustomPainter {
+  /// Paints [top] and [bottom] inside [clip].
+  VideoTileScrimPainter({
+    required this.clip,
+    required this.top,
+    required this.bottom,
+  });
+
+  /// What of the page shows, as for the controls.
+  final RRect clip;
+
+  /// The scrim along the top of the page, darkening in.
+  final VideoTileScrimBand top;
+
+  /// The scrim along the bottom, growing from the tile's into the player's.
+  final VideoTileScrimBand bottom;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas
+      ..save()
+      ..clipRRect(clip);
+    _paintBand(canvas, top, Alignment.bottomCenter, Alignment.topCenter);
+    _paintBand(canvas, bottom, Alignment.topCenter, Alignment.bottomCenter);
+    canvas.restore();
+  }
+
+  static void _paintBand(
+    Canvas canvas,
+    VideoTileScrimBand band,
+    Alignment clear,
+    Alignment dark,
+  ) {
+    if (band.rect.isEmpty || band.opacity <= 0) return;
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: clear,
+        end: dark,
+        colors: [
+          VideoOverlayScrims.color.withValues(alpha: 0),
+          VideoOverlayScrims.color.withValues(alpha: band.opacity),
+        ],
+      ).createShader(band.rect);
+    canvas.drawRect(band.rect, paint);
+  }
+
+  @override
+  bool shouldRepaint(VideoTileScrimPainter oldDelegate) =>
+      clip != oldDelegate.clip ||
+      top.rect != oldDelegate.top.rect ||
+      top.opacity != oldDelegate.top.opacity ||
+      bottom.rect != oldDelegate.bottom.rect ||
+      bottom.opacity != oldDelegate.bottom.opacity;
 }

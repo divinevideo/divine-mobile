@@ -8,16 +8,19 @@ void main() {
   group(VideoTileTransitionTargets, () {
     late VideoTileTransitionTargets targets;
     late ValueNotifier<bool> landed;
+    late ValueNotifier<VideoTileFlightFrame?> flight;
     final pageKey = GlobalKey();
 
     setUp(() {
       targets = VideoTileTransitionTargets();
       landed = ValueNotifier(true);
       addTearDown(landed.dispose);
+      flight = ValueNotifier(null);
+      addTearDown(flight.dispose);
     });
 
     Rect? mediaRect(String videoId, RenderBox page) =>
-        targets.mediaShapeOf(videoId, page)?.outerRect;
+        targets.landingOf(videoId, page)?.media.outerRect;
 
     Future<RenderBox> pumpPage(
       WidgetTester tester, {
@@ -47,6 +50,7 @@ void main() {
               child: VideoTileTransitionScope(
                 targets: targets,
                 landed: landed,
+                flight: flight,
                 child: showTarget ? target : const SizedBox.expand(),
               ),
             ),
@@ -56,7 +60,7 @@ void main() {
       return pageKey.currentContext!.findRenderObject()! as RenderBox;
     }
 
-    group('mediaShapeOf', () {
+    group('landingOf', () {
       testWidgets('letterboxes a square video in the middle of the page', (
         tester,
       ) async {
@@ -132,7 +136,7 @@ void main() {
         );
 
         expect(
-          targets.mediaShapeOf('video1', page),
+          targets.landingOf('video1', page)!.media,
           equals(
             RRect.fromRectAndCorners(
               Offset.zero & _pageSize,
@@ -153,11 +157,33 @@ void main() {
         );
 
         expect(
-          targets.mediaShapeOf('video1', page),
+          targets.landingOf('video1', page)!.media,
           equals(
             RRect.fromRectAndRadius(
               const Rect.fromLTWH(0, 50, 400, 400),
               Radius.zero,
+            ),
+          ),
+        );
+      });
+
+      testWidgets('reports the whole page, rounded like its clip', (
+        tester,
+      ) async {
+        const bottom = BorderRadius.vertical(bottom: Radius.circular(24));
+        final page = await pumpPage(
+          tester,
+          aspectRatio: 1,
+          clipRadius: bottom,
+        );
+
+        expect(
+          targets.landingOf('video1', page)!.page,
+          equals(
+            RRect.fromRectAndCorners(
+              Offset.zero & _pageSize,
+              bottomLeft: const Radius.circular(24),
+              bottomRight: const Radius.circular(24),
             ),
           ),
         );
@@ -180,6 +206,7 @@ void main() {
               child: VideoTileTransitionScope(
                 targets: targets,
                 landed: landed,
+                flight: flight,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -216,6 +243,41 @@ void main() {
       });
     });
 
+    group('flightOf', () {
+      testWidgets('is null outside a tile transition', (tester) async {
+        late BuildContext context;
+        await tester.pumpWidget(
+          Builder(
+            builder: (c) {
+              context = c;
+              return const SizedBox.shrink();
+            },
+          ),
+        );
+
+        expect(VideoTileTransitionScope.flightOf(context), isNull);
+      });
+
+      testWidgets("is the scope's flight inside one", (tester) async {
+        late BuildContext context;
+        await tester.pumpWidget(
+          VideoTileTransitionScope(
+            targets: targets,
+            landed: landed,
+            flight: flight,
+            child: Builder(
+              builder: (c) {
+                context = c;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+
+        expect(VideoTileTransitionScope.flightOf(context), same(flight));
+      });
+    });
+
     group('hasLandedOf', () {
       Widget reader(ValueChanged<bool> onLanded) => Builder(
         builder: (context) {
@@ -240,6 +302,7 @@ void main() {
           VideoTileTransitionScope(
             targets: targets,
             landed: landed,
+            flight: flight,
             child: reader((value) => hasLanded = value),
           ),
         );
@@ -250,6 +313,31 @@ void main() {
 
         expect(hasLanded, isTrue);
       });
+    });
+  });
+
+  group(VideoTileFlightCopy, () {
+    testWidgets('marks only what is inside it', (tester) async {
+      final inside = <bool>[];
+      Widget reader() => Builder(
+        builder: (context) {
+          inside.add(VideoTileFlightCopy.isIn(context));
+          return const SizedBox.shrink();
+        },
+      );
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Column(
+            children: [
+              reader(),
+              VideoTileFlightCopy(child: reader()),
+            ],
+          ),
+        ),
+      );
+
+      expect(inside, equals([false, true]));
     });
   });
 }

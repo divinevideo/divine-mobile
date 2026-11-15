@@ -83,6 +83,7 @@ class FeedVideos extends ConsumerStatefulWidget {
     this.currentIndex = 0,
     this.scrollPhysics,
     this.shouldPortraitExpand = true,
+    this.showTopScrim = false,
     this.isActive = true,
     this.releaseNeighboursWhenInactive = false,
     this.hasMore = false,
@@ -103,6 +104,10 @@ class FeedVideos extends ConsumerStatefulWidget {
   final ScrollPhysics? scrollPhysics;
   final String? contextTitle;
   final bool shouldPortraitExpand;
+
+  /// Whether each video gets a scrim along its top edge, for controls that
+  /// sit over it there, such as a fullscreen player's app bar.
+  final bool showTopScrim;
 
   /// Whether this feed should be playing. Set to `false` when the owning
   /// screen is obscured (tab switch, overlay open) to pause the active video
@@ -679,6 +684,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
                   onAutomaticSkipToNextVideo: () =>
                       unawaited(_animateToPage(index + 1)),
                   shouldPortraitExpand: fillsViewport,
+                  showTopScrim: widget.showTopScrim,
                 ),
               ),
             ),
@@ -702,6 +708,7 @@ class _Overlay extends ConsumerStatefulWidget {
     required this.onSkipToNextVideo,
     required this.onAutomaticSkipToNextVideo,
     required this.shouldPortraitExpand,
+    required this.showTopScrim,
     required this.loopCompletions,
     this.onSuppressAutoAdvance,
     this.onResumeAutoAdvance,
@@ -713,6 +720,9 @@ class _Overlay extends ConsumerStatefulWidget {
   /// Whether the feed fills the item with a video that is not square, which
   /// decides where on the item the video's stickers stand.
   final bool shouldPortraitExpand;
+
+  /// See [FeedVideos.showTopScrim].
+  final bool showTopScrim;
   final VideoEvent video;
   final int index;
 
@@ -1498,6 +1508,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
                               index: widget.index,
                               contextTitle: widget.contextTitle,
                               isOwnVideo: isOwnVideo,
+                              showTopScrim: widget.showTopScrim,
                               onSuppressAutoAdvance:
                                   widget.onSuppressAutoAdvance,
                               // Captions fade with the rest of the chrome, by
@@ -1610,6 +1621,7 @@ class _FeedItemActions extends StatelessWidget {
     required this.index,
     required this.contextTitle,
     required this.isOwnVideo,
+    required this.showTopScrim,
     required this.onSuppressAutoAdvance,
     this.subtitleLayer,
     this.pagePositionListenable,
@@ -1619,6 +1631,7 @@ class _FeedItemActions extends StatelessWidget {
   final int index;
   final String? contextTitle;
   final bool isOwnVideo;
+  final bool showTopScrim;
   final VoidCallback? onSuppressAutoAdvance;
   final Widget? subtitleLayer;
   final ValueListenable<double>? pagePositionListenable;
@@ -1631,6 +1644,7 @@ class _FeedItemActions extends StatelessWidget {
         video: video,
         contextTitle: contextTitle,
         isOwnVideo: isOwnVideo,
+        showTopScrim: showTopScrim,
         onSuppressAutoAdvance: onSuppressAutoAdvance,
         subtitleLayer: subtitleLayer,
       );
@@ -1649,6 +1663,7 @@ class _FeedItemActions extends StatelessWidget {
         video: video,
         contextTitle: contextTitle,
         isOwnVideo: isOwnVideo,
+        showTopScrim: showTopScrim,
         onSuppressAutoAdvance: onSuppressAutoAdvance,
         subtitleLayer: subtitleLayer,
       ),
@@ -1703,6 +1718,7 @@ class _FeedItemOverlayActions extends StatelessWidget {
     required this.video,
     required this.contextTitle,
     required this.isOwnVideo,
+    required this.showTopScrim,
     required this.onSuppressAutoAdvance,
     this.subtitleLayer,
   });
@@ -1710,6 +1726,7 @@ class _FeedItemOverlayActions extends StatelessWidget {
   final VideoEvent video;
   final String? contextTitle;
   final bool isOwnVideo;
+  final bool showTopScrim;
   final VoidCallback? onSuppressAutoAdvance;
   final Widget? subtitleLayer;
 
@@ -1725,6 +1742,7 @@ class _FeedItemOverlayActions extends StatelessWidget {
       hasBottomNavigation: false,
       contextTitle: contextTitle,
       isFullscreen: true,
+      showTopGradient: showTopScrim,
       topOffset: isOwnVideo ? 64 : 8,
       onInteracted: onSuppressAutoAdvance,
       subtitleLayer: subtitleLayer,

@@ -1047,6 +1047,8 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                                 // keyboard.
                                                 isActive:
                                                     !_replyComposerFocused,
+                                                // The app bar sits over the video.
+                                                showTopScrim: true,
                                                 videos: state.videos,
                                                 contextTitle:
                                                     widget.contextTitle,

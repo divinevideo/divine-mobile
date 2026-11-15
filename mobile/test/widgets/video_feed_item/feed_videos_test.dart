@@ -380,6 +380,7 @@ Future<ProviderContainer> _pumpFeedVideos(
   List<dynamic> additionalOverrides = const [],
   ValueListenable<List<VideoEvent>>? videosListenable,
   ValueListenable<bool>? tileTransitionLanded,
+  bool showTopScrim = false,
   ProviderContainer? providerContainer,
 }) async {
   final mockPlaybackCubit =
@@ -407,8 +408,11 @@ Future<ProviderContainer> _pumpFeedVideos(
     releaseNeighboursWhenInactive: releaseNeighboursWhenInactive,
     hasMore: hasMore,
     isLoadingMore: isLoadingMore,
+    showTopScrim: showTopScrim,
     onActiveVideoChanged: onActiveVideoChanged,
   );
+  final noFlight = ValueNotifier<VideoTileFlightFrame?>(null);
+  addTearDown(noFlight.dispose);
   final body = videosListenable == null
       ? buildFeed(videos)
       : ValueListenableBuilder<List<VideoEvent>>(
@@ -461,6 +465,7 @@ Future<ProviderContainer> _pumpFeedVideos(
                 : VideoTileTransitionScope(
                     targets: VideoTileTransitionTargets(),
                     landed: tileTransitionLanded,
+                    flight: noFlight,
                     child: body,
                   ),
           ),
@@ -3539,6 +3544,30 @@ void main() {
       state.didPopNext();
       await tester.pump();
       expect(tester.widget<InfiniteVideoFeed>(feedFinder).isActive, isTrue);
+    });
+
+    testWidgets('leaves the top scrim off by default', (tester) async {
+      await _pumpFeedVideos(tester, videos: [_makeVideo()]);
+      await tester.pump();
+
+      expect(
+        tester
+            .widget<VideoOverlayActions>(find.byType(VideoOverlayActions))
+            .showTopGradient,
+        isFalse,
+      );
+    });
+
+    testWidgets('scrims the top of each video when asked', (tester) async {
+      await _pumpFeedVideos(tester, videos: [_makeVideo()], showTopScrim: true);
+      await tester.pump();
+
+      expect(
+        tester
+            .widget<VideoOverlayActions>(find.byType(VideoOverlayActions))
+            .showTopGradient,
+        isTrue,
+      );
     });
 
     testWidgets('waits for a grid tile picture to land before playing', (
