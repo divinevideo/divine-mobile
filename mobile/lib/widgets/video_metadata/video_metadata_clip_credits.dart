@@ -27,8 +27,6 @@ class VideoMetadataClipCredits extends ConsumerWidget {
   /// removed. The post form uses it to leave the row out entirely when nobody
   /// else is credited, so the empty row does not take a `spacing` gap.
   static List<String> creditedCreators(WidgetRef ref) {
-    // The timeline is the source of truth; watching it rebuilds the rows when
-    // a clip is added or removed.
     ref.watch(clipManagerProvider.select((state) => state.clips));
     final viewerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
     final pubkeys = <String>[];

@@ -90,8 +90,8 @@ abstract interface class ProfileReader {
   /// confirmed absence or an indeterminate read.
   ///
   /// Use it where a missing profile and an unreadable one must be treated
-  /// differently — for example a consent check that fails closed only when
-  /// the answer is genuinely unknown.
+  /// differently — for example a settings screen that loads a confirmed miss
+  /// as the default but treats an unreadable profile as a failure.
   Future<FreshProfileRead> readFreshProfile({
     required String pubkey,
     bool requireRawKind0,

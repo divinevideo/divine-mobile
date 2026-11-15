@@ -355,7 +355,8 @@ final class ClipsLibraryState extends Equatable {
   ///
   /// The library's two clip tabs share this bloc, and a swipe between them
   /// draws both at once. Each tab reads its own list through [sortedClipsFor]
-  /// so the incoming page is never blank while the scope catches up.
+  /// so the incoming page is never blank outside the trash while the scope
+  /// catches up.
   final Map<ClipOwnershipScope, List<DivineVideoClip>> sortedClipsByScope;
 
   /// Clips currently in trash, newest-deleted-first.
@@ -455,8 +456,8 @@ final class ClipsLibraryState extends Equatable {
   /// follows the tab it opens on.
   final ClipOwnershipScope? scope;
 
-  /// The account the library belongs to, which decides [scope]. Fixed for
-  /// the bloc's lifetime.
+  /// The account the library belongs to, which decides the clips each
+  /// [scope] admits. Fixed for the bloc's lifetime.
   final String? viewerPubkey;
 
   /// The clips the tab for [scope] shows: [sortedClips] for the active
@@ -496,11 +497,10 @@ final class ClipsLibraryState extends Equatable {
   ///
   /// A selection survives switching between the active filters and between
   /// scopes so a timeline can span categories and tabs, which leaves part of
-  /// it off screen. The bulk
-  /// toolbar actions run on this set instead of [selectedClipIds]: moving or
-  /// deleting clips the user cannot see is not something one tap should do.
-  /// Bulk-organizing across categories still works from
-  /// [ClipLibraryAllFilter], which shows them all at once.
+  /// it off screen. The bulk toolbar actions run on this set instead of
+  /// [selectedClipIds]: moving or deleting clips the user cannot see is not
+  /// something one tap should do. Bulk-organizing across categories still
+  /// works from [ClipLibraryAllFilter], which shows them all at once.
   Set<String> get visibleSelectedClipIds => {
     for (final clip in clips)
       if (selectedClipIds.contains(clip.id) && shows(clip)) clip.id,

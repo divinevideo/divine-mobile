@@ -115,9 +115,9 @@ class DivineVideoClip {
     receivedDmClipIdPrefix,
   ];
 
-  /// How the ids of clips the editor renders from other clips start: a merge,
-  /// a flattened library save, a split-screen layout, and a recording. They
-  /// copy the credits of their inputs but are the user's own work.
+  /// How the ids of clips made here start: a merge, a flattened library save,
+  /// a split-screen layout, and a camera recording. The renders copy their
+  /// inputs' credits; all are the user's own work.
   static const _derivedIdPrefixes = <String>[
     'merged_',
     'clip_library_',

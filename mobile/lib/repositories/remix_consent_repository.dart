@@ -11,7 +11,8 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// A creator's account-wide answer to "may others remix my videos?".
 enum RemixConsent {
-  /// The creator's kind 0 does not block remixing.
+  /// The creator's kind 0 does not block remixing, or the creator has no
+  /// kind 0.
   allowed,
 
   /// The creator set [divineAllowVideoReuseKey] to `false`.
@@ -26,15 +27,16 @@ enum RemixConsent {
 ///
 /// The block lives under [divineAllowVideoReuseKey] in the creator's kind 0.
 /// Only a relay-fetched raw kind 0 carries custom keys — a REST-built profile
-/// rebuilds `rawData` from typed fields alone — so the check always reads one
-/// straight from the relays and never trusts a cached projection, which would
-/// silently answer "allowed" for a blocked account.
+/// rebuilds `rawData` from typed fields alone — so the check reads one
+/// straight from the relays, except for an author already confirmed this
+/// session to have no kind 0, and never trusts a cached projection, which
+/// would silently answer "allowed" for a blocked account.
 ///
 /// Only Divine writes the key, and it publishes every kind 0 to the app's
 /// default relay. So the check asks every connected relay and the default
 /// relay at once, and settles on whichever answers first in full: one silent
 /// third-party relay — the common case for classic Vine authors with no
-/// kind 0 — no longer holds up the answer until it times out.
+/// kind 0 — does not hold up the answer until it times out.
 class RemixConsentRepository {
   /// Creates a repository that reads kind 0 through [profileRepository],
   /// trusting [defaultRelayUrl]'s full answer on its own.

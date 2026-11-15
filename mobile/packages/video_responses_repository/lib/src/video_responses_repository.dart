@@ -232,9 +232,9 @@ class VideoResponsesRepository {
 
   /// The videos that use a clip of the video at [addressableId]: those whose
   /// `a` tag marked `clip-source` names it. The newest version of each, the
-  /// newest first, at most [limit] of them (50 unless given).
+  /// newest first, at most [limit] of them.
   ///
-  /// The relays are asked for up to [maxRemixReferencesRead] (200) videos
+  /// The relays are asked for up to [maxRemixReferencesRead] videos
   /// naming it in any `a` tag, since the clip-source marker is checked here:
   /// a video naming it for anything else, such as being inspired by it,
   /// answering its Add yours or replying to it, is left out, and a read sized

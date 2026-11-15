@@ -42,11 +42,7 @@ const _nameServerHttpTimeout = Duration(seconds: 10);
 // publishing a local copy that cannot carry the relay copy's tags.
 const _publishSeedRelayTimeout = Duration(seconds: 4);
 
-/// A profile read, and whether an empty answer can be trusted.
-///
-/// `conclusive` is false when the read could not rule out a copy it never
-/// saw: a relay stayed silent or refused the REQ, none took it, or the read
-/// threw. Only a conclusive miss means no Kind 0 exists to be replaced.
+/// Local alias of [FreshProfileRead].
 typedef _ProfileRead = FreshProfileRead;
 
 // Caps NIP-50 user search. The relay query has a slightly shorter inner
