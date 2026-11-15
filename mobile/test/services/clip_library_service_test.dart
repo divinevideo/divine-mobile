@@ -1258,6 +1258,47 @@ void main() {
       });
 
       test(
+        'ignores a split half the recorder detached and the trash restored',
+        () async {
+          final draftService = DraftStorageService(
+            draftsDao: database.draftsDao,
+            clipsDao: database.clipsDao,
+          );
+          final startHalf =
+              clipOf(
+                id: 'classic_vine_vine-123_1',
+                recordedAt: DateTime(2026),
+              ).copyWith(
+                id: '1767225600000000_start',
+                duration: const Duration(seconds: 3),
+              );
+          DivineVideoDraft autosave(List<DivineVideoClip> clips) =>
+              DivineVideoDraft.create(
+                id: VideoEditorConstants.autoSaveId,
+                clips: clips,
+                title: '',
+                description: '',
+                hashtags: const {},
+                selectedApproach: '',
+              );
+
+          await draftService.saveDraft(autosave([startHalf]));
+          // The recorder's delete detaches the autosave copy from its draft,
+          // and the restore brings it back as a row with no draft.
+          await service.softDelete(startHalf.id, clearDraftId: true);
+          await draftService.saveDraft(autosave(const []));
+          await draftService.deleteDraft(VideoEditorConstants.autoSaveId);
+          await service.restore(startHalf.id);
+          expect(
+            (await database.clipsDao.getLibraryClips()).map((row) => row.id),
+            ['${VideoEditorConstants.autoSaveId}:${startHalf.id}'],
+          );
+
+          expect(await service.findImportedClipOf(vine), isNull);
+        },
+      );
+
+      test(
         'ignores a trimmed copy of an import saved to the library',
         () async {
           await service.saveClip(
