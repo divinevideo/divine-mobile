@@ -383,6 +383,16 @@ class VideoContentActionsBloc
         libraryTitle: defaultClipTitle,
       );
       return result is VideoClipImportSuccess ? result.clip : null;
+    } on Exception catch (e, stackTrace) {
+      // A storage or platform failure is expected, not a defect, so it stays
+      // out of crash reports.
+      addError(e, stackTrace);
+      Log.warning(
+        'Could not prepare the remix clip: $e',
+        name: 'VideoContentActionsBloc',
+        category: LogCategory.ui,
+      );
+      return null;
     } catch (e, stackTrace) {
       _addUnexpectedError(
         e,

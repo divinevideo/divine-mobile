@@ -1384,6 +1384,28 @@ void main() {
       );
 
       blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'reports a failed import without a crash report when the library '
+        'lookup fails',
+        setUp: () {
+          when(
+            () => mockImporter.findImportedClipOf(any()),
+          ).thenThrow(Exception('database is locked'));
+        },
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) => bloc.add(const VideoContentRemixRequested()),
+        errors: () => [
+          allOf(isA<Exception>(), isNot(isA<Reportable<Object>>())),
+        ],
+        expect: () => [preparing, importFailed],
+        verify: (_) => verifyNever(
+          () => mockImporter.importToLibrary(
+            any(),
+            libraryTitle: any(named: 'libraryTitle'),
+          ),
+        ),
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
         'drops a second remix request while the first is in flight',
         build: () {
           when(
