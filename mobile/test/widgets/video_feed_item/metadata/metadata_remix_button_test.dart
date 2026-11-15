@@ -58,50 +58,52 @@ void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
   final remixButton = find.widgetWithText(DivineButton, l10n.remixThisVideo);
 
-  late _MockVideoContentActionsBloc contentActions;
+  group(MetadataRemixButton, () {
+    late _MockVideoContentActionsBloc contentActions;
 
-  setUpAll(() {
-    registerFallbackValue(const VideoContentRemixRequested());
-  });
+    setUpAll(() {
+      registerFallbackValue(const VideoContentRemixRequested());
+    });
 
-  setUp(() {
-    contentActions = _MockVideoContentActionsBloc();
-    when(
-      () => contentActions.state,
-    ).thenReturn(const VideoContentActionsState());
-  });
+    setUp(() {
+      contentActions = _MockVideoContentActionsBloc();
+      when(
+        () => contentActions.state,
+      ).thenReturn(const VideoContentActionsState());
+    });
 
-  _MockOwnerVideoActionsCubit ownerCubit({bool isDeleting = false}) {
-    final cubit = _MockOwnerVideoActionsCubit();
-    when(() => cubit.state).thenReturn(const OwnerVideoActionsState());
-    when(() => cubit.isDeleteInProgress(any())).thenReturn(isDeleting);
-    return cubit;
-  }
+    _MockOwnerVideoActionsCubit ownerCubit({bool isDeleting = false}) {
+      final cubit = _MockOwnerVideoActionsCubit();
+      when(() => cubit.state).thenReturn(const OwnerVideoActionsState());
+      when(() => cubit.isDeleteInProgress(any())).thenReturn(isDeleting);
+      return cubit;
+    }
 
-  Widget buildSubject({
-    required VideoEvent video,
-    OwnerVideoActionsCubit? owner,
-    bool isWeb = false,
-  }) {
-    return testMaterialApp(
-      home: Scaffold(
-        body: MultiBlocProvider(
-          providers: [
-            BlocProvider<VideoContentActionsBloc>.value(value: contentActions),
-            if (owner != null)
-              BlocProvider<OwnerVideoActionsCubit>.value(value: owner),
-          ],
-          child: MetadataRemixButton(
-            video: video,
-            isOwnVideo: owner != null,
-            isWeb: isWeb,
+    Widget buildSubject({
+      required VideoEvent video,
+      OwnerVideoActionsCubit? owner,
+      bool isWeb = false,
+    }) {
+      return testMaterialApp(
+        home: Scaffold(
+          body: MultiBlocProvider(
+            providers: [
+              BlocProvider<VideoContentActionsBloc>.value(
+                value: contentActions,
+              ),
+              if (owner != null)
+                BlocProvider<OwnerVideoActionsCubit>.value(value: owner),
+            ],
+            child: MetadataRemixButton(
+              video: video,
+              isOwnVideo: owner != null,
+              isWeb: isWeb,
+            ),
           ),
         ),
-      ),
-    );
-  }
+      );
+    }
 
-  group(MetadataRemixButton, () {
     group('renders', () {
       testWidgets('the remix label on a classic Vine', (tester) async {
         await tester.pumpWidget(buildSubject(video: _classicVine));
