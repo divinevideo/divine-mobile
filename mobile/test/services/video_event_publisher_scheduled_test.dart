@@ -157,6 +157,7 @@ void main() {
           var signedSteps = 0;
 
           final result = await publisher.publishVideoEvent(
+            allowVideoReuse: false,
             upload: createUpload(),
             scheduledAt: scheduledAt,
             expirationTimestamp: scheduledSecs + 86400,
@@ -212,6 +213,7 @@ void main() {
         Event? handedOff;
 
         final result = await publisher.publishVideoEvent(
+          allowVideoReuse: false,
           upload: createUpload(nostrEventId: cached.id),
           scheduledAt: scheduledAt,
           onScheduledEventSigned: (event) => handedOff = event,
@@ -229,6 +231,7 @@ void main() {
 
         await expectLater(
           publisher.publishVideoEvent(
+            allowVideoReuse: false,
             upload: createUpload(),
             scheduledAt: scheduledAt,
             onScheduledEventSigned: (_) => handedOff = true,
@@ -275,6 +278,7 @@ void main() {
         var handedOff = false;
 
         final result = await publisher.publishVideoEvent(
+          allowVideoReuse: false,
           upload: createUpload(),
           onScheduledEventSigned: (_) => handedOff = true,
         );

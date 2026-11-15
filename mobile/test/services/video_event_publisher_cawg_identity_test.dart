@@ -139,7 +139,10 @@ void main() {
           ),
         );
 
-        final published = await publisher.publishDirectUpload(upload);
+        final published = await publisher.publishDirectUpload(
+          upload,
+          allowVideoReuse: false,
+        );
 
         expect(published, isTrue);
         expect(capturedEvent, isNotNull);
@@ -180,7 +183,10 @@ void main() {
           ),
         );
 
-        final published = await publisher.publishDirectUpload(upload);
+        final published = await publisher.publishDirectUpload(
+          upload,
+          allowVideoReuse: false,
+        );
 
         expect(published, isTrue);
         expect(capturedEvent, isNotNull);
@@ -219,7 +225,10 @@ void main() {
           ),
         );
 
-        final published = await publisher.publishDirectUpload(upload);
+        final published = await publisher.publishDirectUpload(
+          upload,
+          allowVideoReuse: false,
+        );
 
         expect(published, isTrue);
         expect(capturedEvent, isNotNull);

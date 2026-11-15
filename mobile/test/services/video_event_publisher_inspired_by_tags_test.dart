@@ -184,6 +184,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             inspiredByAddressableId: inspiredByAddressableId,
             inspiredByRelayUrl: 'wss://source.relay',
           );
@@ -219,6 +220,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             inspiredByAddressableId: inspiredByAddressableId,
             inspiredByRelayUrl: 'wss://source.relay',
             clipSourceCredits: const [
@@ -268,6 +270,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             inspiredByNpubs: [npub],
           );
 
@@ -295,6 +298,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             inspiredByNpubs: [first, second],
           );
 
@@ -332,6 +336,7 @@ void main() {
 
             final result = await publisher.publishDirectUpload(
               createUpload().copyWith(description: 'my caption'),
+              allowVideoReuse: false,
               inspiredByNpubs: [npub],
               selectedAudio: sound(
                 licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
@@ -356,6 +361,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload().copyWith(description: 'my caption'),
+            allowVideoReuse: false,
             selectedAudio: sound(
               licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
             ).copyWith(licenseName: 'CC0 1.0'),
@@ -373,6 +379,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload().copyWith(description: 'my caption'),
+            allowVideoReuse: false,
             creditedSounds: [
               AudioEvent(
                 id: 'bundled_freesound_radio_announcement',
@@ -410,6 +417,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload().copyWith(description: 'my caption'),
+            allowVideoReuse: false,
             creditedSounds: [elevator, monkeys, elevator],
           );
 
@@ -435,6 +443,7 @@ void main() {
 
             final result = await publisher.publishDirectUpload(
               createUpload().copyWith(description: 'my caption'),
+              allowVideoReuse: false,
               selectedAudio: selected,
               creditedSounds: [
                 selected.copyWith(
@@ -460,6 +469,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload().copyWith(description: 'my caption'),
+            allowVideoReuse: false,
             inspiredByNpubs: [npub],
             selectedAudio: sound(
               licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
@@ -484,6 +494,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             inspiredByAddressableId: inspiredByAddressableId,
             inspiredByNpubs: [first, second],
           );
@@ -511,6 +522,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             inspiredByAddressableId: inspiredByAddressableId,
             inspiredByNpubs: [npub],
           );
@@ -531,6 +543,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             clipSourceCredits: const [
               ClipSourceCredit(
                 authorPubkey: inspiredCreatorPubkey,
@@ -594,6 +607,7 @@ void main() {
 
         final result = await publisher.publishDirectUpload(
           createUpload(),
+          allowVideoReuse: false,
           clipSourceCredits: const [
             ClipSourceCredit(
               authorPubkey: inspiredCreatorPubkey,
@@ -628,6 +642,7 @@ void main() {
 
         final result = await publisher.publishDirectUpload(
           createUpload(),
+          allowVideoReuse: false,
           clipSourceCredits: const [
             ClipSourceCredit(
               authorPubkey: testPubkey,
@@ -658,6 +673,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             inspiredByAddressableId: inspiredByAddressableId,
             inspiredByNpubs: [npub],
           );
@@ -677,6 +693,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             inspiredByAddressableId: '34236:$testPubkey:own-d-tag',
           );
 
@@ -693,6 +710,7 @@ void main() {
           const ownAddressableId = '34236:$testPubkey:own-d-tag';
           final result = await publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             inspiredByAddressableId: ownAddressableId,
           );
 
@@ -716,6 +734,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             collaboratorPubkeys: const [inspiredCreatorPubkey],
             inspiredByAddressableId: inspiredByAddressableId,
           );
@@ -743,6 +762,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             mentionedPubkeys: const [inspiredCreatorPubkey],
             inspiredByAddressableId: inspiredByAddressableId,
           );
@@ -775,6 +795,7 @@ void main() {
 
         final result = await publisher.publishDirectUpload(
           createUpload(),
+          allowVideoReuse: false,
           replyContext: replyContext,
           inspiredByAddressableId: inspiredByAddressableId,
           inspiredByNpubs: [NostrKeyUtils.encodePubKey(inspiredPersonPubkey)],
@@ -805,7 +826,10 @@ void main() {
         () async {
           stubSignAndPublish();
 
-          final result = await publisher.publishDirectUpload(createUpload());
+          final result = await publisher.publishDirectUpload(
+            createUpload(),
+            allowVideoReuse: false,
+          );
 
           expect(result, isTrue);
           expect(
@@ -827,6 +851,7 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             inspiredByAddressableId: '34236:',
           );
 

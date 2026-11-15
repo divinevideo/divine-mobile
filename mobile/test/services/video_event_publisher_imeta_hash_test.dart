@@ -184,6 +184,7 @@ void main() {
 
       final result = await publisher.publishDirectUpload(
         createUpload(videoId: uploadedDigest),
+        allowVideoReuse: false,
       );
 
       expect(result, isTrue);
@@ -206,6 +207,7 @@ void main() {
 
       final result = await publisher.publishDirectUpload(
         createUpload(videoId: uploadedDigest),
+        allowVideoReuse: false,
       );
 
       expect(result, isTrue);
@@ -217,6 +219,7 @@ void main() {
 
       final result = await publisher.publishDirectUpload(
         createUpload(videoId: uploadedDigest, blurhash: 'LEHV6nWB2yk8pyoJadR*'),
+        allowVideoReuse: false,
       );
 
       expect(result, isTrue);

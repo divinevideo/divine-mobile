@@ -168,7 +168,10 @@ void main() {
         (_) async => capturedEvent == null ? <Event>[] : [capturedEvent!],
       );
 
-      await publisher.publishDirectUpload(upload);
+      await publisher.publishDirectUpload(
+        upload,
+        allowVideoReuse: false,
+      );
       final publishedEvent = capturedEvent;
 
       // VERIFY: Event must contain ProofMode tags
@@ -306,7 +309,10 @@ void main() {
         );
       });
 
-      await publisher.publishDirectUpload(upload);
+      await publisher.publishDirectUpload(
+        upload,
+        allowVideoReuse: false,
+      );
       final publishedEvent = capturedEvent;
 
       // CRITICAL ASSERTION: Proof data MUST be published
@@ -381,7 +387,10 @@ void main() {
         );
       });
 
-      final result = await publisher.publishDirectUpload(upload);
+      final result = await publisher.publishDirectUpload(
+        upload,
+        allowVideoReuse: false,
+      );
       final publishedEvent = capturedEvent;
 
       expect(
@@ -472,7 +481,10 @@ void main() {
           ),
         );
 
-        await publisher.publishDirectUpload(upload);
+        await publisher.publishDirectUpload(
+          upload,
+          allowVideoReuse: false,
+        );
 
         expect(attestation.proofHash, 'abc123def456');
         expect(attestation.pubkeyHex, 'signer-pubkey');
@@ -565,7 +577,10 @@ void main() {
           ),
         );
 
-        await publisher.publishDirectUpload(upload);
+        await publisher.publishDirectUpload(
+          upload,
+          allowVideoReuse: false,
+        );
 
         expect(attestation.pubkeyHex, 'account-a-pubkey');
         expect(capturedEvent, isNotNull);
@@ -651,7 +666,10 @@ void main() {
         ),
       );
 
-      await publisher.publishDirectUpload(upload);
+      await publisher.publishDirectUpload(
+        upload,
+        allowVideoReuse: false,
+      );
 
       expect(capturedEvent, isNotNull, reason: 'the event still gets signed');
       expect(
@@ -735,7 +753,10 @@ void main() {
           ),
         );
 
-        await publisher.publishDirectUpload(upload);
+        await publisher.publishDirectUpload(
+          upload,
+          allowVideoReuse: false,
+        );
 
         expect(capturedEvent, isNotNull, reason: 'the event still gets signed');
         expect(
@@ -833,7 +854,10 @@ void main() {
           ),
         );
 
-        await publisher.publishDirectUpload(upload);
+        await publisher.publishDirectUpload(
+          upload,
+          allowVideoReuse: false,
+        );
 
         expect(attestation.pubkeyHex, 'account-a-pubkey');
         expect(capturedEvent, isNotNull);

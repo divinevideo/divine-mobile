@@ -190,7 +190,10 @@ void main() {
       stubSigning(signedEvent);
       stubPublish(signedEvent);
 
-      final result = await publisher.publishDirectUpload(createUpload());
+      final result = await publisher.publishDirectUpload(
+        createUpload(),
+        allowVideoReuse: false,
+      );
 
       expect(result, isTrue);
       verify(
@@ -214,7 +217,10 @@ void main() {
         stubSigning(signedEvent);
         stubPublish(signedEvent);
 
-        await publisher.publishDirectUpload(createUpload());
+        await publisher.publishDirectUpload(
+          createUpload(),
+          allowVideoReuse: false,
+        );
 
         expect(persistedEvents.map((e) => e.id), equals([signedEvent.id]));
       },
@@ -228,7 +234,10 @@ void main() {
       stubPublish(signedEvent);
       persistFailure = Exception('disk full');
 
-      final result = await publisher.publishDirectUpload(createUpload());
+      final result = await publisher.publishDirectUpload(
+        createUpload(),
+        allowVideoReuse: false,
+      );
 
       expect(result, isTrue);
     });
@@ -259,7 +268,10 @@ void main() {
         ),
       );
 
-      final result = await publisher.publishDirectUpload(createUpload());
+      final result = await publisher.publishDirectUpload(
+        createUpload(),
+        allowVideoReuse: false,
+      );
 
       expect(result, isFalse);
       verifyNever(
@@ -292,7 +304,10 @@ void main() {
           ),
         );
 
-        final result = await publisher.publishDirectUpload(createUpload());
+        final result = await publisher.publishDirectUpload(
+          createUpload(),
+          allowVideoReuse: false,
+        );
 
         expect(result, isFalse);
         verifyNever(
@@ -315,7 +330,10 @@ void main() {
       ).thenReturn(signedEvent);
       stubPublish(signedEvent);
 
-      final result = await publisher.publishDirectUpload(retryUpload);
+      final result = await publisher.publishDirectUpload(
+        retryUpload,
+        allowVideoReuse: false,
+      );
 
       expect(result, isTrue);
       verifyNever(
@@ -368,6 +386,7 @@ void main() {
 
       final result = await publisher.publishDirectUpload(
         createUpload(),
+        allowVideoReuse: false,
         selectedAudioEventId: validAudioId,
         // Not the default relay, so a dropped forward cannot pass unnoticed.
         selectedAudioRelay: 'wss://sounds.relay.example',
@@ -419,6 +438,7 @@ void main() {
 
       final result = await publisher.publishDirectUpload(
         createUpload(),
+        allowVideoReuse: false,
         selectedAudioEventId: 'video_not_a_64_hex_id',
         selectedAudioRelay: 'wss://relay.divine.video',
       );
@@ -522,6 +542,7 @@ void main() {
 
       final result = await audioPublisher.publishDirectUpload(
         createUpload(),
+        allowVideoReuse: false,
         allowAudioReuse: true,
       );
 

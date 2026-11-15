@@ -161,6 +161,7 @@ void main() {
 
         final result = await publisher.publishDirectUpload(
           createUpload(),
+          allowVideoReuse: false,
           collaboratorPubkeys: const [collaboratorPubkey],
         );
 
@@ -189,6 +190,7 @@ void main() {
 
         final result = await publisher.publishDirectUpload(
           createUpload(),
+          allowVideoReuse: false,
           collaboratorPubkeys: const [collaboratorPubkey],
           mentionedPubkeys: const [
             mentionPubkey,
@@ -268,6 +270,7 @@ void main() {
 
       final result = await publisher.publishDirectUpload(
         createUpload(),
+        allowVideoReuse: false,
         collaboratorPubkeys: [
           collaboratorPubkey.toUpperCase(),
           NostrKeyUtils.encodePubKey(collaboratorPubkey),

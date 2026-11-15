@@ -182,6 +182,7 @@ void main() {
       expect(
         await publisher.publishDirectUpload(
           upload(),
+          allowVideoReuse: false,
           stickerRegions: const [linkRegion, pollRegion],
           poll: poll,
         ),
@@ -215,6 +216,7 @@ void main() {
       expect(
         await publisher.publishDirectUpload(
           upload(nostrEventId: cached.id),
+          allowVideoReuse: false,
           stickerRegions: const [pollRegion],
           poll: poll,
         ),
@@ -230,6 +232,7 @@ void main() {
       expect(
         await publisher.publishDirectUpload(
           upload(),
+          allowVideoReuse: false,
           stickerRegions: const [pollRegion],
           poll: poll,
         ),
@@ -241,6 +244,7 @@ void main() {
       expect(
         await publisher.publishDirectUpload(
           upload(),
+          allowVideoReuse: false,
           stickerRegions: const [pollRegion],
           poll: poll,
         ),
@@ -258,6 +262,7 @@ void main() {
       expect(
         await publisher.publishDirectUpload(
           upload(),
+          allowVideoReuse: false,
           stickerRegions: const [pollRegion],
           poll: poll,
         ),
@@ -271,6 +276,7 @@ void main() {
       expect(
         await publisher.publishDirectUpload(
           upload(),
+          allowVideoReuse: false,
           stickerRegions: const [linkRegion, pollRegion],
         ),
         isTrue,

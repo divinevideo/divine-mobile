@@ -206,12 +206,12 @@ class VideoEventPublisher {
   /// waits to retry — see [publishDirectUpload].
   Future<bool> publishVideoEvent({
     required PendingUpload upload,
+    required bool allowVideoReuse,
     String? title,
     String? description,
     List<String>? hashtags,
     int? expirationTimestamp,
     bool allowAudioReuse = false,
-    bool allowVideoReuse = false,
     Duration? thumbnailTimestamp,
     List<String> collaboratorPubkeys = const [],
     List<String> mentionedPubkeys = const [],
@@ -318,9 +318,9 @@ class VideoEventPublisher {
   ///   counted as one.
   Future<bool> publishDirectUpload(
     PendingUpload upload, {
+    required bool allowVideoReuse,
     int? expirationTimestamp,
     bool allowAudioReuse = false,
-    bool allowVideoReuse = false,
     List<String> collaboratorPubkeys = const [],
     List<String> mentionedPubkeys = const [],
     List<String> linkUrls = const [],
