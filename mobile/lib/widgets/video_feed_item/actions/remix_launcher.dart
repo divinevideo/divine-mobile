@@ -44,8 +44,16 @@ Future<void> openRemixInEditor(
       );
       if (autosave != null && autosave.clips.isNotEmpty) {
         // A fresh id, sharing the autosave's files; deleting the autosave
-        // below leaves files another draft still names.
-        await draftStorage.saveDraft(autosave.duplicate());
+        // below leaves files another draft still names. duplicate() retires
+        // the challenge and the post time, as copying a project should; this
+        // is the same session moving to the Drafts tab, so both come along.
+        await draftStorage.saveDraft(
+          autosave.duplicate().copyWith(
+            challengeContext: autosave.challengeContext,
+            scheduledAt: autosave.scheduledAt,
+            skipUpdateLastModified: true,
+          ),
+        );
       }
     }
   } catch (e, stackTrace) {

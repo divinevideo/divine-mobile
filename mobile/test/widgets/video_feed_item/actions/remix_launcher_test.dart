@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:challenge_protocol/challenge_protocol.dart';
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/challenge_recording_context.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
@@ -32,6 +34,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../packages/challenges_repository/test/synthetic.dart';
 import '../../../mocks/mock_path_provider_platform.dart';
 
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
@@ -222,6 +225,37 @@ void main() {
         expect(container.read(clipManagerProvider).clips, [remixClip]);
       },
     );
+
+    testWidgets('keeps the challenge and post time of the saved session', (
+      tester,
+    ) async {
+      final signer = SyntheticSigner();
+      final challenge = ChallengeRecordingContext(
+        owner: signer.pubkey,
+        generation: 'generation',
+        definition: NostrEvent.fromJson(signer.definition()),
+        recordingId: 'recording',
+        clientTags: const [],
+      );
+      final postTime = DateTime.utc(2026, 12, 24, 9, 30);
+      stubAutosave(
+        _autosave(
+          clips: [sessionClip],
+        ).copyWith(challengeContext: challenge, scheduledAt: postTime),
+      );
+
+      await tester.pumpWidget(buildSubject());
+
+      await remixFromSheet(tester);
+
+      final saved =
+          verify(() => draftStorage.saveDraft(captureAny())).captured.single
+              as DivineVideoDraft;
+      expect(saved.id, isNot(VideoEditorConstants.autoSaveId));
+      expect(saved.challengeContext, same(challenge));
+      expect(saved.scheduledAt, postTime);
+      expect(saved.publishStatus, PublishStatus.draft);
+    });
 
     testWidgets('closes the sheet and opens the editor from the library', (
       tester,
