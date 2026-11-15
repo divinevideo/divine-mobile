@@ -118,8 +118,9 @@ class VideoContentActionsState extends Equatable {
   /// action shows that it is working instead of sitting inert.
   final bool isImportingClip;
 
-  /// Whether a remix is being prepared: the consent check, then finding or
-  /// importing the clip the editor opens with.
+  /// Whether a remix is being prepared: the consent check, finding or
+  /// importing the clip the editor opens with, then opening the editor, until
+  /// [VideoContentRemixLaunchFinished].
   final bool isPreparingRemix;
 
   /// Whether a content action is running. Each one closes the sheet when it

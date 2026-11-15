@@ -11,12 +11,14 @@ import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Starts a new editor session holding only [clip], then closes the sheet
-/// owning [sheetContext] and opens the editor.
+/// owning [sheetContext] and opens the editor. Completes once the editor is
+/// pushed, or when the launch gives up, not when the editor closes.
 ///
 /// A session the viewer left unfinished lives in the autosave, which the new
 /// session replaces. When it holds clips it is first saved as a new regular
@@ -65,10 +67,15 @@ Future<void> openRemixInEditor(
   if (!sheetContext.mounted) return;
   clipManager.insertClip(0, clip);
 
-  await presentAfterSheetDismiss<void>(
-    sheetContext,
-    (hostContext) => const VideoEditorRouteData(
-      from: VideoEditorScreen.libraryOrigin,
-    ).push<void>(hostContext),
-  );
+  await presentAfterSheetDismiss<void>(sheetContext, (hostContext) async {
+    // Not awaited: the push completes only when the editor closes.
+    runDetached(
+      const VideoEditorRouteData(
+        from: VideoEditorScreen.libraryOrigin,
+      ).push<void>(hostContext),
+      'open the editor with a remix',
+      logName: 'RemixLauncher',
+      category: LogCategory.video,
+    );
+  });
 }

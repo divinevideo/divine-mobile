@@ -53,6 +53,7 @@ class VideoContentActionsBloc
       _onRemixRequested,
       transformer: droppable(),
     );
+    on<VideoContentRemixLaunchFinished>(_onRemixLaunchFinished);
     on<VideoContentCopyEventJsonRequested>(_onCopyEventJsonRequested);
     on<VideoContentCopyEventIdRequested>(_onCopyEventIdRequested);
   }
@@ -311,10 +312,16 @@ class VideoContentActionsBloc
   /// Checks consent as Add to clips does, then emits [VideoContentRemixReady]
   /// with the clip the editor opens with. An import that fails reports as a
   /// failed Add to clips would.
+  ///
+  /// [VideoContentActionsState.isPreparingRemix] stays set with the ready
+  /// result, holding the sheet's actions while the UI opens the editor, until
+  /// [VideoContentRemixLaunchFinished]. A request arriving meanwhile is
+  /// ignored.
   Future<void> _onRemixRequested(
     VideoContentRemixRequested event,
     Emitter<VideoContentActionsState> emit,
   ) async {
+    if (state.isPreparingRemix) return;
     emit(state.copyWith(isPreparingRemix: true, clearActionResult: true));
 
     final consent = await _remixConsent();
@@ -333,12 +340,19 @@ class VideoContentActionsBloc
     if (isClosed) return;
     emit(
       state.copyWith(
-        isPreparingRemix: false,
+        isPreparingRemix: clip != null,
         actionResult: clip == null
             ? VideoContentClipImportResult(succeeded: false)
             : VideoContentRemixReady(clip: clip),
       ),
     );
+  }
+
+  void _onRemixLaunchFinished(
+    VideoContentRemixLaunchFinished event,
+    Emitter<VideoContentActionsState> emit,
+  ) {
+    emit(state.copyWith(isPreparingRemix: false));
   }
 
   /// The clip a remix of this video opens with: the one an earlier import

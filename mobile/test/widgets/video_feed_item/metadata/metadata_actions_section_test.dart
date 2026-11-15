@@ -26,8 +26,10 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/services/draft_storage_service.dart';
+import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_section.dart';
+import 'package:openvine/widgets/video_feed_item/metadata/metadata_remix_button.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -38,6 +40,17 @@ class _MockVideoContentActionsBloc
 
 class _MockOwnerVideoActionsCubit extends MockCubit<OwnerVideoActionsState>
     implements OwnerVideoActionsCubit {}
+
+class _MockVideoClipImportService extends Mock
+    implements VideoClipImportService {}
+
+/// Counts routes popped off the router's navigator.
+class _PopCounter extends NavigatorObserver {
+  int count = 0;
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) => count++;
+}
 
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
 
@@ -584,25 +597,34 @@ void main() {
       late StreamController<VideoContentActionsState> results;
       late ProviderContainer container;
       late _MockDraftStorageService draftStorage;
+      late _PopCounter pops;
+      late int editorBuilds;
 
       setUp(() {
-        results = StreamController<VideoContentActionsState>();
+        // Broadcast, so closing it completes in tests that never listen.
+        results = StreamController<VideoContentActionsState>.broadcast();
         whenListen(
           contentActions,
           results.stream,
           initialState: const VideoContentActionsState(),
         );
+        when(() => contentActions.isClosed).thenReturn(false);
         draftStorage = _MockDraftStorageService();
-        when(() => draftStorage.draftExists(any()))
-            .thenAnswer((_) async => false);
+        when(
+          () => draftStorage.draftExists(any()),
+        ).thenAnswer((_) async => false);
+        pops = _PopCounter();
+        editorBuilds = 0;
       });
 
       tearDown(() => results.close());
 
-      // Pushes the section in a scrolling list on its own route, standing in
-      // for the sheet, under a router that knows the editor.
-      Future<void> openSheet(WidgetTester tester) async {
+      // Pushes [sheetBody] on its own route, standing in for the sheet, under
+      // a router that knows the editor. By default the body is the section in
+      // a scrolling list, reading the mocked bloc.
+      Future<void> openSheet(WidgetTester tester, {Widget? sheetBody}) async {
         final router = GoRouter(
+          observers: [pops],
           routes: [
             GoRoute(
               path: '/',
@@ -611,15 +633,17 @@ void main() {
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => Scaffold(
-                        body: BlocProvider<VideoContentActionsBloc>.value(
-                          value: contentActions,
-                          child: ListView(
-                            children: [
-                              MetadataActionsSection(video: _classicVine),
-                              const SizedBox(height: 4000),
-                            ],
-                          ),
-                        ),
+                        body:
+                            sheetBody ??
+                            BlocProvider<VideoContentActionsBloc>.value(
+                              value: contentActions,
+                              child: ListView(
+                                children: [
+                                  MetadataActionsSection(video: _classicVine),
+                                  const SizedBox(height: 4000),
+                                ],
+                              ),
+                            ),
                       ),
                     ),
                   ),
@@ -629,7 +653,10 @@ void main() {
             ),
             GoRoute(
               path: VideoEditorScreen.path,
-              builder: (_, _) => const Scaffold(body: Text(editorLabel)),
+              builder: (_, _) {
+                editorBuilds++;
+                return const Scaffold(body: Text(editorLabel));
+              },
             ),
           ],
         );
@@ -701,6 +728,144 @@ void main() {
         expect(find.text(coverText), findsOneWidget);
         expect(find.text(editorLabel), findsNothing);
         expect(container.read(clipManagerProvider).clips, isEmpty);
+      });
+
+      testWidgets(
+        'holds Remix and the row until the editor opens, then opens it once',
+        (tester) async {
+          final video = _video();
+          final importer = _MockVideoClipImportService();
+          when(
+            () => importer.findImportedClipOf(any()),
+          ).thenAnswer((_) async => remixClip);
+          final ownerCubit = stubbedOwnerCubit();
+          final autosaveCheck = Completer<bool>();
+          when(
+            () => draftStorage.draftExists(any()),
+          ).thenAnswer((_) => autosaveCheck.future);
+          final l10n = lookupAppLocalizations(const Locale('en'));
+
+          await openSheet(
+            tester,
+            sheetBody: MultiBlocProvider(
+              providers: [
+                BlocProvider<VideoContentActionsBloc>(
+                  create: (_) => VideoContentActionsBloc(
+                    video: video,
+                    relayUrl: 'wss://relay.example.com',
+                    videoClipImportService: importer,
+                    viewerPubkey: video.pubkey,
+                  ),
+                ),
+                BlocProvider<OwnerVideoActionsCubit>.value(value: ownerCubit),
+              ],
+              child: ListView(
+                children: [
+                  MetadataRemixButton(video: video, isOwnVideo: true),
+                  MetadataActionsSection(video: video, isOwnVideo: true),
+                ],
+              ),
+            ),
+          );
+          final remixButton = find.widgetWithText(
+            DivineButton,
+            l10n.remixThisVideo,
+          );
+
+          await tester.tap(remixButton);
+          await tester.pump();
+          await tester.pump();
+          verify(() => draftStorage.draftExists(any())).called(1);
+
+          // The launcher is waiting on the autosave check; nothing more may
+          // start meanwhile.
+          await tester.tap(remixButton);
+          await tester.tap(find.text(l10n.shareMenuDeleteVideo));
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(find.text(l10n.shareMenuDelete), findsNothing);
+          verify(() => importer.findImportedClipOf(video)).called(1);
+          verifyNever(() => draftStorage.draftExists(any()));
+
+          autosaveCheck.complete(false);
+          await tester.pumpAndSettle();
+
+          expect(editorBuilds, 1);
+          expect(pops.count, 1);
+          expect(find.text(editorLabel), findsOneWidget);
+          expect(container.read(clipManagerProvider).clips, [remixClip]);
+          verifyNever(() => ownerCubit.deleteVideo(any()));
+        },
+      );
+
+      testWidgets('opens one editor when two ready remixes arrive at once', (
+        tester,
+      ) async {
+        final autosaveCheck = Completer<bool>();
+        when(
+          () => draftStorage.draftExists(any()),
+        ).thenAnswer((_) => autosaveCheck.future);
+        await openSheet(tester);
+
+        results
+          ..add(
+            VideoContentActionsState(
+              actionResult: VideoContentRemixReady(clip: remixClip),
+            ),
+          )
+          ..add(
+            VideoContentActionsState(
+              actionResult: VideoContentRemixReady(clip: remixClip),
+            ),
+          );
+        await tester.pump();
+        autosaveCheck.complete(false);
+        await tester.pumpAndSettle();
+
+        verify(() => draftStorage.draftExists(any())).called(1);
+        expect(editorBuilds, 1);
+        expect(pops.count, 1);
+      });
+
+      testWidgets('ends the launch when a covering route drops the remix', (
+        tester,
+      ) async {
+        await openSheet(tester);
+        Navigator.of(tester.element(sheetList)).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text(coverText)),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        results.add(
+          VideoContentActionsState(
+            actionResult: VideoContentRemixReady(clip: remixClip),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        verify(
+          () => contentActions.add(const VideoContentRemixLaunchFinished()),
+        ).called(1);
+      });
+
+      testWidgets('ends the launch once the editor has opened', (
+        tester,
+      ) async {
+        await openSheet(tester);
+
+        results.add(
+          VideoContentActionsState(
+            actionResult: VideoContentRemixReady(clip: remixClip),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(editorLabel), findsOneWidget);
+        verify(
+          () => contentActions.add(const VideoContentRemixLaunchFinished()),
+        ).called(1);
       });
     });
   });

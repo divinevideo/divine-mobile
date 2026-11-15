@@ -965,8 +965,9 @@ void main() {
           .having((s) => s.isPreparingRemix, 'isPreparingRemix', isTrue)
           .having((s) => s.actionResult, 'actionResult', isNull);
 
+      // Still preparing: the sheet stays held until the editor has opened.
       Matcher readyWith(Object clip) => isA<VideoContentActionsState>()
-          .having((s) => s.isPreparingRemix, 'isPreparingRemix', isFalse)
+          .having((s) => s.isPreparingRemix, 'isPreparingRemix', isTrue)
           .having(
             (s) => s.actionResult,
             'actionResult',
@@ -985,6 +986,14 @@ void main() {
                   consent,
                 ),
               );
+
+      final launchFinished = isA<VideoContentActionsState>()
+          .having((s) => s.isPreparingRemix, 'isPreparingRemix', isFalse)
+          .having(
+            (s) => s.actionResult,
+            'actionResult',
+            isA<VideoContentRemixReady>(),
+          );
 
       final importFailed = isA<VideoContentActionsState>()
           .having((s) => s.isPreparingRemix, 'isPreparingRemix', isFalse)
@@ -1059,11 +1068,14 @@ void main() {
         act: (bloc) async {
           bloc.add(const VideoContentRemixRequested());
           await pumpEventQueue();
+          bloc.add(const VideoContentRemixLaunchFinished());
+          await pumpEventQueue();
           bloc.add(const VideoContentRemixRequested());
         },
         expect: () => [
           preparing,
           readyWith(same(importedClip)),
+          launchFinished,
           preparing,
           readyWith(same(importedClip)),
         ],
@@ -1192,6 +1204,38 @@ void main() {
             libraryTitle: any(named: 'libraryTitle'),
           ),
         ).called(1),
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'ignores a remix request while the ready remix is being opened',
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) async {
+          bloc.add(const VideoContentRemixRequested());
+          await pumpEventQueue();
+          bloc.add(const VideoContentRemixRequested());
+        },
+        expect: () => [preparing, readyWith(same(importedClip))],
+        verify: (_) => verify(
+          () => mockImporter.importToLibrary(
+            any(),
+            libraryTitle: any(named: 'libraryTitle'),
+          ),
+        ).called(1),
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'releases the sheet once the launch has finished',
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) async {
+          bloc.add(const VideoContentRemixRequested());
+          await pumpEventQueue();
+          bloc.add(const VideoContentRemixLaunchFinished());
+        },
+        expect: () => [
+          preparing,
+          readyWith(same(importedClip)),
+          launchFinished,
+        ],
       );
 
       test('counts a remix being prepared as an action in flight', () {

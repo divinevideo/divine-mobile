@@ -46,6 +46,13 @@ class VideoContentRemixRequested extends VideoContentActionsEvent {
   const VideoContentRemixRequested();
 }
 
+/// The remix [VideoContentRemixReady] carried has opened in the editor, or
+/// its launch gave up. Until then the sheet holds its actions, so a second
+/// tap cannot start another launch.
+class VideoContentRemixLaunchFinished extends VideoContentActionsEvent {
+  const VideoContentRemixLaunchFinished();
+}
+
 /// Copy event JSON to clipboard.
 class VideoContentCopyEventJsonRequested extends VideoContentActionsEvent {
   const VideoContentCopyEventJsonRequested();

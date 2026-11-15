@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -52,6 +53,10 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
+
+  /// Whether a ready remix is being opened, so a second one arriving
+  /// meanwhile cannot start another launch.
+  bool _isLaunchingRemix = false;
 
   @override
   Widget build(BuildContext context) {
@@ -113,19 +118,29 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
   /// Opens the remix in the editor, unless a route the user opened over the
   /// sheet meanwhile covers it: closing the sheet would then close that
   /// route instead. The clip stays in the library either way.
+  ///
+  /// The bloc holds the sheet's actions until this reports the launch
+  /// finished, whether it opened the editor or gave up.
   void _openReadyRemix(BuildContext context, VideoContentActionsState state) {
     final result = state.actionResult;
-    if (result is! VideoContentRemixReady) return;
-    if (!context.mounted || ModalRoute.of(context)?.isCurrent == false) {
+    if (result is! VideoContentRemixReady || _isLaunchingRemix) return;
+    if (!context.mounted) return;
+    final bloc = context.read<VideoContentActionsBloc>();
+    if (ModalRoute.of(context)?.isCurrent == false) {
       Log.info(
         'Dropped a ready remix: a route covers the sheet',
         name: 'MetadataActionsSection',
         category: LogCategory.ui,
       );
+      bloc.addIfOpen(const VideoContentRemixLaunchFinished());
       return;
     }
+    _isLaunchingRemix = true;
     runDetached(
-      openRemixInEditor(context, ref, result.clip),
+      openRemixInEditor(context, ref, result.clip).whenComplete(() {
+        _isLaunchingRemix = false;
+        bloc.addIfOpen(const VideoContentRemixLaunchFinished());
+      }),
       'open remix in the editor',
       logName: 'MetadataActionsSection',
       category: LogCategory.video,

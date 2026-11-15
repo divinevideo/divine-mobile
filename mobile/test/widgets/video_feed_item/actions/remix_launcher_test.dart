@@ -72,103 +72,103 @@ DivineVideoDraft _autosave({required List<DivineVideoClip> clips}) =>
     ).copyWith(id: VideoEditorConstants.autoSaveId);
 
 void main() {
-  const openSheetLabel = 'open sheet';
-  const remixLabel = 'remix';
-  const editorLabel = 'editor';
-  final l10n = lookupAppLocalizations(const Locale('en'));
-  final remixClip = _clip('classic_vine_remix');
-  final sessionClip = _clip('earlier_session_clip');
+  group('openRemixInEditor', () {
+    const openSheetLabel = 'open sheet';
+    const remixLabel = 'remix';
+    const editorLabel = 'editor';
+    final l10n = lookupAppLocalizations(const Locale('en'));
+    final remixClip = _clip('classic_vine_remix');
+    final sessionClip = _clip('earlier_session_clip');
 
-  late _MockDraftStorageService draftStorage;
-  late List<String> calls;
-  late _FakeVideoPublishNotifier publish;
-  late ProviderContainer container;
-  late List<Uri> editorLocations;
+    late _MockDraftStorageService draftStorage;
+    late List<String> calls;
+    late _FakeVideoPublishNotifier publish;
+    late ProviderContainer container;
+    late List<Uri> editorLocations;
 
-  setUpAll(() {
-    registerFallbackValue(_autosave(clips: const []));
-  });
-
-  setUp(() {
-    draftStorage = _MockDraftStorageService();
-    calls = <String>[];
-    editorLocations = <Uri>[];
-    publish = _FakeVideoPublishNotifier(calls);
-    when(
-      () => draftStorage.draftExists(VideoEditorConstants.autoSaveId),
-    ).thenAnswer((_) async => false);
-    when(() => draftStorage.saveDraft(any())).thenAnswer((_) async {
-      calls.add('saveDraft');
+    setUpAll(() {
+      registerFallbackValue(_autosave(clips: const []));
     });
-  });
 
-  void stubAutosave(DivineVideoDraft draft) {
-    when(
-      () => draftStorage.draftExists(VideoEditorConstants.autoSaveId),
-    ).thenAnswer((_) async => true);
-    when(
-      () => draftStorage.getDraftById(VideoEditorConstants.autoSaveId),
-    ).thenAnswer((_) async => draft);
-  }
+    setUp(() {
+      draftStorage = _MockDraftStorageService();
+      calls = <String>[];
+      editorLocations = <Uri>[];
+      publish = _FakeVideoPublishNotifier(calls);
+      when(
+        () => draftStorage.draftExists(VideoEditorConstants.autoSaveId),
+      ).thenAnswer((_) async => false);
+      when(() => draftStorage.saveDraft(any())).thenAnswer((_) async {
+        calls.add('saveDraft');
+      });
+    });
 
-  Widget buildSubject() {
-    final router = GoRouter(
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, _) => Scaffold(
-            body: TextButton(
-              onPressed: () => showModalBottomSheet<void>(
-                context: context,
-                builder: (_) => Consumer(
-                  builder: (sheetContext, ref, _) => TextButton(
-                    onPressed: () =>
-                        openRemixInEditor(sheetContext, ref, remixClip),
-                    child: const Text(remixLabel),
+    void stubAutosave(DivineVideoDraft draft) {
+      when(
+        () => draftStorage.draftExists(VideoEditorConstants.autoSaveId),
+      ).thenAnswer((_) async => true);
+      when(
+        () => draftStorage.getDraftById(VideoEditorConstants.autoSaveId),
+      ).thenAnswer((_) async => draft);
+    }
+
+    Widget buildSubject() {
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, _) => Scaffold(
+              body: TextButton(
+                onPressed: () => showModalBottomSheet<void>(
+                  context: context,
+                  builder: (_) => Consumer(
+                    builder: (sheetContext, ref, _) => TextButton(
+                      onPressed: () =>
+                          openRemixInEditor(sheetContext, ref, remixClip),
+                      child: const Text(remixLabel),
+                    ),
                   ),
                 ),
+                child: const Text(openSheetLabel),
               ),
-              child: const Text(openSheetLabel),
             ),
           ),
-        ),
-        GoRoute(
-          path: VideoEditorScreen.path,
-          builder: (_, state) {
-            editorLocations.add(state.uri);
-            return const Scaffold(body: Text(editorLabel));
+          GoRoute(
+            path: VideoEditorScreen.path,
+            builder: (_, state) {
+              editorLocations.add(state.uri);
+              return const Scaffold(body: Text(editorLabel));
+            },
+          ),
+        ],
+      );
+
+      return ProviderScope(
+        overrides: [
+          draftStorageServiceProvider.overrideWithValue(draftStorage),
+          videoPublishProvider.overrideWith(() => publish),
+          videoEditorProvider.overrideWith(_FakeVideoEditorNotifier.new),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) {
+            container = ProviderScope.containerOf(context);
+            return MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            );
           },
         ),
-      ],
-    );
+      );
+    }
 
-    return ProviderScope(
-      overrides: [
-        draftStorageServiceProvider.overrideWithValue(draftStorage),
-        videoPublishProvider.overrideWith(() => publish),
-        videoEditorProvider.overrideWith(_FakeVideoEditorNotifier.new),
-      ],
-      child: Consumer(
-        builder: (context, ref, _) {
-          container = ProviderScope.containerOf(context);
-          return MaterialApp.router(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routerConfig: router,
-          );
-        },
-      ),
-    );
-  }
+    Future<void> remixFromSheet(WidgetTester tester) async {
+      await tester.tap(find.text(openSheetLabel));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(remixLabel));
+      await tester.pumpAndSettle();
+    }
 
-  Future<void> remixFromSheet(WidgetTester tester) async {
-    await tester.tap(find.text(openSheetLabel));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(remixLabel));
-    await tester.pumpAndSettle();
-  }
-
-  group('openRemixInEditor', () {
     testWidgets(
       'saves an autosaved session as a new draft before clearing it',
       (tester) async {
