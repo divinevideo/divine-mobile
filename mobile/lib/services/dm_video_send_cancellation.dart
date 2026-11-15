@@ -96,6 +96,14 @@ class DmVideoSendCancellation {
     if (_lastProgressAt == null) _resetInactivity();
   }
 
+  /// A new server PUT starts its own progress range. A fallback must not be
+  /// compared with the failed server's high-water mark.
+  void startUploadAttempt() {
+    throwIfCancelled();
+    _highestProgress = 0;
+    _resetInactivity();
+  }
+
   /// Upload has settled; preview preparation is still bounded by the deadline.
   void finishUpload() {
     _inactivity?.cancel();

@@ -3369,10 +3369,14 @@ class BlossomUploadService {
   /// still carries `t=upload` and `x=<sha256 of the ciphertext>`, and the
   /// returned [BlossomUploadResult.videoId] is that same ciphertext hash with
   /// [BlossomUploadResult.url] `'<serverUrl>/<hash>'`.
+  ///
+  /// [onUploadAttempt] fires before each server PUT, including fallback, since
+  /// each transfer restarts the fraction reported by [onProgress].
   Future<BlossomUploadResult> uploadEncryptedFile({
     required File ciphertextFile,
     void Function(double)? onProgress,
     CancelToken? cancelToken,
+    void Function()? onUploadAttempt,
   }) async {
     try {
       if (cancelToken?.isCancelled ?? false) throw cancelToken!.cancelError!;
@@ -3395,6 +3399,7 @@ class BlossomUploadService {
 
       for (final serverUrl in serverUrls) {
         if (cancelToken?.isCancelled ?? false) throw cancelToken!.cancelError!;
+        onUploadAttempt?.call();
         final result = await _uploadToServer(
           serverUrl: serverUrl,
           source: _FileUploadSource(ciphertextFile),

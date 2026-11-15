@@ -506,6 +506,7 @@ void main() {
           () => blossom.uploadEncryptedFile(
             ciphertextFile: ciphertext,
             cancelToken: any(named: 'cancelToken'),
+            onUploadAttempt: any(named: 'onUploadAttempt'),
             onProgress: any(named: 'onProgress'),
           ),
         ).thenAnswer((_) async {
@@ -547,6 +548,7 @@ void main() {
           () => blossom.uploadEncryptedFile(
             ciphertextFile: ciphertext,
             cancelToken: any(named: 'cancelToken'),
+            onUploadAttempt: any(named: 'onUploadAttempt'),
             onProgress: any(named: 'onProgress'),
           ),
         ).thenAnswer((_) => upload.future);

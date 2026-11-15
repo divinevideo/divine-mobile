@@ -107,6 +107,7 @@ class DmVideoSendService {
                 onUploadProgress?.call(fraction);
               },
         cancelToken: cancellation?.uploadCancelToken,
+        onUploadAttempt: cancellation?.startUploadAttempt,
       );
       final upload = await (cancellation?.waitFor(uploading) ?? uploading);
       cancellation?.throwIfCancelled();

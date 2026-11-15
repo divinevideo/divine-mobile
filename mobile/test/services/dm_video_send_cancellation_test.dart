@@ -58,6 +58,24 @@ void main() {
       });
     });
 
+    test('a fallback reset cannot extend the pre-publication deadline', () {
+      fakeAsync((clock) {
+        final attempt = DmVideoSendCancellation(
+          now: () => DateTime.utc(2026).add(clock.elapsed),
+        );
+        attempt.startUploadAttempt();
+        for (var minute = 1; minute <= 29; minute++) {
+          clock.elapse(const Duration(minutes: 1));
+          attempt.uploadProgress(minute / 100);
+        }
+        attempt.startUploadAttempt();
+        clock.elapse(const Duration(minutes: 1));
+        expect(attempt.uploadCancelToken.isCancelled, isTrue);
+        attempt.finish();
+        expect(clock.nonPeriodicTimerCount, 0);
+      });
+    });
+
     test('completed upload does not expire while the preview is preparing', () {
       fakeAsync((clock) {
         final attempt = DmVideoSendCancellation();
