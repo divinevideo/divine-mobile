@@ -4024,6 +4024,11 @@ class AppLocalizationsTr extends AppLocalizations {
       'Başkaları videolarını kendi gönderilerinde klip olarak kullanabilir.';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return '$name kullanıcısının bir klibini kullanıyor';
+  }
+
+  @override
   String get remixThisVideo => 'Bu videoyu remiksle';
 
   @override

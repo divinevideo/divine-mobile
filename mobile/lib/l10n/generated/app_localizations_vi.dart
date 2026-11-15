@@ -4048,6 +4048,11 @@ class AppLocalizationsVi extends AppLocalizations {
       'Người khác có thể dùng video của bạn làm clip trong bài đăng của họ.';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Dùng clip của $name';
+  }
+
+  @override
   String get remixThisVideo => 'Remix video này';
 
   @override

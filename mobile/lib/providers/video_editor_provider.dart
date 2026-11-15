@@ -2029,6 +2029,11 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     return credits.single.inspiredByInfo;
   }
 
+  /// The credits carried by the clips on the timeline, one per source.
+  ///
+  /// These are published automatically and are not editable in the post form.
+  List<ClipSourceCredit> get clipSourceCredits => _clipSourceCreditsFromClips();
+
   List<ClipSourceCredit> _clipSourceCreditsFromClips() {
     final credits = <ClipSourceCredit>[];
     final seen = <String>{};

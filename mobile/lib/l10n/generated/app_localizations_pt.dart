@@ -4120,6 +4120,11 @@ class AppLocalizationsPt extends AppLocalizations {
       'Outras pessoas podem usar seus vídeos como clipes nos próprios posts.';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Usa um clipe de $name';
+  }
+
+  @override
   String get remixThisVideo => 'Remixar este vídeo';
 
   @override

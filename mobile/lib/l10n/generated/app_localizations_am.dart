@@ -3992,6 +3992,11 @@ class AppLocalizationsAm extends AppLocalizations {
       'ሌሎች ቪዲዮዎችዎን በራሳቸው ልጥፎች ውስጥ እንደ ቅንጥብ መጠቀም ይችላሉ።';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'የ$name ክሊፕ ይጠቀማል';
+  }
+
+  @override
   String get remixThisVideo => 'ይህን ቪዲዮ ይቀላቅሉ';
 
   @override

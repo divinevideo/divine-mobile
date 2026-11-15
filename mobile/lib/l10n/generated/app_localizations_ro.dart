@@ -4205,6 +4205,11 @@ class AppLocalizationsRo extends AppLocalizations {
       'Alții îți pot folosi videoclipurile drept clipuri în propriile postări.';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Folosește un clip de la $name';
+  }
+
+  @override
   String get remixThisVideo => 'Remixează acest videoclip';
 
   @override

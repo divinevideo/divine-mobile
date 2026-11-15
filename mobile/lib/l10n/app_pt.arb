@@ -1461,6 +1461,7 @@
   "remixConsentCheckFailed": "Não foi possível verificar se este vídeo pode ser remixado. Tente de novo.",
   "remixSettingAllowTitle": "Permitir que outras pessoas remixem meus vídeos",
   "remixSettingAllowSubtitle": "Outras pessoas podem usar seus vídeos como clipes nos próprios posts.",
+  "videoMetadataClipCreditRow": "Usa um clipe de {name}",
   "remixThisVideo": "Remixar este vídeo",
   "remixWebAppNudge": "Os remixes são feitos no app do Divine.",
   "remixWebGetTheApp": "Baixar o app",

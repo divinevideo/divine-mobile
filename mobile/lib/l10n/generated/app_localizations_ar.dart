@@ -4083,6 +4083,11 @@ class AppLocalizationsAr extends AppLocalizations {
       'يمكن للآخرين استخدام فيديوهاتك كمقاطع في منشوراتهم.';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'يستخدم مقطعًا من $name';
+  }
+
+  @override
   String get remixThisVideo => 'إعادة مزج هذا الفيديو';
 
   @override

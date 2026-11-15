@@ -4073,6 +4073,11 @@ class AppLocalizationsMs extends AppLocalizations {
       'Orang lain boleh menggunakan video anda sebagai klip dalam siaran mereka sendiri.';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Menggunakan klip daripada $name';
+  }
+
+  @override
   String get remixThisVideo => 'Remix video ini';
 
   @override

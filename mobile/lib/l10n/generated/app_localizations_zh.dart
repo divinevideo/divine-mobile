@@ -3815,6 +3815,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get remixSettingAllowSubtitle => '其他人可以把你的视频作为片段用在自己的帖子里。';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return '使用了 $name 的片段';
+  }
+
+  @override
   String get remixThisVideo => '混剪此视频';
 
   @override

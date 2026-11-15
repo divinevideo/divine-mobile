@@ -1458,6 +1458,7 @@
   "remixConsentCheckFailed": "Tidak bisa memeriksa apakah video ini boleh di-remix. Coba lagi.",
   "remixSettingAllowTitle": "Izinkan orang lain me-remix videoku",
   "remixSettingAllowSubtitle": "Orang lain bisa memakai videomu sebagai klip di postingan mereka sendiri.",
+  "videoMetadataClipCreditRow": "Menggunakan klip dari {name}",
   "remixThisVideo": "Remix video ini",
   "remixWebAppNudge": "Remix dilakukan di aplikasi Divine.",
   "remixWebGetTheApp": "Dapatkan aplikasinya",

@@ -10,11 +10,14 @@ import 'package:openvine/features/publishing_ideas/publishing_ideas.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_reply_context.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_caption_field.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_tags_selector.dart';
+
+import '../../helpers/test_provider_overrides.dart';
 
 void main() {
   group(VideoMetadataFormFields, () {
@@ -32,6 +35,7 @@ void main() {
     }) {
       return ProviderScope(
         overrides: [
+          authServiceProvider.overrideWithValue(createMockAuthService()),
           videoEditorProvider.overrideWith(
             () => _MockVideoEditorNotifier(state ?? VideoEditorProviderState()),
           ),
@@ -101,6 +105,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            authServiceProvider.overrideWithValue(createMockAuthService()),
             videoEditorProvider.overrideWith(() => mockNotifier),
           ],
           child: const MaterialApp(
@@ -133,6 +138,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            authServiceProvider.overrideWithValue(createMockAuthService()),
             videoEditorProvider.overrideWith(() => mockNotifier),
           ],
           child: const MaterialApp(
@@ -258,6 +264,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            authServiceProvider.overrideWithValue(createMockAuthService()),
             videoEditorProvider.overrideWith(() => mockNotifier),
             videoReplyContextProvider.overrideWith(
               () => _TestVideoReplyContextNotifier(
@@ -393,6 +400,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
+              authServiceProvider.overrideWithValue(createMockAuthService()),
               videoEditorProvider.overrideWith(() => mockNotifier),
             ],
             child: const MaterialApp(

@@ -4085,6 +4085,11 @@ class AppLocalizationsUr extends AppLocalizations {
       'دوسرے لوگ آپ کی ویڈیوز کو اپنی پوسٹس میں کلپس کے طور پر استعمال کر سکتے ہیں۔';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return '$name کا کلپ استعمال کرتا ہے';
+  }
+
+  @override
   String get remixThisVideo => 'اس ویڈیو کو ری مکس کریں';
 
   @override

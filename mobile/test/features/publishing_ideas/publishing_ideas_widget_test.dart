@@ -11,10 +11,13 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
 import 'package:publishing_suggestions/publishing_suggestions.dart';
+
+import '../../helpers/test_provider_overrides.dart';
 
 class _Editor extends VideoEditorNotifier {
   @override
@@ -62,6 +65,7 @@ Future<void> _pumpForm(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        authServiceProvider.overrideWithValue(createMockAuthService()),
         videoEditorProvider.overrideWith(() => editor),
         clipManagerProvider.overrideWith(_Clips.new),
         isFeatureEnabledProvider(FeatureFlag.publishingIdeas)

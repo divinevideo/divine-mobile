@@ -1970,6 +1970,7 @@
   "remixConsentCheckFailed": "Không kiểm tra được video này có thể remix hay không. Hãy thử lại.",
   "remixSettingAllowTitle": "Cho phép người khác remix video của tôi",
   "remixSettingAllowSubtitle": "Người khác có thể dùng video của bạn làm clip trong bài đăng của họ.",
+  "videoMetadataClipCreditRow": "Dùng clip của {name}",
   "remixThisVideo": "Remix video này",
   "remixWebAppNudge": "Bạn có thể remix trong ứng dụng Divine.",
   "remixWebGetTheApp": "Tải ứng dụng",

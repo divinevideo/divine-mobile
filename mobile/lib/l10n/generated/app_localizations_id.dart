@@ -4004,6 +4004,11 @@ class AppLocalizationsId extends AppLocalizations {
       'Orang lain bisa memakai videomu sebagai klip di postingan mereka sendiri.';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Menggunakan klip dari $name';
+  }
+
+  @override
   String get remixThisVideo => 'Remix video ini';
 
   @override

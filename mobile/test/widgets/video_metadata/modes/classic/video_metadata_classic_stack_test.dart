@@ -10,6 +10,7 @@ import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_editor/video_render_failure_reason.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/widgets/video_metadata/modes/classic/video_metadata_classic_app_bar.dart';
@@ -19,6 +20,8 @@ import 'package:openvine/widgets/video_metadata/modes/classic/video_metadata_cla
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_render_failure_banner.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+
+import '../../../../helpers/test_provider_overrides.dart';
 
 void main() {
   group(VideoMetadataClassicStack, () {
@@ -39,6 +42,7 @@ void main() {
     Widget buildWidget({VideoEditorProviderState? state}) {
       return ProviderScope(
         overrides: [
+          authServiceProvider.overrideWithValue(createMockAuthService()),
           isFeatureEnabledProvider(FeatureFlag.publishingIdeas)
               .overrideWithValue(false),
           clipManagerProvider.overrideWith(

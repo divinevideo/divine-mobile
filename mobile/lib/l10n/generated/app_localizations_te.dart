@@ -4224,6 +4224,11 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఇతరులు మీ వీడియోలను వారి స్వంత పోస్ట్‌లలో క్లిప్‌లుగా ఉపయోగించవచ్చు.';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return '$name క్లిప్‌ను ఉపయోగిస్తోంది';
+  }
+
+  @override
   String get remixThisVideo => 'ఈ వీడియోను రీమిక్స్ చేయండి';
 
   @override

@@ -3841,6 +3841,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get remixSettingAllowSubtitle => '다른 사람들이 내 영상을 자기 게시물의 클립으로 쓸 수 있어요.';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return '$name님의 클립 사용';
+  }
+
+  @override
   String get remixThisVideo => '이 영상 리믹스하기';
 
   @override

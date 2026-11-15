@@ -1461,6 +1461,7 @@
   "remixConsentCheckFailed": "Nie udało się sprawdzić, czy ten film można remiksować. Spróbuj ponownie.",
   "remixSettingAllowTitle": "Pozwól innym remiksować moje filmy",
   "remixSettingAllowSubtitle": "Inni mogą używać twoich filmów jako klipów we własnych postach.",
+  "videoMetadataClipCreditRow": "Używa klipu od {name}",
   "remixThisVideo": "Zremiksuj ten film",
   "remixWebAppNudge": "Remiksy tworzy się w aplikacji Divine.",
   "remixWebGetTheApp": "Pobierz aplikację",

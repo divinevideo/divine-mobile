@@ -3824,6 +3824,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get remixSettingAllowSubtitle => '他の人があなたの動画をクリップとして自分の投稿に使えます。';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return '$nameさんのクリップを使用';
+  }
+
+  @override
   String get remixThisVideo => 'この動画をリミックス';
 
   @override

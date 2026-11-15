@@ -4201,6 +4201,11 @@ class AppLocalizationsPl extends AppLocalizations {
       'Inni mogą używać twoich filmów jako klipów we własnych postach.';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Używa klipu od $name';
+  }
+
+  @override
   String get remixThisVideo => 'Zremiksuj ten film';
 
   @override

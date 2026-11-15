@@ -4078,6 +4078,11 @@ class AppLocalizationsSv extends AppLocalizations {
       'Andra kan använda dina videor som klipp i sina egna inlägg.';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Använder ett klipp från $name';
+  }
+
+  @override
   String get remixThisVideo => 'Remixa den här videon';
 
   @override

@@ -4133,6 +4133,11 @@ class AppLocalizationsEs extends AppLocalizations {
       'Otras personas pueden usar tus videos como clips en sus propias publicaciones.';
 
   @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Usa un clip de $name';
+  }
+
+  @override
   String get remixThisVideo => 'Remezclá este video';
 
   @override

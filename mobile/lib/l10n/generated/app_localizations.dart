@@ -6853,6 +6853,12 @@ abstract class AppLocalizations {
   /// **'Others can use your videos as clips in their own posts.'**
   String get remixSettingAllowSubtitle;
 
+  /// Locked row in the post form: this video includes a clip from another creator, so their credit stays on it and can't be removed. {name} is that creator's display name, or their npub when no name is known.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses a clip from {name}'**
+  String videoMetadataClipCreditRow(String name);
+
   /// Full-width button in the video info sheet: imports the video into the viewer's clips and opens the editor with it, so they can make a new video from it.
   ///
   /// In en, this message translates to:
