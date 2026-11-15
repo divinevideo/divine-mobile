@@ -200,6 +200,10 @@ void main() {
     return events;
   }
 
+  List<String> loggedMessages() => [
+    for (final entry in LogCaptureService().getRecentLogs()) entry.message,
+  ];
+
   List<VideoDmSendOutcome> recordOutcomes() {
     final outcomes = <VideoDmSendOutcome>[];
     final subscription = outbox.outcomes.listen(outcomes.add);
@@ -978,6 +982,32 @@ void main() {
           expect(reporter.errors, isEmpty);
         },
       );
+
+      test('logs a clip check the session interrupts', () async {
+        await LogCaptureService().clearAllLogs();
+        when(
+          () => verifier.verify(any()),
+        ).thenAnswer((_) => Completer<ClipProvenanceResult>().future);
+        outbox = createOutbox(clipVerifier: () => verifier);
+        final events = recordConversation('c1');
+
+        sendClips([_clip('clip-a'), _clip('clip-b')]);
+        await pumpEventQueue();
+        outbox.cancelPendingSends();
+        await pumpEventQueue();
+
+        expect(
+          events.last.every((e) => e.phase == OutgoingVideoDmPhase.failed),
+          isTrue,
+        );
+        expect(
+          loggedMessages(),
+          contains(
+            'Video DM clip batch ${events.last.first.batchId} check '
+            'interrupted: originating session ended',
+          ),
+        );
+      });
 
       test('reads a card frame for each clip', () async {
         final readPaths = <String>[];
@@ -1899,6 +1929,7 @@ void main() {
       test(
         'refuses to send under a different account and fails the entry',
         () async {
+          await LogCaptureService().clearAllLogs();
           stubAutoSend();
           var accountIsOurs = true;
           outbox = createOutbox(isAccountCurrent: () => accountIsOurs);
@@ -1917,6 +1948,13 @@ void main() {
           );
           expect(outcomes.single.status, equals(VideoDmOutcomeStatus.failed));
           expect(outcomes.single.sentCount, 0);
+          expect(
+            loggedMessages(),
+            contains(
+              'Video DM ${events.last.single.id} not sent: originating '
+              'account no longer active',
+            ),
+          );
         },
       );
 
@@ -1955,6 +1993,7 @@ void main() {
         'refuses a clip batch before its check when the account changed, so '
         'nothing is signed under the new account',
         () async {
+          await LogCaptureService().clearAllLogs();
           final verifier = _MockClipProvenanceVerifier();
           var signed = false;
           outbox = createOutbox(
@@ -1976,6 +2015,13 @@ void main() {
             isTrue,
           );
           expect(outcomes.single.status, equals(VideoDmOutcomeStatus.failed));
+          expect(
+            loggedMessages(),
+            contains(
+              'Video DM clip batch ${events.last.first.batchId} not sent: '
+              'originating account no longer active',
+            ),
+          );
         },
       );
     });
