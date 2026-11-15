@@ -194,6 +194,12 @@ void main() {
       setUp(stubRelaysHoldNoProfile);
 
       test('replays a queued allowVideoReuse into the publish', () async {
+        when(
+          () => nostrClient.sendProfileAwaitOk(
+            profileContent: any(named: 'profileContent'),
+            requireDefaultRelay: true,
+          ),
+        ).thenAnswer((_) async => PublishSuccess(event: event));
         await repository.enqueuePendingSave(
           const PendingProfileSave(
             pubkey: pubkey,
@@ -210,6 +216,7 @@ void main() {
             verify(
                   () => nostrClient.sendProfileAwaitOk(
                     profileContent: captureAny(named: 'profileContent'),
+                    requireDefaultRelay: true,
                   ),
                 ).captured.single
                 as Map<String, dynamic>;

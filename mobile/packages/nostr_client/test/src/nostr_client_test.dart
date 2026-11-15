@@ -4279,6 +4279,159 @@ void main() {
       });
     });
 
+    group('sendProfileAwaitOk with requireDefaultRelay', () {
+      const defaultRelay = 'wss://relay.example.com';
+      const otherRelay = 'wss://other.example.com';
+
+      void stubPoolPublish(PublishOutcome outcome) {
+        when(
+          () => mockNostr.sendEventAwaitOk(
+            any(),
+            tempRelays: any(named: 'tempRelays', that: isNull),
+            targetRelays: any(named: 'targetRelays', that: isNull),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) async => outcome);
+      }
+
+      void stubDefaultRelayPublish(PublishOutcome outcome) {
+        when(
+          () => mockNostr.sendEventAwaitOk(
+            any(),
+            tempRelays: [defaultRelay],
+            targetRelays: [defaultRelay],
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) async => outcome);
+      }
+
+      Future<PublishResult> send() => client.sendProfileAwaitOk(
+        profileContent: {'display_name': 'Alice'},
+        requireDefaultRelay: true,
+      );
+
+      test('returns PublishSuccess when the default relay accepts', () async {
+        stubPoolPublish(
+          const PublishOutcome(
+            eventId: 'kind0',
+            acceptedBy: ['$defaultRelay/'],
+            rejectedBy: {otherRelay: 'blocked: policy'},
+            noResponseFrom: [],
+          ),
+        );
+
+        expect(await send(), isA<PublishSuccess>());
+      });
+
+      test('returns PublishFailed when only another relay accepts', () async {
+        stubPoolPublish(
+          const PublishOutcome(
+            eventId: 'kind0',
+            acceptedBy: [otherRelay],
+            rejectedBy: {defaultRelay: 'rate-limited: slow down'},
+            noResponseFrom: [],
+          ),
+        );
+
+        expect(await send(), isA<PublishFailed>());
+        verifyNever(
+          () => mockNostr.sendEventAwaitOk(
+            any(),
+            tempRelays: [defaultRelay],
+            targetRelays: [defaultRelay],
+            timeout: any(named: 'timeout'),
+          ),
+        );
+      });
+
+      test(
+        'returns PublishFailed when the default relay stays silent',
+        () async {
+          stubPoolPublish(
+            const PublishOutcome(
+              eventId: 'kind0',
+              acceptedBy: [otherRelay],
+              rejectedBy: {},
+              noResponseFrom: [defaultRelay],
+            ),
+          );
+
+          expect(await send(), isA<PublishFailed>());
+        },
+      );
+
+      group('when the pool does not include the default relay', () {
+        const poolOnlyOther = PublishOutcome(
+          eventId: 'kind0',
+          acceptedBy: [otherRelay],
+          rejectedBy: {},
+          noResponseFrom: [],
+        );
+
+        test('returns PublishSuccess once the default relay accepts the '
+            'event sent to it alone', () async {
+          stubPoolPublish(poolOnlyOther);
+          stubDefaultRelayPublish(
+            const PublishOutcome(
+              eventId: 'kind0',
+              acceptedBy: [defaultRelay],
+              rejectedBy: {},
+              noResponseFrom: [],
+            ),
+          );
+
+          expect(await send(), isA<PublishSuccess>());
+          verify(
+            () => mockNostr.sendEventAwaitOk(
+              any(),
+              tempRelays: [defaultRelay],
+              targetRelays: [defaultRelay],
+              timeout: any(named: 'timeout'),
+            ),
+          ).called(1);
+        });
+
+        test(
+          'returns PublishFailed when the default relay refuses it',
+          () async {
+            stubPoolPublish(poolOnlyOther);
+            stubDefaultRelayPublish(
+              const PublishOutcome(
+                eventId: 'kind0',
+                acceptedBy: [],
+                rejectedBy: {defaultRelay: 'blocked: policy'},
+                noResponseFrom: [],
+              ),
+            );
+
+            expect(await send(), isA<PublishFailed>());
+          },
+        );
+      });
+
+      test('returns PublishFailed without asking the default relay when no '
+          'relay accepts', () async {
+        stubPoolPublish(
+          const PublishOutcome(
+            eventId: 'kind0',
+            acceptedBy: [],
+            rejectedBy: {otherRelay: 'blocked: policy'},
+            noResponseFrom: [],
+          ),
+        );
+
+        expect(await send(), isA<PublishFailed>());
+        verifyNever(
+          () => mockNostr.sendEventAwaitOk(
+            any(),
+            tempRelays: [defaultRelay],
+            targetRelays: [defaultRelay],
+            timeout: any(named: 'timeout'),
+          ),
+        );
+      });
+    });
+
     group('sendRepost', () {
       test('sends repost successfully', () async {
         const eventId = 'event-to-repost';

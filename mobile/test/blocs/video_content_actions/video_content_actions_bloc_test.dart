@@ -1073,6 +1073,7 @@ void main() {
             remixConsentRepository: RemixConsentRepository(
               profileRepository: reader,
               defaultRelayUrl: 'wss://relay.divine.test',
+              connectedRelayUrls: () => const ['wss://relay.divine.test'],
             ),
           );
         },

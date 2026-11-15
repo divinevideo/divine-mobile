@@ -3,16 +3,27 @@
 
 import 'dart:async';
 
+import 'dart:convert';
+
 import 'package:bloc_test/bloc_test.dart';
+import 'package:db_client/db_client.dart' hide Filter;
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/nostr_sdk.dart' show Event, Filter;
 import 'package:openvine/blocs/remix_settings/remix_settings_cubit.dart';
 import 'package:openvine/blocs/remix_settings/remix_settings_state.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockHttpClient extends Mock implements http.Client {}
 
 const _pubkey =
     'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
@@ -473,6 +484,131 @@ void main() {
         expect(cubit.state.saveStatus, RemixSettingsSaveStatus.saving);
         expect(savedProfiles, isEmpty);
       });
+    });
+
+    group('with a profile repository that publishes the save', () {
+      late AppDatabase db;
+      late _MockNostrClient client;
+      late ProfileRepository profileRepository;
+
+      RemixSettingsCubit buildPublishingCubit() => RemixSettingsCubit(
+        repository: profileRepository,
+        pubkey: _pubkey,
+        onProfileSaved: savedProfiles.add,
+      );
+
+      /// Answers a save that must reach the default relay with [result].
+      void stubDefaultRelayPublish(PublishResult Function(Event) result) {
+        when(
+          () => client.sendProfileAwaitOk(
+            profileContent: any(named: 'profileContent'),
+            requireDefaultRelay: true,
+          ),
+        ).thenAnswer(
+          (invocation) async => result(
+            Event(
+              _pubkey,
+              0,
+              const [],
+              jsonEncode(invocation.namedArguments[#profileContent]),
+            ),
+          ),
+        );
+      }
+
+      setUpAll(() {
+        registerFallbackValue(<Filter>[]);
+      });
+
+      setUp(() {
+        db = AppDatabase.test(NativeDatabase.memory());
+        client = _MockNostrClient();
+        profileRepository = ProfileRepository(
+          nostrClient: client,
+          userProfilesDao: db.userProfilesDao,
+          httpClient: _MockHttpClient(),
+        );
+        when(() => client.publicKey).thenReturn(_pubkey);
+        // Every relay answers, and none holds a kind 0 for the account.
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+        );
+        when(
+          () => client.queryEvents(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            useCache: any(named: 'useCache'),
+          ),
+        ).thenAnswer((_) async => <Event>[]);
+        // Another relay accepting is enough for a save that need not reach
+        // the default relay.
+        when(
+          () => client.sendProfileAwaitOk(
+            profileContent: any(named: 'profileContent'),
+          ),
+        ).thenAnswer(
+          (invocation) async => PublishSuccess(
+            event: Event(
+              _pubkey,
+              0,
+              const [],
+              jsonEncode(invocation.namedArguments[#profileContent]),
+            ),
+          ),
+        );
+      });
+
+      tearDown(() => db.close());
+
+      test(
+        'reverts the switch when only a relay other than the default one '
+        'accepts the save',
+        () async {
+          stubDefaultRelayPublish((_) => const PublishFailed());
+          final cubit = buildPublishingCubit();
+          addTearDown(cubit.close);
+          await cubit.load();
+          expect(cubit.state.allowVideoReuse, isTrue);
+
+          await cubit.setAllowVideoReuse(false);
+
+          expect(
+            cubit.state,
+            const RemixSettingsState(
+              loadStatus: RemixSettingsLoadStatus.ready,
+              saveStatus: RemixSettingsSaveStatus.failedPublish,
+            ),
+          );
+          expect(savedProfiles, isEmpty);
+        },
+      );
+
+      test(
+        'keeps the switch when the default relay accepts the save',
+        () async {
+          stubDefaultRelayPublish((event) => PublishSuccess(event: event));
+          final cubit = buildPublishingCubit();
+          addTearDown(cubit.close);
+          await cubit.load();
+
+          await cubit.setAllowVideoReuse(false);
+
+          expect(
+            cubit.state,
+            const RemixSettingsState(
+              loadStatus: RemixSettingsLoadStatus.ready,
+              allowVideoReuse: false,
+            ),
+          );
+          expect(savedProfiles.single.allowsVideoReuse, isFalse);
+        },
+      );
     });
   });
 }

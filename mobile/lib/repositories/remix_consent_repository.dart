@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
+import 'package:openvine/utils/relay_url_utils.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -32,24 +33,33 @@ enum RemixConsent {
 /// session to have no kind 0, and never trusts a cached projection, which
 /// would silently answer "allowed" for a blocked account.
 ///
-/// Only Divine writes the key, and it publishes every kind 0 to the app's
-/// default relay. So the check asks every connected relay and the default
-/// relay at once, and settles on whichever answers first in full: one silent
-/// third-party relay — the common case for classic Vine authors with no
-/// kind 0 — does not hold up the answer until it times out.
+/// Only Divine writes the key, and a save that writes it must be accepted by
+/// the app's default relay. So the check asks every connected relay and the
+/// default relay at once, and settles on whichever answers first in full: one
+/// silent third-party relay — the common case for classic Vine authors with
+/// no kind 0 — does not hold up the answer until it times out. Only a read
+/// that asked the default relay may settle on "allowed": other relays can
+/// hold an older kind 0 that predates the block.
 class RemixConsentRepository {
   /// Creates a repository that reads kind 0 through [profileRepository],
   /// trusting [defaultRelayUrl]'s full answer on its own.
+  ///
+  /// [connectedRelayUrls] names the relays the viewer is connected to when a
+  /// check starts; the read of every connected relay only counts as asking
+  /// the default relay when it is among them.
   ///
   /// Only signer-free reads are made, so a [ProfileReader] is enough.
   RemixConsentRepository({
     required ProfileReader profileRepository,
     required String defaultRelayUrl,
+    required Iterable<String> Function() connectedRelayUrls,
   }) : _profileRepository = profileRepository,
-       _defaultRelayUrl = defaultRelayUrl;
+       _defaultRelayUrl = defaultRelayUrl,
+       _connectedRelayUrls = connectedRelayUrls;
 
   final ProfileReader _profileRepository;
   final String _defaultRelayUrl;
+  final Iterable<String> Function() _connectedRelayUrls;
 
   /// Lowercase pubkeys of authors confirmed to have no kind 0 this session,
   /// so asking again for the same author makes no relay request.
@@ -61,15 +71,16 @@ class RemixConsentRepository {
   /// as soon as either read settles it:
   ///
   /// * a kind 0 of the author holding `false` blocks at once, even from a
-  ///   read that did not finish;
-  /// * a finished read finding no kind 0, or one that does not block, allows.
-  ///   An author who never published a kind 0 cannot have blocked anything;
-  ///   a miss that settles the answer is remembered for the session, and
-  ///   forgotten again if a `false` from the author turns up.
+  ///   read that did not finish or did not ask the default relay;
+  /// * a finished read that asked the default relay and found no kind 0, or
+  ///   one that does not block, allows. An author who never published a
+  ///   kind 0 cannot have blocked anything; a miss that settles the answer is
+  ///   remembered for the session, and forgotten again if a `false` from the
+  ///   author turns up.
   ///
   /// Returns [RemixConsent.unknown] when both reads end without settling it:
-  /// they timed out, refused, threw an [Exception], or returned another
-  /// account's profile.
+  /// they timed out, refused, threw an [Exception], returned another
+  /// account's profile, or only relays other than the default one answered.
   ///
   /// Throws whatever [Error] a read throws first while the answer is still
   /// open — a programming fault, such as a kind 0 that does not parse, which
@@ -88,20 +99,24 @@ class RemixConsentRepository {
       if (!decision.isCompleted) decision.complete(consent);
     }
 
-    void consider(FreshProfileRead? read) {
+    void consider(
+      FreshProfileRead? read, {
+      required bool askedDefaultRelay,
+    }) {
       unsettledReads--;
       final profile = read?.profile;
       final isAuthors =
           profile != null && pubkeysEqual(profile.pubkey, authorPubkey);
+      final settlesAllow = askedDefaultRelay && read != null && read.conclusive;
       if (isAuthors && !profile.allowsVideoReuse) {
         _confirmedWithoutKind0.remove(key);
         settle(RemixConsent.blocked);
-      } else if (read != null && read.conclusive && profile == null) {
+      } else if (settlesAllow && profile == null) {
         // Only a miss that settles the answer is remembered: one arriving
         // after a `false` must not turn later checks into an allow.
         if (!decision.isCompleted) _confirmedWithoutKind0.add(key);
         settle(RemixConsent.allowed);
-      } else if (read != null && read.conclusive && isAuthors) {
+      } else if (settlesAllow && isAuthors) {
         settle(RemixConsent.allowed);
       }
       if (unsettledReads == 0 && !decision.isCompleted) {
@@ -131,11 +146,17 @@ class RemixConsentRepository {
       );
     }
 
+    final connectedToDefaultRelay = _connectedRelayUrls().any(
+      (url) => relayUrlsEquivalent(url, _defaultRelayUrl),
+    );
     unawaited(
       _read(
         authorPubkey,
         () => _profileRepository.readRawProfileFromRelays(pubkey: authorPubkey),
-      ).then(consider, onError: fail),
+      ).then(
+        (read) => consider(read, askedDefaultRelay: connectedToDefaultRelay),
+        onError: fail,
+      ),
     );
     unawaited(
       _read(
@@ -144,7 +165,10 @@ class RemixConsentRepository {
           pubkey: authorPubkey,
           onlyRelayUrl: _defaultRelayUrl,
         ),
-      ).then(consider, onError: fail),
+      ).then(
+        (read) => consider(read, askedDefaultRelay: true),
+        onError: fail,
+      ),
     );
     return decision.future;
   }

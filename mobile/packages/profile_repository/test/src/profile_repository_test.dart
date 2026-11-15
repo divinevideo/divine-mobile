@@ -3139,14 +3139,91 @@ void main() {
       });
 
       group('allowVideoReuse', () {
+        setUp(() {
+          when(
+            () => mockNostrClient.sendProfileAwaitOk(
+              profileContent: any(named: 'profileContent'),
+              requireDefaultRelay: true,
+            ),
+          ).thenAnswer((_) async => PublishSuccess(event: mockProfileEvent));
+        });
+
         Map<String, dynamic> capturedContent() {
           return verify(
                 () => mockNostrClient.sendProfileAwaitOk(
                   profileContent: captureAny(named: 'profileContent'),
+                  requireDefaultRelay: any(named: 'requireDefaultRelay'),
                 ),
               ).captured.single
               as Map<String, dynamic>;
         }
+
+        test(
+          'requires the default relay to accept a save that sets it',
+          () async {
+            final currentProfile = await createCurrentProfile({
+              'display_name': 'Old Name',
+            });
+
+            await profileRepository.saveProfileEvent(
+              displayName: 'Old Name',
+              currentProfile: currentProfile,
+              allowVideoReuse: true,
+            );
+
+            verify(
+              () => mockNostrClient.sendProfileAwaitOk(
+                profileContent: any(named: 'profileContent'),
+                requireDefaultRelay: true,
+              ),
+            ).called(1);
+          },
+        );
+
+        test(
+          'fails when the default relay does not accept the block',
+          () async {
+            when(
+              () => mockNostrClient.sendProfileAwaitOk(
+                profileContent: any(named: 'profileContent'),
+                requireDefaultRelay: true,
+              ),
+            ).thenAnswer((_) async => const PublishFailed());
+            final currentProfile = await createCurrentProfile({
+              'display_name': 'Old Name',
+            });
+
+            await expectLater(
+              profileRepository.saveProfileEvent(
+                displayName: 'Old Name',
+                currentProfile: currentProfile,
+                allowVideoReuse: false,
+              ),
+              throwsA(isA<ProfilePublishFailedException>()),
+            );
+          },
+        );
+
+        test(
+          'does not require the default relay for a save that leaves it alone',
+          () async {
+            final currentProfile = await createCurrentProfile({
+              'display_name': 'Old Name',
+            });
+
+            await profileRepository.saveProfileEvent(
+              displayName: 'New Name',
+              currentProfile: currentProfile,
+            );
+
+            verifyNever(
+              () => mockNostrClient.sendProfileAwaitOk(
+                profileContent: any(named: 'profileContent'),
+                requireDefaultRelay: true,
+              ),
+            );
+          },
+        );
 
         test(
           'writes false without dropping unrelated rawData',

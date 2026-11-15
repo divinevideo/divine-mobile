@@ -28,6 +28,7 @@ void main() {
 
     late _MockProfileRepository profileRepository;
     late RemixConsentRepository repository;
+    late List<String> connectedRelayUrls;
 
     UserProfile profileWith(
       Map<String, dynamic> rawData, {
@@ -87,9 +88,13 @@ void main() {
 
     setUp(() {
       profileRepository = _MockProfileRepository();
+      // Unless a test says otherwise, the viewer is connected to the default
+      // relay, so the read of every connected relay asks it too.
+      connectedRelayUrls = [defaultRelayUrl, 'wss://other.relay.test'];
       repository = RemixConsentRepository(
         profileRepository: profileRepository,
         defaultRelayUrl: defaultRelayUrl,
+        connectedRelayUrls: () => connectedRelayUrls,
       );
       // Unless a test says otherwise, the default relay never answers.
       stubDefaultRelayRead(() => Completer<FreshProfileRead>().future);
@@ -374,6 +379,90 @@ void main() {
             );
 
             expect(consentInFakeTime(async).consent, RemixConsent.blocked);
+          });
+        });
+      });
+
+      group('when the viewer is not connected to the default relay', () {
+        setUp(() {
+          connectedRelayUrls = ['wss://other.relay.test'];
+        });
+
+        test('is not allowed until the default relay answers', () {
+          fakeAsync((async) {
+            stubWiderRead(() async => conclusiveMiss);
+            stubDefaultRelayRead(
+              answersAfter(const Duration(seconds: 2), conclusiveMiss),
+            );
+
+            final result = consentInFakeTime(async);
+
+            expect(result.consent, RemixConsent.allowed);
+            expect(result.at, const Duration(seconds: 2));
+          });
+        });
+
+        test('is blocked when the default relay later holds a JSON false', () {
+          fakeAsync((async) {
+            stubWiderRead(() async => conclusiveMiss);
+            stubDefaultRelayRead(
+              answersAfter(
+                const Duration(seconds: 2),
+                (profile: blocking, conclusive: true),
+              ),
+            );
+
+            final result = consentInFakeTime(async);
+
+            expect(result.consent, RemixConsent.blocked);
+            expect(result.at, const Duration(seconds: 2));
+          });
+        });
+
+        test('is unknown when only the other relays answer', () {
+          fakeAsync((async) {
+            stubWiderRead(
+              () async => (
+                profile: profileWith(const {'name': 'alice'}),
+                conclusive: true,
+              ),
+            );
+            stubDefaultRelayRead(answersAfter(relayTimeout, inconclusiveMiss));
+
+            final result = consentInFakeTime(async);
+
+            expect(result.consent, RemixConsent.unknown);
+            expect(result.at, relayTimeout);
+          });
+        });
+
+        test('does not remember a miss only the other relays confirmed', () {
+          fakeAsync((async) {
+            stubWiderRead(() async => conclusiveMiss);
+            stubDefaultRelayRead(answersAfter(relayTimeout, inconclusiveMiss));
+            expect(consentInFakeTime(async).consent, RemixConsent.unknown);
+            clearInteractions(profileRepository);
+
+            consentInFakeTime(async);
+
+            verify(
+              () => profileRepository.readRawProfileFromRelays(
+                pubkey: authorPubkey,
+                onlyRelayUrl: defaultRelayUrl,
+              ),
+            ).called(1);
+          });
+        });
+
+        test('counts the default relay under another spelling of its URL', () {
+          fakeAsync((async) {
+            connectedRelayUrls = ['WSS://relay.divine.test/'];
+            stubWiderRead(() async => conclusiveMiss);
+
+            final result = consentInFakeTime(async);
+
+            expect(result.consent, RemixConsent.allowed);
+            expect(result.at, Duration.zero);
           });
         });
       });

@@ -1534,7 +1534,9 @@ class ProfileRepository implements ProfileReader {
   /// [allowVideoReuse] `false` writes [divineAllowVideoReuseKey] as JSON
   /// `false`, blocking others from remixing this account's videos; `true`
   /// removes the key, since absence already means allowed; null leaves the
-  /// seed's value alone.
+  /// seed's value alone. A non-null [allowVideoReuse] also requires the
+  /// default relay's `OK true`: remix consent readers settle on that relay's
+  /// kind 0, so a save other relays accepted but it did not is a failure.
   ///
   /// Throws [NoRelaysConnectedException] when no relays are connected.
   /// Throws [ProfilePublishFailedException] when relays were reached but none
@@ -1635,11 +1637,18 @@ class ProfileRepository implements ProfileReader {
     final rawTags = (seed?.rawTags.isNotEmpty ?? false)
         ? seed!.rawTags
         : currentProfile?.rawTags ?? const <List<String>>[];
+    // Remix consent readers trust the default relay's kind 0 on its own, so
+    // a save that sets the block only counts once the default relay has it.
+    final requireDefaultRelay = allowVideoReuse != null;
     final result = rawTags.isEmpty
-        ? await _nostrClient.sendProfileAwaitOk(profileContent: newContent)
+        ? await _nostrClient.sendProfileAwaitOk(
+            profileContent: newContent,
+            requireDefaultRelay: requireDefaultRelay,
+          )
         : await _nostrClient.sendProfileAwaitOk(
             profileContent: newContent,
             tags: rawTags,
+            requireDefaultRelay: requireDefaultRelay,
           );
 
     // Switch exhaustively over the typed result — no post-failure

@@ -2414,9 +2414,16 @@ class NostrClient {
   ///   every relay rejected it, none responded before the confirmation
   ///   timeout, or the send failed before reaching them (e.g. the signer
   ///   returned null).
+  ///
+  /// With [requireDefaultRelay], success also needs [defaultRelayUrl]'s
+  /// `OK true`: a Kind 0 that other relays accepted but the default relay
+  /// refused or never answered is [PublishFailed]. When the pool does not
+  /// include the default relay, the event is sent to it alone after the pool
+  /// accepts it.
   Future<PublishResult> sendProfileAwaitOk({
     required Map<String, dynamic> profileContent,
     List<List<String>> tags = const [],
+    bool requireDefaultRelay = false,
   }) async {
     // Resolve the no-relays case up front. [publishEventAwaitOk] returns an
     // all-empty [PublishOutcome] both when no relay was ever connected AND
@@ -2442,11 +2449,39 @@ class NostrClient {
 
     final outcome = await publishEventAwaitOk(event);
 
-    if (outcome.confirmed) {
-      return PublishSuccess(event: event);
+    if (!outcome.confirmed) {
+      return const PublishFailed();
     }
+    if (requireDefaultRelay && !await _defaultRelayAccepted(event, outcome)) {
+      return const PublishFailed();
+    }
+    return PublishSuccess(event: event);
+  }
 
-    return const PublishFailed();
+  /// Whether [defaultRelayUrl] accepted [event], given the pool's [outcome].
+  ///
+  /// A default relay the pool publish never targeted is sent [event] alone.
+  Future<bool> _defaultRelayAccepted(
+    Event event,
+    PublishOutcome outcome,
+  ) async {
+    final defaultRelay = normalizeRelayUrl(defaultRelayUrl) ?? defaultRelayUrl;
+    bool isDefault(String url) =>
+        (normalizeRelayUrl(url) ?? url) == defaultRelay;
+
+    if (outcome.acceptedBy.any(isDefault)) return true;
+    final targeted = [
+      ...outcome.rejectedBy.keys,
+      ...outcome.noResponseFrom,
+      ...outcome.unreachableTargets,
+    ].any(isDefault);
+    if (targeted) return false;
+
+    final direct = await publishEventAwaitOk(
+      event,
+      targetRelays: [defaultRelayUrl],
+    );
+    return direct.acceptedBy.any(isDefault);
   }
 
   /// Sends a repost

@@ -39,6 +39,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
@@ -539,12 +540,16 @@ void main() {
     ProviderContainer buildContainer({
       required ProfileReader? reader,
       required String relayUrl,
+      List<String> connectedRelays = const [],
     }) {
       final environment = _MockEnvironmentConfig();
       when(() => environment.relayUrl).thenReturn(relayUrl);
+      final client = _MockNostrClient();
+      when(() => client.connectedRelays).thenReturn(connectedRelays);
       final container = ProviderContainer(
         overrides: [
           profileReadRepositoryProvider.overrideWithValue(reader),
+          nostrServiceProvider.overrideWithValue(client),
           currentEnvironmentProvider.overrideWith(
             () => _TestEnvironment(environment),
           ),
@@ -586,6 +591,33 @@ void main() {
         ),
       ).called(1);
     });
+
+    test(
+      'lets every connected relay answer when they include the default relay',
+      () async {
+        const relayUrl = 'wss://relay.staging.example.com';
+        final reader = _MockProfileReader();
+        when(
+          () => reader.readRawProfileFromRelays(pubkey: pubkey),
+        ).thenAnswer((_) async => (profile: null, conclusive: true));
+        when(
+          () => reader.readRawProfileFromRelays(
+            pubkey: pubkey,
+            onlyRelayUrl: relayUrl,
+          ),
+        ).thenAnswer((_) => Completer<FreshProfileRead>().future);
+        final repository = buildContainer(
+          reader: reader,
+          relayUrl: relayUrl,
+          connectedRelays: const [relayUrl],
+        ).read(remixConsentRepositoryProvider);
+
+        expect(
+          await repository!.consentFor(pubkey),
+          RemixConsent.allowed,
+        );
+      },
+    );
   });
 
   group('contactListDirtyBroadcastBridgeProvider reconnect flush (#8331)', () {
