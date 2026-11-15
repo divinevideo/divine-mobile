@@ -5,6 +5,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
 
 /// How long the chrome takes to fade out and back in.
 ///
@@ -12,7 +13,10 @@ import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
 /// doesn't pop.
 const Duration kFeedImmersiveFadeDuration = Duration(milliseconds: 180);
 
-/// Hides [child] while [FeedImmersiveCubit] reports immersive viewing.
+/// Hides [child] while [FeedImmersiveCubit] reports immersive viewing, and
+/// while a grid tile's picture flies over the player
+/// ([VideoTileTransitionScope.hasLandedOf]), so the chrome fades in over the
+/// video once it has landed rather than appearing from under the picture.
 ///
 /// The cubit is looked up nullably, so surfaces that render feed chrome
 /// outside a feed page — the video-editor preview's [FeedModeSwitch], widget
@@ -46,19 +50,24 @@ class _FeedImmersiveChromeState extends State<FeedImmersiveChrome> {
     final isImmersive = context.select<FeedImmersiveCubit?, bool>(
       (cubit) => cubit?.state.isImmersive ?? false,
     );
+    final landed = VideoTileTransitionScope.hasLandedOf(context);
+    final hidden = isImmersive || !landed;
+    // Chrome built under a tile's flying picture starts hidden, so no fade
+    // out marks it invisible: mark it here, for its fade in to clear.
+    if (!landed) _fullyVisible = false;
     return IgnorePointer(
       // Blocked immediately on the way out, and until the fade completes on
       // the way back in — the chrome is never tappable while invisible.
-      ignoring: isImmersive || !_fullyVisible,
+      ignoring: hidden || !_fullyVisible,
       child: AnimatedOpacity(
-        opacity: isImmersive ? 0.0 : 1.0,
+        opacity: hidden ? 0.0 : 1.0,
         // Reduced motion gets the same end state without the cross-fade.
         duration: MediaQuery.disableAnimationsOf(context)
             ? Duration.zero
             : kFeedImmersiveFadeDuration,
         curve: Curves.easeOut,
         onEnd: () {
-          final visible = !isImmersive;
+          final visible = !hidden;
           if (visible != _fullyVisible) {
             setState(() => _fullyVisible = visible);
           }

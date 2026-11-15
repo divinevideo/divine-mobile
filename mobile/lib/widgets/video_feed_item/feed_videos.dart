@@ -64,6 +64,7 @@ import 'package:openvine/widgets/video_feed_item/video_interactions_bloc_key.dar
 import 'package:openvine/widgets/video_feed_item/video_interactions_restriction_listener.dart';
 import 'package:openvine/widgets/video_feed_item/video_loading_placeholder.dart';
 import 'package:openvine/widgets/video_feed_item/video_sticker_tap_areas.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
 
 import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
@@ -394,8 +395,13 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
     );
     final playbackEligible = ref.watch(playbackEligibleProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
+    // A grid tile's picture flying over the page hands over to the video's
+    // first frame when it lands, so playback waits for it.
     final isFeedActive =
-        widget.isActive && _routeAllowsPlayback && playbackEligible;
+        widget.isActive &&
+        _routeAllowsPlayback &&
+        playbackEligible &&
+        VideoTileTransitionScope.hasLandedOf(context);
     // A focus-only pause leaves the visible feed warm for the next swipe.
     // Route/tab changes and actual backgrounding still apply its release policy,
     // including when they happen after focus has already been lost.
@@ -534,48 +540,24 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             return const SizedBox.shrink();
           }
           final video = widget.videos[index];
-
-          final thumbnailUrl = video.thumbnailUrl;
-          final blurhash = video.blurhash;
-          // Metadata (dim-tag) ratio, expected to match the player's decoded
-          // ratio. A wrong dim mis-sizes the bars, or — when it flips the
-          // square/non-square split the cover gate below keys off — drops the
-          // backdrop entirely; no publisher emits such a dim (PR #5965 review).
-          // A missing dim falls back to a fullscreen fill.
           final aspectRatio = backdropAspectRatio(video.width, video.height);
-          // The player covers (fills) the screen for every non-square video
-          // when shouldPortraitExpand is set (see VideoItemWidget._resolveBoxFit),
-          // fully occluding the backdrop — so only mount it for the
-          // contain-fit (letterboxed) case where it is actually visible.
-          final coversScreen = videoCoversFeedViewport(
+          return VideoTileTransitionTarget(
+            videoId: video.id,
             aspectRatio: aspectRatio,
-            shouldPortraitExpand: fillsViewport,
-          );
-          // Either source can carry the backdrop: the blurhash path needs
-          // no poster URL (PR #5957 review). The backdrop paints only in the
-          // letterbox bars (each bar in its own RepaintBoundary), so no outer
-          // boundary here — a fullscreen boundary would be composited whole
-          // every frame and undo the per-bar isolation (PR #5957).
-          // A portrait video only leaves bars beside it where the feed
-          // shows whole videos instead of filling the viewport.
-          final showBlurBackdrop =
-              (!video.isPortrait || !fillsViewport) &&
-              !coversScreen &&
-              ((thumbnailUrl != null && thumbnailUrl.isNotEmpty) ||
-                  (blurhash != null && blurhash.isNotEmpty));
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              if (showBlurBackdrop)
-                Positioned.fill(
-                  child: BlurredVideoBackdrop(
-                    url: thumbnailUrl,
-                    blurhash: blurhash,
-                    videoAspectRatio: aspectRatio,
-                  ),
+            coversViewport: videoCoversFeedViewport(
+              aspectRatio: aspectRatio,
+              shouldPortraitExpand: fillsViewport,
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _LetterboxBackdrop(
+                  video: video,
+                  shouldPortraitExpand: fillsViewport,
                 ),
-              child,
-            ],
+                child,
+              ],
+            ),
           );
         },
         loadingBuilder: (context, index, {required bool isSquare}) {
@@ -583,13 +565,26 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             return const SizedBox.shrink();
           }
           final video = widget.videos[index];
-          return _FeedLoadingOrRestrictedOverlay(
-            video: video,
-            index: index,
-            feedMode: widget.contextTitle,
-            isSquare: isSquare,
-            shouldPortraitExpand: fillsViewport,
-            onSkip: () => _skipPooledVideoAt(index),
+          final aspectRatio = backdropAspectRatio(video.width, video.height);
+          return VideoTileTransitionTarget(
+            videoId: video.id,
+            aspectRatio: aspectRatio,
+            coversViewport: videoCoversFeedViewport(
+              aspectRatio: aspectRatio,
+              shouldPortraitExpand: fillsViewport,
+            ),
+            child: _FeedLoadingOrRestrictedOverlay(
+              video: video,
+              index: index,
+              feedMode: widget.contextTitle,
+              // The feed only knows a video is square once its player has
+              // read the stream. Until then the dimension tags already say
+              // so, and the poster must sit where the video will, rather
+              // than fill the screen and jump into its band on first frame.
+              isSquare: isSquare || aspectRatio == 1,
+              shouldPortraitExpand: fillsViewport,
+              onSkip: () => _skipPooledVideoAt(index),
+            ),
           );
         },
         errorBuilder: (context, index, onRetry, errorType) {
@@ -1784,6 +1779,62 @@ class _SubtitleLayerState extends State<_SubtitleLayer> {
   }
 }
 
+/// The blurred fill in the letterbox bars around a video that does not cover
+/// the screen, or nothing when it does.
+///
+/// Built under the playing video and over its loading poster, so the bars
+/// are filled from the moment the page appears rather than only once the
+/// player knows the video's size.
+class _LetterboxBackdrop extends StatelessWidget {
+  const _LetterboxBackdrop({
+    required this.video,
+    required this.shouldPortraitExpand,
+  });
+
+  final VideoEvent video;
+  final bool shouldPortraitExpand;
+
+  @override
+  Widget build(BuildContext context) {
+    final thumbnailUrl = video.thumbnailUrl;
+    final blurhash = video.blurhash;
+    // Metadata (dim-tag) ratio, expected to match the player's decoded
+    // ratio. A wrong dim mis-sizes the bars, or — when it flips the
+    // square/non-square split the cover gate below keys off — drops the
+    // backdrop entirely; no publisher emits such a dim (PR #5965 review).
+    // A missing dim falls back to a fullscreen fill.
+    final aspectRatio = backdropAspectRatio(video.width, video.height);
+    // The player covers (fills) the screen for every non-square video
+    // when shouldPortraitExpand is set (see VideoItemWidget._resolveBoxFit),
+    // fully occluding the backdrop — so only mount it for the
+    // contain-fit (letterboxed) case where it is actually visible.
+    final coversScreen = videoCoversFeedViewport(
+      aspectRatio: aspectRatio,
+      shouldPortraitExpand: shouldPortraitExpand,
+    );
+    // Either source can carry the backdrop: the blurhash path needs
+    // no poster URL (PR #5957 review). The backdrop paints only in the
+    // letterbox bars (each bar in its own RepaintBoundary), so no outer
+    // boundary here — a fullscreen boundary would be composited whole
+    // every frame and undo the per-bar isolation (PR #5957).
+    // A portrait video only leaves bars beside it where the feed
+    // shows whole videos instead of filling the viewport.
+    final showBlurBackdrop =
+        (!video.isPortrait || !shouldPortraitExpand) &&
+        !coversScreen &&
+        ((thumbnailUrl != null && thumbnailUrl.isNotEmpty) ||
+            (blurhash != null && blurhash.isNotEmpty));
+    if (!showBlurBackdrop) return const SizedBox.shrink();
+    return Positioned.fill(
+      child: BlurredVideoBackdrop(
+        url: thumbnailUrl,
+        blurhash: blurhash,
+        videoAspectRatio: aspectRatio,
+      ),
+    );
+  }
+}
+
 /// Shows [VideoLoadingPlaceholder] initially.
 ///
 /// If the video is still loading after the moderation-check delay, the
@@ -1915,13 +1966,24 @@ class _FeedLoadingOrRestrictedOverlayView extends ConsumerWidget {
                 );
               }
 
-              return VideoLoadingPlaceholder(
-                videoId: video.id,
-                index: index,
-                feedMode: feedMode,
-                thumbnailUrl: video.thumbnailUrl,
-                isSquare: isSquare,
-                shouldPortraitExpand: shouldPortraitExpand,
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  VideoLoadingPlaceholder(
+                    videoId: video.id,
+                    index: index,
+                    feedMode: feedMode,
+                    thumbnailUrl: video.thumbnailUrl,
+                    isSquare: isSquare,
+                    shouldPortraitExpand: shouldPortraitExpand,
+                  ),
+                  // The placeholder paints the page background, so the bars
+                  // go over it; they never reach the poster in the middle.
+                  _LetterboxBackdrop(
+                    video: video,
+                    shouldPortraitExpand: shouldPortraitExpand,
+                  ),
+                ],
               );
             },
           ),

@@ -1,26 +1,37 @@
 // ABOUTME: Widget tests for FeedImmersiveChrome.
 // ABOUTME: Covers fading + pointer-blocking against the cubit, the
-// ABOUTME: no-provider fallback, and the reduced-motion instant switch.
+// ABOUTME: no-provider fallback, the reduced-motion instant switch, and the
+// ABOUTME: hold while a grid tile's picture flies over the player.
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
 
 Future<void> _pumpChrome(
   WidgetTester tester, {
   FeedImmersiveCubit? cubit,
   bool disableAnimations = false,
+  ValueListenable<bool>? landed,
   VoidCallback? onTap,
 }) async {
-  final chrome = FeedImmersiveChrome(
+  Widget chrome = FeedImmersiveChrome(
     child: GestureDetector(
       onTap: onTap,
       child: const SizedBox.expand(child: Text('chrome')),
     ),
   );
+  if (landed != null) {
+    chrome = VideoTileTransitionScope(
+      targets: VideoTileTransitionTargets(),
+      landed: landed,
+      child: chrome,
+    );
+  }
 
   await tester.pumpWidget(
     MaterialApp(
@@ -157,6 +168,40 @@ void main() {
         tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).duration,
         equals(Duration.zero),
       );
+    });
+
+    group('while a grid tile picture flies over the player', () {
+      testWidgets('hides the chrome and blocks taps', (tester) async {
+        final landed = ValueNotifier(false);
+        addTearDown(landed.dispose);
+        var taps = 0;
+
+        await _pumpChrome(tester, landed: landed, onTap: () => taps++);
+        await tester.tap(find.text('chrome'), warnIfMissed: false);
+
+        expect(_opacityOf(tester), equals(0.0));
+        expect(_ignoringPointer(tester), isTrue);
+        expect(taps, equals(0));
+      });
+
+      testWidgets('fades the chrome in once the picture lands', (
+        tester,
+      ) async {
+        final landed = ValueNotifier(false);
+        addTearDown(landed.dispose);
+        await _pumpChrome(tester, landed: landed);
+
+        landed.value = true;
+        await tester.pump();
+
+        expect(_opacityOf(tester), equals(1.0));
+        // Still fading in, so not yet tappable.
+        expect(_ignoringPointer(tester), isTrue);
+
+        await tester.pumpAndSettle();
+
+        expect(_ignoringPointer(tester), isFalse);
+      });
     });
   });
 }

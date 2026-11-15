@@ -34,6 +34,8 @@ import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/profile/profile_video_feed_view.dart';
 import 'package:openvine/widgets/release_cached_images_on_dispose.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_flight_transition.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 
 import '../../helpers/l10n.dart';
 
@@ -1018,6 +1020,65 @@ void main() {
           isA<ProfileVideoFeedView>()
               .having((view) => view.userIdHex, 'userIdHex', _authorHex)
               .having((view) => view.videoIndex, 'videoIndex', 2),
+        );
+      });
+    });
+
+    group('fullscreen feed page', () {
+      Page<void> pageFor(VideoTileOrigin? origin) {
+        final (:route, :state) = _resolve(
+          _videoRouter(),
+          const PooledFullscreenVideoFeedRouteData(video: _hexId).location,
+          extra: ProfilePooledFullscreenVideoFeedArgs(
+            userIdHex: _authorHex,
+            initialIndex: 0,
+            tileOrigin: origin,
+          ),
+        );
+        return route.pageBuilder!(_FakeBuildContext(), state);
+      }
+
+      test('keeps the default page without a tile to grow out of', () {
+        // go_router's internal no-op page, which hands the route to `build`.
+        expect(pageFor(null), isNot(isA<CustomTransitionPage<void>>()));
+      });
+
+      testWidgets('grows out of the tile it was opened from', (tester) async {
+        late BuildContext tileContext;
+        await tester.pumpWidget(
+          Center(
+            child: SizedBox(
+              width: 120,
+              height: 180,
+              child: Builder(
+                builder: (context) {
+                  tileContext = context;
+                  return const VideoTileThumbnailBoundary(
+                    child: ColoredBox(color: Color(0xFF00FF00)),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+        final origin = VideoTileOrigin.capture(tileContext, videoId: _hexId)!;
+
+        final page = pageFor(origin) as CustomTransitionPage<void>;
+
+        expect(page.name, equals(PooledFullscreenVideoFeedScreen.routeName));
+        expect(page.child, isA<ProfileVideoFeedView>());
+        expect(
+          page.transitionsBuilder(
+            tileContext,
+            kAlwaysCompleteAnimation,
+            kAlwaysDismissedAnimation,
+            page.child,
+          ),
+          isA<VideoTileFlightTransition>().having(
+            (transform) => transform.origin,
+            'origin',
+            same(origin),
+          ),
         );
       });
     });

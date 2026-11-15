@@ -63,6 +63,7 @@ import 'package:openvine/services/video_moderation_status_service.dart';
 import 'package:openvine/widgets/divine_video_metrics_tracker.dart';
 import 'package:openvine/widgets/video_feed_item/actions/help_classify_action_button.dart';
 import 'package:openvine/widgets/video_feed_item/actions/report_action_button.dart';
+import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
 import 'package:openvine/widgets/video_feed_item/content_warning_helpers.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 import 'package:openvine/widgets/video_feed_item/feed_reactions_overlay.dart';
@@ -73,6 +74,7 @@ import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
 import 'package:openvine/widgets/video_feed_item/pooled_video_error_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:openvine/widgets/video_feed_item/video_loading_placeholder.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -195,6 +197,8 @@ VideoEvent _makeVideo({
   String? sha256,
   List<String> warnLabels = const [],
   List<String> contentWarningLabels = const [],
+  String? dimensions,
+  String? blurhash,
 }) {
   return VideoEvent(
     id: id ?? _testVideoId,
@@ -206,6 +210,8 @@ VideoEvent _makeVideo({
     sha256: sha256,
     warnLabels: warnLabels,
     contentWarningLabels: contentWarningLabels,
+    dimensions: dimensions,
+    blurhash: blurhash,
   );
 }
 
@@ -373,6 +379,7 @@ Future<ProviderContainer> _pumpFeedVideos(
   List<NavigatorObserver> navigatorObservers = const <NavigatorObserver>[],
   List<dynamic> additionalOverrides = const [],
   ValueListenable<List<VideoEvent>>? videosListenable,
+  ValueListenable<bool>? tileTransitionLanded,
   ProviderContainer? providerContainer,
 }) async {
   final mockPlaybackCubit =
@@ -402,6 +409,12 @@ Future<ProviderContainer> _pumpFeedVideos(
     isLoadingMore: isLoadingMore,
     onActiveVideoChanged: onActiveVideoChanged,
   );
+  final body = videosListenable == null
+      ? buildFeed(videos)
+      : ValueListenableBuilder<List<VideoEvent>>(
+          valueListenable: videosListenable,
+          builder: (context, list, _) => buildFeed(list),
+        );
   final container =
       providerContainer ??
       ProviderContainer(
@@ -443,11 +456,12 @@ Future<ProviderContainer> _pumpFeedVideos(
             BlocProvider<FeedImmersiveCubit>.value(value: immersiveCubit),
           ],
           child: Scaffold(
-            body: videosListenable == null
-                ? buildFeed(videos)
-                : ValueListenableBuilder<List<VideoEvent>>(
-                    valueListenable: videosListenable,
-                    builder: (context, list, _) => buildFeed(list),
+            body: tileTransitionLanded == null
+                ? body
+                : VideoTileTransitionScope(
+                    targets: VideoTileTransitionTargets(),
+                    landed: tileTransitionLanded,
+                    child: body,
                   ),
           ),
         ),
@@ -515,6 +529,72 @@ void main() {
         await tester.pump();
 
         expect(find.byType(VideoLoadingPlaceholder), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'letterboxes the poster of a video tagged square before it loads',
+      (tester) async {
+        final video = _makeVideo(dimensions: '480x480');
+        await _pumpFeedVideos(tester, videos: [video]);
+        await tester.pump();
+
+        expect(
+          tester
+              .widget<VideoLoadingPlaceholder>(
+                find.byType(VideoLoadingPlaceholder),
+              )
+              .isSquare,
+          isTrue,
+        );
+      },
+    );
+
+    testWidgets(
+      'fills the screen with the poster of a video not tagged square',
+      (tester) async {
+        final video = _makeVideo(dimensions: '720x1280');
+        await _pumpFeedVideos(tester, videos: [video]);
+        await tester.pump();
+
+        expect(
+          tester
+              .widget<VideoLoadingPlaceholder>(
+                find.byType(VideoLoadingPlaceholder),
+              )
+              .isSquare,
+          isFalse,
+        );
+      },
+    );
+
+    testWidgets(
+      'fills the letterbox bars of a square video while it loads',
+      (tester) async {
+        final video = _makeVideo(
+          dimensions: '480x480',
+          blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+        );
+        await _pumpFeedVideos(tester, videos: [video]);
+        await tester.pump();
+
+        expect(find.byType(VideoLoadingPlaceholder), findsOneWidget);
+        expect(find.byType(BlurredVideoBackdrop), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'leaves no letterbox bars around a portrait video while it loads',
+      (tester) async {
+        final video = _makeVideo(
+          dimensions: '720x1280',
+          blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+        );
+        await _pumpFeedVideos(tester, videos: [video]);
+        await tester.pump();
+
+        expect(find.byType(VideoLoadingPlaceholder), findsOneWidget);
+        expect(find.byType(BlurredVideoBackdrop), findsNothing);
       },
     );
 
@@ -3458,6 +3538,26 @@ void main() {
 
       state.didPopNext();
       await tester.pump();
+      expect(tester.widget<InfiniteVideoFeed>(feedFinder).isActive, isTrue);
+    });
+
+    testWidgets('waits for a grid tile picture to land before playing', (
+      tester,
+    ) async {
+      final landed = ValueNotifier(false);
+      addTearDown(landed.dispose);
+
+      await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        tileTransitionLanded: landed,
+      );
+      final feedFinder = find.byType(InfiniteVideoFeed);
+      expect(tester.widget<InfiniteVideoFeed>(feedFinder).isActive, isFalse);
+
+      landed.value = true;
+      await tester.pump();
+
       expect(tester.widget<InfiniteVideoFeed>(feedFinder).isActive, isTrue);
     });
 

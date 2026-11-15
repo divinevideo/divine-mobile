@@ -349,5 +349,23 @@ void main() {
         },
       );
     });
+
+    group('fullscreenFeedLetterboxAspectRatio', () {
+      test('letterboxes a square video', () {
+        expect(fullscreenFeedLetterboxAspectRatio(1080, 1080), equals(1));
+      });
+
+      test('fills the screen with a portrait video', () {
+        expect(fullscreenFeedLetterboxAspectRatio(1080, 1920), isNull);
+      });
+
+      test('fills the screen with a landscape video', () {
+        expect(fullscreenFeedLetterboxAspectRatio(1920, 1080), isNull);
+      });
+
+      test('fills the screen when the dimensions are unknown', () {
+        expect(fullscreenFeedLetterboxAspectRatio(null, null), isNull);
+      });
+    });
   });
 }

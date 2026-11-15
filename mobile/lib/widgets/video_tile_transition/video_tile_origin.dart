@@ -1,0 +1,261 @@
+// ABOUTME: The grid tile a fullscreen video was opened from, so the player
+// ABOUTME: can grow out of the tile and shrink back into it on close.
+
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
+import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
+
+/// Marks the thumbnail a fullscreen player grows out of.
+///
+/// [VideoTileOrigin.capture] looks for this widget under the tapped tile, and
+/// takes the tile's image and bounds from it.
+class VideoTileThumbnailBoundary extends StatelessWidget {
+  /// Wraps [child], the tile's thumbnail.
+  const VideoTileThumbnailBoundary({required this.child, super.key});
+
+  /// The thumbnail.
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => RepaintBoundary(child: child);
+}
+
+/// Where a fullscreen video was opened from.
+///
+/// Holds the tapped thumbnail's render objects rather than a fixed rect, so
+/// the close transition aims at wherever the tile is when the player is
+/// popped.
+class VideoTileOrigin {
+  VideoTileOrigin._({
+    required this.videoId,
+    required this.borderRadius,
+    required this.letterboxAspectRatio,
+    required RenderRepaintBoundary boundary,
+    required RenderImage? image,
+  }) : _boundary = boundary,
+       _image = image,
+       alignment = image == null
+           ? Alignment.center
+           : image.alignment.resolve(image.textDirection);
+
+  /// The origin of the tile under [tileContext] showing [videoId], or `null`
+  /// when the tile holds no laid-out [VideoTileThumbnailBoundary].
+  ///
+  /// Also keeps what the tile shows, for [takeImage]: the decoded thumbnail
+  /// when it has loaded, so the player can grow it into a frame of another
+  /// shape without losing what the tile cropped away, or else a snapshot of
+  /// the tile. That happens here, on the tap: by the time the player's first
+  /// frame builds, the push may already have marked the tile for repaint, and
+  /// an unpainted tile cannot be read.
+  static VideoTileOrigin? capture(
+    BuildContext tileContext, {
+    required String videoId,
+    double? letterboxAspectRatio,
+    double borderRadius = 4,
+  }) {
+    final boundaryElement = _findBoundary(tileContext);
+    final boundary = boundaryElement?.findRenderObject();
+    if (boundaryElement == null || boundary is! RenderRepaintBoundary) {
+      return null;
+    }
+    final image = _findImage(boundary);
+    final origin = VideoTileOrigin._(
+      videoId: videoId,
+      borderRadius: borderRadius,
+      letterboxAspectRatio: letterboxAspectRatio,
+      boundary: boundary,
+      image: image,
+    );
+    if (origin.rect == null) return null;
+    origin
+      .._taken =
+          origin.readImage() ??
+          origin._snapshot(
+            pixelRatio: MediaQuery.devicePixelRatioOf(tileContext),
+          )
+      .._playerSizeImage = _loadPlayerSize(tileContext, boundaryElement, image);
+    return origin;
+  }
+
+  /// The video the tile shows.
+  final String videoId;
+
+  /// The tile's corner radius, which the transition starts from.
+  final double borderRadius;
+
+  /// The aspect ratio the player will letterbox the video at, or `null` when
+  /// it fills the screen.
+  ///
+  /// Known from the video's dimensions on the tap, so the transition can aim
+  /// at the right frame before the player has built the page that shows it.
+  final double? letterboxAspectRatio;
+
+  /// Where in [rect] the tile places its picture when cropping it, which
+  /// drawing [takeImage] covering [rect] must match to reproduce the tile.
+  ///
+  /// Grid thumbnails keep the top of the frame, where faces usually are,
+  /// rather than its middle. A snapshot is already the crop, so for one this
+  /// is [Alignment.center].
+  final Alignment alignment;
+
+  final RenderRepaintBoundary _boundary;
+  final RenderImage? _image;
+
+  ui.Image? _taken;
+
+  ImageStream? _playerSizeImage;
+
+  /// The tile's thumbnail decoded at the size the player shows it, loading
+  /// from the tap, or `null` when the tile's own decode is already that size.
+  ///
+  /// Grid tiles decode their thumbnails at the tile's size, to keep many in
+  /// the image cache. Grown to the player's size, that decode is visibly
+  /// softer than the video, which shows where the picture hands over to it.
+  /// The source is read from the cache the tile loaded it through, and the
+  /// decode is capped at the screen's size.
+  ImageStream? get playerSizeImage => _playerSizeImage;
+
+  /// Where the tile's picture is on screen now, in global coordinates, or
+  /// `null` once the tile has left the screen.
+  ///
+  /// A decoded thumbnail fitted with `BoxFit.cover` fills the tile; one
+  /// fitted to `contain` is only the part it paints. Drawing [takeImage]
+  /// covering this rect at [alignment] reproduces the tile.
+  Rect? get rect {
+    if (!_boundary.attached || !_boundary.hasSize) return null;
+    final tile = _boundary.localToGlobal(Offset.zero) & _boundary.size;
+    final image = _liveImage;
+    final decoded = image?.image;
+    if (image == null || decoded == null || !image.hasSize) return tile;
+    final box = image.localToGlobal(Offset.zero) & image.size;
+    final fitted = applyBoxFit(
+      image.fit ?? BoxFit.scaleDown,
+      Size(decoded.width.toDouble(), decoded.height.toDouble()),
+      box.size,
+    ).destination;
+    final painted = image.alignment
+        .resolve(image.textDirection)
+        .inscribe(fitted, box);
+    return painted.intersect(tile);
+  }
+
+  /// The tile's picture as it was tapped, or `null` when it could not be read
+  /// or was already taken. The caller owns the image and must dispose it.
+  ui.Image? takeImage() {
+    final image = _taken;
+    _taken = null;
+    return image;
+  }
+
+  /// A copy of the decoded thumbnail the tile shows now, or `null` when it
+  /// shows none or has left the screen. The caller owns the image and must
+  /// dispose it.
+  ui.Image? readImage() => _liveImage?.image?.clone();
+
+  RenderImage? get _liveImage {
+    final image = _image;
+    return image != null && image.attached ? image : null;
+  }
+
+  ui.Image? _snapshot({required double pixelRatio}) {
+    var painted = true;
+    assert(() {
+      painted = !_boundary.debugNeedsPaint;
+      return true;
+    }(), 'debugNeedsPaint is only readable in debug builds');
+    if (!painted) return null;
+    try {
+      return _boundary.toImageSync(pixelRatio: pixelRatio);
+    } on Object {
+      // The picture is decoration: without one only the page appears.
+      return null;
+    }
+  }
+
+  static Element? _findBoundary(BuildContext context) {
+    Element? found;
+    void visit(Element element) {
+      if (found != null) return;
+      if (element.widget is VideoTileThumbnailBoundary) {
+        found = element;
+        return;
+      }
+      element.visitChildElements(visit);
+    }
+
+    context.visitChildElements(visit);
+    return found;
+  }
+
+  /// Starts decoding [image]'s source at the size covering the screen when
+  /// the tile shows it resized smaller than that.
+  static ImageStream? _loadPlayerSize(
+    BuildContext context,
+    Element boundary,
+    RenderImage? image,
+  ) {
+    final decoded = image?.image;
+    final screen = MediaQuery.maybeSizeOf(context);
+    if (image == null || decoded == null || screen == null) return null;
+    final source = _resizedSourceOf(boundary, image);
+    if (source == null) return null;
+    final aspectRatio = decoded.width / decoded.height;
+    final width =
+        (math.max(screen.width, screen.height * aspectRatio) *
+                MediaQuery.devicePixelRatioOf(context))
+            .ceil();
+    if (width <= decoded.width) return null;
+    // Never upscales: a source narrower than this decodes at its own size.
+    return ResizeImage(
+      source,
+      width: width,
+    ).resolve(createLocalImageConfiguration(context));
+  }
+
+  /// The provider [image] was resized from, when the [Image] that painted it
+  /// decoded a [ResizeImage].
+  static ImageProvider<Object>? _resizedSourceOf(
+    Element boundary,
+    RenderImage image,
+  ) {
+    ImageProvider<Object>? provider;
+    void visit(Element element) {
+      if (provider != null) return;
+      if (element is RenderObjectElement &&
+          identical(element.renderObject, image)) {
+        element.visitAncestorElements((ancestor) {
+          final widget = ancestor.widget;
+          if (widget is Image) {
+            provider = widget.image;
+            return false;
+          }
+          return !identical(ancestor, boundary);
+        });
+        return;
+      }
+      element.visitChildElements(visit);
+    }
+
+    boundary.visitChildElements(visit);
+    final resized = provider;
+    return resized is ResizeImage ? resized.imageProvider : null;
+  }
+
+  /// The last decoded image painted under [boundary]: a thumbnail stacked
+  /// over its blurhash paints after it.
+  static RenderImage? _findImage(RenderObject boundary) {
+    RenderImage? found;
+    void visit(RenderObject child) {
+      if (child is RenderImage && child.image != null) found = child;
+      child.visitChildren(visit);
+    }
+
+    boundary.visitChildren(visit);
+    return found;
+  }
+
+  @override
+  String toString() => 'VideoTileOrigin($videoId, $rect)';
+}

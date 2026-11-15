@@ -229,7 +229,7 @@ class _NewVideosContentState extends ConsumerState<_NewVideosContent> {
       // from `crossAxisSpacing` inside ComposableVideoGrid, not from
       // outer side padding.
       padding: const EdgeInsets.symmetric(vertical: 4),
-      onVideoTap: (videoList, index) {
+      onVideoTap: (videoList, index, origin) {
         Log.info(
           '🎯 NewVideosTab TAP: gridIndex=$index, '
           'videoId=${videoList[index].id}',
@@ -245,6 +245,7 @@ class _NewVideosContentState extends ConsumerState<_NewVideosContent> {
               initialVideoId: videoList[index].id,
               contextTitle: 'New Videos',
               trafficSource: ViewTrafficSource.discoveryNew,
+              tileOrigin: origin,
             ),
           ).push<void>(context),
           'open new video',

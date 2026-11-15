@@ -262,7 +262,7 @@ class _CategoryGalleryBody extends StatelessWidget {
         return galleryOverride ??
             ComposableVideoGrid(
               videos: state.videos,
-              onVideoTap: onVideoTap,
+              onVideoTap: (videos, index, _) => onVideoTap(videos, index),
               useMasonryLayout: true,
               // Edge to edge: the gallery's rounded corners frame the grid.
               padding: const EdgeInsets.only(bottom: 12),

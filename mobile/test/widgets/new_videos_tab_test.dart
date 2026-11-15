@@ -137,7 +137,7 @@ void main() {
       final grid = tester.widget<ComposableVideoGrid>(
         find.byType(ComposableVideoGrid),
       );
-      grid.onVideoTap([_video('new-video')], 0);
+      grid.onVideoTap([_video('new-video')], 0, null);
       await tester.pumpAndSettle();
 
       expect(find.text('opened video new-video'), findsOneWidget);

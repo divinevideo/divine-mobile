@@ -390,11 +390,14 @@ class _HashtagFeedScreenState extends ConsumerState<HashtagFeedScreen> {
         return ComposableVideoGrid(
           videos: videos,
           useMasonryLayout: true,
-          onVideoTap:
-              widget.onVideoTap ??
-              (videoList, index) {
-                _navigateToFullscreenFeed(context, videoList, index);
-              },
+          onVideoTap: (videoList, index, _) {
+            final onVideoTap = widget.onVideoTap;
+            if (onVideoTap != null) {
+              onVideoTap(videoList, index);
+            } else {
+              _navigateToFullscreenFeed(context, videoList, index);
+            }
+          },
           onRefresh: _loadHashtagVideos,
         );
       },

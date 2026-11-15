@@ -209,7 +209,7 @@ class _ForYouContentState extends ConsumerState<_ForYouContent>
                 bottom: 4,
                 top: headerHeight > 0 ? headerHeight + 4 : 4,
               ),
-              onVideoTap: (videoList, index) {
+              onVideoTap: (videoList, index, origin) {
                 Log.info(
                   '🎯 ForYouTab TAP: gridIndex=$index, '
                   'videoId=${videoList[index].id}',
@@ -224,6 +224,7 @@ class _ForYouContentState extends ConsumerState<_ForYouContent>
                       initialIndex: index,
                       initialVideoId: videoList[index].id,
                       contextTitle: context.l10n.feedModeForYou,
+                      tileOrigin: origin,
                       trafficSource: ViewTrafficSource.discoveryForYou,
                     ),
                   ).push<void>(context),

@@ -233,7 +233,7 @@ class _FeaturedGrid extends ConsumerWidget {
       onLoadMore: context.read<FeaturedTabVideosCubit>().loadMore,
       onRefresh: context.read<FeaturedTabVideosCubit>().load,
       emptyBuilder: () => const _FeaturedEmpty(),
-      onVideoTap: (videos, index) => PooledFullscreenVideoFeedRouteData(
+      onVideoTap: (videos, index, origin) => PooledFullscreenVideoFeedRouteData(
         video: videos[index].id,
         $extra: PooledFullscreenVideoFeedArgs(
           source: VideoListViewSource(videos),
@@ -243,6 +243,7 @@ class _FeaturedGrid extends ConsumerWidget {
           sponsorName: sponsorName,
           trafficSource: ViewTrafficSource.discoveryFeatured,
           sourceDetail: config.id,
+          tileOrigin: origin,
         ),
       ).push<void>(context),
     );
