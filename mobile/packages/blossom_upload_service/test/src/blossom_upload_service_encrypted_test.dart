@@ -171,9 +171,10 @@ void main() {
         final adapter = _PendingAdapter();
         final dio = Dio()..httpClientAdapter = adapter;
         addTearDown(dio.close);
-        final file = File(
-          '${Directory.systemTemp.createTempSync('encrypted-cancel').path}/ciphertext',
+        final directory = Directory.systemTemp.createTempSync(
+          'encrypted-cancel',
         );
+        final file = File('${directory.path}/ciphertext');
         await file.writeAsBytes([1, 2, 3]);
         addTearDown(() => file.parent.delete(recursive: true));
         when(() => mockAuthProvider.isAuthenticated).thenReturn(true);
@@ -199,7 +200,8 @@ void main() {
         cancellation.cancel('upload stalled');
         expect((await result).success, isFalse);
         await adapter.cancelled.future;
-        // A transport settling after cancellation must not turn it into success.
+        // A transport settling after cancellation must not turn the result
+        // into success.
         adapter.response.complete(ResponseBody.fromString('{}', 201));
       });
 
