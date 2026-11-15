@@ -1035,6 +1035,27 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         for command in self._shorebird_patch_commands():
             self.assertNotIn("--extra-gen-snapshot-options", command)
 
+    def test_android_shorebird_builds_target_every_abi(self) -> None:
+        # Flutter's Gradle plugin keeps abiFilters at armeabi-v7a, arm64-v8a
+        # and x86_64 whatever --target-platform says; the flag only drops
+        # libflutter.so and libapp.so for the omitted ABIs. Third-party native
+        # libraries still list those devices, so Play shows no device-support
+        # warning and the app crashes on launch there (mobile/docs/
+        # ANDROID_DEVICE_SUPPORT.md). Asserted here rather than in
+        # check_android_device_support.sh because this suite runs on every PR,
+        # while the Guards job skips a codemagic.yaml-only change.
+        android_commands = [
+            command
+            for command in self._shorebird_release_commands()
+            + self._shorebird_patch_commands()
+            if command.lstrip().startswith(
+                ("shorebird release android ", "shorebird patch android ")
+            )
+        ]
+        self.assertTrue(android_commands)
+        for command in android_commands:
+            self.assertNotIn("target-platform", command)
+
     def test_ios_release_uploads_without_automatic_review_submission(self) -> None:
         workflow = self._workflow_block("ios-build")
 
