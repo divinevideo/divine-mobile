@@ -314,7 +314,9 @@ class VideoDmOutbox {
   /// Does nothing otherwise.
   void acknowledge(String id) => _drop(id, OutgoingVideoDmPhase.sent);
 
-  /// Interrupts preparation and uploads when the owning session signs out.
+  /// Interrupts preparation and uploads when the owning session signs out,
+  /// tears down or turns to another pubkey. Tearing down includes rebuilding
+  /// the same account's client once a pubkey-only identity can sign.
   /// Publication already in progress keeps the repository's delivery result.
   void cancelPendingSends() {
     for (final attempt in _attempts) {
