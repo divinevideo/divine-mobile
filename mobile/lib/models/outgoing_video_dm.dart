@@ -169,10 +169,18 @@ class OutgoingVideoDm extends Equatable {
 class VideoDmSendOutcome extends Equatable {
   /// Creates a [VideoDmSendOutcome].
   const VideoDmSendOutcome({
+    required this.conversationId,
+    required this.recipientPubkey,
     required this.status,
     required this.sentCount,
     required this.total,
   });
+
+  /// The chat this result belongs to, used to suppress an on-screen toast.
+  final String conversationId;
+
+  /// The peer used to resolve the chat's display name in the UI layer.
+  final String recipientPubkey;
 
   /// The terminal status: [VideoDmOutcomeStatus.sent] when everything went
   /// out.
@@ -188,5 +196,11 @@ class VideoDmSendOutcome extends Equatable {
   bool get isPartial => sentCount > 0 && sentCount < total;
 
   @override
-  List<Object?> get props => [status, sentCount, total];
+  List<Object?> get props => [
+    conversationId,
+    recipientPubkey,
+    status,
+    sentCount,
+    total,
+  ];
 }

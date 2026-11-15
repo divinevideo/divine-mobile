@@ -6476,5 +6476,13 @@
   "minorAccountReviewVideoSubmittedBody": "Видеото ти е изпратено за преглед.",
   "minorAccountReviewVideoSubmittedTitle": "Видеото е изпратено",
   "minorAccountReviewRecordConsentPrivacyBody": "Видеото ви се изпраща поверително до екипите за поддръжка и доверие и безопасност на Divine за преглед. То не се публикува и не се споделя с други потребители.",
-  "minorAccountReviewRecordConsentRejected": "Изпратеното не беше прието. Провери имейл адреса си, запиши видеото отново или използвай имейл."
+  "minorAccountReviewRecordConsentRejected": "Изпратеното не беше прието. Провери имейл адреса си, запиши видеото отново или използвай имейл.",
+  "dmPendingVideoWaiting": "Изчакване…",
+  "dmPendingVideoPreparing": "Подготовка…",
+  "dmPendingVideoUploading": "Качване {percent}",
+  "dmPendingVideoSending": "Изпращане…",
+  "dmPendingVideoRemove": "Премахни",
+  "dmPendingVideoSemantics": "Изпращане на видео, {percent}",
+  "dmPendingVideoFailedSemantics": "Видеото не беше изпратено",
+  "dmVideoOutcomeInChat": "{chat}: {outcome}"
 }

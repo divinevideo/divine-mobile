@@ -6359,5 +6359,13 @@
   "minorAccountReviewVideoSubmittedBody": "動画を確認のために送信しました。",
   "minorAccountReviewVideoSubmittedTitle": "動画を送信しました",
   "minorAccountReviewRecordConsentPrivacyBody": "動画は確認のため、Divineのサポートおよびトラスト＆セーフティのチームに非公開で送信されます。公開されたり、他のユーザーと共有されたりすることはありません。",
-  "minorAccountReviewRecordConsentRejected": "送信内容が受け付けられませんでした。メールアドレスを確認するか、動画を撮り直すか、メールをご利用ください。"
+  "minorAccountReviewRecordConsentRejected": "送信内容が受け付けられませんでした。メールアドレスを確認するか、動画を撮り直すか、メールをご利用ください。",
+  "dmPendingVideoWaiting": "待機中…",
+  "dmPendingVideoPreparing": "準備中…",
+  "dmPendingVideoUploading": "アップロード中 {percent}",
+  "dmPendingVideoSending": "送信中…",
+  "dmPendingVideoRemove": "削除",
+  "dmPendingVideoSemantics": "動画を送信中、{percent}",
+  "dmPendingVideoFailedSemantics": "動画を送信できませんでした",
+  "dmVideoOutcomeInChat": "{chat}：{outcome}"
 }

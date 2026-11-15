@@ -531,6 +531,8 @@ void main() {
           outcomes,
           equals([
             const VideoDmSendOutcome(
+              conversationId: 'c1',
+              recipientPubkey: _recipientPubkey,
               status: VideoDmOutcomeStatus.sent,
               sentCount: 1,
               total: 1,
@@ -617,6 +619,8 @@ void main() {
           outcomes,
           equals([
             const VideoDmSendOutcome(
+              conversationId: 'c1',
+              recipientPubkey: _recipientPubkey,
               status: VideoDmOutcomeStatus.tooLarge,
               sentCount: 0,
               total: 1,
@@ -645,6 +649,8 @@ void main() {
           outcomes,
           equals([
             const VideoDmSendOutcome(
+              conversationId: 'c1',
+              recipientPubkey: _recipientPubkey,
               status: VideoDmOutcomeStatus.failed,
               sentCount: 0,
               total: 1,
@@ -868,6 +874,8 @@ void main() {
             outcomes,
             equals([
               const VideoDmSendOutcome(
+                conversationId: 'c1',
+                recipientPubkey: _recipientPubkey,
                 status: VideoDmOutcomeStatus.sent,
                 sentCount: 2,
                 total: 2,
@@ -1008,6 +1016,8 @@ void main() {
             outcomes,
             equals([
               const VideoDmSendOutcome(
+                conversationId: 'c1',
+                recipientPubkey: _recipientPubkey,
                 status: VideoDmOutcomeStatus.clipNotVerified,
                 sentCount: 0,
                 total: 3,
@@ -1058,6 +1068,8 @@ void main() {
           outcomes,
           equals([
             const VideoDmSendOutcome(
+              conversationId: 'c1',
+              recipientPubkey: _recipientPubkey,
               status: VideoDmOutcomeStatus.failed,
               sentCount: 0,
               total: 2,
@@ -1236,6 +1248,8 @@ void main() {
             outcomes,
             equals([
               const VideoDmSendOutcome(
+                conversationId: 'c1',
+                recipientPubkey: _recipientPubkey,
                 status: VideoDmOutcomeStatus.failed,
                 sentCount: 0,
                 total: 2,
@@ -1271,6 +1285,8 @@ void main() {
           outcomes,
           equals([
             const VideoDmSendOutcome(
+              conversationId: 'c1',
+              recipientPubkey: _recipientPubkey,
               status: VideoDmOutcomeStatus.failed,
               sentCount: 1,
               total: 3,
@@ -1305,6 +1321,8 @@ void main() {
           outcomes,
           equals([
             const VideoDmSendOutcome(
+              conversationId: 'c1',
+              recipientPubkey: _recipientPubkey,
               status: VideoDmOutcomeStatus.tooLarge,
               sentCount: 1,
               total: 3,
@@ -1496,11 +1514,15 @@ void main() {
             outcomes,
             equals([
               const VideoDmSendOutcome(
+                conversationId: 'c1',
+                recipientPubkey: _recipientPubkey,
                 status: VideoDmOutcomeStatus.failed,
                 sentCount: 0,
                 total: 1,
               ),
               const VideoDmSendOutcome(
+                conversationId: 'c1',
+                recipientPubkey: _recipientPubkey,
                 status: VideoDmOutcomeStatus.sent,
                 sentCount: 1,
                 total: 1,
@@ -1570,11 +1592,15 @@ void main() {
             outcomes,
             equals([
               const VideoDmSendOutcome(
+                conversationId: 'c1',
+                recipientPubkey: _recipientPubkey,
                 status: VideoDmOutcomeStatus.failed,
                 sentCount: 1,
                 total: 2,
               ),
               const VideoDmSendOutcome(
+                conversationId: 'c1',
+                recipientPubkey: _recipientPubkey,
                 status: VideoDmOutcomeStatus.sent,
                 sentCount: 1,
                 total: 1,
@@ -1610,6 +1636,8 @@ void main() {
             outcomes.last,
             equals(
               const VideoDmSendOutcome(
+                conversationId: 'c1',
+                recipientPubkey: _recipientPubkey,
                 status: VideoDmOutcomeStatus.clipNotVerified,
                 sentCount: 0,
                 total: 1,
@@ -1970,6 +1998,8 @@ void main() {
     test('isPartial when some but not all went out', () {
       expect(
         const VideoDmSendOutcome(
+          conversationId: 'c1',
+          recipientPubkey: _recipientPubkey,
           status: VideoDmOutcomeStatus.failed,
           sentCount: 1,
           total: 3,
@@ -1978,6 +2008,8 @@ void main() {
       );
       expect(
         const VideoDmSendOutcome(
+          conversationId: 'c1',
+          recipientPubkey: _recipientPubkey,
           status: VideoDmOutcomeStatus.failed,
           sentCount: 0,
           total: 3,
@@ -1986,6 +2018,8 @@ void main() {
       );
       expect(
         const VideoDmSendOutcome(
+          conversationId: 'c1',
+          recipientPubkey: _recipientPubkey,
           status: VideoDmOutcomeStatus.sent,
           sentCount: 3,
           total: 3,

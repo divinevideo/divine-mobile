@@ -4114,29 +4114,30 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu putem verifica acest clip acum. Încearcă din nou puțin mai târziu.';
 
   @override
-  String get dmPendingVideoWaiting => 'Waiting…';
+  String get dmPendingVideoWaiting => 'În așteptare…';
 
   @override
-  String get dmPendingVideoPreparing => 'Preparing…';
+  String get dmPendingVideoPreparing => 'Se pregătește…';
 
   @override
   String dmPendingVideoUploading(String percent) {
-    return 'Uploading $percent';
+    return 'Se încarcă $percent';
   }
 
   @override
-  String get dmPendingVideoSending => 'Sending…';
+  String get dmPendingVideoSending => 'Se trimite…';
 
   @override
-  String get dmPendingVideoRemove => 'Remove';
+  String get dmPendingVideoRemove => 'Elimină';
 
   @override
   String dmPendingVideoSemantics(String percent) {
-    return 'Sending video, $percent';
+    return 'Se trimite videoclipul, $percent';
   }
 
   @override
-  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+  String get dmPendingVideoFailedSemantics =>
+      'Videoclipul nu a putut fi trimis';
 
   @override
   String get dmClipSendNotVerified =>
@@ -16463,4 +16464,9 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'Trimiterea nu a fost acceptată. Verifică adresa de e-mail, înregistrează din nou videoclipul sau folosește e-mailul.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

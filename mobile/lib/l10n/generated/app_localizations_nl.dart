@@ -4008,29 +4008,29 @@ class AppLocalizationsNl extends AppLocalizations {
       'Deze clip kan nu niet worden gecheckt. Probeer het zo nog eens.';
 
   @override
-  String get dmPendingVideoWaiting => 'Waiting…';
+  String get dmPendingVideoWaiting => 'Wachten…';
 
   @override
-  String get dmPendingVideoPreparing => 'Preparing…';
+  String get dmPendingVideoPreparing => 'Voorbereiden…';
 
   @override
   String dmPendingVideoUploading(String percent) {
-    return 'Uploading $percent';
+    return 'Uploaden $percent';
   }
 
   @override
-  String get dmPendingVideoSending => 'Sending…';
+  String get dmPendingVideoSending => 'Versturen…';
 
   @override
-  String get dmPendingVideoRemove => 'Remove';
+  String get dmPendingVideoRemove => 'Verwijderen';
 
   @override
   String dmPendingVideoSemantics(String percent) {
-    return 'Sending video, $percent';
+    return 'Video versturen, $percent';
   }
 
   @override
-  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+  String get dmPendingVideoFailedSemantics => 'Video kon niet worden verstuurd';
 
   @override
   String get dmClipSendNotVerified =>
@@ -16226,4 +16226,9 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'Je inzending is niet geaccepteerd. Controleer je e-mailadres, neem de video opnieuw op of gebruik e-mail.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

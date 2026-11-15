@@ -6359,5 +6359,13 @@
   "minorAccountReviewVideoSubmittedBody": "Dein Video wurde zur Prüfung eingereicht.",
   "minorAccountReviewVideoSubmittedTitle": "Video eingereicht",
   "minorAccountReviewRecordConsentPrivacyBody": "Dein Video wird vertraulich an die Teams für Support sowie Vertrauen und Sicherheit von Divine zur Prüfung gesendet. Es wird nicht veröffentlicht oder mit anderen Nutzern geteilt.",
-  "minorAccountReviewRecordConsentRejected": "Deine Einreichung wurde nicht angenommen. Prüfe deine E-Mail-Adresse, nimm das Video erneut auf oder nutze E-Mail."
+  "minorAccountReviewRecordConsentRejected": "Deine Einreichung wurde nicht angenommen. Prüfe deine E-Mail-Adresse, nimm das Video erneut auf oder nutze E-Mail.",
+  "dmPendingVideoWaiting": "Warten…",
+  "dmPendingVideoPreparing": "Wird vorbereitet…",
+  "dmPendingVideoUploading": "Wird hochgeladen: {percent}",
+  "dmPendingVideoSending": "Wird gesendet…",
+  "dmPendingVideoRemove": "Entfernen",
+  "dmPendingVideoSemantics": "Video wird gesendet, {percent}",
+  "dmPendingVideoFailedSemantics": "Video konnte nicht gesendet werden",
+  "dmVideoOutcomeInChat": "{chat}: {outcome}"
 }

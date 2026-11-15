@@ -16271,4 +16271,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'Your submission wasn\'t accepted. Check your email, retake the video, or use email instead.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

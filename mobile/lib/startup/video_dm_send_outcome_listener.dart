@@ -6,10 +6,17 @@ import 'dart:async';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
+import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
+import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/services/video_dm_outbox.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -25,7 +32,15 @@ import 'package:unified_logger/unified_logger.dart';
 /// Resubscribes when [videoDmOutboxProvider] hands out a new outbox (an
 /// account switch).
 class VideoDmSendOutcomeListener extends ConsumerStatefulWidget {
-  const VideoDmSendOutcomeListener({required this.child, super.key});
+  const VideoDmSendOutcomeListener({
+    required this.child,
+    this.resolveChatName,
+    super.key,
+  });
+
+  /// Optional name reader for hosts with their own conversation presentation.
+  final Future<String> Function(BuildContext, VideoDmSendOutcome)?
+  resolveChatName;
 
   final Widget child;
 
@@ -38,6 +53,8 @@ class _VideoDmSendOutcomeListenerState
     extends ConsumerState<VideoDmSendOutcomeListener> {
   StreamSubscription<VideoDmSendOutcome>? _subscription;
   VideoDmOutbox? _outbox;
+  Future<void> _notifications = Future.value();
+  int _generation = 0;
 
   @override
   void initState() {
@@ -59,10 +76,63 @@ class _VideoDmSendOutcomeListenerState
     if (identical(outbox, _outbox)) return;
     unawaited(_subscription?.cancel());
     _outbox = outbox;
-    _subscription = outbox.outcomes.listen(_show);
+    final generation = ++_generation;
+    _notifications = Future.value();
+    _subscription = outbox.outcomes.listen((outcome) {
+      final notification = _notifications.then(
+        (_) => _show(outcome, generation),
+      );
+      // A failed presentation must not poison later outcomes.
+      _notifications = notification.then<void>(
+        (_) {},
+        onError: (Object _, StackTrace _) {},
+      );
+      runDetached(
+        notification,
+        'show video DM outcome',
+        logName: 'VideoDmSendOutcomeListener',
+        category: LogCategory.ui,
+      );
+    });
   }
 
-  void _show(VideoDmSendOutcome outcome) {
+  bool _isVisible(BuildContext context, String conversationId) =>
+      GoRouter.maybeOf(context)?.routeInformationProvider.value.uri.path ==
+      ConversationRouteData(id: conversationId).location;
+
+  Future<String> _chatName(
+    BuildContext context,
+    VideoDmSendOutcome outcome,
+  ) async {
+    final pubkey = outcome.recipientPubkey;
+    final vanished = await ref.read(
+      profileVanishedSnapshotProvider(pubkey).future,
+    );
+    if (!mounted || !context.mounted) return '';
+    final moderation = ref.read(moderationPresentationProvider(pubkey));
+    final substitute = dmPeerNameWithoutProfile(
+      context,
+      isVanished: vanished,
+      moderation: moderation,
+    );
+    if (substitute != null) return substitute;
+    // Use cached identity first; a notification must not hold other outcomes
+    // behind a network profile lookup. The inbox uses the same generated name.
+    final profile = await ref
+        .read(profileReadRepositoryProvider)
+        ?.getCachedProfile(pubkey: pubkey);
+    if (!mounted || !context.mounted) return '';
+    return dmPeerDisplayName(
+      context,
+      pubkeyHex: pubkey,
+      isVanished: vanished,
+      moderation: moderation,
+      profile: profile,
+    );
+  }
+
+  Future<void> _show(VideoDmSendOutcome outcome, int generation) async {
+    if (!mounted || generation != _generation) return;
     final context = NavigatorKeys.root.currentContext;
     final l10n = context == null || !context.mounted
         ? null
@@ -81,7 +151,25 @@ class _VideoDmSendOutcomeListenerState
       return;
     }
 
-    final (message, isError) = switch (outcome) {
+    if (_isVisible(context, outcome.conversationId)) return;
+    String chatName;
+    try {
+      chatName = await (widget.resolveChatName ?? _chatName)(context, outcome);
+    } catch (error) {
+      Log.warning(
+        'Could not resolve video DM chat name (${error.runtimeType})',
+        name: 'VideoDmSendOutcomeListener',
+        category: LogCategory.ui,
+      );
+      chatName = UserProfile.defaultDisplayNameFor(outcome.recipientPubkey);
+    }
+    if (!mounted ||
+        !context.mounted ||
+        generation != _generation ||
+        _isVisible(context, outcome.conversationId)) {
+      return;
+    }
+    final (resultMessage, isError) = switch (outcome) {
       VideoDmSendOutcome(isPartial: true) => (
         l10n.dmClipsPartlySent(outcome.sentCount, outcome.total),
         true,
@@ -104,9 +192,10 @@ class _VideoDmSendOutcomeListenerState
       ),
     };
 
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(DivineSnackbarContainer.snackBar(message, error: isError));
+    final message = l10n.dmVideoOutcomeInChat(chatName, resultMessage);
+    messenger.showSnackBar(
+      DivineSnackbarContainer.snackBar(message, error: isError),
+    );
     // Per `accessibility.md`, async visible state changes announce
     // explicitly; Material's default SnackBar semantics are weaker.
     runDetached(

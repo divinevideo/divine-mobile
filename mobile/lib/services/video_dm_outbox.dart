@@ -389,6 +389,7 @@ class VideoDmOutbox {
     if (entry == null) return;
     final failure = await _sendEntry(entry);
     _emitOutcome(
+      entry,
       _outcomeStatusFor(failure),
       sentCount: failure == null ? 1 : 0,
       total: 1,
@@ -422,6 +423,7 @@ class VideoDmOutbox {
       // keys. Fail the batch; the switch disposes this outbox's state anyway.
       failBatch();
       _emitOutcome(
+        batch.first,
         VideoDmOutcomeStatus.failed,
         sentCount: 0,
         total: total,
@@ -437,6 +439,7 @@ class VideoDmOutbox {
       );
       failBatch();
       _emitOutcome(
+        batch.first,
         VideoDmOutcomeStatus.failed,
         sentCount: 0,
         total: total,
@@ -474,6 +477,7 @@ class VideoDmOutbox {
           }
           failBatch();
           _emitOutcome(
+            batch.first,
             VideoDmOutcomeStatus.failed,
             sentCount: 0,
             total: total,
@@ -491,6 +495,7 @@ class VideoDmOutbox {
           );
           failBatch(rejected);
           _emitOutcome(
+            batch.first,
             VideoDmOutcomeStatus.clipNotVerified,
             sentCount: 0,
             total: total,
@@ -515,6 +520,7 @@ class VideoDmOutbox {
             _markFailed(rest.id, OutgoingVideoDmFailure.failed);
           }
           _emitOutcome(
+            batch.first,
             _outcomeStatusFor(failure),
             sentCount: sentCount,
             total: total,
@@ -524,6 +530,7 @@ class VideoDmOutbox {
         sentCount++;
       }
       _emitOutcome(
+        batch.first,
         VideoDmOutcomeStatus.sent,
         sentCount: sentCount,
         total: total,
@@ -770,6 +777,7 @@ class VideoDmOutbox {
   };
 
   void _emitOutcome(
+    OutgoingVideoDm entry,
     VideoDmOutcomeStatus status, {
     required int sentCount,
     required int total,
@@ -777,6 +785,8 @@ class VideoDmOutbox {
     if (_disposed) return;
     _outcomes.add(
       VideoDmSendOutcome(
+        conversationId: entry.conversationId,
+        recipientPubkey: entry.recipientPubkey,
         status: status,
         sentCount: sentCount,
         total: total,

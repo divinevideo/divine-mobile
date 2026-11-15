@@ -26930,6 +26930,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your submission wasn\'t accepted. Check your email, retake the video, or use email instead.'**
   String get minorAccountReviewRecordConsentRejected;
+
+  /// Video DM outcome shown outside its conversation. The chat is resolved through the same identity presentation as the inbox.
+  ///
+  /// In en, this message translates to:
+  /// **'{chat}: {outcome}'**
+  String dmVideoOutcomeInChat(String chat, String outcome);
 }
 
 class _AppLocalizationsDelegate

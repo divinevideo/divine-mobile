@@ -13272,5 +13272,17 @@
   "minorAccountReviewVideoSubmittedBody": "Your video has been submitted for review.",
   "minorAccountReviewVideoSubmittedTitle": "Video submitted",
   "minorAccountReviewRecordConsentPrivacyBody": "Your video goes privately to Divine Support and Trust & Safety for review. It is not published or shared with other users.",
-  "minorAccountReviewRecordConsentRejected": "Your submission wasn't accepted. Check your email, retake the video, or use email instead."
+  "minorAccountReviewRecordConsentRejected": "Your submission wasn't accepted. Check your email, retake the video, or use email instead.",
+  "dmVideoOutcomeInChat": "{chat}: {outcome}",
+  "@dmVideoOutcomeInChat": {
+    "description": "Video DM outcome shown outside its conversation. The chat is resolved through the same identity presentation as the inbox.",
+    "placeholders": {
+      "chat": {
+        "type": "String"
+      },
+      "outcome": {
+        "type": "String"
+      }
+    }
+  }
 }

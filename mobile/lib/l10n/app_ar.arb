@@ -6359,5 +6359,13 @@
   "minorAccountReviewVideoSubmittedBody": "تم إرسال الفيديو للمراجعة.",
   "minorAccountReviewVideoSubmittedTitle": "تم إرسال الفيديو",
   "minorAccountReviewRecordConsentPrivacyBody": "يُرسل الفيديو بشكل خاص إلى فريقي الدعم والثقة والسلامة في Divine لمراجعته. لن يُنشر أو يُشارك مع مستخدمين آخرين.",
-  "minorAccountReviewRecordConsentRejected": "لم يُقبل الإرسال. تحقق من بريدك الإلكتروني أو أعد تسجيل الفيديو أو استخدم البريد الإلكتروني بدلاً من ذلك."
+  "minorAccountReviewRecordConsentRejected": "لم يُقبل الإرسال. تحقق من بريدك الإلكتروني أو أعد تسجيل الفيديو أو استخدم البريد الإلكتروني بدلاً من ذلك.",
+  "dmPendingVideoWaiting": "في الانتظار…",
+  "dmPendingVideoPreparing": "جارٍ التجهيز…",
+  "dmPendingVideoUploading": "جارٍ الرفع {percent}",
+  "dmPendingVideoSending": "جارٍ الإرسال…",
+  "dmPendingVideoRemove": "إزالة",
+  "dmPendingVideoSemantics": "جارٍ إرسال الفيديو، {percent}",
+  "dmPendingVideoFailedSemantics": "تعذّر إرسال الفيديو",
+  "dmVideoOutcomeInChat": "{chat}: {outcome}"
 }

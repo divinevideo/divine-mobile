@@ -4061,29 +4061,30 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible de vérifier ce clip pour l\'instant. Réessaie dans un moment.';
 
   @override
-  String get dmPendingVideoWaiting => 'Waiting…';
+  String get dmPendingVideoWaiting => 'En attente…';
 
   @override
-  String get dmPendingVideoPreparing => 'Preparing…';
+  String get dmPendingVideoPreparing => 'Préparation…';
 
   @override
   String dmPendingVideoUploading(String percent) {
-    return 'Uploading $percent';
+    return 'Envoi du fichier $percent';
   }
 
   @override
-  String get dmPendingVideoSending => 'Sending…';
+  String get dmPendingVideoSending => 'Envoi…';
 
   @override
-  String get dmPendingVideoRemove => 'Remove';
+  String get dmPendingVideoRemove => 'Retirer';
 
   @override
   String dmPendingVideoSemantics(String percent) {
-    return 'Sending video, $percent';
+    return 'Envoi de la vidéo, $percent';
   }
 
   @override
-  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+  String get dmPendingVideoFailedSemantics =>
+      'La vidéo n’a pas pu être envoyée';
 
   @override
   String get dmClipSendNotVerified =>
@@ -16397,4 +16398,9 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'Votre envoi n’a pas été accepté. Vérifiez votre adresse e-mail, refaites la vidéo ou utilisez l’e-mail.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat : $outcome';
+  }
 }

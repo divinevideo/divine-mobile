@@ -5905,5 +5905,13 @@
   "minorAccountReviewVideoSubmittedBody": "검토를 위해 동영상을 제출했어요.",
   "minorAccountReviewVideoSubmittedTitle": "동영상 제출 완료",
   "minorAccountReviewRecordConsentPrivacyBody": "동영상은 검토를 위해 Divine 지원 및 신뢰·안전 팀에 비공개로 전송됩니다. 공개되거나 다른 사용자와 공유되지 않습니다.",
-  "minorAccountReviewRecordConsentRejected": "제출이 승인되지 않았어요. 이메일 주소를 확인하거나, 동영상을 다시 촬영하거나, 이메일을 이용해 주세요."
+  "minorAccountReviewRecordConsentRejected": "제출이 승인되지 않았어요. 이메일 주소를 확인하거나, 동영상을 다시 촬영하거나, 이메일을 이용해 주세요.",
+  "dmPendingVideoWaiting": "대기 중…",
+  "dmPendingVideoPreparing": "준비 중…",
+  "dmPendingVideoUploading": "업로드 중 {percent}",
+  "dmPendingVideoSending": "전송 중…",
+  "dmPendingVideoRemove": "삭제",
+  "dmPendingVideoSemantics": "동영상 전송 중, {percent}",
+  "dmPendingVideoFailedSemantics": "동영상을 보내지 못했어요",
+  "dmVideoOutcomeInChat": "{chat}: {outcome}"
 }

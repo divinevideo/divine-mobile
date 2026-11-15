@@ -3989,29 +3989,29 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det går inte att kolla klippet just nu. Försök igen om en stund.';
 
   @override
-  String get dmPendingVideoWaiting => 'Waiting…';
+  String get dmPendingVideoWaiting => 'Väntar…';
 
   @override
-  String get dmPendingVideoPreparing => 'Preparing…';
+  String get dmPendingVideoPreparing => 'Förbereder…';
 
   @override
   String dmPendingVideoUploading(String percent) {
-    return 'Uploading $percent';
+    return 'Laddar upp $percent';
   }
 
   @override
-  String get dmPendingVideoSending => 'Sending…';
+  String get dmPendingVideoSending => 'Skickar…';
 
   @override
-  String get dmPendingVideoRemove => 'Remove';
+  String get dmPendingVideoRemove => 'Ta bort';
 
   @override
   String dmPendingVideoSemantics(String percent) {
-    return 'Sending video, $percent';
+    return 'Skickar video, $percent';
   }
 
   @override
-  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+  String get dmPendingVideoFailedSemantics => 'Videon kunde inte skickas';
 
   @override
   String get dmClipSendNotVerified =>
@@ -16158,4 +16158,9 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'Din inskickning godkändes inte. Kontrollera din e-postadress, spela in videon igen eller använd e-post.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

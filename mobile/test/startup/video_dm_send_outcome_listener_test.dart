@@ -6,13 +6,23 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/moderation_presentation.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
+import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/services/video_dm_outbox.dart';
 import 'package:openvine/startup/video_dm_send_outcome_listener.dart';
+import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart' show LogCaptureService;
+
+class _MockProfileReader extends Mock implements ProfileReader {}
 
 class _FakeOutbox extends Fake implements VideoDmOutbox {
   final controller = StreamController<VideoDmSendOutcome>.broadcast();
@@ -25,7 +35,14 @@ VideoDmSendOutcome _outcome(
   VideoDmOutcomeStatus status, {
   int sent = 0,
   int total = 1,
-}) => VideoDmSendOutcome(status: status, sentCount: sent, total: total);
+  String conversationId = 'chat',
+}) => VideoDmSendOutcome(
+  conversationId: conversationId,
+  recipientPubkey: '1' * 64,
+  status: status,
+  sentCount: sent,
+  total: total,
+);
 
 void main() {
   late _FakeOutbox outbox;
@@ -45,6 +62,7 @@ void main() {
           videoDmOutboxProvider.overrideWith((ref) => ref.watch(p)),
         ],
         child: VideoDmSendOutcomeListener(
+          resolveChatName: (_, _) async => 'Test chat',
           child: MaterialApp(
             navigatorKey: NavigatorKeys.root,
             localizationsDelegates: appLocalizationsDelegates,
@@ -89,9 +107,162 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(find.text(entry.value.$2()), findsOneWidget);
+        expect(
+          find.text(l10n.dmVideoOutcomeInChat('Test chat', entry.value.$2())),
+          findsOneWidget,
+        );
       });
     }
+
+    testWidgets('queues behind another screen snackbar', (tester) async {
+      final provider = StateProvider<VideoDmOutbox>((ref) => outbox);
+      await pumpApp(tester, provider);
+      final messenger = ScaffoldMessenger.of(
+        tester.element(find.byType(Scaffold)),
+      );
+      messenger.showSnackBar(SnackBar(content: Text(l10n.commonRetry)));
+      await tester.pumpAndSettle();
+      outbox.controller.add(_outcome(VideoDmOutcomeStatus.failed));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump();
+      expect(find.text(l10n.commonRetry), findsOneWidget);
+      expect(find.text(l10n.dmVideoSendFailed), findsNothing);
+    });
+
+    testWidgets('skips snackbar and announcement when its chat is visible', (
+      tester,
+    ) async {
+      final router = GoRouter(
+        navigatorKey: NavigatorKeys.root,
+        initialLocation: '/inbox/conversation/chat',
+        routes: [
+          GoRoute(
+            path: '/inbox/conversation/:id',
+            builder: (_, _) => const Scaffold(body: SizedBox()),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [videoDmOutboxProvider.overrideWithValue(outbox)],
+          child: VideoDmSendOutcomeListener(
+            resolveChatName: (_, _) async => 'Test chat',
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      outbox.controller.add(_outcome(VideoDmOutcomeStatus.failed));
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(SnackBar), findsNothing);
+      expect(tester.takeAnnouncements(), isEmpty);
+      // A different chat still reports the result while this one is visible.
+      outbox.controller.add(
+        _outcome(VideoDmOutcomeStatus.sent, sent: 1, conversationId: 'other'),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(
+        find.text(l10n.dmVideoOutcomeInChat('Test chat', l10n.dmVideoSent)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('preserves queued outcomes in order', (tester) async {
+      final provider = StateProvider<VideoDmOutbox>((ref) => outbox);
+      await pumpApp(tester, provider);
+      outbox.controller.add(_outcome(VideoDmOutcomeStatus.failed));
+      outbox.controller.add(_outcome(VideoDmOutcomeStatus.sent, sent: 1));
+      await tester.pump();
+      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          l10n.dmVideoOutcomeInChat('Test chat', l10n.dmVideoSendFailed),
+        ),
+        findsOneWidget,
+      );
+      final messenger = ScaffoldMessenger.of(
+        tester.element(find.byType(Scaffold)),
+      );
+      messenger.removeCurrentSnackBar();
+      await tester.pumpAndSettle();
+      expect(
+        find.text(l10n.dmVideoOutcomeInChat('Test chat', l10n.dmVideoSent)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'names the chat using the cached profile and honors a vanished peer',
+      (tester) async {
+        final recipient = '1' * 64;
+        final profiles = _MockProfileReader();
+        when(() => profiles.getCachedProfile(pubkey: recipient)).thenAnswer(
+          (_) async => UserProfile(
+            pubkey: recipient,
+            displayName: 'Camera friend',
+            rawData: const {'display_name': 'Camera friend'},
+            eventId: '2' * 64,
+            createdAt: DateTime(2026),
+          ),
+        );
+        final vanished = StateProvider<bool>((_) => false);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              videoDmOutboxProvider.overrideWithValue(outbox),
+              profileReadRepositoryProvider.overrideWithValue(profiles),
+              profileVanishedSnapshotProvider(recipient)
+                  .overrideWith((ref) async => ref.watch(vanished)),
+              moderationPresentationProvider(recipient)
+                  .overrideWithValue(ModerationPresentation.ordinary),
+            ],
+            child: VideoDmSendOutcomeListener(
+              child: MaterialApp(
+                navigatorKey: NavigatorKeys.root,
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(body: SizedBox()),
+              ),
+            ),
+          ),
+        );
+        outbox.controller.add(_outcome(VideoDmOutcomeStatus.sent, sent: 1));
+        await tester.pump();
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            l10n.dmVideoOutcomeInChat('Camera friend', l10n.dmVideoSent),
+          ),
+          findsOneWidget,
+        );
+        final context = tester.element(find.byType(Scaffold));
+        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+        ProviderScope.containerOf(context).read(vanished.notifier).state = true;
+        outbox.controller.add(_outcome(VideoDmOutcomeStatus.failed));
+        await tester.pump();
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            l10n.dmVideoOutcomeInChat(
+              l10n.profileDeletedAccountName,
+              l10n.dmVideoSendFailed,
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(find.textContaining(recipient), findsNothing);
+      },
+    );
 
     testWidgets('logs a result it has no messenger to show on', (
       tester,
@@ -134,7 +305,7 @@ void main() {
 
       expect(
         tester.takeAnnouncements().single.message,
-        equals(l10n.dmVideoSendFailed),
+        equals(l10n.dmVideoOutcomeInChat('Test chat', l10n.dmVideoSendFailed)),
       );
     });
 
@@ -159,7 +330,10 @@ void main() {
       replacement.controller.add(_outcome(VideoDmOutcomeStatus.sent, sent: 1));
       await tester.pump();
       await tester.pump();
-      expect(find.text(l10n.dmVideoSent), findsOneWidget);
+      expect(
+        find.text(l10n.dmVideoOutcomeInChat('Test chat', l10n.dmVideoSent)),
+        findsOneWidget,
+      );
     });
   });
 }

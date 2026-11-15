@@ -4135,29 +4135,29 @@ class AppLocalizationsTe extends AppLocalizations {
       'ప్రస్తుతం ఈ క్లిప్‌ను తనిఖీ చేయడం సాధ్యపడలేదు. కాసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.';
 
   @override
-  String get dmPendingVideoWaiting => 'Waiting…';
+  String get dmPendingVideoWaiting => 'వేచి ఉంది…';
 
   @override
-  String get dmPendingVideoPreparing => 'Preparing…';
+  String get dmPendingVideoPreparing => 'సిద్ధం చేస్తోంది…';
 
   @override
   String dmPendingVideoUploading(String percent) {
-    return 'Uploading $percent';
+    return 'అప్‌లోడ్ అవుతోంది $percent';
   }
 
   @override
-  String get dmPendingVideoSending => 'Sending…';
+  String get dmPendingVideoSending => 'పంపుతోంది…';
 
   @override
-  String get dmPendingVideoRemove => 'Remove';
+  String get dmPendingVideoRemove => 'తొలగించు';
 
   @override
   String dmPendingVideoSemantics(String percent) {
-    return 'Sending video, $percent';
+    return 'వీడియో పంపుతోంది, $percent';
   }
 
   @override
-  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+  String get dmPendingVideoFailedSemantics => 'వీడియో పంపడం విఫలమైంది';
 
   @override
   String get dmClipSendNotVerified =>
@@ -16516,4 +16516,9 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'మీ సమర్పణ అంగీకరించబడలేదు. మీ ఇమెయిల్ చిరునామాను తనిఖీ చేయండి, వీడియోను మళ్లీ రికార్డ్ చేయండి లేదా ఇమెయిల్ ఉపయోగించండి.';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat: $outcome';
+  }
 }

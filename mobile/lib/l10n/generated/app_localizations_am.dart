@@ -3905,29 +3905,29 @@ class AppLocalizationsAm extends AppLocalizations {
       'አሁን ይህን ክሊፕ ማረጋገጥ አልተቻለም። ትንሽ ቆይተው እንደገና ይሞክሩ።';
 
   @override
-  String get dmPendingVideoWaiting => 'Waiting…';
+  String get dmPendingVideoWaiting => 'በመጠባበቅ ላይ…';
 
   @override
-  String get dmPendingVideoPreparing => 'Preparing…';
+  String get dmPendingVideoPreparing => 'በማዘጋጀት ላይ…';
 
   @override
   String dmPendingVideoUploading(String percent) {
-    return 'Uploading $percent';
+    return 'በመስቀል ላይ $percent';
   }
 
   @override
-  String get dmPendingVideoSending => 'Sending…';
+  String get dmPendingVideoSending => 'በመላክ ላይ…';
 
   @override
-  String get dmPendingVideoRemove => 'Remove';
+  String get dmPendingVideoRemove => 'ማስወገድ';
 
   @override
   String dmPendingVideoSemantics(String percent) {
-    return 'Sending video, $percent';
+    return 'ቪዲዮ በመላክ ላይ፣ $percent';
   }
 
   @override
-  String get dmPendingVideoFailedSemantics => 'Video failed to send';
+  String get dmPendingVideoFailedSemantics => 'ቪዲዮው አልተላከም';
 
   @override
   String get dmClipSendNotVerified =>
@@ -15757,4 +15757,9 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get minorAccountReviewRecordConsentRejected =>
       'የላኩት አልተቀበለም። የኢሜይል አድራሻዎን ያረጋግጡ፣ ቪዲዮውን እንደገና ይቅረጹ ወይም በኢሜይል ይላኩ።';
+
+  @override
+  String dmVideoOutcomeInChat(String chat, String outcome) {
+    return '$chat፦ $outcome';
+  }
 }

@@ -6359,5 +6359,13 @@
   "minorAccountReviewVideoSubmittedBody": "Videon incelenmek üzere gönderildi.",
   "minorAccountReviewVideoSubmittedTitle": "Video gönderildi",
   "minorAccountReviewRecordConsentPrivacyBody": "Videonuz incelenmek üzere Divine Destek ve Güven ve Güvenlik ekiplerine özel olarak gönderilir. Yayınlanmaz veya diğer kullanıcılarla paylaşılmaz.",
-  "minorAccountReviewRecordConsentRejected": "Gönderimin kabul edilmedi. E-posta adresini kontrol et, videoyu yeniden kaydet veya e-posta kullan."
+  "minorAccountReviewRecordConsentRejected": "Gönderimin kabul edilmedi. E-posta adresini kontrol et, videoyu yeniden kaydet veya e-posta kullan.",
+  "dmPendingVideoWaiting": "Bekliyor…",
+  "dmPendingVideoPreparing": "Hazırlanıyor…",
+  "dmPendingVideoUploading": "Yükleniyor {percent}",
+  "dmPendingVideoSending": "Gönderiliyor…",
+  "dmPendingVideoRemove": "Kaldır",
+  "dmPendingVideoSemantics": "Video gönderiliyor, {percent}",
+  "dmPendingVideoFailedSemantics": "Video gönderilemedi",
+  "dmVideoOutcomeInChat": "{chat}: {outcome}"
 }
