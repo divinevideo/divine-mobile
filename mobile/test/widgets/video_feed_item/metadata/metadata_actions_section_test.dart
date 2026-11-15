@@ -651,7 +651,10 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(MetadataActionsSection), findsNothing);
-        expect(find.byType(ReportContentDialog), findsOneWidget);
+        final dialog = tester.widget<ReportContentDialog>(
+          find.byType(ReportContentDialog),
+        );
+        expect(dialog.video?.id, _videoId);
       });
 
       testWidgets('is held while another action runs', (tester) async {
