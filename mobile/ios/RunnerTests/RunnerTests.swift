@@ -1083,6 +1083,10 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     let settled = try XCTUnwrap(latestState())
     XCTAssertEqual(settled["status"] as? String, "paused")
     let settledPosition = try XCTUnwrap(settled["positionMs"] as? Int)
+    // The pin is the start the load seeks to: the leading-black-frame skip
+    // (1/30 s) for this untrimmed clip. Without this the test only proves the
+    // reports are steady, and a pin of any value would pass.
+    XCTAssertEqual(settledPosition, 33, "a no-start load reports the start it seeks to")
     let positions = states(since: reportsBeforeReload).compactMap { $0["positionMs"] as? Int }
     XCTAssertEqual(
       positions.filter { $0 != settledPosition }, [],
