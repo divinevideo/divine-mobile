@@ -2265,6 +2265,33 @@ void main() {
       );
 
       blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        "keeps the viewer's own import in own, not in fromOthers",
+        setUp: () {
+          when(() => mockClipLibraryService.getAllClips()).thenAnswer(
+            (_) async => [
+              take,
+              vine,
+              scopedClip('video_own_1', importedSource: true, author: viewer),
+            ],
+          );
+        },
+        build: createScopedBloc,
+        act: (bloc) => bloc.add(const ClipsLibraryLoadRequested()),
+        verify: (bloc) {
+          expect(
+            bloc.state.sortedClipsFor(ClipOwnershipScope.own).map((c) => c.id),
+            unorderedEquals(['clip_1_0', 'video_own_1']),
+          );
+          expect(
+            bloc.state
+                .sortedClipsFor(ClipOwnershipScope.fromOthers)
+                .map((c) => c.id),
+            ['classic_vine_abc_1'],
+          );
+        },
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
         "keeps the other scope's clips ready for its tab",
         setUp: stubLoad,
         build: createScopedBloc,

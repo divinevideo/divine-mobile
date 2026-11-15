@@ -573,12 +573,28 @@ void main() {
           models.ClipSourceCredit(authorPubkey: vineAuthor, eventId: 'vine-1'),
         ],
       );
+      // Imported, but credited to the viewer, so it belongs in Clips: this
+      // is what pins the library's owner as the viewer the tabs scope by.
+      final ownImport = DivineVideoClip(
+        id: 'video_own_1',
+        video: EditorVideo.file('/test/own_import.mp4'),
+        duration: const Duration(seconds: 3),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: models.AspectRatio.square,
+        originalAspectRatio: 1,
+        thumbnailPath: '/test/own_import.jpg',
+        ghostFramePath: '/test/own_import_ghost.jpg',
+        importedSource: true,
+        sourceCredits: const [
+          models.ClipSourceCredit(authorPubkey: viewer, eventId: 'own-1'),
+        ],
+      );
 
       setUp(() {
         when(() => mockClipLibraryService.ownerPubkey).thenReturn(viewer);
         when(
           () => mockClipLibraryService.getAllClips(),
-        ).thenAnswer((_) async => [ownTake, vine]);
+        ).thenAnswer((_) async => [ownTake, vine, ownImport]);
         when(
           () => mockClipLibraryService.recoverMissingAssets(any()),
         ).thenAnswer(
@@ -600,9 +616,9 @@ void main() {
 
         expect(
           clipsBlocOf(tester).state.sortedClips.map((c) => c.id),
-          ['clip_1_0'],
+          ['clip_1_0', 'video_own_1'],
         );
-        expect(find.byType(VideoClipThumbnailCard), findsOneWidget);
+        expect(find.byType(VideoClipThumbnailCard), findsNWidgets(2));
       });
 
       testWidgets('lists them in the From others tab', (tester) async {
@@ -638,7 +654,10 @@ void main() {
               find.byType(VideoClipThumbnailCard),
             )
             .map((card) => card.clip.id);
-        expect(shown, unorderedEquals(['clip_1_0', 'classic_vine_abc_1']));
+        expect(
+          shown,
+          unorderedEquals(['clip_1_0', 'video_own_1', 'classic_vine_abc_1']),
+        );
 
         await gesture.up();
         await tester.pumpAndSettle();
@@ -708,7 +727,13 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byType(VideoClipThumbnailCard));
+        await tester.tap(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is VideoClipThumbnailCard &&
+                widget.clip.id == 'clip_1_0',
+          ),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text(en.libraryTabFromOthers));
