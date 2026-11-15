@@ -200,6 +200,10 @@ void main() {
     return events;
   }
 
+  List<String> loggedMessages() => [
+    for (final entry in LogCaptureService().getRecentLogs()) entry.message,
+  ];
+
   List<VideoDmSendOutcome> recordOutcomes() {
     final outcomes = <VideoDmSendOutcome>[];
     final subscription = outbox.outcomes.listen(outcomes.add);
@@ -270,11 +274,20 @@ void main() {
       outbox.retry(entries.last.single.id);
       await tester.pump();
       expect(sends, hasLength(2));
+      // Uploading is the one phase that takes progress, so a late callback
+      // from the old attempt would show here if it were let through.
+      sends.last.onPhase!(DmVideoSendPhase.uploading);
+      await tester.pump();
+      expect(entries.last.single.phase, OutgoingVideoDmPhase.uploading);
+      old.onUploadProgress!(0.9);
+      old.onPhase!(DmVideoSendPhase.encrypting);
+      await tester.pump();
+      expect(entries.last.single.uploadProgress, isNull);
+      expect(entries.last.single.phase, OutgoingVideoDmPhase.uploading);
       old.onPhase!(DmVideoSendPhase.sending);
-      old.onUploadProgress!(1);
       old.completer.complete(_success('late'));
       await tester.pump();
-      expect(entries.last.single.phase, OutgoingVideoDmPhase.encrypting);
+      expect(entries.last.single.phase, OutgoingVideoDmPhase.uploading);
       expect(outcomes, hasLength(1));
       sends.last.completer.complete(_success('retried'));
       await tester.pump();
@@ -931,6 +944,68 @@ void main() {
           equals([
             ['divine-clip', 'square'],
           ]),
+        );
+      });
+
+      testWidgets(
+        'waits for the signer before signing or checking, and fails the '
+        'batch when it never comes',
+        (tester) async {
+          when(() => verifier.verify(any())).thenAnswer((_) async => _verified);
+          var signed = false;
+          final reporter = _RecordingCrashReporter();
+          outbox = createOutbox(
+            clipVerifier: () => verifier,
+            signOwnRecordings: (_) async => signed = true,
+            reporter: reporter,
+            waitUntilReady: (_) => Completer<void>().future,
+          );
+          final events = recordConversation('c1');
+          final outcomes = recordOutcomes();
+
+          sendClips([_clip('clip-a'), _clip('clip-b')]);
+          await tester.pump();
+
+          expect(signed, isFalse);
+          verifyNever(() => verifier.verify(any()));
+          expect(outcomes, isEmpty);
+
+          await tester.pump(videoDmSignerReadinessTimeout);
+
+          expect(events.last, hasLength(2));
+          expect(events.last.every((entry) => entry.canRetry), isTrue);
+          expect(outcomes.single.status, VideoDmOutcomeStatus.failed);
+          expect(outcomes.single.sentCount, 0);
+          expect(signed, isFalse);
+          verifyNever(() => verifier.verify(any()));
+          expect(sentPaths, isEmpty);
+          expect(reporter.errors, isEmpty);
+        },
+      );
+
+      test('logs a clip check the session interrupts', () async {
+        await LogCaptureService().clearAllLogs();
+        when(
+          () => verifier.verify(any()),
+        ).thenAnswer((_) => Completer<ClipProvenanceResult>().future);
+        outbox = createOutbox(clipVerifier: () => verifier);
+        final events = recordConversation('c1');
+
+        sendClips([_clip('clip-a'), _clip('clip-b')]);
+        await pumpEventQueue();
+        outbox.cancelPendingSends();
+        await pumpEventQueue();
+
+        expect(
+          events.last.every((e) => e.phase == OutgoingVideoDmPhase.failed),
+          isTrue,
+        );
+        expect(
+          loggedMessages(),
+          contains(
+            'Video DM clip batch ${events.last.first.batchId} check '
+            'interrupted: originating session ended',
+          ),
         );
       });
 
@@ -1854,6 +1929,7 @@ void main() {
       test(
         'refuses to send under a different account and fails the entry',
         () async {
+          await LogCaptureService().clearAllLogs();
           stubAutoSend();
           var accountIsOurs = true;
           outbox = createOutbox(isAccountCurrent: () => accountIsOurs);
@@ -1872,6 +1948,13 @@ void main() {
           );
           expect(outcomes.single.status, equals(VideoDmOutcomeStatus.failed));
           expect(outcomes.single.sentCount, 0);
+          expect(
+            loggedMessages(),
+            contains(
+              'Video DM ${events.last.single.id} not sent: originating '
+              'account no longer active',
+            ),
+          );
         },
       );
 
@@ -1910,6 +1993,7 @@ void main() {
         'refuses a clip batch before its check when the account changed, so '
         'nothing is signed under the new account',
         () async {
+          await LogCaptureService().clearAllLogs();
           final verifier = _MockClipProvenanceVerifier();
           var signed = false;
           outbox = createOutbox(
@@ -1931,6 +2015,13 @@ void main() {
             isTrue,
           );
           expect(outcomes.single.status, equals(VideoDmOutcomeStatus.failed));
+          expect(
+            loggedMessages(),
+            contains(
+              'Video DM clip batch ${events.last.first.batchId} not sent: '
+              'originating account no longer active',
+            ),
+          );
         },
       );
     });

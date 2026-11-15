@@ -82,6 +82,9 @@ class _ControlledVideoSend extends Fake implements DmVideoSendService {
   final paths = <String>[];
   DmVideoSendCancellation? attempt;
 
+  /// Reports a later phase of the running send, such as publication.
+  void Function(DmVideoSendPhase)? reportPhase;
+
   @override
   Future<NIP17SendResult> sendVideo({
     required String recipientPubkey,
@@ -96,6 +99,7 @@ class _ControlledVideoSend extends Fake implements DmVideoSendService {
   }) {
     paths.add(videoFile.path);
     attempt = cancellation;
+    reportPhase = onPhase;
     onPhase?.call(DmVideoSendPhase.uploading);
     return result.future;
   }
@@ -1483,6 +1487,84 @@ void main() {
         expect(ownerAtSignIn, leavingHex);
         expect(cancelledBeforeSignIn, isTrue);
         expect(service.paths, ['/v/one.mp4']);
+      },
+    );
+
+    testWidgets(
+      'waits for a publication already in flight before target sign-in',
+      (tester) async {
+        final service = _ControlledVideoSend();
+        final outbox = VideoDmOutbox(
+          sendService: () => service,
+          readFrame: (_) async => null,
+        );
+        addTearDown(outbox.dispose);
+        var outboxStopped = false;
+        outbox
+            .watchConversation('chat')
+            .listen((_) {}, onDone: () => outboxStopped = true);
+        final initial = await pumpHost(
+          tester,
+          accountOverrides: [videoDmOutboxProvider.overrideWithValue(outbox)],
+        );
+        initial.read(videoDmOutboxProvider);
+        // A failed run must not leave the publication holding up teardown.
+        addTearDown(() {
+          if (!service.result.isCompleted) {
+            service.result.complete(const NIP17SendResult.failure('ended'));
+          }
+        });
+        outbox.sendVideo(
+          conversationId: 'chat',
+          recipientPubkey: targetHex,
+          file: File('/v/one.mp4'),
+        );
+        await tester.pump();
+        // Publication is irreversible: the shared DM rows must not be cleared
+        // under it.
+        service.reportPhase!(DmVideoSendPhase.sending);
+        var signedIn = false;
+
+        // Settled rather than awaited by an expectation, so a failure below
+        // does not leave the test waiting on a swap nothing pumps.
+        Object? swapFailure;
+        final swap =
+            swapAccount(
+              deviceScope: deviceScope,
+              controller: controller,
+              currentAuthService: currentAuthService,
+              account: account,
+              signIn: (_, _) async => signedIn = true,
+            ).then<void>(
+              (_) {},
+              onError: (Object error) {
+                swapFailure = error;
+              },
+            );
+        for (var frame = 0; !outboxStopped && frame < 250; frame += 1) {
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+        }
+        expect(outboxStopped, isTrue, reason: 'the swap stops the outbox');
+        // Give a swap that did not wait every chance to reach sign-in.
+        for (var frame = 0; !signedIn && frame < 250; frame += 1) {
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+        }
+        expect(signedIn, isFalse);
+        expect(service.attempt!.uploadCancelToken.isCancelled, isFalse);
+
+        service.result.complete(
+          NIP17SendResult.success(
+            rumorEventId: 'sent',
+            messageEventId: 'wrap',
+            recipientPubkey: targetHex,
+          ),
+        );
+        await driveSwap(swap);
+
+        expect(swapFailure, isNull);
+        expect(signedIn, isTrue);
       },
     );
 

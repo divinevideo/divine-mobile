@@ -314,7 +314,9 @@ class VideoDmOutbox {
   /// Does nothing otherwise.
   void acknowledge(String id) => _drop(id, OutgoingVideoDmPhase.sent);
 
-  /// Interrupts preparation and uploads when the owning session signs out.
+  /// Interrupts preparation and uploads when the owning session signs out,
+  /// tears down or turns to another pubkey. Tearing down includes rebuilding
+  /// the same account's client once a pubkey-only identity can sign.
   /// Publication already in progress keeps the repository's delivery result.
   void cancelPendingSends() {
     for (final attempt in _attempts) {
@@ -421,6 +423,12 @@ class VideoDmOutbox {
       // The account switched away before the batch could start; sending now
       // would sign the outgoing account's clips with the incoming account's
       // keys. Fail the batch; the switch disposes this outbox's state anyway.
+      Log.warning(
+        'Video DM clip batch ${batch.first.batchId} not sent: originating '
+        'account no longer active',
+        name: _logName,
+        category: LogCategory.video,
+      );
       failBatch();
       _emitOutcome(
         batch.first,
@@ -467,7 +475,14 @@ class VideoDmOutbox {
             _firstRejectedClip(verifier, batch, checkingAttempt),
           );
         } catch (error, stackTrace) {
-          if (error is! DmVideoSendCancelled) {
+          if (error is DmVideoSendCancelled) {
+            Log.warning(
+              'Video DM clip batch ${batch.first.batchId} check interrupted: '
+              '${error.reason}',
+              name: _logName,
+              category: LogCategory.video,
+            );
+          } else {
             _logUnexpected(
               'Video DM clip batch ${batch.first.batchId} check',
               error,
@@ -604,6 +619,11 @@ class VideoDmOutbox {
         // The account switched away while this job waited its turn (see
         // [VideoDmOutbox.isAccountCurrent]); refuse rather than send the
         // outgoing account's file under the incoming account's keys.
+        Log.warning(
+          'Video DM $id not sent: originating account no longer active',
+          name: _logName,
+          category: LogCategory.video,
+        );
         return _markFailed(id, OutgoingVideoDmFailure.failed);
       }
       final waitUntilReady = _waitUntilReady;

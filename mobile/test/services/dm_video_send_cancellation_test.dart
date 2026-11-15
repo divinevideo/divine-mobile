@@ -68,6 +68,8 @@ void main() {
           clock.elapse(const Duration(minutes: 1));
           attempt.uploadProgress(minute / 100);
         }
+        // Rising progress kept the inactivity watchdog from firing.
+        expect(attempt.uploadCancelToken.isCancelled, isFalse);
         attempt.startUploadAttempt();
         clock.elapse(const Duration(minutes: 1));
         expect(attempt.uploadCancelToken.isCancelled, isTrue);
