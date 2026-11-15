@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Superseded in part by #11054.** This plan records what #11044 built. #11054 replaced the info sheet's action row: the sheet now leads with a "Remix this video" button and keeps only Edit, Delete (own videos), Save and, on a remix of the viewer's video, Report this remix in its row, while Add to clips, Add to list and Event JSON / Event ID stay in the share sheet only. `canAddVideoToClips` became `canRemixVideo`, which moved with its test to `lib/blocs/video_content_actions/video_content_action_rules.dart` and `test/blocs/video_content_actions/`. See revisions 2 and 3 of the spec, `docs/superpowers/specs/2026-11-14-info-sheet-video-actions-design.md`.
+
 **Goal:** The info sheet (`MetadataExpandedSheet`) gets an action row with Edit, Delete (own videos), Save, Add to clips, Add to list, and debug Event JSON / Event ID, sharing one implementation with the share sheet, which keeps all its actions.
 
 **Architecture:** Bookmark status/toggle, add-to-clips import and event JSON/ID move out of `ShareSheetBloc` into a new `VideoContentActionsBloc` (handlers moved verbatim, tests moved with them). The share sheet's action-row widget, clip-title prompt, sheet-dismissal helpers and result feedback become shared widgets/functions; the owner delete flow reuses the existing one in `owner_video_actions_sheet.dart`. Both sheets provide the bloc and render the shared row.
@@ -101,7 +103,7 @@ Also: `defaultClipTitle` returns the video's title for a titled video.
 - Create: `lib/widgets/video_feed_item/actions/video_action_row.dart` — from `_MoreActionsSection`'s list rendering, `_ActionData`, `_ActionCircle` in `share_sheet_more_actions.dart`.
 - Create: `lib/widgets/video_feed_item/actions/clip_title_sheet.dart` — from `_ClipTitleSheet` / `_ClipTitleSheetState` in `share_action_button.dart`.
 - Create: `lib/widgets/video_feed_item/actions/sheet_dismissal.dart` — from `_safePop` and `_presentAfterDismiss`.
-- Create: `lib/widgets/video_feed_item/actions/video_content_action_rules.dart`
+- Create: `lib/widgets/video_feed_item/actions/video_content_action_rules.dart` (now `lib/blocs/video_content_actions/video_content_action_rules.dart`)
 - Modify: `share_sheet_more_actions.dart`, `share_action_button.dart` to use them.
 - Modify: `scripts/baseline/raw_textstyle.txt`, `scripts/baseline/future_delayed_production_counts.txt` (lowered ceilings).
 - Test: `test/widgets/video_feed_item/actions/video_action_row_test.dart`, `sheet_dismissal_test.dart`, `video_content_action_rules_test.dart`

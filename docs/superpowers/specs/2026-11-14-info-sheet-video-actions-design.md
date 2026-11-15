@@ -37,6 +37,10 @@ Vines included) — revision 2's "Remix this Vine" string is dropped.
   fetches; Divine reads it before offering Remix or Add to clips.
   Builder's call: the exact field name (document it in
   `docs/NOSTR_EVENT_TYPES.md`).
+  *As built:* REST profile projections drop custom keys, so Divine does not
+  use the profile it already has. It reads the creator's raw kind 0 straight
+  from the relays when Remix or Add to clips is tapped, and refuses the tap
+  if the account blocks remixing; the buttons show either way.
 - **Where consent is checked:** one shared rule (`canRemixVideo`, replacing
   `canAddVideoToClips`) used by the Remix button, the share sheet's Add to
   clips, and every other reuse entry point that calls the old rule. Own
@@ -76,6 +80,8 @@ Vines included) — revision 2's "Remix this Vine" string is dropped.
   info sheet offers "Report this remix", which opens the existing report
   flow preselected for this case. It reaches Trust & Safety like any report;
   T&S decides and removes. No automatic takedown.
+  *As built:* the report flow opens for the remix with no reason
+  preselected.
 
 ### Still from revision 2
 
@@ -109,6 +115,9 @@ five, and showed nothing on web.
      Drafts tab's draft-safe call) so an in-progress autosaved draft survives.
      While importing, the button shows its loading state and ignores taps; a
      failed import shows the existing "Couldn't add to clips" snackbar.
+     *As built:* instead of `keepAutosavedDraft: true`, it first copies an
+     autosave that holds clips into Drafts as a new draft, then calls
+     `clearAll()` (see "The autosaved session is kept as a draft" below).
    - **Re-tapping does not duplicate.** If a non-trashed clip in the library
      already has this video's `sourceEventId`, it is reused instead of
      importing again.
@@ -176,6 +185,9 @@ message reads better as one sentence or two.
   tell a plain import from a derived clip, the builder adds the smallest
   persisted marker that can, set at import time; clips imported before this
   ships fall back to "single credit naming someone else".
+  *As built:* the marker is `DivineVideoClip.importedSource`. An older clip
+  counts as an import by its id prefix (`video_`, `classic_vine_`,
+  `dm_clip_`), and as from others when its first credit names someone else.
 - **Duplicate check** matches only plain imports of this exact video
   (`sourceEventId` or addressable coordinate), never derived clips.
 - **One selection across both tabs.** Clips and From others are one clip
@@ -187,6 +199,9 @@ message reads better as one sentence or two.
   backs out of the editor Remix opened without editing, the session is
   cleared so the camera doesn't next open with the Vine on its timeline. An
   edited session behaves like any editor session (autosave, Drafts).
+  *As built:* backing out shows the editor's usual save-or-discard prompt
+  instead. A timeline holding a credited clip counts as edited, so nothing
+  is cleared without asking.
 
 ### Non-goals (revision 2)
 
