@@ -189,6 +189,71 @@ void main() {
         );
       });
 
+      group('when a read fails with an Error', () {
+        test('completes with the error instead of hanging', () {
+          fakeAsync((async) {
+            stubWiderRead(() async => throw TypeError());
+            stubDefaultRelayRead(answersAfter(relayTimeout, inconclusiveMiss));
+
+            Object? error;
+            unawaited(
+              repository
+                  .consentFor(authorPubkey)
+                  .then<void>(
+                    (_) {},
+                    onError: (Object e) => error = e,
+                  ),
+            );
+            async.elapse(Duration.zero);
+
+            expect(error, isA<TypeError>());
+          });
+        });
+
+        test('completes when both reads fail with an Error', () async {
+          stubWiderRead(() async => throw TypeError());
+          stubDefaultRelayRead(() async => throw TypeError());
+
+          await expectLater(
+            repository.consentFor(authorPubkey),
+            throwsA(isA<TypeError>()),
+          );
+        });
+
+        test('keeps an answer another read already settled', () {
+          fakeAsync((async) {
+            stubDefaultRelayRead(
+              () async => (profile: blocking, conclusive: true),
+            );
+            stubWiderRead(() {
+              final failure = Completer<FreshProfileRead>();
+              Timer(
+                const Duration(seconds: 1),
+                () => failure.completeError(TypeError()),
+              );
+              return failure.future;
+            });
+
+            final result = consentInFakeTime(async);
+
+            expect(result.consent, RemixConsent.blocked);
+            expect(result.at, Duration.zero);
+          });
+        });
+      });
+
+      test('completes as unknown when a read fails with an Exception', () {
+        fakeAsync((async) {
+          stubWiderRead(() async => throw Exception('relay down'));
+          stubDefaultRelayRead(answersAfter(relayTimeout, inconclusiveMiss));
+
+          final result = consentInFakeTime(async);
+
+          expect(result.consent, RemixConsent.unknown);
+          expect(result.at, relayTimeout);
+        });
+      });
+
       group('while another relay stays silent', () {
         setUp(() {
           stubWiderRead(answersAfter(relayTimeout, inconclusiveMiss));
@@ -333,6 +398,51 @@ void main() {
                 onlyRelayUrl: any(named: 'onlyRelayUrl'),
               ),
             );
+          });
+        });
+
+        test('does not remember a miss after a JSON false', () {
+          fakeAsync((async) {
+            stubDefaultRelayRead(
+              () async => (profile: blocking, conclusive: true),
+            );
+            stubWiderRead(
+              answersAfter(const Duration(seconds: 1), conclusiveMiss),
+            );
+            expect(consentInFakeTime(async).consent, RemixConsent.blocked);
+
+            expect(consentInFakeTime(async).consent, RemixConsent.blocked);
+            verify(
+              () => profileRepository.readRawProfileFromRelays(
+                pubkey: authorPubkey,
+                onlyRelayUrl: defaultRelayUrl,
+              ),
+            ).called(2);
+          });
+        });
+
+        test('forgets a remembered miss once a JSON false turns up', () {
+          fakeAsync((async) {
+            stubDefaultRelayRead(
+              answersAfter(const Duration(milliseconds: 100), conclusiveMiss),
+            );
+            stubWiderRead(
+              answersAfter(
+                const Duration(seconds: 1),
+                (profile: blocking, conclusive: false),
+              ),
+            );
+            expect(consentInFakeTime(async).consent, RemixConsent.allowed);
+
+            clearInteractions(profileRepository);
+
+            // Asked again rather than answered from the memo.
+            consentInFakeTime(async);
+            verify(
+              () => profileRepository.readRawProfileFromRelays(
+                pubkey: authorPubkey,
+              ),
+            ).called(1);
           });
         });
 

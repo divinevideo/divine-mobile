@@ -62,10 +62,17 @@ class RemixConsentRepository {
   ///   read that did not finish;
   /// * a finished read finding no kind 0, or one that does not block, allows.
   ///   An author who never published a kind 0 cannot have blocked anything;
-  ///   that miss is remembered for the session.
+  ///   a miss that settles the answer is remembered for the session, and
+  ///   forgotten again if a `false` from the author turns up.
   ///
   /// Returns [RemixConsent.unknown] when both reads end without settling it:
-  /// they timed out, refused, threw, or returned another account's profile.
+  /// they timed out, refused, threw an [Exception], or returned another
+  /// account's profile.
+  ///
+  /// Throws whatever [Error] a read throws first while the answer is still
+  /// open — a programming fault, such as a kind 0 that does not parse, which
+  /// the caller reports rather than mistakes for a relay failure. An [Error]
+  /// after the answer is settled is logged.
   Future<RemixConsent> consentFor(String authorPubkey) {
     final key = authorPubkey.toLowerCase();
     if (_confirmedWithoutKind0.contains(key)) {
@@ -85,9 +92,12 @@ class RemixConsentRepository {
       final isAuthors =
           profile != null && pubkeysEqual(profile.pubkey, authorPubkey);
       if (isAuthors && !profile.allowsVideoReuse) {
+        _confirmedWithoutKind0.remove(key);
         settle(RemixConsent.blocked);
       } else if (read != null && read.conclusive && profile == null) {
-        _confirmedWithoutKind0.add(key);
+        // Only a miss that settles the answer is remembered: one arriving
+        // after a `false` must not turn later checks into an allow.
+        if (!decision.isCompleted) _confirmedWithoutKind0.add(key);
         settle(RemixConsent.allowed);
       } else if (read != null && read.conclusive && isAuthors) {
         settle(RemixConsent.allowed);
@@ -103,11 +113,27 @@ class RemixConsentRepository {
       }
     }
 
+    void fail(Object error, StackTrace stackTrace) {
+      unsettledReads--;
+      if (!decision.isCompleted) {
+        decision.completeError(error, stackTrace);
+        return;
+      }
+      Log.error(
+        'Remix consent read for ${pubkeyForLogs(authorPubkey)} failed after '
+        'the answer was settled: $error',
+        name: 'RemixConsentRepository',
+        category: LogCategory.relay,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
     unawaited(
       _read(
         authorPubkey,
         () => _profileRepository.readRawProfileFromRelays(pubkey: authorPubkey),
-      ).then(consider),
+      ).then(consider, onError: fail),
     );
     unawaited(
       _read(
@@ -116,7 +142,7 @@ class RemixConsentRepository {
           pubkey: authorPubkey,
           onlyRelayUrl: _defaultRelayUrl,
         ),
-      ).then(consider),
+      ).then(consider, onError: fail),
     );
     return decision.future;
   }

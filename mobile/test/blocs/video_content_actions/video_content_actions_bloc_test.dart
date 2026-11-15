@@ -14,11 +14,14 @@ import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:profile_repository/profile_repository.dart';
 
 class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
 
 class _MockVideoClipImportService extends Mock
     implements VideoClipImportService {}
+
+class _MockProfileReader extends Mock implements ProfileReader {}
 
 class _MockRemixConsentRepository extends Mock
     implements RemixConsentRepository {}
@@ -111,6 +114,7 @@ void main() {
       // Same distinction as [withBookmarksRepository]: by default the
       // creator allows remixing, so the import tests reach the importer.
       bool withRemixConsentRepository = true,
+      RemixConsentRepository? remixConsentRepository,
       String? viewerPubkey = _viewerPubkey,
     }) => VideoContentActionsBloc(
       video: testVideo,
@@ -120,7 +124,7 @@ void main() {
           : null,
       videoClipImportService: videoClipImportService,
       remixConsentRepository: withRemixConsentRepository
-          ? mockRemixConsentRepository
+          ? (remixConsentRepository ?? mockRemixConsentRepository)
           : null,
       viewerPubkey: viewerPubkey,
     );
@@ -894,6 +898,45 @@ void main() {
             (error) => error.unwrap(),
             'unwrap',
             isA<StateError>(),
+          ),
+        ],
+        expect: () => [checking, refusedWith(RemixConsent.unknown)],
+        verify: (_) => verifyNever(
+          () => mockImporter.importToLibrary(
+            any(),
+            libraryTitle: any(named: 'libraryTitle'),
+          ),
+        ),
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'clears the check and reports when a consent read hits a TypeError',
+        build: () {
+          final reader = _MockProfileReader();
+          // A kind 0 whose content is JSON but not an object fails to parse
+          // with a TypeError, which no relay-failure catch handles.
+          when(
+            () => reader.readRawProfileFromRelays(
+              pubkey: any(named: 'pubkey'),
+              onlyRelayUrl: any(named: 'onlyRelayUrl'),
+            ),
+          ).thenAnswer(
+            (_) async => throw TypeError(),
+          );
+          return createBloc(
+            videoClipImportService: mockImporter,
+            remixConsentRepository: RemixConsentRepository(
+              profileRepository: reader,
+              defaultRelayUrl: 'wss://relay.divine.test',
+            ),
+          );
+        },
+        act: (bloc) => bloc.add(const VideoContentAddToClipsRequested()),
+        errors: () => [
+          isA<Reportable<Object>>().having(
+            (error) => error.unwrap(),
+            'unwrap',
+            isA<TypeError>(),
           ),
         ],
         expect: () => [checking, refusedWith(RemixConsent.unknown)],
