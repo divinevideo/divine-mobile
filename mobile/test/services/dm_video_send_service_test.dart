@@ -14,6 +14,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_preview.dart';
+import 'package:openvine/services/dm_video_send_cancellation.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 // Not exported from pro_video_editor's barrel. Imported by path so the test
 // can subclass MethodChannelProVideoEditor without its EventChannel setup.
@@ -462,6 +463,124 @@ void main() {
         expect(sent.single.dimensions, '1080x1920');
       });
     });
+
+    test(
+      'cancellation during encryption deletes late ciphertext without upload',
+      () async {
+        final video = File('${tempDir.path}/late.mp4');
+        final encrypted = Completer<EncryptedVideoFile>();
+        when(() => encryption.encryptFile(video))
+            .thenAnswer((_) => encrypted.future);
+        final attempt = DmVideoSendCancellation();
+        addTearDown(attempt.finish);
+        final result = createService().sendVideo(
+          recipientPubkey: _recipientPubkey,
+          videoFile: video,
+          mimeType: 'video/mp4',
+          cancellation: attempt,
+        );
+        final failure = expectLater(
+          result,
+          throwsA(isA<DmVideoSendCancelled>()),
+        );
+        attempt.cancel('expired');
+        final ciphertext = ciphertextFile();
+        encrypted.complete(encryptedVideo(ciphertext));
+        await failure;
+        await pumpEventQueue();
+        expect(ciphertext.existsSync(), isFalse);
+        verifyZeroInteractions(blossom);
+        verifyZeroInteractions(dmRepository);
+      },
+    );
+
+    test(
+      'account loss after upload prevents publication and cleans ciphertext',
+      () async {
+        final video = File('${tempDir.path}/switch.mp4');
+        final ciphertext = ciphertextFile();
+        var current = true;
+        when(() => encryption.encryptFile(video))
+            .thenAnswer((_) async => encryptedVideo(ciphertext));
+        when(
+          () => blossom.uploadEncryptedFile(
+            ciphertextFile: ciphertext,
+            cancelToken: any(named: 'cancelToken'),
+            onProgress: any(named: 'onProgress'),
+          ),
+        ).thenAnswer((_) async {
+          current = false;
+          return const BlossomUploadResult(
+            success: true,
+            videoId: _ciphertextHash,
+            url: _fileUrl,
+          );
+        });
+        final attempt = DmVideoSendCancellation(
+          isAccountCurrent: () => current,
+        );
+        addTearDown(attempt.finish);
+        await expectLater(
+          createService().sendVideo(
+            recipientPubkey: _recipientPubkey,
+            videoFile: video,
+            mimeType: 'video/mp4',
+            cancellation: attempt,
+          ),
+          throwsA(isA<DmVideoSendCancelled>()),
+        );
+        await pumpEventQueue();
+        expect(ciphertext.existsSync(), isFalse);
+        verifyZeroInteractions(dmRepository);
+      },
+    );
+
+    test(
+      'cancellation deletes ciphertext while an upload future is still pending',
+      () async {
+        final video = File('${tempDir.path}/stalled.mp4');
+        final ciphertext = ciphertextFile();
+        final upload = Completer<BlossomUploadResult>();
+        when(() => encryption.encryptFile(video))
+            .thenAnswer((_) async => encryptedVideo(ciphertext));
+        when(
+          () => blossom.uploadEncryptedFile(
+            ciphertextFile: ciphertext,
+            cancelToken: any(named: 'cancelToken'),
+            onProgress: any(named: 'onProgress'),
+          ),
+        ).thenAnswer((_) => upload.future);
+        final attempt = DmVideoSendCancellation();
+        addTearDown(attempt.finish);
+        final result = createService().sendVideo(
+          recipientPubkey: _recipientPubkey,
+          videoFile: video,
+          mimeType: 'video/mp4',
+          cancellation: attempt,
+        );
+        final failure = expectLater(
+          result,
+          throwsA(isA<DmVideoSendCancelled>()),
+        );
+        await pumpEventQueue();
+        attempt.cancel('disposed');
+        await pumpEventQueue();
+        try {
+          expect(ciphertext.existsSync(), isFalse);
+          verifyZeroInteractions(dmRepository);
+        } finally {
+          upload.complete(
+            const BlossomUploadResult(
+              success: true,
+              videoId: _ciphertextHash,
+              url: _fileUrl,
+            ),
+          );
+          await failure;
+        }
+        verifyZeroInteractions(dmRepository);
+      },
+    );
 
     test('upload failure skips sendFileMessage and still cleans up', () async {
       final videoFile = File('${tempDir.path}/clip.mp4')

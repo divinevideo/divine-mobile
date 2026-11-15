@@ -1,8 +1,10 @@
 // ABOUTME: Tests for BlossomUploadService.uploadEncryptedFile verifying the
 // ABOUTME: ciphertext is uploaded as octet-stream with t=upload / x auth tags.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:dio/dio.dart';
@@ -15,6 +17,27 @@ class _MockAuthProvider extends Mock implements BlossomAuthProvider {}
 class _MockDio extends Mock implements Dio {}
 
 class _MockResponse extends Mock implements Response<dynamic> {}
+
+/// Keeps an actual Dio request pending until its transport cancellation fires.
+class _PendingAdapter implements HttpClientAdapter {
+  final started = Completer<void>();
+  final cancelled = Completer<void>();
+  final response = Completer<ResponseBody>();
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? body,
+    Future<void>? cancelFuture,
+  ) {
+    started.complete();
+    unawaited(cancelFuture!.then((_) => cancelled.complete()));
+    return response.future;
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
 
 const _testPublicKey =
     '0223456789abcdef0123456789abcdef0123456789abcdef'
@@ -143,6 +166,42 @@ void main() {
           expect(tags, contains(equals(['x', ctHash])));
         },
       );
+
+      test('cancellation reaches the pending Dio transport', () async {
+        final adapter = _PendingAdapter();
+        final dio = Dio()..httpClientAdapter = adapter;
+        addTearDown(dio.close);
+        final file = File(
+          '${Directory.systemTemp.createTempSync('encrypted-cancel').path}/ciphertext',
+        );
+        await file.writeAsBytes([1, 2, 3]);
+        addTearDown(() => file.parent.delete(recursive: true));
+        when(() => mockAuthProvider.isAuthenticated).thenReturn(true);
+        when(
+          () => mockAuthProvider.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer(
+          (_) async => _signedEvent(_testPublicKey, 24242, const [], ''),
+        );
+        final service = BlossomUploadService(
+          authProvider: mockAuthProvider,
+          dio: dio,
+        );
+        final cancellation = CancelToken();
+        final result = service.uploadEncryptedFile(
+          ciphertextFile: file,
+          cancelToken: cancellation,
+        );
+        await adapter.started.future;
+        cancellation.cancel('upload stalled');
+        expect((await result).success, isFalse);
+        await adapter.cancelled.future;
+        // A transport settling after cancellation must not turn it into success.
+        adapter.response.complete(ResponseBody.fromString('{}', 201));
+      });
 
       test('returns a permanent auth failure when not authenticated', () async {
         when(() => mockAuthProvider.isAuthenticated).thenReturn(false);

@@ -16,6 +16,7 @@ import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_preview.dart';
+import 'package:openvine/services/dm_video_send_cancellation.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:rxdart/rxdart.dart';
@@ -80,8 +81,8 @@ class _ClipBatchJob extends _OutboxJob {
 /// Requests are queued synchronously and run one at a time, first in first
 /// out. The send service is read for each send and the clip verifier for
 /// each clip check, so every send goes through the instances current when it
-/// starts, even within one clip batch. Nothing is persisted: [dispose] stops
-/// publishing, and a send already in flight finishes unobserved.
+/// starts, even within one clip batch. Nothing is persisted: [dispose] cancels
+/// preparation and uploads; a publication already in flight keeps its result.
 class VideoDmOutbox {
   /// Creates a [VideoDmOutbox].
   ///
@@ -122,6 +123,10 @@ class VideoDmOutbox {
     ArchivedVineCheck? isArchivedVine,
     bool Function()? isAccountCurrent,
     CrashReporter? reporter,
+    Future<void> Function(DmVideoSendCancellation)? waitUntilReady,
+    Duration uploadInactivityTimeout = videoDmUploadInactivityTimeout,
+    Duration prePublicationTimeout = videoDmPrePublicationTimeout,
+    Duration signerReadinessTimeout = videoDmSignerReadinessTimeout,
   }) : _sendService = sendService,
        _readFrame = readFrame,
        _newId = newId ?? const Uuid().v4,
@@ -130,7 +135,11 @@ class VideoDmOutbox {
        _signOwnRecordings = signOwnRecordings,
        _isArchivedVine = isArchivedVine,
        _isAccountCurrent = isAccountCurrent,
-       _reporter = reporter;
+       _reporter = reporter,
+       _waitUntilReady = waitUntilReady,
+       _uploadInactivityTimeout = uploadInactivityTimeout,
+       _prePublicationTimeout = prePublicationTimeout,
+       _signerReadinessTimeout = signerReadinessTimeout;
 
   static const _logName = 'VideoDmOutbox';
 
@@ -143,6 +152,27 @@ class VideoDmOutbox {
   final ArchivedVineCheck? _isArchivedVine;
   final bool Function()? _isAccountCurrent;
   final CrashReporter? _reporter;
+  final Future<void> Function(DmVideoSendCancellation)? _waitUntilReady;
+  final Duration _uploadInactivityTimeout;
+  final Duration _prePublicationTimeout;
+  final Duration _signerReadinessTimeout;
+  final Set<DmVideoSendCancellation> _attempts = {};
+
+  DmVideoSendCancellation _newAttempt() {
+    final attempt = DmVideoSendCancellation(
+      uploadInactivityTimeout: _uploadInactivityTimeout,
+      prePublicationTimeout: _prePublicationTimeout,
+      signerReadinessTimeout: _signerReadinessTimeout,
+      isAccountCurrent: () => !_disposed && !_accountChanged,
+    );
+    _attempts.add(attempt);
+    return attempt;
+  }
+
+  void _finishAttempt(DmVideoSendCancellation attempt) {
+    attempt.finish();
+    _attempts.remove(attempt);
+  }
 
   final BehaviorSubject<List<OutgoingVideoDm>> _entries =
       BehaviorSubject<List<OutgoingVideoDm>>.seeded(const []);
@@ -150,6 +180,7 @@ class VideoDmOutbox {
       StreamController<VideoDmSendOutcome>.broadcast();
   final Queue<_OutboxJob> _queue = Queue<_OutboxJob>();
   bool _working = false;
+  Future<void> _workerDone = Future.value();
   bool _disposed = false;
 
   /// Listener count per conversation. A sent entry is only kept while its
@@ -283,12 +314,30 @@ class VideoDmOutbox {
   /// Does nothing otherwise.
   void acknowledge(String id) => _drop(id, OutgoingVideoDmPhase.sent);
 
+  /// Interrupts preparation and uploads when the owning session signs out.
+  /// Publication already in progress keeps the repository's delivery result.
+  void cancelPendingSends() {
+    for (final attempt in _attempts) {
+      attempt.cancel('originating session ended');
+    }
+  }
+
+  /// Stops accepting work and waits for any irreversible publication to settle.
+  /// Account switching calls this before shared DM rows are cleared.
+  Future<void> quiesce() {
+    dispose();
+    return _workerDone;
+  }
+
   /// Stops publishing and ignores sends that finish afterwards. Safe to call
   /// more than once.
   void dispose() {
     if (_disposed) return;
     _disposed = true;
     _queue.clear();
+    for (final attempt in _attempts) {
+      attempt.cancel('outbox disposed');
+    }
     unawaited(_entries.close());
     unawaited(_outcomes.close());
   }
@@ -310,8 +359,9 @@ class VideoDmOutbox {
   void _startWorker() {
     if (_working) return;
     _working = true;
+    _workerDone = _drainQueue();
     runDetached(
-      _drainQueue(),
+      _workerDone,
       'run the video DM outbox',
       logName: _logName,
       category: LogCategory.video,
@@ -371,7 +421,11 @@ class VideoDmOutbox {
       // would sign the outgoing account's clips with the incoming account's
       // keys. Fail the batch; the switch disposes this outbox's state anyway.
       failBatch();
-      _emitOutcome(VideoDmOutcomeStatus.failed, sentCount: 0, total: total);
+      _emitOutcome(
+        VideoDmOutcomeStatus.failed,
+        sentCount: 0,
+        total: total,
+      );
       return;
     }
     if (missing != null) {
@@ -382,70 +436,101 @@ class VideoDmOutbox {
         error: VideoDmSendFailure('entry ${missing.id} has no video file'),
       );
       failBatch();
-      _emitOutcome(VideoDmOutcomeStatus.failed, sentCount: 0, total: total);
+      _emitOutcome(
+        VideoDmOutcomeStatus.failed,
+        sentCount: 0,
+        total: total,
+      );
       return;
     }
 
-    final verifier = _clipVerifier?.call();
-    if (verifier != null) {
-      for (final entry in batch) {
-        _setPhase(entry.id, OutgoingVideoDmPhase.checking);
-      }
-      final OutgoingVideoDm? rejected;
-      try {
-        rejected = await _firstRejectedClip(verifier, batch);
-      } catch (error, stackTrace) {
-        _logUnexpected(
-          'Video DM clip batch ${batch.first.batchId} check',
-          error,
-          stackTrace,
-          site: 'checkClipBatch',
-        );
-        failBatch();
-        _emitOutcome(VideoDmOutcomeStatus.failed, sentCount: 0, total: total);
-        return;
-      }
-      if (_disposed) return;
-      if (rejected != null) {
-        Log.warning(
-          'Video DM ${rejected.id} failed its clip check; batch not sent',
-          name: _logName,
-          category: LogCategory.video,
-        );
-        failBatch(rejected);
-        _emitOutcome(
-          VideoDmOutcomeStatus.clipNotVerified,
-          sentCount: 0,
-          total: total,
-        );
-        return;
-      }
-      for (final entry in batch) {
-        _setPhase(entry.id, OutgoingVideoDmPhase.queued);
-      }
-    }
-
-    var sentCount = 0;
-    for (final (index, entry) in batch.indexed) {
-      if (_disposed) return;
-      final failure = await _sendEntry(
-        entry,
-        extraTags: [DmClipTag.build(entry.clip!.targetAspectRatio)],
-      );
-      if (failure != null) {
-        for (final rest in batch.skip(index + 1)) {
-          _markFailed(rest.id, OutgoingVideoDmFailure.failed);
+    final checkingAttempt = _newAttempt();
+    try {
+      final verifier = _clipVerifier?.call();
+      if (verifier != null) {
+        for (final entry in batch) {
+          _setPhase(entry.id, OutgoingVideoDmPhase.checking);
         }
-        _emitOutcome(
-          _outcomeStatusFor(failure),
-          sentCount: sentCount,
-          total: total,
-        );
-        return;
+        final OutgoingVideoDm? rejected;
+        try {
+          final waitUntilReady = _waitUntilReady;
+          if (waitUntilReady != null) {
+            await checkingAttempt.waitForSigner(
+              waitUntilReady(checkingAttempt),
+            );
+          }
+          checkingAttempt.throwIfCancelled();
+          rejected = await checkingAttempt.waitFor(
+            _firstRejectedClip(verifier, batch, checkingAttempt),
+          );
+        } catch (error, stackTrace) {
+          if (error is! DmVideoSendCancelled) {
+            _logUnexpected(
+              'Video DM clip batch ${batch.first.batchId} check',
+              error,
+              stackTrace,
+              site: 'checkClipBatch',
+            );
+          }
+          failBatch();
+          _emitOutcome(
+            VideoDmOutcomeStatus.failed,
+            sentCount: 0,
+            total: total,
+          );
+          return;
+        }
+        if (_disposed) {
+          return;
+        }
+        if (rejected != null) {
+          Log.warning(
+            'Video DM ${rejected.id} failed its clip check; batch not sent',
+            name: _logName,
+            category: LogCategory.video,
+          );
+          failBatch(rejected);
+          _emitOutcome(
+            VideoDmOutcomeStatus.clipNotVerified,
+            sentCount: 0,
+            total: total,
+          );
+          return;
+        }
+        for (final entry in batch) {
+          _setPhase(entry.id, OutgoingVideoDmPhase.queued);
+        }
       }
-      sentCount++;
+
+      var sentCount = 0;
+      for (final (index, entry) in batch.indexed) {
+        if (_disposed) return;
+        final failure = await _sendEntry(
+          entry,
+          extraTags: [DmClipTag.build(entry.clip!.targetAspectRatio)],
+          attempt: index == 0 ? checkingAttempt : null,
+        );
+        if (failure != null) {
+          for (final rest in batch.skip(index + 1)) {
+            _markFailed(rest.id, OutgoingVideoDmFailure.failed);
+          }
+          _emitOutcome(
+            _outcomeStatusFor(failure),
+            sentCount: sentCount,
+            total: total,
+          );
+          return;
+        }
+        sentCount++;
+      }
+      _emitOutcome(
+        VideoDmOutcomeStatus.sent,
+        sentCount: sentCount,
+        total: total,
+      );
+    } finally {
+      _finishAttempt(checkingAttempt);
     }
-    _emitOutcome(VideoDmOutcomeStatus.sent, sentCount: sentCount, total: total);
   }
 
   /// Signs the batch's own recordings, then checks each clip in order and
@@ -453,11 +538,15 @@ class VideoDmOutbox {
   Future<OutgoingVideoDm?> _firstRejectedClip(
     ClipProvenanceVerifier verifier,
     List<OutgoingVideoDm> batch,
+    DmVideoSendCancellation attempt,
   ) async {
+    attempt.throwIfCancelled();
     await _signOwnRecordings?.call([for (final entry in batch) entry.clip!]);
     for (final entry in batch) {
+      attempt.throwIfCancelled();
       final path = _clipPath(entry)!;
       final provenance = await verifier.verify(path);
+      attempt.throwIfCancelled();
       if (provenance.isRejected && !await _isSendableVine(provenance, path)) {
         return entry;
       }
@@ -497,7 +586,10 @@ class VideoDmOutbox {
   Future<OutgoingVideoDmFailure?> _sendEntry(
     OutgoingVideoDm entry, {
     List<List<String>> extraTags = const [],
+    DmVideoSendCancellation? attempt,
   }) async {
+    attempt ??= _newAttempt();
+    final currentAttempt = attempt;
     final id = entry.id;
     _setPhase(id, OutgoingVideoDmPhase.encrypting);
     try {
@@ -507,13 +599,34 @@ class VideoDmOutbox {
         // outgoing account's file under the incoming account's keys.
         return _markFailed(id, OutgoingVideoDmFailure.failed);
       }
-      final result = await _sendService().sendVideo(
-        recipientPubkey: entry.recipientPubkey,
-        videoFile: File(entry.localPath),
-        mimeType: videoDmMimeTypeFor(entry.localPath),
-        extraTags: extraTags,
-        onPhase: (phase) => _onPhase(id, phase),
-        onUploadProgress: (fraction) => _onUploadProgress(id, fraction),
+      final waitUntilReady = _waitUntilReady;
+      if (waitUntilReady != null) {
+        _setPhase(id, OutgoingVideoDmPhase.queued);
+        await currentAttempt.waitForSigner(waitUntilReady(currentAttempt));
+      }
+      currentAttempt.throwIfCancelled();
+      final result = await currentAttempt.waitFor(
+        _sendService().sendVideo(
+          recipientPubkey: entry.recipientPubkey,
+          videoFile: File(entry.localPath),
+          mimeType: videoDmMimeTypeFor(entry.localPath),
+          extraTags: extraTags,
+          cancellation: currentAttempt,
+          onPhase: (phase) {
+            if (!currentAttempt.isActive) return;
+            if (phase == DmVideoSendPhase.uploading) {
+              currentAttempt.startUpload();
+            } else if (phase == DmVideoSendPhase.sending) {
+              currentAttempt.beginPublication();
+            }
+            _onPhase(id, phase);
+          },
+          onUploadProgress: (fraction) {
+            if (!currentAttempt.isActive) return;
+            currentAttempt.uploadProgress(fraction);
+            _onUploadProgress(id, fraction);
+          },
+        ),
       );
       if (result case NIP17SendSuccess(:final rumorEventId)) {
         _update(
@@ -537,6 +650,13 @@ class VideoDmOutbox {
         error: VideoDmSendFailure(result.error ?? 'unknown'),
       );
       return _markFailed(id, OutgoingVideoDmFailure.failed);
+    } on DmVideoSendCancelled catch (error) {
+      Log.warning(
+        'Video DM $id interrupted: ${error.reason}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return _markFailed(id, OutgoingVideoDmFailure.failed);
     } on DmVideoTooLargeException catch (error) {
       Log.warning(
         'Video DM $id is too large to send',
@@ -557,6 +677,8 @@ class VideoDmOutbox {
     } catch (error, stackTrace) {
       _logUnexpected('Video DM $id', error, stackTrace, site: 'sendVideo');
       return _markFailed(id, OutgoingVideoDmFailure.failed);
+    } finally {
+      _finishAttempt(currentAttempt);
     }
   }
 
@@ -654,7 +776,11 @@ class VideoDmOutbox {
   }) {
     if (_disposed) return;
     _outcomes.add(
-      VideoDmSendOutcome(status: status, sentCount: sentCount, total: total),
+      VideoDmSendOutcome(
+        status: status,
+        sentCount: sentCount,
+        total: total,
+      ),
     );
   }
 

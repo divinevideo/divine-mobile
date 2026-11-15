@@ -186,6 +186,7 @@ void main() {
             extraTags: any(named: 'extraTags'),
             onPhase: any(named: 'onPhase'),
             onUploadProgress: any(named: 'onUploadProgress'),
+            cancellation: any(named: 'cancellation'),
           ),
         ).thenAnswer((invocation) {
           onPhase =

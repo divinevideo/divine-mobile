@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -13,6 +14,7 @@ import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
+import 'package:openvine/services/dm_video_send_cancellation.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/video_dm_outbox.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
@@ -51,8 +53,10 @@ class _PendingSend {
     required this.extraTags,
     required this.onPhase,
     required this.onUploadProgress,
+    required this.cancellation,
   });
 
+  final DmVideoSendCancellation cancellation;
   final File videoFile;
   final String mimeType;
   final List<List<String>> extraTags;
@@ -108,6 +112,7 @@ void main() {
     ArchivedVineCheck? isArchivedVine,
     bool Function()? isAccountCurrent,
     CrashReporter? reporter,
+    Future<void> Function(DmVideoSendCancellation)? waitUntilReady,
   }) {
     final created = VideoDmOutbox(
       sendService: () => service,
@@ -119,6 +124,7 @@ void main() {
       isArchivedVine: isArchivedVine,
       isAccountCurrent: isAccountCurrent,
       reporter: reporter,
+      waitUntilReady: waitUntilReady,
     );
     addTearDown(created.dispose);
     return created;
@@ -132,6 +138,7 @@ void main() {
         extraTags: any(named: 'extraTags'),
         onPhase: any(named: 'onPhase'),
         onUploadProgress: any(named: 'onUploadProgress'),
+        cancellation: any(named: 'cancellation'),
       );
 
   When<Future<NIP17SendResult>> whenSendVideo() =>
@@ -154,6 +161,8 @@ void main() {
   void stubControlledSend() {
     whenSendVideo().thenAnswer((invocation) {
       final send = _PendingSend(
+        cancellation:
+            invocation.namedArguments[#cancellation] as DmVideoSendCancellation,
         videoFile: invocation.namedArguments[#videoFile] as File,
         mimeType: invocation.namedArguments[#mimeType] as String,
         extraTags: invocation.namedArguments[#extraTags] as List<List<String>>,
@@ -203,6 +212,7 @@ void main() {
       registerFallbackValue(File('/tmp/fallback.mp4'));
       registerFallbackValue((DmVideoSendPhase _) {});
       registerFallbackValue((double _) {});
+      registerFallbackValue(DmVideoSendCancellation()..finish());
     });
 
     setUp(() {
@@ -213,6 +223,204 @@ void main() {
       readFrame = (_) async => null;
       idCounter = 0;
     });
+
+    test('stalled upload fails and releases the account queue', () {
+      fakeAsync((clock) {
+        stubControlledSend();
+        outbox = createOutbox();
+        final entries = <List<OutgoingVideoDm>>[];
+        final outcomes = <VideoDmSendOutcome>[];
+        final entriesSub = outbox.watchConversation('c1').listen(entries.add);
+        final outcomesSub = outbox.outcomes.listen(outcomes.add);
+        sendVideo();
+        sendVideo(path: '/v/next.mp4');
+        clock.flushMicrotasks();
+        sends.first.onPhase!(DmVideoSendPhase.uploading);
+        sends.first.onUploadProgress!(0.4);
+        clock.elapse(const Duration(minutes: 1));
+        sends.first.onUploadProgress!(0.4);
+        sends.first.onUploadProgress!(0.3);
+        clock.elapse(const Duration(minutes: 1));
+        clock.flushMicrotasks();
+        expect(entries.last.first.phase, OutgoingVideoDmPhase.failed);
+        expect(entries.last.first.canRetry, isTrue);
+        expect(sends, hasLength(2));
+        expect(outcomes.single.status, VideoDmOutcomeStatus.failed);
+        unawaited(entriesSub.cancel());
+        unawaited(outcomesSub.cancel());
+        outbox.dispose();
+        clock.flushMicrotasks();
+      });
+    });
+
+    testWidgets('expired attempt cannot mutate a retried entry or emit twice', (
+      tester,
+    ) async {
+      stubControlledSend();
+      final reporter = _RecordingCrashReporter();
+      outbox = createOutbox(reporter: reporter);
+      final entries = recordConversation('c1');
+      final outcomes = recordOutcomes();
+      sendVideo();
+      await tester.pump();
+      final old = sends.single;
+      await tester.pump(const Duration(minutes: 30));
+      expect(entries.last.single.canRetry, isTrue);
+      expect(old.cancellation.uploadCancelToken.isCancelled, isTrue);
+      outbox.retry(entries.last.single.id);
+      await tester.pump();
+      expect(sends, hasLength(2));
+      old.onPhase!(DmVideoSendPhase.sending);
+      old.onUploadProgress!(1);
+      old.completer.complete(_success('late'));
+      await tester.pump();
+      expect(entries.last.single.phase, OutgoingVideoDmPhase.encrypting);
+      expect(outcomes, hasLength(1));
+      sends.last.completer.complete(_success('retried'));
+      await tester.pump();
+      expect(entries.last.single.rumorEventId, 'retried');
+      expect(outcomes, hasLength(2));
+      expect(reporter.errors, isEmpty);
+    });
+
+    testWidgets(
+      'increasing upload progress refreshes inactivity but not total deadline',
+      (tester) async {
+        stubControlledSend();
+        outbox = createOutbox();
+        final entries = recordConversation('c1');
+        sendVideo();
+        await tester.pump();
+        sends.single.onPhase!(DmVideoSendPhase.uploading);
+        for (var minute = 1; minute <= 29; minute++) {
+          await tester.pump(const Duration(minutes: 1));
+          sends.single.onUploadProgress!(minute / 100);
+          expect(entries.last.single.phase, OutgoingVideoDmPhase.uploading);
+        }
+        await tester.pump(const Duration(minutes: 1));
+        expect(entries.last.single.canRetry, isTrue);
+      },
+    );
+
+    testWidgets(
+      'publication keeps its delivery result beyond preparation deadline',
+      (tester) async {
+        stubControlledSend();
+        outbox = createOutbox();
+        final entries = recordConversation('c1');
+        final outcomes = recordOutcomes();
+        sendVideo();
+        await tester.pump();
+        sends.single.onPhase!(DmVideoSendPhase.sending);
+        await tester.pump(const Duration(hours: 1));
+        expect(entries.last.single.phase, OutgoingVideoDmPhase.publishing);
+        expect(outcomes, isEmpty);
+        sends.single.completer.complete(_success('published'));
+        await tester.pump();
+        expect(entries.last.single.phase, OutgoingVideoDmPhase.sent);
+        expect(outcomes.single.status, VideoDmOutcomeStatus.sent);
+      },
+    );
+
+    testWidgets(
+      'stalled clip leaves partial batch and starts next conversation',
+      (tester) async {
+        stubControlledSend();
+        outbox = createOutbox();
+        final entries = recordConversation('c1');
+        final outcomes = recordOutcomes();
+        sendClips([_clip('one'), _clip('two'), _clip('three')]);
+        sendVideo(conversationId: 'c2');
+        await tester.pump();
+        sends.first.completer.complete(_success('one'));
+        await tester.pump();
+        sends.last.onPhase!(DmVideoSendPhase.uploading);
+        await tester.pump(const Duration(minutes: 2));
+        expect(entries.last.map((e) => e.phase), [
+          OutgoingVideoDmPhase.sent,
+          OutgoingVideoDmPhase.failed,
+          OutgoingVideoDmPhase.failed,
+        ]);
+        expect(outcomes.single.isPartial, isTrue);
+        expect(outcomes.single.sentCount, 1);
+        expect(sends, hasLength(3));
+        sends.last.completer.complete(_success('next-chat'));
+        await tester.pump();
+        expect(outcomes, hasLength(2));
+      },
+    );
+
+    testWidgets(
+      'signer timeout fails without reading service or crash reporting',
+      (tester) async {
+        final reporter = _RecordingCrashReporter();
+        outbox = createOutbox(
+          reporter: reporter,
+          waitUntilReady: (_) => Completer<void>().future,
+        );
+        final entries = recordConversation('c1');
+        final outcomes = recordOutcomes();
+        sendVideo();
+        await tester.pump();
+        expect(entries.last.single.phase, OutgoingVideoDmPhase.queued);
+        await tester.pump(const Duration(minutes: 2));
+        expect(entries.last.single.canRetry, isTrue);
+        expect(outcomes.single.status, VideoDmOutcomeStatus.failed);
+        verifyZeroInteractions(service);
+        expect(reporter.errors, isEmpty);
+      },
+    );
+
+    testWidgets(
+      'clip verification deadline releases queue and ignores late check',
+      (tester) async {
+        stubControlledSend();
+        final verification = Completer<ClipProvenanceResult>();
+        final verifier = _MockClipProvenanceVerifier();
+        when(() => verifier.verify(any()))
+            .thenAnswer((_) => verification.future);
+        outbox = createOutbox(clipVerifier: () => verifier);
+        final entries = recordConversation('c1');
+        final outcomes = recordOutcomes();
+        sendClips([_clip('one'), _clip('two')]);
+        sendVideo(conversationId: 'c2');
+        await tester.pump();
+        await tester.pump(const Duration(minutes: 30));
+        expect(entries.last.every((e) => e.canRetry), isTrue);
+        expect(sends, hasLength(1));
+        verification.complete(_verified);
+        await tester.pump();
+        expect(sends, hasLength(1));
+        expect(outcomes, hasLength(1));
+        sends.single.completer.complete(_success('next'));
+        await tester.pump();
+        expect(outcomes, hasLength(2));
+      },
+    );
+
+    testWidgets(
+      'quiesce cancels uploads but waits for an irreversible publication',
+      (tester) async {
+        stubControlledSend();
+        outbox = createOutbox();
+        sendVideo();
+        sendVideo(path: '/v/queued.mp4');
+        await tester.pump();
+        sends.single.onPhase!(DmVideoSendPhase.sending);
+        var settled = false;
+        final quiesced = outbox.quiesce().then((_) => settled = true);
+        await tester.pump(const Duration(minutes: 30));
+        expect(settled, isFalse);
+        expect(
+          sends.single.cancellation.uploadCancelToken.isCancelled,
+          isFalse,
+        );
+        sends.single.completer.complete(_success('published'));
+        await quiesced;
+        expect(settled, isTrue);
+        expect(sends, hasLength(1));
+      },
+    );
 
     group('sendVideo', () {
       setUp(() {
@@ -250,6 +458,7 @@ void main() {
             mimeType: any(named: 'mimeType'),
             onPhase: any(named: 'onPhase'),
             onUploadProgress: any(named: 'onUploadProgress'),
+            cancellation: any(named: 'cancellation'),
           ),
         ).called(1);
       });

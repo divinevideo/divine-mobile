@@ -1802,8 +1802,10 @@ class BlossomUploadService {
     String contentDescription = 'Upload video to Blossom server',
     String? proofManifestJson,
     void Function(double)? onProgress,
+    CancelToken? cancelToken,
   }) async {
     try {
+      if (cancelToken?.isCancelled ?? false) throw cancelToken!.cancelError!;
       // Validate server URL
       final uri = Uri.tryParse(serverUrl);
       if (uri == null) {
@@ -1830,6 +1832,8 @@ class BlossomUploadService {
           failureReason: BlossomUploadFailureReason.authUnavailable,
         );
       }
+
+      if (cancelToken?.isCancelled ?? false) throw cancelToken!.cancelError!;
 
       // Add ProofMode headers if manifest is provided
       final headers = <String, dynamic>{
@@ -1860,6 +1864,7 @@ class BlossomUploadService {
       final putWatch = Stopwatch()..start();
       final response = await dio.put<dynamic>(
         '$serverUrl/upload',
+        cancelToken: cancelToken,
         data: source.getStreamingBody(),
         options: Options(
           headers: headers,
@@ -3367,8 +3372,10 @@ class BlossomUploadService {
   Future<BlossomUploadResult> uploadEncryptedFile({
     required File ciphertextFile,
     void Function(double)? onProgress,
+    CancelToken? cancelToken,
   }) async {
     try {
+      if (cancelToken?.isCancelled ?? false) throw cancelToken!.cancelError!;
       if (!authProvider.isAuthenticated) {
         return const BlossomUploadResult(
           success: false,
@@ -3387,6 +3394,7 @@ class BlossomUploadService {
       BlossomUploadResult? lastError;
 
       for (final serverUrl in serverUrls) {
+        if (cancelToken?.isCancelled ?? false) throw cancelToken!.cancelError!;
         final result = await _uploadToServer(
           serverUrl: serverUrl,
           source: _FileUploadSource(ciphertextFile),
@@ -3395,8 +3403,10 @@ class BlossomUploadService {
           contentType: 'application/octet-stream',
           contentDescription: 'Upload encrypted file to Blossom server',
           onProgress: onProgress,
+          cancelToken: cancelToken,
         );
 
+        if (cancelToken?.isCancelled ?? false) throw cancelToken!.cancelError!;
         if (result.success) {
           final canonicalUrl = '$_defaultServerUrl/$fileHash';
           return BlossomUploadResult(
