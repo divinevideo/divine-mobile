@@ -6,6 +6,8 @@ import 'package:test/test.dart';
 
 void main() {
   group('VideoEvent reply metadata', () {
+    const replyRootEventId =
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
     const rootAddressableId =
         '34236:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         ':parent-d-tag';
@@ -127,8 +129,7 @@ void main() {
         title: 'Reply video',
         videoUrl: 'https://media.divine.video/reply',
         rawTags: const {
-          'E':
-              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          'E': replyRootEventId,
           'K': '34236',
           'A': rootAddressableId,
           'k': '34236',
