@@ -1,6 +1,11 @@
 // ABOUTME: Tests for opening a remix clip in the editor from a video sheet.
 // ABOUTME: Covers keeping an autosaved session as a draft and the editor push.
 
+import 'dart:async';
+import 'dart:io';
+
+import 'package:db_client/db_client.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -14,12 +19,20 @@ import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/editor_background_work.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_editor/video_editor_screen.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/widgets/video_feed_item/actions/remix_launcher.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../mocks/mock_path_provider_platform.dart';
 
 class _MockDraftStorageService extends Mock implements DraftStorageService {}
 
@@ -51,6 +64,24 @@ class _FakeVideoEditorNotifier extends VideoEditorNotifier {
 
   @override
   void triggerAutosave() {}
+}
+
+/// The real draft store, reporting when the autosave row has been deleted.
+class _ObservedDraftStorageService extends DraftStorageService {
+  _ObservedDraftStorageService({
+    required super.draftsDao,
+    required super.clipsDao,
+  });
+
+  final autosaveDeleted = Completer<void>();
+
+  @override
+  Future<void> deleteDraft(String id) async {
+    await super.deleteDraft(id);
+    if (id == VideoEditorConstants.autoSaveId && !autosaveDeleted.isCompleted) {
+      autosaveDeleted.complete();
+    }
+  }
 }
 
 DivineVideoClip _clip(String id) => DivineVideoClip(
@@ -256,5 +287,149 @@ void main() {
         expect(find.text(l10n.shareActionFailed), findsOneWidget);
       },
     );
+  });
+
+  // The group above mocks storage; this one runs the launcher against the
+  // real draft store and the real editor reset, which deletes the autosave
+  // and reaps files no draft names any more.
+  group('openRemixInEditor with real draft storage', () {
+    const openSheetLabel = 'open sheet';
+    const remixLabel = 'remix';
+
+    late Directory documents;
+    late PathProviderPlatform originalPathProvider;
+    late AppDatabase database;
+    late _ObservedDraftStorageService draftStorage;
+    late SharedPreferences preferences;
+    late ProviderContainer container;
+
+    setUp(() async {
+      documents = Directory.systemTemp.createTempSync('remix_launcher_docs');
+      originalPathProvider = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = MockPathProviderPlatform()
+        ..setApplicationDocumentsPath(documents.path);
+      database = AppDatabase.test(NativeDatabase.memory());
+      draftStorage = _ObservedDraftStorageService(
+        draftsDao: database.draftsDao,
+        clipsDao: database.clipsDao,
+      );
+      SharedPreferences.setMockInitialValues({});
+      preferences = await SharedPreferences.getInstance();
+    });
+
+    tearDown(() async {
+      PathProviderPlatform.instance = originalPathProvider;
+      await database.close();
+      if (documents.existsSync()) documents.deleteSync(recursive: true);
+    });
+
+    DivineVideoClip fileClip(String id) {
+      final file = File(p.join(documents.path, '$id.mp4'))
+        ..writeAsBytesSync(const [0, 1, 2, 3]);
+      return DivineVideoClip(
+        id: id,
+        video: EditorVideo.file(file.path),
+        duration: const Duration(seconds: 6),
+        recordedAt: DateTime.utc(2026),
+        targetAspectRatio: .square,
+        originalAspectRatio: 1,
+      );
+    }
+
+    Widget buildSubject(DivineVideoClip remixClip) {
+      return ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
+          databaseProvider.overrideWithValue(database),
+          draftStorageServiceProvider.overrideWithValue(draftStorage),
+        ],
+        child: Consumer(
+          builder: (context, ref, _) {
+            container = ProviderScope.containerOf(context);
+            return MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: GoRouter(
+                routes: [
+                  GoRoute(
+                    path: '/',
+                    builder: (context, _) => Scaffold(
+                      body: TextButton(
+                        onPressed: () => showModalBottomSheet<void>(
+                          context: context,
+                          builder: (_) => Consumer(
+                            builder: (sheetContext, ref, _) => TextButton(
+                              onPressed: () => openRemixInEditor(
+                                sheetContext,
+                                ref,
+                                remixClip,
+                              ),
+                              child: const Text(remixLabel),
+                            ),
+                          ),
+                        ),
+                        child: const Text(openSheetLabel),
+                      ),
+                    ),
+                  ),
+                  GoRoute(
+                    path: VideoEditorScreen.path,
+                    builder: (_, _) => const Scaffold(body: Text('editor')),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    testWidgets('lists the kept session as a draft and keeps its clip files', (
+      tester,
+    ) async {
+      final sessionClip = fileClip('earlier_session_clip');
+      final remixClip = fileClip('classic_vine_remix');
+      // Real storage encodes off the main isolate, so every storage await runs
+      // in real time; the sheet and the editor push still need frames.
+      await tester.runAsync(
+        () => draftStorage.saveDraft(_autosave(clips: [sessionClip])),
+      );
+
+      await tester.pumpWidget(buildSubject(remixClip));
+      await tester.tap(find.text(openSheetLabel));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        await tester.tap(find.text(remixLabel));
+        await draftStorage.autosaveDeleted.future;
+        await container.read(editorBackgroundWorkProvider).settle();
+      });
+      await tester.pumpAndSettle();
+      expect(find.text(remixLabel), findsNothing);
+      expect(container.read(clipManagerProvider).clips, [remixClip]);
+
+      await tester.runAsync(() async {
+        // The new session's debounced autosave, written now rather than after
+        // the test has torn the database down.
+        await container
+            .read(videoEditorProvider.notifier)
+            .flushPendingAutosave();
+        await container.read(editorBackgroundWorkProvider).settle();
+
+        final summaries = await draftStorage.getDraftSummaries();
+        final kept = summaries
+            .where((draft) => draft.id != VideoEditorConstants.autoSaveId)
+            .toList();
+        expect(kept, hasLength(1));
+        expect(kept.single.title, 'Half-finished idea');
+        expect(kept.single.publishStatus, PublishStatus.draft);
+        expect(kept.single.clipCount, 1);
+        final keptDraft = await draftStorage.getDraftById(kept.single.id);
+        expect(keptDraft!.clips.map((clip) => clip.id), [sessionClip.id]);
+      });
+      expect(
+        File(p.join(documents.path, '${sessionClip.id}.mp4')).existsSync(),
+        isTrue,
+      );
+    });
   });
 }
