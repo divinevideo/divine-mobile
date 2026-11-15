@@ -976,6 +976,26 @@ void main() {
       );
 
       blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        "refuses a classic Vine when its creator's account blocks remixing",
+        setUp: () {
+          testVideo = testVideo.copyWith(rawTags: const {'platform': 'vine'});
+          when(
+            () => mockRemixConsentRepository.consentFor(any()),
+          ).thenAnswer((_) async => RemixConsent.blocked);
+        },
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) => bloc.add(const VideoContentAddToClipsRequested()),
+        expect: () => [checking, refusedWith(RemixConsent.blocked)],
+        verify: (_) {
+          expect(testVideo.isOriginalVine, isTrue);
+          verify(
+            () => mockRemixConsentRepository.consentFor(testVideo.pubkey),
+          ).called(1);
+          verifyZeroInteractions(mockImporter);
+        },
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
         'refuses without importing when consent cannot be read',
         setUp: () {
           when(
@@ -1301,6 +1321,26 @@ void main() {
         expect: () => [preparing, refusedWith(RemixConsent.blocked)],
         verify: (_) {
           verifyNever(() => mockRemixConsentRepository.consentFor(any()));
+          verifyZeroInteractions(mockImporter);
+        },
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        "refuses a classic Vine when its creator's account blocks remixing",
+        setUp: () {
+          testVideo = testVideo.copyWith(rawTags: const {'platform': 'vine'});
+          when(
+            () => mockRemixConsentRepository.consentFor(any()),
+          ).thenAnswer((_) async => RemixConsent.blocked);
+        },
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) => bloc.add(const VideoContentRemixRequested()),
+        expect: () => [preparing, refusedWith(RemixConsent.blocked)],
+        verify: (_) {
+          expect(testVideo.isOriginalVine, isTrue);
+          verify(
+            () => mockRemixConsentRepository.consentFor(testVideo.pubkey),
+          ).called(1);
           verifyZeroInteractions(mockImporter);
         },
       );
