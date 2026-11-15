@@ -317,6 +317,7 @@ final class ClipsLibraryState extends Equatable {
     this.status = ClipsLibraryStatus.initial,
     this.clips = const [],
     this.sortedClips = const [],
+    this.sortedClipsByScope = const {},
     this.trashedClips = const [],
     this.selectedClipIds = const {},
     this.disabledClipIds = const {},
@@ -348,6 +349,14 @@ final class ClipsLibraryState extends Equatable {
 
   /// [clips] sorted by the current [clipSort] for display.
   final List<DivineVideoClip> sortedClips;
+
+  /// What [sortedClips] would be in each [ClipOwnershipScope], under the same
+  /// [filter] and [clipSort]. Empty until the clips first load.
+  ///
+  /// The library's two clip tabs share this bloc, and a swipe between them
+  /// draws both at once. Each tab reads its own list through [sortedClipsFor]
+  /// so the incoming page is never blank while the scope catches up.
+  final Map<ClipOwnershipScope, List<DivineVideoClip>> sortedClipsByScope;
 
   /// Clips currently in trash, newest-deleted-first.
   final List<DivineVideoClip> trashedClips;
@@ -450,6 +459,11 @@ final class ClipsLibraryState extends Equatable {
   /// the bloc's lifetime.
   final String? viewerPubkey;
 
+  /// The clips the tab for [scope] shows: [sortedClips] for the active
+  /// [scope], or that scope's list from [sortedClipsByScope] otherwise.
+  List<DivineVideoClip> sortedClipsFor(ClipOwnershipScope scope) =>
+      scope == this.scope ? sortedClips : sortedClipsByScope[scope] ?? const [];
+
   /// Whether [clip] belongs to the active [scope].
   bool scopeAdmits(DivineVideoClip clip) =>
       scope?.admits(clip, viewerPubkey) ?? true;
@@ -540,6 +554,7 @@ final class ClipsLibraryState extends Equatable {
     ClipsLibraryStatus? status,
     List<DivineVideoClip>? clips,
     List<DivineVideoClip>? sortedClips,
+    Map<ClipOwnershipScope, List<DivineVideoClip>>? sortedClipsByScope,
     List<DivineVideoClip>? trashedClips,
     Set<String>? selectedClipIds,
     Set<String>? disabledClipIds,
@@ -567,6 +582,7 @@ final class ClipsLibraryState extends Equatable {
       status: status ?? this.status,
       clips: clips ?? this.clips,
       sortedClips: sortedClips ?? this.sortedClips,
+      sortedClipsByScope: sortedClipsByScope ?? this.sortedClipsByScope,
       trashedClips: trashedClips ?? this.trashedClips,
       selectedClipIds: selectedClipIds ?? this.selectedClipIds,
       disabledClipIds: disabledClipIds ?? this.disabledClipIds,
@@ -608,6 +624,7 @@ final class ClipsLibraryState extends Equatable {
     status,
     clips,
     sortedClips,
+    sortedClipsByScope,
     trashedClips,
     selectedClipIds,
     disabledClipIds,

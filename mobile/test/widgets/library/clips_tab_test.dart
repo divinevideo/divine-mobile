@@ -109,14 +109,18 @@ void main() {
         expect(find.byType(VideoClipThumbnailCard), findsOneWidget);
       });
 
-      testWidgets('nothing while the bloc shows another scope', (
+      testWidgets("its own scope's clips while the bloc shows another", (
         tester,
       ) async {
         when(() => mockBloc.state).thenReturn(
           ClipsLibraryState(
             status: ClipsLibraryStatus.loaded,
-            clips: [clip1],
+            clips: [clip1, clip2],
             sortedClips: [clip1],
+            sortedClipsByScope: {
+              ClipOwnershipScope.own: [clip1],
+              ClipOwnershipScope.fromOthers: [clip2],
+            },
             scope: ClipOwnershipScope.own,
           ),
         );
@@ -125,8 +129,29 @@ void main() {
           buildWidget(scope: ClipOwnershipScope.fromOthers),
         );
 
-        expect(find.byType(VideoClipThumbnailCard), findsNothing);
-        expect(find.byType(EmptyLibraryState), findsNothing);
+        final cards = tester.widgetList<VideoClipThumbnailCard>(
+          find.byType(VideoClipThumbnailCard),
+        );
+        expect(cards.map((card) => card.clip.id), ['clip2']);
+      });
+
+      testWidgets('nothing in the trash while the bloc shows another scope', (
+        tester,
+      ) async {
+        when(() => mockBloc.state).thenReturn(
+          ClipsLibraryState(
+            status: ClipsLibraryStatus.trashLoaded,
+            filter: const ClipLibraryTrashFilter(),
+            trashedClips: [clip1],
+            scope: ClipOwnershipScope.own,
+          ),
+        );
+
+        await tester.pumpWidget(
+          buildWidget(scope: ClipOwnershipScope.fromOthers),
+        );
+
+        expect(find.byType(TrashedClipsList), findsNothing);
       });
 
       testWidgets('loading indicator when loading', (tester) async {

@@ -620,6 +620,30 @@ void main() {
         expect(find.byType(VideoClipThumbnailCard), findsOneWidget);
       });
 
+      testWidgets("shows both tabs' clips while a swipe is in progress", (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(initialTabIndex: 1));
+        await tester.pumpAndSettle();
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(TabBarView)),
+        );
+        await gesture.moveBy(const Offset(-40, 0));
+        await gesture.moveBy(const Offset(-160, 0));
+        await tester.pump();
+
+        final shown = tester
+            .widgetList<VideoClipThumbnailCard>(
+              find.byType(VideoClipThumbnailCard),
+            )
+            .map((card) => card.clip.id);
+        expect(shown, unorderedEquals(['clip_1_0', 'classic_vine_abc_1']));
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
+
       testWidgets('opens on From others at its tab index', (tester) async {
         await tester.pumpWidget(buildWidget(initialTabIndex: 2));
         await tester.pumpAndSettle();

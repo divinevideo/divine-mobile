@@ -796,7 +796,6 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
           );
           final selectionEnabled = _isSelectionEnabled(clipsState);
 
-          final sortedClips = clipsState.sortedClips;
           // Bulk move and delete run on this rather than the whole selection,
           // which can reach across filters into clips the grid is not showing.
           // Building a video is the exception — spanning categories is the
@@ -924,7 +923,6 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                             selectionMode: widget.selectionMode,
                             scrollController: widget.scrollController,
                             targetAspectRatio: targetAspectRatio,
-                            sortedClips: sortedClips,
                             selectionEnabled: selectionEnabled,
                             // Standalone library only: the recorder's library
                             // is for picking up clips, and a scheduled post is
@@ -988,7 +986,6 @@ class _LibraryContent extends StatelessWidget {
     required this.tabs,
     required this.tabController,
     required this.selectionMode,
-    required this.sortedClips,
     required this.selectionEnabled,
     required this.onCreateVideo,
     this.scrollController,
@@ -1000,7 +997,6 @@ class _LibraryContent extends StatelessWidget {
   final List<_LibraryTab> tabs;
   final TabController tabController;
   final bool selectionMode;
-  final List<DivineVideoClip> sortedClips;
   final bool selectionEnabled;
   final VoidCallback onCreateVideo;
   final ScrollController? scrollController;
@@ -1052,7 +1048,6 @@ class _LibraryContent extends StatelessWidget {
                   onCreate: onCreateVideo,
                 )
               : _TabBody(
-                  clips: sortedClips,
                   selectionEnabled: selectionEnabled,
                   tabs: tabs,
                   tabController: tabController,
@@ -1319,7 +1314,6 @@ class _TabBody extends StatefulWidget {
     required this.showScheduledSection,
     required this.tabController,
     required this.tabs,
-    required this.clips,
     required this.selectionEnabled,
     required this.backgroundColor,
     this.targetAspectRatio,
@@ -1327,7 +1321,6 @@ class _TabBody extends StatefulWidget {
 
   final TabController tabController;
   final List<_LibraryTab> tabs;
-  final List<DivineVideoClip> clips;
   final bool selectionEnabled;
   final Color backgroundColor;
 
@@ -1384,7 +1377,6 @@ class _TabBodyState extends State<_TabBody> {
                 showScheduledSection: widget.showScheduledSection,
               ),
               _LibraryTab.clips || _LibraryTab.fromOthers => ClipsTab(
-                clips: widget.clips,
                 scope: tab.clipScope,
                 selectionEnabled: widget.selectionEnabled,
                 targetAspectRatio: widget.targetAspectRatio,

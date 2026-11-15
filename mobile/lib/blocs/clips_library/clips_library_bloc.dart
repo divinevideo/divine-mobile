@@ -186,6 +186,20 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     ], sort);
   }
 
+  /// [_visibleClips] for every [ClipOwnershipScope], so the tab that is not
+  /// active still has its clips to draw while a swipe brings it into view,
+  /// and a scope switch only has to pick one.
+  Map<ClipOwnershipScope, List<DivineVideoClip>> _visibleClipsByScope(
+    List<DivineVideoClip> clips,
+    ClipLibraryFilter filter,
+    ClipSort sort,
+  ) {
+    return {
+      for (final scope in ClipOwnershipScope.values)
+        scope: _visibleClips(clips, filter, sort, scope: scope),
+    };
+  }
+
   /// Total duration of the clips in [ids], ignoring ids [clips] has no clip
   /// for.
   static Duration _totalDuration(List<DivineVideoClip> clips, Set<String> ids) {
@@ -234,6 +248,11 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
           categories: categories,
           filter: filter,
           sortedClips: _visibleClips(clips, filter, state.clipSort),
+          sortedClipsByScope: _visibleClipsByScope(
+            clips,
+            filter,
+            state.clipSort,
+          ),
           selectedClipIds: preSelectedIds,
           preSelectedIds: event.preSelectedIds,
           disabledClipIds: event.disabledClipIds,
@@ -460,6 +479,11 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
           status: ClipsLibraryStatus.loaded,
           clips: clips,
           sortedClips: _visibleClips(clips, state.filter, state.clipSort),
+          sortedClipsByScope: _visibleClipsByScope(
+            clips,
+            state.filter,
+            state.clipSort,
+          ),
           selectedClipIds: remainingIds,
           selectedDuration: _totalDuration(clips, remainingIds),
           lastDeletedCount: deletedCount,
@@ -518,6 +542,11 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
           status: ClipsLibraryStatus.loaded,
           clips: clips,
           sortedClips: _visibleClips(clips, state.filter, state.clipSort),
+          sortedClipsByScope: _visibleClipsByScope(
+            clips,
+            state.filter,
+            state.clipSort,
+          ),
           selectedClipIds: selectedIds,
           selectedDuration: selectedDuration,
           lastDeletedCount: 1,
@@ -569,6 +598,11 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
         state.copyWith(
           clips: clips,
           sortedClips: _visibleClips(clips, state.filter, state.clipSort),
+          sortedClipsByScope: _visibleClipsByScope(
+            clips,
+            state.filter,
+            state.clipSort,
+          ),
           selectedClipIds: selectedClipIds,
           selectedDuration: selectedClipIds.fold<Duration>(
             Duration.zero,
@@ -640,6 +674,11 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
       state.copyWith(
         clipSort: event.sort,
         sortedClips: _visibleClips(state.clips, state.filter, event.sort),
+        sortedClipsByScope: _visibleClipsByScope(
+          state.clips,
+          state.filter,
+          event.sort,
+        ),
       ),
     );
   }
@@ -856,6 +895,11 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
       state.copyWith(
         filter: event.filter,
         sortedClips: _visibleClips(state.clips, event.filter, state.clipSort),
+        sortedClipsByScope: _visibleClipsByScope(
+          state.clips,
+          event.filter,
+          state.clipSort,
+        ),
         selectedClipIds: crossesTrashBoundary ? const {} : null,
         selectedDuration: crossesTrashBoundary ? Duration.zero : null,
         clearOrganizeResult: true,
@@ -882,12 +926,8 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     emit(
       state.copyWith(
         scope: event.scope,
-        sortedClips: _visibleClips(
-          state.clips,
-          state.filter,
-          state.clipSort,
-          scope: event.scope,
-        ),
+        // Both scopes' lists are already sorted; the switch only picks one.
+        sortedClips: state.sortedClipsFor(event.scope),
         // The other scope's trash must not show while this one's loads.
         trashedClips: state.isShowingTrash ? const [] : null,
         clearOrganizeResult: true,
@@ -1083,6 +1123,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
         categories: categories,
         filter: filter,
         sortedClips: _visibleClips(clips, filter, state.clipSort),
+        sortedClipsByScope: _visibleClipsByScope(clips, filter, state.clipSort),
         selectedClipIds: selectedIds,
         selectedDuration: _totalDuration(clips, selectedIds),
         lastOrganizeResult: result,
@@ -1124,6 +1165,11 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
             : ClipsLibraryStatus.loaded,
         clips: clips,
         sortedClips: _visibleClips(clips, state.filter, state.clipSort),
+        sortedClipsByScope: _visibleClipsByScope(
+          clips,
+          state.filter,
+          state.clipSort,
+        ),
         trashedClips: trashed,
         clearDeletedClipIds: true,
         lastTrashResult: trashResult,

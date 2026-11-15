@@ -366,7 +366,13 @@ void main() {
         act: (bloc) => bloc.add(const ClipsLibraryLoadRequested()),
         expect: () => [
           const ClipsLibraryState(status: ClipsLibraryStatus.loading),
-          const ClipsLibraryState(status: ClipsLibraryStatus.loaded),
+          const ClipsLibraryState(
+            status: ClipsLibraryStatus.loaded,
+            sortedClipsByScope: {
+              ClipOwnershipScope.own: [],
+              ClipOwnershipScope.fromOthers: [],
+            },
+          ),
         ],
       );
 
@@ -2255,6 +2261,48 @@ void main() {
           expect(bloc.state.sortedClips.map((c) => c.id), [
             'classic_vine_abc_1',
           ]);
+        },
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        "keeps the other scope's clips ready for its tab",
+        setUp: stubLoad,
+        build: createScopedBloc,
+        act: (bloc) => bloc.add(const ClipsLibraryLoadRequested()),
+        verify: (bloc) {
+          expect(bloc.state.scope, ClipOwnershipScope.own);
+          expect(
+            bloc.state.sortedClipsFor(ClipOwnershipScope.own).map((c) => c.id),
+            unorderedEquals(['clip_1_0', 'merged_1']),
+          );
+          expect(
+            bloc.state
+                .sortedClipsFor(ClipOwnershipScope.fromOthers)
+                .map((c) => c.id),
+            ['classic_vine_abc_1'],
+          );
+        },
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        "the filter applies to the other scope's clips too",
+        setUp: stubLoad,
+        build: createScopedBloc,
+        act: (bloc) async {
+          bloc.add(const ClipsLibraryLoadRequested());
+          await pumpEventQueue();
+          bloc.add(
+            const ClipsLibraryFilterChanged(ClipLibraryArchiveFilter()),
+          );
+        },
+        verify: (bloc) {
+          expect(bloc.state.sortedClipsFor(ClipOwnershipScope.own), isEmpty);
+          expect(
+            bloc.state
+                .sortedClipsFor(ClipOwnershipScope.fromOthers)
+                .map((c) => c.id),
+            ['classic_vine_def_1'],
+          );
         },
       );
 
