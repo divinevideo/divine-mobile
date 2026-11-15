@@ -150,6 +150,7 @@ class VideoContentActionsBloc
     VideoContentSaveRequested event,
     Emitter<VideoContentActionsState> emit,
   ) async {
+    if (state.isActionInFlight) return;
     // Emitted before the toggle deliberately: it is a relay reconcile + sign
     // + publish, and emitting after it would leave the sheet inert for the
     // whole window, which is the bug (#7073).
@@ -239,6 +240,7 @@ class VideoContentActionsBloc
     VideoContentAddToClipsRequested event,
     Emitter<VideoContentActionsState> emit,
   ) async {
+    if (state.isActionInFlight) return;
     // Emitted before the import so the action shows progress while the video
     // downloads.
     emit(state.copyWith(isImportingClip: true, clearActionResult: true));
@@ -317,13 +319,13 @@ class VideoContentActionsBloc
   ///
   /// [VideoContentActionsState.isPreparingRemix] stays set with the ready
   /// result, holding the sheet's actions while the UI opens the editor, until
-  /// [VideoContentRemixLaunchFinished]. A request arriving meanwhile is
-  /// ignored.
+  /// [VideoContentRemixLaunchFinished]. Like every action, a request arriving
+  /// while any action is in flight is ignored.
   Future<void> _onRemixRequested(
     VideoContentRemixRequested event,
     Emitter<VideoContentActionsState> emit,
   ) async {
-    if (state.isPreparingRemix) return;
+    if (state.isActionInFlight) return;
     emit(state.copyWith(isPreparingRemix: true, clearActionResult: true));
 
     final consent = await _remixConsent();

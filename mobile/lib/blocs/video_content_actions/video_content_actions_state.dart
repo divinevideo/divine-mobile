@@ -124,7 +124,8 @@ class VideoContentActionsState extends Equatable {
   final bool isPreparingRemix;
 
   /// Whether a content action is running. Each one closes the sheet when it
-  /// finishes, so while one runs the sheet holds the others.
+  /// finishes, so while one runs the sheet holds the others and the bloc
+  /// ignores their requests.
   bool get isActionInFlight => isSaving || isImportingClip || isPreparingRemix;
 
   /// Whether this video is already globally bookmarked, per a reconciled read.

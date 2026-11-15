@@ -166,6 +166,113 @@ void main() {
         ).called(1),
       );
 
+      final saving = isA<VideoContentActionsState>()
+          .having((s) => s.isSaving, 'isSaving', isTrue)
+          .having((s) => s.isImportingClip, 'isImportingClip', isFalse)
+          .having((s) => s.isPreparingRemix, 'isPreparingRemix', isFalse);
+
+      final saved = isA<VideoContentActionsState>()
+          .having((s) => s.isActionInFlight, 'isActionInFlight', isFalse)
+          .having(
+            (s) => s.actionResult,
+            'actionResult',
+            isA<VideoContentSaveResult>(),
+          );
+
+      const savedToggle = BookmarkToggleResult(
+        succeeded: true,
+        wasBookmarked: false,
+        isBookmarked: true,
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'ignores a save while a clip import is in flight',
+        build: () {
+          when(
+            () => importer.importToLibrary(
+              any(),
+              libraryTitle: any(named: 'libraryTitle'),
+            ),
+          ).thenAnswer((_) => importCompleter.future);
+          return createBloc(videoClipImportService: importer);
+        },
+        act: (bloc) async {
+          bloc.add(const VideoContentAddToClipsRequested());
+          await pumpEventQueue();
+          bloc.add(const VideoContentSaveRequested());
+          await pumpEventQueue();
+          importCompleter.complete(VideoClipImportSuccess(_clip()));
+        },
+        expect: () => [
+          isA<VideoContentActionsState>()
+              .having((s) => s.isImportingClip, 'isImportingClip', isTrue)
+              .having((s) => s.isSaving, 'isSaving', isFalse),
+          isA<VideoContentActionsState>()
+              .having((s) => s.isActionInFlight, 'isActionInFlight', isFalse)
+              .having(
+                (s) => s.actionResult,
+                'actionResult',
+                isA<VideoContentClipImportResult>(),
+              ),
+        ],
+        verify: (_) => verifyNever(
+          () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+            any(),
+            addressableId: any(named: 'addressableId'),
+          ),
+        ),
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'ignores add to clips while a save is in flight',
+        build: () {
+          when(
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
+          ).thenAnswer((_) => toggleCompleter.future);
+          return createBloc(videoClipImportService: importer);
+        },
+        act: (bloc) async {
+          bloc.add(const VideoContentSaveRequested());
+          await pumpEventQueue();
+          bloc.add(const VideoContentAddToClipsRequested());
+          await pumpEventQueue();
+          toggleCompleter.complete(savedToggle);
+        },
+        expect: () => [saving, saved],
+        verify: (_) {
+          verifyNever(() => mockRemixConsentRepository.consentFor(any()));
+          verifyZeroInteractions(importer);
+        },
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'ignores a remix while a save is in flight',
+        build: () {
+          when(
+            () => mockBookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
+          ).thenAnswer((_) => toggleCompleter.future);
+          return createBloc(videoClipImportService: importer);
+        },
+        act: (bloc) async {
+          bloc.add(const VideoContentSaveRequested());
+          await pumpEventQueue();
+          bloc.add(const VideoContentRemixRequested());
+          await pumpEventQueue();
+          toggleCompleter.complete(savedToggle);
+        },
+        expect: () => [saving, saved],
+        verify: (_) {
+          verifyNever(() => mockRemixConsentRepository.consentFor(any()));
+          verifyZeroInteractions(importer);
+        },
+      );
+
       test(
         'close during an in-flight toggle drops the late result without error',
         () async {
