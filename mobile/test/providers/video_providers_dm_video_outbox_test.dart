@@ -15,6 +15,7 @@ import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/dm_video_send_cancellation.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
+import 'package:openvine/services/video_dm_outbox.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -74,6 +75,31 @@ void main() {
     container.read(_signedIn.notifier).state = first;
     ready(container, first);
     return container;
+  }
+
+  /// Ways the originating session can end while the signed-in account stays
+  /// the same, each of which must stop that session's sends.
+  final sessionEnds = <String, void Function(ProviderContainer)>{
+    'signs out': (container) => container
+        .read(nostrSessionProvider.notifier)
+        .update(const NostrSessionReadiness.signedOut()),
+    'tears down': (container) => container
+        .read(nostrSessionProvider.notifier)
+        .update(NostrSessionReadiness.tearingDown(pubkey: first)),
+    'becomes ready under another pubkey': (container) =>
+        ready(container, second),
+  };
+
+  List<List<OutgoingVideoDm>> recordConversation(
+    VideoDmOutbox outbox,
+    String conversationId,
+  ) {
+    final events = <List<OutgoingVideoDm>>[];
+    final subscription = outbox
+        .watchConversation(conversationId)
+        .listen(events.add);
+    addTearDown(subscription.cancel);
+    return events;
   }
 
   group('videoDmOutboxProvider', () {
@@ -249,5 +275,78 @@ void main() {
         );
       },
     );
+
+    group('cancels the upload in flight when the session', () {
+      for (final MapEntry(key: label, value: endSession)
+          in sessionEnds.entries) {
+        test(label, () async {
+          final container = buildContainer();
+          final service = container.read(
+            dmVideoSendServiceProvider,
+          ) as _MockDmVideoSendService;
+          final attempts = <DmVideoSendCancellation>[];
+          when(
+            () => service.sendVideo(
+              recipientPubkey: any(named: 'recipientPubkey'),
+              videoFile: any(named: 'videoFile'),
+              mimeType: any(named: 'mimeType'),
+              extraTags: any(named: 'extraTags'),
+              onPhase: any(named: 'onPhase'),
+              onUploadProgress: any(named: 'onUploadProgress'),
+              cancellation: any(named: 'cancellation'),
+            ),
+          ).thenAnswer((invocation) {
+            attempts.add(
+              invocation.namedArguments[#cancellation]
+                  as DmVideoSendCancellation,
+            );
+            return Completer<NIP17SendResult>().future;
+          });
+          final outbox = container.read(videoDmOutboxProvider);
+          final entries = recordConversation(outbox, 'c');
+          outbox.sendVideo(
+            conversationId: 'c',
+            recipientPubkey: second,
+            file: File('/v/a.mp4'),
+          );
+          await pumpEventQueue();
+          expect(attempts, hasLength(1));
+          expect(attempts.single.uploadCancelToken.isCancelled, isFalse);
+
+          endSession(container);
+          await pumpEventQueue();
+
+          expect(attempts.single.uploadCancelToken.isCancelled, isTrue);
+          expect(entries.last.single.phase, OutgoingVideoDmPhase.failed);
+          expect(entries.last.single.canRetry, isTrue);
+        });
+      }
+    });
+
+    group('fails at once, without reading the send service, a send started '
+        'after the session', () {
+      for (final MapEntry(key: label, value: endSession)
+          in sessionEnds.entries) {
+        test(label, () async {
+          final container = buildContainer();
+          final outbox = container.read(videoDmOutboxProvider);
+          final entries = recordConversation(outbox, 'c');
+          endSession(container);
+
+          outbox.sendVideo(
+            conversationId: 'c',
+            recipientPubkey: second,
+            file: File('/v/a.mp4'),
+          );
+          // No time passes: the signer readiness deadline cannot be what
+          // ends the send.
+          await pumpEventQueue();
+
+          expect(entries.last.single.phase, OutgoingVideoDmPhase.failed);
+          expect(entries.last.single.canRetry, isTrue);
+          expect(container.exists(dmVideoSendServiceProvider), isFalse);
+        });
+      }
+    });
   });
 }
