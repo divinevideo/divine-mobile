@@ -17,6 +17,8 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
+import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/services/video_dm_outbox.dart';
 import 'package:openvine/startup/video_dm_send_outcome_listener.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -153,10 +155,10 @@ void main() {
     ) async {
       final router = GoRouter(
         navigatorKey: NavigatorKeys.root,
-        initialLocation: '/inbox/conversation/chat',
+        initialLocation: const ConversationRouteData(id: 'chat').location,
         routes: [
           GoRoute(
-            path: '/inbox/conversation/:id',
+            path: ConversationPage.pathPattern,
             builder: (_, _) => const Scaffold(body: SizedBox()),
           ),
         ],
