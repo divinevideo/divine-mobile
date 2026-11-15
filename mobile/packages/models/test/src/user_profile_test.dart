@@ -1156,6 +1156,15 @@ void main() {
         );
       });
 
+      test('is true for the string false, which is not a JSON false', () {
+        expect(
+          profileWith(
+            const {divineAllowVideoReuseKey: 'false'},
+          ).allowsVideoReuse,
+          isTrue,
+        );
+      });
+
       test('reads the key from a kind 0 event', () {
         final event = Event(
           testPubkey,
