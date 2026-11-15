@@ -11,6 +11,7 @@ import 'package:divine_ui/divine_ui.dart' show colorFromArgb32;
 import 'package:models/models.dart'
     as model
     show AspectRatio, ClipSourceCredit, EqualizerSettings, VideoStickerRegion;
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -143,7 +144,9 @@ class DivineVideoClip {
   /// An import crediting nobody is footage the viewer recorded coming back.
   bool isFromOthers(String? viewerPubkey) {
     final author = sourceAuthorPubkey;
-    return isImportedClip && author != null && author != viewerPubkey;
+    return isImportedClip &&
+        author != null &&
+        (viewerPubkey == null || !pubkeysEqual(author, viewerPubkey));
   }
 
   /// Rendered video for a normal clip, or `null` for a stop-motion clip whose

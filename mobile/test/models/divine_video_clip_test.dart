@@ -1333,6 +1333,19 @@ void main() {
         expect(clip.isFromOthers(viewer), isFalse);
       });
 
+      test('is false for an import crediting the viewer in another case', () {
+        const viewerHex =
+            'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
+        final clip = creditedClip(
+          id: 'video_abc_1',
+          importedSource: true,
+          author: viewerHex.toUpperCase(),
+        );
+
+        expect(clip.sourceAuthorPubkey, isNot(viewerHex));
+        expect(clip.isFromOthers(viewerHex), isFalse);
+      });
+
       test('is false for an import that credits nobody', () {
         final clip = creditedClip(
           id: 'dm_clip_abc',
