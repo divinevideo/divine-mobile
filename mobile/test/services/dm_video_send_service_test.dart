@@ -34,6 +34,24 @@ class _MockDmVideoEncryption extends Mock implements DmVideoEncryption {}
 
 class _MockFile extends Mock implements File {}
 
+// Observe real filesystem completion without making the send await cleanup.
+class _ObservedCiphertextFile extends _MockFile {
+  _ObservedCiphertextFile(File file, {Future<void>? deleteGate}) {
+    when(lengthSync).thenAnswer((_) => file.lengthSync());
+    when(existsSync).thenAnswer((_) => file.existsSync());
+    when(delete).thenAnswer((_) async {
+      deleteStarted.complete();
+      if (deleteGate != null) await deleteGate;
+      final result = await file.delete();
+      deleted.complete();
+      return result;
+    });
+  }
+
+  final deleteStarted = Completer<void>();
+  final deleted = Completer<void>();
+}
+
 const _recipientPubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
 const _ciphertextHash =
@@ -72,9 +90,12 @@ void main() {
     }
   });
 
-  File ciphertextFile() =>
-      File('${tempDir.path}/$_ciphertextHash')
-        ..writeAsBytesSync(const [1, 2, 3, 4]);
+  _ObservedCiphertextFile ciphertextFile({Future<void>? deleteGate}) =>
+      _ObservedCiphertextFile(
+        File('${tempDir.path}/$_ciphertextHash')
+          ..writeAsBytesSync(const [1, 2, 3, 4]),
+        deleteGate: deleteGate,
+      );
 
   EncryptedVideoFile encryptedVideo(File file) => EncryptedVideoFile(
     ciphertextFile: file,
@@ -208,10 +229,8 @@ void main() {
         expect(sentMetadata!.blurhash, 'LEHV6nWB2yk8');
         expect(sentMetadata!.thumbnailUrl, isNull);
 
-        // The delete is fire-and-forget now, so the sent flip is not held
-        // across it (see the handoff ordering test below); wait for the
-        // cleanup instead of requiring it to predate the result.
-        await pumpEventQueue();
+        // Cleanup is detached from the sent flip; wait for actual file I/O.
+        await ciphertext.deleted.future;
         expect(ciphertext.existsSync(), isFalse);
       },
     );
@@ -487,7 +506,7 @@ void main() {
         final ciphertext = ciphertextFile();
         encrypted.complete(encryptedVideo(ciphertext));
         await failure;
-        await pumpEventQueue();
+        await ciphertext.deleted.future;
         expect(ciphertext.existsSync(), isFalse);
         verifyZeroInteractions(blossom);
         verifyZeroInteractions(dmRepository);
@@ -530,7 +549,7 @@ void main() {
           ),
           throwsA(isA<DmVideoSendCancelled>()),
         );
-        await pumpEventQueue();
+        await ciphertext.deleted.future;
         expect(ciphertext.existsSync(), isFalse);
         verifyZeroInteractions(dmRepository);
       },
@@ -540,8 +559,10 @@ void main() {
       'cancellation deletes ciphertext while an upload future is still pending',
       () async {
         final video = File('${tempDir.path}/stalled.mp4');
-        final ciphertext = ciphertextFile();
+        final deleteGate = Completer<void>();
+        final ciphertext = ciphertextFile(deleteGate: deleteGate.future);
         final upload = Completer<BlossomUploadResult>();
+        final uploadStarted = Completer<void>();
         when(() => encryption.encryptFile(video))
             .thenAnswer((_) async => encryptedVideo(ciphertext));
         when(
@@ -551,7 +572,10 @@ void main() {
             onUploadAttempt: any(named: 'onUploadAttempt'),
             onProgress: any(named: 'onProgress'),
           ),
-        ).thenAnswer((_) => upload.future);
+        ).thenAnswer((_) {
+          uploadStarted.complete();
+          return upload.future;
+        });
         final attempt = DmVideoSendCancellation();
         addTearDown(attempt.finish);
         final result = createService().sendVideo(
@@ -564,13 +588,19 @@ void main() {
           result,
           throwsA(isA<DmVideoSendCancelled>()),
         );
-        await pumpEventQueue();
+        await uploadStarted.future;
         attempt.cancel('disposed');
-        await pumpEventQueue();
         try {
+          await ciphertext.deleteStarted.future;
+          expect(ciphertext.existsSync(), isTrue);
+          expect(upload.isCompleted, isFalse);
+          deleteGate.complete();
+          await ciphertext.deleted.future;
           expect(ciphertext.existsSync(), isFalse);
+          expect(upload.isCompleted, isFalse);
           verifyZeroInteractions(dmRepository);
         } finally {
+          if (!deleteGate.isCompleted) deleteGate.complete();
           upload.complete(
             const BlossomUploadResult(
               success: true,
@@ -617,6 +647,7 @@ void main() {
           fileMetadata: any(named: 'fileMetadata'),
         ),
       );
+      await ciphertext.deleted.future;
       expect(ciphertext.existsSync(), isFalse);
     });
 
@@ -651,6 +682,7 @@ void main() {
             fileMetadata: any(named: 'fileMetadata'),
           ),
         );
+        await ciphertext.deleted.future;
         expect(ciphertext.existsSync(), isFalse);
       },
     );
