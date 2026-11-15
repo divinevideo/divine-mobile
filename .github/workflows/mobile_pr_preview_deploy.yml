@@ -70,7 +70,20 @@ jobs:
               owner: context.repo.owner, repo: context.repo.repo,
               commit_sha: metadata.build_sha,
             });
-            const provenance = previewProvenance({ run, pr, metadata, commit, associatedPulls });
+            // GitHub merges the PR head into main's tip at event time, so the
+            // first parent need only be a commit main contains.
+            let firstParentComparison;
+            const firstParent = commit.parents.length === 2 ? commit.parents[0].sha : '';
+            if (/^[a-f0-9]{40}$/.test(firstParent)) {
+              const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({
+                owner: context.repo.owner, repo: context.repo.repo,
+                basehead: `${firstParent}...main`, per_page: 1,
+              });
+              firstParentComparison = comparison.status;
+            }
+            const provenance = previewProvenance({
+              run, pr, metadata, commit, firstParentComparison, associatedPulls,
+            });
             core.setOutput('pr_number', provenance.prNumber);
             core.setOutput('head_ref', provenance.headRef);
             core.setOutput('head_sha', provenance.headSha);

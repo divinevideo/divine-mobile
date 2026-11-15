@@ -1,8 +1,30 @@
 // This helper runs from the trusted default-branch deployment workflow.
 const BUILD_WORKFLOW_PATH = '.github/workflows/mobile_pr_preview_build.yml';
 const SHA_PATTERN = /^[a-f0-9]{40}$/;
+// compareCommitsWithBasehead(`${firstParent}...main`) statuses meaning main
+// contains the first parent.
+const ON_MAIN_STATUSES = new Set(['ahead', 'identical']);
+const GITHUB_COMMITTER_EMAIL = 'noreply@github.com';
 
-function previewProvenance({ run, pr, metadata, commit, associatedPulls = [] }) {
+// GitHub builds pull_request runs on a test merge of the PR head into main's
+// tip at event time, so the first parent is any commit main contains, not the
+// PR's recorded base.sha. Fork runs carry an untrusted artifact, so they also
+// require the merge to be GitHub's own signed commit.
+function isGitHubTestMerge(commit) {
+  return (
+    commit.verification?.verified === true &&
+    commit.committer?.email === GITHUB_COMMITTER_EMAIL
+  );
+}
+
+function previewProvenance({
+  run,
+  pr,
+  metadata,
+  commit,
+  firstParentComparison,
+  associatedPulls = [],
+}) {
   const association = run.pull_requests?.find((p) => p.number === pr.number);
   const fallback =
     !association &&
@@ -27,10 +49,9 @@ function previewProvenance({ run, pr, metadata, commit, associatedPulls = [] }) 
     !SHA_PATTERN.test(build) ||
     commit.sha !== build ||
     commit.parents.length !== 2 ||
-    (association
-      ? commit.parents[0].sha !== association.base.sha
-      : build !== pr.merge_commit_sha) ||
-    commit.parents[1].sha !== run.head_sha
+    commit.parents[1].sha !== run.head_sha ||
+    !ON_MAIN_STATUSES.has(firstParentComparison) ||
+    (fallback && !isGitHubTestMerge(commit))
   ) {
     throw Error('Preview merge provenance is invalid');
   }
