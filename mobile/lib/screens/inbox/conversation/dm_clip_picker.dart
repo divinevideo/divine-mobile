@@ -32,7 +32,7 @@ Future<List<DivineVideoClip>?> pickDmClipsFromLibrary(BuildContext context) =>
       initialChildSize: 0.9,
       minChildSize: VineTheme.bottomSheetDismissFloor,
       buildScrollBody: (scrollController) => LibraryScreen(
-        initialTabIndex: 1,
+        initialTabIndex: LibraryScreen.clipsTabIndex,
         selectionMode: true,
         clipTypeFilter: LibraryClipTypeFilter.video,
         scrollController: scrollController,

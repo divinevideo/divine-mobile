@@ -35,7 +35,9 @@ class LibraryClipsRouteData extends GoRouteData with $LibraryClipsRouteData {
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       fadeUpwardsPage(
         state: state,
-        child: const LibraryScreen(initialTabIndex: 1),
+        child: const LibraryScreen(
+          initialTabIndex: LibraryScreen.clipsTabIndex,
+        ),
       );
 }
 
@@ -59,7 +61,7 @@ class LibraryClipsOnlyRouteData extends GoRouteData
       fadeUpwardsPage(
         state: state,
         child: LibraryScreen(
-          initialTabIndex: 1,
+          initialTabIndex: LibraryScreen.clipsTabIndex,
           tabsMode: LibraryTabsMode.withoutSounds,
           // The recorder session owns the autosave draft, so listing it here
           // would offer the user their own live session to reopen.
