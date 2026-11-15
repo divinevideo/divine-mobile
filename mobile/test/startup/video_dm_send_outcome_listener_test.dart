@@ -127,8 +127,16 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump();
+      final outcome = l10n.dmVideoOutcomeInChat(
+        'Test chat',
+        l10n.dmVideoSendFailed,
+      );
       expect(find.text(l10n.commonRetry), findsOneWidget);
-      expect(find.text(l10n.dmVideoSendFailed), findsNothing);
+      expect(find.text(outcome), findsNothing);
+
+      messenger.removeCurrentSnackBar();
+      await tester.pumpAndSettle();
+      expect(find.text(outcome), findsOneWidget);
     });
 
     testWidgets('announces the visible chat outcome once without a snackbar', (
@@ -328,7 +336,8 @@ void main() {
       // Two pumps, as for a shown result: the first only delivers the event.
       await tester.pump();
       await tester.pump();
-      expect(find.text(l10n.dmVideoSendFailed), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(tester.takeAnnouncements(), isEmpty);
 
       replacement.controller.add(_outcome(VideoDmOutcomeStatus.sent, sent: 1));
       await tester.pump();
