@@ -55,14 +55,18 @@ void main() {
 
   tearDown(() => outbox.controller.close());
 
-  Future<void> pumpApp(WidgetTester tester, StateProvider<VideoDmOutbox> p) {
+  Future<void> pumpApp(
+    WidgetTester tester,
+    StateProvider<VideoDmOutbox> p, {
+    Future<String> Function(BuildContext, VideoDmSendOutcome)? resolveChatName,
+  }) {
     return tester.pumpWidget(
       ProviderScope(
         overrides: [
           videoDmOutboxProvider.overrideWith((ref) => ref.watch(p)),
         ],
         child: VideoDmSendOutcomeListener(
-          resolveChatName: (_, _) async => 'Test chat',
+          resolveChatName: resolveChatName ?? (_, _) async => 'Test chat',
           child: MaterialApp(
             navigatorKey: NavigatorKeys.root,
             localizationsDelegates: appLocalizationsDelegates,
@@ -274,6 +278,32 @@ void main() {
         expect(find.textContaining(recipient), findsNothing);
       },
     );
+
+    testWidgets('names the chat by its generated name when the lookup fails', (
+      tester,
+    ) async {
+      final provider = StateProvider<VideoDmOutbox>((ref) => outbox);
+      await pumpApp(
+        tester,
+        provider,
+        resolveChatName: (_, _) async =>
+            throw Exception('profile store closed'),
+      );
+
+      outbox.controller.add(_outcome(VideoDmOutcomeStatus.failed));
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.text(
+          l10n.dmVideoOutcomeInChat(
+            UserProfile.defaultDisplayNameFor('1' * 64),
+            l10n.dmVideoSendFailed,
+          ),
+        ),
+        findsOneWidget,
+      );
+    });
 
     testWidgets('logs a result it has no messenger to show on', (
       tester,
