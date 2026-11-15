@@ -62,21 +62,21 @@ class RemixSettingView extends StatelessWidget {
     final state = context.watch<RemixSettingsCubit>().state;
     return BlocListener<RemixSettingsCubit, RemixSettingsState>(
       listenWhen: (previous, current) =>
-          previous.saveStatus != current.saveStatus &&
-          current.saveStatus == RemixSettingsSaveStatus.failure,
+          previous.saveStatus != current.saveStatus,
       listener: (context, state) {
+        final message = switch (state.saveStatus) {
+          RemixSettingsSaveStatus.failedNoRelays =>
+            context.l10n.profileSetupNoRelaysConnected,
+          RemixSettingsSaveStatus.failedPublish =>
+            context.l10n.profileSetupPublishFailed,
+          RemixSettingsSaveStatus.idle ||
+          RemixSettingsSaveStatus.saving => null,
+        };
+        if (message == null) return;
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(
-            DivineSnackbarContainer.snackBar(
-              switch (state.failure) {
-                RemixSettingsSaveFailure.noRelays =>
-                  context.l10n.profileSetupNoRelaysConnected,
-                RemixSettingsSaveFailure.publishFailed ||
-                null => context.l10n.profileSetupPublishFailed,
-              },
-              error: true,
-            ),
+            DivineSnackbarContainer.snackBar(message, error: true),
           );
       },
       // The switch defaults to on, so showing it before the stored answer is

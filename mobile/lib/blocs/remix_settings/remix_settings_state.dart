@@ -5,16 +5,15 @@ import 'package:equatable/equatable.dart';
 
 enum RemixSettingsLoadStatus { initial, loading, ready, failure }
 
-enum RemixSettingsSaveStatus { idle, saving, failure }
-
-enum RemixSettingsSaveFailure { noRelays, publishFailed }
+/// Where the last save stands. A failed save carries its cause in the value,
+/// so a failure cannot exist without one.
+enum RemixSettingsSaveStatus { idle, saving, failedNoRelays, failedPublish }
 
 class RemixSettingsState extends Equatable {
   const RemixSettingsState({
     this.loadStatus = RemixSettingsLoadStatus.initial,
     this.allowVideoReuse = true,
     this.saveStatus = RemixSettingsSaveStatus.idle,
-    this.failure,
   });
 
   final RemixSettingsLoadStatus loadStatus;
@@ -25,10 +24,6 @@ class RemixSettingsState extends Equatable {
 
   final RemixSettingsSaveStatus saveStatus;
 
-  /// Why the last save failed. `null` unless [saveStatus] is
-  /// [RemixSettingsSaveStatus.failure].
-  final RemixSettingsSaveFailure? failure;
-
   bool get isReady => loadStatus == RemixSettingsLoadStatus.ready;
   bool get isSaving => saveStatus == RemixSettingsSaveStatus.saving;
   bool get canEdit => isReady && !isSaving;
@@ -37,22 +32,14 @@ class RemixSettingsState extends Equatable {
     RemixSettingsLoadStatus? loadStatus,
     bool? allowVideoReuse,
     RemixSettingsSaveStatus? saveStatus,
-    RemixSettingsSaveFailure? failure,
-    bool clearFailure = false,
   }) {
     return RemixSettingsState(
       loadStatus: loadStatus ?? this.loadStatus,
       allowVideoReuse: allowVideoReuse ?? this.allowVideoReuse,
       saveStatus: saveStatus ?? this.saveStatus,
-      failure: clearFailure ? null : failure ?? this.failure,
     );
   }
 
   @override
-  List<Object?> get props => [
-    loadStatus,
-    allowVideoReuse,
-    saveStatus,
-    failure,
-  ];
+  List<Object?> get props => [loadStatus, allowVideoReuse, saveStatus];
 }

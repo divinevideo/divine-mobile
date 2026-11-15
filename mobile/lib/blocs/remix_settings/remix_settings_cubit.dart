@@ -114,7 +114,6 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
       state.copyWith(
         allowVideoReuse: allow,
         saveStatus: RemixSettingsSaveStatus.saving,
-        clearFailure: true,
       ),
     );
 
@@ -143,18 +142,23 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
         ),
       );
     } on NoRelaysConnectedException catch (error, stackTrace) {
-      _revert(previous, RemixSettingsSaveFailure.noRelays, error, stackTrace);
+      _revert(
+        previous,
+        RemixSettingsSaveStatus.failedNoRelays,
+        error,
+        stackTrace,
+      );
     } on ProfilePublishFailedException catch (error, stackTrace) {
       _revert(
         previous,
-        RemixSettingsSaveFailure.publishFailed,
+        RemixSettingsSaveStatus.failedPublish,
         error,
         stackTrace,
       );
     } catch (error, stackTrace) {
       _revert(
         previous,
-        RemixSettingsSaveFailure.publishFailed,
+        RemixSettingsSaveStatus.failedPublish,
         Reportable(
           error,
           context: RemixSettingsReportableSites.setAllowVideoReuse,
@@ -199,18 +203,12 @@ class RemixSettingsCubit extends Cubit<RemixSettingsState>
 
   void _revert(
     bool previous,
-    RemixSettingsSaveFailure failure,
+    RemixSettingsSaveStatus failure,
     Object error,
     StackTrace stackTrace,
   ) {
     if (isClosed) return;
     addError(error, stackTrace);
-    emit(
-      state.copyWith(
-        allowVideoReuse: previous,
-        saveStatus: RemixSettingsSaveStatus.failure,
-        failure: failure,
-      ),
-    );
+    emit(state.copyWith(allowVideoReuse: previous, saveStatus: failure));
   }
 }

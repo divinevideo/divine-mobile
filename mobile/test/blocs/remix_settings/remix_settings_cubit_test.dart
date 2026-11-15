@@ -384,8 +384,7 @@ void main() {
         expect: () => const [
           RemixSettingsState(
             loadStatus: RemixSettingsLoadStatus.ready,
-            saveStatus: RemixSettingsSaveStatus.failure,
-            failure: RemixSettingsSaveFailure.publishFailed,
+            saveStatus: RemixSettingsSaveStatus.failedPublish,
           ),
         ],
         verify: (_) {
@@ -419,8 +418,7 @@ void main() {
         expect: () => const [
           RemixSettingsState(
             loadStatus: RemixSettingsLoadStatus.ready,
-            saveStatus: RemixSettingsSaveStatus.failure,
-            failure: RemixSettingsSaveFailure.publishFailed,
+            saveStatus: RemixSettingsSaveStatus.failedPublish,
           ),
         ],
         verify: (_) => expect(savedProfiles, isEmpty),
@@ -441,8 +439,7 @@ void main() {
         expect: () => const [
           RemixSettingsState(
             loadStatus: RemixSettingsLoadStatus.ready,
-            saveStatus: RemixSettingsSaveStatus.failure,
-            failure: RemixSettingsSaveFailure.noRelays,
+            saveStatus: RemixSettingsSaveStatus.failedNoRelays,
           ),
         ],
       );
