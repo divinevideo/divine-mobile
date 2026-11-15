@@ -1549,6 +1549,7 @@
   },
   "remixBlockedByCreator": "Този автор не позволява ремикси.",
   "remixConsentCheckFailed": "Не успяхме да проверим дали това видео може да се ремиксира. Опитай отново.",
+  "remixStartFailed": "Не успяхме да започнем ремикса. Опитай отново.",
   "remixSettingAllowTitle": "Позволи на другите да ремиксират моите видеа",
   "remixSettingAllowSubtitle": "Другите могат да използват твоите видеа като клипове в своите публикации.",
   "videoMetadataClipCreditRow": "Използва клип от {name}",

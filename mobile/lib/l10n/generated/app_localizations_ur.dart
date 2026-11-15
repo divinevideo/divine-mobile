@@ -4078,6 +4078,9 @@ class AppLocalizationsUr extends AppLocalizations {
       'یہ معلوم نہیں ہو سکا کہ اس ویڈیو کو ری مکس کیا جا سکتا ہے یا نہیں۔ دوبارہ کوشش کریں۔';
 
   @override
+  String get remixStartFailed => 'ری مکس شروع نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
   String get remixSettingAllowTitle => 'دوسروں کو میری ویڈیوز ری مکس کرنے دیں';
 
   @override

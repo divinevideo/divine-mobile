@@ -1084,6 +1084,7 @@
   "shareSheetAddToClipsFailed": "Hindi naidagdag sa clips",
   "remixBlockedByCreator": "Hindi pinapayagan ng creator na ito ang mga remix.",
   "remixConsentCheckFailed": "Hindi ma-check kung pwedeng i-remix ang video na ito. Subukan ulit.",
+  "remixStartFailed": "Hindi masimulan ang remix. Subukan ulit.",
   "remixSettingAllowTitle": "Payagan ang iba na i-remix ang mga video ko",
   "remixSettingAllowSubtitle": "Magagamit ng iba ang mga video mo bilang clips sa sarili nilang posts.",
   "videoMetadataClipCreditRow": "Gumagamit ng clip ni {name}",

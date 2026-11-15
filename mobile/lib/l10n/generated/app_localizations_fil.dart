@@ -4097,6 +4097,9 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi ma-check kung pwedeng i-remix ang video na ito. Subukan ulit.';
 
   @override
+  String get remixStartFailed => 'Hindi masimulan ang remix. Subukan ulit.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Payagan ang iba na i-remix ang mga video ko';
 

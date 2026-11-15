@@ -4197,6 +4197,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu am putut verifica dacă acest videoclip poate fi remixat. Încearcă din nou.';
 
   @override
+  String get remixStartFailed =>
+      'Nu am putut începe remixul. Încearcă din nou.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Permite altora să-mi remixeze videoclipurile';
 

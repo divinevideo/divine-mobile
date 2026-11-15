@@ -1463,6 +1463,7 @@
   "shareSheetAddToClipsFailed": "No se pudo agregar a clips",
   "remixBlockedByCreator": "Esta persona no permite remezclas.",
   "remixConsentCheckFailed": "No pudimos comprobar si este video se puede remezclar. Probá de nuevo.",
+  "remixStartFailed": "No pudimos empezar la remezcla. Probá de nuevo.",
   "remixSettingAllowTitle": "Permitir que otras personas remezclen mis videos",
   "remixSettingAllowSubtitle": "Otras personas pueden usar tus videos como clips en sus propias publicaciones.",
   "videoMetadataClipCreditRow": "Usa un clip de {name}",

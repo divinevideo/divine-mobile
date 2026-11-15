@@ -3818,6 +3818,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get remixConsentCheckFailed => 'この動画をリミックスできるか確認できませんでした。もう一度お試しください。';
 
   @override
+  String get remixStartFailed => 'リミックスを開始できませんでした。もう一度お試しください。';
+
+  @override
   String get remixSettingAllowTitle => '自分の動画のリミックスを許可';
 
   @override

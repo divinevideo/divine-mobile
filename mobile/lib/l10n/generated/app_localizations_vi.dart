@@ -4040,6 +4040,9 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không kiểm tra được video này có thể remix hay không. Hãy thử lại.';
 
   @override
+  String get remixStartFailed => 'Không bắt đầu được bản remix. Hãy thử lại.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Cho phép người khác remix video của tôi';
 

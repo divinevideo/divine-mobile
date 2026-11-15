@@ -208,6 +208,34 @@ void main() {
       expect(find.text(l10n.remixConsentCheckFailed), findsOneWidget);
     });
 
+    testWidgets('says a remix that could not start can be retried', (
+      tester,
+    ) async {
+      await pumpSheet(tester);
+
+      showVideoContentActionFeedback(sheetContext, VideoContentRemixFailed());
+      await tester.pumpAndSettle();
+
+      expect(find.text(_sheetBodyText), findsNothing);
+      expect(find.text(l10n.remixStartFailed), findsOneWidget);
+      expect(find.text(l10n.shareSheetAddToClipsFailed), findsNothing);
+    });
+
+    testWidgets('keeps the Add to clips copy for a failed Add to clips', (
+      tester,
+    ) async {
+      await pumpSheet(tester);
+
+      showVideoContentActionFeedback(
+        sheetContext,
+        VideoContentClipImportResult(succeeded: false),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.shareSheetAddToClipsFailed), findsOneWidget);
+      expect(find.text(l10n.remixStartFailed), findsNothing);
+    });
+
     testWidgets('leaves the sheet open and silent for a remix that is ready', (
       tester,
     ) async {

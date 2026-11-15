@@ -4071,6 +4071,9 @@ class AppLocalizationsSv extends AppLocalizations {
       'Kunde inte kontrollera om videon får remixas. Försök igen.';
 
   @override
+  String get remixStartFailed => 'Kunde inte starta remixen. Försök igen.';
+
+  @override
   String get remixSettingAllowTitle => 'Låt andra remixa mina videor';
 
   @override

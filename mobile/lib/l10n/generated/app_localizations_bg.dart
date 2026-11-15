@@ -4128,6 +4128,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Не успяхме да проверим дали това видео може да се ремиксира. Опитай отново.';
 
   @override
+  String get remixStartFailed =>
+      'Не успяхме да започнем ремикса. Опитай отново.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Позволи на другите да ремиксират моите видеа';
 

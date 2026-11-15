@@ -4194,6 +4194,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się sprawdzić, czy ten film można remiksować. Spróbuj ponownie.';
 
   @override
+  String get remixStartFailed =>
+      'Nie udało się rozpocząć remiksu. Spróbuj ponownie.';
+
+  @override
   String get remixSettingAllowTitle => 'Pozwól innym remiksować moje filmy';
 
   @override

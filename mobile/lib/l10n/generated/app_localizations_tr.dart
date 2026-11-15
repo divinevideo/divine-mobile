@@ -4016,6 +4016,9 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu videonun remikslenip remikslenemeyeceği kontrol edilemedi. Tekrar dene.';
 
   @override
+  String get remixStartFailed => 'Remiks başlatılamadı. Tekrar dene.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Başkalarının videolarımı remikslemesine izin ver';
 

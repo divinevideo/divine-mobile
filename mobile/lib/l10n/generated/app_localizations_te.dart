@@ -4216,6 +4216,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఈ వీడియోను రీమిక్స్ చేయవచ్చో లేదో తనిఖీ చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get remixStartFailed =>
+      'రీమిక్స్‌ను ప్రారంభించలేకపోయాము. మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get remixSettingAllowTitle =>
       'నా వీడియోలను రీమిక్స్ చేయడానికి ఇతరులను అనుమతించండి';
 

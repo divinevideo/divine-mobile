@@ -1207,11 +1207,7 @@ void main() {
           .having(
             (s) => s.actionResult,
             'actionResult',
-            isA<VideoContentClipImportResult>().having(
-              (r) => r.succeeded,
-              'succeeded',
-              isFalse,
-            ),
+            isA<VideoContentRemixFailed>(),
           );
 
       blocTest<VideoContentActionsBloc, VideoContentActionsState>(

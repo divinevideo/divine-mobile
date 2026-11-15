@@ -6841,6 +6841,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t check whether this video can be remixed. Try again.'**
   String get remixConsentCheckFailed;
 
+  /// Snackbar shown when 'Remix this video' could not bring the video into the clip library, so the editor did not open; the user can try again.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t start the remix. Try again.'**
+  String get remixStartFailed;
+
   /// Settings switch title: when off, nobody else can use the signed-in creator's videos as clips.
   ///
   /// In en, this message translates to:

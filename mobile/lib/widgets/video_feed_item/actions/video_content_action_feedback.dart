@@ -68,6 +68,7 @@ void showVideoContentActionFeedback(
           : l10n.shareSheetAddToClipsFailed,
       !succeeded,
     ),
+    VideoContentRemixFailed() => (l10n.remixStartFailed, true),
     VideoContentRemixRefused(:final consent) => (
       consent == RemixConsent.blocked
           ? l10n.remixBlockedByCreator

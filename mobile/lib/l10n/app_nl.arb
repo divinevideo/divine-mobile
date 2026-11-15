@@ -1459,6 +1459,7 @@
   "shareSheetAddToClipsFailed": "Kon niet toevoegen aan clips",
   "remixBlockedByCreator": "Deze maker staat geen remixes toe.",
   "remixConsentCheckFailed": "We konden niet controleren of deze video geremixt mag worden. Probeer het opnieuw.",
+  "remixStartFailed": "We konden de remix niet starten. Probeer het opnieuw.",
   "remixSettingAllowTitle": "Laat anderen mijn video's remixen",
   "remixSettingAllowSubtitle": "Anderen kunnen je video's als clips in hun eigen posts gebruiken.",
   "videoMetadataClipCreditRow": "Gebruikt een clip van {name}",

@@ -4089,6 +4089,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'We konden niet controleren of deze video geremixt mag worden. Probeer het opnieuw.';
 
   @override
+  String get remixStartFailed =>
+      'We konden de remix niet starten. Probeer het opnieuw.';
+
+  @override
   String get remixSettingAllowTitle => 'Laat anderen mijn video\'s remixen';
 
   @override

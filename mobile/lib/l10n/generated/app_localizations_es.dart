@@ -4125,6 +4125,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'No pudimos comprobar si este video se puede remezclar. Probá de nuevo.';
 
   @override
+  String get remixStartFailed =>
+      'No pudimos empezar la remezcla. Probá de nuevo.';
+
+  @override
   String get remixSettingAllowTitle =>
       'Permitir que otras personas remezclen mis videos';
 

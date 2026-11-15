@@ -314,8 +314,8 @@ class VideoContentActionsBloc
   }
 
   /// Checks consent as Add to clips does, then emits [VideoContentRemixReady]
-  /// with the clip the editor opens with. An import that fails reports as a
-  /// failed Add to clips would.
+  /// with the clip the editor opens with. An import that fails reports
+  /// [VideoContentRemixFailed].
   ///
   /// [VideoContentActionsState.isPreparingRemix] stays set with the ready
   /// result, holding the sheet's actions while the UI opens the editor, until
@@ -346,7 +346,7 @@ class VideoContentActionsBloc
       state.copyWith(
         isPreparingRemix: clip != null,
         actionResult: clip == null
-            ? VideoContentClipImportResult(succeeded: false)
+            ? VideoContentRemixFailed()
             : VideoContentRemixReady(clip: clip),
       ),
     );

@@ -3809,6 +3809,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get remixConsentCheckFailed => '无法确认此视频能否混剪。请重试。';
 
   @override
+  String get remixStartFailed => '无法开始混剪。请重试。';
+
+  @override
   String get remixSettingAllowTitle => '允许他人混剪我的视频';
 
   @override

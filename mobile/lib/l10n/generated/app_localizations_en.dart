@@ -4139,6 +4139,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Couldn\'t check whether this video can be remixed. Try again.';
 
   @override
+  String get remixStartFailed => 'Couldn\'t start the remix. Try again.';
+
+  @override
   String get remixSettingAllowTitle => 'Let people remix my videos';
 
   @override

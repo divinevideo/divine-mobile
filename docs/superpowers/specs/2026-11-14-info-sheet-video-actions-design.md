@@ -118,6 +118,8 @@ five, and showed nothing on web.
      *As built:* instead of `keepAutosavedDraft: true`, it first copies an
      autosave that holds clips into Drafts as a new draft, then calls
      `clearAll()` (see "The autosaved session is kept as a draft" below).
+     A failed import shows its own "Couldn't start the remix. Try again."
+     snackbar rather than the Add to clips one.
    - **Re-tapping does not duplicate.** If a non-trashed clip in the library
      already has this video's `sourceEventId`, it is reused instead of
      importing again.

@@ -3997,6 +3997,9 @@ class AppLocalizationsId extends AppLocalizations {
       'Tidak bisa memeriksa apakah video ini boleh di-remix. Coba lagi.';
 
   @override
+  String get remixStartFailed => 'Tidak bisa memulai remix. Coba lagi.';
+
+  @override
   String get remixSettingAllowTitle => 'Izinkan orang lain me-remix videoku';
 
   @override

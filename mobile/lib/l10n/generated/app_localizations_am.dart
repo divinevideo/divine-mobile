@@ -3985,6 +3985,9 @@ class AppLocalizationsAm extends AppLocalizations {
       'ይህ ቪዲዮ መቀላቀል ይችል እንደሆነ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።';
 
   @override
+  String get remixStartFailed => 'ሪሚክሱን መጀመር አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
   String get remixSettingAllowTitle => 'ሌሎች ቪዲዮዎቼን እንዲቀላቅሉ መፍቀድ';
 
   @override

@@ -1459,6 +1459,7 @@
   "shareSheetAddToClipsFailed": "Impossible d'ajouter aux clips",
   "remixBlockedByCreator": "Cette personne n'autorise pas les remix.",
   "remixConsentCheckFailed": "Impossible de vérifier si cette vidéo peut être remixée. Réessaie.",
+  "remixStartFailed": "Impossible de lancer le remix. Réessaie.",
   "remixSettingAllowTitle": "Autoriser les autres à remixer mes vidéos",
   "remixSettingAllowSubtitle": "Les autres peuvent utiliser tes vidéos comme clips dans leurs propres publications.",
   "videoMetadataClipCreditRow": "Utilise un clip de {name}",

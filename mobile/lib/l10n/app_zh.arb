@@ -1968,6 +1968,7 @@
   },
   "remixBlockedByCreator": "该创作者不允许混剪。",
   "remixConsentCheckFailed": "无法确认此视频能否混剪。请重试。",
+  "remixStartFailed": "无法开始混剪。请重试。",
   "remixSettingAllowTitle": "允许他人混剪我的视频",
   "remixSettingAllowSubtitle": "其他人可以把你的视频作为片段用在自己的帖子里。",
   "videoMetadataClipCreditRow": "使用了 {name} 的片段",
