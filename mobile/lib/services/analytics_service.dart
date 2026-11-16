@@ -913,7 +913,7 @@ class AnalyticsService implements BackgroundAwareService {
     if (video.addressableId == null && !video.isAddressableShareKind) {
       Log.debug(
         'Skipping pending view event for non-addressable video kind '
-        '${video.shareKind}',
+        '${video.eventKind ?? 'unknown'} (read as ${video.shareKind})',
         name: 'AnalyticsService',
         category: LogCategory.video,
       );
