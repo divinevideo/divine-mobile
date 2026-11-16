@@ -47,11 +47,13 @@ void main() {
         try {
           applyCipherKey(raw, validKey);
           for (final checked in [0, 1]) {
+            final id = checked == 0 ? 'a' * 64 : 'b' * 64;
             raw.execute(
-              'INSERT INTO event (id,pubkey,created_at,kind,tags,content,sig,expire_at,signature_verified) '
+              'INSERT INTO event (id,pubkey,created_at,kind,tags,content, '
+              'sig,expire_at,signature_verified) '
               'VALUES (?,?,?,?,?,?,?,?,?)',
               [
-                checked == 0 ? 'a' * 64 : 'b' * 64,
+                id,
                 'c' * 64,
                 100 + checked,
                 1,
@@ -64,7 +66,7 @@ void main() {
             );
           }
         } finally {
-          raw.dispose();
+          raw.close();
         }
         for (var launch = 0; launch < 2; launch++) {
           expect(
@@ -84,7 +86,9 @@ void main() {
             ]);
             final plan = await db
                 .customSelect(
-                  'EXPLAIN QUERY PLAN SELECT id,sig FROM event WHERE signature_verified=1 ORDER BY created_at DESC LIMIT 50000',
+                  'EXPLAIN QUERY PLAN SELECT id,sig FROM event '
+                  'WHERE signature_verified=1 '
+                  'ORDER BY created_at DESC LIMIT 50000',
                 )
                 .get();
             expect(

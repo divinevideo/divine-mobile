@@ -2191,7 +2191,8 @@ void main() {
           final plan = await database
               .customSelect(
                 'EXPLAIN QUERY PLAN SELECT id, sig FROM event '
-                'WHERE signature_verified = 1 ORDER BY created_at DESC LIMIT 50000',
+                'WHERE signature_verified = 1 '
+                'ORDER BY created_at DESC LIMIT 50000',
               )
               .get();
           final details = plan
