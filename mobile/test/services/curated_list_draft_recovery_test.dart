@@ -400,6 +400,56 @@ void main() {
       expect(await service.retryListSync(cached.id), isTrue);
     });
 
+    group('a relay answering with a revision older than the one held', () {
+      late Event older;
+
+      setUp(() async {
+        older = await signedCuratedListFixture(
+          cached.copyWith(
+            videoEventIds: const [],
+            updatedAt: cached.updatedAt.subtract(const Duration(minutes: 3)),
+          ),
+          LocalNostrSigner('1'.padLeft(64, '0')),
+        );
+        answer(() async => (events: [older], timedOut: false, noRelays: false));
+      });
+
+      test('keeps the list editable', () async {
+        expect(await service.addVideoToList(cached.id, addedVideo), isTrue);
+
+        expect(service.getListById(cached.id)!.hasRelayConflict, isFalse);
+        expect(publishedVideos(), [firstVideo, addedVideo]);
+      });
+
+      test('clears a conflict it raised before', () async {
+        await reopen(cached.copyWith(hasRelayConflict: true));
+
+        expect(await service.addVideoToList(cached.id, addedVideo), isTrue);
+
+        expect(service.getListById(cached.id)!.hasRelayConflict, isFalse);
+        expect(publishedVideos(), [firstVideo, addedVideo]);
+      });
+
+      test('does not replay a draft onto it', () async {
+        final desired = cached.copyWith(
+          videoEventIds: [firstVideo, addedVideo],
+        );
+        await reopen(
+          desired.copyWith(
+            pendingRepublish: true,
+            localEditDraft: CuratedListEditDraft(
+              baseline: cached,
+              desired: desired,
+            ),
+          ),
+        );
+
+        expect(await service.retryListSync(cached.id), isTrue);
+
+        expect(publishedVideos(), [firstVideo, addedVideo]);
+      });
+    });
+
     test('an incomplete recovery read keeps both conflicting copies', () async {
       await reopen(cached.copyWith(name: 'Local edit', pendingRepublish: true));
       expect(await service.retryListSync(cached.id), isFalse);

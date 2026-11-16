@@ -296,8 +296,9 @@ class SelectListCubit extends Cubit<SelectListState>
 
   /// Picks the list with [listId], or unpicks it when it is picked.
   ///
-  /// Ignored during read-only recovery or a save, for an unavailable list, and
-  /// for one waiting on an accepted permission change. Clears the sheet instead
+  /// Ignored during read-only recovery or a save, for an unavailable list, for
+  /// one waiting on an accepted permission change, and for one in conflict with
+  /// the relay, which the service refuses to change. Clears the sheet instead
   /// once the account it opened for is no longer current.
   void toggled(String listId) {
     if (state.isSaving) return;
@@ -310,7 +311,8 @@ class SelectListCubit extends Cubit<SelectListState>
       (list) =>
           list.id == listId &&
           !list.hasPendingPermissionRecovery &&
-          !list.hasPendingPermissionDraft,
+          !list.hasPendingPermissionDraft &&
+          !list.hasRelayConflict,
     )) {
       return;
     }

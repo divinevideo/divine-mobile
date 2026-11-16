@@ -345,4 +345,47 @@ extension _CuratedListDraftRecovery on CuratedListService {
       cancelled: false,
     );
   }
+
+  /// Leaves [existing] as it is when [decoded] is an earlier state of the
+  /// revision already held here; see [CuratedListRelayMerger.isStaleRevision].
+  ///
+  /// Returns whether the revision was handled, so the caller merges nothing.
+  bool _ignoredStaleRevision(
+    CuratedList existing,
+    CuratedList decoded,
+    Event event,
+    UnsealedItemTags items,
+  ) {
+    if (!CuratedListRelayMerger.isStaleRevision(existing, decoded)) {
+      return false;
+    }
+    // A held revision only releases the list once decoded and reconciled.
+    if (!_relayEvidence.decoded(event, items)) return true;
+    final held = (existing.localEditDraft?.baseline ?? existing).nostrEventId;
+    Log.info(
+      'Ignoring relay revision ${event.id} of list ${existing.id}: an '
+      'earlier state of revision $held already held here',
+      name: 'CuratedListService',
+      category: LogCategory.system,
+    );
+    // A row with no draft or unsent change is only flagged when the relay
+    // returned an older revision; seeing it is merely behind settles that.
+    if (existing.hasRelayConflict && existing.localEditDraft == null) {
+      _restoreList(existing.copyWith(hasRelayConflict: false));
+    }
+    return true;
+  }
+
+  /// A conflict blocks every edit and sync of the list until the owner picks a
+  /// version, so record which two revisions disagreed.
+  void _warnRelayConflict(CuratedList existing, Event event) {
+    final held = (existing.localEditDraft?.baseline ?? existing).nostrEventId;
+    Log.warning(
+      'List ${existing.id} conflicts with relay revision ${event.id} '
+      '(held revision: $held, unsent changes: '
+      '${existing.localEditDraft != null || existing.pendingRepublish})',
+      name: 'CuratedListService',
+      category: LogCategory.system,
+    );
+  }
 }

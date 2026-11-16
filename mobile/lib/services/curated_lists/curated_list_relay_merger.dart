@@ -49,6 +49,34 @@ class CuratedListRelayMerger {
         !samePublicationValue(local, incoming);
   }
 
+  /// Whether [incoming] is an earlier state of the last revision this device
+  /// confirmed for [local], so the relay is answering from behind rather than
+  /// reporting an edit made elsewhere.
+  ///
+  /// Merging such a revision would treat the videos it lacks as removed, and
+  /// judging it a conflict blocks the list until the relay catches up. Being
+  /// older is not enough: a device clock running ahead can make an unseen
+  /// edit look older, so the revision must also hold nothing the confirmed one
+  /// lacks. Only a confirmed revision has a known time: an unsent row's
+  /// [CuratedList.updatedAt] is its edit time, so those rows are not judged.
+  static bool isStaleRevision(CuratedList local, CuratedList incoming) {
+    final confirmed = local.localEditDraft?.baseline ?? local;
+    final confirmedSecond = confirmed.updatedAt.millisecondsSinceEpoch ~/ 1000;
+    final incomingSecond = incoming.updatedAt.millisecondsSinceEpoch ~/ 1000;
+    if (confirmed.nostrEventId == null ||
+        confirmed.pendingRepublish ||
+        incoming.nostrEventId == confirmed.nostrEventId ||
+        incomingSecond >= confirmedSecond) {
+      return false;
+    }
+    final held = confirmed.videoEventIds.toSet();
+    return incoming.videoEventIds.every(held.contains) &&
+        samePublicationValue(
+          confirmed.copyWith(videoEventIds: incoming.videoEventIds),
+          incoming,
+        );
+  }
+
   /// Applies an editor's membership delta to the freshly reconciled permissions.
   static List<String> mergeCollaboratorEdit({
     required List<String> current,

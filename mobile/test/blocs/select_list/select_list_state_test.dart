@@ -66,6 +66,17 @@ void main() {
         );
       });
 
+      test('names a relay conflict, which syncing cannot settle', () {
+        final list = _list(
+          holdsVideo: true,
+        ).copyWith(pendingRepublish: true, hasRelayConflict: true);
+
+        expect(
+          _state(list: list, holdsVideo: true).syncNoticeFor(list),
+          SelectListSyncNotice.conflict,
+        );
+      });
+
       test('says other changes wait when the republished list does not hold '
           'the video', () {
         final list = _list().copyWith(pendingRepublish: true);

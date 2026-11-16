@@ -201,6 +201,9 @@ class _ListRow extends StatelessWidget {
     final syncNotice = context.select(
       (SelectListCubit cubit) => cubit.state.syncNoticeFor(list),
     );
+    // Neither a saved permission change nor a relay conflict can be synced
+    // from here; the list's editor settles both.
+    final needsEditor = list.hasPendingPermissionDraft || list.hasRelayConflict;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -215,10 +218,7 @@ class _ListRow extends StatelessWidget {
           meta:
               '${l10n.listVideoCount(list.videoEventIds.length)} • $visibility',
           isSelected: isSelected,
-          onTap:
-              !canEdit ||
-                  list.hasPendingPermissionRecovery ||
-                  list.hasPendingPermissionDraft
+          onTap: !canEdit || list.hasPendingPermissionRecovery || needsEditor
               ? null
               : () => context.read<SelectListCubit>().toggled(list.id),
         ),
@@ -232,6 +232,7 @@ class _ListRow extends StatelessWidget {
                   switch (syncNotice) {
                     SelectListSyncNotice.permissionRecovery =>
                       l10n.listPermissionsRecoveryPending,
+                    SelectListSyncNotice.conflict => l10n.listConflictNotice,
                     SelectListSyncNotice.recovery => l10n.listRecoveryPending,
                     SelectListSyncNotice.videoPending =>
                       l10n.listVideoPendingSync,
@@ -250,12 +251,12 @@ class _ListRow extends StatelessWidget {
                   )
                 else
                   DivineButton(
-                    label: list.hasPendingPermissionDraft
+                    label: needsEditor
                         ? l10n.listEditTitle
                         : l10n.listRetrySync,
                     onPressed: !canEdit
                         ? null
-                        : list.hasPendingPermissionDraft
+                        : needsEditor
                         ? () => runDetached(
                             showListInfoSheet(context, existingList: list),
                             'review saved list changes',

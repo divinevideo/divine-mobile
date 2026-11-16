@@ -839,6 +839,22 @@ void main() {
         },
       );
 
+      testWidgets('relay conflicts offer the editor instead of sync', (
+        tester,
+      ) async {
+        when(
+          () => service.pickerListsForOwner(any()),
+        ).thenReturn([list('Conflicted').copyWith(hasRelayConflict: true)]);
+        await openSheet(tester);
+        expect(find.text(l10n.listConflictNotice), findsOneWidget);
+        expect(find.text(l10n.listEditTitle), findsOneWidget);
+        expect(find.text(l10n.listRetrySync), findsNothing);
+        await tester.tap(find.text('Conflicted'));
+        await tester.pump();
+        expect(rowChecks(), findsNothing);
+        verifyNever(() => service.retryListSync(any()));
+      });
+
       testWidgets('tapping rows picks and unpicks them without writing', (
         tester,
       ) async {

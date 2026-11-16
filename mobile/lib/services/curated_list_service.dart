@@ -1675,6 +1675,10 @@ class CuratedListService extends ChangeNotifier {
         return;
       }
       final existing = getListById(decoded.authorScopedId);
+      if (existing != null &&
+          _ignoredStaleRevision(existing, decoded, event, unsealedItemTags)) {
+        return;
+      }
       if (existing != null && existing.localEditDraft != null) {
         final target = _inFlightListTargets[existing.authorScopedId];
         final confirmsTarget =
@@ -1711,6 +1715,7 @@ class CuratedListService extends ChangeNotifier {
                       existing.nostrEventId!,
                   }.toList(),
                 );
+          _warnRelayConflict(existing, event);
           _restoreList(retained.copyWith(hasRelayConflict: true));
           return;
         }
@@ -1750,6 +1755,7 @@ class CuratedListService extends ChangeNotifier {
               existing.authorScopedId,
             ),
           )) {
+        _warnRelayConflict(existing, event);
         _restoreList(existing.copyWith(hasRelayConflict: true));
         return;
       }
