@@ -172,12 +172,12 @@ const _prismTileSeconds = 6.0;
 ///
 /// Each shows the effect at full strength. The fisheye's value is the
 /// `CIBumpDistortion` scale `FisheyeVideoEffect` uses at intensity 1; night
-/// vision shows its first noise pattern; the drops show the default settings at a moment where two of them flow into
-/// each other; the particles' last value is the style the native
-/// `ParticlesVideoEffect` draws; watercolour and oil paint share one shader,
-/// told apart by their last value. The looks share one shader, which reads
-/// the look's table from [lookTableAssets]; the ASCII shader reads its glyphs
-/// from [asciiGlyphsAsset] (see [shaderTileTextureOf]).
+/// vision shows its first noise pattern; the drops show the default settings at
+/// a moment where two of them flow into each other; the particles' last value
+/// is the style the native `ParticlesVideoEffect` draws; watercolour and oil
+/// paint share one shader, told apart by their last value. The looks share one
+/// shader, which reads the look's table from [lookTableAssets]; the ASCII
+/// shader reads its glyphs from [asciiGlyphsAsset] (see [shaderTileTextureOf]).
 @visibleForTesting
 ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
   fisheyeVideoEffectId => (asset: 'shaders/fisheye.frag', values: const [0.8]),
