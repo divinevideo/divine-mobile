@@ -30,18 +30,18 @@ class LibraryDraftsRouteData extends GoRouteData with $LibraryDraftsRouteData {
 )
 class LibraryClipsRouteData extends GoRouteData with $LibraryClipsRouteData {
   const LibraryClipsRouteData({
-    @TypedQueryParameter(name: 'from-others') this.fromOthers = false,
+    @TypedQueryParameter(name: 'from-others') this.fromOthers,
   });
 
-  /// Opens imported footage after Remix; ordinary library entry stays on Clips.
-  final bool fromOthers;
+  /// `true` opens the From others tab; any other value, or none, opens Clips.
+  final String? fromOthers;
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) =>
       fadeUpwardsPage(
         state: state,
         child: LibraryScreen(
-          initialTabIndex: fromOthers
+          initialTabIndex: fromOthers == 'true'
               ? LibraryScreen.fromOthersTabIndex
               : LibraryScreen.clipsTabIndex,
         ),

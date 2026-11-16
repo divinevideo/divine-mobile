@@ -119,6 +119,19 @@ void main() {
       expect(screen.tabsMode, LibraryTabsMode.allTabs);
     });
 
+    testWidgets('a from-others value other than true opens the Clips tab', (
+      tester,
+    ) async {
+      await captureContext(tester);
+
+      final screen = screenAt(
+        LibraryScreen.clipsRouteName,
+        '/clips?from-others=1',
+      );
+
+      expect(screen.initialTabIndex, LibraryScreen.clipsTabIndex);
+    });
+
     group(LibraryScreen.clipsOnlyPath, () {
       testWidgets('scopes the clips to the type in the query', (tester) async {
         await captureContext(tester);

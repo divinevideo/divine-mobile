@@ -17,7 +17,9 @@ Future<void> openRemixInLibrary(
 
   await presentAfterSheetDismiss<void>(sheetContext, (hostContext) async {
     runDetached(
-      LibraryClipsRouteData(fromOthers: fromOthers).push<void>(hostContext),
+      LibraryClipsRouteData(
+        fromOthers: fromOthers ? 'true' : null,
+      ).push<void>(hostContext),
       'show the remix in the clip library',
       logName: 'RemixLauncher',
       category: LogCategory.video,
