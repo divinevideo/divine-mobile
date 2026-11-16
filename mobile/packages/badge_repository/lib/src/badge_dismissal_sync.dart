@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:account_state_repository/account_state_repository.dart';
+import 'package:badge_repository/src/badge_account_state_closed_exception.dart';
 import 'package:badge_repository/src/nip58_badge_models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -38,8 +39,10 @@ class BadgeDismissalSync {
   final _compatibilityWrites = <String, Set<Future<void>>>{};
   bool _closed = false;
 
+  bool _isClosed(String pubkey) => _closed || _closedOwners.contains(pubkey);
+
   AccountStateRepository _account(String pubkey) {
-    if (_closed || _closedOwners.contains(pubkey)) {
+    if (_isClosed(pubkey)) {
       throw StateError('Badge account state is closed');
     }
     final existing = _accounts[pubkey];
@@ -56,10 +59,31 @@ class BadgeDismissalSync {
     );
     _accounts[pubkey] = account;
     onAccountCreated?.call(pubkey, () => _closeAccount(pubkey));
-    if (_closed || _closedOwners.contains(pubkey)) {
+    if (_isClosed(pubkey)) {
       throw StateError('Badge account state is closed');
     }
     return account;
+  }
+
+  /// Runs [operation], whose calls on this class read or write [pubkey]'s
+  /// badge state across awaits.
+  ///
+  /// Throws a [StateError] when the state is already closed: nothing should
+  /// start work on an account after its close. A close that lands while
+  /// [operation] runs, as when sign-out erases the account under a dashboard
+  /// load, makes its next step refuse the closed state; that refusal ends the
+  /// operation with a [BadgeAccountStateClosedException] instead.
+  Future<T> whileOpen<T>(String pubkey, Future<T> Function() operation) async {
+    _account(pubkey);
+    try {
+      return await operation();
+    } catch (error, stackTrace) {
+      if (error is! StateError || !_isClosed(pubkey)) rethrow;
+      Error.throwWithStackTrace(
+        const BadgeAccountStateClosedException(),
+        stackTrace,
+      );
+    }
   }
 
   Set<String> _hidden(AccountStateRepository account) => {

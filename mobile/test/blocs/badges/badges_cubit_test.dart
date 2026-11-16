@@ -4,10 +4,15 @@ import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/badges/badges_cubit.dart';
+import 'package:openvine/observability/reportable_error.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockBadgeRepository extends Mock implements BadgeRepository {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
 
 void main() {
   group('BadgesCubit', () {
@@ -19,6 +24,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(_awardViewData());
+      registerFallbackValue(<Filter>[]);
     });
 
     setUp(() {
@@ -412,6 +418,72 @@ void main() {
           await expectLater(accepting, completes);
           expect(cubit.state.actionStatus, BadgeActionStatus.accepting);
         },
+      );
+    });
+
+    group('account erased while the dashboard loads', () {
+      late Completer<List<Event>> awards;
+      late List<Future<void> Function()> drains;
+      late BadgeRepository badgeRepository;
+
+      blocTest<BadgesCubit, BadgesState>(
+        'adds a failure that is not reported instead of a StateError',
+        setUp: () async {
+          SharedPreferences.setMockInitialValues({});
+          final nostrClient = _MockNostrClient();
+          awards = Completer<List<Event>>();
+          drains = [];
+          when(() => nostrClient.queryEvents(any())).thenAnswer((call) {
+            final filters = call.positionalArguments.single as List<Filter>;
+            return filters.first.kinds?.contains(EventKind.badgeAward) == true
+                ? awards.future
+                : Future.value(<Event>[]);
+          });
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
+            ),
+          ).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+          );
+          badgeRepository = BadgeRepository(
+            nostrClient: nostrClient,
+            sharedPreferences: await SharedPreferences.getInstance(),
+            currentPubkey: () => _pubkey(1),
+            signEvent: ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async => null,
+            signer: () => LocalNostrSigner(_eventId(101)),
+            onAccountCreated: (_, close) => drains.add(close),
+          );
+        },
+        build: () => BadgesCubit(repository: badgeRepository),
+        act: (cubit) async {
+          final loading = cubit.load();
+          await pumpEventQueue();
+          // Sign-out with data erasure drains the account's badge state
+          // through the write barrier while the awards query is in flight.
+          await Future.wait(drains.map((drain) => drain()));
+          awards.complete([]);
+          await loading;
+        },
+        tearDown: () => badgeRepository.dispose(),
+        expect: () => const [
+          BadgesState(status: BadgesStatus.loading),
+          BadgesState(status: BadgesStatus.error),
+        ],
+        errors: () => [
+          isA<BadgeAccountStateClosedException>().having(
+            (error) => asReportableError(error, context: 'BadgesCubit'),
+            'reportable',
+            isNull,
+          ),
+        ],
       );
     });
   });

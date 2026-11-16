@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:badge_repository/src/badge_account_state_closed_exception.dart';
 import 'package:badge_repository/src/badge_coordinate.dart';
 import 'package:badge_repository/src/badge_dismissal_sync.dart';
 import 'package:badge_repository/src/badge_read_incomplete_exception.dart';
@@ -1018,6 +1019,10 @@ class BadgeRepository {
     await closeAccountState();
   }
 
+  /// Loads the current account's awarded, hidden, issued and created badges.
+  ///
+  /// Throws [BadgeAccountStateClosedException] when the account's badge state
+  /// closes during the load, as sign-out with data erasure does.
   Future<BadgeDashboardData> loadDashboard() async {
     final memo = _DashboardLookupMemo();
     final awardedFuture = _loadAwardedBadges(memo);
@@ -2002,18 +2007,23 @@ class BadgeRepository {
 
   /// Brings the dismissed badge at [definitionCoordinate] back into the
   /// awarded list.
+  ///
+  /// Throws [BadgeAccountStateClosedException] when the account's badge state
+  /// closes before the choice is saved.
   Future<void> unhideAward(String definitionCoordinate) async {
     final pubkey = _requireCurrentPubkey();
-    final dismissed = await _dismissalSync.setHidden(
-      pubkey,
-      _dismissalSync.storedCoordinates(pubkey),
-      definitionCoordinate,
-      hidden: false,
-    );
-    if (_dismissalSync.storedCoordinates(pubkey).isNotEmpty ||
-        dismissed.isNotEmpty) {
-      await _dismissalSync.writeCoordinates(pubkey, dismissed);
-    }
+    await _dismissalSync.whileOpen(pubkey, () async {
+      final dismissed = await _dismissalSync.setHidden(
+        pubkey,
+        _dismissalSync.storedCoordinates(pubkey),
+        definitionCoordinate,
+        hidden: false,
+      );
+      if (_dismissalSync.storedCoordinates(pubkey).isNotEmpty ||
+          dismissed.isNotEmpty) {
+        await _dismissalSync.writeCoordinates(pubkey, dismissed);
+      }
+    });
   }
 
   /// Dismisses the badge at [definitionCoordinate] for the current user.
@@ -2023,15 +2033,20 @@ class BadgeRepository {
   /// dismissal keyed on an event id died the moment the same badge was
   /// awarded again, which is exactly what an account handing out unwanted
   /// badges does.
+  ///
+  /// Throws [BadgeAccountStateClosedException] when the account's badge state
+  /// closes before the choice is saved.
   Future<void> hideAward(String definitionCoordinate) async {
     final pubkey = _requireCurrentPubkey();
-    final dismissed = await _dismissalSync.setHidden(
-      pubkey,
-      _dismissalSync.storedCoordinates(pubkey),
-      definitionCoordinate,
-      hidden: true,
-    );
-    await _dismissalSync.writeCoordinates(pubkey, dismissed);
+    await _dismissalSync.whileOpen(pubkey, () async {
+      final dismissed = await _dismissalSync.setHidden(
+        pubkey,
+        _dismissalSync.storedCoordinates(pubkey),
+        definitionCoordinate,
+        hidden: true,
+      );
+      await _dismissalSync.writeCoordinates(pubkey, dismissed);
+    });
   }
 
   Future<List<Nip58BadgeAward>> _queryAwardsForRecipient(String pubkey) async {
@@ -2435,7 +2450,7 @@ class BadgeRepository {
   Future<Set<String>> _dismissedCoordinates(
     String pubkey,
     Future<List<Nip58BadgeAward>> awards,
-  ) async {
+  ) => _dismissalSync.whileOpen(pubkey, () async {
     final localFuture = awards.then(
       (awards) => _dismissalSync.localCoordinates(pubkey, awards),
     );
@@ -2445,7 +2460,7 @@ class BadgeRepository {
       await _dismissalSync.writeCoordinates(pubkey, dismissed);
     }
     return dismissed;
-  }
+  });
 
   String _requireCurrentPubkey() {
     final pubkey = _currentPubkey();
