@@ -3527,6 +3527,8 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.remixBlockedByCreator), findsOneWidget);
+        // Only bookmark results stay in the sheet; a refusal still closes it.
+        expect(find.byType(MetadataActionsSection), findsNothing);
         verify(() => consent.consentFor(_creatorPubkey)).called(1);
         verifyZeroInteractions(importer);
       },

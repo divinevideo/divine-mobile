@@ -503,6 +503,7 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.text(l10n.shareFailedToAddBookmark), findsOneWidget);
+        expect(find.byType(SnackBar), findsNothing);
       });
     });
     group('remix on the web', () {
