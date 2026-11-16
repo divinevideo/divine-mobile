@@ -65,6 +65,10 @@ VideoEvent _video(String digit) => VideoEvent(
   videoUrl: 'https://example.com/$digit.mp4',
 );
 
+// New limits each creator to two videos, so its fixtures need distinct authors.
+VideoEvent _newVideo(String digit) =>
+    _video(digit).copyWith(pubkey: digit * 64);
+
 void main() {
   group('Home video removal', () {
     late _MockVideosRepository videos;
@@ -424,13 +428,54 @@ void main() {
           ),
         ],
       );
+
+      // New pages past a page that shows nothing new, so a page holding only
+      // a removed video must not end the read early.
+      feedBlocTest(
+        'reads past a New page whose only video was removed',
+        build: createBloc,
+        setUp: () =>
+            when(
+              () => videos.getNewVideos(
+                cursor: any(named: 'cursor'),
+                skipCache: any(named: 'skipCache'),
+                revalidate: any(named: 'revalidate'),
+              ),
+            ).thenAnswer(
+              (call) async => call.namedArguments[#cursor] == 'first-page'
+                  ? HomeFeedResult(
+                      videos: [_newVideo('2')],
+                      paginationCursor: 'second-page',
+                      hasMore: true,
+                    )
+                  : HomeFeedResult(videos: [_newVideo('3')], hasMore: false),
+            ),
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          source: const VideoFeedSource.newVideos(),
+          videos: [_newVideo('1')],
+          paginationCursor: 'first-page',
+          coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
+        ),
+        act: (bloc) async {
+          final finished = bloc.stream
+              .skipWhile((state) => !state.isLoadingMore)
+              .firstWhere((state) => !state.isLoadingMore);
+          bloc.add(const VideoFeedLoadMoreRequested());
+          await finished;
+        },
+        verify: (bloc) =>
+            expect(bloc.state.videos, [_newVideo('1'), _newVideo('3')]),
+      );
     });
 
     group('switching to a cached source', () {
       late _MemoryHomeFeedCache cache;
+      List<VideoEvent>? firstServed;
 
       setUp(() {
         cache = _MemoryHomeFeedCache();
+        firstServed = null;
         when(() => videos.applyContentPreferences(any())).thenAnswer(
           (call) => call.positionalArguments.single as List<VideoEvent>,
         );
@@ -456,6 +501,39 @@ void main() {
         status: VideoFeedStatus.success,
         source: const VideoFeedSource.classic(),
         coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
+      );
+
+      feedBlocTest(
+        'serves a cached window without a video removed after it was read',
+        // The fresh page differs from the window, so only the cache can put
+        // video 1 first.
+        setUp: () =>
+            when(
+              () => videos.getRecommendedVideos(
+                userPubkey: any(named: 'userPubkey'),
+                until: any(named: 'until'),
+                skipCache: any(named: 'skipCache'),
+                revalidate: any(named: 'revalidate'),
+              ),
+            ).thenAnswer(
+              (_) async =>
+                  HomeFeedResult(videos: [_video('4')], hasMore: false),
+            ),
+        build: () => createBloc(
+          cache: cache..window = [_video('1'), _video('2')],
+          serveCachedHomeFeed: true,
+        ),
+        seed: removedAfterTheRead,
+        act: (bloc) async {
+          final served = bloc.stream.firstWhere(
+            (state) =>
+                state.source == const VideoFeedSource.forYou() &&
+                state.videos.isNotEmpty,
+          );
+          bloc.add(const VideoFeedModeChanged(FeedMode.forYou));
+          firstServed = (await served).videos;
+        },
+        verify: (_) => expect(firstServed, [_video('1')]),
       );
 
       group('with a tracked load', () {
