@@ -25,7 +25,7 @@ VideoEvent _video(String id) => VideoEvent(
 
 class _RestoredPooledFeedState extends Fake implements GoRouterState {
   _RestoredPooledFeedState(String videoId)
-    : uri = Uri.parse(PooledFullscreenVideoFeedScreen.pathForVideoId(videoId));
+    : uri = Uri.parse('/pooled-video-feed?video=$videoId');
 
   @override
   final Uri uri;
@@ -122,14 +122,7 @@ void main() {
     });
   });
 
-  group('PooledFullscreenVideoFeedScreen.pathForVideoId', () {
-    test('puts the selected video identity in the route URL', () {
-      expect(
-        PooledFullscreenVideoFeedScreen.pathForVideoId('video/with spaces'),
-        equals('/pooled-video-feed?video=video%2Fwith+spaces'),
-      );
-    });
-
+  group('buildPooledFullscreenFeed', () {
     testWidgets('builder forwards the sponsor disclosure', (tester) async {
       late Widget built;
       final args = PooledFullscreenVideoFeedArgs(

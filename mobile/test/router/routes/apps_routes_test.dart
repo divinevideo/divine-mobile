@@ -10,6 +10,7 @@ import 'package:nostr_app_bridge_repository/nostr_app_bridge_repository.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/apps_routes.dart';
 import 'package:openvine/router/widgets/resolved_app_route_screen.dart';
 import 'package:openvine/screens/apps/app_detail_screen.dart';
@@ -127,20 +128,19 @@ void main() {
         );
       });
 
-      // Callers and the screens' path builders still build these locations,
-      // so the typed routes must produce the same URL for every id.
+      // The typed sandbox locations must percent-encode the id.
       for (final id in _awkwardIds) {
-        test('the sandbox location matches pathForAppId for "$id"', () {
+        test('the sandbox location encodes the id "$id"', () {
           expect(
             NostrAppSandboxRouteData(appId: id).location,
-            equals(NostrAppSandboxScreen.pathForAppId(id)),
+            equals('/apps/${Uri.encodeComponent(id)}/sandbox'),
           );
         });
 
-        test('the web sandbox location matches pathForAppId for "$id"', () {
+        test('the web sandbox location encodes the id "$id"', () {
           expect(
             WebIframeSandboxRouteData(appId: id).location,
-            equals(WebIframeSandboxScreen.pathForAppId(id)),
+            equals('/apps/${Uri.encodeComponent(id)}/web-sandbox'),
           );
         });
 
@@ -155,11 +155,12 @@ void main() {
         });
       }
 
+      // buildRoute still builds the detail location from RoutePaths.
       for (final slug in _plainIds) {
-        test('the detail location matches pathForSlug for "$slug"', () {
+        test('the detail location matches RoutePaths for "$slug"', () {
           expect(
             AppDetailRouteData(slug: slug).location,
-            equals(AppDetailScreen.pathForSlug(slug)),
+            equals(RoutePaths.appDetailForSlug(slug)),
           );
         });
       }
@@ -408,7 +409,7 @@ void main() {
 
           final screen = build(
             NostrAppSandboxScreen.routeName,
-            NostrAppSandboxScreen.pathForAppId(appId),
+            '/apps/$appId/sandbox',
             pathParameters: const {'appId': appId},
             extra: extra,
           );
@@ -429,7 +430,7 @@ void main() {
 
           final screen = build(
             WebIframeSandboxScreen.routeName,
-            WebIframeSandboxScreen.pathForAppId(appId),
+            '/apps/$appId/web-sandbox',
             pathParameters: const {'appId': appId},
             extra: extra,
           );
@@ -450,7 +451,7 @@ void main() {
 
           final screen = build(
             AppDetailScreen.routeName,
-            AppDetailScreen.pathForSlug('primal'),
+            RoutePaths.appDetailForSlug('primal'),
             pathParameters: const {'slug': 'primal'},
             extra: extra,
           );
@@ -472,7 +473,7 @@ void main() {
 
         final screen = build(
           NostrAppSandboxScreen.routeName,
-          NostrAppSandboxScreen.pathForAppId(appId),
+          '/apps/$appId/sandbox',
           pathParameters: const {'appId': appId},
         ) as ResolvedAppRouteScreen;
 
@@ -485,7 +486,7 @@ void main() {
 
         final screen = build(
           WebIframeSandboxScreen.routeName,
-          WebIframeSandboxScreen.pathForAppId(appId),
+          '/apps/$appId/web-sandbox',
           pathParameters: const {'appId': appId},
         ) as ResolvedAppRouteScreen;
 

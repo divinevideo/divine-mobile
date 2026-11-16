@@ -34,9 +34,6 @@ class LoginOptionsScreen extends ConsumerWidget {
   /// Route name for this screen.
   static const String routeName = 'login-options';
 
-  /// Route path for this screen.
-  static const String path = '/login-options';
-
   /// Path segment of the reset password child route.
   static const String resetPasswordSegment = 'reset-password';
 

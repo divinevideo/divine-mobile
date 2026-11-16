@@ -15,7 +15,6 @@ import 'package:openvine/blocs/categories/categories_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_category_name.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -29,9 +28,6 @@ class CategoryGalleryScreen extends ConsumerStatefulWidget {
 
   static const routeName = 'category-gallery';
   static const path = '/categories/:categoryName';
-
-  static String locationFor(String categoryName) =>
-      RoutePaths.categoryGalleryFor(categoryName);
 
   final VideoCategory category;
 

@@ -104,17 +104,17 @@ void main() {
         );
       });
 
-      test('a followers location matches pathForPubkey', () {
+      test('a followers location matches RoutePaths', () {
         expect(
           const FollowersRouteData(pubkey: _pubkey).location,
-          equals(FollowersScreenRouter.pathForPubkey(_pubkey)),
+          equals(RoutePaths.followersForPubkey(_pubkey)),
         );
       });
 
-      test('a following location matches pathForPubkey', () {
+      test('a following location matches RoutePaths', () {
         expect(
           const FollowingRouteData(pubkey: _pubkey).location,
-          equals(FollowingScreenRouter.pathForPubkey(_pubkey)),
+          equals(RoutePaths.followingForPubkey(_pubkey)),
         );
       });
 
@@ -243,7 +243,7 @@ void main() {
 
         final screen = build(
           FollowersScreenRouter.routeName,
-          FollowersScreenRouter.pathForPubkey(_pubkey),
+          RoutePaths.followersForPubkey(_pubkey),
           pathParameters: const {'pubkey': _pubkey},
           extra: 'Alice',
         );
@@ -261,7 +261,7 @@ void main() {
 
         final screen = build(
           FollowingScreenRouter.routeName,
-          FollowingScreenRouter.pathForPubkey(_pubkey),
+          RoutePaths.followingForPubkey(_pubkey),
           pathParameters: const {'pubkey': _pubkey},
           extra: 'Alice',
         );
@@ -283,7 +283,7 @@ void main() {
 
         final screen = build(
           FollowersScreenRouter.routeName,
-          FollowersScreenRouter.pathForPubkey(_pubkey),
+          RoutePaths.followersForPubkey(_pubkey),
           pathParameters: const {'pubkey': _pubkey},
           extra: const <String, dynamic>{'displayName': 'Alice'},
         );

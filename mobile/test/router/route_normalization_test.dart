@@ -5,12 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/reset_password.dart';
-import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -89,9 +87,9 @@ void main() {
       'skips all query or fragment routes because canonicalization is lossy',
       () {
         final routes = {
-          PooledFullscreenVideoFeedScreen.pathForVideoId(videoId):
+          '/pooled-video-feed?video=$videoId':
               'pooled feed carries selected video identity in query',
-          CreatePeopleListPage.pathWithInitialPubkey(pubkey):
+          '/people-lists/new?initialPubkey=$pubkey':
               'create people list seeds a full pubkey in query',
           SearchResultsPage.pathForQuery('nostr', requestFocusOnMount: true):
               'search focus state lives in query',

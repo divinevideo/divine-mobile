@@ -269,12 +269,12 @@ void main() {
       },
     );
 
-    testWidgets('pathForEmptyQuery opens search without a prefilled query', (
+    testWidgets('the empty search path opens without a prefilled query', (
       tester,
     ) async {
       final result = await navigateAndCapture(
         tester,
-        SearchResultsPage.pathForEmptyQuery(requestFocusOnMount: true),
+        '/search-results?focus=1',
       );
 
       expect(tester.takeException(), isNull);

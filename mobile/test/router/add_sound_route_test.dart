@@ -24,7 +24,7 @@ void main() {
       final router = container.read(goRouterProvider);
 
       final match = router.configuration.findMatch(
-        Uri.parse(AddSoundPage.path),
+        Uri.parse(RoutePaths.addSound),
       );
 
       expect(match.isError, isFalse);

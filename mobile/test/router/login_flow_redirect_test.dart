@@ -4,7 +4,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
-import 'package:openvine/screens/auth/login_options_screen.dart';
 import 'package:openvine/screens/auth/nostr_connect_screen.dart';
 import 'package:openvine/screens/auth/reset_password.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
@@ -315,7 +314,7 @@ void main() {
             redirect,
             isNot(equals(WelcomeScreen.path)),
             reason:
-                'BUG: ${LoginOptionsScreen.path} is an auth route and should be accessible '
+                'BUG: ${WelcomeScreen.loginOptionsPath} is an auth route and should be accessible '
                 'to unauthenticated users trying to log in!',
           );
         },

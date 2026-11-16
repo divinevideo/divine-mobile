@@ -35,10 +35,6 @@ class VideoMetadataEditScreen extends ConsumerStatefulWidget {
   /// Route pattern, with the video id as its `videoId` parameter.
   static const pathWithId = '$path/:videoId';
 
-  /// Build a concrete `/video-edit/:videoId` path for [videoId].
-  static String pathFor(String videoId) =>
-      RoutePaths.videoMetadataEditFor(videoId);
-
   const VideoMetadataEditScreen({
     required this.videoId,
     this.prefetched,

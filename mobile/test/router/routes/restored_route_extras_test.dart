@@ -363,7 +363,7 @@ void main() {
         tester,
         appsRoutes(),
         AppDetailScreen.routeName,
-        location: AppDetailScreen.pathForSlug(slug),
+        location: RoutePaths.appDetailForSlug(slug),
         pathParameters: const {'slug': slug},
       );
 
@@ -466,7 +466,7 @@ void main() {
         tester,
         videoRoutes(),
         OriginalSoundDetailScreen.routeName,
-        location: OriginalSoundDetailScreen.pathForPubkey(pubkeyHex),
+        location: RoutePaths.originalSoundDetailForPubkey(pubkeyHex),
         pathParameters: const {'pubkey': pubkeyHex},
       );
 
@@ -485,7 +485,7 @@ void main() {
         tester,
         videoRoutes(),
         PostAnalyticsDetailScreen.routeName,
-        location: PostAnalyticsDetailScreen.pathForId(eventId),
+        location: '/creator-analytics/$eventId',
         pathParameters: const {'videoId': eventId},
       );
 
@@ -525,7 +525,7 @@ void main() {
         tester,
         profileRoutes(),
         FollowersScreenRouter.routeName,
-        location: FollowersScreenRouter.pathForPubkey(pubkeyHex),
+        location: RoutePaths.followersForPubkey(pubkeyHex),
         pathParameters: const {'pubkey': pubkeyHex},
       );
 
@@ -544,7 +544,7 @@ void main() {
         tester,
         profileRoutes(),
         FollowingScreenRouter.routeName,
-        location: FollowingScreenRouter.pathForPubkey(pubkeyHex),
+        location: RoutePaths.followingForPubkey(pubkeyHex),
         pathParameters: const {'pubkey': pubkeyHex},
       );
 
@@ -658,9 +658,7 @@ void main() {
           withVideo = route.redirect!(
             context,
             _FakeGoRouterState(
-              location: PooledFullscreenVideoFeedScreen.pathForVideoId(
-                eventId,
-              ),
+              location: '/pooled-video-feed?video=$eventId',
               pathParameters: const {},
             ),
           );

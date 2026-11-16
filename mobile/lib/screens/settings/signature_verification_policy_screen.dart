@@ -19,7 +19,6 @@ class SignatureVerificationPolicyScreen extends ConsumerWidget {
 
   static const routeName = 'signature-verification';
   static const subpath = 'signature-verification';
-  static const path = '${NostrSettingsScreen.path}/$subpath';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
