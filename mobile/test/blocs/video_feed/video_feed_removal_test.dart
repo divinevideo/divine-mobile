@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
@@ -24,8 +25,18 @@ class _MockCuratedListRepository extends Mock
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
+class _MockFeedPerformanceTracker extends Mock
+    implements FeedPerformanceTracker {}
+
 class _MemoryHomeFeedCache extends HomeFeedCache {
   List<VideoEvent>? saved;
+  List<VideoEvent>? window;
+
+  @override
+  Future<List<VideoEvent>?> readVideos({
+    required String? pubkey,
+    required String mode,
+  }) async => window;
 
   @override
   Future<void> writeVideos({
@@ -71,14 +82,17 @@ void main() {
     VideoFeedBloc createBloc({
       ProfileRepository? profiles,
       HomeFeedCache? cache,
+      FeedPerformanceTracker? feedTracker,
+      bool serveCachedHomeFeed = false,
     }) => VideoFeedBloc(
       videosRepository: videos,
       removedIdsStream: videos.removedVideoIds,
       followRepository: _MockFollowRepository(),
       curatedListRepository: _MockCuratedListRepository(),
-      serveCachedHomeFeed: false,
+      serveCachedHomeFeed: serveCachedHomeFeed,
       profileRepository: profiles,
       homeFeedCache: cache ?? _MemoryHomeFeedCache(),
+      feedTracker: feedTracker,
     );
 
     feedBlocTest(
@@ -377,6 +391,83 @@ void main() {
           ),
         ],
       );
+    });
+
+    group('switching to a cached source', () {
+      late _MemoryHomeFeedCache cache;
+
+      setUp(() {
+        cache = _MemoryHomeFeedCache();
+        when(() => videos.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.single as List<VideoEvent>,
+        );
+        when(() => videos.isVideoKnownDeleted(any())).thenAnswer(
+          (call) =>
+              (call.positionalArguments.single as VideoEvent).id == '2' * 64,
+        );
+        when(
+          () => videos.getRecommendedVideos(
+            userPubkey: any(named: 'userPubkey'),
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer(
+          (_) async => HomeFeedResult(videos: [_video('1')], hasMore: false),
+        );
+      });
+
+      // The window was read before the deletion arrived, so the repository's
+      // own read filter could not drop it.
+      VideoFeedBlocState removedAfterTheRead() => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        source: const VideoFeedSource.classic(),
+        coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
+      );
+
+      group('with a tracked load', () {
+        late _MockFeedPerformanceTracker tracker;
+        late FeedLoadHandle feedLoad;
+
+        setUp(() {
+          registerFallbackValue(FeedLoadReason.sourceSwitch);
+          tracker = _MockFeedPerformanceTracker();
+          feedLoad = FeedPerformanceTracker(
+            sink: const NoOpAnalyticsEventSink(),
+          ).startFeedLoad('forYou');
+          when(
+            () => tracker.startFeedLoad(any(), reason: any(named: 'reason')),
+          ).thenReturn(feedLoad);
+        });
+
+        feedBlocTest(
+          'a window left empty by removals is not counted as served',
+          build: () => createBloc(
+            cache: cache..window = [_video('2')],
+            serveCachedHomeFeed: true,
+            feedTracker: tracker,
+          ),
+          seed: removedAfterTheRead,
+          act: (bloc) async {
+            bloc.add(const VideoFeedModeChanged(FeedMode.forYou));
+            await bloc.stream.firstWhere(
+              (state) =>
+                  state.status == VideoFeedStatus.success &&
+                  state.source == const VideoFeedSource.forYou(),
+            );
+          },
+          verify: (bloc) {
+            expect(bloc.state.videos, [_video('1')]);
+            verify(
+              () => tracker.markFirstVisibleContent(
+                feedLoad,
+                1,
+                servedFromCache: false,
+              ),
+            ).called(1);
+          },
+        );
+      });
     });
 
     feedBlocTest(

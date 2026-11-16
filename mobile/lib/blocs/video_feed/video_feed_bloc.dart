@@ -878,7 +878,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       emit,
       feedLoad: feedLoad,
       revalidate: true,
-      prefetchedCachedVideos: cachedVideos,
+      // An empty list, not null: a window left empty by removals was not
+      // served, and must not be read and served again.
+      prefetchedCachedVideos: servedCache ? cachedVideos : const [],
       startsNewFeedSession: !servedCache,
     );
   }
