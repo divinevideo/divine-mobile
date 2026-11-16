@@ -2195,14 +2195,11 @@ class LikesRepository {
     if (unknown.isEmpty) return first;
 
     final again = await _readVotesOnce(
-      unknown.toList(),
-      {
-        for (final MapEntry(key: coordinate, value: eventId)
-            in eventIdByCoordinate.entries)
-          if (unknown.contains(eventId)) coordinate: eventId,
-      },
+      eventIds,
+      eventIdByCoordinate,
       authors: authors,
       timeout: _voteRereadTimeout,
+      targetsToRead: unknown,
     );
     return (
       votes: [...first.votes, ...again.votes],
@@ -2220,10 +2217,22 @@ class LikesRepository {
     Map<String, String> eventIdByCoordinate, {
     required Duration timeout,
     List<String>? authors,
+    Set<String>? targetsToRead,
   }) async {
+    // Narrow the queries, not target resolution: a reaction returned for a
+    // copied ancestor tag must still resolve to its already-settled target.
+    final readIds = targetsToRead == null
+        ? eventIds
+        : eventIds.where(targetsToRead.contains).toList();
+    final readCoordinates = [
+      for (final MapEntry(key: coordinate, value: eventId)
+          in eventIdByCoordinate.entries)
+        if (targetsToRead == null || targetsToRead.contains(eventId))
+          coordinate,
+    ];
     final reads = await Future.wait([
       _readVoteChunks(
-        eventIds,
+        readIds,
         (chunk) => Filter(
           kinds: const [EventKind.reaction],
           authors: authors,
@@ -2232,7 +2241,7 @@ class LikesRepository {
         timeout: timeout,
       ),
       _readVoteChunks(
-        eventIdByCoordinate.keys.toList(),
+        readCoordinates,
         (chunk) => Filter(
           kinds: const [EventKind.reaction],
           authors: authors,
@@ -2270,7 +2279,9 @@ class LikesRepository {
         knownEventIds,
         eventIdByCoordinate,
       );
-      if (targetId == null || retractions.retracted.contains(vote.id)) {
+      if (targetId == null ||
+          (targetsToRead != null && !targetsToRead.contains(targetId)) ||
+          retractions.retracted.contains(vote.id)) {
         continue;
       }
       if (retractions.undecided.contains(vote.id)) {

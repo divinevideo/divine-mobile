@@ -962,6 +962,67 @@ void main() {
   });
 
   group('LikesRepository vote reads that end short (#10996)', () {
+    group('rereads with copied ancestor tags', () {
+      Future<_Harness> harnessWithAncestorVote() async {
+        final h = await _harness();
+        h.relay
+          ..store.add(
+            await h._sign(
+              Event(
+                h.user,
+                EventKind.reaction,
+                [
+                  ['e', _target],
+                  ['e', _otherTarget],
+                  ['p', _author],
+                ],
+                '+',
+                createdAt: _now - 60,
+              ),
+            ),
+          )
+          // The ancestor's coordinate read fails once, but the reaction's
+          // real target already settled through the shared event-id read.
+          ..replyQueue[_Read.targetedReactions] = [
+            _Reply.answer,
+            _Reply.closed,
+          ];
+        return h;
+      }
+
+      test(
+        'does not count a settled target vote on its reread ancestor',
+        () async {
+          final h = await harnessWithAncestorVote();
+
+          final counts = await h.repo.getVoteCounts(
+            [_target, _otherTarget],
+            addressableIds: {_target: _coord},
+          );
+
+          expect(counts.upvotes[_otherTarget], 1);
+          expect(counts.upvotes[_target], 0);
+          expect(
+            h.relay.reads.where((r) => r == _Read.targetedReactions),
+            hasLength(4),
+          );
+        },
+      );
+
+      test('does not give the viewer a vote on the reread ancestor', () async {
+        final h = await harnessWithAncestorVote();
+
+        final statuses = await h.repo.getUserVoteStatuses(
+          [_target, _otherTarget],
+          addressableIds: {_target: _coord},
+        );
+
+        expect(statuses.unknownIds, isEmpty);
+        expect(statuses.upvotedIds, {_otherTarget});
+        expect(statuses.downvotedIds, isEmpty);
+      });
+    });
+
     group('getVoteCounts', () {
       test('counts the vote the relay holds', () async {
         final h = await _harness();
