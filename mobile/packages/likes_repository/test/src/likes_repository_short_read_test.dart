@@ -1009,6 +1009,34 @@ void main() {
         },
       );
 
+      test(
+        'keeps a settled target counted when the reread cannot read '
+        'its vote retractions',
+        () async {
+          final h = await harnessWithAncestorVote();
+          // The first pass reads the retractions; the reread, which finds
+          // the same vote through the ancestor, gets a CLOSED instead. The
+          // vote belongs to the settled target, so the reread must leave it
+          // alone rather than turn that target unknown.
+          h.relay.replyQueue[_Read.deletions] = [
+            _Reply.answer,
+            _Reply.closed,
+          ];
+
+          final counts = await h.repo.getVoteCounts(
+            [_target, _otherTarget],
+            addressableIds: {_target: _coord},
+          );
+
+          expect(
+            h.relay.reads.where((r) => r == _Read.deletions),
+            hasLength(2),
+          );
+          expect(counts.upvotes[_otherTarget], 1);
+          expect(counts.upvotes[_target], 0);
+        },
+      );
+
       test('does not give the viewer a vote on the reread ancestor', () async {
         final h = await harnessWithAncestorVote();
 
