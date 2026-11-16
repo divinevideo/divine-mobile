@@ -226,7 +226,7 @@ enum DivineIconName {
   squareFill('square_fill'),
   squaresFour('squares_four'),
 
-  /// Frame held level between motion arcs: camera stabilization.
+  /// A frame held level between motion arcs: camera stabilization.
   stabilization('stabilization'),
   stackSimple('stack_simple'),
   sticker('sticker'),
