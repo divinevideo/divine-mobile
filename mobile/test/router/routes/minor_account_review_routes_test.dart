@@ -1,9 +1,11 @@
-// ABOUTME: Tests the minor-account review routes registered by
-// ABOUTME: minorAccountReviewRoutes: locations, names, navigators and order.
+// ABOUTME: Tests minorAccountReviewRoutes: locations, names, navigators, order,
+// ABOUTME: and the review loading page arriving without a transition.
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/router/routes/minor_account_review_routes.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
@@ -237,6 +239,57 @@ void main() {
           isA<MinorAccountReviewLoadingScreen>(),
         );
       });
+    });
+
+    group('transitions', () {
+      // The gate can send an account on the bottom-nav shell to the loading
+      // route and back before the loading page has finished arriving, when the
+      // status fetch fails fast. The returning shell must not meet the leaving
+      // one, which would put the shell's GlobalKey on two widgets.
+      testWidgets(
+        'returning to the shell while the loading page arrives keeps one shell',
+        (tester) async {
+          final router = GoRouter(
+            navigatorKey: NavigatorKeys.root,
+            initialLocation: '/home',
+            routes: [
+              StatefulShellRoute.indexedStack(
+                pageBuilder: (context, state, shell) =>
+                    NoTransitionPage<void>(key: state.pageKey, child: shell),
+                branches: [
+                  StatefulShellBranch(
+                    routes: [
+                      GoRoute(
+                        path: '/home',
+                        builder: (_, _) => const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              ...minorAccountReviewRoutes(),
+            ],
+          );
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            MaterialApp.router(
+              theme: VineTheme.theme,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
+          );
+
+          router.go(const MinorAccountReviewLoadingRouteData().location);
+          await tester.pump();
+          router.go('/home');
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(tester.takeException(), isNull);
+          expect(find.byType(StatefulNavigationShell), findsOneWidget);
+        },
+      );
     });
 
     group('resolution', () {
