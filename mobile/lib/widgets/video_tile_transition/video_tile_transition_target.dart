@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/widgets/video_feed_item/blurred_video_backdrop.dart';
+import 'package:openvine/widgets/video_tile_transition/rounded_by_clips.dart';
 
 /// Where a player letterboxing a video at [aspectRatio] draws it in
 /// [viewport]: fitted inside it and centered, or the whole [viewport] when
@@ -137,11 +138,7 @@ class _VideoTileTransitionTargetState extends State<VideoTileTransitionTarget> {
     RenderObject page,
     RenderBox ancestor,
   ) {
-    var topLeft = Radius.zero;
-    var topRight = Radius.zero;
-    var bottomLeft = Radius.zero;
-    var bottomRight = Radius.zero;
-    bool meets(Offset a, Offset b) => (a - b).distance < 0.5;
+    final clips = <RenderClipRRect>[];
     // The ancestor itself can be the clip: it is the page's first render
     // object, which is whatever the page puts outermost.
     for (
@@ -149,37 +146,9 @@ class _VideoTileTransitionTargetState extends State<VideoTileTransitionTarget> {
       node != null;
       node = identical(node, ancestor) ? null : node.parent
     ) {
-      // A custom clipper's shape is not its border radius.
-      if (node is! RenderClipRRect || node.clipper != null || !node.hasSize) {
-        continue;
-      }
-      final clip = MatrixUtils.transformRect(
-        node.getTransformTo(ancestor),
-        Offset.zero & node.size,
-      );
-      final radius = node.borderRadius.resolve(node.textDirection);
-      if (topLeft == Radius.zero && meets(rect.topLeft, clip.topLeft)) {
-        topLeft = radius.topLeft;
-      }
-      if (topRight == Radius.zero && meets(rect.topRight, clip.topRight)) {
-        topRight = radius.topRight;
-      }
-      if (bottomLeft == Radius.zero &&
-          meets(rect.bottomLeft, clip.bottomLeft)) {
-        bottomLeft = radius.bottomLeft;
-      }
-      if (bottomRight == Radius.zero &&
-          meets(rect.bottomRight, clip.bottomRight)) {
-        bottomRight = radius.bottomRight;
-      }
+      if (node is RenderClipRRect) clips.add(node);
     }
-    return RRect.fromRectAndCorners(
-      rect,
-      topLeft: topLeft,
-      topRight: topRight,
-      bottomLeft: bottomLeft,
-      bottomRight: bottomRight,
-    );
+    return roundedByClips(rect, clips, ancestor: ancestor);
   }
 
   /// The page as it is drawn now, at [pixelRatio], or `null` when it does
@@ -269,6 +238,7 @@ class VideoTileFlightFrame {
   const VideoTileFlightFrame({
     required this.transform,
     required this.clip,
+    required this.bounds,
     required this.opacity,
   });
 
@@ -280,6 +250,12 @@ class VideoTileFlightFrame {
   /// What of the page shows now, in global coordinates: growing from the
   /// tile to the page.
   final RRect clip;
+
+  /// Where anything flying may be drawn now, in global coordinates, with its
+  /// corners: growing from where the tile can be seen to the page, so bars
+  /// and rounded panels around the grid, such as the bottom navigation, stay
+  /// over the flight.
+  final RRect bounds;
 
   /// How far the controls have faded in.
   final double opacity;

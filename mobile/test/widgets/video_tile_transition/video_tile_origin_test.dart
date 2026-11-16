@@ -235,6 +235,152 @@ void main() {
       });
     });
 
+    group('visibleBounds', () {
+      /// A grid of [gridHeight] scrolled into a view at [view], holding a tile
+      /// at [_tileRect] in the view's content, with [inner] wrapping the grid.
+      Future<VideoTileOrigin> captureInView(
+        WidgetTester tester, {
+        required Rect view,
+        Widget Function(Widget grid)? inner,
+        BorderRadius? tileCorners,
+      }) async {
+        late BuildContext tileContext;
+        final grid = SingleChildScrollView(
+          physics: const NeverScrollableScrollPhysics(),
+          child: SizedBox(
+            height: 600,
+            width: 400,
+            child: Stack(
+              children: [
+                Positioned.fromRect(
+                  rect: _tileRect,
+                  child: Builder(
+                    builder: (context) {
+                      tileContext = context;
+                      const thumbnail = VideoTileThumbnailBoundary(
+                        child: ColoredBox(color: Color(0xFF00FF00)),
+                      );
+                      final corners = tileCorners;
+                      if (corners == null) return thumbnail;
+                      return ClipRRect(
+                        borderRadius: corners,
+                        child: thumbnail,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Stack(
+              children: [
+                Positioned.fromRect(
+                  rect: view,
+                  child: inner?.call(grid) ?? grid,
+                ),
+              ],
+            ),
+          ),
+        );
+        return VideoTileOrigin.capture(tileContext, videoId: 'v')!;
+      }
+
+      testWidgets('is where the scrolling view around the tile shows it', (
+        tester,
+      ) async {
+        // The view ends 50 points into the tile, where a bar would begin.
+        const view = Rect.fromLTWH(0, 0, 400, 230);
+
+        final origin = await captureInView(tester, view: view);
+
+        expect(origin.rect, equals(_tileRect));
+        expect(
+          origin.visibleBounds,
+          equals(RRect.fromRectAndRadius(view, Radius.zero)),
+        );
+      });
+
+      testWidgets("is rounded like a panel's corners around the view", (
+        tester,
+      ) async {
+        const view = Rect.fromLTWH(0, 0, 400, 230);
+        const corners = BorderRadius.vertical(bottom: Radius.circular(30));
+
+        final origin = await captureInView(
+          tester,
+          view: view,
+          inner: (grid) => ClipRRect(borderRadius: corners, child: grid),
+        );
+
+        expect(origin.visibleBounds, equals(corners.toRRect(view)));
+      });
+
+      testWidgets("keeps square corners where only the tile's own meet them", (
+        tester,
+      ) async {
+        // The view ends at the tile's bottom right, which the tile rounds.
+        final origin = await captureInView(
+          tester,
+          view: Rect.fromLTRB(0, 0, _tileRect.right, _tileRect.bottom),
+          tileCorners: BorderRadius.circular(8),
+        );
+
+        expect(origin.visibleBounds!.brRadius, equals(Radius.zero));
+      });
+
+      testWidgets('is only what every scrolling view around it shows', (
+        tester,
+      ) async {
+        const view = Rect.fromLTWH(0, 0, 400, 230);
+
+        final origin = await captureInView(
+          tester,
+          view: view,
+          // A horizontal view, as of tabs, showing only its left 100 points.
+          inner: (grid) => Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 100,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const NeverScrollableScrollPhysics(),
+                child: grid,
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          origin.visibleBounds?.outerRect,
+          equals(const Rect.fromLTWH(0, 0, 100, 230)),
+        );
+      });
+
+      testWidgets('is null without a scrolling view, and once gone', (
+        tester,
+      ) async {
+        late BuildContext tileContext;
+        await tester.pumpWidget(
+          _Tile(rect: _tileRect, onContext: (c) => tileContext = c),
+        );
+        final origin = VideoTileOrigin.capture(tileContext, videoId: 'v')!;
+        expect(origin.visibleBounds, isNull);
+
+        final inView = await captureInView(
+          tester,
+          view: const Rect.fromLTWH(0, 0, 400, 230),
+        );
+        expect(inView.visibleBounds, isNotNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+
+        expect(inView.visibleBounds, isNull);
+      });
+    });
+
     group('alignment', () {
       testWidgets('is where the tile crops its thumbnail', (tester) async {
         final image = await squareImage(tester);

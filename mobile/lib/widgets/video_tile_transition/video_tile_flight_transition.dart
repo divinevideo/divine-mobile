@@ -19,6 +19,12 @@ import 'package:openvine/widgets/video_tile_transition/video_tile_transition_tar
 /// the player never shows behind the picture still on its way, and the page
 /// is whole the moment the picture lands.
 ///
+/// Everything that flies stays within bounds growing from where the tile can
+/// be seen, [VideoTileOrigin.visibleBounds], to the page, their corners from
+/// those of a panel around the grid to the page's: a tile partly under a bar
+/// around the grid, such as the bottom navigation, flies out from under it,
+/// and the bar stays over the flight as it fades into the page's own.
+///
 /// The frame is whatever the page's [VideoTileTransitionTarget] reports, so a
 /// letterboxed square video lands on its letterboxed band rather than filling
 /// the screen, and the picture's corners round into the frame's. Until the
@@ -380,12 +386,60 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
           landing.page,
           progress,
         )!;
+        // The scrims span all of what shows: the page laid over the
+        // picture's crop, as the controls are, can be narrower than it.
+        Rect across(Rect band) =>
+            Rect.fromLTRB(clip.left, band.top, clip.right, band.bottom);
+        final topScrim = VideoTileScrimBand(
+          rect: across(
+            MatrixUtils.transformRect(
+              transform,
+              _playerTopScrim(landing.page.outerRect, screen),
+            ),
+          ),
+          opacity: VideoOverlayScrims.topOpacity * progress,
+        );
+        final bottom = _bottomScrim(
+          landing: MatrixUtils.transformRect(
+            transform,
+            _playerBottomScrim(landing.page.outerRect, screen),
+          ),
+          from: from,
+          rect: rect,
+          progress: progress,
+        );
+        final bottomScrim = VideoTileScrimBand(
+          rect: across(bottom.rect),
+          opacity: bottom.opacity,
+        );
+        final visible =
+            widget.origin.visibleBounds ??
+            RRect.fromRectAndRadius(screen, Radius.zero);
+        // Until the page is laid out, where its own bars begin is unknown:
+        // the bounds keep to the bottom of the view until then, so the bars
+        // below it stay over the flight.
+        final bounds = RRect.lerp(
+          visible,
+          _lastLanding?.page ??
+              RRect.fromLTRBAndCorners(
+                screen.left,
+                screen.top,
+                screen.right,
+                visible.bottom,
+                topLeft: visible.tlRadius,
+                topRight: visible.trRadius,
+                bottomLeft: visible.blRadius,
+                bottomRight: visible.brRadius,
+              ),
+          progress,
+        )!;
         // The page's controls rebuild from this while they fly, which is
         // allowed during this build: they are below it.
         _flight.value = flying
             ? VideoTileFlightFrame(
                 transform: transform,
                 clip: clip,
+                bounds: bounds,
                 opacity: progress,
               )
             : null;
@@ -396,6 +450,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
               page: landing.page,
               // The snapshot stands in for the page under the clip.
               flight: frame == null ? clip : null,
+              bounds: bounds,
             ),
             child: page,
           );
@@ -404,63 +459,60 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
           fit: StackFit.expand,
           children: [
             Opacity(opacity: progress, child: revealed),
-            if (flying) ...[
-              if (frame != null)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: CustomPaint(
-                      painter: VideoTilePageSnapshotPainter(
-                        image: frame,
-                        page: landing.page.outerRect,
-                        transform: transform,
-                        clip: clip,
-                      ),
-                    ),
-                  ),
-                ),
-              if (picture != null && pictureOpacity > 0)
-                Positioned.fromRect(
-                  rect: rect,
-                  child: IgnorePointer(
-                    child: Opacity(
-                      opacity: pictureOpacity,
-                      child: ClipRRect(
-                        borderRadius: borderRadius,
-                        child: RawImage(
-                          image: picture,
-                          fit: BoxFit.cover,
-                          alignment: alignment,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+            if (flying)
               Positioned.fill(
                 child: IgnorePointer(
-                  child: CustomPaint(
-                    painter: VideoTileScrimPainter(
-                      clip: clip,
-                      top: VideoTileScrimBand(
-                        rect: MatrixUtils.transformRect(
-                          transform,
-                          _playerTopScrim(landing.page.outerRect, screen),
+                  child: ClipRRect(
+                    clipper: _BoundsClip(bounds),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (frame != null)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: CustomPaint(
+                                painter: VideoTilePageSnapshotPainter(
+                                  image: frame,
+                                  page: landing.page.outerRect,
+                                  transform: transform,
+                                  clip: clip,
+                                ),
+                              ),
+                            ),
+                          ),
+                        if (picture != null && pictureOpacity > 0)
+                          Positioned.fromRect(
+                            rect: rect,
+                            child: IgnorePointer(
+                              child: Opacity(
+                                opacity: pictureOpacity,
+                                child: ClipRRect(
+                                  borderRadius: borderRadius,
+                                  child: RawImage(
+                                    image: picture,
+                                    fit: BoxFit.cover,
+                                    alignment: alignment,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: CustomPaint(
+                              painter: VideoTileScrimPainter(
+                                clip: clip,
+                                top: topScrim,
+                                bottom: bottomScrim,
+                              ),
+                            ),
+                          ),
                         ),
-                        opacity: VideoOverlayScrims.topOpacity * progress,
-                      ),
-                      bottom: _bottomScrim(
-                        landing: MatrixUtils.transformRect(
-                          transform,
-                          _playerBottomScrim(landing.page.outerRect, screen),
-                        ),
-                        from: from,
-                        rect: rect,
-                        progress: progress,
-                      ),
+                      ],
                     ),
                   ),
                 ),
               ),
-            ],
           ],
         );
       },
@@ -513,12 +565,18 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
 }
 
 /// Shows the page around [page], where the video is, and inside [flight],
-/// the clip growing from the tile to the page, when there is one.
+/// the clip growing from the tile to the page, when there is one, as far as
+/// [bounds] reach.
 class _PageReveal extends CustomClipper<Path> {
-  const _PageReveal({required this.page, required this.flight});
+  const _PageReveal({
+    required this.page,
+    required this.flight,
+    required this.bounds,
+  });
 
   final RRect page;
   final RRect? flight;
+  final RRect bounds;
 
   @override
   Path getClip(Size size) {
@@ -532,13 +590,32 @@ class _PageReveal extends CustomClipper<Path> {
     return Path.combine(
       PathOperation.union,
       around,
-      Path()..addRRect(flight),
+      Path.combine(
+        PathOperation.intersect,
+        Path()..addRRect(flight),
+        Path()..addRRect(bounds),
+      ),
     );
   }
 
   @override
   bool shouldReclip(_PageReveal oldClipper) =>
-      page != oldClipper.page || flight != oldClipper.flight;
+      page != oldClipper.page ||
+      flight != oldClipper.flight ||
+      bounds != oldClipper.bounds;
+}
+
+/// Clips what flies to [bounds], given in the transition's coordinates.
+class _BoundsClip extends CustomClipper<RRect> {
+  const _BoundsClip(this.bounds);
+
+  final RRect bounds;
+
+  @override
+  RRect getClip(Size size) => bounds;
+
+  @override
+  bool shouldReclip(_BoundsClip oldClipper) => bounds != oldClipper.bounds;
 }
 
 /// Paints [image], a snapshot of the page laid out at [page], moved by

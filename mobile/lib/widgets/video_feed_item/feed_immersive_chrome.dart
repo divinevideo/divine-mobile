@@ -130,20 +130,23 @@ class _FlyingChrome extends StatelessWidget {
         return IgnorePointer(
           child: ExcludeSemantics(
             child: ClipRRect(
-              clipper: _FixedRRect(frame.clip),
-              child: Transform(
-                transform: frame.transform.multiplied(
-                  layout.childPaintTransform,
-                ),
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: SizedBox.fromSize(
-                    size: layout.childSize,
-                    child: Opacity(
-                      opacity: frame.opacity,
-                      child: MediaQuery(
-                        data: mediaQuery,
-                        child: VideoTileFlightCopy(child: child),
+              clipper: _FixedRRect(frame.bounds),
+              child: ClipRRect(
+                clipper: _FixedRRect(frame.clip),
+                child: Transform(
+                  transform: frame.transform.multiplied(
+                    layout.childPaintTransform,
+                  ),
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: SizedBox.fromSize(
+                      size: layout.childSize,
+                      child: Opacity(
+                        opacity: frame.opacity,
+                        child: MediaQuery(
+                          data: mediaQuery,
+                          child: VideoTileFlightCopy(child: child),
+                        ),
                       ),
                     ),
                   ),

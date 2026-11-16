@@ -98,6 +98,8 @@ class _Harness extends StatelessWidget {
     this.tileAlignment = Alignment.center,
     this.tileScrim = false,
     this.onTileContext,
+    this.tileView,
+    this.tileViewCorners = BorderRadius.zero,
   });
 
   final ui.Image image;
@@ -119,10 +121,76 @@ class _Harness extends StatelessWidget {
   final bool tileScrim;
   final ValueChanged<BuildContext>? onTileContext;
 
+  /// Where a scrolling view around the tile shows it, when it is in one.
+  final Rect? tileView;
+
+  /// The corners of a panel the view is clipped to.
+  final BorderRadius tileViewCorners;
+
   @override
   Widget build(BuildContext context) {
     final animation = this.animation;
     final origin = this.origin;
+    final tile = Positioned.fromRect(
+      rect: _tileRect,
+      child: Builder(
+        builder: (tileContext) {
+          onTileContext?.call(tileContext);
+          final provider = tileImageProvider;
+          Widget picture = RawImage(
+            image: image,
+            fit: BoxFit.cover,
+            alignment: tileAlignment,
+          );
+          if (provider != null) {
+            picture = Image(
+              image: provider,
+              fit: BoxFit.cover,
+              alignment: tileAlignment,
+            );
+          }
+          final thumbnail = VideoTileThumbnailBoundary(
+            child: picture,
+          );
+          if (!tileScrim) return thumbnail;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              thumbnail,
+              const Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 40,
+                child: VideoTileScrimBoundary(
+                  opacity: 0.5,
+                  child: SizedBox.expand(),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    Widget? placedTile;
+    if (showTile) placedTile = tile;
+    final view = tileView;
+    if (showTile && view != null) {
+      // The tile in a scrolling view showing only [view] of it.
+      placedTile = Positioned.fromRect(
+        rect: view,
+        child: ClipRRect(
+          borderRadius: tileViewCorners,
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            child: SizedBox.fromSize(
+              size: _screenSize,
+              child: Stack(children: [tile]),
+            ),
+          ),
+        ),
+      );
+    }
     return MediaQuery(
       data: MediaQueryData(
         size: _screenSize,
@@ -132,48 +200,7 @@ class _Harness extends StatelessWidget {
         textDirection: TextDirection.ltr,
         child: Stack(
           children: [
-            if (showTile)
-              Positioned.fromRect(
-                rect: _tileRect,
-                child: Builder(
-                  builder: (tileContext) {
-                    onTileContext?.call(tileContext);
-                    final provider = tileImageProvider;
-                    Widget picture = RawImage(
-                      image: image,
-                      fit: BoxFit.cover,
-                      alignment: tileAlignment,
-                    );
-                    if (provider != null) {
-                      picture = Image(
-                        image: provider,
-                        fit: BoxFit.cover,
-                        alignment: tileAlignment,
-                      );
-                    }
-                    final thumbnail = VideoTileThumbnailBoundary(
-                      child: picture,
-                    );
-                    if (!tileScrim) return thumbnail;
-                    return Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        thumbnail,
-                        const Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          height: 40,
-                          child: VideoTileScrimBoundary(
-                            opacity: 0.5,
-                            child: SizedBox.expand(),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
+            ?placedTile,
             if (animation != null && origin != null)
               Positioned.fill(
                 child: VideoTileFlightTransition(
@@ -211,9 +238,10 @@ bool _pageHasLanded(WidgetTester tester) =>
 bool _pageMayPlay(WidgetTester tester) =>
     VideoTileTransitionScope.mayPlayOf(tester.element(find.byType(_Page)));
 
+/// The picture's own corners: its nearest rounded clip, inside the flight's.
 BorderRadiusGeometry? _pictureCorners(WidgetTester tester) => tester
     .widget<ClipRRect>(
-      find.ancestor(of: _picture, matching: find.byType(ClipRRect)),
+      find.ancestor(of: _picture, matching: find.byType(ClipRRect)).first,
     )
     .borderRadius;
 
@@ -257,6 +285,8 @@ void main() {
       Alignment tileAlignment = Alignment.center,
       bool tileScrim = false,
       Size imageSize = const Size(300, 300),
+      Rect? tileView,
+      BorderRadius tileViewCorners = BorderRadius.zero,
     }) async {
       tester.view.physicalSize = _screenSize;
       tester.view.devicePixelRatio = 1;
@@ -281,6 +311,8 @@ void main() {
           image: image,
           tileAlignment: tileAlignment,
           tileScrim: tileScrim,
+          tileView: tileView,
+          tileViewCorners: tileViewCorners,
           onTileContext: (c) => tileContext = c,
         ),
       );
@@ -810,6 +842,122 @@ void main() {
       });
     });
 
+    group('under a bar over the tile', () {
+      // The grid's view ends 50 points into the tile, where a bar begins.
+      const view = Rect.fromLTWH(0, 0, 400, 230);
+
+      Future<void> pumpOpening(
+        WidgetTester tester, {
+        bool pageShowsVideo = true,
+        BorderRadius corners = BorderRadius.zero,
+      }) async {
+        final origin = await pumpTile(
+          tester,
+          tileView: view,
+          tileViewCorners: corners,
+        );
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(
+            image: image,
+            animation: controller,
+            origin: origin,
+            tileView: view,
+            tileViewCorners: corners,
+            pageShowsVideo: pageShowsVideo,
+          ),
+        );
+      }
+
+      /// What the flight is clipped to: the clip with a clipper, as the
+      /// picture's own corners have none.
+      RRect flightBounds(WidgetTester tester) => tester
+          .widgetList<ClipRRect>(
+            find.ancestor(of: _picture, matching: find.byType(ClipRRect)),
+          )
+          .map((clip) => clip.clipper?.getClip(_screenSize))
+          .whereType<RRect>()
+          .single;
+
+      bool pageShowsAt(WidgetTester tester, Offset point) => tester
+          .widget<ClipPath>(
+            find.ancestor(
+              of: find.byType(_Page),
+              matching: find.byType(ClipPath),
+            ),
+          )
+          .clipper!
+          .getClip(_screenSize)
+          .contains(point);
+
+      testWidgets('starts with only what the view shows of the tile', (
+        tester,
+      ) async {
+        await pumpOpening(tester);
+
+        expect(tester.getRect(_picture), equals(_tileRect));
+        expect(flightBounds(tester).outerRect, equals(view));
+        expect(_flightFrame(tester)!.bounds.outerRect, equals(view));
+        expect(pageShowsAt(tester, const Offset(70, 200)), isTrue);
+        expect(pageShowsAt(tester, const Offset(70, 260)), isFalse);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets(
+        'keeps to the bottom of the view until the page is laid out',
+        (
+          tester,
+        ) async {
+          // A page that never shows the video leaves the landing predicted, as
+          // every flight's first frame is.
+          await pumpOpening(tester, pageShowsVideo: false);
+
+          await tester.pump(VideoTileFlightTransition.openDuration ~/ 2);
+
+          expect(flightBounds(tester).bottom, equals(view.bottom));
+          expect(_flightFrame(tester)!.bounds.bottom, equals(view.bottom));
+          await tester.pumpAndSettle();
+        },
+      );
+
+      testWidgets('grows its bounds from the view to the page as it flies', (
+        tester,
+      ) async {
+        await pumpOpening(tester);
+
+        await tester.pump(VideoTileFlightTransition.openDuration ~/ 2);
+
+        final progress = Curves.easeOutCubic.transform(controller.value);
+        final bounds = Rect.lerp(view, Offset.zero & _screenSize, progress)!;
+        expect(flightBounds(tester).outerRect, _rectCloseTo(bounds));
+        expect(_flightFrame(tester)!.bounds.outerRect, _rectCloseTo(bounds));
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets("rounds from the panel's corners to the page's", (
+        tester,
+      ) async {
+        // A panel around the view rounding its bottom corners.
+        const corners = BorderRadius.vertical(bottom: Radius.circular(30));
+        await pumpOpening(tester, corners: corners);
+        final start = corners.toRRect(view);
+        expect(flightBounds(tester), equals(start));
+        expect(_flightFrame(tester)!.bounds, equals(start));
+
+        await tester.pump(VideoTileFlightTransition.openDuration ~/ 2);
+
+        final progress = Curves.easeOutCubic.transform(controller.value);
+        final bounds = RRect.lerp(
+          start,
+          RRect.fromRectAndRadius(Offset.zero & _screenSize, Radius.zero),
+          progress,
+        )!;
+        expect(flightBounds(tester), equals(bounds));
+        expect(_flightFrame(tester)!.bounds, equals(bounds));
+        await tester.pumpAndSettle();
+      });
+    });
+
     group('scrims', () {
       testWidgets("start from the tile's bottom scrim", (tester) async {
         final origin = await pumpTile(tester, tileScrim: true);
@@ -869,10 +1017,40 @@ void main() {
             height,
           ),
         );
+        // Across all of what shows.
+        final shown = _scrims(tester).clip.outerRect;
+        final band = Rect.lerp(carried, players, progress)!;
         expect(
           _scrims(tester).bottom.rect,
-          _rectCloseTo(Rect.lerp(carried, players, progress)!),
+          _rectCloseTo(
+            Rect.fromLTRB(shown.left, band.top, shown.right, band.bottom),
+          ),
         );
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('span the whole picture where the page laid over it is '
+          'narrower', (tester) async {
+        // A portrait picture covering a wider tile, cropped top and bottom,
+        // with the full screen page laid over it narrower than the tile.
+        final origin = await pumpTile(tester, imageSize: const Size(180, 320));
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(
+            image: image,
+            animation: controller,
+            origin: origin,
+            pageRoundedCover: true,
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 1));
+
+        final picture = tester.getRect(_picture);
+        final scrims = _scrims(tester);
+        expect(scrims.top.rect.left, lessThanOrEqualTo(picture.left));
+        expect(scrims.top.rect.right, greaterThanOrEqualTo(picture.right));
+        expect(scrims.bottom.rect.left, lessThanOrEqualTo(picture.left));
+        expect(scrims.bottom.rect.right, greaterThanOrEqualTo(picture.right));
         await tester.pumpAndSettle();
       });
 

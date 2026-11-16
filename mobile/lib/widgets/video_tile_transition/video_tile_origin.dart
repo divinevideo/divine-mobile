@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:openvine/widgets/video_tile_transition/rounded_by_clips.dart';
 
 /// Marks the thumbnail a fullscreen player grows out of.
 ///
@@ -183,6 +184,38 @@ class VideoTileOrigin {
         .resolve(image.textDirection)
         .inscribe(fitted, box);
     return painted.intersect(tile);
+  }
+
+  /// The part of the screen the tile can be seen in now, in global
+  /// coordinates, or `null` when the tile is in no scrolling view, which
+  /// leaves the whole screen, or is no longer laid out.
+  ///
+  /// This is where the scrolling views around the tile show their content,
+  /// which ends where bars around the grid, such as the bottom navigation,
+  /// begin, and within the rounded clips around those views, such as a
+  /// panel's: a corner that sits in a clip's corner is rounded like it.
+  /// Clips inside the scrolling content, such as the tile's own, scroll with
+  /// it and play no part.
+  RRect? get visibleBounds {
+    if (!_boundary.attached || !_boundary.hasSize) return null;
+    Rect? shown;
+    final clips = <RenderClipRRect>[];
+    for (
+      RenderObject? node = _boundary.parent;
+      node != null;
+      node = node.parent
+    ) {
+      if (node is! RenderBox || !node.hasSize) continue;
+      final Rect bounds = node.localToGlobal(Offset.zero) & node.size;
+      if (node is RenderAbstractViewport) {
+        shown = shown?.intersect(bounds) ?? bounds;
+      } else if (shown != null && node is RenderClipRRect) {
+        clips.add(node);
+        shown = shown.intersect(bounds);
+      }
+    }
+    if (shown == null) return null;
+    return roundedByClips(shown, clips);
   }
 
   /// Where the tile's bottom scrim is on screen now, in global coordinates,

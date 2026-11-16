@@ -90,14 +90,25 @@ Finder get _flyingCopy => find.descendant(
   matching: find.text('chrome'),
 );
 
+/// The rounded rects the flying copy is clipped to.
+List<RRect> _flyingClips(WidgetTester tester) => tester
+    .widgetList<ClipRRect>(
+      find.ancestor(of: _flyingCopy, matching: find.byType(ClipRRect)),
+    )
+    .map((clip) => clip.clipper?.getClip(Size.zero))
+    .whereType<RRect>()
+    .toList();
+
 VideoTileFlightFrame _frame({
   double opacity = 0.4,
   RRect clip = const RRect.fromLTRBXY(0, 0, 800, 600, 0, 0),
+  RRect bounds = const RRect.fromLTRBXY(0, 0, 800, 600, 0, 0),
 }) => VideoTileFlightFrame(
   transform: Matrix4.identity()
     ..translateByDouble(10, 20, 0, 1)
     ..scaleByDouble(0.5, 0.5, 1, 1),
   clip: clip,
+  bounds: bounds,
   opacity: opacity,
 );
 
@@ -327,12 +338,31 @@ void main() {
 
         await _pumpChrome(tester, phase: phase, flight: flight);
 
-        final clipper = tester
-            .widget<ClipRRect>(
-              find.ancestor(of: _flyingCopy, matching: find.byType(ClipRRect)),
-            )
-            .clipper!;
-        expect(clipper.getClip(Size.zero), equals(clip));
+        expect(_flyingClips(tester), contains(clip));
+      });
+
+      testWidgets('keeps the copy within the bounds the flight is drawn in', (
+        tester,
+      ) async {
+        final phase = ValueNotifier(VideoTileFlightPhase.flying);
+        addTearDown(phase.dispose);
+        // As above a bottom bar the copy must stay under, inside a panel's
+        // rounded corners.
+        final bounds = RRect.fromLTRBR(
+          0,
+          0,
+          800,
+          520,
+          const Radius.circular(30),
+        );
+        final flight = ValueNotifier<VideoTileFlightFrame?>(
+          _frame(bounds: bounds),
+        );
+        addTearDown(flight.dispose);
+
+        await _pumpChrome(tester, phase: phase, flight: flight);
+
+        expect(_flyingClips(tester), contains(bounds));
       });
 
       testWidgets('drops the copy when no picture flies', (tester) async {
