@@ -37,11 +37,11 @@ class VideoContentAddToClipsRequested extends VideoContentActionsEvent {
   List<Object?> get props => [libraryTitle];
 }
 
-/// Get the video ready to remix: a clip in the viewer's library that the
-/// editor can open with.
+/// Get the video ready to remix: a clip in the viewer's library.
 ///
-/// Reuses the clip an earlier import of this video left in the library, and
-/// otherwise imports it under its default title, without asking for one.
+/// Reuses the clip an earlier import of this video left in the library,
+/// restoring it first if it was archived, and otherwise imports it under its
+/// default title, without asking for one.
 class VideoContentRemixRequested extends VideoContentActionsEvent {
   const VideoContentRemixRequested();
 }

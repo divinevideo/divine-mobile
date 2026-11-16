@@ -143,9 +143,8 @@ class VideoEditorScreen extends ConsumerStatefulWidget {
 
   /// Value of [originQueryParameter] for an entry from the Library screen.
   ///
-  /// A remix started from a video's info sheet passes it too, deliberately
-  /// counting as a library-origin session. Its only effect is the
-  /// abandoned-creation analytics event when the editor closes.
+  /// Its only effect is the abandoned-creation analytics event when the
+  /// editor closes.
   static const libraryOrigin = 'library';
 
   /// Builds the editor location, optionally for an existing [draftId].

@@ -125,7 +125,7 @@ class VideoContentActionsState extends Equatable {
   final bool isImportingClip;
 
   /// Whether a remix is being prepared: the consent check, finding or
-  /// importing the clip the editor opens with, then opening the editor, until
+  /// importing the clip, then opening the library, until
   /// [VideoContentRemixLaunchFinished].
   final bool isPreparingRemix;
 

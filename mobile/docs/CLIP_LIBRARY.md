@@ -123,7 +123,7 @@ When the library loads, video clips missing a thumbnail or ghost frame get them 
 | Stop motion | `StopMotionSessionStore`, each still as it is taken ([`CAMERA_ARCHITECTURE.md`](CAMERA_ARCHITECTURE.md#modes)) |
 | Saving one clip from the editor timeline | [`VideoEditorClipLibrarySaveService`](../lib/services/video_editor/video_editor_clip_library_save_service.dart), which renders the trimmed part, with its visual overlays, into a new file; `ClipEditorBloc` then saves it through `ClipManagerNotifier.saveClipToLibrary` |
 | Share sheet, "Add to clips" | `VideoClipImportService.importToLibrary`, for classic Vines, the user's own videos and any video that allows reuse |
-| Info sheet, "Remix" (action row) | `VideoContentActionsBloc` reuses the newest earlier import of the video (`VideoClipImportService.findImportedClipOf`), or else imports it with `importToLibrary`, then `openRemixInEditor` opens the editor on that clip |
+| Info sheet, "Remix" (action row) | `VideoContentActionsBloc` reuses the newest earlier import of the video (`VideoClipImportService.findImportedClipOf`), restoring it from the archive first (`unarchiveImportedClip`), or else imports it with `importToLibrary`; `openRemixInLibrary` then opens the library on From others, or on Clips for the viewer's own video |
 | Direct messages | `VideoClipImportService.importReceivedClip` and `importReceivedVine` ([`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#in-the-library)) |
 | Device gallery | `VideoClipImportService.importGalleryClip` ([`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#back-from-the-gallery)) |
 | A clip the editor creates, such as a split-screen layout render | The editor's autosave draft, which `getAllClips` lists as library clips (see [Rows](#rows)) |
@@ -140,6 +140,7 @@ Of the ways footage comes in from outside the app, a clip received in a direct m
 | Recorder | `openRecorderLibrary`, `RoutePaths.libraryClipsOnly` | Drafts, Clips and From others; clips of the recording mode's type only |
 | Editor, adding clips | `LibraryScreen(selectionMode: true, allowsMixedClipTypes: true)` in a sheet | Clips and From others tabs as a picker; timeline clips pre-selected |
 | Editor, split-screen cell | `_pickLayoutCellClips` in [`video_editor_screen.dart`](../lib/screens/video_editor/video_editor_screen.dart) | Clips and From others tabs as a picker, with the cell's crop on each thumbnail |
+| Info sheet, "Remix" | `openRemixInLibrary`, `LibraryClipsRouteData` with `from-others=true` for another creator's video | Drafts, Clips, From others and Sounds tabs, opening on From others, or on Clips for the viewer's own video |
 | Chroma-key backdrop | `showChromaKeyClipPicker` | A single-clip picker of video clips, with its own `ClipsLibraryBloc` |
 | Direct message | `_onAttachClip` in [`conversation_view.dart`](../lib/screens/inbox/conversation/conversation_view.dart) | Clips and From others tabs as a picker of video clips; the picked clips are sent |
 

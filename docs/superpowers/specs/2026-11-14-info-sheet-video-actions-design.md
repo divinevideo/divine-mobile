@@ -21,6 +21,13 @@ while the remix is prepared and the rest of the row held; on the web it
 closes the sheet and points to the app. The "Remix this video" string is
 gone. Wherever this spec says "the Remix button", read "the Remix action".
 
+*As built (#11066):* Remix no longer opens the editor. It saves or reuses the
+video's footage, restoring an archived import, and opens the clip library on
+From others, or on Clips for the viewer's own video. It leaves the editor
+session alone, so the autosave-kept-as-draft step below is gone. The footage
+is then used from the library or through the editor's clip picker. Read "open
+editor" in this spec as "open the clip library".
+
 ### Consent
 
 - **Default flips to allowed.** A video may be remixed unless its creator
