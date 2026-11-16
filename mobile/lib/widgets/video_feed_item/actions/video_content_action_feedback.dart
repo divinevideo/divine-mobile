@@ -194,6 +194,7 @@ class VideoContentActionsFeedbackListener extends StatelessWidget {
       listener: (context, state) {
         final result = state.actionResult;
         if (result == null) return;
+        if (keepBookmarkResultsOpen && result is VideoContentSaveResult) return;
         if (!context.mounted || ModalRoute.of(context)?.isCurrent == false) {
           Log.info(
             'Dropped a ${result.runtimeType}: a route covers the sheet',
@@ -202,7 +203,6 @@ class VideoContentActionsFeedbackListener extends StatelessWidget {
           );
           return;
         }
-        if (keepBookmarkResultsOpen && result is VideoContentSaveResult) return;
         showVideoContentActionFeedback(context, result);
       },
       child: child,
