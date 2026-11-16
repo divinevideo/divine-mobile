@@ -14,6 +14,7 @@ import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_feed_item/actions/remix_launcher.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
+import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_items.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -129,9 +130,15 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
           current.actionResult is VideoContentRemixReady &&
           previous.actionResult != current.actionResult,
       listener: _openReadyRemix,
-      child: VideoActionRow(
-        actions: actions,
-        isLocked: isDeletePending || isActionInFlight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          VideoActionRow(
+            actions: actions,
+            isLocked: isDeletePending || isActionInFlight,
+          ),
+          const VideoContentSaveFeedback(),
+        ],
       ),
     );
   }

@@ -169,6 +169,7 @@ void main() {
               BlocProvider<OwnerVideoActionsCubit>.value(value: ownerCubit),
           ],
           child: VideoContentActionsFeedbackListener(
+            keepBookmarkResultsOpen: true,
             child: MetadataActionsSection(
               video: video,
               isOwnVideo: ownerCubit != null,
