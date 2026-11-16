@@ -293,6 +293,14 @@ reconcile the recorded GitHub run label in Codemagic first. A rerun with no
 visible matching build stops rather than submitting again. A timeout stops only
 the monitor; inspect the recorded build URL before starting another request.
 
+Pending App Store Connect processing blocks another build even when Codemagic
+reports the earlier build failed or was canceled. Historical upload-only builds
+can have no App Store Connect task status after a successful upload. The driver
+checks their publishing configuration at the exact source commit with Ruby's
+safe YAML parser (available on the Ubuntu runner), and permits only verified
+upload-only builds without asynchronous submissions, group assignment or notes.
+An unreported status for a beta-submitting or unknown configuration stays blocked.
+
 ### Release identity ledger
 
 The release identity ledger lives in the `allocations/` tree of

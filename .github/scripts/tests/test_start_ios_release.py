@@ -1,4 +1,5 @@
 """Release driver boundary tests; network calls are the only fake dependency."""
+import base64
 import contextlib
 import importlib.util
 import io
@@ -51,6 +52,12 @@ class FakeAPI:
         self.ci = ci
         self.calls = []
         self.pages = []
+        self.source_config = (
+            'workflows:\n  ios-build:\n    publishing:\n'
+            '      app_store_connect:\n'
+            '        submit_to_testflight: false\n'
+            '        submit_to_app_store: false\n'
+        )
 
     def __call__(self, method, url, token, payload=None):
         self.calls.append((method, url, token, payload))
@@ -63,6 +70,8 @@ class FakeAPI:
             return {'check_runs': [{'name': 'Mobile CI', 'head_sha': SHA, 'status': 'completed',
                                    'conclusion': 'success', 'app': {'slug': 'github-actions', 'id': 15368},
                                    'details_url': 'https://github.com/example/repo/actions/runs/1/job/2'}]}
+        if '/contents/codemagic.yaml?' in url:
+            return {'encoding': 'base64', 'content': base64.b64encode(self.source_config.encode()).decode()}
         if '/teams/' in url:
             return self.pages.pop(0) if self.pages else {'data': self.builds, 'cursor': None, 'page_size': 100}
         if method == 'POST':
@@ -196,12 +205,48 @@ class IOSReleaseTest(unittest.TestCase):
             self.run_driver()
         self.assertFalse(self.api.posts)
 
+    def test_pending_store_processing_blocks_even_after_build_failure(self):
+        for status in ['failed', 'canceled', 'timeout', 'skipped']:
+            with self.subTest(status=status):
+                self.api = FakeAPI(builds=[build(status=status, asc='processing')])
+                with self.assertRaises(self.driver.ReleaseError):
+                    self.run_driver()
+                self.assertFalse(self.api.posts)
+
+    def test_unreported_store_state_needs_verified_upload_only_source(self):
+        for config in [
+            self.api.source_config.replace('submit_to_testflight: false', 'submit_to_testflight: true'),
+            self.api.source_config.replace('submit_to_app_store: false', 'submit_to_app_store: true'),
+            self.api.source_config + '        beta_groups: [External]\n',
+            'workflows: {}\n',
+        ]:
+            with self.subTest(config=config):
+                self.api = FakeAPI(builds=[build(asc=None)])
+                self.api.source_config = config
+                with self.assertRaises(self.driver.ReleaseError):
+                    self.run_driver()
+                self.assertFalse(self.api.posts)
+
     def test_completed_historical_branch_or_nonpublished_build_does_not_block(self):
         historical = build(commit=OTHER, asc=None)
         historical['branch'] = 'old-feature'
         self.api.builds = [historical]
+        self.api.source_config += '        beta_groups: []\n'
         self.run_driver()
         self.assertEqual(1, len(self.api.posts))
+
+    def test_unreported_store_state_with_notes_or_missing_source_stays_blocked(self):
+        for missing_source in [False, True]:
+            with self.subTest(missing_source=missing_source):
+                historical = build(asc=None)
+                if missing_source:
+                    historical['commit'] = None
+                else:
+                    historical['release_notes'] = [{'language': 'en-US', 'text': 'Try this build.'}]
+                self.api = FakeAPI(builds=[historical])
+                with self.assertRaises(self.driver.ReleaseError):
+                    self.run_driver()
+                self.assertFalse(self.api.posts)
 
     def test_same_run_reuses_build_without_post(self):
         self.api.builds = [build(labels=[LABEL])]

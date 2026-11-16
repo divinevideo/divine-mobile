@@ -4,6 +4,7 @@
 Provider contract: https://codemagic.io/api/v3/schema/openapi.json
 This driver does not verify Apple Beta App Review or external tester availability.
 """
+import base64
 import json
 import os
 import re
@@ -148,6 +149,37 @@ def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.s
 
     def cm(method, path, payload=None):
         return request(method, 'https://codemagic.io/api/v3' + path, env['CODEMAGIC_API_TOKEN'], payload)
+
+    upload_only_sources = {}
+
+    def verified_upload_only(build):
+        # Legacy upload-only builds have a null ASC task status even after a
+        # successful upload. Verify their exact publishing policy rather than
+        # treating null as either completed or pending for every release.
+        commit = (build.get('commit') or {}).get('hash')
+        if not sha(commit) or 'release_notes' not in build or build['release_notes'] not in (None, []):
+            return False
+        if commit not in upload_only_sources:
+            try:
+                contents = gh('/contents/codemagic.yaml?' + urllib.parse.urlencode({'ref': commit}))
+                if contents.get('encoding') != 'base64' or len(contents['content']) > 1_000_000:
+                    raise ValueError('Unavailable source')
+                source_yaml = base64.b64decode(contents['content'])
+                ruby = (
+                    "require 'yaml'; require 'json'; "
+                    "p=YAML.safe_load(STDIN.read, aliases: true).fetch('workflows')"
+                    ".fetch('ios-build').fetch('publishing').fetch('app_store_connect'); "
+                    "puts JSON.generate(p['submit_to_testflight']==false && "
+                    "p['submit_to_app_store']==false && (p['beta_groups'].nil? || p['beta_groups']==[]) && "
+                    "!p['expire_build_submitted_for_review'] && !p['cancel_previous_submissions'])"
+                )
+                parsed = subprocess.run(['ruby', '-e', ruby], input=source_yaml,
+                                        capture_output=True, check=True, timeout=10)
+                upload_only_sources[commit] = json.loads(parsed.stdout) is True
+            except (APIError, KeyError, TypeError, ValueError, OSError, subprocess.SubprocessError):
+                upload_only_sources[commit] = False
+        return upload_only_sources[commit]
+
     label = f'github:{repo}:{env["GITHUB_RUN_ID"]}:ios-testflight:{source}'
     # Scan all statuses: the API's status filter omits some active states.
     cursor = None
@@ -165,7 +197,8 @@ def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.s
             status, asc, _ = validate_build(item, expected, require_main=label in item.get('labels', []))
             if label in item.get('labels', []):
                 matches.append(item)
-            elif status in ACTIVE or (status == 'finished' and asc in ASC_PENDING):
+            elif (status in ACTIVE or asc in ASC_PENDING
+                  or (status == 'finished' and asc is None and not verified_upload_only(item))):
                 blockers.append(build_id(item['id']))
         cursor = page.get('cursor')
         if cursor is None:
@@ -175,7 +208,7 @@ def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.s
             raise ReleaseError('Could not finish Codemagic build pagination; refusing a new submission.')
         seen_cursors.add(serialized)
     if blockers:
-        raise ReleaseError('Another iOS build or its App Store Connect processing is active: ' + ', '.join(blockers))
+        raise ReleaseError('Another iOS build has active or unverified App Store Connect processing: ' + ', '.join(blockers))
     if len(matches) > 1:
         raise ReleaseError('Multiple builds match this GitHub run; reconcile in Codemagic before continuing.')
     if matches:
