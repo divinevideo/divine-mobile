@@ -1,0 +1,88 @@
+name: Store release train
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Observe and plan without writing state or publishing
+        type: boolean
+        default: true
+      acknowledge:
+        description: Exact observed rejection or failed operation identity to acknowledge
+        type: string
+        required: false
+      bootstrap:
+        description: Bootstrap identities from provider state (dry_run applies)
+        type: boolean
+        default: false
+      setup_codemagic:
+        description: Store existing Codemagic token encrypted in the existing github_credentials group
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  deployments: write
+  actions: read
+  checks: read
+
+concurrency:
+  group: store-release-train
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (vars.RELEASE_TRAIN_IOS != '' && vars.RELEASE_TRAIN_IOS != 'off') ||
+       (vars.RELEASE_TRAIN_ANDROID != '' && vars.RELEASE_TRAIN_ANDROID != 'off'))
+    environment: store-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Scope private provenance installation token
+        id: provenance
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ secrets.PROVENANCE_APP_ID }}
+          private-key: ${{ secrets.PROVENANCE_APP_PRIVATE_KEY }}
+          owner: divinevideo
+          repositories: divine-release-provenance
+          permission-contents: write
+      - name: Scope immutable candidate tag installation token
+        id: candidate
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ secrets.PROVENANCE_APP_ID }}
+          private-key: ${{ secrets.PROVENANCE_APP_PRIVATE_KEY }}
+          owner: divinevideo
+          repositories: divine-mobile
+          permission-contents: write
+      - name: Observe and coordinate both store queues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_TAG_TOKEN: ${{ steps.candidate.outputs.token }}
+          PROVENANCE_TOKEN: ${{ steps.provenance.outputs.token }}
+          CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          TESTFLIGHT_PUBLIC_GROUP_ID: ${{ vars.TESTFLIGHT_PUBLIC_GROUP_ID }}
+          TESTFLIGHT_GROUP_IDS: ${{ vars.TESTFLIGHT_GROUP_IDS }}
+          PLAY_MANAGED_PUBLISHING: ${{ vars.PLAY_MANAGED_PUBLISHING }}
+          RELEASE_TRAIN_IOS: ${{ vars.RELEASE_TRAIN_IOS }}
+          RELEASE_TRAIN_ANDROID: ${{ vars.RELEASE_TRAIN_ANDROID }}
+          RELEASE_DRY_RUN: ${{ inputs.dry_run || false }}
+          RELEASE_ACKNOWLEDGE: ${{ inputs.acknowledge }}
+          RELEASE_BOOTSTRAP: ${{ inputs.bootstrap || false }}
+          RELEASE_SETUP_CODEMAGIC: ${{ inputs.setup_codemagic || false }}
+        run: python3 mobile/scripts/run_release_train.py
