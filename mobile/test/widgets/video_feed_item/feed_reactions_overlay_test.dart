@@ -33,6 +33,7 @@ import 'package:openvine/widgets/video_feed_item/feed_reactions_overlay.dart';
 import 'package:riverpod/misc.dart' show Override;
 
 import '../../helpers/go_router.dart';
+import '../../helpers/test_provider_overrides.dart';
 
 class _MockFeedTopCommentCubit extends MockCubit<FeedTopCommentState>
     implements FeedTopCommentCubit {}
@@ -739,6 +740,10 @@ void main() {
                 goRouter: router,
                 child: buildSubject(
                   extraOverrides: [
+                    // Opening a profile asks who is signed in (#11097).
+                    authServiceProvider.overrideWithValue(
+                      createMockAuthService(),
+                    ),
                     userProfileReactiveProvider(mentioned).overrideWith(
                       (ref) => Stream<UserProfile?>.value(
                         UserProfile(

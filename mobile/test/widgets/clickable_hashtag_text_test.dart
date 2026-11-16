@@ -8,7 +8,7 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
@@ -18,6 +18,8 @@ import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:url_launcher_platform_interface/link.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+
+import '../helpers/test_provider_overrides.dart';
 
 class _FakeUrlLauncherPlatform extends UrlLauncherPlatform {
   String? launchedUrl;
@@ -389,6 +391,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            // Opening a profile asks who is signed in (#11097).
+            authServiceProvider.overrideWithValue(createMockAuthService()),
             profileRepositoryProvider.overrideWithValue(profileRepository),
             profileReadRepositoryProvider.overrideWithValue(profileRepository),
           ],

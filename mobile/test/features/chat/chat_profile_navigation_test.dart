@@ -14,10 +14,13 @@ import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/user_avatar.dart';
+
+import '../../helpers/test_provider_overrides.dart';
 
 class _ChatCubit extends MockCubit<ChatState> implements ChatCubit {}
 
@@ -65,6 +68,8 @@ void main() {
           await tester.pumpWidget(
             ProviderScope(
               overrides: [
+                // Opening a profile asks who is signed in (#11097).
+                authServiceProvider.overrideWithValue(createMockAuthService()),
                 fetchUserProfileProvider(author).overrideWith(
                   (ref) async => UserProfile(
                     pubkey: author,
@@ -150,6 +155,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            authServiceProvider.overrideWithValue(createMockAuthService()),
             for (final (pubkey, name) in [
               (author, 'Room member'),
               (mentioned, 'Mentioned friend'),

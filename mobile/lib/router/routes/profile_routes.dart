@@ -2,10 +2,13 @@
 // ABOUTME: Typed with go_router_builder; conventions in .claude/rules/routing.md.
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/routes/route_extras.dart';
+import 'package:openvine/router/routes/shell.dart';
 import 'package:openvine/router/widgets/followers_screen_router.dart';
 import 'package:openvine/router/widgets/following_screen_router.dart';
 import 'package:openvine/router/widgets/other_profile_screen_router.dart';
@@ -13,6 +16,7 @@ import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/screens/verify/verify_connect_screen.dart';
 import 'package:openvine/screens/verify/verify_screen.dart';
+import 'package:openvine/utils/npub_hex.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'profile_routes.g.dart';
@@ -158,7 +162,8 @@ class FollowingRouteData extends GoRouteData with $FollowingRouteData {
 
 /// Another user's profile, pushed from feeds and search with no bottom nav.
 ///
-/// The router widget redirects a self-visit to the own-profile tab.
+/// Your own profile is the Profile tab: the router redirects a visit to your
+/// own npub here into it, and [push] goes there directly.
 @TypedGoRoute<OtherProfileRouteData>(
   path: OtherProfileScreen.pathWithNpub,
   name: OtherProfileScreen.routeName,
@@ -171,6 +176,33 @@ class OtherProfileRouteData extends GoRouteData with $OtherProfileRouteData {
   /// A map with optional `displayName` and `avatarUrl` hints, for users with
   /// no kind 0 profile; read through [extraValue], absent after a deep link.
   final Object? $extra;
+
+  /// Whether [npub] is the signed-in account, decided as the router's
+  /// own-profile redirect decides it.
+  bool namesSignedInAccount(BuildContext context) => routeIdentifiesUser(
+    npub,
+    ProviderScope.containerOf(
+      context,
+      listen: false,
+    ).read(authServiceProvider).currentPublicKeyHex,
+  );
+
+  /// Where your own profile lives: the Profile tab.
+  ProfileGridRouteData get ownProfileTab => ProfileGridRouteData(npub: npub);
+
+  /// Goes to [ownProfileTab] instead when [npub] is the signed-in account.
+  ///
+  /// A push would be redirected into the tab shell, and from a route above
+  /// the shell go_router stacks a second copy of the shell page under the
+  /// same key (#11097).
+  @override
+  Future<T?> push<T>(BuildContext context) {
+    if (namesSignedInAccount(context)) {
+      ownProfileTab.go(context);
+      return Future<T?>.value();
+    }
+    return super.push<T>(context);
+  }
 
   @override
   Widget build(BuildContext context, GoRouterState state) {

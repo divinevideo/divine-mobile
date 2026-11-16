@@ -34,6 +34,8 @@ import 'package:openvine/screens/video_engagement/video_engagement_list_screen.d
 import 'package:openvine/services/video_event_service.dart';
 import 'package:videos_repository/videos_repository.dart';
 
+import '../../helpers/test_provider_overrides.dart';
+
 final AppLocalizations _l10n = lookupAppLocalizations(const Locale('en'));
 
 class _MockNotificationFeedBloc
@@ -167,6 +169,8 @@ Future<_RoutedViewResult> _pumpRoutedViewFull(
     ProviderScope(
       overrides: [
         videoEventServiceProvider.overrideWithValue(videoEventService),
+        // Opening a profile asks who is signed in (#11097).
+        authServiceProvider.overrideWithValue(createMockAuthService()),
         nostrServiceProvider.overrideWithValue(nostrClient),
         videosRepositoryProvider.overrideWithValue(videosRepository),
       ],
