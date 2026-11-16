@@ -49,6 +49,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/og_viner_cache_service.dart';
@@ -287,6 +288,29 @@ class _FakeDraft extends Fake implements DivineVideoDraft {
   @override
   String get id => 'fake-draft-id';
 }
+
+/// The accepted "Diviner of the Day" badge, awarded to the signed-in
+/// [testUserHex] and to [recipientUserHex].
+ProfileBadgeViewData _dailyDivinerBadgeView() => ProfileBadgeViewData(
+  badge: const Nip58ProfileBadgeRef(
+    definitionCoordinate: '30009:$issuerUserHex:daily-diviner',
+    awardEventId:
+        '00000000000000000000000000000000000000000000000000000000000000aa',
+  ),
+  award: Nip58BadgeAward(
+    event: _badgeAwardEvent(),
+    definitionCoordinate: '30009:$issuerUserHex:daily-diviner',
+    recipientPubkeys: const [testUserHex, recipientUserHex],
+  ),
+  definition: Nip58BadgeDefinition(
+    event: _badgeDefinitionEvent(),
+    coordinate: '30009:$issuerUserHex:daily-diviner',
+    dTag: 'daily-diviner',
+    name: 'Diviner of the Day',
+    description: 'A daily badge for people who keep the network weird.',
+    thumbnails: const ['https://example.com/daily-diviner-thumb.png'],
+  ),
+);
 
 Event _badgeDefinitionEvent() {
   return Event.fromJson({
@@ -1724,6 +1748,51 @@ void main() {
           ),
         ),
       ).called(1);
+    });
+
+    // Pushing your own viewer route from above the tab shell stacks a second
+    // shell page (#11097), so your own row goes to your Profile tab.
+    testWidgets('opens your own Profile tab from your badge recipient row', (
+      tester,
+    ) async {
+      final mockGoRouter = MockGoRouter();
+      when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
+      when(
+        () => mockGoRouter.go(any(), extra: any(named: 'extra')),
+      ).thenReturn(null);
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          userIdHex: recipientUserHex,
+          isOwnProfile: false,
+          suppliedProfile: createTestProfile(displayName: 'Badged User'),
+          goRouter: mockGoRouter,
+          accessibleNavigation: true,
+          acceptedProfileBadges: [_dailyDivinerBadgeView()],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Diviner of the Day'));
+      await tester.pumpAndSettle();
+      expect(find.byType(UserProfileTile), findsNWidgets(3));
+
+      // Issuer first, then the recipients in award order: you, then the other.
+      await tester.tap(find.byType(UserProfileTile).at(1));
+      await tester.pumpAndSettle();
+
+      final ownNpub = NostrKeyUtils.encodePubKey(testUserHex);
+      verify(
+        () => mockGoRouter.go(
+          ProfileScreenRouter.pathForNpub(ownNpub),
+          extra: any(named: 'extra'),
+        ),
+      ).called(1);
+      verifyNever(
+        () => mockGoRouter.push(
+          OtherProfileScreen.pathForNpub(ownNpub),
+          extra: any(named: 'extra'),
+        ),
+      );
     });
 
     testWidgets('opens OG Viner explainer from profile header target', (

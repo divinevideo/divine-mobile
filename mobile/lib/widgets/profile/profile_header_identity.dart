@@ -801,13 +801,17 @@ class _ProfileBadgeSheetSectionTitle extends StatelessWidget {
 }
 
 void _openProfileFromBadgeSheet(BuildContext context, String pubkey) {
-  final path = OtherProfileRouteData(
-    npub: NostrKeyUtils.encodePubKey(pubkey),
-  ).location;
+  final route = OtherProfileRouteData(npub: NostrKeyUtils.encodePubKey(pubkey));
   final router = GoRouter.of(context);
+  // Read before the pop, while the sheet's context is still mounted.
+  final isOwnProfile = route.namesSignedInAccount(context);
   Navigator.of(context).pop();
+  if (isOwnProfile) {
+    router.go(route.ownProfileTab.location);
+    return;
+  }
   _runProfileDetached(
-    _awaitProfileResult(router.push<Object?>(path)),
+    _awaitProfileResult(router.push<Object?>(route.location)),
     'open badge recipient profile',
   );
 }

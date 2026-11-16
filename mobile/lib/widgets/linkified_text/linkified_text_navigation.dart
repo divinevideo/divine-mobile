@@ -52,11 +52,19 @@ final class LinkifiedTextNavigation {
     String hexPubkey, {
     VoidCallback? beforeNavigate,
   }) {
-    final npub = NostrKeyUtils.encodePubKey(hexPubkey);
-    _pushAfterModalPop(
+    final route = OtherProfileRouteData(
+      npub: NostrKeyUtils.encodePubKey(hexPubkey),
+    );
+    _afterModalPop(
       context,
-      OtherProfileRouteData(npub: npub).location,
       beforeNavigate: beforeNavigate,
+      // The route's own push opens your own profile in the Profile tab.
+      navigate: (hostContext) => runDetached(
+        route.push<void>(hostContext),
+        'navigate after linkified text modal dismissal',
+        logName: 'LinkifiedTextNavigation',
+        category: LogCategory.ui,
+      ),
     );
   }
 
@@ -147,16 +155,28 @@ final class LinkifiedTextNavigation {
     String location, {
     VoidCallback? beforeNavigate,
   }) {
+    _afterModalPop(
+      context,
+      beforeNavigate: beforeNavigate,
+      navigate: (hostContext) => _pushDetached(
+        hostContext,
+        location,
+        description: 'navigate after linkified text modal dismissal',
+      ),
+    );
+  }
+
+  static void _afterModalPop(
+    BuildContext context, {
+    required void Function(BuildContext hostContext) navigate,
+    VoidCallback? beforeNavigate,
+  }) {
     final hostContext = Navigator.of(context, rootNavigator: true).context;
     beforeNavigate?.call();
     Navigator.of(context).pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!hostContext.mounted) return;
-      _pushDetached(
-        hostContext,
-        location,
-        description: 'navigate after linkified text modal dismissal',
-      );
+      navigate(hostContext);
     });
   }
 
