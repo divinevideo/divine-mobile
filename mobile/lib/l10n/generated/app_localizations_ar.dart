@@ -9481,6 +9481,45 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectRiso => 'طباعة ريسو';
 
   @override
+  String get videoEditorEffectPopArt => 'فن البوب';
+
+  @override
+  String get videoEditorEffectPaperCut => 'ورق مقصوص';
+
+  @override
+  String get videoEditorEffectCrossStitch => 'تطريز متصالب';
+
+  @override
+  String get videoEditorEffectBricks => 'مكعبات البناء';
+
+  @override
+  String get videoEditorEffectWatercolor => 'ألوان مائية';
+
+  @override
+  String get videoEditorEffectOilPaint => 'ألوان زيتية';
+
+  @override
+  String get videoEditorEffectPencilSketch => 'رسم بالرصاص';
+
+  @override
+  String get videoEditorEffectNeonEdges => 'حواف نيون';
+
+  @override
+  String get videoEditorEffectAscii => 'ASCII';
+
+  @override
+  String get videoEditorEffectStainedGlass => 'زجاج معشّق';
+
+  @override
+  String get videoEditorEffectThermal => 'تصوير حراري';
+
+  @override
+  String get videoEditorEffectNightVision => 'رؤية ليلية';
+
+  @override
+  String get videoEditorEffectXRay => 'أشعة سينية';
+
+  @override
   String get videoEditorEffectTealOrange => 'تيل وبرتقالي';
 
   @override
@@ -9512,6 +9551,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryRetro => 'ريترو';
+
+  @override
+  String get videoEditorEffectCategoryArt => 'فن';
 
   @override
   String get videoEditorEffectCategoryGlitch => 'تشويش';

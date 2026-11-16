@@ -17,7 +17,10 @@ import co.openvine.app.proofmode.HardwareAttestationNotarizationProvider
 import co.openvine.app.videoeffects.AdjustVideoEffect
 import co.openvine.app.videoeffects.AnaglyphVideoEffect
 import co.openvine.app.videoeffects.AnamorphicVideoEffect
+import co.openvine.app.videoeffects.AsciiVideoEffect
+import co.openvine.app.videoeffects.BricksVideoEffect
 import co.openvine.app.videoeffects.ComicVideoEffect
+import co.openvine.app.videoeffects.CrossStitchVideoEffect
 import co.openvine.app.videoeffects.DropsVideoEffect
 import co.openvine.app.videoeffects.EchoVideoEffect
 import co.openvine.app.videoeffects.EightBitVideoEffect
@@ -26,16 +29,25 @@ import co.openvine.app.videoeffects.FlutedGlassVideoEffect
 import co.openvine.app.videoeffects.LightLeakVideoEffect
 import co.openvine.app.videoeffects.LightRaysVideoEffect
 import co.openvine.app.videoeffects.LookVideoEffect
+import co.openvine.app.videoeffects.NeonEdgesVideoEffect
+import co.openvine.app.videoeffects.NightVisionVideoEffect
+import co.openvine.app.videoeffects.PaintVideoEffect
+import co.openvine.app.videoeffects.PaperCutVideoEffect
 import co.openvine.app.videoeffects.ParticlesVideoEffect
+import co.openvine.app.videoeffects.PencilSketchVideoEffect
+import co.openvine.app.videoeffects.PopArtVideoEffect
 import co.openvine.app.videoeffects.PrismVideoEffect
 import co.openvine.app.videoeffects.RippleVideoEffect
 import co.openvine.app.videoeffects.RisoVideoEffect
 import co.openvine.app.videoeffects.SpinBlurVideoEffect
 import co.openvine.app.videoeffects.SpotlightVideoEffect
+import co.openvine.app.videoeffects.StainedGlassVideoEffect
 import co.openvine.app.videoeffects.SwirlVideoEffect
+import co.openvine.app.videoeffects.ThermalVideoEffect
 import co.openvine.app.videoeffects.TiltShiftVideoEffect
 import co.openvine.app.videoeffects.TunnelVideoEffect
 import co.openvine.app.videoeffects.WindowLightVideoEffect
+import co.openvine.app.videoeffects.XRayVideoEffect
 import co.openvine.app.videoeffects.ZoomBlurVideoEffect
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -146,6 +158,18 @@ class MainActivity : FlutterFragmentActivity() {
         EightBitVideoEffect.register()
         AnaglyphVideoEffect.register()
         RisoVideoEffect.register()
+        PaintVideoEffect.register()
+        PencilSketchVideoEffect.register()
+        NeonEdgesVideoEffect.register()
+        AsciiVideoEffect.register(applicationContext.assets)
+        StainedGlassVideoEffect.register()
+        ThermalVideoEffect.register()
+        NightVisionVideoEffect.register()
+        XRayVideoEffect.register()
+        PopArtVideoEffect.register()
+        PaperCutVideoEffect.register()
+        CrossStitchVideoEffect.register()
+        BricksVideoEffect.register()
         LookVideoEffect.register(applicationContext.assets)
         AdjustVideoEffect.register()
 

@@ -8921,6 +8921,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectRiso => '孔版印刷';
 
   @override
+  String get videoEditorEffectPopArt => '波普艺术';
+
+  @override
+  String get videoEditorEffectPaperCut => '剪纸';
+
+  @override
+  String get videoEditorEffectCrossStitch => '十字绣';
+
+  @override
+  String get videoEditorEffectBricks => '积木';
+
+  @override
+  String get videoEditorEffectWatercolor => '水彩';
+
+  @override
+  String get videoEditorEffectOilPaint => '油画';
+
+  @override
+  String get videoEditorEffectPencilSketch => '铅笔素描';
+
+  @override
+  String get videoEditorEffectNeonEdges => '霓虹描边';
+
+  @override
+  String get videoEditorEffectAscii => 'ASCII';
+
+  @override
+  String get videoEditorEffectStainedGlass => '彩绘玻璃';
+
+  @override
+  String get videoEditorEffectThermal => '热成像';
+
+  @override
+  String get videoEditorEffectNightVision => '夜视';
+
+  @override
+  String get videoEditorEffectXRay => 'X 光';
+
+  @override
   String get videoEditorEffectTealOrange => '青橙';
 
   @override
@@ -8952,6 +8991,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryRetro => '复古';
+
+  @override
+  String get videoEditorEffectCategoryArt => '艺术';
 
   @override
   String get videoEditorEffectCategoryGlitch => '故障';

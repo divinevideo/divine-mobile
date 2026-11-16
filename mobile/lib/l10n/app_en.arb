@@ -6977,6 +6977,58 @@
   "@videoEditorEffectRiso": {
     "description": "Name of a video effect: the picture looks printed on a risograph, in grainy pink and blue ink on paper, slightly out of register. Keep Riso or use your language's word for risograph printing."
   },
+  "videoEditorEffectPopArt": "Pop Art",
+  "@videoEditorEffectPopArt": {
+    "description": "Name of a video effect: the picture is shown four times in a grid, each copy printed in a few flat, bold colours, as in 1960s pop art screen prints."
+  },
+  "videoEditorEffectPaperCut": "Paper Cut",
+  "@videoEditorEffectPaperCut": {
+    "description": "Name of a video effect: the picture looks made of layers of cut coloured paper stacked on each other, with soft shadows between the layers."
+  },
+  "videoEditorEffectCrossStitch": "Cross-Stitch",
+  "@videoEditorEffectCrossStitch": {
+    "description": "Name of a video effect: the picture looks embroidered on cloth in cross stitches, small X-shaped stitches of coloured thread."
+  },
+  "videoEditorEffectBricks": "Bricks",
+  "@videoEditorEffectBricks": {
+    "description": "Name of a video effect: the picture looks built from small square toy building bricks with round studs. Use your language's generic word for toy building bricks, not a brand name."
+  },
+  "videoEditorEffectWatercolor": "Watercolor",
+  "@videoEditorEffectWatercolor": {
+    "description": "Name of a video effect: the picture looks painted in watercolour, in soft, light washes of paint on paper."
+  },
+  "videoEditorEffectOilPaint": "Oil Paint",
+  "@videoEditorEffectOilPaint": {
+    "description": "Name of a video effect: the picture looks painted in oil, in flat, hard-edged patches of thick paint."
+  },
+  "videoEditorEffectPencilSketch": "Pencil Sketch",
+  "@videoEditorEffectPencilSketch": {
+    "description": "Name of a video effect: the picture looks drawn with a pencil on paper, with dark outlines and cross-hatched shadows."
+  },
+  "videoEditorEffectNeonEdges": "Neon Edges",
+  "@videoEditorEffectNeonEdges": {
+    "description": "Name of a video effect: only the outlines of the picture are shown, glowing like neon tubes on black."
+  },
+  "videoEditorEffectAscii": "ASCII",
+  "@videoEditorEffectAscii": {
+    "description": "Name of a video effect: the picture is redrawn in text characters such as . : + # and @, denser where it is brighter. Keep ASCII, the name of the character set."
+  },
+  "videoEditorEffectStainedGlass": "Stained Glass",
+  "@videoEditorEffectStainedGlass": {
+    "description": "Name of a video effect: the picture looks like a stained glass window, made of coloured glass panes held together by dark lead."
+  },
+  "videoEditorEffectThermal": "Thermal",
+  "@videoEditorEffectThermal": {
+    "description": "Name of a video effect: the picture looks like it was filmed with a thermal (heat) camera, with warm things in yellow and white and cold things in purple and black."
+  },
+  "videoEditorEffectNightVision": "Night Vision",
+  "@videoEditorEffectNightVision": {
+    "description": "Name of a video effect: the picture looks like it is seen through night vision goggles, bright green with fine noise and darker corners."
+  },
+  "videoEditorEffectXRay": "X-Ray",
+  "@videoEditorEffectXRay": {
+    "description": "Name of a video effect: the picture looks like an X-ray image, its dark and bright parts swapped into blue-white on black."
+  },
   "videoEditorEffectTealOrange": "Teal & Orange",
   "@videoEditorEffectTealOrange": {
     "description": "Name of a colour-graded look in the video effects picker: the blockbuster film grade, with teal (blue-green) shadows and greens, and warm orange skin and highlights. Keep the colour names short; \"& \" may become your language's \"and\"."
@@ -7020,6 +7072,10 @@
   "videoEditorEffectCategoryRetro": "Retro",
   "@videoEditorEffectCategoryRetro": {
     "description": "Name of a group in the video effects picker: effects that look like old media, such as VHS tape, old film or an old TV."
+  },
+  "videoEditorEffectCategoryArt": "Art",
+  "@videoEditorEffectCategoryArt": {
+    "description": "Name of a group in the video effects picker: effects that redraw the picture in another medium, such as paint, pencil, print, paper, thread, toy bricks or stained glass, or show it as another kind of camera would, such as a thermal camera or night vision."
   },
   "videoEditorEffectCategoryGlitch": "Glitch",
   "@videoEditorEffectCategoryGlitch": {

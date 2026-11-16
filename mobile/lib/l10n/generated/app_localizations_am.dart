@@ -9248,6 +9248,45 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectRiso => 'ሪሶ ህትመት';
 
   @override
+  String get videoEditorEffectPopArt => 'ፖፕ አርት';
+
+  @override
+  String get videoEditorEffectPaperCut => 'የተቆረጠ ወረቀት';
+
+  @override
+  String get videoEditorEffectCrossStitch => 'የመስቀል ጥልፍ';
+
+  @override
+  String get videoEditorEffectBricks => 'የግንባታ ብሎኮች';
+
+  @override
+  String get videoEditorEffectWatercolor => 'የውሃ ቀለም';
+
+  @override
+  String get videoEditorEffectOilPaint => 'የዘይት ቀለም';
+
+  @override
+  String get videoEditorEffectPencilSketch => 'የእርሳስ ንድፍ';
+
+  @override
+  String get videoEditorEffectNeonEdges => 'የኒዮን ጠርዞች';
+
+  @override
+  String get videoEditorEffectAscii => 'ASCII';
+
+  @override
+  String get videoEditorEffectStainedGlass => 'ባለቀለም መስታወት';
+
+  @override
+  String get videoEditorEffectThermal => 'የሙቀት ካሜራ';
+
+  @override
+  String get videoEditorEffectNightVision => 'የምሽት እይታ';
+
+  @override
+  String get videoEditorEffectXRay => 'ኤክስሬይ';
+
+  @override
   String get videoEditorEffectTealOrange => 'ቲል እና ብርቱካናማ';
 
   @override
@@ -9279,6 +9318,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryRetro => 'ሬትሮ';
+
+  @override
+  String get videoEditorEffectCategoryArt => 'ጥበብ';
 
   @override
   String get videoEditorEffectCategoryGlitch => 'ግሊች';

@@ -9378,6 +9378,45 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectRiso => 'Riso Baskı';
 
   @override
+  String get videoEditorEffectPopArt => 'Pop Art';
+
+  @override
+  String get videoEditorEffectPaperCut => 'Kâğıt Kesme';
+
+  @override
+  String get videoEditorEffectCrossStitch => 'Kanaviçe';
+
+  @override
+  String get videoEditorEffectBricks => 'Yapı Blokları';
+
+  @override
+  String get videoEditorEffectWatercolor => 'Suluboya';
+
+  @override
+  String get videoEditorEffectOilPaint => 'Yağlı Boya';
+
+  @override
+  String get videoEditorEffectPencilSketch => 'Karakalem';
+
+  @override
+  String get videoEditorEffectNeonEdges => 'Neon Kenarlar';
+
+  @override
+  String get videoEditorEffectAscii => 'ASCII';
+
+  @override
+  String get videoEditorEffectStainedGlass => 'Vitray';
+
+  @override
+  String get videoEditorEffectThermal => 'Termal';
+
+  @override
+  String get videoEditorEffectNightVision => 'Gece Görüşü';
+
+  @override
+  String get videoEditorEffectXRay => 'Röntgen';
+
+  @override
   String get videoEditorEffectTealOrange => 'Turkuaz ve Turuncu';
 
   @override
@@ -9409,6 +9448,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryArt => 'Sanat';
 
   @override
   String get videoEditorEffectCategoryGlitch => 'Glitch';

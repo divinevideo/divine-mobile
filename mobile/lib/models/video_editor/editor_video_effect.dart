@@ -114,6 +114,68 @@ const anaglyphVideoEffectId = 'divine.anaglyph';
 /// macOS.
 const risoVideoEffectId = 'divine.riso';
 
+/// The id Divine's watercolour is registered under with pro_video_editor, by
+/// the native `PaintVideoEffect` on Android, iOS and macOS.
+const watercolorVideoEffectId = 'divine.watercolor';
+
+/// The id Divine's oil paint is registered under with pro_video_editor, by
+/// the native `PaintVideoEffect` on Android, iOS and macOS.
+const oilPaintVideoEffectId = 'divine.oilPaint';
+
+/// The id Divine's pencil sketch is registered under with pro_video_editor,
+/// by the native `PencilSketchVideoEffect` on Android, iOS and macOS.
+const pencilSketchVideoEffectId = 'divine.pencilSketch';
+
+/// The id Divine's glowing outlines are registered under with
+/// pro_video_editor, by the native `NeonEdgesVideoEffect` on Android, iOS and
+/// macOS.
+const neonEdgesVideoEffectId = 'divine.neonEdges';
+
+/// The id Divine's character art is registered under with pro_video_editor,
+/// by the native `AsciiVideoEffect` on Android, iOS and macOS, which draws its
+/// characters from [asciiGlyphsAsset].
+const asciiVideoEffectId = 'divine.ascii';
+
+/// The glyphs the ASCII effect draws: ten of 24x24 side by side, from the
+/// emptiest to the fullest. `tools/generate_ascii_glyphs.dart` writes them.
+/// The native `AsciiVideoEffect` reads the same asset, and the picker tile
+/// binds it to `shaders/ascii.frag`.
+const asciiGlyphsAsset = 'assets/effects/ascii_glyphs.png';
+
+/// The id Divine's stained glass is registered under with pro_video_editor,
+/// by the native `StainedGlassVideoEffect` on Android, iOS and macOS.
+const stainedGlassVideoEffectId = 'divine.stainedGlass';
+
+/// The id Divine's thermal camera view is registered under with
+/// pro_video_editor, by the native `ThermalVideoEffect` on Android, iOS and
+/// macOS.
+const thermalVideoEffectId = 'divine.thermal';
+
+/// The id Divine's night vision is registered under with pro_video_editor,
+/// by the native `NightVisionVideoEffect` on Android, iOS and macOS.
+const nightVisionVideoEffectId = 'divine.nightVision';
+
+/// The id Divine's X-ray is registered under with pro_video_editor, by the
+/// native `XRayVideoEffect` on Android, iOS and macOS.
+const xRayVideoEffectId = 'divine.xray';
+
+/// The id Divine's pop art grid is registered under with pro_video_editor, by
+/// the native `PopArtVideoEffect` on Android, iOS and macOS.
+const popArtVideoEffectId = 'divine.popArt';
+
+/// The id Divine's layered paper is registered under with pro_video_editor,
+/// by the native `PaperCutVideoEffect` on Android, iOS and macOS.
+const paperCutVideoEffectId = 'divine.paperCut';
+
+/// The id Divine's embroidery is registered under with pro_video_editor, by
+/// the native `CrossStitchVideoEffect` on Android, iOS and macOS.
+const crossStitchVideoEffectId = 'divine.crossStitch';
+
+/// The id Divine's toy brick mosaic is registered under with
+/// pro_video_editor, by the native `BricksVideoEffect` on Android, iOS and
+/// macOS.
+const bricksVideoEffectId = 'divine.bricks';
+
 /// The ids Divine's colour-graded looks are registered under with
 /// pro_video_editor, one per look, all drawn by the native `LookVideoEffect`
 /// on Android, iOS and macOS from the look's table in [lookTableAssets].
@@ -149,8 +211,13 @@ const Map<String, String> lookTableAssets = {
 /// A group of effects the effects picker lists together, by what they do to
 /// the picture; see [EditorEffectType.category]. In picker order.
 enum EditorEffectCategory {
-  /// Old media: tape, film, old screens, print.
+  /// Old media: tape, film, old screens and games, 3D films.
   retro,
+
+  /// The picture is redrawn in another medium (paint, pencil, print, paper,
+  /// thread, bricks, glass, neon or characters) or seen through another
+  /// camera (thermal, night vision, X-ray).
+  art,
 
   /// The picture breaks up digitally.
   glitch,
@@ -314,6 +381,53 @@ class EditorEffectType {
   /// Comic: flat poster colours, halftone dots and ink outlines.
   static const comic = EditorEffectType.custom(comicVideoEffectId);
 
+  /// Watercolour: soft, light washes of paint with darker edges, on paper.
+  static const watercolor = EditorEffectType.custom(watercolorVideoEffectId);
+
+  /// Oil paint: flat, hard-edged patches of thick, rich paint.
+  static const oilPaint = EditorEffectType.custom(oilPaintVideoEffectId);
+
+  /// Pencil sketch: graphite outlines and cross-hatching on paper.
+  static const pencilSketch = EditorEffectType.custom(
+    pencilSketchVideoEffectId,
+  );
+
+  /// Neon edges: the picture's outlines glow on black.
+  static const neonEdges = EditorEffectType.custom(neonEdgesVideoEffectId);
+
+  /// ASCII: the picture redrawn in characters chosen by brightness.
+  static const ascii = EditorEffectType.custom(asciiVideoEffectId);
+
+  /// Stained glass: panes of coloured glass held by dark lead.
+  static const stainedGlass = EditorEffectType.custom(
+    stainedGlassVideoEffectId,
+  );
+
+  /// Thermal camera: warm things glow yellow and white, cold ones purple
+  /// and black.
+  static const thermal = EditorEffectType.custom(thermalVideoEffectId);
+
+  /// Night vision: green phosphor with fine noise and darker corners.
+  static const nightVision = EditorEffectType.custom(nightVisionVideoEffectId);
+
+  /// X-ray: the brightness turned around into blue-white on black, with
+  /// glowing outlines.
+  static const xRay = EditorEffectType.custom(xRayVideoEffectId);
+
+  /// Pop art: four copies in a grid, each screen-printed in three flat tones
+  /// of its own bold colours.
+  static const popArt = EditorEffectType.custom(popArtVideoEffectId);
+
+  /// Paper cut: layers of cut coloured paper, the lighter ones on top,
+  /// casting soft shadows.
+  static const paperCut = EditorEffectType.custom(paperCutVideoEffectId);
+
+  /// Cross-stitch: the picture embroidered in cross stitches on cloth.
+  static const crossStitch = EditorEffectType.custom(crossStitchVideoEffectId);
+
+  /// Bricks: the picture built from square toy bricks with studs.
+  static const bricks = EditorEffectType.custom(bricksVideoEffectId);
+
   /// 8-bit: the picture as early console pixel art, in chunky pixels and 256
   /// colours.
   static const eightBit = EditorEffectType.custom(eightBitVideoEffectId);
@@ -393,10 +507,23 @@ class EditorEffectType {
     spiralTunnel,
     zoomBlur,
     spinBlur,
-    comic,
     eightBit,
     anaglyph,
+    watercolor,
+    oilPaint,
+    pencilSketch,
+    comic,
     riso,
+    popArt,
+    paperCut,
+    crossStitch,
+    bricks,
+    stainedGlass,
+    neonEdges,
+    ascii,
+    thermal,
+    nightVision,
+    xRay,
     tealOrange,
     warmFilm,
     slideFilm,
@@ -440,10 +567,23 @@ class EditorEffectType {
   EditorEffectCategory get category => switch (builtIn) {
     final builtIn? => _builtInVideoEffectCategory(builtIn),
     null => switch (customId) {
-      comicVideoEffectId ||
       eightBitVideoEffectId ||
-      anaglyphVideoEffectId ||
-      risoVideoEffectId => EditorEffectCategory.retro,
+      anaglyphVideoEffectId => EditorEffectCategory.retro,
+      watercolorVideoEffectId ||
+      oilPaintVideoEffectId ||
+      pencilSketchVideoEffectId ||
+      comicVideoEffectId ||
+      risoVideoEffectId ||
+      popArtVideoEffectId ||
+      paperCutVideoEffectId ||
+      crossStitchVideoEffectId ||
+      bricksVideoEffectId ||
+      stainedGlassVideoEffectId ||
+      neonEdgesVideoEffectId ||
+      asciiVideoEffectId ||
+      thermalVideoEffectId ||
+      nightVisionVideoEffectId ||
+      xRayVideoEffectId => EditorEffectCategory.art,
       fisheyeVideoEffectId ||
       dropsVideoEffectId ||
       tiltShiftVideoEffectId ||

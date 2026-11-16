@@ -53,6 +53,18 @@
 		71D5B9672C414D4DF83CCC58 /* EightBitVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */; };
 		E648F7BDCA3BBAC723D4FF76 /* AnaglyphVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */; };
 		BE5457F6518C15FBD7D67F84 /* RisoVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF08006D5B45BEC1469CADDF /* RisoVideoEffect.swift */; };
+		9BA3AE7BD7E05F214CD7DD84 /* PaintVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F4DBB523A0DED8C9D4C2125 /* PaintVideoEffect.swift */; };
+		E4B880008BB5CFAFB6DD3006 /* PencilSketchVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EBAA3EE6094C0CF821CF2E8 /* PencilSketchVideoEffect.swift */; };
+		222AC23386CFF65276767FC2 /* NeonEdgesVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EA178A54FF86E0D422A13A /* NeonEdgesVideoEffect.swift */; };
+		7B49D23B422C97BF36E9233D /* AsciiVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EE46AB16F92C48F3A7B15E5 /* AsciiVideoEffect.swift */; };
+		4C682F1D82091D63A7E72978 /* StainedGlassVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0ACA8F5FBB6644233E3B7C /* StainedGlassVideoEffect.swift */; };
+		13CA462C4ADD1FE6411B6876 /* ThermalVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D94F16B30B33C2BE2F9A0A2 /* ThermalVideoEffect.swift */; };
+		B7105A7721FB8C16E564D039 /* NightVisionVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DF5424E78D7D7BA927F01AB /* NightVisionVideoEffect.swift */; };
+		1E50681454AE4BC9C3C9F4DA /* XRayVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22B695F1A477455D92D125B3 /* XRayVideoEffect.swift */; };
+		F4EDD6CF9A0BD9401D39F845 /* PopArtVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140351A099894A14626BFA5F /* PopArtVideoEffect.swift */; };
+		B043346756171BFB7DE031E9 /* PaperCutVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55FB1443C9363655BBAA7A94 /* PaperCutVideoEffect.swift */; };
+		9CD0B76212942CD1EB9CCCD0 /* CrossStitchVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4B83C45671C1EE600F77F86 /* CrossStitchVideoEffect.swift */; };
+		BD8DF3F91EA6464D6ECA9047 /* BricksVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5913F717B88E254523BC097 /* BricksVideoEffect.swift */; };
 		B917EE59D6D3D0A762EBE056 /* LookVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97BD6E9E1AB367CC54A6D082 /* LookVideoEffect.swift */; };
 		AD1A57E1C8E35A4FAB9D3D23 /* AdjustVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD1A57E1C8E35A4FAB9D3D22 /* AdjustVideoEffect.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
@@ -134,6 +146,18 @@
 		5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EightBitVideoEffect.swift; path = ../ios/Runner/EightBitVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AnaglyphVideoEffect.swift; path = ../ios/Runner/AnaglyphVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		DF08006D5B45BEC1469CADDF /* RisoVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RisoVideoEffect.swift; path = ../ios/Runner/RisoVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		9F4DBB523A0DED8C9D4C2125 /* PaintVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PaintVideoEffect.swift; path = ../ios/Runner/PaintVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		5EBAA3EE6094C0CF821CF2E8 /* PencilSketchVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PencilSketchVideoEffect.swift; path = ../ios/Runner/PencilSketchVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		C4EA178A54FF86E0D422A13A /* NeonEdgesVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NeonEdgesVideoEffect.swift; path = ../ios/Runner/NeonEdgesVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		7EE46AB16F92C48F3A7B15E5 /* AsciiVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AsciiVideoEffect.swift; path = ../ios/Runner/AsciiVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		9A0ACA8F5FBB6644233E3B7C /* StainedGlassVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StainedGlassVideoEffect.swift; path = ../ios/Runner/StainedGlassVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		1D94F16B30B33C2BE2F9A0A2 /* ThermalVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThermalVideoEffect.swift; path = ../ios/Runner/ThermalVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		3DF5424E78D7D7BA927F01AB /* NightVisionVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NightVisionVideoEffect.swift; path = ../ios/Runner/NightVisionVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		22B695F1A477455D92D125B3 /* XRayVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = XRayVideoEffect.swift; path = ../ios/Runner/XRayVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		140351A099894A14626BFA5F /* PopArtVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PopArtVideoEffect.swift; path = ../ios/Runner/PopArtVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		55FB1443C9363655BBAA7A94 /* PaperCutVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PaperCutVideoEffect.swift; path = ../ios/Runner/PaperCutVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		C4B83C45671C1EE600F77F86 /* CrossStitchVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CrossStitchVideoEffect.swift; path = ../ios/Runner/CrossStitchVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		E5913F717B88E254523BC097 /* BricksVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BricksVideoEffect.swift; path = ../ios/Runner/BricksVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		97BD6E9E1AB367CC54A6D082 /* LookVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LookVideoEffect.swift; path = ../ios/Runner/LookVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		AD1A57E1C8E35A4FAB9D3D22 /* AdjustVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AdjustVideoEffect.swift; path = ../ios/Runner/AdjustVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
@@ -263,6 +287,18 @@
 				5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */,
 				44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */,
 				DF08006D5B45BEC1469CADDF /* RisoVideoEffect.swift */,
+				9F4DBB523A0DED8C9D4C2125 /* PaintVideoEffect.swift */,
+				5EBAA3EE6094C0CF821CF2E8 /* PencilSketchVideoEffect.swift */,
+				C4EA178A54FF86E0D422A13A /* NeonEdgesVideoEffect.swift */,
+				7EE46AB16F92C48F3A7B15E5 /* AsciiVideoEffect.swift */,
+				9A0ACA8F5FBB6644233E3B7C /* StainedGlassVideoEffect.swift */,
+				1D94F16B30B33C2BE2F9A0A2 /* ThermalVideoEffect.swift */,
+				3DF5424E78D7D7BA927F01AB /* NightVisionVideoEffect.swift */,
+				22B695F1A477455D92D125B3 /* XRayVideoEffect.swift */,
+				140351A099894A14626BFA5F /* PopArtVideoEffect.swift */,
+				55FB1443C9363655BBAA7A94 /* PaperCutVideoEffect.swift */,
+				C4B83C45671C1EE600F77F86 /* CrossStitchVideoEffect.swift */,
+				E5913F717B88E254523BC097 /* BricksVideoEffect.swift */,
 				97BD6E9E1AB367CC54A6D082 /* LookVideoEffect.swift */,
 				AD1A57E1C8E35A4FAB9D3D22 /* AdjustVideoEffect.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
@@ -576,6 +612,18 @@
 				71D5B9672C414D4DF83CCC58 /* EightBitVideoEffect.swift in Sources */,
 				E648F7BDCA3BBAC723D4FF76 /* AnaglyphVideoEffect.swift in Sources */,
 				BE5457F6518C15FBD7D67F84 /* RisoVideoEffect.swift in Sources */,
+				9BA3AE7BD7E05F214CD7DD84 /* PaintVideoEffect.swift in Sources */,
+				E4B880008BB5CFAFB6DD3006 /* PencilSketchVideoEffect.swift in Sources */,
+				222AC23386CFF65276767FC2 /* NeonEdgesVideoEffect.swift in Sources */,
+				7B49D23B422C97BF36E9233D /* AsciiVideoEffect.swift in Sources */,
+				4C682F1D82091D63A7E72978 /* StainedGlassVideoEffect.swift in Sources */,
+				13CA462C4ADD1FE6411B6876 /* ThermalVideoEffect.swift in Sources */,
+				B7105A7721FB8C16E564D039 /* NightVisionVideoEffect.swift in Sources */,
+				1E50681454AE4BC9C3C9F4DA /* XRayVideoEffect.swift in Sources */,
+				F4EDD6CF9A0BD9401D39F845 /* PopArtVideoEffect.swift in Sources */,
+				B043346756171BFB7DE031E9 /* PaperCutVideoEffect.swift in Sources */,
+				9CD0B76212942CD1EB9CCCD0 /* CrossStitchVideoEffect.swift in Sources */,
+				BD8DF3F91EA6464D6ECA9047 /* BricksVideoEffect.swift in Sources */,
 				B917EE59D6D3D0A762EBE056 /* LookVideoEffect.swift in Sources */,
 				AD1A57E1C8E35A4FAB9D3D23 /* AdjustVideoEffect.swift in Sources */,
 				2DD63C4A2E00A62100B40DED /* NativeCameraPlugin.swift in Sources */,

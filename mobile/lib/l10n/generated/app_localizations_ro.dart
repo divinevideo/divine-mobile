@@ -9679,6 +9679,45 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectRiso => 'Risografie';
 
   @override
+  String get videoEditorEffectPopArt => 'Pop art';
+
+  @override
+  String get videoEditorEffectPaperCut => 'Hârtie decupată';
+
+  @override
+  String get videoEditorEffectCrossStitch => 'Cusătură în cruce';
+
+  @override
+  String get videoEditorEffectBricks => 'Cuburi';
+
+  @override
+  String get videoEditorEffectWatercolor => 'Acuarelă';
+
+  @override
+  String get videoEditorEffectOilPaint => 'Pictură în ulei';
+
+  @override
+  String get videoEditorEffectPencilSketch => 'Schiță în creion';
+
+  @override
+  String get videoEditorEffectNeonEdges => 'Contururi neon';
+
+  @override
+  String get videoEditorEffectAscii => 'ASCII';
+
+  @override
+  String get videoEditorEffectStainedGlass => 'Vitraliu';
+
+  @override
+  String get videoEditorEffectThermal => 'Termic';
+
+  @override
+  String get videoEditorEffectNightVision => 'Vedere nocturnă';
+
+  @override
+  String get videoEditorEffectXRay => 'Raze X';
+
+  @override
   String get videoEditorEffectTealOrange => 'Teal & Orange';
 
   @override
@@ -9710,6 +9749,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryArt => 'Artă';
 
   @override
   String get videoEditorEffectCategoryGlitch => 'Glitch';

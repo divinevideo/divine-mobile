@@ -9001,6 +9001,45 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectRiso => 'リソグラフ';
 
   @override
+  String get videoEditorEffectPopArt => 'ポップアート';
+
+  @override
+  String get videoEditorEffectPaperCut => '切り絵';
+
+  @override
+  String get videoEditorEffectCrossStitch => 'クロスステッチ';
+
+  @override
+  String get videoEditorEffectBricks => 'ブロック';
+
+  @override
+  String get videoEditorEffectWatercolor => '水彩';
+
+  @override
+  String get videoEditorEffectOilPaint => '油絵';
+
+  @override
+  String get videoEditorEffectPencilSketch => '鉛筆スケッチ';
+
+  @override
+  String get videoEditorEffectNeonEdges => 'ネオンエッジ';
+
+  @override
+  String get videoEditorEffectAscii => 'ASCII';
+
+  @override
+  String get videoEditorEffectStainedGlass => 'ステンドグラス';
+
+  @override
+  String get videoEditorEffectThermal => 'サーモグラフィ';
+
+  @override
+  String get videoEditorEffectNightVision => 'ナイトビジョン';
+
+  @override
+  String get videoEditorEffectXRay => 'X線';
+
+  @override
   String get videoEditorEffectTealOrange => 'ティール＆オレンジ';
 
   @override
@@ -9032,6 +9071,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryRetro => 'レトロ';
+
+  @override
+  String get videoEditorEffectCategoryArt => 'アート';
 
   @override
   String get videoEditorEffectCategoryGlitch => 'グリッチ';

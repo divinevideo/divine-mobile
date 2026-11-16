@@ -90,7 +90,7 @@ class _EffectItem extends StatelessWidget {
               final tile? => _ShaderThumbnail(
                 path: path,
                 tile: tile,
-                table: lookTableAssets[type.customId],
+                texture: shaderTileTextureOf(type),
               ),
               null => VideoEffectPreview(
                 effects: [
@@ -171,11 +171,13 @@ const _prismTileSeconds = 6.0;
 /// The tile of [type], or `null` for an effect whose tile is drawn otherwise.
 ///
 /// Each shows the effect at full strength. The fisheye's value is the
-/// `CIBumpDistortion` scale `FisheyeVideoEffect` uses at intensity 1; the
-/// drops show the default settings at a moment where two of them flow into
-/// each other; the particles' last value is the style the native
-/// `ParticlesVideoEffect` draws. The looks share one shader, which reads the
-/// look's table from [lookTableAssets].
+/// `CIBumpDistortion` scale `FisheyeVideoEffect` uses at intensity 1; night
+/// vision shows its first noise pattern; the drops show the default settings at
+/// a moment where two of them flow into each other; the particles' last value
+/// is the style the native `ParticlesVideoEffect` draws; watercolour and oil
+/// paint share one shader, told apart by their last value. The looks share one
+/// shader, which reads the look's table from [lookTableAssets]; the ASCII
+/// shader reads its glyphs from [asciiGlyphsAsset] (see [shaderTileTextureOf]).
 @visibleForTesting
 ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
   fisheyeVideoEffectId => (asset: 'shaders/fisheye.frag', values: const [0.8]),
@@ -303,11 +305,57 @@ ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
     values: const [1.0],
   ),
   risoVideoEffectId => (asset: 'shaders/riso.frag', values: const [1.0]),
+  watercolorVideoEffectId => (
+    asset: 'shaders/paint.frag',
+    values: const [1.0, 0.0],
+  ),
+  oilPaintVideoEffectId => (
+    asset: 'shaders/paint.frag',
+    values: const [1.0, 1.0],
+  ),
+  pencilSketchVideoEffectId => (
+    asset: 'shaders/pencil_sketch.frag',
+    values: const [1.0],
+  ),
+  neonEdgesVideoEffectId => (
+    asset: 'shaders/neon_edges.frag',
+    values: const [1.0],
+  ),
+  asciiVideoEffectId => (asset: 'shaders/ascii.frag', values: const [1.0]),
+  stainedGlassVideoEffectId => (
+    asset: 'shaders/stained_glass.frag',
+    values: const [1.0],
+  ),
+  thermalVideoEffectId => (asset: 'shaders/thermal.frag', values: const [1.0]),
+  nightVisionVideoEffectId => (
+    asset: 'shaders/night_vision.frag',
+    values: const [1.0, 0.0],
+  ),
+  xRayVideoEffectId => (asset: 'shaders/x_ray.frag', values: const [1.0]),
+  popArtVideoEffectId => (asset: 'shaders/pop_art.frag', values: const [1.0]),
+  paperCutVideoEffectId => (
+    asset: 'shaders/paper_cut.frag',
+    values: const [1.0],
+  ),
+  crossStitchVideoEffectId => (
+    asset: 'shaders/cross_stitch.frag',
+    values: const [1.0],
+  ),
+  bricksVideoEffectId => (asset: 'shaders/bricks.frag', values: const [1.0]),
   final id? when lookTableAssets.containsKey(id) => (
     asset: 'shaders/look.frag',
     values: const [1.0],
   ),
   _ => null,
+};
+
+/// The asset [type]'s tile shader reads as its second texture, after the
+/// thumbnail: a look's table or the ASCII glyphs. `null` for the others.
+@visibleForTesting
+String? shaderTileTextureOf(EditorEffectType type) => switch (type.customId) {
+  asciiVideoEffectId => asciiGlyphsAsset,
+  final id? => lookTableAssets[id],
+  null => null,
 };
 
 /// The drops' tile values: the intensity, the scale, the frost, the fringes
@@ -328,28 +376,33 @@ final List<double> _dropsTileValues = () {
 }();
 
 /// The tile of an effect Divine draws itself: the thumbnail through the
-/// [tile]'s shader, which for a look also reads the look's [table].
+/// [tile]'s shader, which for a look or the ASCII effect also reads a
+/// [texture].
 ///
 /// Shows the plain thumbnail where the backend has no shader image filter
 /// (Skia), as the chroma-key preview does.
 class _ShaderThumbnail extends StatefulWidget {
-  const _ShaderThumbnail({required this.path, required this.tile, this.table});
+  const _ShaderThumbnail({
+    required this.path,
+    required this.tile,
+    this.texture,
+  });
 
   final String path;
   final ShaderTile tile;
 
-  /// The asset of a look's lookup table, bound as the shader's second
-  /// texture; `null` for the other effects.
-  final String? table;
+  /// The asset bound as the shader's second texture: a look's lookup table
+  /// or the ASCII glyphs; `null` for the other effects.
+  final String? texture;
 
   @override
   State<_ShaderThumbnail> createState() => _ShaderThumbnailState();
 }
 
 class _ShaderThumbnailState extends State<_ShaderThumbnail> {
-  /// Each shader and each table is read once, whichever tiles show it.
+  /// Each shader and each texture is read once, whichever tiles show it.
   static final _programs = <String, Future<ui.FragmentProgram>>{};
-  static final _tables = <String, Future<ui.Image>>{};
+  static final _textures = <String, Future<ui.Image>>{};
 
   ui.FragmentShader? _shader;
 
@@ -363,7 +416,7 @@ class _ShaderThumbnailState extends State<_ShaderThumbnail> {
   void didUpdateWidget(_ShaderThumbnail oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.tile.asset != widget.tile.asset ||
-        oldWidget.table != widget.table) {
+        oldWidget.texture != widget.texture) {
       _shader?.dispose();
       _shader = null;
       _load();
@@ -376,21 +429,22 @@ class _ShaderThumbnailState extends State<_ShaderThumbnail> {
   void _load() {
     if (!ui.ImageFilter.isShaderFilterSupported) return;
     final asset = widget.tile.asset;
-    final table = widget.table;
+    final texture = widget.texture;
     Future<void> load() async {
       final program = await (_programs[asset] ??= ui.FragmentProgram.fromAsset(
         asset,
       ));
-      final image = table == null
+      final image = texture == null
           ? null
-          : await (_tables[table] ??= _decodeTable(table));
-      if (!mounted || widget.tile.asset != asset || widget.table != table) {
+          : await (_textures[texture] ??= _decodeTexture(texture));
+      if (!mounted || widget.tile.asset != asset || widget.texture != texture) {
         return;
       }
       final shader = _configure(program.fragmentShader());
       // Sampler 0 is the thumbnail, which the engine binds. Bilinear
-      // filtering interpolates red and green within a slice of the table,
-      // as the native renderers do.
+      // filtering interpolates red and green within a slice of a look's
+      // table, and scales the ASCII glyphs to their cells, as the native
+      // renderers do.
       if (image != null) {
         shader.setImageSampler(1, image, filterQuality: ui.FilterQuality.low);
       }
@@ -405,9 +459,10 @@ class _ShaderThumbnailState extends State<_ShaderThumbnail> {
     );
   }
 
-  /// Decodes a look's table, whose PNG carries no colour profile, so the
-  /// shader reads exactly the values the native renderers do.
-  static Future<ui.Image> _decodeTable(String asset) async {
+  /// Decodes a look's table or the ASCII glyphs, whose PNGs carry no colour
+  /// profile, so the shader reads exactly the values the native renderers
+  /// do.
+  static Future<ui.Image> _decodeTexture(String asset) async {
     final data = await rootBundle.load(asset);
     final codec = await ui.instantiateImageCodec(
       data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
@@ -489,6 +544,19 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
     eightBitVideoEffectId => context.l10n.videoEditorEffectEightBit,
     anaglyphVideoEffectId => context.l10n.videoEditorEffectAnaglyph,
     risoVideoEffectId => context.l10n.videoEditorEffectRiso,
+    watercolorVideoEffectId => context.l10n.videoEditorEffectWatercolor,
+    oilPaintVideoEffectId => context.l10n.videoEditorEffectOilPaint,
+    pencilSketchVideoEffectId => context.l10n.videoEditorEffectPencilSketch,
+    neonEdgesVideoEffectId => context.l10n.videoEditorEffectNeonEdges,
+    asciiVideoEffectId => context.l10n.videoEditorEffectAscii,
+    stainedGlassVideoEffectId => context.l10n.videoEditorEffectStainedGlass,
+    thermalVideoEffectId => context.l10n.videoEditorEffectThermal,
+    nightVisionVideoEffectId => context.l10n.videoEditorEffectNightVision,
+    xRayVideoEffectId => context.l10n.videoEditorEffectXRay,
+    popArtVideoEffectId => context.l10n.videoEditorEffectPopArt,
+    paperCutVideoEffectId => context.l10n.videoEditorEffectPaperCut,
+    crossStitchVideoEffectId => context.l10n.videoEditorEffectCrossStitch,
+    bricksVideoEffectId => context.l10n.videoEditorEffectBricks,
     tealOrangeLookId => context.l10n.videoEditorEffectTealOrange,
     warmFilmLookId => context.l10n.videoEditorEffectWarmFilm,
     slideFilmLookId => context.l10n.videoEditorEffectSlideFilm,
@@ -509,6 +577,7 @@ String _categoryLabel(
   EditorEffectCategory category,
 ) => switch (category) {
   EditorEffectCategory.retro => context.l10n.videoEditorEffectCategoryRetro,
+  EditorEffectCategory.art => context.l10n.videoEditorEffectCategoryArt,
   EditorEffectCategory.glitch => context.l10n.videoEditorEffectCategoryGlitch,
   EditorEffectCategory.distort => context.l10n.videoEditorEffectCategoryDistort,
   EditorEffectCategory.light => context.l10n.videoEditorEffectCategoryLight,

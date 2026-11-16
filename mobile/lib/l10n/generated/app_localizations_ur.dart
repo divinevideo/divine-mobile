@@ -9461,6 +9461,45 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectRiso => 'ریسو پرنٹ';
 
   @override
+  String get videoEditorEffectPopArt => 'پاپ آرٹ';
+
+  @override
+  String get videoEditorEffectPaperCut => 'کاغذ کی کٹنگ';
+
+  @override
+  String get videoEditorEffectCrossStitch => 'کراس اسٹچ';
+
+  @override
+  String get videoEditorEffectBricks => 'بلاکس';
+
+  @override
+  String get videoEditorEffectWatercolor => 'آبی رنگ';
+
+  @override
+  String get videoEditorEffectOilPaint => 'آئل پینٹ';
+
+  @override
+  String get videoEditorEffectPencilSketch => 'پنسل اسکیچ';
+
+  @override
+  String get videoEditorEffectNeonEdges => 'نیون کنارے';
+
+  @override
+  String get videoEditorEffectAscii => 'ASCII';
+
+  @override
+  String get videoEditorEffectStainedGlass => 'رنگین شیشہ';
+
+  @override
+  String get videoEditorEffectThermal => 'تھرمل';
+
+  @override
+  String get videoEditorEffectNightVision => 'نائٹ وژن';
+
+  @override
+  String get videoEditorEffectXRay => 'ایکس رے';
+
+  @override
   String get videoEditorEffectTealOrange => 'ٹیل اور نارنجی';
 
   @override
@@ -9492,6 +9531,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryRetro => 'ریٹرو';
+
+  @override
+  String get videoEditorEffectCategoryArt => 'آرٹ';
 
   @override
   String get videoEditorEffectCategoryGlitch => 'گلچ';

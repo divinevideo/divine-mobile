@@ -9418,6 +9418,45 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectRiso => 'In Riso';
 
   @override
+  String get videoEditorEffectPopArt => 'Pop art';
+
+  @override
+  String get videoEditorEffectPaperCut => 'Cắt giấy';
+
+  @override
+  String get videoEditorEffectCrossStitch => 'Thêu chữ thập';
+
+  @override
+  String get videoEditorEffectBricks => 'Gạch xếp hình';
+
+  @override
+  String get videoEditorEffectWatercolor => 'Màu nước';
+
+  @override
+  String get videoEditorEffectOilPaint => 'Sơn dầu';
+
+  @override
+  String get videoEditorEffectPencilSketch => 'Phác thảo chì';
+
+  @override
+  String get videoEditorEffectNeonEdges => 'Viền neon';
+
+  @override
+  String get videoEditorEffectAscii => 'ASCII';
+
+  @override
+  String get videoEditorEffectStainedGlass => 'Kính màu';
+
+  @override
+  String get videoEditorEffectThermal => 'Ảnh nhiệt';
+
+  @override
+  String get videoEditorEffectNightVision => 'Nhìn đêm';
+
+  @override
+  String get videoEditorEffectXRay => 'X-quang';
+
+  @override
   String get videoEditorEffectTealOrange => 'Xanh ngọc & Cam';
 
   @override
@@ -9449,6 +9488,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryArt => 'Nghệ thuật';
 
   @override
   String get videoEditorEffectCategoryGlitch => 'Glitch';
