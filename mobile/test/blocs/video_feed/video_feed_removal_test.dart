@@ -271,9 +271,11 @@ void main() {
           ),
           act: (bloc) async {
             bloc.add(const VideoFeedActiveIndexChanged(1));
-            await bloc.stream.firstWhere((state) => state.currentIndex == 1);
+            await pumpEventQueue();
+            expect(bloc.state.currentIndex, 1);
             removals.add('3' * 64);
-            await bloc.stream.firstWhere((state) => state.videos.length == 2);
+            await pumpEventQueue();
+            expect(bloc.state.videos, [_video('1'), _video('2')]);
           },
           verify: (_) async {
             await pumpEventQueue();
@@ -327,12 +329,11 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoFeedLoadMoreRequested());
-          await requested.future;
-          final removed = bloc.stream.firstWhere(
-            (state) => !state.videos.contains(_video('2')),
-          );
+          await pumpEventQueue();
+          expect(requested.isCompleted, isTrue);
           removals.add('2' * 64);
-          await removed;
+          await pumpEventQueue();
+          expect(bloc.state.videos, [_video('1'), _video('3')]);
           page.complete(
             HomeFeedResult(
               videos: [_video('2'), _video('4')],
@@ -371,12 +372,11 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoFeedRefreshRequested());
-          await requested.future;
-          final removed = bloc.stream.firstWhere(
-            (state) => state.coordination.removedVideoIds.contains('2' * 64),
-          );
+          await pumpEventQueue();
+          expect(requested.isCompleted, isTrue);
           removals.add('2' * 64);
-          await removed;
+          await pumpEventQueue();
+          expect(bloc.state.coordination.removedVideoIds, contains('2' * 64));
           page.complete(HomeFeedResult(videos: [_video('1'), _video('2')]));
         },
         wait: Duration.zero,
@@ -411,12 +411,11 @@ void main() {
         ),
         act: (bloc) async {
           bloc.add(const VideoFeedRefreshRequested());
-          await requested.future;
-          final removed = bloc.stream.firstWhere(
-            (state) => state.coordination.removedVideoIds.contains('2' * 64),
-          );
+          await pumpEventQueue();
+          expect(requested.isCompleted, isTrue);
           removals.add('2' * 64);
-          await removed;
+          await pumpEventQueue();
+          expect(bloc.state.coordination.removedVideoIds, contains('2' * 64));
           page.complete(HomeFeedResult(videos: [_video('1'), _video('2')]));
         },
         wait: Duration.zero,
@@ -463,11 +462,8 @@ void main() {
           coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
         ),
         act: (bloc) async {
-          final finished = bloc.stream
-              .skipWhile((state) => !state.isLoadingMore)
-              .firstWhere((state) => !state.isLoadingMore);
           bloc.add(const VideoFeedLoadMoreRequested());
-          await finished;
+          await pumpEventQueue();
         },
         verify: (bloc) =>
             expect(bloc.state.videos, [_newVideo('1'), _newVideo('3')]),
@@ -530,13 +526,18 @@ void main() {
         ),
         seed: removedAfterTheRead,
         act: (bloc) async {
-          final served = bloc.stream.firstWhere(
-            (state) =>
-                state.source == const VideoFeedSource.forYou() &&
-                state.videos.isNotEmpty,
-          );
+          final states = <VideoFeedBlocState>[];
+          final subscription = bloc.stream.listen(states.add);
           bloc.add(const VideoFeedModeChanged(FeedMode.forYou));
-          firstServed = (await served).videos;
+          await pumpEventQueue();
+          await subscription.cancel();
+          firstServed = states
+              .firstWhere(
+                (state) =>
+                    state.source == const VideoFeedSource.forYou() &&
+                    state.videos.isNotEmpty,
+              )
+              .videos;
         },
         verify: (_) => expect(firstServed, [_video('1')]),
       );
@@ -566,11 +567,7 @@ void main() {
           seed: removedAfterTheRead,
           act: (bloc) async {
             bloc.add(const VideoFeedModeChanged(FeedMode.forYou));
-            await bloc.stream.firstWhere(
-              (state) =>
-                  state.status == VideoFeedStatus.success &&
-                  state.source == const VideoFeedSource.forYou(),
-            );
+            await pumpEventQueue();
           },
           verify: (bloc) {
             expect(bloc.state.videos, [_video('1')]);
@@ -594,11 +591,9 @@ void main() {
         videos: [_video('1'), _video('2')],
       ),
       act: (bloc) async {
-        final removed = bloc.stream.firstWhere(
-          (state) => state.videos.length == 1,
-        );
         removals.add('2' * 64);
-        await removed;
+        await pumpEventQueue();
+        expect(bloc.state.videos, [_video('1')]);
         bloc.add(
           VideoFeedEnrichmentReady(
             source: const VideoFeedSource.forYou(),
@@ -659,13 +654,12 @@ void main() {
         final bloc = createBloc(profiles: profiles, cache: cache);
         addTearDown(bloc.close);
         bloc.add(const VideoFeedRefreshRequested());
-        await requested.future;
+        await pumpEventQueue();
+        expect(requested.isCompleted, isTrue);
         expect(bloc.state.videos, hasLength(3));
-        final removed = bloc.stream.firstWhere(
-          (state) => state.videos.length == 2,
-        );
         removals.add('3' * 64);
-        await removed;
+        await pumpEventQueue();
+        expect(bloc.state.videos, hasLength(2));
         profileRead.complete({});
         await pumpEventQueue();
         expect(cache.saved?.map((video) => video.id).toList(), ['2' * 64]);
