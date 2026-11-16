@@ -41,7 +41,7 @@ import 'package:openvine/widgets/video_tile_transition/video_tile_transition_tar
 /// it is still small enough for the two to look alike.
 ///
 /// Closing from the landed page flies a snapshot of the page as the player
-/// was showing it, where it has been seen to read the player's frames: the
+/// was showing it, where a snapshot reads the player's frames: the
 /// frame it was on, with whatever letterboxes it, placed like the controls
 /// and hiding the page beneath, which may go on playing. The tile's picture
 /// cross-fades in over it in the last [closeCrossFade] of the way, so it
@@ -210,14 +210,19 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     }
   }
 
-  /// Whether a snapshot of the page has been seen to read the player's
-  /// frames. Only iOS has been checked on a device. The Android feed draws
-  /// through a texture too, but there the snapshot is unverified, so the
+  /// Whether a snapshot of the page reads the player's frames: where the
+  /// feed draws them through a texture, as on iOS, where it has been seen
+  /// to on a device, and Android. A web player is a video element, which a
+  /// snapshot leaves out, and desktop players are unchecked, so there the
   /// tile's picture flies instead.
-  static bool get _framesReadable => switch (defaultTargetPlatform) {
-    TargetPlatform.iOS || TargetPlatform.macOS => true,
-    _ => false,
-  };
+  static bool get _framesReadable =>
+      !kIsWeb &&
+      switch (defaultTargetPlatform) {
+        TargetPlatform.iOS ||
+        TargetPlatform.macOS ||
+        TargetPlatform.android => true,
+        _ => false,
+      };
 
   /// Takes the pictures closing flies: what the tile shows now, which is
   /// where it lands, and, from the landed page, the video it shows and the

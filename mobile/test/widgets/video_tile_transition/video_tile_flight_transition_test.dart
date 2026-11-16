@@ -302,6 +302,16 @@ VideoTileScrimPainter _scrims(WidgetTester tester) =>
             .painter!
         as VideoTileScrimPainter;
 
+/// Where a snapshot of the page reads the player's frames.
+const _readsFrames = TargetPlatformVariant({
+  TargetPlatform.iOS,
+  TargetPlatform.android,
+});
+
+/// Where it does not, so the tile's picture flies instead.
+TargetPlatformVariant get _readsNoFrames =>
+    TargetPlatformVariant.only(TargetPlatform.linux);
+
 Matcher _rectCloseTo(Rect expected) => isA<Rect>()
     .having((r) => r.left, 'left', closeTo(expected.left, 0.01))
     .having((r) => r.top, 'top', closeTo(expected.top, 0.01))
@@ -1305,7 +1315,7 @@ void main() {
             expect(pageShowsAt(tester, screen.center), isFalse);
             await tester.pumpAndSettle();
           },
-          variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+          variant: _readsFrames,
         );
 
         testWidgets(
@@ -1338,7 +1348,7 @@ void main() {
             );
             await tester.pumpAndSettle();
           },
-          variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+          variant: _readsFrames,
         );
 
         testWidgets(
@@ -1362,7 +1372,7 @@ void main() {
             );
             expect(pageShowsAt(tester, screen.center), isFalse);
           },
-          variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+          variant: _readsFrames,
         );
 
         testWidgets(
@@ -1377,7 +1387,7 @@ void main() {
             expect(tester.getRect(_picture), equals(screen));
             await tester.pumpAndSettle();
           },
-          variant: TargetPlatformVariant.only(TargetPlatform.android),
+          variant: _readsNoFrames,
         );
       });
 
@@ -1416,7 +1426,7 @@ void main() {
           expect(snapshotPainter(tester).clip.outerRect, isNot(_landing));
           await tester.pumpAndSettle();
         },
-        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+        variant: _readsFrames,
       );
 
       testWidgets(
@@ -1459,7 +1469,7 @@ void main() {
           expect(pictureOpacity(tester), closeTo(1, 0.01));
           await tester.pumpAndSettle();
         },
-        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+        variant: _readsFrames,
       );
 
       testWidgets(
@@ -1478,7 +1488,7 @@ void main() {
           );
           await tester.pumpAndSettle();
         },
-        variant: TargetPlatformVariant.only(TargetPlatform.android),
+        variant: _readsNoFrames,
       );
 
       testWidgets(
@@ -1502,7 +1512,7 @@ void main() {
           expect(_flightFrame(tester), isNotNull);
           expect(_pageHasLanded(tester), isFalse);
         },
-        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+        variant: _readsFrames,
       );
 
       testWidgets(
@@ -1522,7 +1532,7 @@ void main() {
           expect(_flightFrame(tester), isNull);
           expect(_pageHasLanded(tester), isTrue);
         },
-        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+        variant: _readsFrames,
       );
     });
 
