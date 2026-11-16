@@ -223,13 +223,8 @@ def plan_tick(snapshot, state, levels):
                     action("attach-beta-groups", "ios", build=b)
             builds = data.get("builds", [])
             dates = data.get("submissions", [])
-            newest_public = max(
-                (b["number"] for b in builds if b.get("public")), default=0
-            )
             rejected = any(
-                b.get("external") in BETA_REJECTED
-                and b["number"] > newest_public
-                and "ios-build:" + b["id"] not in ack
+                b.get("external") in BETA_REJECTED and "ios-build:" + b["id"] not in ack
                 for b in builds
             )
             waiting = any(b.get("external") in BETA_WAITING for b in builds)

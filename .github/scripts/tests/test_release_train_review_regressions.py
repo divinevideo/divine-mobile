@@ -394,3 +394,30 @@ class LargePrivateStateTest(unittest.TestCase):
         self.assertEqual(store.load(), expected)
         self.assertEqual(store.sha, "b" * 40)
         self.assertEqual(len(calls), 2)
+
+
+class AssignedGroupRejectionTest(unittest.TestCase):
+    def test_rejected_build_still_in_groups_holds_new_submissions_until_ack(self):
+        s = snapshot()
+        s["changes"]["ios"] = False
+        rejected = build() | {
+            "external": "BETA_REJECTED",
+            "public": True,
+            "public_complete": True,
+        }
+        newer = build() | {
+            "id": "11",
+            "number": 11,
+            "public": False,
+            "external": "READY_FOR_BETA_SUBMISSION",
+        }
+        s["ios"]["builds"] = [rejected, newer]
+        self.assertFalse(
+            plan_tick(s, {}, {"ios": "testflight", "android": "off"})["actions"]
+        )
+        actions = plan_tick(
+            s,
+            {"acknowledged": ["ios-build:10"]},
+            {"ios": "testflight", "android": "off"},
+        )["actions"]
+        self.assertEqual([a["kind"] for a in actions], ["public-beta"])
