@@ -180,7 +180,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 34;
+  int get schemaVersion => 35;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -439,6 +439,9 @@ class AppDatabase extends _$AppDatabase {
           'unconfirmed_recipient_wrap_json',
           'TEXT NULL',
         );
+      }
+      if (from < 35 && to >= 35) {
+        await m.createIndex(idxEventVerifiedCreatedAt);
       }
       await _withholdV31Columns(to);
       await _withholdV34Columns(to);

@@ -8,6 +8,10 @@ import 'package:drift/drift.dart';
 ///
 /// Contains all Nostr events including video events (kind 34236), profiles
 /// (kind 0), reactions (kind 7), etc.
+@TableIndex.sql(
+  'CREATE INDEX IF NOT EXISTS idx_event_verified_created_at '
+  'ON event (created_at DESC) WHERE signature_verified = 1',
+)
 @DataClassName('NostrEventRow')
 class NostrEvents extends Table {
   @override
@@ -77,8 +81,8 @@ class NostrEvents extends Table {
           'ON event (pubkey, kind, d_tag, created_at)',
     ),
 
-    // Global recency (ORDER BY created_at DESC LIMIT ?), e.g. the
-    // verified-signature seed on cold start.
+    // Global recency for queries that also include unchecked events. The
+    // verified-signature seed uses the partial index declared above.
     Index(
       'idx_event_created_at',
       'CREATE INDEX IF NOT EXISTS idx_event_created_at '

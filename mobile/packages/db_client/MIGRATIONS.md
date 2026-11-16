@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 33** (see `app_database.dart`).
+**Version: 35** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -337,6 +337,15 @@ Version 33 adds `event.signature_verified`. The relay pool can reuse a
 signature check across launches only when the stored event records that check.
 Existing rows start with the flag off and can gain it when a verified replay
 is saved. The flag follows the exact event ID and signature.
+
+Version 34 adds `outgoing_dms.unconfirmed_recipient_wrap_json`, retaining the
+recipient wrap for a queued DM whose relay acknowledgement has not arrived.
+
+Version 35 adds `idx_event_verified_created_at`, a partial recency index over
+only locally verified events. The startup verification seed can stop at its
+limit without reading every unchecked event in an upgraded cache. Existing
+verification flags and event data are unchanged; index construction is a
+one-time migration. Fresh databases create the same index through Drift.
 
 ## Project Structure
 
