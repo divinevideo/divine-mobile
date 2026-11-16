@@ -253,11 +253,15 @@ class CommentReactionsBloc
         viewerIds,
         addressableIds: event.addressableIdsByCommentId,
       );
-      // An unfinished read cannot tell a vote taken back from one it did
-      // not reach, so the arrows stay as they are (#10996).
-      if (emit.isDone || !votes.isComplete) return;
+      if (emit.isDone) return;
 
-      final refreshed = viewerIds.where(canApply).toSet();
+      // A comment whose read did not finish cannot tell a vote taken back
+      // from one the read did not reach, so its arrows stay as they are. The
+      // comments whose reads finished still refresh (#10996).
+      final refreshed = viewerIds
+          .where(canApply)
+          .toSet()
+          .difference(votes.unknownIds);
       emit(
         state.copyWith(
           upvotedCommentIds: {

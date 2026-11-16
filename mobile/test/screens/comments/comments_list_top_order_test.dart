@@ -94,7 +94,7 @@ void main() {
         (_) async => (
           upvotedIds: <String>{},
           downvotedIds: <String>{},
-          isComplete: true,
+          unknownIds: <String>{},
         ),
       );
       when(
@@ -332,7 +332,7 @@ void main() {
             ({
               Set<String> upvotedIds,
               Set<String> downvotedIds,
-              bool isComplete,
+              Set<String> unknownIds,
             })
           >();
       when(
@@ -346,7 +346,7 @@ void main() {
           viewerVotes.complete((
             upvotedIds: <String>{},
             downvotedIds: <String>{},
-            isComplete: true,
+            unknownIds: <String>{},
           ));
         }
       });

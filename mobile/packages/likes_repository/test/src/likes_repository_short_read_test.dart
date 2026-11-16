@@ -1076,7 +1076,7 @@ void main() {
 
         final statuses = await h.repo.getUserVoteStatuses([_target]);
 
-        expect(statuses.isComplete, isTrue);
+        expect(statuses.unknownIds, isEmpty);
         expect(statuses.upvotedIds, equals({_target}));
       });
 
@@ -1089,7 +1089,7 @@ void main() {
 
         final statuses = await h.repo.getUserVoteStatuses([_target]);
 
-        expect(statuses.isComplete, isTrue);
+        expect(statuses.unknownIds, isEmpty);
         expect(statuses.upvotedIds, equals({_target}));
       });
 
@@ -1102,7 +1102,7 @@ void main() {
 
         final statuses = await h.repo.getUserVoteStatuses([_target]);
 
-        expect(statuses.isComplete, isFalse);
+        expect(statuses.unknownIds, equals({_target}));
       });
 
       test('reports the read unfinished when the vote retractions could '
@@ -1115,7 +1115,23 @@ void main() {
         final statuses = await h.repo.getUserVoteStatuses([_target]);
 
         expect(h.relay.reads, contains(_Read.deletions));
-        expect(statuses.isComplete, isFalse);
+        expect(statuses.unknownIds, equals({_target}));
+      });
+
+      test('reports the viewer vote on a target whose reads finished beside '
+          'one whose reads did not', () async {
+        final h = await _harness();
+        h.relay
+          ..store.add(await h.reaction(_otherTarget, createdAt: _now - 60))
+          ..coordinateReply = _Reply.closed;
+
+        final statuses = await h.repo.getUserVoteStatuses(
+          [_target, _otherTarget],
+          addressableIds: {_target: _coord},
+        );
+
+        expect(statuses.unknownIds, equals({_target}));
+        expect(statuses.upvotedIds, equals({_otherTarget}));
       });
 
       test('reads only the retractions of the viewer votes it '

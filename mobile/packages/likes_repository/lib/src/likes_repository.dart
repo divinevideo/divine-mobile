@@ -2106,10 +2106,12 @@ class LikesRepository {
   /// A like or unlike that is still queued counts as published (#10922).
   ///
   /// Returns the sets of event IDs the user has upvoted or downvoted.
-  /// `isComplete` is false when the votes on some target could not be
-  /// settled, even when read again with a longer budget: the sets then say
-  /// nothing about that target (#10996).
-  Future<({Set<String> upvotedIds, Set<String> downvotedIds, bool isComplete})>
+  /// `unknownIds` names the targets whose votes could not be settled, even
+  /// when read again with a longer budget: the sets say nothing about those
+  /// targets, and stay right for the rest (#10996).
+  Future<
+    ({Set<String> upvotedIds, Set<String> downvotedIds, Set<String> unknownIds})
+  >
   getUserVoteStatuses(
     List<String> eventIds, {
     Map<String, String> addressableIds = const {},
@@ -2118,7 +2120,7 @@ class LikesRepository {
       return (
         upvotedIds: <String>{},
         downvotedIds: <String>{},
-        isComplete: true,
+        unknownIds: <String>{},
       );
     }
 
@@ -2129,7 +2131,7 @@ class LikesRepository {
       return (
         upvotedIds: <String>{},
         downvotedIds: <String>{},
-        isComplete: true,
+        unknownIds: <String>{},
       );
     }
 
@@ -2169,7 +2171,7 @@ class LikesRepository {
     return (
       upvotedIds: upvotedIds,
       downvotedIds: downvotedIds,
-      isComplete: snapshot.unknownTargets.isEmpty,
+      unknownIds: snapshot.unknownTargets,
     );
   }
 

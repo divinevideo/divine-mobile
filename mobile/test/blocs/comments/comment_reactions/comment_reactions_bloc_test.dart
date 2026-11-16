@@ -57,7 +57,7 @@ void main() {
         (_) async => (
           upvotedIds: <String>{},
           downvotedIds: <String>{},
-          isComplete: true,
+          unknownIds: <String>{},
         ),
       );
       when(
@@ -177,7 +177,7 @@ void main() {
               ({
                 Set<String> upvotedIds,
                 Set<String> downvotedIds,
-                bool isComplete,
+                Set<String> unknownIds,
               })
             >();
         when(() => mockLikesRepository.getVoteCounts([id])).thenAnswer(
@@ -193,7 +193,7 @@ void main() {
             viewerVote.complete((
               upvotedIds: {id},
               downvotedIds: <String>{},
-              isComplete: true,
+              unknownIds: <String>{},
             ));
           }
           await bloc.close();
@@ -208,7 +208,7 @@ void main() {
         viewerVote.complete((
           upvotedIds: {id},
           downvotedIds: <String>{},
-          isComplete: true,
+          unknownIds: <String>{},
         ));
         await pumpEventQueue();
 
@@ -328,7 +328,7 @@ void main() {
               ({
                 Set<String> upvotedIds,
                 Set<String> downvotedIds,
-                bool isComplete,
+                Set<String> unknownIds,
               })
             >();
         var reads = 0;
@@ -363,7 +363,11 @@ void main() {
 
         // The relay snapshot predates the vote, so it says "not upvoted".
         staleViewerVote.complete(
-          (upvotedIds: <String>{}, downvotedIds: <String>{}, isComplete: true),
+          (
+            upvotedIds: <String>{},
+            downvotedIds: <String>{},
+            unknownIds: <String>{},
+          ),
         );
         await pumpEventQueue();
 
@@ -426,7 +430,7 @@ void main() {
           (_) async => (
             upvotedIds: ++reads == 1 ? {id} : <String>{},
             downvotedIds: <String>{},
-            isComplete: true,
+            unknownIds: <String>{},
           ),
         );
 
@@ -450,11 +454,15 @@ void main() {
         var reads = 0;
         when(() => mockLikesRepository.getUserVoteStatuses([id])).thenAnswer(
           (_) async => ++reads == 1
-              ? (upvotedIds: {id}, downvotedIds: <String>{}, isComplete: true)
+              ? (
+                  upvotedIds: {id},
+                  downvotedIds: <String>{},
+                  unknownIds: <String>{},
+                )
               : (
                   upvotedIds: <String>{},
                   downvotedIds: <String>{},
-                  isComplete: false,
+                  unknownIds: {id},
                 ),
         );
 
@@ -469,6 +477,28 @@ void main() {
 
         expect(reads, 2);
         expect(bloc.state.upvotedCommentIds, {id});
+      });
+
+      test('shows the viewer arrow on a comment whose read finished beside '
+          'one whose read did not (#10996)', () async {
+        final settled = validId('c1');
+        final unsettled = validId('c2');
+        when(
+          () => mockLikesRepository.getUserVoteStatuses([settled, unsettled]),
+        ).thenAnswer(
+          (_) async => (
+            upvotedIds: {settled},
+            downvotedIds: <String>{},
+            unknownIds: {unsettled},
+          ),
+        );
+
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(CommentVoteCountsFetchRequested([settled, unsettled]));
+        await pumpEventQueue();
+
+        expect(bloc.state.upvotedCommentIds, {settled});
       });
 
       test('leaves a total unknown when the repository could not settle '
@@ -501,7 +531,7 @@ void main() {
             (_) async => (
               upvotedIds: {validId('c1')},
               downvotedIds: <String>{},
-              isComplete: true,
+              unknownIds: <String>{},
             ),
           );
         },
@@ -551,7 +581,7 @@ void main() {
             (_) async => (
               upvotedIds: <String>{},
               downvotedIds: <String>{},
-              isComplete: true,
+              unknownIds: <String>{},
             ),
           );
         },
