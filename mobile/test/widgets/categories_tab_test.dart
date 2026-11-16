@@ -2,6 +2,7 @@
 // ABOUTME: Verifies loading/error/empty states and the redesigned pinned-first list.
 
 import 'package:categories_repository/categories_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/category_gallery_screen.dart';
+import 'package:openvine/widgets/categories/category_glyph.dart';
 import 'package:openvine/widgets/categories_tab.dart';
 
 class _MockCategoriesRepository extends Mock implements CategoriesRepository {}
@@ -200,6 +202,97 @@ void main() {
         tappedCategory,
         const VideoCategory(name: 'animals', videoCount: 1500),
       );
+    });
+
+    group('category sticker', () {
+      CategoriesState loadedWith(String slug) {
+        return CategoriesState(
+          categoriesStatus: CategoriesStatus.loaded,
+          categories: [VideoCategory(name: slug, videoCount: 1500)],
+        );
+      }
+
+      final sticker = find.byType(DivineSticker);
+      final slot = find.ancestor(
+        of: sticker,
+        matching: find.byType(OverflowBox),
+      );
+      final tile = find.ancestor(of: sticker, matching: find.byType(ClipRRect));
+
+      testWidgets('draws the sticker design chose for the category', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildSubject(state: loadedWith('animals')));
+
+        expect(
+          tester.widget<DivineSticker>(sticker).sticker,
+          equals(DivineStickerName.horse),
+        );
+        expect(find.byType(CategoryGlyph), findsNothing);
+      });
+
+      testWidgets('keeps the glyph for a category without a sticker', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildSubject(state: loadedWith('technology')));
+
+        expect(find.byType(CategoryGlyph), findsOneWidget);
+        expect(sticker, findsNothing);
+      });
+
+      testWidgets('lets the sticker bleed past the tile that clips it', (
+        tester,
+      ) async {
+        // Food's pizza slice is not rotated, so its rect is its painted bounds.
+        await tester.pumpWidget(buildSubject(state: loadedWith('food')));
+
+        final tileRect = tester.getRect(tile);
+        expect(tileRect.height, equals(96));
+        expect(tester.getRect(sticker).bottom, greaterThan(tileRect.bottom));
+      });
+
+      testWidgets('keeps the decorative sticker out of the semantics tree', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(buildSubject(state: loadedWith('animals')));
+
+        // An unexcluded Image marks the tile it merges into as an image.
+        expect(
+          find.semantics.byPredicate((node) => node.flagsCollection.isImage),
+          findsNothing,
+        );
+        handle.dispose();
+      });
+
+      testWidgets('nudges the sticker toward the trailing edge', (
+        tester,
+      ) async {
+        // Style's sunglasses carry the largest sideways nudge in the design.
+        await tester.pumpWidget(buildSubject(state: loadedWith('fashion')));
+
+        final nudge = tester.getCenter(sticker).dx - tester.getCenter(slot).dx;
+        expect(nudge, closeTo(16.5, 0.01));
+      });
+
+      testWidgets('mirrors the nudge in a right-to-left layout', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(
+            state: loadedWith('fashion'),
+            locale: const Locale('ar'),
+          ),
+        );
+
+        final nudge = tester.getCenter(sticker).dx - tester.getCenter(slot).dx;
+        expect(nudge, closeTo(-16.5, 0.01));
+        // The slot itself moved to the leading (left) half of the tile.
+        expect(
+          tester.getCenter(slot).dx,
+          lessThan(tester.getRect(tile).center.dx),
+        );
+      });
     });
   });
 

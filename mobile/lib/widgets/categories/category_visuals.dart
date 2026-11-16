@@ -1,22 +1,51 @@
 // ABOUTME: Shared visual metadata for featured and fallback category presentation.
 // ABOUTME: Keeps the categories discovery list and gallery screens visually consistent.
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show VideoCategory;
+
+/// A category's [DivineSticker] and where design placed it in the list tile.
+///
+/// The sticker is drawn in a [size] square that is larger than the tile's
+/// sticker slot, turned by [rotationDegrees] clockwise, and moved by [offset]
+/// from the slot's centre. It bleeds past the tile, which clips it.
+class CategorySticker {
+  const CategorySticker(
+    this.name, {
+    required this.size,
+    this.rotationDegrees = 0,
+    this.offset = Offset.zero,
+  });
+
+  final DivineStickerName name;
+  final double size;
+  final double rotationDegrees;
+
+  /// Offset from the slot's centre in a left-to-right layout. The horizontal
+  /// part is mirrored in right-to-left layouts.
+  final Offset offset;
+}
 
 class CategoryVisuals {
   const CategoryVisuals({
     required this.backgroundColor,
     required this.foregroundColor,
     this.assetPath,
+    this.sticker,
   });
 
   final Color backgroundColor;
   final Color foregroundColor;
   final String? assetPath;
 
+  /// The sticker design chose for this category, or `null` when it has none
+  /// and callers fall back to [assetPath] and then the category emoji.
+  final CategorySticker? sticker;
+
   /// Resolves visuals for any category. Featured categories get custom colors;
-  /// all others cycle through fallback colors. Every asset path — featured or
+  /// all others cycle through fallback colors. A category with a designed
+  /// sticker also gets its [sticker]. Every asset path — featured or
   /// derived from the name — resolves through [bundledAssetBasenames], so it
   /// only points at an asset that is actually bundled.
   ///
@@ -35,6 +64,7 @@ class CategoryVisuals {
         backgroundColor: featured.backgroundColor,
         foregroundColor: featured.foregroundColor,
         assetPath: _bundledAssetPathOrNull(featured.assetBasename),
+        sticker: _categoryStickers[name],
       );
     }
     final fallback =
@@ -43,6 +73,7 @@ class CategoryVisuals {
       backgroundColor: fallback.backgroundColor,
       foregroundColor: fallback.foregroundColor,
       assetPath: _bundledAssetPathOrNull(_assetNameAliases[name] ?? name),
+      sticker: _categoryStickers[name],
     );
   }
 
@@ -169,6 +200,108 @@ class CategoryVisuals {
     'wrestling',
   };
 }
+
+/// The sticker placed on each category in the Explore category list, keyed by
+/// backend slug, with its size, angle and offset for a 64 px slot. Most
+/// placements are the Figma values. Food and dance keep the slot Figma gave
+/// their earlier sticker; music, art, nature and fitness carry stickers the
+/// reference does not show, placed in the same style. The horse turns less than
+/// in Figma so the cut edge of its neck stays below the tile. A category
+/// missing here keeps its SVG or emoji glyph.
+const _categoryStickers = <String, CategorySticker>{
+  'animals': CategorySticker(
+    DivineStickerName.horse,
+    size: 115,
+    rotationDegrees: 4,
+    offset: Offset(7.5, 0),
+  ),
+  'food': CategorySticker(
+    DivineStickerName.pizzaSlice,
+    size: 116,
+    offset: Offset(-0.5, 12),
+  ),
+  'sports': CategorySticker(
+    DivineStickerName.foamFinger,
+    size: 129,
+    rotationDegrees: -17.5,
+    offset: Offset(-2, -3),
+  ),
+  // The backend calls this category fashion and the app displays it as Style.
+  'fashion': CategorySticker(
+    DivineStickerName.sunglasses,
+    size: 127,
+    rotationDegrees: -3.83,
+    offset: Offset(16.5, -1.5),
+  ),
+  'music': CategorySticker(
+    DivineStickerName.djController,
+    size: 147,
+    rotationDegrees: -8,
+    offset: Offset(8, -2),
+  ),
+  'art': CategorySticker(
+    DivineStickerName.ceramicHands,
+    size: 118,
+    rotationDegrees: 6,
+    offset: Offset(8, -2),
+  ),
+  'entertainment': CategorySticker(
+    DivineStickerName.psychedelicTv,
+    size: 120,
+    rotationDegrees: 5.31,
+    offset: Offset(9.5, -19.5),
+  ),
+  'family': CategorySticker(
+    DivineStickerName.toaster,
+    size: 117,
+    offset: Offset(8, 0),
+  ),
+  'comedy': CategorySticker(
+    DivineStickerName.chatteringTeeth,
+    size: 114,
+    rotationDegrees: -9.64,
+    offset: Offset(14, -5.5),
+  ),
+  'dance': CategorySticker(
+    DivineStickerName.discoBall,
+    size: 112,
+    rotationDegrees: 8,
+    offset: Offset(7.5, -5),
+  ),
+  'travel': CategorySticker(
+    DivineStickerName.luggage,
+    size: 107,
+    offset: Offset(8, -0.5),
+  ),
+  'education': CategorySticker(
+    DivineStickerName.schoolBackpack,
+    size: 108,
+    rotationDegrees: -10.79,
+    offset: Offset(7.5, -7),
+  ),
+  'gaming': CategorySticker(
+    DivineStickerName.gameController,
+    size: 124,
+    rotationDegrees: -15,
+    offset: Offset(7, -4),
+  ),
+  'news': CategorySticker(
+    DivineStickerName.newsCamera,
+    size: 122,
+    offset: Offset(9.5, -1.5),
+  ),
+  'nature': CategorySticker(
+    DivineStickerName.rainforest,
+    size: 118,
+    offset: Offset(8, 0),
+  ),
+  'fitness': CategorySticker(
+    DivineStickerName.pinkDumbbells,
+    size: 120,
+    rotationDegrees: -12,
+    offset: Offset(8, -2),
+  ),
+};
 
 /// Maps backend category slugs onto the bundled SVG asset basename when the two
 /// diverge. Keeps the asset path pointing at a file that exists (#4398); any
