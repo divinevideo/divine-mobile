@@ -14,7 +14,6 @@ import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController;
 import 'package:feed_repository/feed_repository.dart';
 import 'package:feed_tuning_repository/feed_tuning_repository.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -59,6 +58,7 @@ import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
 import 'package:openvine/widgets/video_feed_item/fullscreen_sponsor_disclosure.dart';
 import 'package:openvine/widgets/video_feed_item/inline_comment_composer_bar.dart';
 import 'package:openvine/widgets/video_feed_item/moderated_content_overlay.dart';
+import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
 import 'package:openvine/widgets/video_feed_item/reel_dm_reply_bar.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:unified_logger/unified_logger.dart';
@@ -1045,7 +1045,9 @@ void main() {
         final gesture = await tester.startGesture(
           tester.getCenter(disclosureText),
         );
-        await tester.pump(kLongPressTimeout + const Duration(milliseconds: 1));
+        await tester.pump(
+          kFeedHoldToPeekDelay + const Duration(milliseconds: 1),
+        );
 
         expect(immersiveCubit.state.isImmersive, isTrue);
 

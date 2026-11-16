@@ -8,7 +8,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart'
-    show kDoubleTapTimeout, kLongPressTimeout;
+    show LongPressGestureRecognizer, kDoubleTapTimeout;
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1500,7 +1500,9 @@ void main() {
       final gesture = await tester.startGesture(
         tester.getCenter(find.byType(InfiniteVideoFeed)),
       );
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pump(
+        kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+      );
       await pumpFade(tester);
 
       expect(immersiveCubit.state.isImmersive, isTrue);
@@ -1529,7 +1531,9 @@ void main() {
       final gesture = await tester.startGesture(
         tester.getCenter(find.byType(InfiniteVideoFeed)),
       );
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pump(
+        kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+      );
       expect(immersiveCubit.state.isImmersive, isTrue);
 
       // LongPressGestureRecognizer reports neither onLongPressEnd nor
@@ -1557,7 +1561,9 @@ void main() {
 
       final center = tester.getCenter(find.byType(InfiniteVideoFeed));
       final holdFinger = await tester.startGesture(center, pointer: 1);
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pump(
+        kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+      );
       await pumpFade(tester);
 
       expect(immersiveCubit.state.isImmersive, isTrue);
@@ -1603,7 +1609,9 @@ void main() {
       final gesture = await tester.startGesture(
         tester.getCenter(find.byType(InfiniteVideoFeed)),
       );
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pump(
+        kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+      );
       await pumpFade(tester);
 
       expect(
@@ -1653,7 +1661,9 @@ void main() {
       final gesture = await tester.startGesture(
         tester.getCenter(find.byType(InfiniteVideoFeed)),
       );
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pump(
+        kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+      );
       expect(immersiveCubit.state.isImmersive, isTrue);
 
       await tester.pumpWidget(const SizedBox());
@@ -1672,7 +1682,7 @@ void main() {
       'keeps the action rail out from under the peek gesture',
       (tester) async {
         // When the rail sat *inside* the long-press detector, any press held
-        // past kLongPressTimeout anywhere on Report/More/Share was claimed by
+        // past the hold delay anywhere on Report/More/Share was claimed by
         // the video's long-press: the button's tap recognizer only accepts on
         // pointer-up, so it lost the arena, the tap was swallowed and the
         // control faded out under the viewer's finger.
@@ -1686,18 +1696,28 @@ void main() {
         await _pumpFeedVideos(tester, videos: [video]);
         await tester.pump();
 
-        final longPressAncestors = tester
-            .widgetList<GestureDetector>(
-              find.ancestor(
-                of: find.byType(VideoOverlayActions),
-                matching: find.byType(GestureDetector),
-              ),
-            )
-            .where((detector) => detector.onLongPressStart != null);
+        // Matches the raw detector a `GestureDetector` builds as well, so the
+        // check holds whichever widget carries the long press.
+        final longPressDetector = find.byWidgetPredicate(
+          (widget) =>
+              widget is RawGestureDetector &&
+              widget.gestures.containsKey(LongPressGestureRecognizer),
+        );
 
         expect(
-          longPressAncestors,
-          isEmpty,
+          find.descendant(
+            of: find.byType(PlayerGestureSurface),
+            matching: longPressDetector,
+          ),
+          findsOneWidget,
+          reason: 'the matcher must see the peek detector to rule it out',
+        );
+        expect(
+          find.ancestor(
+            of: find.byType(VideoOverlayActions),
+            matching: longPressDetector,
+          ),
+          findsNothing,
           reason: 'the peek gesture must not sit above the action rail',
         );
       },
@@ -1753,7 +1773,9 @@ void main() {
       final gesture = await tester.startGesture(
         tester.getCenter(find.byType(InfiniteVideoFeed)),
       );
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pump(
+        kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+      );
       await pumpFade(tester);
 
       expect(
@@ -1806,7 +1828,9 @@ void main() {
         final gesture = await tester.startGesture(
           tester.getCenter(find.byType(InfiniteVideoFeed)),
         );
-        await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+        await tester.pump(
+          kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+        );
         expect(immersiveCubit.state.isImmersive, isTrue);
 
         // The label lands mid-hold and unmounts the Listener.
@@ -2035,7 +2059,9 @@ void main() {
         center - const Offset(20, 0),
         pointer: 1,
       );
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pump(
+        kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+      );
       expect(immersiveCubit.state.isHolding, isTrue);
 
       final spreading = await tester.startGesture(

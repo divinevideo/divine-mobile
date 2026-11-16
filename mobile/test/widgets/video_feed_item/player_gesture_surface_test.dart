@@ -2,7 +2,8 @@
 // ABOUTME: Pins that the LABEL and the TAP ACTION land on the same semantics
 // ABOUTME: node, which is what shipped broken and what a device caught.
 
-import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
+import 'package:flutter/gestures.dart'
+    show DeviceGestureSettings, kDoubleTapTimeout, kLongPressTimeout;
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -18,19 +19,28 @@ void main() {
       required bool interactiveReady,
       bool isOwnVideo = false,
       VoidCallback? onTap,
+      VoidCallback? onLongPressStart,
       VoidCallback? onRestoreChrome,
+      DeviceGestureSettings? gestureSettings,
     }) => testMaterialApp(
       home: Scaffold(
         body: Center(
           child: SizedBox.square(
             dimension: 200,
-            child: PlayerGestureSurface(
-              interactiveReady: interactiveReady,
-              isOwnVideo: isOwnVideo,
-              onTap: onTap ?? () {},
-              onDoubleTapDown: (_) {},
-              onLongPressStart: () {},
-              onRestoreChrome: onRestoreChrome,
+            child: Builder(
+              builder: (context) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(gestureSettings: gestureSettings),
+                child: PlayerGestureSurface(
+                  interactiveReady: interactiveReady,
+                  isOwnVideo: isOwnVideo,
+                  onTap: onTap ?? () {},
+                  onDoubleTapDown: (_) {},
+                  onLongPressStart: onLongPressStart ?? () {},
+                  onRestoreChrome: onRestoreChrome,
+                ),
+              ),
             ),
           ),
         ),
@@ -169,6 +179,98 @@ void main() {
 
       expect(tapped, equals(1));
       expect(restored, isZero);
+    });
+
+    group('press and hold', () {
+      testWidgets('starts the hold once the finger stays down for '
+          '$kFeedHoldToPeekDelay', (tester) async {
+        var held = 0;
+        await tester.pumpWidget(
+          host(interactiveReady: true, onLongPressStart: () => held++),
+        );
+        await tester.pump();
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(PlayerGestureSurface)),
+        );
+        await tester.pump(
+          kFeedHoldToPeekDelay - const Duration(milliseconds: 1),
+        );
+        expect(held, isZero, reason: 'a hold must not start early');
+
+        await tester.pump(const Duration(milliseconds: 1));
+        expect(
+          held,
+          equals(1),
+          reason:
+              'the default $kLongPressTimeout left the video playing under '
+              'a resting thumb for half a second',
+        );
+
+        await gesture.up();
+      });
+
+      testWidgets(
+        'a press lifted just before the delay is a tap, not a hold',
+        (tester) async {
+          var held = 0;
+          var tapped = 0;
+          await tester.pumpWidget(
+            host(
+              interactiveReady: true,
+              onTap: () => tapped++,
+              onLongPressStart: () => held++,
+            ),
+          );
+          await tester.pump();
+
+          final gesture = await tester.startGesture(
+            tester.getCenter(find.byType(PlayerGestureSurface)),
+          );
+          await tester.pump(
+            kFeedHoldToPeekDelay - const Duration(milliseconds: 20),
+          );
+          await gesture.up();
+          await tester.pump(
+            kDoubleTapTimeout + const Duration(milliseconds: 50),
+          );
+
+          expect(held, isZero);
+          expect(tapped, equals(1));
+        },
+      );
+
+      testWidgets(
+        'lets go of a finger that drifts past the device touch slop',
+        (
+          tester,
+        ) async {
+          var held = 0;
+          await tester.pumpWidget(
+            host(
+              interactiveReady: true,
+              onLongPressStart: () => held++,
+              gestureSettings: const DeviceGestureSettings(touchSlop: 8),
+            ),
+          );
+          await tester.pump();
+
+          final gesture = await tester.startGesture(
+            tester.getCenter(find.byType(PlayerGestureSurface)),
+          );
+          // Past this device's 8 px, but inside Flutter's 18 px fallback.
+          await gesture.moveBy(const Offset(12, 0));
+          await tester.pump(kFeedHoldToPeekDelay);
+
+          expect(
+            held,
+            isZero,
+            reason: 'the hold must use the touch slop the device reports',
+          );
+
+          await gesture.up();
+        },
+      );
     });
   });
 }
