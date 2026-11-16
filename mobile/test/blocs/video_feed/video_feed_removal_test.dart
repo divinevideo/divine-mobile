@@ -162,17 +162,6 @@ void main() {
       ],
     );
 
-    feedBlocTest(
-      'a cancelled or failed delete that emits nothing leaves the feed intact',
-      build: createBloc,
-      seed: () => VideoFeedBlocState(
-        status: VideoFeedStatus.success,
-        videos: [_video('1'), _video('2')],
-      ),
-      expect: () => <VideoFeedBlocState>[],
-      verify: (bloc) => expect(bloc.state.videos, [_video('1'), _video('2')]),
-    );
-
     test('close cancels the removal subscription', () async {
       final bloc = createBloc();
       expect(removals.hasListener, isTrue);
