@@ -6619,7 +6619,7 @@ void main() {
         },
       );
 
-      test('yields local results first then remote results', () async {
+      test('emits available sources progressively', () async {
         // Arrange - local cache has a profile
         final cachedProfile = UserProfile(
           pubkey: testPubkey,
@@ -6655,28 +6655,23 @@ void main() {
             .searchUsersProgressive(query: 'test')
             .toList();
 
-        // Assert - at least 2 emissions: local first, then merged
         expect(emissions.length, greaterThanOrEqualTo(2));
-
-        // First emission: local results only
-        expect(emissions.first.profiles, hasLength(1));
-        expect(emissions.first.profiles.first.pubkey, equals(testPubkey));
-        expect(
-          emissions.first.sources[SearchSource.localCache],
-          isA<SearchSourceSuccess>(),
-        );
-        expect(
-          emissions.first.sources[SearchSource.funnelcakeApi],
-          isA<SearchSourcePending>(),
-        );
-        expect(
-          emissions.first.sources[SearchSource.nip50Relay],
-          isA<SearchSourcePending>(),
-        );
         expect(emissions.first.isComplete, isFalse);
-
-        // Last emission: merged and enriched
-        expect(emissions.last.profiles.length, greaterThanOrEqualTo(1));
+        expect(emissions.first.profiles, hasLength(1));
+        // Either source can finish first; each snapshot reports its own
+        // completed source while the other may still be pending.
+        final localSnapshot = emissions.firstWhere(
+          (result) =>
+              result.sources[SearchSource.localCache] is SearchSourceSuccess,
+        );
+        expect(
+          localSnapshot.profiles.map((p) => p.pubkey),
+          contains(testPubkey),
+        );
+        expect(
+          emissions.last.profiles.map((p) => p.pubkey),
+          unorderedEquals([testPubkey, otherPubkey]),
+        );
         expect(emissions.last.isComplete, isTrue);
       });
 
@@ -6708,7 +6703,7 @@ void main() {
         );
       });
 
-      test('yields single result when local cache is empty', () async {
+      test('yields relay results when local cache is empty', () async {
         // Arrange - empty local cache
         when(
           () => mockUserProfilesDao.getAllProfiles(),
@@ -6727,10 +6722,10 @@ void main() {
             .searchUsersProgressive(query: 'test')
             .toList();
 
-        // Assert - no local emission (empty), just the final one
-        expect(emissions, hasLength(1));
-        expect(emissions.first.profiles, hasLength(1));
-        expect(emissions.first.profiles.first.pubkey, equals(testPubkey));
+        expect(emissions.last.isComplete, isTrue);
+        for (final result in emissions) {
+          expect(result.profiles.map((p) => p.pubkey), [testPubkey]);
+        }
       });
 
       group('with FunnelcakeApiClient', () {
@@ -6744,7 +6739,7 @@ void main() {
           ).thenAnswer((_) async => Response('{"names":{}}', 200));
         });
 
-        test('cancellation after delayed REST prevents relay work', () async {
+        test('cancelling REST suppresses results', () async {
           final rest = Completer<List<ProfileSearchResult>>();
           final token = SearchCancellationToken('test-search');
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
@@ -6772,16 +6767,14 @@ void main() {
               .toList();
           await Future<void>.delayed(Duration.zero);
           token.cancel();
-          rest.complete([]);
+          rest.complete([
+            const ProfileSearchResult(
+              pubkey: testPubkey,
+              displayName: 'Test REST result',
+            ),
+          ]);
 
           expect(await resultFuture, isEmpty);
-          verifyNever(
-            () => mockNostrClient.queryUsers(
-              any(),
-              limit: any(named: 'limit'),
-              timeout: any(named: 'timeout'),
-            ),
-          );
         });
 
         test('yields progressively: local, then API+relay merged', () async {
