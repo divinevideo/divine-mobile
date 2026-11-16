@@ -225,7 +225,10 @@ class _CategoryGalleryBody extends StatelessWidget {
                   color: context.vineColors.secondaryText,
                 ),
               ),
-              DivineButton(label: context.l10n.commonRetry, onPressed: onRetry),
+              DivineButton(
+                label: context.l10n.commonRetry,
+                onPressed: onRetry,
+              ),
             ],
           ),
         );
