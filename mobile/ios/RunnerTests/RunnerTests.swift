@@ -1964,14 +1964,14 @@ final class DropsVideoEffectTests: XCTestCase {
 
 /// Light leak, light rays, anamorphic, prism, window light, spotlight,
 /// particles, tilt-shift, swirl, ripple, fluted glass, zoom blur, spin blur,
-/// comic, 8-bit, 3D glasses, riso print, watercolour, oil paint, pencil
-/// sketch, neon edges, stained glass, ASCII, thermal camera, night vision,
-/// X-ray, pop art, bricks, cross-stitch and paper cut are drawn with Metal kernels on iOS and macOS (`ShaderVideoEffect`),
-/// and with the same shaders in GLSL on Android and in the effects picker
-/// (`shaders/*.frag`). These tests
-/// check every pixel each kernel draws against its shader's formulas computed
-/// here on the CPU, so a change to one copy that is not made to the others
-/// fails, and so does a kernel that reads its textures upside down.
+/// comic, 8-bit, 3D glasses, riso print, watercolour, oil paint, pencil sketch,
+/// neon edges, stained glass, ASCII, thermal camera, night vision, X-ray, pop
+/// art, bricks, cross-stitch and paper cut are drawn with Metal kernels on iOS
+/// and macOS (`ShaderVideoEffect`), and with the same shaders in GLSL on
+/// Android and in the effects picker (`shaders/*.frag`). These tests check
+/// every pixel each kernel draws against its shader's formulas computed here on
+/// the CPU, so a change to one copy that is not made to the others fails, and
+/// so does a kernel that reads its textures upside down.
 ///
 /// The CPU copies spell out every type and keep each statement short: Swift
 /// type-checks a long arithmetic expression over overloaded functions such as
