@@ -3371,6 +3371,12 @@ void main() {
             theme: theme,
           );
           final l10n = _l10n(tester);
+          final bannerSurface = find
+              .descendant(
+                of: find.byType(DivineSnackbarContainer),
+                matching: find.byType(DecoratedBox),
+              )
+              .first;
 
           await tester.tap(find.text(l10n.shareSheetSave));
           await tester.pumpAndSettle();
@@ -3389,6 +3395,11 @@ void main() {
             isTrue,
           );
           expect(find.byType(SnackBar), findsNothing);
+          final bannerRect = tester.getRect(bannerSurface);
+          final titleLeft = tester.getTopLeft(find.byType(LinkifiedText)).dx;
+          final sheetRect = tester.getRect(find.byType(MetadataActionsSection));
+          expect(bannerRect.left, equals(titleLeft));
+          expect(sheetRect.right - bannerRect.right, equals(titleLeft));
 
           await tester.tap(find.text(l10n.shareSheetRemoveFromSaved));
           await tester.pumpAndSettle();

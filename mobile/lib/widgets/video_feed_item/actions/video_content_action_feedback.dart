@@ -126,7 +126,7 @@ class VideoContentSaveFeedback extends StatelessWidget {
         if (result == null) return const SizedBox.shrink();
         final (message, isError) = _saveFeedbackMessage(context.l10n, result);
         return Padding(
-          padding: const EdgeInsets.only(top: 12),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Semantics(
             // Without its own node the live region merges into the list
             // item, making the whole action row one announcement.
