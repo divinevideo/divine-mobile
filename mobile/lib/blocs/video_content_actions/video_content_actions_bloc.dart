@@ -360,9 +360,10 @@ class VideoContentActionsBloc
   }
 
   /// The library clip for a remix of this video: the one an earlier import
-  /// left in the library, or else a fresh import under [defaultClipTitle].
+  /// left in the library, restored first if it was archived, or else a fresh
+  /// import under [defaultClipTitle].
   ///
-  /// Returns null when the video could not be imported.
+  /// Returns null when the video could not be imported or restored.
   Future<DivineVideoClip?> _remixClip() async {
     final importer = _videoClipImportService;
     if (importer == null) {
@@ -377,9 +378,17 @@ class VideoContentActionsBloc
     try {
       final earlierImport = await importer.findImportedClipOf(_video);
       if (earlierImport != null) {
-        return earlierImport.archivedAt == null
-            ? earlierImport
-            : await importer.unarchiveImportedClip(earlierImport);
+        if (earlierImport.archivedAt == null) return earlierImport;
+        final restored = await importer.unarchiveImportedClip(earlierImport);
+        if (restored == null) {
+          Log.warning(
+            'Could not restore the archived clip ${earlierImport.id} '
+            'for a remix',
+            name: 'VideoContentActionsBloc',
+            category: LogCategory.ui,
+          );
+        }
+        return restored;
       }
 
       final result = await importer.importToLibrary(

@@ -215,6 +215,9 @@ class VideoClipImportService {
       _clipLibraryService.findImportedClipOf(video);
 
   /// Brings an earlier import back into the visible library without copying it.
+  ///
+  /// Returns the restored clip, or null when its row is no longer stored.
+  /// Throws the clip store's exception when the write fails.
   Future<DivineVideoClip?> unarchiveImportedClip(DivineVideoClip clip) async {
     await _clipLibraryService.setClipArchived(clipId: clip.id, archived: false);
     return _clipLibraryService.getClipById(clip.id);
