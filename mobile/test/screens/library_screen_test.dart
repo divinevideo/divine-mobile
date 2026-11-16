@@ -16,6 +16,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as models;
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_category.dart';
@@ -190,6 +191,7 @@ void main() {
       registerFallbackValue(<DivineVideoClip>[]);
       registerFallbackValue(_FakeEditorVideo());
       registerFallbackValue(File(''));
+      registerFallbackValue(_createTestDraft());
     });
 
     setUp(() async {
@@ -1255,6 +1257,79 @@ void main() {
           );
         },
       );
+
+      testWidgets(
+        'keeps an unfinished session as a draft before it starts the new one',
+        (tester) async {
+          final clip = DivineVideoClip(
+            id: 'selected',
+            video: EditorVideo.file('/test/selected.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: models.AspectRatio.vertical,
+            originalAspectRatio: 9 / 16,
+            thumbnailPath: '/test/selected.jpg',
+            ghostFramePath: '/test/selected_ghost.jpg',
+          );
+          when(
+            () => mockClipLibraryService.getAllClips(),
+          ).thenAnswer((_) async => [clip]);
+          when(
+            () => mockDraftStorageService.draftExists(
+              VideoEditorConstants.autoSaveId,
+            ),
+          ).thenAnswer((_) async => true);
+          when(
+            () => mockDraftStorageService.getDraftById(
+              VideoEditorConstants.autoSaveId,
+            ),
+          ).thenAnswer(
+            (_) async => _createTestDraft().copyWith(
+              id: VideoEditorConstants.autoSaveId,
+            ),
+          );
+          final saved = Completer<void>();
+          when(
+            () => mockDraftStorageService.saveDraft(any()),
+          ).thenAnswer((_) => saved.future);
+          final publish = _GatedVideoPublishNotifier(Completer<void>());
+
+          await tester.pumpWidget(
+            buildWidget(
+              initialTabIndex: 1,
+              tabsMode: LibraryTabsMode.withoutSounds,
+              extraOverrides: [
+                videoPublishProvider.overrideWith(() => publish),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+          BlocProvider.of<ClipsLibraryBloc>(
+              tester.element(find.byType(ClipsTab)),
+            )
+            ..add(const ClipsLibraryEnterSelectionMode())
+            ..add(ClipsLibraryToggleSelection(clip));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text(en.libraryCreateVideo(1)));
+          await tester.pump();
+
+          final draft =
+              verify(
+                    () => mockDraftStorageService.saveDraft(captureAny()),
+                  ).captured.single
+                  as DivineVideoDraft;
+          expect(draft.id, isNot(VideoEditorConstants.autoSaveId));
+          expect(draft.title, equals('Test Draft'));
+          // Clearing deletes the autosave, so it must wait for the copy.
+          expect(publish.clearAllCalls, isZero);
+
+          saved.complete();
+          await tester.pump();
+
+          expect(publish.clearAllCalls, equals(1));
+        },
+      );
     });
     group('delete undo snackbar', () {
       testWidgets('tapping Undo after the screen is gone does not add to the '
@@ -1740,6 +1815,11 @@ void main() {
           when(
             () => mockClipLibraryService.getAllClips(),
           ).thenAnswer((_) async => [clip]);
+          when(
+            () => mockDraftStorageService.draftExists(
+              VideoEditorConstants.autoSaveId,
+            ),
+          ).thenAnswer((_) async => false);
           final publish = _GatedVideoPublishNotifier(Completer<void>());
 
           await tester.pumpWidget(

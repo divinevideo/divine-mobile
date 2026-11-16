@@ -23,6 +23,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/video_routes.dart';
@@ -550,7 +551,14 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     if (selectedClips.isEmpty) return;
 
     if (!widget.selectionMode) {
-      await ref.read(videoPublishProvider.notifier).clearAll();
+      // The new session takes the autosave's slot, so an unfinished session
+      // there moves to Drafts first instead of being deleted. Read up front:
+      // clearing must follow the copy even if the library closes meanwhile,
+      // or Drafts lists the session twice.
+      final videoEditor = ref.read(videoEditorProvider.notifier);
+      final videoPublish = ref.read(videoPublishProvider.notifier);
+      await videoEditor.keepAutosaveAsDraft();
+      await videoPublish.clearAll();
       if (!mounted) return;
 
       final clipManagerNotifier = ref.read(clipManagerProvider.notifier);
