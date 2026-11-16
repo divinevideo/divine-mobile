@@ -61,6 +61,28 @@ Future<AsyncValue<MinorAccountReviewStatus>> _refetchingAfter(
   return container.read(status);
 }
 
+/// The state a status provider holds during a refetch when its only fetch so
+/// far failed, as an account switched in with the status service unreachable
+/// has: the refetch carries that failure and no value. With [reload] the
+/// refetch is a dependency change rather than an invalidation.
+Future<AsyncValue<MinorAccountReviewStatus>> _refetchingAfterOnlyFailure({
+  bool reload = false,
+}) async {
+  final fetches = <Future<MinorAccountReviewStatus> Function()>[
+    () async => throw StateError('status unavailable'),
+    () => Completer<MinorAccountReviewStatus>().future,
+  ];
+  final status = FutureProvider<MinorAccountReviewStatus>(
+    (ref) => fetches.removeAt(0)(),
+    retry: (_, _) => null,
+  );
+  final container = ProviderContainer();
+  addTearDown(container.dispose);
+  await expectLater(container.read(status.future), throwsStateError);
+  container.invalidate(status, asReload: reload);
+  return container.read(status);
+}
+
 void main() {
   group('minorAccountReviewRoutingStatus', () {
     test("keeps a restriction's case through a background refetch", () async {
@@ -137,6 +159,50 @@ void main() {
       );
 
       expect(routed, same(live));
+    });
+
+    // A loading status with no value sends the account to the loading
+    // screen. Routing a refetch of a fetch that only ever failed that way
+    // bounced it off whatever it was viewing and straight back.
+    group('while a fetch that only ever failed is refetched', () {
+      test('keeps failing open for an account with no saved status', () async {
+        final live = await _refetchingAfterOnlyFailure();
+        expect(live.isLoading && live.hasError && !live.hasValue, isTrue);
+
+        final routed = minorAccountReviewRoutingStatus(
+          live,
+          lastKnownRestricted: () => null,
+        );
+
+        expect(routed.isLoading, isFalse);
+        expect(routed.hasError, isTrue);
+      });
+
+      test('keeps failing open for an account seen restricted', () async {
+        final live = await _refetchingAfterOnlyFailure();
+        expect(live.isLoading && live.hasError && !live.hasValue, isTrue);
+
+        final routed = minorAccountReviewRoutingStatus(
+          live,
+          lastKnownRestricted: () => true,
+        );
+
+        expect(routed.isLoading, isFalse);
+        expect(routed.hasError, isTrue);
+      });
+
+      test('keeps failing open through a reload of that fetch', () async {
+        final live = await _refetchingAfterOnlyFailure(reload: true);
+        expect(live.isReloading && live.hasError && !live.hasValue, isTrue);
+
+        final routed = minorAccountReviewRoutingStatus(
+          live,
+          lastKnownRestricted: () => null,
+        );
+
+        expect(routed.isLoading, isFalse);
+        expect(routed.hasError, isTrue);
+      });
     });
   });
 
@@ -297,6 +363,36 @@ void main() {
           expect(location(router), LegalScreen.path);
 
           fetch.complete(restrictedStatus());
+          await tester.pumpAndSettle();
+          expect(location(router), MinorAccountReviewScreen.path);
+        },
+      );
+
+      // As when an account is switched in while the status service is
+      // unreachable (#11070): its only fetch failed, so a refetch carries no
+      // value. It must not bounce the account to the loading screen and back,
+      // and a restriction it confirms must still redirect.
+      testWidgets(
+        'stays put while a status that only ever failed is refetched',
+        (tester) async {
+          final router = await pumpRouter(
+            tester,
+            startState: AuthState.authenticated,
+          );
+          fetch.completeError(StateError('status unavailable'));
+          await tester.pumpAndSettle();
+          expect(location(router), LegalScreen.path);
+
+          await refetchStatus(tester);
+          final refetching = container.read(
+            currentMinorAccountReviewStatusProvider,
+          );
+          expect(refetching.isLoading && !refetching.hasValue, isTrue);
+          await tester.pump();
+          await tester.pump();
+          expect(location(router), LegalScreen.path);
+
+          refetch.complete(restrictedStatus());
           await tester.pumpAndSettle();
           expect(location(router), MinorAccountReviewScreen.path);
         },

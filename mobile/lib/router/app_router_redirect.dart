@@ -299,22 +299,36 @@ bool minorAccountReviewStatusAffectsRouting(
 /// The review status [appRouterRedirect] gates on, given the [live] fetch.
 ///
 /// While the fetch runs, [live] carries either no value, which holds the
-/// account on the loading screen for the whole request, or the value it had
-/// before. At cold start that is the `active()` resolved while auth was still
-/// restoring, which says nothing about this account. The account's
-/// [lastKnownRestricted] status decides instead, and is only read while
-/// fetching: an account never seen restricted routes without waiting, and one
-/// seen restricted waits for the fetch rather than routing on the
-/// placeholder. A settled [live] always wins, and so does a result a refetch
-/// carries over, so a status that could not be fetched still fails open, and a
-/// restriction is only routed on once fetched.
+/// account on the loading screen for the whole request unless all it carries
+/// is an earlier failure, or the value it had before. At cold start that is
+/// the `active()` resolved while auth was still restoring, which says nothing
+/// about this account. The account's [lastKnownRestricted] status decides
+/// instead, and is only read while fetching: an account never seen restricted
+/// routes without waiting, and one seen restricted waits for the fetch rather
+/// than routing on the placeholder. A settled [live] always wins, and so does
+/// a result a refetch carries over, so a status that could not be fetched
+/// still fails open, and a restriction is only routed on once fetched. A
+/// refetch of a fetch that only ever failed carries that failure and no value;
+/// it routes on the failure, so the account is not sent to the loading screen
+/// and back (#11070).
 @visibleForTesting
 AsyncValue<MinorAccountReviewStatus> minorAccountReviewRoutingStatus(
   AsyncValue<MinorAccountReviewStatus> live, {
   required bool? Function() lastKnownRestricted,
 }) {
   if (!live.isLoading) return live;
-  return switch (lastKnownRestricted()) {
+  final routed = _routingStatusWhileFetching(live, lastKnownRestricted());
+  if (routed.isLoading && !routed.hasValue && live.hasError) {
+    return AsyncError(live.error!, live.stackTrace ?? StackTrace.empty);
+  }
+  return routed;
+}
+
+AsyncValue<MinorAccountReviewStatus> _routingStatusWhileFetching(
+  AsyncValue<MinorAccountReviewStatus> live,
+  bool? lastKnownRestricted,
+) {
+  return switch (lastKnownRestricted) {
     null => live,
     // A refetch keeps what this account's fetch already settled on: a
     // result, a restriction's case included, or a failure that failed open.
