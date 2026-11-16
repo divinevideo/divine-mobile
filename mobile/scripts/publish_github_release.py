@@ -3,6 +3,8 @@
 import argparse
 import hashlib
 import json
+import os
+from datetime import datetime, timezone
 from pathlib import Path
 import re
 import subprocess
@@ -218,6 +220,47 @@ def marketing_version(pubspec):
     return match.group(1)
 
 
+def record_stable_claim(ledger, version, sha):
+    from release_train.ledger import claim_path
+    from release_train.versions import parse_version
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ValueError("Invalid stable release source")
+    version = str(parse_version(version))
+    ledger.create_json(claim_path(version, "github-stable"), {
+        "schema": 1, "version": version, "channel": "github-stable",
+        "source_sha": sha, "observed_at": datetime.now(timezone.utc).isoformat(),
+    }, f"claim {version} (github-stable)")
+
+
+def stable_ledger():
+    from release_train.ledger import GhLedgerStore
+    return GhLedgerStore(os.environ.get("SHOREBIRD_PROVENANCE_REPOSITORY")
+                         or "divinevideo/divine-release-provenance")
+
+
+def effective_version(path, source_sha):
+    """Parse data rather than executing build-generated shell environment files."""
+    values = {}
+    for line in Path(path).read_text().splitlines():
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            raise ValueError("Invalid effective release identity")
+        key, value = line.split("=", 1)
+        if key in values:
+            raise ValueError("Duplicate effective release identity field")
+        values[key] = value
+    version = values.get("SHOREBIRD_BUILD_NAME", "")
+    number = values.get("SHOREBIRD_BUILD_NUMBER", "")
+    if (not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version)
+            or not re.fullmatch(r"[0-9]+", number)
+            or values.get("SHOREBIRD_RELEASE_VERSION") != version + "+" + number):
+        raise ValueError("Inconsistent effective release identity")
+    if values.get("RELEASE_SOURCE_SHA") != source_sha:
+        raise ValueError("Effective release identity source differs from checked-out source")
+    return version
+
+
 def recovery_artifacts(directory):
     if not directory.is_dir():
         raise ValueError('Original artifacts directory does not exist')
@@ -231,11 +274,12 @@ def main():
     parser.add_argument('--repo', required=True)
     parser.add_argument('--channel', default=None, choices=['BETA', 'PRODUCTION'])
     parser.add_argument('--backend', default='PRODUCTION')
+    parser.add_argument('--release-env', type=Path, help='Allocator output for this exact source; required for new publication')
     parser.add_argument('--promote-from', help='Publish an existing beta’s exact artifacts as stable')
     parser.add_argument('--artifacts-dir', type=Path,
                         help='Retry with original downloaded artifacts; checkout their source commit first')
     args = parser.parse_args()
-    if args.promote_from and (args.channel == 'BETA' or args.backend != 'PRODUCTION' or args.artifacts_dir):
+    if args.promote_from and (args.channel == 'BETA' or args.backend != 'PRODUCTION' or args.artifacts_dir or args.release_env):
         parser.error('--promote-from requires production channel/backend and cannot use --artifacts-dir')
     mobile = Path(__file__).resolve().parents[1]
     if args.promote_from:
@@ -244,13 +288,17 @@ def main():
             parser.error('Invalid beta version')
         tag = promote(GitHub(args.repo), args.promote_from,
                       mobile.parent / 'release-notes' / f'{version}.md')
+        match = re.fullmatch(r'(\d+\.\d+\.\d+)-beta\.production\.([0-9a-f]{40})', args.promote_from)
+        record_stable_claim(stable_ledger(), version, match.group(2))
         print(f'Promoted and verified https://github.com/{args.repo}/releases/tag/{tag}')
         return
-    try:
-        version = marketing_version((mobile / 'pubspec.yaml').read_text())
-    except ValueError as error:
-        parser.error(str(error))
+    if not args.release_env:
+        parser.error('--release-env is required for new publication and artifact retries')
     sha = run('git', '-C', str(mobile), 'rev-parse', 'HEAD')
+    try:
+        version = effective_version(args.release_env, sha)
+    except (OSError, ValueError) as error:
+        parser.error(str(error))
     patterns = ['build/app/outputs/apk/release/*arm64*.apk',
                 'build/app/outputs/apk/release/*armeabi*.apk',
                 'build/ios/ipa/*.ipa', 'build/macos/Build/Products/Release/*.dmg']
@@ -258,6 +306,8 @@ def main():
                  else sorted({p for pattern in patterns for p in mobile.glob(pattern)}))
     tag = publish(GitHub(args.repo), version, sha, args.channel or 'BETA', args.backend,
                   mobile.parent / 'release-notes' / f'{version}.md', artifacts)
+    if args.channel == 'PRODUCTION':
+        record_stable_claim(stable_ledger(), version, sha)
     print(f'Published and verified https://github.com/{args.repo}/releases/tag/{tag}')
 
 

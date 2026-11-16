@@ -113,6 +113,7 @@ class CliTest(unittest.TestCase):
             "SHOREBIRD_BUILD_NUMBER=6\n"
             "SHOREBIRD_RELEASE_VERSION=1.2.6+6\n"
             "RELEASE_TRAIN_RESERVATION_KEY=manual/abc\n"
+            f"RELEASE_SOURCE_SHA={SHA}\n"
             "RELEASE_TRAIN_RESERVATION_REUSED=false\n",
             self.out.read_text(),
         )

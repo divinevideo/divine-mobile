@@ -30,6 +30,7 @@
 #   - RELEASE_CHANNEL defaults to BETA; ready direct releases can publish independently of store rollout
 #   - Defaults to NO
 #   - Requires GITHUB_TOKEN in "github_credentials" environment variable group
+#   - CODEMAGIC_API_TOKEN (secure) lets scheduled allocation verify the previous builder is terminal
 # 9 - Android publishing reads the service account from environment variable
 #     group "google_play_credentials":
 #   - GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
@@ -216,23 +217,7 @@ definitions:
         fi
     - &verify_shorebird_release_source
       name: Verify Shorebird release source
-      script: |
-        set -euo pipefail
-        if [ "$CM_BRANCH" != "main" ]; then
-          echo "Refusing to create a store release from branch '$CM_BRANCH'."
-          echo "Shorebird releases must be cut from main so future patches have a reachable baseline."
-          exit 1
-        fi
-        if [ -n "${RELEASE_EXPECTED_SHA:-}" ]; then
-          if [[ ! "$RELEASE_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "RELEASE_EXPECTED_SHA must be a full lowercase 40-character commit SHA."
-            exit 1
-          fi
-          if [ "$(git rev-parse HEAD)" != "$RELEASE_EXPECTED_SHA" ]; then
-            echo "Refusing release: fetched source differs from RELEASE_EXPECTED_SHA. Dispatch again from current main."
-            exit 1
-          fi
-        fi
+      script: bash scripts/verify_release_source.sh
     - &write_shorebird_dart_defines
       name: Write Shorebird dart-defines
       script: |
@@ -414,129 +399,32 @@ definitions:
     - &preflight_shorebird_android_release
       name: Preflight Android Shorebird release
       script: |
-        BUILD_NAME=$(ruby -ne 'if $_ =~ /^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+/; puts $1; exit; end' pubspec.yaml)
-        if [ -z "$BUILD_NAME" ]; then
-          echo "ERROR: could not read build name from pubspec.yaml version."
-          exit 1
-        fi
-        # Fail closed, like the iOS lookup. Falling back to the Codemagic
-        # counter on a lookup error can pick a versionCode Play already holds,
-        # which Play rejects only after a full build and Shorebird release.
-        PLAY_LOOKUP_LOG=$(mktemp)
-        trap 'rm -f "$PLAY_LOOKUP_LOG"' EXIT
-        if ! LATEST_GOOGLE_PLAY_BUILD_NUMBER=$(google-play get-latest-build-number --package-name "co.openvine.app" 2>"$PLAY_LOOKUP_LOG"); then
-          LATEST_GOOGLE_PLAY_BUILD_NUMBER=
-        fi
-        case "$LATEST_GOOGLE_PLAY_BUILD_NUMBER" in
-          ''|*[!0-9]*)
-            echo "ERROR: could not read the latest Google Play build number."
-            if [ -n "$LATEST_GOOGLE_PLAY_BUILD_NUMBER" ]; then
-              echo "       Google Play returned: $LATEST_GOOGLE_PLAY_BUILD_NUMBER"
-            fi
-            if [ -s "$PLAY_LOOKUP_LOG" ]; then
-              echo "       Google Play lookup output:"
-              sed 's/^/       /' "$PLAY_LOOKUP_LOG"
-            fi
-            echo "       Refusing to guess a build number Google Play may reject after the build."
-            exit 1
-            ;;
-        esac
-        BUILD_NUMBER=$PROJECT_BUILD_NUMBER
-        NEXT_PLAY_BUILD_NUMBER=$((LATEST_GOOGLE_PLAY_BUILD_NUMBER + 1))
-        if [ "$NEXT_PLAY_BUILD_NUMBER" -gt "$BUILD_NUMBER" ]; then
-          BUILD_NUMBER=$NEXT_PLAY_BUILD_NUMBER
-        fi
-        RELEASE_VERSION="$BUILD_NAME+$BUILD_NUMBER"
-        {
-          echo "SHOREBIRD_BUILD_NAME=$BUILD_NAME"
-          echo "SHOREBIRD_BUILD_NUMBER=$BUILD_NUMBER"
-          echo "SHOREBIRD_RELEASE_VERSION=$RELEASE_VERSION"
-        } > build/shorebird/android_release.env
-        echo "Android Shorebird release version: $RELEASE_VERSION"
-        if ! shorebird releases list --platform=android --json > build/shorebird/release_info.json 2> build/shorebird/release_info.err; then
-          echo "ERROR: could not list existing Shorebird releases."
-          if [ -s build/shorebird/release_info.err ]; then
-            sed 's/^/stderr: /' build/shorebird/release_info.err
-          fi
-          if [ -s build/shorebird/release_info.json ]; then
-            sed 's/^/stdout: /' build/shorebird/release_info.json
-          fi
-          exit 1
-        fi
-        ruby scripts/shorebird_release_preflight.rb build/shorebird/release_info.json android "$RELEASE_VERSION"
+        set -euo pipefail
+        python3 scripts/allocate_build_identity.py android
+        . build/shorebird/android_release.env
+        ruby scripts/shorebird_release_preflight.rb build/shorebird/release_info.json android "$SHOREBIRD_RELEASE_VERSION"
     - &preflight_shorebird_ios_release
       name: Preflight iOS Shorebird release
       script: |
         set -euo pipefail
-        BUILD_NAME=$(ruby -ne 'if $_ =~ /^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+/; puts $1; exit; end' pubspec.yaml)
-        if [ -z "$BUILD_NAME" ]; then
-          echo "ERROR: could not read build name from pubspec.yaml version."
-          exit 1
-        fi
-        APP_STORE_APP_ID=6747959501 # co.openvine.app
-        ASC_LOOKUP_LOG=$(mktemp)
-        ASC_STORE_VERSIONS_JSON=$(mktemp)
-        trap 'rm -f "$ASC_LOOKUP_LOG" "$ASC_STORE_VERSIONS_JSON"' EXIT
-        # List every App Store version, not the highest version that has a
-        # build. `get-latest-app-store-build-number` returns the highest
-        # appStoreVersion record in any state, so a version that only ever
-        # reached TestFlight looks "approved" and wrongly blocks the next
-        # release. The preflight script keeps only released/approved states.
-        if ! app-store-connect apps app-store-versions "$APP_STORE_APP_ID" \
-          --platform IOS --json > "$ASC_STORE_VERSIONS_JSON" 2>"$ASC_LOOKUP_LOG"; then
-          echo "ERROR: could not read the App Store versions."
-          if [ -s "$ASC_LOOKUP_LOG" ]; then
-            echo "       App Store Connect lookup output:"
-            sed 's/^/       /' "$ASC_LOOKUP_LOG"
-          fi
-          echo "       Refusing to create a Shorebird release that Apple may reject after the build."
-          exit 1
-        fi
-        ruby scripts/ios_store_version_preflight.rb "$ASC_STORE_VERSIONS_JSON" "$BUILD_NAME"
-        : > "$ASC_LOOKUP_LOG"
-        if ! LATEST_IOS_BUILD_NUMBER=$(app-store-connect get-latest-build-number "$APP_STORE_APP_ID" 2>"$ASC_LOOKUP_LOG"); then
-          LATEST_IOS_BUILD_NUMBER=
-        fi
-        case "$LATEST_IOS_BUILD_NUMBER" in
-          ''|*[!0-9]*)
-            echo "ERROR: could not read the latest App Store Connect build number."
-            if [ -s "$ASC_LOOKUP_LOG" ]; then
-              echo "       App Store Connect lookup output:"
-              sed 's/^/       /' "$ASC_LOOKUP_LOG"
-            fi
-            echo "       Refusing to guess a build number Apple may reject after upload."
-            exit 1
-            ;;
-          *)
-            BUILD_NUMBER=$((LATEST_IOS_BUILD_NUMBER + 1))
-            ;;
-        esac
-        RELEASE_VERSION="$BUILD_NAME+$BUILD_NUMBER"
-        {
-          echo "SHOREBIRD_BUILD_NAME=$BUILD_NAME"
-          echo "SHOREBIRD_BUILD_NUMBER=$BUILD_NUMBER"
-          echo "SHOREBIRD_RELEASE_VERSION=$RELEASE_VERSION"
-        } > build/shorebird/ios_release.env
-        echo "iOS Shorebird release version: $RELEASE_VERSION"
-        if ! shorebird releases list --platform=ios --json > build/shorebird/release_info.json 2> build/shorebird/release_info.err; then
-          echo "ERROR: could not list existing Shorebird releases."
-          if [ -s build/shorebird/release_info.err ]; then
-            sed 's/^/stderr: /' build/shorebird/release_info.err
-          fi
-          if [ -s build/shorebird/release_info.json ]; then
-            sed 's/^/stdout: /' build/shorebird/release_info.json
-          fi
-          exit 1
-        fi
-        ruby scripts/shorebird_release_preflight.rb build/shorebird/release_info.json ios "$RELEASE_VERSION"
+        python3 scripts/allocate_build_identity.py ios
+        . build/shorebird/ios_release.env
+        ruby scripts/ios_store_version_preflight.rb build/shorebird/store_versions.json "$SHOREBIRD_BUILD_NAME"
+        ruby scripts/shorebird_release_preflight.rb build/shorebird/release_info.json ios "$SHOREBIRD_RELEASE_VERSION"
     - &build_apk
       name: Build Android APK
       script: |
+        set -euo pipefail
+        if [ "${RELEASE_TRAIN_SCHEDULED:-false}" = true ]; then
+          echo 'Scheduled Android builds skip direct APKs.'
+          exit 0
+        fi
+        . build/shorebird/android_release.env
         # Deliberately NOT a Shorebird release. Shorebird has no
         # --split-per-abi; its Android artifact is either an AAB or one
         # universal APK. These per-ABI APKs go to Zapstore / direct download,
         # so those installs are not patchable. Play (the AAB below) is.
-        flutter build apk --release --split-per-abi --build-number=$PROJECT_BUILD_NUMBER \
+        flutter build apk --release --split-per-abi --build-name=$SHOREBIRD_BUILD_NAME --build-number=$PROJECT_BUILD_NUMBER \
           --dart-define-from-file=build/shorebird/dart_defines.json
     - &build_aab
       name: Build Android AAB (Shorebird release)
@@ -618,7 +506,9 @@ definitions:
           --github-repository "$CM_REPO_SLUG"
         ruby scripts/write_concord_release_defines.rb \
           --output build/public_people_list_defines.json
+        . build/shorebird/macos_release.env
         env CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO flutter build macos --release \
+          --build-name=$SHOREBIRD_BUILD_NAME --build-number=$SHOREBIRD_BUILD_NUMBER \
           --dart-define-from-file=build/public_people_list_defines.json \
           --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
@@ -650,7 +540,8 @@ definitions:
         python3 scripts/publish_github_release.py \
           --repo "$CM_REPO_SLUG" \
           --channel "${{ inputs.RELEASE_CHANNEL }}" \
-          --backend "${{ inputs.DEFAULT_ENV }}"
+          --backend "${{ inputs.DEFAULT_ENV }}" \
+          --release-env "build/shorebird/${SHOREBIRD_PLATFORM}_release.env"
     - &publish_zapstore
       name: Publish to Zapstore
       script: |
@@ -1049,7 +940,7 @@ definitions:
         adb install "$APK_PATH"
         echo "App installed on Android emulator"
 workflows:
-  ios-build:
+  ios-build: &ios_build
     name: iOS Build
     working_directory: mobile
     max_build_duration: 60
@@ -1116,11 +1007,6 @@ workflows:
       events: []
     scripts:
       - *verify_shorebird_release_source
-      - name: Prepare TestFlight notes
-        script: |
-          set -euo pipefail
-          BUILD_NAME=$(ruby -ne 'if $_ =~ /^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+/; puts $1; exit; end' pubspec.yaml)
-          cp "../release-notes/$BUILD_NAME-testflight.json" release_notes.json
       - *shorebird_install
       - *check_coordinator_route
       - *check_signing_endpoint
@@ -1128,6 +1014,8 @@ workflows:
       - *check_ios_extension_signing_contract
       - *write_shorebird_public_key
       - *preflight_shorebird_ios_release
+      - name: Prepare TestFlight notes
+        script: python3 scripts/prepare_testflight_notes.py
       - *setup_code_signing_xcode
       - *clean_ios_workspace_state
       - *enable_spm
@@ -1142,6 +1030,7 @@ workflows:
       - *publish_github_release
     artifacts:
       - build/ios/ipa/*.ipa
+      - build/shorebird/ios_release.env
       - build/ios/archive/Runner.xcarchive/dSYMs/**
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
@@ -1156,6 +1045,17 @@ workflows:
           - VIP Testers
           - Testflight Expansion from Waitlist
           - friends-of-rabble
+        submit_to_app_store: false
+
+  # Scheduled uploads never submit to external audiences. The coordinator owns
+  # the one configured public group and the beta review budget.
+  ios-scheduled-build:
+    <<: *ios_build
+    name: iOS scheduled internal release
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
         submit_to_app_store: false
 
   ios-simulator-build:
@@ -1273,18 +1173,14 @@ workflows:
       - *emit_shorebird_provenance
       - *publish_github_release
       - *publish_zapstore
+      - name: Retain and publish signed Android bundle with review guard
+        script: python3 scripts/publish_play_bundle.py
     artifacts:
       - build/app/outputs/apk/release/*.apk
       - build/app/outputs/bundle/release/*.aab
+      - build/shorebird/android_release.env
+      - build/shorebird/android_upload.json
       - build/app/outputs/mapping/**/mapping.txt
-    publishing:
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        # Ship the exact Shorebird-enabled release to internal testers first.
-        # Promote this same Play artifact manually after testing; do not rebuild
-        # it for broader testing or production.
-        track: internal
-
   # Publish a promoted GitHub release with the existing Codemagic signer.
   # No APK rebuild, GitHub upload, or Play submission runs in this workflow.
   zapstore-publish:
@@ -1559,11 +1455,23 @@ workflows:
       - *enable_spm
       - *flutter_pub_get
       - *pod_install
+      - name: Allocate effective direct distribution identity
+        script: |
+          set -euo pipefail
+          mkdir -p build/shorebird
+          git ls-remote --tags origin | awk '{print $2}' > build/shorebird/stable_tags.txt
+          python3 scripts/release_identity.py direct \
+            --pubspec pubspec.yaml --source-sha "$(git rev-parse HEAD)" \
+            --stable-tags build/shorebird/stable_tags.txt \
+            --build-number "$PROJECT_BUILD_NUMBER" \
+            --output build/shorebird/macos_release.env
+          echo SHOREBIRD_PLATFORM=macos >> "$CM_ENV"
       - *build_macos
       - *package_macos_dmg
       - *publish_github_release
     artifacts:
       - build/macos/Build/Products/Release/*.dmg
+      - build/shorebird/macos_release.env
       - build/macos/Build/Products/Release/*.app
 
   e2e-smoke-ios:

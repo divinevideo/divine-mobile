@@ -8,11 +8,14 @@ import json
 import os
 import re
 import sys
+import tempfile
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-from release_train.allocator import AllocationError, allocate, bootstrap
-from release_train.ledger import GhLedgerStore, LedgerError
+from release_train.allocator import AllocationError, allocate, bootstrap, claim_builder, claimed_versions, derive_version
+from release_train.ledger import BOOTSTRAP_PATH, GhLedgerStore, LedgerError
 from release_train.store_state import (
     ios_submitted_versions,
     play_production_version_codes,
@@ -64,6 +67,13 @@ def _parser():
     alloc.add_argument("--play-production-track")
     alloc.add_argument("--output", required=True)
 
+    direct = commands.add_parser("direct", help="derive the shared version for direct macOS distribution")
+    direct.add_argument("--pubspec", required=True)
+    direct.add_argument("--source-sha", required=True)
+    direct.add_argument("--stable-tags", required=True)
+    direct.add_argument("--build-number", type=_build_number, required=True)
+    direct.add_argument("--output", required=True)
+
     boot = commands.add_parser("bootstrap", help="seed the ledger from store state")
     boot.add_argument("--app-store-versions", required=True)
     boot.add_argument("--play-production-track", required=True)
@@ -84,7 +94,51 @@ def _check_platform_inputs(parser, args):
         parser.error(f"{flag(other)} is not valid for --platform {args.platform}")
 
 
+def atomic_write(path, body):
+    """Keep a complete previous output if a new allocation cannot be persisted."""
+    path = Path(path)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", dir=path.parent,
+                                         prefix="." + path.name + ".", delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(body)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def codemagic_owner_status(build_id, *, platform, source_sha):
+    token = os.environ.get("CODEMAGIC_API_TOKEN")
+    if not token:
+        raise AllocationError("CODEMAGIC_API_TOKEN is required to reconcile scheduled builder ownership")
+    if not re.fullmatch(r"[0-9a-f]{24}", build_id):
+        raise AllocationError("invalid recorded Codemagic owner ID")
+    request = urllib.request.Request("https://codemagic.io/api/v3/builds/" + build_id,
+                                     headers={"x-auth-token": token})
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            build = json.load(response)["data"]
+        if (build.get("id") != build_id
+                or build.get("app_id") != "69370e59eac15e6c367b661b"
+                or (build.get("workflow") or {}).get("id") not in (
+                    {"ios-build", "ios-scheduled-build"} if platform == "ios" else {"android-build"})
+                or (build.get("commit") or {}).get("hash") not in (None, source_sha)):
+            raise ValueError("owner identity mismatch")
+        return build.get("status")
+    except (urllib.error.URLError, OSError, ValueError, KeyError, TypeError, AttributeError):
+        raise AllocationError("cannot verify prior Codemagic builder; refusing concurrent allocation") from None
+
+
 def _allocate(args, ledger, now):
+    claim_builder(args.platform, ledger=ledger, source_sha=args.source_sha,
+                  reservation_key=args.reservation_key,
+                  codemagic_build_id=args.codemagic_build_id,
+                  owner_status=lambda owner: codemagic_owner_status(
+                      owner, platform=args.platform, source_sha=args.source_sha), now=now)
     ios = args.platform == "ios"
     result = allocate(
         args.platform,
@@ -114,9 +168,25 @@ def _allocate(args, ledger, now):
         f"SHOREBIRD_BUILD_NUMBER={result.build_number}",
         f"SHOREBIRD_RELEASE_VERSION={result.release_version}",
         f"RELEASE_TRAIN_RESERVATION_KEY={result.reservation_key}",
+        f"RELEASE_SOURCE_SHA={args.source_sha}",
         f"RELEASE_TRAIN_RESERVATION_REUSED={'true' if result.reused else 'false'}",
     ]
-    Path(args.output).write_text("\n".join(lines) + "\n")
+    atomic_write(args.output, "\n".join(lines) + "\n")
+
+
+def _direct(args, ledger):
+    if not re.fullmatch(r"[0-9a-f]{40}", args.source_sha):
+        raise AllocationError("direct release source must be a full lowercase SHA")
+    if BOOTSTRAP_PATH not in ledger.paths():
+        raise AllocationError("release ledger is not bootstrapped")
+    version = derive_version(pubspec_version(Path(args.pubspec).read_text()),
+        claimed_versions(ledger.paths()) + stable_tag_versions(Path(args.stable_tags).read_text().splitlines()))
+    atomic_write(args.output, "\n".join([
+        f"SHOREBIRD_BUILD_NAME={version}",
+        f"SHOREBIRD_BUILD_NUMBER={args.build_number}",
+        f"SHOREBIRD_RELEASE_VERSION={version}+{args.build_number}",
+        f"RELEASE_SOURCE_SHA={args.source_sha}",
+    ]) + "\n")
 
 
 def _bootstrap(args, ledger, now):
@@ -148,6 +218,8 @@ def main(argv=None, *, ledger_factory=GhLedgerStore, now: datetime | None = None
         ledger = ledger_factory(args.ledger_repository)
         if args.command == "allocate":
             _allocate(args, ledger, now)
+        elif args.command == "direct":
+            _direct(args, ledger)
         else:
             _bootstrap(args, ledger, now)
     except (AllocationError, LedgerError, ValueError, OSError) as error:
