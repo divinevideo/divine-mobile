@@ -2701,7 +2701,8 @@ class LikesRepository {
           // (#6123). Restricted to the same reaction id: accepting a
           // different (older) coordinate-bearing reaction would repoint the
           // record at the wrong wire event, so unlike would delete the
-          // wrong reaction.
+          // wrong reaction. A retracted cached record cannot defend its
+          // timestamp: an older reaction may still be live on the target.
           final existing = _likeRecords[targetId];
           final canBackfillCoordinate =
               existing != null &&
@@ -2712,6 +2713,7 @@ class LikesRepository {
               record.addressableId!.isNotEmpty;
           if (existing == null ||
               _isPlaceholderId(existing.reactionEventId) ||
+              retractions.retracted.contains(existing.reactionEventId) ||
               record.createdAt.isAfter(existing.createdAt) ||
               canBackfillCoordinate) {
             _indexLikeRecord(record);
@@ -2727,11 +2729,12 @@ class LikesRepository {
             addressableId: _extractAddressableId(event),
           );
 
-          // Mirror the upvote freshness check; downvotes aren't persisted
-          // in v1 so there's no batch save. The coordinate is indexed
+          // Mirror the upvote freshness/retraction check; downvotes aren't
+          // persisted in v1 so there's no batch save. The coordinate is indexed
           // alongside the id so an edited target still resolves (#6124).
           final existing = _downvoteRecords[targetId];
           if (existing == null ||
+              retractions.retracted.contains(existing.reactionEventId) ||
               record.createdAt.isAfter(existing.createdAt)) {
             _indexDownvoteRecord(record);
             downvoteCacheChanged = true;

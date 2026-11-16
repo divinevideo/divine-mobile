@@ -4120,6 +4120,61 @@ void main() {
         verifyNever(() => mockLocalStorage.deleteLikeRecord(any()));
       });
 
+      for (final newestFirst in [false, true]) {
+        test('replaces a retracted stored like with an older live one '
+            '(newest first: $newestFirst)', () async {
+          const targetId =
+              '1111111111111111111111111111111111111111111111111111111111111111';
+          const liveId =
+              '2222222222222222222222222222222222222222222222222222222222222222';
+          const retractedId =
+              '3333333333333333333333333333333333333333333333333333333333333333';
+          when(() => mockLocalStorage.getAllLikeRecords()).thenAnswer(
+            (_) async => [
+              createLikeRecord(
+                targetEventId: targetId,
+                reactionEventId: retractedId,
+                createdAt: DateTime.fromMillisecondsSinceEpoch(
+                  (defaultTimestamp + 1) * 1000,
+                ),
+              ),
+            ],
+          );
+          final live = createMockReaction(
+            id: liveId,
+            targetEventId: targetId,
+          );
+          final retracted = createMockReaction(
+            id: retractedId,
+            targetEventId: targetId,
+            createdAt: defaultTimestamp + 1,
+          );
+          mockReadEventsSequence([
+            newestFirst ? [retracted, live] : [live, retracted],
+            [
+              createMockDeletion([retractedId]),
+            ],
+          ]);
+          when(
+            () => mockLocalStorage.saveLikeRecordsBatch(any()),
+          ).thenAnswer((_) async {});
+
+          repository = createRepository();
+          final result = await repository.syncUserReactions(
+            requireCompleteRelaySnapshot: true,
+          );
+
+          expect(result.eventIdToReactionId[targetId], equals(liveId));
+          final saved =
+              verify(
+                    () => mockLocalStorage.saveLikeRecordsBatch(captureAny()),
+                  ).captured.single
+                  as List<LikeRecord>;
+          expect(saved.single.reactionEventId, equals(liveId));
+          verifyNever(() => mockLocalStorage.deleteLikeRecord(any()));
+        });
+      }
+
       test('ignores non-like reactions (content != "+")', () async {
         final mockReaction = createMockReaction(
           id: 'reaction_id_1234567890abcdef',

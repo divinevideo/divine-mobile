@@ -406,6 +406,32 @@ void main() {
     });
 
     group('removeDownvote', () {
+      for (final newestFirst in [false, true]) {
+        test('resync replaces a cached retracted downvote with an older live '
+            'one (newest first: $newestFirst)', () async {
+          final live = relay.vote(_me, _comment, content: '-');
+          final retracted = relay.vote(_me, _comment, content: '-');
+          await repository.initialize();
+          expect(
+            (await repository.getDownvoteRecord(_comment))?.reactionEventId,
+            equals(retracted.id),
+          );
+          relay.delete(retracted.id);
+          if (newestFirst) {
+            relay.events
+              ..remove(live)
+              ..add(live);
+          }
+
+          await repository.syncUserReactions(
+            requireCompleteRelaySnapshot: true,
+          );
+          await repository.removeDownvote(_comment);
+
+          expect(relay.events.last.tags, contains(equals(['e', live.id])));
+        });
+      }
+
       test('fails instead of reporting no downvote when the relays did not '
           'answer (#10809)', () async {
         relay
