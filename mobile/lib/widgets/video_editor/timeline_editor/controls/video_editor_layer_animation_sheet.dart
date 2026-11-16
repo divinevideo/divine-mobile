@@ -283,6 +283,9 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
   /// pulse and a spin. Fade (a blink) and slide (back and forth across the
   /// frame) are left out, and so are the text reveals and the draw-on, which
   /// only a text or a drawing plays, once on the way in or out.
+  ///
+  /// For a drawing the draw-on comes first, right after None: it is the one
+  /// effect made for a drawing, and the row scrolls past the screen edge.
   List<LayerAnimationType?> get _typeOptions => [
     null,
     if (_phase == AnimationPhase.loop) ...const [
@@ -291,6 +294,7 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
       LayerAnimationType.scale,
       LayerAnimationType.spin,
     ] else ...[
+      if (widget.allowDrawOn) LayerAnimationType.drawOn,
       LayerAnimationType.fade,
       LayerAnimationType.slide,
       LayerAnimationType.scale,
@@ -302,7 +306,6 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
         LayerAnimationType.typewriter,
         LayerAnimationType.wordByWord,
       ],
-      if (widget.allowDrawOn) LayerAnimationType.drawOn,
     ],
   ];
 
