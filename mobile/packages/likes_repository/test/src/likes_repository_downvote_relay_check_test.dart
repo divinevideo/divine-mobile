@@ -92,6 +92,10 @@ class _Relay {
   /// newest matches, as a relay clamps an unbounded `REQ`.
   int? unscopedResultLimit;
 
+  /// True: reads ignore `authors`, as a relay that does not honour it or a
+  /// merged cache hit can.
+  bool ignoresAuthors = false;
+
   /// Reads that had to prove their answer, counted as they were asked.
   int settledReads = 0;
 
@@ -138,9 +142,9 @@ class _Relay {
     return reaction;
   }
 
-  Event delete(String eventId) {
+  Event delete(String eventId, {String? by}) {
     final deletion = Event(
-      _me,
+      by ?? _me,
       EventKind.eventDeletion,
       [
         ['e', eventId],
@@ -165,7 +169,7 @@ class _Relay {
       }
       var matches = [
         for (final event in events)
-          if (_matches(filter, event)) event,
+          if (_matches(filter, event, ignoreAuthors: ignoresAuthors)) event,
       ];
       final limit = unscopedResultLimit;
       if (limit != null && filter.e == null && filter.a == null) {
@@ -179,11 +183,17 @@ class _Relay {
     return (events: answered.values.toList(), complete: complete);
   }
 
-  static bool _matches(Filter filter, Event event) {
+  static bool _matches(
+    Filter filter,
+    Event event, {
+    required bool ignoreAuthors,
+  }) {
     final kinds = filter.kinds;
     if (kinds != null && !kinds.contains(event.kind)) return false;
     final authors = filter.authors;
-    if (authors != null && !authors.contains(event.pubkey)) return false;
+    if (!ignoreAuthors && authors != null && !authors.contains(event.pubkey)) {
+      return false;
+    }
     final e = filter.e;
     if (e != null) {
       final tagged = event.tags
@@ -342,7 +352,25 @@ void main() {
         expect(id, isNot(equals(retracted.id)));
         expect(relay.downvotesBy(_me, _comment), equals(2));
       });
+
+      test(
+        "does not adopt another account's downvote on a plain comment",
+        () async {
+          relay
+            ..vote(_other, _comment, content: '-')
+            ..ignoresAuthors = true;
+
+          await repository.downvoteEvent(
+            eventId: _comment,
+            authorPubkey: _author,
+            targetKind: EventKind.comment,
+          );
+
+          expect(relay.downvotesBy(_me, _comment), equals(1));
+        },
+      );
     });
+
     group('removeDownvote', () {
       test('fails instead of reporting no downvote when the relays did not '
           'answer (#10809)', () async {
@@ -395,6 +423,27 @@ void main() {
         final votes = await repository.getUserVoteStatuses([_comment]);
 
         expect(votes.downvotedIds, isEmpty);
+      });
+
+      test("ignores another account's vote", () async {
+        relay
+          ..vote(_other, _comment, content: '-')
+          ..ignoresAuthors = true;
+
+        final votes = await repository.getUserVoteStatuses([_comment]);
+
+        expect(votes.downvotedIds, isEmpty);
+      });
+
+      test("keeps a vote another account's deletion names", () async {
+        final mine = relay.vote(_me, _comment, content: '-');
+        relay
+          ..delete(mine.id, by: _other)
+          ..ignoresAuthors = true;
+
+        final votes = await repository.getUserVoteStatuses([_comment]);
+
+        expect(votes.downvotedIds, equals({_comment}));
       });
 
       test('control: reports a live vote', () async {
