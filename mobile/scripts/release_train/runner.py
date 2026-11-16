@@ -45,6 +45,19 @@ DEFAULT_GROUPS = [
 WORKFLOWS = {"ios": "ios-scheduled-build", "android": "android-build"}
 
 
+def beta_attributes(attributes, detail, legacy):
+    if detail is not None:
+        return detail["attributes"]
+    if attributes.get("expired") or legacy:
+        return {"externalBuildState": "EXPIRED"}
+    processing = attributes.get("processingState")
+    if processing == "PROCESSING":
+        return {"externalBuildState": "PROCESSING"}
+    if processing in {"FAILED", "INVALID"}:
+        return {"externalBuildState": "PROCESSING_EXCEPTION"}
+    raise ProviderError("Processed Apple build has no verifiable beta state")
+
+
 def operation_key(action):
     identity = (
         action["sha"]
@@ -88,20 +101,41 @@ def reconcile_operations(state, snapshot):
                 if state.get("holds", {}).get(platform) == key:
                     state["holds"].pop(platform)
                 if status == "finished":
-                    state.setdefault("last_built_source", {})[platform] = action["sha"]
+                    started = operation.get("started_at", 0)
+                    if started >= state.setdefault("last_built_source_started", {}).get(
+                        platform, -1
+                    ):
+                        state["last_built_source_started"][platform] = started
+                        state.setdefault("last_built_source", {})[platform] = action[
+                            "sha"
+                        ]
+            elif operation["status"] in {"started", "ambiguous"}:
+                state.setdefault("holds", {})[platform] = key
         elif operation["status"] in {"started", "ambiguous", "deferred"}:
             build = action.get("build", action)
             observed = False
-            if kind == "public-beta":
-                observed = any(
-                    b["id"] == build["id"]
-                    and (
-                        b.get("public")
-                        or b.get("external")
-                        in {"WAITING_FOR_BETA_REVIEW", "IN_BETA_REVIEW"}
-                    )
+            if kind in {"public-beta", "attach-beta-groups"}:
+                matches = [
+                    b
                     for b in snapshot.get("ios", {}).get("builds", [])
-                )
+                    if b["id"] == build["id"]
+                ]
+                if matches:
+                    current = matches[0]
+                    observed = current.get("public_complete", current.get("public"))
+                    if not observed and (
+                        current.get("groups")
+                        or current.get("external")
+                        in {
+                            "WAITING_FOR_BETA_REVIEW",
+                            "IN_BETA_REVIEW",
+                            "BETA_APPROVED",
+                            "IN_BETA_TESTING",
+                        }
+                    ):
+                        operation["status"] = "deferred"
+                        if state.get("holds", {}).get(platform) == key:
+                            state["holds"].pop(platform)
             elif kind == "app-store":
                 observed = any(
                     v.get("build_id") == build["id"]
@@ -162,6 +196,34 @@ def execute_plan(plan, state, snapshot, store, provider):
             state["operations"][key]["status"] = "ambiguous"
             state.setdefault("holds", {})[action["platform"]] = key
         store.save(state)
+
+
+def acknowledge(state, item, snapshot):
+    known = (
+        set(state.get("holds", {}).values())
+        | {"ios-build:" + b["id"] for b in snapshot.get("ios", {}).get("builds", [])}
+        | {
+            "ios-version:" + v["id"]
+            for v in snapshot.get("ios", {}).get("versions", [])
+        }
+    )
+    if item not in known:
+        raise ProviderError("Acknowledgement does not identify an observed item")
+    state.setdefault("acknowledged", []).append(item)
+    state["holds"] = {
+        p: key for p, key in state.get("holds", {}).items() if key != item
+    }
+    if item in state.get("operations", {}):
+        operation = state["operations"][item]
+        operation["status"] = "acknowledged"
+        action = operation["action"]
+        if action["kind"] == "build":
+            attempt = (
+                state.setdefault("attempts", {})
+                .setdefault(action["platform"], {})
+                .setdefault(action["sha"], {"count": action["attempt"]})
+            )
+            attempt["status"] = "failed"
 
 
 class GitHub:
@@ -334,46 +396,66 @@ class Runtime:
             text=True,
         ).splitlines()
         for sha in shas:
-            query = urllib.parse.urlencode({"head_sha": sha, "status": "completed"})
-            runs = self.gh.pages(
-                "/actions/workflows/mobile_ci.yaml/runs?" + query, "workflow_runs"
-            )
-            passed = {
-                str(r["id"])
-                for r in runs
-                if r["head_sha"] == sha
-                and r["conclusion"] == "success"
-                and r["status"] == "completed"
-                and (
-                    r["event"] == "merge_group"
-                    or (r["event"] == "push" and r["head_branch"] == "main")
-                )
-            }
-            if not passed:
-                continue
-            checks = self.gh.pages(
-                "/commits/" + sha + "/check-runs?check_name=Mobile%20CI", "check_runs"
-            )
-            if any(
-                c["name"] == "Mobile CI"
-                and c["head_sha"] == sha
-                and c["status"] == "completed"
-                and c["conclusion"] == "success"
-                and c.get("app", {}).get("id") == 15368
-                and any(
-                    c.get("details_url", "").startswith(
-                        "https://github.com/"
-                        + self.env["GITHUB_REPOSITORY"]
-                        + "/actions/runs/"
-                        + run
-                        + "/"
-                    )
-                    for run in passed
-                )
-                for c in checks
-            ):
+            if self.source_ci(sha):
                 return sha
         return None
+
+    def source_ci(self, sha):
+        if not hasattr(self, "_ci_cache"):
+            self._ci_cache = {}
+        if sha in self._ci_cache:
+            return self._ci_cache[sha]
+        if (
+            not re.fullmatch("[0-9a-f]{40}", sha or "")
+            or subprocess.run(
+                ["git", "merge-base", "--is-ancestor", sha, "origin/main"],
+                capture_output=True,
+                check=False,
+            ).returncode
+        ):
+            self._ci_cache[sha] = False
+            return False
+        query = urllib.parse.urlencode({"head_sha": sha, "status": "completed"})
+        runs = self.gh.pages(
+            "/actions/workflows/mobile_ci.yaml/runs?" + query, "workflow_runs"
+        )
+        passed = {
+            str(r["id"])
+            for r in runs
+            if r["head_sha"] == sha
+            and r["conclusion"] == "success"
+            and r["status"] == "completed"
+            and (
+                r["event"] == "merge_group"
+                or (r["event"] == "push" and r["head_branch"] == "main")
+            )
+        }
+        if not passed:
+            self._ci_cache[sha] = False
+            return False
+        checks = self.gh.pages(
+            "/commits/" + sha + "/check-runs?check_name=Mobile%20CI", "check_runs"
+        )
+        result = any(
+            c["name"] == "Mobile CI"
+            and c["head_sha"] == sha
+            and c["status"] == "completed"
+            and c["conclusion"] == "success"
+            and c.get("app", {}).get("id") == 15368
+            and any(
+                c.get("details_url", "").startswith(
+                    "https://github.com/"
+                    + self.env["GITHUB_REPOSITORY"]
+                    + "/actions/runs/"
+                    + run
+                    + "/"
+                )
+                for run in passed
+            )
+            for c in checks
+        )
+        self._ci_cache[sha] = result
+        return result
 
     def identity(self, platform, number, version=None, *, allow_historical=False):
         path = f"allocations/builds/{platform}/{number}.json"
@@ -450,44 +532,49 @@ class Runtime:
             memberships[identifier] = {
                 b["id"] for b in apple.pages("/betaGroups/" + identifier + "/builds")
             }
-        builds = apple.pages(
+        builds, included = apple.pages_including(
             "/builds?"
             + urllib.parse.urlencode(
                 {
                     "filter[app]": APP_ID,
-                    "include": "preReleaseVersion,buildBetaDetail,betaAppReviewSubmission,betaGroups",
+                    "include": "preReleaseVersion,buildBetaDetail,betaAppReviewSubmission",
                     "limit": 200,
                 }
             )
         )
-        # Read explicit related resources: absence in an include is never taken as no review.
+        # Preserve included resources across every page; incomplete relations fail closed.
         normalized = []
         submitted = []
         for b in builds:
             attrs = b["attributes"]
             number = int(attrs["version"])
-            version = apple.call("GET", "/builds/" + b["id"] + "/preReleaseVersion")[
-                "data"
-            ]["attributes"]["version"]
-            detail = apple.call("GET", "/builds/" + b["id"] + "/buildBetaDetail")[
-                "data"
-            ]["attributes"]
-            try:
-                review = apple.call(
-                    "GET", "/builds/" + b["id"] + "/betaAppReviewSubmission"
-                ).get("data")
-            except NotFound:
-                review = None
+
+            def related(name, optional=False, build=b):
+                relationship = build.get("relationships", {}).get(name, {}).get("data")
+                if relationship is None:
+                    if optional:
+                        return None
+                    raise ProviderError(
+                        "Apple build is missing required included " + name
+                    )
+                value = included.get((relationship["type"], relationship["id"]))
+                if value is None:
+                    raise ProviderError("Apple pagination omitted related " + name)
+                return value
+
+            version = related("preReleaseVersion")["attributes"]["version"]
+            identity = self.identity("ios", number, version, allow_historical=True)
+            beta_detail = related("buildBetaDetail", optional=True)
+            detail = beta_attributes(attrs, beta_detail, identity.get("legacy", False))
+            review = related("betaAppReviewSubmission", optional=True)
             if review and review["attributes"].get("submittedDate"):
                 submitted.append(epoch(review["attributes"]["submittedDate"]))
             external = detail.get("externalBuildState")
-            if external == "READY_FOR_BETA_SUBMISSION":
-                pass
-            identity = self.identity("ios", number, version, allow_historical=True)
             normalized.append(
                 identity
                 | {
                     "id": b["id"],
+                    "beta_detail_id": beta_detail["id"] if beta_detail else None,
                     "valid": not identity.get("legacy")
                     and attrs["processingState"] == "VALID"
                     and not attrs.get("expired", False),
@@ -495,6 +582,12 @@ class Runtime:
                     == "IN_BETA_TESTING",
                     "external": external,
                     "public": b["id"] in memberships[apple.group],
+                    "groups": [
+                        group for group in apple.groups if b["id"] in memberships[group]
+                    ],
+                    "public_complete": all(
+                        b["id"] in memberships[group] for group in apple.groups
+                    ),
                 }
             )
         reviews = apple.pages("/apps/" + APP_ID + "/reviewSubmissions")
@@ -614,6 +707,15 @@ class Runtime:
                     if isinstance(error, ProviderError)
                     else "Missing credential, configuration, or malformed provider response"
                 }
+        for platform in ["ios", "android"]:
+            data = snapshot.get(platform, {})
+            if data.get("error"):
+                continue
+            try:
+                for b in data.get("builds" if platform == "ios" else "internal", []):
+                    b["ci_verified"] = bool(b.get("sha")) and self.source_ci(b["sha"])
+            except ProviderError as error:
+                snapshot[platform] = {"error": str(error)}
         return snapshot
 
     def deploy(self, environment, build, status, state, stage=None):
@@ -797,6 +899,9 @@ class Runtime:
                 },
             )
             return {"build_id": result["data"]["id"]}
+        if kind == "attach-beta-groups":
+            self.apple.attach_groups(build)
+            return {}
         if kind == "public-beta":
             previous = [
                 b
@@ -983,27 +1088,7 @@ def main(env=os.environ):
     reconcile_operations(state, snapshot)
     acknowledgement = env.get("RELEASE_ACKNOWLEDGE", "")
     if acknowledgement:
-        known = (
-            set(state.get("holds", {}).values())
-            | {
-                "ios-build:" + b["id"]
-                for b in snapshot.get("ios", {}).get("builds", [])
-            }
-            | {
-                "ios-version:" + v["id"]
-                for v in snapshot.get("ios", {}).get("versions", [])
-            }
-        )
-        if acknowledgement not in known:
-            raise ProviderError("Acknowledgement does not identify an observed item")
-        state.setdefault("acknowledged", []).append(acknowledgement)
-        state["holds"] = {
-            p: key
-            for p, key in state.get("holds", {}).items()
-            if key != acknowledgement
-        }
-        if acknowledgement in state.get("operations", {}):
-            state["operations"][acknowledgement]["status"] = "acknowledged"
+        acknowledge(state, acknowledgement, snapshot)
     # Repair claims after an accepted store mutation, including manual releases.
     if not dry:
         for platform in ["ios", "android"]:

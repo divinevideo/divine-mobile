@@ -1030,6 +1030,7 @@ workflows:
       - *publish_github_release
     artifacts:
       - build/ios/ipa/*.ipa
+      - build/shorebird/ios_release.env
       - build/ios/archive/Runner.xcarchive/dSYMs/**
       - /tmp/xcodebuild_logs/*.log
       - flutter_drive.log
@@ -1177,6 +1178,7 @@ workflows:
     artifacts:
       - build/app/outputs/apk/release/*.apk
       - build/app/outputs/bundle/release/*.aab
+      - build/shorebird/android_release.env
       - build/shorebird/android_upload.json
       - build/app/outputs/mapping/**/mapping.txt
   # Publish a promoted GitHub release with the existing Codemagic signer.
@@ -1469,6 +1471,7 @@ workflows:
       - *publish_github_release
     artifacts:
       - build/macos/Build/Products/Release/*.dmg
+      - build/shorebird/macos_release.env
       - build/macos/Build/Products/Release/*.app
 
   e2e-smoke-ios:

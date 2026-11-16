@@ -153,14 +153,22 @@ slice. The full device-support policy and upload runbook are in
 Download and preserve the failed job's original signed artifacts from Codemagic.
 Do not run the build again. For a production retry, verify the direct-release
 readiness requirements above. In an isolated checkout of that job's **exact
-source commit**, with its reviewed notes and matching pubspec version, run:
+source commit**, with its reviewed notes and the original effective identity
+(`build/shorebird/<platform>_release.env`) downloaded from the same job, run:
 
 ```sh
 python3 mobile/scripts/publish_github_release.py \
   --repo divinevideo/divine-mobile \
   --channel PRODUCTION --backend PRODUCTION \
-  --artifacts-dir /absolute/path/to/original-artifacts
+  --artifacts-dir /absolute/path/to/original-artifacts \
+  --release-env /absolute/path/to/original-artifacts/android_release.env
 ```
+
+Use the matching iOS or macOS identity filename for those artifacts. The identity
+must match the checked-out source; never regenerate it from today's pubspec.
+For a historical pre-allocator job, use that job's original publisher at its
+source revision or promote its verified existing beta tag with `--promote-from`;
+those tags preserve their original version, source, artifacts and note mapping.
 
 The directory may contain nested downloads. The same files as a normal publish
 are selected: arm64/armeabi APKs, IPAs and DMGs. Other APK variants are excluded;

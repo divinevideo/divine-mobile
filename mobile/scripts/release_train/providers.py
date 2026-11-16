@@ -271,7 +271,11 @@ class Apple:
         return self.request(method, self.base + path, self.headers, body)
 
     def pages(self, path):
+        return self.pages_including(path)[0]
+
+    def pages_including(self, path):
         found = []
+        included = {}
         seen = set()
         while path:
             if path in seen or len(seen) >= 1000:
@@ -279,11 +283,13 @@ class Apple:
             seen.add(path)
             page = self.call("GET", path)
             found.extend(page["data"])
+            for resource in page.get("included", []):
+                included[(resource["type"], resource["id"])] = resource
             link = page.get("links", {}).get("next")
             if link and not link.startswith(self.base + "/"):
                 raise ProviderError("Unexpected Apple pagination origin")
             path = link[len(self.base) :] if link else None
-        return found
+        return found, included
 
     def resource(self, kind, identifier=None, attributes=None, relationships=None):
         data = {"type": kind}
@@ -299,6 +305,15 @@ class Apple:
         return {"data": {"type": kind, "id": identifier}}
 
     def submit_beta(self, build, notes):
+        if build.get("beta_detail_id"):
+            identifier = build["beta_detail_id"]
+            self.call(
+                "PATCH",
+                "/buildBetaDetails/" + identifier,
+                self.resource(
+                    "buildBetaDetails", identifier, {"autoNotifyEnabled": True}
+                ),
+            )
         localizations = self.pages("/builds/" + build["id"] + "/betaBuildLocalizations")
         if localizations:
             for loc in localizations:
@@ -319,7 +334,13 @@ class Apple:
                     relationships={"build": self.relationship("builds", build["id"])},
                 ),
             )
-        if build.get("external") not in {"READY_FOR_BETA_TESTING", "IN_BETA_TESTING"}:
+        if build.get("external") not in {
+            "BETA_APPROVED",
+            "READY_FOR_BETA_TESTING",
+            "IN_BETA_TESTING",
+            "WAITING_FOR_BETA_REVIEW",
+            "IN_BETA_REVIEW",
+        }:
             self.call(
                 "POST",
                 "/betaAppReviewSubmissions",
@@ -328,7 +349,12 @@ class Apple:
                     relationships={"build": self.relationship("builds", build["id"])},
                 ),
             )
+        self.attach_groups(build)
+
+    def attach_groups(self, build):
         for group in self.groups:
+            if group in build.get("groups", []):
+                continue
             self.call(
                 "POST",
                 f"/betaGroups/{group}/relationships/builds",

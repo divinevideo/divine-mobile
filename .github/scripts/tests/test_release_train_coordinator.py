@@ -29,6 +29,7 @@ def build(**changes):
         number=10,
         version="1.0.31",
         sha=SHA,
+        ci_verified=True,
         valid=True,
         external="READY_FOR_BETA_TESTING",
         public=True,
@@ -155,7 +156,9 @@ class CoordinatorTest(unittest.TestCase):
         s = snapshot()
         s["android"]["production"] = [{"number": 8, "version": "1.0.30"}]
         state = observe(s, {})
-        s["android"]["internal"] = [{"number": 10, "version": "1.0.31", "sha": SHA}]
+        s["android"]["internal"] = [
+            {"number": 10, "version": "1.0.31", "sha": SHA, "ci_verified": True}
+        ]
         state["internal_periods"] = {"10": {"since": NOW - 21600, "completed": True}}
         self.assertFalse(
             any(
@@ -168,13 +171,17 @@ class CoordinatorTest(unittest.TestCase):
 
     def test_android_six_hour_continuous_exposure_and_replacement(self):
         s = snapshot()
-        s["android"]["internal"] = [{"number": 10, "version": "1.0.31", "sha": SHA}]
+        s["android"]["internal"] = [
+            {"number": 10, "version": "1.0.31", "sha": SHA, "ci_verified": True}
+        ]
         state = observe(s, {})
         s["now"] += 14400
         self.assertFalse(
             plan_tick(s, state, {"ios": "off", "android": "build"})["actions"]
         )
-        s["android"]["internal"] = [{"number": 11, "version": "1.0.31", "sha": SHA}]
+        s["android"]["internal"] = [
+            {"number": 11, "version": "1.0.31", "sha": SHA, "ci_verified": True}
+        ]
         state = observe(s, state)
         s["now"] += 21600
         state = observe(s, state)
@@ -195,7 +202,9 @@ class CoordinatorTest(unittest.TestCase):
     def test_production_kill_switch_and_managed_publish(self):
         s = snapshot()
         s["changes"]["android"] = False
-        s["android"]["internal"] = [{"number": 10, "version": "1.0.31", "sha": SHA}]
+        s["android"]["internal"] = [
+            {"number": 10, "version": "1.0.31", "sha": SHA, "ci_verified": True}
+        ]
         state = {"internal_periods": {"10": {"since": NOW - 21600, "completed": True}}}
         self.assertFalse(
             plan_tick(s, state, {"ios": "off", "android": "build"})["actions"]
@@ -232,7 +241,9 @@ class CoordinatorTest(unittest.TestCase):
 class QueueRaceTest(unittest.TestCase):
     def test_deferred_upload_cannot_interrupt_manual_internal_soak(self):
         s = snapshot()
-        s["android"]["internal"] = [{"number": 11, "version": "1.0.31", "sha": SHA}]
+        s["android"]["internal"] = [
+            {"number": 11, "version": "1.0.31", "sha": SHA, "ci_verified": True}
+        ]
         state = {
             "deferred_android": {"number": 10},
             "internal_periods": {"11": {"since": NOW - 10, "completed": False}},

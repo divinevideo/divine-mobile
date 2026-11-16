@@ -36,6 +36,9 @@ BETA_STATES = (
         "MISSING_EXPORT_COMPLIANCE",
         "INVALID_BINARY",
         "NOT_APPLICABLE",
+        "BETA_APPROVED",
+        "IN_EXPORT_COMPLIANCE_REVIEW",
+        "PROCESSING_EXCEPTION",
     }
 )
 STORE_WAITING = {
@@ -203,6 +206,21 @@ def plan_tick(snapshot, state, levels):
                 f"{platform}: no new build (CI/change/retry/active-build/cadence/exposure checks)"
             )
         if platform == "ios" and level in {"testflight", "app-store"}:
+            for b in data.get("builds", []):
+                known_operation = any(
+                    o["action"]["kind"] == "public-beta"
+                    and o["action"].get("build", {}).get("id") == b["id"]
+                    for o in state.get("operations", {}).values()
+                )
+                if (
+                    b.get("ci_verified")
+                    and not b.get("public_complete", b.get("public"))
+                    and (b.get("groups") or known_operation)
+                    and b.get("external")
+                    in BETA_WAITING
+                    | {"BETA_APPROVED", "READY_FOR_BETA_TESTING", "IN_BETA_TESTING"}
+                ):
+                    action("attach-beta-groups", "ios", build=b)
             builds = data.get("builds", [])
             dates = data.get("submissions", [])
             newest_public = max(
@@ -226,10 +244,12 @@ def plan_tick(snapshot, state, levels):
                 b
                 for b in builds
                 if b.get("valid")
+                and b.get("ci_verified")
                 and not b.get("public")
                 and b["number"] > newest_public
                 and b.get("external")
                 in {
+                    "BETA_APPROVED",
                     "READY_FOR_BETA_SUBMISSION",
                     "READY_FOR_BETA_TESTING",
                     "IN_BETA_TESTING",
@@ -290,6 +310,8 @@ def plan_tick(snapshot, state, levels):
                     for b in builds
                     if b.get("public")
                     and b.get("valid")
+                    and b.get("ci_verified")
+                    and b.get("public_complete", b.get("public"))
                     and b.get("external")
                     in {"READY_FOR_BETA_TESTING", "IN_BETA_TESTING"}
                     and b["id"] in state.get("public_available", {})
@@ -315,7 +337,8 @@ def plan_tick(snapshot, state, levels):
             eligible = [
                 b
                 for b in data.get("internal", [])
-                if state.get("internal_periods", {})
+                if b.get("ci_verified")
+                and state.get("internal_periods", {})
                 .get(str(b["number"]), {})
                 .get("completed")
                 and parse_version(b["version"]) > highest
