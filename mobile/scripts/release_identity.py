@@ -124,7 +124,8 @@ def codemagic_owner_status(build_id, *, platform, source_sha):
             build = json.load(response)["data"]
         if (build.get("id") != build_id
                 or build.get("app_id") != "69370e59eac15e6c367b661b"
-                or (build.get("workflow") or {}).get("id") != platform + "-build"
+                or (build.get("workflow") or {}).get("id") not in (
+                    {"ios-build", "ios-scheduled-build"} if platform == "ios" else {"android-build"})
                 or (build.get("commit") or {}).get("hash") not in (None, source_sha)):
             raise ValueError("owner identity mismatch")
         return build.get("status")

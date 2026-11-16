@@ -98,6 +98,16 @@ class OwnerProviderTests(unittest.TestCase):
                     release_identity.codemagic_owner_status(build_id, platform="ios", source_sha=SHA)
                 self.assertNotIn("secret-value", str(error.exception))
 
+    def test_owner_lookup_accepts_dedicated_scheduled_ios_workflow(self):
+        import io
+        build_id = "0" * 24
+        build = {"id": build_id, "app_id": "69370e59eac15e6c367b661b",
+                 "workflow": {"id": "ios-scheduled-build"}, "commit": {"hash": SHA}, "status": "failed"}
+        response = io.BytesIO(json.dumps({"data": build}).encode())
+        with patch.dict(release_identity.os.environ, {"CODEMAGIC_API_TOKEN": "secret-value"}), \
+             patch.object(release_identity.urllib.request, "urlopen", return_value=response):
+            self.assertEqual(release_identity.codemagic_owner_status(build_id, platform="ios", source_sha=SHA), "failed")
+
     def test_owner_lookup_accepts_failed_prefetch_without_commit(self):
         import io
         build_id = "0" * 24

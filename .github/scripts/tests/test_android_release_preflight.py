@@ -1,161 +1,90 @@
+"""Exercise the release workflow's evidence collector and real shared allocator."""
 import json
 import os
+from pathlib import Path
 import subprocess
 import tempfile
 import unittest
-from pathlib import Path
+from unittest.mock import patch
 
+from release_train_fakes import MemoryLedgerStore
+from release_train.ledger import BOOTSTRAP_PATH
+import allocate_build_identity
+import release_identity
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-CODEMAGIC_PATH = REPO_ROOT / "codemagic.yaml"
-SHOREBIRD_RELEASE_PREFLIGHT_PATH = (
-    REPO_ROOT / "mobile" / "scripts" / "shorebird_release_preflight.rb"
-)
-STEP_NAME = "Preflight Android Shorebird release"
-
-
-def android_preflight_script() -> str:
-    """Return the preflight step exactly as android-build runs it."""
-    config = json.loads(
-        subprocess.run(
-            [
-                "ruby",
-                "-ryaml",
-                "-rjson",
-                "-e",
-                "print JSON.generate(YAML.safe_load(File.read(ARGV[0]), aliases: true))",
-                str(CODEMAGIC_PATH),
-            ],
-            check=True,
-            text=True,
-            capture_output=True,
-        ).stdout
-    )
-    steps = [
-        step
-        for step in config["workflows"]["android-build"]["scripts"]
-        if isinstance(step, dict) and step.get("name") == STEP_NAME
-    ]
-    if len(steps) != 1:
-        raise AssertionError(
-            f"expected one {STEP_NAME!r} step in android-build, found {len(steps)}"
-        )
-    return steps[0]["script"]
-
-
-def write_stub(path: Path, stdout: str, stderr: str, exit_code: int) -> None:
-    path.write_text(
-        "#!/usr/bin/env python3\n"
-        "import sys\n"
-        f"sys.stdout.write({stdout!r})\n"
-        f"sys.stderr.write({stderr!r})\n"
-        f"sys.exit({exit_code})\n"
-    )
-    path.chmod(0o755)
+SHA = 'a' * 40
 
 
 class AndroidReleasePreflightTest(unittest.TestCase):
-    """Runs the real preflight step against stub store and Shorebird CLIs."""
-
-    script: str
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.script = android_preflight_script()
-
-    def run_preflight(
-        self,
-        *,
-        play_stdout: str = "",
-        play_stderr: str = "",
-        play_exit: int = 0,
-        project_build_number: str = "900",
-    ) -> tuple[subprocess.CompletedProcess[str], str | None]:
-        with tempfile.TemporaryDirectory() as tmp:
-            mobile = Path(tmp) / "mobile"
-            (mobile / "build" / "shorebird").mkdir(parents=True)
-            (mobile / "scripts").mkdir()
-            (mobile / "scripts" / "shorebird_release_preflight.rb").symlink_to(
-                SHOREBIRD_RELEASE_PREFLIGHT_PATH
-            )
-            (mobile / "pubspec.yaml").write_text(
-                "name: openvine\nversion: 1.0.28+820\n"
-            )
-            bin_dir = Path(tmp) / "bin"
-            bin_dir.mkdir()
-            write_stub(bin_dir / "google-play", play_stdout, play_stderr, play_exit)
-            write_stub(
-                bin_dir / "shorebird",
-                json.dumps({"status": "success", "data": {"releases": []}}),
-                "",
-                0,
-            )
-            env = {
-                **os.environ,
-                "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
-                "PROJECT_BUILD_NUMBER": project_build_number,
+    def run_preflight(self, *, latest='500\n', counter='900', failure=None, scheduled=False):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = Path(temporary.name)
+        (root / 'pubspec.yaml').write_text('name: openvine\nversion: 1.0.28+820\n')
+        ledger = MemoryLedgerStore({BOOTSTRAP_PATH: {}, 'releases/android/1.0.31+500.json': {}})
+        calls = []
+        def run(command, **kwargs):
+            calls.append(command)
+            if command[:2] == ['google-play', 'get-latest-build-number']:
+                return subprocess.CompletedProcess(command, 1 if failure == 'latest' else 0, latest, 'private provider details')
+            responses = {
+                'shorebird': json.dumps({'status': 'success', 'data': {'releases': []}}),
+                'git': (SHA + '\trefs/tags/1.0.30\n' if 'ls-remote' in command else SHA + '\n'),
+                'google-play': json.dumps({'track': 'production', 'releases': [{'status': 'completed', 'versionCodes': ['500']}]}),
             }
-            result = subprocess.run(
-                ["bash", "-c", self.script],
-                cwd=mobile,
-                env=env,
-                check=False,
-                text=True,
-                capture_output=True,
-            )
-            release_env_path = mobile / "build" / "shorebird" / "android_release.env"
-            release_env = (
-                release_env_path.read_text() if release_env_path.exists() else None
-            )
-        return result, release_env
+            code = 1 if failure == command[0] else 0
+            return subprocess.CompletedProcess(command, code, responses[command[0]], '')
+        env = {'CM_BUILD_ID': 'a' * 24, 'PROJECT_BUILD_NUMBER': counter}
+        if scheduled:
+            env['RELEASE_TRAIN_RESERVATION_KEY'] = 'scheduled/android/' + SHA
+        def identity(args):
+            return release_identity.main(args, ledger_factory=lambda _: ledger)
+        previous = Path.cwd()
+        try:
+            os.chdir(root)
+            with patch.object(allocate_build_identity, 'identity_main', side_effect=identity):
+                result = allocate_build_identity.allocate_build('android', env=env, run=run)
+        finally:
+            os.chdir(previous)
+        output = root / 'build/shorebird/android_release.env'
+        return result, output.read_text() if output.exists() else None, ledger, calls
 
-    def test_play_lookup_failure_stops_before_a_build_number_is_chosen(self) -> None:
-        result, release_env = self.run_preflight(
-            play_stderr="Google Play API: 401 Unauthorized\n",
-            play_exit=1,
-        )
+    def test_play_lookup_failure_stops_before_allocation(self):
+        with self.assertRaisesRegex(ValueError, 'could not read the latest Google Play build number'):
+            self.run_preflight(failure='latest')
 
-        self.assertNotEqual(result.returncode, 0, result.stdout)
-        self.assertIn(
-            "could not read the latest Google Play build number", result.stdout
-        )
-        self.assertIn("401 Unauthorized", result.stdout)
-        self.assertIsNone(release_env)
+    def test_unreadable_or_non_ascii_play_number_fails_closed(self):
+        for latest in ('No builds found\n', '', '٩٠٠\n', '-1\n'):
+            with self.subTest(latest=latest), self.assertRaisesRegex(ValueError, 'refusing to guess'):
+                self.run_preflight(latest=latest)
 
-    def test_unreadable_play_lookup_stops_before_a_build_number_is_chosen(
-        self,
-    ) -> None:
-        result, release_env = self.run_preflight(play_stdout="No builds found\n")
+    def test_provider_evidence_failure_never_reaches_allocator(self):
+        for provider in ('shorebird', 'git', 'google-play'):
+            with self.subTest(provider=provider), self.assertRaisesRegex(ValueError, 'lookup failed'):
+                self.run_preflight(failure=provider)
 
-        self.assertNotEqual(result.returncode, 0, result.stdout)
-        self.assertIn(
-            "could not read the latest Google Play build number", result.stdout
-        )
-        self.assertIn("No builds found", result.stdout)
-        self.assertIsNone(release_env)
+    def test_next_play_number_wins_and_marketing_version_uses_shared_claims(self):
+        result, output, ledger, calls = self.run_preflight(latest='1000\n')
+        self.assertEqual(result, 0)
+        self.assertIn('SHOREBIRD_BUILD_NUMBER=1001\n', output)
+        self.assertIn('SHOREBIRD_RELEASE_VERSION=1.0.32+1001\n', output)
+        self.assertIn('RELEASE_SOURCE_SHA=' + SHA + '\n', output)
+        self.assertIn('allocations/claims/1.0.31/play-production.json', ledger.creates)
+        self.assertIn(['google-play', 'tracks', 'get', '--package-name', 'co.openvine.app', '--track', 'production', '--json'], calls)
+        self.assertIn(['shorebird', 'releases', 'list', '--platform=android', '--json'], calls)
 
-    def test_next_play_build_number_wins_over_a_lower_codemagic_counter(
-        self,
-    ) -> None:
-        result, release_env = self.run_preflight(
-            play_stdout="1000\n", project_build_number="900"
-        )
+    def test_ci_counter_is_a_floor_not_upload_evidence(self):
+        result, output, _, _ = self.run_preflight(latest='500\n', counter='900')
+        self.assertEqual(result, 0)
+        self.assertIn('SHOREBIRD_BUILD_NUMBER=900\n', output)
+        self.assertIn('RELEASE_TRAIN_RESERVATION_KEY=manual/' + 'a' * 24 + '\n', output)
 
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIsNotNone(release_env)
-        self.assertIn("SHOREBIRD_BUILD_NUMBER=1001\n", release_env)
-        self.assertIn("SHOREBIRD_RELEASE_VERSION=1.0.28+1001\n", release_env)
-
-    def test_codemagic_counter_wins_over_a_lower_play_build_number(self) -> None:
-        result, release_env = self.run_preflight(
-            play_stdout="500\n", project_build_number="900"
-        )
-
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIsNotNone(release_env)
-        self.assertIn("SHOREBIRD_BUILD_NUMBER=900\n", release_env)
-        self.assertIn("SHOREBIRD_RELEASE_VERSION=1.0.28+900\n", release_env)
+    def test_scheduled_build_uses_same_allocator_and_single_flight_owner(self):
+        result, output, ledger, _ = self.run_preflight(scheduled=True)
+        self.assertEqual(result, 0)
+        self.assertIn('RELEASE_TRAIN_RESERVATION_KEY=scheduled/android/' + SHA + '\n', output)
+        self.assertIn('allocations/owners/android/' + SHA + '/0.json', ledger.creates)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
