@@ -134,6 +134,7 @@ void main() {
     test(
       'relay results cannot resurrect an account just evicted by bulk',
       () async {
+        final relay = Completer<List<Event>>();
         final event = _Event();
         when(() => event.pubkey).thenReturn(deleted);
         when(() => event.id).thenReturn('d' * 64);
@@ -149,17 +150,22 @@ void main() {
             limit: any(named: 'limit'),
             timeout: any(named: 'timeout'),
           ),
-        ).thenAnswer((_) async => [event]);
+        ).thenAnswer((_) => relay.future);
 
-        final results = await repo
-            .searchUsersProgressive(query: 'test account')
-            .toList();
+        final afterVanish = <ProgressiveSearchResult>[];
+        await repo.searchUsersProgressive(query: 'test account').forEach((
+          result,
+        ) {
+          if (!repo.isVanished(deleted)) return;
+          afterVanish.add(result);
+          if (!relay.isCompleted) relay.complete([event]);
+        });
 
-        expect(results, hasLength(4));
-        for (final result in results.skip(2)) {
+        expect(afterVanish, isNotEmpty);
+        for (final result in afterVanish) {
           expect(result.profiles.map((p) => p.pubkey), [live]);
         }
-        expect(results.last.isComplete, isTrue);
+        expect(afterVanish.last.isComplete, isTrue);
       },
     );
 
@@ -238,21 +244,24 @@ void main() {
         return response.future;
       });
       final token = SearchCancellationToken('vanish-search');
+      final emissions = <ProgressiveSearchResult>[];
       final pending = repo
           .searchUsersProgressive(
             query: 'test account',
             cancellationToken: token,
           )
-          .toList();
+          .forEach(emissions.add);
       await started.future.timeout(const Duration(seconds: 2));
+      final countBeforeCancel = emissions.length;
+      expect(countBeforeCancel, greaterThan(0));
       token.cancel();
       response.complete(
         const BulkProfilesResponse(
           profiles: {deleted: UserProfileVanished(pubkey: deleted)},
         ),
       );
-      final results = await pending;
-      expect(results, hasLength(2));
+      await pending;
+      expect(emissions, hasLength(countBeforeCancel));
       expect(repo.isVanished(deleted), isFalse);
       expect(await db.userProfilesDao.getProfile(deleted), isNotNull);
     });

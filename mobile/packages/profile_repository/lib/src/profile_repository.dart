@@ -2461,17 +2461,18 @@ class ProfileRepository implements ProfileReader {
   /// - a per-source outcome map ([ProgressiveSearchResult.sources])
   /// - an [ProgressiveSearchResult.isComplete] flag on the terminal yield
   ///
-  /// Consults three sources in order:
-  /// 1. Local cached profiles (instant, first page only)
-  /// 2. Funnelcake REST API (fast)
-  /// 3. NIP-50 WebSocket (first page only, with [_nip50SearchTimeout])
+  /// Starts local cache, Funnelcake REST and NIP-50 WebSocket searches
+  /// concurrently, emitting each available answer without waiting for the
+  /// other sources. Local and relay searches run on the first page only;
+  /// NIP-50 retains [_nip50SearchTimeout]. Remote requests start while durable
+  /// vanish policy loads, but no results are emitted before it is loaded.
   ///
   /// On [offset] > 0 the local and NIP-50 phases are recorded as
   /// [SearchSourceSkipped]. When Funnelcake is unconfigured it is also
   /// recorded as [SearchSourceSkipped]. Any phase that throws (REST as
   /// an [Exception], NIP-50 as an [Object] since WebSocket errors
   /// surface as [Error]) is recorded as [SearchSourceFailed]; the stream
-  /// continues to consult later sources.
+  /// continues to publish the other sources.
   ///
   /// When [boostPubkeys] is non-empty, profiles whose pubkey is in the set
   /// are promoted to the front of each emission while preserving the
@@ -2496,50 +2497,62 @@ class ProfileRepository implements ProfileReader {
     bool hasVideos = false,
     Set<String>? boostPubkeys,
     SearchCancellationToken? cancellationToken,
-  }) async* {
+  }) {
     final trimmed = query.trim();
-    if (trimmed.isEmpty) return;
-    if (_isSearchCancelled(cancellationToken)) return;
+    if (trimmed.isEmpty || _isSearchCancelled(cancellationToken)) {
+      return const Stream.empty();
+    }
 
-    await loadVanishedPubkeys();
-    if (_isSearchCancelled(cancellationToken)) return;
+    var consumerCancelled = false;
+    bool isCancelled() =>
+        consumerCancelled || _isSearchCancelled(cancellationToken);
+    late final StreamController<ProgressiveSearchResult> controller;
 
-    final resultMap = <String, UserProfile>{};
-    final serverSelectedPubkeys = <String>{};
-    final sources = <SearchSource, SearchSourceStatus>{
-      for (final source in SearchSource.values)
-        source: const SearchSourcePending(),
-    };
-    final useServerSort = sortBy != null;
-    int? nextRestOffset;
-    var restHasMore = false;
-    String? ownerPubkey;
-    // Pinning needs people search to confirm the owner is discoverable. The
-    // owner is not known to have videos, so a video-only search skips it.
-    final ownerLookup =
-        offset == 0 &&
-            !hasVideos &&
-            (_funnelcakeApiClient?.isAvailable ?? false)
-        ? _lookUpUsernameOwner(trimmed)
-        : null;
-    final restPubkeys = <String>{};
-    final restPositions = <String, int>{};
+    Future<void> searchAll() async {
+      if (isCancelled()) return;
+      final visibilityReady = loadVanishedPubkeys();
+      final resultMap = <String, UserProfile>{};
+      final localPubkeys = <String>{};
+      final restResultsByPubkey = <String, ProfileSearchResult>{};
+      final serverSelectedPubkeys = <String>{};
+      final sources = <SearchSource, SearchSourceStatus>{
+        SearchSource.localCache: offset == 0
+            ? const SearchSourcePending()
+            : const SearchSourceSkipped(),
+        SearchSource.funnelcakeApi: (_funnelcakeApiClient?.isAvailable ?? false)
+            ? const SearchSourcePending()
+            : const SearchSourceSkipped(),
+        SearchSource.nip50Relay: offset == 0
+            ? const SearchSourcePending()
+            : const SearchSourceSkipped(),
+      };
+      final useServerSort = sortBy != null;
+      int? nextRestOffset;
+      var restHasMore = false;
+      String? ownerPubkey;
+      final ownerLookup =
+          offset == 0 &&
+              !hasVideos &&
+              (_funnelcakeApiClient?.isAvailable ?? false)
+          ? _lookUpUsernameOwner(trimmed)
+          : null;
+      final restPubkeys = <String>{};
+      final restPositions = <String, int>{};
 
-    List<UserProfile> rank(List<UserProfile> profiles) => _applyFilter(
-      trimmed,
-      profiles,
-      useServerSort,
-      boostPubkeys,
-      sortBy: sortBy,
-      pinnedPubkey: ownerPubkey,
-      serverPositions: restPositions,
-    );
+      List<UserProfile> rank(List<UserProfile> profiles) => _applyFilter(
+        trimmed,
+        profiles,
+        useServerSort,
+        boostPubkeys,
+        sortBy: sortBy,
+        pinnedPubkey: ownerPubkey,
+        serverPositions: restPositions,
+      );
 
-    ProgressiveSearchResult snapshot({
-      required bool isComplete,
-      List<UserProfile>? enriched,
-    }) {
-      return ProgressiveSearchResult(
+      ProgressiveSearchResult snapshot({
+        required bool isComplete,
+        List<UserProfile>? enriched,
+      }) => ProgressiveSearchResult(
         profiles: enriched ?? rank(resultMap.values.toList()),
         sources: Map.unmodifiable(sources),
         isComplete: isComplete,
@@ -2547,263 +2560,282 @@ class ProfileRepository implements ProfileReader {
         restHasMore: restHasMore,
         usernameOwnerPubkey: ownerPubkey,
       );
-    }
 
-    // Phase 1: Local cache (instant, first page only)
-    if (offset == 0) {
-      final phase1Watch = Stopwatch()..start();
-      final preCount = resultMap.length;
-      try {
-        final local = await searchCachedProfilesByIdentity(
-          query: trimmed,
-          limit: limit,
-        );
-        if (_isSearchCancelled(cancellationToken)) return;
-        for (final profile in local) {
-          resultMap[profile.pubkey] = profile;
+      void emit() {
+        if (!isCancelled() && resultMap.isNotEmpty) {
+          controller.add(snapshot(isComplete: false));
         }
-        sources[SearchSource.localCache] = SearchSourceSuccess(
-          resultCount: resultMap.length - preCount,
-          latencyMs: phase1Watch.elapsedMilliseconds,
-        );
-      } on Object catch (e) {
-        sources[SearchSource.localCache] = SearchSourceFailed(
-          reason: SearchSourceFailureReason.other,
-          latencyMs: phase1Watch.elapsedMilliseconds,
-        );
-        Log.warning(
-          'Local cache search failed (${e.runtimeType})',
-          name: 'ProfileRepository.searchUsersProgressive',
-          category: LogCategory.api,
-        );
       }
-      if (resultMap.isNotEmpty) {
-        yield snapshot(isComplete: false);
-      }
-    } else {
-      sources[SearchSource.localCache] = const SearchSourceSkipped();
-    }
 
-    // Merges a REST profile with any copy already listed. A cached copy wins
-    // only with a canonical event ID and a strictly newer event timestamp;
-    // otherwise the server's revision is kept whole, including the fields it
-    // cleared.
-    void mergeRestResult(ProfileSearchResult result) {
-      if (isVanished(result.pubkey)) revalidateVanishOnce(result.pubkey);
-      final cached = resultMap[result.pubkey];
-      final serverRevision = result.createdAt;
-      // Compare event revisions before conversion: an older API can omit
-      // created_at, and toUserProfile's fallback is not an event timestamp.
-      // Cached REST and bundled seed projections lack event provenance.
-      if (cached != null &&
-          NostrHexUtils.isValidEventId(cached.eventId) &&
-          serverRevision != null &&
-          cached.createdAt.isAfter(serverRevision)) {
-        // Counts are not part of the profile event, so the newer revision
-        // still ranks and renders with the server's numbers.
-        resultMap[result.pubkey] = cached.copyWith(
-          rawData: {
-            ...cached.rawData,
-            if (result.followerCount != null)
-              'follower_count': result.followerCount,
-            if (result.videoCount != null) 'video_count': result.videoCount,
-          },
-        );
-        return;
-      }
-      resultMap[result.pubkey] = result.toUserProfile();
-      serverSelectedPubkeys.add(result.pubkey);
-    }
-
-    // Phase 2: Funnelcake REST API (fast)
-    if (_isSearchCancelled(cancellationToken)) return;
-    final prevCount = resultMap.length;
-    if (_funnelcakeApiClient?.isAvailable ?? false) {
-      final phase2Watch = Stopwatch()..start();
-      final preRestCount = resultMap.length;
-      try {
-        final restResults = await _funnelcakeApiClient!.searchProfiles(
-          query: trimmed,
-          limit: limit,
-          offset: offset,
-          sortBy: sortBy,
-          hasVideos: hasVideos,
-        );
-        if (_isSearchCancelled(cancellationToken)) return;
-        nextRestOffset = offset + restResults.length;
-        restHasMore = restResults.length == limit;
-        for (final result in restResults) {
-          restPubkeys.add(result.pubkey);
-          restPositions.putIfAbsent(result.pubkey, () => restPositions.length);
-          mergeRestResult(result);
-        }
-        sources[SearchSource.funnelcakeApi] = SearchSourceSuccess(
-          resultCount: resultMap.length - preRestCount,
-          latencyMs: phase2Watch.elapsedMilliseconds,
-        );
-      } on Exception catch (e) {
-        sources[SearchSource.funnelcakeApi] = SearchSourceFailed(
-          reason: SearchSourceFailureReason.network,
-          latencyMs: phase2Watch.elapsedMilliseconds,
-        );
-        Log.warning(
-          'REST search failed (${e.runtimeType})',
-          name: 'ProfileRepository.searchUsersProgressive',
-          category: LogCategory.api,
-        );
-      }
-    } else {
-      sources[SearchSource.funnelcakeApi] = const SearchSourceSkipped();
-    }
-
-    // The owner joins the REST yield, so it never lands above profiles that
-    // claim its handle after they were shown.
-    final candidate = await ownerLookup;
-    if (_isSearchCancelled(cancellationToken)) return;
-    if (candidate != null && restPubkeys.contains(candidate.pubkey)) {
-      ownerPubkey = candidate.pubkey;
-    } else if (candidate != null) {
-      final discovered = await _discoverableUsernameOwner(candidate);
-      if (_isSearchCancelled(cancellationToken)) return;
-      if (discovered != null) {
-        restPubkeys.add(discovered.pubkey);
-        mergeRestResult(discovered);
-        ownerPubkey = candidate.pubkey;
-      }
-    }
-
-    final cachedOnly = resultMap.keys
-        .where(
-          (pubkey) => !restPubkeys.contains(pubkey) && !isVanished(pubkey),
-        )
-        .toList();
-    final recheckCached =
-        offset == 0 &&
-        (_funnelcakeApiClient?.isAvailable ?? false) &&
-        cachedOnly.isNotEmpty;
-
-    // Publish the REST answer before spending another request's latency on
-    // cached rows. The bloc's outer timeout measures gaps between emissions.
-    if (recheckCached ||
-        resultMap.length > prevCount ||
-        ownerPubkey != null ||
-        (sortBy == profileSearchSortRelevance && restPositions.isNotEmpty)) {
-      yield snapshot(isComplete: false);
-    }
-
-    // Cached rows omitted by search may predate an account's deletion. A
-    // sparse bulk miss is not proof of deletion; only its typed vanish answer
-    // evicts a row. Keep this separate from fetchBatchProfiles, which trusts
-    // cached rows and deliberately does not re-fetch them.
-    if (recheckCached) {
-      for (
-        var start = 0;
-        start < cachedOnly.length;
-        start += _searchProfileRecheckBatchSize
-      ) {
-        if (_isSearchCancelled(cancellationToken)) return;
-        final batch = cachedOnly
-            .skip(start)
-            .take(_searchProfileRecheckBatchSize)
-            .toList();
-        try {
-          final response = await _funnelcakeApiClient!.getBulkProfiles(
-            batch,
+      // Merges a REST profile with its local revision. A cached copy wins
+      // only with a canonical event ID and a strictly newer event timestamp;
+      // otherwise the server's revision is kept whole, including the fields it
+      // cleared.
+      void mergeRestResult(ProfileSearchResult result) {
+        if (isVanished(result.pubkey)) revalidateVanishOnce(result.pubkey);
+        final cached = localPubkeys.contains(result.pubkey)
+            ? resultMap[result.pubkey]
+            : null;
+        final serverRevision = result.createdAt;
+        // Compare event revisions before conversion: an older API can omit
+        // created_at, and toUserProfile's fallback is not an event timestamp.
+        // Cached REST and bundled seed projections lack event provenance.
+        if (cached != null &&
+            NostrHexUtils.isValidEventId(cached.eventId) &&
+            serverRevision != null &&
+            cached.createdAt.isAfter(serverRevision)) {
+          // Counts are not part of the profile event, so the newer revision
+          // still ranks and renders with the server's numbers.
+          serverSelectedPubkeys.remove(result.pubkey);
+          resultMap[result.pubkey] = cached.copyWith(
+            rawData: {
+              ...cached.rawData,
+              if (result.followerCount != null)
+                'follower_count': result.followerCount,
+              if (result.videoCount != null) 'video_count': result.videoCount,
+            },
           );
-          if (_isSearchCancelled(cancellationToken)) return;
-          for (final pubkey in batch) {
-            if (_isSearchCancelled(cancellationToken)) return;
-            if (response.profiles[pubkey] is UserProfileVanished) {
-              await _applyVanish(pubkey);
-              resultMap.remove(pubkey);
-            }
+          return;
+        }
+        resultMap[result.pubkey] = result.toUserProfile();
+        serverSelectedPubkeys.add(result.pubkey);
+      }
+
+      Future<void> searchLocal() async {
+        if (offset != 0 || isCancelled()) return;
+        final watch = Stopwatch()..start();
+        try {
+          final local = await searchCachedProfilesByIdentity(
+            query: trimmed,
+            limit: limit,
+          );
+          await visibilityReady;
+          if (isCancelled()) return;
+          final preCount = resultMap.length;
+          for (final profile in local) {
+            localPubkeys.add(profile.pubkey);
+            resultMap[profile.pubkey] = profile;
+            // A cache answer may arrive after REST. Apply the same revision
+            // comparison in either completion order, retaining REST counts.
+            final rest = restResultsByPubkey[profile.pubkey];
+            if (rest != null) mergeRestResult(rest);
           }
-        } on Exception catch (e) {
+          sources[SearchSource.localCache] = SearchSourceSuccess(
+            resultCount: resultMap.length - preCount,
+            latencyMs: watch.elapsedMilliseconds,
+          );
+        } on Object catch (e) {
+          sources[SearchSource.localCache] = SearchSourceFailed(
+            reason: SearchSourceFailureReason.other,
+            latencyMs: watch.elapsedMilliseconds,
+          );
           Log.warning(
-            'Search profile recheck failed (${e.runtimeType})',
+            'Local cache search failed (${e.runtimeType})',
             name: 'ProfileRepository.searchUsersProgressive',
             category: LogCategory.api,
           );
         }
-        if (_isSearchCancelled(cancellationToken)) return;
-        // Even a sparse or failed batch completes a phase. Keep the next
-        // batch and NIP-50 from extending the same silent timeout window.
-        yield snapshot(isComplete: false);
+        emit();
       }
-    }
-    if (_isSearchCancelled(cancellationToken)) return;
 
-    // Phase 3: NIP-50 WebSocket (first page only)
-    if (_isSearchCancelled(cancellationToken)) return;
-    if (offset == 0) {
-      final preWsCount = resultMap.length;
-      final phase3Watch = Stopwatch()..start();
-      try {
-        final events = await _nostrClient
-            .queryUsers(trimmed, limit: limit, timeout: _nip50RelayQueryTimeout)
-            .timeout(_nip50SearchTimeout);
-        if (_isSearchCancelled(cancellationToken)) return;
-        for (final event in events) {
-          final profile = UserProfile.fromNostrEvent(event);
-          if (isVanished(profile.pubkey)) revalidateVanishOnce(profile.pubkey);
-          resultMap.putIfAbsent(profile.pubkey, () => profile);
+      Future<void> searchRest() async {
+        if (sources[SearchSource.funnelcakeApi] is SearchSourceSkipped ||
+            isCancelled()) {
+          return;
         }
-        sources[SearchSource.nip50Relay] = SearchSourceSuccess(
-          resultCount: resultMap.length - preWsCount,
-          latencyMs: phase3Watch.elapsedMilliseconds,
-        );
-      } on TimeoutException {
-        sources[SearchSource.nip50Relay] = SearchSourceFailed(
-          reason: SearchSourceFailureReason.timeout,
-          latencyMs: phase3Watch.elapsedMilliseconds,
-        );
-        Log.warning(
-          'NIP-50 search timed out after ${_nip50SearchTimeout.inSeconds}s',
-          name: 'ProfileRepository.searchUsersProgressive',
-          category: LogCategory.relay,
-        );
-      } on Object catch (e) {
-        // WebSocket failures surface as StateError (an Error, not
-        // Exception), so we catch Object.
-        sources[SearchSource.nip50Relay] = SearchSourceFailed(
-          reason: SearchSourceFailureReason.other,
-          latencyMs: phase3Watch.elapsedMilliseconds,
-        );
-        Log.warning(
-          'NIP-50 search failed (${e.runtimeType})',
-          name: 'ProfileRepository.searchUsersProgressive',
-          category: LogCategory.relay,
-        );
+        final watch = Stopwatch()..start();
+        var restResults = <ProfileSearchResult>[];
+        SearchSourceStatus? failure;
+        try {
+          restResults = await _funnelcakeApiClient!.searchProfiles(
+            query: trimmed,
+            limit: limit,
+            offset: offset,
+            sortBy: sortBy,
+            hasVideos: hasVideos,
+          );
+          if (isCancelled()) return;
+        } on Exception catch (e) {
+          failure = SearchSourceFailed(
+            reason: SearchSourceFailureReason.network,
+            latencyMs: watch.elapsedMilliseconds,
+          );
+          Log.warning(
+            'REST search failed (${e.runtimeType})',
+            name: 'ProfileRepository.searchUsersProgressive',
+            category: LogCategory.api,
+          );
+        }
+        // Resolve the exact owner before publishing the REST page, as before.
+        // Other sources continue to publish while this request is pending.
+        final candidate = await ownerLookup;
+        if (isCancelled()) return;
+        ProfileSearchResult? discovered;
+        if (candidate != null &&
+            !restResults.any((r) => r.pubkey == candidate.pubkey)) {
+          discovered = await _discoverableUsernameOwner(candidate);
+        }
+        await visibilityReady;
+        if (isCancelled()) return;
+        final preCount = resultMap.length;
+        if (failure == null) {
+          nextRestOffset = offset + restResults.length;
+          restHasMore = restResults.length == limit;
+        }
+        for (final result in restResults) {
+          restPubkeys.add(result.pubkey);
+          restPositions.putIfAbsent(result.pubkey, () => restPositions.length);
+          restResultsByPubkey[result.pubkey] = result;
+          mergeRestResult(result);
+        }
+        if (discovered != null) {
+          restPubkeys.add(discovered.pubkey);
+          restResultsByPubkey[discovered.pubkey] = discovered;
+          mergeRestResult(discovered);
+        }
+        if (candidate != null && restPubkeys.contains(candidate.pubkey)) {
+          ownerPubkey = candidate.pubkey;
+        }
+        sources[SearchSource.funnelcakeApi] =
+            failure ??
+            SearchSourceSuccess(
+              resultCount: resultMap.length - preCount,
+              latencyMs: watch.elapsedMilliseconds,
+            );
+        emit();
       }
 
-      if (resultMap.length > preWsCount) {
-        final enriched = await _enrichFromCache(
-          resultMap.values.toList(),
-          cancellationToken: cancellationToken,
-          preserveRevisions: serverSelectedPubkeys,
-        );
-        if (_isSearchCancelled(cancellationToken)) return;
-        final result = snapshot(isComplete: true, enriched: rank(enriched));
-        _logSearchSummary(result);
-        yield result;
-        return;
+      Future<void> searchRelay() async {
+        if (offset != 0 || isCancelled()) return;
+        final watch = Stopwatch()..start();
+        try {
+          final events = await _nostrClient
+              .queryUsers(
+                trimmed,
+                limit: limit,
+                timeout: _nip50RelayQueryTimeout,
+              )
+              .timeout(_nip50SearchTimeout);
+          await visibilityReady;
+          if (isCancelled()) return;
+          final preCount = resultMap.length;
+          for (final event in events) {
+            final profile = UserProfile.fromNostrEvent(event);
+            if (isVanished(profile.pubkey)) {
+              revalidateVanishOnce(profile.pubkey);
+            }
+            resultMap.putIfAbsent(profile.pubkey, () => profile);
+          }
+          sources[SearchSource.nip50Relay] = SearchSourceSuccess(
+            resultCount: resultMap.length - preCount,
+            latencyMs: watch.elapsedMilliseconds,
+          );
+        } on TimeoutException {
+          sources[SearchSource.nip50Relay] = SearchSourceFailed(
+            reason: SearchSourceFailureReason.timeout,
+            latencyMs: watch.elapsedMilliseconds,
+          );
+          Log.warning(
+            'NIP-50 search timed out after ${_nip50SearchTimeout.inSeconds}s',
+            name: 'ProfileRepository.searchUsersProgressive',
+            category: LogCategory.relay,
+          );
+        } on Object catch (e) {
+          sources[SearchSource.nip50Relay] = SearchSourceFailed(
+            reason: SearchSourceFailureReason.other,
+            latencyMs: watch.elapsedMilliseconds,
+          );
+          Log.warning(
+            'NIP-50 search failed (${e.runtimeType})',
+            name: 'ProfileRepository.searchUsersProgressive',
+            category: LogCategory.relay,
+          );
+        }
+        emit();
       }
-    } else {
-      sources[SearchSource.nip50Relay] = const SearchSourceSkipped();
+
+      Future<void> recheckCached(Future<void> localAndRest) async {
+        await localAndRest;
+        if (offset != 0 ||
+            isCancelled() ||
+            !(_funnelcakeApiClient?.isAvailable ?? false)) {
+          return;
+        }
+        final cachedOnly = localPubkeys
+            .where(
+              (pubkey) => !restPubkeys.contains(pubkey) && !isVanished(pubkey),
+            )
+            .toList();
+        // A sparse miss is not deletion. Only an explicit vanish response
+        // evicts a cached result; emit after each batch, including failures.
+        for (
+          var start = 0;
+          start < cachedOnly.length;
+          start += _searchProfileRecheckBatchSize
+        ) {
+          if (isCancelled()) return;
+          final batch = cachedOnly
+              .skip(start)
+              .take(_searchProfileRecheckBatchSize)
+              .toList();
+          try {
+            final response = await _funnelcakeApiClient!.getBulkProfiles(batch);
+            if (isCancelled()) return;
+            for (final pubkey in batch) {
+              if (isCancelled()) return;
+              if (response.profiles[pubkey] is UserProfileVanished) {
+                await _applyVanish(pubkey);
+                resultMap.remove(pubkey);
+              }
+            }
+          } on Exception catch (e) {
+            Log.warning(
+              'Search profile recheck failed (${e.runtimeType})',
+              name: 'ProfileRepository.searchUsersProgressive',
+              category: LogCategory.api,
+            );
+          }
+          if (isCancelled()) return;
+          controller.add(snapshot(isComplete: false));
+        }
+      }
+
+      final localAndRest = Future.wait([searchLocal(), searchRest()]);
+      await Future.wait([
+        recheckCached(localAndRest),
+        searchRelay(),
+        visibilityReady,
+      ]);
+      if (isCancelled()) return;
+      final enriched = await _enrichFromCache(
+        resultMap.values.toList(),
+        cancellationToken: cancellationToken,
+        preserveRevisions: serverSelectedPubkeys,
+        isCancelled: isCancelled,
+      );
+      if (isCancelled()) return;
+      final result = snapshot(isComplete: true, enriched: rank(enriched));
+      _logSearchSummary(result);
+      controller.add(result);
     }
 
-    // Final yield: enriched + filtered (when WS didn't add anything or
-    // was skipped due to offset > 0)
-    if (_isSearchCancelled(cancellationToken)) return;
-    final enriched = await _enrichFromCache(
-      resultMap.values.toList(),
-      cancellationToken: cancellationToken,
-      preserveRevisions: serverSelectedPubkeys,
+    Future<void> run() async {
+      try {
+        await searchAll();
+      } on Object catch (error, stackTrace) {
+        if (!isCancelled()) controller.addError(error, stackTrace);
+      } finally {
+        if (!consumerCancelled) await controller.close();
+      }
+    }
+
+    controller = StreamController<ProgressiveSearchResult>(
+      onListen: () => unawaited(run()),
+      onCancel: () {
+        consumerCancelled = true;
+      },
     );
-    if (_isSearchCancelled(cancellationToken)) return;
-    final result = snapshot(isComplete: true, enriched: rank(enriched));
-    _logSearchSummary(result);
-    yield result;
+    return controller.stream;
   }
 
   void _logSearchSummary(ProgressiveSearchResult result) {
@@ -3527,12 +3559,16 @@ class ProfileRepository implements ProfileReader {
     List<UserProfile> profiles, {
     SearchCancellationToken? cancellationToken,
     Set<String> preserveRevisions = const {},
+    bool Function()? isCancelled,
   }) async {
     final enriched = <UserProfile>[];
     var cacheHits = 0;
     var pictureEnriched = 0;
     for (final profile in profiles) {
-      if (_isSearchCancelled(cancellationToken)) break;
+      if (_isSearchCancelled(cancellationToken) ||
+          (isCancelled?.call() ?? false)) {
+        break;
+      }
       // A selected server revision includes intentional omissions. Mixing in
       // older cached fields would restore removed names and other metadata.
       if (preserveRevisions.contains(profile.pubkey)) {
@@ -3540,7 +3576,10 @@ class ProfileRepository implements ProfileReader {
         continue;
       }
       final cached = await _userProfilesDao.getProfile(profile.pubkey);
-      if (_isSearchCancelled(cancellationToken)) break;
+      if (_isSearchCancelled(cancellationToken) ||
+          (isCancelled?.call() ?? false)) {
+        break;
+      }
       if (cached == null) {
         enriched.add(profile);
         continue;

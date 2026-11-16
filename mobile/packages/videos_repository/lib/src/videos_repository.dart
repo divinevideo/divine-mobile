@@ -2652,72 +2652,96 @@ class VideosRepository {
     }).toList();
   }
 
-  /// Searches videos across all sources, yielding progressively.
+  /// Searches the local cache, REST API and NIP-50 relays concurrently.
   ///
-  /// Returns a [Stream] that emits accumulated [VideoEvent] lists as each
-  /// source completes:
-  /// 1. Local cache results (instant)
-  /// 2. Funnelcake API results (fast, ~1s)
-  /// 3. NIP-50 relay results (slower, ~5s)
+  /// Each completed source emits the full result set available so far. API
+  /// results retain server order and take precedence over matching local or
+  /// relay videos; local results are ranked by popularity, with relay-only
+  /// results appended. Slow sources and operational exceptions do not hold
+  /// up the others; programming errors are forwarded with their stack trace.
   ///
-  /// Each emission contains the full deduplicated+sorted result set so far.
-  /// Each phase is isolated — a failure in one phase does not prevent
-  /// subsequent phases from yielding results.
-  ///
-  /// Parameters:
-  /// - [query]: The search query string. Returns empty stream if blank.
-  /// - [limit]: Maximum results per remote source (default 50).
+  /// Blank queries emit nothing. Cancelling the subscription stops emissions
+  /// immediately; outstanding source futures are still observed for errors.
+  /// An operational local failure emits the accumulated snapshot, including an
+  /// empty list when no source has results, so a previous query is cleared.
   Stream<List<VideoEvent>> searchVideos({
     required String query,
     int limit = 50,
     VideoSearchSort sort = defaultVideoSearchSort,
-  }) async* {
+  }) {
     final trimmed = query.trim();
-    if (trimmed.isEmpty) return;
+    if (trimmed.isEmpty) return const Stream.empty();
 
-    // Phase 1: Local cache (instant)
-    final local = await searchVideosLocally(query: trimmed);
-    var accumulated = deduplicateAndSortVideos(local);
-    yield accumulated;
+    var cancelled = false;
+    var local = <VideoEvent>[];
+    var api = <VideoEvent>[];
+    var relay = <VideoEvent>[];
+    late final StreamController<List<VideoEvent>> controller;
 
-    // Phase 2: Funnelcake API (fast)
-    try {
-      final apiResult = await searchVideosViaApi(
-        query: trimmed,
-        limit: limit,
-        sort: sort,
+    void emitSnapshot() {
+      controller.add(
+        deduplicateVideosPreservingOrder([...api, ...local, ...relay]),
       );
-      if (apiResult.videos.isNotEmpty) {
-        accumulated = deduplicateVideosPreservingOrder([
-          ...apiResult.videos,
-          ...accumulated,
-        ]);
-        yield accumulated;
+    }
+
+    Future<void> collect(
+      String source,
+      Future<List<VideoEvent>> Function() search,
+      void Function(List<VideoEvent>) save, {
+      bool emitEmpty = false,
+    }) async {
+      try {
+        final videos = await search();
+        if (cancelled) return;
+        save(videos);
+        if (videos.isNotEmpty || emitEmpty) {
+          emitSnapshot();
+        }
+      } on Exception catch (error, stackTrace) {
+        Log.error(
+          'Video search source failed: $source',
+          name: 'VideosRepository',
+          category: LogCategory.video,
+          error: error,
+          stackTrace: stackTrace,
+        );
+        if (emitEmpty && !cancelled) emitSnapshot();
+      } on Object catch (error, stackTrace) {
+        if (!cancelled) controller.addError(error, stackTrace);
       }
-    } on Exception catch (e, stackTrace) {
-      Log.error(
-        'searchVideos API phase failed for "$trimmed"',
-        name: 'VideosRepository',
-        category: LogCategory.video,
-        error: e,
-        stackTrace: stackTrace,
-      );
     }
 
-    // Phase 3: NIP-50 relay search (slower)
-    // Note: searchVideosOnRelays handles exceptions internally and returns []
-    // on failure, so no outer try-catch is needed.
-    final relayResults = await searchVideosOnRelays(
-      query: trimmed,
-      limit: limit,
-    );
-    if (relayResults.isNotEmpty) {
-      accumulated = deduplicateVideosPreservingOrder([
-        ...accumulated,
-        ...relayResults,
+    Future<void> searchAll() async {
+      await Future.wait([
+        collect(
+          'local',
+          () => searchVideosLocally(query: trimmed),
+          (videos) => local = deduplicateAndSortVideos(videos),
+          emitEmpty: true,
+        ),
+        collect(
+          'API',
+          () async => (await searchVideosViaApi(
+            query: trimmed,
+            limit: limit,
+            sort: sort,
+          )).videos,
+          (videos) => api = videos,
+        ),
+        collect(
+          'relay',
+          () => searchVideosOnRelays(query: trimmed, limit: limit),
+          (videos) => relay = videos,
+        ),
       ]);
-      yield accumulated;
+      if (!cancelled) await controller.close();
     }
+
+    controller = StreamController<List<VideoEvent>>(
+      onListen: () => unawaited(searchAll()),
+      onCancel: () => cancelled = true,
+    );
+    return controller.stream;
   }
 
   /// Fetches confirmed collaborator videos for [taggedPubkey].
