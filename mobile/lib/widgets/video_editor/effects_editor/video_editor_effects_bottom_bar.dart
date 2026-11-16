@@ -277,6 +277,14 @@ ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
     asset: 'shaders/fluted_glass.frag',
     values: const [1.0],
   ),
+  tunnelVideoEffectId => (
+    asset: 'shaders/tunnel.frag',
+    values: const [1.0, 0.0, 0.0],
+  ),
+  spiralTunnelVideoEffectId => (
+    asset: 'shaders/tunnel.frag',
+    values: const [1.0, 0.0, 1.0],
+  ),
   zoomBlurVideoEffectId => (
     asset: 'shaders/zoom_blur.frag',
     values: const [1.0],
@@ -473,6 +481,8 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
     swirlVideoEffectId => context.l10n.videoEditorEffectSwirl,
     rippleVideoEffectId => context.l10n.videoEditorEffectRipple,
     flutedGlassVideoEffectId => context.l10n.videoEditorEffectFlutedGlass,
+    tunnelVideoEffectId => context.l10n.videoEditorEffectTunnel,
+    spiralTunnelVideoEffectId => context.l10n.videoEditorEffectSpiralTunnel,
     zoomBlurVideoEffectId => context.l10n.videoEditorEffectZoomBlur,
     spinBlurVideoEffectId => context.l10n.videoEditorEffectSpinBlur,
     comicVideoEffectId => context.l10n.videoEditorEffectComic,

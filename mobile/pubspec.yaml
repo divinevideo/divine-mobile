@@ -593,6 +593,7 @@ flutter:
     - shaders/spotlight.frag
     - shaders/swirl.frag
     - shaders/tilt_shift.frag
+    - shaders/tunnel.frag
     - shaders/window_light.frag
     - shaders/zoom_blur.frag
 

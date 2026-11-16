@@ -6957,6 +6957,14 @@
   "@videoEditorEffectFlutedGlass": {
     "description": "Name of a video effect: the picture is seen through ribbed (fluted or reeded) glass, made of upright ribs that each show a squeezed slice of it."
   },
+  "videoEditorEffectTunnel": "Tunnel",
+  "@videoEditorEffectTunnel": {
+    "description": "Name of a video effect: the picture holds a smaller copy of itself in its middle, which holds another, and so on, and the picture keeps zooming into them, like flying down an endless tunnel."
+  },
+  "videoEditorEffectSpiralTunnel": "Spiral Tunnel",
+  "@videoEditorEffectSpiralTunnel": {
+    "description": "Name of a video effect: like the Tunnel effect, the picture holds ever smaller copies of itself and zooms into them, but the copies are twisted into a spiral."
+  },
   "videoEditorEffectEightBit": "8-Bit",
   "@videoEditorEffectEightBit": {
     "description": "Name of a video effect: the picture looks like the pixel art of early video game consoles, in large pixels and few colours. Use the term your language uses for retro 8-bit video game graphics."

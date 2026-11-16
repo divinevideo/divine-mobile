@@ -34,6 +34,7 @@ import co.openvine.app.videoeffects.SpinBlurVideoEffect
 import co.openvine.app.videoeffects.SpotlightVideoEffect
 import co.openvine.app.videoeffects.SwirlVideoEffect
 import co.openvine.app.videoeffects.TiltShiftVideoEffect
+import co.openvine.app.videoeffects.TunnelVideoEffect
 import co.openvine.app.videoeffects.WindowLightVideoEffect
 import co.openvine.app.videoeffects.ZoomBlurVideoEffect
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -138,6 +139,7 @@ class MainActivity : FlutterFragmentActivity() {
         SwirlVideoEffect.register()
         RippleVideoEffect.register()
         FlutedGlassVideoEffect.register()
+        TunnelVideoEffect.register()
         ZoomBlurVideoEffect.register()
         SpinBlurVideoEffect.register()
         ComicVideoEffect.register()

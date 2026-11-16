@@ -9534,6 +9534,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Оребрено стъкло';
 
   @override
+  String get videoEditorEffectTunnel => 'Тунел';
+
+  @override
+  String get videoEditorEffectSpiralTunnel => 'Спирален тунел';
+
+  @override
   String get videoEditorEffectEightBit => '8-битов';
 
   @override
