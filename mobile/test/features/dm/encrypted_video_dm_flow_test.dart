@@ -232,7 +232,8 @@ void main() {
               recipientPubkey: _recipientPubkey,
               videoFile: videoFile,
               mimeType: _mimeType,
-            );
+            )
+            .timeout(const Duration(seconds: 10));
 
         expect(result.success, isTrue);
         expect(sent.ciphertext, isNotNull);
