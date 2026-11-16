@@ -86,10 +86,10 @@ final _eventIdPattern = RegExp(r'^[0-9a-f]{64}$');
 /// ones a deletion names, and the ones a short read leaves unknown.
 typedef _Retractions = ({Set<String> retracted, Set<String> undecided});
 
-/// A relay check for this account's live like on one target: the newest like
-/// no deletion was seen for, if any, and whether the check proves it (see
-/// `LikesRepository._checkRelayForLiveLike`).
-typedef _LikeCheck = ({LikeRecord? newest, bool isConclusive});
+/// A relay check for this account's live like or downvote on one target: the
+/// newest one no deletion was seen for, if any, and whether the check proves
+/// it (see `LikesRepository._checkRelayForLiveReaction`).
+typedef _ReactionCheck = ({LikeRecord? newest, bool isConclusive});
 
 /// Callback to check if the device is currently online
 typedef IsOnlineCallback = bool Function();
@@ -856,7 +856,7 @@ class LikesRepository {
       );
       final check = reconciled != null || _hasCompleteRelayReactionSnapshot
           ? (newest: reconciled, isConclusive: true)
-          : await _checkRelayForLiveLikeOrUnknown(
+          : await _checkRelayForLiveReactionOrUnknown(
               eventId,
               addressableId: addressableId,
               timeout: _settledReadTimeout,
@@ -1249,7 +1249,7 @@ class LikesRepository {
     }
 
     try {
-      final check = await _checkRelayForLiveLikeOrUnknown(
+      final check = await _checkRelayForLiveReactionOrUnknown(
         eventId,
         addressableId: addressableId,
         timeout: _queuedLikeCheckTimeout,
@@ -1656,7 +1656,7 @@ class LikesRepository {
           'No public key to look for the like with',
         );
       }
-      final check = await _checkRelayForLiveLike(
+      final check = await _checkRelayForLiveReaction(
         eventId,
         addressableId: addressableId,
         timeout: _queuedLikeCheckTimeout,
@@ -1757,7 +1757,7 @@ class LikesRepository {
   }) async {
     await _ensureInitialized();
     if (_likeRecords.containsKey(eventId)) return;
-    final check = await _checkRelayForLiveLike(
+    final check = await _checkRelayForLiveReaction(
       eventId,
       addressableId: addressableId,
       timeout: _queuedLikeCheckTimeout,
@@ -2296,6 +2296,13 @@ class LikesRepository {
   /// edit of the target. When [targetKind] is addressable and it is missing,
   /// the downvote is still published and the gap is logged (#6980).
   ///
+  /// Before publishing it looks for a live downvote this device does not
+  /// hold, on any target, and adopts it instead of publishing a second one
+  /// (#10992). When the relays cannot prove whether there is one, it
+  /// publishes without adopting anything (#10809). The check runs before the
+  /// downvote is recorded locally, so callers serialise downvotes on one
+  /// target, as `CommentReactionsBloc` does per comment.
+  ///
   /// Throws [AlreadyDownvotedException] if the event is already downvoted.
   /// Throws [LikeFailedException] if the publish fails.
   Future<String> downvoteEvent({
@@ -2309,16 +2316,23 @@ class LikesRepository {
     if (_lookupDownvoteRecord(eventId, addressableId) != null) {
       throw AlreadyDownvotedException(eventId);
     }
-    if (addressableId != null && addressableId.isNotEmpty) {
-      final remoteRecord = await _resolveRemoteDownvoteRecord(
-        eventId,
-        addressableId: addressableId,
+    final check = await _checkForLiveDownvote(
+      eventId,
+      addressableId: addressableId,
+    );
+    final liveDownvote = check.isConclusive ? check.newest : null;
+    if (liveDownvote != null) {
+      _indexDownvoteRecord(liveDownvote);
+      _emitDownvotedIds();
+      throw AlreadyDownvotedException(eventId);
+    }
+    if (!check.isConclusive) {
+      Log.info(
+        'Relays did not confirm whether $eventId is already downvoted; '
+        'publishing without adopting a downvote',
+        name: 'LikesRepository',
+        category: LogCategory.relay,
       );
-      if (remoteRecord != null) {
-        _indexDownvoteRecord(remoteRecord);
-        _emitDownvotedIds();
-        throw AlreadyDownvotedException(eventId);
-      }
     }
 
     // 1. Optimistic-first: write to memory + tick the stream BEFORE any
@@ -3781,7 +3795,11 @@ class LikesRepository {
   /// reaction SHOULD NOT be read as either, so it neither counts as a vote
   /// nor replaces the account's earlier one.
   static bool _isVoteReaction(Event event) =>
-      _isLikeReaction(event) || event.content == _downvoteContent;
+      _isLikeReaction(event) || _isDownvoteReaction(event);
+
+  /// NIP-25: a reaction whose `content` is `-` MUST be read as a downvote.
+  static bool _isDownvoteReaction(Event event) =>
+      event.content == _downvoteContent;
 
   /// Whether [event] supersedes [other] as one account's vote. Reactions
   /// from the same second are ordered by id, so every reader keeps the same
@@ -3792,7 +3810,7 @@ class LikesRepository {
 
   /// The live reaction that startup reconciliation or the live subscription
   /// has already indexed for [eventId] or its coordinate, shaped exactly as
-  /// [_checkRelayForLiveLike] would return it: keyed under [eventId], so
+  /// [_checkRelayForLiveReaction] would return it: keyed under [eventId], so
   /// the caller's later unlike resolves it, and carrying [addressableId] when
   /// the reaction itself has no `a` tag, so adopting it evicts this tap's
   /// placeholder from the coordinate index too.
@@ -3877,7 +3895,7 @@ class LikesRepository {
       await inFlight;
     } on Object catch (e) {
       Log.warning(
-        'Startup reaction reconciliation failed; this like falls back to its '
+        'Startup reaction reconciliation failed; this vote falls back to its '
         'target-specific relay check: $e',
         name: 'LikesRepository',
         category: LogCategory.relay,
@@ -3885,24 +3903,51 @@ class LikesRepository {
     }
   }
 
-  /// [_checkRelayForLiveLike] that never throws.
+  /// This account's live downvote on [eventId] or [addressableId] that this
+  /// device has not indexed, checked the way [likeEvent] checks a like.
+  ///
+  /// Joins the startup snapshot first, then answers from what it or the live
+  /// subscription indexed. Only when that snapshot is incomplete does it read
+  /// the relays for the target itself, whether or not the target has a
+  /// coordinate (#10992). The answer is conclusive only when it was proven
+  /// (#10809).
+  Future<_ReactionCheck> _checkForLiveDownvote(
+    String eventId, {
+    required String? addressableId,
+  }) async {
+    await _joinStartupReconciliation();
+    final indexed = _lookupDownvoteRecord(eventId, addressableId);
+    if (indexed != null || _hasCompleteRelayReactionSnapshot) {
+      return (newest: indexed, isConclusive: true);
+    }
+    return _checkRelayForLiveReactionOrUnknown(
+      eventId,
+      addressableId: addressableId,
+      timeout: _settledReadTimeout,
+      isWanted: _isDownvoteReaction,
+    );
+  }
+
+  /// [_checkRelayForLiveReaction] that never throws.
   ///
   /// A check that fails proves nothing either way, so it comes back
   /// inconclusive and the caller treats it as a relay that did not finish.
-  Future<_LikeCheck> _checkRelayForLiveLikeOrUnknown(
+  Future<_ReactionCheck> _checkRelayForLiveReactionOrUnknown(
     String eventId, {
     required String? addressableId,
     required Duration timeout,
+    bool Function(Event reaction) isWanted = _isLikeReaction,
   }) async {
     try {
-      return await _checkRelayForLiveLike(
+      return await _checkRelayForLiveReaction(
         eventId,
         addressableId: addressableId,
         timeout: timeout,
+        isWanted: isWanted,
       );
     } on Object catch (e) {
       Log.warning(
-        'Could not check the relay for an existing like on $eventId: $e',
+        'Could not check the relay for an existing vote on $eventId: $e',
         name: 'LikesRepository',
         category: LogCategory.relay,
       );
@@ -3910,23 +3955,26 @@ class LikesRepository {
     }
   }
 
-  /// Checks the relays for the current user's still-live `+` on [eventId] or
-  /// its coordinate. Backs the pre-publish check in [likeEvent] and the
-  /// replay guard in [executeLikeAction] (#7001).
+  /// Checks the relays for the current user's still-live reaction on
+  /// [eventId] or its coordinate, of the kind [isWanted] accepts: a `+` by
+  /// default. Backs the pre-publish checks in [likeEvent] and
+  /// [downvoteEvent], the replay guard in [executeLikeAction] (#7001), and
+  /// [removeDownvote]'s fallback for a downvote this device does not hold.
   ///
-  /// The check is conclusive when it proves its answer: that the newest like
-  /// it found has no deletion, or, when it found none, that the relays hold
-  /// none. A read that ended short proves neither (#9004).
-  Future<_LikeCheck> _checkRelayForLiveLike(
+  /// The check is conclusive when it proves its answer: that the newest
+  /// reaction it found has no deletion, or, when it found none, that the
+  /// relays hold none. A read that ended short proves neither (#9004).
+  Future<_ReactionCheck> _checkRelayForLiveReaction(
     String eventId, {
     required String? addressableId,
     required Duration timeout,
+    bool Function(Event reaction) isWanted = _isLikeReaction,
   }) async {
     final pubkey = await _currentUserPubkey();
     if (pubkey == null) return (newest: null, isConclusive: true);
 
     final hasCoordinate = addressableId != null && addressableId.isNotEmpty;
-    Filter likesOf(List<String>? e, List<String>? a) => Filter(
+    Filter reactionsOn(List<String>? e, List<String>? a) => Filter(
       kinds: const [EventKind.reaction],
       authors: [pubkey],
       e: e,
@@ -3934,11 +3982,15 @@ class LikesRepository {
       limit: _defaultReactionFetchLimit,
     );
     final reads = await Future.wait([
-      _readChunked([eventId], (ids) => likesOf(ids, null), timeout: timeout),
+      _readChunked(
+        [eventId],
+        (ids) => reactionsOn(ids, null),
+        timeout: timeout,
+      ),
       if (hasCoordinate)
         _readChunked(
           [addressableId, ?legacyVideoCoordinateFor(addressableId)],
-          (coordinates) => likesOf(null, coordinates),
+          (coordinates) => reactionsOn(null, coordinates),
           timeout: timeout,
         ),
     ]);
@@ -3950,7 +4002,7 @@ class LikesRepository {
       for (final read in reads)
         for (final event in read.events)
           if (event.pubkey == pubkey &&
-              _isLikeReaction(event) &&
+              isWanted(event) &&
               _isReactionOn(event, eventId, addressableId))
             event.id: event,
     };

@@ -2164,7 +2164,7 @@ void main() {
         const supersededId = 'superseded_reply_id_1234567890abcdef';
         const editedId = 'edited_reply_id_1234567890abcdef';
         const coordinate = '34236:$testAuthorPubkey:reply-d-tag';
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           <Event>[],
           [
             createMockReaction(
@@ -7238,7 +7238,7 @@ void main() {
 
         test('downvoteEvent finds the downvote left under the legacy key '
             'instead of sending another', () async {
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             <Event>[],
             [legacyDownvote()],
             <Event>[],
