@@ -367,6 +367,58 @@ Future<void> main() async {
         client.of('EVENT').any((f) => f[1] == 'retractions'),
         'the retraction read should still get its events',
       );
+      client.send([
+        'REQ',
+        'mixed',
+        {
+          'kinds': [5],
+          '#e': ['kind7'],
+        },
+        {
+          'kinds': [1],
+        },
+      ]);
+      _expect(
+        await _within(() => client.of('EOSE').any((f) => f[1] == 'mixed')),
+        'a REQ with any other filter should finish, got ${client.frames}',
+      );
+    },
+  );
+
+  await scenario(
+    '--hold-retraction-eose remembers a vote across connections',
+    ['--hold-retraction-eose'],
+    (proxy) async {
+      final first = await proxy.connect();
+      first.send([
+        'REQ',
+        'votes',
+        {
+          'kinds': [7],
+        },
+      ]);
+      _expect(
+        await _within(() => first.of('EOSE').length == 1),
+        'the vote read should finish, got ${first.frames}',
+      );
+      final second = await proxy.connect();
+      second.send([
+        'REQ',
+        'retractions',
+        {
+          'kinds': [5],
+          '#e': ['kind7'],
+        },
+      ]);
+      _expect(
+        await _within(() => second.of('EVENT').length == 1),
+        'the retraction read should get its events, got ${second.frames}',
+      );
+      await _quiet();
+      _expect(
+        second.of('EOSE').isEmpty,
+        'a vote seen on one connection should hold the read on another',
+      );
     },
   );
 
