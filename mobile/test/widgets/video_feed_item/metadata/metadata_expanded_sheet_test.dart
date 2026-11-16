@@ -3320,9 +3320,9 @@ void main() {
       },
     );
 
-    for (final (appearance, theme) in [
-      ('dark', VineTheme.theme),
-      ('light', VineTheme.lightTheme),
+    for (final (appearance, theme, colors) in [
+      ('dark', VineTheme.theme, VineTheme.darkColors),
+      ('light', VineTheme.lightTheme, VineTheme.lightColors),
     ]) {
       testWidgetsWithSurfaceSize(
         'saves, removes, and retries a failed save inside the $appearance sheet',
@@ -3377,6 +3377,10 @@ void main() {
                 matching: find.byType(DecoratedBox),
               )
               .first;
+          Color? bannerColor() =>
+              (tester.widget<DecoratedBox>(bannerSurface).decoration
+                      as BoxDecoration)
+                  .color;
 
           await tester.tap(find.text(l10n.shareSheetSave));
           await tester.pumpAndSettle();
@@ -3400,6 +3404,7 @@ void main() {
           final sheetRect = tester.getRect(find.byType(MetadataActionsSection));
           expect(bannerRect.left, equals(titleLeft));
           expect(sheetRect.right - bannerRect.right, equals(titleLeft));
+          expect(bannerColor(), equals(colors.surfaceContainerHigh));
 
           await tester.tap(find.text(l10n.shareSheetRemoveFromSaved));
           await tester.pumpAndSettle();
@@ -3411,6 +3416,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.byType(MetadataActionsSection), findsOneWidget);
           expect(find.text(l10n.profileSetupNoRelaysConnected), findsOneWidget);
+          expect(bannerColor(), equals(colors.errorContainer));
           expect(find.text(l10n.shareSheetSave), findsOneWidget);
 
           await tester.tap(find.text(l10n.shareSheetSave));
@@ -3418,7 +3424,7 @@ void main() {
           expect(find.text(l10n.shareSheetRemoveFromSaved), findsOneWidget);
           expect(find.text(l10n.shareAddedToBookmarks), findsOneWidget);
           expect(find.text(l10n.profileSetupNoRelaysConnected), findsNothing);
-          expect(attempt, 4);
+          expect(attempt, equals(4));
         },
       );
     }
