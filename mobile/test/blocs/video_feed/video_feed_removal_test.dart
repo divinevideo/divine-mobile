@@ -101,181 +101,187 @@ void main() {
       feedTracker: feedTracker,
     );
 
-    feedBlocTest(
-      'removes the currently playing video when deletion is announced',
-      build: createBloc,
-      seed: () => VideoFeedBlocState(
-        status: VideoFeedStatus.success,
-        videos: [_video('1'), _video('2'), _video('3')],
-        currentIndex: 1,
-      ),
-      act: (_) => removals.add('2' * 64),
-      wait: Duration.zero,
-      expect: () => [
-        isA<VideoFeedBlocState>()
-            .having(
-              (state) => state.videos.map((v) => v.id).toList(),
-              'surviving videos',
-              ['1' * 64, '3' * 64],
-            )
-            .having((state) => state.currentIndex, 'current index', 1),
-      ],
-    );
-
-    for (final (removed, currentIndex, nextIndex) in [
-      ('1', 0, 0),
-      ('1', 1, 0),
-      ('1', 2, 1),
-      ('3', 2, 1),
-      ('3', 0, 0),
-    ]) {
+    group(VideoFeedVideoRemoved, () {
       feedBlocTest(
-        'removing $removed preserves the survivor at cursor $currentIndex',
+        'removes the currently playing video when deletion is announced',
         build: createBloc,
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
           videos: [_video('1'), _video('2'), _video('3')],
-          currentIndex: currentIndex,
-          videoListSources: {
-            removed * 64: const {'synthetic-list'},
-            '2' * 64: const {'synthetic-list'},
-          },
-          listOnlyVideoIds: {removed * 64, '2' * 64},
+          currentIndex: 1,
         ),
-        act: (_) => removals.add(removed * 64),
+        act: (_) => removals.add('2' * 64),
         wait: Duration.zero,
         expect: () => [
           isA<VideoFeedBlocState>()
               .having(
                 (state) => state.videos.map((v) => v.id).toList(),
                 'surviving videos',
-                [
-                  for (final digit in ['1', '2', '3'])
-                    if (digit != removed) digit * 64,
-                ],
+                ['1' * 64, '3' * 64],
               )
-              .having((state) => state.currentIndex, 'current index', nextIndex)
-              .having(
-                (state) => state.videoListSources,
-                'list attribution',
-                {
-                  '2' * 64: const {'synthetic-list'},
-                },
-              )
-              .having(
-                (state) => state.listOnlyVideoIds,
-                'list-only videos',
-                {'2' * 64},
-              ),
+              .having((state) => state.currentIndex, 'current index', 1),
         ],
       );
-    }
 
-    feedBlocTest(
-      'removing the last video reaches the existing empty state',
-      build: createBloc,
-      seed: () => VideoFeedBlocState(
-        status: VideoFeedStatus.success,
-        videos: [_video('1')],
-      ),
-      act: (_) => removals.add('1' * 64),
-      wait: Duration.zero,
-      expect: () => [
-        isA<VideoFeedBlocState>()
-            .having((state) => state.isEmpty, 'empty feed', isTrue)
-            .having((state) => state.currentIndex, 'current index', 0),
-      ],
-    );
+      for (final (removed, currentIndex, nextIndex) in [
+        ('1', 0, 0),
+        ('1', 1, 0),
+        ('1', 2, 1),
+        ('3', 2, 1),
+        ('3', 0, 0),
+      ]) {
+        feedBlocTest(
+          'removing $removed preserves the survivor at cursor $currentIndex',
+          build: createBloc,
+          seed: () => VideoFeedBlocState(
+            status: VideoFeedStatus.success,
+            videos: [_video('1'), _video('2'), _video('3')],
+            currentIndex: currentIndex,
+            videoListSources: {
+              removed * 64: const {'synthetic-list'},
+              '2' * 64: const {'synthetic-list'},
+            },
+            listOnlyVideoIds: {removed * 64, '2' * 64},
+          ),
+          act: (_) => removals.add(removed * 64),
+          wait: Duration.zero,
+          expect: () => [
+            isA<VideoFeedBlocState>()
+                .having(
+                  (state) => state.videos.map((v) => v.id).toList(),
+                  'surviving videos',
+                  [
+                    for (final digit in ['1', '2', '3'])
+                      if (digit != removed) digit * 64,
+                  ],
+                )
+                .having(
+                  (state) => state.currentIndex,
+                  'current index',
+                  nextIndex,
+                )
+                .having(
+                  (state) => state.videoListSources,
+                  'list attribution',
+                  {
+                    '2' * 64: const {'synthetic-list'},
+                  },
+                )
+                .having(
+                  (state) => state.listOnlyVideoIds,
+                  'list-only videos',
+                  {'2' * 64},
+                ),
+          ],
+        );
+      }
 
-    // Block and mute sweeps share the bus and are reversible, so a removed id
-    // can belong to a video that came back on a refresh.
-    feedBlocTest(
-      'removes a video again when its id is announced a second time',
-      build: createBloc,
-      seed: () => VideoFeedBlocState(
-        status: VideoFeedStatus.success,
-        videos: [_video('1'), _video('2')],
-        coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
-      ),
-      act: (_) => removals.add('2' * 64),
-      wait: Duration.zero,
-      expect: () => [
-        isA<VideoFeedBlocState>().having(
-          (state) => state.videos,
-          'surviving videos',
-          [_video('1')],
-        ),
-      ],
-    );
-
-    feedBlocTest(
-      'keeps a video that came back when a different video is removed',
-      build: createBloc,
-      seed: () => VideoFeedBlocState(
-        status: VideoFeedStatus.success,
-        videos: [_video('1'), _video('2'), _video('3')],
-        coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
-      ),
-      act: (_) => removals.add('3' * 64),
-      wait: Duration.zero,
-      expect: () => [
-        isA<VideoFeedBlocState>().having(
-          (state) => state.videos,
-          'surviving videos',
-          [_video('1'), _video('2')],
-        ),
-      ],
-    );
-
-    // Deleting one version of an addressable video tombstones its coordinate,
-    // but the bus only names the versions the service had cached.
-    feedBlocTest(
-      'removes another version of a deleted video the bus did not name',
-      build: createBloc,
-      setUp: () => when(() => videos.isVideoKnownDeleted(any())).thenAnswer(
-        (call) =>
-            (call.positionalArguments.single as VideoEvent).id == '1' * 64,
-      ),
-      seed: () => VideoFeedBlocState(
-        status: VideoFeedStatus.success,
-        videos: [_video('1'), _video('2')],
-      ),
-      act: (_) => removals.add('9' * 64),
-      wait: Duration.zero,
-      expect: () => [
-        isA<VideoFeedBlocState>().having(
-          (state) => state.videos,
-          'surviving videos',
-          [_video('2')],
-        ),
-      ],
-    );
-
-    group('resume window', () {
-      late _MemoryHomeFeedCache resumeCache;
-
-      // A swipe schedules a debounced write of the window ahead of the cursor.
-      // The removal has to replace it, or closing Home flushes the video back.
       feedBlocTest(
-        'a removal replaces a pending swipe write that still holds the video',
-        setUp: () => resumeCache = _MemoryHomeFeedCache(),
-        build: () => createBloc(cache: resumeCache),
+        'removing the last video reaches the existing empty state',
+        build: createBloc,
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('1')],
+        ),
+        act: (_) => removals.add('1' * 64),
+        wait: Duration.zero,
+        expect: () => [
+          isA<VideoFeedBlocState>()
+              .having((state) => state.isEmpty, 'empty feed', isTrue)
+              .having((state) => state.currentIndex, 'current index', 0),
+        ],
+      );
+
+      // Block and mute sweeps share the bus and are reversible, so a removed id
+      // can belong to a video that came back on a refresh.
+      feedBlocTest(
+        'removes a video again when its id is announced a second time',
+        build: createBloc,
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('1'), _video('2')],
+          coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
+        ),
+        act: (_) => removals.add('2' * 64),
+        wait: Duration.zero,
+        expect: () => [
+          isA<VideoFeedBlocState>().having(
+            (state) => state.videos,
+            'surviving videos',
+            [_video('1')],
+          ),
+        ],
+      );
+
+      feedBlocTest(
+        'keeps a video that came back when a different video is removed',
+        build: createBloc,
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
           videos: [_video('1'), _video('2'), _video('3')],
+          coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
         ),
-        act: (bloc) async {
-          bloc.add(const VideoFeedActiveIndexChanged(1));
-          await bloc.stream.firstWhere((state) => state.currentIndex == 1);
-          removals.add('3' * 64);
-          await bloc.stream.firstWhere((state) => state.videos.length == 2);
-        },
-        verify: (_) async {
-          await pumpEventQueue();
-          expect(resumeCache.cleared, isTrue);
-          expect(resumeCache.saved, isNull);
-        },
+        act: (_) => removals.add('3' * 64),
+        wait: Duration.zero,
+        expect: () => [
+          isA<VideoFeedBlocState>().having(
+            (state) => state.videos,
+            'surviving videos',
+            [_video('1'), _video('2')],
+          ),
+        ],
       );
+
+      // Deleting one version of an addressable video tombstones its coordinate,
+      // but the bus only names the versions the service had cached.
+      feedBlocTest(
+        'removes another version of a deleted video the bus did not name',
+        build: createBloc,
+        setUp: () => when(() => videos.isVideoKnownDeleted(any())).thenAnswer(
+          (call) =>
+              (call.positionalArguments.single as VideoEvent).id == '1' * 64,
+        ),
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('1'), _video('2')],
+        ),
+        act: (_) => removals.add('9' * 64),
+        wait: Duration.zero,
+        expect: () => [
+          isA<VideoFeedBlocState>().having(
+            (state) => state.videos,
+            'surviving videos',
+            [_video('2')],
+          ),
+        ],
+      );
+
+      group('resume window', () {
+        late _MemoryHomeFeedCache resumeCache;
+
+        // A swipe schedules a debounced write of the window ahead of the cursor.
+        // The removal has to replace it, or closing Home flushes the video back.
+        feedBlocTest(
+          'a removal replaces a pending swipe write that still holds the video',
+          setUp: () => resumeCache = _MemoryHomeFeedCache(),
+          build: () => createBloc(cache: resumeCache),
+          seed: () => VideoFeedBlocState(
+            status: VideoFeedStatus.success,
+            videos: [_video('1'), _video('2'), _video('3')],
+          ),
+          act: (bloc) async {
+            bloc.add(const VideoFeedActiveIndexChanged(1));
+            await bloc.stream.firstWhere((state) => state.currentIndex == 1);
+            removals.add('3' * 64);
+            await bloc.stream.firstWhere((state) => state.videos.length == 2);
+          },
+          verify: (_) async {
+            await pumpEventQueue();
+            expect(resumeCache.cleared, isTrue);
+            expect(resumeCache.saved, isNull);
+          },
+        );
+      });
     });
 
     test('close cancels the removal subscription', () async {
@@ -283,7 +289,6 @@ void main() {
       expect(removals.hasListener, isTrue);
       await bloc.close();
       expect(removals.hasListener, isFalse);
-      removals.add('1' * 64);
     });
 
     group('late async results', () {
