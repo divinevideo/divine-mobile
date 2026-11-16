@@ -280,6 +280,48 @@ class IOSReleaseTest(unittest.TestCase):
         self.assertEqual(1, len(self.api.posts))
         self.assertFalse(self.api.polls[:-1])
 
+    def test_initial_build_without_fetched_branch_is_monitored(self):
+        initial = build(status='initializing', asc=None, commit=None)
+        initial['branch'] = None
+        initial['commit'] = None
+        self.api.polls = [initial, build(status='fetching', asc=None), build()]
+        self.run_driver()
+        self.assertEqual(1, len(self.api.posts))
+        self.assertFalse(self.api.polls[:-1])
+
+    def test_retry_reattaches_before_branch_is_fetched_without_submitting(self):
+        initial = build(status='queued', asc=None, commit=None, labels=[LABEL])
+        initial['branch'] = None
+        initial['commit'] = None
+        self.env['GITHUB_RUN_ATTEMPT'] = '2'
+        self.api.builds = [initial]
+        self.api.polls = [initial, build()]
+        self.run_driver()
+        self.assertFalse(self.api.posts)
+
+    def test_missing_branch_outside_source_fetch_is_rejected(self):
+        for status in ['building', 'publishing', 'finished']:
+            with self.subTest(status=status):
+                missing = build(status=status, commit=None)
+                missing['branch'] = None
+                missing['commit'] = None
+                self.api = FakeAPI(polls=[missing])
+                with self.assertRaises(self.driver.ReleaseError):
+                    self.run_driver()
+
+    def test_unfetched_branch_does_not_hide_wrong_identity_or_source(self):
+        for field, value in [('branch', 'other'), ('app_id', 'other'),
+                             ('workflow', {'id': 'other'}), ('tag', 'release'),
+                             ('commit', {'hash': OTHER})]:
+            with self.subTest(field=field):
+                initial = build(status='initializing', asc=None, commit=None)
+                initial['branch'] = None
+                initial['commit'] = None
+                initial[field] = value
+                self.api = FakeAPI(polls=[initial])
+                with self.assertRaises(self.driver.ReleaseError):
+                    self.run_driver()
+
     def test_failed_unknown_wrong_identity_and_wrong_commit_fail(self):
         cases = [build(status=s) for s in ['failed', 'canceled', 'timeout', 'skipped', 'future-status']]
         cases += [build(asc=s) for s in ['failed', 'timeout', 'future-status']]
