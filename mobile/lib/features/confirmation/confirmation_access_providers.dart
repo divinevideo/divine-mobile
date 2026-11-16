@@ -11,7 +11,10 @@ import 'package:profile_repository/profile_repository.dart';
 
 /// SharedPreferences key holding the developer override's
 /// [ConfirmationAccess.name].
-@visibleForTesting
+///
+/// It forces an answer about the signed-in account, so it is swept with the
+/// account's other settings (`UserDataCleanupService.userSpecificKeys`) and
+/// must not carry onto the next account.
 const confirmationAccessOverrideKey = 'confirmation_access_override';
 
 /// Whether this is a debug build, where the override applies without

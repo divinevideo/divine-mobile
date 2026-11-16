@@ -4528,6 +4528,14 @@ void main() {
       ).thenAnswer((_) => answer());
     }
 
+    /// Points the client at [accessUrl] and has the verifier answer. Called
+    /// by each test that reaches the verifier, not from a shared setUp, so
+    /// a test that never gets that far doesn't inherit a stub it doesn't use.
+    void stubVerifier([Future<bool?> Function()? answer]) {
+      when(() => client.confirmationAccessUrl).thenReturn(accessUrl);
+      stubFetch(answer ?? () async => true);
+    }
+
     /// Checks the fetches since the last check: mocktail resets the count
     /// on each verify.
     void verifyFetchCalled(int times) {
@@ -4554,11 +4562,10 @@ void main() {
           ['method', 'GET'],
         ],
       );
-      when(() => client.confirmationAccessUrl).thenReturn(accessUrl);
-      stubFetch(() async => true);
     });
 
     test('signs a GET NIP-98 event for the exact access URL', () async {
+      stubVerifier();
       final event = _event(id: _eventId(4), kind: 27235);
       signAnswer = () async => event;
 
@@ -4585,6 +4592,7 @@ void main() {
     });
 
     test('signs passively, never through the interactive signer', () async {
+      stubVerifier();
       await buildRepo().confirmationAccess();
 
       expect(signed, hasLength(1));
@@ -4592,12 +4600,13 @@ void main() {
     });
 
     test('maps true/false/null to has/hasNot/unknown', () async {
+      stubVerifier();
       for (final (answer, expected) in [
         (true, ConfirmationAccess.has),
         (false, ConfirmationAccess.hasNot),
         (null, ConfirmationAccess.unknown),
       ]) {
-        stubFetch(() async => answer);
+        stubVerifier(() async => answer);
         expect(
           await buildRepo().confirmationAccess(),
           equals(expected),
@@ -4618,6 +4627,7 @@ void main() {
       });
 
       test('with only the interactive signer', () async {
+        stubVerifier();
         final interactiveOnly = IdentityClaimsRepository(
           verifierClient: client,
           nostrClient: nostrClient,
@@ -4633,6 +4643,7 @@ void main() {
       });
 
       test('when the passive signer declines', () async {
+        stubVerifier();
         signAnswer = () async => null;
 
         expect(
@@ -4644,6 +4655,7 @@ void main() {
       });
 
       test('when the signer throws', () async {
+        stubVerifier();
         signAnswer = () async => throw StateError('signer gone');
 
         expect(
@@ -4653,7 +4665,9 @@ void main() {
       });
 
       test('when the verifier cannot be reached', () async {
-        stubFetch(() async => throw const VerifierNetworkException('offline'));
+        stubVerifier(
+          () async => throw const VerifierNetworkException('offline'),
+        );
 
         expect(
           await buildRepo().confirmationAccess(),
@@ -4663,6 +4677,7 @@ void main() {
     });
 
     test('a second call reuses the answer; refresh asks again', () async {
+      stubVerifier();
       final repo = buildRepo();
 
       expect(await repo.confirmationAccess(), equals(ConfirmationAccess.has));
@@ -4686,7 +4701,7 @@ void main() {
 
     test('callers arriving while a check is in flight share it', () async {
       final answer = Completer<bool?>();
-      stubFetch(() => answer.future);
+      stubVerifier(() => answer.future);
       final repo = buildRepo();
 
       final first = repo.confirmationAccess();
@@ -4710,7 +4725,7 @@ void main() {
         stale = Completer<bool?>();
         fresh = Completer<bool?>();
         final answers = [stale, fresh];
-        stubFetch(() => answers.removeAt(0).future);
+        stubVerifier(() => answers.removeAt(0).future);
         repo = buildRepo();
 
         before = repo.confirmationAccess();
