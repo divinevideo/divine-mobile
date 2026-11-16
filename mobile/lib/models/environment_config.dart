@@ -12,6 +12,19 @@ const androidEmulatorHost = '10.0.2.2';
 /// Host address every other target uses to reach the host machine.
 const loopbackHost = 'localhost';
 
+/// Production verifier host (verifier.divine.video).
+const productionVerifierBaseUrl = 'https://verifier.divine.video';
+
+/// Build-time override for the verifier host, set with
+/// `--dart-define=VERIFIER_BASE_URL=...` so a test build can point at a local
+/// verifier. Empty for an ordinary build, which means production.
+const verifierBaseUrlOverride = String.fromEnvironment('VERIFIER_BASE_URL');
+
+/// The verifier base URL for a given build-time [override]: the override when
+/// non-empty, otherwise production.
+String resolveVerifierBaseUrl(String override) =>
+    override.isEmpty ? productionVerifierBaseUrl : override;
+
 /// Host that reaches the local Docker stack from the current platform.
 ///
 /// The Android emulator reaches the host through [androidEmulatorHost];
@@ -132,9 +145,11 @@ class EnvironmentConfig {
   }
 
   /// Base URL for the Divine identity verification service
-  /// (verifier.divine.video). Single host across all environments — the
-  /// service is not part of local_stack.
-  String get verifierBaseUrl => 'https://verifier.divine.video';
+  /// (verifier.divine.video). Single host across all environments; the
+  /// service is not part of local_stack. A test build can point at a local
+  /// verifier with `--dart-define=VERIFIER_BASE_URL=http://localhost:8787`;
+  /// without the define every build uses production.
+  String get verifierBaseUrl => resolveVerifierBaseUrl(verifierBaseUrlOverride);
 
   /// Origin of the divine-name-server that owns `@divine.video` usernames
   ///
