@@ -7729,7 +7729,7 @@ void main() {
       );
 
       test('getUserVoteStatuses resolves the own vote by coordinate', () async {
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           <Event>[],
           [
             createMockReaction(
@@ -7759,7 +7759,7 @@ void main() {
 
       test('getUserVoteStatuses still excludes a deleted coordinate '
           'vote', () async {
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           <Event>[],
           [
             createMockReaction(
@@ -7774,7 +7774,7 @@ void main() {
             ),
           ],
           [
-            createMockDeletion(['own_downvote']),
+            createMockDeletion(['own_downvote'], authorPubkey: testUserPubkey),
           ],
         ]);
 
@@ -8108,7 +8108,7 @@ void main() {
         // control: a skip that dropped upvotes too would still leave the
         // emoji target out of upvotedIds.
         const otherId = 'other_reply_id_1234567890abcdef';
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [
             createMockReaction(
               id: 'own_downvote',

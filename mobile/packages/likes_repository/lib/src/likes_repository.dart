@@ -2109,6 +2109,10 @@ class LikesRepository {
   /// A like or unlike that is still queued counts as published (#10922).
   ///
   /// Returns the sets of event IDs the user has upvoted or downvoted.
+  ///
+  /// Throws [LikesRepositoryException] when the relays could not prove the
+  /// answer: a read that ended short, or a vote whose deletion they could
+  /// not rule out (#10809).
   Future<({Set<String> upvotedIds, Set<String> downvotedIds})>
   getUserVoteStatuses(
     List<String> eventIds, {
@@ -2133,34 +2137,42 @@ class LikesRepository {
     // Read before the relays, as in [getVoteCounts].
     final queuedLikesFuture = _queuedLikesOn(knownEventIds);
 
-    final events = await _queryVoteTargetReactions(
-      eventIds: eventIds,
-      eventIdByCoordinate: eventIdByCoordinate,
-      authors: [pubkey],
+    // Both reads wait for every relay, and only a proven answer counts: a
+    // short one would clear the arrow of a vote that is still live, or keep
+    // the arrow of one already taken back (#10809).
+    const unconfirmed = LikesRepositoryException(
+      "Relays did not confirm this account's votes",
     );
-
-    // Also fetch deletions to exclude deleted votes
-    final deletionFilter = Filter(
-      kinds: const [EventKind.eventDeletion],
+    Filter votesOn({List<String>? e, List<String>? a}) => Filter(
+      kinds: const [EventKind.reaction],
       authors: [pubkey],
+      e: e,
+      a: a,
     );
-    final deletions = await _nostrClient.queryEvents([deletionFilter]);
+    final reads = await Future.wait([
+      _readChunked(eventIds, (chunk) => votesOn(e: chunk)),
+      _readChunked(
+        eventIdByCoordinate.keys.toList(),
+        (chunk) => votesOn(a: chunk),
+      ),
+    ]);
+    if (!reads.every((read) => read.isComplete)) throw unconfirmed;
 
-    final deletedIds = <String>{};
-    for (final deletion in deletions) {
-      for (final tag in deletion.tags) {
-        if (tag.isNotEmpty && tag[0] == 'e' && tag.length > 1) {
-          deletedIds.add(tag[1]);
-        }
-      }
-    }
+    // A relay that ignores `authors`, or a merged cache hit, must not fill
+    // this account's arrow with someone else's vote.
+    final votesById = {
+      for (final read in reads)
+        for (final event in read.events)
+          if (event.pubkey == pubkey && _isVoteReaction(event)) event.id: event,
+    };
+    final retractions = await _readRetractions(votesById, pubkey: pubkey);
+    if (retractions.undecided.isNotEmpty) throw unconfirmed;
 
     final upvotedIds = <String>{};
     final downvotedIds = <String>{};
 
-    for (final event in events) {
-      if (deletedIds.contains(event.id)) continue;
-      if (!_isVoteReaction(event)) continue;
+    for (final event in votesById.values) {
+      if (retractions.retracted.contains(event.id)) continue;
 
       final targetId = _resolveVoteTarget(
         event,
@@ -2210,17 +2222,14 @@ class LikesRepository {
   Future<List<Event>> _queryVoteTargetReactions({
     required List<String> eventIds,
     required Map<String, String> eventIdByCoordinate,
-    List<String>? authors,
   }) async {
     final eEventsFuture = _queryChunked(
       eventIds,
-      (chunk) =>
-          Filter(kinds: const [EventKind.reaction], authors: authors, e: chunk),
+      (chunk) => Filter(kinds: const [EventKind.reaction], e: chunk),
     );
     final aEventsFuture = _queryChunked(
       eventIdByCoordinate.keys.toList(),
-      (chunk) =>
-          Filter(kinds: const [EventKind.reaction], authors: authors, a: chunk),
+      (chunk) => Filter(kinds: const [EventKind.reaction], a: chunk),
     );
     final results = await Future.wait([eEventsFuture, aEventsFuture]);
 

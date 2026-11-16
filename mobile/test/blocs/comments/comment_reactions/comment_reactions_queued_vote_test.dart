@@ -60,9 +60,11 @@ class _Relay {
         timeout: any(named: 'timeout'),
       ),
     ).thenAnswer((invocation) async {
+      // The viewer's own vote read waits for every relay, so it fails and
+      // holds here as a plain query does.
       final filters = invocation.positionalArguments.first as List;
       return QueryResult(
-        events: _matching(filters.cast<Filter>()),
+        events: await _query(filters),
         endedBy: check == _Check.conclusive
             ? QueryEnd.complete
             : QueryEnd.deadline,

@@ -370,5 +370,40 @@ void main() {
         },
       );
     });
+    group('getUserVoteStatuses', () {
+      test('throws instead of reporting no vote when the relays did not '
+          'answer', () async {
+        relay
+          ..vote(_me, _comment, content: '-')
+          ..answers = false;
+
+        await expectLater(
+          repository.getUserVoteStatuses([_comment]),
+          throwsA(isA<LikesRepositoryException>()),
+        );
+      });
+
+      test("finds a vote's deletion past the relay's result limit", () async {
+        final retracted = relay.vote(_me, _comment, content: '-');
+        relay
+          ..delete(retracted.id)
+          ..delete(_hex('older1'))
+          ..delete(_hex('older2'))
+          ..delete(_hex('older3'))
+          ..unscopedResultLimit = 3;
+
+        final votes = await repository.getUserVoteStatuses([_comment]);
+
+        expect(votes.downvotedIds, isEmpty);
+      });
+
+      test('control: reports a live vote', () async {
+        relay.vote(_me, _comment, content: '-');
+
+        final votes = await repository.getUserVoteStatuses([_comment]);
+
+        expect(votes.downvotedIds, equals({_comment}));
+      });
+    });
   });
 }
