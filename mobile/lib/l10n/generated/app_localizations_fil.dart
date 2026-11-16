@@ -14740,6 +14740,41 @@ class AppLocalizationsFil extends AppLocalizations {
   String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
 
   @override
+  String get verifyConfirmationTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroTitle => 'Divine Confirmation';
+
+  @override
+  String get verifyConfirmationHeroBody =>
+      'Divine Confirmation lets you link your accounts on other platforms by signing in to them.';
+
+  @override
+  String get verifyConfirmationIncludedTitle => 'What\'s included';
+
+  @override
+  String get verifyConfirmationIncludedSignIn => 'Link accounts by signing in';
+
+  @override
+  String get verifyConfirmationComingSoon => 'Coming soon';
+
+  @override
+  String get verifyConfirmationSmallPrint =>
+      'Details will appear here when Divine Confirmation is ready.';
+
+  @override
+  String get verifyConfirmationStoreOnly =>
+      'Divine Confirmation is available in the App Store and Google Play versions of Divine.';
+
+  @override
+  String get verifyConfirmationBuySemantic =>
+      'Divine Confirmation, coming soon, unavailable';
+
+  @override
+  String get verifyConfirmationRestoreSemantic =>
+      'Restore purchases, unavailable';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'I-unlink ang $platform account na $identity';
   }

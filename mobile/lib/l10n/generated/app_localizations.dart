@@ -24591,6 +24591,66 @@ abstract class AppLocalizations {
   /// **'Needs Confirmation'**
   String get verifyStatusNeedsConfirmation;
 
+  /// App bar title of the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation'**
+  String get verifyConfirmationTitle;
+
+  /// Headline of the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation'**
+  String get verifyConfirmationHeroTitle;
+
+  /// Short pitch under the headline of the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation lets you link your accounts on other platforms by signing in to them.'**
+  String get verifyConfirmationHeroBody;
+
+  /// Heading of the list of what Divine Confirmation includes. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s included'**
+  String get verifyConfirmationIncludedTitle;
+
+  /// List item on the Divine Confirmation screen: linking accounts by signing in. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Link accounts by signing in'**
+  String get verifyConfirmationIncludedSignIn;
+
+  /// Label of the disabled buy button on the Divine Confirmation screen, shown because it cannot be bought yet. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming soon'**
+  String get verifyConfirmationComingSoon;
+
+  /// Small print at the bottom of the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Details will appear here when Divine Confirmation is ready.'**
+  String get verifyConfirmationSmallPrint;
+
+  /// Shown on the Divine Confirmation screen in place of the buy button when this build cannot be billed by a store. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation is available in the App Store and Google Play versions of Divine.'**
+  String get verifyConfirmationStoreOnly;
+
+  /// Screen reader label for the disabled buy button on the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation, coming soon, unavailable'**
+  String get verifyConfirmationBuySemantic;
+
+  /// Screen reader label for the disabled restore link on the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchases, unavailable'**
+  String get verifyConfirmationRestoreSemantic;
+
   /// Screen reader label for the button that removes a linked account.
   ///
   /// In en, this message translates to:
