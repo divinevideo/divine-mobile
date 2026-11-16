@@ -482,6 +482,17 @@ void main() {
           reason: type.name,
         );
       }
+      // One shader draws both tunnels, the spiral one told apart by its last
+      // value.
+      final tunnels = [EditorEffectType.tunnel, EditorEffectType.spiralTunnel];
+      expect(tunnels.map((type) => shaderTileOf(type)!.asset), [
+        'shaders/tunnel.frag',
+        'shaders/tunnel.frag',
+      ]);
+      expect(tunnels.map((type) => shaderTileOf(type)!.values.last), [
+        0.0,
+        1.0,
+      ]);
     });
 
     testWidgets('marks the picked effect and the shown category as selected '

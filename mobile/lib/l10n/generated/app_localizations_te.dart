@@ -9706,6 +9706,12 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'ఫ్లూటెడ్ గ్లాస్';
 
   @override
+  String get videoEditorEffectTunnel => 'సొరంగం';
+
+  @override
+  String get videoEditorEffectSpiralTunnel => 'సర్పిలాకార సొరంగం';
+
+  @override
   String get videoEditorEffectEightBit => '8-బిట్';
 
   @override

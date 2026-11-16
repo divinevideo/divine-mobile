@@ -937,6 +937,124 @@ void main() {
       });
     });
 
+    group('tunnelStepDuration', () {
+      test('takes 1.2 s for a copy half the size of the picture', () {
+        expect(tunnelStepDuration(0.875), const Duration(milliseconds: 1200));
+      });
+
+      test('takes longer for a smaller copy, so the zoom looks equally '
+          'fast', () {
+        expect(tunnelStepDuration(0.2), greaterThan(tunnelStepDuration(0.9)));
+      });
+    });
+
+    group('tunnelPeriodUs', () {
+      CustomVideoEffect tunnel({
+        EditorEffectType type = EditorEffectType.tunnel,
+        Duration? startTime,
+        Duration? endTime,
+        bool onBeat = false,
+      }) => EditorVideoEffect.of(
+        id: 'tunnel',
+        type: type,
+        intensity: 0.7,
+        startTime: startTime,
+        endTime: endTime,
+        onBeat: onBeat,
+      ).custom!;
+
+      test('fits a whole number of steps into a tunnel over the whole '
+          'video, so it zooms on across the loop', () {
+        // 6 s hold 4.1 natural steps of 1.46 s, so 4 steps of 1.5 s.
+        expect(tunnelPeriodUs(tunnel(), plain), 1500000);
+        // 5.6 s of exported video hold 3.8, so 4 steps of 1.4 s.
+        expect(tunnelPeriodUs(tunnel(), compressed), 1400000);
+      });
+
+      test('fits the steps into a window on the exported video', () {
+        final period = tunnelPeriodUs(
+          tunnel(startTime: ms(1000), endTime: ms(4000)),
+          compressed,
+        );
+
+        // 1 s to 3.6 s on the exported video: 2 steps of 1.3 s.
+        expect(period, 1300000);
+      });
+
+      test('stops counting at the loop point of a timeline longer than the '
+          'export', () {
+        final long = TransitionTimelineMap.fromClips([
+          clip('a', duration: ms(6800)),
+        ]);
+
+        // The export stops at 6.3 s, which holds 4.3 steps: 4 of 1.575 s.
+        expect(tunnelPeriodUs(tunnel(), long), 1575000);
+        expect(tunnelPeriodUs(tunnel(endTime: ms(6800)), long), 1575000);
+      });
+
+      test('keeps the natural step in a window shorter than half of it', () {
+        expect(
+          tunnelPeriodUs(tunnel(endTime: ms(500)), plain),
+          tunnelStepDuration(0.7).inMicroseconds,
+        );
+      });
+
+      test('counts the steps on the player when one maps the timeline', () {
+        Duration slowed(Duration editorTime) => editorTime * 2;
+
+        final params = customVideoEffectRenderParams(
+          tunnel(),
+          compressed,
+          const [],
+          toPlayer: slowed,
+        );
+
+        // 5.6 s of exported video hold 4 steps; on the player the window
+        // runs to the 6 s editor end, doubled.
+        expect(params?[EditorVideoEffect.periodParam], 3000000);
+      });
+
+      test('is what both tunnels playing all through are rendered with', () {
+        for (final type in [
+          EditorEffectType.tunnel,
+          EditorEffectType.spiralTunnel,
+        ]) {
+          final rendered = customVideoEffectsOnOutput([
+            tunnel(type: type),
+          ], plain).single;
+
+          expect(
+            rendered.params[EditorVideoEffect.periodParam],
+            1500000,
+            reason: type.name,
+          );
+          expect(
+            rendered.params[EditorVideoEffect.intensityParam],
+            0.7,
+            reason: type.name,
+          );
+        }
+      });
+
+      test('is left out of a tunnel on the beat, which steps on the '
+          'beats', () {
+        final rendered = customVideoEffectsOnOutput(
+          [tunnel(onBeat: true)],
+          plain,
+          beats: [ms(2000), ms(4000)],
+        ).single;
+
+        expect(rendered.params[EditorVideoEffect.beatsParam], [
+          2000000,
+          4000000,
+        ]);
+        expect(
+          rendered.params.containsKey(EditorVideoEffect.periodParam),
+          isFalse,
+        );
+      });
+    });
+
     group('looksLast', () {
       CustomVideoEffect effect(String id) => CustomVideoEffect(id: id);
 
@@ -1062,7 +1180,7 @@ void main() {
         for (final type in EditorEffectType.values)
           if (type.customId != null) type,
       ];
-      expect(custom, hasLength(44));
+      expect(custom, hasLength(46));
       for (final type in custom) {
         final effect = EditorVideoEffect.of(
           id: 'x',
@@ -1076,9 +1194,11 @@ void main() {
       }
     });
 
-    test('only the zoom blur and the spin blur of the custom effects fire on '
-        'the beat', () {
+    test('only the zoom blur, the spin blur and the tunnels of the custom '
+        'effects fire on the beat', () {
       expect(EditorEffectType.zoomBlur.supportsOnBeat, isTrue);
+      expect(EditorEffectType.tunnel.supportsOnBeat, isTrue);
+      expect(EditorEffectType.spiralTunnel.supportsOnBeat, isTrue);
       final spinBlur = EditorVideoEffect.of(
         id: 'spin',
         type: EditorEffectType.spinBlur,
@@ -1164,8 +1284,8 @@ void main() {
       }
     });
 
-    test('lists the swirl, ripple and fluted glass under distort, after '
-        'the tilt-shift', () {
+    test('lists the swirl, ripple, fluted glass and the tunnels under '
+        'distort, after the tilt-shift', () {
       expect(EditorEffectCategory.distort.types, [
         const EditorEffectType.builtIn(VideoEffectType.mirror),
         const EditorEffectType.builtIn(VideoEffectType.kaleidoscope),
@@ -1177,6 +1297,8 @@ void main() {
         EditorEffectType.swirl,
         EditorEffectType.ripple,
         EditorEffectType.flutedGlass,
+        EditorEffectType.tunnel,
+        EditorEffectType.spiralTunnel,
       ]);
     });
 

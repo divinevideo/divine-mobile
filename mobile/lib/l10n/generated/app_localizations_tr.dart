@@ -9363,6 +9363,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Yivli Cam';
 
   @override
+  String get videoEditorEffectTunnel => 'Tünel';
+
+  @override
+  String get videoEditorEffectSpiralTunnel => 'Spiral Tünel';
+
+  @override
   String get videoEditorEffectEightBit => '8-Bit';
 
   @override

@@ -1,6 +1,8 @@
 // ABOUTME: A video effect placed on the editor timeline, with a stable id so
 // ABOUTME: the timeline can move, trim, edit and delete it.
 
+import 'dart:math' as math;
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:openvine/models/content_label.dart';
@@ -79,6 +81,12 @@ const rippleVideoEffectId = 'divine.ripple';
 /// The id Divine's fluted glass is registered under with pro_video_editor, by
 /// the native `FlutedGlassVideoEffect` on Android, iOS and macOS.
 const flutedGlassVideoEffectId = 'divine.flutedGlass';
+
+/// The ids Divine's tunnels are registered under with pro_video_editor, the
+/// plain one and the spiral one, both drawn by the native `TunnelVideoEffect`
+/// on Android, iOS and macOS.
+const tunnelVideoEffectId = 'divine.tunnel';
+const spiralTunnelVideoEffectId = 'divine.spiralTunnel';
 
 /// The id Divine's zoom blur is registered under with pro_video_editor, by
 /// the native `ZoomBlurVideoEffect` on Android, iOS and macOS.
@@ -285,6 +293,16 @@ class EditorEffectType {
   /// a squeezed slice of it.
   static const flutedGlass = EditorEffectType.custom(flutedGlassVideoEffectId);
 
+  /// Tunnel: the picture holds a smaller copy of itself in its middle, which
+  /// holds another, and so on, and the picture zooms into them without end.
+  static const tunnel = EditorEffectType.custom(tunnelVideoEffectId);
+
+  /// Spiral tunnel: the tunnel in rings twisted into a spiral, so one turn
+  /// around the middle leads one copy deeper.
+  static const spiralTunnel = EditorEffectType.custom(
+    spiralTunnelVideoEffectId,
+  );
+
   /// Zoom blur: the picture streaks outward from its centre, all the time or
   /// on the beat.
   static const zoomBlur = EditorEffectType.custom(zoomBlurVideoEffectId);
@@ -371,6 +389,8 @@ class EditorEffectType {
     swirl,
     ripple,
     flutedGlass,
+    tunnel,
+    spiralTunnel,
     zoomBlur,
     spinBlur,
     comic,
@@ -402,11 +422,15 @@ class EditorEffectType {
   bool get isFlashing => builtIn != null && isFlashingVideoEffect(builtIn!);
 
   /// Whether this type can fire on the beat; see [canFireOnBeat]. Of the
-  /// custom effects only the zoom blur and the spin blur have a hit; the
-  /// others play all through their window.
+  /// custom effects only the zoom blur and the spin blur have a hit, and the
+  /// tunnels take one step deeper on each beat; the others play all through
+  /// their window.
   bool get supportsOnBeat => builtIn != null
       ? canFireOnBeat(builtIn!)
-      : customId == zoomBlurVideoEffectId || customId == spinBlurVideoEffectId;
+      : customId == zoomBlurVideoEffectId ||
+            customId == spinBlurVideoEffectId ||
+            customId == tunnelVideoEffectId ||
+            customId == spiralTunnelVideoEffectId;
 
   /// The category the effects picker lists this type under.
   ///
@@ -425,7 +449,9 @@ class EditorEffectType {
       tiltShiftVideoEffectId ||
       swirlVideoEffectId ||
       rippleVideoEffectId ||
-      flutedGlassVideoEffectId => EditorEffectCategory.distort,
+      flutedGlassVideoEffectId ||
+      tunnelVideoEffectId ||
+      spiralTunnelVideoEffectId => EditorEffectCategory.distort,
       lightLeakVideoEffectId ||
       lightRaysVideoEffectId ||
       anamorphicVideoEffectId ||
@@ -584,6 +610,11 @@ class EditorVideoEffect extends Equatable {
   /// rendered: microseconds after the start of its window, in order. See
   /// [customVideoEffectRenderParams].
   static const beatsParam = 'beatsUs';
+
+  /// The param a tunnel that plays all through its window reads how long one
+  /// step takes from, when it is rendered, in microseconds. See
+  /// [tunnelPeriodUs].
+  static const periodParam = 'periodUs';
 
   /// Identifies the effect on the timeline and across undo steps.
   final String id;
@@ -747,8 +778,9 @@ List<CustomVideoEffect> customVideoEffectsOnOutput(
 /// The params a renderer draws [effect] with, its window on the editor
 /// timeline.
 ///
-/// An effect that plays all through its window keeps its own. One on the
-/// beat also gets the times it fires at, under
+/// An effect that plays all through its window keeps its own; a tunnel also
+/// gets how long one step takes, under [EditorVideoEffect.periodParam] (see
+/// [tunnelPeriodUs]). One on the beat also gets the times it fires at, under
 /// [EditorVideoEffect.beatsParam]: the [beats] of the exported video that fall
 /// in its window, as microseconds after its start. It moves with the time
 /// since it started in the preview as in the export, so the beats are counted
@@ -765,7 +797,18 @@ Map<String, Object?>? customVideoEffectRenderParams(
   Duration Function(Duration editorTime)? toPlayer,
 }) {
   if (effect.params[EditorVideoEffect.onBeatParam] != true) {
-    return effect.params;
+    if (effect.id != tunnelVideoEffectId &&
+        effect.id != spiralTunnelVideoEffectId) {
+      return effect.params;
+    }
+    return {
+      ...effect.params,
+      EditorVideoEffect.periodParam: tunnelPeriodUs(
+        effect,
+        timelineMap,
+        toPlayer: toPlayer,
+      ),
+    };
   }
   final editorStart = effect.startTime ?? Duration.zero;
   final start = timelineMap.editorToOutput(editorStart);
@@ -781,6 +824,57 @@ Map<String, Object?>? customVideoEffectRenderParams(
   ];
   if (offsets.isEmpty) return null;
   return {...effect.params, EditorVideoEffect.beatsParam: offsets};
+}
+
+/// How long one step of a tunnel takes at [intensity] when nothing else
+/// decides it: as long as the picture takes to grow from one copy to the size
+/// of the one around it, at a zoom that doubles it every 1.2 seconds. A
+/// smaller copy takes longer, so the zoom looks equally fast at every
+/// intensity. The native `TunnelSteps` use the same.
+Duration tunnelStepDuration(double intensity) {
+  final copyScale = 0.15 + 0.4 * intensity.clamp(0.0, 1.0);
+  return Duration(
+    microseconds: (-math.log(copyScale) / math.ln2 * 1200000).round(),
+  );
+}
+
+/// How long one step of the tunnel [effect] takes, in microseconds, on the
+/// time its renderer counts in: the exported video, or the player's timeline
+/// when [toPlayer] maps onto one.
+///
+/// A whole number of steps fits into the effect's window on the exported
+/// video, which ends where the video loops at the latest, so a tunnel over
+/// the whole video ends on the picture it starts with and zooms on across the
+/// loop without a jump. The count is how many steps of [tunnelStepDuration]
+/// the window holds, rounded to the nearest whole number: rounding the count
+/// rather than the step keeps the zoom speed, in steps a second, nearest the
+/// natural one. A window shorter than half a step keeps the natural step.
+int tunnelPeriodUs(
+  CustomVideoEffect effect,
+  TransitionTimelineMap timelineMap, {
+  Duration Function(Duration editorTime)? toPlayer,
+}) {
+  final intensity =
+      (effect.params[EditorVideoEffect.intensityParam] as num?)?.toDouble() ??
+      1;
+  final step = tunnelStepDuration(intensity);
+  final editorStart = effect.startTime ?? Duration.zero;
+  final start = timelineMap.editorToOutput(editorStart);
+  final loopPoint = timelineMap.loopPoint;
+  final requestedEnd = timelineMap.editorToOutputOrNull(effect.endTime);
+  final end = requestedEnd == null || requestedEnd > loopPoint
+      ? loopPoint
+      : requestedEnd;
+  final window = end - start;
+  if (window < step ~/ 2) return step.inMicroseconds;
+  final steps = math.max(
+    1,
+    (window.inMicroseconds / step.inMicroseconds).round(),
+  );
+  final span = toPlayer == null
+      ? window
+      : toPlayer(timelineMap.outputToEditor(end)) - toPlayer(editorStart);
+  return math.max(1, span.inMicroseconds ~/ steps);
 }
 
 /// [effects] with their windows moved from the editor timeline onto the

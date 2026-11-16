@@ -9403,6 +9403,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Kính gân';
 
   @override
+  String get videoEditorEffectTunnel => 'Đường hầm';
+
+  @override
+  String get videoEditorEffectSpiralTunnel => 'Đường hầm xoắn ốc';
+
+  @override
   String get videoEditorEffectEightBit => '8-bit';
 
   @override
