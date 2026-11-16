@@ -216,6 +216,9 @@ enum DivineIconName {
   skull('skull'),
   sliders('sliders'),
   slidersHorizontal('sliders_horizontal'),
+
+  /// A four-pointed star with two small crosses: AI, recommendations and
+  /// highlights. Not a fallback for a control no icon fits; add a new one.
   sparkle('sparkle'),
   speakerHigh('speaker_high'),
   speakerSimpleHigh('speaker_simple_high'),

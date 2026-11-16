@@ -285,6 +285,33 @@ SvgPicture.asset(DivineIconName.search.assetPath, ...)
 Icon(Icons.search, color: VineTheme.lightText)
 ```
 
+### Choose an icon for what the control does
+Pick the `DivineIconName` whose drawing shows what the control does, not the
+nearest one in the list. `sparkle` is not a fallback: in Divine it stands for
+AI, recommendations and highlights (the For You algorithm, smart sort,
+auto-detect, creator highlights, badges), so a control that shows it reads as
+an AI feature. Agents kept reaching for it whenever nothing else matched,
+which is how the camera's stabilization button (#11080) and the editor's
+layer animation button (#11093) came to look like AI toggles.
+
+When no existing icon fits, draw a new one instead of settling for the
+nearest:
+
+1. Draw three or four candidates as 32×32 SVGs in the style of the icons
+   beside the control: white, the same stroke weight (3 units with round caps
+   in the camera toolbar), and no shape that repeats a neighbour's.
+2. Compare them at real size next to those neighbours, in dark and light. A
+   candidate that only reads when enlarged does not read.
+3. In an interactive session, show the candidates and let the user pick.
+   Working unattended, pick one and list the rejected candidates, with the
+   reason, in the PR description so reviewers can weigh in.
+4. Add the SVG to `mobile/assets/icon/` and a `DivineIconName` entry in
+   alphabetical order, with a one-line doc saying what it shows and what it
+   is for (`/// A ball bouncing along its arc: layer animation.`). Regenerate
+   the compiled asset with `dart run tool/compile_icons.dart` from
+   `mobile/packages/divine_ui`, and commit the `.svg` and `.vec` together:
+   the `divine_ui` icon tests fail when they differ.
+
 ---
 
 ## VineTheme Typography
