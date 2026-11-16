@@ -21,11 +21,13 @@ import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/device_scope.dart';
+import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/live_account_container.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
@@ -766,15 +768,18 @@ void main() {
     // a new OAuthConfig once a LOCAL container's environment initializes. The
     // other swap tests override the provider with no dependencies, so they
     // cannot see the incoming AuthService being rebuilt mid-switch (#11046).
-    Future<List<AuthService>> pumpHostWithEnvironment(
+    // It also reads its relay URLs from the environment once, when built, so
+    // each built service is recorded with the environment it saw.
+    Future<List<({AuthService auth, AppEnvironment environment})>>
+    pumpHostWithEnvironment(
       WidgetTester tester,
-      String environment,
+      AppEnvironment environment,
     ) async {
       await deviceScope.sharedPreferences.setString(
         'app_environment',
-        environment,
+        environment.name,
       );
-      final built = <AuthService>[];
+      final built = <({AuthService auth, AppEnvironment environment})>[];
       final outgoing = currentAuthService;
       var authBuilds = 0;
       deviceScope = DeviceScope(
@@ -795,7 +800,10 @@ void main() {
             ref.watch(oauthConfigProvider);
             if (authBuilds++ == 0) return outgoing;
             final auth = makeIncomingAuth();
-            built.add(auth);
+            built.add((
+              auth: auth,
+              environment: ref.read(currentEnvironmentProvider).environment,
+            ));
             ref.onDispose(() => unawaited(auth.dispose()));
             return auth;
           }),
@@ -806,9 +814,14 @@ void main() {
       return built;
     }
 
-    for (final environment in ['production', 'staging', 'local']) {
+    for (final environment in [
+      AppEnvironment.production,
+      AppEnvironment.staging,
+      AppEnvironment.local,
+    ]) {
       testWidgets(
-        'commits the incoming account when it initializes to $environment',
+        'commits the incoming account when it initializes to '
+        '${environment.name}',
         (tester) async {
           final built = await pumpHostWithEnvironment(tester, environment);
 
@@ -823,7 +836,8 @@ void main() {
 
           final live = controller.currentContainer!.read(authServiceProvider);
           expect(built, hasLength(1));
-          expect(live, same(built.single));
+          expect(live, same(built.single.auth));
+          expect(built.single.environment, environment);
           expect(live.currentPublicKeyHex, targetHex);
           expect(live.committedAccountOwnerPubkey, targetHex);
         },
