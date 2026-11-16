@@ -265,6 +265,7 @@ These issues stay report-only regardless of assignee; see `<context-dir>/AGENT_T
 - Prefer full-screen flows over introducing new dialogs or bottom sheets unless the task explicitly calls for one or the existing UX already uses that pattern.
 - Divine ships dark and light appearances; dark is the default and users pick System / Light / Dark in Settings → General → Appearance. Never hardcode for one mode: read adaptive surfaces and content through `context.vineColors.<token>`, and reserve the static `VineTheme.*` color constants for brand colors and fixed media chrome (scrims, over-video controls, the camera and editor canvas). Use `VineTheme` and existing components from `mobile/packages/divine_ui` instead of raw `Colors.*` values or one-off styling.
 - Reuse shared components like `DivineButton`, `DivineIconButton`, `DivineAuthTextField`, and `VineBottomSheet` when they fit the job.
+- Choose each icon for what its control does. `sparkle` stands for AI, recommendation and highlight features and is not a fallback; when no `DivineIconName` fits, draw a new icon and propose it instead of reusing the nearest one. See `.claude/rules/ui_theming.md` → Icons.
 - When changing user-facing copy, align with `brand-guidelines/AGENT_QUICK_REFERENCE.md` and `brand-guidelines/TONE_OF_VOICE.md`: direct, human, slightly playful, and never corporate.
 
 ### Account Identifiers And NIP-05

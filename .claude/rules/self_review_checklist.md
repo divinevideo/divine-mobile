@@ -127,6 +127,10 @@ Design system (check `divine_ui` first — most review nits map here):
 - [ ] No raw `Icons.*` / `SvgPicture.asset(...)`. Use `DivineIcon` or
   `DivineIconButton`. Icon colors are picked automatically from the
   button variant — never pass color manually to icon-in-button cases.
+- [ ] Each icon shows what its control does. `sparkle` means AI and
+  highlights, never "nothing else fits"; when no icon fits, draw
+  candidates and propose a new one. See
+  [`ui_theming.md`](ui_theming.md#choose-an-icon-for-what-the-control-does).
 - [ ] Uniform gaps between children in a `Row`/`Column` → use
   `spacing: N`, not manual `SizedBox` spacers. `SizedBox` is fine when
   gaps differ.
