@@ -10,7 +10,6 @@ import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
-import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/swap_account.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
@@ -113,9 +112,6 @@ void main() {
         ),
         signIn: (container, account) async {
           swapped = container;
-          await container
-              .read(environmentServiceProvider)
-              .initialize(sharedPreferences: scope.prefs);
           await container
               .read(authServiceProvider)
               .initializeForAccountSwitch();

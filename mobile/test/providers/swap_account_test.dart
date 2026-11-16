@@ -21,11 +21,13 @@ import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/device_scope.dart';
+import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/live_account_container.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
@@ -759,6 +761,88 @@ void main() {
         expect(databaseCleanups, 0);
       },
     );
+  });
+
+  group('default sign-in environment', () {
+    // The real authServiceProvider watches oauthConfigProvider, which returns
+    // a new OAuthConfig once a LOCAL container's environment initializes. The
+    // other swap tests override the provider with no dependencies, so they
+    // cannot see the incoming AuthService being rebuilt mid-switch (#11046).
+    // It also reads its relay URLs from the environment once, when built, so
+    // each built service is recorded with the environment it saw.
+    Future<List<({AuthService auth, AppEnvironment environment})>>
+    pumpHostWithEnvironment(
+      WidgetTester tester,
+      AppEnvironment environment,
+    ) async {
+      await deviceScope.sharedPreferences.setString(
+        'app_environment',
+        environment.name,
+      );
+      final built = <({AuthService auth, AppEnvironment environment})>[];
+      final outgoing = currentAuthService;
+      var authBuilds = 0;
+      deviceScope = DeviceScope(
+        database: database,
+        sharedPreferences: deviceScope.sharedPreferences,
+        announcementSessions: AnnouncementSessions(),
+        feedModePersistence: deviceScope.feedModePersistence,
+        switchController: controller,
+        appVersion: 'test',
+        crashReporting: deviceScope.crashReporting,
+        startupPerformance: deviceScope.startupPerformance,
+        documentsPath: '/documents',
+        logMessageBatcher: deviceScope.logMessageBatcher,
+        accountOverrides: [
+          secureKeyStorageProvider.overrideWithValue(keyStorage),
+          pushNotificationSyncProvider.overrideWithValue(null),
+          authServiceProvider.overrideWith((ref) {
+            ref.watch(oauthConfigProvider);
+            if (authBuilds++ == 0) return outgoing;
+            final auth = makeIncomingAuth();
+            built.add((
+              auth: auth,
+              environment: ref.read(currentEnvironmentProvider).environment,
+            ));
+            ref.onDispose(() => unawaited(auth.dispose()));
+            return auth;
+          }),
+        ],
+      );
+      final initial = await pumpHost(tester);
+      expect(initial.read(authServiceProvider), same(outgoing));
+      return built;
+    }
+
+    for (final environment in [
+      AppEnvironment.production,
+      AppEnvironment.staging,
+      AppEnvironment.local,
+    ]) {
+      testWidgets(
+        'commits the incoming account when it initializes to '
+        '${environment.name}',
+        (tester) async {
+          final built = await pumpHostWithEnvironment(tester, environment);
+
+          await driveSwap(
+            swapAccount(
+              deviceScope: deviceScope,
+              controller: controller,
+              currentAuthService: currentAuthService,
+              account: account,
+            ),
+          );
+
+          final live = controller.currentContainer!.read(authServiceProvider);
+          expect(built, hasLength(1));
+          expect(live, same(built.single.auth));
+          expect(built.single.environment, environment);
+          expect(live.currentPublicKeyHex, targetHex);
+          expect(live.committedAccountOwnerPubkey, targetHex);
+        },
+      );
+    }
   });
 
   /// Switches away from [from] and reports the location [swapAccount] seeded
