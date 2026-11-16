@@ -199,12 +199,30 @@ void main() {
         expect(held, isZero, reason: 'a hold must not start early');
 
         await tester.pump(const Duration(milliseconds: 1));
+        expect(held, equals(1), reason: 'the hold must start at the delay');
+
+        await gesture.up();
+      });
+
+      testWidgets('starts the hold within half of the default '
+          '${kLongPressTimeout.inMilliseconds} ms long press', (tester) async {
+        var held = 0;
+        await tester.pumpWidget(
+          host(interactiveReady: true, onLongPressStart: () => held++),
+        );
+        await tester.pump();
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(PlayerGestureSurface)),
+        );
+        await tester.pump(kLongPressTimeout ~/ 2);
+
         expect(
           held,
           equals(1),
           reason:
-              'the default $kLongPressTimeout left the video playing under '
-              'a resting thumb for half a second',
+              'the default ${kLongPressTimeout.inMilliseconds} ms left the '
+              'video playing under a resting thumb for half a second',
         );
 
         await gesture.up();

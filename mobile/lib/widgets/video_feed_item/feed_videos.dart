@@ -1352,13 +1352,13 @@ class __OverlayState extends ConsumerState<_Overlay> {
                 builder: (context) {
                   // The chrome layers are SIBLINGS above the gesture surface,
                   // never descendants of it. As descendants, any press held
-                  // past `kLongPressTimeout` anywhere on the action rail was
-                  // claimed by the video's long-press: the rail's own tap
-                  // recognizer only accepts on pointer-up, so it lost the
-                  // arena, and Report/More/Share swallowed the tap and faded
-                  // out under the viewer's finger. Keeping them siblings lets
-                  // an opaque button win the hit test outright, so the peek
-                  // never sees that pointer.
+                  // past the hold delay (`kFeedHoldToPeekDelay`) anywhere on
+                  // the action rail was claimed by the video's long-press: the
+                  // rail's own tap recognizer only accepts on pointer-up, so it
+                  // lost the arena, and Report/More/Share swallowed the tap and
+                  // faded out under the viewer's finger. Keeping them siblings
+                  // lets an opaque button win the hit test outright, so the
+                  // peek never sees that pointer.
                   //
                   // The player's label and hint live on the gesture surface
                   // below, not on a wrapper here: a node with no tap action
