@@ -13,7 +13,7 @@
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 
-/// Why a sender is allowed into the cryptographically trusted Official tab.
+/// The role of a signed-registry identity; decides whether it can be blocked.
 enum DivineIdentityKind { operationalAccount, teamMember }
 
 /// A signed-registry identity and the capabilities attached to that role.
@@ -28,10 +28,10 @@ class DivineOfficialIdentity {
 
 /// Where a conversation lands in the four-tab inbox.
 enum DmInboxBucket {
-  /// Authenticated DivineHQ / Divine Support / Trust & Safety.
+  /// Rooms whose every other participant is an authenticated Divine identity.
   ///
-  /// Never routed to requests, never hidden by a privacy setting, never
-  /// blockable — only reportable.
+  /// Never routed to requests or hidden by a privacy setting. Always
+  /// reportable. Blocking targets individual team members only.
   official,
 
   /// Conversations the user has consented to: they replied, or they follow
@@ -145,7 +145,7 @@ class DmVerdict {
     required this.bucket,
     required this.score,
     required this.reasons,
-    this.officialIdentity,
+    this.officialParticipants = const {},
   });
 
   final DmInboxBucket bucket;
@@ -155,7 +155,10 @@ class DmVerdict {
   final int score;
 
   final List<DmRiskReason> reasons;
-  final DivineOfficialIdentity? officialIdentity;
+
+  /// Authenticated counterparties in pubkey order, populated only for an
+  /// all-official room.
+  final Map<String, DivineOfficialIdentity> officialParticipants;
 }
 
 /// Tunable weights and thresholds.
@@ -352,9 +355,10 @@ class DmInboxClassification {
 ///
 /// Ordering is deliberate and each step is a hard short-circuit:
 ///
-/// 1. **Official** — any participant is a canonical official pubkey. Wins over
-///    everything, including a risk score that would otherwise flag it, because
-///    Divine Support must be able to reach an account about a report.
+/// 1. **Official** — every non-self participant is a canonical official pubkey.
+///    At least one counterparty is required. Official rooms bypass
+///    scoring. Mixed rooms follow the ordinary consent and relationship rules;
+///    one official participant never grants trust to the whole room.
 /// 2. **Inbox (consented)** — the user has replied, so consent is established.
 /// 3. **Inbox (followed)** — every deduplicated non-self participant is
 ///    followed. `every`, not `first`, so a stranger p-tagged into a group
@@ -446,16 +450,21 @@ class DmInboxClassifier {
     required DmSenderSignals Function(String) signalsFor,
     required DmMessageSignals messageSignals,
   }) {
-    DivineOfficialIdentity? officialIdentity;
-    for (final pubkey in others) {
-      officialIdentity ??= officialIdentities[pubkey];
-    }
-    if (officialIdentity != null) {
+    final officialParticipants = <String, DivineOfficialIdentity>{
+      for (final pubkey in others.toList()..sort())
+        pubkey: ?officialIdentities[pubkey],
+    };
+    if (others.isNotEmpty && officialParticipants.length == others.length) {
       return DmVerdict(
         bucket: DmInboxBucket.official,
         score: 0,
-        reasons: const [DmRiskReason('Verified Divine identity', 0)],
-        officialIdentity: officialIdentity,
+        reasons: const [
+          DmRiskReason(
+            'Every other participant is an official Divine identity',
+            0,
+          ),
+        ],
+        officialParticipants: Map.unmodifiable(officialParticipants),
       );
     }
 

@@ -435,7 +435,7 @@ class _FilterHero extends StatelessWidget {
                 ),
                 Text(
                   'Decide what reaches Requests and what waits in Likely spam. '
-                  'Official Divine identities and existing chats are never filtered.',
+                  'All-official conversations and existing chats are never filtered.',
                   style: VineTheme.bodyMediumFont(
                     color: colors.onSurfaceVariant,
                   ).copyWith(height: 1.4),
