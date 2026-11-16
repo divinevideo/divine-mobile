@@ -24,8 +24,9 @@ void main() {
       (tester) async {
         await runWithAppErrorHandlers(() async {
           // Headless Linux CI has the libsecret client library but no Secret
-          // Service session. Mock only the unavailable platform channels so the
-          // app can exercise its real startup and navigation flow.
+          // Service session, and no NetworkManager for connectivity_plus.
+          // Stand in for only those so the app can exercise its real startup
+          // and navigation flow.
           await RealIntegrationTestHelper.setupTestEnvironment();
           addTearDown(RealIntegrationTestHelper.cleanup);
 
