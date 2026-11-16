@@ -132,6 +132,47 @@ void main() {
     expect(emissions.last.map((video) => video.id), [_id('1'), _id('4')]);
   });
 
+  for (final remoteOutcome in ['empty', 'failed']) {
+    test(
+      'local timeout and $remoteOutcome remotes emit an empty result',
+      () async {
+        setUpSearch();
+        final results = repository.searchVideos(query: 'test-loop').toList();
+        localResults.completeError(TimeoutException('cache unavailable'));
+        if (remoteOutcome == 'failed') {
+          apiResults.completeError(TimeoutException('API unavailable'));
+          relayResults.addError(TimeoutException('relay unavailable'));
+        } else {
+          apiResults.complete(_response([]));
+        }
+        await relayResults.close();
+        expect(await results, [isEmpty]);
+      },
+    );
+  }
+
+  test(
+    'a late local timeout preserves API results already published',
+    () async {
+      setUpSearch();
+      final emissions = <List<VideoEvent>>[];
+      final done = Completer<void>();
+      repository
+          .searchVideos(query: 'test-loop')
+          .listen(
+            emissions.add,
+            onDone: done.complete,
+          );
+      apiResults.complete(_response([_stats('1')]));
+      await pumpEventQueue();
+      expect(emissions.last.map((video) => video.id), [_id('1')]);
+      localResults.completeError(TimeoutException('cache unavailable'));
+      await relayResults.close();
+      await done.future;
+      expect(emissions.last.map((video) => video.id), [_id('1')]);
+    },
+  );
+
   for (final source in ['local', 'API', 'relay']) {
     test(
       '$source programming errors reach an active consumer with their stack',

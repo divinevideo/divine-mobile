@@ -2662,6 +2662,8 @@ class VideosRepository {
   ///
   /// Blank queries emit nothing. Cancelling the subscription stops emissions
   /// immediately; outstanding source futures are still observed for errors.
+  /// An operational local failure emits the accumulated snapshot, including an
+  /// empty list when no source has results, so a previous query is cleared.
   Stream<List<VideoEvent>> searchVideos({
     required String query,
     int limit = 50,
@@ -2676,6 +2678,12 @@ class VideosRepository {
     var relay = <VideoEvent>[];
     late final StreamController<List<VideoEvent>> controller;
 
+    void emitSnapshot() {
+      controller.add(
+        deduplicateVideosPreservingOrder([...api, ...local, ...relay]),
+      );
+    }
+
     Future<void> collect(
       String source,
       Future<List<VideoEvent>> Function() search,
@@ -2687,9 +2695,7 @@ class VideosRepository {
         if (cancelled) return;
         save(videos);
         if (videos.isNotEmpty || emitEmpty) {
-          controller.add(
-            deduplicateVideosPreservingOrder([...api, ...local, ...relay]),
-          );
+          emitSnapshot();
         }
       } on Exception catch (error, stackTrace) {
         Log.error(
@@ -2699,6 +2705,7 @@ class VideosRepository {
           error: error,
           stackTrace: stackTrace,
         );
+        if (emitEmpty && !cancelled) emitSnapshot();
       } on Object catch (error, stackTrace) {
         if (!cancelled) controller.addError(error, stackTrace);
       }
