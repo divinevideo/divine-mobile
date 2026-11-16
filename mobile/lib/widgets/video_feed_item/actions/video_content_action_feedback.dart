@@ -132,12 +132,22 @@ class VideoContentSaveFeedback extends StatelessWidget {
         final (message, isError) = _saveFeedbackMessage(context.l10n, result);
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Semantics(
-            // Without its own node the live region merges into the list
-            // item, making the whole action row one announcement.
-            container: true,
-            liveRegion: true,
-            child: DivineSnackbarContainer(label: message, error: isError),
+          // The container centres itself past its maximum width; the sheet's
+          // content starts at its margin, so the banner does too.
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: DivineSnackbarContainer.maxWidth,
+              ),
+              child: Semantics(
+                // Without its own node the live region merges into the list
+                // item, making the whole action row one announcement.
+                container: true,
+                liveRegion: true,
+                child: DivineSnackbarContainer(label: message, error: isError),
+              ),
+            ),
           ),
         );
       },

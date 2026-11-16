@@ -4,6 +4,7 @@
 // ABOUTME: collaborators, inspired by, reposted by, and sounds sections.
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:collaborator_repository/collaborator_repository.dart';
@@ -3387,23 +3388,7 @@ void main() {
           expect(find.byType(MetadataActionsSection), findsOneWidget);
           expect(find.text(l10n.shareSheetRemoveFromSaved), findsOneWidget);
           expect(find.text(l10n.shareAddedToBookmarks), findsOneWidget);
-          // A leaf node: merged into its list item, the live region would
-          // carry the label and flag too, but also the whole action row.
-          final banner = tester.getSemantics(
-            find.text(l10n.shareAddedToBookmarks),
-          );
-          expect(banner.childrenCount, equals(0));
-          expect(banner.label, equals(l10n.shareAddedToBookmarks));
-          expect(
-            banner.getSemanticsData().flagsCollection.isLiveRegion,
-            isTrue,
-          );
           expect(find.byType(SnackBar), findsNothing);
-          final bannerRect = tester.getRect(bannerSurface);
-          final titleLeft = tester.getTopLeft(find.byType(LinkifiedText)).dx;
-          final sheetRect = tester.getRect(find.byType(MetadataActionsSection));
-          expect(bannerRect.left, equals(titleLeft));
-          expect(sheetRect.right - bannerRect.right, equals(titleLeft));
           expect(bannerColor(), equals(colors.surfaceContainerHigh));
 
           await tester.tap(find.text(l10n.shareSheetRemoveFromSaved));
@@ -3425,6 +3410,88 @@ void main() {
           expect(find.text(l10n.shareAddedToBookmarks), findsOneWidget);
           expect(find.text(l10n.profileSetupNoRelaysConnected), findsNothing);
           expect(attempt, equals(4));
+        },
+      );
+    }
+
+    for (final (device, size) in [
+      ('phone', const Size(390, 844)),
+      ('tablet', const Size(1024, 1366)),
+    ]) {
+      testWidgets(
+        'shows a Save result as its own live region within the sheet margin '
+        'on a $device',
+        (tester) async {
+          tester.view.physicalSize = size;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          when(
+            bookmarksRepository.syncGlobalBookmarks,
+          ).thenAnswer((_) async => true);
+          when(
+            () => bookmarksRepository.hasUnreadablePrivateItems,
+          ).thenReturn(false);
+          when(
+            () => bookmarksRepository.isVideoBookmarkedGlobally(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
+          ).thenReturn(false);
+          when(
+            () => bookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
+          ).thenAnswer(
+            (_) async => const BookmarkToggleResult(
+              succeeded: true,
+              wasBookmarked: false,
+              isBookmarked: true,
+            ),
+          );
+          await openSheet(
+            tester,
+            video: _makeVideo(title: 'Classic', rawTags: {'platform': 'vine'}),
+            viewerPubkey: _thirdPartyViewer,
+          );
+          final l10n = _l10n(tester);
+
+          await tester.tap(find.text(l10n.shareSheetSave));
+          await tester.pumpAndSettle();
+
+          // A leaf node: merged into its list item, the live region would
+          // carry the label and flag too, but also the whole action row.
+          final banner = tester.getSemantics(
+            find.text(l10n.shareAddedToBookmarks),
+          );
+          expect(banner.childrenCount, equals(0));
+          expect(banner.label, equals(l10n.shareAddedToBookmarks));
+          expect(
+            banner.getSemanticsData().flagsCollection.isLiveRegion,
+            isTrue,
+          );
+
+          final bannerRect = tester.getRect(
+            find
+                .descendant(
+                  of: find.byType(DivineSnackbarContainer),
+                  matching: find.byType(DecoratedBox),
+                )
+                .first,
+          );
+          final sheetRect = tester.getRect(find.byType(MetadataActionsSection));
+          final margin =
+              tester.getTopLeft(find.byType(LinkifiedText)).dx - sheetRect.left;
+          expect(bannerRect.left - sheetRect.left, equals(margin));
+          expect(
+            bannerRect.width,
+            equals(
+              math.min(
+                sheetRect.width - 2 * margin,
+                DivineSnackbarContainer.maxWidth,
+              ),
+            ),
+          );
         },
       );
     }
