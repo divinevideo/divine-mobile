@@ -4,6 +4,7 @@
 import 'dart:io';
 
 import 'package:db_client/db_client.dart' hide Filter;
+import 'package:drift/drift.dart' show Variable;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -2190,9 +2191,9 @@ void main() {
           await dao.upsertEvent(verified);
           final plan = await database
               .customSelect(
-                'EXPLAIN QUERY PLAN SELECT id, sig FROM event '
-                'WHERE signature_verified = 1 '
-                'ORDER BY created_at DESC LIMIT 50000',
+                'EXPLAIN QUERY PLAN '
+                '${NostrEventsDao.recentVerifiedEventIdSigsSql}',
+                variables: [Variable.withInt(50000)],
               )
               .get();
           final details = plan

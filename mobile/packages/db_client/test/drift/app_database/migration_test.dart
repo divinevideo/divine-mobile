@@ -1,5 +1,6 @@
 // dart format width=80
 import 'package:db_client/src/database/app_database.dart';
+import 'package:db_client/src/database/daos/nostr_events_dao.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';
@@ -336,8 +337,9 @@ void main() {
         ]);
         final plan = await db
             .customSelect(
-              'EXPLAIN QUERY PLAN SELECT id, sig FROM event '
-              'WHERE signature_verified = 1 ORDER BY created_at DESC LIMIT 50000',
+              'EXPLAIN QUERY PLAN '
+              '${NostrEventsDao.recentVerifiedEventIdSigsSql}',
+              variables: [Variable.withInt(50000)],
             )
             .get();
         expect(
