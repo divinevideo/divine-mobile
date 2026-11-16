@@ -377,7 +377,17 @@ void blocklistSyncBridge(Ref ref) {
     }
   }
 
-  unawaited(startSync(ref.read(nostrSessionProvider)));
+  // A switched-in account's session can already be ready here, and adopting
+  // its identity bumps blocklistVersionProvider, which a provider must not do
+  // while it builds (#11070). So the first sync starts after this build.
+  runProviderDetached(
+    Future<void>.microtask(() {
+      if (!ref.mounted) return null;
+      return startSync(ref.read(nostrSessionProvider));
+    }),
+    'start initial block/mute list sync',
+    logName: 'BlocklistSyncBridge',
+  );
 
   ref.listen<NostrSessionReadiness>(nostrSessionProvider, (_, next) {
     unawaited(startSync(next));
