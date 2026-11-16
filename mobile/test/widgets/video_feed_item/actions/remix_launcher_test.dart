@@ -78,11 +78,34 @@ class _ObservedDraftStorageService extends DraftStorageService {
 
   final autosaveDeleted = Completer<void>();
 
+  /// Completes when a draft other than the autosave has been deleted.
+  final keptDeleted = Completer<void>();
+
+  /// Runs after a draft other than the autosave is written.
+  void Function()? afterKeptSave;
+
+  @override
+  Future<void> saveDraft(
+    DivineVideoDraft draft, {
+    void Function(List<String?> orphanPaths)? deferOrphanCleanup,
+    DraftOwnedFilesMemo? ownedFilesMemo,
+  }) async {
+    await super.saveDraft(
+      draft,
+      deferOrphanCleanup: deferOrphanCleanup,
+      ownedFilesMemo: ownedFilesMemo,
+    );
+    if (draft.id != VideoEditorConstants.autoSaveId) afterKeptSave?.call();
+  }
+
   @override
   Future<void> deleteDraft(String id) async {
     await super.deleteDraft(id);
     if (id == VideoEditorConstants.autoSaveId && !autosaveDeleted.isCompleted) {
       autosaveDeleted.complete();
+    }
+    if (id != VideoEditorConstants.autoSaveId && !keptDeleted.isCompleted) {
+      keptDeleted.complete();
     }
   }
 }
@@ -120,6 +143,7 @@ void main() {
     late ProviderContainer container;
     late List<Uri> editorLocations;
     late List<Object> launchErrors;
+    late BuildContext homeContext;
 
     setUpAll(() {
       registerFallbackValue(_autosave(clips: const []));
@@ -131,21 +155,18 @@ void main() {
       editorLocations = <Uri>[];
       launchErrors = <Object>[];
       publish = _FakeVideoPublishNotifier(calls);
-      when(
-        () => draftStorage.draftExists(VideoEditorConstants.autoSaveId),
-      ).thenAnswer((_) async => false);
+      when(() => draftStorage.draftExists(VideoEditorConstants.autoSaveId))
+          .thenAnswer((_) async => false);
       when(() => draftStorage.saveDraft(any())).thenAnswer((_) async {
         calls.add('saveDraft');
       });
     });
 
     void stubAutosave(DivineVideoDraft draft) {
-      when(
-        () => draftStorage.draftExists(VideoEditorConstants.autoSaveId),
-      ).thenAnswer((_) async => true);
-      when(
-        () => draftStorage.getDraftById(VideoEditorConstants.autoSaveId),
-      ).thenAnswer((_) async => draft);
+      when(() => draftStorage.draftExists(VideoEditorConstants.autoSaveId))
+          .thenAnswer((_) async => true);
+      when(() => draftStorage.getDraftById(VideoEditorConstants.autoSaveId))
+          .thenAnswer((_) async => draft);
     }
 
     Widget buildSubject() {
@@ -153,28 +174,32 @@ void main() {
         routes: [
           GoRoute(
             path: '/',
-            builder: (context, _) => Scaffold(
-              body: TextButton(
-                onPressed: () => showModalBottomSheet<void>(
-                  context: context,
-                  builder: (_) => Consumer(
-                    builder: (sheetContext, ref, _) => TextButton(
-                      onPressed: () =>
-                          openRemixInEditor(
-                            sheetContext,
-                            ref,
-                            remixClip,
-                          ).then<void>(
-                            (_) {},
-                            onError: (Object error) => launchErrors.add(error),
-                          ),
-                      child: const Text(remixLabel),
+            builder: (context, _) {
+              homeContext = context;
+              return Scaffold(
+                body: TextButton(
+                  onPressed: () => showModalBottomSheet<void>(
+                    context: context,
+                    builder: (_) => Consumer(
+                      builder: (sheetContext, ref, _) => TextButton(
+                        onPressed: () =>
+                            openRemixInEditor(
+                              sheetContext,
+                              ref,
+                              remixClip,
+                            ).then<void>(
+                              (_) {},
+                              onError: (Object error) =>
+                                  launchErrors.add(error),
+                            ),
+                        child: const Text(remixLabel),
+                      ),
                     ),
                   ),
+                  child: const Text(openSheetLabel),
                 ),
-                child: const Text(openSheetLabel),
-              ),
-            ),
+              );
+            },
           ),
           GoRoute(
             path: VideoEditorScreen.path,
@@ -248,9 +273,8 @@ void main() {
       );
       final postTime = DateTime.utc(2026, 12, 24, 9, 30);
       stubAutosave(
-        _autosave(
-          clips: [sessionClip],
-        ).copyWith(challengeContext: challenge, scheduledAt: postTime),
+        _autosave(clips: [sessionClip])
+            .copyWith(challengeContext: challenge, scheduledAt: postTime),
       );
 
       await tester.pumpWidget(buildSubject());
@@ -314,9 +338,8 @@ void main() {
       'keeps the session and opens nothing when the draft cannot be saved',
       (tester) async {
         stubAutosave(_autosave(clips: [sessionClip]));
-        when(
-          () => draftStorage.saveDraft(any()),
-        ).thenThrow(Exception('disk full'));
+        when(() => draftStorage.saveDraft(any()))
+            .thenThrow(Exception('disk full'));
 
         await tester.pumpWidget(buildSubject());
         container.read(clipManagerProvider.notifier).insertClip(0, sessionClip);
@@ -336,9 +359,8 @@ void main() {
       'shows the failure, then rethrows an Error from keeping the session',
       (tester) async {
         stubAutosave(_autosave(clips: [sessionClip]));
-        when(
-          () => draftStorage.saveDraft(any()),
-        ).thenThrow(StateError('draft without an id'));
+        when(() => draftStorage.saveDraft(any()))
+            .thenThrow(StateError('draft without an id'));
 
         await tester.pumpWidget(buildSubject());
         container.read(clipManagerProvider.notifier).insertClip(0, sessionClip);
@@ -350,6 +372,45 @@ void main() {
         expect(calls, isEmpty);
         expect(container.read(clipManagerProvider).clips, [sessionClip]);
         expect(find.text(editorLabel), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'removes the kept copy when a route covers the sheet during the save',
+      (tester) async {
+        stubAutosave(_autosave(clips: [sessionClip]));
+        const coverLabel = 'covering route';
+        when(() => draftStorage.saveDraft(any())).thenAnswer((_) async {
+          calls.add('saveDraft');
+          Navigator.of(homeContext).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const Scaffold(body: Text(coverLabel)),
+            ),
+          );
+        });
+        when(() => draftStorage.deleteDraft(any())).thenAnswer((_) async {
+          calls.add('deleteDraft');
+        });
+
+        await tester.pumpWidget(buildSubject());
+        container.read(clipManagerProvider.notifier).insertClip(0, sessionClip);
+
+        await remixFromSheet(tester);
+
+        final copyId =
+            (verify(() => draftStorage.saveDraft(captureAny())).captured.single
+                    as DivineVideoDraft)
+                .id;
+        expect(copyId, isNot(VideoEditorConstants.autoSaveId));
+        verify(() => draftStorage.deleteDraft(copyId)).called(1);
+        verifyNever(
+          () => draftStorage.deleteDraft(VideoEditorConstants.autoSaveId),
+        );
+        expect(calls, ['saveDraft', 'deleteDraft']);
+        expect(container.read(clipManagerProvider).clips, [sessionClip]);
+        expect(find.text(coverLabel), findsOneWidget);
+        expect(find.text(editorLabel), findsNothing);
+        expect(launchErrors, isEmpty);
       },
     );
   });
@@ -367,6 +428,7 @@ void main() {
     late _ObservedDraftStorageService draftStorage;
     late SharedPreferences preferences;
     late ProviderContainer container;
+    late BuildContext homeContext;
 
     setUp(() async {
       documents = Directory.systemTemp.createTempSync('remix_launcher_docs');
@@ -418,24 +480,27 @@ void main() {
                 routes: [
                   GoRoute(
                     path: '/',
-                    builder: (context, _) => Scaffold(
-                      body: TextButton(
-                        onPressed: () => showModalBottomSheet<void>(
-                          context: context,
-                          builder: (_) => Consumer(
-                            builder: (sheetContext, ref, _) => TextButton(
-                              onPressed: () => openRemixInEditor(
-                                sheetContext,
-                                ref,
-                                remixClip,
+                    builder: (context, _) {
+                      homeContext = context;
+                      return Scaffold(
+                        body: TextButton(
+                          onPressed: () => showModalBottomSheet<void>(
+                            context: context,
+                            builder: (_) => Consumer(
+                              builder: (sheetContext, ref, _) => TextButton(
+                                onPressed: () => openRemixInEditor(
+                                  sheetContext,
+                                  ref,
+                                  remixClip,
+                                ),
+                                child: const Text(remixLabel),
                               ),
-                              child: const Text(remixLabel),
                             ),
                           ),
+                          child: const Text(openSheetLabel),
                         ),
-                        child: const Text(openSheetLabel),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                   GoRoute(
                     path: VideoEditorScreen.path,
@@ -496,5 +561,47 @@ void main() {
         isTrue,
       );
     });
+
+    testWidgets(
+      'leaves only the autosave and its files when the launch gives up',
+      (tester) async {
+        final sessionClip = fileClip('earlier_session_clip');
+        final remixClip = fileClip('classic_vine_remix');
+        await tester.runAsync(
+          () => draftStorage.saveDraft(_autosave(clips: [sessionClip])),
+        );
+        draftStorage.afterKeptSave = () => Navigator.of(homeContext).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('covering route')),
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject(remixClip));
+        await tester.tap(find.text(openSheetLabel));
+        await tester.pumpAndSettle();
+        await tester.runAsync(() async {
+          await tester.tap(find.text(remixLabel));
+          // Bounded so a launch that never removes the copy fails the test
+          // rather than hanging the shard.
+          await draftStorage.keptDeleted.future.timeout(
+            const Duration(seconds: 10),
+          );
+        });
+        await tester.pumpAndSettle();
+
+        expect(find.text('covering route'), findsOneWidget);
+        expect(find.text('editor'), findsNothing);
+        await tester.runAsync(() async {
+          final ids = (await draftStorage.getDraftSummaries())
+              .map((draft) => draft.id)
+              .toList();
+          expect(ids, [VideoEditorConstants.autoSaveId]);
+        });
+        expect(
+          File(p.join(documents.path, '${sessionClip.id}.mp4')).existsSync(),
+          isTrue,
+        );
+      },
+    );
   });
 }
