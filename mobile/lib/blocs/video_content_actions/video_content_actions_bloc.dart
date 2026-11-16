@@ -314,11 +314,11 @@ class VideoContentActionsBloc
   }
 
   /// Checks consent as Add to clips does, then emits [VideoContentRemixReady]
-  /// with the clip the editor opens with. An import that fails reports
+  /// with the saved clip to show in the library. An import that fails reports
   /// [VideoContentRemixFailed].
   ///
   /// [VideoContentActionsState.isPreparingRemix] stays set with the ready
-  /// result, holding the sheet's actions while the UI opens the editor, until
+  /// result, holding the sheet's actions while the UI opens the library, until
   /// [VideoContentRemixLaunchFinished]. Like every action, a request arriving
   /// while any action is in flight is ignored.
   Future<void> _onRemixRequested(
@@ -359,7 +359,7 @@ class VideoContentActionsBloc
     emit(state.copyWith(isPreparingRemix: false));
   }
 
-  /// The clip a remix of this video opens with: the one an earlier import
+  /// The library clip for a remix of this video: the one an earlier import
   /// left in the library, or else a fresh import under [defaultClipTitle].
   ///
   /// Returns null when the video could not be imported.
@@ -376,7 +376,11 @@ class VideoContentActionsBloc
 
     try {
       final earlierImport = await importer.findImportedClipOf(_video);
-      if (earlierImport != null) return earlierImport;
+      if (earlierImport != null) {
+        return earlierImport.archivedAt == null
+            ? earlierImport
+            : await importer.unarchiveImportedClip(earlierImport);
+      }
 
       final result = await importer.importToLibrary(
         _video,

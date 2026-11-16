@@ -185,10 +185,10 @@ VideoActionRowItem? addToClipsActionItem(
   );
 }
 
-/// Asks [bloc] for a remix of [video], which the sheet then opens in the
-/// editor, or null when [canRemixVideo] does not allow it for this viewer.
+/// Asks [bloc] to save [video] for remixing and show it in the clip library,
+/// or null when [canRemixVideo] does not allow it for this viewer.
 ///
-/// Remixing needs the mobile editor, so on the web ([isWeb]) the tap closes
+/// Remixing needs the mobile clip library, so on the web ([isWeb]) the tap closes
 /// the sheet owning [context] and points to the app instead.
 ///
 /// Shows as pending while the remix is prepared. [context] must be the

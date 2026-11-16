@@ -61,13 +61,12 @@ class VideoContentRemixRefused extends VideoContentActionResult {
 }
 
 /// A remix the creator allowed could not start: the video could not be
-/// brought into the viewer's clip library, so the editor did not open.
+/// brought into the viewer's clip library.
 class VideoContentRemixFailed extends VideoContentActionResult {
   VideoContentRemixFailed();
 }
 
-/// The video is in the viewer's clip library as [clip], ready to open in the
-/// editor. Not feedback: the info sheet opens the editor with it.
+/// The video is saved as [clip]. The info sheet shows it in the clip library.
 class VideoContentRemixReady extends VideoContentActionResult {
   VideoContentRemixReady({required this.clip});
 

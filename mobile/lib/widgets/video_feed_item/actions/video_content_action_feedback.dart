@@ -18,7 +18,7 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// The sheet is dismissed first: a snackbar raised while it is open lands on
 /// the opener's scaffold, underneath the sheet. A [VideoContentRemixReady] is
-/// not feedback — the info sheet opens the editor with it — so it leaves the
+/// not feedback — the info sheet shows it in the clip library — so it leaves the
 /// sheet alone.
 void showVideoContentActionFeedback(
   BuildContext sheetContext,

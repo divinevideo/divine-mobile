@@ -1151,6 +1151,7 @@ void main() {
     group('VideoContentRemixRequested', () {
       late _MockVideoClipImportService mockImporter;
       late DivineVideoClip importedClip;
+      late DivineVideoClip archivedImport;
       late Completer<VideoClipImportResult> importGate;
 
       setUp(() {
@@ -1172,7 +1173,7 @@ void main() {
           .having((s) => s.isPreparingRemix, 'isPreparingRemix', isTrue)
           .having((s) => s.actionResult, 'actionResult', isNull);
 
-      // Still preparing: the sheet stays held until the editor has opened.
+      // Still preparing: the sheet stays held until the library has opened.
       Matcher readyWith(Object clip) => isA<VideoContentActionsState>()
           .having((s) => s.isPreparingRemix, 'isPreparingRemix', isTrue)
           .having(
@@ -1241,6 +1242,32 @@ void main() {
         expect: () => [preparing, readyWith(same(importedClip))],
         verify: (_) {
           verify(() => mockImporter.findImportedClipOf(testVideo)).called(1);
+          verifyNever(
+            () => mockImporter.importToLibrary(
+              any(),
+              libraryTitle: any(named: 'libraryTitle'),
+            ),
+          );
+        },
+      );
+
+      blocTest<VideoContentActionsBloc, VideoContentActionsState>(
+        'restores an archived import before showing it in the library',
+        setUp: () {
+          archivedImport = importedClip.copyWith(archivedAt: DateTime(2026));
+          when(
+            () => mockImporter.findImportedClipOf(any()),
+          ).thenAnswer((_) async => archivedImport);
+          when(
+            () => mockImporter.unarchiveImportedClip(archivedImport),
+          ).thenAnswer((_) async => importedClip);
+        },
+        build: () => createBloc(videoClipImportService: mockImporter),
+        act: (bloc) => bloc.add(const VideoContentRemixRequested()),
+        expect: () => [preparing, readyWith(same(importedClip))],
+        verify: (_) {
+          verify(() => mockImporter.unarchiveImportedClip(archivedImport))
+              .called(1);
           verifyNever(
             () => mockImporter.importToLibrary(
               any(),

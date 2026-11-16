@@ -104,6 +104,21 @@ void main() {
       expect(screen.initialTabIndex, equals(LibraryScreen.soundsTabIndex));
     });
 
+    testWidgets('remix entry opens From others without entering the editor', (
+      tester,
+    ) async {
+      await captureContext(tester);
+
+      final screen = screenAt(
+        LibraryScreen.clipsRouteName,
+        '/clips?from-others=true',
+      );
+
+      expect(screen.initialTabIndex, LibraryScreen.fromOthersTabIndex);
+      expect(screen.selectionMode, isFalse);
+      expect(screen.tabsMode, LibraryTabsMode.allTabs);
+    });
+
     group(LibraryScreen.clipsOnlyPath, () {
       testWidgets('scopes the clips to the type in the query', (tester) async {
         await captureContext(tester);
