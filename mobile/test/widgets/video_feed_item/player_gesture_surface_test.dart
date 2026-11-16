@@ -228,6 +228,34 @@ void main() {
         await gesture.up();
       });
 
+      // The other bound: the tests above derive their timing from the delay,
+      // so a delay moved below an ordinary tap would still pass them while
+      // turning every play/pause tap into a hold.
+      testWidgets('keeps a 150 ms press, as long as an ordinary tap, a tap', (
+        tester,
+      ) async {
+        var held = 0;
+        var tapped = 0;
+        await tester.pumpWidget(
+          host(
+            interactiveReady: true,
+            onTap: () => tapped++,
+            onLongPressStart: () => held++,
+          ),
+        );
+        await tester.pump();
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(PlayerGestureSurface)),
+        );
+        await tester.pump(const Duration(milliseconds: 150));
+        await gesture.up();
+        await tester.pump(kDoubleTapTimeout + const Duration(milliseconds: 50));
+
+        expect(held, isZero, reason: 'an ordinary tap must not start a hold');
+        expect(tapped, equals(1));
+      });
+
       testWidgets(
         'a press lifted just before the delay is a tap, not a hold',
         (tester) async {
