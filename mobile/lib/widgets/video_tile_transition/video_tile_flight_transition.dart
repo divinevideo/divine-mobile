@@ -26,18 +26,20 @@ import 'package:openvine/widgets/video_tile_transition/video_tile_transition_tar
 /// [VideoTileOrigin.letterboxAspectRatio]. The picture is drawn covering the
 /// moving rect, which reproduces the tile's crop at one end and the player's
 /// at the other: the crop's alignment moves from the tile's to the player's
-/// centered one with the rect. When the tile has left the screen the picture
-/// flies to the middle of the screen instead.
+/// centered one with the rect. When the tile is no longer laid out the
+/// picture flies to the middle of the screen instead; a tile scrolled out of
+/// view but still built keeps its place.
 ///
 /// The picture starts as the tile's own decode and switches to
-/// [VideoTileOrigin.playerSizeImage] once that has loaded, while it is still
-/// small enough for the two to look alike.
+/// [VideoTileOrigin.playerSizeImage] whenever that has loaded, usually while
+/// it is still small enough for the two to look alike.
 ///
 /// Closing from the landed page flies a snapshot of the page as the player
-/// was showing it, where its frames can be read: the frame it was on, with
-/// whatever letterboxes it, placed like the controls and hiding the page
-/// beneath, which may go on playing. The tile's picture cross-fades in over
-/// it in the last [closeCrossFade] of the way, so it lands as the tile.
+/// was showing it, where it has been seen to read the player's frames: the
+/// frame it was on, with whatever letterboxes it, placed like the controls
+/// and hiding the page beneath, which may go on playing. The tile's picture
+/// cross-fades in over it in the last [closeCrossFade] of the way, so it
+/// lands as the tile.
 /// Without a snapshot it flies the tile's picture throughout, the player-size
 /// decode when that has loaded, as it starts out at the player's size.
 ///
@@ -193,8 +195,10 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     }
   }
 
-  /// Whether the player draws its frames where a snapshot can read them: a
-  /// texture can be, but Android's platform view cannot.
+  /// Whether a snapshot of the page has been seen to read the player's
+  /// frames. Only iOS has been checked on a device. The Android feed draws
+  /// through a texture too, but there the snapshot is unverified, so the
+  /// tile's picture flies instead.
   static bool get _framesReadable => switch (defaultTargetPlatform) {
     TargetPlatform.iOS || TargetPlatform.macOS => true,
     _ => false,
@@ -329,7 +333,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
         final media = landing.media.outerRect;
         final rect = Rect.lerp(from, media, progress)!;
         final borderRadius = BorderRadius.lerp(
-          BorderRadius.circular(widget.origin.borderRadius),
+          widget.origin.borderRadius,
           BorderRadius.only(
             topLeft: landing.media.tlRadius,
             topRight: landing.media.trRadius,
@@ -372,10 +376,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
                 1.0,
               );
         final clip = RRect.lerp(
-          RRect.fromRectAndRadius(
-            from,
-            Radius.circular(widget.origin.borderRadius),
-          ),
+          widget.origin.borderRadius.toRRect(from),
           landing.page,
           progress,
         )!;
@@ -388,22 +389,21 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
                 opacity: progress,
               )
             : null;
+        var revealed = page;
+        if (flying) {
+          revealed = ClipPath(
+            clipper: _PageReveal(
+              page: landing.page,
+              // The snapshot stands in for the page under the clip.
+              flight: frame == null ? clip : null,
+            ),
+            child: page,
+          );
+        }
         return Stack(
           fit: StackFit.expand,
           children: [
-            Opacity(
-              opacity: progress,
-              child: flying
-                  ? ClipPath(
-                      clipper: _PageReveal(
-                        page: landing.page,
-                        // The snapshot stands in for the page under the clip.
-                        flight: frame == null ? clip : null,
-                      ),
-                      child: page,
-                    )
-                  : page,
-            ),
+            Opacity(opacity: progress, child: revealed),
             if (flying) ...[
               if (frame != null)
                 Positioned.fill(

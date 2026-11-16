@@ -395,10 +395,10 @@ void main() {
             home: Scaffold(
               body: ComposableVideoGrid(
                 videos: testVideos.take(2).toList(),
-                onVideoTap: (videos, index, origin) {
+                onVideoTap: (videos, index, captureOrigin) {
                   tappedVideos = videos;
                   tappedIndex = index;
-                  tappedOrigin = origin;
+                  tappedOrigin = captureOrigin();
                 },
               ),
             ),
@@ -807,7 +807,8 @@ void main() {
                 body: ComposableVideoGrid(
                   videos: testVideos.take(2).toList(),
                   selectedVideoIds: const {'video1'},
-                  onVideoTap: (videos, index, origin) => origins.add(origin),
+                  onVideoTap: (videos, index, captureOrigin) =>
+                      origins.add(captureOrigin()),
                 ),
               ),
             ),
@@ -1043,6 +1044,52 @@ void main() {
             topLeft: outer,
             bottomLeft: inner,
             bottomRight: inner,
+          ),
+        );
+      });
+
+      testWidgets('grows the player out of the tile with its own corners', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        VideoTileOrigin? origin;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: _gridOverrides(mockTracker),
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Directionality(
+                textDirection: TextDirection.rtl,
+                child: Scaffold(
+                  body: ComposableVideoGrid(
+                    videos: testVideos,
+                    useMasonryLayout: true,
+                    topOuterRadius: 32,
+                    onVideoTap: (videos, index, captureOrigin) =>
+                        origin = captureOrigin(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.byType(VideoTileThumbnailBoundary).first);
+        await tester.pump();
+
+        // Tile 0 paints on the right under RTL, its enlarged corner with it.
+        expect(
+          origin?.borderRadius,
+          const BorderRadius.only(
+            topRight: Radius.circular(32),
+            topLeft: Radius.circular(4),
+            bottomLeft: Radius.circular(4),
+            bottomRight: Radius.circular(4),
           ),
         );
       });

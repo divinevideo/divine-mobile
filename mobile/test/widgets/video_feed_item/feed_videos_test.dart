@@ -380,7 +380,9 @@ Future<ProviderContainer> _pumpFeedVideos(
   List<dynamic> additionalOverrides = const [],
   ValueListenable<List<VideoEvent>>? videosListenable,
   ValueListenable<VideoTileFlightPhase>? tileTransitionPhase,
-  bool showTopScrim = false,
+
+  /// Left out of the feed when `null`, so its own default applies.
+  bool? showTopScrim,
   ProviderContainer? providerContainer,
 }) async {
   final mockPlaybackCubit =
@@ -397,28 +399,55 @@ Future<ProviderContainer> _pumpFeedVideos(
   // tests assert the chrome that reacts to it.
   final immersiveCubit = feedImmersiveCubit ?? FeedImmersiveCubit();
   addTearDown(immersiveCubit.close);
-  Widget buildFeed(List<VideoEvent> list) => FeedVideos(
-    key: feedKey,
-    trafficSource: trafficSource,
-    sourceDetail: sourceDetail,
-    feedSessionRevision: feedSessionRevision,
-    videos: list,
-    onNearEnd: () {},
-    isActive: isActive,
-    releaseNeighboursWhenInactive: releaseNeighboursWhenInactive,
-    hasMore: hasMore,
-    isLoadingMore: isLoadingMore,
-    showTopScrim: showTopScrim,
-    onActiveVideoChanged: onActiveVideoChanged,
-  );
+  Widget buildFeed(List<VideoEvent> list) {
+    if (showTopScrim == null) {
+      return FeedVideos(
+        key: feedKey,
+        trafficSource: trafficSource,
+        sourceDetail: sourceDetail,
+        feedSessionRevision: feedSessionRevision,
+        videos: list,
+        onNearEnd: () {},
+        isActive: isActive,
+        releaseNeighboursWhenInactive: releaseNeighboursWhenInactive,
+        hasMore: hasMore,
+        isLoadingMore: isLoadingMore,
+        onActiveVideoChanged: onActiveVideoChanged,
+      );
+    }
+    return FeedVideos(
+      key: feedKey,
+      trafficSource: trafficSource,
+      sourceDetail: sourceDetail,
+      feedSessionRevision: feedSessionRevision,
+      videos: list,
+      onNearEnd: () {},
+      isActive: isActive,
+      releaseNeighboursWhenInactive: releaseNeighboursWhenInactive,
+      hasMore: hasMore,
+      isLoadingMore: isLoadingMore,
+      showTopScrim: showTopScrim,
+      onActiveVideoChanged: onActiveVideoChanged,
+    );
+  }
+
   final noFlight = ValueNotifier<VideoTileFlightFrame?>(null);
   addTearDown(noFlight.dispose);
-  final body = videosListenable == null
-      ? buildFeed(videos)
-      : ValueListenableBuilder<List<VideoEvent>>(
-          valueListenable: videosListenable,
-          builder: (context, list, _) => buildFeed(list),
-        );
+  Widget body = buildFeed(videos);
+  if (videosListenable != null) {
+    body = ValueListenableBuilder<List<VideoEvent>>(
+      valueListenable: videosListenable,
+      builder: (context, list, _) => buildFeed(list),
+    );
+  }
+  if (tileTransitionPhase != null) {
+    body = VideoTileTransitionScope(
+      targets: VideoTileTransitionTargets(),
+      phase: tileTransitionPhase,
+      flight: noFlight,
+      child: body,
+    );
+  }
   final container =
       providerContainer ??
       ProviderContainer(
@@ -459,16 +488,7 @@ Future<ProviderContainer> _pumpFeedVideos(
             BlocProvider<VideoVolumeCubit>.value(value: mockVolumeCubit),
             BlocProvider<FeedImmersiveCubit>.value(value: immersiveCubit),
           ],
-          child: Scaffold(
-            body: tileTransitionPhase == null
-                ? body
-                : VideoTileTransitionScope(
-                    targets: VideoTileTransitionTargets(),
-                    phase: tileTransitionPhase,
-                    flight: noFlight,
-                    child: body,
-                  ),
-          ),
+          child: Scaffold(body: body),
         ),
       ),
     ),

@@ -58,20 +58,19 @@ class _Page extends StatelessWidget {
         ),
       );
     }
-    final video = ColoredBox(
-      color: const Color(0xFF000000),
-      child: showsVideo
-          ? VideoTileTransitionTarget(
-              videoId: 'video1',
-              aspectRatio: 1,
-              coversViewport: false,
-              showsVideo: drawsVideo,
-              child: drawsVideo
-                  ? const ColoredBox(color: _videoColor)
-                  : const SizedBox.expand(),
-            )
-          : null,
-    );
+    Widget? target;
+    if (showsVideo) {
+      Widget content = const SizedBox.expand();
+      if (drawsVideo) content = const ColoredBox(color: _videoColor);
+      target = VideoTileTransitionTarget(
+        videoId: 'video1',
+        aspectRatio: 1,
+        coversViewport: false,
+        showsVideo: drawsVideo,
+        child: content,
+      );
+    }
+    final video = ColoredBox(color: const Color(0xFF000000), child: target);
     if (!bottomBar) return video;
     return Column(
       children: [
@@ -140,18 +139,20 @@ class _Harness extends StatelessWidget {
                   builder: (tileContext) {
                     onTileContext?.call(tileContext);
                     final provider = tileImageProvider;
+                    Widget picture = RawImage(
+                      image: image,
+                      fit: BoxFit.cover,
+                      alignment: tileAlignment,
+                    );
+                    if (provider != null) {
+                      picture = Image(
+                        image: provider,
+                        fit: BoxFit.cover,
+                        alignment: tileAlignment,
+                      );
+                    }
                     final thumbnail = VideoTileThumbnailBoundary(
-                      child: provider == null
-                          ? RawImage(
-                              image: image,
-                              fit: BoxFit.cover,
-                              alignment: tileAlignment,
-                            )
-                          : Image(
-                              image: provider,
-                              fit: BoxFit.cover,
-                              alignment: tileAlignment,
-                            ),
+                      child: picture,
                     );
                     if (!tileScrim) return thumbnail;
                     return Stack(
@@ -255,13 +256,17 @@ void main() {
       double? letterboxAspectRatio,
       Alignment tileAlignment = Alignment.center,
       bool tileScrim = false,
+      Size imageSize = const Size(300, 300),
     }) async {
       tester.view.physicalSize = _screenSize;
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       image = (await tester.runAsync(
-        () => createTestImage(width: 300, height: 300),
+        () => createTestImage(
+          width: imageSize.width.toInt(),
+          height: imageSize.height.toInt(),
+        ),
       ))!;
       addTearDown(image.dispose);
       controller = AnimationController(
@@ -710,27 +715,41 @@ void main() {
       testWidgets('stay over the same part of the picture as it flies', (
         tester,
       ) async {
-        final origin = await pumpTile(tester);
+        // A portrait picture landing on a frame of another shape, so the
+        // picture's crop differs from the frame's.
+        final origin = await pumpTile(tester, imageSize: const Size(180, 320));
         controller.forward();
         await tester.pumpWidget(
-          _Harness(image: image, animation: controller, origin: origin),
+          _Harness(
+            image: image,
+            animation: controller,
+            origin: origin,
+            pageRoundedCover: true,
+          ),
         );
 
         await tester.pump(VideoTileFlightTransition.openDuration ~/ 2);
 
-        // Where the picture draws its whole image, which it crops to the
-        // rect at its alignment.
+        // The picture covers the frame at its landing, and the moving rect
+        // now: the controls laid out over the one are drawn over the other.
+        Rect cover(Rect box, Alignment alignment) {
+          final size = Size(image.width.toDouble(), image.height.toDouble());
+          final scale = math.max(
+            box.width / size.width,
+            box.height / size.height,
+          );
+          return alignment.inscribe(size * scale, box);
+        }
+
         final rect = tester.getRect(_picture);
         final alignment = tester.widget<RawImage>(_picture).alignment;
-        final scale = math.max(rect.width, rect.height) / image.width;
-        final imageRect = (alignment as Alignment).inscribe(
-          Size(image.width * scale, image.height * scale),
-          rect,
-        );
         final frame = _flightFrame(tester)!;
         expect(
-          MatrixUtils.transformRect(frame.transform, _landing),
-          _rectCloseTo(imageRect),
+          MatrixUtils.transformRect(
+            frame.transform,
+            cover(Offset.zero & _screenSize, Alignment.center),
+          ),
+          _rectCloseTo(cover(rect, alignment as Alignment)),
         );
         expect(frame.opacity, allOf(greaterThan(0), lessThan(1)));
         await tester.pumpAndSettle();
@@ -811,6 +830,49 @@ void main() {
         );
         expect(scrims.bottom.opacity, equals(0.5));
         expect(scrims.top.opacity, equals(0));
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets("carry the tile's scrim along with the picture", (
+        tester,
+      ) async {
+        final origin = await pumpTile(tester, tileScrim: true);
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(
+            image: image,
+            tileScrim: true,
+            animation: controller,
+            origin: origin,
+          ),
+        );
+
+        await tester.pump(VideoTileFlightTransition.openDuration ~/ 2);
+
+        // The tile's scrim, its bottom 40 of 180 points, kept on the same
+        // part of the picture, on its way to the player's.
+        final progress = Curves.easeOutCubic.transform(controller.value);
+        final picture = tester.getRect(_picture);
+        final carried = Rect.fromLTRB(
+          picture.left,
+          picture.top + picture.height * 140 / 180,
+          picture.right,
+          picture.bottom,
+        );
+        final height = _screenSize.height;
+        final players = MatrixUtils.transformRect(
+          _flightFrame(tester)!.transform,
+          Rect.fromLTRB(
+            0,
+            height * (1 - VideoOverlayScrims.bottomHeightFactor),
+            _screenSize.width,
+            height,
+          ),
+        );
+        expect(
+          _scrims(tester).bottom.rect,
+          _rectCloseTo(Rect.lerp(carried, players, progress)!),
+        );
         await tester.pumpAndSettle();
       });
 

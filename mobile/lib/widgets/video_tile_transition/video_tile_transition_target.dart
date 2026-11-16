@@ -208,18 +208,20 @@ class _VideoTileTransitionTargetState extends State<VideoTileTransitionTarget> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      widget.showsVideo ? RepaintBoundary(child: widget.child) : widget.child;
+  Widget build(BuildContext context) {
+    if (!widget.showsVideo) return widget.child;
+    return RepaintBoundary(child: widget.child);
+  }
 }
 
 /// The [VideoTileTransitionTarget]s below a [VideoTileTransitionScope], so a
 /// route transition can find where its page will show a video.
 class VideoTileTransitionTargets {
   // More than one target can show a video at once: the feed stacks a loading
-  // layer and the video layer for the same page, and when the loading layer
-  // goes the framework may keep its element for the video layer and dispose
-  // the other one. Keeping only the last one registered lost the video
-  // mid-flight whenever that happened.
+  // layer and the video layer for the same page. Unkeyed, the framework may
+  // hand one's element to the other and dispose the second as the loading
+  // layer goes, which lost the video mid-flight when only the last target
+  // registered was kept.
   final _targets = <String, Set<_VideoTileTransitionTargetState>>{};
 
   /// Where the page shows [videoId], in [ancestor]'s coordinates, or `null`

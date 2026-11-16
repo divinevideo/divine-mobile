@@ -9,8 +9,8 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/services/video_event_service.dart';
-import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/new_videos_tab.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/test_provider_overrides.dart';
@@ -108,7 +108,9 @@ void main() {
             builder: (context, state) => Scaffold(
               body: Text(
                 'opened video '
-                '${state.uri.queryParameters[PooledFullscreenVideoFeedScreen.videoQueryParameter]}',
+                '${state.uri.queryParameters[PooledFullscreenVideoFeedScreen.videoQueryParameter]}'
+                ' from tile '
+                '${(state.extra! as PooledFullscreenVideoFeedArgs).tileOrigin?.videoId}',
               ),
             ),
           ),
@@ -134,13 +136,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final grid = tester.widget<ComposableVideoGrid>(
-        find.byType(ComposableVideoGrid),
-      );
-      grid.onVideoTap([_video('new-video')], 0, null);
+      await tester.tap(find.byType(VideoTileThumbnailBoundary));
       await tester.pumpAndSettle();
 
-      expect(find.text('opened video new-video'), findsOneWidget);
+      // The player grows out of the tapped tile.
+      expect(
+        find.text('opened video new-video from tile new-video'),
+        findsOneWidget,
+      );
       router.dispose();
     });
 

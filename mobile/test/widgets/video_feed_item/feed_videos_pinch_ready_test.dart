@@ -40,6 +40,7 @@ import 'package:openvine/widgets/video_feed_item/center_playback_control.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
 import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
+import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -105,7 +106,12 @@ class _NativePlayerHarness {
   static const _globalChannel = MethodChannel('divine_video_player');
   static const _codec = StandardMethodCodec();
 
-  void install({Iterable<int> playerIds = const <int>[0]}) {
+  /// Installs the native player, whose first state reports a rendered
+  /// frame only when [firstFrameRendered] is set.
+  void install({
+    Iterable<int> playerIds = const <int>[0],
+    bool firstFrameRendered = true,
+  }) {
     DivineVideoPlayerController.resetIdCounterForTesting();
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       _globalChannel,
@@ -135,11 +141,11 @@ class _NativePlayerHarness {
             scheduleMicrotask(() async {
               await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
                 eventChannelName,
-                _codec.encodeSuccessEnvelope(const <Object?, Object?>{
+                _codec.encodeSuccessEnvelope(<Object?, Object?>{
                   'status': 'ready',
                   'videoWidth': 1280,
                   'videoHeight': 720,
-                  'isFirstFrameRendered': true,
+                  'isFirstFrameRendered': firstFrameRendered,
                 }),
                 (_) {},
               );
@@ -226,9 +232,16 @@ Future<bool> _toggleLike(_MockLikesRepository likes) => likes.toggleLike(
 );
 
 /// Pumps a one-video [FeedVideos] whose player has rendered its first frame,
-/// so the tap and double-tap recognizers exist before any finger lands.
-Future<_Rig> _pumpReadyFeed(WidgetTester tester, {VideoEvent? video}) async {
-  final harness = _NativePlayerHarness(tester)..install();
+/// so the tap and double-tap recognizers exist before any finger lands, or,
+/// without [firstFrameRendered], whose player knows the video's size but
+/// still shows the poster.
+Future<_Rig> _pumpReadyFeed(
+  WidgetTester tester, {
+  VideoEvent? video,
+  bool firstFrameRendered = true,
+}) async {
+  final harness = _NativePlayerHarness(tester)
+    ..install(firstFrameRendered: firstFrameRendered);
   addTearDown(harness.dispose);
 
   final likes = _MockLikesRepository();
@@ -675,6 +688,29 @@ void main() {
     });
   });
 
+  group('first frame on a ready player', () {
+    testWidgets('keeps the video layer when the poster over it goes', (
+      tester,
+    ) async {
+      final rig = await _pumpReadyFeed(tester, firstFrameRendered: false);
+      final videoLayer = find.byWidgetPredicate(
+        (widget) => widget is VideoTileTransitionTarget && widget.showsVideo,
+      );
+      final poster = find.byWidgetPredicate(
+        (widget) => widget is VideoTileTransitionTarget && !widget.showsVideo,
+      );
+      expect(poster, findsOneWidget);
+      expect(videoLayer, findsOneWidget);
+      final mounted = tester.state(videoLayer);
+
+      await rig.harness.emitStatus('playing');
+
+      expect(poster, findsNothing);
+      expect(tester.state(videoLayer), same(mounted));
+      await _unmount(tester);
+    });
+  });
+
   group('like tags (#6980)', () {
     Future<void> doubleTapToLike(WidgetTester tester) async {
       final center = tester.getCenter(find.byType(InfiniteVideoFeed));
@@ -722,8 +758,10 @@ void main() {
           content: 'video reply',
           authorPubkey: _testPubkey,
           createdAt: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
-          rootEventId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-          rootAuthorPubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          rootEventId:
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          rootAuthorPubkey:
+              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
           eventKind: 34236,
           videoUrl: 'https://example.com/video.mp4',
         ).toSyntheticVideoEvent(),
@@ -752,8 +790,10 @@ void main() {
           content: 'video reply',
           authorPubkey: _testPubkey,
           createdAt: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
-          rootEventId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-          rootAuthorPubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          rootEventId:
+              'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          rootAuthorPubkey:
+              'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
           eventKind: 34236,
           addressableId: replyCoordinate,
           videoUrl: 'https://example.com/video.mp4',

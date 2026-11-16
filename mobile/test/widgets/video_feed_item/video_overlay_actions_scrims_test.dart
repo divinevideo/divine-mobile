@@ -77,6 +77,8 @@ void main() {
         isFullscreen: true,
         showTopGradient: true,
       );
+      Widget content = actions;
+      if (flying) content = VideoTileFlightCopy(child: actions);
       await tester.pumpWidget(
         testProviderScope(
           additionalOverrides: [
@@ -88,7 +90,7 @@ void main() {
             home: Scaffold(
               body: BlocProvider<VideoInteractionsBloc>.value(
                 value: interactionsBloc,
-                child: flying ? VideoTileFlightCopy(child: actions) : actions,
+                child: content,
               ),
             ),
           ),

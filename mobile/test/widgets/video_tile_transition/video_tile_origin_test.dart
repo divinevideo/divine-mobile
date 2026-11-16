@@ -38,11 +38,14 @@ class _Tile extends StatelessWidget {
   Widget build(BuildContext context) {
     final image = this.image;
     final imageProvider = this.imageProvider;
-    final thumbnail = imageProvider != null
-        ? Image(image: imageProvider, fit: fit, alignment: alignment)
-        : image == null
-        ? const ColoredBox(color: Color(0xFF00FF00))
-        : RawImage(image: image, fit: fit, alignment: alignment);
+    final Widget thumbnail;
+    if (imageProvider != null) {
+      thumbnail = Image(image: imageProvider, fit: fit, alignment: alignment);
+    } else if (image == null) {
+      thumbnail = const ColoredBox(color: Color(0xFF00FF00));
+    } else {
+      thumbnail = RawImage(image: image, fit: fit, alignment: alignment);
+    }
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Stack(
@@ -52,9 +55,10 @@ class _Tile extends StatelessWidget {
             child: Builder(
               builder: (tileContext) {
                 onContext?.call(tileContext);
-                final picture = withBoundary
-                    ? VideoTileThumbnailBoundary(child: thumbnail)
-                    : thumbnail;
+                Widget picture = thumbnail;
+                if (withBoundary) {
+                  picture = VideoTileThumbnailBoundary(child: thumbnail);
+                }
                 if (!withScrim) return picture;
                 return Stack(
                   fit: StackFit.expand,
@@ -105,7 +109,7 @@ void main() {
         expect(origin, isNotNull);
         expect(origin!.rect, equals(_tileRect));
         expect(origin.videoId, equals('video1'));
-        expect(origin.borderRadius, equals(4));
+        expect(origin.borderRadius, equals(BorderRadius.circular(4)));
       });
 
       testWidgets('returns null for a tile without a thumbnail boundary', (
@@ -308,9 +312,13 @@ void main() {
     });
 
     group('playerSizeImage', () {
-      Future<ui.Image> image(WidgetTester tester, int size) async {
+      Future<ui.Image> image(
+        WidgetTester tester,
+        int size, {
+        int? height,
+      }) async {
         final image = await tester.runAsync(
-          () => createTestImage(width: size, height: size),
+          () => createTestImage(width: size, height: height ?? size),
         );
         addTearDown(image!.dispose);
         return image;
@@ -378,6 +386,55 @@ void main() {
         );
 
         expect(origin.playerSizeImage, isNull);
+      });
+
+      testWidgets(
+        "decodes again when the screen's pixels outnumber the decode",
+        (
+          tester,
+        ) async {
+          // 300 points at 2 pixels each want 600 pixels, more than the 500.
+          tester.view.physicalSize = const Size(600, 600);
+          tester.view.devicePixelRatio = 2;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final decode = await image(tester, 500);
+          final origin = await captureTileShowing(
+            tester,
+            ResizeImage(
+              SequencedImageProvider([
+                () => SynchronousFuture(decode),
+                () => SynchronousFuture(decode),
+              ]),
+              width: 500,
+            ),
+          );
+
+          expect(origin.playerSizeImage, isNotNull);
+        },
+      );
+
+      testWidgets('decodes a wide thumbnail again to cover the screen', (
+        tester,
+      ) async {
+        // A 2:1 thumbnail covering a 300 x 300 screen is 600 wide.
+        tester.view.physicalSize = const Size(300, 300);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final decode = await image(tester, 400, height: 200);
+        final origin = await captureTileShowing(
+          tester,
+          ResizeImage(
+            SequencedImageProvider([
+              () => SynchronousFuture(decode),
+              () => SynchronousFuture(decode),
+            ]),
+            width: 400,
+          ),
+        );
+
+        expect(origin.playerSizeImage, isNotNull);
       });
 
       testWidgets("is null when the tile's decode already fills the screen", (

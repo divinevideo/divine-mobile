@@ -74,11 +74,16 @@ class VideoTileOrigin {
   /// the tile. That happens here, on the tap: by the time the player's first
   /// frame builds, the push may already have marked the tile for repaint, and
   /// an unpainted tile cannot be read.
+  ///
+  /// [borderRadius] is the tile's corners, resolved against the tile's text
+  /// direction.
   static VideoTileOrigin? capture(
     BuildContext tileContext, {
     required String videoId,
     double? letterboxAspectRatio,
-    double borderRadius = 4,
+    BorderRadiusGeometry borderRadius = const BorderRadius.all(
+      Radius.circular(4),
+    ),
   }) {
     final boundaryElement = _findWidget<VideoTileThumbnailBoundary>(
       tileContext,
@@ -92,7 +97,7 @@ class VideoTileOrigin {
     final scrim = scrimElement?.findRenderObject();
     final origin = VideoTileOrigin._(
       videoId: videoId,
-      borderRadius: borderRadius,
+      borderRadius: borderRadius.resolve(Directionality.maybeOf(tileContext)),
       letterboxAspectRatio: letterboxAspectRatio,
       boundary: boundary,
       image: image,
@@ -116,8 +121,8 @@ class VideoTileOrigin {
   /// The video the tile shows.
   final String videoId;
 
-  /// The tile's corner radius, which the transition starts from.
-  final double borderRadius;
+  /// The tile's corners, which the transition starts from.
+  final BorderRadius borderRadius;
 
   /// The aspect ratio the player will letterbox the video at, or `null` when
   /// it fills the screen.
@@ -155,8 +160,9 @@ class VideoTileOrigin {
   /// decode is capped at the screen's size.
   ImageStream? get playerSizeImage => _playerSizeImage;
 
-  /// Where the tile's picture is on screen now, in global coordinates, or
-  /// `null` once the tile has left the screen.
+  /// Where the tile's picture is now, in global coordinates, or `null` once
+  /// the tile is no longer laid out. A tile scrolled out of view but still
+  /// built keeps its rect, off screen.
   ///
   /// A decoded thumbnail fitted with `BoxFit.cover` fills the tile; one
   /// fitted to `contain` is only the part it paints. Drawing [takeImage]
@@ -180,7 +186,7 @@ class VideoTileOrigin {
   }
 
   /// Where the tile's bottom scrim is on screen now, in global coordinates,
-  /// or `null` when the tile has none or has left the screen.
+  /// or `null` when the tile has none or is no longer laid out.
   Rect? get scrimRect {
     final scrim = _scrim;
     if (scrim == null || !scrim.attached || !scrim.hasSize) return null;
@@ -196,7 +202,7 @@ class VideoTileOrigin {
   }
 
   /// A copy of the decoded thumbnail the tile shows now, or `null` when it
-  /// shows none or has left the screen. The caller owns the image and must
+  /// shows none or is no longer laid out. The caller owns the image and must
   /// dispose it.
   ui.Image? readImage() => _liveImage?.image?.clone();
 

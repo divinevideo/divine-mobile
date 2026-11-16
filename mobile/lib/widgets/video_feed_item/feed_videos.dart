@@ -547,6 +547,10 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
           final video = widget.videos[index];
           final aspectRatio = backdropAspectRatio(video.width, video.height);
           return VideoTileTransitionTarget(
+            // The loading layer above is the same widget type, and goes at
+            // the first frame: unkeyed, the page would hand its element to
+            // this layer and rebuild the player from scratch.
+            key: const ValueKey('video-layer'),
             videoId: video.id,
             aspectRatio: aspectRatio,
             coversViewport: videoCoversFeedViewport(
@@ -573,6 +577,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
           final video = widget.videos[index];
           final aspectRatio = backdropAspectRatio(video.width, video.height);
           return VideoTileTransitionTarget(
+            key: const ValueKey('loading-layer'),
             videoId: video.id,
             aspectRatio: aspectRatio,
             coversViewport: videoCoversFeedViewport(

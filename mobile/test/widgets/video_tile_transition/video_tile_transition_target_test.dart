@@ -73,6 +73,8 @@ void main() {
       if (clipRadius != null) {
         target = ClipRRect(borderRadius: clipRadius, child: target);
       }
+      Widget content = const SizedBox.expand();
+      if (showTarget) content = target;
       await tester.pumpWidget(
         Directionality(
           textDirection: TextDirection.ltr,
@@ -85,7 +87,7 @@ void main() {
                 targets: targets,
                 phase: phase,
                 flight: flight,
-                child: showTarget ? target : const SizedBox.expand(),
+                child: content,
               ),
             ),
           ),
@@ -228,8 +230,8 @@ void main() {
       ) async {
         // The feed stacks a loading layer and a video layer for one page,
         // both targets, and drops the loading layer once the first frame is
-        // up. Unkeyed, the framework keeps the loading layer's element for
-        // the video layer and disposes the other one.
+        // up. The feed keys them; unkeyed, as here, the framework keeps the
+        // loading layer's element for the video layer and disposes the other.
         Widget layers({required bool loading}) => Directionality(
           textDirection: TextDirection.ltr,
           child: Align(

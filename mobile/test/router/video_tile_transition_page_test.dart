@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart' show MaterialPage;
 import 'package:openvine/router/video_tile_transition_page.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_flight_transition.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
@@ -52,6 +53,7 @@ class _Host extends StatelessWidget {
     required this.onClosed,
     this.playerKey = const ValueKey('player'),
     this.covered = false,
+    this.coveredByMaterialPage = false,
   });
 
   final ui.Image image;
@@ -62,6 +64,9 @@ class _Host extends StatelessWidget {
 
   /// Whether another page, as a profile, is open over the player.
   final bool covered;
+
+  /// Whether the app's default page, as a profile, is open over the player.
+  final bool coveredByMaterialPage;
   final ValueChanged<BuildContext> onTileContext;
   final VoidCallback onClosed;
 
@@ -99,6 +104,11 @@ class _Host extends StatelessWidget {
               ),
             if (covered)
               const _GridPage(
+                key: ValueKey('profile'),
+                child: ColoredBox(color: Color(0xFF00FF00)),
+              ),
+            if (coveredByMaterialPage)
+              const MaterialPage<void>(
                 key: ValueKey('profile'),
                 child: ColoredBox(color: Color(0xFF00FF00)),
               ),
@@ -179,6 +189,31 @@ void main() {
       await tester.pumpAndSettle();
       expect(_playerHasLanded(tester), isTrue);
     }
+
+    group('under another page', () {
+      testWidgets(
+        "slides behind a page opened over it, as the platform's pages do",
+        (tester) async {
+          await pumpOpenPlayer(tester);
+
+          await tester.pumpWidget(
+            _Host(
+              image: image,
+              origin: origin,
+              coveredByMaterialPage: true,
+              onTileContext: (_) {},
+              onClosed: () => closed = true,
+            ),
+          );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 200));
+
+          expect(tester.getTopLeft(find.byType(_Player)).dx, lessThan(0));
+          await tester.pumpAndSettle();
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      );
+    });
 
     group('rebuilt under another page', () {
       /// Covers the player with another page, during which the navigator

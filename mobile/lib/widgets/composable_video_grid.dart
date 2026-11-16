@@ -38,12 +38,14 @@ const double _gridCacheExtentScreens = 2;
 
 /// Called with the videos a grid shows and the tapped one's [index].
 ///
-/// [origin] is the tapped tile, for a player that grows out of it; `null` in
+/// [captureOrigin] reads the tapped tile, for a player that grows out of it.
+/// Call it during the callback, before navigating, and only to open such a
+/// player: reading the tile copies its picture. It returns `null` in
 /// selection mode, where a tap toggles the tile instead.
 typedef VideoGridTapCallback = void Function(
   List<VideoEvent> videos,
   int index,
-  VideoTileOrigin? origin,
+  ValueGetter<VideoTileOrigin?> captureOrigin,
 );
 
 /// Composable video grid that automatically filters broken videos
@@ -441,21 +443,19 @@ class _VideoItem extends StatelessWidget {
       video: video,
       viewerPubkey: viewerPubkey,
       index: index,
-      onTap: () => onVideoTap(
-        displayedVideos,
-        index,
+      onTap: () => onVideoTap(displayedVideos, index, () {
         // In selection mode a tap toggles the tile rather than opening it.
-        isSelected == null
-            ? VideoTileOrigin.capture(
-                context,
-                videoId: video.id,
-                letterboxAspectRatio: fullscreenFeedLetterboxAspectRatio(
-                  video.width,
-                  video.height,
-                ),
-              )
-            : null,
-      ),
+        if (isSelected != null) return null;
+        return VideoTileOrigin.capture(
+          context,
+          videoId: video.id,
+          borderRadius: borderRadius,
+          letterboxAspectRatio: fullscreenFeedLetterboxAspectRatio(
+            video.width,
+            video.height,
+          ),
+        );
+      }),
       onOwnerLongPress: onOwnerLongPress,
       // In selection mode a long-press menu would fight the toggle gesture.
       ownerActionsEnabled: isSelected == null,

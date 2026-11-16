@@ -4,6 +4,7 @@
 // ABOUTME: pages and navigators, and how each route builds from its URL, with
 // ABOUTME: an extra or without one.
 
+import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -1025,25 +1026,32 @@ void main() {
     });
 
     group('fullscreen feed page', () {
-      Page<void> pageFor(VideoTileOrigin? origin) {
-        final (:route, :state) = _resolve(
-          _videoRouter(),
-          const PooledFullscreenVideoFeedRouteData(video: _hexId).location,
-          extra: ProfilePooledFullscreenVideoFeedArgs(
+      Page<void> pageFor(VideoTileOrigin? origin, {bool fromProfile = true}) {
+        final Object extra;
+        if (fromProfile) {
+          extra = ProfilePooledFullscreenVideoFeedArgs(
             userIdHex: _authorHex,
             initialIndex: 0,
             tileOrigin: origin,
-          ),
+          );
+        } else {
+          extra = PooledFullscreenVideoFeedArgs(
+            source: SingleVideoViewSource(_video(_hexId)),
+            feedRepository: StaticFeedRepository(),
+            initialIndex: 0,
+            tileOrigin: origin,
+          );
+        }
+        final (:route, :state) = _resolve(
+          _videoRouter(),
+          const PooledFullscreenVideoFeedRouteData(video: _hexId).location,
+          extra: extra,
         );
         return route.pageBuilder!(_FakeBuildContext(), state);
       }
 
-      test('keeps the default page without a tile to grow out of', () {
-        // go_router's internal no-op page, which hands the route to `build`.
-        expect(pageFor(null), isNot(isA<VideoTileTransitionPage>()));
-      });
-
-      testWidgets('grows out of the tile it was opened from', (tester) async {
+      /// The origin of a tile on screen showing the video.
+      Future<VideoTileOrigin> captureTile(WidgetTester tester) async {
         late BuildContext tileContext;
         await tester.pumpWidget(
           Center(
@@ -1061,7 +1069,41 @@ void main() {
             ),
           ),
         );
-        final origin = VideoTileOrigin.capture(tileContext, videoId: _hexId)!;
+        return VideoTileOrigin.capture(tileContext, videoId: _hexId)!;
+      }
+
+      test('keeps the default page without a tile to grow out of', () {
+        // go_router's internal no-op page, which hands the route to `build`.
+        expect(pageFor(null), isNot(isA<VideoTileTransitionPage>()));
+        expect(
+          pageFor(null, fromProfile: false),
+          isNot(isA<VideoTileTransitionPage>()),
+        );
+      });
+
+      testWidgets('grows a feed out of the tile it was opened from', (
+        tester,
+      ) async {
+        final origin = await captureTile(tester);
+
+        final page = pageFor(origin, fromProfile: false);
+
+        expect(
+          page,
+          isA<VideoTileTransitionPage>()
+              .having((page) => page.origin, 'origin', same(origin))
+              .having(
+                (page) => page.child,
+                'child',
+                isA<PooledFullscreenVideoFeedScreen>(),
+              ),
+        );
+      });
+
+      testWidgets('grows a profile feed out of the tile it was opened from', (
+        tester,
+      ) async {
+        final origin = await captureTile(tester);
 
         final page = pageFor(origin) as VideoTileTransitionPage;
 
