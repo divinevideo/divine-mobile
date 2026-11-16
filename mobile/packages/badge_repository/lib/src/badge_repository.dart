@@ -1021,8 +1021,12 @@ class BadgeRepository {
 
   /// Loads the current account's awarded, hidden, issued and created badges.
   ///
-  /// Throws [BadgeAccountStateClosedException] when the account's badge state
-  /// closes during the load, as sign-out with data erasure does.
+  /// Throws:
+  ///
+  /// * [StateError] if there is no current pubkey, or its badge state is
+  ///   already closed when the load starts.
+  /// * [BadgeAccountStateClosedException] if that state closes while the load
+  ///   still reads or writes it, as sign-out with data erasure can.
   Future<BadgeDashboardData> loadDashboard() async {
     final memo = _DashboardLookupMemo();
     final awardedFuture = _loadAwardedBadges(memo);
@@ -1048,6 +1052,8 @@ class BadgeRepository {
   ///
   /// Dismissed awards come back with [BadgeAwardViewData.isHidden] set rather
   /// than being dropped — the dashboard needs them to offer a way back.
+  ///
+  /// Throws as [loadDashboard] does.
   Future<List<BadgeAwardViewData>> loadAwardedBadges() =>
       _loadAwardedBadges(_DashboardLookupMemo());
 
@@ -2008,8 +2014,12 @@ class BadgeRepository {
   /// Brings the dismissed badge at [definitionCoordinate] back into the
   /// awarded list.
   ///
-  /// Throws [BadgeAccountStateClosedException] when the account's badge state
-  /// closes before the choice is saved.
+  /// Throws:
+  ///
+  /// * [StateError] if there is no current pubkey, or its badge state is
+  ///   already closed when the call starts.
+  /// * [BadgeAccountStateClosedException] if that state closes after the call
+  ///   starts and before the choice is saved.
   Future<void> unhideAward(String definitionCoordinate) async {
     final pubkey = _requireCurrentPubkey();
     await _dismissalSync.whileOpen(pubkey, () async {
@@ -2034,8 +2044,12 @@ class BadgeRepository {
   /// awarded again, which is exactly what an account handing out unwanted
   /// badges does.
   ///
-  /// Throws [BadgeAccountStateClosedException] when the account's badge state
-  /// closes before the choice is saved.
+  /// Throws:
+  ///
+  /// * [StateError] if there is no current pubkey, or its badge state is
+  ///   already closed when the call starts.
+  /// * [BadgeAccountStateClosedException] if that state closes after the call
+  ///   starts and before the choice is saved.
   Future<void> hideAward(String definitionCoordinate) async {
     final pubkey = _requireCurrentPubkey();
     await _dismissalSync.whileOpen(pubkey, () async {
