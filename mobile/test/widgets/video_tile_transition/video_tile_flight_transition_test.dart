@@ -190,6 +190,9 @@ Future<void> _pumpToLastFlightFrame(WidgetTester tester) =>
 bool _pageHasLanded(WidgetTester tester) =>
     VideoTileTransitionScope.hasLandedOf(tester.element(find.byType(_Page)));
 
+bool _pageMayPlay(WidgetTester tester) =>
+    VideoTileTransitionScope.mayPlayOf(tester.element(find.byType(_Page)));
+
 BorderRadiusGeometry? _pictureCorners(WidgetTester tester) => tester
     .widget<ClipRRect>(
       find.ancestor(of: _picture, matching: find.byType(ClipRRect)),
@@ -428,6 +431,28 @@ void main() {
         await tester.pump(const Duration(milliseconds: 1));
 
         expect(_pageHasLanded(tester), isTrue);
+      });
+
+      testWidgets('lets the page play just before the picture lands', (
+        tester,
+      ) async {
+        final origin = await pumpTile(tester);
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(image: image, animation: controller, origin: origin),
+        );
+        final untilArrival =
+            VideoTileFlightTransition.openDuration -
+            VideoTileFlightTransition.playbackLead;
+
+        await tester.pump(untilArrival - const Duration(milliseconds: 2));
+        expect(_pageMayPlay(tester), isFalse);
+
+        await tester.pump(const Duration(milliseconds: 4));
+        expect(_pageMayPlay(tester), isTrue);
+        expect(_pageHasLanded(tester), isFalse);
+        expect(_picture, findsOneWidget);
+        await tester.pumpAndSettle();
       });
 
       testWidgets('lands full screen while the page shows no video yet', (
@@ -868,6 +893,7 @@ void main() {
         await tester.pump();
 
         expect(_pageHasLanded(tester), isFalse);
+        expect(_pageMayPlay(tester), isFalse);
         await tester.pumpAndSettle();
       });
 

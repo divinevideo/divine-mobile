@@ -41,9 +41,10 @@ import 'package:openvine/widgets/video_tile_transition/video_tile_transition_tar
 /// Once the picture has landed, it is removed at once, uncovering the
 /// player's own poster or video in the same place: fading it out would show
 /// both pictures at once, doubling anything that has moved since the poster.
-/// The page holds its playback and controls until then, through
-/// [VideoTileTransitionScope], so the video starts from where the picture
-/// shows it and the controls take over from their flying copy.
+/// Through [VideoTileTransitionScope], the page holds its controls until
+/// then, so they take over from their flying copy, and its playback until
+/// [playbackLead] before then, so the video is already moving from near
+/// where the picture shows it.
 class VideoTileFlightTransition extends StatefulWidget {
   /// Creates the transition for one route.
   const VideoTileFlightTransition({
@@ -67,6 +68,11 @@ class VideoTileFlightTransition extends StatefulWidget {
 
   /// How long the picture takes to fly back into the tile on close.
   static const closeDuration = Duration(milliseconds: 250);
+
+  /// How long before the picture lands the page starts playing beneath it:
+  /// about how long the player takes from being asked to play to showing
+  /// the video moving.
+  static const playbackLead = Duration(milliseconds: 100);
 
   @override
   State<VideoTileFlightTransition> createState() =>
@@ -96,7 +102,9 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
 
   VideoTileLanding? _lastLanding;
 
-  final _landed = ValueNotifier<bool>(false);
+  final _phase = ValueNotifier<VideoTileFlightPhase>(
+    VideoTileFlightPhase.flying,
+  );
 
   final _flight = ValueNotifier<VideoTileFlightFrame?>(null);
 
@@ -112,7 +120,23 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     _playerSizeStream = widget.origin.playerSizeImage
       ?..addListener(_playerSizeListener);
     _hasOpened = widget.animation.status == AnimationStatus.forward;
-    widget.animation.addStatusListener(_onStatus);
+    widget.animation
+      ..addStatusListener(_onStatus)
+      ..addListener(_onProgress);
+  }
+
+  /// How far through opening the page starts playing.
+  static final double _arrivalProgress =
+      1 -
+      VideoTileFlightTransition.playbackLead.inMicroseconds /
+          VideoTileFlightTransition.openDuration.inMicroseconds;
+
+  void _onProgress() {
+    if (widget.animation.status == AnimationStatus.forward &&
+        widget.animation.value >= _arrivalProgress &&
+        _phase.value == VideoTileFlightPhase.flying) {
+      _phase.value = VideoTileFlightPhase.arriving;
+    }
   }
 
   void _onStatus(AnimationStatus status) {
@@ -121,9 +145,9 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
         _hasOpened = true;
       case AnimationStatus.completed when _hasOpened:
         setState(_releasePicture);
-        _landed.value = true;
+        _phase.value = VideoTileFlightPhase.landed;
       case AnimationStatus.reverse:
-        _landed.value = false;
+        _phase.value = VideoTileFlightPhase.flying;
         // Closing: fly what the tile shows now, which is where it lands,
         // unless the player-size decode has loaded.
         setState(() {
@@ -150,9 +174,11 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
 
   @override
   void dispose() {
-    widget.animation.removeStatusListener(_onStatus);
+    widget.animation
+      ..removeStatusListener(_onStatus)
+      ..removeListener(_onProgress);
     _motion.dispose();
-    _landed.dispose();
+    _phase.dispose();
     _flight.dispose();
     _releasePicture();
     _playerSizeStream?.removeListener(_playerSizeListener);
@@ -189,7 +215,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
   Widget build(BuildContext context) {
     final page = VideoTileTransitionScope(
       targets: _targets,
-      landed: _landed,
+      phase: _phase,
       flight: _flight,
       child: KeyedSubtree(key: _pageKey, child: widget.child),
     );

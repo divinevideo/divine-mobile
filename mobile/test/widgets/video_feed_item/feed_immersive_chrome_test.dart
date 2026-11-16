@@ -17,7 +17,7 @@ Future<void> _pumpChrome(
   WidgetTester tester, {
   FeedImmersiveCubit? cubit,
   bool disableAnimations = false,
-  ValueListenable<bool>? landed,
+  ValueListenable<VideoTileFlightPhase>? phase,
   ValueListenable<VideoTileFlightFrame?>? flight,
   VoidCallback? onTap,
 }) async {
@@ -27,7 +27,7 @@ Future<void> _pumpChrome(
       child: const SizedBox.expand(child: Text('chrome')),
     ),
   );
-  if (landed != null) {
+  if (phase != null) {
     var scopeFlight = flight;
     if (scopeFlight == null) {
       final noFlight = ValueNotifier<VideoTileFlightFrame?>(null);
@@ -36,7 +36,7 @@ Future<void> _pumpChrome(
     }
     chrome = VideoTileTransitionScope(
       targets: VideoTileTransitionTargets(),
-      landed: landed,
+      phase: phase,
       flight: scopeFlight,
       child: chrome,
     );
@@ -211,11 +211,11 @@ void main() {
 
     group('while a grid tile picture flies over the player', () {
       testWidgets('hides the chrome and blocks taps', (tester) async {
-        final landed = ValueNotifier(false);
-        addTearDown(landed.dispose);
+        final phase = ValueNotifier(VideoTileFlightPhase.flying);
+        addTearDown(phase.dispose);
         var taps = 0;
 
-        await _pumpChrome(tester, landed: landed, onTap: () => taps++);
+        await _pumpChrome(tester, phase: phase, onTap: () => taps++);
         await tester.tap(find.text('chrome'), warnIfMissed: false);
 
         expect(_opacityOf(tester), equals(0.0));
@@ -223,13 +223,25 @@ void main() {
         expect(taps, equals(0));
       });
 
+      testWidgets('keeps the chrome hidden while the picture is arriving', (
+        tester,
+      ) async {
+        final phase = ValueNotifier(VideoTileFlightPhase.arriving);
+        addTearDown(phase.dispose);
+
+        await _pumpChrome(tester, phase: phase);
+
+        expect(_opacityOf(tester), equals(0.0));
+        expect(_ignoringPointer(tester), isTrue);
+      });
+
       testWidgets('flies a copy where the frame puts it', (tester) async {
-        final landed = ValueNotifier(false);
-        addTearDown(landed.dispose);
+        final phase = ValueNotifier(VideoTileFlightPhase.flying);
+        addTearDown(phase.dispose);
         final flight = ValueNotifier<VideoTileFlightFrame?>(_frame());
         addTearDown(flight.dispose);
 
-        await _pumpChrome(tester, landed: landed, flight: flight);
+        await _pumpChrome(tester, phase: phase, flight: flight);
 
         expect(_flyingCopy, findsOneWidget);
         // Laid out at the chrome's size, then moved and scaled by the frame.
@@ -250,14 +262,14 @@ void main() {
       testWidgets('lays the copy out with the padding the chrome sees', (
         tester,
       ) async {
-        final landed = ValueNotifier(false);
-        addTearDown(landed.dispose);
+        final phase = ValueNotifier(VideoTileFlightPhase.flying);
+        addTearDown(phase.dispose);
         final flight = ValueNotifier<VideoTileFlightFrame?>(_frame());
         addTearDown(flight.dispose);
         final bottomPaddings = <bool, double>{};
         final chrome = VideoTileTransitionScope(
           targets: VideoTileTransitionTargets(),
-          landed: landed,
+          phase: phase,
           flight: flight,
           child: FeedImmersiveChrome(
             child: Builder(
@@ -301,8 +313,8 @@ void main() {
       });
 
       testWidgets('shows only what the frame clips to', (tester) async {
-        final landed = ValueNotifier(false);
-        addTearDown(landed.dispose);
+        final phase = ValueNotifier(VideoTileFlightPhase.flying);
+        addTearDown(phase.dispose);
         final clip = RRect.fromLTRBR(
           30,
           40,
@@ -313,7 +325,7 @@ void main() {
         final flight = ValueNotifier<VideoTileFlightFrame?>(_frame(clip: clip));
         addTearDown(flight.dispose);
 
-        await _pumpChrome(tester, landed: landed, flight: flight);
+        await _pumpChrome(tester, phase: phase, flight: flight);
 
         final clipper = tester
             .widget<ClipRRect>(
@@ -324,11 +336,11 @@ void main() {
       });
 
       testWidgets('drops the copy when no picture flies', (tester) async {
-        final landed = ValueNotifier(false);
-        addTearDown(landed.dispose);
+        final phase = ValueNotifier(VideoTileFlightPhase.flying);
+        addTearDown(phase.dispose);
         final flight = ValueNotifier<VideoTileFlightFrame?>(_frame());
         addTearDown(flight.dispose);
-        await _pumpChrome(tester, landed: landed, flight: flight);
+        await _pumpChrome(tester, phase: phase, flight: flight);
         expect(_flyingCopy, findsOneWidget);
 
         flight.value = null;
@@ -340,19 +352,19 @@ void main() {
       testWidgets('swaps the copy for the chrome at once on landing', (
         tester,
       ) async {
-        final landed = ValueNotifier(false);
-        addTearDown(landed.dispose);
+        final phase = ValueNotifier(VideoTileFlightPhase.flying);
+        addTearDown(phase.dispose);
         final flight = ValueNotifier<VideoTileFlightFrame?>(_frame());
         addTearDown(flight.dispose);
         var taps = 0;
         await _pumpChrome(
           tester,
-          landed: landed,
+          phase: phase,
           flight: flight,
           onTap: () => taps++,
         );
 
-        landed.value = true;
+        phase.value = VideoTileFlightPhase.landed;
         flight.value = null;
         await tester.pump();
 
@@ -366,14 +378,14 @@ void main() {
       testWidgets('hides the chrome at once when the picture flies back', (
         tester,
       ) async {
-        final landed = ValueNotifier(true);
-        addTearDown(landed.dispose);
+        final phase = ValueNotifier(VideoTileFlightPhase.landed);
+        addTearDown(phase.dispose);
         final flight = ValueNotifier<VideoTileFlightFrame?>(null);
         addTearDown(flight.dispose);
-        await _pumpChrome(tester, landed: landed, flight: flight);
+        await _pumpChrome(tester, phase: phase, flight: flight);
         expect(_paintedOpacityOf(tester), equals(1.0));
 
-        landed.value = false;
+        phase.value = VideoTileFlightPhase.flying;
         flight.value = _frame(opacity: 1);
         await tester.pump();
 

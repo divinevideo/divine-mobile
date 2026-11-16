@@ -400,13 +400,13 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
     );
     final playbackEligible = ref.watch(playbackEligibleProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
-    // A grid tile's picture flying over the page hands over to the video's
-    // first frame when it lands, so playback waits for it.
+    // A grid tile's picture flying over the page uncovers the video when it
+    // lands, so playback waits until it is about to.
     final isFeedActive =
         widget.isActive &&
         _routeAllowsPlayback &&
         playbackEligible &&
-        VideoTileTransitionScope.hasLandedOf(context);
+        VideoTileTransitionScope.mayPlayOf(context);
     // A focus-only pause leaves the visible feed warm for the next swipe.
     // Route/tab changes and actual backgrounding still apply its release policy,
     // including when they happen after focus has already been lost.

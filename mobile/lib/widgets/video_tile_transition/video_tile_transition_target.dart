@@ -232,20 +232,33 @@ class VideoTileFlightFrame {
   final double opacity;
 }
 
+/// How far a tile's picture flying over a page has got.
+enum VideoTileFlightPhase {
+  /// The picture is on its way: the page holds its playback and controls.
+  flying,
+
+  /// The picture is about to land: the page starts playing beneath it, so
+  /// the video is moving by the time the picture uncovers it, and still holds
+  /// its controls.
+  arriving,
+
+  /// The picture has handed over to the page, or no picture flies.
+  landed,
+}
+
 /// Hands [targets] to the [VideoTileTransitionTarget]s in [child], and tells
-/// the page in [child] whether a tile's picture is flying over it.
+/// the page in [child] how far a tile's picture flying over it has got.
 class VideoTileTransitionScope
-    extends InheritedNotifier<ValueListenable<bool>> {
-  /// Collects the targets in [child] into [targets]; [landed] is whether the
-  /// picture has handed over to the page, and [flight] where the page's
-  /// controls fly with it.
+    extends InheritedNotifier<ValueListenable<VideoTileFlightPhase>> {
+  /// Collects the targets in [child] into [targets]; [phase] is how far the
+  /// picture has got, and [flight] where the page's controls fly with it.
   const VideoTileTransitionScope({
     required this.targets,
-    required ValueListenable<bool> landed,
+    required ValueListenable<VideoTileFlightPhase> phase,
     required this.flight,
     required super.child,
     super.key,
-  }) : super(notifier: landed);
+  }) : super(notifier: phase);
 
   /// Where the targets register.
   final VideoTileTransitionTargets targets;
@@ -261,20 +274,30 @@ class VideoTileTransitionScope
   ) =>
       context.getInheritedWidgetOfExactType<VideoTileTransitionScope>()?.flight;
 
-  /// Whether the page in [context] is free to play and show its controls:
-  /// `false` while a tile's picture flies over it, on the way in or out, and
-  /// `true` once it has landed or when no picture flies at all.
-  ///
-  /// Holding playback until the picture lands lets it hand over to the
-  /// video's first frame rather than to a frame further on, and holding the
-  /// controls lets their copy flying with the picture hand over to them in
-  /// the same place.
-  static bool hasLandedOf(BuildContext context) =>
+  static VideoTileFlightPhase _phaseOf(BuildContext context) =>
       context
           .dependOnInheritedWidgetOfExactType<VideoTileTransitionScope>()
           ?.notifier
           ?.value ??
-      true;
+      VideoTileFlightPhase.landed;
+
+  /// Whether the page in [context] is free to play: `false` while a tile's
+  /// picture flies over it, on the way in or out, until it is about to land.
+  ///
+  /// The player takes a moment to start moving once asked to play, so
+  /// starting just before the picture lands, hidden beneath it, uncovers a
+  /// video that is already moving from near its first frame.
+  static bool mayPlayOf(BuildContext context) =>
+      _phaseOf(context) != VideoTileFlightPhase.flying;
+
+  /// Whether the page in [context] is free to show its controls: `false`
+  /// while a tile's picture flies over it, on the way in or out, and `true`
+  /// once it has landed or when no picture flies at all.
+  ///
+  /// Holding the controls lets their copy flying with the picture hand over
+  /// to them in the same place.
+  static bool hasLandedOf(BuildContext context) =>
+      _phaseOf(context) == VideoTileFlightPhase.landed;
 
   @override
   bool updateShouldNotify(VideoTileTransitionScope oldWidget) =>

@@ -379,7 +379,7 @@ Future<ProviderContainer> _pumpFeedVideos(
   List<NavigatorObserver> navigatorObservers = const <NavigatorObserver>[],
   List<dynamic> additionalOverrides = const [],
   ValueListenable<List<VideoEvent>>? videosListenable,
-  ValueListenable<bool>? tileTransitionLanded,
+  ValueListenable<VideoTileFlightPhase>? tileTransitionPhase,
   bool showTopScrim = false,
   ProviderContainer? providerContainer,
 }) async {
@@ -460,11 +460,11 @@ Future<ProviderContainer> _pumpFeedVideos(
             BlocProvider<FeedImmersiveCubit>.value(value: immersiveCubit),
           ],
           child: Scaffold(
-            body: tileTransitionLanded == null
+            body: tileTransitionPhase == null
                 ? body
                 : VideoTileTransitionScope(
                     targets: VideoTileTransitionTargets(),
-                    landed: tileTransitionLanded,
+                    phase: tileTransitionPhase,
                     flight: noFlight,
                     child: body,
                   ),
@@ -3570,21 +3570,21 @@ void main() {
       );
     });
 
-    testWidgets('waits for a grid tile picture to land before playing', (
+    testWidgets('waits for a grid tile picture to be about to land to play', (
       tester,
     ) async {
-      final landed = ValueNotifier(false);
-      addTearDown(landed.dispose);
+      final phase = ValueNotifier(VideoTileFlightPhase.flying);
+      addTearDown(phase.dispose);
 
       await _pumpFeedVideos(
         tester,
         videos: [_makeVideo()],
-        tileTransitionLanded: landed,
+        tileTransitionPhase: phase,
       );
       final feedFinder = find.byType(InfiniteVideoFeed);
       expect(tester.widget<InfiniteVideoFeed>(feedFinder).isActive, isFalse);
 
-      landed.value = true;
+      phase.value = VideoTileFlightPhase.arriving;
       await tester.pump();
 
       expect(tester.widget<InfiniteVideoFeed>(feedFinder).isActive, isTrue);

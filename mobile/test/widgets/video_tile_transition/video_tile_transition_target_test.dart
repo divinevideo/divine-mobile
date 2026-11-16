@@ -7,14 +7,14 @@ const _pageSize = Size(400, 500);
 void main() {
   group(VideoTileTransitionTargets, () {
     late VideoTileTransitionTargets targets;
-    late ValueNotifier<bool> landed;
+    late ValueNotifier<VideoTileFlightPhase> phase;
     late ValueNotifier<VideoTileFlightFrame?> flight;
     final pageKey = GlobalKey();
 
     setUp(() {
       targets = VideoTileTransitionTargets();
-      landed = ValueNotifier(true);
-      addTearDown(landed.dispose);
+      phase = ValueNotifier(VideoTileFlightPhase.landed);
+      addTearDown(phase.dispose);
       flight = ValueNotifier(null);
       addTearDown(flight.dispose);
     });
@@ -49,7 +49,7 @@ void main() {
               size: _pageSize,
               child: VideoTileTransitionScope(
                 targets: targets,
-                landed: landed,
+                phase: phase,
                 flight: flight,
                 child: showTarget ? target : const SizedBox.expand(),
               ),
@@ -205,7 +205,7 @@ void main() {
               size: _pageSize,
               child: VideoTileTransitionScope(
                 targets: targets,
-                landed: landed,
+                phase: phase,
                 flight: flight,
                 child: Stack(
                   fit: StackFit.expand,
@@ -263,7 +263,7 @@ void main() {
         await tester.pumpWidget(
           VideoTileTransitionScope(
             targets: targets,
-            landed: landed,
+            phase: phase,
             flight: flight,
             child: Builder(
               builder: (c) {
@@ -278,40 +278,48 @@ void main() {
       });
     });
 
-    group('hasLandedOf', () {
-      Widget reader(ValueChanged<bool> onLanded) => Builder(
+    group('hasLandedOf and mayPlayOf', () {
+      Widget reader(ValueChanged<(bool, bool)> onRead) => Builder(
         builder: (context) {
-          onLanded(VideoTileTransitionScope.hasLandedOf(context));
+          onRead((
+            VideoTileTransitionScope.hasLandedOf(context),
+            VideoTileTransitionScope.mayPlayOf(context),
+          ));
           return const SizedBox.shrink();
         },
       );
 
-      testWidgets('is true for a page no picture flies over', (tester) async {
-        bool? hasLanded;
-        await tester.pumpWidget(reader((value) => hasLanded = value));
-
-        expect(hasLanded, isTrue);
-      });
-
-      testWidgets('follows the scope as the picture flies and lands', (
+      testWidgets('let a page no picture flies over show and play', (
         tester,
       ) async {
-        landed.value = false;
-        bool? hasLanded;
+        (bool, bool)? read;
+        await tester.pumpWidget(reader((value) => read = value));
+
+        expect(read, equals((true, true)));
+      });
+
+      testWidgets('follow the scope as the picture flies, arrives and lands', (
+        tester,
+      ) async {
+        phase.value = VideoTileFlightPhase.flying;
+        (bool, bool)? read;
         await tester.pumpWidget(
           VideoTileTransitionScope(
             targets: targets,
-            landed: landed,
+            phase: phase,
             flight: flight,
-            child: reader((value) => hasLanded = value),
+            child: reader((value) => read = value),
           ),
         );
-        expect(hasLanded, isFalse);
+        expect(read, equals((false, false)));
 
-        landed.value = true;
+        phase.value = VideoTileFlightPhase.arriving;
         await tester.pump();
+        expect(read, equals((false, true)));
 
-        expect(hasLanded, isTrue);
+        phase.value = VideoTileFlightPhase.landed;
+        await tester.pump();
+        expect(read, equals((true, true)));
       });
     });
   });
