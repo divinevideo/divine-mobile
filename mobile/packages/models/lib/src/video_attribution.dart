@@ -221,3 +221,105 @@ class ClipSourceCredit {
       'ClipSourceCredit(authorPubkey: $authorPubkey, '
       'addressableId: $addressableId, eventId: $eventId)';
 }
+
+/// The first explicit relay hint on a video's `r` tags.
+/// HTTP references identify linked content rather than a relay.
+String? videoSourceRelayFromTags(Iterable<List<String>> tags) {
+  for (final tag in tags) {
+    if (tag.length < 2 || tag[0] != 'r') continue;
+    final value = tag[1];
+    if (value.startsWith('ws://') || value.startsWith('wss://')) return value;
+  }
+  return null;
+}
+
+/// Creator credits parsed consistently for relay and REST video events.
+@immutable
+class VideoEventAttribution {
+  const VideoEventAttribution._({
+    required this.inspiredByVideo,
+    required this.inspiredByPubkeys,
+    required this.clipSourceCredits,
+  });
+
+  factory VideoEventAttribution.fromTags(
+    Iterable<List<String>> tags, {
+    required String authorPubkey,
+  }) {
+    InspiredByInfo? inspiredByVideo;
+    final inspiredByPubkeys = <String>[];
+    final clipSourceCredits = <ClipSourceCredit>[];
+    final author = authorPubkey.toLowerCase();
+    for (final tag in tags) {
+      if (tag.length < 2) continue;
+      final value = tag[1];
+      final marker = tag.length >= 4 ? tag[3].toLowerCase() : null;
+      final relay = tag.length >= 3 && tag[2].isNotEmpty ? tag[2] : null;
+      if (tag[0] == 'p') {
+        final pubkey = value.toLowerCase();
+        if (pubkey.isEmpty || pubkey == author) continue;
+        if (marker == inspiredByPTagMarker) {
+          if (!inspiredByPubkeys.contains(pubkey)) {
+            inspiredByPubkeys.add(pubkey);
+          }
+        } else if (marker == clipSourceCreditTagMarker) {
+          _addClipSourceCredit(
+            clipSourceCredits,
+            ClipSourceCredit(authorPubkey: pubkey, relayUrl: relay),
+          );
+        }
+      } else if (tag[0] == 'a' && value.startsWith('34236:')) {
+        if (marker == clipSourceCreditTagMarker) {
+          _addClipSourceCredit(
+            clipSourceCredits,
+            ClipSourceCredit.fromAddressableId(
+              addressableId: value,
+              relayUrl: relay,
+            ),
+          );
+        } else {
+          inspiredByVideo ??= InspiredByInfo(
+            addressableId: value,
+            relayUrl: relay,
+          );
+        }
+      }
+    }
+    return VideoEventAttribution._(
+      inspiredByVideo: inspiredByVideo,
+      inspiredByPubkeys: List.unmodifiable(inspiredByPubkeys),
+      clipSourceCredits: List.unmodifiable(clipSourceCredits),
+    );
+  }
+
+  final InspiredByInfo? inspiredByVideo;
+  final List<String> inspiredByPubkeys;
+  final List<ClipSourceCredit> clipSourceCredits;
+}
+
+void _addClipSourceCredit(
+  List<ClipSourceCredit> credits,
+  ClipSourceCredit credit,
+) {
+  if (credit.authorPubkey.isEmpty) return;
+  final authorPubkey = credit.authorPubkey.toLowerCase();
+  if (!credit.hasAddressableSource &&
+      credits.any(
+        (existing) =>
+            existing.hasAddressableSource &&
+            existing.authorPubkey.toLowerCase() == authorPubkey,
+      )) {
+    return;
+  }
+  if (credit.hasAddressableSource) {
+    credits.removeWhere(
+      (existing) =>
+          !existing.hasAddressableSource &&
+          existing.authorPubkey.toLowerCase() == authorPubkey,
+    );
+  }
+  if (credits.any((existing) => existing.identityKey == credit.identityKey)) {
+    return;
+  }
+  credits.add(credit);
+}

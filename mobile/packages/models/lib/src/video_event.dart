@@ -459,12 +459,13 @@ class VideoEvent {
     int? expirationTimestamp;
     String? audioEventId;
     String? audioEventRelay;
-    String? sourceRelay;
+    var sourceRelay = videoSourceRelayFromTags(event.tags);
     String? addressableDTag;
     final collaboratorPubkeys = <String>[];
-    InspiredByInfo? inspiredByVideo;
-    final inspiredByPubkeys = <String>[];
-    final clipSourceCredits = <ClipSourceCredit>[];
+    final attribution = VideoEventAttribution.fromTags(
+      event.tags,
+      authorPubkey: event.pubkey,
+    );
     final textTrackRefsLocal = <String>[];
     String? textTrackLangLocal;
     final contentWarningLabels = <String>[];
@@ -626,9 +627,9 @@ class VideoEvent {
           // NIP-25 reference - might contain media URLs. Also handle "r" tags
           // with type annotation (e.g., ["r", "url", "video"])
           if (tagValue.startsWith('wss://') || tagValue.startsWith('ws://')) {
-            // Relay hint for this event; keep the first one seen.
-            sourceRelay ??= tagValue;
-          } else if (tag.length >= 3) {
+            break;
+          }
+          if (tag.length >= 3) {
             final url = tagValue;
             final type = tag[2];
 
@@ -693,44 +694,6 @@ class VideoEvent {
             if (role == 'collaborator' &&
                 !collaboratorPubkeys.contains(normalizedPubkey)) {
               collaboratorPubkeys.add(normalizedPubkey);
-            } else if (role == inspiredByPTagMarker) {
-              if (!inspiredByPubkeys.contains(normalizedPubkey)) {
-                inspiredByPubkeys.add(normalizedPubkey);
-              }
-            } else if (role == clipSourceCreditTagMarker) {
-              _addClipSourceCredit(
-                clipSourceCredits,
-                ClipSourceCredit(
-                  authorPubkey: normalizedPubkey,
-                  relayUrl: tag.length >= 3 && tag[2].isNotEmpty
-                      ? tag[2]
-                      : null,
-                ),
-              );
-            }
-          }
-        case 'a':
-          // NIP-33 addressable event reference
-          // Format: ['a', '34236:<pubkey>:<d-tag>', '<relay>', 'mention']
-          if (tagValue.isNotEmpty && tagValue.startsWith('34236:')) {
-            final relayHint = tag.length > 2 ? tag[2] : null;
-            final relayUrl = relayHint != null && relayHint.isNotEmpty
-                ? relayHint
-                : null;
-            final marker = tag.length >= 4 ? tag[3].toLowerCase() : null;
-            if (marker == clipSourceCreditTagMarker) {
-              _addClipSourceCredit(
-                clipSourceCredits,
-                ClipSourceCredit.fromAddressableId(
-                  addressableId: tagValue,
-                  relayUrl: relayUrl,
-                ),
-              );
-            } else {
-              inspiredByVideo ??= InspiredByInfo(
-                addressableId: tagValue,
-                relayUrl: relayUrl,
-              );
             }
           }
         case 'content-warning':
@@ -861,10 +824,10 @@ class VideoEvent {
       audioEventId: audioEventId,
       audioEventRelay: audioEventRelay,
       collaboratorPubkeys: collaboratorPubkeys,
-      inspiredByVideo: inspiredByVideo,
+      inspiredByVideo: attribution.inspiredByVideo,
       inspiredByNpub: inspiredByNpub,
-      inspiredByPubkeys: inspiredByPubkeys,
-      clipSourceCredits: clipSourceCredits,
+      inspiredByPubkeys: attribution.inspiredByPubkeys,
+      clipSourceCredits: attribution.clipSourceCredits,
       nostrEventTags: event.tags
           .map((t) => (t as List).map((e) => e.toString()).toList())
           .toList(),
@@ -877,33 +840,6 @@ class VideoEvent {
       eventKind: event.kind,
       sourceRelay: sourceRelay,
     );
-  }
-
-  static void _addClipSourceCredit(
-    List<ClipSourceCredit> credits,
-    ClipSourceCredit credit,
-  ) {
-    if (credit.authorPubkey.isEmpty) return;
-    final authorPubkey = credit.authorPubkey.toLowerCase();
-    if (!credit.hasAddressableSource &&
-        credits.any(
-          (existing) =>
-              existing.hasAddressableSource &&
-              existing.authorPubkey.toLowerCase() == authorPubkey,
-        )) {
-      return;
-    }
-    if (credit.hasAddressableSource) {
-      credits.removeWhere(
-        (existing) =>
-            !existing.hasAddressableSource &&
-            existing.authorPubkey.toLowerCase() == authorPubkey,
-      );
-    }
-    if (credits.any((existing) => existing.identityKey == credit.identityKey)) {
-      return;
-    }
-    credits.add(credit);
   }
 
   final String id;

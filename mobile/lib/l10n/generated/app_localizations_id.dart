@@ -9353,6 +9353,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Kaca Rusuk';
 
   @override
+  String get videoEditorEffectTunnel => 'Terowongan';
+
+  @override
+  String get videoEditorEffectSpiralTunnel => 'Terowongan Spiral';
+
+  @override
   String get videoEditorEffectEightBit => '8-Bit';
 
   @override

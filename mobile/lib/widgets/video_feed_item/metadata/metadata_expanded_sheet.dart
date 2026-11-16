@@ -116,6 +116,7 @@ class MetadataExpandedSheet extends StatelessWidget {
         child: VideoContentActionsScope(
           video: video,
           child: VideoContentActionsFeedbackListener(
+            keepBookmarkResultsOpen: true,
             child: _MetadataContent(
               video: video,
               scrollController: scrollController,

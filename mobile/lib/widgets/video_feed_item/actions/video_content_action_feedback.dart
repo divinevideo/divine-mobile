@@ -1,4 +1,4 @@
-// ABOUTME: Feedback for per-video content actions: closes the sheet, reports.
+// ABOUTME: Per-video action feedback in sheet banners and after dismissal.
 // ABOUTME: Also hosts the clip-title prompt that starts an Add to clips.
 
 import 'package:bookmarks_repository/bookmarks_repository.dart';
@@ -28,38 +28,7 @@ void showVideoContentActionFeedback(
   final messenger = ScaffoldMessenger.of(sheetContext);
 
   final (snackText, isError) = switch (result) {
-    // "Failed to add bookmark" names no recovery for the state the user is
-    // almost certainly in, and after a long blocking wait that matters more,
-    // not less. Both network-shaped failures are worded that way: the read
-    // runs with requireAllRelaysSettled, so a single slow relay reports
-    // timedOut while the device is merely degraded, not offline. An unreadable
-    // private list names neither add nor remove: the repository refused
-    // because it cannot tell which one Save would be. Everything else keeps
-    // the add- or remove-specific copy.
-    VideoContentSaveResult(
-      :final succeeded,
-      :final removed,
-      :final wasBookmarkedBeforeToggle,
-      :final failure,
-    ) =>
-      (
-        succeeded
-            ? (removed
-                  ? l10n.shareRemovedFromBookmarks
-                  : l10n.shareAddedToBookmarks)
-            : switch (failure) {
-                BookmarkToggleFailure.couldNotReachRelays ||
-                BookmarkToggleFailure.timedOut =>
-                  l10n.profileSetupNoRelaysConnected,
-                BookmarkToggleFailure.privateItemsUnreadable =>
-                  l10n.shareBookmarkPrivateItemsLocked,
-                _ =>
-                  wasBookmarkedBeforeToggle
-                      ? l10n.shareFailedToRemoveBookmark
-                      : l10n.shareFailedToAddBookmark,
-              },
-        !succeeded,
-      ),
+    VideoContentSaveResult() => _saveFeedbackMessage(l10n, result),
     VideoContentClipImportResult(:final succeeded, :final libraryTitle) => (
       succeeded
           ? l10n.shareSheetSavedClipToClips(
@@ -107,6 +76,85 @@ void showVideoContentActionFeedback(
   );
 }
 
+/// Localized bookmark message, and whether it reports a failure, shared by
+/// the info sheet's banner and the share sheet's snackbar.
+///
+/// "Failed to add bookmark" names no recovery for the state the user is
+/// almost certainly in, and after a long blocking wait that matters more, not
+/// less. Both network-shaped failures are worded that way: the read runs with
+/// requireAllRelaysSettled, so a single slow relay reports timedOut while the
+/// device is merely degraded, not offline. An unreadable private list names
+/// neither add nor remove: the repository refused because it cannot tell
+/// which one Save would be. Everything else keeps the add- or remove-specific
+/// copy.
+(String, bool) _saveFeedbackMessage(
+  AppLocalizations l10n,
+  VideoContentSaveResult result,
+) => (
+  result.succeeded
+      ? (result.removed
+            ? l10n.shareRemovedFromBookmarks
+            : l10n.shareAddedToBookmarks)
+      : switch (result.failure) {
+          BookmarkToggleFailure.couldNotReachRelays ||
+          BookmarkToggleFailure.timedOut => l10n.profileSetupNoRelaysConnected,
+          BookmarkToggleFailure.privateItemsUnreadable =>
+            l10n.shareBookmarkPrivateItemsLocked,
+          _ =>
+            result.wasBookmarkedBeforeToggle
+                ? l10n.shareFailedToRemoveBookmark
+                : l10n.shareFailedToAddBookmark,
+        },
+  !result.succeeded,
+);
+
+/// Shows the latest bookmark result below the info sheet's action row.
+///
+/// Needs a [VideoContentActionsFeedbackListener] above it with
+/// `keepBookmarkResultsOpen`, or the sheet closes first. Starting another
+/// save, clip import or remix clears it, so a retry replaces a failure.
+class VideoContentSaveFeedback extends StatelessWidget {
+  const VideoContentSaveFeedback({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<
+      VideoContentActionsBloc,
+      VideoContentActionsState,
+      VideoContentSaveResult?
+    >(
+      selector: (state) => switch (state.actionResult) {
+        final VideoContentSaveResult result => result,
+        _ => null,
+      },
+      builder: (context, result) {
+        if (result == null) return const SizedBox.shrink();
+        final (message, isError) = _saveFeedbackMessage(context.l10n, result);
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          // The container centres itself past its maximum width; the sheet's
+          // content starts at its margin, so the banner does too.
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: DivineSnackbarContainer.maxWidth,
+              ),
+              child: Semantics(
+                // Without its own node the live region merges into the list
+                // item, making the whole action row one announcement.
+                container: true,
+                liveRegion: true,
+                child: DivineSnackbarContainer(label: message, error: isError),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 /// Copies [text], then confirms it only once the platform has taken it.
 Future<void> _copyThenReport(
   ScaffoldMessengerState messenger,
@@ -134,15 +182,27 @@ Future<void> _copyThenReport(
   );
 }
 
-/// Reports every [VideoContentActionsBloc] result through
-/// [showVideoContentActionFeedback].
+/// Reports [VideoContentActionsBloc] results through
+/// [showVideoContentActionFeedback], which dismisses the sheet first. With
+/// [keepBookmarkResultsOpen], bookmark results are left to a
+/// [VideoContentSaveFeedback] in the sheet instead.
 ///
 /// Results that arrive while another route covers this one are dropped, so a
 /// late result never closes a route that was pushed on top of the sheet.
 class VideoContentActionsFeedbackListener extends StatelessWidget {
-  const VideoContentActionsFeedbackListener({required this.child, super.key});
+  const VideoContentActionsFeedbackListener({
+    required this.child,
+    this.keepBookmarkResultsOpen = false,
+    super.key,
+  });
 
   final Widget child;
+
+  /// Whether bookmark results stay in the sheet for a
+  /// [VideoContentSaveFeedback] below this listener instead of closing it for
+  /// a snackbar. Without that widget they are not shown at all. Every other
+  /// result still closes the sheet.
+  final bool keepBookmarkResultsOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -153,6 +213,7 @@ class VideoContentActionsFeedbackListener extends StatelessWidget {
       listener: (context, state) {
         final result = state.actionResult;
         if (result == null) return;
+        if (keepBookmarkResultsOpen && result is VideoContentSaveResult) return;
         if (!context.mounted || ModalRoute.of(context)?.isCurrent == false) {
           Log.info(
             'Dropped a ${result.runtimeType}: a route covers the sheet',

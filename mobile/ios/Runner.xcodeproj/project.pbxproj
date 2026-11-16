@@ -26,6 +26,7 @@
 		EB372E11C2741863261D5FF4 /* SwirlVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 715D6E5659F04EC57C302EAE /* SwirlVideoEffect.swift */; };
 		5B915AFFF6946D0B5618AAE1 /* RippleVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9916875E6F93F6EC0C193663 /* RippleVideoEffect.swift */; };
 		C6EE28CDADF84677B9B0832C /* FlutedGlassVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77358128B37775028E0C5A8D /* FlutedGlassVideoEffect.swift */; };
+		B9D6B217AA921D0528602017 /* TunnelVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75DF6B7F5C9617F4CB9CD876 /* TunnelVideoEffect.swift */; };
 		E643D7ED41609CAECBDE60D9 /* LightRaysVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98DCCD1B4FE91217318DA362 /* LightRaysVideoEffect.swift */; };
 		8FCB8EEF354AACD2B31528B4 /* AnamorphicVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90591D699B2A7411E10B64AF /* AnamorphicVideoEffect.swift */; };
 		B2B586EE5CCD311F6254F28B /* PrismVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F966BB2EC250CD1C802A17C /* PrismVideoEffect.swift */; };
@@ -140,6 +141,7 @@
 		715D6E5659F04EC57C302EAE /* SwirlVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SwirlVideoEffect.swift; sourceTree = "<group>"; };
 		9916875E6F93F6EC0C193663 /* RippleVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RippleVideoEffect.swift; sourceTree = "<group>"; };
 		77358128B37775028E0C5A8D /* FlutedGlassVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FlutedGlassVideoEffect.swift; sourceTree = "<group>"; };
+		75DF6B7F5C9617F4CB9CD876 /* TunnelVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TunnelVideoEffect.swift; sourceTree = "<group>"; };
 		98DCCD1B4FE91217318DA362 /* LightRaysVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LightRaysVideoEffect.swift; sourceTree = "<group>"; };
 		90591D699B2A7411E10B64AF /* AnamorphicVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnamorphicVideoEffect.swift; sourceTree = "<group>"; };
 		6F966BB2EC250CD1C802A17C /* PrismVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PrismVideoEffect.swift; sourceTree = "<group>"; };
@@ -363,6 +365,7 @@
 				715D6E5659F04EC57C302EAE /* SwirlVideoEffect.swift */,
 				9916875E6F93F6EC0C193663 /* RippleVideoEffect.swift */,
 				77358128B37775028E0C5A8D /* FlutedGlassVideoEffect.swift */,
+				75DF6B7F5C9617F4CB9CD876 /* TunnelVideoEffect.swift */,
 				98DCCD1B4FE91217318DA362 /* LightRaysVideoEffect.swift */,
 				90591D699B2A7411E10B64AF /* AnamorphicVideoEffect.swift */,
 				6F966BB2EC250CD1C802A17C /* PrismVideoEffect.swift */,
@@ -824,6 +827,7 @@
 				EB372E11C2741863261D5FF4 /* SwirlVideoEffect.swift in Sources */,
 				5B915AFFF6946D0B5618AAE1 /* RippleVideoEffect.swift in Sources */,
 				C6EE28CDADF84677B9B0832C /* FlutedGlassVideoEffect.swift in Sources */,
+				B9D6B217AA921D0528602017 /* TunnelVideoEffect.swift in Sources */,
 				E643D7ED41609CAECBDE60D9 /* LightRaysVideoEffect.swift in Sources */,
 				8FCB8EEF354AACD2B31528B4 /* AnamorphicVideoEffect.swift in Sources */,
 				B2B586EE5CCD311F6254F28B /* PrismVideoEffect.swift in Sources */,

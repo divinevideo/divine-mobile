@@ -349,6 +349,109 @@ void main() {
       expect(find.text(coverText), findsOneWidget);
       expect(find.text(l10n.shareAddedToBookmarks), findsNothing);
     });
+
+    group('with keepBookmarkResultsOpen', () {
+      late StreamController<VideoContentActionsState> results;
+
+      Future<void> pumpListener(WidgetTester tester) async {
+        results = StreamController<VideoContentActionsState>();
+        addTearDown(results.close);
+        whenListen(
+          bloc,
+          results.stream,
+          initialState: const VideoContentActionsState(),
+        );
+        await _pumpOpenSheet(
+          tester,
+          body: (_) => BlocProvider<VideoContentActionsBloc>.value(
+            value: bloc,
+            child: const VideoContentActionsFeedbackListener(
+              keepBookmarkResultsOpen: true,
+              child: Text(_sheetBodyText),
+            ),
+          ),
+        );
+      }
+
+      testWidgets('leaves the sheet open and silent for a bookmark result', (
+        tester,
+      ) async {
+        await pumpListener(tester);
+
+        results.add(
+          VideoContentActionsState(
+            actionResult: VideoContentSaveResult(succeeded: true),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(_sheetBodyText), findsOneWidget);
+        expect(find.byType(SnackBar), findsNothing);
+      });
+
+      testWidgets('still closes the sheet to report any other result', (
+        tester,
+      ) async {
+        await pumpListener(tester);
+
+        results.add(
+          VideoContentActionsState(actionResult: VideoContentActionFailure()),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(_sheetBodyText), findsNothing);
+        expect(find.text(l10n.shareActionFailed), findsOneWidget);
+      });
+    });
+  });
+
+  group(VideoContentSaveFeedback, () {
+    late _MockVideoContentActionsBloc bloc;
+
+    setUp(() => bloc = _MockVideoContentActionsBloc());
+
+    Future<void> pumpFeedback(
+      WidgetTester tester,
+      VideoContentActionResult result,
+    ) async {
+      whenListen(
+        bloc,
+        const Stream<VideoContentActionsState>.empty(),
+        initialState: VideoContentActionsState(actionResult: result),
+      );
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: Scaffold(
+            body: BlocProvider<VideoContentActionsBloc>.value(
+              value: bloc,
+              child: const VideoContentSaveFeedback(),
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('shows a failed save as an error banner', (tester) async {
+      await pumpFeedback(tester, VideoContentSaveResult(succeeded: false));
+
+      expect(find.text(l10n.shareFailedToAddBookmark), findsOneWidget);
+      expect(
+        tester
+            .widget<DivineSnackbarContainer>(
+              find.byType(DivineSnackbarContainer),
+            )
+            .error,
+        isTrue,
+      );
+    });
+
+    testWidgets('shows nothing for a result that is not a bookmark', (
+      tester,
+    ) async {
+      await pumpFeedback(tester, VideoContentActionFailure());
+
+      expect(find.byType(DivineSnackbarContainer), findsNothing);
+    });
   });
 
   group('requestAddToClips', () {

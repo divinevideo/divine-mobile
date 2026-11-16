@@ -2264,6 +2264,8 @@
   "videoEditorEffectSwirl": "소용돌이",
   "videoEditorEffectRipple": "물결",
   "videoEditorEffectFlutedGlass": "플루티드 글라스",
+  "videoEditorEffectTunnel": "터널",
+  "videoEditorEffectSpiralTunnel": "나선 터널",
   "videoEditorEffectEightBit": "8비트",
   "videoEditorEffectAnaglyph": "3D 안경",
   "videoEditorEffectRiso": "리소 인쇄",

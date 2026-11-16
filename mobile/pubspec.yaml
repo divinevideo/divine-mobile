@@ -605,6 +605,7 @@ flutter:
     - shaders/swirl.frag
     - shaders/thermal.frag
     - shaders/tilt_shift.frag
+    - shaders/tunnel.frag
     - shaders/window_light.frag
     - shaders/x_ray.frag
     - shaders/zoom_blur.frag

@@ -9664,6 +9664,12 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Sticlă striată';
 
   @override
+  String get videoEditorEffectTunnel => 'Tunel';
+
+  @override
+  String get videoEditorEffectSpiralTunnel => 'Tunel în spirală';
+
+  @override
   String get videoEditorEffectEightBit => '8 biți';
 
   @override

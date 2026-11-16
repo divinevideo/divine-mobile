@@ -9450,6 +9450,12 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Kaca Beralur';
 
   @override
+  String get videoEditorEffectTunnel => 'Terowong';
+
+  @override
+  String get videoEditorEffectSpiralTunnel => 'Terowong Berpilin';
+
+  @override
   String get videoEditorEffectEightBit => '8-Bit';
 
   @override

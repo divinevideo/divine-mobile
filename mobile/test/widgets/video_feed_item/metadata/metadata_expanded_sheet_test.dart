@@ -4,6 +4,7 @@
 // ABOUTME: collaborators, inspired by, reposted by, and sounds sections.
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:collaborator_repository/collaborator_repository.dart';
@@ -3019,9 +3020,11 @@ void main() {
       required VideoEvent video,
       required String viewerPubkey,
       BookmarksRepository Function(Ref ref)? bookmarks,
+      ThemeData? theme,
     }) async {
       await tester.pumpWidget(
         buildSubject(
+          theme: theme,
           providerOverrides: sheetOverrides(
             viewerPubkey: viewerPubkey,
             bookmarks: bookmarks,
@@ -3273,7 +3276,7 @@ void main() {
     );
 
     testWidgetsWithSurfaceSize(
-      'labels a saved video on open, then closes and reports its removal',
+      'keeps the sheet open and updates Save after removing a bookmark',
       (tester) async {
         when(
           bookmarksRepository.syncGlobalBookmarks,
@@ -3312,10 +3315,186 @@ void main() {
         await tester.tap(find.text(l10n.shareSheetRemoveFromSaved));
         await tester.pumpAndSettle();
 
-        expect(find.byType(MetadataActionsSection), findsNothing);
+        expect(find.byType(MetadataActionsSection), findsOneWidget);
+        expect(find.text(l10n.shareSheetSave), findsOneWidget);
         expect(find.text(l10n.shareRemovedFromBookmarks), findsOneWidget);
       },
     );
+
+    for (final (appearance, theme, colors) in [
+      ('dark', VineTheme.theme, VineTheme.darkColors),
+      ('light', VineTheme.lightTheme, VineTheme.lightColors),
+    ]) {
+      testWidgetsWithSurfaceSize(
+        'saves, removes, and retries a failed save inside the $appearance sheet',
+        (tester) async {
+          when(
+            bookmarksRepository.syncGlobalBookmarks,
+          ).thenAnswer((_) async => true);
+          when(
+            () => bookmarksRepository.hasUnreadablePrivateItems,
+          ).thenReturn(false);
+          var bookmarked = false;
+          when(
+            () => bookmarksRepository.isVideoBookmarkedGlobally(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
+          ).thenAnswer((_) => bookmarked);
+          var attempt = 0;
+          when(
+            () => bookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
+          ).thenAnswer((_) async {
+            attempt++;
+            if (attempt == 3) {
+              return const BookmarkToggleResult(
+                succeeded: false,
+                wasBookmarked: false,
+                isBookmarked: false,
+                failure: BookmarkToggleFailure.timedOut,
+              );
+            }
+            final wasBookmarked = bookmarked;
+            bookmarked = !bookmarked;
+            return BookmarkToggleResult(
+              succeeded: true,
+              wasBookmarked: wasBookmarked,
+              isBookmarked: bookmarked,
+            );
+          });
+          await openSheet(
+            tester,
+            video: _makeVideo(title: 'Classic', rawTags: {'platform': 'vine'}),
+            viewerPubkey: _thirdPartyViewer,
+            theme: theme,
+          );
+          final l10n = _l10n(tester);
+          final bannerSurface = find
+              .descendant(
+                of: find.byType(DivineSnackbarContainer),
+                matching: find.byType(DecoratedBox),
+              )
+              .first;
+          Color? bannerColor() =>
+              (tester.widget<DecoratedBox>(bannerSurface).decoration
+                      as BoxDecoration)
+                  .color;
+
+          await tester.tap(find.text(l10n.shareSheetSave));
+          await tester.pumpAndSettle();
+          expect(find.byType(MetadataActionsSection), findsOneWidget);
+          expect(find.text(l10n.shareSheetRemoveFromSaved), findsOneWidget);
+          expect(find.text(l10n.shareAddedToBookmarks), findsOneWidget);
+          expect(find.byType(SnackBar), findsNothing);
+          expect(bannerColor(), equals(colors.surfaceContainerHigh));
+
+          await tester.tap(find.text(l10n.shareSheetRemoveFromSaved));
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.shareSheetSave), findsOneWidget);
+          expect(find.text(l10n.shareRemovedFromBookmarks), findsOneWidget);
+          expect(find.text(l10n.shareAddedToBookmarks), findsNothing);
+
+          await tester.tap(find.text(l10n.shareSheetSave));
+          await tester.pumpAndSettle();
+          expect(find.byType(MetadataActionsSection), findsOneWidget);
+          expect(find.text(l10n.profileSetupNoRelaysConnected), findsOneWidget);
+          expect(bannerColor(), equals(colors.errorContainer));
+          expect(find.text(l10n.shareSheetSave), findsOneWidget);
+
+          await tester.tap(find.text(l10n.shareSheetSave));
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.shareSheetRemoveFromSaved), findsOneWidget);
+          expect(find.text(l10n.shareAddedToBookmarks), findsOneWidget);
+          expect(find.text(l10n.profileSetupNoRelaysConnected), findsNothing);
+          expect(attempt, equals(4));
+        },
+      );
+    }
+
+    for (final (device, size) in [
+      ('phone', const Size(390, 844)),
+      ('tablet', const Size(1024, 1366)),
+    ]) {
+      testWidgets(
+        'shows a Save result as its own live region within the sheet margin '
+        'on a $device',
+        (tester) async {
+          tester.view.physicalSize = size;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          when(
+            bookmarksRepository.syncGlobalBookmarks,
+          ).thenAnswer((_) async => true);
+          when(
+            () => bookmarksRepository.hasUnreadablePrivateItems,
+          ).thenReturn(false);
+          when(
+            () => bookmarksRepository.isVideoBookmarkedGlobally(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
+          ).thenReturn(false);
+          when(
+            () => bookmarksRepository.toggleVideoInGlobalBookmarks(
+              any(),
+              addressableId: any(named: 'addressableId'),
+            ),
+          ).thenAnswer(
+            (_) async => const BookmarkToggleResult(
+              succeeded: true,
+              wasBookmarked: false,
+              isBookmarked: true,
+            ),
+          );
+          await openSheet(
+            tester,
+            video: _makeVideo(title: 'Classic', rawTags: {'platform': 'vine'}),
+            viewerPubkey: _thirdPartyViewer,
+          );
+          final l10n = _l10n(tester);
+
+          await tester.tap(find.text(l10n.shareSheetSave));
+          await tester.pumpAndSettle();
+
+          // A leaf node: merged into its list item, the live region would
+          // carry the label and flag too, but also the whole action row.
+          final banner = tester.getSemantics(
+            find.text(l10n.shareAddedToBookmarks),
+          );
+          expect(banner.childrenCount, equals(0));
+          expect(banner.label, equals(l10n.shareAddedToBookmarks));
+          expect(
+            banner.getSemanticsData().flagsCollection.isLiveRegion,
+            isTrue,
+          );
+
+          final bannerRect = tester.getRect(
+            find
+                .descendant(
+                  of: find.byType(DivineSnackbarContainer),
+                  matching: find.byType(DecoratedBox),
+                )
+                .first,
+          );
+          final sheetRect = tester.getRect(find.byType(MetadataActionsSection));
+          final margin =
+              tester.getTopLeft(find.byType(LinkifiedText)).dx - sheetRect.left;
+          expect(bannerRect.left - sheetRect.left, equals(margin));
+          expect(
+            bannerRect.width,
+            equals(
+              math.min(
+                sheetRect.width - 2 * margin,
+                DivineSnackbarContainer.maxWidth,
+              ),
+            ),
+          );
+        },
+      );
+    }
 
     testWidgetsWithSurfaceSize(
       'saves through the bookmarks repository that replaced the one the sheet '
@@ -3415,6 +3594,8 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.remixBlockedByCreator), findsOneWidget);
+        // Only bookmark results stay in the sheet; a refusal still closes it.
+        expect(find.byType(MetadataActionsSection), findsNothing);
         verify(() => consent.consentFor(_creatorPubkey)).called(1);
         verifyZeroInteractions(importer);
       },

@@ -15845,6 +15845,18 @@ abstract class AppLocalizations {
   /// **'Fluted Glass'**
   String get videoEditorEffectFlutedGlass;
 
+  /// Name of a video effect: the picture holds a smaller copy of itself in its middle, which holds another, and so on, and the picture keeps zooming into them, like flying down an endless tunnel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tunnel'**
+  String get videoEditorEffectTunnel;
+
+  /// Name of a video effect: like the Tunnel effect, the picture holds ever smaller copies of itself and zooms into them, but the copies are twisted into a spiral.
+  ///
+  /// In en, this message translates to:
+  /// **'Spiral Tunnel'**
+  String get videoEditorEffectSpiralTunnel;
+
   /// Name of a video effect: the picture looks like the pixel art of early video game consoles, in large pixels and few colours. Use the term your language uses for retro 8-bit video game graphics.
   ///
   /// In en, this message translates to:

@@ -9535,6 +9535,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Vidro canelado';
 
   @override
+  String get videoEditorEffectTunnel => 'Túnel';
+
+  @override
+  String get videoEditorEffectSpiralTunnel => 'Túnel em espiral';
+
+  @override
   String get videoEditorEffectEightBit => '8 bits';
 
   @override

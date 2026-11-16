@@ -2744,6 +2744,8 @@
   "videoEditorEffectSwirl": "Strudel",
   "videoEditorEffectRipple": "Wellenringe",
   "videoEditorEffectFlutedGlass": "Riffelglas",
+  "videoEditorEffectTunnel": "Tunnel",
+  "videoEditorEffectSpiralTunnel": "Spiraltunnel",
   "videoEditorEffectEightBit": "8-Bit",
   "videoEditorEffectAnaglyph": "3D-Brille",
   "videoEditorEffectRiso": "Riso-Druck",

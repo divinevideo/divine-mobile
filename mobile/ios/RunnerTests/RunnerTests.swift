@@ -1963,15 +1963,16 @@ final class DropsVideoEffectTests: XCTestCase {
 }
 
 /// Light leak, light rays, anamorphic, prism, window light, spotlight,
-/// particles, tilt-shift, swirl, ripple, fluted glass, zoom blur, spin blur,
-/// comic, 8-bit, 3D glasses, riso print, watercolour, oil paint, pencil sketch,
-/// neon edges, stained glass, ASCII, thermal camera, night vision, X-ray, pop
-/// art, bricks, cross-stitch and paper cut are drawn with Metal kernels on iOS
-/// and macOS (`ShaderVideoEffect`), and with the same shaders in GLSL on
-/// Android and in the effects picker (`shaders/*.frag`). These tests check
-/// every pixel each kernel draws against its shader's formulas computed here on
-/// the CPU, so a change to one copy that is not made to the others fails, and
-/// so does a kernel that reads its textures upside down.
+/// particles, tilt-shift, swirl, ripple, fluted glass, the tunnels, zoom blur,
+/// spin blur, comic, 8-bit, 3D glasses, riso print, watercolour, oil paint,
+/// pencil sketch, neon edges, stained glass, ASCII, thermal camera, night
+/// vision, X-ray, pop art, bricks, cross-stitch and paper cut are drawn with
+/// Metal kernels on iOS and macOS (`ShaderVideoEffect`), and with the same
+/// shaders in GLSL on Android and in the effects picker (`shaders/*.frag`).
+/// These tests check every pixel each kernel draws against its shader's
+/// formulas computed here on the CPU, so a change to one copy that is not made
+/// to the others fails, and so does a kernel that reads its textures upside
+/// down.
 ///
 /// The CPU copies spell out every type and keep each statement short: Swift
 /// type-checks a long arithmetic expression over overloaded functions such as
@@ -2191,6 +2192,44 @@ final class ShaderVideoEffectTests: XCTestCase {
       let difference = compare(effect, seconds: 0, expected)
       XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity)")
     }
+  }
+
+  func testTunnelDrawsWhatTheAndroidShaderDraws() {
+    let cases: [(spiral: Bool, intensity: Double, seconds: Double)] = [
+      (false, 1.0, 0), (false, 0.45, 0.7), (true, 1.0, 0), (true, 0.6, 1.3),
+    ]
+    for (spiral, intensity, seconds) in cases {
+      let effect = TunnelVideoEffect(
+        spiral: spiral, params: ["intensity": intensity, "periodUs": 2_000_000])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.tunnel(px, py, intensity: intensity, phase: seconds / 2, spiral: spiral)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
+      // A pixel right on a copy's edge can land in either copy, on the GPU and
+      // here, and in the very middle the copies shrink below a pixel; a change
+      // to the copies' size, the zoom, the twist or the shadow moves far more.
+      XCTAssertLessThan(
+        difference.share, 0.004, "spiral \(spiral), intensity \(intensity), \(seconds) s")
+    }
+  }
+
+  func testTunnelStepsOnTheBeat() {
+    let beats: [Int64] = [1_000_000, 1_200_000, 3_000_000]
+    func phase(_ us: Int64) -> Double {
+      TunnelSteps.phase(periodUs: 2_000_000, beatsUs: beats, effectTimeUs: us)
+    }
+    // Still before the first beat.
+    XCTAssertEqual(phase(500_000), 0)
+    // Halfway into the step the next beat cuts to 200 ms, eased out.
+    XCTAssertEqual(phase(1_100_000), 0.875, accuracy: 1e-9)
+    // Halfway into a 350 ms step when the next beat is further off.
+    XCTAssertEqual(phase(1_375_000), 0.875, accuracy: 1e-9)
+    // Settled one step deeper 350 ms after the last beat.
+    XCTAssertEqual(phase(3_400_000), 0)
+    // Without beats it zooms on steadily, one step per period.
+    XCTAssertEqual(
+      TunnelSteps.phase(periodUs: 2_000_000, beatsUs: nil, effectTimeUs: 4_500_000), 0.25,
+      accuracy: 1e-9)
   }
 
   func testEightBitDrawsWhatTheAndroidShaderDraws() {
@@ -2418,6 +2457,8 @@ final class ShaderVideoEffectTests: XCTestCase {
       SwirlVideoEffect(params: ["intensity": 0]),
       RippleVideoEffect(params: ["intensity": 0]),
       FlutedGlassVideoEffect(params: ["intensity": 0]),
+      TunnelVideoEffect(spiral: false, params: ["intensity": 0]),
+      TunnelVideoEffect(spiral: true, params: ["intensity": 0]),
       ZoomBlurVideoEffect(params: ["intensity": 0]),
       SpinBlurVideoEffect(params: ["intensity": 0]),
       ComicVideoEffect(params: ["intensity": 0]),
@@ -3304,6 +3345,44 @@ final class ShaderVideoEffectTests: XCTestCase {
     let glint: Double = 1 - smoothstep(0, 0.15, abs(across + 0.22))
     var out = [Double](repeating: 0, count: 3)
     for k in 0..<3 { out[k] = clamp(color[k] * shade + 0.1 * intensity * glint) }
+    return out
+  }
+
+  private func tunnel(
+    _ px: Double, _ py: Double, intensity: Double, phase: Double, spiral: Bool
+  ) -> [Double] {
+    let cx: Double = Double(width) / 2
+    let cy: Double = Double(height) / 2
+    let dx: Double = px - cx
+    let dy: Double = py - cy
+    let s = Double(min(width, height))
+    let level: Double = -log(0.15 + 0.4 * intensity)
+    var qx: Double
+    var qy: Double
+    var edge: Double
+    if spiral {
+      let big: Double = 0.5 * s
+      let lr: Double = log(max(hypot(dx, dy), 0.001) / big)
+      let a: Double = atan2(dy, dx)
+      let twist: Double = level / 6.2832
+      let f: Double = fract(-(lr + a * twist) / level + phase)
+      let r: Double = big * exp(-level * f)
+      let b: Double = a - lr * twist
+      qx = cx + r * cos(b)
+      qy = cy + r * sin(b)
+      edge = big - r
+    } else {
+      let m: Double = max(max(abs(dx) / cx, abs(dy) / cy), 0.0001)
+      let f: Double = fract(-log(m) / level + phase)
+      let grow: Double = exp(-level * f) / m
+      qx = cx + dx * grow
+      qy = cy + dy * grow
+      edge = min(cx - abs(qx - cx), cy - abs(qy - cy))
+    }
+    let shade: Double = 1 - 0.35 * (1 - smoothstep(0, 0.012 * s, edge))
+    let color: [Double] = tap(qx, qy)
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 { out[k] = color[k] * shade }
     return out
   }
 

@@ -1,9 +1,9 @@
-// ABOUTME: State and one-shot action results for VideoContentActionsBloc
+// ABOUTME: State and action results for VideoContentActionsBloc
 // ABOUTME: Carries save, clip-import and remix progress, bookmark status and results
 
 part of 'video_content_actions_bloc.dart';
 
-/// One-shot result of a content action, consumed by a BlocListener.
+/// Result of a content action, reported by a BlocListener or shown inline.
 ///
 /// Constructors are deliberately non-const and the hierarchy is not
 /// Equatable: each result is a distinct instance, so two identical-looking
@@ -130,16 +130,17 @@ class VideoContentActionsState extends Equatable {
   /// [VideoContentRemixLaunchFinished].
   final bool isPreparingRemix;
 
-  /// Whether a content action is running. Each one closes the sheet when it
-  /// finishes, so while one runs the sheet holds the others and the bloc
-  /// ignores their requests.
+  /// Whether a save, clip import or remix is running. The bloc ignores
+  /// another of the three until it finishes, and the info sheet holds its
+  /// other actions.
   bool get isActionInFlight => isSaving || isImportingClip || isPreparingRemix;
 
   /// Whether this video is already globally bookmarked, per a reconciled read.
   final VideoBookmarkStatus bookmarkStatus;
 
-  /// Last one-shot action result, for BlocListener consumption. Kept until
-  /// the next result, or until a save, clip import or remix starts.
+  /// Last action result. Listeners report it once, and the info sheet's Save
+  /// banner shows it until the next result, or until a save, clip import or
+  /// remix starts.
   final VideoContentActionResult? actionResult;
 
   VideoContentActionsState copyWith({

@@ -9446,6 +9446,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'دھاری دار شیشہ';
 
   @override
+  String get videoEditorEffectTunnel => 'سرنگ';
+
+  @override
+  String get videoEditorEffectSpiralTunnel => 'چکردار سرنگ';
+
+  @override
   String get videoEditorEffectEightBit => '8 بٹ';
 
   @override

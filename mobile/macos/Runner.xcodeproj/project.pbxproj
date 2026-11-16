@@ -44,6 +44,7 @@
 		AF39B182970EB8C779C2E6C4 /* SwirlVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44196EC835A5B5EF919C2FFE /* SwirlVideoEffect.swift */; };
 		E0439CB80EEE75F6063D959E /* RippleVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9BBA0630FFD61410DA3A57 /* RippleVideoEffect.swift */; };
 		D4E642A600F5DFC64E53950A /* FlutedGlassVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46BF25C2B1C6D5F8B19B8C49 /* FlutedGlassVideoEffect.swift */; };
+		2A7625F651F21EA5E55E5B9B /* TunnelVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B495983EED7FC60AFD4143F /* TunnelVideoEffect.swift */; };
 		38061F6967824F84801EE8CB /* LightRaysVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44E690049CF1C9D078E4FBCA /* LightRaysVideoEffect.swift */; };
 		455485B538B9075709608752 /* AnamorphicVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5350AF80EEA5B0C1F2ADEAF7 /* AnamorphicVideoEffect.swift */; };
 		DF861BF87BAE30D93576EFBA /* PrismVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = A65F5DBF203B52B18003D662 /* PrismVideoEffect.swift */; };
@@ -136,6 +137,7 @@
 		44196EC835A5B5EF919C2FFE /* SwirlVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SwirlVideoEffect.swift; path = ../ios/Runner/SwirlVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		6D9BBA0630FFD61410DA3A57 /* RippleVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RippleVideoEffect.swift; path = ../ios/Runner/RippleVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		46BF25C2B1C6D5F8B19B8C49 /* FlutedGlassVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FlutedGlassVideoEffect.swift; path = ../ios/Runner/FlutedGlassVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		0B495983EED7FC60AFD4143F /* TunnelVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TunnelVideoEffect.swift; path = ../ios/Runner/TunnelVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		44E690049CF1C9D078E4FBCA /* LightRaysVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LightRaysVideoEffect.swift; path = ../ios/Runner/LightRaysVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		5350AF80EEA5B0C1F2ADEAF7 /* AnamorphicVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AnamorphicVideoEffect.swift; path = ../ios/Runner/AnamorphicVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		A65F5DBF203B52B18003D662 /* PrismVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PrismVideoEffect.swift; path = ../ios/Runner/PrismVideoEffect.swift; sourceTree = SOURCE_ROOT; };
@@ -276,6 +278,7 @@
 				44196EC835A5B5EF919C2FFE /* SwirlVideoEffect.swift */,
 				6D9BBA0630FFD61410DA3A57 /* RippleVideoEffect.swift */,
 				46BF25C2B1C6D5F8B19B8C49 /* FlutedGlassVideoEffect.swift */,
+				0B495983EED7FC60AFD4143F /* TunnelVideoEffect.swift */,
 				44E690049CF1C9D078E4FBCA /* LightRaysVideoEffect.swift */,
 				5350AF80EEA5B0C1F2ADEAF7 /* AnamorphicVideoEffect.swift */,
 				A65F5DBF203B52B18003D662 /* PrismVideoEffect.swift */,
@@ -600,6 +603,7 @@
 				AF39B182970EB8C779C2E6C4 /* SwirlVideoEffect.swift in Sources */,
 				E0439CB80EEE75F6063D959E /* RippleVideoEffect.swift in Sources */,
 				D4E642A600F5DFC64E53950A /* FlutedGlassVideoEffect.swift in Sources */,
+				2A7625F651F21EA5E55E5B9B /* TunnelVideoEffect.swift in Sources */,
 				38061F6967824F84801EE8CB /* LightRaysVideoEffect.swift in Sources */,
 				455485B538B9075709608752 /* AnamorphicVideoEffect.swift in Sources */,
 				DF861BF87BAE30D93576EFBA /* PrismVideoEffect.swift in Sources */,

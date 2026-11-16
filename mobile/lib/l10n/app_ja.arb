@@ -2718,6 +2718,8 @@
   "videoEditorEffectSwirl": "渦巻き",
   "videoEditorEffectRipple": "波紋",
   "videoEditorEffectFlutedGlass": "モールガラス",
+  "videoEditorEffectTunnel": "トンネル",
+  "videoEditorEffectSpiralTunnel": "スパイラルトンネル",
   "videoEditorEffectEightBit": "8ビット",
   "videoEditorEffectAnaglyph": "3Dメガネ",
   "videoEditorEffectRiso": "リソグラフ",

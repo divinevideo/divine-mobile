@@ -1,6 +1,6 @@
 // ABOUTME: Action row in the video info sheet: remix and save; edit and delete
 // ABOUTME: on the viewer's own video; report on a remix of theirs. Opens the
-// ABOUTME: remix its Remix action asked for.
+// ABOUTME: remix its Remix action asked for and shows Save's result below.
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -14,6 +14,7 @@ import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_feed_item/actions/remix_launcher.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
+import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_items.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -23,7 +24,8 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// Remix stands in for Add to clips; on the web ([isWeb]) it points to the app
 /// instead. Add to list and the debug copies stay in the share sheet. When the
-/// remix Remix asked for is ready, this section opens it in the editor.
+/// remix Remix asked for is ready, this section opens it in the editor. Save's
+/// result shows below the row, which the sheet's listener leaves to it.
 ///
 /// Reads the [VideoContentActionsBloc] the sheet provides, and the
 /// [OwnerVideoActionsCubit] it provides alongside when [isOwnVideo] is true.
@@ -129,9 +131,15 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
           current.actionResult is VideoContentRemixReady &&
           previous.actionResult != current.actionResult,
       listener: _openReadyRemix,
-      child: VideoActionRow(
-        actions: actions,
-        isLocked: isDeletePending || isActionInFlight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          VideoActionRow(
+            actions: actions,
+            isLocked: isDeletePending || isActionInFlight,
+          ),
+          const VideoContentSaveFeedback(),
+        ],
       ),
     );
   }

@@ -629,6 +629,9 @@ class VideoStats {
   /// client can honour server-side expiration on REST-loaded videos the same
   /// way it does for relay-loaded videos.
   ///
+  /// Preserves creator-credit tags and explicit source relay hints using the
+  /// same parsing as relay-loaded videos.
+  ///
   /// Propagates [kind] so a REST-loaded video carries the same
   /// [VideoEvent.eventKind] a relay-loaded one gets from `fromNostrEvent`.
   /// Without it every REST video reads as an unknown kind, and the
@@ -654,6 +657,10 @@ class VideoStats {
         .where((tag) => tag.isNotEmpty)
         .toList();
     final content = description ?? '';
+    final attribution = VideoEventAttribution.fromTags(
+      eventTags,
+      authorPubkey: pubkey,
+    );
     return VideoEvent(
       id: id,
       pubkey: pubkey,
@@ -664,6 +671,10 @@ class VideoStats {
       // same parsed credit a relay-loaded one gets or About has nothing to
       // show for it.
       inspiredByNpub: inspiredByNpubFromContent(content),
+      inspiredByVideo: attribution.inspiredByVideo,
+      inspiredByPubkeys: attribution.inspiredByPubkeys,
+      clipSourceCredits: attribution.clipSourceCredits,
+      sourceRelay: videoSourceRelayFromTags(eventTags),
       timestamp: DateTime.fromMillisecondsSinceEpoch(
         effectiveTimestamp * 1000,
         isUtc: true,

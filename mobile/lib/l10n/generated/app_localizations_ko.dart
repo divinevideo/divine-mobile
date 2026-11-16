@@ -9005,6 +9005,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => '플루티드 글라스';
 
   @override
+  String get videoEditorEffectTunnel => '터널';
+
+  @override
+  String get videoEditorEffectSpiralTunnel => '나선 터널';
+
+  @override
   String get videoEditorEffectEightBit => '8비트';
 
   @override

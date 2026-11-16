@@ -8906,6 +8906,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => '长虹玻璃';
 
   @override
+  String get videoEditorEffectTunnel => '隧道';
+
+  @override
+  String get videoEditorEffectSpiralTunnel => '螺旋隧道';
+
+  @override
   String get videoEditorEffectEightBit => '8 位';
 
   @override

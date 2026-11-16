@@ -9512,6 +9512,12 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Fluted Glass';
 
   @override
+  String get videoEditorEffectTunnel => 'Tunnel';
+
+  @override
+  String get videoEditorEffectSpiralTunnel => 'Spiral na Tunnel';
+
+  @override
   String get videoEditorEffectEightBit => '8-Bit';
 
   @override

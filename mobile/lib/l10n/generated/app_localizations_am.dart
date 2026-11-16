@@ -9233,6 +9233,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'ባለሸንተረር መስታወት';
 
   @override
+  String get videoEditorEffectTunnel => 'ዋሻ';
+
+  @override
+  String get videoEditorEffectSpiralTunnel => 'ጠመዝማዛ ዋሻ';
+
+  @override
   String get videoEditorEffectEightBit => '8-ቢት';
 
   @override
