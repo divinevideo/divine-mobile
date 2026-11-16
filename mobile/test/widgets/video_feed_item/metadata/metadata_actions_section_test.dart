@@ -870,6 +870,7 @@ void main() {
       late _MockDraftStorageService draftStorage;
       late _PopCounter pops;
       late int editorBuilds;
+      late List<Uri> libraryLocations;
 
       setUp(() {
         // Broadcast, so closing it completes in tests that never listen.
@@ -886,6 +887,7 @@ void main() {
         ).thenAnswer((_) async => false);
         pops = _PopCounter();
         editorBuilds = 0;
+        libraryLocations = [];
       });
 
       tearDown(() => results.close());
@@ -924,7 +926,10 @@ void main() {
             ),
             GoRoute(
               path: LibraryScreen.clipsPath,
-              builder: (_, _) => const Scaffold(body: Text(libraryLabel)),
+              builder: (_, state) {
+                libraryLocations.add(state.uri);
+                return const Scaffold(body: Text(libraryLabel));
+              },
             ),
             GoRoute(
               path: VideoEditorScreen.path,
@@ -978,6 +983,10 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(find.text(libraryLabel), findsOneWidget);
+          // Another creator's video: its import is listed under From others.
+          expect(libraryLocations.single.queryParameters, {
+            'from-others': 'true',
+          });
           expect(find.text(editorLabel), findsNothing);
           expect(container.read(clipManagerProvider).clips, [existingClip]);
           verifyZeroInteractions(draftStorage);
@@ -1091,6 +1100,8 @@ void main() {
           expect(editorBuilds, 0);
           expect(pops.count, 1);
           expect(find.text(libraryLabel), findsOneWidget);
+          // The viewer's own video: its import is listed under Clips.
+          expect(libraryLocations.single.queryParameters, isEmpty);
           expect(container.read(clipManagerProvider).clips, isEmpty);
           verifyNever(() => ownerCubit.deleteVideo(any()));
         },
