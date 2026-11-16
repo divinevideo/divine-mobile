@@ -103,14 +103,7 @@ class UploadRetryPolicy {
             rethrow;
           }
 
-          final delayMs = math
-              .min(
-                _retryConfig.initialDelay.inMilliseconds *
-                    math.pow(_retryConfig.backoffMultiplier, autoAttempt - 1),
-                _retryConfig.maxDelay.inMilliseconds.toDouble(),
-              )
-              .round();
-          final delay = Duration(milliseconds: delayMs);
+          final delay = backoffDelay(autoAttempt);
           Log.error(
             'Upload attempt $autoAttempt failed, retrying in ${delay.inMilliseconds}ms: ${upload.id}',
             name: 'UploadManager',
@@ -129,6 +122,30 @@ class UploadRetryPolicy {
       );
       rethrow;
     }
+  }
+
+  /// The wait before automatic retry number [retry] (1-based), on the
+  /// curve [performWithRetry] uses between whole attempts.
+  Duration backoffDelay(int retry) {
+    final delayMs = math
+        .min(
+          _retryConfig.initialDelay.inMilliseconds *
+              math.pow(_retryConfig.backoffMultiplier, retry - 1),
+          _retryConfig.maxDelay.inMilliseconds.toDouble(),
+        )
+        .round();
+    return Duration(milliseconds: delayMs);
+  }
+
+  /// Waits [delay] before retrying part of [uploadId]'s attempt.
+  ///
+  /// The wait is the same one [performWithRetry] uses between attempts:
+  /// [wakeBackoff] ends it early, and [discardUploads] and [dispose] end it
+  /// for good. Returns whether the upload may still be retried afterwards.
+  Future<bool> waitBeforeRetry(String uploadId, Duration delay) async {
+    if (_isDisposed || _discardedUploadIds.contains(uploadId)) return false;
+    await _waitForBackoff(uploadId, delay);
+    return !_isDisposed && !_discardedUploadIds.contains(uploadId);
   }
 
   bool wakeBackoff(String uploadId) {
@@ -310,6 +327,12 @@ class UploadRetryPolicy {
       return false;
     }
 
+    // The repository already retried the thumbnail alone while it could;
+    // another whole attempt would upload the full video again.
+    if (error is ThumbnailUploadException) {
+      return false;
+    }
+
     if (error is BlossomResumableUploadException) {
       final reason = error.failureReason;
       if (reason == BlossomUploadFailureReason.authUnavailable ||
@@ -373,12 +396,6 @@ class UploadRetryPolicy {
 
     // Fall back to string matching for non-HTTP errors
     final errorStr = error.toString().toLowerCase();
-
-    // A missing required thumbnail already exhausted the image upload's own
-    // retry path; retrying here would re-upload the full video.
-    if (errorStr.contains('thumbnail upload failed')) {
-      return false;
-    }
 
     // Network and timeout errors are retriable
     if (errorStr.contains('timeout') ||

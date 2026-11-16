@@ -14,6 +14,8 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:upload_repository/upload_repository.dart'
     show
         PendingUploadAdapter,
+        ThumbnailUploadException,
+        ThumbnailUploadFailureStage,
         UploadConnectivity,
         UploadProgressReporter,
         UploadStatusAdapter;
@@ -304,7 +306,13 @@ void main() {
 
       test('returns false for required thumbnail upload failures', () {
         expect(
-          uploadManager.isRetriableError(StateError('Thumbnail upload failed')),
+          uploadManager.isRetriableError(
+            const ThumbnailUploadException(
+              ThumbnailUploadFailureStage.upload,
+              'Upload failed: 503',
+              statusCode: 503,
+            ),
+          ),
           isFalse,
         );
       });

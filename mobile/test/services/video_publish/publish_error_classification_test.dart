@@ -164,6 +164,10 @@ void main() {
       ('SERVER_UNAVAILABLE', PublishErrorKind.serverDown),
       ('SERVER_ERROR', PublishErrorKind.serverInternalError),
       ('CLIENT_ERROR', PublishErrorKind.generic),
+      (
+        UploadProgressReporter.thumbnailExtractionFailedCategory,
+        PublishErrorKind.thumbnailFailed,
+      ),
     ];
 
     for (final (category, expected) in expectations) {

@@ -47,3 +47,71 @@ class BlossomUploadFailureException implements Exception {
   @override
   String toString() => message;
 }
+
+/// Which half of an upload's thumbnail leg failed.
+enum ThumbnailUploadFailureStage {
+  /// Making the thumbnail on the device: the extractor returned no frame,
+  /// its file was gone, or it threw.
+  extraction,
+
+  /// Sending the extracted image to the Blossom server.
+  upload,
+}
+
+/// The thumbnail leg of an upload ended without a CDN URL.
+///
+/// Divine relays require a CDN thumbnail, so the publish cannot go ahead
+/// without one. The exception keeps the leg's actual cause, so
+/// [UploadProgressReporter] can tell an expected network or server failure
+/// from a local one, and [isTransient] tells the repository whether
+/// uploading the thumbnail again can work.
+class ThumbnailUploadException implements Exception {
+  const ThumbnailUploadException(
+    this.stage,
+    this.cause, {
+    this.statusCode,
+    this.failureReason,
+    this.isTransientNetworkFailure = false,
+  });
+
+  /// The failure carried by an image upload that returned no CDN URL.
+  factory ThumbnailUploadException.fromUploadResult(
+    BlossomUploadResult result,
+  ) => ThumbnailUploadException(
+    ThumbnailUploadFailureStage.upload,
+    result.errorMessage ?? 'the server returned no URL',
+    statusCode: result.statusCode,
+    failureReason: result.failureReason,
+    isTransientNetworkFailure: result.isTransientNetworkFailure,
+  );
+
+  /// HTTP statuses worth another thumbnail upload; the same set
+  /// `UploadRetryPolicy.isRetriableError` retries for the video.
+  static const _transientStatusCodes = {408, 429, 500, 502, 503, 504};
+
+  final ThumbnailUploadFailureStage stage;
+
+  /// What went wrong, as reported by the extractor or the Blossom service.
+  final String cause;
+
+  final int? statusCode;
+  final BlossomUploadFailureReason? failureReason;
+  final bool isTransientNetworkFailure;
+
+  /// Whether another upload of the thumbnail can succeed: a dropped
+  /// connection, a signer that was briefly unreachable, or a status the
+  /// server sends while it is overloaded or restarting. An extraction failure
+  /// is local and never transient.
+  bool get isTransient {
+    if (stage != ThumbnailUploadFailureStage.upload) return false;
+    if (isTransientNetworkFailure) return true;
+    if (failureReason == BlossomUploadFailureReason.network ||
+        failureReason == BlossomUploadFailureReason.authUnavailable) {
+      return true;
+    }
+    return _transientStatusCodes.contains(statusCode);
+  }
+
+  @override
+  String toString() => 'Thumbnail upload failed (${stage.name}): $cause';
+}

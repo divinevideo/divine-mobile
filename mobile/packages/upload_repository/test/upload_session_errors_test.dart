@@ -1,5 +1,5 @@
-// ABOUTME: Unit tests for the shared isExpiredResumableSessionError predicate
-// ABOUTME: used by UploadRetryPolicy, UploadProgressReporter, and UploadManager.
+// ABOUTME: Unit tests for the shared upload failure types and the
+// ABOUTME: isExpiredResumableSessionError predicate used across the package.
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -79,6 +79,105 @@ void main() {
         isExpiredResumableSessionError(Exception('network error')),
         isFalse,
       );
+    });
+  });
+
+  group(ThumbnailUploadException, () {
+    group('fromUploadResult', () {
+      test('keeps the server status, reason and message', () {
+        final error = ThumbnailUploadException.fromUploadResult(
+          const BlossomUploadResult(
+            success: false,
+            statusCode: 503,
+            errorMessage: 'Upload failed: 503 - overloaded',
+            failureReason: BlossomUploadFailureReason.server,
+          ),
+        );
+
+        expect(error.stage, ThumbnailUploadFailureStage.upload);
+        expect(error.statusCode, 503);
+        expect(error.failureReason, BlossomUploadFailureReason.server);
+        expect(
+          error.toString(),
+          'Thumbnail upload failed (upload): Upload failed: 503 - overloaded',
+        );
+      });
+
+      test('names the missing URL when the server sent no message', () {
+        final error = ThumbnailUploadException.fromUploadResult(
+          const BlossomUploadResult(success: true),
+        );
+
+        expect(error.cause, 'the server returned no URL');
+      });
+    });
+
+    group('isTransient', () {
+      ThumbnailUploadException uploadFailure({
+        int? statusCode,
+        BlossomUploadFailureReason? failureReason,
+        bool isTransientNetworkFailure = false,
+      }) => ThumbnailUploadException(
+        ThumbnailUploadFailureStage.upload,
+        'failed',
+        statusCode: statusCode,
+        failureReason: failureReason,
+        isTransientNetworkFailure: isTransientNetworkFailure,
+      );
+
+      for (final statusCode in [408, 429, 500, 502, 503, 504]) {
+        test('$statusCode → true', () {
+          expect(uploadFailure(statusCode: statusCode).isTransient, isTrue);
+        });
+      }
+
+      for (final statusCode in [400, 401, 403, 413, 501]) {
+        test('$statusCode → false', () {
+          expect(uploadFailure(statusCode: statusCode).isTransient, isFalse);
+        });
+      }
+
+      test('a dropped connection → true', () {
+        expect(
+          uploadFailure(isTransientNetworkFailure: true).isTransient,
+          isTrue,
+        );
+      });
+
+      test('a network or signer reason → true', () {
+        expect(
+          uploadFailure(
+            failureReason: BlossomUploadFailureReason.network,
+          ).isTransient,
+          isTrue,
+        );
+        expect(
+          uploadFailure(
+            failureReason: BlossomUploadFailureReason.authUnavailable,
+          ).isTransient,
+          isTrue,
+        );
+      });
+
+      test('an unclassified upload failure → false', () {
+        expect(
+          uploadFailure(
+            failureReason: BlossomUploadFailureReason.unknown,
+          ).isTransient,
+          isFalse,
+        );
+      });
+
+      test('an extraction failure → false', () {
+        expect(
+          const ThumbnailUploadException(
+            ThumbnailUploadFailureStage.extraction,
+            'no frame',
+            isTransientNetworkFailure: true,
+          ).isTransient,
+          isFalse,
+        );
+      });
     });
   });
 }

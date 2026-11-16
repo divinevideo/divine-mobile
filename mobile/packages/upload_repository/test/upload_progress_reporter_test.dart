@@ -262,10 +262,126 @@ void main() {
         expect(result, equals('AUTHENTICATION'));
       },
     );
+
+    group('$ThumbnailUploadException', () {
+      ThumbnailUploadException uploadFailure({
+        int? statusCode,
+        BlossomUploadFailureReason? failureReason,
+        bool isTransientNetworkFailure = false,
+        String cause = 'Upload failed',
+      }) => ThumbnailUploadException(
+        ThumbnailUploadFailureStage.upload,
+        cause,
+        statusCode: statusCode,
+        failureReason: failureReason,
+        isTransientNetworkFailure: isTransientNetworkFailure,
+      );
+
+      test('a server that is down → SERVER_UNAVAILABLE', () async {
+        final result = await reporter.categorizeError(
+          uploadFailure(
+            statusCode: 503,
+            failureReason: BlossomUploadFailureReason.server,
+          ),
+        );
+        expect(result, equals('SERVER_UNAVAILABLE'));
+      });
+
+      test('a dropped connection → NETWORK_ERROR', () async {
+        final result = await reporter.categorizeError(
+          uploadFailure(
+            failureReason: BlossomUploadFailureReason.network,
+            isTransientNetworkFailure: true,
+            cause: 'DioException [receive timeout]',
+          ),
+        );
+        expect(result, equals('NETWORK_ERROR'));
+      });
+
+      test('an unreachable signer → NETWORK_ERROR', () async {
+        final result = await reporter.categorizeError(
+          uploadFailure(
+            failureReason: BlossomUploadFailureReason.authUnavailable,
+          ),
+        );
+        expect(result, equals('NETWORK_ERROR'));
+      });
+
+      test('a signed-out session without a status → AUTHENTICATION', () async {
+        final result = await reporter.categorizeError(
+          uploadFailure(
+            failureReason: BlossomUploadFailureReason.auth,
+            cause: 'Not authenticated',
+          ),
+        );
+        expect(result, equals('AUTHENTICATION'));
+      });
+
+      test('a server error without a status → SERVER_ERROR', () async {
+        final result = await reporter.categorizeError(
+          uploadFailure(failureReason: BlossomUploadFailureReason.server),
+        );
+        expect(result, equals('SERVER_ERROR'));
+      });
+
+      test('an oversized image without a status → FILE_TOO_LARGE', () async {
+        final result = await reporter.categorizeError(
+          uploadFailure(failureReason: BlossomUploadFailureReason.fileTooLarge),
+        );
+        expect(result, equals('FILE_TOO_LARGE'));
+      });
+
+      test('an unclassified upload failure stays UNKNOWN', () async {
+        final result = await reporter.categorizeError(
+          uploadFailure(
+            failureReason: BlossomUploadFailureReason.unknown,
+            cause: 'Upload response missing URL field',
+          ),
+        );
+        expect(result, equals('UNKNOWN'));
+      });
+
+      test(
+        'a thumbnail the device could not make is its own category, '
+        'even offline',
+        () async {
+          final offlineReporter = UploadProgressReporter(
+            store: store,
+            circuitBreaker: circuitBreaker,
+            retryConfig: const UploadRetryConfig(),
+            crashReporter: crashReporter,
+            connectivityProvider: () async => UploadConnectivity.none,
+            platformName: 'test',
+            isWeb: false,
+          );
+          addTearDown(offlineReporter.dispose);
+
+          final result = await offlineReporter.categorizeError(
+            const ThumbnailUploadException(
+              ThumbnailUploadFailureStage.extraction,
+              'no frame could be extracted from the video',
+            ),
+          );
+
+          expect(
+            result,
+            equals(UploadProgressReporter.thumbnailExtractionFailedCategory),
+          );
+        },
+      );
+    });
   });
 
   // ---------------------------------------------------------------------------
   group('getUserFriendlyErrorMessage', () {
+    test('THUMBNAIL_EXTRACTION_FAILED → thumbnail copy', () {
+      final msg = UploadProgressReporter.userFriendlyErrorMessage(
+        UploadProgressReporter.thumbnailExtractionFailedCategory,
+        UploadConnectivity.wifi,
+      );
+      expect(msg, contains('Thumbnail upload failed'));
+    });
+
     test('NO_INTERNET → offline copy', () {
       final msg = UploadProgressReporter.userFriendlyErrorMessage(
         'NO_INTERNET',
@@ -506,6 +622,42 @@ void main() {
         verify(
           () => crashReporter.setCustomKey(any(), any()),
         ).called(greaterThan(0));
+      },
+    );
+
+    test(
+      'sendUploadFailureCrashReport records a thumbnail the device could not '
+      'make',
+      () async {
+        when(() => store.length).thenReturn(1);
+        when(() => store.queuedCount).thenReturn(0);
+        const error = ThumbnailUploadException(
+          ThumbnailUploadFailureStage.extraction,
+          'no frame could be extracted from the video',
+        );
+
+        await reporter.sendUploadFailureCrashReport(
+          _makeUpload(),
+          error,
+          UploadProgressReporter.thumbnailExtractionFailedCategory,
+          null,
+          UploadConnectivity.wifi,
+          stackTrace: StackTrace.current,
+          isManagerInitialized: true,
+        );
+
+        final captured = verify(
+          () => crashReporter.recordError(
+            captureAny(),
+            any(),
+            reason: captureAny(named: 'reason'),
+          ),
+        ).captured;
+        expect(captured[0], same(error));
+        expect(
+          captured[1],
+          equals('Video upload failure - THUMBNAIL_EXTRACTION_FAILED'),
+        );
       },
     );
 
