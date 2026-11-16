@@ -1106,6 +1106,11 @@ workflows:
       events: []
     scripts:
       - *verify_shorebird_release_source
+      - name: Prepare TestFlight notes
+        script: |
+          set -euo pipefail
+          BUILD_NAME=$(ruby -ne 'if $_ =~ /^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+/; puts $1; exit; end' pubspec.yaml)
+          cp "../release-notes/$BUILD_NAME-testflight.json" release_notes.json
       - *shorebird_install
       - *check_coordinator_route
       - *check_signing_endpoint
@@ -1133,8 +1138,14 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        # Upload only; App Store Connect owns internal distribution and review gates.
-        submit_to_testflight: false
+        # External groups receive each build after any required Apple beta review.
+        # Divine Internal uses App Store Connect's Automatic Distribution instead.
+        submit_to_testflight: true
+        beta_groups:
+          - OpenVineTesters
+          - VIP Testers
+          - Testflight Expansion from Waitlist
+          - friends-of-rabble
         submit_to_app_store: false
 
   ios-simulator-build:

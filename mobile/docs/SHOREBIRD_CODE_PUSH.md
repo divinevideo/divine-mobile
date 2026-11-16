@@ -188,40 +188,53 @@ the current version and closes that train, move to a newer marketing version:
 the iOS preflight reads the latest approved App Store version and refuses a
 candidate that is equal or lower before Shorebird builds or records a release.
 
-iOS publishing deliberately stops after uploading the Shorebird IPA to App
-Store Connect (`submit_to_testflight: false`, `submit_to_app_store: false`).
-App Store Connect, not Codemagic, provides automatic internal TestFlight
-distribution. This depends on configuration outside this repository.
+iOS publishing uploads the Shorebird IPA and requests automatic external TestFlight
+distribution (`submit_to_testflight: true`, `submit_to_app_store: false`).
+Codemagic assigns the build to the external groups named in `ios-build`'s
+`beta_groups`, then submits it for Beta App Review when Apple requires it.
+These are the existing groups read from App Store Connect on 2026-11-16:
+**OpenVineTesters**, **VIP Testers**, **Testflight Expansion from Waitlist**,
+and **friends-of-rabble**. Preserve their exact names when configuring publishing.
+
+Before each build, agents update the reviewed tester description in
+`release-notes/<marketing-version>-testflight.json`. The workflow copies that
+version's file to `mobile/release_notes.json`, which Codemagic uploads as
+TestFlight's **What to Test** text during post-processing. A missing file stops
+the build rather than reusing another version's description. These notes do not
+submit an App Store version or replace its public description.
+
+App Store Connect provides automatic internal TestFlight distribution separately.
+This depends on configuration outside this repository.
 
 There is exactly one internal tester group: **Divine Internal**. It must have
 **Automatic Distribution** enabled, and it must contain no external testers —
-adding one turns every build into a Beta App Review submission. Codemagic no
-longer names the group, because it stopped assigning beta groups when
-publishing became upload-only, so nothing in this repository fails if that
-toggle is turned off or the group is renamed. Manage membership in App Store
-Connect; the group is recorded here only so the dependency stays reviewable.
+the group is managed separately from external testing. Codemagic does not name
+the internal group in `beta_groups`, so nothing in this repository fails if its
+automatic-distribution toggle is turned off or the group is renamed. Manage
+membership in App Store Connect.
 
 Because it is a single group, it is also a single point of failure: if its
 Automatic Distribution is off, no internal tester receives any build, and
 every Codemagic run still reports success.
 
-A green Codemagic build confirms the IPA upload, not successful App Store
-Connect processing or tester distribution. After each iOS build, work through
-this before treating internal delivery as complete:
+A green Codemagic build confirms the IPA upload, not completed post-processing,
+Apple review or tester distribution. After each iOS build, agents verify:
 
-1. Confirm the build finishes processing in App Store Connect and reaches
-   **Ready to Test**. Codemagic reports success as soon as the upload lands,
-   which is several minutes earlier.
-2. Confirm the build was distributed to **Divine Internal**.
-3. Confirm an internal tester actually sees it in TestFlight.
+1. The build finishes processing and its **What to Test** text matches the notes.
+2. The build is available to **Divine Internal** and assigned to all four external groups.
+3. **Automatically notify testers** is enabled (`autoNotifyEnabled: true`), so
+   Apple approval releases the build without another manual promotion.
+4. The external state reaches **Testing** (`IN_BETA_TESTING`) and testers can
+   access the build. Report **Waiting for Review** or **In Review** accurately
+   until Apple clears it; an upload is not external delivery.
 
 A build that uploaded but never reached testers looks identical to a healthy
 one from Codemagic alone, which is why this is a checklist rather than a
 closing remark.
 
-After internal testing passes, perform a manual external TestFlight promotion
-of the same build in App Store Connect: add it to the external groups and submit
-it for Beta App Review. After the full external cohort passes, perform a manual
+Internal sign-off is not a gate for external TestFlight submission. Existing
+usable builds are not expired automatically to replace a build awaiting review.
+After the external cohort passes, an agent can perform an authorized manual
 App Store promotion by selecting that exact build for the marketing version and
 submitting it for App Store Review. Do not rebuild between those gates; the
 binary reviewed for public release must be the Shorebird binary exercised by
