@@ -170,6 +170,7 @@ void main() {
         final upload = createUpload(localVideoPath: '/tmp/test.mp4');
         final firstPublish = publisher.publishDirectUpload(
           upload,
+          allowVideoReuse: false,
           allowAudioReuse: true,
         );
         // Let the first call run into the gated audio extraction.
@@ -177,6 +178,7 @@ void main() {
 
         final secondPublish = publisher.publishDirectUpload(
           upload,
+          allowVideoReuse: false,
           allowAudioReuse: true,
         );
         await pumpEventQueue();
@@ -247,9 +249,18 @@ void main() {
       });
 
       final upload = createUpload();
-      expect(await publisher.publishDirectUpload(upload), isTrue);
       expect(
-        await publisher.publishDirectUpload(upload),
+        await publisher.publishDirectUpload(
+          upload,
+          allowVideoReuse: false,
+        ),
+        isTrue,
+      );
+      expect(
+        await publisher.publishDirectUpload(
+          upload,
+          allowVideoReuse: false,
+        ),
         isTrue,
         reason: 'sequential re-publish (e.g. an edit) must not be blocked',
       );
@@ -293,9 +304,13 @@ void main() {
         });
 
         final results = await Future.wait([
-          publisher.publishDirectUpload(createUpload()),
+          publisher.publishDirectUpload(
+            createUpload(),
+            allowVideoReuse: false,
+          ),
           publisher.publishDirectUpload(
             createUpload().copyWith(videoId: 'other-video-id'),
+            allowVideoReuse: false,
           ),
         ]);
 

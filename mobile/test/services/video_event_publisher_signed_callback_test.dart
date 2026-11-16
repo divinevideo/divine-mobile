@@ -124,6 +124,7 @@ void main() {
 
         final result = await publisher.publishDirectUpload(
           createUpload(),
+          allowVideoReuse: false,
           onEventSigned: () => signedSteps++,
         );
 
@@ -181,11 +182,13 @@ void main() {
         final results = await Future.wait([
           publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             onEventSigned: () => signedSteps++,
             onPublishedEvent: publishedEvents.add,
           ),
           publisher.publishDirectUpload(
             createUpload(),
+            allowVideoReuse: false,
             onPublishedEvent: publishedEvents.add,
           ),
         ]);

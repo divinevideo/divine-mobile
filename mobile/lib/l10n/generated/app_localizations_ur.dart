@@ -4071,6 +4071,43 @@ class AppLocalizationsUr extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'کلپس میں شامل نہیں ہو سکا';
 
   @override
+  String get remixBlockedByCreator => 'یہ کریئیٹر ری مکس کی اجازت نہیں دیتے۔';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'یہ معلوم نہیں ہو سکا کہ اس ویڈیو کو ری مکس کیا جا سکتا ہے یا نہیں۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get remixStartFailed => 'ری مکس شروع نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get remixSettingAllowTitle => 'دوسروں کو میری ویڈیوز ری مکس کرنے دیں';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'دوسرے لوگ آپ کی ویڈیوز کو اپنی پوسٹس میں کلپس کے طور پر استعمال کر سکتے ہیں۔';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return '$name کا کلپ استعمال کرتا ہے';
+  }
+
+  @override
+  String get metadataRemixAction => 'ری مکس کریں';
+
+  @override
+  String get remixWebAppNudge => 'ری مکس Divine ایپ میں ہوتا ہے۔';
+
+  @override
+  String get remixWebGetTheApp => 'ایپ حاصل کریں';
+
+  @override
+  String get metadataRemixesLabel => 'ری مکسز';
+
+  @override
+  String get metadataReportRemix => 'اس ری مکس کی رپورٹ کریں';
+
+  @override
   String get shareSheetAddToList => 'فہرست میں شامل کریں';
 
   @override
@@ -6767,6 +6804,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'کلپس';
+
+  @override
+  String get libraryTabFromOthers => 'دوسروں سے';
 
   @override
   String get libraryScheduledSectionTitle => 'شیڈول شدہ';

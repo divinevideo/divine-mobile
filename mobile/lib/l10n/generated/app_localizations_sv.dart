@@ -4063,6 +4063,44 @@ class AppLocalizationsSv extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Kunde inte lägga till i klipp';
 
   @override
+  String get remixBlockedByCreator =>
+      'Den här kreatören tillåter inte remixer.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Kunde inte kontrollera om videon får remixas. Försök igen.';
+
+  @override
+  String get remixStartFailed => 'Kunde inte starta remixen. Försök igen.';
+
+  @override
+  String get remixSettingAllowTitle => 'Låt andra remixa mina videor';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Andra kan använda dina videor som klipp i sina egna inlägg.';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Använder ett klipp från $name';
+  }
+
+  @override
+  String get metadataRemixAction => 'Remixa';
+
+  @override
+  String get remixWebAppNudge => 'Remixa gör du i Divine-appen.';
+
+  @override
+  String get remixWebGetTheApp => 'Hämta appen';
+
+  @override
+  String get metadataRemixesLabel => 'Remixar';
+
+  @override
+  String get metadataReportRemix => 'Rapportera den här remixen';
+
+  @override
   String get shareSheetAddToList => 'Lägg till i lista';
 
   @override
@@ -6756,6 +6794,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'Klipp';
+
+  @override
+  String get libraryTabFromOthers => 'Från andra';
 
   @override
   String get libraryScheduledSectionTitle => 'Schemalagda';

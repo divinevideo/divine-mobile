@@ -4033,6 +4033,44 @@ class AppLocalizationsVi extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Không thêm được vào clip';
 
   @override
+  String get remixBlockedByCreator => 'Nhà sáng tạo này không cho phép remix.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Không kiểm tra được video này có thể remix hay không. Hãy thử lại.';
+
+  @override
+  String get remixStartFailed => 'Không bắt đầu được bản remix. Hãy thử lại.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'Cho phép người khác remix video của tôi';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Người khác có thể dùng video của bạn làm clip trong bài đăng của họ.';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Dùng clip của $name';
+  }
+
+  @override
+  String get metadataRemixAction => 'Remix';
+
+  @override
+  String get remixWebAppNudge => 'Bạn có thể remix trong ứng dụng Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Tải ứng dụng';
+
+  @override
+  String get metadataRemixesLabel => 'Bản remix';
+
+  @override
+  String get metadataReportRemix => 'Báo cáo bản remix này';
+
+  @override
   String get shareSheetAddToList => 'Thêm vào danh sách';
 
   @override
@@ -6722,6 +6760,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'Clip';
+
+  @override
+  String get libraryTabFromOthers => 'Từ người khác';
 
   @override
   String get libraryScheduledSectionTitle => 'Đã lên lịch';

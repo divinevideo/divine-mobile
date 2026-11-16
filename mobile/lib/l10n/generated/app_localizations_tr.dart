@@ -4008,6 +4008,45 @@ class AppLocalizationsTr extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Kliplere eklenemedi';
 
   @override
+  String get remixBlockedByCreator =>
+      'Bu içerik üreticisi remikse izin vermiyor.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Bu videonun remikslenip remikslenemeyeceği kontrol edilemedi. Tekrar dene.';
+
+  @override
+  String get remixStartFailed => 'Remiks başlatılamadı. Tekrar dene.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'Başkalarının videolarımı remikslemesine izin ver';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Başkaları videolarını kendi gönderilerinde klip olarak kullanabilir.';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return '$name kullanıcısının bir klibini kullanıyor';
+  }
+
+  @override
+  String get metadataRemixAction => 'Remiksle';
+
+  @override
+  String get remixWebAppNudge => 'Remiks Divine uygulamasında yapılır.';
+
+  @override
+  String get remixWebGetTheApp => 'Uygulamayı indir';
+
+  @override
+  String get metadataRemixesLabel => 'Remiksler';
+
+  @override
+  String get metadataReportRemix => 'Bu remiksi bildir';
+
+  @override
   String get shareSheetAddToList => 'Listeye Ekle';
 
   @override
@@ -6694,6 +6733,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'Klipler';
+
+  @override
+  String get libraryTabFromOthers => 'Başkalarından';
 
   @override
   String get libraryScheduledSectionTitle => 'Zamanlanmış';

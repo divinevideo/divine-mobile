@@ -32,7 +32,7 @@ class VideoEditorProviderState {
     this.isPosting = false,
     this.isAutosavedDraft = true,
     this.allowAudioReuse = false,
-    this.allowVideoReuse = false,
+    this.allowVideoReuse = true,
     this.audioShareAttribution,
     this.shareReplyToFeed = false,
     this.title = '',

@@ -604,6 +604,7 @@ void main() {
         var published = false;
         when(
           () => mockVideoEventPublisher.publishVideoEvent(
+            allowVideoReuse: any(named: 'allowVideoReuse'),
             upload: any(named: 'upload'),
             title: any(named: 'title'),
             description: any(named: 'description'),
@@ -688,6 +689,7 @@ void main() {
         late List<double> beforeEvent;
         when(
           () => mockVideoEventPublisher.publishVideoEvent(
+            allowVideoReuse: any(named: 'allowVideoReuse'),
             upload: any(named: 'upload'),
             title: any(named: 'title'),
             description: any(named: 'description'),
@@ -1249,6 +1251,7 @@ void main() {
           );
           verifyNever(
             () => mockVideoEventPublisher.publishVideoEvent(
+              allowVideoReuse: any(named: 'allowVideoReuse'),
               upload: any(named: 'upload'),
               title: any(named: 'title'),
               description: any(named: 'description'),
@@ -1397,6 +1400,7 @@ void main() {
           expect(result, isA<PublishSuccess>());
           verify(
             () => mockVideoEventPublisher.publishVideoEvent(
+              allowVideoReuse: any(named: 'allowVideoReuse'),
               upload: any(named: 'upload'),
               title: any(named: 'title'),
               description: 'caption from @alice',
@@ -1488,6 +1492,7 @@ void main() {
           expect(result, isA<PublishSuccess>());
           verify(
             () => mockVideoEventPublisher.publishVideoEvent(
+              allowVideoReuse: any(named: 'allowVideoReuse'),
               upload: any(named: 'upload'),
               title: any(named: 'title'),
               description: '',
@@ -1613,6 +1618,7 @@ void main() {
         expect(result, isA<PublishSuccess>());
         final captured = verify(
           () => mockVideoEventPublisher.publishVideoEvent(
+            allowVideoReuse: any(named: 'allowVideoReuse'),
             upload: any(named: 'upload'),
             title: any(named: 'title'),
             description: any(named: 'description'),
@@ -1696,6 +1702,7 @@ void main() {
         expect(result, isA<PublishSuccess>());
         final captured = verify(
           () => mockVideoEventPublisher.publishVideoEvent(
+            allowVideoReuse: any(named: 'allowVideoReuse'),
             upload: any(named: 'upload'),
             title: any(named: 'title'),
             description: any(named: 'description'),
@@ -1765,6 +1772,7 @@ void main() {
           );
           verifyNever(
             () => mockVideoEventPublisher.publishVideoEvent(
+              allowVideoReuse: any(named: 'allowVideoReuse'),
               upload: any(named: 'upload'),
               title: any(named: 'title'),
               description: any(named: 'description'),
@@ -1823,6 +1831,7 @@ void main() {
           expect(result, isA<PublishSuccess>());
           final captured = verify(
             () => mockVideoEventPublisher.publishVideoEvent(
+              allowVideoReuse: any(named: 'allowVideoReuse'),
               upload: any(named: 'upload'),
               title: any(named: 'title'),
               description: any(named: 'description'),
@@ -1900,6 +1909,7 @@ void main() {
 
           final captured = verify(
             () => mockVideoEventPublisher.publishVideoEvent(
+              allowVideoReuse: any(named: 'allowVideoReuse'),
               upload: any(named: 'upload'),
               title: any(named: 'title'),
               description: any(named: 'description'),
@@ -1966,6 +1976,7 @@ void main() {
 
           final captured = verify(
             () => mockVideoEventPublisher.publishVideoEvent(
+              allowVideoReuse: any(named: 'allowVideoReuse'),
               upload: any(named: 'upload'),
               title: any(named: 'title'),
               description: any(named: 'description'),
@@ -2082,6 +2093,7 @@ void main() {
           final publishedCollaborators =
               verify(
                     () => mockVideoEventPublisher.publishVideoEvent(
+                      allowVideoReuse: any(named: 'allowVideoReuse'),
                       upload: any(named: 'upload'),
                       title: any(named: 'title'),
                       description: any(named: 'description'),
@@ -2211,6 +2223,7 @@ void main() {
           expect(result, isA<PublishSuccess>());
           verifyInOrder([
             () => mockVideoEventPublisher.publishVideoEvent(
+              allowVideoReuse: any(named: 'allowVideoReuse'),
               upload: any(named: 'upload'),
               title: any(named: 'title'),
               description: any(named: 'description'),
@@ -2282,6 +2295,7 @@ void main() {
           );
           when(
             () => mockVideoEventPublisher.publishVideoEvent(
+              allowVideoReuse: any(named: 'allowVideoReuse'),
               upload: any(named: 'upload'),
               title: any(named: 'title'),
               description: any(named: 'description'),
@@ -2499,6 +2513,7 @@ void main() {
         ).thenReturn(_createPendingUpload(status: UploadStatus.readyToPublish));
         when(
           () => mockVideoEventPublisher.publishVideoEvent(
+            allowVideoReuse: any(named: 'allowVideoReuse'),
             upload: any(named: 'upload'),
             title: any(named: 'title'),
             description: any(named: 'description'),
@@ -2574,6 +2589,7 @@ void main() {
         ).thenReturn(_createPendingUpload(status: UploadStatus.readyToPublish));
         when(
           () => mockVideoEventPublisher.publishVideoEvent(
+            allowVideoReuse: any(named: 'allowVideoReuse'),
             upload: any(named: 'upload'),
             title: any(named: 'title'),
             description: any(named: 'description'),
@@ -2686,6 +2702,7 @@ void main() {
         );
         verifyNever(
           () => mockVideoEventPublisher.publishVideoEvent(
+            allowVideoReuse: any(named: 'allowVideoReuse'),
             upload: any(named: 'upload'),
             title: any(named: 'title'),
             description: any(named: 'description'),
@@ -2828,6 +2845,7 @@ void main() {
         when(() => mockUploadManager.getUpload(any())).thenReturn(readyUpload);
         when(
           () => mockVideoEventPublisher.publishVideoEvent(
+            allowVideoReuse: any(named: 'allowVideoReuse'),
             upload: any(named: 'upload'),
             title: any(named: 'title'),
             description: any(named: 'description'),
@@ -2933,6 +2951,7 @@ void main() {
         ).thenReturn(null);
         when(
           () => mockVideoEventPublisher.publishVideoEvent(
+            allowVideoReuse: any(named: 'allowVideoReuse'),
             upload: any(named: 'upload'),
             title: any(named: 'title'),
             description: any(named: 'description'),
@@ -3583,6 +3602,7 @@ void main() {
         );
         when(
           () => mockVideoEventPublisher.publishVideoEvent(
+            allowVideoReuse: any(named: 'allowVideoReuse'),
             upload: any(named: 'upload'),
             title: any(named: 'title'),
             description: any(named: 'description'),
@@ -3630,6 +3650,7 @@ void main() {
       Map<Symbol, dynamic> capturedPublishArguments() {
         final captured = verify(
           () => mockVideoEventPublisher.publishVideoEvent(
+            allowVideoReuse: any(named: 'allowVideoReuse'),
             upload: any(named: 'upload'),
             title: any(named: 'title'),
             description: any(named: 'description'),
@@ -3929,6 +3950,7 @@ void main() {
           );
           verifyNever(
             () => mockVideoEventPublisher.publishVideoEvent(
+              allowVideoReuse: any(named: 'allowVideoReuse'),
               upload: any(named: 'upload'),
               title: any(named: 'title'),
               description: any(named: 'description'),
@@ -4118,6 +4140,7 @@ void _stubPublishVideoEventThrows(
 ) {
   when(
     () => publisher.publishVideoEvent(
+      allowVideoReuse: any(named: 'allowVideoReuse'),
       upload: any(named: 'upload'),
       title: any(named: 'title'),
       description: any(named: 'description'),
@@ -4164,6 +4187,7 @@ Future<bool> _verifyPublishVideoEvent(
   dynamic contentWarning = _anyContentWarningMatcher,
   List<AudioEvent> creditedSounds = const [],
 }) => publisher.publishVideoEvent(
+  allowVideoReuse: any(named: 'allowVideoReuse'),
   upload: any(named: 'upload'),
   title: any(named: 'title'),
   description: any(named: 'description'),
@@ -4276,6 +4300,7 @@ void _setupSuccessfulPublish({
   when(() => mockUploadManager.getUpload(any())).thenReturn(upload);
   when(
     () => mockVideoEventPublisher.publishVideoEvent(
+      allowVideoReuse: any(named: 'allowVideoReuse'),
       upload: any(named: 'upload'),
       title: any(named: 'title'),
       description: any(named: 'description'),

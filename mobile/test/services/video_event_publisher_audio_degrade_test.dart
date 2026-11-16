@@ -191,6 +191,7 @@ void main() {
 
         final result = await publisher.publishDirectUpload(
           createUpload(),
+          allowVideoReuse: false,
           allowAudioReuse: true,
         );
 
@@ -216,6 +217,7 @@ void main() {
       var degraded = false;
       final result = await publisher.publishDirectUpload(
         createUpload(),
+        allowVideoReuse: false,
         allowAudioReuse: true,
         onAudioReuseDegraded: () => degraded = true,
       );
@@ -283,6 +285,7 @@ void main() {
         var degraded = false;
         await publisher.publishDirectUpload(
           createUpload(),
+          allowVideoReuse: false,
           allowAudioReuse: true,
           onAudioReuseDegraded: () => degraded = true,
         );
@@ -357,7 +360,11 @@ void main() {
         });
 
         await expectLater(
-          publisher.publishDirectUpload(createUpload(), allowAudioReuse: true),
+          publisher.publishDirectUpload(
+            createUpload(),
+            allowVideoReuse: false,
+            allowAudioReuse: true,
+          ),
           throwsA(
             isA<AccountRestrictedPublishException>().having(
               (error) => error.source,

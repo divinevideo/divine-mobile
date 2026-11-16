@@ -1253,4 +1253,174 @@ void main() {
       expect(ratioClip(null, orig: 3 / 4).originalAspectRatio, 3 / 4);
     });
   });
+
+  group('DivineVideoClip.importedSource', () {
+    const viewer = 'viewer-pubkey';
+    const vineAuthor = 'vine-author-pubkey';
+
+    DivineVideoClip creditedClip({
+      required String id,
+      bool importedSource = false,
+      String? author = vineAuthor,
+    }) => DivineVideoClip(
+      id: id,
+      video: editor.EditorVideo.file(File('/tmp/$id.mp4')),
+      duration: const Duration(seconds: 6),
+      recordedAt: DateTime(2024),
+      targetAspectRatio: model.AspectRatio.square,
+      originalAspectRatio: 1,
+      importedSource: importedSource,
+      sourceCredits: [
+        if (author != null)
+          model.ClipSourceCredit(authorPubkey: author, eventId: 'vine-event'),
+      ],
+    );
+
+    test('defaults to false', () {
+      expect(creditedClip(id: 'clip_1').importedSource, isFalse);
+    });
+
+    test('survives a JSON round trip', () {
+      final imported = creditedClip(
+        id: 'classic_vine_abc_1',
+        importedSource: true,
+      );
+
+      final json = imported.toJson();
+      final restored = DivineVideoClip.fromJson(json, '/tmp');
+
+      expect(json['importedSource'], isTrue);
+      expect(restored.importedSource, isTrue);
+    });
+
+    test('reads false from stored JSON written before the field existed', () {
+      final json = creditedClip(id: 'video_abc_1').toJson()
+        ..remove('importedSource');
+
+      expect(
+        DivineVideoClip.fromJson(json, '/tmp').importedSource,
+        isFalse,
+      );
+    });
+
+    test('is kept by copyWith and can be set by it', () {
+      final imported = creditedClip(id: 'video_abc_1', importedSource: true);
+
+      expect(imported.copyWith(volume: 0.5).importedSource, isTrue);
+      expect(
+        creditedClip(id: 'x').copyWith(importedSource: true).importedSource,
+        isTrue,
+      );
+    });
+
+    group('isFromOthers', () {
+      test('is true for a Vine imported from someone else', () {
+        final clip = creditedClip(
+          id: 'classic_vine_abc_1',
+          importedSource: true,
+        );
+
+        expect(clip.isFromOthers(viewer), isTrue);
+      });
+
+      test('is false for an import credited to the viewer', () {
+        final clip = creditedClip(
+          id: 'video_abc_1',
+          importedSource: true,
+          author: viewer,
+        );
+
+        expect(clip.isFromOthers(viewer), isFalse);
+      });
+
+      test('is false for an import crediting the viewer in another case', () {
+        const viewerHex =
+            'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
+        final clip = creditedClip(
+          id: 'video_abc_1',
+          importedSource: true,
+          author: viewerHex.toUpperCase(),
+        );
+
+        expect(clip.sourceAuthorPubkey, isNot(viewerHex));
+        expect(clip.isFromOthers(viewerHex), isFalse);
+      });
+
+      test('is false for an import that credits nobody', () {
+        final clip = creditedClip(
+          id: 'dm_clip_abc',
+          importedSource: true,
+          author: null,
+        );
+
+        expect(clip.isFromOthers(viewer), isFalse);
+      });
+
+      test('is false for a split-screen render carrying a credit', () {
+        final clip = creditedClip(id: 'split_layout_1700000000000');
+
+        expect(clip.isFromOthers(viewer), isFalse);
+      });
+
+      test(
+        'is false for a derived clip even when it claims to be imported',
+        () {
+          for (final id in [
+            'merged_1',
+            'clip_library_1',
+            'split_layout_1',
+            'clip_1_0',
+          ]) {
+            final clip = creditedClip(id: id, importedSource: true);
+
+            expect(clip.isFromOthers(viewer), isFalse, reason: id);
+          }
+        },
+      );
+
+      test("is false for the viewer's own recording", () {
+        final clip = creditedClip(id: 'clip_1_0', author: null);
+
+        expect(clip.isFromOthers(viewer), isFalse);
+      });
+
+      group('for clips stored before importedSource existed', () {
+        DivineVideoClip legacy(String id, {String? author = vineAuthor}) {
+          final json = creditedClip(id: id, author: author).toJson()
+            ..remove('importedSource');
+          return DivineVideoClip.fromJson(json, '/tmp');
+        }
+
+        test('treats an import id crediting someone else as from others', () {
+          expect(legacy('video_abc_1').isFromOthers(viewer), isTrue);
+          expect(legacy('classic_vine_abc_1').isFromOthers(viewer), isTrue);
+          expect(legacy('dm_clip_abc').isFromOthers(viewer), isTrue);
+        });
+
+        test('treats an import id crediting the viewer as own', () {
+          expect(
+            legacy('video_abc_1', author: viewer).isFromOthers(viewer),
+            isFalse,
+          );
+        });
+
+        test('treats an import id with no credit as own', () {
+          expect(
+            legacy('dm_clip_abc', author: null).isFromOthers(viewer),
+            isFalse,
+          );
+        });
+
+        test('treats a derived id carrying a credit as own', () {
+          expect(legacy('merged_1').isFromOthers(viewer), isFalse);
+          expect(legacy('split_layout_1').isFromOthers(viewer), isFalse);
+        });
+
+        test('counts an import id as imported', () {
+          expect(legacy('classic_vine_abc_1').isImportedClip, isTrue);
+          expect(legacy('merged_1').isImportedClip, isFalse);
+        });
+      });
+    });
+  });
 }

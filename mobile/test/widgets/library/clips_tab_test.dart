@@ -68,6 +68,7 @@ void main() {
       double? targetAspectRatio,
       bool showCategoryManagement = false,
       ScrollController? scrollController,
+      ClipOwnershipScope? scope,
     }) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
@@ -83,6 +84,7 @@ void main() {
               targetAspectRatio: targetAspectRatio,
               showCategoryManagement: showCategoryManagement,
               scrollController: scrollController,
+              scope: scope,
             ),
           ),
         ),
@@ -90,6 +92,68 @@ void main() {
     }
 
     group('renders', () {
+      testWidgets('the clips of the scope it stands for', (tester) async {
+        when(() => mockBloc.state).thenReturn(
+          ClipsLibraryState(
+            status: ClipsLibraryStatus.loaded,
+            clips: [clip1],
+            sortedClips: [clip1],
+            scope: ClipOwnershipScope.fromOthers,
+          ),
+        );
+
+        await tester.pumpWidget(
+          buildWidget(scope: ClipOwnershipScope.fromOthers),
+        );
+
+        expect(find.byType(VideoClipThumbnailCard), findsOneWidget);
+      });
+
+      testWidgets("its own scope's clips while the bloc shows another", (
+        tester,
+      ) async {
+        when(() => mockBloc.state).thenReturn(
+          ClipsLibraryState(
+            status: ClipsLibraryStatus.loaded,
+            clips: [clip1, clip2],
+            sortedClips: [clip1],
+            sortedClipsByScope: {
+              ClipOwnershipScope.own: [clip1],
+              ClipOwnershipScope.fromOthers: [clip2],
+            },
+            scope: ClipOwnershipScope.own,
+          ),
+        );
+
+        await tester.pumpWidget(
+          buildWidget(scope: ClipOwnershipScope.fromOthers),
+        );
+
+        final cards = tester.widgetList<VideoClipThumbnailCard>(
+          find.byType(VideoClipThumbnailCard),
+        );
+        expect(cards.map((card) => card.clip.id), ['clip2']);
+      });
+
+      testWidgets('nothing in the trash while the bloc shows another scope', (
+        tester,
+      ) async {
+        when(() => mockBloc.state).thenReturn(
+          ClipsLibraryState(
+            status: ClipsLibraryStatus.trashLoaded,
+            filter: const ClipLibraryTrashFilter(),
+            trashedClips: [clip1],
+            scope: ClipOwnershipScope.own,
+          ),
+        );
+
+        await tester.pumpWidget(
+          buildWidget(scope: ClipOwnershipScope.fromOthers),
+        );
+
+        expect(find.byType(TrashedClipsList), findsNothing);
+      });
+
       testWidgets('loading indicator when loading', (tester) async {
         when(() => mockBloc.state).thenReturn(
           const ClipsLibraryState(status: ClipsLibraryStatus.loading),

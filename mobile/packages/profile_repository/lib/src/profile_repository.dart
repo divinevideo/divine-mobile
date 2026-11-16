@@ -13,7 +13,7 @@ import 'package:http/http.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
-import 'package:nostr_sdk/nostr_sdk.dart' show Event, Filter, Nip19;
+import 'package:nostr_sdk/nostr_sdk.dart' show Event, Filter, Nip19, RelayType;
 import 'package:profile_repository/profile_repository.dart';
 import 'package:profile_repository/src/identity_event_selection.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -42,12 +42,8 @@ const _nameServerHttpTimeout = Duration(seconds: 10);
 // publishing a local copy that cannot carry the relay copy's tags.
 const _publishSeedRelayTimeout = Duration(seconds: 4);
 
-/// A profile read, and whether an empty answer can be trusted.
-///
-/// `conclusive` is false when the read could not rule out a copy it never
-/// saw: a relay stayed silent or refused the REQ, none took it, or the read
-/// threw. Only a conclusive miss means no Kind 0 exists to be replaced.
-typedef _ProfileRead = ({UserProfile? profile, bool conclusive});
+/// Local alias of [FreshProfileRead].
+typedef _ProfileRead = FreshProfileRead;
 
 // Caps NIP-50 user search. The relay query has a slightly shorter inner
 // budget and returns partial results on SDK timeout; the outer guard is a
@@ -950,6 +946,53 @@ class ProfileRepository implements ProfileReader {
     return read.profile;
   }
 
+  @override
+  Future<FreshProfileRead> readFreshProfile({
+    required String pubkey,
+    bool requireRawKind0 = false,
+    List<Duration> rawKind0RetryDelays = const [],
+  }) => _readFreshProfile(
+    pubkey: pubkey,
+    requireRawKind0: requireRawKind0,
+    rawKind0RetryDelays: rawKind0RetryDelays,
+  );
+
+  @override
+  Future<FreshProfileRead> readRawProfileFromRelays({
+    required String pubkey,
+    String? onlyRelayUrl,
+  }) async {
+    // A blocked account is never looked up, so its miss proves nothing.
+    if (_blockFilter?.call(pubkey) ?? false) {
+      return (profile: null, conclusive: false);
+    }
+    try {
+      final read = await _nostrClient.queryEventsDetailed(
+        [
+          Filter(kinds: [0], authors: [pubkey], limit: 1),
+        ],
+        tempRelays: onlyRelayUrl == null ? null : [onlyRelayUrl],
+        relayTypes: onlyRelayUrl == null
+            ? RelayType.all
+            : const [RelayType.temp],
+        useCache: false,
+        requireAllRelaysSettled: true,
+      );
+      return (
+        profile: _newestKind0Profile(read.events),
+        conclusive: !read.timedOut && !read.noRelays,
+      );
+    } on Exception catch (e) {
+      Log.warning(
+        'Kind 0 read from ${onlyRelayUrl ?? 'the connected relays'} '
+        'failed: $e',
+        name: 'ProfileRepository.readRawProfileFromRelays',
+        category: LogCategory.relay,
+      );
+      return (profile: null, conclusive: false);
+    }
+  }
+
   /// Reads optional raw Kind 0 metadata without delaying the ordinary REST
   /// profile read. Accepts partial relay results; unsafe as a publish seed.
   ///
@@ -1488,6 +1531,13 @@ class ProfileRepository implements ProfileReader {
   /// surfaces as a failure rather than a false success. After a confirmed
   /// publish, the profile is cached locally for immediate subsequent reads.
   ///
+  /// [allowVideoReuse] `false` writes [divineAllowVideoReuseKey] as JSON
+  /// `false`, blocking others from remixing this account's videos; `true`
+  /// removes the key, since absence already means allowed; null leaves the
+  /// seed's value alone. A non-null [allowVideoReuse] also requires the
+  /// default relay's `OK true`: remix consent readers settle on that relay's
+  /// kind 0, so a save other relays accepted but it did not is a failure.
+  ///
   /// Throws [NoRelaysConnectedException] when no relays are connected.
   /// Throws [ProfilePublishFailedException] when relays were reached but none
   /// confirmed the event (rejection, timeout, or a send failure such as the
@@ -1506,6 +1556,7 @@ class ProfileRepository implements ProfileReader {
     String? picture,
     String? banner,
     Iterable<MonetizationLink>? monetizationLinks,
+    bool? allowVideoReuse,
     UserProfile? currentProfile,
   }) async {
     // External NIP-05 takes precedence when provided.
@@ -1573,6 +1624,12 @@ class ProfileRepository implements ProfileReader {
       }
     }
 
+    if (allowVideoReuse == false) {
+      newContent[divineAllowVideoReuseKey] = false;
+    } else if (allowVideoReuse == true) {
+      newContent.remove(divineAllowVideoReuseKey);
+    }
+
     // Every other key — lud16, lud06, website, bot, NIP-39 `i` tags,
     // custom client fields, future NIPs — flows through from the seed
     // untouched. Adding new editable fields here MUST keep that invariant.
@@ -1580,11 +1637,18 @@ class ProfileRepository implements ProfileReader {
     final rawTags = (seed?.rawTags.isNotEmpty ?? false)
         ? seed!.rawTags
         : currentProfile?.rawTags ?? const <List<String>>[];
+    // Remix consent readers trust the default relay's kind 0 on its own, so
+    // a save that sets the block only counts once the default relay has it.
+    final requireDefaultRelay = allowVideoReuse != null;
     final result = rawTags.isEmpty
-        ? await _nostrClient.sendProfileAwaitOk(profileContent: newContent)
+        ? await _nostrClient.sendProfileAwaitOk(
+            profileContent: newContent,
+            requireDefaultRelay: requireDefaultRelay,
+          )
         : await _nostrClient.sendProfileAwaitOk(
             profileContent: newContent,
             tags: rawTags,
+            requireDefaultRelay: requireDefaultRelay,
           );
 
     // Switch exhaustively over the typed result — no post-failure
@@ -1762,6 +1826,7 @@ class ProfileRepository implements ProfileReader {
         picture: payload.picture,
         banner: payload.banner,
         monetizationLinks: payload.monetizationLinks,
+        allowVideoReuse: payload.allowVideoReuse,
         currentProfile: currentProfile,
       );
       await dao.clear(pubkey, generation: generation);

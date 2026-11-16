@@ -194,7 +194,8 @@ class AudioEvent {
           divineSoundId = tagValue.isNotEmpty ? tagValue : null;
         case 'allow_audio_reuse':
           hasExplicitReuseConsent = true;
-          allowsReuse = tagValue == 'true';
+          allowsReuse =
+              ReuseConsent.fromMarker(tagValue) == ReuseConsent.granted;
         case 'creator':
           creatorName = tagValue.isNotEmpty ? tagValue : null;
         case 'p':

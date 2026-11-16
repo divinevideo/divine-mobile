@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_feed_item/actions/clip_title_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
@@ -16,7 +17,9 @@ import 'package:unified_logger/unified_logger.dart';
 /// Reports [result] for the sheet owning [sheetContext].
 ///
 /// The sheet is dismissed first: a snackbar raised while it is open lands on
-/// the opener's scaffold, underneath the sheet.
+/// the opener's scaffold, underneath the sheet. A [VideoContentRemixReady] is
+/// not feedback — the info sheet opens the editor with it — so it leaves the
+/// sheet alone.
 void showVideoContentActionFeedback(
   BuildContext sheetContext,
   VideoContentActionResult result,
@@ -65,6 +68,13 @@ void showVideoContentActionFeedback(
           : l10n.shareSheetAddToClipsFailed,
       !succeeded,
     ),
+    VideoContentRemixFailed() => (l10n.remixStartFailed, true),
+    VideoContentRemixRefused(:final consent) => (
+      consent == RemixConsent.blocked
+          ? l10n.remixBlockedByCreator
+          : l10n.remixConsentCheckFailed,
+      true,
+    ),
     VideoContentCopiedToClipboard(:final kind) => (
       switch (kind) {
         VideoContentCopiedKind.eventJson => l10n.shareCopiedEventJson,
@@ -73,7 +83,9 @@ void showVideoContentActionFeedback(
       false,
     ),
     VideoContentActionFailure() => (l10n.shareActionFailed, true),
+    VideoContentRemixReady() => (null, false),
   };
+  if (snackText == null) return;
 
   dismissSheet(sheetContext);
   if (result case VideoContentCopiedToClipboard(:final text)) {

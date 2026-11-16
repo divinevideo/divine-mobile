@@ -156,7 +156,11 @@ void main() {
     test('adds L and l tags when language is provided', () async {
       stubSignAndPublish();
 
-      await publisher.publishDirectUpload(createTestUpload(), language: 'en');
+      await publisher.publishDirectUpload(
+        createTestUpload(),
+        allowVideoReuse: false,
+        language: 'en',
+      );
 
       expect(capturedTags, isNotNull);
       expect(
@@ -174,7 +178,11 @@ void main() {
     test('adds correct language code for non-English languages', () async {
       stubSignAndPublish();
 
-      await publisher.publishDirectUpload(createTestUpload(), language: 'pt');
+      await publisher.publishDirectUpload(
+        createTestUpload(),
+        allowVideoReuse: false,
+        language: 'pt',
+      );
 
       expect(capturedTags, isNotNull);
       expect(_containsTag(capturedTags!, ['L', 'ISO-639-1']), isTrue);
@@ -188,7 +196,10 @@ void main() {
     test('does not add language tags when language is null', () async {
       stubSignAndPublish();
 
-      await publisher.publishDirectUpload(createTestUpload());
+      await publisher.publishDirectUpload(
+        createTestUpload(),
+        allowVideoReuse: false,
+      );
 
       expect(capturedTags, isNotNull);
       expect(
@@ -210,7 +221,11 @@ void main() {
     test('does not add language tags when language is empty string', () async {
       stubSignAndPublish();
 
-      await publisher.publishDirectUpload(createTestUpload(), language: '');
+      await publisher.publishDirectUpload(
+        createTestUpload(),
+        allowVideoReuse: false,
+        language: '',
+      );
 
       expect(capturedTags, isNotNull);
       expect(
@@ -224,6 +239,7 @@ void main() {
       stubSignAndPublish();
 
       await publisher.publishVideoEvent(
+        allowVideoReuse: false,
         upload: createTestUpload(),
         language: 'es',
       );
@@ -244,6 +260,7 @@ void main() {
 
       await publisher.publishDirectUpload(
         createTestUpload(),
+        allowVideoReuse: false,
         contentWarning: 'nudity,violence',
       );
 
@@ -267,6 +284,7 @@ void main() {
       stubSignAndPublish();
 
       await publisher.publishVideoEvent(
+        allowVideoReuse: false,
         upload: createTestUpload(),
         contentWarning: 'drugs',
       );
@@ -284,6 +302,7 @@ void main() {
 
       await publisher.publishDirectUpload(
         createTestUpload(),
+        allowVideoReuse: false,
         contentWarning: '',
       );
 
@@ -309,6 +328,7 @@ void main() {
       stubSignAndPublish();
 
       await publisher.publishVideoEvent(
+        allowVideoReuse: false,
         upload: createTestUpload(),
         expirationTimestamp: 1893456000,
       );

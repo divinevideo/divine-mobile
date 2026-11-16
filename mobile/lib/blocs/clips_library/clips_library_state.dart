@@ -98,6 +98,26 @@ enum LibraryClipTypeFilter {
   };
 }
 
+/// Whose footage the clip grid shows: the account's own clips, or the clips
+/// it imported from other people, which the library keeps in their own tab.
+///
+/// Filters apply within a scope. A clip rendered from someone else's
+/// footage, such as a remix, is the account's own work.
+enum ClipOwnershipScope {
+  /// What the account recorded, made or brought back from its gallery.
+  own,
+
+  /// Other people's footage imported as published or sent (see
+  /// [DivineVideoClip.isFromOthers]).
+  fromOthers;
+
+  /// Whether [clip] belongs to this scope for the account [viewerPubkey].
+  bool admits(DivineVideoClip clip, String? viewerPubkey) => switch (this) {
+    ClipOwnershipScope.own => !clip.isFromOthers(viewerPubkey),
+    ClipOwnershipScope.fromOthers => clip.isFromOthers(viewerPubkey),
+  };
+}
+
 /// Which slice of the clip library the grid shows.
 ///
 /// All, Archive, and Deleted are built in and always available; the
@@ -297,6 +317,7 @@ final class ClipsLibraryState extends Equatable {
     this.status = ClipsLibraryStatus.initial,
     this.clips = const [],
     this.sortedClips = const [],
+    this.sortedClipsByScope = const {},
     this.trashedClips = const [],
     this.selectedClipIds = const {},
     this.disabledClipIds = const {},
@@ -316,6 +337,8 @@ final class ClipsLibraryState extends Equatable {
     this.allowsMixedClipTypes = false,
     this.allowsMixedAspectRatios = false,
     this.maxSelectedClips,
+    this.scope,
+    this.viewerPubkey,
   });
 
   /// Current operation status.
@@ -326,6 +349,15 @@ final class ClipsLibraryState extends Equatable {
 
   /// [clips] sorted by the current [clipSort] for display.
   final List<DivineVideoClip> sortedClips;
+
+  /// What [sortedClips] would be in each [ClipOwnershipScope], under the same
+  /// [filter] and [clipSort]. Empty until the clips first load.
+  ///
+  /// The library's two clip tabs share this bloc, and a swipe between them
+  /// draws both at once. Each tab reads its own list through [sortedClipsFor]
+  /// so the incoming page is never blank outside the trash while the scope
+  /// catches up.
+  final Map<ClipOwnershipScope, List<DivineVideoClip>> sortedClipsByScope;
 
   /// Clips currently in trash, newest-deleted-first.
   final List<DivineVideoClip> trashedClips;
@@ -419,6 +451,28 @@ final class ClipsLibraryState extends Equatable {
   /// lifetime.
   final int? maxSelectedClips;
 
+  /// Whose clips the grid and the trash show, or `null` for every clip, as
+  /// in a picker without the library's tabs. Not persisted: the library
+  /// follows the tab it opens on.
+  final ClipOwnershipScope? scope;
+
+  /// The account the library belongs to, which decides the clips each
+  /// [scope] admits. Fixed for the bloc's lifetime.
+  final String? viewerPubkey;
+
+  /// The clips the tab for [scope] shows: [sortedClips] for the active
+  /// [scope], or that scope's list from [sortedClipsByScope] otherwise.
+  List<DivineVideoClip> sortedClipsFor(ClipOwnershipScope scope) =>
+      scope == this.scope ? sortedClips : sortedClipsByScope[scope] ?? const [];
+
+  /// Whether [clip] belongs to the active [scope].
+  bool scopeAdmits(DivineVideoClip clip) =>
+      scope?.admits(clip, viewerPubkey) ?? true;
+
+  /// Whether the grid shows [clip]: it passes both the [filter] and the
+  /// [scope].
+  bool shows(DivineVideoClip clip) => filter.admits(clip) && scopeAdmits(clip);
+
   /// The category the [filter] is showing, or `null` for the built-in
   /// filters and for a category that no longer exists.
   ClipCategory? get activeCategory {
@@ -439,17 +493,17 @@ final class ClipsLibraryState extends Equatable {
   /// Whether a delete operation is in progress.
   bool get isDeleting => status == ClipsLibraryStatus.deleting;
 
-  /// The selected clips the active [filter] actually shows.
+  /// The selected clips the active [filter] and [scope] actually show.
   ///
-  /// A selection survives switching between the active filters so a timeline
-  /// can span categories, which leaves part of it off screen. The bulk
-  /// toolbar actions run on this set instead of [selectedClipIds]: moving or
-  /// deleting clips the user cannot see is not something one tap should do.
-  /// Bulk-organizing across categories still works from
-  /// [ClipLibraryAllFilter], which shows them all at once.
+  /// A selection survives switching between the active filters and between
+  /// scopes so a timeline can span categories and tabs, which leaves part of
+  /// it off screen. The bulk toolbar actions run on this set instead of
+  /// [selectedClipIds]: moving or deleting clips the user cannot see is not
+  /// something one tap should do. Bulk-organizing across categories still
+  /// works from [ClipLibraryAllFilter], which shows them all at once.
   Set<String> get visibleSelectedClipIds => {
     for (final clip in clips)
-      if (selectedClipIds.contains(clip.id) && filter.admits(clip)) clip.id,
+      if (selectedClipIds.contains(clip.id) && shows(clip)) clip.id,
   };
 
   /// Returns the currently selected clips in selection order.
@@ -500,6 +554,7 @@ final class ClipsLibraryState extends Equatable {
     ClipsLibraryStatus? status,
     List<DivineVideoClip>? clips,
     List<DivineVideoClip>? sortedClips,
+    Map<ClipOwnershipScope, List<DivineVideoClip>>? sortedClipsByScope,
     List<DivineVideoClip>? trashedClips,
     Set<String>? selectedClipIds,
     Set<String>? disabledClipIds,
@@ -516,6 +571,7 @@ final class ClipsLibraryState extends Equatable {
     ClipsLibraryOrganizeResult? lastOrganizeResult,
     ClipsLibraryTrashResult? lastTrashResult,
     ClipsLibraryDragSelection? dragSelection,
+    ClipOwnershipScope? scope,
     bool clearDragSelection = false,
     bool clearOrganizeResult = false,
     bool clearTrashResult = false,
@@ -526,6 +582,7 @@ final class ClipsLibraryState extends Equatable {
       status: status ?? this.status,
       clips: clips ?? this.clips,
       sortedClips: sortedClips ?? this.sortedClips,
+      sortedClipsByScope: sortedClipsByScope ?? this.sortedClipsByScope,
       trashedClips: trashedClips ?? this.trashedClips,
       selectedClipIds: selectedClipIds ?? this.selectedClipIds,
       disabledClipIds: disabledClipIds ?? this.disabledClipIds,
@@ -557,6 +614,8 @@ final class ClipsLibraryState extends Equatable {
       allowsMixedClipTypes: allowsMixedClipTypes,
       allowsMixedAspectRatios: allowsMixedAspectRatios,
       maxSelectedClips: maxSelectedClips,
+      scope: scope ?? this.scope,
+      viewerPubkey: viewerPubkey,
     );
   }
 
@@ -565,6 +624,7 @@ final class ClipsLibraryState extends Equatable {
     status,
     clips,
     sortedClips,
+    sortedClipsByScope,
     trashedClips,
     selectedClipIds,
     disabledClipIds,
@@ -584,5 +644,7 @@ final class ClipsLibraryState extends Equatable {
     allowsMixedClipTypes,
     allowsMixedAspectRatios,
     maxSelectedClips,
+    scope,
+    viewerPubkey,
   ];
 }

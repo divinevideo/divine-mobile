@@ -3978,6 +3978,43 @@ class AppLocalizationsAm extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'ወደ ቅንጥቦች ማከል አልተቻለም';
 
   @override
+  String get remixBlockedByCreator => 'ይህ ፈጣሪ መቀላቀልን አይፈቅድም።';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'ይህ ቪዲዮ መቀላቀል ይችል እንደሆነ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get remixStartFailed => 'ሪሚክሱን መጀመር አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get remixSettingAllowTitle => 'ሌሎች ቪዲዮዎቼን እንዲቀላቅሉ መፍቀድ';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'ሌሎች ቪዲዮዎችዎን በራሳቸው ልጥፎች ውስጥ እንደ ቅንጥብ መጠቀም ይችላሉ።';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'የ$name ክሊፕ ይጠቀማል';
+  }
+
+  @override
+  String get metadataRemixAction => 'ይቀላቅሉ';
+
+  @override
+  String get remixWebAppNudge => 'መቀላቀል የሚከናወነው በDivine መተግበሪያ ውስጥ ነው።';
+
+  @override
+  String get remixWebGetTheApp => 'መተግበሪያውን ያግኙ';
+
+  @override
+  String get metadataRemixesLabel => 'ቅልቅሎች';
+
+  @override
+  String get metadataReportRemix => 'ይህን ቅልቅል ሪፖርት ያድርጉ';
+
+  @override
   String get shareSheetAddToList => 'ወደ ዝርዝር ያክሉ';
 
   @override
@@ -6608,6 +6645,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'ክሊፖች';
+
+  @override
+  String get libraryTabFromOthers => 'ከሌሎች';
 
   @override
   String get libraryScheduledSectionTitle => 'የታቀዱ';

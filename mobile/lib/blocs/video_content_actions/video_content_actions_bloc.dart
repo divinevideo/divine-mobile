@@ -1,4 +1,4 @@
-// ABOUTME: BLoC for per-video content actions (save, add to clips, copy)
+// ABOUTME: BLoC for per-video content actions (save, add to clips, remix, copy)
 // ABOUTME: Shared by sheets that act on one video's bookmark, clip, and event
 
 import 'dart:convert';
@@ -9,8 +9,12 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/video_content_actions/reportable_sites.dart';
+import 'package:openvine/blocs/video_content_actions/video_content_action_rules.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -18,7 +22,7 @@ part 'video_content_actions_event.dart';
 part 'video_content_actions_state.dart';
 
 /// BLoC for the per-video content actions: save to bookmarks, add to the clip
-/// library, and copy the event JSON or event ID.
+/// library, get a remix ready, and copy the event JSON or event ID.
 ///
 /// Emits [VideoContentActionResult] as one-shot side effects for the UI to
 /// handle (snackbars, clipboard).
@@ -29,10 +33,14 @@ class VideoContentActionsBloc
     required String relayUrl,
     BookmarksRepository? bookmarksRepository,
     VideoClipImportService? videoClipImportService,
+    RemixConsentRepository? remixConsentRepository,
+    String? viewerPubkey,
   }) : _video = video,
        _relayUrl = relayUrl,
        _bookmarksRepository = bookmarksRepository,
        _videoClipImportService = videoClipImportService,
+       _remixConsentRepository = remixConsentRepository,
+       _viewerPubkey = viewerPubkey,
        super(const VideoContentActionsState()) {
     on<VideoContentSaveRequested>(_onSaveRequested, transformer: droppable());
     on<VideoContentBookmarkStatusRequested>(
@@ -43,6 +51,11 @@ class VideoContentActionsBloc
       _onAddToClipsRequested,
       transformer: droppable(),
     );
+    on<VideoContentRemixRequested>(
+      _onRemixRequested,
+      transformer: droppable(),
+    );
+    on<VideoContentRemixLaunchFinished>(_onRemixLaunchFinished);
     on<VideoContentCopyEventJsonRequested>(_onCopyEventJsonRequested);
     on<VideoContentCopyEventIdRequested>(_onCopyEventIdRequested);
   }
@@ -51,6 +64,12 @@ class VideoContentActionsBloc
   final String _relayUrl;
   final BookmarksRepository? _bookmarksRepository;
   final VideoClipImportService? _videoClipImportService;
+  final RemixConsentRepository? _remixConsentRepository;
+
+  /// The signed-in viewer, or null when signed out. A viewer may always use
+  /// their own videos, so only someone else's video needs the creator's
+  /// consent.
+  final String? _viewerPubkey;
 
   /// Default library title for adding this video to clips, so widgets do not
   /// need to import the import service.
@@ -131,6 +150,7 @@ class VideoContentActionsBloc
     VideoContentSaveRequested event,
     Emitter<VideoContentActionsState> emit,
   ) async {
+    if (state.isActionInFlight) return;
     // Emitted before the toggle deliberately: it is a relay reconcile + sign
     // + publish, and emitting after it would leave the sheet inert for the
     // whole window, which is the bug (#7073).
@@ -220,6 +240,7 @@ class VideoContentActionsBloc
     VideoContentAddToClipsRequested event,
     Emitter<VideoContentActionsState> emit,
   ) async {
+    if (state.isActionInFlight) return;
     // Emitted before the import so the action shows progress while the video
     // downloads.
     emit(state.copyWith(isImportingClip: true, clearActionResult: true));
@@ -235,6 +256,18 @@ class VideoContentActionsBloc
         state.copyWith(
           isImportingClip: false,
           actionResult: VideoContentClipImportResult(succeeded: false),
+        ),
+      );
+      return;
+    }
+
+    final consent = await _remixConsent();
+    if (isClosed) return;
+    if (consent != RemixConsent.allowed) {
+      emit(
+        state.copyWith(
+          isImportingClip: false,
+          actionResult: VideoContentRemixRefused(consent: consent),
         ),
       );
       return;
@@ -277,6 +310,144 @@ class VideoContentActionsBloc
           actionResult: VideoContentClipImportResult(succeeded: false),
         ),
       );
+    }
+  }
+
+  /// Checks consent as Add to clips does, then emits [VideoContentRemixReady]
+  /// with the clip the editor opens with. An import that fails reports
+  /// [VideoContentRemixFailed].
+  ///
+  /// [VideoContentActionsState.isPreparingRemix] stays set with the ready
+  /// result, holding the sheet's actions while the UI opens the editor, until
+  /// [VideoContentRemixLaunchFinished]. Like every action, a request arriving
+  /// while any action is in flight is ignored.
+  Future<void> _onRemixRequested(
+    VideoContentRemixRequested event,
+    Emitter<VideoContentActionsState> emit,
+  ) async {
+    if (state.isActionInFlight) return;
+    emit(state.copyWith(isPreparingRemix: true, clearActionResult: true));
+
+    final consent = await _remixConsent();
+    if (isClosed) return;
+    if (consent != RemixConsent.allowed) {
+      emit(
+        state.copyWith(
+          isPreparingRemix: false,
+          actionResult: VideoContentRemixRefused(consent: consent),
+        ),
+      );
+      return;
+    }
+
+    final clip = await _remixClip();
+    if (isClosed) return;
+    emit(
+      state.copyWith(
+        isPreparingRemix: clip != null,
+        actionResult: clip == null
+            ? VideoContentRemixFailed()
+            : VideoContentRemixReady(clip: clip),
+      ),
+    );
+  }
+
+  void _onRemixLaunchFinished(
+    VideoContentRemixLaunchFinished event,
+    Emitter<VideoContentActionsState> emit,
+  ) {
+    emit(state.copyWith(isPreparingRemix: false));
+  }
+
+  /// The clip a remix of this video opens with: the one an earlier import
+  /// left in the library, or else a fresh import under [defaultClipTitle].
+  ///
+  /// Returns null when the video could not be imported.
+  Future<DivineVideoClip?> _remixClip() async {
+    final importer = _videoClipImportService;
+    if (importer == null) {
+      Log.warning(
+        'Video clip importer unavailable — cannot remix',
+        name: 'VideoContentActionsBloc',
+        category: LogCategory.ui,
+      );
+      return null;
+    }
+
+    try {
+      final earlierImport = await importer.findImportedClipOf(_video);
+      if (earlierImport != null) return earlierImport;
+
+      final result = await importer.importToLibrary(
+        _video,
+        libraryTitle: defaultClipTitle,
+      );
+      return result is VideoClipImportSuccess ? result.clip : null;
+    } on Exception catch (e, stackTrace) {
+      // A storage or platform failure is expected, not a defect, so it stays
+      // out of crash reports.
+      addError(e, stackTrace);
+      Log.warning(
+        'Could not prepare the remix clip: $e',
+        name: 'VideoContentActionsBloc',
+        category: LogCategory.ui,
+      );
+      return null;
+    } catch (e, stackTrace) {
+      _addUnexpectedError(
+        e,
+        stackTrace,
+        VideoContentActionsReportableSites.onRemixRequested,
+      );
+      Log.error(
+        'Failed to prepare the remix clip: $e',
+        name: 'VideoContentActionsBloc',
+        category: LogCategory.ui,
+      );
+      return null;
+    }
+  }
+
+  /// Whether the creator lets the viewer use this video as a clip.
+  ///
+  /// The viewer's own video skips the check. A video whose creator declined
+  /// reuse ([canRemixVideo]) is [RemixConsent.blocked] without reading the
+  /// account. Anything that prevents a confident answer — no repository
+  /// wired, a failed read, an unexpected throw — comes back
+  /// [RemixConsent.unknown], so the import fails closed.
+  Future<RemixConsent> _remixConsent() async {
+    final viewerPubkey = _viewerPubkey;
+    if (viewerPubkey != null && pubkeysEqual(viewerPubkey, _video.pubkey)) {
+      return RemixConsent.allowed;
+    }
+    if (!canRemixVideo(video: _video, isOwnContent: false)) {
+      return RemixConsent.blocked;
+    }
+
+    final repository = _remixConsentRepository;
+    if (repository == null) {
+      Log.warning(
+        'Remix consent repository unavailable — refusing the import',
+        name: 'VideoContentActionsBloc',
+        category: LogCategory.ui,
+      );
+      return RemixConsent.unknown;
+    }
+
+    try {
+      return await repository.consentFor(_video.pubkey);
+    } catch (e, stackTrace) {
+      _addUnexpectedError(
+        e,
+        stackTrace,
+        VideoContentActionsReportableSites.remixConsent,
+      );
+      Log.error(
+        'Remix consent check failed: $e',
+        name: 'VideoContentActionsBloc',
+        category: LogCategory.ui,
+      );
+      return RemixConsent.unknown;
     }
   }
 

@@ -164,7 +164,7 @@ void main() {
             ['allow_video_reuse', 'false'],
           ],
         ),
-        editorState: VideoEditorProviderState(allowVideoReuse: true),
+        editorState: VideoEditorProviderState(),
         initialCollaboratorPubkeys: const {},
       );
 

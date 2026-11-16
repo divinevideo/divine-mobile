@@ -4082,6 +4082,44 @@ class AppLocalizationsNl extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Kon niet toevoegen aan clips';
 
   @override
+  String get remixBlockedByCreator => 'Deze maker staat geen remixes toe.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'We konden niet controleren of deze video geremixt mag worden. Probeer het opnieuw.';
+
+  @override
+  String get remixStartFailed =>
+      'We konden de remix niet starten. Probeer het opnieuw.';
+
+  @override
+  String get remixSettingAllowTitle => 'Laat anderen mijn video\'s remixen';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Anderen kunnen je video\'s als clips in hun eigen posts gebruiken.';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Gebruikt een clip van $name';
+  }
+
+  @override
+  String get metadataRemixAction => 'Remixen';
+
+  @override
+  String get remixWebAppNudge => 'Remixen doe je in de Divine-app.';
+
+  @override
+  String get remixWebGetTheApp => 'Download de app';
+
+  @override
+  String get metadataRemixesLabel => 'Remixes';
+
+  @override
+  String get metadataReportRemix => 'Deze remix rapporteren';
+
+  @override
   String get shareSheetAddToList => 'Toevoegen aan lijst';
 
   @override
@@ -6792,6 +6830,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'Clips';
+
+  @override
+  String get libraryTabFromOthers => 'Van anderen';
 
   @override
   String get libraryScheduledSectionTitle => 'Gepland';

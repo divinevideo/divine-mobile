@@ -13,6 +13,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as models;
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/published_clip_source_resolver.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
@@ -117,6 +118,8 @@ void main() {
     FileSha256Hasher? hashFile,
     PublishedClipSourceResolver? publishedSourceResolver,
     ClipLibraryService? library,
+    RemixConsentReader? readRemixConsent,
+    bool withRemixConsentReader = true,
   }) {
     return VideoClipImportService(
       clipLibraryService: library ?? clipLibraryService,
@@ -159,6 +162,9 @@ void main() {
       now: () => now ?? DateTime.utc(2026, 4, 27, 12),
       hashFile: hashFile ?? (_) async => _receivedClipHash,
       publishedSourceResolver: publishedSourceResolver,
+      readRemixConsent: withRemixConsentReader
+          ? readRemixConsent ?? (_) async => RemixConsent.allowed
+          : null,
     );
   }
 
@@ -185,6 +191,7 @@ void main() {
         '34236:classic-vine-author-pubkey:vine-123',
       );
       expect(success.clip.sourceRelayHint, 'wss://relay.divine.video');
+      expect(success.clip.importedSource, isTrue);
       expect(
         File(success.clip.requireVideo.file!.path).readAsBytesSync(),
         sourceVideo.readAsBytesSync(),
@@ -200,6 +207,7 @@ void main() {
       expect(captured.sourceEventId, success.clip.sourceEventId);
       expect(captured.sourceAddressableId, success.clip.sourceAddressableId);
       expect(captured.sourceRelayHint, success.clip.sourceRelayHint);
+      expect(captured.importedSource, isTrue);
     });
 
     test('uses an explicit user title when importing to the library', () async {
@@ -257,6 +265,18 @@ void main() {
 
       final success = result as VideoClipImportSuccess;
       expect(success.clip.libraryTitle, 'First useful caption');
+    });
+  });
+
+  group('findImportedClipOf', () {
+    test('finds the import in the library the service imports into', () async {
+      final video = _video();
+      final imported = _FakeDivineVideoClip();
+      when(
+        () => clipLibraryService.findImportedClipOf(video),
+      ).thenAnswer((_) async => imported);
+
+      expect(await buildService().findImportedClipOf(video), same(imported));
     });
   });
 
@@ -816,6 +836,7 @@ void main() {
         expect(clip.targetAspectRatio, equals(models.AspectRatio.square));
         expect(clip.originalAspectRatio, closeTo(9 / 16, 0.0001));
         expect(clip.sourceAuthorPubkey, equals(_senderPubkey));
+        expect(clip.importedSource, isTrue);
         expect(
           models.NativeProofData.fromJson(
             jsonDecode(clip.proofManifestJson!) as Map<String, dynamic>,
@@ -878,6 +899,163 @@ void main() {
           (credit) => credit.authorPubkey,
         ),
         equals([_senderPubkey]),
+      );
+    });
+
+    group("the credited creator's remix consent", () {
+      const creatorPubkey =
+          '4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c';
+      final asked = <String>[];
+
+      setUp(asked.clear);
+
+      /// A service whose resolver finds the file published by [publishedBy],
+      /// or by nobody, answering every consent check with [consent].
+      VideoClipImportService serviceAnswering(
+        RemixConsent consent, {
+        String? publishedBy,
+      }) {
+        final resolver = _MockPublishedClipSourceResolver();
+        when(() => resolver.resolve(_receivedClipHash)).thenAnswer(
+          (_) async => publishedBy == null
+              ? null
+              : PublishedClipSource(
+                  ownerPubkey: publishedBy,
+                  video: _video(id: 'creator-post-id', pubkey: publishedBy),
+                ),
+        );
+        return buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+          publishedSourceResolver: resolver,
+          readRemixConsent: (author) async {
+            asked.add(author);
+            return consent;
+          },
+        );
+      }
+
+      Future<VideoClipImportResult> importFrom(
+        VideoClipImportService service, {
+        String senderPubkey = _senderPubkey,
+      }) => service.importReceivedClip(
+        source: sourceVideo,
+        messageId: _messageId,
+        senderPubkey: senderPubkey,
+        c2paManifestId: _c2paManifestId,
+      );
+
+      test(
+        "refuses someone else's forward of a creator who blocks remixes",
+        () async {
+          final result = await importFrom(
+            serviceAnswering(RemixConsent.blocked, publishedBy: creatorPubkey),
+          );
+
+          expect(
+            result,
+            isA<VideoClipImportFailure>().having(
+              (result) => result.reason,
+              'reason',
+              VideoClipImportFailureReason.remixBlocked,
+            ),
+          );
+          expect(asked, equals([creatorPubkey]));
+          expect(docsDir.listSync(), isEmpty);
+          verifyNever(() => clipLibraryService.saveClip(any()));
+        },
+      );
+
+      test("refuses a clip whose creator's consent cannot be read", () async {
+        final result = await importFrom(
+          serviceAnswering(RemixConsent.unknown, publishedBy: creatorPubkey),
+        );
+
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.remixConsentUnknown,
+          ),
+        );
+        verifyNever(() => clipLibraryService.saveClip(any()));
+      });
+
+      test('refuses when nothing can read the consent', () async {
+        final resolver = _MockPublishedClipSourceResolver();
+        when(() => resolver.resolve(_receivedClipHash)).thenAnswer(
+          (_) async => const PublishedClipSource(ownerPubkey: creatorPubkey),
+        );
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+          publishedSourceResolver: resolver,
+          withRemixConsentReader: false,
+        );
+
+        final result = await importFrom(service);
+
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.remixConsentUnknown,
+          ),
+        );
+      });
+
+      test('saves a forward of a creator who allows remixes', () async {
+        final result = await importFrom(
+          serviceAnswering(RemixConsent.allowed, publishedBy: creatorPubkey),
+        );
+
+        expect(result, isA<VideoClipImportSuccess>());
+        expect(asked, equals([creatorPubkey]));
+      });
+
+      test(
+        'saves a recording the creator sent themselves, even while they '
+        'block remixes',
+        () async {
+          final result = await importFrom(
+            serviceAnswering(RemixConsent.blocked),
+            senderPubkey: creatorPubkey,
+          );
+
+          expect(
+            (result as VideoClipImportSuccess).clip.sourceAuthorPubkey,
+            equals(creatorPubkey),
+          );
+          expect(asked, isEmpty);
+        },
+      );
+
+      test(
+        'saves a post the creator forwarded themselves, even while they '
+        'block remixes',
+        () async {
+          final result = await importFrom(
+            serviceAnswering(RemixConsent.blocked, publishedBy: creatorPubkey),
+            senderPubkey: creatorPubkey,
+          );
+
+          expect(result, isA<VideoClipImportSuccess>());
+          expect(asked, isEmpty);
+        },
+      );
+
+      test(
+        'does not ask about the account whose library it goes into',
+        () async {
+          when(() => clipLibraryService.ownerPubkey).thenReturn(_ownerPubkey);
+
+          final result = await importFrom(
+            serviceAnswering(RemixConsent.blocked, publishedBy: _ownerPubkey),
+          );
+
+          expect(result, isA<VideoClipImportSuccess>());
+          expect(asked, isEmpty);
+        },
       );
     });
 
@@ -1346,6 +1524,7 @@ void main() {
         final result = await buildVineService().importReceivedVine(
           source: sourceVideo,
           messageId: _messageId,
+          senderPubkey: _senderPubkey,
         );
 
         final clip = (result as VideoClipImportSuccess).clip;
@@ -1354,6 +1533,7 @@ void main() {
         expect(clip.sourceAuthorPubkey, equals(vine.pubkey));
         expect(clip.sourceEventId, equals(vine.id));
         expect(clip.sourceAddressableId, equals(vine.addressableId));
+        expect(clip.importedSource, isTrue);
         expect(clip.targetAspectRatio, equals(models.AspectRatio.square));
         expect(clip.duration, equals(const Duration(milliseconds: 6200)));
         expect(clip.libraryTitle, equals('classic vine'));
@@ -1367,6 +1547,141 @@ void main() {
       },
     );
 
+    group("the viner's remix consent", () {
+      final asked = <String>[];
+
+      setUp(asked.clear);
+
+      VideoClipImportService vineServiceAnswering(RemixConsent consent) =>
+          buildService(
+            readVideoMetadata: (_) async => VideoMetadata(
+              duration: const Duration(milliseconds: 6200),
+              extension: 'mp4',
+              fileSize: 16,
+              resolution: const Size(480, 480),
+              rotation: 0,
+              bitrate: 0,
+            ),
+            publishedSourceResolver: resolver,
+            readRemixConsent: (author) async {
+              asked.add(author);
+              return consent;
+            },
+          );
+
+      test('refuses a Vine whose viner blocks remixes', () async {
+        final vine = _video();
+        when(
+          () => resolver.findArchivedVine(_receivedClipHash),
+        ).thenAnswer((_) async => vine);
+
+        final result =
+            await vineServiceAnswering(
+              RemixConsent.blocked,
+            ).importReceivedVine(
+              source: sourceVideo,
+              messageId: _messageId,
+              senderPubkey: _senderPubkey,
+            );
+
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.remixBlocked,
+          ),
+        );
+        expect(asked, equals([vine.pubkey]));
+        expect(docsDir.listSync(), isEmpty);
+        verifyNever(() => clipLibraryService.saveClip(any()));
+      });
+
+      test("refuses a Vine whose viner's consent cannot be read", () async {
+        when(
+          () => resolver.findArchivedVine(_receivedClipHash),
+        ).thenAnswer((_) async => _video());
+
+        final result =
+            await vineServiceAnswering(
+              RemixConsent.unknown,
+            ).importReceivedVine(
+              source: sourceVideo,
+              messageId: _messageId,
+              senderPubkey: _senderPubkey,
+            );
+
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.remixConsentUnknown,
+          ),
+        );
+        verifyNever(() => clipLibraryService.saveClip(any()));
+      });
+
+      test('saves a Vine whose viner allows remixes', () async {
+        final vine = _video();
+        when(
+          () => resolver.findArchivedVine(_receivedClipHash),
+        ).thenAnswer((_) async => vine);
+
+        final result =
+            await vineServiceAnswering(
+              RemixConsent.allowed,
+            ).importReceivedVine(
+              source: sourceVideo,
+              messageId: _messageId,
+              senderPubkey: _senderPubkey,
+            );
+
+        expect(result, isA<VideoClipImportSuccess>());
+        expect(asked, equals([vine.pubkey]));
+      });
+
+      test(
+        'saves a Vine the viner sent themselves, even while they block '
+        'remixes',
+        () async {
+          final vine = _video();
+          when(
+            () => resolver.findArchivedVine(_receivedClipHash),
+          ).thenAnswer((_) async => vine);
+
+          final result = await vineServiceAnswering(RemixConsent.blocked)
+              .importReceivedVine(
+                source: sourceVideo,
+                messageId: _messageId,
+                senderPubkey: vine.pubkey,
+              );
+
+          expect(result, isA<VideoClipImportSuccess>());
+          expect(asked, isEmpty);
+        },
+      );
+
+      test("does not ask about the viewer's own Vine", () async {
+        when(() => clipLibraryService.ownerPubkey).thenReturn(_ownerPubkey);
+        when(
+          () => resolver.findArchivedVine(_receivedClipHash),
+        ).thenAnswer((_) async => _video(pubkey: _ownerPubkey));
+
+        final result =
+            await vineServiceAnswering(
+              RemixConsent.blocked,
+            ).importReceivedVine(
+              source: sourceVideo,
+              messageId: _messageId,
+              senderPubkey: _senderPubkey,
+            );
+
+        expect(result, isA<VideoClipImportSuccess>());
+        expect(asked, isEmpty);
+      });
+    });
+
     test('turns away a file no Vine post names', () async {
       when(
         () => resolver.findArchivedVine(_receivedClipHash),
@@ -1375,6 +1690,7 @@ void main() {
       final result = await buildVineService().importReceivedVine(
         source: sourceVideo,
         messageId: _messageId,
+        senderPubkey: _senderPubkey,
       );
 
       expect(
@@ -1397,6 +1713,7 @@ void main() {
       final result = await buildVineService().importReceivedVine(
         source: sourceVideo,
         messageId: _messageId,
+        senderPubkey: _senderPubkey,
       );
 
       expect(
@@ -1426,6 +1743,7 @@ void main() {
       final result = await buildVineService().importReceivedVine(
         source: sourceVideo,
         messageId: _messageId,
+        senderPubkey: _senderPubkey,
       );
 
       expect(
@@ -1448,6 +1766,7 @@ void main() {
         final result = await buildVineService().importReceivedVine(
           source: sourceVideo,
           messageId: _messageId,
+          senderPubkey: _senderPubkey,
           beforeSave: () async => throw StateError('the message was retracted'),
         );
 
@@ -1524,7 +1843,10 @@ void main() {
         contributorPubkeys: [_ownerPubkey],
       );
 
-      expect((result as VideoClipImportSuccess).clip.sourceCredits, isEmpty);
+      final clip = (result as VideoClipImportSuccess).clip;
+      expect(clip.sourceCredits, isEmpty);
+      // The device's own footage coming back is not someone else's clip.
+      expect(clip.importedSource, isFalse);
     });
 
     test('credits everyone else its signed history names', () async {

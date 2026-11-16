@@ -263,6 +263,7 @@ void main() {
         ClipsLibraryStatus.loaded,
         [clip1],
         const <DivineVideoClip>[],
+        const <ClipOwnershipScope, List<DivineVideoClip>>{},
         const <DivineVideoClip>[],
         {'clip1'},
         const <String>{},
@@ -282,7 +283,75 @@ void main() {
         false,
         false,
         null,
+        null,
+        null,
       ]);
+    });
+
+    group('sortedClipsFor', () {
+      final otherClip = DivineVideoClip(
+        id: 'other',
+        video: EditorVideo.file('/path/other.mp4'),
+        duration: const Duration(seconds: 2),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      );
+
+      test('returns the shown list for the active scope', () {
+        final state = ClipsLibraryState(
+          sortedClips: [clip1],
+          sortedClipsByScope: {
+            ClipOwnershipScope.own: [clip1],
+            ClipOwnershipScope.fromOthers: [otherClip],
+          },
+          scope: ClipOwnershipScope.own,
+        );
+
+        expect(state.sortedClipsFor(ClipOwnershipScope.own), [clip1]);
+      });
+
+      test("returns the other scope's own list for an inactive tab", () {
+        final state = ClipsLibraryState(
+          sortedClips: [clip1],
+          sortedClipsByScope: {
+            ClipOwnershipScope.own: [clip1],
+            ClipOwnershipScope.fromOthers: [otherClip],
+          },
+          scope: ClipOwnershipScope.own,
+        );
+
+        expect(state.sortedClipsFor(ClipOwnershipScope.fromOthers), [
+          otherClip,
+        ]);
+      });
+
+      test('copyWith keeps the per-scope lists', () {
+        final state = ClipsLibraryState(
+          sortedClipsByScope: {
+            ClipOwnershipScope.fromOthers: [otherClip],
+          },
+          scope: ClipOwnershipScope.own,
+        );
+
+        expect(
+          state.copyWith().sortedClipsFor(ClipOwnershipScope.fromOthers),
+          [otherClip],
+        );
+      });
+    });
+
+    test('copyWith switches the scope and keeps the viewer', () {
+      const state = ClipsLibraryState(
+        scope: ClipOwnershipScope.own,
+        viewerPubkey: 'viewer',
+      );
+
+      final switched = state.copyWith(scope: ClipOwnershipScope.fromOthers);
+
+      expect(switched.scope, ClipOwnershipScope.fromOthers);
+      expect(switched.viewerPubkey, 'viewer');
+      expect(switched.copyWith().scope, ClipOwnershipScope.fromOthers);
     });
   });
 

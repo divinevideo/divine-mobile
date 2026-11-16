@@ -4069,6 +4069,43 @@ class AppLocalizationsAr extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'تعذّرت الإضافة إلى المقاطع';
 
   @override
+  String get remixBlockedByCreator => 'لا يسمح صانع المحتوى هذا بإعادة المزج.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'تعذّر التحقق مما إذا كان يمكن إعادة مزج هذا الفيديو. يُرجى إعادة المحاولة.';
+
+  @override
+  String get remixStartFailed => 'تعذّر بدء إعادة المزج. يُرجى إعادة المحاولة.';
+
+  @override
+  String get remixSettingAllowTitle => 'السماح للآخرين بإعادة مزج فيديوهاتي';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'يمكن للآخرين استخدام فيديوهاتك كمقاطع في منشوراتهم.';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'يستخدم مقطعًا من $name';
+  }
+
+  @override
+  String get metadataRemixAction => 'إعادة مزج';
+
+  @override
+  String get remixWebAppNudge => 'تتم إعادة المزج في تطبيق Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'تنزيل التطبيق';
+
+  @override
+  String get metadataRemixesLabel => 'إعادات المزج';
+
+  @override
+  String get metadataReportRemix => 'الإبلاغ عن إعادة المزج هذه';
+
+  @override
   String get shareSheetAddToList => 'إضافة إلى قائمة';
 
   @override
@@ -6761,6 +6798,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'مقاطع';
+
+  @override
+  String get libraryTabFromOthers => 'من الآخرين';
 
   @override
   String get libraryScheduledSectionTitle => 'المجدولة';

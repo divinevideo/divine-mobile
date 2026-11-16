@@ -3803,6 +3803,41 @@ class AppLocalizationsZh extends AppLocalizations {
   String get shareSheetAddToClipsFailed => '无法加入片段库';
 
   @override
+  String get remixBlockedByCreator => '该创作者不允许混剪。';
+
+  @override
+  String get remixConsentCheckFailed => '无法确认此视频能否混剪。请重试。';
+
+  @override
+  String get remixStartFailed => '无法开始混剪。请重试。';
+
+  @override
+  String get remixSettingAllowTitle => '允许他人混剪我的视频';
+
+  @override
+  String get remixSettingAllowSubtitle => '其他人可以把你的视频作为片段用在自己的帖子里。';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return '使用了 $name 的片段';
+  }
+
+  @override
+  String get metadataRemixAction => '混剪';
+
+  @override
+  String get remixWebAppNudge => '混剪需要在 Divine 应用中进行。';
+
+  @override
+  String get remixWebGetTheApp => '获取应用';
+
+  @override
+  String get metadataRemixesLabel => '混剪';
+
+  @override
+  String get metadataReportRemix => '举报此混剪';
+
+  @override
   String get shareSheetAddToList => '加入列表';
 
   @override
@@ -6367,6 +6402,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get libraryTabClips => '片段';
+
+  @override
+  String get libraryTabFromOthers => '来自他人';
 
   @override
   String get libraryScheduledSectionTitle => '定时';

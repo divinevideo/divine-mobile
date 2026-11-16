@@ -39,10 +39,12 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
+import 'package:profile_repository/profile_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_responses_repository/video_responses_repository.dart'
     show RepliesCuration;
@@ -87,6 +89,8 @@ class _MockPendingProfileSavesDao extends Mock
 class _MockIdentityEventsDao extends Mock implements IdentityEventsDao {}
 
 class _MockVanishedProfilesDao extends Mock implements VanishedProfilesDao {}
+
+class _MockProfileReader extends Mock implements ProfileReader {}
 
 class _TestNostrSession extends NostrSession {
   _TestNostrSession(this._readiness);
@@ -528,6 +532,86 @@ void main() {
         await pumpEventQueue();
 
         expect(container.read(profileVanishedProvider(pubkey)), isTrue);
+      },
+    );
+  });
+
+  group('remixConsentRepositoryProvider', () {
+    ProviderContainer buildContainer({
+      required ProfileReader? reader,
+      required String relayUrl,
+      List<String> connectedRelays = const [],
+    }) {
+      final client = _MockNostrClient();
+      when(() => client.defaultRelayUrl).thenReturn(relayUrl);
+      when(() => client.connectedRelays).thenReturn(connectedRelays);
+      final container = ProviderContainer(
+        overrides: [
+          profileReadRepositoryProvider.overrideWithValue(reader),
+          nostrServiceProvider.overrideWithValue(client),
+        ],
+      );
+      addTearDown(container.dispose);
+      return container;
+    }
+
+    test('is null until a profile reader is available', () {
+      final container = buildContainer(
+        reader: null,
+        relayUrl: 'wss://relay.example.com',
+      );
+
+      expect(container.read(remixConsentRepositoryProvider), isNull);
+    });
+
+    test("asks the Nostr client's default relay", () async {
+      const relayUrl = 'wss://relay.staging.example.com';
+      final reader = _MockProfileReader();
+      when(
+        () => reader.readRawProfileFromRelays(
+          pubkey: any(named: 'pubkey'),
+          onlyRelayUrl: any(named: 'onlyRelayUrl'),
+        ),
+      ).thenAnswer((_) async => (profile: null, conclusive: true));
+      final repository = buildContainer(
+        reader: reader,
+        relayUrl: relayUrl,
+      ).read(remixConsentRepositoryProvider);
+
+      await repository!.consentFor(pubkey);
+
+      verify(
+        () => reader.readRawProfileFromRelays(
+          pubkey: pubkey,
+          onlyRelayUrl: relayUrl,
+        ),
+      ).called(1);
+    });
+
+    test(
+      'lets every connected relay answer when they include the default relay',
+      () async {
+        const relayUrl = 'wss://relay.staging.example.com';
+        final reader = _MockProfileReader();
+        when(
+          () => reader.readRawProfileFromRelays(pubkey: pubkey),
+        ).thenAnswer((_) async => (profile: null, conclusive: true));
+        when(
+          () => reader.readRawProfileFromRelays(
+            pubkey: pubkey,
+            onlyRelayUrl: relayUrl,
+          ),
+        ).thenAnswer((_) => Completer<FreshProfileRead>().future);
+        final repository = buildContainer(
+          reader: reader,
+          relayUrl: relayUrl,
+          connectedRelays: const [relayUrl],
+        ).read(remixConsentRepositoryProvider);
+
+        expect(
+          await repository!.consentFor(pubkey),
+          RemixConsent.allowed,
+        );
       },
     );
   });

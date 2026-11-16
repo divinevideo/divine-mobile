@@ -3828,6 +3828,42 @@ class AppLocalizationsKo extends AppLocalizations {
   String get shareSheetAddToClipsFailed => '클립에 추가할 수 없어요';
 
   @override
+  String get remixBlockedByCreator => '이 크리에이터는 리믹스를 허용하지 않아요.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      '이 영상을 리믹스할 수 있는지 확인하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get remixStartFailed => '리믹스를 시작하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get remixSettingAllowTitle => '다른 사람이 내 영상을 리믹스하도록 허용';
+
+  @override
+  String get remixSettingAllowSubtitle => '다른 사람들이 내 영상을 자기 게시물의 클립으로 쓸 수 있어요.';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return '$name님의 클립 사용';
+  }
+
+  @override
+  String get metadataRemixAction => '리믹스';
+
+  @override
+  String get remixWebAppNudge => '리믹스는 Divine 앱에서 할 수 있어요.';
+
+  @override
+  String get remixWebGetTheApp => '앱 받기';
+
+  @override
+  String get metadataRemixesLabel => '리믹스';
+
+  @override
+  String get metadataReportRemix => '이 리믹스 신고';
+
+  @override
   String get shareSheetAddToList => '리스트에 추가';
 
   @override
@@ -6430,6 +6466,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get libraryTabClips => '클립';
+
+  @override
+  String get libraryTabFromOthers => '다른 사람에게서';
 
   @override
   String get libraryScheduledSectionTitle => '예약';

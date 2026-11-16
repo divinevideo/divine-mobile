@@ -3990,6 +3990,43 @@ class AppLocalizationsId extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Tidak dapat menambahkan ke klip';
 
   @override
+  String get remixBlockedByCreator => 'Kreator ini tidak mengizinkan remix.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Tidak bisa memeriksa apakah video ini boleh di-remix. Coba lagi.';
+
+  @override
+  String get remixStartFailed => 'Tidak bisa memulai remix. Coba lagi.';
+
+  @override
+  String get remixSettingAllowTitle => 'Izinkan orang lain me-remix videoku';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Orang lain bisa memakai videomu sebagai klip di postingan mereka sendiri.';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Menggunakan klip dari $name';
+  }
+
+  @override
+  String get metadataRemixAction => 'Remix';
+
+  @override
+  String get remixWebAppNudge => 'Remix dilakukan di aplikasi Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Dapatkan aplikasinya';
+
+  @override
+  String get metadataRemixesLabel => 'Remix';
+
+  @override
+  String get metadataReportRemix => 'Laporkan remix ini';
+
+  @override
   String get shareSheetAddToList => 'Tambah ke Daftar';
 
   @override
@@ -6683,6 +6720,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'Klip';
+
+  @override
+  String get libraryTabFromOthers => 'Dari orang lain';
 
   @override
   String get libraryScheduledSectionTitle => 'Terjadwal';

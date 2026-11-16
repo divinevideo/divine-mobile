@@ -236,8 +236,10 @@ class VideoEditorRouteData extends GoRouteData with $VideoEditorRouteData {
     this.from,
   });
 
-  /// [VideoEditorScreen.libraryOrigin] when the Library opened the editor;
-  /// the only value that changes how the editor exits.
+  /// [VideoEditorScreen.libraryOrigin] when the Library opened the editor. A
+  /// remix from the video info sheet passes it too, deliberately counting as
+  /// a library-origin session. Its only effect is the abandoned-creation
+  /// analytics event when the editor closes.
   final String? from;
 
   @override

@@ -27,8 +27,32 @@ String? _usableThumbnailUrl(Object? value) {
   return url;
 }
 
+/// A creator's reuse marker (`allow_audio_reuse`, `allow_video_reuse`) on a
+/// video event.
+///
+/// Read liberally: surrounding whitespace and letter case are ignored, so
+/// `FALSE` declines like `false`. A value that is neither `true` nor `false`
+/// is [invalid], and every reader treats it as no consent.
+enum ReuseConsent {
+  granted,
+  declined,
+  unspecified,
+  invalid;
+
+  /// Classifies a marker's value; `null` or blank is [unspecified].
+  static ReuseConsent fromMarker(String? value) {
+    final normalized = value?.trim().toLowerCase();
+    return switch (normalized) {
+      'true' => granted,
+      'false' => declined,
+      null || '' => unspecified,
+      _ => invalid,
+    };
+  }
+}
+
 /// The creator's `allow_audio_reuse` marker on a video event.
-enum AudioReuseConsent { granted, declined, unspecified, invalid }
+typedef AudioReuseConsent = ReuseConsent;
 
 /// Compact backend-computed ProofMode verification result for feed/list rows.
 @immutable
@@ -1134,24 +1158,28 @@ class VideoEvent {
   /// JSON-cache round-trip — [nostrEventTags] is intentionally not persisted
   /// through `toJson`/`fromJson`, but [rawTags] is, which keeps the edit form
   /// from seeding the toggle `false` on a cache-rehydrated video.
-  AudioReuseConsent get audioReuseConsent {
-    return switch (_firstNostrTagValue('allow_audio_reuse')) {
-      'true' => AudioReuseConsent.granted,
-      'false' => AudioReuseConsent.declined,
-      null => AudioReuseConsent.unspecified,
-      _ => AudioReuseConsent.invalid,
-    };
-  }
+  AudioReuseConsent get audioReuseConsent => _reuseConsent('allow_audio_reuse');
 
   /// Whether the creator explicitly marked this video's audio as reusable.
   bool get allowAudioReuse => audioReuseConsent == AudioReuseConsent.granted;
 
-  /// Whether the creator lets others add this video to their clips.
+  /// The creator's `allow_video_reuse` marker, read like
+  /// [audioReuseConsent] and recovered from [rawTags] the same way.
+  ReuseConsent get videoReuseConsent => _reuseConsent('allow_video_reuse');
+
+  /// Whether the creator has not declined others adding this video to their
+  /// clips.
   ///
-  /// Only the exact `allow_video_reuse=true` marker grants it; an absent or
-  /// malformed marker does not.
-  bool get allowVideoReuse =>
-      _firstNostrTagValue('allow_video_reuse') == 'true';
+  /// An absent marker leaves the video open to reuse. A decline in any case
+  /// (`false`, `FALSE`) or a value that is neither `true` nor `false` closes
+  /// it, as an invalid `allow_audio_reuse` marker does for the sound.
+  bool get allowVideoReuse => switch (videoReuseConsent) {
+    ReuseConsent.granted || ReuseConsent.unspecified => true,
+    ReuseConsent.declined || ReuseConsent.invalid => false,
+  };
+
+  ReuseConsent _reuseConsent(String tagName) =>
+      ReuseConsent.fromMarker(_firstNostrTagValue(tagName));
 
   /// Whether this video has any content warnings.
   bool get hasContentWarning => contentWarningLabels.isNotEmpty;
@@ -1178,7 +1206,9 @@ class VideoEvent {
   /// credits. Deduplicated; empty when the video credits nobody.
   ///
   /// NIP-22 replies keep content and legacy `inspired-by` p-tag credits in
-  /// About, while their parent context replaces video and clip-source credits.
+  /// About, while their parent context replaces the inspiring-video credit.
+  /// Clip-source credits stay on replies: they are factual provenance of
+  /// footage inside the reply and the parent context does not cover them.
   List<String> get creditedInspiredByPubkeys {
     final pubkeys = <String>[];
     final seen = <String>{};
@@ -1192,9 +1222,7 @@ class VideoEvent {
     if (!isVideoReply) add(inspiredByVideo?.creatorPubkey);
     if (inspiredByNpub case final npub?) add(Nip19.decode(npub));
     inspiredByPubkeys.forEach(add);
-    if (!isVideoReply) {
-      clipSourceCredits.map((credit) => credit.authorPubkey).forEach(add);
-    }
+    clipSourceCredits.map((credit) => credit.authorPubkey).forEach(add);
     return List.unmodifiable(pubkeys);
   }
 

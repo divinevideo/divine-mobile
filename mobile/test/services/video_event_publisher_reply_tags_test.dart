@@ -166,6 +166,7 @@ void main() {
 
       final result = await publisher.publishDirectUpload(
         createUpload(),
+        allowVideoReuse: false,
         replyContext: const VideoReplyContext(
           rootEventId: rootEventId,
           rootEventKind: 34236,
@@ -213,6 +214,7 @@ void main() {
 
       final result = await publisher.publishDirectUpload(
         createUpload(),
+        allowVideoReuse: false,
         replyContext: const VideoReplyContext(
           rootEventId: rootEventId,
           rootEventKind: 34236,
@@ -258,6 +260,7 @@ void main() {
 
       final result = await publisher.publishDirectUpload(
         createUpload(),
+        allowVideoReuse: false,
         replyContext: const VideoReplyContext(
           rootEventId: rootEventId,
           rootEventKind: 34236,

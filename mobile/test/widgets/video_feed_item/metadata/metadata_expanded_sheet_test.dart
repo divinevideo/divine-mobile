@@ -28,16 +28,19 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
+import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_expanded_sheet.dart';
+import 'package:openvine/widgets/video_feed_item/metadata/metadata_remixes_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_sounds_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_stats_row.dart';
@@ -52,6 +55,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
+import 'package:video_responses_repository/video_responses_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -72,7 +76,15 @@ class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
 class _MockVideoClipImportService extends Mock
     implements VideoClipImportService {}
 
+class _MockRemixConsentRepository extends Mock
+    implements RemixConsentRepository {}
+
 class _MockRepostsRepository extends Mock implements RepostsRepository {}
+
+class _MockVideoResponsesRepository extends Mock
+    implements VideoResponsesRepository {}
+
+class _MockVideoEventService extends Mock implements VideoEventService {}
 
 /// Signs in a viewer who is neither the creator nor a collaborator.
 List<Override> _thirdPartyViewerOverrides({
@@ -1748,56 +1760,70 @@ void main() {
       },
     );
 
-    testWidgetsWithSurfaceSize('keeps the content credit on a reply', (
-      tester,
-    ) async {
-      VideoEvent video({required bool reply}) => _makeVideo(
-        inspiredByNpub: normalizeToNpub(_collaborator1),
-        clipSourceCredits: const [
-          ClipSourceCredit(
-            authorPubkey: _collaborator2,
-            addressableId: '34236:$_collaborator2:reused-clip',
+    testWidgetsWithSurfaceSize(
+      'keeps the content and clip credits on a reply, not the inspiring video',
+      (
+        tester,
+      ) async {
+        VideoEvent video({required bool reply}) => _makeVideo(
+          inspiredByNpub: normalizeToNpub(_collaborator1),
+          inspiredByVideo: const InspiredByInfo(
+            addressableId: '34236:$_inspiredByPubkey:inspiring-d',
           ),
-        ],
-        nostrEventTags: reply
-            ? const [
-                ['E', _parentEventId],
-                ['K', '34236'],
-              ]
-            : const [],
-      );
-      Widget subject(VideoEvent video) => buildSubject(
-        providerOverrides: [
-          fetchUserProfileProvider(_collaborator1).overrideWith(
-            (ref) async => _makeProfile(_collaborator1, 'Referenced Creator'),
-          ),
-          fetchUserProfileProvider(_collaborator2).overrideWith(
-            (ref) async => _makeProfile(_collaborator2, 'Clip Source Creator'),
-          ),
-        ],
-        child: MetadataInspiredBySection(video: video),
-      );
+          clipSourceCredits: const [
+            ClipSourceCredit(
+              authorPubkey: _collaborator2,
+              addressableId: '34236:$_collaborator2:reused-clip',
+            ),
+          ],
+          nostrEventTags: reply
+              ? const [
+                  ['E', _parentEventId],
+                  ['K', '34236'],
+                ]
+              : const [],
+        );
+        Widget subject(VideoEvent video) => buildSubject(
+          providerOverrides: [
+            fetchUserProfileProvider(_collaborator1).overrideWith(
+              (ref) async => _makeProfile(_collaborator1, 'Referenced Creator'),
+            ),
+            fetchUserProfileProvider(_collaborator2).overrideWith(
+              (ref) async =>
+                  _makeProfile(_collaborator2, 'Clip Source Creator'),
+            ),
+            fetchUserProfileProvider(_inspiredByPubkey).overrideWith(
+              (ref) async => _makeProfile(_inspiredByPubkey, 'Inspiring Video'),
+            ),
+          ],
+          child: MetadataInspiredBySection(video: video),
+        );
 
-      // Positive control: off a reply the same sources render both credits.
-      await tester.pumpWidget(subject(video(reply: false)));
-      await tester.pumpAndSettle();
-      final l10n = _l10n(tester);
-      expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
-      expect(find.text('Referenced Creator'), findsOneWidget);
-      expect(find.text('Clip Source Creator'), findsOneWidget);
+        // Positive control: off a reply the same sources render all credits.
+        await tester.pumpWidget(subject(video(reply: false)));
+        await tester.pumpAndSettle();
+        final l10n = _l10n(tester);
+        expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
+        expect(find.text('Referenced Creator'), findsOneWidget);
+        expect(find.text('Clip Source Creator'), findsOneWidget);
+        expect(find.text('Inspiring Video'), findsOneWidget);
 
-      await tester.pumpWidget(subject(video(reply: true)));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(subject(video(reply: true)));
+        await tester.pumpAndSettle();
 
-      expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
-      expect(find.text('Referenced Creator'), findsOneWidget);
-      expect(find.text('Clip Source Creator'), findsNothing);
+        // A reply's parent context replaces the inspiring-video credit; the
+        // clip it reuses is still credited.
+        expect(find.text(l10n.metadataInspiredByLabel), findsOneWidget);
+        expect(find.text('Referenced Creator'), findsOneWidget);
+        expect(find.text('Clip Source Creator'), findsOneWidget);
+        expect(find.text('Inspiring Video'), findsNothing);
 
-      // Unmount explicitly and let Riverpod run its zero-duration disposal
-      // task before the test binding checks for leaked timers.
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(milliseconds: 1));
-    });
+        // Unmount explicitly and let Riverpod run its zero-duration disposal
+        // task before the test binding checks for leaked timers.
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 1));
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -2895,8 +2921,34 @@ void main() {
   group('$MetadataExpandedSheet.show', () {
     late _MockBookmarksRepository bookmarksRepository;
     late _MockRepostsRepository repostsRepository;
+    late _MockVideoResponsesRepository videoResponsesRepository;
+    late _MockVideoEventService videoEventService;
+
+    setUpAll(() => registerFallbackValue(_makeVideo()));
 
     setUp(() {
+      videoResponsesRepository = _MockVideoResponsesRepository();
+      when(
+        () => videoResponsesRepository.fetchRemixesOf(
+          any(),
+          filter: any(named: 'filter'),
+        ),
+      ).thenAnswer((_) async => const []);
+      // The viewer's real remixes filter runs over these two.
+      videoEventService = _MockVideoEventService();
+      when(
+        () => videoEventService.removedVideoIds,
+      ).thenAnswer((_) => const Stream.empty());
+      when(() => videoEventService.shouldHideVideo(any())).thenReturn(false);
+      when(
+        () => mockVideosRepository.applyContentPreferences(
+          any(),
+          includeFeedShape: any(named: 'includeFeedShape'),
+        ),
+      ).thenAnswer(
+        (invocation) =>
+            invocation.positionalArguments.single as List<VideoEvent>,
+      );
       bookmarksRepository = _MockBookmarksRepository();
       when(
         bookmarksRepository.syncGlobalBookmarks,
@@ -2914,6 +2966,9 @@ void main() {
       required String viewerPubkey,
       MockAuthService? authService,
       BookmarksRepository Function(Ref ref)? bookmarks,
+      VideoClipImportService? videoClipImportService,
+      RemixConsentRepository? Function(Ref ref)? remixConsent,
+      bool debugTools = false,
     }) => [
       authServiceProvider.overrideWithValue(
         authService ??
@@ -2926,14 +2981,38 @@ void main() {
         bookmarks ?? (ref) => bookmarksRepository,
       ),
       videoClipImportServiceProvider.overrideWithValue(
-        _MockVideoClipImportService(),
+        videoClipImportService ?? _MockVideoClipImportService(),
       ),
+      if (remixConsent != null)
+        remixConsentRepositoryProvider.overrideWith(remixConsent),
       repostsRepositoryProvider.overrideWithValue(repostsRepository),
-      isFeatureEnabledProvider(FeatureFlag.debugTools).overrideWithValue(false),
+      videoResponsesRepositoryProvider.overrideWithValue(
+        videoResponsesRepository,
+      ),
+      videoEventServiceProvider.overrideWithValue(videoEventService),
+      isFeatureEnabledProvider(
+        FeatureFlag.debugTools,
+      ).overrideWithValue(debugTools),
       fetchUserProfileProvider(
         _creatorPubkey,
       ).overrideWith((ref) async => _makeProfile(_creatorPubkey, 'Creator')),
     ];
+
+    /// Answers the remixes read for [video] with [remixes], passed through the
+    /// viewer's filter the sheet hands the read, as the repository does.
+    void answerRemixes(VideoEvent video, List<VideoEvent> remixes) {
+      when(
+        () => videoResponsesRepository.fetchRemixesOf(
+          video.addressableId!,
+          filter: any(named: 'filter'),
+        ),
+      ).thenAnswer((invocation) async {
+        final filter =
+            invocation.namedArguments[#filter]
+                as List<VideoEvent> Function(List<VideoEvent>);
+        return filter(remixes);
+      });
+    }
 
     Future<void> openSheet(
       WidgetTester tester, {
@@ -2961,7 +3040,8 @@ void main() {
     }
 
     testWidgetsWithSurfaceSize(
-      'renders the action row between the stats row and the creator',
+      'renders the action row, Remix first, between the stats row and the '
+      'creator',
       (tester) async {
         await openSheet(
           tester,
@@ -2970,8 +3050,19 @@ void main() {
         );
 
         final l10n = _l10n(tester);
-        expect(find.text(l10n.shareSheetAddToClips), findsOneWidget);
+        expect(find.text(l10n.shareSheetAddToClips), findsNothing);
         expect(find.text(l10n.shareMenuEditVideo), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(MetadataActionsSection),
+            matching: find.text(l10n.metadataRemixAction),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          tester.getTopLeft(find.text(l10n.metadataRemixAction)).dx,
+          lessThan(tester.getTopLeft(find.text(l10n.shareSheetSave)).dx),
+        );
 
         final statsY = tester
             .getTopLeft(find.byType(MetadataStatsRow, skipOffstage: false))
@@ -2993,6 +3084,50 @@ void main() {
     );
 
     testWidgetsWithSurfaceSize(
+      'offers only Remix, Save, Edit and Delete, in that order, on the viewer '
+      'own video, with debug tools on',
+      (tester) async {
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: sheetOverrides(
+              viewerPubkey: _creatorPubkey,
+              debugTools: true,
+            ),
+            child: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => unawaited(
+                  MetadataExpandedSheet.show(
+                    context,
+                    _makeVideo(title: 'Mine'),
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        final l10n = _l10n(tester);
+        final labels = [
+          l10n.metadataRemixAction,
+          l10n.shareSheetSave,
+          l10n.shareMenuEditVideo,
+          l10n.shareMenuDeleteVideo,
+        ];
+        final xs = [
+          for (final label in labels) tester.getTopLeft(find.text(label)).dx,
+        ];
+        expect(xs, orderedEquals([...xs]..sort()));
+        expect(find.text(l10n.shareSheetAddToClips), findsNothing);
+        expect(find.text(l10n.shareSheetAddToList), findsNothing);
+        expect(find.text(l10n.shareSheetEventJson), findsNothing);
+        expect(find.text(l10n.shareSheetEventId), findsNothing);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
       'offers Edit and Delete on the viewer own video',
       (
         tester,
@@ -3006,6 +3141,134 @@ void main() {
         final l10n = _l10n(tester);
         expect(find.text(l10n.shareMenuEditVideo), findsOneWidget);
         expect(find.text(l10n.shareMenuDeleteVideo), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'lists the remixes of the video between Inspired by and Reposted by',
+      (tester) async {
+        final video = _makeVideo(title: 'Source', addressableDTag: 'source-d');
+        final remix = VideoEvent(
+          id: '4444444444444444444444444444444444444444444444444444444444444444',
+          pubkey: _thirdPartyViewer,
+          createdAt: 1700000100,
+          content: 'A remix',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1700000100 * 1000),
+          authorName: 'Remixer',
+        );
+        answerRemixes(video, [remix]);
+
+        await openSheet(tester, video: video, viewerPubkey: _creatorPubkey);
+
+        final l10n = _l10n(tester);
+        expect(find.text(l10n.metadataRemixesLabel), findsOneWidget);
+        expect(find.text('Remixer'), findsOneWidget);
+        double topOf(Type type) =>
+            tester.getTopLeft(find.byType(type, skipOffstage: false)).dy;
+        expect(
+          topOf(MetadataInspiredBySection),
+          lessThanOrEqualTo(topOf(MetadataRemixesSection)),
+        );
+        expect(
+          topOf(MetadataRemixesSection),
+          lessThan(topOf(MetadataRepostedBySection)),
+        );
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'leaves out blocked and deleted remixes and blurs a warned one',
+      (tester) async {
+        final video = _makeVideo(title: 'Source', addressableDTag: 'source-d');
+        VideoEvent remix(String digit, String name) => VideoEvent(
+          id: digit * 64,
+          pubkey: _thirdPartyViewer,
+          createdAt: 1700000100,
+          content: '',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1700000100 * 1000),
+          authorName: name,
+        );
+        final blocked = remix('5', 'Blocked remixer');
+        final deleted = remix('6', 'Deleted remix');
+        final warned = remix('7', 'Warned remix');
+        final plain = remix('8', 'Plain remix');
+        answerRemixes(video, [blocked, deleted, warned, plain]);
+        // Blocks and deletions both hide a video for the viewer.
+        when(
+          () => videoEventService.shouldHideVideo(
+            any(that: isIn([blocked, deleted])),
+          ),
+        ).thenReturn(true);
+        when(
+          () => mockVideosRepository.applyContentPreferences(
+            any(),
+            includeFeedShape: false,
+          ),
+        ).thenAnswer(
+          (invocation) =>
+              (invocation.positionalArguments.single as List<VideoEvent>)
+                  .map(
+                    (remix) => remix == warned
+                        ? remix.copyWith(warnLabels: const ['nudity'])
+                        : remix,
+                  )
+                  .toList(),
+        );
+
+        await openSheet(tester, video: video, viewerPubkey: _creatorPubkey);
+
+        expect(find.text('Blocked remixer'), findsNothing);
+        expect(find.text('Deleted remix'), findsNothing);
+        expect(find.text('Plain remix'), findsOneWidget);
+        expect(find.text('Warned remix'), findsOneWidget);
+        Finder blurIn(String name) => find.descendant(
+          of: find
+              .ancestor(of: find.text(name), matching: find.byType(Row))
+              .first,
+          matching: find.byType(ImageFiltered),
+        );
+        expect(blurIn('Warned remix'), findsOneWidget);
+        expect(blurIn('Plain remix'), findsNothing);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'offers Report this remix to the creator the remix credits',
+      (tester) async {
+        await openSheet(
+          tester,
+          video: _makeVideo(
+            title: 'A remix',
+            clipSourceCredits: [
+              ClipSourceCredit.fromAddressableId(
+                addressableId: '34236:$_inspiredByPubkey:source-d',
+              ),
+            ],
+          ),
+          viewerPubkey: _inspiredByPubkey,
+        );
+
+        expect(find.text(_l10n(tester).metadataReportRemix), findsOneWidget);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'offers no Report this remix to a viewer the remix does not credit',
+      (tester) async {
+        await openSheet(
+          tester,
+          video: _makeVideo(
+            title: 'A remix',
+            clipSourceCredits: [
+              ClipSourceCredit.fromAddressableId(
+                addressableId: '34236:$_inspiredByPubkey:source-d',
+              ),
+            ],
+          ),
+          viewerPubkey: _thirdPartyViewer,
+        );
+
+        expect(find.text(_l10n(tester).metadataReportRemix), findsNothing);
       },
     );
 
@@ -3112,6 +3375,103 @@ void main() {
             addressableId: any(named: 'addressableId'),
           ),
         );
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'refuses a remix when the creator blocks remixing',
+      (tester) async {
+        final importer = _MockVideoClipImportService();
+        final consent = _MockRemixConsentRepository();
+        when(
+          () => consent.consentFor(_creatorPubkey),
+        ).thenAnswer((_) async => RemixConsent.blocked);
+        final video = _makeVideo(
+          title: 'Classic',
+          rawTags: {'platform': 'vine'},
+        );
+
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: sheetOverrides(
+              viewerPubkey: _thirdPartyViewer,
+              videoClipImportService: importer,
+              remixConsent: (ref) => consent,
+            ),
+            child: Builder(
+              builder: (context) => TextButton(
+                onPressed: () =>
+                    unawaited(MetadataExpandedSheet.show(context, video)),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        final l10n = _l10n(tester);
+        await tester.tap(find.text(l10n.metadataRemixAction));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.remixBlockedByCreator), findsOneWidget);
+        verify(() => consent.consentFor(_creatorPubkey)).called(1);
+        verifyZeroInteractions(importer);
+      },
+    );
+
+    testWidgetsWithSurfaceSize(
+      'checks consent through the remix consent repository that replaced the '
+      'one the sheet opened with',
+      (tester) async {
+        final importer = _MockVideoClipImportService();
+        final original = _MockRemixConsentRepository();
+        when(
+          () => original.consentFor(any()),
+        ).thenAnswer((_) async => RemixConsent.allowed);
+        final replacement = _MockRemixConsentRepository();
+        when(
+          () => replacement.consentFor(any()),
+        ).thenAnswer((_) async => RemixConsent.blocked);
+        final activeConsent = StateProvider<RemixConsentRepository>(
+          (ref) => original,
+        );
+        final video = _makeVideo(
+          title: 'Classic',
+          rawTags: {'platform': 'vine'},
+        );
+
+        await tester.pumpWidget(
+          buildSubject(
+            providerOverrides: sheetOverrides(
+              viewerPubkey: _thirdPartyViewer,
+              videoClipImportService: importer,
+              remixConsent: (ref) => ref.watch(activeConsent),
+            ),
+            child: Builder(
+              builder: (context) => TextButton(
+                onPressed: () =>
+                    unawaited(MetadataExpandedSheet.show(context, video)),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        ProviderScope.containerOf(
+          tester.element(find.byType(MetadataActionsSection)),
+        ).read(activeConsent.notifier).state = replacement;
+        await tester.pumpAndSettle();
+
+        final l10n = _l10n(tester);
+        await tester.tap(find.text(l10n.metadataRemixAction));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.remixBlockedByCreator), findsOneWidget);
+        verify(() => replacement.consentFor(_creatorPubkey)).called(1);
+        verifyNever(() => original.consentFor(any()));
+        verifyZeroInteractions(importer);
       },
     );
 

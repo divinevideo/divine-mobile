@@ -4132,6 +4132,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Couldn\'t add to clips';
 
   @override
+  String get remixBlockedByCreator => 'This creator doesn\'t allow remixes.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Couldn\'t check whether this video can be remixed. Try again.';
+
+  @override
+  String get remixStartFailed => 'Couldn\'t start the remix. Try again.';
+
+  @override
+  String get remixSettingAllowTitle => 'Let people remix my videos';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Others can use your videos as clips in their own posts.';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Uses a clip from $name';
+  }
+
+  @override
+  String get metadataRemixAction => 'Remix';
+
+  @override
+  String get remixWebAppNudge => 'Remixing happens in the Divine app.';
+
+  @override
+  String get remixWebGetTheApp => 'Get the app';
+
+  @override
+  String get metadataRemixesLabel => 'Remixes';
+
+  @override
+  String get metadataReportRemix => 'Report this remix';
+
+  @override
   String get shareSheetAddToList => 'Add to List';
 
   @override
@@ -6852,6 +6889,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'Clips';
+
+  @override
+  String get libraryTabFromOthers => 'From others';
 
   @override
   String get libraryScheduledSectionTitle => 'Scheduled';

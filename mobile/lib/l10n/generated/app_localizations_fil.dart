@@ -4089,6 +4089,45 @@ class AppLocalizationsFil extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Hindi naidagdag sa clips';
 
   @override
+  String get remixBlockedByCreator =>
+      'Hindi pinapayagan ng creator na ito ang mga remix.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Hindi ma-check kung pwedeng i-remix ang video na ito. Subukan ulit.';
+
+  @override
+  String get remixStartFailed => 'Hindi masimulan ang remix. Subukan ulit.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'Payagan ang iba na i-remix ang mga video ko';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Magagamit ng iba ang mga video mo bilang clips sa sarili nilang posts.';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Gumagamit ng clip ni $name';
+  }
+
+  @override
+  String get metadataRemixAction => 'I-remix';
+
+  @override
+  String get remixWebAppNudge => 'Sa Divine app ginagawa ang pag-remix.';
+
+  @override
+  String get remixWebGetTheApp => 'Kunin ang app';
+
+  @override
+  String get metadataRemixesLabel => 'Mga remix';
+
+  @override
+  String get metadataReportRemix => 'I-report ang remix na ito';
+
+  @override
   String get shareSheetAddToList => 'Idagdag sa List';
 
   @override
@@ -6803,6 +6842,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'Mga Clip';
+
+  @override
+  String get libraryTabFromOthers => 'Mula sa iba';
 
   @override
   String get libraryScheduledSectionTitle => 'Naka-schedule';

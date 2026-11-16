@@ -305,12 +305,12 @@ void main() {
         );
       });
 
-      testWidgets('never adds a fourth tab', (tester) async {
+      testWidgets('adds no tab of its own', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pump();
 
         expect(find.text(en.libraryScheduledSectionTitle), findsNothing);
-        expect(find.byType(Tab), findsNWidgets(3));
+        expect(find.byType(Tab), findsNWidgets(4));
       });
     });
 
@@ -465,16 +465,55 @@ void main() {
         expect(find.byType(DraftsTab), findsOneWidget);
       });
 
-      testWidgets('shows only clips and hides tab bar in selection mode', (
+      List<String> tabLabels(WidgetTester tester) => [
+        for (final tab in tester.widgetList<Tab>(find.byType(Tab))) tab.text!,
+      ];
+
+      testWidgets('shows Drafts, Clips, From others and Sounds in order', (
         tester,
       ) async {
-        await tester.pumpWidget(buildWidget(selectionMode: true));
+        await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
 
-        expect(find.byType(TabBar), findsNothing);
+        expect(tabLabels(tester), [
+          en.libraryTabDrafts,
+          en.libraryTabClips,
+          en.libraryTabFromOthers,
+          en.soundsTitle,
+        ]);
+      });
+
+      testWidgets('drops only Sounds in withoutSounds mode', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(tabsMode: LibraryTabsMode.withoutSounds),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tabLabels(tester), [
+          en.libraryTabDrafts,
+          en.libraryTabClips,
+          en.libraryTabFromOthers,
+        ]);
+      });
+
+      testWidgets('shows only Clips and From others in selection mode', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(selectionMode: true, initialTabIndex: 1),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tabLabels(tester), [
+          en.libraryTabClips,
+          en.libraryTabFromOthers,
+        ]);
+        expect(
+          tester.widget<TabBar>(find.byType(TabBar)).controller!.index,
+          0,
+        );
         expect(find.byType(ClipsTab), findsOneWidget);
         expect(find.byType(DraftsTab), findsNothing);
-        expect(find.text(en.soundsTitle), findsNothing);
       });
 
       testWidgets('can switch to $ClipsTab', (tester) async {
@@ -501,6 +540,218 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(DraftsTab), findsOneWidget);
+      });
+    });
+
+    group('From others', () {
+      const viewer =
+          'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+      const vineAuthor =
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+
+      final ownTake = DivineVideoClip(
+        id: 'clip_1_0',
+        video: EditorVideo.file('/test/take.mp4'),
+        duration: const Duration(seconds: 2),
+        recordedAt: DateTime(2026, 1, 2),
+        targetAspectRatio: models.AspectRatio.square,
+        originalAspectRatio: 1,
+        thumbnailPath: '/test/take.jpg',
+        ghostFramePath: '/test/take_ghost.jpg',
+      );
+      final vine = DivineVideoClip(
+        id: 'classic_vine_abc_1',
+        video: EditorVideo.file('/test/vine.mp4'),
+        duration: const Duration(seconds: 6),
+        recordedAt: DateTime(2026, 1, 3),
+        targetAspectRatio: models.AspectRatio.square,
+        originalAspectRatio: 1,
+        thumbnailPath: '/test/vine.jpg',
+        ghostFramePath: '/test/vine_ghost.jpg',
+        importedSource: true,
+        sourceCredits: const [
+          models.ClipSourceCredit(authorPubkey: vineAuthor, eventId: 'vine-1'),
+        ],
+      );
+      // Imported, but credited to the viewer, so it belongs in Clips: this
+      // is what pins the library's owner as the viewer the tabs scope by.
+      final ownImport = DivineVideoClip(
+        id: 'video_own_1',
+        video: EditorVideo.file('/test/own_import.mp4'),
+        duration: const Duration(seconds: 3),
+        recordedAt: DateTime(2026),
+        targetAspectRatio: models.AspectRatio.square,
+        originalAspectRatio: 1,
+        thumbnailPath: '/test/own_import.jpg',
+        ghostFramePath: '/test/own_import_ghost.jpg',
+        importedSource: true,
+        sourceCredits: const [
+          models.ClipSourceCredit(authorPubkey: viewer, eventId: 'own-1'),
+        ],
+      );
+
+      setUp(() {
+        when(() => mockClipLibraryService.ownerPubkey).thenReturn(viewer);
+        when(
+          () => mockClipLibraryService.getAllClips(),
+        ).thenAnswer((_) async => [ownTake, vine, ownImport]);
+        when(
+          () => mockClipLibraryService.recoverMissingAssets(any()),
+        ).thenAnswer(
+          (invocation) async =>
+              invocation.positionalArguments.single as List<DivineVideoClip>,
+        );
+      });
+
+      ClipsLibraryBloc clipsBlocOf(WidgetTester tester) =>
+          BlocProvider.of<ClipsLibraryBloc>(
+            tester.element(find.byType(ClipsTab)),
+          );
+
+      testWidgets('keeps clips from others out of the Clips tab', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(initialTabIndex: 1));
+        await tester.pumpAndSettle();
+
+        expect(
+          clipsBlocOf(tester).state.sortedClips.map((c) => c.id),
+          ['clip_1_0', 'video_own_1'],
+        );
+        expect(find.byType(VideoClipThumbnailCard), findsNWidgets(2));
+      });
+
+      testWidgets('lists them in the From others tab', (tester) async {
+        await tester.pumpWidget(buildWidget(initialTabIndex: 1));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(en.libraryTabFromOthers));
+        await tester.pumpAndSettle();
+
+        final bloc = clipsBlocOf(tester);
+        expect(bloc.state.scope, ClipOwnershipScope.fromOthers);
+        expect(bloc.state.sortedClips.map((c) => c.id), [
+          'classic_vine_abc_1',
+        ]);
+        expect(find.byType(VideoClipThumbnailCard), findsOneWidget);
+      });
+
+      testWidgets("shows both tabs' clips while a swipe is in progress", (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(initialTabIndex: 1));
+        await tester.pumpAndSettle();
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.byType(TabBarView)),
+        );
+        await gesture.moveBy(const Offset(-40, 0));
+        await gesture.moveBy(const Offset(-160, 0));
+        await tester.pump();
+
+        final shown = tester
+            .widgetList<VideoClipThumbnailCard>(
+              find.byType(VideoClipThumbnailCard),
+            )
+            .map((card) => card.clip.id);
+        expect(
+          shown,
+          unorderedEquals(['clip_1_0', 'video_own_1', 'classic_vine_abc_1']),
+        );
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('opens on From others at its tab index', (tester) async {
+        await tester.pumpWidget(buildWidget(initialTabIndex: 2));
+        await tester.pumpAndSettle();
+
+        expect(
+          clipsBlocOf(tester).state.scope,
+          ClipOwnershipScope.fromOthers,
+        );
+      });
+
+      testWidgets('keeps a selection mode the user opened across the two '
+          'clip tabs', (tester) async {
+        await tester.pumpWidget(buildWidget(initialTabIndex: 1));
+        await tester.pumpAndSettle();
+
+        final bloc = clipsBlocOf(tester)
+          ..add(const ClipsLibraryEnterSelectionMode())
+          ..add(ClipsLibraryToggleSelection(ownTake));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(en.libraryTabFromOthers));
+        await tester.pumpAndSettle();
+
+        expect(bloc.state.isLibrarySelectionMode, isTrue);
+        expect(bloc.state.selectedClipIds, {'clip_1_0'});
+      });
+
+      testWidgets('picks clips from both tabs in one selection', (
+        tester,
+      ) async {
+        final mockGoRouter = MockGoRouter();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+              gallerySaveServiceProvider.overrideWithValue(
+                mockGallerySaveService,
+              ),
+              clipLibraryServiceProvider.overrideWithValue(
+                mockClipLibraryService,
+              ),
+              draftStorageServiceProvider.overrideWithValue(
+                mockDraftStorageService,
+              ),
+              clipManagerProvider.overrideWith(ClipManagerNotifier.new),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: VineTheme.theme,
+              home: MockGoRouterProvider(
+                goRouter: mockGoRouter,
+                child: const LibraryScreen(
+                  selectionMode: true,
+                  initialTabIndex: 1,
+                  tabsMode: LibraryTabsMode.withoutSounds,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is VideoClipThumbnailCard &&
+                widget.clip.id == 'clip_1_0',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(en.libraryTabFromOthers));
+        await tester.pumpAndSettle();
+
+        final cards = find.byType(VideoClipThumbnailCard);
+        expect(cards, findsOneWidget);
+        await tester.tap(cards);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(en.librarySelect).first);
+        await tester.pumpAndSettle();
+
+        final captured = verify(
+          () => mockGoRouter.pop<List<DivineVideoClip>>(captureAny()),
+        ).captured;
+        final picked = captured.single as List<DivineVideoClip>;
+        expect(picked.map((c) => c.id), ['clip_1_0', 'classic_vine_abc_1']);
       });
     });
 

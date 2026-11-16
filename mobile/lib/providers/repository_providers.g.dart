@@ -647,6 +647,71 @@ final class ProfileReadRepositoryProvider
 String _$profileReadRepositoryHash() =>
     r'2ca21e064d13b26a175f71d17f152295b242c275';
 
+/// Reads a creator's account-wide remix block from their fresh kind 0.
+///
+/// Built on [profileReadRepository] because the check only reads: it needs a
+/// known identity, not a signer. Null until then, and callers treat a missing
+/// repository as consent they could not read.
+
+@ProviderFor(remixConsentRepository)
+final remixConsentRepositoryProvider = RemixConsentRepositoryProvider._();
+
+/// Reads a creator's account-wide remix block from their fresh kind 0.
+///
+/// Built on [profileReadRepository] because the check only reads: it needs a
+/// known identity, not a signer. Null until then, and callers treat a missing
+/// repository as consent they could not read.
+
+final class RemixConsentRepositoryProvider
+    extends
+        $FunctionalProvider<
+          RemixConsentRepository?,
+          RemixConsentRepository?,
+          RemixConsentRepository?
+        >
+    with $Provider<RemixConsentRepository?> {
+  /// Reads a creator's account-wide remix block from their fresh kind 0.
+  ///
+  /// Built on [profileReadRepository] because the check only reads: it needs a
+  /// known identity, not a signer. Null until then, and callers treat a missing
+  /// repository as consent they could not read.
+  RemixConsentRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'remixConsentRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$remixConsentRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<RemixConsentRepository?> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  RemixConsentRepository? create(Ref ref) {
+    return remixConsentRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RemixConsentRepository? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RemixConsentRepository?>(value),
+    );
+  }
+}
+
+String _$remixConsentRepositoryHash() =>
+    r'8d7e7f61b7d49020b393e0e3c6ce6e2ced27e050';
+
 /// Curation Service - manages NIP-51 video curation sets
 
 @ProviderFor(curationRepository)

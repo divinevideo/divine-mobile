@@ -35,6 +35,7 @@ import 'package:openvine/screens/settings/legal_screen.dart';
 import 'package:openvine/screens/settings/mirror_front_camera_setting.dart';
 import 'package:openvine/screens/settings/monetization_links_settings_screen.dart';
 import 'package:openvine/screens/settings/recording_gallery_backup_setting.dart';
+import 'package:openvine/screens/settings/remix_setting.dart';
 import 'package:openvine/screens/settings/storage/storage_management_page.dart';
 import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/utils/nostr_apps_platform_support.dart';
@@ -126,6 +127,8 @@ class CreatingSettingsScreen extends ConsumerWidget {
         if (!kIsWeb && defaultTargetPlatform != TargetPlatform.linux)
           const AudioDeviceSetting(),
         const AudioSharingSetting(),
+        // Stored in the account's kind 0, so it needs a signed-in account.
+        if (isAuthenticated) const RemixSetting(),
         // Android and iOS only, like the gallery import that brings the
         // copies back.
         if (!kIsWeb &&

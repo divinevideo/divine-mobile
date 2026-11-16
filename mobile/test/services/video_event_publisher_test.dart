@@ -172,6 +172,7 @@ void main() {
       stubSignAndPublish();
 
       final result = await publisher.publishVideoEvent(
+        allowVideoReuse: false,
         upload: createUpload(),
         mentionedPubkeys: const [mentionPubkey],
       );
@@ -192,6 +193,7 @@ void main() {
       stubSignAndPublish();
 
       final result = await publisher.publishVideoEvent(
+        allowVideoReuse: false,
         upload: createUpload().copyWith(
           streamingMp4Url: 'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/play_360p.mp4',
           streamingHlsUrl: 'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/playlist.m3u8',
@@ -210,7 +212,13 @@ void main() {
     test('publishVideoEvent writes an explicit false reuse marker', () async {
       stubSignAndPublish();
 
-      expect(await publisher.publishVideoEvent(upload: createUpload()), isTrue);
+      expect(
+        await publisher.publishVideoEvent(
+          allowVideoReuse: false,
+          upload: createUpload(),
+        ),
+        isTrue,
+      );
       expect(
         _containsTag(capturedTags, const ['allow_audio_reuse', 'false']),
         isTrue,
@@ -250,6 +258,7 @@ void main() {
         stubSignAndPublish();
 
         final result = await publisher.publishVideoEvent(
+          allowVideoReuse: false,
           upload: createUpload(),
           textTrackRefs: const [
             'https://media.divine.video/captions.vtt',
@@ -302,6 +311,7 @@ void main() {
           );
 
           final result = await publisher.publishVideoEvent(
+            allowVideoReuse: false,
             upload: createUpload(),
             selectedAudio: reusedSound,
             selectedAudioEventId: reusedSound.id,
@@ -364,6 +374,7 @@ void main() {
 
         final result = await publisherWithConsent(consent: true)
             .publishVideoEvent(
+              allowVideoReuse: false,
               upload: createUpload(),
               selectedAudio: classicSound,
               selectedAudioEventId: classicSound.id,
@@ -399,6 +410,7 @@ void main() {
           expect(classicSound.hasExplicitReuseConsent, isTrue);
           expect(
             await publisherWithConsent(consent: true).publishVideoEvent(
+              allowVideoReuse: false,
               upload: createUpload(),
               selectedAudio: classicSound,
               selectedAudioEventId: classicSound.id,
@@ -420,6 +432,7 @@ void main() {
         );
 
         final result = await publisherWithConsent().publishVideoEvent(
+          allowVideoReuse: false,
           upload: createUpload(),
           selectedAudio: explicitlyGranted,
           selectedAudioEventId: explicitlyGranted.id,
@@ -453,6 +466,7 @@ void main() {
           expect(persistedSound.requiresCurrentReuseVerification, isTrue);
           expect(
             await publisherWithConsent(consent: true).publishVideoEvent(
+              allowVideoReuse: false,
               upload: createUpload(),
               selectedAudio: persistedSound,
               selectedAudioEventId: persistedSound.id,
@@ -469,6 +483,7 @@ void main() {
 
           await expectLater(
             publisherWithConsent().publishVideoEvent(
+              allowVideoReuse: false,
               upload: createUpload(),
               selectedAudio: withheldSound,
               selectedAudioEventId: withheldSound.id,
@@ -501,6 +516,7 @@ void main() {
         final ownDeclinedSound = withheldSound.copyWith(pubkey: testPubkey);
 
         final result = await publisherWithConsent().publishVideoEvent(
+          allowVideoReuse: false,
           upload: createUpload(),
           selectedAudio: ownDeclinedSound,
           selectedAudioEventId: ownDeclinedSound.id,
@@ -519,6 +535,7 @@ void main() {
         );
 
         final result = await publisherWithConsent().publishVideoEvent(
+          allowVideoReuse: false,
           upload: createUpload(),
           selectedAudio: ownLegacySound,
           selectedAudioEventId: ownLegacySound.id,
@@ -543,6 +560,7 @@ void main() {
 
         expect(
           await publisherWithConsent().publishVideoEvent(
+            allowVideoReuse: false,
             upload: createUpload(),
             selectedAudio: ownedSound,
             selectedAudioEventId: ownedSound.id,
@@ -568,6 +586,7 @@ void main() {
         );
 
         final result = await publisherWithConsent().publishVideoEvent(
+          allowVideoReuse: false,
           upload: createUpload(),
           selectedAudio: legacySound,
           selectedAudioEventId: legacySound.id,
@@ -598,6 +617,7 @@ void main() {
         );
 
         final result = await publisherWithoutChecker.publishVideoEvent(
+          allowVideoReuse: false,
           upload: createUpload(),
           selectedAudio: legacySound,
           selectedAudioEventId: legacySound.id,
@@ -620,6 +640,7 @@ void main() {
         );
 
         final result = await publisher.publishVideoEvent(
+          allowVideoReuse: false,
           upload: createUpload(),
           selectedAudio: reusedTrack,
           selectedAudioEventId: reusedTrack.id,
@@ -649,6 +670,7 @@ void main() {
           );
 
           final result = await publisher.publishVideoEvent(
+            allowVideoReuse: false,
             upload: createUpload(localVideoPath: '/tmp/divine-video-6185.mp4'),
             allowAudioReuse: true,
             selectedAudio: reusedSound,
@@ -746,6 +768,7 @@ void main() {
         );
 
         final result = await publisher.publishVideoEvent(
+          allowVideoReuse: false,
           upload: createUpload(localVideoPath: '/tmp/divine-video-6185.mp4'),
           allowAudioReuse: true,
           selectedAudio: bundledSound,
@@ -810,6 +833,7 @@ void main() {
           stubSignAndPublish();
 
           final result = await publisher.publishVideoEvent(
+            allowVideoReuse: false,
             upload: createUpload(localVideoPath: '/tmp/video-with-audio.mp4'),
             allowAudioReuse: true,
           );
@@ -872,6 +896,7 @@ void main() {
           );
 
           final result = await publisher.publishVideoEvent(
+            allowVideoReuse: false,
             upload: createUpload(localVideoPath: '/tmp/divine-video-6185.mp4'),
             allowAudioReuse: true,
             selectedAudio: externalProviderSound,
@@ -953,6 +978,7 @@ void main() {
 
           expect(
             await publisher.publishVideoEvent(
+              allowVideoReuse: false,
               upload: createUpload(),
               selectedAudio: externalProviderSound,
               selectedAudioEventId: externalProviderSound.id,
@@ -1003,6 +1029,7 @@ void main() {
 
       expect(
         await publisher.publishVideoEvent(
+          allowVideoReuse: false,
           upload: createUpload(),
           selectedAudio: sound,
           selectedAudioEventId: sound.id,
@@ -1031,6 +1058,7 @@ void main() {
 
         expect(
           await publisher.publishVideoEvent(
+            allowVideoReuse: false,
             upload: createUpload(localVideoPath: '/tmp/divine-video-6185.mp4'),
             allowAudioReuse: true,
             selectedAudio: _uncreditedProviderSound,
@@ -1055,6 +1083,7 @@ void main() {
 
         expect(
           await publisher.publishVideoEvent(
+            allowVideoReuse: false,
             upload: createUpload(),
             selectedAudio: _uncreditedProviderSound,
             selectedAudioEventId: _uncreditedProviderSound.id,
@@ -1096,6 +1125,7 @@ void main() {
 
       expect(
         await publisher.publishVideoEvent(
+          allowVideoReuse: false,
           upload: createUpload(localVideoPath: '/tmp/divine-video-6185.mp4'),
           allowAudioReuse: true,
           selectedAudio: thinCatalogRow,
@@ -1212,6 +1242,7 @@ void main() {
           );
 
           final result = await publisher.publishVideoEvent(
+            allowVideoReuse: false,
             upload: createUpload(),
             allowAudioReuse: true,
             selectedAudio: localAudio,
@@ -1319,6 +1350,7 @@ void main() {
         );
 
         final result = await publisher.publishVideoEvent(
+          allowVideoReuse: false,
           upload: createUpload(),
           allowAudioReuse: true,
           selectedAudio: AudioEvent.fromLocalImport(
@@ -1361,6 +1393,7 @@ void main() {
           );
 
           final result = await publisher.publishVideoEvent(
+            allowVideoReuse: false,
             upload: createUpload(),
             selectedAudio: localAudio,
           );
@@ -1392,6 +1425,7 @@ void main() {
           );
 
           final result = await publisher.publishVideoEvent(
+            allowVideoReuse: false,
             upload: createUpload(),
             selectedAudio: localAudio,
             allowAudioReuse: true,
@@ -1421,6 +1455,7 @@ void main() {
           );
 
           final result = await publisher.publishVideoEvent(
+            allowVideoReuse: false,
             upload: createUpload(),
             selectedAudio: localAudio,
             allowAudioReuse: true,

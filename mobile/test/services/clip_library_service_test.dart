@@ -9,7 +9,9 @@ import 'dart:ui' show Color;
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' as models show AspectRatio;
+import 'package:models/models.dart'
+    as models
+    show AspectRatio, ClipSourceCredit, VideoEvent;
 import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/clip_library_constants.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -1079,6 +1081,303 @@ void main() {
 
         final clips = await service.getAllClips();
         expect(clips.map((c) => c.id), ['valid_clip']);
+      });
+    });
+
+    group('findImportedClipOf', () {
+      const vineAuthor =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const vineEventId =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+
+      final vine = models.VideoEvent(
+        id: vineEventId,
+        pubkey: vineAuthor,
+        createdAt: 1451606400,
+        content: 'classic vine',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(
+          1451606400 * 1000,
+          isUtc: true,
+        ),
+        videoUrl: 'https://cdn.example.com/classic.mp4',
+        rawTags: const {'platform': 'vine'},
+        vineId: 'vine-123',
+        addressableDTag: 'vine-123',
+      );
+
+      late Directory documentsDir;
+      late PathProviderPlatform originalPathProvider;
+
+      setUp(() {
+        documentsDir = Directory.systemTemp.createTempSync('clip_import_');
+        originalPathProvider = PathProviderPlatform.instance;
+        PathProviderPlatform.instance = MockPathProviderPlatform()
+          ..setApplicationDocumentsPath(documentsDir.path);
+      });
+
+      tearDown(() {
+        PathProviderPlatform.instance = originalPathProvider;
+        if (documentsDir.existsSync()) {
+          documentsDir.deleteSync(recursive: true);
+        }
+      });
+
+      /// A clip imported from [vine], with its video file written to disk
+      /// unless [videoOnDisk] is false.
+      DivineVideoClip clipOf({
+        required String id,
+        required DateTime recordedAt,
+        bool importedSource = true,
+        String? eventId = vineEventId,
+        String? addressableId,
+        bool videoOnDisk = true,
+      }) {
+        final videoFile = File(p.join(documentsDir.path, '$id.mp4'));
+        if (videoOnDisk) videoFile.writeAsBytesSync(const [0, 1, 2, 3]);
+        return DivineVideoClip(
+          id: id,
+          video: EditorVideo.file(videoFile.path),
+          duration: const Duration(seconds: 6),
+          recordedAt: recordedAt,
+          targetAspectRatio: .square,
+          originalAspectRatio: 1,
+          importedSource: importedSource,
+          sourceCredits: [
+            models.ClipSourceCredit(
+              authorPubkey: vineAuthor,
+              eventId: eventId,
+              addressableId: addressableId,
+            ),
+          ],
+        );
+      }
+
+      test('returns null when nothing was imported from the video', () async {
+        expect(await service.findImportedClipOf(vine), isNull);
+      });
+
+      test('returns the clip imported from the video', () async {
+        await service.saveClip(
+          clipOf(id: 'classic_vine_vine-123_1', recordedAt: DateTime(2026)),
+        );
+
+        final found = await service.findImportedClipOf(vine);
+
+        expect(found?.id, 'classic_vine_vine-123_1');
+      });
+
+      test("matches an import by the video's addressable id", () async {
+        await service.saveClip(
+          clipOf(
+            id: 'classic_vine_vine-123_1',
+            recordedAt: DateTime(2026),
+            eventId: 'an-older-edit-of-the-post',
+            addressableId: vine.addressableId,
+          ),
+        );
+
+        final found = await service.findImportedClipOf(vine);
+
+        expect(vine.addressableId, isNotNull);
+        expect(found?.id, 'classic_vine_vine-123_1');
+      });
+
+      test('returns the newest of several imports', () async {
+        await service.saveClip(
+          clipOf(id: 'classic_vine_vine-123_1', recordedAt: DateTime(2025)),
+        );
+        await service.saveClip(
+          clipOf(id: 'classic_vine_vine-123_2', recordedAt: DateTime(2026)),
+        );
+
+        final found = await service.findImportedClipOf(vine);
+
+        expect(found?.id, 'classic_vine_vine-123_2');
+      });
+
+      test(
+        'returns the newest import whatever order they were saved in',
+        () async {
+          await service.saveClip(
+            clipOf(id: 'classic_vine_vine-123_b', recordedAt: DateTime(2026)),
+          );
+          await service.saveClip(
+            clipOf(id: 'classic_vine_vine-123_a', recordedAt: DateTime(2025)),
+          );
+
+          final found = await service.findImportedClipOf(vine);
+
+          expect(found?.id, 'classic_vine_vine-123_b');
+        },
+      );
+
+      test('ignores a merged clip that kept the import flag', () async {
+        await service.saveClip(
+          clipOf(id: 'merged_2', recordedAt: DateTime(2026)),
+        );
+
+        expect(await service.findImportedClipOf(vine), isNull);
+      });
+
+      test('ignores the halves of a split import in the autosave', () async {
+        final draftService = DraftStorageService(
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        );
+        // The editor's split copies the import, keeping its flag and credit.
+        final import = clipOf(
+          id: 'classic_vine_vine-123_1',
+          recordedAt: DateTime(2026),
+        );
+        await draftService.saveDraft(
+          DivineVideoDraft.create(
+            id: VideoEditorConstants.autoSaveId,
+            clips: [
+              import.copyWith(
+                id: '1767225600000000_start',
+                duration: const Duration(seconds: 3),
+              ),
+              import.copyWith(
+                id: '1767225600000000_end',
+                trimStart: const Duration(seconds: 3),
+                minTrimStart: const Duration(seconds: 3),
+              ),
+            ],
+            title: '',
+            description: '',
+            hashtags: const {},
+            selectedApproach: '',
+          ),
+        );
+        expect(
+          (await service.getAllClips()).map((c) => c.id),
+          containsAll(['1767225600000000_start', '1767225600000000_end']),
+        );
+
+        expect(await service.findImportedClipOf(vine), isNull);
+      });
+
+      test(
+        'ignores a split half the recorder detached and the trash restored',
+        () async {
+          final draftService = DraftStorageService(
+            draftsDao: database.draftsDao,
+            clipsDao: database.clipsDao,
+          );
+          final startHalf =
+              clipOf(
+                id: 'classic_vine_vine-123_1',
+                recordedAt: DateTime(2026),
+              ).copyWith(
+                id: '1767225600000000_start',
+                duration: const Duration(seconds: 3),
+              );
+          DivineVideoDraft autosave(List<DivineVideoClip> clips) =>
+              DivineVideoDraft.create(
+                id: VideoEditorConstants.autoSaveId,
+                clips: clips,
+                title: '',
+                description: '',
+                hashtags: const {},
+                selectedApproach: '',
+              );
+
+          await draftService.saveDraft(autosave([startHalf]));
+          // The recorder's delete detaches the autosave copy from its draft,
+          // and the restore brings it back as a row with no draft.
+          await service.softDelete(startHalf.id, clearDraftId: true);
+          await draftService.saveDraft(autosave(const []));
+          await draftService.deleteDraft(VideoEditorConstants.autoSaveId);
+          await service.restore(startHalf.id);
+          expect(
+            (await database.clipsDao.getLibraryClips()).map((row) => row.id),
+            ['${VideoEditorConstants.autoSaveId}:${startHalf.id}'],
+          );
+
+          expect(await service.findImportedClipOf(vine), isNull);
+        },
+      );
+
+      test(
+        'ignores a trimmed copy of an import saved to the library',
+        () async {
+          await service.saveClip(
+            clipOf(
+              id: '1767225600000000_end',
+              recordedAt: DateTime(2026),
+            ).copyWith(
+              trimStart: const Duration(seconds: 3),
+              minTrimStart: const Duration(seconds: 3),
+            ),
+          );
+
+          expect(await service.findImportedClipOf(vine), isNull);
+        },
+      );
+
+      test('ignores a derived clip carrying the same credit', () async {
+        await service.saveClip(
+          clipOf(
+            id: 'merged_1',
+            recordedAt: DateTime(2026),
+            importedSource: false,
+          ),
+        );
+
+        expect(await service.findImportedClipOf(vine), isNull);
+      });
+
+      test('ignores a trashed import', () async {
+        await service.saveClip(
+          clipOf(id: 'classic_vine_vine-123_1', recordedAt: DateTime(2026)),
+        );
+        await service.softDelete('classic_vine_vine-123_1');
+
+        expect(await service.findImportedClipOf(vine), isNull);
+      });
+
+      test('ignores an import whose video file is gone', () async {
+        await service.saveClip(
+          clipOf(
+            id: 'classic_vine_vine-123_1',
+            recordedAt: DateTime(2026),
+            videoOnDisk: false,
+          ),
+        );
+
+        expect(await service.findImportedClipOf(vine), isNull);
+      });
+
+      test(
+        'returns an older import when the newest one has lost its file',
+        () async {
+          await service.saveClip(
+            clipOf(id: 'classic_vine_vine-123_1', recordedAt: DateTime(2025)),
+          );
+          await service.saveClip(
+            clipOf(
+              id: 'classic_vine_vine-123_2',
+              recordedAt: DateTime(2026),
+              videoOnDisk: false,
+            ),
+          );
+
+          final found = await service.findImportedClipOf(vine);
+
+          expect(found?.id, 'classic_vine_vine-123_1');
+        },
+      );
+
+      test('ignores an import of another video', () async {
+        await service.saveClip(
+          clipOf(
+            id: 'classic_vine_other_1',
+            recordedAt: DateTime(2026),
+            eventId: 'another-event-id',
+          ),
+        );
+
+        expect(await service.findImportedClipOf(vine), isNull);
       });
     });
 

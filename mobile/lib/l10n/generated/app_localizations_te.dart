@@ -4209,6 +4209,45 @@ class AppLocalizationsTe extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'క్లిప్‌లకు జోడించడం సాధ్యపడలేదు';
 
   @override
+  String get remixBlockedByCreator => 'ఈ క్రియేటర్ రీమిక్స్‌లను అనుమతించరు.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'ఈ వీడియోను రీమిక్స్ చేయవచ్చో లేదో తనిఖీ చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get remixStartFailed =>
+      'రీమిక్స్‌ను ప్రారంభించలేకపోయాము. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'నా వీడియోలను రీమిక్స్ చేయడానికి ఇతరులను అనుమతించండి';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'ఇతరులు మీ వీడియోలను వారి స్వంత పోస్ట్‌లలో క్లిప్‌లుగా ఉపయోగించవచ్చు.';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return '$name క్లిప్‌ను ఉపయోగిస్తోంది';
+  }
+
+  @override
+  String get metadataRemixAction => 'రీమిక్స్ చేయండి';
+
+  @override
+  String get remixWebAppNudge => 'రీమిక్స్ Divine యాప్‌లో జరుగుతుంది.';
+
+  @override
+  String get remixWebGetTheApp => 'యాప్ పొందండి';
+
+  @override
+  String get metadataRemixesLabel => 'రీమిక్స్‌లు';
+
+  @override
+  String get metadataReportRemix => 'ఈ రీమిక్స్‌ను నివేదించండి';
+
+  @override
   String get shareSheetAddToList => 'జాబితాకు జోడించండి';
 
   @override
@@ -6967,6 +7006,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'క్లిప్‌లు';
+
+  @override
+  String get libraryTabFromOthers => 'ఇతరుల నుండి';
 
   @override
   String get libraryScheduledSectionTitle => 'షెడ్యూల్ చేసినవి';

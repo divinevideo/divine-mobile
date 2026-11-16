@@ -33,6 +33,31 @@ This document outlines the required Nostr event types (kinds) that Divine uses f
 - `about` - User bio/description
 - `picture` - Avatar image URL
 
+**Divine-specific Content JSON keys** (other clients ignore them; a profile
+save re-seeds from the freshest relay copy so they survive edits):
+- `divine_monetization_links` - Support and subscription links shown on the
+  profile.
+- `divine_allow_video_reuse` - Account-wide remix block. JSON `false` means
+  nobody else may use this account's videos as clips ("Add to clips",
+  the info sheet's "Remix", and adding a clip received in a direct message that
+  credits the account all refuse, except a clip the account sent itself);
+  absent or `true` means remixing follows each
+  video's own `allow_video_reuse` tag. Only the creator's own
+  "Let people remix my videos" setting writes it: turning the setting off
+  writes `false`, turning it back on removes the key. That save only succeeds
+  once the app's default relay has accepted it (`OK true`); a kind 0 other
+  relays accepted but the default relay refused or never answered is reported
+  as a failed save and the setting reverts. Readers must read the author's raw
+  kind 0 straight from relays (`readRawProfileFromRelays`) — REST profile
+  projections drop custom keys. A `false` from any relay blocks at once, but
+  only a complete read that asked the default relay may answer "allowed":
+  other relays can still hold an older kind 0 from before the block. A viewer
+  not connected to the default relay therefore waits for a separate read of
+  it, and gets no answer — refusing the remix with a retry message — when it
+  stays silent. The app's reader is `RemixConsentRepository`
+  (`mobile/lib/repositories/remix_consent_repository.dart`), which documents
+  how it asks the relays and settles on an answer.
+
 ### Kind 16 - Generic Reposts (NIP-18)
 **Required for:** Video repost functionality
 

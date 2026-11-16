@@ -59,6 +59,12 @@ Operations that take a clip id (`getClipById`, trashing, restoring, deleting, fi
 
 [`ClipRecoveryService`](../lib/services/clip_recovery_service.dart) is a developer-only tool for recordings the library can no longer show: rows stored under another owner, and files whose rows are gone.
 
+## Clips and From others
+
+Clips imported from other people sit in their own tab, From others, so the Clips tab holds the user's own footage. The two tabs share one `ClipsLibraryBloc`, which shows one `ClipOwnershipScope` at a time. A clip is from others (`DivineVideoClip.isFromOthers`) when it is an import and its first credit names someone other than the library's account. An import is a clip saved by `importToLibrary`, `importReceivedClip` or `importReceivedVine`, which set `importedSource`. Clips stored before that field existed are recognised by their id prefix (`video_`, `classic_vine_`, `dm_clip_`). Clips the editor renders from others' footage (merges, flattened saves, split-screen layouts) are the user's own work and stay in Clips, whatever credits they carry. A gallery import is never from others.
+
+Filters, the trash and emptying it apply within the active tab. A selection survives switching tabs, so a pick can hold the user's own take and someone else's Vine. The pickers show both tabs too; the chroma-key picker has no tabs and shows every clip. `ClipLibraryService.findImportedClipOf` finds the newest import of a published video.
+
 ## Organizing
 
 The grid shows one filter at a time (`ClipLibraryFilter`):
@@ -117,24 +123,25 @@ When the library loads, video clips missing a thumbnail or ghost frame get them 
 | Stop motion | `StopMotionSessionStore`, each still as it is taken ([`CAMERA_ARCHITECTURE.md`](CAMERA_ARCHITECTURE.md#modes)) |
 | Saving one clip from the editor timeline | [`VideoEditorClipLibrarySaveService`](../lib/services/video_editor/video_editor_clip_library_save_service.dart), which renders the trimmed part, with its visual overlays, into a new file; `ClipEditorBloc` then saves it through `ClipManagerNotifier.saveClipToLibrary` |
 | Share sheet, "Add to clips" | `VideoClipImportService.importToLibrary`, for classic Vines, the user's own videos and any video that allows reuse |
+| Info sheet, "Remix" (action row) | `VideoContentActionsBloc` reuses the newest earlier import of the video (`VideoClipImportService.findImportedClipOf`), or else imports it with `importToLibrary`, then `openRemixInEditor` opens the editor on that clip |
 | Direct messages | `VideoClipImportService.importReceivedClip` and `importReceivedVine` ([`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#in-the-library)) |
 | Device gallery | `VideoClipImportService.importGalleryClip` ([`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#back-from-the-gallery)) |
 | A clip the editor creates, such as a split-screen layout render | The editor's autosave draft, which `getAllClips` lists as library clips (see [Rows](#rows)) |
 | Developer recovery tool | `ClipRecoveryService`, which saves recovered recordings back (see [Accounts](#accounts)) |
 | Earlier builds | `ClipLibraryService.migrateOldClips`, which moves the old SharedPreferences store into Drift at startup (see [Startup and background work](#startup-and-background-work)) |
 
-Of the ways footage comes in from outside the app, a clip received in a direct message and a clip brought back from the gallery get in only after the C2PA check described in [`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#the-c2pa-check). A received file that carries no credentials gets in only if it is the exact file of an archived Vine, matched by its file hash. The share sheet's "Add to clips" brings in a published video with no check.
+Of the ways footage comes in from outside the app, a clip received in a direct message and a clip brought back from the gallery get in only after the C2PA check described in [`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#the-c2pa-check). A received file that carries no credentials gets in only if it is the exact file of an archived Vine, matched by its file hash. The share sheet's "Add to clips" and the info sheet's "Remix" bring in a published video with no C2PA check, but only once `VideoContentActionsBloc` has checked the creator's consent: first the video's own rule (`canRemixVideo`), then the creator's account-wide block (`RemixConsentRepository`). The user's own videos skip both checks.
 
 ## Where the library opens
 
 | From | Code | Shows |
 |---|---|---|
-| Library routes | `RoutePaths.libraryDrafts`, `RoutePaths.libraryClips`, `RoutePaths.librarySounds` in [`library_routes.dart`](../lib/router/routes/library_routes.dart) | Drafts, Clips and Sounds tabs |
-| Recorder | `openRecorderLibrary`, `RoutePaths.libraryClipsOnly` | Drafts and Clips; clips of the recording mode's type only |
-| Editor, adding clips | `LibraryScreen(selectionMode: true, allowsMixedClipTypes: true)` in a sheet | Clips tab as a picker; timeline clips pre-selected |
-| Editor, split-screen cell | `_pickLayoutCellClips` in [`video_editor_screen.dart`](../lib/screens/video_editor/video_editor_screen.dart) | Picker with the cell's crop on each thumbnail |
+| Library routes | `RoutePaths.libraryDrafts`, `RoutePaths.libraryClips`, `RoutePaths.librarySounds` in [`library_routes.dart`](../lib/router/routes/library_routes.dart) | Drafts, Clips, From others and Sounds tabs |
+| Recorder | `openRecorderLibrary`, `RoutePaths.libraryClipsOnly` | Drafts, Clips and From others; clips of the recording mode's type only |
+| Editor, adding clips | `LibraryScreen(selectionMode: true, allowsMixedClipTypes: true)` in a sheet | Clips and From others tabs as a picker; timeline clips pre-selected |
+| Editor, split-screen cell | `_pickLayoutCellClips` in [`video_editor_screen.dart`](../lib/screens/video_editor/video_editor_screen.dart) | Clips and From others tabs as a picker, with the cell's crop on each thumbnail |
 | Chroma-key backdrop | `showChromaKeyClipPicker` | A single-clip picker of video clips, with its own `ClipsLibraryBloc` |
-| Direct message | `_onAttachClip` in [`conversation_view.dart`](../lib/screens/inbox/conversation/conversation_view.dart) | Picker of video clips; the picked clips are sent |
+| Direct message | `_onAttachClip` in [`conversation_view.dart`](../lib/screens/inbox/conversation/conversation_view.dart) | Clips and From others tabs as a picker of video clips; the picked clips are sent |
 
 ## Tests
 

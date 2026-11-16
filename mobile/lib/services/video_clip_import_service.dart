@@ -6,8 +6,11 @@ import 'dart:io';
 
 import 'package:characters/characters.dart';
 import 'package:models/models.dart' as models;
+import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/published_clip_source_resolver.dart';
@@ -39,6 +42,10 @@ typedef VideoMetadataReader = Future<VideoMetadata> Function(EditorVideo video);
 
 /// Returns the lowercase hex SHA-256 of the file at `filePath`.
 typedef FileSha256Hasher = Future<String> Function(String filePath);
+
+/// Answers whether the account `authorPubkey` lets others use its videos as
+/// clips (see [RemixConsentRepository.consentFor]).
+typedef RemixConsentReader = Future<RemixConsent> Function(String authorPubkey);
 
 class VideoClipThumbnail {
   const VideoClipThumbnail({required this.path, required this.timestamp});
@@ -83,6 +90,15 @@ enum VideoClipImportFailureReason {
   /// The received file is not the file of a published Vine post, so nothing
   /// shows where it came from.
   notArchivedVine,
+
+  /// The account credited as the received footage's creator does not let
+  /// others use its videos as clips.
+  remixBlocked,
+
+  /// Whether the account credited as the received footage's creator lets
+  /// others use its videos as clips could not be read, so the import fails
+  /// closed.
+  remixConsentUnknown,
   saveFailed,
 }
 
@@ -97,6 +113,7 @@ class VideoClipImportService {
     VideoMetadataReader? readVideoMetadata,
     FileSha256Hasher? hashFile,
     PublishedClipSourceResolver? publishedSourceResolver,
+    RemixConsentReader? readRemixConsent,
   }) : _clipLibraryService = clipLibraryService,
        _getDocumentsPath = getDocumentsPath,
        _downloadVideo = downloadVideo,
@@ -106,7 +123,8 @@ class VideoClipImportService {
        _readVideoMetadata =
            readVideoMetadata ?? ProVideoEditor.instance.getMetadata,
        _hashFile = hashFile ?? NativeProofModeService.generateSha256FileHash,
-       _publishedSourceResolver = publishedSourceResolver;
+       _publishedSourceResolver = publishedSourceResolver,
+       _readRemixConsent = readRemixConsent;
 
   static const _logName = 'VideoClipImportService';
 
@@ -123,6 +141,7 @@ class VideoClipImportService {
   final Clock _now;
   final VideoMetadataReader _readVideoMetadata;
   final PublishedClipSourceResolver? _publishedSourceResolver;
+  final RemixConsentReader? _readRemixConsent;
   final FileSha256Hasher _hashFile;
 
   Future<VideoClipImportResult> importToLibrary(
@@ -188,6 +207,13 @@ class VideoClipImportService {
     }
   }
 
+  /// The clip an earlier [importToLibrary] of [video] left in the library
+  /// this service imports into, or null when it holds none.
+  ///
+  /// See [ClipLibraryService.findImportedClipOf] for what counts as one.
+  Future<DivineVideoClip?> findImportedClipOf(models.VideoEvent video) =>
+      _clipLibraryService.findImportedClipOf(video);
+
   /// Imports a clip received in a direct message into the library.
   ///
   /// [source] must already have passed the C2PA camera-capture check; the
@@ -201,6 +227,13 @@ class VideoClipImportService {
   /// Then whoever published it is credited, linked to the post. When that
   /// cannot be determined, the import fails with
   /// [VideoClipImportFailureReason.sourceLookupFailed] rather than guess.
+  ///
+  /// The first credited account, unless it is the library's own or the
+  /// sender's, must let others use its videos as clips: otherwise the import
+  /// fails with
+  /// [VideoClipImportFailureReason.remixBlocked], or with
+  /// [VideoClipImportFailureReason.remixConsentUnknown] when that cannot be
+  /// read, before anything is copied.
   ///
   /// [contributorPubkeys] are the accounts the clip's signed history names as
   /// having recorded or edited it before. Each is credited too, so a clip
@@ -239,6 +272,8 @@ class VideoClipImportService {
       targetAspectRatio: targetAspectRatio,
       contributorPubkeys: contributorPubkeys,
       beforeSave: beforeSave,
+      importedSource: true,
+      checkRemixConsent: true,
     );
   }
 
@@ -267,7 +302,11 @@ class VideoClipImportService {
   /// crediting the viner, linked to the post, without a proof record. Any
   /// other file fails with [VideoClipImportFailureReason.notArchivedVine],
   /// and one that cannot be told with
-  /// [VideoClipImportFailureReason.sourceLookupFailed].
+  /// [VideoClipImportFailureReason.sourceLookupFailed]. A viner other than
+  /// the library's own account or [senderPubkey] who blocks remixing refuses
+  /// it with
+  /// [VideoClipImportFailureReason.remixBlocked], and one whose consent
+  /// cannot be read with [VideoClipImportFailureReason.remixConsentUnknown].
   ///
   /// The clip's id is derived from [messageId] and [beforeSave] is awaited
   /// just before the save, both as for [importReceivedClip].
@@ -276,6 +315,7 @@ class VideoClipImportService {
   Future<VideoClipImportResult> importReceivedVine({
     required File source,
     required String messageId,
+    required String senderPubkey,
     Future<void> Function()? beforeSave,
   }) async {
     final documentsPath = await _getDocumentsPath();
@@ -316,6 +356,11 @@ class VideoClipImportService {
         VideoClipImportFailureReason.notArchivedVine,
       );
     }
+    final refusal = await _remixRefusal(
+      vine.pubkey,
+      senderPubkey: senderPubkey,
+    );
+    if (refusal != null) return VideoClipImportFailure(refusal);
 
     final written = <String>[];
     try {
@@ -415,6 +460,53 @@ class VideoClipImportService {
     );
   }
 
+  /// Why footage credited to [authorPubkey] may not enter this library, or
+  /// null when it may.
+  ///
+  /// Footage crediting nobody, the library's own account, or [senderPubkey]
+  /// — a creator who sent their own footage chose to share it — is never
+  /// asked about. Anyone else must let others use their videos as clips: a
+  /// block is [VideoClipImportFailureReason.remixBlocked], and an answer that
+  /// could not be read — including no reader at all — is
+  /// [VideoClipImportFailureReason.remixConsentUnknown].
+  Future<VideoClipImportFailureReason?> _remixRefusal(
+    String? authorPubkey, {
+    String? senderPubkey,
+  }) async {
+    if (authorPubkey == null) return null;
+    final owner = _clipLibraryService.ownerPubkey;
+    if (owner != null && pubkeysEqual(authorPubkey, owner)) return null;
+    if (senderPubkey != null && pubkeysEqual(authorPubkey, senderPubkey)) {
+      return null;
+    }
+
+    final readConsent = _readRemixConsent;
+    final RemixConsent consent;
+    if (readConsent == null) {
+      Log.warning(
+        'No remix consent reader — refusing the received clip',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      consent = RemixConsent.unknown;
+    } else {
+      consent = await readConsent(authorPubkey);
+    }
+    if (consent != RemixConsent.allowed) {
+      Log.info(
+        'Refused a received clip crediting ${pubkeyForLogs(authorPubkey)}: '
+        'remix consent ${consent.name}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
+    return switch (consent) {
+      RemixConsent.allowed => null,
+      RemixConsent.blocked => VideoClipImportFailureReason.remixBlocked,
+      RemixConsent.unknown => VideoClipImportFailureReason.remixConsentUnknown,
+    };
+  }
+
   /// The library clip outside the trash whose proof names [c2paManifestId],
   /// if any.
   ///
@@ -448,6 +540,14 @@ class VideoClipImportService {
   /// is never credited.
   ///
   /// [videoHash] is [source]'s SHA-256 when the caller already computed it.
+  ///
+  /// [importedSource] marks the clip as footage someone sent rather than the
+  /// device's own coming back (see [DivineVideoClip.importedSource]).
+  ///
+  /// With [checkRemixConsent], footage whose first credit would go to an
+  /// account other than the library's or [senderPubkey] is refused, before
+  /// anything is copied, unless that account lets others use its videos as
+  /// clips (see [_remixRefusal]).
   Future<VideoClipImportResult> _importVerifiedClip({
     required File source,
     required String clipId,
@@ -457,6 +557,8 @@ class VideoClipImportService {
     String? videoHash,
     models.AspectRatio? targetAspectRatio,
     Future<void> Function()? beforeSave,
+    bool importedSource = false,
+    bool checkRemixConsent = false,
   }) async {
     final documentsPath = await _getDocumentsPath();
     if (documentsPath.isEmpty) {
@@ -487,6 +589,19 @@ class VideoClipImportService {
         return const VideoClipImportFailure(
           VideoClipImportFailureReason.sourceLookupFailed,
         );
+      }
+
+      final post = published?.video;
+      // A forwarded post credits whoever published it, linked to the post the
+      // way a clip imported from a published video is. Only footage that was
+      // never published credits the person who sent it.
+      final author = post?.pubkey ?? published?.ownerPubkey ?? senderPubkey;
+      if (checkRemixConsent) {
+        final refusal = await _remixRefusal(
+          author,
+          senderPubkey: senderPubkey,
+        );
+        if (refusal != null) return VideoClipImportFailure(refusal);
       }
 
       await Directory(documentsPath).create(recursive: true);
@@ -520,11 +635,6 @@ class VideoClipImportService {
         videoHash: hash,
         c2paManifestId: c2paManifestId,
       );
-      final post = published?.video;
-      // A forwarded post credits whoever published it, linked to the post the
-      // way a clip imported from a published video is. Only footage that was
-      // never published credits the person who sent it.
-      final author = post?.pubkey ?? published?.ownerPubkey ?? senderPubkey;
       final owner = _clipLibraryService.ownerPubkey;
 
       final clip = DivineVideoClip(
@@ -539,6 +649,7 @@ class VideoClipImportService {
             targetAspectRatio ?? _targetAspectRatioForRatio(actualRatio),
         ghostFramePath: ghostFramePath,
         proofManifestJson: jsonEncode(proof.toJson()),
+        importedSource: importedSource,
         sourceCredits: [
           if (author != null && author != owner)
             models.ClipSourceCredit(
@@ -668,6 +779,7 @@ class VideoClipImportService {
       originalAspectRatio: actualRatio ?? 1,
       targetAspectRatio: _targetAspectRatioFor(video, actualRatio),
       ghostFramePath: ghostFramePath,
+      importedSource: true,
       sourceAuthorPubkey: video.pubkey,
       sourceEventId: video.id,
       sourceAddressableId: video.addressableId,

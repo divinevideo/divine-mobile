@@ -2414,9 +2414,16 @@ class NostrClient {
   ///   every relay rejected it, none responded before the confirmation
   ///   timeout, or the send failed before reaching them (e.g. the signer
   ///   returned null).
+  ///
+  /// With [requireDefaultRelay], success also needs [defaultRelayUrl]'s
+  /// `OK true`: a Kind 0 that other relays accepted but the default relay
+  /// rejected is [PublishFailed]. When the default relay did not answer the
+  /// pool publish in time, was unreachable, or is not in the pool, the event
+  /// is sent to it alone after the pool accepts it, and that answer decides.
   Future<PublishResult> sendProfileAwaitOk({
     required Map<String, dynamic> profileContent,
     List<List<String>> tags = const [],
+    bool requireDefaultRelay = false,
   }) async {
     // Resolve the no-relays case up front. [publishEventAwaitOk] returns an
     // all-empty [PublishOutcome] both when no relay was ever connected AND
@@ -2442,11 +2449,39 @@ class NostrClient {
 
     final outcome = await publishEventAwaitOk(event);
 
-    if (outcome.confirmed) {
-      return PublishSuccess(event: event);
+    if (!outcome.confirmed) {
+      return const PublishFailed();
     }
+    if (requireDefaultRelay && !await _defaultRelayAccepted(event, outcome)) {
+      return const PublishFailed();
+    }
+    return PublishSuccess(event: event);
+  }
 
-    return const PublishFailed();
+  /// Whether [defaultRelayUrl] accepted [event], given the pool's [outcome].
+  ///
+  /// Only an explicit rejection in [outcome] is final. A default relay that
+  /// had not answered when the pool publish settled — which completes shortly
+  /// after the first `OK`, so a slower relay that accepted can still be listed
+  /// as silent — or that was unreachable or never targeted, is sent [event]
+  /// alone, and its answer decides. A relay that already stored the event
+  /// acknowledges the duplicate with `OK true`.
+  Future<bool> _defaultRelayAccepted(
+    Event event,
+    PublishOutcome outcome,
+  ) async {
+    final defaultRelay = normalizeRelayUrl(defaultRelayUrl) ?? defaultRelayUrl;
+    bool isDefault(String url) =>
+        (normalizeRelayUrl(url) ?? url) == defaultRelay;
+
+    if (outcome.acceptedBy.any(isDefault)) return true;
+    if (outcome.rejectedBy.keys.any(isDefault)) return false;
+
+    final direct = await publishEventAwaitOk(
+      event,
+      targetRelays: [defaultRelayUrl],
+    );
+    return direct.acceptedBy.any(isDefault);
   }
 
   /// Sends a repost

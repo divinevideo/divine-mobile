@@ -54,6 +54,7 @@ import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_address_lookup.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/repositories/profile_pins_repository.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/services/challenges/challenge_app_session.dart';
 import 'package:openvine/services/challenges/challenge_video_policy.dart';
 import 'package:openvine/services/challenges/sqlite_challenge_store.dart';
@@ -690,6 +691,24 @@ ProfileReader? profileReadRepository(Ref ref) {
   }
 
   return _buildProfileRepository(ref);
+}
+
+/// Reads a creator's account-wide remix block from their fresh kind 0.
+///
+/// Built on [profileReadRepository] because the check only reads: it needs a
+/// known identity, not a signer. Null until then, and callers treat a missing
+/// repository as consent they could not read.
+@Riverpod(keepAlive: true)
+RemixConsentRepository? remixConsentRepository(Ref ref) {
+  final reader = ref.watch(profileReadRepositoryProvider);
+  if (reader == null) return null;
+  final nostrClient = ref.watch(nostrServiceProvider);
+  return RemixConsentRepository(
+    profileRepository: reader,
+    // The same default relay a remix-setting save must reach.
+    defaultRelayUrl: nostrClient.defaultRelayUrl,
+    connectedRelayUrls: () => nostrClient.connectedRelays,
+  );
 }
 
 /// Shared construction for [profileRepository] and [profileReadRepository].

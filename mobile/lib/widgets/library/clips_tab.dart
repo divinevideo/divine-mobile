@@ -35,7 +35,7 @@ class ClipsTab extends StatelessWidget {
     required this.showRecordButton,
     required this.backgroundColor,
     this.selectionEnabled = true,
-    this.clips,
+    this.scope,
     this.targetAspectRatio,
     this.scrollController,
     this.gridTopPadding = 0,
@@ -43,8 +43,16 @@ class ClipsTab extends StatelessWidget {
     super.key,
   });
 
-  /// Optional externally provided clip order.
-  final List<DivineVideoClip>? clips;
+  /// The [ClipOwnershipScope] this tab stands for, or `null` when it shows
+  /// whatever scope the bloc has.
+  ///
+  /// The library's two clip tabs share one bloc. Each draws its own scope's
+  /// clips ([ClipsLibraryState.sortedClipsFor]) whichever scope the bloc is
+  /// on, so a swipe between them never slides in a blank page. Selection,
+  /// the trash and bulk actions still follow the bloc's active scope; the
+  /// inactive tab leaves the trash blank rather than showing the other
+  /// scope's.
+  final ClipOwnershipScope? scope;
 
   /// Whether tapping a clip should toggle selection.
   final bool selectionEnabled;
@@ -89,7 +97,7 @@ class ClipsTab extends StatelessWidget {
         _CategoryChipRow(showCategoryManagement: showCategoryManagement),
         Expanded(
           child: _ClipsBody(
-            clips: clips,
+            scope: scope,
             selectionEnabled: selectionEnabled,
             showRecordButton: showRecordButton,
             backgroundColor: backgroundColor,
@@ -156,7 +164,7 @@ class _CategoryChipRow extends StatelessWidget {
 
 class _ClipsBody extends StatelessWidget {
   const _ClipsBody({
-    required this.clips,
+    required this.scope,
     required this.selectionEnabled,
     required this.showRecordButton,
     required this.backgroundColor,
@@ -165,7 +173,7 @@ class _ClipsBody extends StatelessWidget {
     required this.gridTopPadding,
   });
 
-  final List<DivineVideoClip>? clips;
+  final ClipOwnershipScope? scope;
   final bool selectionEnabled;
   final bool showRecordButton;
   final Color backgroundColor;
@@ -180,9 +188,17 @@ class _ClipsBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ClipsLibraryBloc, ClipsLibraryState>(
       builder: (context, state) {
+        final tabScope = scope;
+        final isInactiveTab = tabScope != null && tabScope != state.scope;
+        // The trash is loaded for the active scope only.
+        if (isInactiveTab && state.isShowingTrash) {
+          return const SizedBox.shrink();
+        }
         final content = _FilterContent(
           state: state,
-          clips: clips,
+          clips: tabScope == null
+              ? state.sortedClips
+              : state.sortedClipsFor(tabScope),
           selectionEnabled: selectionEnabled,
           showRecordButton: showRecordButton,
           backgroundColor: backgroundColor,
@@ -238,7 +254,8 @@ class _FilterContent extends StatelessWidget {
   /// keeps rendering the filter it belongs to until the fade ends.
   final ClipsLibraryState state;
 
-  final List<DivineVideoClip>? clips;
+  /// The clips of the scope this tab stands for.
+  final List<DivineVideoClip> clips;
   final bool selectionEnabled;
   final bool showRecordButton;
   final Color backgroundColor;
@@ -254,7 +271,7 @@ class _FilterContent extends StatelessWidget {
       return TrashedClipsList(scrollController: scrollController);
     }
 
-    final visibleClips = clips ?? state.sortedClips;
+    final visibleClips = clips;
 
     if (state.isLoading) {
       return const Center(child: BrandedLoadingIndicator(size: 60));

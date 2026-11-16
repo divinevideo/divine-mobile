@@ -6,7 +6,7 @@ import 'package:openvine/providers/video_editor_provider.dart';
 
 /// Lets the creator allow others to add this post to their clips.
 ///
-/// Off by default. Locked off when the post's sound is licensed without
+/// On by default. Locked off when the post's sound is licensed without
 /// derivatives, since a reused clip carries that sound along.
 class VideoMetadataVideoReuseToggle extends ConsumerWidget {
   /// Creates the video reuse toggle.

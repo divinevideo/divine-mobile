@@ -4190,6 +4190,45 @@ class AppLocalizationsRo extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Nu s-a putut adăuga la clipuri';
 
   @override
+  String get remixBlockedByCreator => 'Această persoană nu permite remixuri.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Nu am putut verifica dacă acest videoclip poate fi remixat. Încearcă din nou.';
+
+  @override
+  String get remixStartFailed =>
+      'Nu am putut începe remixul. Încearcă din nou.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'Permite altora să-mi remixeze videoclipurile';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Alții îți pot folosi videoclipurile drept clipuri în propriile postări.';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Folosește un clip de la $name';
+  }
+
+  @override
+  String get metadataRemixAction => 'Remixează';
+
+  @override
+  String get remixWebAppNudge => 'Remixurile se fac în aplicația Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Descarcă aplicația';
+
+  @override
+  String get metadataRemixesLabel => 'Remixuri';
+
+  @override
+  String get metadataReportRemix => 'Raportează acest remix';
+
+  @override
   String get shareSheetAddToList => 'Adaugă la listă';
 
   @override
@@ -6939,6 +6978,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'Clipuri';
+
+  @override
+  String get libraryTabFromOthers => 'De la alții';
 
   @override
   String get libraryScheduledSectionTitle => 'Programate';

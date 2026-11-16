@@ -650,6 +650,202 @@ void main() {
       );
     });
 
+    group('fetchRemixesOf', () {
+      Event remix(
+        int id, {
+        required int createdAt,
+        String? source,
+        String marker = 'clip-source',
+        String? dTag,
+      }) => _video(
+        id: id,
+        createdAt: createdAt,
+        pubkey: _hex(1000 + id),
+        dTag: dTag ?? 'remix-$id',
+        tags: [
+          ['a', source ?? _rootAddress, _relay, marker],
+        ],
+      );
+
+      test(
+        'reads the videos that use a clip of it, the newest first',
+        () async {
+          relayAnswers([
+            remix(401, createdAt: 1000),
+            remix(402, createdAt: 3000),
+            // Inspired by it, answering its Add yours, or naming it without a
+            // marker: none uses a clip of it.
+            remix(403, createdAt: 4000, marker: 'mention'),
+            remix(404, createdAt: 5000, marker: ''),
+            // Uses a clip of another video.
+            remix(405, createdAt: 6000, source: '34236:$_creator:other-d'),
+            // A reply to it.
+            _video(
+              id: 406,
+              createdAt: 7000,
+              tags: [
+                ['a', _rootAddress, _relay, 'reply'],
+                ['A', _rootAddress, ''],
+              ],
+            ),
+          ]);
+
+          final remixes = await repository().fetchRemixesOf(_rootAddress);
+
+          expect(
+            remixes.map((video) => video.id),
+            equals([_hex(402), _hex(401)]),
+          );
+          final filter =
+              (verify(
+                        () => nostrClient.readEvents(captureAny()),
+                      ).captured.single
+                      as List<Filter>)
+                  .single;
+          expect(
+            filter.kinds,
+            equals([NIP71VideoKinds.addressableShortVideo]),
+          );
+          expect(filter.a, equals([_rootAddress]));
+          expect(
+            filter.limit,
+            equals(VideoResponsesRepository.maxRemixReferencesRead),
+          );
+        },
+      );
+
+      test(
+        'finds remixes past the first 50 videos that name it otherwise',
+        () async {
+          relayAnswers([
+            for (var i = 0; i < 60; i++)
+              remix(500 + i, createdAt: 9000 + i, marker: 'mention'),
+            remix(401, createdAt: 1000),
+            remix(402, createdAt: 2000),
+          ]);
+
+          final remixes = await repository().fetchRemixesOf(_rootAddress);
+
+          expect(
+            remixes.map((video) => video.id),
+            equals([_hex(402), _hex(401)]),
+          );
+          expect(VideoResponsesRepository.maxRemixReferencesRead, equals(200));
+        },
+      );
+
+      test('shows at most [limit] remixes, the newest', () async {
+        relayAnswers([
+          for (var i = 0; i < 55; i++) remix(600 + i, createdAt: 1000 + i),
+        ]);
+
+        final remixes = await repository().fetchRemixesOf(_rootAddress);
+
+        expect(remixes, hasLength(50));
+        expect(remixes.first.id, equals(_hex(654)));
+      });
+
+      test(
+        "leaves out what the viewer's filter does, then takes the limit",
+        () async {
+          relayAnswers([
+            remix(401, createdAt: 1000),
+            remix(402, createdAt: 2000),
+            remix(403, createdAt: 3000),
+            // Not a remix: never handed to the filter.
+            remix(404, createdAt: 4000, marker: 'mention'),
+          ]);
+          final seen = <String>[];
+
+          final remixes = await repository().fetchRemixesOf(
+            _rootAddress,
+            limit: 1,
+            filter: (videos) {
+              seen.addAll(videos.map((video) => video.id));
+              return [
+                for (final video in videos)
+                  if (video.id != _hex(403)) video,
+              ];
+            },
+          );
+
+          expect(seen, unorderedEquals([_hex(401), _hex(402), _hex(403)]));
+          expect(remixes.map((video) => video.id), equals([_hex(402)]));
+        },
+      );
+
+      test('keeps the newest version of each remix', () async {
+        relayAnswers([
+          remix(401, createdAt: 1000, dTag: 'same'),
+          remix(401, createdAt: 1000, dTag: 'same'),
+          _video(
+            id: 402,
+            createdAt: 3000,
+            pubkey: _hex(1401),
+            dTag: 'same',
+            tags: [
+              ['a', _rootAddress, _relay, 'clip-source'],
+            ],
+          ),
+          _video(
+            id: 403,
+            createdAt: 2000,
+            pubkey: _hex(1401),
+            dTag: 'same',
+            tags: [
+              ['a', _rootAddress, _relay, 'clip-source'],
+            ],
+          ),
+        ]);
+
+        final remixes = await repository().fetchRemixesOf(_rootAddress);
+
+        expect(remixes.map((video) => video.id), equals([_hex(402)]));
+      });
+
+      test('leaves out the video itself and what is not a video', () async {
+        relayAnswers([
+          _video(
+            id: 100,
+            createdAt: 5000,
+            pubkey: _creator,
+            dTag: 'root-d',
+            tags: [
+              ['a', _rootAddress, _relay, 'clip-source'],
+            ],
+          ),
+          _video(
+            id: 407,
+            createdAt: 6000,
+            kind: 1,
+            tags: [
+              ['a', _rootAddress, _relay, 'clip-source'],
+            ],
+          ),
+          remix(401, createdAt: 1000),
+        ]);
+
+        final remixes = await repository().fetchRemixesOf(_rootAddress);
+
+        expect(remixes.map((video) => video.id), equals([_hex(401)]));
+      });
+
+      test('is empty when nothing uses a clip of it', () async {
+        relayAnswers(const []);
+
+        final remixes = await repository().fetchRemixesOf(_rootAddress);
+
+        expect(remixes, isEmpty);
+      });
+
+      test('asks nothing for what is not an address', () async {
+        final remixes = await repository().fetchRemixesOf(_rootId);
+
+        expect(remixes, isEmpty);
+        verifyNever(() => nostrClient.readEvents(any()));
+      });
+    });
+
     group('chainStart', () {
       Event first({List<List<String>> tags = const []}) => _video(
         id: 100,

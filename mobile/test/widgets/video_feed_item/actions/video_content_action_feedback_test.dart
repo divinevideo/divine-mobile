@@ -13,7 +13,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
+import 'package:pro_video_editor/pro_video_editor.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
 
@@ -175,6 +178,86 @@ void main() {
       expect(find.text(_sheetBodyText), findsNothing);
       expect(find.text(l10n.shareCopiedEventJson), findsNothing);
       expect(find.text(l10n.shareActionFailed), findsOneWidget);
+    });
+
+    testWidgets('says the creator does not allow remixes', (tester) async {
+      await pumpSheet(tester);
+
+      showVideoContentActionFeedback(
+        sheetContext,
+        VideoContentRemixRefused(consent: RemixConsent.blocked),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(_sheetBodyText), findsNothing);
+      expect(find.text(l10n.remixBlockedByCreator), findsOneWidget);
+    });
+
+    testWidgets('asks to retry when consent could not be checked', (
+      tester,
+    ) async {
+      await pumpSheet(tester);
+
+      showVideoContentActionFeedback(
+        sheetContext,
+        VideoContentRemixRefused(consent: RemixConsent.unknown),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(_sheetBodyText), findsNothing);
+      expect(find.text(l10n.remixConsentCheckFailed), findsOneWidget);
+    });
+
+    testWidgets('says a remix that could not start can be retried', (
+      tester,
+    ) async {
+      await pumpSheet(tester);
+
+      showVideoContentActionFeedback(sheetContext, VideoContentRemixFailed());
+      await tester.pumpAndSettle();
+
+      expect(find.text(_sheetBodyText), findsNothing);
+      expect(find.text(l10n.remixStartFailed), findsOneWidget);
+      expect(find.text(l10n.shareSheetAddToClipsFailed), findsNothing);
+    });
+
+    testWidgets('keeps the Add to clips copy for a failed Add to clips', (
+      tester,
+    ) async {
+      await pumpSheet(tester);
+
+      showVideoContentActionFeedback(
+        sheetContext,
+        VideoContentClipImportResult(succeeded: false),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.shareSheetAddToClipsFailed), findsOneWidget);
+      expect(find.text(l10n.remixStartFailed), findsNothing);
+    });
+
+    testWidgets('leaves the sheet open and silent for a remix that is ready', (
+      tester,
+    ) async {
+      await pumpSheet(tester);
+
+      showVideoContentActionFeedback(
+        sheetContext,
+        VideoContentRemixReady(
+          clip: DivineVideoClip(
+            id: 'remix-clip',
+            video: EditorVideo.file('/tmp/remix.mp4'),
+            duration: const Duration(seconds: 6),
+            recordedAt: DateTime.utc(2026),
+            targetAspectRatio: .square,
+            originalAspectRatio: 1,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(_sheetBodyText), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
     });
 
     testWidgets('closes the sheet before reporting a failed action', (

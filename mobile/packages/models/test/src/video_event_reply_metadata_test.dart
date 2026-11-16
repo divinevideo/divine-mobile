@@ -6,6 +6,8 @@ import 'package:test/test.dart';
 
 void main() {
   group('VideoEvent reply metadata', () {
+    const replyRootEventId =
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
     const rootAddressableId =
         '34236:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         ':parent-d-tag';
@@ -112,6 +114,32 @@ void main() {
       expect(video.replyRootAddressableId, rootAddressableId);
       expect(video.replyRootRouteId, rootAddressableId);
       expect(video.creditedInspiredByPubkeys, isEmpty);
+    });
+
+    test('lists clip-source credit authors on a video reply', () {
+      const clipAuthor =
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+      final video = VideoEvent(
+        id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+        pubkey:
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+        createdAt: 1778120201,
+        content: '',
+        timestamp: DateTime.utc(2026, 5, 7),
+        title: 'Reply video',
+        videoUrl: 'https://media.divine.video/reply',
+        rawTags: const {
+          'E': replyRootEventId,
+          'K': '34236',
+          'A': rootAddressableId,
+          'k': '34236',
+        },
+        inspiredByVideo: const InspiredByInfo(addressableId: rootAddressableId),
+        clipSourceCredits: const [ClipSourceCredit(authorPubkey: clipAuthor)],
+      );
+
+      expect(video.isVideoReply, isTrue);
+      expect(video.creditedInspiredByPubkeys, equals([clipAuthor]));
     });
   });
 }

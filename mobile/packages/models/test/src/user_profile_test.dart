@@ -1128,6 +1128,55 @@ void main() {
       });
     });
 
+    group('allowsVideoReuse', () {
+      UserProfile profileWith(Map<String, dynamic> rawData) => UserProfile(
+        pubkey: testPubkey,
+        rawData: rawData,
+        createdAt: testCreatedAt,
+        eventId: testEventId,
+      );
+
+      test('is true when the key is absent', () {
+        expect(profileWith(const {}).allowsVideoReuse, isTrue);
+      });
+
+      test('is true when the key is true', () {
+        expect(
+          profileWith(const {divineAllowVideoReuseKey: true}).allowsVideoReuse,
+          isTrue,
+        );
+      });
+
+      test('is false only for a JSON false', () {
+        expect(
+          profileWith(
+            const {divineAllowVideoReuseKey: false},
+          ).allowsVideoReuse,
+          isFalse,
+        );
+      });
+
+      test('is true for the string false, which is not a JSON false', () {
+        expect(
+          profileWith(
+            const {divineAllowVideoReuseKey: 'false'},
+          ).allowsVideoReuse,
+          isTrue,
+        );
+      });
+
+      test('reads the key from a kind 0 event', () {
+        final event = Event(
+          testPubkey,
+          0,
+          const [],
+          jsonEncode({'name': 'alice', 'divine_allow_video_reuse': false}),
+        );
+
+        expect(UserProfile.fromNostrEvent(event).allowsVideoReuse, isFalse);
+      });
+    });
+
     group('displayNip05', () {
       test('returns @user.divine.video for subdomain format', () {
         final profile = UserProfile(

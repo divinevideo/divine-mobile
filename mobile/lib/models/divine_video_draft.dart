@@ -54,7 +54,7 @@ class DivineVideoDraft {
     this.challengeContext,
     this.publishedVideoEvent,
     this.allowAudioReuse = false,
-    this.allowVideoReuse = false,
+    this.allowVideoReuse = true,
     this.expireTime,
     this.scheduledAt,
     this.proofManifestJson,
@@ -84,7 +84,7 @@ class DivineVideoDraft {
     required Set<String> hashtags,
     required String selectedApproach,
     bool allowAudioReuse = false,
-    bool allowVideoReuse = false,
+    bool allowVideoReuse = true,
     Duration? expireTime,
     DateTime? scheduledAt,
     String? id,
@@ -207,7 +207,7 @@ class DivineVideoDraft {
           ? PublishStatus.values.byName(json['publishStatus'] as String)
           : PublishStatus.draft, // Migration: default for old drafts
       allowAudioReuse: json['allowAudioReuse'] as bool? ?? false,
-      allowVideoReuse: json['allowVideoReuse'] as bool? ?? false,
+      allowVideoReuse: json['allowVideoReuse'] as bool? ?? true,
       publishError: json['publishError'] as String?,
       publishAttempts: json['publishAttempts'] as int? ?? 0,
       sourceDraftId: json['sourceDraftId'] as String?,
@@ -792,9 +792,9 @@ class DivineVideoDraft {
   ///
   /// Checks metadata and editor state but ignores clips.
   /// Note: [allowAudioReuse] and [allowVideoReuse] are intentionally
-  /// excluded — they are publish-time permission toggles (default `false`),
-  /// not content edits, so flipping one alone should not mark the draft as
-  /// edited or trigger autosave.
+  /// excluded — they are publish-time permission toggles (video reuse defaults
+  /// to `true`), not content edits, so flipping one alone should not mark the
+  /// draft as edited or trigger autosave.
   bool get hasBeenEdited =>
       clips.isNotEmpty &&
       (hasTitle ||

@@ -3812,6 +3812,41 @@ class AppLocalizationsJa extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'クリップに追加できませんでした';
 
   @override
+  String get remixBlockedByCreator => 'このクリエイターはリミックスを許可していません。';
+
+  @override
+  String get remixConsentCheckFailed => 'この動画をリミックスできるか確認できませんでした。もう一度お試しください。';
+
+  @override
+  String get remixStartFailed => 'リミックスを開始できませんでした。もう一度お試しください。';
+
+  @override
+  String get remixSettingAllowTitle => '自分の動画のリミックスを許可';
+
+  @override
+  String get remixSettingAllowSubtitle => '他の人があなたの動画をクリップとして自分の投稿に使えます。';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return '$nameさんのクリップを使用';
+  }
+
+  @override
+  String get metadataRemixAction => 'リミックス';
+
+  @override
+  String get remixWebAppNudge => 'リミックスはDivineアプリで行えます。';
+
+  @override
+  String get remixWebGetTheApp => 'アプリを入手';
+
+  @override
+  String get metadataRemixesLabel => 'リミックス';
+
+  @override
+  String get metadataReportRemix => 'このリミックスを報告';
+
+  @override
   String get shareSheetAddToList => 'リストに追加';
 
   @override
@@ -6408,6 +6443,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'クリップ';
+
+  @override
+  String get libraryTabFromOthers => '他の人から';
 
   @override
   String get libraryScheduledSectionTitle => '予約投稿';

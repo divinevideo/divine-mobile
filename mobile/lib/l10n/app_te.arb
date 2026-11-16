@@ -2311,6 +2311,17 @@
   "@shareSheetAddToClipsFailed": {
     "description": "Snackbar shown when importing a classic Vine into the clip library fails"
   },
+  "remixBlockedByCreator": "ఈ క్రియేటర్ రీమిక్స్‌లను అనుమతించరు.",
+  "remixConsentCheckFailed": "ఈ వీడియోను రీమిక్స్ చేయవచ్చో లేదో తనిఖీ చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.",
+  "remixStartFailed": "రీమిక్స్‌ను ప్రారంభించలేకపోయాము. మళ్లీ ప్రయత్నించండి.",
+  "remixSettingAllowTitle": "నా వీడియోలను రీమిక్స్ చేయడానికి ఇతరులను అనుమతించండి",
+  "remixSettingAllowSubtitle": "ఇతరులు మీ వీడియోలను వారి స్వంత పోస్ట్‌లలో క్లిప్‌లుగా ఉపయోగించవచ్చు.",
+  "videoMetadataClipCreditRow": "{name} క్లిప్‌ను ఉపయోగిస్తోంది",
+  "metadataRemixAction": "రీమిక్స్ చేయండి",
+  "remixWebAppNudge": "రీమిక్స్ Divine యాప్‌లో జరుగుతుంది.",
+  "remixWebGetTheApp": "యాప్ పొందండి",
+  "metadataRemixesLabel": "రీమిక్స్‌లు",
+  "metadataReportRemix": "ఈ రీమిక్స్‌ను నివేదించండి",
   "shareSheetAddToList": "జాబితాకు జోడించండి",
   "shareSheetCopy": "కాపీ",
   "shareSheetShareVia": "ద్వారా భాగస్వామ్యం చేయండి",
@@ -3917,6 +3928,7 @@
   "libraryWebUnavailableDescription": "చిత్తుప్రతులు మరియు క్లిప్‌లు మీ పరికరంలో సేవ్ చేయబడ్డాయి, కాబట్టి వాటిని నిర్వహించడానికి మీ ఫోన్‌లో Divineని తెరవండి.",
   "libraryTabDrafts": "చిత్తుప్రతులు",
   "libraryTabClips": "క్లిప్‌లు",
+  "libraryTabFromOthers": "ఇతరుల నుండి",
   "libraryDeleteSelectedClipsTooltip": "ఎంచుకున్న క్లిప్‌లను తొలగించండి",
   "libraryCloseSemanticLabel": "లైబ్రరీని మూసివేయండి",
   "@libraryCloseSemanticLabel": {

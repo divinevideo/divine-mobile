@@ -2,6 +2,7 @@
 // ABOUTME: Keeps the import service testable while using app cache and storage services.
 
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
@@ -18,6 +19,7 @@ part 'video_clip_import_provider.g.dart';
 VideoClipImportService videoClipImportService(Ref ref) {
   final mediaCache = ref.watch(mediaCacheProvider);
   final videosRepository = ref.watch(videosRepositoryProvider);
+  final remixConsentRepository = ref.watch(remixConsentRepositoryProvider);
 
   return VideoClipImportService(
     clipLibraryService: ref.watch(clipLibraryServiceProvider),
@@ -45,6 +47,7 @@ VideoClipImportService videoClipImportService(Ref ref) {
       videosByFileHash: videosRepository.getVideosByFileHash,
       archiveVerdicts: archiveVerdictsLookup(videosRepository),
     ),
+    readRemixConsent: remixConsentRepository?.consentFor,
   );
 }
 

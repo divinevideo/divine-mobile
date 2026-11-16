@@ -191,7 +191,10 @@ void main() {
           ),
         );
 
-        final result = publisher.publishDirectUpload(createUpload());
+        final result = publisher.publishDirectUpload(
+          createUpload(),
+          allowVideoReuse: false,
+        );
         await firstAttempt.future;
         publisher.dispose();
 
@@ -206,7 +209,10 @@ void main() {
       stubSigning(signedEvent);
       stubRest(const EventApiAccepted('server-event-id'));
 
-      final result = await publisher.publishDirectUpload(createUpload());
+      final result = await publisher.publishDirectUpload(
+        createUpload(),
+        allowVideoReuse: false,
+      );
 
       expect(result, isTrue);
       verify(() => mockEventApiClient.publishEvent(any())).called(1);
@@ -241,7 +247,10 @@ void main() {
           ),
         );
 
-        final result = await publisher.publishDirectUpload(createUpload());
+        final result = await publisher.publishDirectUpload(
+          createUpload(),
+          allowVideoReuse: false,
+        );
 
         expect(result, isTrue);
         verify(() => mockEventApiClient.publishEvent(any())).called(1);
@@ -274,7 +283,10 @@ void main() {
         ),
       );
 
-      final result = await publisher.publishDirectUpload(createUpload());
+      final result = await publisher.publishDirectUpload(
+        createUpload(),
+        allowVideoReuse: false,
+      );
 
       expect(result, isTrue);
       verify(
@@ -297,7 +309,10 @@ void main() {
       );
 
       await expectLater(
-        publisher.publishDirectUpload(createUpload()),
+        publisher.publishDirectUpload(
+          createUpload(),
+          allowVideoReuse: false,
+        ),
         throwsA(isA<AccountRestrictedPublishException>()),
       );
       verifyNever(
@@ -324,7 +339,10 @@ void main() {
       );
 
       await expectLater(
-        publisher.publishDirectUpload(createUpload()),
+        publisher.publishDirectUpload(
+          createUpload(),
+          allowVideoReuse: false,
+        ),
         throwsA(isA<AccountRestrictedPublishException>()),
       );
 
@@ -352,7 +370,13 @@ void main() {
         ),
       );
 
-      expect(await publisher.publishDirectUpload(createUpload()), isTrue);
+      expect(
+        await publisher.publishDirectUpload(
+          createUpload(),
+          allowVideoReuse: false,
+        ),
+        isTrue,
+      );
     });
 
     test('an untrusted WebSocket restriction is not authoritative', () async {
@@ -376,7 +400,13 @@ void main() {
         ),
       ).thenAnswer((_) async => [signedEvent]);
 
-      expect(await publisher.publishDirectUpload(createUpload()), isTrue);
+      expect(
+        await publisher.publishDirectUpload(
+          createUpload(),
+          allowVideoReuse: false,
+        ),
+        isTrue,
+      );
       verify(
         () => mockNostrClient.publishEventAwaitOk(
           signedEvent,
@@ -393,7 +423,10 @@ void main() {
       ).thenReturn(signedEvent);
       stubRest(const EventApiAccepted('server-event-id'));
 
-      final result = await publisher.publishDirectUpload(retryUpload);
+      final result = await publisher.publishDirectUpload(
+        retryUpload,
+        allowVideoReuse: false,
+      );
 
       expect(result, isTrue);
       // No new event signed — the cached event is reused.
@@ -428,7 +461,10 @@ void main() {
           ),
         ).thenAnswer((_) async => [signedEvent]);
 
-        final result = await publisher.publishDirectUpload(retryUpload);
+        final result = await publisher.publishDirectUpload(
+          retryUpload,
+          allowVideoReuse: false,
+        );
 
         expect(result, isTrue);
         verifyNever(() => mockEventApiClient.publishEvent(any()));
@@ -472,7 +508,10 @@ void main() {
           ),
         ).thenAnswer((_) async => [signedEvent]);
 
-        final result = await publisher.publishDirectUpload(createUpload());
+        final result = await publisher.publishDirectUpload(
+          createUpload(),
+          allowVideoReuse: false,
+        );
 
         expect(result, isTrue);
         // The event is signed exactly once and reused across attempts — a
@@ -527,7 +566,13 @@ void main() {
           return presenceChecks == 3 ? [signedEvent] : <Event>[];
         });
 
-        expect(await publisher.publishDirectUpload(createUpload()), isTrue);
+        expect(
+          await publisher.publishDirectUpload(
+            createUpload(),
+            allowVideoReuse: false,
+          ),
+          isTrue,
+        );
         verify(() => mockEventApiClient.publishEvent(signedEvent)).called(3);
         verify(
           () => mockNostrClient.publishEventAwaitOk(

@@ -212,6 +212,20 @@ final class ClipsLibraryFilterChanged extends ClipsLibraryEvent {
   List<Object?> get props => [filter];
 }
 
+/// Event to switch whose clips the grid shows, following the library tab.
+///
+/// The selection survives the switch, so a pick can hold the user's own
+/// takes and clips from others together.
+final class ClipsLibraryScopeChanged extends ClipsLibraryEvent {
+  const ClipsLibraryScopeChanged(this.scope);
+
+  /// The scope to show.
+  final ClipOwnershipScope scope;
+
+  @override
+  List<Object?> get props => [scope];
+}
+
 /// Event to create a new user category and file [clipIds] into it.
 ///
 /// [clipIds] may be empty, which just creates the empty category.

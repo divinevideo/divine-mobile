@@ -187,7 +187,10 @@ void main() {
           ).thenReturn(cached);
 
           expect(
-            await publisher.publishDirectUpload(retriedUpload(cached)),
+            await publisher.publishDirectUpload(
+              retriedUpload(cached),
+              allowVideoReuse: false,
+            ),
             isTrue,
           );
 
@@ -213,7 +216,10 @@ void main() {
           ).thenReturn(cached);
 
           expect(
-            await publisher.publishDirectUpload(retriedUpload(cached)),
+            await publisher.publishDirectUpload(
+              retriedUpload(cached),
+              allowVideoReuse: false,
+            ),
             isTrue,
           );
 
@@ -239,7 +245,10 @@ void main() {
           ).thenReturn(cached);
 
           expect(
-            await publisher.publishDirectUpload(retriedUpload(cached)),
+            await publisher.publishDirectUpload(
+              retriedUpload(cached),
+              allowVideoReuse: false,
+            ),
             isTrue,
           );
 
@@ -260,7 +269,10 @@ void main() {
           ).thenReturn(cached);
 
           expect(
-            await publisher.publishDirectUpload(retriedUpload(cached)),
+            await publisher.publishDirectUpload(
+              retriedUpload(cached),
+              allowVideoReuse: false,
+            ),
             isTrue,
           );
 

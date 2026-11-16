@@ -2847,6 +2847,55 @@
   "@shareSheetAddToClipsFailed": {
     "description": "Snackbar shown when importing a classic Vine into the clip library fails"
   },
+  "remixBlockedByCreator": "This creator doesn't allow remixes.",
+  "@remixBlockedByCreator": {
+    "description": "Snackbar shown when a creator doesn't let others reuse their video, by blocking remixing on their account or on that video, so it can't be remixed or added to clips."
+  },
+  "remixConsentCheckFailed": "Couldn't check whether this video can be remixed. Try again.",
+  "@remixConsentCheckFailed": {
+    "description": "Snackbar shown when the creator's profile could not be read to check whether their video may be remixed; the action was refused and can be retried."
+  },
+  "remixStartFailed": "Couldn't start the remix. Try again.",
+  "@remixStartFailed": {
+    "description": "Snackbar shown when Remix in the video info sheet could not bring the video into the clip library, so the editor did not open; the user can try again."
+  },
+  "remixSettingAllowTitle": "Let people remix my videos",
+  "@remixSettingAllowTitle": {
+    "description": "Settings switch title: when off, nobody else can use the signed-in creator's videos as clips."
+  },
+  "remixSettingAllowSubtitle": "Others can use your videos as clips in their own posts.",
+  "@remixSettingAllowSubtitle": {
+    "description": "Settings switch subtitle under 'Let people remix my videos'."
+  },
+  "videoMetadataClipCreditRow": "Uses a clip from {name}",
+  "@videoMetadataClipCreditRow": {
+    "description": "Locked row in the post form: this video includes a clip from another creator, so their credit stays on it and can't be removed. {name} is that creator's display name, or their npub when no name is known.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "metadataRemixAction": "Remix",
+  "@metadataRemixAction": {
+    "description": "Short label and screen-reader label of the Remix circle in the video info sheet's action row: imports the video into the viewer's clips and opens the editor with it, so they can make a new video from it."
+  },
+  "remixWebAppNudge": "Remixing happens in the Divine app.",
+  "@remixWebAppNudge": {
+    "description": "Snackbar shown on the web when someone taps Remix in the video info sheet: remixing needs the mobile app."
+  },
+  "remixWebGetTheApp": "Get the app",
+  "@remixWebGetTheApp": {
+    "description": "Snackbar action next to 'Remixing happens in the Divine app.'; opens the app download page."
+  },
+  "metadataRemixesLabel": "Remixes",
+  "@metadataRemixesLabel": {
+    "description": "Section header in the video info sheet listing the videos that use a clip of this video."
+  },
+  "metadataReportRemix": "Report this remix",
+  "@metadataReportRemix": {
+    "description": "Action in the video info sheet, shown only to the creator whose clip this video uses: opens the report flow so Trust & Safety can review the remix."
+  },
   "shareSheetAddToList": "Add to List",
   "shareSheetCopy": "Copy",
   "shareSheetShareVia": "Share via",
@@ -4813,6 +4862,10 @@
   "libraryWebUnavailableDescription": "Drafts and clips are saved on your device, so open Divine on your phone to manage them.",
   "libraryTabDrafts": "Drafts",
   "libraryTabClips": "Clips",
+  "libraryTabFromOthers": "From others",
+  "@libraryTabFromOthers": {
+    "description": "Library tab listing clips imported from other people's videos, such as classic Vines, kept apart from the user's own clips."
+  },
   "libraryScheduledSectionTitle": "Scheduled",
   "@libraryScheduledSectionTitle": {
     "description": "Header of the section above the drafts list that shows posts scheduled for a later time (#3538)."

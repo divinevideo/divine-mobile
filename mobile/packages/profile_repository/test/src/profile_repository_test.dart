@@ -594,6 +594,208 @@ void main() {
       );
     });
 
+    group('readFreshProfile', () {
+      test('reports a raw Kind 0 every relay answered as conclusive', () async {
+        stubRelaysServeProfileEvent();
+
+        final read = await profileRepository.readFreshProfile(
+          pubkey: testPubkey,
+          requireRawKind0: true,
+        );
+
+        expect(read.profile?.pubkey, testPubkey);
+        expect(read.conclusive, isTrue);
+      });
+
+      test('reports a miss every relay answered as conclusive', () async {
+        stubRawRelayRead();
+
+        final read = await profileRepository.readFreshProfile(
+          pubkey: testPubkey,
+          requireRawKind0: true,
+        );
+
+        expect(read.profile, isNull);
+        expect(read.conclusive, isTrue);
+      });
+
+      test('reports a timed-out miss as inconclusive', () async {
+        stubRawRelayRead(timedOut: true);
+
+        final read = await profileRepository.readFreshProfile(
+          pubkey: testPubkey,
+          requireRawKind0: true,
+        );
+
+        expect(read.profile, isNull);
+        expect(read.conclusive, isFalse);
+      });
+
+      test('reports a miss with no relay connected as inconclusive', () async {
+        stubRawRelayRead(noRelays: true);
+
+        final read = await profileRepository.readFreshProfile(
+          pubkey: testPubkey,
+          requireRawKind0: true,
+        );
+
+        expect(read.profile, isNull);
+        expect(read.conclusive, isFalse);
+      });
+    });
+
+    group('readRawProfileFromRelays', () {
+      const relayUrl = 'wss://relay.example.test';
+
+      void stubRelayRead({
+        List<Event> events = const [],
+        bool timedOut = false,
+        bool noRelays = false,
+      }) {
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
+        );
+      }
+
+      test('asks every connected relay, settled and uncached', () async {
+        stubRelayRead(events: [mockProfileEvent]);
+
+        final read = await profileRepository.readRawProfileFromRelays(
+          pubkey: testPubkey,
+        );
+
+        expect(read.profile?.pubkey, testPubkey);
+        expect(read.conclusive, isTrue);
+        final filters =
+            verify(
+                  () => mockNostrClient.queryEventsDetailed(
+                    captureAny(),
+                    // ignore: avoid_redundant_argument_values, pins the default
+                    tempRelays: null,
+                    // ignore: avoid_redundant_argument_values, pins the default
+                    relayTypes: RelayType.all,
+                    useCache: false,
+                    requireAllRelaysSettled: true,
+                  ),
+                ).captured.single
+                as List<Filter>;
+        expect(filters.single.kinds, [0]);
+        expect(filters.single.authors, [testPubkey]);
+      });
+
+      test('asks only the named relay when given one', () async {
+        stubRelayRead(events: [mockProfileEvent]);
+
+        final read = await profileRepository.readRawProfileFromRelays(
+          pubkey: testPubkey,
+          onlyRelayUrl: relayUrl,
+        );
+
+        expect(read.profile?.pubkey, testPubkey);
+        expect(read.conclusive, isTrue);
+        verify(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            tempRelays: [relayUrl],
+            relayTypes: [RelayType.temp],
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).called(1);
+      });
+
+      test('reports a miss the relays answered as conclusive', () async {
+        stubRelayRead();
+
+        final read = await profileRepository.readRawProfileFromRelays(
+          pubkey: testPubkey,
+          onlyRelayUrl: relayUrl,
+        );
+
+        expect(read.profile, isNull);
+        expect(read.conclusive, isTrue);
+      });
+
+      test(
+        'reports what a timed-out read saw, marked inconclusive',
+        () async {
+          stubRelayRead(events: [mockProfileEvent], timedOut: true);
+
+          final read = await profileRepository.readRawProfileFromRelays(
+            pubkey: testPubkey,
+          );
+
+          expect(read.profile?.pubkey, testPubkey);
+          expect(read.conclusive, isFalse);
+        },
+      );
+
+      test('reports a read no relay took as inconclusive', () async {
+        stubRelayRead(noRelays: true);
+
+        final read = await profileRepository.readRawProfileFromRelays(
+          pubkey: testPubkey,
+        );
+
+        expect(read.profile, isNull);
+        expect(read.conclusive, isFalse);
+      });
+
+      test('reports a failed read as inconclusive', () async {
+        when(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenThrow(Exception('socket closed'));
+
+        final read = await profileRepository.readRawProfileFromRelays(
+          pubkey: testPubkey,
+          onlyRelayUrl: relayUrl,
+        );
+
+        expect(read.profile, isNull);
+        expect(read.conclusive, isFalse);
+      });
+
+      test('never looks up a blocked account', () async {
+        final blocking = ProfileRepository(
+          nostrClient: mockNostrClient,
+          userProfilesDao: mockUserProfilesDao,
+          httpClient: mockHttpClient,
+          blockFilter: (pubkey) => pubkey == testPubkey,
+        );
+
+        final read = await blocking.readRawProfileFromRelays(
+          pubkey: testPubkey,
+          onlyRelayUrl: relayUrl,
+        );
+
+        expect(read.profile, isNull);
+        expect(read.conclusive, isFalse);
+        verifyNever(
+          () => mockNostrClient.queryEventsDetailed(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        );
+      });
+    });
+
     group('fetchFreshProfile', () {
       /// Stubs both relay and indexer to return nothing, so tests that
       /// only care about one layer can focus on that.
@@ -2934,6 +3136,148 @@ void main() {
                 ).captured.single
                 as Map<String, dynamic>;
         expect(captured.containsKey(divineMonetizationLinksKey), isFalse);
+      });
+
+      group('allowVideoReuse', () {
+        setUp(() {
+          when(
+            () => mockNostrClient.sendProfileAwaitOk(
+              profileContent: any(named: 'profileContent'),
+              requireDefaultRelay: true,
+            ),
+          ).thenAnswer((_) async => PublishSuccess(event: mockProfileEvent));
+        });
+
+        Map<String, dynamic> capturedContent() {
+          return verify(
+                () => mockNostrClient.sendProfileAwaitOk(
+                  profileContent: captureAny(named: 'profileContent'),
+                  requireDefaultRelay: any(named: 'requireDefaultRelay'),
+                ),
+              ).captured.single
+              as Map<String, dynamic>;
+        }
+
+        test(
+          'requires the default relay to accept a save that sets it',
+          () async {
+            final currentProfile = await createCurrentProfile({
+              'display_name': 'Old Name',
+            });
+
+            await profileRepository.saveProfileEvent(
+              displayName: 'Old Name',
+              currentProfile: currentProfile,
+              allowVideoReuse: true,
+            );
+
+            verify(
+              () => mockNostrClient.sendProfileAwaitOk(
+                profileContent: any(named: 'profileContent'),
+                requireDefaultRelay: true,
+              ),
+            ).called(1);
+          },
+        );
+
+        test(
+          'fails when the default relay does not accept the block',
+          () async {
+            when(
+              () => mockNostrClient.sendProfileAwaitOk(
+                profileContent: any(named: 'profileContent'),
+                requireDefaultRelay: true,
+              ),
+            ).thenAnswer((_) async => const PublishFailed());
+            final currentProfile = await createCurrentProfile({
+              'display_name': 'Old Name',
+            });
+
+            await expectLater(
+              profileRepository.saveProfileEvent(
+                displayName: 'Old Name',
+                currentProfile: currentProfile,
+                allowVideoReuse: false,
+              ),
+              throwsA(isA<ProfilePublishFailedException>()),
+            );
+          },
+        );
+
+        test(
+          'does not require the default relay for a save that leaves it alone',
+          () async {
+            final currentProfile = await createCurrentProfile({
+              'display_name': 'Old Name',
+            });
+
+            await profileRepository.saveProfileEvent(
+              displayName: 'New Name',
+              currentProfile: currentProfile,
+            );
+
+            verifyNever(
+              () => mockNostrClient.sendProfileAwaitOk(
+                profileContent: any(named: 'profileContent'),
+                requireDefaultRelay: true,
+              ),
+            );
+          },
+        );
+
+        test(
+          'writes false without dropping unrelated rawData',
+          () async {
+            final currentProfile = await createCurrentProfile({
+              'display_name': 'Old Name',
+              'custom_field': 'preserved',
+              'lud16': 'alice@example.com',
+            });
+
+            await profileRepository.saveProfileEvent(
+              displayName: 'Old Name',
+              currentProfile: currentProfile,
+              allowVideoReuse: false,
+            );
+
+            final captured = capturedContent();
+            expect(captured[divineAllowVideoReuseKey], isFalse);
+            expect(captured['custom_field'], 'preserved');
+            expect(captured['lud16'], 'alice@example.com');
+          },
+        );
+
+        test('removes the key when reuse is allowed again', () async {
+          final currentProfile = await createCurrentProfile({
+            'display_name': 'Old Name',
+            divineAllowVideoReuseKey: false,
+          });
+
+          await profileRepository.saveProfileEvent(
+            displayName: 'Old Name',
+            currentProfile: currentProfile,
+            allowVideoReuse: true,
+          );
+
+          final captured = capturedContent();
+          expect(captured.containsKey(divineAllowVideoReuseKey), isFalse);
+        });
+
+        test('preserves an existing value when omitted', () async {
+          final currentProfile = await createCurrentProfile({
+            'display_name': 'Old Name',
+            divineAllowVideoReuseKey: false,
+          });
+
+          await profileRepository.saveProfileEvent(
+            displayName: 'New Name',
+            currentProfile: currentProfile,
+          );
+
+          final captured = capturedContent();
+          expect(captured['display_name'], 'New Name');
+          expect(captured[divineAllowVideoReuseKey], isFalse);
+        });
       });
 
       test('removes website key when empty string is passed', () async {

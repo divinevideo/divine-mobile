@@ -4121,6 +4121,45 @@ class AppLocalizationsBg extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'Не можа да се добави към клипове';
 
   @override
+  String get remixBlockedByCreator => 'Този автор не позволява ремикси.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'Не успяхме да проверим дали това видео може да се ремиксира. Опитай отново.';
+
+  @override
+  String get remixStartFailed =>
+      'Не успяхме да започнем ремикса. Опитай отново.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'Позволи на другите да ремиксират моите видеа';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Другите могат да използват твоите видеа като клипове в своите публикации.';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Използва клип от $name';
+  }
+
+  @override
+  String get metadataRemixAction => 'Ремиксирай';
+
+  @override
+  String get remixWebAppNudge => 'Ремиксирането става в приложението Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Изтегли приложението';
+
+  @override
+  String get metadataRemixesLabel => 'Ремикси';
+
+  @override
+  String get metadataReportRemix => 'Докладвай този ремикс';
+
+  @override
   String get shareSheetAddToList => 'Добави към списъка';
 
   @override
@@ -6824,6 +6863,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'Клипове';
+
+  @override
+  String get libraryTabFromOthers => 'От други';
 
   @override
   String get libraryScheduledSectionTitle => 'Насрочени';

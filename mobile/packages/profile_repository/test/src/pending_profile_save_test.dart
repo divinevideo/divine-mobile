@@ -25,6 +25,7 @@ void main() {
             enabled: true,
           ),
         ],
+        allowVideoReuse: false,
       );
 
       final decoded = PendingProfileSave.decode(payload.encode());
@@ -39,6 +40,7 @@ void main() {
       expect(decoded.banner, '#112233');
       expect(decoded.monetizationLinks, hasLength(1));
       expect(decoded.monetizationLinks!.first.url, 'https://venmo.com/alice');
+      expect(decoded.allowVideoReuse, isFalse);
     });
 
     test('omits null optionals and defaults clearNip05/monetizationLinks', () {
@@ -48,6 +50,7 @@ void main() {
       expect(json.containsKey('about'), isFalse);
       expect(json.containsKey('username'), isFalse);
       expect(json.containsKey('monetizationLinks'), isFalse);
+      expect(json.containsKey('allowVideoReuse'), isFalse);
       expect(json['clearNip05'], isFalse);
 
       final decoded = PendingProfileSave.decode(payload.encode());
@@ -55,6 +58,7 @@ void main() {
       expect(decoded.username, isNull);
       expect(decoded.clearNip05, isFalse);
       expect(decoded.monetizationLinks, isNull);
+      expect(decoded.allowVideoReuse, isNull);
     });
 
     group('requiresClaim', () {

@@ -9,6 +9,7 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_audio_sharing_section.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_caption_field.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_clip_credits.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_collaborators_input.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_content_warning_selector.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_expiration_selector.dart';
@@ -136,6 +137,10 @@ class _VideoMetadataFormFieldsState
     final showIdeas =
         widget.enableIdeas &&
         ref.watch(isFeatureEnabledProvider(FeatureFlag.publishingIdeas));
+    // Gated for the same reason: most posts credit nobody else.
+    final showClipCredits = VideoMetadataClipCredits.creditedCreators(
+      ref,
+    ).isNotEmpty;
 
     return Padding(
       padding: const .symmetric(horizontal: 16),
@@ -191,6 +196,9 @@ class _VideoMetadataFormFieldsState
 
           if (widget.enableInspiredBy)
             const _InputWrapper(child: VideoMetadataInspiredByInput()),
+
+          if (showClipCredits)
+            const _InputWrapper(child: VideoMetadataClipCredits()),
 
           if (widget.enableContentWarning)
             const _InputWrapper(child: VideoMetadataContentWarningSelector()),

@@ -106,7 +106,10 @@ void main() {
 
         expect(parseWith('true').allowsReuse, isTrue);
         expect(parseWith('false').allowsReuse, isFalse);
-        expect(parseWith('TRUE').allowsReuse, isFalse);
+        expect(parseWith('TRUE').allowsReuse, isTrue);
+        expect(parseWith(' True ').allowsReuse, isTrue);
+        expect(parseWith('FALSE').allowsReuse, isFalse);
+        expect(parseWith('maybe').allowsReuse, isFalse);
         expect(parseWith('true').hasExplicitReuseConsent, isTrue);
         expect(parseWith('false').hasExplicitReuseConsent, isTrue);
       });

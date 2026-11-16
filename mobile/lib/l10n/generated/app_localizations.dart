@@ -6829,6 +6829,72 @@ abstract class AppLocalizations {
   /// **'Couldn\'t add to clips'**
   String get shareSheetAddToClipsFailed;
 
+  /// Snackbar shown when a creator doesn't let others reuse their video, by blocking remixing on their account or on that video, so it can't be remixed or added to clips.
+  ///
+  /// In en, this message translates to:
+  /// **'This creator doesn\'t allow remixes.'**
+  String get remixBlockedByCreator;
+
+  /// Snackbar shown when the creator's profile could not be read to check whether their video may be remixed; the action was refused and can be retried.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check whether this video can be remixed. Try again.'**
+  String get remixConsentCheckFailed;
+
+  /// Snackbar shown when Remix in the video info sheet could not bring the video into the clip library, so the editor did not open; the user can try again.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t start the remix. Try again.'**
+  String get remixStartFailed;
+
+  /// Settings switch title: when off, nobody else can use the signed-in creator's videos as clips.
+  ///
+  /// In en, this message translates to:
+  /// **'Let people remix my videos'**
+  String get remixSettingAllowTitle;
+
+  /// Settings switch subtitle under 'Let people remix my videos'.
+  ///
+  /// In en, this message translates to:
+  /// **'Others can use your videos as clips in their own posts.'**
+  String get remixSettingAllowSubtitle;
+
+  /// Locked row in the post form: this video includes a clip from another creator, so their credit stays on it and can't be removed. {name} is that creator's display name, or their npub when no name is known.
+  ///
+  /// In en, this message translates to:
+  /// **'Uses a clip from {name}'**
+  String videoMetadataClipCreditRow(String name);
+
+  /// Short label and screen-reader label of the Remix circle in the video info sheet's action row: imports the video into the viewer's clips and opens the editor with it, so they can make a new video from it.
+  ///
+  /// In en, this message translates to:
+  /// **'Remix'**
+  String get metadataRemixAction;
+
+  /// Snackbar shown on the web when someone taps Remix in the video info sheet: remixing needs the mobile app.
+  ///
+  /// In en, this message translates to:
+  /// **'Remixing happens in the Divine app.'**
+  String get remixWebAppNudge;
+
+  /// Snackbar action next to 'Remixing happens in the Divine app.'; opens the app download page.
+  ///
+  /// In en, this message translates to:
+  /// **'Get the app'**
+  String get remixWebGetTheApp;
+
+  /// Section header in the video info sheet listing the videos that use a clip of this video.
+  ///
+  /// In en, this message translates to:
+  /// **'Remixes'**
+  String get metadataRemixesLabel;
+
+  /// Action in the video info sheet, shown only to the creator whose clip this video uses: opens the report flow so Trust & Safety can review the remix.
+  ///
+  /// In en, this message translates to:
+  /// **'Report this remix'**
+  String get metadataReportRemix;
+
   /// No description provided for @shareSheetAddToList.
   ///
   /// In en, this message translates to:
@@ -11448,6 +11514,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clips'**
   String get libraryTabClips;
+
+  /// Library tab listing clips imported from other people's videos, such as classic Vines, kept apart from the user's own clips.
+  ///
+  /// In en, this message translates to:
+  /// **'From others'**
+  String get libraryTabFromOthers;
 
   /// Header of the section above the drafts list that shows posts scheduled for a later time (#3538).
   ///

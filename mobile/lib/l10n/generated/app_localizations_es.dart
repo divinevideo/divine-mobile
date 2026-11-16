@@ -4118,6 +4118,45 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shareSheetAddToClipsFailed => 'No se pudo agregar a clips';
 
   @override
+  String get remixBlockedByCreator => 'Esta persona no permite remezclas.';
+
+  @override
+  String get remixConsentCheckFailed =>
+      'No pudimos comprobar si este video se puede remezclar. Probá de nuevo.';
+
+  @override
+  String get remixStartFailed =>
+      'No pudimos empezar la remezcla. Probá de nuevo.';
+
+  @override
+  String get remixSettingAllowTitle =>
+      'Permitir que otras personas remezclen mis videos';
+
+  @override
+  String get remixSettingAllowSubtitle =>
+      'Otras personas pueden usar tus videos como clips en sus propias publicaciones.';
+
+  @override
+  String videoMetadataClipCreditRow(String name) {
+    return 'Usa un clip de $name';
+  }
+
+  @override
+  String get metadataRemixAction => 'Remezclar';
+
+  @override
+  String get remixWebAppNudge => 'Las remezclas se hacen en la app de Divine.';
+
+  @override
+  String get remixWebGetTheApp => 'Descargá la app';
+
+  @override
+  String get metadataRemixesLabel => 'Remezclas';
+
+  @override
+  String get metadataReportRemix => 'Reportar esta remezcla';
+
+  @override
   String get shareSheetAddToList => 'Agregar a lista';
 
   @override
@@ -6828,6 +6867,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get libraryTabClips => 'Clips';
+
+  @override
+  String get libraryTabFromOthers => 'De otros';
 
   @override
   String get libraryScheduledSectionTitle => 'Programados';

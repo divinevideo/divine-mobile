@@ -93,5 +93,38 @@ void main() {
 
       expect(find.text(l10n.videoEditorClipSavedSuccess), findsOneWidget);
     });
+
+    for (final (status, text) in [
+      (DmClipSaveStatus.remixBlocked, l10n.remixBlockedByCreator),
+      (DmClipSaveStatus.remixConsentUnknown, l10n.remixConsentCheckFailed),
+    ]) {
+      testWidgets('reports ${status.name} with its own copy', (tester) async {
+        final cubit = _MockDmClipSaveCubit();
+        when(() => cubit.save(any())).thenAnswer((_) async => status);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<DmClipSaveCubit>.value(
+              value: cubit,
+              child: Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    onPressed: () =>
+                        addReceivedClipToLibrary(context, _videoMessage()),
+                    child: const Text('add'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('add'));
+        await tester.pumpAndSettle();
+
+        expect(find.text(text), findsOneWidget);
+      });
+    }
   });
 }

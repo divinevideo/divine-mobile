@@ -4,6 +4,14 @@
 import 'package:models/models.dart';
 import 'package:profile_repository/profile_repository.dart';
 
+/// A fresh profile read, and whether an empty answer can be trusted.
+///
+/// `conclusive` is false when the read could not rule out a profile it never
+/// saw: a relay stayed silent or refused the REQ, none was connected, the
+/// read threw, or the pubkey is blocked. A null `profile` with `conclusive`
+/// true means the account has confirmably published no Kind 0.
+typedef FreshProfileRead = ({UserProfile? profile, bool conclusive});
+
 /// The subset of [ProfileRepository] that reads profile data without ever
 /// signing or publishing.
 ///
@@ -76,6 +84,33 @@ abstract interface class ProfileReader {
     required String pubkey,
     bool requireRawKind0,
     List<Duration> rawKind0RetryDelays,
+  });
+
+  /// [fetchFreshProfile], also reporting whether a `null` profile is a
+  /// confirmed absence or an indeterminate read.
+  ///
+  /// Use it where a missing profile and an unreadable one must be treated
+  /// differently — for example a settings screen that loads a confirmed miss
+  /// as the default but treats an unreadable profile as a failure.
+  Future<FreshProfileRead> readFreshProfile({
+    required String pubkey,
+    bool requireRawKind0,
+    List<Duration> rawKind0RetryDelays,
+  });
+
+  /// Reads the newest raw Kind 0 for [pubkey] straight from the relays: every
+  /// connected relay, or [onlyRelayUrl] alone when it is given.
+  ///
+  /// Skips REST, the local cache and the session miss memos, and caches
+  /// nothing. `conclusive` is true only when every asked relay answered in
+  /// full, so a null `profile` then means none of them holds a Kind 0 for the
+  /// account. An incomplete read still reports the newest Kind 0 it saw, with
+  /// `conclusive` false: a sighting that a newer copy may supersede, which is
+  /// enough to honour a flag the account set but never to seed a publish —
+  /// [fetchFreshProfile] with `requireRawKind0` is the strict read for that.
+  Future<FreshProfileRead> readRawProfileFromRelays({
+    required String pubkey,
+    String? onlyRelayUrl,
   });
 
   /// Reads raw Kind 0 metadata for display, returning the first valid relay

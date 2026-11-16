@@ -7,7 +7,7 @@ import 'package:bloc/bloc.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' as model show AspectRatio;
+import 'package:models/models.dart' as model show AspectRatio, ClipSourceCredit;
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/models/clip_category.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -97,6 +97,8 @@ void main() {
       bool allowsMixedClipTypes = false,
       bool allowsMixedAspectRatios = false,
       int? maxSelectedClips,
+      String? viewerPubkey,
+      ClipOwnershipScope? scope,
     }) => ClipsLibraryBloc(
       clipLibraryService: mockClipLibraryService,
       sharedPreferences: sharedPreferences,
@@ -104,6 +106,8 @@ void main() {
       allowsMixedClipTypes: allowsMixedClipTypes,
       allowsMixedAspectRatios: allowsMixedAspectRatios,
       maxSelectedClips: maxSelectedClips,
+      viewerPubkey: viewerPubkey,
+      scope: scope,
     );
 
     test('initial state is correct', () async {
@@ -362,7 +366,13 @@ void main() {
         act: (bloc) => bloc.add(const ClipsLibraryLoadRequested()),
         expect: () => [
           const ClipsLibraryState(status: ClipsLibraryStatus.loading),
-          const ClipsLibraryState(status: ClipsLibraryStatus.loaded),
+          const ClipsLibraryState(
+            status: ClipsLibraryStatus.loaded,
+            sortedClipsByScope: {
+              ClipOwnershipScope.own: [],
+              ClipOwnershipScope.fromOthers: [],
+            },
+          ),
         ],
       );
 
@@ -2164,6 +2174,292 @@ void main() {
           ClipsLibraryFilterChanged(ClipLibraryCategoryFilter(travel.id)),
         ),
         verify: (bloc) => expect(bloc.state.selectedClipIds, {'active'}),
+      );
+    });
+
+    group('ownership scope', () {
+      const viewer = 'viewer-pubkey';
+      const vineAuthor = 'vine-author-pubkey';
+
+      DivineVideoClip scopedClip(
+        String id, {
+        bool importedSource = false,
+        String? author,
+        DateTime? archivedAt,
+        DateTime? deletedAt,
+      }) => DivineVideoClip(
+        id: id,
+        video: EditorVideo.file('/path/$id.mp4'),
+        duration: const Duration(seconds: 2),
+        recordedAt: DateTime(2026, 3, 5),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+        importedSource: importedSource,
+        archivedAt: archivedAt,
+        deletedAt: deletedAt,
+        sourceCredits: [
+          if (author != null) model.ClipSourceCredit(authorPubkey: author),
+        ],
+      );
+
+      final take = scopedClip('clip_1_0');
+      final vine = scopedClip(
+        'classic_vine_abc_1',
+        importedSource: true,
+        author: vineAuthor,
+      );
+      final archivedVine = scopedClip(
+        'classic_vine_def_1',
+        importedSource: true,
+        author: vineAuthor,
+        archivedAt: DateTime(2026, 3, 6),
+      );
+      final remix = scopedClip('merged_1', author: vineAuthor);
+
+      void stubLoad() {
+        when(
+          () => mockClipLibraryService.getAllClips(),
+        ).thenAnswer((_) async => [take, vine, archivedVine, remix]);
+      }
+
+      ClipsLibraryBloc createScopedBloc({
+        ClipOwnershipScope scope = ClipOwnershipScope.own,
+      }) => createBloc(viewerPubkey: viewer, scope: scope);
+
+      test('starts on the scope it is given', () async {
+        final bloc = createScopedBloc(scope: ClipOwnershipScope.fromOthers);
+        expect(bloc.state.scope, ClipOwnershipScope.fromOthers);
+        await bloc.close();
+      });
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        "own shows the viewer's clips, including remixes of others' clips",
+        setUp: stubLoad,
+        build: createScopedBloc,
+        act: (bloc) => bloc.add(const ClipsLibraryLoadRequested()),
+        verify: (bloc) {
+          expect(
+            bloc.state.sortedClips.map((c) => c.id),
+            unorderedEquals(['clip_1_0', 'merged_1']),
+          );
+        },
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'switching to fromOthers shows only clips imported from others',
+        setUp: stubLoad,
+        build: createScopedBloc,
+        act: (bloc) async {
+          bloc.add(const ClipsLibraryLoadRequested());
+          await pumpEventQueue();
+          bloc.add(
+            const ClipsLibraryScopeChanged(ClipOwnershipScope.fromOthers),
+          );
+        },
+        verify: (bloc) {
+          expect(bloc.state.scope, ClipOwnershipScope.fromOthers);
+          expect(bloc.state.sortedClips.map((c) => c.id), [
+            'classic_vine_abc_1',
+          ]);
+        },
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        "keeps the viewer's own import in own, not in fromOthers",
+        setUp: () {
+          when(() => mockClipLibraryService.getAllClips()).thenAnswer(
+            (_) async => [
+              take,
+              vine,
+              scopedClip('video_own_1', importedSource: true, author: viewer),
+            ],
+          );
+        },
+        build: createScopedBloc,
+        act: (bloc) => bloc.add(const ClipsLibraryLoadRequested()),
+        verify: (bloc) {
+          expect(
+            bloc.state.sortedClipsFor(ClipOwnershipScope.own).map((c) => c.id),
+            unorderedEquals(['clip_1_0', 'video_own_1']),
+          );
+          expect(
+            bloc.state
+                .sortedClipsFor(ClipOwnershipScope.fromOthers)
+                .map((c) => c.id),
+            ['classic_vine_abc_1'],
+          );
+        },
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        "keeps the other scope's clips ready for its tab",
+        setUp: stubLoad,
+        build: createScopedBloc,
+        act: (bloc) => bloc.add(const ClipsLibraryLoadRequested()),
+        verify: (bloc) {
+          expect(bloc.state.scope, ClipOwnershipScope.own);
+          expect(
+            bloc.state.sortedClipsFor(ClipOwnershipScope.own).map((c) => c.id),
+            unorderedEquals(['clip_1_0', 'merged_1']),
+          );
+          expect(
+            bloc.state
+                .sortedClipsFor(ClipOwnershipScope.fromOthers)
+                .map((c) => c.id),
+            ['classic_vine_abc_1'],
+          );
+        },
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        "the filter applies to the other scope's clips too",
+        setUp: stubLoad,
+        build: createScopedBloc,
+        act: (bloc) async {
+          bloc.add(const ClipsLibraryLoadRequested());
+          await pumpEventQueue();
+          bloc.add(
+            const ClipsLibraryFilterChanged(ClipLibraryArchiveFilter()),
+          );
+        },
+        verify: (bloc) {
+          expect(bloc.state.sortedClipsFor(ClipOwnershipScope.own), isEmpty);
+          expect(
+            bloc.state
+                .sortedClipsFor(ClipOwnershipScope.fromOthers)
+                .map((c) => c.id),
+            ['classic_vine_def_1'],
+          );
+        },
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'the active filter applies within the scope',
+        setUp: stubLoad,
+        build: () => createScopedBloc(scope: ClipOwnershipScope.fromOthers),
+        act: (bloc) async {
+          bloc.add(const ClipsLibraryLoadRequested());
+          await pumpEventQueue();
+          bloc.add(
+            const ClipsLibraryFilterChanged(ClipLibraryArchiveFilter()),
+          );
+        },
+        verify: (bloc) {
+          expect(bloc.state.sortedClips.map((c) => c.id), [
+            'classic_vine_def_1',
+          ]);
+        },
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'a selection survives switching scopes',
+        setUp: stubLoad,
+        build: createScopedBloc,
+        act: (bloc) async {
+          bloc.add(const ClipsLibraryLoadRequested());
+          await pumpEventQueue();
+          bloc.add(ClipsLibraryToggleSelection(take));
+          bloc.add(
+            const ClipsLibraryScopeChanged(ClipOwnershipScope.fromOthers),
+          );
+          await pumpEventQueue();
+          bloc.add(ClipsLibraryToggleSelection(vine));
+        },
+        verify: (bloc) {
+          expect(bloc.state.selectedClipIds.toList(), [
+            'clip_1_0',
+            'classic_vine_abc_1',
+          ]);
+          expect(
+            bloc.state.selectedClips.map((c) => c.id),
+            ['clip_1_0', 'classic_vine_abc_1'],
+          );
+          expect(bloc.state.selectedDuration, const Duration(seconds: 4));
+          // Bulk actions only reach what the active tab shows.
+          expect(bloc.state.visibleSelectedClipIds, {'classic_vine_abc_1'});
+        },
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'switching to the scope already shown changes nothing',
+        setUp: stubLoad,
+        build: createScopedBloc,
+        seed: () => const ClipsLibraryState(scope: ClipOwnershipScope.own),
+        act: (bloc) =>
+            bloc.add(const ClipsLibraryScopeChanged(ClipOwnershipScope.own)),
+        expect: () => const <ClipsLibraryState>[],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        "the Deleted filter lists only the active scope's trash",
+        setUp: () {
+          stubLoad();
+          when(() => mockClipLibraryService.getTrashedClips()).thenAnswer(
+            (_) async => [
+              scopedClip('clip_2_0', deletedAt: DateTime(2026, 3, 7)),
+              scopedClip(
+                'video_abc_1',
+                importedSource: true,
+                author: vineAuthor,
+                deletedAt: DateTime(2026, 3, 7),
+              ),
+            ],
+          );
+        },
+        build: createScopedBloc,
+        act: (bloc) async {
+          bloc.add(
+            const ClipsLibraryFilterChanged(ClipLibraryTrashFilter()),
+          );
+          await pumpEventQueue();
+          expect(bloc.state.trashedClips.map((c) => c.id), ['clip_2_0']);
+          bloc.add(
+            const ClipsLibraryScopeChanged(ClipOwnershipScope.fromOthers),
+          );
+        },
+        verify: (bloc) {
+          expect(bloc.state.trashedClips.map((c) => c.id), ['video_abc_1']);
+        },
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        "emptying the trash deletes only the active scope's clips",
+        setUp: () {
+          when(() => mockClipLibraryService.getTrashedClips()).thenAnswer(
+            (_) async => [
+              scopedClip('clip_2_0', deletedAt: DateTime(2026, 3, 7)),
+              scopedClip(
+                'video_abc_1',
+                importedSource: true,
+                author: vineAuthor,
+                deletedAt: DateTime(2026, 3, 7),
+              ),
+            ],
+          );
+          when(
+            () => mockClipLibraryService.hardDelete(any()),
+          ).thenAnswer((_) async {});
+        },
+        build: () => createScopedBloc(scope: ClipOwnershipScope.fromOthers),
+        act: (bloc) => bloc.add(const ClipsLibraryEmptyTrash()),
+        verify: (_) {
+          verify(() => mockClipLibraryService.hardDelete('video_abc_1'))
+              .called(1);
+          verifyNever(() => mockClipLibraryService.hardDelete('clip_2_0'));
+        },
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'with no scope every clip shows',
+        setUp: stubLoad,
+        build: () => createBloc(viewerPubkey: viewer),
+        act: (bloc) => bloc.add(const ClipsLibraryLoadRequested()),
+        verify: (bloc) {
+          expect(
+            bloc.state.sortedClips.map((c) => c.id),
+            unorderedEquals(['clip_1_0', 'classic_vine_abc_1', 'merged_1']),
+          );
+        },
       );
     });
 
