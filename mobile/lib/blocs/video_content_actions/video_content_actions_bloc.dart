@@ -24,8 +24,8 @@ part 'video_content_actions_state.dart';
 /// BLoC for the per-video content actions: save to bookmarks, add to the clip
 /// library, get a remix ready, and copy the event JSON or event ID.
 ///
-/// Emits [VideoContentActionResult] as one-shot side effects for the UI to
-/// handle (snackbars, clipboard).
+/// Emits [VideoContentActionResult]s for the UI to report: snackbars, the
+/// clipboard, and the info sheet's inline Save banner.
 class VideoContentActionsBloc
     extends Bloc<VideoContentActionsEvent, VideoContentActionsState> {
   VideoContentActionsBloc({
