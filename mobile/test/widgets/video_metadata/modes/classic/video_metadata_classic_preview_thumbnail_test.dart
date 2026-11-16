@@ -359,16 +359,21 @@ void main() {
             methodCalls: methodCalls,
             method: 'play',
           );
+          expect(methodCalls, contains('play'));
           expect(DivineVideoPlayerController.liveControllerCount, equals(1));
 
-          // The discard lands while the native play() call is outstanding.
+          // The discard lands while the native play() call is outstanding,
+          // and the player is released without waiting for it to answer.
           notifier.emit(VideoEditorProviderState(isProcessing: true));
+          await _settleRelease(tester);
+
+          expect(methodCalls, contains('dispose'));
+          expect(DivineVideoPlayerController.liveControllerCount, equals(0));
+
           releasePlay.complete();
           await _settleRelease(tester);
           await _finishCrossFade(tester);
 
-          expect(methodCalls, contains('dispose'));
-          expect(DivineVideoPlayerController.liveControllerCount, equals(0));
           expect(find.byType(DivineVideoPlayer), findsNothing);
         },
       );
