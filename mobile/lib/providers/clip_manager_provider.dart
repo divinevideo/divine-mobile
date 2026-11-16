@@ -205,6 +205,10 @@ class ClipManagerNotifier extends Notifier<ClipManagerState> {
     return VideoEditorConstants.maxDuration - totalDuration;
   }
 
+  /// How long the take in progress has run, or what it reached while its
+  /// clip is still being finalized.
+  Duration get activeRecordingDuration => state.activeRecordingDuration;
+
   /// Calculates the total duration of all recorded clips.
   Duration get totalDuration {
     return _clips.fold<Duration>(

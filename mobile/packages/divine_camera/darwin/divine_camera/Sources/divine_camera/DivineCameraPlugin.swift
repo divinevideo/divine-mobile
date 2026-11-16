@@ -16,6 +16,7 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
     private var methodChannel: FlutterMethodChannel?
     #if os(iOS)
     private var volumeKeyHandler: VolumeKeyHandler?
+    private var watchRemoteLink: WatchRemoteLink?
     #endif
 
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -32,6 +33,16 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
         instance.messenger = messenger
         instance.methodChannel = channel
         registrar.addMethodCallDelegate(instance, channel: channel)
+
+        #if os(iOS)
+        // Up from launch so a Watch still showing a recorder from a previous
+        // run of the app learns that it is gone.
+        let watchRemoteLink = WatchRemoteLink { [weak instance] in
+            instance?.methodChannel?.invokeMethod("onRemoteRecordTrigger", arguments: "watch")
+        }
+        watchRemoteLink.activate()
+        instance.watchRemoteLink = watchRemoteLink
+        #endif
 
         // Forward curated native diagnostics to Dart's UnifiedLogger so
         // recording issues (e.g. missing audio) land in user bug reports.
@@ -298,6 +309,12 @@ public class DivineCameraPlugin: NSObject, FlutterPlugin {
             
         case "listAudioDevices":
             listAudioDevices(result: result)
+
+        case "updateRemoteRecorderState":
+            #if os(iOS)
+            watchRemoteLink?.update(state: call.arguments as? [String: Any])
+            #endif
+            result(nil)
             
         default:
             result(FlutterMethodNotImplemented)

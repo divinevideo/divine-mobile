@@ -9,6 +9,7 @@ import 'package:divine_camera/src/models/camera_zoom_state.dart';
 import 'package:divine_camera/src/models/flash_mode.dart';
 import 'package:divine_camera/src/models/photo_capture_result.dart';
 import 'package:divine_camera/src/models/remote_record_trigger.dart';
+import 'package:divine_camera/src/models/remote_recorder_state.dart';
 import 'package:divine_camera/src/models/video_quality.dart';
 import 'package:divine_camera/src/models/video_recording_result.dart';
 import 'package:divine_camera/src/models/video_stabilization_mode.dart';
@@ -414,6 +415,14 @@ class MethodChannelDivineCamera extends DivineCameraPlatform {
       {'enabled': enabled},
     );
     return result ?? false;
+  }
+
+  @override
+  Future<void> updateRemoteRecorderState(RemoteRecorderState? state) {
+    return methodChannel.invokeMethod<void>(
+      'updateRemoteRecorderState',
+      state?.toMap(),
+    );
   }
 
   @override

@@ -14,7 +14,10 @@ enum RemoteRecordTrigger {
   volumeDown,
 
   /// A Bluetooth remote or headphone button was pressed.
-  bluetooth;
+  bluetooth,
+
+  /// The shutter in the Apple Watch app was tapped.
+  watch;
 
   /// Converts a native string to a [RemoteRecordTrigger].
   static RemoteRecordTrigger fromNativeString(String value) {
@@ -22,6 +25,7 @@ enum RemoteRecordTrigger {
       'volumeUp' => RemoteRecordTrigger.volumeUp,
       'volumeDown' => RemoteRecordTrigger.volumeDown,
       'bluetooth' => RemoteRecordTrigger.bluetooth,
+      'watch' => RemoteRecordTrigger.watch,
       _ => RemoteRecordTrigger.volumeUp,
     };
   }
@@ -32,6 +36,7 @@ enum RemoteRecordTrigger {
       RemoteRecordTrigger.volumeUp => 'volumeUp',
       RemoteRecordTrigger.volumeDown => 'volumeDown',
       RemoteRecordTrigger.bluetooth => 'bluetooth',
+      RemoteRecordTrigger.watch => 'watch',
     };
   }
 }

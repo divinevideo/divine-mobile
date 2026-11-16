@@ -9,6 +9,7 @@ import 'package:divine_camera/src/models/camera_zoom_state.dart';
 import 'package:divine_camera/src/models/flash_mode.dart';
 import 'package:divine_camera/src/models/photo_capture_result.dart';
 import 'package:divine_camera/src/models/remote_record_trigger.dart';
+import 'package:divine_camera/src/models/remote_recorder_state.dart';
 import 'package:divine_camera/src/models/video_quality.dart';
 import 'package:divine_camera/src/models/video_recording_result.dart';
 import 'package:divine_camera/src/models/video_stabilization_mode.dart';
@@ -267,6 +268,16 @@ abstract class DivineCameraPlatform extends PlatformInterface {
   Future<bool> setRemoteRecordControlEnabled({required bool enabled}) {
     throw UnimplementedError(
       'setRemoteRecordControlEnabled() has not been implemented.',
+    );
+  }
+
+  /// Tells remote controls what the recorder is doing, or that it closed
+  /// when [state] is `null`.
+  ///
+  /// Platforms without such a remote ignore it.
+  Future<void> updateRemoteRecorderState(RemoteRecorderState? state) {
+    throw UnimplementedError(
+      'updateRemoteRecorderState() has not been implemented.',
     );
   }
 

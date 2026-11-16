@@ -253,6 +253,11 @@ class DivineCameraPlugin :
                 listAudioDevices(result)
             }
 
+            // Only the Apple Watch app mirrors the recorder; nothing to tell here.
+            "updateRemoteRecorderState" -> {
+                oneShotResult.success(null)
+            }
+
             else -> {
                 oneShotResult.notImplemented()
             }

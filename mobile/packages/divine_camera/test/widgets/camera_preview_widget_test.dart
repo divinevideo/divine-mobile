@@ -46,6 +46,9 @@ class MockDivineCameraPlatform
   Future<bool> setVolumeKeysEnabled({required bool enabled}) async => true;
 
   @override
+  Future<void> updateRemoteRecorderState(RemoteRecorderState? state) async {}
+
+  @override
   Future<List<AudioDevice>> listAudioDevices() async => const [];
 
   @override
