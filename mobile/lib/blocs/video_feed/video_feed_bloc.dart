@@ -1568,12 +1568,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   /// The bus carries deletions and block or mute sweeps. Sweeps are
   /// reversible, so only the announced id is matched: an earlier removal may
   /// belong to a video that came back, and a repeated id removes it again.
+  /// A deletion also drops other versions of the same addressable video,
+  /// which the bus does not announce when the service never cached them.
   void _onVideoRemoved(
     VideoFeedVideoRemoved event,
     Emitter<VideoFeedBlocState> emit,
   ) {
     final videoId = event.videoId.toLowerCase();
-    bool isRemoved(VideoEvent video) => video.id.toLowerCase() == videoId;
+    bool isRemoved(VideoEvent video) =>
+        video.id.toLowerCase() == videoId ||
+        _videosRepository.isVideoKnownDeleted(video);
     final removedBeforeCursor = state.videos
         .take(state.currentIndex)
         .where(isRemoved)

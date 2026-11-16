@@ -63,6 +63,7 @@ void main() {
       videos = _MockVideosRepository();
       removals = StreamController<String>.broadcast();
       when(() => videos.removedVideoIds).thenAnswer((_) => removals.stream);
+      when(() => videos.isVideoKnownDeleted(any())).thenReturn(false);
     });
 
     tearDown(() => removals.close());
@@ -202,6 +203,30 @@ void main() {
       ],
     );
 
+    // Deleting one version of an addressable video tombstones its coordinate,
+    // but the bus only names the versions the service had cached.
+    feedBlocTest(
+      'removes another version of a deleted video the bus did not name',
+      build: createBloc,
+      setUp: () => when(() => videos.isVideoKnownDeleted(any())).thenAnswer(
+        (call) =>
+            (call.positionalArguments.single as VideoEvent).id == '1' * 64,
+      ),
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [_video('1'), _video('2')],
+      ),
+      act: (_) => removals.add('9' * 64),
+      wait: Duration.zero,
+      expect: () => [
+        isA<VideoFeedBlocState>().having(
+          (state) => state.videos,
+          'surviving videos',
+          [_video('2')],
+        ),
+      ],
+    );
+
     test('close cancels the removal subscription', () async {
       final bloc = createBloc();
       expect(removals.hasListener, isTrue);
@@ -229,7 +254,10 @@ void main() {
           requested.complete();
           return page.future;
         });
-        when(() => videos.isVideoKnownDeleted(any())).thenReturn(true);
+        when(() => videos.isVideoKnownDeleted(any())).thenAnswer(
+          (call) =>
+              (call.positionalArguments.single as VideoEvent).id == '2' * 64,
+        );
       });
 
       feedBlocTest(
