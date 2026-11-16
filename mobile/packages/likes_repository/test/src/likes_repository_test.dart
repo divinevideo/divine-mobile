@@ -4124,11 +4124,14 @@ void main() {
         test('replaces a retracted stored like with an older live one '
             '(newest first: $newestFirst)', () async {
           const targetId =
-              '1111111111111111111111111111111111111111111111111111111111111111';
+              '11111111111111111111111111111111'
+              '11111111111111111111111111111111';
           const liveId =
-              '2222222222222222222222222222222222222222222222222222222222222222';
+              '22222222222222222222222222222222'
+              '22222222222222222222222222222222';
           const retractedId =
-              '3333333333333333333333333333333333333333333333333333333333333333';
+              '33333333333333333333333333333333'
+              '33333333333333333333333333333333';
           when(() => mockLocalStorage.getAllLikeRecords()).thenAnswer(
             (_) async => [
               createLikeRecord(
@@ -4150,7 +4153,7 @@ void main() {
             createdAt: defaultTimestamp + 1,
           );
           mockReadEventsSequence([
-            newestFirst ? [retracted, live] : [live, retracted],
+            if (newestFirst) [retracted, live] else [live, retracted],
             [
               createMockDeletion([retractedId]),
             ],
