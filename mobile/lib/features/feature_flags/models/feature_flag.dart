@@ -110,6 +110,13 @@ enum FeatureFlag {
         'rooms. Messages are signed with your key and can be read publicly.',
     audience: FeatureFlagAudience.internal,
   ),
+  confirmationSignIn(
+    'Confirmation Sign-in',
+    'Show who can link by signing in when the verifier requires Divine '
+        'Confirmation, the placeholder Confirmation screen, and the refusal '
+        'sheet. Off until the purchase exists (#8278).',
+    audience: FeatureFlagAudience.internal,
+  ),
   // User-facing: families can start the existing Greenlight consent flow from
   // Experimental Features, or opt in while already in account review.
   minorConsentInAppRecording(

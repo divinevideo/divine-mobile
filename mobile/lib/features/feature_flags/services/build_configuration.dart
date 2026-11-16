@@ -92,6 +92,8 @@ class BuildConfiguration {
         // Unconfigured developer/reviewer builds retain their explicit opt-in.
         return const String.fromEnvironment('CONCORD_INVITE_URL').isNotEmpty ||
             const bool.fromEnvironment('FF_CONCORD_CHAT');
+      case FeatureFlag.confirmationSignIn:
+        return const bool.fromEnvironment('FF_CONFIRMATION_SIGN_IN');
       case FeatureFlag.minorConsentInAppRecording:
         // A preference cannot override the build's verified-deployment gate.
         return consentDeliveryVerified &&
@@ -148,6 +150,8 @@ class BuildConfiguration {
         return 'FF_BUNNY_PLAYBACK_CANARY';
       case FeatureFlag.concordChat:
         return 'FF_CONCORD_CHAT';
+      case FeatureFlag.confirmationSignIn:
+        return 'FF_CONFIRMATION_SIGN_IN';
       case FeatureFlag.minorConsentInAppRecording:
         return 'FF_MINOR_CONSENT_IN_APP_RECORDING';
     }
