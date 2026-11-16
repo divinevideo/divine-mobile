@@ -842,9 +842,10 @@ Duration tunnelStepDuration(double intensity) {
 /// time its renderer counts in: the exported video, or the player's timeline
 /// when [toPlayer] maps onto one.
 ///
-/// A whole number of steps, the nearest to [tunnelStepDuration], fits into
-/// the effect's window on the exported video, which ends where the video
-/// loops at the latest. A tunnel over the whole video therefore ends on the
+/// A whole number of steps fits into the effect's window on the exported
+/// video, which ends where the video loops at the latest: as many steps of
+/// [tunnelStepDuration] as the window holds, rounded to the nearest whole
+/// number. A tunnel over the whole video therefore ends on the
 /// picture it starts with, and zooms on across the loop without a jump. A
 /// window shorter than half a step keeps the natural step.
 int tunnelPeriodUs(
