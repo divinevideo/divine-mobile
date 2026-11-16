@@ -1,7 +1,8 @@
-// ABOUTME: Regression tests for #9004: a relay read that ends short is not a
-// ABOUTME: complete answer. Drives LikesRepository through a real NostrClient
-// ABOUTME: and relay pool over a scripted relay that ends each read with EOSE,
-// ABOUTME: CLOSED or a late answer, so the read's outcome is the pool's own.
+// ABOUTME: Regression tests for #9004 and #10996: a relay read that ends short
+// ABOUTME: is not a complete answer. Drives LikesRepository through a real
+// ABOUTME: NostrClient and relay pool over a scripted relay that ends each read
+// ABOUTME: with EOSE, CLOSED, a late answer or silence, so the read's outcome
+// ABOUTME: is the pool's own.
 
 import 'dart:async';
 
@@ -29,6 +30,9 @@ enum _Reply {
 
   /// The same answer as [answer], sent after the pool's settle window.
   late,
+
+  /// Nothing at all, so the read runs to its deadline.
+  silent,
 }
 
 /// Which read a REQ is, judged from its single filter.
@@ -60,6 +64,15 @@ class _ScriptedRelay extends Relay {
 
   final List<Event> store = [];
   Map<_Read, _Reply> replies = {};
+
+  /// Replies used before [replies], one per read of that kind, in order.
+  final Map<_Read, List<_Reply>> replyQueue = {};
+
+  /// Overrides [replies] for a reaction read that filters by `#a`.
+  _Reply? coordinateReply;
+
+  /// The filters of every read this relay received, in order.
+  final List<List<Filter>> requests = [];
   bool hidesDeleted = false;
 
   /// Whether a published event is stored and acknowledged with `OK true`;
@@ -105,8 +118,9 @@ class _ScriptedRelay extends Relay {
       ];
       final read = _classify(filters);
       reads.add(read);
+      requests.add(filters);
       _awaitedReads.remove(read)?.complete();
-      unawaited(_answer(subId, filters, replies[read] ?? _Reply.answer));
+      unawaited(_answer(subId, filters, _replyFor(read, filters)));
     } else if (type == 'EVENT' && message.length > 1) {
       final event = Event.fromJson(
         Map<String, dynamic>.from(message[1] as Map),
@@ -116,6 +130,17 @@ class _ScriptedRelay extends Relay {
       unawaited(_ack(event.id));
     }
     return true;
+  }
+
+  _Reply _replyFor(_Read read, List<Filter> filters) {
+    final queued = replyQueue[read];
+    if (queued != null && queued.isNotEmpty) return queued.removeAt(0);
+    final byCoordinate = filters.any((f) => f.a?.isNotEmpty ?? false);
+    if (read == _Read.targetedReactions && byCoordinate) {
+      final reply = coordinateReply;
+      if (reply != null) return reply;
+    }
+    return replies[read] ?? _Reply.answer;
   }
 
   bool isDeleted(Event event) => store.any(
@@ -139,6 +164,8 @@ class _ScriptedRelay extends Relay {
     // The pool records a query only after send() returns, so let it.
     await pumpEventQueue();
     switch (reply) {
+      case _Reply.silent:
+        return;
       case _Reply.closed:
         await _deliver([
           'CLOSED',
@@ -930,6 +957,186 @@ void main() {
 
         expect(await h.repo.isLiked(_target), isFalse);
         expect(h.storage.records, isNot(contains(_target)));
+      });
+    });
+  });
+
+  group('LikesRepository vote reads that end short (#10996)', () {
+    group('getVoteCounts', () {
+      test('counts the vote the relay holds', () async {
+        final h = await _harness();
+        h.relay.store.add(await h.reaction(_target, createdAt: _now - 60));
+
+        final counts = await h.repo.getVoteCounts([_target]);
+
+        expect(counts.upvotes[_target], equals(1));
+        expect(counts.downvotes[_target], equals(0));
+      });
+
+      test('counts a target whose first read ran to its deadline once the '
+          'read again finishes', () async {
+        final h = await _harness();
+        h.relay
+          ..store.add(await h.reaction(_target, createdAt: _now - 60))
+          ..replyQueue[_Read.targetedReactions] = [_Reply.silent];
+
+        final counts = await h.repo.getVoteCounts([_target]);
+
+        expect(
+          h.relay.reads.where((r) => r == _Read.targetedReactions),
+          hasLength(2),
+        );
+        expect(counts.upvotes[_target], equals(1));
+      });
+
+      test('leaves out a target whose reaction reads the relay '
+          'closed', () async {
+        final h = await _harness();
+        h.relay
+          ..store.add(await h.reaction(_target, createdAt: _now - 60))
+          ..replies = {_Read.targetedReactions: _Reply.closed};
+
+        final counts = await h.repo.getVoteCounts([_target]);
+
+        expect(
+          h.relay.reads.where((r) => r == _Read.targetedReactions),
+          hasLength(2),
+        );
+        expect(counts.upvotes, isNot(contains(_target)));
+        expect(counts.downvotes, isNot(contains(_target)));
+      });
+
+      test('leaves out a target whose vote retractions could not be '
+          'read', () async {
+        final h = await _harness();
+        h.relay
+          ..store.add(await h.reaction(_target, createdAt: _now - 60))
+          ..replies = {_Read.deletions: _Reply.closed};
+
+        final counts = await h.repo.getVoteCounts([_target]);
+
+        expect(h.relay.reads, contains(_Read.deletions));
+        expect(counts.upvotes, isNot(contains(_target)));
+        expect(counts.downvotes, isNot(contains(_target)));
+      });
+
+      test('leaves out a target whose coordinate read the relay '
+          'closed', () async {
+        final h = await _harness();
+        h.relay
+          ..store.add(
+            await h.reaction(_target, createdAt: _now - 60, coord: _coord),
+          )
+          ..coordinateReply = _Reply.closed;
+
+        final counts = await h.repo.getVoteCounts(
+          [_target],
+          addressableIds: {_target: _coord},
+        );
+
+        expect(counts.upvotes, isNot(contains(_target)));
+      });
+
+      test('keeps the count of a target whose reads finished beside one '
+          'whose reads did not', () async {
+        final h = await _harness();
+        h.relay
+          ..store.add(
+            await h.reaction(_target, createdAt: _now - 60, coord: _coord),
+          )
+          ..coordinateReply = _Reply.closed;
+
+        final counts = await h.repo.getVoteCounts(
+          [_target, _otherTarget],
+          addressableIds: {_target: _coord},
+        );
+
+        expect(counts.upvotes, isNot(contains(_target)));
+        expect(counts.upvotes[_otherTarget], equals(0));
+      });
+
+      test('counts a vote one relay answered while another refused the '
+          'read', () async {
+        final refusing = _ScriptedRelay('wss://refusing.example')
+          ..replies = {_Read.targetedReactions: _Reply.closed};
+        final h = await _harness(otherRelays: [refusing]);
+        h.relay.store.add(await h.reaction(_target, createdAt: _now - 60));
+
+        final counts = await h.repo.getVoteCounts([_target]);
+
+        expect(refusing.reads, contains(_Read.targetedReactions));
+        expect(counts.upvotes[_target], equals(1));
+      });
+    });
+
+    group('getUserVoteStatuses', () {
+      test('reports the viewer vote the relay holds', () async {
+        final h = await _harness();
+        h.relay.store.add(await h.reaction(_target, createdAt: _now - 60));
+
+        final statuses = await h.repo.getUserVoteStatuses([_target]);
+
+        expect(statuses.isComplete, isTrue);
+        expect(statuses.upvotedIds, equals({_target}));
+      });
+
+      test('reports the viewer vote whose first read ran to its deadline '
+          'once the read again finishes', () async {
+        final h = await _harness();
+        h.relay
+          ..store.add(await h.reaction(_target, createdAt: _now - 60))
+          ..replyQueue[_Read.targetedReactions] = [_Reply.silent];
+
+        final statuses = await h.repo.getUserVoteStatuses([_target]);
+
+        expect(statuses.isComplete, isTrue);
+        expect(statuses.upvotedIds, equals({_target}));
+      });
+
+      test('reports the read unfinished when the relay closed the reaction '
+          'reads', () async {
+        final h = await _harness();
+        h.relay
+          ..store.add(await h.reaction(_target, createdAt: _now - 60))
+          ..replies = {_Read.targetedReactions: _Reply.closed};
+
+        final statuses = await h.repo.getUserVoteStatuses([_target]);
+
+        expect(statuses.isComplete, isFalse);
+      });
+
+      test('reports the read unfinished when the vote retractions could '
+          'not be read', () async {
+        final h = await _harness();
+        h.relay
+          ..store.add(await h.reaction(_target, createdAt: _now - 60))
+          ..replies = {_Read.deletions: _Reply.closed};
+
+        final statuses = await h.repo.getUserVoteStatuses([_target]);
+
+        expect(h.relay.reads, contains(_Read.deletions));
+        expect(statuses.isComplete, isFalse);
+      });
+
+      test('reads only the retractions of the viewer votes it '
+          'found', () async {
+        final h = await _harness();
+        final vote = await h.reaction(_target, createdAt: _now - 60);
+        h.relay.store.add(vote);
+
+        await h.repo.getUserVoteStatuses([_target]);
+
+        final deletionFilters = [
+          for (final filters in h.relay.requests)
+            for (final filter in filters)
+              if (filter.kinds?.contains(EventKind.eventDeletion) ?? false)
+                filter,
+        ];
+        expect(deletionFilters, isNotEmpty);
+        for (final filter in deletionFilters) {
+          expect(filter.authors, equals([h.user]));
+          expect(filter.e, equals([vote.id]));
+        }
       });
     });
   });

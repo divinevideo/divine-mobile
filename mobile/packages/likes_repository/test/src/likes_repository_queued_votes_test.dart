@@ -48,6 +48,7 @@ class _Relay {
       (invocation) async => QueryResult(
         events: _matching(invocation.positionalArguments.first as List),
         endedBy: checksAreConclusive ? QueryEnd.complete : QueryEnd.deadline,
+        answeredNetworkRelayCount: checksAreConclusive ? 1 : 0,
       ),
     );
     when(() => client.countEvents(any())).thenAnswer(
@@ -254,6 +255,19 @@ void main() {
         final counts = await repository.getVoteCounts([_comment]);
 
         expect(counts.upvotes[_comment], equals(1));
+      });
+
+      test('leaves a target unknown when its vote read did not finish, '
+          'whatever the queue holds (#10996)', () async {
+        relay
+          ..vote(_other, _comment)
+          ..checksAreConclusive = false;
+        queue.add((eventId: _comment, isLike: true));
+
+        final counts = await repository.getVoteCounts([_comment]);
+
+        expect(counts.upvotes, isNot(contains(_comment)));
+        expect(counts.downvotes, isNot(contains(_comment)));
       });
     });
 

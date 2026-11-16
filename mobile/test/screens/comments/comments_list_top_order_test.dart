@@ -91,7 +91,11 @@ void main() {
           addressableIds: any(named: 'addressableIds'),
         ),
       ).thenAnswer(
-        (_) async => (upvotedIds: <String>{}, downvotedIds: <String>{}),
+        (_) async => (
+          upvotedIds: <String>{},
+          downvotedIds: <String>{},
+          isComplete: true,
+        ),
       );
       when(
         () => commentsRepository.watchComments(
@@ -324,7 +328,13 @@ void main() {
       final [newer, older] = comments(2);
       stubCounts({});
       final viewerVotes =
-          Completer<({Set<String> upvotedIds, Set<String> downvotedIds})>();
+          Completer<
+            ({
+              Set<String> upvotedIds,
+              Set<String> downvotedIds,
+              bool isComplete,
+            })
+          >();
       when(
         () => likes.getUserVoteStatuses(
           any(),
@@ -336,6 +346,7 @@ void main() {
           viewerVotes.complete((
             upvotedIds: <String>{},
             downvotedIds: <String>{},
+            isComplete: true,
           ));
         }
       });

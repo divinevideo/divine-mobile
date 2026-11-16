@@ -63,6 +63,15 @@ class _Relay {
       // getUserVoteStatuses reads through readEvents, so failViewerReads and
       // holdViewerRead apply here as they do to queryEvents.
       final filters = invocation.positionalArguments.first as List;
+      // Only the like check waits for every relay. The vote reads (#10996)
+      // answer as this relay's other reads do, and finish.
+      if (invocation.namedArguments[#requireAllRelaysSettled] != true) {
+        return QueryResult(
+          events: await _query(filters),
+          endedBy: QueryEnd.complete,
+          answeredNetworkRelayCount: 1,
+        );
+      }
       return QueryResult(
         events: await _query(filters),
         endedBy: check == _Check.conclusive
