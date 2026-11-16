@@ -7,8 +7,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController;
-import 'package:flutter/gestures.dart'
-    show kDoubleTapTimeout, kLongPressTimeout;
+import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -40,6 +39,7 @@ import 'package:openvine/services/video_moderation_status_service.dart';
 import 'package:openvine/widgets/video_feed_item/center_playback_control.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
+import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -535,7 +535,9 @@ void main() {
       final pausesBefore = rig.harness.countCalls('pause');
 
       final gesture = await tester.startGesture(center, pointer: 1);
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pump(
+        kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+      );
 
       expect(rig.immersive.state.isHolding, isTrue);
       expect(rig.harness.countCalls('pause') - pausesBefore, equals(1));
@@ -557,7 +559,9 @@ void main() {
       final playsBefore = rig.harness.countCalls('play');
 
       final gesture = await tester.startGesture(center, pointer: 1);
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pump(
+        kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+      );
       await rig.harness.emitStatus('paused');
       await gesture.cancel();
       await tester.pump();
@@ -577,7 +581,9 @@ void main() {
       final pausesBefore = rig.harness.countCalls('pause');
 
       final gesture = await tester.startGesture(center, pointer: 1);
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pump(
+        kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+      );
       expect(rig.immersive.state.isHolding, isTrue);
       await gesture.up();
       await tester.pump();
@@ -596,7 +602,9 @@ void main() {
       final playsBefore = rig.harness.countCalls('play');
 
       final gesture = await tester.startGesture(center, pointer: 1);
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pump(
+        kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+      );
       await rig.harness.emitStatus('paused');
       // An incoming call or the app switcher backgrounds the app mid-hold.
       rig.container.read(appForegroundProvider.notifier).setForeground(false);
@@ -621,7 +629,9 @@ void main() {
       final center = tester.getCenter(find.byType(InfiniteVideoFeed));
 
       final gesture = await tester.startGesture(center, pointer: 1);
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pump(
+        kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+      );
       await rig.harness.emitStatus('paused');
       // The chrome is still fading out here, so a play button would show.
       await _expectNoPlaybackControlsFor(tester, kFeedImmersiveFadeDuration);
@@ -653,7 +663,9 @@ void main() {
       final center = tester.getCenter(find.byType(InfiniteVideoFeed));
 
       final gesture = await tester.startGesture(center, pointer: 1);
-      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+      await tester.pump(
+        kFeedHoldToPeekDelay + const Duration(milliseconds: 50),
+      );
       await gesture.up();
       await tester.pump();
       await tester.pump(kFeedImmersiveFadeDuration);

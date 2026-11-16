@@ -234,6 +234,7 @@ void main() {
     late List<VideoStickerRegion> opened;
     late int playerTaps;
     late int playerDoubleTaps;
+    late int playerHolds;
 
     setUp(() {
       controller = _MockController();
@@ -241,6 +242,7 @@ void main() {
       opened = [];
       playerTaps = 0;
       playerDoubleTaps = 0;
+      playerHolds = 0;
       when(() => controller.state).thenReturn(_playing(Duration.zero));
       when(() => controller.stateStream).thenAnswer((_) => states.stream);
     });
@@ -276,7 +278,7 @@ void main() {
                     isOwnVideo: false,
                     onTap: () => playerTaps++,
                     onDoubleTapDown: (_) => playerDoubleTaps++,
-                    onLongPressStart: () {},
+                    onLongPressStart: () => playerHolds++,
                   ),
                 ),
                 Positioned.fill(
@@ -332,6 +334,25 @@ void main() {
         await tester.pump(kDoubleTapTimeout);
 
         expect(playerDoubleTaps, equals(1));
+        expect(opened, isEmpty);
+      });
+
+      testWidgets('leaves a press held on the sticker to the player', (
+        tester,
+      ) async {
+        await pump(tester, [_link]);
+
+        // A sticker's tap lands only on release, so once the finger stays
+        // down past the hold delay the player's hold takes the press. Under
+        // Flutter's 500 ms default, a press this long opened the sticker.
+        final gesture = await tester.startGesture(const Offset(180, 160));
+        await tester.pump(
+          kFeedHoldToPeekDelay + const Duration(milliseconds: 100),
+        );
+        await gesture.up();
+        await tester.pump(kDoubleTapTimeout);
+
+        expect(playerHolds, equals(1));
         expect(opened, isEmpty);
       });
 

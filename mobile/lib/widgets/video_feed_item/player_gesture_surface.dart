@@ -2,8 +2,17 @@
 // ABOUTME: double-tap to like, press-and-hold to peek at the unobstructed frame.
 // ABOUTME: Extracted so its semantics can be tested without a video player pool.
 
+import 'package:flutter/gestures.dart' show LongPressGestureRecognizer;
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+
+/// How long a finger must stay down on a feed video before it counts as a
+/// hold, which hides the chrome and pauses the video.
+///
+/// Flutter's default long-press timeout is 500 ms, which kept the video
+/// playing under a resting thumb for half a second. 200 ms is past almost
+/// every tap and still reads as immediate.
+const Duration kFeedHoldToPeekDelay = Duration(milliseconds: 200);
 
 /// The tap/double-tap/long-press surface painted under a feed item's chrome.
 ///
@@ -49,6 +58,10 @@ class PlayerGestureSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // `GestureDetector` hands its recognizers the device's touch slop; a raw
+    // one falls back to 18 px without it.
+    final gestureSettings = MediaQuery.maybeGestureSettingsOf(context);
+
     // The annotation must sit DIRECTLY above the GestureDetector. In the
     // original tree it wrapped the whole Stack instead, several layers up and
     // around the chrome siblings, so it annotated a node that owned no tap
@@ -68,7 +81,9 @@ class PlayerGestureSurface extends StatelessWidget {
         // then the restore path stands in, and is null when nothing is pinned.
         onTap: interactiveReady ? onTap : onRestoreChrome,
         onDoubleTapDown: interactiveReady ? onDoubleTapDown : null,
-        child: GestureDetector(
+        // Raw rather than a `GestureDetector`, whose long press is fixed at
+        // the 500 ms default; see [kFeedHoldToPeekDelay].
+        child: RawGestureDetector(
           behavior: HitTestBehavior.translucent,
           // Press and hold to peek at the unobstructed frame. Deliberately
           // not gated on [interactiveReady] the way tap and double-tap are:
@@ -77,14 +92,29 @@ class PlayerGestureSurface extends StatelessWidget {
           // only a player that is already playing.
           //
           // Excluded from semantics, and kept on its own detector so the tap
-          // action above is still published. A `GestureDetector` publishes
-          // `SemanticsAction.longPress` for ANY long-press callback,
-          // `onLongPressStart` included — and firing that action delivers no
-          // pointer events, so the release path in the parent would never run
-          // and a screen-reader user would be left with every control hidden
-          // and pointer-blocked until the item was disposed.
+          // action above is still published. A long-press recognizer
+          // publishes `SemanticsAction.longPress`, and firing that action
+          // delivers no pointer events, so the release path in the parent
+          // would never run and a screen-reader user would be left with
+          // every control hidden and pointer-blocked until the item was
+          // disposed.
           excludeFromSemantics: true,
-          onLongPressStart: (_) => onLongPressStart(),
+          gestures: <Type, GestureRecognizerFactory>{
+            LongPressGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<
+                  LongPressGestureRecognizer
+                >(
+                  () => LongPressGestureRecognizer(
+                    duration: kFeedHoldToPeekDelay,
+                    debugOwner: this,
+                  ),
+                  (recognizer) {
+                    recognizer
+                      ..gestureSettings = gestureSettings
+                      ..onLongPressStart = (_) => onLongPressStart();
+                  },
+                ),
+          },
           child: const SizedBox.expand(),
         ),
       ),
