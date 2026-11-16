@@ -1,5 +1,6 @@
 // ABOUTME: Tests for VideoMetadataClassicPreviewThumbnail widget
-// ABOUTME: Verifies warning icon, player initialization, and resource disposal
+// ABOUTME: Verifies warning icon, player initialization, resource disposal,
+// ABOUTME: and that a discarded video's player is released and replaced
 
 import 'dart:async';
 import 'dart:io';
