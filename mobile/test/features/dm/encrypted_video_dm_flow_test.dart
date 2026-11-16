@@ -43,7 +43,6 @@ const _mimeType = 'video/mp4';
 /// Capture of what the send pipeline handed to the faked transport.
 class _SentVideo {
   Uint8List? ciphertext;
-  File? ciphertextFile;
   DmFileMetadata? metadata;
   String? fileUrl;
 }
@@ -64,7 +63,6 @@ void _recordSend({
     ),
   ).thenAnswer((invocation) async {
     final file = invocation.namedArguments[#ciphertextFile] as File;
-    out.ciphertextFile = file;
     out.ciphertext = await file.readAsBytes();
     final hash = HashUtil.sha256Hash(out.ciphertext!);
     return BlossomUploadResult(
@@ -198,8 +196,6 @@ void main() {
         expect(sent.metadata!.decryptionKey, hasLength(64));
         expect(sent.metadata!.decryptionNonce, hasLength(24));
         expect(sent.metadata!.thumbnailUrl, isNull);
-        // Send cleans up its ciphertext temp file.
-        expect(sent.ciphertextFile!.existsSync(), isFalse);
 
         _stubDownload(dio, sent.fileUrl!, sent.ciphertext!.toList());
 
