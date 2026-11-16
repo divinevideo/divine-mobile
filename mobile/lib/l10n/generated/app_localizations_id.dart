@@ -4012,7 +4012,7 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get remixThisVideo => 'Remix video ini';
+  String get metadataRemixAction => 'Remix';
 
   @override
   String get remixWebAppNudge => 'Remix dilakukan di aplikasi Divine.';

@@ -1972,7 +1972,7 @@
   "remixSettingAllowTitle": "允许他人混剪我的视频",
   "remixSettingAllowSubtitle": "其他人可以把你的视频作为片段用在自己的帖子里。",
   "videoMetadataClipCreditRow": "使用了 {name} 的片段",
-  "remixThisVideo": "混剪此视频",
+  "metadataRemixAction": "混剪",
   "remixWebAppNudge": "混剪需要在 Divine 应用中进行。",
   "remixWebGetTheApp": "获取应用",
   "metadataRemixesLabel": "混剪",

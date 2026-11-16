@@ -1463,7 +1463,7 @@
   "remixSettingAllowTitle": "Låt andra remixa mina videor",
   "remixSettingAllowSubtitle": "Andra kan använda dina videor som klipp i sina egna inlägg.",
   "videoMetadataClipCreditRow": "Använder ett klipp från {name}",
-  "remixThisVideo": "Remixa den här videon",
+  "metadataRemixAction": "Remixa",
   "remixWebAppNudge": "Remixa gör du i Divine-appen.",
   "remixWebGetTheApp": "Hämta appen",
   "metadataRemixesLabel": "Remixar",

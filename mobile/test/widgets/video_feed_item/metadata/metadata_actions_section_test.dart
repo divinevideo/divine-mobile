@@ -1,5 +1,6 @@
 // ABOUTME: Tests for the action row in the video info sheet.
-// ABOUTME: Covers which actions show for whom, their order, and their effects.
+// ABOUTME: Covers which actions show for whom, their order, and their effects,
+// ABOUTME: including Remix and its web app nudge.
 
 import 'dart:async';
 
@@ -14,6 +15,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
+import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -30,10 +32,11 @@ import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_section.dart';
-import 'package:openvine/widgets/video_feed_item/metadata/metadata_remix_button.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
+import '../../../helpers/url_launcher_test_double.dart';
 
 class _MockVideoContentActionsBloc
     extends MockBloc<VideoContentActionsEvent, VideoContentActionsState>
@@ -100,6 +103,12 @@ VideoEvent _video({
 
 final VideoEvent _classicVine = _video(rawTags: const {'platform': 'vine'});
 
+final VideoEvent _declinedReuse = _video(
+  tags: const [
+    ['allow_video_reuse', 'false'],
+  ],
+);
+
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
 
@@ -139,6 +148,7 @@ void main() {
     OwnerVideoActionsCubit? ownerCubit,
     bool debugTools = false,
     bool isRemixOfViewersVideo = false,
+    bool isWeb = false,
   }) {
     return testMaterialApp(
       additionalOverrides: [
@@ -163,6 +173,7 @@ void main() {
               video: video,
               isOwnVideo: ownerCubit != null,
               isRemixOfViewersVideo: isRemixOfViewersVideo,
+              isWeb: isWeb,
             ),
           ),
         ),
@@ -184,7 +195,7 @@ void main() {
         expect(find.text(l10n.shareSheetSave), findsNothing);
       });
 
-      testWidgets('only Save on another creator classic Vine', (
+      testWidgets('only Remix, then Save, on another creator classic Vine', (
         tester,
       ) async {
         stubContentActions();
@@ -192,7 +203,10 @@ void main() {
           buildSubject(video: _classicVine, debugTools: true),
         );
 
-        expect(find.text(l10n.shareSheetSave), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text(l10n.metadataRemixAction)).dx,
+          lessThan(tester.getTopLeft(find.text(l10n.shareSheetSave)).dx),
+        );
         expect(find.text(l10n.shareSheetAddToClips), findsNothing);
         expect(find.text(l10n.shareSheetAddToList), findsNothing);
         expect(find.text(l10n.shareMenuEditVideo), findsNothing);
@@ -201,48 +215,45 @@ void main() {
         expect(find.text(l10n.shareSheetEventId), findsNothing);
       });
 
-      testWidgets('Edit, Delete and Save in order on the viewer own video', (
-        tester,
-      ) async {
-        stubContentActions();
-        final video = _video(
-          tags: const [
-            ['allow_video_reuse', 'true'],
-          ],
-        );
-        expect(video.allowVideoReuse, isTrue);
+      testWidgets(
+        'Remix, Save, Edit and Delete in order on the viewer own video, even '
+        'when its tag declines reuse',
+        (tester) async {
+          stubContentActions();
+          expect(_declinedReuse.allowVideoReuse, isFalse);
 
-        await tester.pumpWidget(
-          buildSubject(
-            video: video,
-            ownerCubit: stubbedOwnerCubit(),
-            debugTools: true,
-          ),
-        );
-
-        final labels = [
-          l10n.shareMenuEditVideo,
-          l10n.shareMenuDeleteVideo,
-          l10n.shareSheetSave,
-        ];
-        final xs = [
-          for (final label in labels) tester.getTopLeft(find.text(label)).dx,
-        ];
-
-        for (var i = 1; i < xs.length; i++) {
-          expect(
-            xs[i - 1],
-            lessThan(xs[i]),
-            reason: '${labels[i - 1]} should come before ${labels[i]}',
+          await tester.pumpWidget(
+            buildSubject(
+              video: _declinedReuse,
+              ownerCubit: stubbedOwnerCubit(),
+              debugTools: true,
+            ),
           );
-        }
-        // The remix button stands in for Add to clips; the rest stay in the
-        // share sheet.
-        expect(find.text(l10n.shareSheetAddToClips), findsNothing);
-        expect(find.text(l10n.shareSheetAddToList), findsNothing);
-        expect(find.text(l10n.shareSheetEventJson), findsNothing);
-        expect(find.text(l10n.shareSheetEventId), findsNothing);
-      });
+
+          final labels = [
+            l10n.metadataRemixAction,
+            l10n.shareSheetSave,
+            l10n.shareMenuEditVideo,
+            l10n.shareMenuDeleteVideo,
+          ];
+          final xs = [
+            for (final label in labels) tester.getTopLeft(find.text(label)).dx,
+          ];
+
+          for (var i = 1; i < xs.length; i++) {
+            expect(
+              xs[i - 1],
+              lessThan(xs[i]),
+              reason: '${labels[i - 1]} should come before ${labels[i]}',
+            );
+          }
+          // Remix stands in for Add to clips; the rest stay in the share sheet.
+          expect(find.text(l10n.shareSheetAddToClips), findsNothing);
+          expect(find.text(l10n.shareSheetAddToList), findsNothing);
+          expect(find.text(l10n.shareSheetEventJson), findsNothing);
+          expect(find.text(l10n.shareSheetEventId), findsNothing);
+        },
+      );
 
       testWidgets(
         'no Edit or Delete from an owner cubit provided for a video the viewer '
@@ -300,6 +311,40 @@ void main() {
 
         expect(find.text(l10n.shareSheetSave), findsOneWidget);
         expect(find.text(l10n.metadataReportRemix), findsNothing);
+      });
+
+      testWidgets('Remix on another creator video with no reuse tag', (
+        tester,
+      ) async {
+        stubContentActions();
+        await tester.pumpWidget(buildSubject(video: _video()));
+
+        expect(find.text(l10n.metadataRemixAction), findsOneWidget);
+      });
+
+      testWidgets('no Remix on another creator video that declines reuse', (
+        tester,
+      ) async {
+        stubContentActions();
+        await tester.pumpWidget(buildSubject(video: _declinedReuse));
+
+        expect(find.text(l10n.shareSheetSave), findsOneWidget);
+        expect(find.text(l10n.metadataRemixAction), findsNothing);
+      });
+
+      testWidgets('a spinner on Remix while the remix is being prepared', (
+        tester,
+      ) async {
+        stubContentActions(isPreparingRemix: true);
+        await tester.pumpWidget(buildSubject(video: _classicVine));
+
+        expect(
+          find.descendant(
+            of: find.widgetWithText(GestureDetector, l10n.metadataRemixAction),
+            matching: find.byType(DivineCircularProgressIndicator),
+          ),
+          findsOneWidget,
+        );
       });
 
       testWidgets('a spinner on Save while the bookmark toggle is in flight', (
@@ -372,6 +417,59 @@ void main() {
         expect(find.text(l10n.shareMenuDelete), findsNothing);
       });
 
+      testWidgets('tapping Remix asks the bloc for a remix', (tester) async {
+        stubContentActions();
+        await tester.pumpWidget(buildSubject(video: _classicVine));
+
+        await tester.tap(find.text(l10n.metadataRemixAction));
+        await tester.pump();
+
+        verify(
+          () => contentActions.add(const VideoContentRemixRequested()),
+        ).called(1);
+      });
+
+      testWidgets('ignores Remix taps while the remix is being prepared', (
+        tester,
+      ) async {
+        stubContentActions(isPreparingRemix: true);
+        await tester.pumpWidget(buildSubject(video: _classicVine));
+
+        await tester.tap(find.text(l10n.metadataRemixAction));
+        // The remix spinner never settles.
+        await tester.pump(const Duration(seconds: 1));
+
+        verifyNever(() => contentActions.add(any()));
+      });
+
+      testWidgets('holds Remix while a save is in flight', (tester) async {
+        stubContentActions(isSaving: true);
+        await tester.pumpWidget(buildSubject(video: _classicVine));
+
+        await tester.tap(find.text(l10n.metadataRemixAction));
+        // The save spinner never settles.
+        await tester.pump(const Duration(seconds: 1));
+
+        verifyNever(() => contentActions.add(any()));
+      });
+
+      testWidgets('holds Remix while the video is being deleted', (
+        tester,
+      ) async {
+        stubContentActions();
+        final ownerCubit = stubbedOwnerCubit() as _MockOwnerVideoActionsCubit;
+        when(() => ownerCubit.isDeleteInProgress(any())).thenReturn(true);
+        await tester.pumpWidget(
+          buildSubject(video: _video(), ownerCubit: ownerCubit),
+        );
+
+        await tester.tap(find.text(l10n.metadataRemixAction));
+        // The delete spinner never settles.
+        await tester.pump(const Duration(seconds: 1));
+
+        verifyNever(() => contentActions.add(any()));
+      });
+
       testWidgets('tapping Save requests a bookmark toggle', (tester) async {
         stubContentActions();
         await tester.pumpWidget(buildSubject(video: _classicVine));
@@ -406,6 +504,82 @@ void main() {
         expect(find.text(l10n.shareFailedToAddBookmark), findsOneWidget);
       });
     });
+    group('remix on the web', () {
+      const openSheetLabel = 'open sheet';
+      late UrlLauncherPlatform originalLauncher;
+      late UrlLauncherTestDouble launcher;
+
+      setUp(() {
+        originalLauncher = UrlLauncherPlatform.instance;
+        launcher = UrlLauncherTestDouble();
+        UrlLauncherPlatform.instance = launcher;
+        stubContentActions();
+      });
+
+      tearDown(() => UrlLauncherPlatform.instance = originalLauncher);
+
+      // Pushes the section on its own route, standing in for the sheet, so the
+      // nudge has a route to close and an opener to report on.
+      Future<void> openSheet(WidgetTester tester) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => Scaffold(
+                        body: BlocProvider<VideoContentActionsBloc>.value(
+                          value: contentActions,
+                          child: MetadataActionsSection(
+                            video: _classicVine,
+                            isWeb: true,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  child: const Text(openSheetLabel),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text(openSheetLabel));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('closes the sheet and points to the app instead', (
+        tester,
+      ) async {
+        await openSheet(tester);
+
+        await tester.tap(find.text(l10n.metadataRemixAction));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MetadataActionsSection), findsNothing);
+        expect(find.text(openSheetLabel), findsOneWidget);
+        expect(find.text(l10n.remixWebAppNudge), findsOneWidget);
+        expect(find.text(l10n.remixWebGetTheApp), findsOneWidget);
+        verifyNever(() => contentActions.add(any()));
+      });
+
+      testWidgets('Get the app opens the download page in the browser', (
+        tester,
+      ) async {
+        await openSheet(tester);
+        await tester.tap(find.text(l10n.metadataRemixAction));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(l10n.remixWebGetTheApp));
+        await tester.pumpAndSettle();
+
+        final launched = launcher.launched.single;
+        expect(launched.url, AppConstants.downloadUrl);
+        expect(launched.useExternalApplication, isTrue);
+      });
+    });
+
     group('owner delete', () {
       const openSheetLabel = 'open sheet';
       final sheetList = find.byWidgetPredicate(
@@ -903,16 +1077,12 @@ void main() {
               ],
               child: ListView(
                 children: [
-                  MetadataRemixButton(video: video, isOwnVideo: true),
                   MetadataActionsSection(video: video, isOwnVideo: true),
                 ],
               ),
             ),
           );
-          final remixButton = find.widgetWithText(
-            DivineButton,
-            l10n.remixThisVideo,
-          );
+          final remixButton = find.text(l10n.metadataRemixAction);
 
           await tester.tap(remixButton);
           await tester.pump();

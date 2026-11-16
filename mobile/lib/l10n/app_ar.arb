@@ -1453,7 +1453,7 @@
   "remixSettingAllowTitle": "السماح للآخرين بإعادة مزج فيديوهاتي",
   "remixSettingAllowSubtitle": "يمكن للآخرين استخدام فيديوهاتك كمقاطع في منشوراتهم.",
   "videoMetadataClipCreditRow": "يستخدم مقطعًا من {name}",
-  "remixThisVideo": "إعادة مزج هذا الفيديو",
+  "metadataRemixAction": "إعادة مزج",
   "remixWebAppNudge": "تتم إعادة المزج في تطبيق Divine.",
   "remixWebGetTheApp": "تنزيل التطبيق",
   "metadataRemixesLabel": "إعادات المزج",

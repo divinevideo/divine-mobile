@@ -4214,7 +4214,7 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get remixThisVideo => 'Remixează acest videoclip';
+  String get metadataRemixAction => 'Remixează';
 
   @override
   String get remixWebAppNudge => 'Remixurile se fac în aplicația Divine.';

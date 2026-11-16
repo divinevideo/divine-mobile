@@ -2857,7 +2857,7 @@
   },
   "remixStartFailed": "Couldn't start the remix. Try again.",
   "@remixStartFailed": {
-    "description": "Snackbar shown when 'Remix this video' could not bring the video into the clip library, so the editor did not open; the user can try again."
+    "description": "Snackbar shown when Remix in the video info sheet could not bring the video into the clip library, so the editor did not open; the user can try again."
   },
   "remixSettingAllowTitle": "Let people remix my videos",
   "@remixSettingAllowTitle": {
@@ -2876,13 +2876,13 @@
       }
     }
   },
-  "remixThisVideo": "Remix this video",
-  "@remixThisVideo": {
-    "description": "Full-width button in the video info sheet: imports the video into the viewer's clips and opens the editor with it, so they can make a new video from it."
+  "metadataRemixAction": "Remix",
+  "@metadataRemixAction": {
+    "description": "Short label and screen-reader label of the Remix circle in the video info sheet's action row: imports the video into the viewer's clips and opens the editor with it, so they can make a new video from it."
   },
   "remixWebAppNudge": "Remixing happens in the Divine app.",
   "@remixWebAppNudge": {
-    "description": "Snackbar shown on the web when someone taps 'Remix this video': remixing needs the mobile app."
+    "description": "Snackbar shown on the web when someone taps Remix in the video info sheet: remixing needs the mobile app."
   },
   "remixWebGetTheApp": "Get the app",
   "@remixWebGetTheApp": {

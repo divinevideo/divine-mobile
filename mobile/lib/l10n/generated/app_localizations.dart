@@ -6841,7 +6841,7 @@ abstract class AppLocalizations {
   /// **'Couldn\'t check whether this video can be remixed. Try again.'**
   String get remixConsentCheckFailed;
 
-  /// Snackbar shown when 'Remix this video' could not bring the video into the clip library, so the editor did not open; the user can try again.
+  /// Snackbar shown when Remix in the video info sheet could not bring the video into the clip library, so the editor did not open; the user can try again.
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t start the remix. Try again.'**
@@ -6865,13 +6865,13 @@ abstract class AppLocalizations {
   /// **'Uses a clip from {name}'**
   String videoMetadataClipCreditRow(String name);
 
-  /// Full-width button in the video info sheet: imports the video into the viewer's clips and opens the editor with it, so they can make a new video from it.
+  /// Short label and screen-reader label of the Remix circle in the video info sheet's action row: imports the video into the viewer's clips and opens the editor with it, so they can make a new video from it.
   ///
   /// In en, this message translates to:
-  /// **'Remix this video'**
-  String get remixThisVideo;
+  /// **'Remix'**
+  String get metadataRemixAction;
 
-  /// Snackbar shown on the web when someone taps 'Remix this video': remixing needs the mobile app.
+  /// Snackbar shown on the web when someone taps Remix in the video info sheet: remixing needs the mobile app.
   ///
   /// In en, this message translates to:
   /// **'Remixing happens in the Divine app.'**

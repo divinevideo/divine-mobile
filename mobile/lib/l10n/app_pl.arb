@@ -1463,7 +1463,7 @@
   "remixSettingAllowTitle": "Pozwól innym remiksować moje filmy",
   "remixSettingAllowSubtitle": "Inni mogą używać twoich filmów jako klipów we własnych postach.",
   "videoMetadataClipCreditRow": "Używa klipu od {name}",
-  "remixThisVideo": "Zremiksuj ten film",
+  "metadataRemixAction": "Zremiksuj",
   "remixWebAppNudge": "Remiksy tworzy się w aplikacji Divine.",
   "remixWebGetTheApp": "Pobierz aplikację",
   "metadataRemixesLabel": "Remiksy",

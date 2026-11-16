@@ -40,7 +40,6 @@ import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_expanded_sheet.dart';
-import 'package:openvine/widgets/video_feed_item/metadata/metadata_remix_button.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_remixes_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_sounds_section.dart';
@@ -3041,8 +3040,8 @@ void main() {
     }
 
     testWidgetsWithSurfaceSize(
-      'renders the remix button, then the action row, between the stats row '
-      'and the creator',
+      'renders the action row, Remix first, between the stats row and the '
+      'creator',
       (tester) async {
         await openSheet(
           tester,
@@ -3051,15 +3050,22 @@ void main() {
         );
 
         final l10n = _l10n(tester);
-        expect(find.text(l10n.remixThisVideo), findsOneWidget);
         expect(find.text(l10n.shareSheetAddToClips), findsNothing);
         expect(find.text(l10n.shareMenuEditVideo), findsNothing);
+        expect(
+          find.descendant(
+            of: find.byType(MetadataActionsSection),
+            matching: find.text(l10n.metadataRemixAction),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          tester.getTopLeft(find.text(l10n.metadataRemixAction)).dx,
+          lessThan(tester.getTopLeft(find.text(l10n.shareSheetSave)).dx),
+        );
 
         final statsY = tester
             .getTopLeft(find.byType(MetadataStatsRow, skipOffstage: false))
-            .dy;
-        final remixY = tester
-            .getTopLeft(find.byType(MetadataRemixButton, skipOffstage: false))
             .dy;
         final actionsY = tester
             .getTopLeft(
@@ -3072,15 +3078,14 @@ void main() {
             )
             .dy;
 
-        expect(statsY, lessThan(remixY));
-        expect(remixY, lessThan(actionsY));
+        expect(statsY, lessThan(actionsY));
         expect(actionsY, lessThan(creatorY));
       },
     );
 
     testWidgetsWithSurfaceSize(
-      'offers only Remix, Edit, Delete and Save on the viewer own video, '
-      'with debug tools on',
+      'offers only Remix, Save, Edit and Delete, in that order, on the viewer '
+      'own video, with debug tools on',
       (tester) async {
         await tester.pumpWidget(
           buildSubject(
@@ -3106,17 +3111,14 @@ void main() {
 
         final l10n = _l10n(tester);
         final labels = [
+          l10n.metadataRemixAction,
+          l10n.shareSheetSave,
           l10n.shareMenuEditVideo,
           l10n.shareMenuDeleteVideo,
-          l10n.shareSheetSave,
         ];
-        final remixY = tester.getTopLeft(find.text(l10n.remixThisVideo)).dy;
-        final xs = <double>[];
-        for (final label in labels) {
-          final topLeft = tester.getTopLeft(find.text(label));
-          expect(remixY, lessThan(topLeft.dy), reason: 'Remix above $label');
-          xs.add(topLeft.dx);
-        }
+        final xs = [
+          for (final label in labels) tester.getTopLeft(find.text(label)).dx,
+        ];
         expect(xs, orderedEquals([...xs]..sort()));
         expect(find.text(l10n.shareSheetAddToClips), findsNothing);
         expect(find.text(l10n.shareSheetAddToList), findsNothing);
@@ -3409,7 +3411,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = _l10n(tester);
-        await tester.tap(find.text(l10n.remixThisVideo));
+        await tester.tap(find.text(l10n.metadataRemixAction));
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.remixBlockedByCreator), findsOneWidget);
@@ -3463,7 +3465,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final l10n = _l10n(tester);
-        await tester.tap(find.text(l10n.remixThisVideo));
+        await tester.tap(find.text(l10n.metadataRemixAction));
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.remixBlockedByCreator), findsOneWidget);

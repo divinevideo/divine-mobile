@@ -4233,7 +4233,7 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get remixThisVideo => 'ఈ వీడియోను రీమిక్స్ చేయండి';
+  String get metadataRemixAction => 'రీమిక్స్ చేయండి';
 
   @override
   String get remixWebAppNudge => 'రీమిక్స్ Divine యాప్‌లో జరుగుతుంది.';

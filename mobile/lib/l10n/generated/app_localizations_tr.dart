@@ -4032,7 +4032,7 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get remixThisVideo => 'Bu videoyu remiksle';
+  String get metadataRemixAction => 'Remiksle';
 
   @override
   String get remixWebAppNudge => 'Remiks Divine uygulamasında yapılır.';

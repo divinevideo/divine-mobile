@@ -1467,7 +1467,7 @@
   "remixSettingAllowTitle": "Permitir que otras personas remezclen mis videos",
   "remixSettingAllowSubtitle": "Otras personas pueden usar tus videos como clips en sus propias publicaciones.",
   "videoMetadataClipCreditRow": "Usa un clip de {name}",
-  "remixThisVideo": "Remezclá este video",
+  "metadataRemixAction": "Remezclar",
   "remixWebAppNudge": "Las remezclas se hacen en la app de Divine.",
   "remixWebGetTheApp": "Descargá la app",
   "metadataRemixesLabel": "Remezclas",

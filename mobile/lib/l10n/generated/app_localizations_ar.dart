@@ -4091,7 +4091,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get remixThisVideo => 'إعادة مزج هذا الفيديو';
+  String get metadataRemixAction => 'إعادة مزج';
 
   @override
   String get remixWebAppNudge => 'تتم إعادة المزج في تطبيق Divine.';

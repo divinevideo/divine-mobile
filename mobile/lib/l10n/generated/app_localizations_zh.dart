@@ -3823,7 +3823,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get remixThisVideo => '混剪此视频';
+  String get metadataRemixAction => '混剪';
 
   @override
   String get remixWebAppNudge => '混剪需要在 Divine 应用中进行。';

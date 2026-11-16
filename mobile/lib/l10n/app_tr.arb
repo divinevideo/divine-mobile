@@ -1460,7 +1460,7 @@
   "remixSettingAllowTitle": "Başkalarının videolarımı remikslemesine izin ver",
   "remixSettingAllowSubtitle": "Başkaları videolarını kendi gönderilerinde klip olarak kullanabilir.",
   "videoMetadataClipCreditRow": "{name} kullanıcısının bir klibini kullanıyor",
-  "remixThisVideo": "Bu videoyu remiksle",
+  "metadataRemixAction": "Remiksle",
   "remixWebAppNudge": "Remiks Divine uygulamasında yapılır.",
   "remixWebGetTheApp": "Uygulamayı indir",
   "metadataRemixesLabel": "Remiksler",

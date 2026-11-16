@@ -1819,7 +1819,7 @@
   "remixSettingAllowTitle": "ሌሎች ቪዲዮዎቼን እንዲቀላቅሉ መፍቀድ",
   "remixSettingAllowSubtitle": "ሌሎች ቪዲዮዎችዎን በራሳቸው ልጥፎች ውስጥ እንደ ቅንጥብ መጠቀም ይችላሉ።",
   "videoMetadataClipCreditRow": "የ{name} ክሊፕ ይጠቀማል",
-  "remixThisVideo": "ይህን ቪዲዮ ይቀላቅሉ",
+  "metadataRemixAction": "ይቀላቅሉ",
   "remixWebAppNudge": "መቀላቀል የሚከናወነው በDivine መተግበሪያ ውስጥ ነው።",
   "remixWebGetTheApp": "መተግበሪያውን ያግኙ",
   "metadataRemixesLabel": "ቅልቅሎች",

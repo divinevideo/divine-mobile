@@ -4093,7 +4093,7 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get remixThisVideo => 'اس ویڈیو کو ری مکس کریں';
+  String get metadataRemixAction => 'ری مکس کریں';
 
   @override
   String get remixWebAppNudge => 'ری مکس Divine ایپ میں ہوتا ہے۔';

@@ -3,12 +3,13 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_action_rules.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
+import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -18,6 +19,7 @@ import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/sheet_dismissal.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_feedback.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void _runActionDetached(Future<void> operation, String description) {
   runDetached(
@@ -180,6 +182,58 @@ VideoActionRowItem? addToClipsActionItem(
     onTap: () =>
         _runActionDetached(requestAddToClips(context), 'request add to clips'),
     isPending: isImporting,
+  );
+}
+
+/// Asks [bloc] for a remix of [video], which the sheet then opens in the
+/// editor, or null when [canRemixVideo] does not allow it for this viewer.
+///
+/// Remixing needs the mobile editor, so on the web ([isWeb]) the tap closes
+/// the sheet owning [context] and points to the app instead.
+///
+/// Shows as pending while the remix is prepared. [context] must be the
+/// building context of a widget below the sheet's [VideoContentActionsBloc]:
+/// the item subscribes it to the remix progress.
+VideoActionRowItem? remixVideoActionItem(
+  BuildContext context, {
+  required VideoContentActionsBloc bloc,
+  required VideoEvent video,
+  required bool isOwnContent,
+  bool isWeb = kIsWeb,
+}) {
+  if (!canRemixVideo(video: video, isOwnContent: isOwnContent)) return null;
+  final isPreparing = context.select(
+    (VideoContentActionsBloc actions) => actions.state.isPreparingRemix,
+  );
+  return VideoActionRowItem(
+    icon: DivineIconName.filmSlate,
+    label: context.l10n.metadataRemixAction,
+    onTap: isWeb
+        ? () => _showRemixAppNudge(context)
+        : () => bloc.add(const VideoContentRemixRequested()),
+    isPending: isPreparing,
+  );
+}
+
+/// Closes the sheet owning [sheetContext] and says remixing happens in the
+/// app, with an action opening the app download page.
+void _showRemixAppNudge(BuildContext sheetContext) {
+  final l10n = sheetContext.l10n;
+  final messenger = ScaffoldMessenger.of(sheetContext);
+  // A snackbar raised while the sheet is open lands underneath it.
+  dismissSheet(sheetContext);
+  messenger.showSnackBar(
+    DivineSnackbarContainer.snackBar(
+      l10n.remixWebAppNudge,
+      actionLabel: l10n.remixWebGetTheApp,
+      onActionPressed: () => _runActionDetached(
+        launchUrl(
+          Uri.parse(AppConstants.downloadUrl),
+          mode: LaunchMode.externalApplication,
+        ),
+        'open the app download page',
+      ),
+    ),
   );
 }
 

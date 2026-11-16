@@ -1088,7 +1088,7 @@
   "remixSettingAllowTitle": "Payagan ang iba na i-remix ang mga video ko",
   "remixSettingAllowSubtitle": "Magagamit ng iba ang mga video mo bilang clips sa sarili nilang posts.",
   "videoMetadataClipCreditRow": "Gumagamit ng clip ni {name}",
-  "remixThisVideo": "I-remix ang video na ito",
+  "metadataRemixAction": "I-remix",
   "remixWebAppNudge": "Sa Divine app ginagawa ang pag-remix.",
   "remixWebGetTheApp": "Kunin ang app",
   "metadataRemixesLabel": "Mga remix",

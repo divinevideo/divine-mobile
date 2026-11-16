@@ -4129,7 +4129,7 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get remixThisVideo => 'Remixar este vídeo';
+  String get metadataRemixAction => 'Remixar';
 
   @override
   String get remixWebAppNudge => 'Os remixes são feitos no app do Divine.';

@@ -1553,7 +1553,7 @@
   "remixSettingAllowTitle": "Позволи на другите да ремиксират моите видеа",
   "remixSettingAllowSubtitle": "Другите могат да използват твоите видеа като клипове в своите публикации.",
   "videoMetadataClipCreditRow": "Използва клип от {name}",
-  "remixThisVideo": "Ремиксирай това видео",
+  "metadataRemixAction": "Ремиксирай",
   "remixWebAppNudge": "Ремиксирането става в приложението Divine.",
   "remixWebGetTheApp": "Изтегли приложението",
   "metadataRemixesLabel": "Ремикси",

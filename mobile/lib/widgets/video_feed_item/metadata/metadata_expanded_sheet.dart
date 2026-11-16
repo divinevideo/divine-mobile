@@ -1,5 +1,5 @@
 // ABOUTME: Expanded video metadata bottom sheet opened by the info button.
-// ABOUTME: Header (date + title + badges + description + tags), stats, remix,
+// ABOUTME: Header (date + title + badges + description + tags), stats,
 // ABOUTME: actions, creator, collaborators, inspired by, remixes, reposted by,
 // ABOUTME: sounds, links, verification. Actions run through the shared video
 // ABOUTME: actions blocs.
@@ -26,7 +26,6 @@ import 'package:openvine/widgets/video_feed_item/actions/video_content_actions_s
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_actions_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_links_section.dart';
-import 'package:openvine/widgets/video_feed_item/metadata/metadata_remix_button.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_remixes_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_sounds_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_stats_row.dart';
@@ -45,8 +44,8 @@ import 'package:time_formatter/time_formatter.dart';
 /// title scrolls with the content rather than being pinned in a header bar.
 ///
 /// Metadata is read from [VideoEvent] and the existing
-/// [VideoInteractionsBloc] in the widget tree. The remix button and the action
-/// row run through a [VideoContentActionsBloc], plus an
+/// [VideoInteractionsBloc] in the widget tree. The action row, Remix
+/// included, runs through a [VideoContentActionsBloc], plus an
 /// [OwnerVideoActionsCubit] when the viewer owns the video, both created by
 /// [show].
 ///
@@ -68,8 +67,8 @@ class MetadataExpandedSheet extends StatelessWidget {
   /// [video], through the viewer's [stickerResponsesFilterProvider] as the
   /// sheet opens. Both are scoped to the modal and auto-closed on dismiss.
   ///
-  /// Creates the [VideoContentActionsBloc] the remix button and the action row
-  /// share, and an [OwnerVideoActionsCubit] when the signed-in viewer owns
+  /// Creates the [VideoContentActionsBloc] the action row runs through, and
+  /// an [OwnerVideoActionsCubit] when the signed-in viewer owns
   /// [video].
   /// Ownership, and whether [video] is a remix of one of the viewer's videos,
   /// are decided once here, so the actions offered and their cubit cannot
@@ -167,7 +166,6 @@ class _MetadataContent extends StatelessWidget {
           variant: VideoReplyParentLinkVariant.metadata,
         ),
         MetadataStatsRow(video: video),
-        MetadataRemixButton(video: video, isOwnVideo: isOwnVideo),
         MetadataActionsSection(
           video: video,
           isOwnVideo: isOwnVideo,

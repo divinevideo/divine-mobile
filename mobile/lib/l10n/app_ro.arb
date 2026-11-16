@@ -1463,7 +1463,7 @@
   "remixSettingAllowTitle": "Permite altora să-mi remixeze videoclipurile",
   "remixSettingAllowSubtitle": "Alții îți pot folosi videoclipurile drept clipuri în propriile postări.",
   "videoMetadataClipCreditRow": "Folosește un clip de la {name}",
-  "remixThisVideo": "Remixează acest videoclip",
+  "metadataRemixAction": "Remixează",
   "remixWebAppNudge": "Remixurile se fac în aplicația Divine.",
   "remixWebGetTheApp": "Descarcă aplicația",
   "metadataRemixesLabel": "Remixuri",

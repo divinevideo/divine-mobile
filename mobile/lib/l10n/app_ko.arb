@@ -1013,7 +1013,7 @@
   "remixSettingAllowTitle": "다른 사람이 내 영상을 리믹스하도록 허용",
   "remixSettingAllowSubtitle": "다른 사람들이 내 영상을 자기 게시물의 클립으로 쓸 수 있어요.",
   "videoMetadataClipCreditRow": "{name}님의 클립 사용",
-  "remixThisVideo": "이 영상 리믹스하기",
+  "metadataRemixAction": "리믹스하기",
   "remixWebAppNudge": "리믹스는 Divine 앱에서 할 수 있어요.",
   "remixWebGetTheApp": "앱 받기",
   "metadataRemixesLabel": "리믹스",

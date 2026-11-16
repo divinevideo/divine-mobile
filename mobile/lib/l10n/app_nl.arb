@@ -1463,7 +1463,7 @@
   "remixSettingAllowTitle": "Laat anderen mijn video's remixen",
   "remixSettingAllowSubtitle": "Anderen kunnen je video's als clips in hun eigen posts gebruiken.",
   "videoMetadataClipCreditRow": "Gebruikt een clip van {name}",
-  "remixThisVideo": "Deze video remixen",
+  "metadataRemixAction": "Remixen",
   "remixWebAppNudge": "Remixen doe je in de Divine-app.",
   "remixWebGetTheApp": "Download de app",
   "metadataRemixesLabel": "Remixes",

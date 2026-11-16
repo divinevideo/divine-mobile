@@ -1,28 +1,29 @@
-// ABOUTME: Action row in the video info sheet: edit and delete on the viewer's
-// ABOUTME: own video, save, and report on a remix of theirs; opens a remix the
-// ABOUTME: sheet's button asked for.
+// ABOUTME: Action row in the video info sheet: remix and save; edit and delete
+// ABOUTME: on the viewer's own video; report on a remix of theirs. Opens the
+// ABOUTME: remix its Remix action asked for.
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/owner_video_actions/owner_video_actions_cubit.dart';
+import 'package:openvine/blocs/video_content_actions/video_content_action_rules.dart';
 import 'package:openvine/blocs/video_content_actions/video_content_actions_bloc.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_feed_item/actions/remix_launcher.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_action_row.dart';
 import 'package:openvine/widgets/video_feed_item/actions/video_content_action_items.dart';
-import 'package:openvine/widgets/video_feed_item/metadata/metadata_remix_button.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Content actions for [video] in the info sheet: Edit and Delete on the
-/// viewer's own video, then Save, then Report this remix when [video] uses a
-/// clip of one of the viewer's videos.
+/// Content actions for [video] in the info sheet: Remix when [canRemixVideo]
+/// allows it, then Save, then Edit and Delete on the viewer's own video, then
+/// Report this remix when [video] uses a clip of one of the viewer's videos.
 ///
-/// The sheet's [MetadataRemixButton] stands in for Add to clips. Add to list
-/// and the debug copies stay in the share sheet. When the remix the button
-/// asked for is ready, this section opens it in the editor.
+/// Remix stands in for Add to clips; on the web ([isWeb]) it points to the app
+/// instead. Add to list and the debug copies stay in the share sheet. When the
+/// remix Remix asked for is ready, this section opens it in the editor.
 ///
 /// Reads the [VideoContentActionsBloc] the sheet provides, and the
 /// [OwnerVideoActionsCubit] it provides alongside when [isOwnVideo] is true.
@@ -37,6 +38,7 @@ class MetadataActionsSection extends ConsumerStatefulWidget {
     required this.video,
     this.isOwnVideo = false,
     this.isRemixOfViewersVideo = false,
+    this.isWeb = kIsWeb,
     super.key,
   });
 
@@ -50,6 +52,9 @@ class MetadataActionsSection extends ConsumerStatefulWidget {
   /// Whether [video] uses a clip of one of the signed-in viewer's videos,
   /// decided once by the sheet. Only then is Report this remix offered.
   final bool isRemixOfViewersVideo;
+
+  /// Whether the app runs on the web, where the editor is unavailable.
+  final bool isWeb;
 
   @override
   ConsumerState<MetadataActionsSection> createState() =>
@@ -91,6 +96,19 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
           (cubit) => cubit.isDeleteInProgress(video.id),
         );
     final actions = <VideoActionRowItem>[
+      ?remixVideoActionItem(
+        context,
+        bloc: contentActions,
+        video: video,
+        isOwnContent: widget.isOwnVideo,
+        isWeb: widget.isWeb,
+      ),
+      saveVideoActionItem(
+        context,
+        bloc: contentActions,
+        isSaved: isSaved,
+        isPending: isSavePending,
+      ),
       if (ownerCubit != null) ...[
         editOwnerVideoActionItem(
           context,
@@ -102,12 +120,6 @@ class _MetadataActionsSectionState extends ConsumerState<MetadataActionsSection>
           isDeletePending: isDeletePending,
         ),
       ],
-      saveVideoActionItem(
-        context,
-        bloc: contentActions,
-        isSaved: isSaved,
-        isPending: isSavePending,
-      ),
       if (widget.isRemixOfViewersVideo)
         reportRemixActionItem(context, video: video),
     ];

@@ -4056,7 +4056,7 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get remixThisVideo => 'Remix video này';
+  String get metadataRemixAction => 'Remix';
 
   @override
   String get remixWebAppNudge => 'Bạn có thể remix trong ứng dụng Divine.';

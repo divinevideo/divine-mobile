@@ -4000,7 +4000,7 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get remixThisVideo => 'ይህን ቪዲዮ ይቀላቅሉ';
+  String get metadataRemixAction => 'ይቀላቅሉ';
 
   @override
   String get remixWebAppNudge => 'መቀላቀል የሚከናወነው በDivine መተግበሪያ ውስጥ ነው።';

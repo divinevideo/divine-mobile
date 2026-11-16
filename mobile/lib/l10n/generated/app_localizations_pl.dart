@@ -4210,7 +4210,7 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get remixThisVideo => 'Zremiksuj ten film';
+  String get metadataRemixAction => 'Zremiksuj';
 
   @override
   String get remixWebAppNudge => 'Remiksy tworzy się w aplikacji Divine.';
