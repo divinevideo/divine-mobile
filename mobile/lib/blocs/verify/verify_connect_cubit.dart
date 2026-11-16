@@ -98,9 +98,10 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   // never go into state, logs or analytics.
   _PendingSignIn? _pending;
 
-  // Bumped by every refresh of Confirmation access. A read started before
-  // the latest refresh is dropped when it answers: that refresh asked the
-  // verifier afresh, so its answer is the newer one whenever it lands.
+  // Bumped by every refresh of Confirmation access, and by a refusal for it.
+  // A read started before the latest of those is dropped when it answers:
+  // the refresh asked the verifier afresh, and the refusal is the verifier's
+  // own newer answer, whenever the older read lands.
   int _accessRefreshes = 0;
 
   // Whether the last access answer taken since the last refusal for Divine
@@ -496,11 +497,18 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
               confirmationRefused: true,
             );
           }
+          // The refusal is the verifier's newest word on access, so the
+          // screen offers Confirmation rather than a sign-in that would be
+          // refused the same way. It isn't a read: a re-check that answers
+          // "has" still brings the sign-in back, and an answer to a read
+          // asked before the refusal is older and is dropped.
+          _accessRefreshes++;
           return _failKeepingSignIn(
             pendingPurchase
                 ? VerifyConnectError.confirmationPending
                 : VerifyConnectError.confirmationRequired,
             confirmationRefused: true,
+            confirmationAccess: ConfirmationAccess.hasNot,
           );
         case SignInRefusal.confirmationUnavailable:
           // Already retried inside the confirm window [D3c]. It says nothing
@@ -743,6 +751,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   void _failKeepingSignIn(
     VerifyConnectError error, {
     bool confirmationRefused = false,
+    ConfirmationAccess? confirmationAccess,
   }) {
     if (isClosed) return;
     emit(
@@ -754,6 +763,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
         error: error,
         errorAttempt: state.errorAttempt + 1,
         confirmationRefused: confirmationRefused ? true : null,
+        confirmationAccess: confirmationAccess,
       ),
     );
   }

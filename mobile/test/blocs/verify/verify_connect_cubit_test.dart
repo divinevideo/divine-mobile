@@ -2604,6 +2604,84 @@ void main() {
         );
 
         test(
+          'confirmation_required with the flag on reads as no access, keeping '
+          'the sign-in',
+          () async {
+            whenConfirm().thenThrow(required());
+            accessReader.answer = ConfirmationAccess.has;
+            final cubit = await waiting(confirmationSignIn: true);
+            addTearDown(cubit.close);
+            await cubit.refreshConfirmationAccess();
+            final reads = accessReader.reads.length;
+
+            await cubit.approveSignIn();
+
+            // The refusal is the newer answer, and asks the verifier nothing.
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+            expect(accessReader.reads, hasLength(reads));
+            expect(cubit.state.signedInAccount, 'jack');
+            expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+
+            // A later re-check that says yes restores the sign-in path.
+            accessReader.answer = ConfirmationAccess.has;
+            await cubit.refreshConfirmationAccess();
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.has);
+          },
+        );
+
+        test(
+          'confirmation_required with the flag off leaves access alone',
+          () async {
+            whenConfirm().thenThrow(required());
+            final cubit = await waiting();
+            addTearDown(cubit.close);
+
+            await cubit.approveSignIn();
+
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.unknown);
+          },
+        );
+
+        test(
+          'an access answer asked before the refusal does not undo it',
+          () async {
+            whenConfirm().thenThrow(required());
+            final cubit = await waiting(confirmationSignIn: true);
+            addTearDown(cubit.close);
+            final held = Completer<ConfirmationAccess>();
+            accessReader.respond = ({required refresh}) => held.future;
+            final refreshing = cubit.refreshConfirmationAccess();
+
+            await cubit.approveSignIn();
+            held.complete(ConfirmationAccess.has);
+            await refreshing;
+
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+          },
+        );
+
+        test(
+          'the no-access a refusal sets is not a read for the pending copy',
+          () async {
+            whenConfirm().thenThrow(required());
+            final cubit = await waiting(confirmationSignIn: true);
+            addTearDown(cubit.close);
+
+            await cubit.approveSignIn();
+            await cubit.approveSignIn();
+            expect(cubit.state.error, VerifyConnectError.confirmationRequired);
+
+            // A has read after the refusal still makes the next refusal the
+            // pending copy, once.
+            accessReader.answer = ConfirmationAccess.has;
+            await cubit.refreshConfirmationAccess();
+            await cubit.approveSignIn();
+            expect(cubit.state.error, VerifyConnectError.confirmationPending);
+            expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+          },
+        );
+
+        test(
           'a refusal after access read hasNot stays confirmationRequired',
           () async {
             whenConfirm().thenThrow(required());

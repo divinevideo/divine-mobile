@@ -641,6 +641,13 @@ const _knownUntranslatedDebt = <String>{
   'verifyConfirmationStoreOnly',
   'verifyConfirmationBuySemantic',
   'verifyConfirmationRestoreSemantic',
+  'verifyConfirmationCardTitle',
+  'verifyConfirmationCardBody',
+  'verifyGetConfirmation',
+  'verifyProofAlwaysAvailable',
+  'verifyConfirmationSheetTitle',
+  'verifyConfirmationSheetSubtitle',
+  'verifyConfirmationSheetUseProof',
   // Real public community Rooms privacy notice.
   'messagesPublicRoomsDisclosure',
   'messagesRoomRetiredDraft',

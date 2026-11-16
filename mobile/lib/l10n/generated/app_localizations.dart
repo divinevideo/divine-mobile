@@ -24633,7 +24633,7 @@ abstract class AppLocalizations {
   /// **'Details will appear here when Divine Confirmation is ready.'**
   String get verifyConfirmationSmallPrint;
 
-  /// Shown on the Divine Confirmation screen in place of the buy button when this build cannot be billed by a store. Placeholder until #8278.
+  /// Shown in place of a button that would buy Divine Confirmation when this build cannot be billed by a store: on the Divine Confirmation screen, on the link-an-account screen, and in the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278.
   ///
   /// In en, this message translates to:
   /// **'Divine Confirmation is available in the App Store and Google Play versions of Divine.'**
@@ -24650,6 +24650,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Restore purchases, unavailable'**
   String get verifyConfirmationRestoreSemantic;
+
+  /// Title of the card on the link-an-account screen that takes the place of the sign-in button when linking by signing in needs Divine Confirmation and the person doesn't have it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Link by signing in'**
+  String get verifyConfirmationCardTitle;
+
+  /// Body of the card on the link-an-account screen that takes the place of the sign-in button when linking by signing in needs Divine Confirmation and the person doesn't have it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'One-tap linking is part of Divine Confirmation.'**
+  String get verifyConfirmationCardBody;
+
+  /// Button that opens the Divine Confirmation screen, on the link-an-account screen and in the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Divine Confirmation'**
+  String get verifyGetConfirmation;
+
+  /// Line above the proof-post section of the link-an-account screen, shown while linking by signing in needs Divine Confirmation, to say a proof post still links the account without it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof posts are always available'**
+  String get verifyProofAlwaysAvailable;
+
+  /// Title of the sheet shown when the verification service refuses a sign-in link because linking by signing in needs Divine Confirmation, which the person doesn't have. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Linking by signing in needs Divine Confirmation'**
+  String get verifyConfirmationSheetTitle;
+
+  /// Text under the title of the sheet shown when a sign-in link is refused for Divine Confirmation. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'You can still link this account with a proof post.'**
+  String get verifyConfirmationSheetSubtitle;
+
+  /// Button in the sheet shown when a sign-in link is refused for Divine Confirmation. Drops the sign-in and goes to the proof-post section of the link-an-account screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a proof post'**
+  String get verifyConfirmationSheetUseProof;
 
   /// Screen reader label for the button that removes a linked account.
   ///

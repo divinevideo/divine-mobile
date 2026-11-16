@@ -14655,6 +14655,30 @@ class AppLocalizationsSv extends AppLocalizations {
       'Restore purchases, unavailable';
 
   @override
+  String get verifyConfirmationCardTitle => 'Link by signing in';
+
+  @override
+  String get verifyConfirmationCardBody =>
+      'One-tap linking is part of Divine Confirmation.';
+
+  @override
+  String get verifyGetConfirmation => 'Get Divine Confirmation';
+
+  @override
+  String get verifyProofAlwaysAvailable => 'Proof posts are always available';
+
+  @override
+  String get verifyConfirmationSheetTitle =>
+      'Linking by signing in needs Divine Confirmation';
+
+  @override
+  String get verifyConfirmationSheetSubtitle =>
+      'You can still link this account with a proof post.';
+
+  @override
+  String get verifyConfirmationSheetUseProof => 'Use a proof post';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Ta bort länken till $platform-kontot $identity';
   }
