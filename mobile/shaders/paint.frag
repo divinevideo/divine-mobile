@@ -2,15 +2,15 @@
 // video editor's effects picker.
 //
 // The renderers draw the effects natively, with `PaintVideoEffect` on
-// Android, iOS and macOS. This is the same shader: a Kuwahara filter, which
-// paints each pixel with the mean colour of the evenest of the four
-// quadrants around it, so the picture turns into flat patches with the
-// edges kept.
+// Android, iOS and macOS. This is the same shader: a soft Kuwahara filter,
+// which paints each pixel with the mean colours of the four quadrants around
+// it, weighted towards the evenest, so the picture turns into flat patches with
+// the edges kept.
 //
-// The quadrants are mixed by how even each is. Watercolour mixes them
-// softly, lightens the washes, lets the paint pool darker where they meet
-// and shows the paper's grain; oil paint keeps only the evenest, for hard
-// edges, and lights the patches' edges from the top left like thick paint.
+// Watercolour mixes the quadrants softly, lightens the washes, lets the paint
+// pool darker where they meet and shows the paper's grain; oil paint keeps only
+// the evenest, for hard edges, and lights the patches' edges from the top left
+// like thick paint.
 //
 // Distances are in pixels with y up, from the bottom left, as natively;
 // Flutter counts y down, so it is flipped on the way in. `s` is the shorter

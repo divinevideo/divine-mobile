@@ -7,14 +7,13 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
 /**
  * The picture painted in one of its [Style]s: in watercolour or in oil.
  *
- * Both are a Kuwahara filter, which paints each pixel with the mean colour of
- * the evenest of the four quadrants around it, so the picture turns into
- * flat patches with the edges kept. The quadrants are mixed by how even each
- * is. Watercolour mixes them softly, lightens the washes unevenly, lets the
- * paint pool a little darker where they meet and shows the paper's grain;
- * oil paint keeps only the evenest, for hard edges, deepens the colours and
- * lights the patches' edges from the top left like thick paint, with fine
- * bristle marks.
+ * Both are a soft Kuwahara filter, which paints each pixel with the mean
+ * colours of the four quadrants around it, weighted towards the evenest, so the
+ * picture turns into flat patches with the edges kept. Watercolour mixes them
+ * softly, lightens the washes unevenly, lets the paint pool a little darker
+ * where they meet and shows the paper's grain; oil paint keeps only the
+ * evenest, for hard edges, deepens the colours and lights the patches' edges
+ * from the top left like thick paint, with fine bristle marks.
  *
  * Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
  * far the picture turns into paint).
