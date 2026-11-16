@@ -1,8 +1,8 @@
 // ABOUTME: End-to-end test for the encrypted video DM round trip.
-// ABOUTME: Real AES-GCM encrypt + decrypt and a real ciphertext file; Blossom
-// ABOUTME: upload, transport, the DM repository and the preview reader are
-// ABOUTME: faked. Send pipeline output is fed, as a received kind 15 message,
-// ABOUTME: back through the receive pipeline.
+// ABOUTME: Real AES-GCM encrypt + decrypt and a real ciphertext file; the
+// ABOUTME: Blossom upload, DM repository, Dio download and both preview
+// ABOUTME: readers are faked. Send pipeline output is fed, as a received
+// ABOUTME: kind 15 message, back through the receive pipeline.
 
 import 'dart:async';
 import 'dart:io';
