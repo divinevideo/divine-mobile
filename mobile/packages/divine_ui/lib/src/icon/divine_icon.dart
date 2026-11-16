@@ -9,6 +9,9 @@ import 'package:vector_graphics/vector_graphics.dart';
 /// Each value maps to an SVG asset in `assets/icon/`.
 enum DivineIconName {
   androidLogo('AndroidLogo'),
+
+  /// A ball bouncing along its arc: layer animation.
+  animation('animation'),
   appleLogo('AppleLogo'),
   arrowArcLeft('arrow_arc_left'),
   arrowArcRight('arrow_arc_right'),
