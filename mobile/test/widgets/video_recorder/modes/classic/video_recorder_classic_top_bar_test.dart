@@ -257,6 +257,7 @@ class _TestClipManagerNotifier extends ClipManagerNotifier {
 
   @override
   final List<DivineVideoClip> clips;
+  @override
   final Duration activeRecordingDuration;
 
   @override

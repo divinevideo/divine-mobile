@@ -86,6 +86,14 @@ final class VideoRecorderRemoteRecordResumed extends VideoRecorderEvent {
   const VideoRecorderRemoteRecordResumed();
 }
 
+/// The recorded clips changed outside the recorder's own start and stop (a
+/// clip was added, deleted or restored), so remote controls mirroring the
+/// clip budget need the new total.
+final class VideoRecorderRemoteStateRefreshRequested
+    extends VideoRecorderEvent {
+  const VideoRecorderRemoteStateRefreshRequested();
+}
+
 /// Cycles flash mode `off → torch → auto → off`.
 final class VideoRecorderFlashToggled extends VideoRecorderEvent {
   const VideoRecorderFlashToggled();

@@ -78,6 +78,13 @@ class MockDivineCameraPlatform
     return true;
   }
 
+  final remoteRecorderStates = <RemoteRecorderState?>[];
+
+  @override
+  Future<void> updateRemoteRecorderState(RemoteRecorderState? state) async {
+    remoteRecorderStates.add(state);
+  }
+
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
 
@@ -328,6 +335,13 @@ void main() {
       test('setVolumeKeysEnabled throws', () {
         expect(
           () => basePlatform.setVolumeKeysEnabled(enabled: true),
+          throwsUnimplementedError,
+        );
+      });
+
+      test('updateRemoteRecorderState throws', () {
+        expect(
+          () => basePlatform.updateRemoteRecorderState(null),
           throwsUnimplementedError,
         );
       });
@@ -1133,6 +1147,22 @@ void main() {
         expect(DivineCamera.instance.remoteRecordControlEnabled, isFalse);
       });
 
+      test(
+        'updateRemoteRecorderState hands the state to the platform',
+        () async {
+          const state = RemoteRecorderState(
+            recorded: Duration(seconds: 2),
+            budget: Duration(milliseconds: 6300),
+            modeName: 'Capture',
+          );
+
+          await DivineCamera.instance.updateRemoteRecorderState(state);
+          await DivineCamera.instance.updateRemoteRecorderState(null);
+
+          expect(mockPlatform.remoteRecorderStates, equals([state, null]));
+        },
+      );
+
       test('setVolumeKeysEnabled enables volume keys', () async {
         await DivineCamera.instance.initialize();
 
@@ -1556,6 +1586,10 @@ void main() {
         RemoteRecordTrigger.fromNativeString('bluetooth'),
         equals(RemoteRecordTrigger.bluetooth),
       );
+      expect(
+        RemoteRecordTrigger.fromNativeString('watch'),
+        equals(RemoteRecordTrigger.watch),
+      );
     });
 
     test('fromNativeString defaults to volumeUp for unknown values', () {
@@ -1571,8 +1605,8 @@ void main() {
 
     test('all trigger values are distinct', () {
       const triggers = RemoteRecordTrigger.values;
-      expect(triggers.length, equals(3));
-      expect(triggers.toSet().length, equals(3));
+      expect(triggers.length, equals(4));
+      expect(triggers.toSet().length, equals(4));
     });
 
     test('toNativeString returns correct string for volumeUp', () {
@@ -1590,6 +1624,10 @@ void main() {
       expect(
         RemoteRecordTrigger.bluetooth.toNativeString(),
         equals('bluetooth'),
+      );
+      expect(
+        RemoteRecordTrigger.watch.toNativeString(),
+        equals('watch'),
       );
     });
   });
@@ -2496,6 +2534,37 @@ void _runMethodChannelTests() {
       expect(result, isTrue);
       expect(capturedCalls.first.arguments, {'enabled': false});
     });
+
+    test('updateRemoteRecorderState sends the recorder state', () async {
+      await methodChannelImpl.updateRemoteRecorderState(
+        RemoteRecorderState(
+          recorded: const Duration(milliseconds: 3900),
+          activeTakeStartedAt: DateTime.fromMillisecondsSinceEpoch(1700),
+          budget: const Duration(milliseconds: 6300),
+          modeName: 'Capture',
+        ),
+      );
+
+      expect(capturedCalls, hasLength(1));
+      expect(capturedCalls.first.method, 'updateRemoteRecorderState');
+      expect(capturedCalls.first.arguments, {
+        'recordedMs': 3900,
+        'activeTakeStartedAtMs': 1700,
+        'budgetMs': 6300,
+        'modeName': 'Capture',
+      });
+    });
+
+    test(
+      'updateRemoteRecorderState sends null for a closed recorder',
+      () async {
+        await methodChannelImpl.updateRemoteRecorderState(null);
+
+        expect(capturedCalls, hasLength(1));
+        expect(capturedCalls.first.method, 'updateRemoteRecorderState');
+        expect(capturedCalls.first.arguments, isNull);
+      },
+    );
 
     test('setVolumeKeysEnabled invokes method channel', () async {
       final result = await methodChannelImpl.setVolumeKeysEnabled(

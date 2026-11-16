@@ -72,6 +72,16 @@
 		D1A000000000000000000002 /* CameraQuickActionWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D1A000000000000000000008 /* CameraQuickActionWidget.appex */; };
 		D1A000000000000000000003 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = D1A00000000000000000001B /* Localizable.strings */; };
 		775462F994C0E01379E4F2D8 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4295E09E426DBF44341E107E /* InfoPlist.strings */; };
+		061A0AF7DC07220AA88542F1 /* DivineWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 45242AEE9B6E61BE4CEE35AF /* DivineWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		08B4F9B687B7A1BBA9938DFF /* RemoteShutterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED8F532DDE1F96A68C7142F7 /* RemoteShutterView.swift */; };
+		25372261116C06A22C617E3F /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 8C5EBA2446C49D6517C38A37 /* Localizable.xcstrings */; };
+		513038A4A3F4C4953797A8B1 /* RecorderSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B98C1CB6EAF9AE7F3EEE109D /* RecorderSnapshot.swift */; };
+		610EF0EFEC1CF3FE6C534191 /* RecordButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91CE38B19BDC413B7F610E5C /* RecordButton.swift */; };
+		97BCFBD5E5609421E3742C7B /* DivinePalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C52C1C73829ABF6474B686E /* DivinePalette.swift */; };
+		97E6A81FBA85251B16CB7C9E /* PhoneRecorderLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDA8DDBD3D82351E5E345B06 /* PhoneRecorderLink.swift */; };
+		9B9F30F0789DAA167021C3EF /* DivineWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9A5AAB2250A23AEE3C02C52 /* DivineWatchApp.swift */; };
+		E022E1B3A9C7C123F0A6F9F3 /* RecordingBudgetStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 052516A86C2B1B3CB9DEF08C /* RecordingBudgetStrip.swift */; };
+		E4EBAD77EA22CAFB2CD1993D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C116B284C742B3A17F256FD5 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,6 +113,13 @@
 			remoteGlobalIDString = D1A000000000000000000020;
 			remoteInfo = CameraQuickActionWidget;
 		};
+		17A83C08FE23DC3B26B5A280 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C8F12709A43207ED4B889C31;
+			remoteInfo = DivineWatch;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -126,6 +143,17 @@
 				D1A000000000000000000002 /* CameraQuickActionWidget.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5625B2BAC25546B9C22E653F /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				061A0AF7DC07220AA88542F1 /* DivineWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -258,6 +286,16 @@
 		6458D20EFBA67F555B3097B1 /* ur */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ur; path = ur.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		D6C97B737061C3053A5CC7AB /* vi */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = vi; path = vi.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		07DC9FD39AC4D5189625D488 /* zh */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = zh; path = zh.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		052516A86C2B1B3CB9DEF08C /* RecordingBudgetStrip.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingBudgetStrip.swift; sourceTree = "<group>"; };
+		45242AEE9B6E61BE4CEE35AF /* DivineWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DivineWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7C52C1C73829ABF6474B686E /* DivinePalette.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DivinePalette.swift; sourceTree = "<group>"; };
+		8C5EBA2446C49D6517C38A37 /* Localizable.xcstrings */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		91CE38B19BDC413B7F610E5C /* RecordButton.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordButton.swift; sourceTree = "<group>"; };
+		B98C1CB6EAF9AE7F3EEE109D /* RecorderSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecorderSnapshot.swift; sourceTree = "<group>"; };
+		C116B284C742B3A17F256FD5 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D9A5AAB2250A23AEE3C02C52 /* DivineWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DivineWatchApp.swift; sourceTree = "<group>"; };
+		ED8F532DDE1F96A68C7142F7 /* RemoteShutterView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RemoteShutterView.swift; sourceTree = "<group>"; };
+		FDA8DDBD3D82351E5E345B06 /* PhoneRecorderLink.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhoneRecorderLink.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -296,6 +334,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D1A00000000000000000001D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6BCCAA178356E12802445E17 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -358,6 +403,7 @@
 				D848421FEE281E0D22EAD079 /* NotificationServiceExtension */,
 				D1A00000000000000000001C /* CameraQuickActionWidget */,
 				E6E5343B49E34738EBCF225C /* DivineUITests */,
+				0C7C49D2F9C78F1EAD72F002 /* DivineWatch */,
 			);
 			sourceTree = "<group>";
 		};
@@ -369,6 +415,7 @@
 				C696D98D09FD161565BF6483 /* NotificationServiceExtension.appex */,
 				D1A000000000000000000008 /* CameraQuickActionWidget.appex */,
 				C16A69932FC765BCE0EA69F0 /* DivineUITests.xctest */,
+				45242AEE9B6E61BE4CEE35AF /* DivineWatch.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -482,6 +529,23 @@
 			path = DivineUITests;
 			sourceTree = "<group>";
 		};
+		0C7C49D2F9C78F1EAD72F002 /* DivineWatch */ = {
+			isa = PBXGroup;
+			children = (
+				D9A5AAB2250A23AEE3C02C52 /* DivineWatchApp.swift */,
+				ED8F532DDE1F96A68C7142F7 /* RemoteShutterView.swift */,
+				91CE38B19BDC413B7F610E5C /* RecordButton.swift */,
+				052516A86C2B1B3CB9DEF08C /* RecordingBudgetStrip.swift */,
+				B98C1CB6EAF9AE7F3EEE109D /* RecorderSnapshot.swift */,
+				FDA8DDBD3D82351E5E345B06 /* PhoneRecorderLink.swift */,
+				7C52C1C73829ABF6474B686E /* DivinePalette.swift */,
+				C116B284C742B3A17F256FD5 /* Assets.xcassets */,
+				8C5EBA2446C49D6517C38A37 /* Localizable.xcstrings */,
+			);
+			name = DivineWatch;
+			path = DivineWatch;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -551,6 +615,7 @@
 				F17EBA5E0000000000000002 /* Use staging Firebase config */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				F4D10BEA6CFC4738B7665C3A /* Embed App Extensions */,
+				5625B2BAC25546B9C22E653F /* Embed Watch Content */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				A11C0546913CF84FD97FA55A /* [CP] Embed Pods Frameworks */,
 				0439C9E33AA6B9E50AD033CE /* [CP] Copy Pods Resources */,
@@ -560,6 +625,7 @@
 			dependencies = (
 				C436A121E3E9C7CE79C8ACF7 /* PBXTargetDependency */,
 				D1A000000000000000000021 /* PBXTargetDependency */,
+				239F76BCB2198D68C959C30E /* PBXTargetDependency */,
 			);
 			name = Runner;
 			packageProductDependencies = (
@@ -586,6 +652,23 @@
 			productReference = D1A000000000000000000008 /* CameraQuickActionWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		C8F12709A43207ED4B889C31 /* DivineWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8A7F3F94F14E279323699375 /* Build configuration list for PBXNativeTarget "DivineWatch" */;
+			buildPhases = (
+				B2E08FD50CDDF586508D2F0C /* Sources */,
+				6BCCAA178356E12802445E17 /* Frameworks */,
+				85344C741D2EB26893E39443 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DivineWatch;
+			productName = DivineWatch;
+			productReference = 45242AEE9B6E61BE4CEE35AF /* DivineWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -603,6 +686,9 @@
 					97C146ED1CF9000F007C117D = {
 						CreatedOnToolsVersion = 7.3.1;
 						LastSwiftMigration = 1100;
+					};
+					C8F12709A43207ED4B889C31 = {
+						CreatedOnToolsVersion = 15.0;
 					};
 					D1A000000000000000000020 = {
 						CreatedOnToolsVersion = 15.0;
@@ -652,6 +738,7 @@
 				6160B2963EF9AC3D27CA3F2F /* NotificationServiceExtension */,
 				D1A000000000000000000020 /* CameraQuickActionWidget */,
 				9519587FDFEF94B3660DD6CF /* DivineUITests */,
+				C8F12709A43207ED4B889C31 /* DivineWatch */,
 			);
 		};
 /* End PBXProject section */
@@ -697,6 +784,15 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		85344C741D2EB26893E39443 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E4EBAD77EA22CAFB2CD1993D /* Assets.xcassets in Resources */,
+				25372261116C06A22C617E3F /* Localizable.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -916,6 +1012,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B2E08FD50CDDF586508D2F0C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9B9F30F0789DAA167021C3EF /* DivineWatchApp.swift in Sources */,
+				08B4F9B687B7A1BBA9938DFF /* RemoteShutterView.swift in Sources */,
+				610EF0EFEC1CF3FE6C534191 /* RecordButton.swift in Sources */,
+				E022E1B3A9C7C123F0A6F9F3 /* RecordingBudgetStrip.swift in Sources */,
+				513038A4A3F4C4953797A8B1 /* RecorderSnapshot.swift in Sources */,
+				97E6A81FBA85251B16CB7C9E /* PhoneRecorderLink.swift in Sources */,
+				97BCFBD5E5609421E3742C7B /* DivinePalette.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -941,6 +1051,12 @@
 			name = CameraQuickActionWidget;
 			target = D1A000000000000000000020 /* CameraQuickActionWidget */;
 			targetProxy = D1A000000000000000000004 /* PBXContainerItemProxy */;
+		};
+		239F76BCB2198D68C959C30E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = DivineWatch;
+			target = C8F12709A43207ED4B889C31 /* DivineWatch */;
+			targetProxy = 17A83C08FE23DC3B26B5A280 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1727,6 +1843,126 @@
 			};
 			name = Release;
 		};
+		3E249B1955AF43E0FBC29EE5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 82B841000000000000334401 /* AppVersion.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = GZCZBKH7MY;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Divine;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = co.openvine.app.staging;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = co.openvine.app.staging.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
+			};
+			name = Debug;
+		};
+		60AF8CF9C2F93C5B1169ADA7 /* Debug-DivineUITests */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 82B841000000000000334401 /* AppVersion.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = GZCZBKH7MY;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Divine;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = co.openvine.app.staging;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = co.openvine.app.staging.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
+			};
+			name = "Debug-DivineUITests";
+		};
+		7D5773186A51E425B3E08B24 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 82B841000000000000334401 /* AppVersion.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = GZCZBKH7MY;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Divine;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = co.openvine.app;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = co.openvine.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
+			};
+			name = Profile;
+		};
+		D2BFC1016690F218BCEE745C /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 82B841000000000000334401 /* AppVersion.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = GZCZBKH7MY;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Divine;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKApplication = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = co.openvine.app;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = co.openvine.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1792,6 +2028,17 @@
 				D1A000000000000000000023 /* Debug */,
 				D1A000000000000000000025 /* Profile */,
 				1920DEB43254CC0788B0574D /* Debug-DivineUITests */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8A7F3F94F14E279323699375 /* Build configuration list for PBXNativeTarget "DivineWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3E249B1955AF43E0FBC29EE5 /* Debug */,
+				60AF8CF9C2F93C5B1169ADA7 /* Debug-DivineUITests */,
+				7D5773186A51E425B3E08B24 /* Profile */,
+				D2BFC1016690F218BCEE745C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
