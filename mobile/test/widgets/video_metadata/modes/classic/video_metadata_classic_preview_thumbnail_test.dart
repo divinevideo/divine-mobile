@@ -212,6 +212,123 @@ void main() {
       );
     });
 
+    group('when the finished video is rendered again', () {
+      late Directory tmpDir;
+      late DivineVideoClip firstRender;
+      late DivineVideoClip secondRender;
+
+      setUp(() {
+        tmpDir = Directory.systemTemp.createTempSync('test_clip_');
+        addTearDown(() => tmpDir.deleteSync(recursive: true));
+        DivineVideoClip renderedClip(String id) => DivineVideoClip(
+          id: id,
+          video: EditorVideo.file(
+            (File('${tmpDir.path}/$id.mp4')..writeAsBytesSync([0])).path,
+          ),
+          duration: const Duration(seconds: 6),
+          recordedAt: DateTime.now(),
+          targetAspectRatio: models.AspectRatio.square,
+          originalAspectRatio: 1,
+        );
+        firstRender = renderedClip('first-render');
+        secondRender = renderedClip('second-render');
+      });
+
+      Future<_MutableVideoEditorNotifier> pumpPlayingFirstRender(
+        WidgetTester tester,
+        List<String> methodCalls, {
+        List<Map<Object?, Object?>>? setClipsArguments,
+      }) async {
+        _registerMockPlayerChannel(
+          methodCalls,
+          setClipsArguments: setClipsArguments,
+          playerIds: const [0, 1],
+        );
+        final notifier = _MutableVideoEditorNotifier(
+          VideoEditorProviderState(finalRenderedClip: firstRender),
+        );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              clipManagerProvider.overrideWith(
+                () => _MockClipManagerNotifier([testClip]),
+              ),
+              videoEditorProvider.overrideWith(() => notifier),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(body: VideoMetadataClassicPreviewThumbnail()),
+            ),
+          ),
+        );
+        await _waitForMethodCall(
+          tester: tester,
+          methodCalls: methodCalls,
+          method: 'play',
+        );
+        await _waitForFinder(
+          tester: tester,
+          finder: find.byType(DivineVideoPlayer),
+        );
+        // Let the thumbnail finish fading out under the player.
+        await _finishCrossFade(tester);
+        expect(DivineVideoPlayerController.liveControllerCount, equals(1));
+        return notifier;
+      }
+
+      testWidgets(
+        'releases the player once the video it plays is discarded, so the '
+        'next render can claim the hardware codec',
+        (tester) async {
+          final methodCalls = <String>[];
+          final notifier = await pumpPlayingFirstRender(tester, methodCalls);
+
+          // A take's proof landing after the export discards the finished
+          // video and starts the next render.
+          notifier.emit(VideoEditorProviderState(isProcessing: true));
+          await _settleRelease(tester);
+          await _finishCrossFade(tester);
+
+          expect(methodCalls, contains('dispose'));
+          expect(DivineVideoPlayerController.liveControllerCount, equals(0));
+          expect(find.byType(DivineVideoPlayer), findsNothing);
+          final overlay = tester.widget<VideoEditorProcessingOverlay>(
+            find.byType(VideoEditorProcessingOverlay),
+          );
+          expect(overlay.isProcessing, isTrue);
+        },
+      );
+
+      testWidgets('plays the video the next render finished', (tester) async {
+        final methodCalls = <String>[];
+        final setClipsArguments = <Map<Object?, Object?>>[];
+        final notifier = await pumpPlayingFirstRender(
+          tester,
+          methodCalls,
+          setClipsArguments: setClipsArguments,
+        );
+
+        notifier.emit(VideoEditorProviderState(isProcessing: true));
+        await _settleRelease(tester);
+        await _finishCrossFade(tester);
+        expect(find.byType(DivineVideoPlayer), findsNothing);
+        notifier.emit(
+          VideoEditorProviderState(finalRenderedClip: secondRender),
+        );
+        await _waitForFinder(
+          tester: tester,
+          finder: find.byType(DivineVideoPlayer),
+        );
+
+        expect(DivineVideoPlayerController.liveControllerCount, equals(1));
+        expect(setClipsArguments, hasLength(2));
+        final clips = setClipsArguments.last['clips']! as List<Object?>;
+        final clip = clips.single! as Map<Object?, Object?>;
+        expect(clip['uri'], contains('second-render.mp4'));
+      });
+    });
+
     group('dispose', () {
       testWidgets('unmounts cleanly after player initialization', (
         tester,
@@ -260,7 +377,7 @@ void main() {
         );
         await _waitForFinder(
           tester: tester,
-          finder: find.byKey(const ValueKey('player')),
+          finder: find.byType(DivineVideoPlayer),
         );
 
         // Unmount the widget — triggers dispose
@@ -360,6 +477,20 @@ void main() {
   });
 }
 
+/// Runs the preview's 400 ms cross-fade between the thumbnail and the player
+/// past its end, where the child that faded out is dropped.
+Future<void> _finishCrossFade(WidgetTester tester) =>
+    tester.pump(const Duration(milliseconds: 450));
+
+/// Lets a player release finish: the event subscription it cancels first
+/// answers outside the test's fake async zone.
+Future<void> _settleRelease(WidgetTester tester) async {
+  for (var round = 0; round < 5; round++) {
+    await tester.runAsync(pumpEventQueue);
+    await tester.pump();
+  }
+}
+
 Future<void> _waitForFinder({
   required WidgetTester tester,
   required Finder finder,
@@ -392,29 +523,33 @@ Future<void> _waitForMethodCall({
 /// The global channel handles `create` / `dispose`; the per-player channel
 /// handles `setClips`, `play`, `setLooping`, etc. Both record into
 /// [methodCalls]. When [holdPlay] is given, `play` answers only once it
-/// completes.
+/// completes. [playerIds] lists the players a test creates, in order.
 void _registerMockPlayerChannel(
   List<String> methodCalls, {
   List<Map<Object?, Object?>>? setClipsArguments,
   Future<void>? holdPlay,
+  List<int> playerIds = const [0],
 }) {
   const globalChannel = MethodChannel('divine_video_player');
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
   // Player ID resets via resetIdCounterForTesting in setUp, so first is 0.
-  installMockDivineVideoPlayer(
-    onMethodCall: (call) async {
-      methodCalls.add(call.method);
-      if (call.method == 'setClips') {
-        setClipsArguments?.add(
-          call.arguments! as Map<Object?, Object?>,
-        );
-      }
-      if (call.method == 'play' && holdPlay != null) await holdPlay;
-      return null;
-    },
-  );
+  for (final playerId in playerIds) {
+    installMockDivineVideoPlayer(
+      playerId: playerId,
+      onMethodCall: (call) async {
+        methodCalls.add(call.method);
+        if (call.method == 'setClips') {
+          setClipsArguments?.add(
+            call.arguments! as Map<Object?, Object?>,
+          );
+        }
+        if (call.method == 'play' && holdPlay != null) await holdPlay;
+        return null;
+      },
+    );
+  }
 
   messenger.setMockMethodCallHandler(globalChannel, (call) async {
     methodCalls.add(call.method);
@@ -445,4 +580,15 @@ class _MockVideoEditorNotifier extends VideoEditorNotifier {
 
   @override
   VideoEditorProviderState build() => _state;
+}
+
+class _MutableVideoEditorNotifier extends VideoEditorNotifier {
+  _MutableVideoEditorNotifier(this._initialState);
+
+  final VideoEditorProviderState _initialState;
+
+  @override
+  VideoEditorProviderState build() => _initialState;
+
+  void emit(VideoEditorProviderState next) => state = next;
 }
