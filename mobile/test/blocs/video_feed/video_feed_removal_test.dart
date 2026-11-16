@@ -31,6 +31,7 @@ class _MockFeedPerformanceTracker extends Mock
 class _MemoryHomeFeedCache extends HomeFeedCache {
   List<VideoEvent>? saved;
   List<VideoEvent>? window;
+  bool cleared = false;
 
   @override
   Future<List<VideoEvent>?> readVideos({
@@ -51,6 +52,7 @@ class _MemoryHomeFeedCache extends HomeFeedCache {
     required String mode,
   }) async {
     saved = null;
+    cleared = true;
   }
 }
 
@@ -244,6 +246,33 @@ void main() {
         ),
       ],
     );
+
+    group('resume window', () {
+      late _MemoryHomeFeedCache resumeCache;
+
+      // A swipe schedules a debounced write of the window ahead of the cursor.
+      // The removal has to replace it, or closing Home flushes the video back.
+      feedBlocTest(
+        'a removal replaces a pending swipe write that still holds the video',
+        setUp: () => resumeCache = _MemoryHomeFeedCache(),
+        build: () => createBloc(cache: resumeCache),
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('1'), _video('2'), _video('3')],
+        ),
+        act: (bloc) async {
+          bloc.add(const VideoFeedActiveIndexChanged(1));
+          await bloc.stream.firstWhere((state) => state.currentIndex == 1);
+          removals.add('3' * 64);
+          await bloc.stream.firstWhere((state) => state.videos.length == 2);
+        },
+        verify: (_) async {
+          await pumpEventQueue();
+          expect(resumeCache.cleared, isTrue);
+          expect(resumeCache.saved, isNull);
+        },
+      );
+    });
 
     test('close cancels the removal subscription', () async {
       final bloc = createBloc();
