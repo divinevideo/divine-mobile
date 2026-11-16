@@ -59,16 +59,17 @@ void main() {
 
     test('the loop never stops itself while the picture clock waits', () {
       final loop = _loopSource();
-      final start = _body(loop, 'func start(alignedTo item: AVPlayerItem)');
 
       expect(
-        start,
+        _body(loop, 'func start(alignedTo item: AVPlayerItem)'),
         contains(
-          'guard let timebase = item.timebase, '
-          'CMTimebaseGetRate(timebase) > 0 else {\n'
-          '            return false\n'
-          '        }',
+          'guard let timebase = item.timebase else { return false }\n'
+          '        return start(alignedTo: timebase)',
         ),
+      );
+      expect(
+        _body(loop, 'func start(alignedTo timebase: CMTimebase)'),
+        contains('guard CMTimebaseGetRate(timebase) > 0 else { return false }'),
         reason:
             'While the item clock is stopped the loop must carry on as it '
             'is; stopping it there silenced every seam.',
