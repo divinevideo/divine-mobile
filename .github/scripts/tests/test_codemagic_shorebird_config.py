@@ -913,6 +913,29 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             f"{missing}",
         )
 
+    def test_store_release_source_guard_requires_the_expected_checkout(self) -> None:
+        steps = self._resolved_config()["workflows"]["ios-build"]["scripts"]
+        guard = next(step["script"] for step in steps
+                     if step.get("name") == "Verify Shorebird release source")
+        head = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=CODEMAGIC_PATH.parent, text=True,
+        ).strip()
+        for branch, expected, succeeds in [
+            ("main", None, True), ("feature", None, False),
+            ("main", head, True), ("main", "f" * 40, False),
+            ("main", "short", False), ("main", "A" * 40, False),
+            ("main", head + "\n", False),
+        ]:
+            env = dict(os.environ, CM_BRANCH=branch)
+            env.pop("RELEASE_EXPECTED_SHA", None)
+            if expected is not None:
+                env["RELEASE_EXPECTED_SHA"] = expected
+            with self.subTest(branch=branch, expected=expected):
+                result = subprocess.run(["bash", "-c", guard], env=env,
+                                        cwd=CODEMAGIC_PATH.parent,
+                                        text=True, capture_output=True)
+                self.assertEqual(result.returncode == 0, succeeds, result.stdout + result.stderr)
+
     def test_store_release_workflows_require_main_and_emit_provenance(self) -> None:
         for workflow_name in ("ios-build", "android-build"):
             workflow = self._workflow_block(workflow_name)
@@ -1056,12 +1079,26 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         for command in android_commands:
             self.assertNotIn("target-platform", command)
 
-    def test_ios_release_uploads_without_automatic_review_submission(self) -> None:
-        workflow = self._workflow_block("ios-build")
+    def test_ios_release_submits_to_external_testflight_without_store_release(self) -> None:
+        publishing = self._resolved_config()["workflows"]["ios-build"]["publishing"][
+            "app_store_connect"
+        ]
 
-        self.assertIn("app_store_connect:", workflow)
-        self.assertIn("submit_to_testflight: false", workflow)
-        self.assertIn("submit_to_app_store: false", workflow)
+        self.assertIs(publishing["submit_to_testflight"], True)
+        self.assertIs(publishing["submit_to_app_store"], False)
+        groups = publishing["beta_groups"]
+        self.assertIsInstance(groups, list)
+        self.assertEqual(
+            groups,
+            [
+                "OpenVineTesters",
+                "VIP Testers",
+                "Testflight Expansion from Waitlist",
+                "friends-of-rabble",
+            ],
+        )
+        self.assertFalse(publishing.get("expire_build_submitted_for_review", False))
+        self.assertFalse(publishing.get("cancel_previous_submissions", False))
 
         self.assertRegex(
             self.shorebird_doc_contents,
@@ -1069,12 +1106,39 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         )
         self.assertRegex(
             self.shorebird_doc_contents,
-            r"manual external TestFlight promotion",
+            r"automatic external TestFlight\s+distribution",
         )
         self.assertRegex(
             self.shorebird_doc_contents,
             r"manual\s+App Store promotion",
         )
+
+    def test_ios_testflight_notes_follow_the_marketing_version(self) -> None:
+        steps = self._resolved_config()["workflows"]["ios-build"]["scripts"]
+        matching = [step for step in steps if step["name"] == "Prepare TestFlight notes"]
+        self.assertEqual(len(matching), 1, "iOS must prepare its version's TestFlight notes")
+        step = matching[0]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            mobile = root / "mobile"
+            mobile.mkdir()
+            notes = root / "release-notes"
+            notes.mkdir()
+            (mobile / "pubspec.yaml").write_text("version: 9.8.7+123\n")
+            expected = [{"language": "en-US", "text": "Try saving your list offline."}]
+            (notes / "9.8.7-testflight.json").write_text(json.dumps(expected))
+            result = subprocess.run(
+                ["bash", "-c", step["script"]], cwd=mobile, capture_output=True, text=True
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads((mobile / "release_notes.json").read_text()), expected)
+            (mobile / "release_notes.json").unlink()
+            (notes / "9.8.7-testflight.json").unlink()
+            result = subprocess.run(
+                ["bash", "-c", step["script"]], cwd=mobile, capture_output=True, text=True
+            )
+            self.assertNotEqual(result.returncode, 0, "Missing notes must stop the build")
+            self.assertFalse((mobile / "release_notes.json").exists())
 
     def test_release_jobs_never_materialize_patch_private_key(self) -> None:
         self.assertIn("*write_shorebird_public_key", self._workflow_block("ios-build"))

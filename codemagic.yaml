@@ -223,6 +223,16 @@ definitions:
           echo "Shorebird releases must be cut from main so future patches have a reachable baseline."
           exit 1
         fi
+        if [ -n "${RELEASE_EXPECTED_SHA:-}" ]; then
+          if [[ ! "$RELEASE_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "RELEASE_EXPECTED_SHA must be a full lowercase 40-character commit SHA."
+            exit 1
+          fi
+          if [ "$(git rev-parse HEAD)" != "$RELEASE_EXPECTED_SHA" ]; then
+            echo "Refusing release: fetched source differs from RELEASE_EXPECTED_SHA. Dispatch again from current main."
+            exit 1
+          fi
+        fi
     - &write_shorebird_dart_defines
       name: Write Shorebird dart-defines
       script: |
@@ -1106,6 +1116,11 @@ workflows:
       events: []
     scripts:
       - *verify_shorebird_release_source
+      - name: Prepare TestFlight notes
+        script: |
+          set -euo pipefail
+          BUILD_NAME=$(ruby -ne 'if $_ =~ /^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+/; puts $1; exit; end' pubspec.yaml)
+          cp "../release-notes/$BUILD_NAME-testflight.json" release_notes.json
       - *shorebird_install
       - *check_coordinator_route
       - *check_signing_endpoint
@@ -1133,8 +1148,14 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        # Upload only; App Store Connect owns internal distribution and review gates.
-        submit_to_testflight: false
+        # External groups receive each build after any required Apple beta review.
+        # Divine Internal uses App Store Connect's Automatic Distribution instead.
+        submit_to_testflight: true
+        beta_groups:
+          - OpenVineTesters
+          - VIP Testers
+          - Testflight Expansion from Waitlist
+          - friends-of-rabble
         submit_to_app_store: false
 
   ios-simulator-build:

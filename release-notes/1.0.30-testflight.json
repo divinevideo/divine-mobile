@@ -1,0 +1,6 @@
+[
+  {
+    "language": "en-US",
+    "text": "This build brings fixes for video messages, editing, lists and playback. Please try:\n\n- Send a video message, leave the chat and come back. Upload progress should keep up without freezing the app.\n- Add music to a video and play the full editor preview. The music should keep playing.\n- Pause a video while it loads on a slow connection. Its position should stay steady.\n- Edit a list offline, then reconnect and check that your changes survive.\n- Browse your feeds and check whether videos you have already watched keep coming back.\n\nYou can now import FLAC audio too. If something goes sideways, use Report a Bug in Settings and tell us what happened."
+  }
+]

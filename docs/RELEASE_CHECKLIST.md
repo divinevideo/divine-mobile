@@ -88,6 +88,8 @@ section 7).
 - [ ] Ensure App Store Connect screenshots, subtitle, description, keywords, privacy answers, and support URL are current.
 - [ ] Attach reviewer notes using [docs/APP_STORE_REVIEW_DOSSIER.md](APP_STORE_REVIEW_DOSSIER.md).
 - [ ] Upload the archive to TestFlight or App Store Connect and verify processing succeeds.
+- [ ] Update `release-notes/<marketing-version>-testflight.json` with the reviewed **What to Test** description before starting `ios-build`.
+- [ ] Verify Codemagic's post-processing submitted the same build to all configured external TestFlight groups, with automatic tester notification enabled. Follow [the delivery checks](../mobile/docs/SHOREBIRD_CODE_PUSH.md#cutting-a-release); Apple review pending is not tester availability.
 
 ## 7. Android Submission Checklist
 

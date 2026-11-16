@@ -1,0 +1,36 @@
+name: iOS TestFlight Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Optional full lowercase 40-character SHA; must equal current main'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  checks: read
+  actions: read
+
+concurrency:
+  group: ios-testflight-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Submit and monitor main iOS beta release
+        id: codemagic
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: python3 mobile/scripts/start_ios_release.py
