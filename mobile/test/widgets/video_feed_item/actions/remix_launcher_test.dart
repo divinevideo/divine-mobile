@@ -1,4 +1,4 @@
-// ABOUTME: Tests opening the saved remix in the clip library from a video sheet.
+// ABOUTME: Tests opening the saved remix in the clip library from a sheet.
 // ABOUTME: Covers ownership tabs and leaving newer navigation untouched.
 
 import 'package:flutter_test/flutter_test.dart';

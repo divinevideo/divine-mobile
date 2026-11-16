@@ -882,9 +882,6 @@ void main() {
         );
         when(() => contentActions.isClosed).thenReturn(false);
         draftStorage = _MockDraftStorageService();
-        when(
-          () => draftStorage.draftExists(any()),
-        ).thenAnswer((_) async => false);
         pops = _PopCounter();
         editorBuilds = 0;
         libraryLocations = [];
@@ -893,8 +890,8 @@ void main() {
       tearDown(() => results.close());
 
       // Pushes [sheetBody] on its own route, standing in for the sheet, under
-      // a router that knows the library and editor. By default the body is the section in
-      // a scrolling list, reading the mocked bloc.
+      // a router that knows the library and editor. By default the body is the
+      // section in a scrolling list, reading the mocked bloc.
       Future<void> openSheet(WidgetTester tester, {Widget? sheetBody}) async {
         final router = GoRouter(
           observers: [pops],

@@ -104,7 +104,7 @@ void main() {
       expect(screen.initialTabIndex, equals(LibraryScreen.soundsTabIndex));
     });
 
-    testWidgets('remix entry opens From others without entering the editor', (
+    testWidgets('from-others=true opens every tab, on From others', (
       tester,
     ) async {
       await captureContext(tester);
