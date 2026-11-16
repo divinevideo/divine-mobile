@@ -20,6 +20,14 @@ enum ClipAudioLoopTests {
             preconditionFailure("could not prepare a loop from a generated tone")
         }
         loop.volume = 0
+        // Stopping a loop while its render thread is held blocks for good, so a
+        // start that stopped the stalled engine instead of refusing would hang
+        // the job until its timeout rather than fail.
+        Thread.detachNewThread {
+            Thread.sleep(forTimeInterval: 30)
+            print("Clip audio loop tests timed out after 30 s")
+            exit(1)
+        }
         let stall = RenderStall(attachedTo: loop.engine)
         let clock = runningClock()
 
