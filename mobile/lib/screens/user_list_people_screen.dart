@@ -696,7 +696,6 @@ class _MemberVideos extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 4),
         topOuterRadius: VineTheme.shellInnerCornerRadius,
         backgroundColor: context.vineColors.surfaceContainerHigh,
-        showSubscribedListBadge: false,
         headerSlivers: [
           SliverToBoxAdapter(
             child: _RosterHero(
