@@ -166,8 +166,13 @@ class CategoryGalleryView extends StatelessWidget {
     // This screen is a root-navigator route, so nothing above it provides a
     // `Material`. Without one every `Text` inherits Flutter's yellow
     // double-underline fallback style from `MaterialApp`.
+    //
+    // The page carries the header's colour so the gallery's rounded top
+    // corners read as a continuation of the header rather than a hole. The
+    // clip sits outside the scroll view, so the corners stay put while the
+    // videos scroll under them.
     return Material(
-      color: context.vineColors.surfaceContainerHigh,
+      color: context.vineColors.nav,
       child: Column(
         children: [
           _CategoryGalleryHeader(
@@ -178,13 +183,24 @@ class CategoryGalleryView extends StatelessWidget {
             onSortChanged: onSortChanged,
           ),
           Expanded(
-            child: _CategoryGalleryBody(
-              state: state,
-              onRetry: onRetry,
-              onVideoTap: onVideoTap,
-              onLoadMore: onLoadMore,
-              onRefresh: onRefresh,
-              galleryOverride: galleryOverride,
+            child: ClipRRect(
+              key: const Key('category-gallery-body-clip'),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(_galleryTopRadius),
+              ),
+              // Material, not ColoredBox: the grid's tiles paint their ink
+              // onto the nearest Material, and a ColoredBox would hide it.
+              child: Material(
+                color: context.vineColors.surfaceContainerHigh,
+                child: _CategoryGalleryBody(
+                  state: state,
+                  onRetry: onRetry,
+                  onVideoTap: onVideoTap,
+                  onLoadMore: onLoadMore,
+                  onRefresh: onRefresh,
+                  galleryOverride: galleryOverride,
+                ),
+              ),
             ),
           ),
         ],
@@ -252,7 +268,8 @@ class _CategoryGalleryBody extends StatelessWidget {
               videos: state.videos,
               onVideoTap: onVideoTap,
               useMasonryLayout: true,
-              padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+              // Edge to edge: the gallery's rounded corners frame the grid.
+              padding: const EdgeInsets.only(bottom: 12),
               onLoadMore: onLoadMore,
               onRefresh: onRefresh,
               isLoadingMore: state.isLoadingMore,
@@ -285,59 +302,65 @@ class _CategoryGalleryHeader extends StatelessWidget {
         bottom: false,
         minimum: const EdgeInsets.only(top: 24),
         child: SizedBox(
-          height: 108,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: _CategoryHeaderActionButton(
-                    decorationKey: const Key('category-header-back-button'),
-                    icon: DivineIconName.caretLeft,
-                    onPressed: onBack,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 18),
-                    child: Text(
-                      localizedCategoryName(context.l10n, category.name),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: VineTheme.titleMediumFont(
-                        color: context.vineColors.onNav,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                _CategoryHeaderMascotSlot(
+          height: _headerBarHeight,
+          // The mascot is painted first so the actions stay on top where the
+          // two overlap, and it may rise above the bar into the status area.
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              PositionedDirectional(
+                end: _mascotSlotEndInset,
+                bottom: 0,
+                child: _CategoryHeaderMascotSlot(
                   visuals: visuals,
                   emoji: category.emoji,
                 ),
-                const SizedBox(width: 8),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: _CategoryHeaderActionButton(
-                    decorationKey: const Key('category-header-filter-button'),
-                    icon: DivineIconName.funnelSimple,
-                    semanticLabel: context.l10n.categoryGallerySortOptionsLabel,
-                    onPressed: () async {
-                      final selected = await _showCategorySortSheet(
-                        context: context,
-                        selectedValue: selectedSort,
-                      );
-                      if (selected != null && selected != selectedSort) {
-                        onSortChanged(selected);
-                      }
-                    },
-                  ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(_headerBarPadding),
+                child: Row(
+                  spacing: _headerBarGap,
+                  children: [
+                    _CategoryHeaderActionButton(
+                      decorationKey: const Key('category-header-back-button'),
+                      icon: DivineIconName.caretLeft,
+                      onPressed: onBack,
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          start: _titleHorizontalPadding,
+                          end: _titleEndPadding,
+                        ),
+                        child: Text(
+                          localizedCategoryName(context.l10n, category.name),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: VineTheme.titleMediumFont(
+                            color: context.vineColors.onNav,
+                          ),
+                        ),
+                      ),
+                    ),
+                    _CategoryHeaderActionButton(
+                      decorationKey: const Key('category-header-filter-button'),
+                      icon: DivineIconName.funnelSimple,
+                      semanticLabel:
+                          context.l10n.categoryGallerySortOptionsLabel,
+                      onPressed: () async {
+                        final selected = await _showCategorySortSheet(
+                          context: context,
+                          selectedValue: selectedSort,
+                        );
+                        if (selected != null && selected != selectedSort) {
+                          onSortChanged(selected);
+                        }
+                      },
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -377,6 +400,40 @@ const _categoryActionShadows = <BoxShadow>[
   BoxShadow(color: Color(0x1A000000), offset: Offset(1, 1), blurRadius: 1),
 ];
 
+/// Header metrics from the Figma category page's top app bar, below the
+/// status area.
+const _headerBarHeight = 72.0;
+const _headerBarPadding = 12.0;
+const _headerBarGap = 8.0;
+const _titleHorizontalPadding = 4.0;
+
+/// Each action is a 40 px button inside a 4 px margin, a 48 px slot.
+const _headerActionMargin = 4.0;
+const _headerActionSlot = 48.0;
+
+/// The mascot's slot. Its end edge sits 56 px from the screen's end, where
+/// the trailing button begins, and its bottom rests on the bar's bottom edge,
+/// so it rises 18 px above the bar into the status area.
+const _mascotSlotWidth = 149.0;
+const _mascotSlotHeight = 90.0;
+const _mascotSlotEndInset = 56.0;
+
+/// The mascot's box inside the slot, narrow enough that its 8° tilt stays
+/// within the slot's width.
+const _mascotWidth = 132.0;
+
+/// The title stops where the mascot starts instead of running under it.
+const double _titleEndPadding =
+    _mascotSlotEndInset +
+    _mascotSlotWidth -
+    _headerBarPadding -
+    _headerActionSlot -
+    _headerBarGap;
+
+/// The gallery's top corner radius: Figma's `radius 96` corner pair, 48 px
+/// on each side.
+const _galleryTopRadius = 48.0;
+
 Future<String?> _showCategorySortSheet({
   required BuildContext context,
   required String selectedValue,
@@ -407,25 +464,33 @@ class _CategoryHeaderActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: semanticLabel,
-      button: true,
-      child: Material(
-        color: VineTheme.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(16),
-          child: DecoratedBox(
-            key: decorationKey,
-            decoration: BoxDecoration(
-              color: _categoryHeaderActionFill,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _categoryHeaderActionBorder, width: 2),
-              boxShadow: _categoryActionShadows,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: DivineIcon(icon: icon, color: VineTheme.whiteText),
+    // The margin around the 40 px button is Figma's action slot; the row
+    // reserves the full slot so the title and edges line up with the design.
+    return Padding(
+      padding: const EdgeInsets.all(_headerActionMargin),
+      child: Semantics(
+        label: semanticLabel,
+        button: true,
+        child: Material(
+          color: VineTheme.transparent,
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(16),
+            child: DecoratedBox(
+              key: decorationKey,
+              decoration: BoxDecoration(
+                color: _categoryHeaderActionFill,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _categoryHeaderActionBorder,
+                  width: 2,
+                ),
+                boxShadow: _categoryActionShadows,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: DivineIcon(icon: icon, color: VineTheme.whiteText),
+              ),
             ),
           ),
         ),
@@ -445,14 +510,13 @@ class _CategoryHeaderMascotSlot extends StatelessWidget {
     final sticker = visuals.sticker;
     return SizedBox(
       key: const Key('category-header-mascot-slot'),
-      width: 149,
-      height: 90,
-      child: OverflowBox(
-        maxWidth: 149,
-        maxHeight: 132,
-        alignment: Alignment.topCenter,
-        child: Transform.translate(
-          offset: const Offset(0, -12),
+      width: _mascotSlotWidth,
+      height: _mascotSlotHeight,
+      // The slot clips its mascot, as in Figma, so it never spills past the
+      // bar onto the gallery's rounded corners. The mascot is sized to the
+      // slot's height so the clip only trims its empty corners.
+      child: ClipRect(
+        child: Center(
           child: Transform.rotate(
             angle: 8 * math.pi / 180,
             child: sticker != null
@@ -460,8 +524,8 @@ class _CategoryHeaderMascotSlot extends StatelessWidget {
                 : CategoryGlyph(
                     assetPath: visuals.assetPath,
                     emoji: emoji,
-                    height: 104,
-                    width: 132,
+                    height: _mascotSlotHeight,
+                    width: _mascotWidth,
                   ),
           ),
         ),
@@ -470,8 +534,8 @@ class _CategoryHeaderMascotSlot extends StatelessWidget {
   }
 }
 
-/// The category's sticker in the glyph's 132 × 104 box, as tall as the glyph
-/// it replaces. Decorative: the header already names the category.
+/// The category's sticker in the glyph's box, as tall as the glyph it
+/// replaces. Decorative: the header already names the category.
 class _CategoryHeaderSticker extends StatelessWidget {
   const _CategoryHeaderSticker({required this.sticker});
 
@@ -481,9 +545,11 @@ class _CategoryHeaderSticker extends StatelessWidget {
   Widget build(BuildContext context) {
     return ExcludeSemantics(
       child: SizedBox(
-        width: 132,
-        height: 104,
-        child: Center(child: DivineSticker(sticker: sticker, size: 104)),
+        width: _mascotWidth,
+        height: _mascotSlotHeight,
+        child: Center(
+          child: DivineSticker(sticker: sticker, size: _mascotSlotHeight),
+        ),
       ),
     );
   }

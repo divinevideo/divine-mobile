@@ -167,6 +167,124 @@ void main() {
       },
     );
 
+    group('layout', () {
+      // The Figma frame is 402 wide. With no device inset the header keeps
+      // its 24 px minimum top, so the 72 px bar ends at 96.
+      const screenWidth = 402.0;
+      const barBottom = 24.0 + 72.0;
+
+      final backButton = find.byKey(const Key('category-header-back-button'));
+      final filterButton = find.byKey(
+        const Key('category-header-filter-button'),
+      );
+      final mascotSlot = find.byKey(const Key('category-header-mascot-slot'));
+      final bodyClip = find.byKey(const Key('category-gallery-body-clip'));
+
+      Future<void> pumpAtPhoneSize(
+        WidgetTester tester, {
+        VideoCategory shown = category,
+      }) async {
+        tester.view.physicalSize = const Size(screenWidth, 874);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          buildSubject(
+            category: shown,
+            state: CategoriesState(
+              selectedCategory: shown,
+              videosStatus: CategoriesVideosStatus.loaded,
+            ),
+            galleryOverride: const SizedBox.expand(),
+          ),
+        );
+      }
+
+      testWidgets('places the actions inside 48 px slots with 12 px padding', (
+        tester,
+      ) async {
+        await pumpAtPhoneSize(tester);
+
+        // 12 px bar padding plus the 4 px slot margin around each button.
+        expect(tester.getTopLeft(backButton), equals(const Offset(16, 40)));
+        expect(
+          tester.getTopRight(filterButton),
+          equals(const Offset(screenWidth - 16, 40)),
+        );
+        expect(tester.getSize(backButton), equals(const Size(40, 40)));
+      });
+
+      testWidgets('starts the gallery right below the bar, edge to edge', (
+        tester,
+      ) async {
+        await pumpAtPhoneSize(tester);
+
+        expect(
+          tester.getRect(bodyClip),
+          equals(const Rect.fromLTRB(0, barBottom, screenWidth, 874)),
+        );
+      });
+
+      testWidgets('rests the mascot on the bar and next to the sort button', (
+        tester,
+      ) async {
+        await pumpAtPhoneSize(tester);
+
+        expect(
+          tester.getRect(mascotSlot),
+          equals(
+            const Rect.fromLTRB(
+              screenWidth - 56 - 149,
+              barBottom - 90,
+              screenWidth - 56,
+              barBottom,
+            ),
+          ),
+        );
+        // The slot ends where the sort button begins.
+        expect(
+          tester.getRect(mascotSlot).right,
+          equals(tester.getRect(filterButton).left),
+        );
+      });
+
+      testWidgets('ends a long title where the mascot begins', (tester) async {
+        const entertainment = VideoCategory(
+          name: 'entertainment',
+          videoCount: 1500,
+        );
+        await pumpAtPhoneSize(tester, shown: entertainment);
+
+        final title = find.text(
+          lookupAppLocalizations(const Locale('en')).categoryEntertainment,
+        );
+        expect(
+          tester.getRect(title).right,
+          lessThanOrEqualTo(tester.getRect(mascotSlot).left),
+        );
+      });
+
+      testWidgets('rounds the gallery top corners into the header colour', (
+        tester,
+      ) async {
+        await pumpAtPhoneSize(tester);
+
+        final clip = tester.widget<ClipRRect>(bodyClip);
+        expect(
+          clip.borderRadius,
+          equals(const BorderRadius.vertical(top: Radius.circular(48))),
+        );
+
+        // What shows through the cut corners is the page behind the clip,
+        // which must be the header's own colour.
+        final page = tester.widget<Material>(
+          find.ancestor(of: bodyClip, matching: find.byType(Material)).first,
+        );
+        final headerColor = tester.element(backButton).vineColors.nav;
+        expect(page.color, equals(headerColor));
+      });
+    });
+
     testWidgets(
       'opens picker sheet and calls back when a different mode is tapped',
       (tester) async {
@@ -555,6 +673,42 @@ void main() {
         },
       );
     }
+
+    testWidgets('lays the videos out edge to edge with 4 px gaps', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(402, 874);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: CategoryGalleryScreen(category: category),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      Rect tile(int index) => tester.getRect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              widget.properties.identifier == 'video_thumbnail_$index',
+        ),
+      );
+
+      // Two columns of (402 - 4) / 2 px, starting right below the 72 px bar.
+      expect(tile(0).topLeft, equals(const Offset(0, 96)));
+      expect(tile(0).width, equals(199));
+      expect(tile(1).left - tile(0).right, equals(4));
+      expect(tile(1).right, equals(402));
+    });
 
     Future<({Uri uri, PooledFullscreenVideoFeedArgs args})> tapAllowedVideo(
       WidgetTester tester,
