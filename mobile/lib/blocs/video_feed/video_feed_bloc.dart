@@ -1008,7 +1008,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         }
       }
 
-      // Filter out videos without valid URLs
       final validNewVideos = _withoutRemovedVideos(
         result.videos,
       ).where((v) => v.videoUrl != null).toList();
@@ -1763,7 +1762,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       );
       if (!canEmit()) return;
 
-      // Filter out videos without valid URLs
       final validVideos = _withoutRemovedVideos(
         result.videos,
       ).where((v) => v.videoUrl != null).toList();
@@ -1842,8 +1840,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
 
       // Advance the resume window past the active position so the next cold
       // start opens on the next unseen video — even when the user just
-      // reopens without scrolling. Uses the spliced list so freshly loaded
-      // videos replenish the window.
+      // reopens without scrolling. Reads the current list rather than the
+      // spliced local, so a removal that landed during the profile fetch is
+      // not written back.
       if (_usesHomeFeedCache(source)) {
         _resumeManager.persistNow(
           pubkey: _userPubkey,

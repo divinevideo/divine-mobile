@@ -256,10 +256,12 @@ final class VideoFeedHashtagsChanged extends VideoFeedEvent {
   List<Object?> get props => [hashtags];
 }
 
-/// Successful deletion or another authoritative removal from the app-wide bus.
+/// A video id announced on [VideosRepository.removedVideoIds]: a deletion,
+/// or a block or mute sweep of its author.
 final class VideoFeedVideoRemoved extends VideoFeedEvent {
   const VideoFeedVideoRemoved(this.videoId);
 
+  /// Event id of the removed video.
   final String videoId;
 
   @override
