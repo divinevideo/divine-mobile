@@ -431,6 +431,18 @@ void main() {
         );
       });
 
+      test('throws instead of showing a vote whose deletion it could not '
+          'read', () async {
+        relay
+          ..vote(_me, _comment, content: '-')
+          ..deletionsAnswer = false;
+
+        await expectLater(
+          repository.getUserVoteStatuses([_comment]),
+          throwsA(isA<LikesRepositoryException>()),
+        );
+      });
+
       test("finds a vote's deletion past the relay's result limit", () async {
         final retracted = relay.vote(_me, _comment, content: '-');
         relay
