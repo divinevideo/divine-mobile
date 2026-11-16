@@ -69,10 +69,12 @@ class BadgeDismissalSync {
   /// badge state across awaits.
   ///
   /// Throws a [StateError] when the state is already closed: nothing should
-  /// start work on an account after its close. A close that lands while
+  /// start work on an account after its close. If the state closes while
   /// [operation] runs, as when sign-out erases the account under a dashboard
-  /// load, makes its next step refuse the closed state; that refusal ends the
-  /// operation with a [BadgeAccountStateClosedException] instead.
+  /// load, a [StateError] the operation throws after that is rethrown as a
+  /// [BadgeAccountStateClosedException]. An operation with nothing left to
+  /// read or write, or whose last write the close waits for, completes
+  /// normally.
   Future<T> whileOpen<T>(String pubkey, Future<T> Function() operation) async {
     _account(pubkey);
     try {
