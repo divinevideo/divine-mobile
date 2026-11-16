@@ -2219,6 +2219,8 @@ final class ShaderVideoEffectTests: XCTestCase {
     XCTAssertEqual(phase(500_000), 0)
     // Halfway into the step the next beat cuts to 200 ms, eased out.
     XCTAssertEqual(phase(1_100_000), 0.875, accuracy: 1e-9)
+    // Halfway into a 350 ms step when the next beat is further off.
+    XCTAssertEqual(phase(1_375_000), 0.875, accuracy: 1e-9)
     // Settled one step deeper 350 ms after the last beat.
     XCTAssertEqual(phase(3_400_000), 0)
     // Without beats it zooms on steadily, one step per period.

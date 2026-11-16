@@ -950,12 +950,13 @@ void main() {
 
     group('tunnelPeriodUs', () {
       CustomVideoEffect tunnel({
+        EditorEffectType type = EditorEffectType.tunnel,
         Duration? startTime,
         Duration? endTime,
         bool onBeat = false,
       }) => EditorVideoEffect.of(
         id: 'tunnel',
-        type: EditorEffectType.tunnel,
+        type: type,
         intensity: 0.7,
         startTime: startTime,
         endTime: endTime,
@@ -980,6 +981,17 @@ void main() {
         expect(period, 1300000);
       });
 
+      test('stops counting at the loop point of a timeline longer than the '
+          'export', () {
+        final long = TransitionTimelineMap.fromClips([
+          clip('a', duration: ms(6800)),
+        ]);
+
+        // The export stops at 6.3 s, which holds 4.3 steps: 4 of 1.575 s.
+        expect(tunnelPeriodUs(tunnel(), long), 1575000);
+        expect(tunnelPeriodUs(tunnel(endTime: ms(6800)), long), 1575000);
+      });
+
       test('keeps the natural step in a window shorter than half of it', () {
         expect(
           tunnelPeriodUs(tunnel(endTime: ms(500)), plain),
@@ -990,14 +1002,38 @@ void main() {
       test('counts the steps on the player when one maps the timeline', () {
         Duration slowed(Duration editorTime) => editorTime * 2;
 
-        expect(tunnelPeriodUs(tunnel(), plain, toPlayer: slowed), 3000000);
+        final params = customVideoEffectRenderParams(
+          tunnel(),
+          compressed,
+          const [],
+          toPlayer: slowed,
+        );
+
+        // 5.6 s of exported video hold 4 steps; on the player the window
+        // runs to the 6 s editor end, doubled.
+        expect(params?[EditorVideoEffect.periodParam], 3000000);
       });
 
-      test('is what a tunnel playing all through is rendered with', () {
-        final rendered = customVideoEffectsOnOutput([tunnel()], plain).single;
+      test('is what both tunnels playing all through are rendered with', () {
+        for (final type in [
+          EditorEffectType.tunnel,
+          EditorEffectType.spiralTunnel,
+        ]) {
+          final rendered = customVideoEffectsOnOutput([
+            tunnel(type: type),
+          ], plain).single;
 
-        expect(rendered.params[EditorVideoEffect.periodParam], 1500000);
-        expect(rendered.params[EditorVideoEffect.intensityParam], 0.7);
+          expect(
+            rendered.params[EditorVideoEffect.periodParam],
+            1500000,
+            reason: type.name,
+          );
+          expect(
+            rendered.params[EditorVideoEffect.intensityParam],
+            0.7,
+            reason: type.name,
+          );
+        }
       });
 
       test('is left out of a tunnel on the beat, which steps on the '
