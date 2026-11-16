@@ -68,7 +68,8 @@ final class ClipAudioLoop {
         let itemSeconds: Double
     }
 
-    private let engine = AVAudioEngine()
+    /// Internal so a test can stall its output.
+    let engine = AVAudioEngine()
 
     /// Two players, so the loop can be placed again without a gap: the
     /// newly placed one fades in while the other fades out.
@@ -340,13 +341,25 @@ final class ClipAudioLoop {
     /// running yet. The player reports `.playing` before its clock moves;
     /// placed against the still clock, the sound came in 55–63 ms ahead of
     /// the picture on an iPad Air (M4).
+    ///
+    /// It also returns false, changing nothing, while the engine runs but
+    /// its output has stopped rendering; see [outputIsRendering].
     @discardableResult
     func start(alignedTo item: AVPlayerItem) -> Bool {
-        guard let timebase = item.timebase, CMTimebaseGetRate(timebase) > 0 else {
-            return false
-        }
+        guard let timebase = item.timebase else { return false }
+        return start(alignedTo: timebase)
+    }
+
+    /// [start(alignedTo:)] against the item's timebase itself.
+    @discardableResult
+    func start(alignedTo timebase: CMTimebase) -> Bool {
+        guard CMTimebaseGetRate(timebase) > 0 else { return false }
         do {
-            if !engine.isRunning { try engine.start() }
+            if !engine.isRunning {
+                try engine.start()
+            } else if !outputIsRendering {
+                return false
+            }
         } catch {
             return false
         }
@@ -476,6 +489,33 @@ final class ClipAudioLoop {
         }
         return head
     }
+
+    /// Whether the engine's output has rendered in the last
+    /// [maxRenderAgeSeconds], so a node started now sees a render cycle.
+    ///
+    /// An engine keeps reporting itself running when its output stops
+    /// rendering. `play(at:)` given a host time then waits up to 5 s on the
+    /// calling thread for the next render cycle, and raises "player did not
+    /// see an IO cycle" if none comes. Swift cannot catch that, so it ends
+    /// the app.
+    ///
+    /// Only asked of an engine that was already running. An engine [start]
+    /// has only just started has not rendered yet, and `play(at:)` waits for
+    /// its first render cycle there as it always has.
+    private var outputIsRendering: Bool {
+        guard let renderTime = engine.outputNode.lastRenderTime, renderTime.isHostTimeValid
+        else { return false }
+        let now = mach_absolute_time()
+        // The time a render reports lies a few milliseconds ahead of now.
+        return renderTime.hostTime >= now
+            || now - renderTime.hostTime <= Self.hostTicks(forSeconds: Self.maxRenderAgeSeconds)
+    }
+
+    /// The longest an output that is rendering goes without a render cycle,
+    /// with room to spare: iOS renders in buffers of up to 4096 frames, 93 ms
+    /// at 44.1 kHz, while the screen is locked. Far below the 5 s `play(at:)`
+    /// waits.
+    private static let maxRenderAgeSeconds = 0.25
 
     /// How far ahead of now the node is started, so the host time it is
     /// given is still in the future when the render thread reaches it.

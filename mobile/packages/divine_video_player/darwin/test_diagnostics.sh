@@ -6,7 +6,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCES="$SCRIPT_DIR/divine_video_player/Sources/divine_video_player"
 DIAGNOSTICS_DIR="$(mktemp -d)"
-trap 'rm -f "$DIAGNOSTICS_DIR/playback_network_tests" "$DIAGNOSTICS_DIR/http_playback_error_tests" "$DIAGNOSTICS_DIR/tests" "$DIAGNOSTICS_DIR/loop_pcm_tests" "$DIAGNOSTICS_DIR/audio_overlay_fade_tests" "$DIAGNOSTICS_DIR/audio_overlay_entry_tests" "$DIAGNOSTICS_DIR/audio_overlay_seek_lead_tests" "$DIAGNOSTICS_DIR/audio_equalizer_tests" "$DIAGNOSTICS_DIR/equalized_audio_file_tests" "$DIAGNOSTICS_DIR/video_frame_effects_tests"; rmdir "$DIAGNOSTICS_DIR"' EXIT
+trap 'rm -f "$DIAGNOSTICS_DIR/playback_network_tests" "$DIAGNOSTICS_DIR/http_playback_error_tests" "$DIAGNOSTICS_DIR/tests" "$DIAGNOSTICS_DIR/loop_pcm_tests" "$DIAGNOSTICS_DIR/audio_overlay_fade_tests" "$DIAGNOSTICS_DIR/audio_overlay_entry_tests" "$DIAGNOSTICS_DIR/audio_overlay_seek_lead_tests" "$DIAGNOSTICS_DIR/audio_equalizer_tests" "$DIAGNOSTICS_DIR/equalized_audio_file_tests" "$DIAGNOSTICS_DIR/video_frame_effects_tests" "$DIAGNOSTICS_DIR/clip_audio_loop_tests"; rmdir "$DIAGNOSTICS_DIR"' EXIT
 
 xcrun swiftc "$SOURCES/HTTPPlaybackError.swift" \
   "$SCRIPT_DIR/Tests/HTTPPlaybackErrorTests.swift" \
@@ -64,6 +64,13 @@ xcrun swiftc "$SOURCES/VideoFrameEffects.swift" \
   "$SCRIPT_DIR/Tests/VideoFrameEffectsTests.swift" \
   -o "$DIAGNOSTICS_DIR/video_frame_effects_tests"
 "$DIAGNOSTICS_DIR/video_frame_effects_tests"
+
+xcrun swiftc -parse-as-library "$SOURCES/ClipAudioLoop.swift" \
+  "$SOURCES/LoopPcm.swift" \
+  "$SOURCES/AudioEqualizer.swift" \
+  "$SCRIPT_DIR/Tests/ClipAudioLoopTests.swift" \
+  -o "$DIAGNOSTICS_DIR/clip_audio_loop_tests"
+"$DIAGNOSTICS_DIR/clip_audio_loop_tests"
 
 ENGINE="${FLUTTER_ROOT:?Set FLUTTER_ROOT to the precached Flutter SDK}/bin/cache/artifacts/engine"
 xcrun swiftc -typecheck -target arm64-apple-macos13.0 \
