@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:db_client/db_client.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:openvine/database/sqlcipher_runtime.dart';
 import 'package:openvine/services/database_recovery_store.dart';
@@ -188,8 +189,10 @@ class DatabaseEncryptionBootstrap {
   ///   rather than silently ship an unencrypted database.
   /// * [DatabaseCipherStorageUnavailableException] when the keystore holding
   ///   the cipher key cannot be read or written, or cannot be trusted to have
-  ///   shown it, most often a launch before the device's first unlock. Raised
-  ///   by the Keychain backends only — see the platform note on that class.
+  ///   shown it, most often a launch before the device's first unlock. See the
+  ///   platform note on that class.
+  /// * [DatabaseCipherKeyUnrecoverableException] when Android secure storage
+  ///   still holds the cipher key but can never decrypt it again.
   /// * [DatabaseUnreadableError] when the database file is structurally
   ///   corrupt. Distinct from the deferral above: that one hands back a `null`
   ///   key for a database that genuinely is readable plaintext, this one has no
@@ -537,7 +540,9 @@ class DatabaseEncryptionBootstrap {
   }
 
   /// Reads the stored cipher key, translating a platform secure-storage
-  /// failure into [DatabaseCipherStorageUnavailableException].
+  /// failure into [DatabaseCipherStorageUnavailableException], or into
+  /// [DatabaseCipherKeyUnrecoverableException] when Android can never decrypt
+  /// the stored value again.
   ///
   /// Rethrows rather than degrading a failed read into "no key stored": the
   /// caller would generate a replacement and overwrite the only key that can
@@ -552,7 +557,9 @@ class DatabaseEncryptionBootstrap {
       return await storage.read(key: storageKey);
     } on Object catch (error, stack) {
       Error.throwWithStackTrace(
-        DatabaseCipherStorageUnavailableException(error),
+        _isUndecryptableAndroidSecureStorageRead(error)
+            ? DatabaseCipherKeyUnrecoverableException(error)
+            : DatabaseCipherStorageUnavailableException(error),
         stack,
       );
     }
@@ -655,12 +662,13 @@ class DatabaseRecoveryEvent implements Exception {
 /// this error merely failed to reach, turning a transient lock into permanent
 /// data loss. See [shouldRepairLocalDatabaseCacheAfterBootstrapError].
 ///
-/// Platform note: only the Keychain backends (iOS, macOS) reach this type —
-/// they either throw, or report protected data unavailable next to a `null`
-/// read. Android's `encryptedSharedPreferences` backend falls back to
-/// plaintext preferences when the keystore cannot be initialised and reads
-/// back `null` with no availability signal, which this bootstrap cannot tell
-/// apart from a fresh install.
+/// Platform note: the Keychain backends (iOS, macOS) either throw, or report
+/// protected data unavailable next to a `null` read. Android has no such
+/// signal: when its keystore cannot start EncryptedSharedPreferences, the
+/// plugin falls back to its own cipher, and a key it never wrote there reads
+/// back `null`, which this bootstrap cannot tell apart from a fresh install.
+/// An Android read that throws does land here, except for the one failure
+/// proven permanent, which is [DatabaseCipherKeyUnrecoverableException].
 class DatabaseCipherStorageUnavailableException implements Exception {
   DatabaseCipherStorageUnavailableException(this.cause);
 
@@ -672,6 +680,71 @@ class DatabaseCipherStorageUnavailableException implements Exception {
   String toString() =>
       'DatabaseCipherStorageUnavailableException: '
       'secure storage is unavailable ($cause)';
+}
+
+/// Thrown when Android secure storage still holds the DB cipher key but can
+/// never decrypt it again, so the encrypted database it opens is lost.
+///
+/// Unlike [DatabaseCipherStorageUnavailableException], nothing here heals on a
+/// later launch: every launch reads the same undecryptable value and fails the
+/// same way. See [_isUndecryptableAndroidSecureStorageRead] for why the
+/// failure is permanent and which platform errors are classified as this.
+///
+/// Startup still fails closed on it. The bootstrap deletes and rotates nothing
+/// on its own, and [shouldRepairLocalDatabaseCacheAfterBootstrapError] refuses
+/// it, so no launch that merely looks normal wipes anything. The failure screen
+/// offers the reset instead, and only after the user confirms does it back up
+/// the database, delete the unreadable key and let the next launch start
+/// fresh under a new one.
+class DatabaseCipherKeyUnrecoverableException implements Exception {
+  DatabaseCipherKeyUnrecoverableException(this.cause);
+
+  /// The `PlatformException` `flutter_secure_storage` raised for the read.
+  final Object cause;
+
+  @override
+  String toString() =>
+      'DatabaseCipherKeyUnrecoverableException: secure storage can no longer '
+      'decrypt the stored database cipher key ($cause)';
+}
+
+/// Whether [error] is `flutter_secure_storage`'s Android read failing a
+/// padding or authentication-tag check: the stored value is there, but the key
+/// the plugin now holds did not encrypt it and never will.
+///
+/// On Android the plugin (9.x) reports every native failure as a
+/// `PlatformException` whose code is `Exception encountered`, whose message is
+/// the method name, and whose details are the Java stack trace, beginning with
+/// the thrown exception. When EncryptedSharedPreferences cannot start, the
+/// plugin stores values under its own cipher instead: an AES key, wrapped by
+/// an Android Keystore RSA key, in its own SharedPreferences file. When that
+/// unwrap fails, it generates a new AES key and writes it over the stored one.
+/// Every value encrypted under the old key then fails `Cipher.doFinal` with
+/// `BadPaddingException` (BoringSSL `BAD_DECRYPT`), and since the old key
+/// exists nowhere any more, so does every later read of it.
+///
+/// Matches only the software decrypt failures a mismatched key produces:
+/// `javax.crypto.BadPaddingException` and its subclass `AEADBadTagException`.
+/// Keystore errors that can be transient — `KeyStoreException`,
+/// `InvalidKeyException`, `ProviderException`, an unavailable keystore daemon
+/// — do not match and stay [DatabaseCipherStorageUnavailableException]. So
+/// does `KeyPermanentlyInvalidatedException`: the plugin swallows it during
+/// setup, which is what leads to the regenerated key above, and never raises
+/// it from a read.
+///
+/// Never matches on iOS or macOS. Their plugins raise Keychain status codes,
+/// and a refused Keychain read is the device-locked case that heals on the
+/// next unlocked launch (#9343).
+bool _isUndecryptableAndroidSecureStorageRead(Object error) {
+  if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
+  if (error is! PlatformException) return false;
+  if (error.code != 'Exception encountered' || error.message != 'read') {
+    return false;
+  }
+  final details = error.details;
+  return details is String &&
+      (details.startsWith('javax.crypto.BadPaddingException') ||
+          details.startsWith('javax.crypto.AEADBadTagException'));
 }
 
 /// The [DatabaseCipherStorageUnavailableException.cause] recorded when every
@@ -740,20 +813,58 @@ class DatabaseCipherUnavailableError extends StateError {
 /// [resolveCipherKey] — but only when the plaintext database is actually
 /// readable; a damaged one throws [DatabaseUnreadableError] rather than
 /// inheriting that carve-out (#6897).
+///
+/// A [DatabaseCipherKeyUnrecoverableException] is logged on every launch but
+/// passed to [recordError] only while [claimUnrecoverableCipherKeyReport]
+/// returns `true`, which the app makes once per install. It is an expected
+/// device state rather than a defect, and it repeats on every launch until the
+/// user resets, so reporting each launch would only count restarts. One report
+/// keeps the rate visible per install. Without the callback, or when it
+/// throws, it is reported like any other failure.
 Future<String?> resolveStartupDatabaseCipherKey({
   required Future<String?> Function() resolveCipherKey,
   required Future<void> Function(Object error, StackTrace stack) recordError,
+  Future<bool> Function()? claimUnrecoverableCipherKeyReport,
 }) async {
   try {
     return await resolveCipherKey();
   } catch (error, stack) {
     try {
-      await recordError(error, stack);
+      if (await _shouldRecordBootstrapFailure(
+        error,
+        claimUnrecoverableCipherKeyReport,
+      )) {
+        await recordError(error, stack);
+      }
     } catch (_) {
       // Startup still needs to fail with the bootstrap root cause even if
       // telemetry is unavailable during early app initialization.
     }
     Error.throwWithStackTrace(error, stack);
+  }
+}
+
+Future<bool> _shouldRecordBootstrapFailure(
+  Object error,
+  Future<bool> Function()? claimUnrecoverableCipherKeyReport,
+) async {
+  if (error is! DatabaseCipherKeyUnrecoverableException) return true;
+  Log.error(
+    'Secure storage can no longer decrypt the database cipher key. The '
+    'failure screen offers a reset; nothing is deleted without it.',
+    name: DatabaseEncryptionBootstrap._logName,
+    error: error,
+  );
+  if (claimUnrecoverableCipherKeyReport == null) return true;
+  try {
+    return await claimUnrecoverableCipherKeyReport();
+  } on Object catch (claimError) {
+    Log.warning(
+      'Could not check whether this install already reported its '
+      'undecryptable database cipher key; reporting it: $claimError',
+      name: DatabaseEncryptionBootstrap._logName,
+    );
+    return true;
   }
 }
 
@@ -777,6 +888,11 @@ bool shouldRepairLocalDatabaseCacheAfterBootstrapError(Object error) {
   // The database is fine; only the keystore holding its key was unreachable.
   // Repairing would delete that key and strand a recoverable database.
   if (error is DatabaseCipherStorageUnavailableException) return false;
+  // Permanent, so a repair would not strand anything, but deleting the user's
+  // local-only data stays their decision: the failure screen offers the same
+  // reset behind a confirmation instead of a wipe on a launch that looked
+  // normal.
+  if (error is DatabaseCipherKeyUnrecoverableException) return false;
   // Load-bearing: this message names SQLITE_CORRUPT, so it would otherwise
   // match the allowlist below and auto-repair. The database really is unusable,
   // but the repair rotates the cipher key, and nothing here proves the stored

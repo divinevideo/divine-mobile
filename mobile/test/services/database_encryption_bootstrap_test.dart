@@ -225,6 +225,111 @@ void main() {
       },
     );
 
+    group('Android secure storage that can no longer decrypt the key', () {
+      const storedKey =
+          '2dd29ca851e7b56e4697b0e1f08507293d761a05ce4d1b628663f411a8086d99';
+
+      setUp(() {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        store[dbCipherKeyStorageKey] = storedKey;
+      });
+
+      Future<Object?> resolveWithReadFailure(PlatformException failure) async {
+        when(() => storage.read(key: any(named: 'key'))).thenThrow(failure);
+        var deletedDatabase = false;
+        final bootstrap = buildBootstrap(
+          outcome: CipherMigrationOutcome.alreadyEncrypted,
+          onDelete: () => deletedDatabase = true,
+        );
+        Object? thrown;
+        try {
+          await bootstrap.resolveCipherKey();
+        } on Object catch (error) {
+          thrown = error;
+        }
+        expect(
+          deletedDatabase,
+          isFalse,
+          reason: 'the launch that finds the failure must delete nothing',
+        );
+        return thrown;
+      }
+
+      test(
+        'reports a failed padding check as an unrecoverable key and deletes '
+        'nothing',
+        () async {
+          final failure = _androidReadFailure(
+            'javax.crypto.BadPaddingException: error:1e000065:Cipher '
+            'functions:OPENSSL_internal:BAD_DECRYPT',
+          );
+
+          final thrown = await resolveWithReadFailure(failure);
+
+          expect(
+            thrown,
+            isA<DatabaseCipherKeyUnrecoverableException>().having(
+              (e) => e.cause,
+              'cause',
+              same(failure),
+            ),
+          );
+          expect(store, {dbCipherKeyStorageKey: storedKey});
+          verifyNever(
+            () => storage.write(
+              key: any(named: 'key'),
+              value: any(named: 'value'),
+            ),
+          );
+          verifyNever(
+            () => storage.delete(
+              key: any(named: 'key'),
+              iOptions: any(named: 'iOptions'),
+            ),
+          );
+        },
+      );
+
+      test('reports a failed authentication tag the same way', () async {
+        final thrown = await resolveWithReadFailure(
+          _androidReadFailure(
+            'javax.crypto.AEADBadTagException: error:1e000065:Cipher '
+            'functions:OPENSSL_internal:BAD_DECRYPT',
+          ),
+        );
+
+        expect(thrown, isA<DatabaseCipherKeyUnrecoverableException>());
+      });
+
+      test('keeps a keystore failure that can heal as unavailable', () async {
+        // Thrown by Android Keystore itself, e.g. while its daemon restarts.
+        // Nothing proves the stored key is lost.
+        final thrown = await resolveWithReadFailure(
+          _androidReadFailure(
+            'android.security.KeyStoreException: System error',
+          ),
+        );
+
+        expect(thrown, isA<DatabaseCipherStorageUnavailableException>());
+      });
+
+      test('keeps the same failure on iOS as unavailable', () async {
+        // Only Android's plugin fails this way; an iOS read error is the
+        // locked-Keychain case that the next unlocked launch heals.
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+
+        final thrown = await resolveWithReadFailure(
+          _androidReadFailure(
+            'javax.crypto.BadPaddingException: error:1e000065:Cipher '
+            'functions:OPENSSL_internal:BAD_DECRYPT',
+          ),
+        );
+
+        expect(thrown, isA<DatabaseCipherStorageUnavailableException>());
+      });
+    });
+
     group('empty keystore while protected data is unavailable', () {
       // What a launch before the first unlock — or, for a key still stored
       // under `unlocked`, any launch while the device is locked — looks like:
@@ -1814,5 +1919,79 @@ void main() {
         throwsA(same(bootstrapError)),
       );
     });
+
+    group('undecryptable cipher key', () {
+      final keyError = DatabaseCipherKeyUnrecoverableException(
+        _androidReadFailure('javax.crypto.BadPaddingException: BAD_DECRYPT'),
+      );
+
+      Future<List<Object>> launch({
+        required Object error,
+        required Future<bool> Function() claim,
+      }) async {
+        final recorded = <Object>[];
+        await expectLater(
+          resolveStartupDatabaseCipherKey(
+            resolveCipherKey: () async => throw error,
+            recordError: (error, _) async => recorded.add(error),
+            claimUnrecoverableCipherKeyReport: claim,
+          ),
+          throwsA(same(error)),
+        );
+        return recorded;
+      }
+
+      test('is reported only while the install has not reported it', () async {
+        var reported = false;
+        Future<bool> claimOnce() async {
+          if (reported) return false;
+          reported = true;
+          return true;
+        }
+
+        final firstLaunch = await launch(error: keyError, claim: claimOnce);
+        final secondLaunch = await launch(error: keyError, claim: claimOnce);
+
+        expect(firstLaunch, [same(keyError)]);
+        expect(secondLaunch, isEmpty);
+      });
+
+      test('is still reported when the claim cannot be checked', () async {
+        final recorded = await launch(
+          error: keyError,
+          claim: () async => throw StateError('preferences unavailable'),
+        );
+
+        expect(recorded, [same(keyError)]);
+      });
+
+      test('does not limit how often other failures are reported', () async {
+        final otherError = DatabaseCipherStorageUnavailableException(
+          StateError('locked'),
+        );
+        var claims = 0;
+
+        final recorded = await launch(
+          error: otherError,
+          claim: () async {
+            claims += 1;
+            return false;
+          },
+        );
+
+        expect(recorded, [same(otherError)]);
+        expect(claims, isZero);
+      });
+    });
   });
 }
+
+/// What `flutter_secure_storage` 9.x on Android raises for a failed `read`:
+/// a fixed code, the method name, and the Java stack trace as [details].
+PlatformException _androidReadFailure(String thrown) => PlatformException(
+  code: 'Exception encountered',
+  message: 'read',
+  details:
+      '$thrown\n'
+      '\tat javax.crypto.Cipher.doFinal(Cipher.java:2055)\n',
+);
