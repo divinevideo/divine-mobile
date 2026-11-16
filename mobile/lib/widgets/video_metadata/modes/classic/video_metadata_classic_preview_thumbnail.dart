@@ -27,60 +27,130 @@ class _VideoMetadataClassicPreviewThumbnailState
   static const _hideDelay = Duration(seconds: 1);
 
   DivineVideoPlayerController? _controller;
+
+  /// The player still starting for the finished video, until it plays.
+  DivineVideoPlayerController? _startingPlayer;
+
   bool _isPlayerReady = false;
   bool _isPlaying = false;
   Timer? _hideTimer;
   final _iconVisible = ValueNotifier<bool>(false);
 
+  /// Id of the finished video the preview follows, kept even when its player
+  /// failed to load.
+  String? _playerClipId;
+
+  /// Bumped whenever the finished video changes or the widget goes away, so a
+  /// load it superseded stops instead of showing its player.
+  int _loadGeneration = 0;
+
+  /// How many players were released for a discarded video. Keys the thumbnail
+  /// that replaces each one: a release can land while the previous thumbnail
+  /// is still fading out under that player. With a shared key the
+  /// [AnimatedSwitcher] drops that thumbnail and fades the new one in from
+  /// transparent, so the preview blinks instead of staying covered.
+  int _releasedPlayers = 0;
+
   @override
   void initState() {
     super.initState();
-    // Start playback once the rendered clip becomes available.
-    ref.listenManual(videoEditorProvider.select((s) => s.finalRenderedClip), (
-      _,
-      clip,
-    ) {
-      if (clip != null && _controller == null) {
-        runDetached(
-          _loadPlayer(clip),
-          'load classic metadata preview',
-          logName: 'VideoMetadataClassicPreviewThumbnail',
-          category: LogCategory.video,
-        );
-      }
-    }, fireImmediately: true);
+    ref.listenManual(
+      videoEditorProvider.select((s) => s.finalRenderedClip),
+      (_, clip) => _followFinishedVideo(clip),
+      fireImmediately: true,
+    );
   }
 
   @override
   void dispose() {
+    _loadGeneration++;
     _hideTimer?.cancel();
     _iconVisible.dispose();
+    _releaseStartingPlayer(
+      'dispose the classic metadata preview still starting',
+    );
     final controller = _controller;
     if (controller != null) {
-      runDetached(
-        controller.dispose(),
-        'dispose classic metadata preview player',
-        logName: 'VideoMetadataClassicPreviewThumbnail',
-        category: LogCategory.video,
-      );
+      _release(controller, 'dispose classic metadata preview player');
     }
     super.dispose();
   }
 
-  Future<void> _loadPlayer(DivineVideoClip clip) async {
+  /// Plays the finished video, and only that one.
+  ///
+  /// An edit that changes after the export, most often a take's proof landing,
+  /// discards the finished video and renders again at once. Its player is
+  /// released right away, even one still starting: on a device with few
+  /// hardware codecs the decoder leaves that render no encoder, and it fails
+  /// on every retry.
+  ///
+  /// Keyed on the clip's id, which every render changes, so a copy of the same
+  /// video, such as one with a new cover, does not reload it.
+  void _followFinishedVideo(DivineVideoClip? clip) {
+    if (clip?.id == _playerClipId) return;
+    _playerClipId = clip?.id;
+    final generation = ++_loadGeneration;
+
+    _releaseStartingPlayer(
+      'release the preview starting for a discarded video',
+    );
+    final previous = _controller;
+    if (previous != null) {
+      _hideTimer?.cancel();
+      setState(() {
+        _controller = null;
+        _isPlayerReady = false;
+        _isPlaying = false;
+        _releasedPlayers++;
+      });
+      _iconVisible.value = false;
+      _release(previous, 'release the preview of a discarded video');
+    }
+
+    if (clip == null) return;
+    runDetached(
+      _loadPlayer(clip, generation),
+      'load classic metadata preview',
+      logName: 'VideoMetadataClassicPreviewThumbnail',
+      category: LogCategory.video,
+    );
+  }
+
+  bool _isCurrentLoad(int generation) =>
+      mounted && generation == _loadGeneration;
+
+  void _releaseStartingPlayer(String description) {
+    final starting = _startingPlayer;
+    if (starting == null) return;
+    _startingPlayer = null;
+    _release(starting, description);
+  }
+
+  void _release(DivineVideoPlayerController controller, String description) {
+    runDetached(
+      controller.dispose(),
+      description,
+      logName: 'VideoMetadataClassicPreviewThumbnail',
+      category: LogCategory.video,
+    );
+  }
+
+  Future<void> _loadPlayer(DivineVideoClip clip, int generation) async {
     final path = await clip.requireVideo.safeFilePath();
-    if (!mounted) return;
-    await _initPlayer(path);
+    if (!_isCurrentLoad(generation)) return;
+    await _initPlayer(path, generation);
   }
 
   Future<void> _togglePlayPause() async {
-    if (_controller == null) return;
+    final controller = _controller;
+    if (controller == null) return;
     if (_isPlaying) {
-      await _controller!.pause();
+      await controller.pause();
     } else {
-      await _controller!.play();
+      await controller.play();
     }
-    if (!mounted) return;
+    // The video was discarded meanwhile and its player released.
+    if (!mounted || !identical(controller, _controller)) return;
     setState(() => _isPlaying = !_isPlaying);
 
     _hideTimer?.cancel();
@@ -94,20 +164,17 @@ class _VideoMetadataClassicPreviewThumbnailState
     }
   }
 
-  Future<void> _initPlayer(String filePath) async {
-    // Avoid re-initializing for the same source.
-    if (_controller != null) return;
-
+  Future<void> _initPlayer(String filePath, int generation) async {
     final controller = DivineVideoPlayerController(
       useTexture: true,
       debugLabel: 'metadata_classic_thumbnail',
     );
+    _startingPlayer = controller;
+    // A load that stops early was superseded, and whatever superseded it
+    // already released this player.
     try {
       await controller.initialize();
-      if (!mounted) {
-        await controller.dispose();
-        return;
-      }
+      if (!_isCurrentLoad(generation)) return;
       await controller.setSource(
         VideoClip.file(
           filePath,
@@ -115,21 +182,13 @@ class _VideoMetadataClassicPreviewThumbnailState
           trimToCommonTrackEnd: true,
         ),
       );
-      if (!mounted) {
-        await controller.dispose();
-        return;
-      }
+      if (!_isCurrentLoad(generation)) return;
       await controller.setLooping(looping: true);
-      if (!mounted) {
-        await controller.dispose();
-        return;
-      }
+      if (!_isCurrentLoad(generation)) return;
       await controller.play();
-      if (!mounted) {
-        await controller.dispose();
-        return;
-      }
+      if (!_isCurrentLoad(generation)) return;
     } catch (e, stackTrace) {
+      if (!_isCurrentLoad(generation)) return;
       Log.error(
         'Classic metadata preview player failed to load',
         name: 'VideoMetadataClassicPreviewThumbnail',
@@ -137,15 +196,11 @@ class _VideoMetadataClassicPreviewThumbnailState
         error: e,
         stackTrace: stackTrace,
       );
-      runDetached(
-        controller.dispose(),
-        'dispose failed classic metadata preview player',
-        logName: 'VideoMetadataClassicPreviewThumbnail',
-        category: LogCategory.video,
-      );
+      _releaseStartingPlayer('dispose failed classic metadata preview player');
       return;
     }
 
+    _startingPlayer = null;
     setState(() {
       _controller = controller;
       _isPlayerReady = true;
@@ -183,11 +238,13 @@ class _VideoMetadataClassicPreviewThumbnailState
                   duration: const Duration(milliseconds: 400),
                   child: _isPlayerReady && _controller != null
                       ? DivineVideoPlayer(
-                          key: const ValueKey('player'),
+                          // One key per player: the players of two renders
+                          // must never share one in the cross-fade.
+                          key: ObjectKey(_controller),
                           controller: _controller,
                         )
                       : Stack(
-                          key: const ValueKey('thumbnail'),
+                          key: ValueKey(('thumbnail', _releasedPlayers)),
                           fit: StackFit.expand,
                           children: [
                             ClipThumbnailImage(
