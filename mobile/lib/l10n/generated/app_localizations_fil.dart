@@ -14722,6 +14722,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'I-unlink ang $platform account na $identity';
   }

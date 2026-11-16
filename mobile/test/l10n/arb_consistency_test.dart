@@ -621,6 +621,8 @@ const _knownUntranslatedDebt = <String>{
   'verifySignInAgainSemanticLabel',
   'verifyStatusAccountChanged',
   'verifyStatusSignInExpired',
+  // Verify: Divine Confirmation; placeholder copy, translation debt.
+  'verifyStatusNeedsConfirmation',
   // Real public community Rooms privacy notice.
   'messagesPublicRoomsDisclosure',
   'messagesRoomRetiredDraft',

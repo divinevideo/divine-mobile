@@ -1543,6 +1543,35 @@ void main() {
       });
 
       group('reports why a sign-in stopped counting', () {
+        test('records a sign-in whose owner needs Confirmation', () async {
+          when(() => client.verifyBatch(any())).thenAnswer(
+            (_) async => const [
+              VerificationResult(
+                platform: 'github',
+                identity: 'octocat',
+                verified: true,
+                checkedAt: 100,
+                cached: false,
+              ),
+              VerificationResult(
+                platform: 'twitter',
+                identity: 'jack',
+                verified: false,
+                checkedAt: 100,
+                cached: false,
+                code: 'signin_needs_confirmation',
+              ),
+            ],
+          );
+
+          final status = await repo.claimsWithVerdicts(_pubkey);
+
+          expect(
+            status.signInCodes,
+            equals({'twitter:jack': SignInLapse.needsConfirmation}),
+          );
+        });
+
         test('records a sign-in the verifier says expired', () async {
           when(() => client.verifyBatch(any())).thenAnswer(
             (_) async => const [

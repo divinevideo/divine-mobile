@@ -136,7 +136,14 @@ class VerifyState extends Equatable {
   /// another link the verifier could not check does not hide it, and a link
   /// unverified for any other reason does not get it.
   bool canSignInAgain(IdentityClaim claim) {
-    if (signInLapse(claim) == null || isVerified(claim)) return false;
+    final lapse = signInLapse(claim);
+    // A link that needs Confirmation is restored by renewing, not by signing
+    // in again.
+    if (lapse == null ||
+        lapse == SignInLapse.needsConfirmation ||
+        isVerified(claim)) {
+      return false;
+    }
     final platform = claim.platform.toLowerCase();
     return platforms.any(
       (offered) =>

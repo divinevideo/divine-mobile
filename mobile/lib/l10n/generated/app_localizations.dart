@@ -24555,6 +24555,12 @@ abstract class AppLocalizations {
   /// **'Account changed'**
   String get verifyStatusAccountChanged;
 
+  /// Pill on an account linked by signing in that doesn't count because its owner doesn't have Divine Confirmation right now. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs Confirmation'**
+  String get verifyStatusNeedsConfirmation;
+
   /// Screen reader label for the button that removes a linked account.
   ///
   /// In en, this message translates to:

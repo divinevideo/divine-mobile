@@ -271,6 +271,22 @@ void main() {
         expect(find.text(l10n.verifyStatusSignInExpired), findsNothing);
       });
 
+      testWidgets('says a link needs Confirmation and offers no sign-in', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          ready(
+            signInCodes: const {'twitter:jack': SignInLapse.needsConfirmation},
+          ),
+          oauthUsable: true,
+        );
+
+        expect(find.text(l10n.verifyStatusNeedsConfirmation), findsOneWidget);
+        expect(find.text(l10n.verifyStatusUnverified), findsNothing);
+        expect(find.text(l10n.verifySignInAgain), findsNothing);
+      });
+
       testWidgets('says not verified when the verifier gave no reason', (
         tester,
       ) async {

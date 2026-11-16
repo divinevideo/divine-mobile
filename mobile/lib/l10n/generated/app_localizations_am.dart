@@ -14235,6 +14235,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'የ$platform መለያ $identity ግንኙነት አቋርጥ';
   }

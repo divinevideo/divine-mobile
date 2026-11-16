@@ -154,6 +154,8 @@ class _VerdictPill extends StatelessWidget {
             (false, SignInLapse.expired) => l10n.verifyStatusSignInExpired,
             (false, SignInLapse.accountChanged) =>
               l10n.verifyStatusAccountChanged,
+            (false, SignInLapse.needsConfirmation) =>
+              l10n.verifyStatusNeedsConfirmation,
             (false, null) => l10n.verifyStatusUnverified,
           },
           style: VineTheme.labelSmallFont(color: color),

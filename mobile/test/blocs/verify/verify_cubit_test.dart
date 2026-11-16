@@ -633,6 +633,16 @@ void main() {
         );
       });
 
+      test('does not offer it on a link that needs Confirmation', () {
+        // Renewing restores that link; signing in again would not.
+        expect(
+          state(
+            signInCodes: const {'twitter:jack': SignInLapse.needsConfirmation},
+          ).canSignInAgain(_twitter),
+          isFalse,
+        );
+      });
+
       test('does not offer it when the verifier gave no sign-in reason', () {
         // Unverified for some other reason, or by a verifier older than the
         // reason codes: signing in again is not known to help.

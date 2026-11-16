@@ -14732,6 +14732,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Премахни връзката с профила $identity в $platform';
   }

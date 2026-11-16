@@ -13910,6 +13910,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '$platform 계정 $identity 연결 해제';
   }

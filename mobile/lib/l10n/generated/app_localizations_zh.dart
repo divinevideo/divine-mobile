@@ -13721,6 +13721,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get verifyStatusAccountChanged => 'Account changed';
 
   @override
+  String get verifyStatusNeedsConfirmation => 'Needs Confirmation';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '解除关联 $platform 账号 $identity';
   }
