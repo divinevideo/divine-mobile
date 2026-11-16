@@ -2657,7 +2657,8 @@ class VideosRepository {
   /// Each completed source emits the full result set available so far. API
   /// results retain server order and take precedence over matching local or
   /// relay videos; local results are ranked by popularity, with relay-only
-  /// results appended. A slow or failed source does not hold up the others.
+  /// results appended. Slow sources and operational exceptions do not hold
+  /// up the others; programming errors are forwarded with their stack trace.
   ///
   /// Blank queries emit nothing. Cancelling the subscription stops emissions
   /// immediately; outstanding source futures are still observed for errors.
@@ -2690,7 +2691,7 @@ class VideosRepository {
             deduplicateVideosPreservingOrder([...api, ...local, ...relay]),
           );
         }
-      } on Object catch (error, stackTrace) {
+      } on Exception catch (error, stackTrace) {
         Log.error(
           'Video search source failed: $source',
           name: 'VideosRepository',
@@ -2698,6 +2699,8 @@ class VideosRepository {
           error: error,
           stackTrace: stackTrace,
         );
+      } on Object catch (error, stackTrace) {
+        if (!cancelled) controller.addError(error, stackTrace);
       }
     }
 

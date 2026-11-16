@@ -41,7 +41,7 @@ void main() {
       () => api.searchVideos(query: 'test-loop'),
     ).thenAnswer((_) => apiResults.future);
     when(
-      () => nostr.searchVideos('test-loop'),
+      () => nostr.searchVideos('test-loop', limit: 50),
     ).thenAnswer((_) => relayResults.stream);
     repository = VideosRepository(
       nostrClient: nostr,
@@ -118,12 +118,12 @@ void main() {
     },
   );
 
-  test('local failure does not prevent API or relay results', () async {
+  test('local timeout does not prevent API or relay results', () async {
     setUpSearch();
     final emissions = <List<VideoEvent>>[];
     repository.searchVideos(query: 'test-loop').listen(emissions.add);
     await pumpEventQueue();
-    localResults.completeError(StateError('cache unavailable'));
+    localResults.completeError(TimeoutException('cache unavailable'));
     apiResults.complete(_response([_stats('1')]));
     relayResults.add(_event('4'));
     unawaited(relayResults.close());
@@ -131,6 +131,45 @@ void main() {
 
     expect(emissions.last.map((video) => video.id), [_id('1'), _id('4')]);
   });
+
+  for (final source in ['local', 'API', 'relay']) {
+    test(
+      '$source programming errors reach an active consumer with their stack',
+      () async {
+        setUpSearch();
+        final failure = StateError('invalid video invariant');
+        final stack = StackTrace.fromString('synthetic video source stack');
+        final failures = <Object>[];
+        final stacks = <StackTrace>[];
+        final done = Completer<void>();
+        repository
+            .searchVideos(query: 'test-loop')
+            .listen(
+              (_) {},
+              onError: (Object error, StackTrace stackTrace) {
+                failures.add(error);
+                stacks.add(stackTrace);
+              },
+              onDone: done.complete,
+            );
+        if (source == 'local') {
+          localResults.completeError(failure, stack);
+        } else {
+          localResults.complete([]);
+        }
+        if (source == 'API') {
+          apiResults.completeError(failure, stack);
+        } else {
+          apiResults.complete(_response([]));
+        }
+        if (source == 'relay') relayResults.addError(failure, stack);
+        await relayResults.close();
+        await done.future;
+        expect(failures, [same(failure)]);
+        expect(stacks, [same(stack)]);
+      },
+    );
+  }
 
   test('consumer cancellation completes before outstanding sources', () async {
     setUpSearch();
