@@ -7,13 +7,12 @@ block was re-read at `b587c61` (2026-11-07), after 98b57cf moved its prefix
 list to 01.md:185. Command behaviour is `nak`
 0.20.6 as run on 2026-10-10, and a reviewer re-checked the recipes on 0.20.7.
 Later releases exist (0.22.1 on 2026-10-31) and have not been re-run: re-check
-flags after upgrading. On 0.22.3 (2026-11-16) `nak req` through
-`scripts/relay-fault-proxy.dart` connected, but the proxy logged no frame from
-it and `nak` ended only on a `timeout`, with staging and with a local
-`nak serve` upstream; a direct `nak req` to that `nak serve` hung the same way.
-A `dart:io` WebSocket client got through the same proxy. Not diagnosed: until
-it is, self-test the proxy with a `dart:io` client. The bulk-read limits in §3
-(COUNT, `--paginate`, many one-shot connections) were measured against `relay.divine.video` on 2026-11-06
+flags after upgrading. On 0.22.3 (2026-11-16) `nak req` with stdin left open
+(a Claude Code Bash call's stdin is a socket) connects and then waits on stdin
+for filters, so it sends no REQ, through `scripts/relay-fault-proxy.dart` or
+directly; with `</dev/null` (rule 1 in §3) it reads through the proxy. The
+bulk-read limits in §3 (COUNT, `--paginate`, many one-shot connections) were
+measured against `relay.divine.video` on 2026-11-06
 with 0.20.6.
 
 ## 1. Name the authority the bug is against
