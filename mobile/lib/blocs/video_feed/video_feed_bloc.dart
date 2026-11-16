@@ -1563,22 +1563,27 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     );
   }
 
-  /// Removes deleted content immediately without waiting for a feed refresh.
+  /// Drops a video announced on the removal bus without waiting for a refresh.
+  ///
+  /// The bus carries deletions and block or mute sweeps. Sweeps are
+  /// reversible, so only the announced id is matched: an earlier removal may
+  /// belong to a video that came back, and a repeated id removes it again.
   void _onVideoRemoved(
     VideoFeedVideoRemoved event,
     Emitter<VideoFeedBlocState> emit,
   ) {
     final videoId = event.videoId.toLowerCase();
-    if (state.coordination.removedVideoIds.contains(videoId)) return;
-    final removedIds = {...state.coordination.removedVideoIds, videoId};
-    bool isRemoved(VideoEvent video) =>
-        removedIds.contains(video.id.toLowerCase());
+    bool isRemoved(VideoEvent video) => video.id.toLowerCase() == videoId;
     final removedBeforeCursor = state.videos
         .take(state.currentIndex)
         .where(isRemoved)
         .length;
     final survivors = state.videos.where((video) => !isRemoved(video)).toList();
     final removedVisibleVideo = survivors.length != state.videos.length;
+    final removedIds = {
+      videoId,
+      ...state.videos.where(isRemoved).map((video) => video.id.toLowerCase()),
+    };
     emit(
       state.copyWith(
         videos: survivors,
@@ -1592,7 +1597,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           ..removeWhere((id, _) => removedIds.contains(id)),
         listOnlyVideoIds: state.listOnlyVideoIds.difference(removedIds),
         coordination: state.coordination.copyWith(
-          removedVideoIds: Set.unmodifiable(removedIds),
+          removedVideoIds: Set.unmodifiable({
+            ...state.coordination.removedVideoIds,
+            ...removedIds,
+          }),
         ),
       ),
     );

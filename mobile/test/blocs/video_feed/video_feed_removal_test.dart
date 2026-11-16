@@ -162,6 +162,46 @@ void main() {
       ],
     );
 
+    // Block and mute sweeps share the bus and are reversible, so a removed id
+    // can belong to a video that came back on a refresh.
+    feedBlocTest(
+      'removes a video again when its id is announced a second time',
+      build: createBloc,
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [_video('1'), _video('2')],
+        coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
+      ),
+      act: (_) => removals.add('2' * 64),
+      wait: Duration.zero,
+      expect: () => [
+        isA<VideoFeedBlocState>().having(
+          (state) => state.videos,
+          'surviving videos',
+          [_video('1')],
+        ),
+      ],
+    );
+
+    feedBlocTest(
+      'keeps a video that came back when a different video is removed',
+      build: createBloc,
+      seed: () => VideoFeedBlocState(
+        status: VideoFeedStatus.success,
+        videos: [_video('1'), _video('2'), _video('3')],
+        coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
+      ),
+      act: (_) => removals.add('3' * 64),
+      wait: Duration.zero,
+      expect: () => [
+        isA<VideoFeedBlocState>().having(
+          (state) => state.videos,
+          'surviving videos',
+          [_video('1'), _video('2')],
+        ),
+      ],
+    );
+
     test('close cancels the removal subscription', () async {
       final bloc = createBloc();
       expect(removals.hasListener, isTrue);
