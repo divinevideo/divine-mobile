@@ -420,6 +420,18 @@ void main() {
         expect(relay.deletionCount, equals(0));
       });
 
+      test('removes a live downvote the startup sync found beside one '
+          'already taken back', () async {
+        final live = relay.vote(_me, _comment, content: '-');
+        final retracted = relay.vote(_me, _comment, content: '-');
+        relay.delete(retracted.id);
+        await repository.initialize();
+
+        await repository.removeDownvote(_comment);
+
+        expect(relay.events.last.tags, contains(equals(['e', live.id])));
+      });
+
       test(
         'control: reports no downvote when the relays prove there is none',
         () async {

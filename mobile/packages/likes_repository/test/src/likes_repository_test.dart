@@ -4089,6 +4089,37 @@ void main() {
         verify(() => mockLocalStorage.deleteLikeRecord(targetId)).called(1);
       });
 
+      test('keeps a stored like when the relays also hold an earlier one it '
+          'took back', () async {
+        const targetId = 'target_event_1234567890abcdef';
+        const liveId = 'live_reaction_1234567890abcdef';
+        const retractedId = 'retracted_reaction_1234567890abcdef';
+
+        when(() => mockLocalStorage.getAllLikeRecords()).thenAnswer(
+          (_) async => [
+            createLikeRecord(targetEventId: targetId, reactionEventId: liveId),
+          ],
+        );
+        mockReadEventsSequence([
+          [
+            createMockReaction(id: liveId, targetEventId: targetId),
+            createMockReaction(id: retractedId, targetEventId: targetId),
+          ],
+          [
+            createMockDeletion([retractedId]),
+          ],
+        ]);
+        when(
+          () => mockLocalStorage.saveLikeRecordsBatch(any()),
+        ).thenAnswer((_) async {});
+
+        repository = createRepository();
+        final result = await repository.syncUserReactions();
+
+        expect(result.eventIdToReactionId[targetId], equals(liveId));
+        verifyNever(() => mockLocalStorage.deleteLikeRecord(any()));
+      });
+
       test('ignores non-like reactions (content != "+")', () async {
         final mockReaction = createMockReaction(
           id: 'reaction_id_1234567890abcdef',

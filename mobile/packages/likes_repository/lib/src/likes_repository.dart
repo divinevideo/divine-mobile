@@ -2739,8 +2739,16 @@ class LikesRepository {
         }
       }
 
+      // A deletion takes back only the reaction it names. A target reacted
+      // to again after an earlier reaction was taken back keeps its live
+      // record, whichever of the two the relays sent first.
+      bool isRetracted(LikeRecord? record) =>
+          record != null &&
+          retractions.retracted.contains(record.reactionEventId);
+
       // Remove deleted likes from cache and storage
       for (final targetId in deletedTargetIds) {
+        if (!isRetracted(_likeRecords[targetId])) continue;
         _deindexLikeRecord(targetId);
         await _bestEffortLocalStorage(
           () async => localStorage?.deleteLikeRecord(targetId),
@@ -2751,6 +2759,7 @@ class LikesRepository {
 
       // Remove deleted downvotes from in-memory cache (no local storage in v1)
       for (final targetId in deletedDownvoteTargetIds) {
+        if (!isRetracted(_downvoteRecords[targetId])) continue;
         _deindexDownvoteRecord(targetId);
         downvoteCacheChanged = true;
       }
