@@ -225,10 +225,7 @@ class _CategoryGalleryBody extends StatelessWidget {
                   color: context.vineColors.secondaryText,
                 ),
               ),
-              DivineButton(
-                label: context.l10n.commonRetry,
-                onPressed: onRetry,
-              ),
+              DivineButton(label: context.l10n.commonRetry, onPressed: onRetry),
             ],
           ),
         );
@@ -471,16 +468,18 @@ class _CategorySortSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        key: const Key('category-sort-sheet'),
-        decoration: BoxDecoration(
-          color: context.vineColors.surface,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(VineTheme.bottomSheetBorderRadius),
-          ),
+    return Container(
+      key: const Key('category-sort-sheet'),
+      decoration: BoxDecoration(
+        color: context.vineColors.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(VineTheme.bottomSheetBorderRadius),
         ),
+      ),
+      // Inside the surface, so it paints behind the home indicator while the
+      // options stay above it.
+      child: SafeArea(
+        top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

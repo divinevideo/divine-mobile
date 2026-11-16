@@ -164,6 +164,47 @@ void main() {
       },
     );
 
+    testWidgets(
+      'sort sheet surface reaches the bottom edge and keeps its options '
+      'above the bottom inset',
+      (tester) async {
+        const screenSize = Size(402, 874);
+        const bottomInset = 34.0;
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = screenSize;
+        tester.view.padding = const FakeViewPadding(bottom: bottomInset);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetPadding);
+
+        await tester.pumpWidget(
+          buildSubject(
+            category: category,
+            state: const CategoriesState(
+              selectedCategory: category,
+              videosStatus: CategoriesVideosStatus.loaded,
+            ),
+          ),
+        );
+
+        await tester.tap(find.bySemanticsLabel('Category sort options'));
+        await tester.pumpAndSettle();
+
+        final sheetRect = tester.getRect(
+          find.byKey(const Key('category-sort-sheet')),
+        );
+        expect(sheetRect.bottom, equals(screenSize.height));
+
+        final lastOptionRect = tester.getRect(
+          find.byKey(const Key('category-sort-option-forYou')),
+        );
+        expect(
+          lastOptionRect.bottom,
+          lessThanOrEqualTo(screenSize.height - bottomInset),
+        );
+      },
+    );
+
     testWidgets('shows retry state when category videos fail to load', (
       tester,
     ) async {
