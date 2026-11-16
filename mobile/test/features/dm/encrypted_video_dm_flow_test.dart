@@ -53,7 +53,13 @@ class _ObservedDmVideoEncryption extends DmVideoEncryption {
 
 class _ObservedCiphertextFile extends Mock implements File {
   _ObservedCiphertextFile(File file, {required Future<void> deleteGate}) {
-    when(readAsBytes).thenAnswer((_) => file.readAsBytes());
+    // The gate holds the real delete, so a delete requested before the
+    // upload's read must fail that read the way an unlinked file would.
+    when(readAsBytes).thenAnswer(
+      (_) => deleteStarted
+          ? throw FileSystemException('read after delete', file.path)
+          : file.readAsBytes(),
+    );
     when(existsSync).thenAnswer((_) => file.existsSync());
     when(delete).thenAnswer((_) async {
       deleteStarted = true;
