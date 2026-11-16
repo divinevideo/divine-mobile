@@ -112,7 +112,7 @@ A second stop result for a file that was already stopped is dropped, so one take
 - **Classic** has the recording limit and no editor (see [Leaving the recorder](#leaving-the-recorder)).
 - **Upload** records nothing: the view pauses the camera while it shows and resumes it on leaving.
 
-Switching between two recording modes discards the session's clips, which stay in the clip library; a visit to Upload and back keeps them.
+Switching between two recording modes discards the session's clips, which stay in the clip library; a visit to Upload and back keeps them. Leaving Stop Motion ends an unfinished stop-motion session the same way: its stills were saved to the clip library as they were shot, so the session stays there.
 
 ## Leaving the recorder
 

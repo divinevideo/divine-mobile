@@ -142,65 +142,79 @@ class _VideoRecorderLibraryButtonState
       hasClips = clips.isNotEmpty || _libraryVideoThumbnailPath != null;
     }
 
-    return Padding(
-      padding: const .only(left: 16),
-      child: Semantics(
-        identifier: SemanticIds.cameraLibraryButton,
-        button: widget.interactive,
-        // A stop-motion session counts captured stills, not clips — the clip
-        // label would announce 12 stills as "12 clips". Its own label also
-        // covers the zero case, which is reachable here: the button opens a
-        // previous session's library before this one's first still is shot.
-        label: hasClips
-            ? (capturesStills
-                  ? context.l10n.videoRecorderLibraryOpenStopMotionLabel(count)
-                  : context.l10n.videoRecorderLibraryOpenLabel(count))
-            : context.l10n.videoRecorderLibraryEmptyLabel,
-        enabled: hasClips && widget.interactive,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: hasClips && widget.interactive ? _openLibrary : null,
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: ShapeDecoration(
-              color: context.vineColors.surfaceContainer,
-              shape: RoundedRectangleBorder(
-                side: BorderSide(width: 2, color: context.vineColors.onSurface),
-                borderRadius: .circular(16),
-              ),
-            ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                ClipRRect(
-                  borderRadius: .circular(14),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    transitionBuilder: (child, animation) =>
-                        FadeTransition(opacity: animation, child: child),
-                    layoutBuilder: (currentChild, previousChildren) => Stack(
-                      alignment: .center,
-                      fit: .expand,
-                      children: [...previousChildren, ?currentChild],
-                    ),
-                    child: thumbnailPath != null
-                        ? ClipThumbnailImage(
-                            key: ValueKey(thumbnailPath),
-                            path: thumbnailPath,
-                            fit: BoxFit.cover,
-                            // Stop-motion stills are full-resolution photos;
-                            // bound the decode to the 40px button.
-                            cacheHeight:
-                                (40 * MediaQuery.devicePixelRatioOf(context))
-                                    .round(),
-                            placeholder: const SizedBox.shrink(),
-                          )
-                        : const SizedBox.shrink(),
+    return BlocListener<VideoRecorderBloc, VideoRecorderBlocState>(
+      // A stop-motion session ended by a mode switch stays in the library as
+      // its newest set. The button outlives the switch, so the preview it
+      // loaded on init would still show the set before it.
+      listenWhen: (previous, current) =>
+          previous.stopMotionFrames.isNotEmpty &&
+          previous.recorderMode != current.recorderMode,
+      listener: (_, _) => _loadLibraryThumbnailDetached(),
+      child: Padding(
+        padding: const .only(left: 16),
+        child: Semantics(
+          identifier: SemanticIds.cameraLibraryButton,
+          button: widget.interactive,
+          // A stop-motion session counts captured stills, not clips — the clip
+          // label would announce 12 stills as "12 clips". Its own label also
+          // covers the zero case, which is reachable here: the button opens a
+          // previous session's library before this one's first still is shot.
+          label: hasClips
+              ? (capturesStills
+                    ? context.l10n.videoRecorderLibraryOpenStopMotionLabel(
+                        count,
+                      )
+                    : context.l10n.videoRecorderLibraryOpenLabel(count))
+              : context.l10n.videoRecorderLibraryEmptyLabel,
+          enabled: hasClips && widget.interactive,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: hasClips && widget.interactive ? _openLibrary : null,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: ShapeDecoration(
+                color: context.vineColors.surfaceContainer,
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(
+                    width: 2,
+                    color: context.vineColors.onSurface,
                   ),
+                  borderRadius: .circular(16),
                 ),
-                _SelectionCountBadge(count: count),
-              ],
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ClipRRect(
+                    borderRadius: .circular(14),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) =>
+                          FadeTransition(opacity: animation, child: child),
+                      layoutBuilder: (currentChild, previousChildren) => Stack(
+                        alignment: .center,
+                        fit: .expand,
+                        children: [...previousChildren, ?currentChild],
+                      ),
+                      child: thumbnailPath != null
+                          ? ClipThumbnailImage(
+                              key: ValueKey(thumbnailPath),
+                              path: thumbnailPath,
+                              fit: BoxFit.cover,
+                              // Stop-motion stills are full-resolution photos;
+                              // bound the decode to the 40px button.
+                              cacheHeight:
+                                  (40 * MediaQuery.devicePixelRatioOf(context))
+                                      .round(),
+                              placeholder: const SizedBox.shrink(),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ),
+                  _SelectionCountBadge(count: count),
+                ],
+              ),
             ),
           ),
         ),

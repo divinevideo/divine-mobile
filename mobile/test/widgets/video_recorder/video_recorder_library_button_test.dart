@@ -47,14 +47,11 @@ void main() {
     Widget buildWidget({
       List<DivineVideoClip>? clips,
       VideoRecorderBlocState recorderState = const VideoRecorderBlocState(),
+      Stream<VideoRecorderBlocState> recorderStates = const Stream.empty(),
       bool interactive = true,
       RecorderExitAuthGate? authGate,
     }) {
-      whenListen(
-        recorderBloc,
-        const Stream<VideoRecorderBlocState>.empty(),
-        initialState: recorderState,
-      );
+      whenListen(recorderBloc, recorderStates, initialState: recorderState);
       return ProviderScope(
         overrides: [
           clipManagerProvider.overrideWith(
@@ -518,6 +515,58 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(find.byKey(const ValueKey('/lib/video_thumb.jpg')), findsOne);
+          expect(find.byKey(const ValueKey('/lib/sm_thumb.jpg')), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'previews the session a mode switch ended once back in stop-motion',
+        (tester) async {
+          final endedSession = DivineVideoClip(
+            id: 'clip_sm_ended',
+            stopMotionFrames: const [
+              StopMotionClipFrame(
+                path: '/frames/a.jpg',
+                duration: Duration(milliseconds: 42),
+              ),
+            ],
+            duration: const Duration(milliseconds: 42),
+            recordedAt: DateTime(2025),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+            thumbnailPath: '/frames/a.jpg',
+          );
+          when(
+            () => mockClipLibraryService.getAllClips(),
+          ).thenAnswer((_) async => [stopMotionClip]);
+          final states = StreamController<VideoRecorderBlocState>();
+          addTearDown(states.close);
+
+          await tester.pumpWidget(
+            buildWidget(
+              recorderState: const VideoRecorderBlocState(
+                recorderMode: VideoRecorderMode.stopMotion,
+                stopMotionFrames: ['/frames/a.jpg', '/frames/b.jpg'],
+              ),
+              recorderStates: states.stream,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          // The switch leaves the session in the library as its newest set.
+          when(
+            () => mockClipLibraryService.getAllClips(),
+          ).thenAnswer((_) async => [endedSession, stopMotionClip]);
+          states.add(const VideoRecorderBlocState());
+          await tester.pumpAndSettle();
+          states.add(
+            const VideoRecorderBlocState(
+              recorderMode: VideoRecorderMode.stopMotion,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byKey(const ValueKey('/frames/a.jpg')), findsOne);
           expect(find.byKey(const ValueKey('/lib/sm_thumb.jpg')), findsNothing);
         },
       );
