@@ -19,6 +19,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:iap_repository/iap_repository.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:media_cache/media_cache.dart' show CancellableCacheOperation;
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -78,6 +79,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
+import '../../helpers/decoded_images.dart';
 import '../../helpers/finders.dart';
 import '../../helpers/go_router.dart';
 import '../../helpers/test_provider_overrides.dart';
@@ -382,9 +384,26 @@ void main() {
       mockFollowRepository = MockFollowRepository();
       mockNostrClient = MockNostrClient();
       await CacheSync.init(dao: _FakeCacheDao());
+
+      // Profile pictures must not open the shared disk cache and leave its
+      // database cleanup timer behind in the merged test isolate.
+      final imageCache = createMockMediaCacheManager();
+      when(() => imageCache.getFileFromCache(any()))
+          .thenAnswer((_) async => null);
+      when(
+        () => imageCache.cacheFileCancellable(
+          any(),
+          key: any(named: 'key'),
+          authHeaders: any(named: 'authHeaders'),
+        ),
+      ).thenAnswer(
+        (_) => CancellableCacheOperation.fromStream(const Stream.empty()),
+      );
+      debugImageCacheOverride = imageCache;
     });
 
     tearDown(() {
+      debugImageCacheOverride = null;
       debugUsesAppleAppStoreTipPolicyOverride = null;
     });
 
@@ -2492,14 +2511,19 @@ void main() {
           picture: 'https://example.com/avatar.jpg',
         );
 
-        await tester.pumpWidget(
+        await pumpWithDecodedImages(
+          tester,
           buildTestWidget(
             userIdHex: testUserHex,
             isOwnProfile: true,
             profile: testProfile,
+            profileStats: const ProfileStats(pubkey: testUserHex),
+          ),
+          images: find.descendant(
+            of: find.byType(VineCachedImage),
+            matching: find.byType(Image),
           ),
         );
-        await tester.pumpAndSettle();
 
         final headerDecode = tester
             .widget<VineCachedImage>(find.byType(VineCachedImage))
