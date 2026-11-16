@@ -3941,11 +3941,21 @@ void main() {
           when(
             () => mockNostrClient.resolvePublicKey(),
           ).thenAnswer((_) async => null);
+          // A read must succeed if it happens, so only the verifyNever
+          // below can catch one.
+          mockReadEventsSequence([<Event>[]]);
 
           repository = createRepository();
           final statuses = await repository.getUserVoteStatuses([testEventId]);
 
           verifyNoFallbackReads();
+          verifyNever(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          );
           expect(statuses.upvotedIds, isEmpty);
           expect(statuses.downvotedIds, isEmpty);
         },
