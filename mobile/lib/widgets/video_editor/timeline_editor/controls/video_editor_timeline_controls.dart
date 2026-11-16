@@ -403,7 +403,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
           ),
         if (onAnimate != null)
           TimelineActionButton(
-            icon: .sparkle,
+            icon: .animation,
             label: context.l10n.videoEditorLayerAnimationLabel,
             semanticLabel:
                 context.l10n.videoEditorLayerAnimationButtonSemanticLabel,
