@@ -17,9 +17,9 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// A session is the ordered list of still paths the recorder has shot so far.
 /// It is mirrored into the clip library on every still (so the recording is
-/// preserved the instant it is shot), rewritten on undo, ingested into the
-/// clip manager on assemble, and discarded — files and library row — when the
-/// user walks away from it.
+/// preserved the instant it is shot), rewritten on undo, and ingested into the
+/// clip manager on assemble. A session the user walks away from, by switching
+/// modes or closing the recorder, keeps its library row and frame files.
 ///
 /// Every library write goes through one serialized queue: a still, an undo
 /// and an assemble can each queue a write in quick succession, and the row is
@@ -227,17 +227,6 @@ class StopMotionSessionStore {
         }
       }),
     );
-  }
-
-  /// Discards an abandoned capture session: deletes its frame files and drops
-  /// the library row eagerly saved during capture. A mode switch or reset
-  /// otherwise leaves an orphaned library clip whose source frames are gone.
-  Future<void> discardSession(List<String> framePaths) async {
-    if (framePaths.isEmpty) return;
-    for (final path in framePaths) {
-      await deleteFrameFile(path);
-    }
-    await removeSession(framePaths.first);
   }
 
   /// Deletes a captured stop-motion frame file, ignoring errors.

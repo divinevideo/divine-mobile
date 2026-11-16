@@ -5142,7 +5142,7 @@ void main() {
           );
         },
         verify: (bloc) {
-          // The switch discarded the session and moved the recorder off
+          // The switch ended the session and moved the recorder off
           // stop-motion; appending the resumed still would write a phantom
           // one-frame library row on the new mode, so it is dropped with its
           // file.
@@ -5446,7 +5446,7 @@ void main() {
       });
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'switching modes discards the session and drops its library row',
+        'switching modes keeps the unfinished session in the library',
         setUp: () {
           when(
             () => cameraService.setVideoStabilizationMode(any()),
@@ -5458,51 +5458,26 @@ void main() {
           stopMotionFrames: [frameAPath, frameBPath],
         ),
         act: (bloc) async {
-          final removed = Completer<void>();
-          when(
-            () => clipManager.removeStopMotionSessionFromLibrary('clip_sm_a'),
-          ).thenAnswer((_) async => removed.complete());
-          bloc.add(
-            const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
+          await _atRecorderState(
+            bloc,
+            (state) => state.recorderMode == VideoRecorderMode.capture,
+            () => bloc.add(
+              const VideoRecorderRecorderModeSet(VideoRecorderMode.capture),
+            ),
           );
-          // The mode change emits before the abandoned files are deleted.
-          await removed.future;
+          // Lets any cleanup the switch started detached run to completion.
+          await pumpEventQueue();
         },
         verify: (bloc) {
+          // The recorder starts over...
           expect(bloc.state.stopMotionFrames, isEmpty);
-          expect(File(frameAPath).existsSync(), isFalse);
-          expect(File(frameBPath).existsSync(), isFalse);
-          // Files deleted AND the eager-saved row removed — no orphan.
-          verify(
-            () => clipManager.removeStopMotionSessionFromLibrary('clip_sm_a'),
-          ).called(1);
-        },
-      );
-
-      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'reset discards the session and drops its library row',
-        build: buildBloc,
-        seed: () => VideoRecorderBlocState(
-          recorderMode: VideoRecorderMode.stopMotion,
-          stopMotionFrames: [frameAPath, frameBPath],
-        ),
-        act: (bloc) async {
-          final removed = Completer<void>();
-          when(
-            () => clipManager.removeStopMotionSessionFromLibrary('clip_sm_a'),
-          ).thenAnswer((_) async => removed.complete());
-          bloc.add(const VideoRecorderResetRequested());
-          // Reset emits before file deletion finishes. Wait for the actual
-          // cleanup boundary, not a fixed number of event-loop turns.
-          await removed.future;
-        },
-        verify: (bloc) {
-          expect(bloc.state.stopMotionFrames, isEmpty);
-          expect(File(frameAPath).existsSync(), isFalse);
-          expect(File(frameBPath).existsSync(), isFalse);
-          verify(
-            () => clipManager.removeStopMotionSessionFromLibrary('clip_sm_a'),
-          ).called(1);
+          // ...but the stills and the row saved while shooting stay, so the
+          // session can be picked up from the library.
+          expect(File(frameAPath).existsSync(), isTrue);
+          expect(File(frameBPath).existsSync(), isTrue);
+          verifyNever(
+            () => clipManager.removeStopMotionSessionFromLibrary(any()),
+          );
         },
       );
 

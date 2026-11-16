@@ -111,21 +111,6 @@ void main() {
       expect(calls, ['save-start', 'remove', 'save-2']);
     });
 
-    test('discardSession deletes the stills before dropping the row', () async {
-      final removed = <String>[];
-      when(
-        () => clipManager.removeStopMotionSessionFromLibrary(any()),
-      ).thenAnswer((invocation) async {
-        expect(File(frameA).existsSync(), isFalse);
-        expect(File(frameB).existsSync(), isFalse);
-        removed.add(invocation.positionalArguments.single as String);
-      });
-
-      await store.discardSession([frameA, frameB]);
-
-      expect(removed, ['clip_sm_a']);
-    });
-
     group('ingest', () {
       late String missing;
 

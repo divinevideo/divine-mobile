@@ -1882,11 +1882,8 @@ class VideoRecorderBloc
     required bool keepAutosavedDraft,
   }) async {
     // No assembling-status guard: the assemble is synchronous, so a mode switch
-    // cannot land inside it, and the `ready` it leaves behind already carries an
-    // empty frame list — so the discard below is a no-op and the queued library
-    // write has nothing to lose.
+    // cannot land inside it.
     _stopIntervalCapture(emit);
-    final previousFrames = state.stopMotionFrames;
     // The recording mode the session's clips belong to. Upload records nothing,
     // so while it shows, that is the mode it was entered from — null when the
     // recorder opened straight into Upload.
@@ -1902,13 +1899,13 @@ class VideoRecorderBloc
         showGridLines: _gridLinesEnabledFor(mode),
         timerDuration: _timerDurationCarriedTo(mode),
         countdownValue: 0,
+        // Ends an unfinished stop-motion session without deleting it: every
+        // still went into the library as it was shot, so the session stays
+        // there, as a capture clip does across a switch.
         stopMotionFrames: const [],
         stopMotionStatus: StopMotionStatus.idle,
       ),
     );
-    if (previousFrames.isNotEmpty) {
-      unawaited(_stopMotionSessions.discardSession(previousFrames));
-    }
     final prefs = _readSharedPreferences();
     await prefs.setString(VideoRecorderMode.persistenceKey, mode.name);
 
@@ -1980,11 +1977,9 @@ class VideoRecorderBloc
       category: LogCategory.video,
     );
     _stopIntervalCapture(emit);
-    final frames = state.stopMotionFrames;
+    // An unfinished stop-motion session stays in the library, see
+    // _applyRecorderMode.
     emit(const VideoRecorderBlocState());
-    if (frames.isNotEmpty) {
-      unawaited(_stopMotionSessions.discardSession(frames));
-    }
   }
 
   void _onShowLastClipOverlayToggled(
@@ -2303,13 +2298,13 @@ class VideoRecorderBloc
     // The recorder can move off this session across the await above. "Next"
     // stays tappable, so an assemble can claim it — synchronously, so `ready`
     // is what it leaves behind, never `assembling`; the mode wheel stays live
-    // during an idle capture, so a swipe can discard it (_applyRecorderMode
+    // during an idle capture, so a swipe can end it (_applyRecorderMode
     // clears the frames and leaves stop-motion, status idle). Either way the
-    // session this still belonged to is gone, so appending it now would
-    // re-persist a phantom one-frame session — on the new mode, for a swipe —
-    // so it is dropped with its file. Only idle (still shooting) and failure
-    // (assemble bailed, stills retained) while still in stop-motion own the
-    // session here.
+    // session this still belonged to has left the recorder, so appending it
+    // now would re-persist a phantom one-frame session — on the new mode, for
+    // a swipe — so it is dropped with its file. Only idle (still shooting) and
+    // failure (assemble bailed, stills retained) while still in stop-motion
+    // own the session here.
     if (!state.recorderMode.capturesStills ||
         state.stopMotionStatus == StopMotionStatus.ready) {
       unawaited(_stopMotionSessions.deleteFrameFile(photo.filePath));

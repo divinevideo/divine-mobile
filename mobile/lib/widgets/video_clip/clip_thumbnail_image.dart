@@ -11,8 +11,8 @@ import 'package:material_ui/material_ui.dart';
 ///
 /// These paths are persisted as absolute paths; on iOS the app container UUID
 /// changes on reinstall/update and cached files can be evicted, and the
-/// recorder deletes stop-motion frame files on undo, discard, reset and a mode
-/// switch — so the file may not exist by the time it is decoded. A bare
+/// recorder deletes a stop-motion frame file on undo — so the file may not
+/// exist by the time it is decoded. A bare
 /// `Image.file` has no image-stream error listener in that case, and the
 /// resulting `PathNotFoundException` is recorded as a fatal crash
 /// (Crashlytics 71e200c8, #5796). This widget renders [placeholder]
