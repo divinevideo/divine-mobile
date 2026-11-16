@@ -291,6 +291,11 @@ class Apple:
             path = link[len(self.base) :] if link else None
         return found, included
 
+    def beta_detail(self, build_id, included):
+        if included is not None:
+            return included
+        return self.call("GET", "/builds/" + build_id + "/buildBetaDetail").get("data")
+
     def resource(self, kind, identifier=None, attributes=None, relationships=None):
         data = {"type": kind}
         if identifier:

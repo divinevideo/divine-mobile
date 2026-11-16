@@ -274,6 +274,10 @@ class StateStore:
         except NotFound:
             return {}
         self.sha = result["sha"]
+        if result.get("encoding") == "none":
+            result = self.github.call("GET", "/git/blobs/" + self.sha)
+        if result.get("encoding", "base64") != "base64":
+            raise ProviderError("Private coordinator state encoding is unsupported")
         state = json.loads(base64.b64decode(result["content"]))
         if not isinstance(state, dict):
             raise ProviderError("Private coordinator state is invalid")
@@ -565,6 +569,13 @@ class Runtime:
             version = related("preReleaseVersion")["attributes"]["version"]
             identity = self.identity("ios", number, version, allow_historical=True)
             beta_detail = related("buildBetaDetail", optional=True)
+            if (
+                beta_detail is None
+                and not identity.get("legacy")
+                and attrs.get("processingState") == "VALID"
+                and not attrs.get("expired")
+            ):
+                beta_detail = apple.beta_detail(b["id"], beta_detail)
             detail = beta_attributes(attrs, beta_detail, identity.get("legacy", False))
             review = related("betaAppReviewSubmission", optional=True)
             if review and review["attributes"].get("submittedDate"):

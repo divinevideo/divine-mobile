@@ -345,3 +345,52 @@ class HistoricalProviderStateTest(unittest.TestCase):
         )
         with self.assertRaises(ProviderError):
             runner.beta_attributes({"processingState": "VALID"}, None, False)
+
+
+class SparseIncludedRelationTest(unittest.TestCase):
+    def test_sparse_beta_detail_uses_single_authoritative_related_read(self):
+        calls = []
+        resource = {"id": "d", "attributes": {"externalBuildState": "IN_BETA_TESTING"}}
+        apple = Apple(
+            "token",
+            "g",
+            request=lambda method, url, *args: (
+                calls.append((method, url)) or {"data": resource}
+            ),
+        )
+        self.assertEqual(apple.beta_detail("b", None), resource)
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(calls[0][1].endswith("/builds/b/buildBetaDetail"))
+        self.assertEqual(apple.beta_detail("b", resource), resource)
+        self.assertEqual(len(calls), 1)
+
+
+class LargePrivateStateTest(unittest.TestCase):
+    def test_large_state_reads_exact_blob_when_contents_encoding_is_none(self):
+        import base64
+
+        calls = []
+        expected = {"schema": 1, "operations": {"synthetic": {"status": "started"}}}
+
+        class GH:
+            def call(self, method, path, payload=None):
+                calls.append(path)
+                if path.startswith("/contents/"):
+                    return {
+                        "sha": "b" * 40,
+                        "encoding": "none",
+                        "content": "",
+                        "size": 2000000,
+                    }
+                self_expected = "/git/blobs/" + ("b" * 40)
+                if path != self_expected:
+                    raise AssertionError(path)
+                return {
+                    "encoding": "base64",
+                    "content": base64.b64encode(json.dumps(expected).encode()).decode(),
+                }
+
+        store = runner.StateStore(GH())
+        self.assertEqual(store.load(), expected)
+        self.assertEqual(store.sha, "b" * 40)
+        self.assertEqual(len(calls), 2)
