@@ -2295,10 +2295,9 @@ class LikesRepository {
 
   /// Publish a downvote (Kind 7 reaction with content '-').
   ///
-  /// Optimistic-first: writes the downvote record into [_downvoteRecords]
-  /// and ticks [watchDownvotedEventIds] BEFORE the kind-7 publish, mirroring
-  /// the upvote flow in [likeEvent]. On publish failure the record is
-  /// removed and the stream is ticked again.
+  /// Writes the downvote record into [_downvoteRecords] and ticks
+  /// [watchDownvotedEventIds] before the kind-7 publish. On publish failure
+  /// the record is removed and the stream is ticked again.
   ///
   /// Returns the reaction event ID, or a `pending_downvote_*` placeholder
   /// when the network call hasn't been awaited yet (offline or pre-publish
@@ -2310,11 +2309,12 @@ class LikesRepository {
   /// the downvote is still published and the gap is logged (#6980).
   ///
   /// Before publishing it looks for a live downvote this device does not
-  /// hold, on any target, and adopts it instead of publishing a second one
-  /// (#10992). When the relays cannot prove whether there is one, it
-  /// publishes without adopting anything (#10809). The check runs before the
-  /// downvote is recorded locally, so callers serialise downvotes on one
-  /// target, as `CommentReactionsBloc` does per comment.
+  /// hold, whether or not the target has a coordinate, and adopts it instead
+  /// of publishing a second one (#10992). When the relays cannot prove
+  /// whether there is one, it publishes without adopting anything (#10809).
+  /// The check runs before the downvote is recorded locally, so callers
+  /// serialise downvotes on one target, as `CommentReactionsBloc` does per
+  /// comment.
   ///
   /// Throws [AlreadyDownvotedException] if the event is already downvoted.
   /// Throws [LikeFailedException] if the publish fails.
@@ -2348,8 +2348,8 @@ class LikesRepository {
       );
     }
 
-    // 1. Optimistic-first: write to memory + tick the stream BEFORE any
-    // network I/O. The UI flips here. Mirrors [likeEvent]'s ordering.
+    // 1. Record the downvote and tick the stream before the publish. Unlike
+    // [likeEvent], this comes after the relay check above.
     final placeholderId = 'pending_downvote_$eventId';
     final placeholder = LikeRecord(
       targetEventId: eventId,
@@ -3927,8 +3927,8 @@ class LikesRepository {
     }
   }
 
-  /// This account's live downvote on [eventId] or [addressableId] that this
-  /// device has not indexed, checked the way [likeEvent] checks a like.
+  /// This account's live downvote on [eventId] or [addressableId], found the
+  /// way [likeEvent] finds an existing like.
   ///
   /// Joins the startup snapshot first, then answers from what it or the live
   /// subscription indexed. Only when that snapshot is incomplete does it read
