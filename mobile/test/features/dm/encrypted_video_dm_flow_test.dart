@@ -295,7 +295,8 @@ void main() {
     );
 
     test(
-      'a tampered ciphertext fails authentication instead of yielding bytes',
+      "a tampered ciphertext fails the sender's hash check instead of "
+      'yielding bytes',
       () async {
         final plaintext = Uint8List.fromList(
           List<int>.generate(512, (index) => index % 251),
@@ -331,12 +332,14 @@ void main() {
           fileMetadata: sent.metadata,
         );
 
+        // The x tag still names the untouched ciphertext, so the hash check
+        // rejects the download before AES-GCM runs.
         await expectLater(
           DmVideoDecryptor(
             dio: dio,
             encryption: FileEncryption(),
           ).decrypt(tamperedMessage),
-          throwsA(isA<Exception>()),
+          throwsA(isA<DmVideoUnavailableException>()),
         );
       },
     );
