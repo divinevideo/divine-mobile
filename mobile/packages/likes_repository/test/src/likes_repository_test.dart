@@ -2034,6 +2034,11 @@ void main() {
     });
 
     group('downvoteEvent', () {
+      // The relays hold no downvote for these targets unless a test says
+      // otherwise, so the check before publishing or removing proves there
+      // is none instead of failing on an unstubbed read.
+      setUp(() => mockReadEventsSequence([<Event>[]]));
+
       test('logs a missing coordinate on an addressable target '
           '(#6980)', () async {
         stubAnyPublish();
@@ -2315,6 +2320,11 @@ void main() {
     });
 
     group('removeDownvote', () {
+      // The relays hold no downvote for these targets unless a test says
+      // otherwise, so the check before publishing or removing proves there
+      // is none instead of failing on an unstubbed read.
+      setUp(() => mockReadEventsSequence([<Event>[]]));
+
       test('publishes deletion event and removes the record', () async {
         when(
           () => mockNostrClient.sendLike(
@@ -2676,6 +2686,11 @@ void main() {
     });
 
     group('toggleDownvote', () {
+      // The relays hold no downvote for these targets unless a test says
+      // otherwise, so the check before publishing or removing proves there
+      // is none instead of failing on an unstubbed read.
+      setUp(() => mockReadEventsSequence([<Event>[]]));
+
       test('downvotes when not downvoted and returns true', () async {
         when(
           () => mockNostrClient.sendLike(
@@ -2769,6 +2784,11 @@ void main() {
     });
 
     group('isDownvoted / getDownvoteRecord / getDownvotedEventIds', () {
+      // The relays hold no downvote for these targets unless a test says
+      // otherwise, so the check before publishing or removing proves there
+      // is none instead of failing on an unstubbed read.
+      setUp(() => mockReadEventsSequence([<Event>[]]));
+
       test('isDownvoted returns false for non-downvoted event', () async {
         repository = createRepository(withLocalStorage: false);
         expect(await repository.isDownvoted(testEventId), isFalse);
