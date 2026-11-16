@@ -1453,7 +1453,7 @@
   "remixSettingAllowTitle": "自分の動画のリミックスを許可",
   "remixSettingAllowSubtitle": "他の人があなたの動画をクリップとして自分の投稿に使えます。",
   "videoMetadataClipCreditRow": "{name}さんのクリップを使用",
-  "metadataRemixAction": "リミックスする",
+  "metadataRemixAction": "リミックス",
   "remixWebAppNudge": "リミックスはDivineアプリで行えます。",
   "remixWebGetTheApp": "アプリを入手",
   "metadataRemixesLabel": "リミックス",

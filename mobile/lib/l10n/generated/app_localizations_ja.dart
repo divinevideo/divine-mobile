@@ -3832,7 +3832,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get metadataRemixAction => 'リミックスする';
+  String get metadataRemixAction => 'リミックス';
 
   @override
   String get remixWebAppNudge => 'リミックスはDivineアプリで行えます。';

@@ -3849,7 +3849,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get metadataRemixAction => '리믹스하기';
+  String get metadataRemixAction => '리믹스';
 
   @override
   String get remixWebAppNudge => '리믹스는 Divine 앱에서 할 수 있어요.';

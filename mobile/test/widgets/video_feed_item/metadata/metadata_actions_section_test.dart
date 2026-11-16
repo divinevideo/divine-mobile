@@ -1098,6 +1098,16 @@ void main() {
           expect(find.text(l10n.shareMenuDelete), findsNothing);
           verify(() => importer.findImportedClipOf(video)).called(1);
           verifyNever(() => draftStorage.draftExists(any()));
+          // The Remix circle keeps its spinner for the whole launch.
+          expect(
+            find.descendant(
+              of: find
+                  .ancestor(of: remixButton, matching: find.byType(Column))
+                  .first,
+              matching: find.byType(DivineCircularProgressIndicator),
+            ),
+            findsOneWidget,
+          );
 
           autosaveCheck.complete(false);
           await tester.pumpAndSettle();
