@@ -195,8 +195,9 @@ class ViewEventRetryService {
           if (success) {
             await _dao.deleteById(row.id);
           } else if (video.addressableId == null) {
-            // The publisher has now reported the missing d tag, and a queued
-            // snapshot can never grow one, so a retry would only re-report.
+            // The publisher has now classified the missing address, reporting
+            // it when the kind is addressable, and a queued snapshot can never
+            // grow one, so a retry would only repeat that.
             await _dao.deleteById(row.id);
           } else {
             await _dao.markFailed(row.id, 'publish returned false');

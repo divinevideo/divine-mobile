@@ -3,6 +3,7 @@
 
 import 'dart:io';
 
+import 'package:comments_repository/comments_repository.dart' show Comment;
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,8 +11,10 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/event_kind.dart';
 import 'package:openvine/models/view_event_drop_reason.dart';
 import 'package:openvine/models/view_traffic_source.dart';
+import 'package:openvine/screens/comments/comment_synthetic_video_event.dart';
 import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -335,6 +338,145 @@ void main() {
                 as Event;
         expect(versionTags(event), isEmpty);
         expect(await dao.getById('queued-before-v14'), isNull);
+      },
+    );
+  });
+
+  // A video opened from the comments sheet is played from a synthetic
+  // VideoEvent built from the Comment. Before this guard a plain Kind 1111
+  // video comment reached the publisher with no kind and no d tag, which it
+  // read as a Divine Kind 34236 video that had lost its d tag and reported as
+  // a structural defect, although a regular event has no address to count a
+  // view under.
+  group('a view of a video opened from the comments sheet', () {
+    late AppDatabase database;
+    late PendingViewEventsDao dao;
+    late _MockNostrClient mockNostr;
+    late _MockAuthService mockAuth;
+    late Directory tempDir;
+    late AnalyticsService analytics;
+    final drops = <ViewEventDropReason>[];
+
+    const commenterPubkey =
+        '1111111111111111111111111111111111111111111111111111111111111111';
+
+    Comment videoComment({int? eventKind, String? addressableId}) => Comment(
+      id: 'c' * 64,
+      content: 'video comment',
+      authorPubkey: commenterPubkey,
+      createdAt: DateTime.utc(2026, 11, 13),
+      rootEventId: 'a' * 64,
+      rootAuthorPubkey: _videoPubkey,
+      rootAddressableId: '34236:$_videoPubkey:root-video',
+      eventKind: eventKind,
+      addressableId: addressableId,
+      videoUrl: 'https://media.divine.video/comment-video',
+    );
+
+    Future<void> trackStart(VideoEvent video) =>
+        analytics.trackDetailedVideoViewWithUser(
+          video,
+          userId: _userPubkey,
+          source: 'mobile',
+          eventType: 'view_start',
+          sessionToken: 'mount-1',
+        );
+
+    setUp(() async {
+      drops.clear();
+      SharedPreferences.setMockInitialValues({});
+      tempDir = Directory.systemTemp.createTempSync(
+        'view_event_comment_video_',
+      );
+      database = AppDatabase.test(
+        NativeDatabase(File('${tempDir.path}/test.db')),
+      );
+      dao = database.pendingViewEventsDao;
+
+      mockNostr = _MockNostrClient();
+      mockAuth = _MockAuthService();
+      _stubSigningAndPublishing(mockAuth, mockNostr);
+
+      final publisher = ViewEventPublisher(
+        nostrService: mockNostr,
+        authService: mockAuth,
+        appVersion: '1.0.29',
+        onDrop: (reason, {required String videoId, required String method}) =>
+            drops.add(reason),
+      );
+      // The immediate flush after enqueueing is the path the reports carry:
+      // _enqueuePendingViewEvent -> ViewEventRetryService.sweep -> publish.
+      final retryService = ViewEventRetryService(
+        viewEventPublisher: publisher,
+        pendingViewEventsDao: dao,
+        userPubkey: _userPubkey,
+        appForegroundStream: const Stream<bool>.empty(),
+      );
+      analytics = AnalyticsService(
+        backgroundActivityManager: BackgroundActivityManager(),
+        viewEventPublisher: publisher,
+        pendingViewEventsDao: dao,
+        viewEventRetryService: retryService,
+      );
+      await analytics.initialize();
+      retryService.setPublishingEnabled(true);
+    });
+
+    tearDown(() async {
+      analytics.dispose();
+      await database.close();
+      tempDir.deleteSync(recursive: true);
+    });
+
+    test('does not report a plain Kind 1111 video comment as a video that '
+        'lost its d tag', () async {
+      await trackStart(
+        videoComment(eventKind: EventKind.comment).toSyntheticVideoEvent(),
+      );
+
+      expect(
+        drops,
+        isNot(contains(ViewEventDropReason.missingAddressableDTag)),
+        reason: 'a regular event has no address, which is not a defect',
+      );
+      expect(await dao.getRetryableForUser(userPubkey: _userPubkey), isEmpty);
+      verifyNever(() => mockNostr.publishEvent(any()));
+    });
+
+    test(
+      'does not report a comment row that arrived without its kind',
+      () async {
+        // Funnelcake's comment rows can omit the kind, which Comment keeps as
+        // null; those rows are Kind 1111 comments.
+        await trackStart(videoComment().toSyntheticVideoEvent());
+
+        expect(
+          drops,
+          isNot(contains(ViewEventDropReason.missingAddressableDTag)),
+        );
+        expect(await dao.getRetryableForUser(userPubkey: _userPubkey), isEmpty);
+        verifyNever(() => mockNostr.publishEvent(any()));
+      },
+    );
+
+    test(
+      'publishes a Kind 34236 video reply under its own coordinate',
+      () async {
+        const replyCoordinate = '34236:$commenterPubkey:reply-d-tag';
+
+        await trackStart(
+          videoComment(
+            eventKind: EventKind.videoVertical,
+            addressableId: replyCoordinate,
+          ).toSyntheticVideoEvent(),
+        );
+
+        final event =
+            verify(() => mockNostr.publishEvent(captureAny())).captured.single
+                as Event;
+        final aTag = event.tags.firstWhere((tag) => tag.first == 'a');
+        expect(aTag[1], equals(replyCoordinate));
+        expect(drops, isEmpty);
       },
     );
   });
