@@ -320,6 +320,11 @@ void main() {
     });
 
     group('unavailable local storage', () {
+      // The relays hold no like for these targets unless a test says
+      // otherwise, so the check before publishing proves there is none
+      // instead of failing on an unstubbed read.
+      setUp(() => mockReadEventsSequence([<Event>[]]));
+
       // The local database is a cache, not a precondition. When it is
       // unreadable (at-rest cipher bootstrap left it unopenable, runtime
       // corruption, disk full) the Kind 7 must still reach relays: the signed
@@ -726,6 +731,11 @@ void main() {
 
     group('likeEvent', () {
       group('on an addressable target with no coordinate (#6980)', () {
+        // The relays hold no like for these targets unless a test says
+        // otherwise, so the check before publishing proves there is none
+        // instead of failing on an unstubbed read.
+        setUp(() => mockReadEventsSequence([<Event>[]]));
+
         test('still publishes the like with its kind', () async {
           stubAnyPublish();
           repository = createReportingRepository();
@@ -814,6 +824,7 @@ void main() {
       });
 
       test('publishes like reaction and stores record', () async {
+        mockReadEventsSequence([<Event>[]]);
         final mockEvent = MockEvent();
         when(() => mockEvent.id).thenReturn(testReactionEventId);
         when(
@@ -855,6 +866,7 @@ void main() {
       });
 
       test('publishes like with addressable ID when provided', () async {
+        mockReadEventsSequence([<Event>[]]);
         const testAddressableId = '34236:$testAuthorPubkey:test-d-tag';
         final mockEvent = MockEvent();
         when(() => mockEvent.id).thenReturn(testReactionEventId);
@@ -892,6 +904,7 @@ void main() {
       });
 
       test('throws LikeFailedException when publish fails', () async {
+        mockReadEventsSequence([<Event>[]]);
         when(
           () => mockNostrClient.sendLike(
             any(),
@@ -941,6 +954,7 @@ void main() {
       test(
         'writes optimistic placeholder to storage before sendLike resolves',
         () async {
+          mockReadEventsSequence([<Event>[]]);
           // Suspend sendLike with a Completer so we can observe the local
           // state mid-call. This is the heart of the Follow-pattern fix:
           // the local DB update + stream emit must happen before the
@@ -996,6 +1010,7 @@ void main() {
       );
 
       test('rolls back optimistic record when sendLike returns null', () async {
+        mockReadEventsSequence([<Event>[]]);
         when(
           () => mockNostrClient.sendLike(
             any(),
@@ -1027,6 +1042,7 @@ void main() {
       });
 
       test('rolls back optimistic record when sendLike throws', () async {
+        mockReadEventsSequence([<Event>[]]);
         when(
           () => mockNostrClient.sendLike(
             any(),
@@ -1122,6 +1138,7 @@ void main() {
       test(
         'stale restricted rollback preserves a newer confirmed record',
         () async {
+          mockReadEventsSequence([<Event>[]]);
           LikeRecord? storedRecord;
           final firstPublish = Completer<Event>();
           final deleteStarted = Completer<void>();
@@ -1197,6 +1214,7 @@ void main() {
       test(
         'stale relay-failure rollback preserves a newer confirmed record',
         () async {
+          mockReadEventsSequence([<Event>[]]);
           LikeRecord? storedRecord;
           final firstPublish = Completer<Event>();
           final deleteStarted = Completer<void>();
@@ -1276,6 +1294,7 @@ void main() {
       // guard at the top of likeEvent does not fire.
       test('queues offline action and preserves optimistic state when '
           'sendLike returns null and queueOfflineAction is wired', () async {
+        mockReadEventsSequence([<Event>[]]);
         when(
           () => mockNostrClient.sendLike(
             any(),
@@ -1331,6 +1350,7 @@ void main() {
 
       test('queues offline action when sendLike throws and '
           'queueOfflineAction is wired', () async {
+        mockReadEventsSequence([<Event>[]]);
         when(
           () => mockNostrClient.sendLike(
             any(),
@@ -1371,6 +1391,11 @@ void main() {
     });
 
     group('unlikeEvent', () {
+      // The relays hold no like for these targets unless a test says
+      // otherwise, so the check before publishing proves there is none
+      // instead of failing on an unstubbed read.
+      setUp(() => mockReadEventsSequence([<Event>[]]));
+
       test(
         'retracts a reaction whose publish is still in flight (#7001)',
         () async {
@@ -1913,6 +1938,11 @@ void main() {
     });
 
     group('toggleLike', () {
+      // The relays hold no like for these targets unless a test says
+      // otherwise, so the check before publishing proves there is none
+      // instead of failing on an unstubbed read.
+      setUp(() => mockReadEventsSequence([<Event>[]]));
+
       test('likes when not liked and returns true', () async {
         final mockEvent = MockEvent();
         when(() => mockEvent.id).thenReturn(testReactionEventId);
@@ -2899,6 +2929,11 @@ void main() {
     });
 
     group('getLikeCount', () {
+      // The relays hold no like for these targets unless a test says
+      // otherwise, so the check before publishing proves there is none
+      // instead of failing on an unstubbed read.
+      setUp(() => mockReadEventsSequence([<Event>[]]));
+
       test('returns null and caches nothing when no relay answered', () async {
         when(() => mockNostrClient.countEvents(any())).thenThrow(
           const CountUnavailableException('No relay responded to COUNT'),
@@ -5801,6 +5836,11 @@ void main() {
     });
 
     group('watchLikedEventIds', () {
+      // The relays hold no like for these targets unless a test says
+      // otherwise, so the check before publishing proves there is none
+      // instead of failing on an unstubbed read.
+      setUp(() => mockReadEventsSequence([<Event>[]]));
+
       test('seeds from local storage, then streams repository cache', () async {
         final mockEvent = MockEvent();
         when(() => mockEvent.id).thenReturn(testReactionEventId);
@@ -6369,6 +6409,11 @@ void main() {
     });
 
     group('executeLikeAction', () {
+      // The relays hold no like for these targets unless a test says
+      // otherwise, so the check before publishing proves there is none
+      // instead of failing on an unstubbed read.
+      setUp(() => mockReadEventsSequence([<Event>[]]));
+
       test('logs a replayed like missing its coordinate (#6980)', () async {
         // The relay holds no like, so the replay goes on to publish.
         mockReadEventsSequence([<Event>[]]);
@@ -6733,6 +6778,11 @@ void main() {
     });
 
     group('executeUnlikeAction', () {
+      // The relays hold no like for these targets unless a test says
+      // otherwise, so the check before publishing proves there is none
+      // instead of failing on an unstubbed read.
+      setUp(() => mockReadEventsSequence([<Event>[]]));
+
       test('publishes deletion directly to relays', () async {
         when(
           () => mockNostrClient.sendLike(
