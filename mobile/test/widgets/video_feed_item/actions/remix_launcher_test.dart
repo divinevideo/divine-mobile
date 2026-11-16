@@ -4,6 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/video_feed_item/actions/remix_launcher.dart';
 
 void main() {
@@ -54,7 +55,13 @@ void main() {
         ],
       );
       addTearDown(router.dispose);
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: router,
+        ),
+      );
       await tester.tap(find.text('open sheet'));
       await tester.pumpAndSettle();
     }
