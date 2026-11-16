@@ -82,7 +82,9 @@ Dispatch `acknowledge` with the exact item from the run summary: an
 or a failed operation identity. Resolve the provider failure before acknowledging.
 The acknowledgement is durable and recorded in the deployment history. Version
 acknowledgements are bound to the observed marketing version as well as the store
-record ID, so a later rejection on a reused record requires a new acknowledgement.
+record ID. Positive submission acceptance consumes the grant, and a newer review
+submission timestamp invalidates an older acknowledgement, so a later rejection
+requires a new acknowledgement even when the record and version are reused.
 A repeated provider failure creates a new hold even after an earlier acknowledgement.
 
 An acknowledged App Store rejection resolves only its exact existing review item

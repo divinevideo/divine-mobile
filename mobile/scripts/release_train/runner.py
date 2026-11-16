@@ -22,6 +22,8 @@ from release_train.allocator import reconcile
 from release_train.coordinator import (
     ACTIVE,
     affects_app,
+    consume_version_acknowledgements,
+    current_acknowledgements,
     observe,
     plan_tick,
     version_ack_key,
@@ -118,7 +120,9 @@ def reconcile_operations(state, snapshot):
                         ]
             elif operation["status"] in {"started", "ambiguous"}:
                 state.setdefault("holds", {})[platform] = key
-        elif operation["status"] in {"started", "ambiguous", "deferred"}:
+        elif operation["status"] in {"started", "ambiguous", "deferred"} or (
+            kind == "app-store" and operation["status"] == "acknowledged"
+        ):
             build = action.get("build", action)
             observed = False
             if kind in {"public-beta", "attach-beta-groups"}:
@@ -168,6 +172,14 @@ def reconcile_operations(state, snapshot):
                     for v in snapshot.get("ios", {}).get("versions", [])
                 )
                 if superseded:
+                    consume_version_acknowledgements(
+                        state,
+                        {
+                            v["id"]
+                            for v in snapshot.get("ios", {}).get("versions", [])
+                            if v["state"] in accepted_states
+                        },
+                    )
                     operation["status"] = "superseded"
                     if state.get("holds", {}).get(platform) == key:
                         state["holds"].pop(platform)
@@ -187,6 +199,8 @@ def reconcile_operations(state, snapshot):
                     for b in snapshot.get("android", {}).get(track, [])
                 )
             if observed:
+                if kind == "app-store":
+                    consume_version_acknowledgements(state, {v["id"] for v in matching})
                 operation["status"] = "done"
                 if kind == "retry-android-upload":
                     state.pop("deferred_android", None)
@@ -238,14 +252,22 @@ def execute_plan(plan, state, snapshot, store, provider):
 def acknowledge(state, item, snapshot):
     known = (
         set(state.get("holds", {}).values())
-        | {"ios-build:" + b["id"] for b in snapshot.get("ios", {}).get("builds", [])}
+        | {
+            "ios-build:" + b["id"]
+            for b in snapshot.get("ios", {}).get("builds", [])
+            if b.get("external") in {"BETA_REJECTED", "REJECTED"}
+        }
         | {
             "ios-version:" + v["id"]
             for v in snapshot.get("ios", {}).get("versions", [])
+            if v["state"]
+            in {"REJECTED", "METADATA_REJECTED", "INVALID_BINARY", "DEVELOPER_REJECTED"}
         }
     )
     if item not in known:
-        raise ProviderError("Acknowledgement does not identify an observed item")
+        raise ProviderError(
+            "Acknowledgement must identify an observed rejection or current failure hold"
+        )
     versions = snapshot.get("ios", {}).get("versions", [])
     acknowledged_item = next(
         (version_ack_key(v) for v in versions if item == "ios-version:" + v["id"]), item
@@ -851,6 +873,7 @@ class Runtime:
         state["deployment_stages"][key] = marker
 
     def audit_observations(self, snapshot, state):
+        acknowledged_items = current_acknowledgements(snapshot, state)
         ios = snapshot.get("ios", {})
         for build in ios.get("builds", []):
             if not build.get("sha"):
@@ -867,9 +890,7 @@ class Runtime:
                     "ios-testflight-public", build, "success", state, "available"
                 )
             elif build.get("external") in {"BETA_REJECTED", "REJECTED"}:
-                acknowledged = "ios-build:" + build["id"] in state.get(
-                    "acknowledged", []
-                )
+                acknowledged = "ios-build:" + build["id"] in acknowledged_items
                 self.deploy(
                     "ios-testflight-public",
                     build,
@@ -884,7 +905,7 @@ class Runtime:
             if not matches or not matches[0].get("sha"):
                 continue
             status = version["state"]
-            acknowledged = version_ack_key(version) in state.get("acknowledged", [])
+            acknowledged = version_ack_key(version) in acknowledged_items
             if acknowledged and status in {
                 "REJECTED",
                 "METADATA_REJECTED",
@@ -1027,6 +1048,7 @@ class Runtime:
                 state.get("acknowledged", []),
                 reviews=snapshot["ios"].get("review_submissions", []),
             )
+            consume_version_acknowledgements(state, {identifier})
             self.claim(build, "app-store")
             state.setdefault("app_store_submissions", []).append(snapshot["now"])
             self.deploy("ios-app-store", build, "in_progress", state)

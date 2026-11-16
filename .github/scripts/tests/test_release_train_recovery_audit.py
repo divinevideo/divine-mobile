@@ -340,7 +340,8 @@ class RecoveryIntegrationAuditTest(unittest.TestCase):
 
     def test_scoped_version_ack_is_audited_on_rejected_version(self):
         s = rejected_snapshot()
-        state = {"acknowledged": ["ios-version:v:1.0.30"]}
+        state = {}
+        runner.acknowledge(state, "ios-version:v", s)
         calls = []
         runtime = runner.Runtime.__new__(runner.Runtime)
         runtime.deploy = lambda *args: calls.append(args)
@@ -436,3 +437,127 @@ class ResumptionGateAuditTest(unittest.TestCase):
                 any(a["kind"] == "build" and a["platform"] == "ios" for a in actions)
             )
             self.assertFalse(any(a["kind"] == "app-store" for a in actions))
+
+
+class RejectionEpisodeAuditTest(unittest.TestCase):
+    def test_new_submission_episode_same_version_needs_fresh_ack(self):
+        s = rejected_snapshot(version="1.0.31")
+        s["ios"]["builds"][0]["version"] = "1.0.32"
+        state = soaked_state()
+        s["now"] = NOW - 100000
+        s["ios"]["review_submissions"][0]["attributes"]["submittedDate"] = NOW - 110000
+        runner.acknowledge(state, "ios-version:v", s)
+        s["now"] = NOW
+        s["ios"]["review_submissions"][0]["attributes"]["submittedDate"] = NOW - 90000
+        self.assertFalse(
+            plan_tick(s, state, {"ios": "app-store", "android": "off"})["actions"]
+        )
+        runner.acknowledge(state, "ios-version:v", s)
+        self.assertTrue(
+            any(
+                a["kind"] == "app-store"
+                for a in plan_tick(s, state, {"ios": "app-store", "android": "off"})[
+                    "actions"
+                ]
+            )
+        )
+
+    def test_positive_acceptance_consumes_acknowledgement_during_reconciliation(self):
+        s = rejected_snapshot(version="1.0.31")
+        s["ios"]["versions"][0]["state"] = "WAITING_FOR_REVIEW"
+        key = "app-store:ios:10"
+        ack = "ios-version:v:1.0.31"
+        state = {
+            "acknowledged": [ack],
+            "operations": {
+                key: {
+                    "status": "ambiguous",
+                    "started_at": NOW - 20,
+                    "action": {
+                        "kind": "app-store",
+                        "platform": "ios",
+                        "build": build(),
+                    },
+                }
+            },
+        }
+        runner.reconcile_operations(state, s)
+        self.assertNotIn(ack, state["acknowledged"])
+
+    def test_successful_publishing_consumes_grant_and_preserves_audit_history(self):
+        s = rejected_snapshot()
+        key = "ios-version:v:1.0.30"
+        state = {
+            "acknowledged": [key],
+            "acknowledgement_events": [{"item": key, "observed_at": NOW}],
+        }
+        runtime = runner.Runtime.__new__(runner.Runtime)
+
+        class Client:
+            def submit_store(self, build, versions, acknowledged, *, reviews):
+                if key not in acknowledged:
+                    raise AssertionError("original rejected item was not authorized")
+                return "v"
+
+        runtime.apple = Client()
+        runtime.claim = lambda *args: None
+        runtime.deploy = lambda *args: None
+        runtime.execute(
+            {"kind": "app-store", "platform": "ios", "build": build()}, state, s
+        )
+        self.assertNotIn(key, state["acknowledged"])
+        self.assertEqual(state["acknowledgement_events"][0]["item"], key)
+
+    def test_parked_acknowledged_intent_is_superseded_by_newer_manual_release(self):
+        s = rejected_snapshot(version="1.0.32")
+        s["ios"]["versions"][0] |= {
+            "state": "READY_FOR_DISTRIBUTION",
+            "build_id": "other-build",
+        }
+        key = "app-store:ios:10"
+        state = {
+            "operations": {
+                key: {
+                    "status": "acknowledged",
+                    "started_at": NOW - 20,
+                    "action": {
+                        "kind": "app-store",
+                        "platform": "ios",
+                        "build": build(),
+                    },
+                }
+            }
+        }
+        runner.reconcile_operations(state, s)
+        self.assertEqual(state["operations"][key]["status"], "superseded")
+        self.assertNotIn("ios", state.get("holds", {}))
+
+
+class AmbiguousAcknowledgementTimeAuditTest(unittest.TestCase):
+    def test_equal_submission_and_ack_second_does_not_authorize_unknown_episode(self):
+        s = rejected_snapshot(version="1.0.31")
+        s["ios"]["builds"][0]["version"] = "1.0.32"
+        state = soaked_state()
+        s["now"] = NOW - 90000
+        s["ios"]["review_submissions"][0]["attributes"]["submittedDate"] = NOW - 90000
+        runner.acknowledge(state, "ios-version:v", s)
+        s["now"] = NOW
+        self.assertFalse(
+            plan_tick(s, state, {"ios": "app-store", "android": "off"})["actions"]
+        )
+
+
+class FutureAcknowledgementAuditTest(unittest.TestCase):
+    def test_only_observed_rejections_or_current_failure_holds_can_be_acknowledged(
+        self,
+    ):
+        s = snapshot()
+        s["ios"]["builds"] = [build()]
+        s["ios"]["versions"] = [
+            {"id": "v", "version": "1.0.31", "state": "WAITING_FOR_REVIEW"}
+        ]
+        for target in ["ios-build:10", "ios-version:v", "play-production:android:10"]:
+            state = {}
+            with self.assertRaises(ProviderError):
+                runner.acknowledge(state, target, s)
+            self.assertFalse(state.get("acknowledged"))

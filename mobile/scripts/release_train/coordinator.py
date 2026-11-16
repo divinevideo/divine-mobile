@@ -96,6 +96,31 @@ def unresolved_review_is_acknowledged(review, versions, acknowledged):
     )
 
 
+def current_acknowledgements(snapshot, state):
+    acknowledged = set(state.get("acknowledged", []))
+    latest = {}
+    for event in state.get("acknowledgement_events", []):
+        latest[event["item"]] = max(latest.get(event["item"], 0), event["observed_at"])
+    versions = {v["id"]: v for v in snapshot.get("ios", {}).get("versions", [])}
+    for review in snapshot.get("ios", {}).get("review_submissions", []):
+        submitted = review["attributes"].get("submittedDate") or 0
+        for item in review.get("items", []):
+            version = versions.get(item.get("version_id"))
+            if version is not None:
+                key = version_ack_key(version)
+                if submitted >= latest.get(key, 0):
+                    acknowledged.discard(key)
+    return acknowledged
+
+
+def consume_version_acknowledgements(state, version_ids):
+    prefixes = tuple("ios-version:" + identifier + ":" for identifier in version_ids)
+    if prefixes:
+        state["acknowledged"] = [
+            key for key in state.get("acknowledged", []) if not key.startswith(prefixes)
+        ]
+
+
 def affects_app(path):
     if (
         path.endswith(".md")
@@ -120,6 +145,15 @@ def observe(snapshot, previous):
             and b.get("external") in {"READY_FOR_BETA_TESTING", "IN_BETA_TESTING"}
         ):
             state.setdefault("public_available", {}).setdefault(b["id"], now)
+    consume_version_acknowledgements(
+        state,
+        {
+            v["id"]
+            for v in snapshot.get("ios", {}).get("versions", [])
+            if v["state"]
+            in STORE_WAITING | {"READY_FOR_SALE", "READY_FOR_DISTRIBUTION"}
+        },
+    )
     internal = snapshot.get("android", {}).get("internal", [])
     offered = {str(b["number"]) for b in internal}
     periods = state.setdefault("internal_periods", {})
@@ -149,7 +183,7 @@ def plan_tick(snapshot, state, levels):
     proposed = []
     dry_platforms = {p for p, level in levels.items() if level == "dry-run"}
     now = snapshot["now"]
-    ack = set(state.get("acknowledged", []))
+    ack = current_acknowledgements(snapshot, state)
 
     def action(kind, platform, **values):
         (proposed if platform in dry_platforms else actions).append(
