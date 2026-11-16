@@ -9,7 +9,7 @@
 // Each copy is the whole picture at half size. Its brightness is cut into a
 // dark, a middle and a light tone, with a narrow blend between them that
 // keeps the edges from crawling as the picture moves, and each tone takes
-// that copy's colour. The intensity mixes the copies' own colours into the
+// that copy's colour. The intensity is how far the copies turn into the
 // print; the grid shows at any intensity above zero, so at zero the picture
 // is left as it is.
 //
