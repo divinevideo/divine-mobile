@@ -144,7 +144,7 @@ class CoordinatorTest(unittest.TestCase):
             self.assertFalse(
                 plan_tick(s, state, {"ios": "app-store", "android": "off"})["actions"]
             )
-        state["acknowledged"] = ["ios-version:v"]
+        state["acknowledged"] = ["ios-version:v:1.0.30"]
         self.assertEqual(
             plan_tick(s, state, {"ios": "app-store", "android": "off"})["actions"][0][
                 "kind"

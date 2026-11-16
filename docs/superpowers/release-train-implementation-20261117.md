@@ -80,7 +80,19 @@ six hours, including when a manual build supersedes a scheduled candidate.
 Dispatch `acknowledge` with the exact item from the run summary: an
 `ios-build:<store-id>` beta rejection, `ios-version:<store-id>` store rejection,
 or a failed operation identity. Resolve the provider failure before acknowledging.
-The acknowledgement is durable and recorded in the deployment history.
+The acknowledgement is durable and recorded in the deployment history. Version
+acknowledgements are bound to the observed marketing version as well as the store
+record ID, so a later rejection on a reused record requires a new acknowledgement.
+A repeated provider failure creates a new hold even after an earlier acknowledgement.
+
+An acknowledged App Store rejection resolves only its exact existing review item
+and resubmits that submission. It never removes unrelated items or cancels a
+review. Interrupted draft/item creation is resumed using the same resources;
+only positive accepted-review evidence completes the mutation journal. When an
+error stopped after version edits, acknowledge the current rejected version and
+the named operation hold after checking the provider state. A manual accepted
+submission of the same or a newer version supersedes an older interrupted intent,
+so the old artifact is not replayed.
 
 A failed build is retried once. The shared allocator reuses only an unspent
 identity and verifies the previous scheduled builder is terminal; spent

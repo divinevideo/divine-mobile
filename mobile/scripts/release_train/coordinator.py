@@ -75,6 +75,27 @@ LEVELS = {
 }
 
 
+def version_ack_key(version):
+    return "ios-version:" + version["id"] + ":" + version["version"]
+
+
+def unresolved_review_is_acknowledged(review, versions, acknowledged):
+    items = review.get("items", [])
+    if len(items) != 1:
+        return False
+    item = items[0]
+    if item.get("state") not in {"REJECTED", "READY_FOR_REVIEW"}:
+        return False
+    matching = [v for v in versions if v["id"] == item.get("version_id")]
+    return len(matching) == 1 and (
+        version_ack_key(matching[0]) in acknowledged
+        or (
+            item.get("state") == "READY_FOR_REVIEW"
+            and matching[0]["state"] in {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW"}
+        )
+    )
+
+
 def affects_app(path):
     if (
         path.endswith(".md")
@@ -151,11 +172,10 @@ def plan_tick(snapshot, state, levels):
             continue
         if state.get("holds", {}).get(platform):
             hold = state["holds"][platform]
-            if hold not in ack:
-                errors.append(
-                    f"{platform}: acknowledge {hold} after resolving the provider failure"
-                )
-                continue
+            errors.append(
+                f"{platform}: acknowledge {hold} after resolving the provider failure"
+            )
+            continue
         # Unknown provider states hold this platform, including its builds.
         if platform == "ios" and (
             any(b.get("external") not in BETA_STATES for b in data.get("builds", []))
@@ -223,6 +243,15 @@ def plan_tick(snapshot, state, levels):
                     action("attach-beta-groups", "ios", build=b)
             builds = data.get("builds", [])
             dates = data.get("submissions", [])
+            for b in builds:
+                if (
+                    b.get("external") in BETA_REJECTED
+                    and "ios-build:" + b["id"] not in ack
+                ):
+                    reasons.append(
+                        "ios public: rejection hold; resolve the issue then acknowledge ios-build:"
+                        + b["id"]
+                    )
             rejected = any(
                 b.get("external") in BETA_REJECTED and "ios-build:" + b["id"] not in ack
                 for b in builds
@@ -264,24 +293,42 @@ def plan_tick(snapshot, state, levels):
                 versions = data.get("versions", [])
                 blocked = any(
                     v["state"] in STORE_WAITING
-                    or (
-                        v["state"] in STORE_REJECTED
-                        and "ios-version:" + v["id"] not in ack
-                    )
+                    or (v["state"] in STORE_REJECTED and version_ack_key(v) not in ack)
                     for v in versions
                 )
+                for version in versions:
+                    if (
+                        version["state"] in STORE_REJECTED
+                        and version_ack_key(version) not in ack
+                    ):
+                        reasons.append(
+                            "ios app-store: rejection hold for "
+                            + version["version"]
+                            + "; resolve the issue then acknowledge ios-version:"
+                            + version["id"]
+                        )
                 reviews = data.get("review_submissions", [])
                 blocked = blocked or any(
                     r["attributes"]["state"]
                     in {
                         "WAITING_FOR_REVIEW",
                         "IN_REVIEW",
-                        "UNRESOLVED_ISSUES",
                         "CANCELING",
                         "COMPLETING",
                     }
                     for r in reviews
                 )
+                blocked = blocked or any(
+                    r["attributes"]["state"] == "UNRESOLVED_ISSUES"
+                    and not unresolved_review_is_acknowledged(r, versions, ack)
+                    for r in reviews
+                )
+                resumable = {
+                    o["action"]["build"]["number"]
+                    for o in state.get("operations", {}).values()
+                    if o.get("status") == "acknowledged"
+                    and o["action"]["kind"] == "app-store"
+                }
                 submitted = [
                     r["attributes"]["submittedDate"]
                     for r in reviews
@@ -311,8 +358,13 @@ def plan_tick(snapshot, state, levels):
                     in {"READY_FOR_BETA_TESTING", "IN_BETA_TESTING"}
                     and b["id"] in state.get("public_available", {})
                     and now - state["public_available"][b["id"]] >= 6 * HOUR
-                    and parse_version(b["version"]) > highest
+                    and (
+                        parse_version(b["version"]) > highest
+                        or b["number"] in resumable
+                    )
                 ]
+                if resumable:
+                    eligible = [b for b in eligible if b["number"] in resumable]
                 if not blocked and eligible and now - max(submitted, default=0) >= DAY:
                     action(
                         "app-store",

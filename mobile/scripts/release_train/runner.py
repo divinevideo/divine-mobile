@@ -19,7 +19,13 @@ from start_ios_release import APP_ID as CM_APP_ID
 from start_ios_release import TEAM_ID as CM_TEAM_ID
 
 from release_train.allocator import reconcile
-from release_train.coordinator import ACTIVE, affects_app, observe, plan_tick
+from release_train.coordinator import (
+    ACTIVE,
+    affects_app,
+    observe,
+    plan_tick,
+    version_ack_key,
+)
 from release_train.ledger import GhLedgerStore, claim_path
 from release_train.providers import (
     APP_ID,
@@ -34,6 +40,7 @@ from release_train.providers import (
     request_json,
     verify_bundle,
 )
+from release_train.versions import parse_version
 
 STATE_PATH = "coordinator/state-v1.json"
 DEFAULT_GROUPS = [
@@ -137,10 +144,41 @@ def reconcile_operations(state, snapshot):
                         if state.get("holds", {}).get(platform) == key:
                             state["holds"].pop(platform)
             elif kind == "app-store":
-                observed = any(
-                    v.get("build_id") == build["id"]
-                    and v["state"] not in {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW"}
+                matching = [
+                    v
                     for v in snapshot.get("ios", {}).get("versions", [])
+                    if v.get("build_id") == build["id"]
+                ]
+                accepted_states = {
+                    "WAITING_FOR_REVIEW",
+                    "IN_REVIEW",
+                    "ACCEPTED",
+                    "PENDING_DEVELOPER_RELEASE",
+                    "PENDING_APPLE_RELEASE",
+                    "PROCESSING_FOR_DISTRIBUTION",
+                    "WAITING_FOR_EXPORT_COMPLIANCE",
+                    "READY_FOR_SALE",
+                    "READY_FOR_DISTRIBUTION",
+                }
+                superseded = any(
+                    v["state"] in accepted_states
+                    and v.get("build_id")
+                    and v["build_id"] != build["id"]
+                    and parse_version(v["version"]) >= parse_version(build["version"])
+                    for v in snapshot.get("ios", {}).get("versions", [])
+                )
+                if superseded:
+                    operation["status"] = "superseded"
+                    if state.get("holds", {}).get(platform) == key:
+                        state["holds"].pop(platform)
+                    continue
+                observed = any(v["state"] in accepted_states for v in matching)
+                ids = {v["id"] for v in matching}
+                observed = observed or any(
+                    (r["attributes"].get("submittedDate") or 0)
+                    >= operation.get("started_at", snapshot.get("now", 0))
+                    and any(i.get("version_id") in ids for i in r.get("items", []))
+                    for r in snapshot.get("ios", {}).get("review_submissions", [])
                 )
             elif kind in {"play-production", "retry-android-upload"}:
                 track = "production" if kind == "play-production" else "internal"
@@ -154,6 +192,8 @@ def reconcile_operations(state, snapshot):
                     state.pop("deferred_android", None)
                 if state.get("holds", {}).get(platform) == key:
                     state["holds"].pop(platform)
+            elif operation["status"] in {"started", "ambiguous"}:
+                state.setdefault("holds", {})[platform] = key
 
 
 def execute_plan(plan, state, snapshot, store, provider):
@@ -164,10 +204,7 @@ def execute_plan(plan, state, snapshot, store, provider):
         old = state.setdefault("operations", {}).get(key)
         if old and old["status"] not in {"deferred", "acknowledged"}:
             continue
-        if state.get("holds", {}).get(action["platform"]) not in (
-            None,
-            *state.get("acknowledged", []),
-        ):
+        if state.get("holds", {}).get(action["platform"]) is not None:
             continue
         state["operations"][key] = {
             "action": action,
@@ -209,7 +246,17 @@ def acknowledge(state, item, snapshot):
     )
     if item not in known:
         raise ProviderError("Acknowledgement does not identify an observed item")
-    state.setdefault("acknowledged", []).append(item)
+    versions = snapshot.get("ios", {}).get("versions", [])
+    acknowledged_item = next(
+        (version_ack_key(v) for v in versions if item == "ios-version:" + v["id"]), item
+    )
+    state.setdefault("acknowledged", []).append(acknowledged_item)
+    state.setdefault("acknowledgement_events", []).append(
+        {
+            "item": acknowledged_item,
+            "observed_at": snapshot.get("now", int(time.time())),
+        }
+    )
     state["holds"] = {
         p: key for p, key in state.get("holds", {}).items() if key != item
     }
@@ -633,6 +680,23 @@ class Runtime:
                 raise ProviderError("Unknown Apple review submission state")
             if attrs.get("submittedDate"):
                 attrs["submittedDate"] = epoch(attrs["submittedDate"])
+            if attrs["state"] in {"UNRESOLVED_ISSUES", "READY_FOR_REVIEW"}:
+                r["items"] = []
+                for item in apple.pages(
+                    "/reviewSubmissions/" + r["id"] + "/items?include=appStoreVersion"
+                ):
+                    version = (
+                        item.get("relationships", {})
+                        .get("appStoreVersion", {})
+                        .get("data")
+                    )
+                    r["items"].append(
+                        {
+                            "id": item["id"],
+                            "state": item["attributes"]["state"],
+                            "version_id": version["id"] if version else None,
+                        }
+                    )
         return {
             "builds": normalized,
             "versions": versions,
@@ -820,10 +884,13 @@ class Runtime:
             if not matches or not matches[0].get("sha"):
                 continue
             status = version["state"]
-            acknowledged = "ios-version:" + version["id"] in state.get(
-                "acknowledged", []
-            )
-            if acknowledged:
+            acknowledged = version_ack_key(version) in state.get("acknowledged", [])
+            if acknowledged and status in {
+                "REJECTED",
+                "METADATA_REJECTED",
+                "INVALID_BINARY",
+                "DEVELOPER_REJECTED",
+            }:
                 self.deploy(
                     "ios-app-store", matches[0], "inactive", state, "acknowledged"
                 )
@@ -856,7 +923,11 @@ class Runtime:
             )
         for key in state.get("acknowledged", []):
             operation = state.get("operations", {}).get(key)
-            if operation and operation["action"].get("build"):
+            if (
+                operation
+                and operation.get("status") == "acknowledged"
+                and operation["action"].get("build")
+            ):
                 action = operation["action"]
                 environment = {
                     "public-beta": "ios-testflight-public",
@@ -951,7 +1022,10 @@ class Runtime:
             return {}
         if kind == "app-store":
             identifier = self.apple.submit_store(
-                build, snapshot["ios"]["versions"], state.get("acknowledged", [])
+                build,
+                snapshot["ios"]["versions"],
+                state.get("acknowledged", []),
+                reviews=snapshot["ios"].get("review_submissions", []),
             )
             self.claim(build, "app-store")
             state.setdefault("app_store_submissions", []).append(snapshot["now"])

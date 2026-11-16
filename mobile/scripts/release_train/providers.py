@@ -14,6 +14,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from release_train.coordinator import unresolved_review_is_acknowledged, version_ack_key
+
 NOTES = "This update includes the latest tested changes to Divine."
 APP_ID = "6747959501"
 PACKAGE = "co.openvine.app"
@@ -366,11 +368,16 @@ class Apple:
                 {"data": [{"type": "builds", "id": build["id"]}]},
             )
 
-    def submit_store(self, build, versions, acknowledged):
+    def submit_store(self, build, versions, acknowledged, *, reviews=None):
         editable = [
             v
             for v in versions
             if v["state"] == "PREPARE_FOR_SUBMISSION"
+            or (
+                v["state"] == "READY_FOR_REVIEW"
+                and v.get("build_id") == build["id"]
+                and v["version"] == build["version"]
+            )
             or (
                 v["state"]
                 in {
@@ -379,13 +386,56 @@ class Apple:
                     "INVALID_BINARY",
                     "DEVELOPER_REJECTED",
                 }
-                and "ios-version:" + v["id"] in acknowledged
+                and version_ack_key(v) in acknowledged
             )
         ]
         if len(editable) > 1:
             raise ProviderError(
                 "Multiple editable App Store versions; reconcile in console"
             )
+        reviews = reviews or []
+        unresolved = [
+            r for r in reviews if r["attributes"]["state"] == "UNRESOLVED_ISSUES"
+        ]
+        if len(unresolved) > 1 or any(
+            not unresolved_review_is_acknowledged(r, versions, acknowledged)
+            for r in unresolved
+        ):
+            raise ProviderError(
+                "Resolve unrelated or unacknowledged review items in App Store Connect before resubmitting"
+            )
+        existing_review = unresolved[0] if unresolved else None
+        if existing_review and (
+            not editable
+            or existing_review["items"][0].get("version_id") != editable[0]["id"]
+        ):
+            raise ProviderError(
+                "Rejected review ownership does not match the editable App Store version"
+            )
+        drafts = [r for r in reviews if r["attributes"]["state"] == "READY_FOR_REVIEW"]
+        if len(drafts) + len(unresolved) > 1:
+            raise ProviderError(
+                "Multiple unfinished App Store submissions; reconcile their ownership in console"
+            )
+        if drafts:
+            draft = drafts[0]
+            items = draft.get("items")
+            if (
+                items is None
+                or len(items) > 1
+                or (
+                    items
+                    and (
+                        not editable
+                        or items[0].get("version_id") != editable[0]["id"]
+                        or items[0].get("state") != "READY_FOR_REVIEW"
+                    )
+                )
+            ):
+                raise ProviderError(
+                    "Unrelated draft review items require App Store Connect reconciliation"
+                )
+            existing_review = draft
         attrs = {"versionString": build["version"], "releaseType": "AFTER_APPROVAL"}
         if editable:
             identifier = editable[0]["id"]
@@ -436,29 +486,47 @@ class Apple:
                     "appStoreVersionLocalizations", loc["id"], {"whatsNew": NOTES}
                 ),
             )
-        result = self.call(
-            "POST",
-            "/reviewSubmissions",
-            self.resource(
-                "reviewSubmissions",
-                attributes={"platform": "IOS"},
-                relationships={"app": self.relationship("apps", APP_ID)},
-            ),
-        )
-        review = result["data"]["id"]
-        self.call(
-            "POST",
-            "/reviewSubmissionItems",
-            self.resource(
-                "reviewSubmissionItems",
-                relationships={
-                    "reviewSubmission": self.relationship("reviewSubmissions", review),
-                    "appStoreVersion": self.relationship(
-                        "appStoreVersions", identifier
+        if existing_review:
+            review = existing_review["id"]
+            items = existing_review.get("items", [])
+        else:
+            result = self.call(
+                "POST",
+                "/reviewSubmissions",
+                self.resource(
+                    "reviewSubmissions",
+                    attributes={"platform": "IOS"},
+                    relationships={"app": self.relationship("apps", APP_ID)},
+                ),
+            )
+            review = result["data"]["id"]
+            items = []
+        if items:
+            item = items[0]
+            if item["state"] == "REJECTED":
+                self.call(
+                    "PATCH",
+                    "/reviewSubmissionItems/" + item["id"],
+                    self.resource(
+                        "reviewSubmissionItems", item["id"], {"resolved": True}
                     ),
-                },
-            ),
-        )
+                )
+        else:
+            self.call(
+                "POST",
+                "/reviewSubmissionItems",
+                self.resource(
+                    "reviewSubmissionItems",
+                    relationships={
+                        "reviewSubmission": self.relationship(
+                            "reviewSubmissions", review
+                        ),
+                        "appStoreVersion": self.relationship(
+                            "appStoreVersions", identifier
+                        ),
+                    },
+                ),
+            )
         self.call(
             "PATCH",
             "/reviewSubmissions/" + review,
