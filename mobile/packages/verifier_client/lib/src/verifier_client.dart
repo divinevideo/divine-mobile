@@ -44,6 +44,11 @@ class VerifierClient {
   /// cannot drift apart.
   static const String _oauthRevokePath = '/auth/oauth/revoke';
 
+  /// Path of the Confirmation access endpoint, shared by
+  /// [fetchConfirmationAccess] and [confirmationAccessUrl] for the same
+  /// reason.
+  static const String _confirmationAccessPath = '/auth/confirmation-access';
+
   final String _baseUrl;
   final http.Client _httpClient;
   final Duration _timeout;
@@ -262,6 +267,51 @@ class VerifierClient {
   /// directly would skip the normalization `Uri.parse` applies, and the
   /// verifier compares the `u` tag to the request URL exactly.
   String get oauthRevokeUrl => _uriFor(_oauthRevokePath).toString();
+
+  /// Asks the verifier whether the signer of [nip98Event] holds Divine
+  /// Confirmation.
+  ///
+  /// [nip98Event] must be a signed NIP-98 (kind 27235) event whose `u` tag is
+  /// [confirmationAccessUrl] and whose `method` tag is `GET`. It travels as
+  /// `Authorization: Nostr <base64 of its JSON>`.
+  ///
+  /// Returns true for `200 {"access":"yes"}` and false for
+  /// `200 {"access":"no"}`. Every other answer is null: the verifier said it
+  /// could not tell (`"unavailable"`), refused the request, failed, or is an
+  /// older deployment without this endpoint (404). None of those is a "no".
+  ///
+  /// Throws [VerifierTimeoutException] and [VerifierNetworkException] as
+  /// [verifyBatch] does.
+  Future<bool?> fetchConfirmationAccess({
+    required Map<String, dynamic> nip98Event,
+  }) async {
+    final uri = _uriFor(_confirmationAccessPath);
+    final authorization =
+        'Nostr ${base64Encode(utf8.encode(jsonEncode(nip98Event)))}';
+    final res = await _fetch(
+      () => _httpClient.get(uri, headers: {'Authorization': authorization}),
+    );
+    if (res.statusCode != 200) return null;
+    final Object? json;
+    try {
+      json = jsonDecode(res.body);
+    } on FormatException {
+      return null;
+    }
+    if (json is! Map<String, dynamic>) return null;
+    return switch (json['access']) {
+      'yes' => true,
+      'no' => false,
+      _ => null,
+    };
+  }
+
+  /// Absolute URL of the Confirmation access endpoint, for the `u` tag of the
+  /// NIP-98 event passed to [fetchConfirmationAccess].
+  ///
+  /// Built through [_uriFor] for the same reason as [oauthRevokeUrl].
+  String get confirmationAccessUrl =>
+      _uriFor(_confirmationAccessPath).toString();
 
   /// The one place a request URL is built.
   ///

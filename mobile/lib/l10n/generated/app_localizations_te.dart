@@ -13884,6 +13884,21 @@ class AppLocalizationsTe extends AppLocalizations {
       'ప్రొటెక్టెడ్-మైనర్ ఓవర్‌రైడ్ క్లియర్ చేయబడింది';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
   String get commentsRecordVideoButtonLabel =>
       'వీడియో వ్యాఖ్యను రికార్డ్ చేయండి';
 

@@ -12762,6 +12762,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get devOptionsProtectedMinorClearedToast => '未成年保护覆盖已清除';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
   String get commentsRecordVideoButtonLabel => '录制视频评论';
 
   @override

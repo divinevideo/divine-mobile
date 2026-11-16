@@ -3,6 +3,8 @@
 // ABOUTME: Shows page load performance timing data for debugging
 // ABOUTME: Includes video format selector for A/B testing server-side formats
 
+import 'dart:async';
+
 import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
@@ -11,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/features/confirmation/confirmation_access_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/models/environment_config.dart';
@@ -28,6 +31,8 @@ import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/video_format_preference.dart';
 import 'package:openvine/widgets/developer/storage_footprint_section.dart';
 import 'package:openvine/widgets/developer_options/shorebird_patch_section.dart';
+import 'package:profile_repository/profile_repository.dart'
+    show ConfirmationAccess;
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -141,6 +146,9 @@ class _DeveloperOptionsScreenState
     final currentConfig = ref.watch(currentEnvironmentProvider);
     final reviewStatusAsync = ref.watch(
       currentMinorAccountReviewStatusProvider,
+    );
+    final confirmationAccessOverride = ref.watch(
+      confirmationAccessOverrideProvider,
     );
 
     // All available environment configurations
@@ -372,6 +380,48 @@ class _DeveloperOptionsScreenState
                         )
                       : null,
                   onTap: () => _switchFormat(option.format),
+                );
+              }),
+
+              // Outside the kDebugMode block: testers reach it on a release
+              // build by turning developer mode on.
+              Divider(color: context.vineColors.outline, height: 32),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Text(
+                  context.l10n.devOptionsConfirmationAccessTitle,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.accentPositive,
+                  ),
+                ),
+              ),
+              ..._confirmationAccessOptions(context).map((option) {
+                final (value, label) = option;
+                final isSelected = value == confirmationAccessOverride;
+                return ListTile(
+                  // Announces the current choice; the check mark is only
+                  // its visual.
+                  selected: isSelected,
+                  title: Text(
+                    label,
+                    style: VineTheme.titleMediumFont(
+                      color: context.vineColors.primaryText,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? DivineIcon(
+                          icon: DivineIconName.check,
+                          color: context.vineColors.accentPositive,
+                        )
+                      : null,
+                  onTap: () => unawaited(
+                    ref
+                        .read(confirmationAccessOverrideProvider.notifier)
+                        .set(value),
+                  ),
                 );
               }),
 
@@ -808,6 +858,23 @@ class _DeveloperOptionsScreenState
       context.pop();
     }
   }
+
+  /// The Confirmation override choices in display order; null is the
+  /// verifier's real answer.
+  List<(ConfirmationAccess?, String)> _confirmationAccessOptions(
+    BuildContext context,
+  ) => [
+    (null, context.l10n.devOptionsConfirmationAccessReal),
+    (ConfirmationAccess.has, context.l10n.devOptionsConfirmationAccessHas),
+    (
+      ConfirmationAccess.hasNot,
+      context.l10n.devOptionsConfirmationAccessHasNot,
+    ),
+    (
+      ConfirmationAccess.unknown,
+      context.l10n.devOptionsConfirmationAccessUnknown,
+    ),
+  ];
 
   Future<void> _switchFormat(VideoPlaybackFormat? format) async {
     await videoFormatPreference.setFormat(format);

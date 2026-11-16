@@ -12931,6 +12931,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get devOptionsProtectedMinorClearedToast => '보호 대상 미성년자 재정의를 해제했어요';
 
   @override
+  String get devOptionsConfirmationAccessTitle => 'Divine Confirmation access';
+
+  @override
+  String get devOptionsConfirmationAccessReal => 'Real answer';
+
+  @override
+  String get devOptionsConfirmationAccessHas => 'Has Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessHasNot => 'Doesn\'t have Confirmation';
+
+  @override
+  String get devOptionsConfirmationAccessUnknown => 'Couldn\'t check';
+
+  @override
   String get commentsRecordVideoButtonLabel => '영상 댓글 녹화';
 
   @override

@@ -10487,6 +10487,26 @@
   "devOptionsProtectedMinorEnabledToast": "Protected-minor state forced on",
   "devOptionsProtectedMinorNonMinorToast": "Protected-minor state forced off",
   "devOptionsProtectedMinorClearedToast": "Protected-minor override cleared",
+  "devOptionsConfirmationAccessTitle": "Divine Confirmation access",
+  "@devOptionsConfirmationAccessTitle": {
+    "description": "Developer options section heading for forcing whether this account has Divine Confirmation, for testing."
+  },
+  "devOptionsConfirmationAccessReal": "Real answer",
+  "@devOptionsConfirmationAccessReal": {
+    "description": "Developer options choice that uses the verifier's real answer for whether this account has Divine Confirmation."
+  },
+  "devOptionsConfirmationAccessHas": "Has Confirmation",
+  "@devOptionsConfirmationAccessHas": {
+    "description": "Developer options choice that makes the app act as if this account has Divine Confirmation."
+  },
+  "devOptionsConfirmationAccessHasNot": "Doesn't have Confirmation",
+  "@devOptionsConfirmationAccessHasNot": {
+    "description": "Developer options choice that makes the app act as if this account doesn't have Divine Confirmation."
+  },
+  "devOptionsConfirmationAccessUnknown": "Couldn't check",
+  "@devOptionsConfirmationAccessUnknown": {
+    "description": "Developer options choice that makes the app act as if it couldn't find out whether this account has Divine Confirmation."
+  },
   "commentsRecordVideoButtonLabel": "Record video comment",
   "@commentsRecordVideoButtonLabel": {
     "description": "Semantics label for the button that opens the recorder to create a video reply in comments."

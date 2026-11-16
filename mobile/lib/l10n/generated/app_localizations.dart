@@ -22875,6 +22875,36 @@ abstract class AppLocalizations {
   /// **'Protected-minor override cleared'**
   String get devOptionsProtectedMinorClearedToast;
 
+  /// Developer options section heading for forcing whether this account has Divine Confirmation, for testing.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Confirmation access'**
+  String get devOptionsConfirmationAccessTitle;
+
+  /// Developer options choice that uses the verifier's real answer for whether this account has Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Real answer'**
+  String get devOptionsConfirmationAccessReal;
+
+  /// Developer options choice that makes the app act as if this account has Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Has Confirmation'**
+  String get devOptionsConfirmationAccessHas;
+
+  /// Developer options choice that makes the app act as if this account doesn't have Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Doesn\'t have Confirmation'**
+  String get devOptionsConfirmationAccessHasNot;
+
+  /// Developer options choice that makes the app act as if it couldn't find out whether this account has Divine Confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check'**
+  String get devOptionsConfirmationAccessUnknown;
+
   /// Semantics label for the button that opens the recorder to create a video reply in comments.
   ///
   /// In en, this message translates to:

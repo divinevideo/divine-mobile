@@ -623,6 +623,11 @@ const _knownUntranslatedDebt = <String>{
   'verifyStatusSignInExpired',
   // Verify: Divine Confirmation; placeholder copy, translation debt.
   'verifyStatusNeedsConfirmation',
+  'devOptionsConfirmationAccessTitle',
+  'devOptionsConfirmationAccessReal',
+  'devOptionsConfirmationAccessHas',
+  'devOptionsConfirmationAccessHasNot',
+  'devOptionsConfirmationAccessUnknown',
   // Real public community Rooms privacy notice.
   'messagesPublicRoomsDisclosure',
   'messagesRoomRetiredDraft',
