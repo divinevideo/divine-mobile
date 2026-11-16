@@ -11731,6 +11731,28 @@
   "@verifyOneTapBadge": {
     "description": "Small marker on platforms that can be linked by signing in, without posting a proof."
   },
+  "verifyOneTapWithConfirmationBadge": "One tap with Confirmation",
+  "@verifyOneTapWithConfirmationBadge": {
+    "description": "Small marker on a platform that can be linked by signing in, when that needs Divine Confirmation the person does not have. Placeholder until #8278."
+  },
+  "verifyRenewConfirmation": "Renew Confirmation",
+  "@verifyRenewConfirmation": {
+    "description": "Button on a linked account that needs Divine Confirmation to count as verified. Opens the Divine Confirmation screen. Placeholder until #8278."
+  },
+  "verifyRenewConfirmationSemanticLabel": "Renew Divine Confirmation to restore {platform} account {identity}",
+  "@verifyRenewConfirmationSemanticLabel": {
+    "description": "Screen reader label for the button that opens the Divine Confirmation screen from a linked account that needs it. Placeholder until #8278.",
+    "placeholders": {
+      "platform": {
+        "type": "String",
+        "example": "Twitter / X"
+      },
+      "identity": {
+        "type": "String",
+        "example": "jack"
+      }
+    }
+  },
   "verifyConnectSignInLifetime": "Sign-in links last {days, plural, =1{{days} day} other{{days} days}}. After that, sign in again to keep the link.",
   "@verifyConnectSignInLifetime": {
     "description": "Notice under the sign-in explainer on the connect screen, saying how long a sign-in link lasts. Shown only when the verifier reports a lifetime for that platform; platforms whose links last until unlinked omit it, so the notice is not shown there.",

@@ -24741,6 +24741,24 @@ abstract class AppLocalizations {
   /// **'One tap'**
   String get verifyOneTapBadge;
 
+  /// Small marker on a platform that can be linked by signing in, when that needs Divine Confirmation the person does not have. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'One tap with Confirmation'**
+  String get verifyOneTapWithConfirmationBadge;
+
+  /// Button on a linked account that needs Divine Confirmation to count as verified. Opens the Divine Confirmation screen. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Renew Confirmation'**
+  String get verifyRenewConfirmation;
+
+  /// Screen reader label for the button that opens the Divine Confirmation screen from a linked account that needs it. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Renew Divine Confirmation to restore {platform} account {identity}'**
+  String verifyRenewConfirmationSemanticLabel(String platform, String identity);
+
   /// Notice under the sign-in explainer on the connect screen, saying how long a sign-in link lasts. Shown only when the verifier reports a lifetime for that platform; platforms whose links last until unlinked omit it, so the notice is not shown there.
   ///
   /// In en, this message translates to:

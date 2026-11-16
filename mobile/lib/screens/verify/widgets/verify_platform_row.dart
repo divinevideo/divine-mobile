@@ -12,6 +12,7 @@ class VerifyPlatformRow extends StatelessWidget {
   const VerifyPlatformRow({
     required this.platform,
     required this.onTap,
+    this.needsConfirmation = false,
     super.key,
   });
 
@@ -20,6 +21,10 @@ class VerifyPlatformRow extends StatelessWidget {
 
   /// Opens the connect flow for [platform].
   final VoidCallback onTap;
+
+  /// Whether linking [platform] by signing in needs Divine Confirmation that
+  /// the user lacks. Changes the badge from "One tap" to say so.
+  final bool needsConfirmation;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +64,9 @@ class VerifyPlatformRow extends StatelessWidget {
                     if (platform.supportsOAuth)
                       ExcludeSemantics(
                         child: Text(
-                          l10n.verifyOneTapBadge,
+                          needsConfirmation
+                              ? l10n.verifyOneTapWithConfirmationBadge
+                              : l10n.verifyOneTapBadge,
                           style: VineTheme.labelSmallFont(
                             color: context.vineColors.mutedText,
                           ),

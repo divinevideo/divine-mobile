@@ -18,6 +18,8 @@ class VerifyClaimRow extends StatelessWidget {
     required this.onRemove,
     this.lapse,
     this.onSignInAgain,
+    this.onRenewConfirmation,
+    this.renewNeedsStore = false,
     super.key,
   });
 
@@ -40,6 +42,14 @@ class VerifyClaimRow extends StatelessWidget {
 
   /// Renews a sign-in link that no longer verifies. Null hides the action.
   final VoidCallback? onSignInAgain;
+
+  /// Opens the Divine Confirmation screen for a link that needs it, which
+  /// renewing restores. Null hides the action.
+  final VoidCallback? onRenewConfirmation;
+
+  /// Whether this build cannot buy Divine Confirmation, so a note says where
+  /// to get it in place of the renew action.
+  final bool renewNeedsStore;
 
   @override
   Widget build(BuildContext context) {
@@ -119,6 +129,24 @@ class VerifyClaimRow extends StatelessWidget {
                   size: DivineButtonSize.small,
                   onPressed: onSignInAgain,
                   semanticLabel: l10n.verifySignInAgainSemanticLabel(
+                    verifyPlatformLabel(claim.platform),
+                    claim.identity,
+                  ),
+                ),
+              if (renewNeedsStore)
+                Text(
+                  l10n.verifyConfirmationStoreOnly,
+                  style: VineTheme.bodySmallFont(
+                    color: context.vineColors.mutedText,
+                  ),
+                )
+              else if (onRenewConfirmation case final onRenew?)
+                DivineButton(
+                  label: l10n.verifyRenewConfirmation,
+                  type: DivineButtonType.secondary,
+                  size: DivineButtonSize.small,
+                  onPressed: onRenew,
+                  semanticLabel: l10n.verifyRenewConfirmationSemanticLabel(
                     verifyPlatformLabel(claim.platform),
                     claim.identity,
                   ),

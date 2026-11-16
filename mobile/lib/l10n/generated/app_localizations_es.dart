@@ -14877,6 +14877,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get verifyOneTapBadge => 'Un toque';
 
   @override
+  String get verifyOneTapWithConfirmationBadge => 'One tap with Confirmation';
+
+  @override
+  String get verifyRenewConfirmation => 'Renew Confirmation';
+
+  @override
+  String verifyRenewConfirmationSemanticLabel(
+    String platform,
+    String identity,
+  ) {
+    return 'Renew Divine Confirmation to restore $platform account $identity';
+  }
+
+  @override
   String verifyConnectSignInLifetime(int days) {
     String _temp0 = intl.Intl.pluralLogic(
       days,

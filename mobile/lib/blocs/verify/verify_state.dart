@@ -65,6 +65,7 @@ class VerifyState extends Equatable {
     List<VerifierPlatform> platforms = const [],
     this.verifierReachable = true,
     Map<String, SignInLapse> signInCodes = const {},
+    this.confirmationAccess = ConfirmationAccess.unknown,
     this.removingKey,
     this.error,
     this.errorAttempt = 0,
@@ -94,6 +95,11 @@ class VerifyState extends Equatable {
   /// [verifiedKeys]. Can include a proof-post link on a platform with
   /// sign-in; read it through [signInLapse], which drops those.
   final Map<String, SignInLapse> signInCodes;
+
+  /// Whether the user holds Divine Confirmation, as last read. Stays
+  /// [ConfirmationAccess.unknown] until a read lands, with the flag off, and
+  /// when no platform's sign-in needs it; unknown behaves like "has".
+  final ConfirmationAccess confirmationAccess;
 
   /// Key of the claim currently being unlinked, if any.
   final String? removingKey;
@@ -151,6 +157,24 @@ class VerifyState extends Equatable {
     );
   }
 
+  /// Whether [claim] is a sign-in link the verifier stopped counting because
+  /// it needs Divine Confirmation, so Renew Confirmation can be offered.
+  ///
+  /// Needs the `confirmationSignIn` flag ([flagOn]) and a device that can run
+  /// a sign-in ([oauthUsable], false on iOS below 17.4). Not while an unlink
+  /// is rewriting the same links, and not on a link that verifies. Whether
+  /// the build can buy decides only the control shown, not this.
+  bool canRenewConfirmation(
+    IdentityClaim claim, {
+    required bool flagOn,
+    required bool oauthUsable,
+  }) =>
+      flagOn &&
+      oauthUsable &&
+      removingKey == null &&
+      !isVerified(claim) &&
+      signInLapse(claim) == SignInLapse.needsConfirmation;
+
   /// Platforms that have no link yet: the ones offering a sign-in first,
   /// each side in [verifyPlatformOrder].
   ///
@@ -191,6 +215,7 @@ class VerifyState extends Equatable {
     List<VerifierPlatform>? platforms,
     bool? verifierReachable,
     Map<String, SignInLapse>? signInCodes,
+    ConfirmationAccess? confirmationAccess,
     String? removingKey,
     VerifyError? error,
     int? errorAttempt,
@@ -204,6 +229,7 @@ class VerifyState extends Equatable {
       platforms: platforms ?? this.platforms,
       verifierReachable: verifierReachable ?? this.verifierReachable,
       signInCodes: signInCodes ?? this.signInCodes,
+      confirmationAccess: confirmationAccess ?? this.confirmationAccess,
       removingKey: clearRemoving ? null : (removingKey ?? this.removingKey),
       error: clearError ? null : (error ?? this.error),
       errorAttempt: errorAttempt ?? this.errorAttempt,
@@ -218,6 +244,7 @@ class VerifyState extends Equatable {
     platforms,
     verifierReachable,
     signInCodes,
+    confirmationAccess,
     removingKey,
     error,
     errorAttempt,
