@@ -73,6 +73,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     FeedTuningRepository? feedTuningRepository,
     Future<Iterable<String>> Function()? badgeAuthors,
     Stream<void>? badgeSubscriptionChanges,
+    Stream<String>? removedIdsStream,
   }) : _videosRepository = videosRepository,
        _followRepository = followRepository,
        _curatedListRepository = curatedListRepository,
@@ -126,6 +127,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     on<VideoFeedEnrichmentReady>(_onEnrichmentReady);
     on<VideoFeedTuningSwipeCommitted>(_onTuningSwipeCommitted);
     on<VideoFeedTuningUndoRequested>(_onTuningUndoRequested);
+    on<VideoFeedVideoRemoved>(_onVideoRemoved, transformer: sequential());
+    _removedIdsSubscription = removedIdsStream?.listen((videoId) {
+      if (!_isClosing && !isClosed) add(VideoFeedVideoRemoved(videoId));
+    });
   }
 
   final VideosRepository _videosRepository;
@@ -148,6 +153,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   final Future<Iterable<String>> Function()? _badgeAuthors;
   final Stream<void>? _badgeSubscriptionChanges;
   StreamSubscription<void>? _badgeSubscriptionsSubscription;
+  StreamSubscription<String>? _removedIdsSubscription;
 
   late final _followingFeed = FollowingVideoFeedSession(
     videosRepository: _videosRepository,
@@ -721,6 +727,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     // Flush any swipe still inside the debounce window before tearing down, so
     // the last move isn't lost on dispose.
     _resumeManager.dispose();
+    final removedIdsCancelled = _removedIdsSubscription?.cancel();
+    _removedIdsSubscription = null;
     await _hashtagsSubscription?.cancel();
     await _followingSubscription?.cancel();
     await _curatedListsSubscription?.cancel();
@@ -730,7 +738,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     _followedPeopleListsSubscription = null;
     await _badgeSubscriptionsSubscription?.cancel();
     _badgeSubscriptionsSubscription = null;
-    return super.close();
+    await super.close();
+    await removedIdsCancelled;
   }
 
   Future<void> _onHashtagsChanged(
@@ -949,7 +958,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           final existingKeys = state.videos.map((v) => v.feedDedupKey).toSet();
           final displayable = filterNewFeedVideos([
             ...state.videos,
-            ...result.videos.where(
+            ..._withoutRemovedVideos(result.videos).where(
               (v) => v.videoUrl != null && existingKeys.add(v.feedDedupKey),
             ),
           ]);
@@ -998,9 +1007,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       }
 
       // Filter out videos without valid URLs
-      final validNewVideos = result.videos
-          .where((v) => v.videoUrl != null)
-          .toList();
+      final validNewVideos = _withoutRemovedVideos(
+        result.videos,
+      ).where((v) => v.videoUrl != null).toList();
 
       // Deduplicate by logical video identity. Addressable videos can be
       // republished with fresh event IDs, and bare d-tags can collide across
@@ -1554,6 +1563,59 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     );
   }
 
+  /// Removes deleted content immediately without waiting for a feed refresh.
+  void _onVideoRemoved(
+    VideoFeedVideoRemoved event,
+    Emitter<VideoFeedBlocState> emit,
+  ) {
+    final videoId = event.videoId.toLowerCase();
+    if (state.coordination.removedVideoIds.contains(videoId)) return;
+    final removedIds = {...state.coordination.removedVideoIds, videoId};
+    bool isRemoved(VideoEvent video) =>
+        removedIds.contains(video.id.toLowerCase());
+    final removedBeforeCursor = state.videos
+        .take(state.currentIndex)
+        .where(isRemoved)
+        .length;
+    final survivors = state.videos.where((video) => !isRemoved(video)).toList();
+    final removedVisibleVideo = survivors.length != state.videos.length;
+    emit(
+      state.copyWith(
+        videos: survivors,
+        currentIndex: survivors.isEmpty
+            ? 0
+            : (state.currentIndex - removedBeforeCursor).clamp(
+                0,
+                survivors.length - 1,
+              ),
+        videoListSources: Map.of(state.videoListSources)
+          ..removeWhere((id, _) => removedIds.contains(id)),
+        listOnlyVideoIds: state.listOnlyVideoIds.difference(removedIds),
+        coordination: state.coordination.copyWith(
+          removedVideoIds: Set.unmodifiable(removedIds),
+        ),
+      ),
+    );
+    if (removedVisibleVideo && _usesHomeFeedCache(state.source)) {
+      // Replaces a pending swipe write, which may still contain the video.
+      _resumeManager.persistNow(
+        pubkey: _userPubkey,
+        mode: state.source.mode.name,
+        videos: state.videos,
+        activeIndex: state.currentIndex,
+      );
+    }
+  }
+
+  List<VideoEvent> _withoutRemovedVideos(Iterable<VideoEvent> videos) {
+    final removed = state.coordination.removedVideoIds;
+    return videos
+        .where(
+          (video) => !removed.contains(video.id.toLowerCase()),
+        )
+        .toList();
+  }
+
   /// Handle blocklist changes.
   ///
   /// When [event.blockedPubkey] is provided, removes that user's videos
@@ -1680,9 +1742,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       if (!canEmit()) return;
 
       // Filter out videos without valid URLs
-      final validVideos = result.videos
-          .where((v) => v.videoUrl != null)
-          .toList();
+      final validVideos = _withoutRemovedVideos(
+        result.videos,
+      ).where((v) => v.videoUrl != null).toList();
 
       _lastRefreshedAt = DateTime.now();
 
@@ -1764,7 +1826,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         _resumeManager.persistNow(
           pubkey: _userPubkey,
           mode: source.mode.name,
-          videos: displayedVideos,
+          videos: state.videos,
           activeIndex: state.currentIndex,
         );
       }
@@ -1855,13 +1917,15 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     bool requireCurrentSource = true,
     FeedLoadHandle? feedLoad,
   }) {
-    if (cachedValid.isEmpty || emit.isDone) return false;
+    if (emit.isDone) return false;
     if (requireCurrentSource && state.source != source) return false;
 
+    final survivingVideos = _withoutRemovedVideos(cachedValid);
+    if (survivingVideos.isEmpty) return false;
     final mode = source.mode.name;
     final displayedVideos = source.type == VideoFeedSourceType.newVideos
-        ? filterNewFeedVideos(cachedValid)
-        : cachedValid;
+        ? filterNewFeedVideos(survivingVideos)
+        : survivingVideos;
 
     // The cached window already starts at the resume position (already-watched
     // videos were dropped on write), so it is served at index 0.

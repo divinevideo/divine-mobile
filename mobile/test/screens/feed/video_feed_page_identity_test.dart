@@ -23,7 +23,11 @@ import 'package:videos_repository/videos_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
-class _VideosRepository extends Mock implements VideosRepository {}
+class _VideosRepository extends Mock implements VideosRepository {
+  _VideosRepository({Stream<String> removals = const Stream.empty()}) {
+    when(() => removedVideoIds).thenAnswer((_) => removals);
+  }
+}
 
 class _CuratedListRepository extends Mock implements CuratedListRepository {}
 
@@ -77,18 +81,22 @@ class _SafetyPolicyHome {
   final VideoPlaybackStatusCubit originalPlayback;
 }
 
-Future<_SafetyPolicyHome> _mountSafetyPolicyHome(WidgetTester tester) async {
+Future<_SafetyPolicyHome> _mountSafetyPolicyHome(
+  WidgetTester tester, {
+  Stream<String> removals = const Stream.empty(),
+}) async {
   await CacheSync.init(dao: _CacheDao());
   SharedPreferences.setMockInitialValues({
     'selected_feed_mode_$_policyViewer': 'forYou',
     'adult_content_verified_$_policyViewer': true,
   });
   final preferences = await SharedPreferences.getInstance();
-  final videos = _VideosRepository();
+  final videos = _VideosRepository(removals: removals);
   final curated = _CuratedListRepository();
   when(curated.getSubscribedLists).thenReturn([]);
-  when(() => curated.subscriptionSnapshots)
-      .thenAnswer((_) => const Stream<CuratedListSubscriptionSnapshot>.empty());
+  when(
+    () => curated.subscriptionSnapshots,
+  ).thenAnswer((_) => const Stream<CuratedListSubscriptionSnapshot>.empty());
   when(
     () => videos.getRecommendedVideos(
       userPubkey: any(named: 'userPubkey'),
@@ -212,6 +220,30 @@ void main() {
   });
 
   group('VideoFeedPage account and repository identity', () {
+    testWidgets('wires repository deletion notifications to the Home bloc', (
+      tester,
+    ) async {
+      final removals = StreamController<String>.broadcast();
+      addTearDown(removals.close);
+      final home = await _mountSafetyPolicyHome(
+        tester,
+        removals: removals.stream,
+      );
+      final deletedId = '1' * 64;
+      expect(home.originalFeed.state.coordination.removedVideoIds, isEmpty);
+      expect(removals.hasListener, isTrue);
+      removals.add(deletedId);
+      await tester.runAsync(pumpEventQueue);
+      await tester.pump();
+      expect(
+        home.originalFeed.state.coordination.removedVideoIds,
+        contains(deletedId),
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.runAsync(pumpEventQueue);
+      expect(removals.hasListener, isFalse);
+    });
+
     testWidgets(
       'legacy false flags preserve people sources and saved selection',
       (tester) async {
@@ -249,10 +281,12 @@ void main() {
         final stream =
             StreamController<List<PeopleListSearchResult>>.broadcast();
         addTearDown(stream.close);
-        when(() => people.readFollowedLists(viewerPubkey: viewer))
-            .thenAnswer((_) async => copies);
-        when(() => people.watchFollowedLists(viewerPubkey: viewer))
-            .thenAnswer((_) => stream.stream);
+        when(
+          () => people.readFollowedLists(viewerPubkey: viewer),
+        ).thenAnswer((_) async => copies);
+        when(
+          () => people.watchFollowedLists(viewerPubkey: viewer),
+        ).thenAnswer((_) => stream.stream);
         when(
           () => people.isFollowingList(
             viewerPubkey: viewer,
@@ -591,13 +625,16 @@ void main() {
         ]) {
           when(repository.getSubscribedLists).thenReturn(snapshot.lists);
           when(() => repository.subscriptionSnapshot).thenReturn(snapshot);
-          when(() => repository.subscriptionSnapshots)
-              .thenAnswer((_) => stream);
-          when(() => repository.hasCompleteSubscriptionSnapshot)
-              .thenReturn(true);
+          when(
+            () => repository.subscriptionSnapshots,
+          ).thenAnswer((_) => stream);
+          when(
+            () => repository.hasCompleteSubscriptionSnapshot,
+          ).thenReturn(true);
         }
-        when(() => originalRepository.getListById(originalList.authorScopedId))
-            .thenReturn(originalList);
+        when(
+          () => originalRepository.getListById(originalList.authorScopedId),
+        ).thenReturn(originalList);
         when(
           () => replacementRepository.getListById(originalList.authorScopedId),
         ).thenReturn(null);
@@ -727,8 +764,9 @@ void main() {
           addTearDown(originalRepository.dispose);
           addTearDown(replacementRepository.dispose);
           final videos = _VideosRepository();
-          when(() => videos.getVideosForList(any()))
-              .thenAnswer((_) async => []);
+          when(
+            () => videos.getVideosForList(any()),
+          ).thenAnswer((_) async => []);
           when(
             () => videos.getRecommendedVideos(
               userPubkey: any(named: 'userPubkey'),

@@ -255,3 +255,13 @@ final class VideoFeedHashtagsChanged extends VideoFeedEvent {
   @override
   List<Object?> get props => [hashtags];
 }
+
+/// Successful deletion or another authoritative removal from the app-wide bus.
+final class VideoFeedVideoRemoved extends VideoFeedEvent {
+  const VideoFeedVideoRemoved(this.videoId);
+
+  final String videoId;
+
+  @override
+  List<Object?> get props => [videoId];
+}

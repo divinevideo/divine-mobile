@@ -530,7 +530,7 @@ final class VideoFeedBlocState extends Equatable {
   ];
 }
 
-/// Immutable operation ownership and deferred snapshots for Home.
+/// Immutable operation ownership, deferred snapshots, and exclusions for Home.
 final class VideoFeedCoordination extends Equatable {
   const VideoFeedCoordination({
     this.sourceSelectionSequence = 0,
@@ -544,6 +544,7 @@ final class VideoFeedCoordination extends Equatable {
     this.paginationGeneration = 0,
     this.loadGeneration = 0,
     this.newVideosUntil,
+    this.removedVideoIds = const {},
   });
 
   final int sourceSelectionSequence;
@@ -566,6 +567,10 @@ final class VideoFeedCoordination extends Equatable {
   /// read was empty. Only meaningful while the source is New.
   final int? newVideosUntil;
 
+  /// Event IDs excluded during this session after an authoritative removal.
+  /// Filters stale network and cache reads after a deletion notification.
+  final Set<String> removedVideoIds;
+
   VideoFeedCoordination copyWith({
     int? sourceSelectionSequence,
     Object? activeSourceSelection = _unchanged,
@@ -578,6 +583,7 @@ final class VideoFeedCoordination extends Equatable {
     int? paginationGeneration,
     int? loadGeneration,
     Object? newVideosUntil = _unchanged,
+    Set<String>? removedVideoIds,
   }) => VideoFeedCoordination(
     sourceSelectionSequence:
         sourceSelectionSequence ?? this.sourceSelectionSequence,
@@ -605,6 +611,7 @@ final class VideoFeedCoordination extends Equatable {
     newVideosUntil: identical(newVideosUntil, _unchanged)
         ? this.newVideosUntil
         : newVideosUntil as int?,
+    removedVideoIds: removedVideoIds ?? this.removedVideoIds,
   );
 
   static const _unchanged = Object();
@@ -622,5 +629,6 @@ final class VideoFeedCoordination extends Equatable {
     paginationGeneration,
     loadGeneration,
     newVideosUntil,
+    removedVideoIds,
   ];
 }
