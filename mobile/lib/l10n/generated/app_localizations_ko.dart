@@ -14070,6 +14070,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get verifyErrorPublishFailed => '인증은 됐는데 업데이트를 받아준 릴레이가 없어. 다시 시도해.';
 
   @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
+
+  @override
   String get verifyErrorOauthUnavailable =>
       '여기는 아직 원탭 로그인이 준비 안 됐어. 아래 증명 게시물을 써.';
 

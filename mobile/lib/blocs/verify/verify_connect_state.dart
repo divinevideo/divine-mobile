@@ -89,6 +89,20 @@ enum VerifyConnectError {
   /// The claims already on the identity event could not be read, so writing
   /// would have dropped them.
   linksUnreadable,
+
+  /// The verifier refused the sign-in because linking by signing in needs
+  /// Divine Confirmation, which this account doesn't have. The proof post
+  /// can still link it.
+  confirmationRequired,
+
+  /// The verifier couldn't check Divine Confirmation, even after the retries
+  /// inside the confirm window. The sign-in stays to approve again later.
+  confirmationUnavailable,
+
+  /// The verifier refused the sign-in for Divine Confirmation right after
+  /// access read as held, which is what a purchase the gate hasn't caught up
+  /// with looks like. The sign-in stays to approve again shortly.
+  confirmationPending,
 }
 
 /// State of a single platform link attempt.
@@ -106,6 +120,8 @@ class VerifyConnectState extends Equatable {
     this.replacingIdentity,
     this.signedInAccount,
     this.signInFailedToStart = false,
+    this.confirmationAccess = ConfirmationAccess.unknown,
+    this.confirmationRefused = false,
   });
 
   /// The platform being linked.
@@ -155,18 +171,36 @@ class VerifyConnectState extends Equatable {
   /// sign-in keeps the proof post on offer while the sign-in can be retried.
   final bool signInFailedToStart;
 
+  /// Whether the signed-in user holds Divine Confirmation, as last read.
+  ///
+  /// Read only while the `confirmationSignIn` flag is on and the platform's
+  /// sign-in requires it; [ConfirmationAccess.unknown] until then, which the
+  /// screen treats like [ConfirmationAccess.has].
+  final ConfirmationAccess confirmationAccess;
+
+  /// Whether the verifier refused a sign-in in this flow because it needs
+  /// Divine Confirmation.
+  ///
+  /// Stays set for the rest of the flow, like [signInFailedToStart]: a
+  /// renewal refused this way can't finish by signing in, so the proof post
+  /// comes back.
+  final bool confirmationRefused;
+
   /// Whether this flow renews by signing in alone, so the proof post is not
   /// offered beside a sign-in that can run.
-  bool get renewsBySignInOnly => isReplacing && !signInFailedToStart;
+  bool get renewsBySignInOnly =>
+      isReplacing && !signInFailedToStart && !confirmationRefused;
 
   /// Whether the handle is fixed to [replacingIdentity]: a renewal whose
-  /// sign-in failed to start, so the proof post is on offer.
+  /// sign-in failed to start or was refused for Divine Confirmation, so the
+  /// proof post is on offer.
   ///
   /// A platform keeps one link, so a renewal must take that link's place
   /// rather than add a second link under another handle. The proof post
   /// holds to the renewed handle in every renewal (see [normalizedInput]);
   /// this lock also keeps a Bluesky sign-in retry on the handle shown.
-  bool get identityLocked => isReplacing && signInFailedToStart;
+  bool get identityLocked =>
+      isReplacing && (signInFailedToStart || confirmationRefused);
 
   /// The account a sign-in returned, shown for the person to approve.
   final String? signedInAccount;
@@ -251,6 +285,8 @@ class VerifyConnectState extends Equatable {
     String? replacingIdentity,
     String? signedInAccount,
     bool? signInFailedToStart,
+    ConfirmationAccess? confirmationAccess,
+    bool? confirmationRefused,
     bool clearError = false,
     bool clearSignedInAccount = false,
   }) {
@@ -268,6 +304,8 @@ class VerifyConnectState extends Equatable {
           ? null
           : (signedInAccount ?? this.signedInAccount),
       signInFailedToStart: signInFailedToStart ?? this.signInFailedToStart,
+      confirmationAccess: confirmationAccess ?? this.confirmationAccess,
+      confirmationRefused: confirmationRefused ?? this.confirmationRefused,
     );
   }
 
@@ -284,5 +322,7 @@ class VerifyConnectState extends Equatable {
     replacingIdentity,
     signedInAccount,
     signInFailedToStart,
+    confirmationAccess,
+    confirmationRefused,
   ];
 }

@@ -14766,6 +14766,18 @@ class AppLocalizationsAr extends AppLocalizations {
       'تم التوثيق، لكن لم يقبل أي مُرحِّل التحديث. حاول مجدداً.';
 
   @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
+
+  @override
   String get verifyErrorOauthUnavailable =>
       'تسجيل الدخول بنقرة واحدة غير مُعدّ لهذه المنصة بعد. استخدم إثبات المنشور بالأسفل.';
 

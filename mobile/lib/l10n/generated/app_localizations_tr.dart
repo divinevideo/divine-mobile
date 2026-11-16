@@ -14680,6 +14680,18 @@ class AppLocalizationsTr extends AppLocalizations {
       'Doğrulandı ama hiçbir röle güncellemeyi kabul etmedi. Tekrar dene.';
 
   @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
+
+  @override
   String get verifyErrorOauthUnavailable =>
       'Tek dokunuşla giriş bunun için henüz ayarlı değil. Aşağıdaki kanıtı kullan.';
 

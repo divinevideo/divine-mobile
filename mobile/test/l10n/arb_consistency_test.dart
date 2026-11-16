@@ -628,6 +628,9 @@ const _knownUntranslatedDebt = <String>{
   'devOptionsConfirmationAccessHas',
   'devOptionsConfirmationAccessHasNot',
   'devOptionsConfirmationAccessUnknown',
+  'verifyErrorConfirmationRequired',
+  'verifyErrorConfirmationUnavailable',
+  'verifyErrorConfirmationPending',
   // Real public community Rooms privacy notice.
   'messagesPublicRoomsDisclosure',
   'messagesRoomRetiredDraft',

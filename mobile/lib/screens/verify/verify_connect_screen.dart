@@ -8,6 +8,9 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
+import 'package:openvine/features/confirmation/confirmation_access_providers.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/oauth/app_oauth_callback.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -87,6 +90,16 @@ class VerifyConnectPage extends ConsumerWidget {
           // A plain Provider whose identity never changes, so it is read
           // rather than watched and stays out of the ValueKey above.
           analytics: ref.read(analyticsEventSinkProvider),
+          // Read once per flow and kept out of the ValueKey: turning the flag
+          // over must not close a cubit holding a sign-in to approve.
+          confirmationSignIn: ref.read(
+            isFeatureEnabledProvider(FeatureFlag.confirmationSignIn),
+          ),
+          // The verifier's reader is the repository's own, and the repository
+          // is in the ValueKey, so an account change (a new repository) makes
+          // a new cubit reading the new account's answer rather than the old
+          // one's remembered answer.
+          readConfirmationAccess: ref.read(confirmationAccessReaderProvider),
         );
         runDetached(
           cubit.loadPlatform(),
@@ -208,6 +221,12 @@ class VerifyConnectView extends StatelessWidget {
         VerifyConnectError.handleRequired => l10n.verifyErrorHandleRequired,
         VerifyConnectError.publishFailed => l10n.verifyErrorPublishFailed,
         VerifyConnectError.linksUnreadable => l10n.verifyErrorLinksUnreadable,
+        VerifyConnectError.confirmationRequired =>
+          l10n.verifyErrorConfirmationRequired,
+        VerifyConnectError.confirmationUnavailable =>
+          l10n.verifyErrorConfirmationUnavailable,
+        VerifyConnectError.confirmationPending =>
+          l10n.verifyErrorConfirmationPending,
       }, error: true),
     );
   }

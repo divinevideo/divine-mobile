@@ -14049,6 +14049,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get verifyErrorPublishFailed => '認証はできたけど、どのリレーも更新を受け取らなかった。もう一度試して。';
 
   @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
+
+  @override
   String get verifyErrorOauthUnavailable =>
       'ワンタップのログインはこれにはまだ用意されてない。下の証明投稿を使ってね。';
 

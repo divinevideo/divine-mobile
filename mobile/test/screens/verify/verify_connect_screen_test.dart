@@ -14,7 +14,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart' hide VerificationResult;
+import 'package:openvine/blocs/verify/confirmation_requirement.dart';
 import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
+import 'package:openvine/features/confirmation/confirmation_access_providers.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
@@ -23,6 +27,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/screens/verify/verify_connect_screen.dart';
 import 'package:openvine/screens/verify/verify_platform_labels.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:verifier_client/verifier_client.dart' show SigninRequirement;
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -73,6 +78,10 @@ const _bluesky = VerifierPlatform(
   supported: true,
 );
 
+/// A reader that never knows, which shows sign-in as before.
+Future<ConfirmationAccess> _unknownAccess({bool refresh = false}) async =>
+    ConfirmationAccess.unknown;
+
 void main() {
   group(VerifyConnectPage, () {
     final l10n = lookupAppLocalizations(const Locale('en'));
@@ -87,11 +96,19 @@ void main() {
       required String platformKey,
       bool deviceSupportsOAuth = true,
       String? replacingIdentity,
+      bool confirmationSignIn = false,
+      ConfirmationAccessReader readConfirmationAccess = _unknownAccess,
     }) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             identityClaimsRepositoryProvider.overrideWithValue(repository),
+            isFeatureEnabledProvider(
+              FeatureFlag.confirmationSignIn,
+            ).overrideWithValue(confirmationSignIn),
+            confirmationAccessReaderProvider.overrideWithValue(
+              readConfirmationAccess,
+            ),
             authServiceProvider.overrideWithValue(
               createMockAuthService(
                 authState: AuthState.authenticated,
@@ -243,6 +260,90 @@ void main() {
       expect(signInButton('twitter'), findsOneWidget);
       verify(() => repository.platform('twitter')).called(1);
     });
+
+    group('Divine Confirmation access', () {
+      const twitterGated = VerifierPlatform(
+        key: 'twitter',
+        label: 'Twitter / X',
+        supported: true,
+        oauth: true,
+        signinRequires: SigninRequirement.confirmation,
+      );
+
+      void gate(_MockIdentityClaimsRepository repository) {
+        when(
+          () => repository.startingPlatform('twitter'),
+        ).thenReturn(twitterGated);
+        when(
+          () => repository.platform('twitter'),
+        ).thenAnswer((_) async => twitterGated);
+      }
+
+      testWidgets('reads access through the injected reader with the flag on', (
+        tester,
+      ) async {
+        gate(repository);
+        final reads = <bool>[];
+
+        await pump(
+          tester,
+          platformKey: 'twitter',
+          confirmationSignIn: true,
+          readConfirmationAccess: ({bool refresh = false}) async {
+            reads.add(refresh);
+            return ConfirmationAccess.hasNot;
+          },
+        );
+        await tester.pump();
+
+        expect(reads, equals([false]));
+      });
+
+      testWidgets(
+        'asks the new account, not the old one, after an account change',
+        (tester) async {
+          // Each account has its own repository, which remembers its own
+          // answer; a cubit kept across the change would ask the old one.
+          gate(repository);
+          final oldReads = <bool>[];
+          await pump(
+            tester,
+            platformKey: 'twitter',
+            confirmationSignIn: true,
+            readConfirmationAccess: ({bool refresh = false}) async {
+              oldReads.add(refresh);
+              return ConfirmationAccess.has;
+            },
+          );
+          await tester.pump();
+          expect(oldReads, hasLength(1));
+
+          repository = _MockIdentityClaimsRepository();
+          gate(repository);
+          final newReads = <bool>[];
+          await pump(
+            tester,
+            platformKey: 'twitter',
+            confirmationSignIn: true,
+            readConfirmationAccess: ({bool refresh = false}) async {
+              newReads.add(refresh);
+              return ConfirmationAccess.hasNot;
+            },
+          );
+          await tester.pump();
+
+          expect(newReads, equals([false]));
+          expect(oldReads, hasLength(1));
+          final cubit = BlocProvider.of<VerifyConnectCubit>(
+            tester.element(find.byType(VerifyConnectView)),
+          );
+          expect(cubit.state.confirmationAccess, ConfirmationAccess.hasNot);
+          await cubit.refreshConfirmationAccess();
+          expect(newReads, equals([false, true]));
+          expect(oldReads, hasLength(1));
+        },
+      );
+    });
   });
 
   group(VerifyConnectView, () {
@@ -260,6 +361,8 @@ void main() {
         ),
       ).thenAnswer((_) async {});
       cubit = VerifyConnectCubit(
+        confirmationSignIn: false,
+        readConfirmationAccess: _unknownAccess,
         repository: repository,
         pubkey: _pubkey,
         platform: _telegram,
@@ -388,6 +491,8 @@ void main() {
         ),
       ).thenAnswer((_) async {});
       cubit = VerifyConnectCubit(
+        confirmationSignIn: false,
+        readConfirmationAccess: _unknownAccess,
         repository: repository,
         pubkey: _pubkey,
         platform: discord,
@@ -523,6 +628,8 @@ void main() {
         return Uri.parse('https://provider.example/authorize?state=s');
       });
       cubit = VerifyConnectCubit(
+        confirmationSignIn: false,
+        readConfirmationAccess: _unknownAccess,
         repository: repository,
         pubkey: _pubkey,
         platform: twitter,
@@ -568,6 +675,8 @@ void main() {
 
     setUp(() {
       cubit = VerifyConnectCubit(
+        confirmationSignIn: false,
+        readConfirmationAccess: _unknownAccess,
         repository: _MockIdentityClaimsRepository(),
         pubkey: _pubkey,
         platform: _bluesky,
@@ -651,6 +760,8 @@ void main() {
       IdentityClaimsRepository? repository,
     }) async {
       cubit = VerifyConnectCubit(
+        confirmationSignIn: false,
+        readConfirmationAccess: _unknownAccess,
         repository: repository ?? _MockIdentityClaimsRepository(),
         pubkey: _pubkey,
         platform: platform,
@@ -1029,6 +1140,8 @@ void main() {
       String? replacingIdentity,
     }) async {
       cubit = VerifyConnectCubit(
+        confirmationSignIn: false,
+        readConfirmationAccess: _unknownAccess,
         repository: _MockIdentityClaimsRepository(),
         pubkey: _pubkey,
         platform: platform,
@@ -1200,6 +1313,8 @@ void main() {
         () => repository.publishSignedClaim(any()),
       ).thenAnswer((_) async => []);
       cubit = VerifyConnectCubit(
+        confirmationSignIn: false,
+        readConfirmationAccess: _unknownAccess,
         repository: repository,
         pubkey: _pubkey,
         platform: twitter,
@@ -1346,6 +1461,8 @@ void main() {
     Future<void> pumpBlueskyWaitingForApproval(WidgetTester tester) async {
       await cubit.close();
       cubit = VerifyConnectCubit(
+        confirmationSignIn: false,
+        readConfirmationAccess: _unknownAccess,
         repository: repository,
         pubkey: _pubkey,
         platform: _bluesky,
@@ -1434,6 +1551,65 @@ void main() {
 
       expect(find.text(l10n.verifyErrorSignInNotConfirmed), findsOneWidget);
       expect(find.text(signedInTitle), findsNothing);
+    });
+
+    // With the flag off there is nowhere to buy, so a refusal is a snackbar
+    // and nothing more [P2].
+    testWidgets(
+      'says linking by signing in needs Divine Confirmation, with no sheet',
+      (tester) async {
+        when(
+          () => repository.confirmSignIn(
+            code: any(named: 'code'),
+            startSecret: any(named: 'startSecret'),
+            signed: any(named: 'signed'),
+          ),
+        ).thenThrow(
+          SignInConfirmException(403, SignInRefusal.confirmationRequired),
+        );
+        await pumpWaitingForApproval(tester);
+
+        await tester.tap(find.text(l10n.verifyConnectSignedInCta));
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          find.text(l10n.verifyErrorConfirmationRequired),
+          findsOneWidget,
+        );
+        expect(find.byType(BottomSheet), findsNothing);
+        // The sign-in is dropped, so the proof post can be used.
+        expect(find.text(signedInTitle), findsNothing);
+      },
+    );
+
+    testWidgets("says Divine Confirmation couldn't be checked", (
+      tester,
+    ) async {
+      when(
+        () => repository.confirmSignIn(
+          code: any(named: 'code'),
+          startSecret: any(named: 'startSecret'),
+          signed: any(named: 'signed'),
+        ),
+      ).thenThrow(
+        SignInConfirmException(503, SignInRefusal.confirmationUnavailable),
+      );
+      await pumpWaitingForApproval(tester);
+
+      await tester.tap(find.text(l10n.verifyConnectSignedInCta));
+      // Past the retries inside the confirm window.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 10));
+      await tester.pump();
+
+      expect(
+        find.text(l10n.verifyErrorConfirmationUnavailable),
+        findsOneWidget,
+      );
+      expect(find.byType(BottomSheet), findsNothing);
+      // Kept, so linking can be tried again in a few minutes.
+      expect(find.text(signedInTitle), findsOneWidget);
     });
 
     testWidgets('says nothing was linked when the signer declines', (

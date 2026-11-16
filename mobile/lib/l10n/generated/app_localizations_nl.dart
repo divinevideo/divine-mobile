@@ -14830,6 +14830,18 @@ class AppLocalizationsNl extends AppLocalizations {
       'Geverifieerd, maar geen enkele relay nam de update aan. Probeer het nog eens.';
 
   @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
+
+  @override
   String get verifyErrorOauthUnavailable =>
       'Inloggen met één tik is hier nog niet ingesteld. Gebruik het bewijs hieronder.';
 

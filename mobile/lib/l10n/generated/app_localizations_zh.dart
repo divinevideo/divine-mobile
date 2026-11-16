@@ -13881,6 +13881,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get verifyErrorPublishFailed => '验证通过了，但没有中继接受这次更新。再试一次。';
 
   @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
+
+  @override
   String get verifyErrorOauthUnavailable => '这个还没接一键登录。用下面的证明帖吧。';
 
   @override

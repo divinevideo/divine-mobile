@@ -14949,6 +14949,18 @@ class AppLocalizationsIt extends AppLocalizations {
       'Verificato, ma nessun relay ha accettato l\'aggiornamento. Riprova.';
 
   @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
+
+  @override
   String get verifyErrorOauthUnavailable =>
       'L\'accesso con un tap non è ancora configurato per questa. Usa la prova qui sotto.';
 

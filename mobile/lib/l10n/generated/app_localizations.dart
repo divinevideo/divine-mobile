@@ -24807,6 +24807,24 @@ abstract class AppLocalizations {
   /// **'Verified, but no relay took the update. Try again.'**
   String get verifyErrorPublishFailed;
 
+  /// Error shown when the verification service refused a sign-in link because linking by signing in needs Divine Confirmation, which the person doesn't have. A proof post can still link the account. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Linking by signing in needs Divine Confirmation. You can still link with a proof post.'**
+  String get verifyErrorConfirmationRequired;
+
+  /// Error shown when the verification service couldn't check Divine Confirmation while confirming a sign-in link. The sign-in is kept, so the person can try linking again later. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.'**
+  String get verifyErrorConfirmationUnavailable;
+
+  /// Error shown when a sign-in link is refused for Divine Confirmation right after the app read that the person has it, as happens just after buying it. The sign-in is kept to try again. Placeholder until #8278.
+  ///
+  /// In en, this message translates to:
+  /// **'This can take a minute after buying. Try again shortly.'**
+  String get verifyErrorConfirmationPending;
+
   /// Error shown when the platform's one-tap sign-in has no credentials configured on the verification service, so only the proof-post route works.
   ///
   /// In en, this message translates to:

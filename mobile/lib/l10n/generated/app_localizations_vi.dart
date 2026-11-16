@@ -14699,6 +14699,18 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đã xác minh, nhưng không relay nào nhận cập nhật. Thử lại.';
 
   @override
+  String get verifyErrorConfirmationRequired =>
+      'Linking by signing in needs Divine Confirmation. You can still link with a proof post.';
+
+  @override
+  String get verifyErrorConfirmationUnavailable =>
+      'Couldn\'t check Divine Confirmation right now. Try again in a few minutes.';
+
+  @override
+  String get verifyErrorConfirmationPending =>
+      'This can take a minute after buying. Try again shortly.';
+
+  @override
   String get verifyErrorOauthUnavailable =>
       'Đăng nhập một chạm chưa được thiết lập cho mục này. Dùng bằng chứng bên dưới.';
 
