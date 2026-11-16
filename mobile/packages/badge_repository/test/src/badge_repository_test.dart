@@ -219,7 +219,7 @@ void main() {
         );
         final load = expectLater(
           repository.loadAwardedBadges(),
-          throwsStateError,
+          throwsA(isA<BadgeAccountStateClosedException>()),
         );
         await pumpEventQueue();
         await repository.closeAccountState();
@@ -234,6 +234,73 @@ void main() {
         }
       },
     );
+
+    group('when the account drain overtakes', () {
+      test(
+        'a dashboard load awaiting awards gives way without a StateError',
+        () async {
+          final awards = Completer<List<Event>>();
+          when(() => nostrClient.queryEvents(any())).thenAnswer((call) async {
+            final filters = call.positionalArguments.single as List<Filter>;
+            return filters.first.kinds?.contains(EventKind.badgeAward) == true
+                ? awards.future
+                : <Event>[];
+          });
+          final coordinate = '30009:${_pubkey(2)}:badge';
+          await preferences.setStringList(
+            'dismissed_badge_coordinates_${_pubkey(1)}',
+            [coordinate],
+          );
+          final load = expectLater(
+            repository.loadDashboard(),
+            throwsA(isA<BadgeAccountStateClosedException>()),
+          );
+          await pumpEventQueue();
+          // Sign-out with data erasure drains the account through the write
+          // barrier, then erases its keys, while the dashboard still waits.
+          await accountClosers[_pubkey(1)]!();
+          for (final key in BadgeRepository.localAccountKeys(_pubkey(1))) {
+            await preferences.remove(key);
+          }
+          awards.complete([]);
+          await load;
+          await preferences.reload();
+          for (final key in BadgeRepository.localAccountKeys(_pubkey(1))) {
+            expect(preferences.containsKey(key), isFalse);
+          }
+          await repository.closeAccountState();
+        },
+      );
+
+      test('a dismissal still saving gives way without a StateError', () async {
+        final coordinate = '30009:${_pubkey(2)}:badge';
+        final hiding = expectLater(
+          repository.hideAward(coordinate),
+          throwsA(isA<BadgeAccountStateClosedException>()),
+        );
+        await accountClosers[_pubkey(1)]!();
+        await hiding;
+        expect(
+          preferences.containsKey('dismissed_badge_coordinates_${_pubkey(1)}'),
+          isFalse,
+        );
+        await repository.closeAccountState();
+      });
+
+      test(
+        'a load requested after the drain still throws a StateError',
+        () async {
+          await repository.loadAwardedBadges();
+          await accountClosers[_pubkey(1)]!();
+          await expectLater(repository.loadDashboard(), throwsStateError);
+          await expectLater(
+            repository.hideAward('30009:${_pubkey(2)}:badge'),
+            throwsStateError,
+          );
+          await repository.closeAccountState();
+        },
+      );
+    });
 
     test('loads decisions while awards are still pending', () async {
       final awards = Completer<List<Event>>();

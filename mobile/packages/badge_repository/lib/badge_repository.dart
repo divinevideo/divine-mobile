@@ -3,6 +3,7 @@
 /// issued-badge recipient acceptance).
 library;
 
+export 'src/badge_account_state_closed_exception.dart';
 export 'src/badge_coordinate.dart';
 export 'src/badge_read_incomplete_exception.dart';
 export 'src/badge_repository.dart';

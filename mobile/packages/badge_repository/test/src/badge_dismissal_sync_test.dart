@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:badge_repository/src/badge_account_state_closed_exception.dart';
 import 'package:badge_repository/src/badge_dismissal_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -280,6 +281,80 @@ void main() {
         await sync.close();
       },
     );
+  });
+
+  group('whileOpen', () {
+    late Map<String, Future<void> Function()> closers;
+    late BadgeDismissalSync sync;
+
+    setUp(() {
+      closers = {};
+      sync = BadgeDismissalSync(
+        client: client,
+        preferences: phonePreferences,
+        signer: () => signer,
+        onAccountCreated: (owner, close) => closers[owner] = close,
+      );
+    });
+
+    tearDown(() => sync.close());
+
+    test('a drain during the operation ends it as closed', () async {
+      final drained = Completer<void>();
+      final operation = sync.whileOpen(pubkey, () async {
+        await drained.future;
+        return sync.writeCoordinates(pubkey, {coordinate});
+      });
+      await closers[pubkey]!();
+      drained.complete();
+      await expectLater(
+        operation,
+        throwsA(isA<BadgeAccountStateClosedException>()),
+      );
+      expect(
+        phonePreferences.containsKey('dismissed_badge_coordinates_$pubkey'),
+        isFalse,
+      );
+    });
+
+    test('an operation started after the drain throws a StateError', () async {
+      await sync.writeCoordinates(pubkey, {coordinate});
+      await closers[pubkey]!();
+      var ran = false;
+      await expectLater(
+        sync.whileOpen(pubkey, () async => ran = true),
+        throwsStateError,
+      );
+      expect(ran, isFalse);
+    });
+
+    test('keeps failures that are not the close', () async {
+      await expectLater(
+        sync.whileOpen<void>(pubkey, () async => throw StateError('broken')),
+        throwsA(
+          isA<StateError>().having((e) => e.message, 'message', 'broken'),
+        ),
+      );
+      await expectLater(
+        sync.whileOpen<void>(
+          pubkey,
+          () async => throw const BadgeDismissalSyncException('refused'),
+        ),
+        throwsA(isA<BadgeDismissalSyncException>()),
+      );
+      expect(await sync.whileOpen(pubkey, () async => 1), 1);
+    });
+
+    test('the closed failure is a diagnostic exception, not an Error', () {
+      const failure = BadgeAccountStateClosedException();
+      expect(failure, isA<Exception>());
+      expect(failure, isNot(isA<Error>()));
+      expect(
+        failure.toString(),
+        'BadgeAccountStateClosedException: the account badge state closed '
+        'during the operation',
+      );
+    });
   });
 
   Future<Event> snapshot(Object payload, {int? createdAt, String? raw}) async {
