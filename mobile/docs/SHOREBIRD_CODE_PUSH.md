@@ -254,6 +254,45 @@ baseline, Flutter version, exact Shorebird CLI revision, and keyed fingerprints
 of every dart-define. The record contains no dart-define values. If recording
 fails, treat the release build as incomplete and do not patch that release.
 
+### Headless iOS TestFlight release
+
+A cloud agent can trigger and monitor `ios-build` through GitHub Actions without
+controlling a laptop or browser. Configure the repository Actions secret
+`CODEMAGIC_API_TOKEN` with a Codemagic API token that can read team builds and
+start builds for this app. The workflow fails before submission if it is absent.
+Never put the token in a command, issue, or chat.
+
+From a cloud shell with GitHub access:
+
+```bash
+gh workflow run ios_testflight_release.yml --ref main -f source_sha=FULL_LOWERCASE_40_CHARACTER_SHA
+gh run list --workflow ios_testflight_release.yml --event workflow_dispatch --limit 5
+gh run watch RUN_ID --exit-status
+```
+
+Omit `-f source_sha=...` to select current `main`. The selected commit must equal
+current `main` and the workflow checkout, with its own successful main-push or
+merge-queue Mobile CI workflow and matching `Mobile CI` check. If `main` moved
+since dispatch, dispatch again from current `main`. Codemagic also compares its fetched checkout against
+`RELEASE_EXPECTED_SHA` before any Shorebird or store operations.
+
+The driver selects `DEFAULT_ENV=PRODUCTION`, `RELEASE_CHANNEL=BETA`, and
+`PUBLISH_TO_GITHUB=NO`. It records the Codemagic build ID, URL, source SHA, and
+status in the Actions logs and step summary. Success requires the fetched commit
+to match and both the build and App Store Connect processing to finish. This
+submits the beta via the existing `ios-build` publishing configuration; it does
+not submit a public App Store release. Apple Beta App Review and external group
+availability still need separate verification in App Store Connect.
+
+GitHub release requests run serially. The driver refuses to start alongside a
+visible active iOS build, including builds started manually, and follows a
+matching build when retrying the same GitHub run. Codemagic offers no atomic
+idempotency key or cross-client lock: do not start manual iOS builds while this
+workflow is submitting. An ambiguous submission is never automatically retried;
+reconcile the recorded GitHub run label in Codemagic first. A rerun with no
+visible matching build stops rather than submitting again. A timeout stops only
+the monitor; inspect the recorded build URL before starting another request.
+
 ### Release identity ledger
 
 The release identity ledger lives in the `allocations/` tree of

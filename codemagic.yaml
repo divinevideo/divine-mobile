@@ -223,6 +223,16 @@ definitions:
           echo "Shorebird releases must be cut from main so future patches have a reachable baseline."
           exit 1
         fi
+        if [ -n "${RELEASE_EXPECTED_SHA:-}" ]; then
+          if [[ ! "$RELEASE_EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "RELEASE_EXPECTED_SHA must be a full lowercase 40-character commit SHA."
+            exit 1
+          fi
+          if [ "$(git rev-parse HEAD)" != "$RELEASE_EXPECTED_SHA" ]; then
+            echo "Refusing release: fetched source differs from RELEASE_EXPECTED_SHA. Dispatch again from current main."
+            exit 1
+          fi
+        fi
     - &write_shorebird_dart_defines
       name: Write Shorebird dart-defines
       script: |

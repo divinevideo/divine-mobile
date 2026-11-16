@@ -913,6 +913,29 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             f"{missing}",
         )
 
+    def test_store_release_source_guard_requires_the_expected_checkout(self) -> None:
+        steps = self._resolved_config()["workflows"]["ios-build"]["scripts"]
+        guard = next(step["script"] for step in steps
+                     if step.get("name") == "Verify Shorebird release source")
+        head = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=CODEMAGIC_PATH.parent, text=True,
+        ).strip()
+        for branch, expected, succeeds in [
+            ("main", None, True), ("feature", None, False),
+            ("main", head, True), ("main", "f" * 40, False),
+            ("main", "short", False), ("main", "A" * 40, False),
+            ("main", head + "\n", False),
+        ]:
+            env = dict(os.environ, CM_BRANCH=branch)
+            env.pop("RELEASE_EXPECTED_SHA", None)
+            if expected is not None:
+                env["RELEASE_EXPECTED_SHA"] = expected
+            with self.subTest(branch=branch, expected=expected):
+                result = subprocess.run(["bash", "-c", guard], env=env,
+                                        cwd=CODEMAGIC_PATH.parent,
+                                        text=True, capture_output=True)
+                self.assertEqual(result.returncode == 0, succeeds, result.stdout + result.stderr)
+
     def test_store_release_workflows_require_main_and_emit_provenance(self) -> None:
         for workflow_name in ("ios-build", "android-build"):
             workflow = self._workflow_block(workflow_name)
