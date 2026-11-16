@@ -3,7 +3,9 @@
 
 import 'dart:async';
 
+import 'package:divine_camera/divine_camera.dart' show DivineCamera;
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -389,6 +391,11 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
             session: analyticsSession,
           ),
         ),
+        // Only iOS has a remote that mirrors the recorder: the Apple Watch.
+        publishRemoteRecorderState:
+            !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+            ? DivineCamera.instance.updateRemoteRecorderState
+            : null,
         liveChromaKeySupported: ChromaKeyShader.isBackendSupported,
       ),
       child: child,
@@ -761,6 +768,19 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
         context.select(
           (VideoRecorderBloc bloc) => _reactionTakeInFlight(bloc.state),
         );
+    // The Apple Watch mirrors the clip budget, and clips are also added,
+    // deleted and restored without the recorder bloc changing state.
+    ref.listen(
+      clipManagerProvider.select(
+        (clips) => (
+          clips.totalDuration,
+          clips.activeRecordingDuration == Duration.zero,
+        ),
+      ),
+      (_, _) => context.read<VideoRecorderBloc>().addIfOpen(
+        const VideoRecorderRemoteStateRefreshRequested(),
+      ),
+    );
     return BlocProvider<SoundWaveformBloc>(
       // Eager: the create factory installs the selected-sound listener that
       // drives waveform extraction. The only consumer (capture's audio

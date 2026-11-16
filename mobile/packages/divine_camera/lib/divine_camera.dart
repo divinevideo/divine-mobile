@@ -7,6 +7,7 @@ import 'package:divine_camera/src/models/camera_state.dart';
 import 'package:divine_camera/src/models/flash_mode.dart';
 import 'package:divine_camera/src/models/photo_capture_result.dart';
 import 'package:divine_camera/src/models/remote_record_trigger.dart';
+import 'package:divine_camera/src/models/remote_recorder_state.dart';
 import 'package:divine_camera/src/models/secondary_camera_state.dart';
 import 'package:divine_camera/src/models/video_quality.dart';
 import 'package:divine_camera/src/models/video_recording_result.dart';
@@ -21,6 +22,7 @@ export 'src/models/camera_zoom_state.dart';
 export 'src/models/flash_mode.dart';
 export 'src/models/photo_capture_result.dart';
 export 'src/models/remote_record_trigger.dart';
+export 'src/models/remote_recorder_state.dart';
 export 'src/models/secondary_camera_state.dart';
 export 'src/models/video_quality.dart';
 export 'src/models/video_recording_result.dart';
@@ -527,6 +529,15 @@ class DivineCamera {
   /// Returns `true` if successfully set.
   Future<bool> setVolumeKeysEnabled({required bool enabled}) async {
     return _platform.setVolumeKeysEnabled(enabled: enabled);
+  }
+
+  /// Tells remote controls (the Apple Watch app) what the recorder is
+  /// doing, so they can mirror its shutter and clip budget.
+  ///
+  /// Pass `null` when the recorder is no longer on screen. Platforms
+  /// without such a remote ignore the call.
+  Future<void> updateRemoteRecorderState(RemoteRecorderState? state) {
+    return _platform.updateRemoteRecorderState(state);
   }
 
   /// The aspect ratio of the camera sensor.
