@@ -183,7 +183,7 @@ void main() {
 
     group('press and hold', () {
       testWidgets('starts the hold once the finger stays down for '
-          '$kFeedHoldToPeekDelay', (tester) async {
+          '${kFeedHoldToPeekDelay.inMilliseconds} ms', (tester) async {
         var held = 0;
         await tester.pumpWidget(
           host(interactiveReady: true, onLongPressStart: () => held++),

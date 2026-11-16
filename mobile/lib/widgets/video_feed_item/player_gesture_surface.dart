@@ -58,6 +58,10 @@ class PlayerGestureSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // `GestureDetector` hands its recognizers the device's touch slop; a raw
+    // one falls back to 18 px without it.
+    final gestureSettings = MediaQuery.maybeGestureSettingsOf(context);
+
     // The annotation must sit DIRECTLY above the GestureDetector. In the
     // original tree it wrapped the whole Stack instead, several layers up and
     // around the chrome siblings, so it annotated a node that owned no tap
@@ -106,11 +110,7 @@ class PlayerGestureSurface extends StatelessWidget {
                   ),
                   (recognizer) {
                     recognizer
-                      // `GestureDetector` hands its recognizers the device's
-                      // touch slop; a raw one falls back to 18 px without it.
-                      ..gestureSettings = MediaQuery.maybeGestureSettingsOf(
-                        context,
-                      )
+                      ..gestureSettings = gestureSettings
                       ..onLongPressStart = (_) => onLongPressStart();
                   },
                 ),
