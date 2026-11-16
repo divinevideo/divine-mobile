@@ -1,5 +1,7 @@
 # App cache index audit
 
+Audit baseline: `5cf80166225b5a41e60b087df295d632e9a3a114`.
+
 This audit covers `db_client`'s encrypted event/profile database and
 `cache_sync`'s JSON snapshot database. Query plans and timings below use
 synthetic data, not a production account database. Timings are local diagnostic
@@ -38,6 +40,26 @@ A separate `cache_sync` versioned migration should validate real eviction
 workloads before shipping it. Eviction still materializes all entry metadata;
 this index alone does not make that operation bounded.
 
+## Profile retention: index the eviction order, not just the row count
+
+`UserProfilesDao.enforceRowCap` selects the newest 5,000 keys by
+`last_fetched`. Even a cache already at the cap can read large profile records
+and sort them on every database open. Another candidate is:
+
+```sql
+CREATE INDEX idx_user_profiles_retention
+ON user_profiles (last_fetched DESC, pubkey);
+```
+
+On 5,000 synthetic encrypted profiles with 8 KiB payloads (41.9 MiB file),
+consecutive keyed opens took 286 / 283 ms for the unchanged cap check. The
+candidate reduced these to 22 / 22 ms. The cap, retained keys and profile data
+were unchanged. This is a useful additional startup-cleanup candidate, though
+its measured cost is smaller than the multi-second verified-event scan. It
+needs a separate versioned migration and coverage of over-cap/tied timestamps
+before shipping; these measurements do not attribute an observed launch gap
+to this query.
+
 ## Existing coverage and queries an ordinary index cannot fix
 
 | Operation | Current coverage / conclusion |
@@ -47,7 +69,7 @@ this index alone does not make that operation bounded.
 | Author/kind feeds and replaceable-event lookup | Existing composite indexes cover their equality prefixes and recency. |
 | Profile and snapshot key lookup | Their primary-key indexes already cover exact lookup. |
 | Notification timeline | Existing owner/timestamp index matches the account-scoped timeline. |
-| Profile row cap | Sorts a bounded 5,000-row cache after cleanup; lower priority than the full event scan. |
+| Profile row cap | Candidate covering retention-order index avoids reading large profile records during the cap check; measured separately above. |
 | Cached profile substring search | `instr` and normalized-field expressions do not become substring seeks with a plain name index. |
 | Cached video text search | `content LIKE '%query%'` scans candidate event content despite the kind/recency index. A plain content index cannot seek arbitrary substrings. |
 | Snapshot prefix deletion | `LIKE ? || '%'` and LIKE's collation prevent an ordinary key index from solving the scan. Changing the bound pattern/collation needs semantic tests. |
