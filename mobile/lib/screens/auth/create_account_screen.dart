@@ -8,7 +8,6 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/divine_auth/divine_auth_cubit.dart';
@@ -377,10 +376,11 @@ class _SkipConfirmationSheet extends StatelessWidget {
           ),
           const SizedBox(height: 32),
 
-          SvgPicture.asset(
-            'assets/stickers/pointing_finger.svg',
-            width: 132,
-            height: 132,
+          // Decorative: the title below carries the message.
+          const ExcludeSemantics(
+            child: DivineSticker(
+              sticker: DivineStickerName.fingerPointing,
+            ),
           ),
           const SizedBox(height: 24),
 

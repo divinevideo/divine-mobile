@@ -3,7 +3,6 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
@@ -229,10 +228,8 @@ class _DraftPreview extends StatelessWidget {
     final path = clip?.thumbnailPath;
     final aspectRatio = clip?.targetAspectRatio.value ?? 9 / 16;
     final previewWidth = previewHeight * aspectRatio;
-    final placeholder = SvgPicture.asset(
-      'assets/stickers/alert.svg',
-      height: 132,
-      width: 132,
+    const placeholder = DivineSticker(
+      sticker: DivineStickerName.alert,
     );
 
     return GestureDetector(

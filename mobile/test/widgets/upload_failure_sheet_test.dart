@@ -7,7 +7,6 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -317,7 +316,10 @@ void main() {
         await tester.tap(find.text('Open Sheet'));
         await tester.pumpAndSettle();
 
-        expect(find.byType(SvgPicture), findsOneWidget);
+        expect(
+          tester.widget<DivineSticker>(find.byType(DivineSticker)).sticker,
+          equals(DivineStickerName.alert),
+        );
       });
     });
 

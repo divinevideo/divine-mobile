@@ -3,7 +3,6 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/support_contact/support_contact_cubit.dart';
 import 'package:openvine/constants/app_constants.dart';
@@ -458,11 +457,9 @@ class _AllClearBody extends StatelessWidget {
         spacing: 24,
         children: [
           // Decorative: the heading below carries the whole message.
-          ExcludeSemantics(
-            child: SvgPicture.asset(
-              'assets/stickers/hang_loose.svg',
-              height: 132,
-              width: 132,
+          const ExcludeSemantics(
+            child: DivineSticker(
+              sticker: DivineStickerName.hangLoose,
             ),
           ),
           Text(
