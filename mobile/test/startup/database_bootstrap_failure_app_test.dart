@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/database_encryption_bootstrap.dart';
 import 'package:openvine/startup/database_bootstrap_failure_app.dart';
 import 'package:sqlite3/sqlite3.dart';
@@ -848,6 +849,82 @@ void main() {
       expect(find.text(l10n.dbFailureTitle), findsOneWidget);
     });
   });
+
+  group('$DatabaseBootstrapFailureApp incoming links', () {
+    // This screen replaces the router-based app, so a link the platform opens
+    // while it is up used to reach a navigator with no route for it and throw
+    // (Crashlytics a1768bd4202a73cdc6a20bb94723331f, iOS 1.0.30).
+    const location = 'https://divine.video${RoutePaths.explore}';
+
+    testWidgets('stays on the failure screen when a link is opened', (
+      tester,
+    ) async {
+      var closed = false;
+
+      await tester.pumpWidget(
+        DatabaseBootstrapFailureApp(
+          error: DatabaseCipherStorageUnavailableException(
+            _lockedKeychainFailure(),
+          ),
+          stack: StackTrace.current,
+          onCloseApp: () => closed = true,
+        ),
+      );
+
+      final handled = await _openLink(tester, location);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(handled, isTrue, reason: 'the link is dropped, not passed on');
+      expect(find.text(l10n.dbFailureTitle), findsOneWidget);
+
+      await tester.tap(find.text(l10n.dbFailureCloseApp));
+      expect(closed, isTrue);
+    });
+
+    testWidgets('keeps the reset confirmation open when a link is opened', (
+      tester,
+    ) async {
+      DatabaseBootstrapDiagnosis? resetDiagnosis;
+
+      await tester.pumpWidget(
+        DatabaseBootstrapFailureApp(
+          error: const DatabaseUnreadableError(),
+          stack: StackTrace.current,
+          onCloseApp: () {},
+          onResetLocalDatabase: (diagnosis) async => resetDiagnosis = diagnosis,
+        ),
+      );
+      await tester.tap(find.text(l10n.dbFailureResetAction));
+      await tester.pump();
+
+      await _openLink(tester, location);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text(l10n.dbFailureConfirmTitle), findsOneWidget);
+
+      await tester.tap(find.text(l10n.dbFailureResetConfirm));
+      await tester.pump();
+
+      expect(resetDiagnosis, DatabaseBootstrapDiagnosis.databaseUnreadable);
+    });
+  });
+}
+
+/// Delivers [location] the way the iOS and Android embedders deliver an opened
+/// link: a `pushRouteInformation` call on the navigation channel. Returns
+/// whether the app reported the link as handled.
+Future<bool> _openLink(WidgetTester tester, String location) async {
+  final reply = await tester.binding.defaultBinaryMessenger
+      .handlePlatformMessage(
+        SystemChannels.navigation.name,
+        SystemChannels.navigation.codec.encodeMethodCall(
+          MethodCall('pushRouteInformation', {'location': location}),
+        ),
+        null,
+      );
+  return SystemChannels.navigation.codec.decodeEnvelope(reply!) as bool;
 }
 
 /// What `flutter_secure_storage` raises when the Keychain refuses a read on a

@@ -8,6 +8,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/resolve_app_ui_locale.dart';
 import 'package:openvine/services/database_encryption_bootstrap.dart';
 import 'package:openvine/startup/close_app_support.dart';
+import 'package:openvine/utils/sensitive_uri_for_logs.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Result of resolving the DB cipher key during app startup.
 class DatabaseBootstrapStartupResult {
@@ -141,25 +143,77 @@ class DatabaseBootstrapFailureApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      // This screen replaces the whole app before startup finishes, so it
-      // needs its own delegates — nothing above it has registered any. It
-      // shipped entirely in English to all 21 other locales without them.
-      // AppLocalizations does not touch the database, so it is safe here.
-      locale: locale,
-      localizationsDelegates: appLocalizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      localeListResolutionCallback: resolveAppUiLocale,
-      home: _FailureScreen(
-        error: error,
-        stack: stack,
-        canCloseApp: canCloseApp ?? platformCanCloseApp,
-        onCloseApp: onCloseApp,
-        onResetLocalDatabase: onResetLocalDatabase,
+    return _IncomingLinkSink(
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        // This screen replaces the whole app before startup finishes, so it
+        // needs its own delegates — nothing above it has registered any. It
+        // shipped entirely in English to all 21 other locales without them.
+        // AppLocalizations does not touch the database, so it is safe here.
+        locale: locale,
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localeListResolutionCallback: resolveAppUiLocale,
+        home: _FailureScreen(
+          error: error,
+          stack: stack,
+          canCloseApp: canCloseApp ?? platformCanCloseApp,
+          onCloseApp: onCloseApp,
+          onResetLocalDatabase: onResetLocalDatabase,
+        ),
       ),
     );
   }
+}
+
+/// Drops every link the platform opens while the failure screen is up.
+///
+/// The running app hands opened links to its router. This screen replaces it
+/// with a navigator that knows only its home route, so `WidgetsApp` pushed the
+/// link's path, found no route for it and threw. Startup cannot continue from
+/// here, so there is nothing a link could open: claim it and keep the user on
+/// the screen that tells them what to do.
+///
+/// The binding offers a link to its observers in registration order and stops
+/// at the first that handles it. This state registers in [State.initState],
+/// before its [MaterialApp] child exists, so it is always asked before
+/// `WidgetsApp`.
+class _IncomingLinkSink extends StatefulWidget {
+  const _IncomingLinkSink({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_IncomingLinkSink> createState() => _IncomingLinkSinkState();
+}
+
+class _IncomingLinkSinkState extends State<_IncomingLinkSink>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Future<bool> didPushRouteInformation(RouteInformation routeInformation) {
+    Log.info(
+      'Dropped a link opened while the database failure screen was up: '
+      '${redactUriStringForLogs(routeInformation.uri.toString())}',
+      name: 'DatabaseBootstrapFailureApp',
+      category: LogCategory.system,
+    );
+    return SynchronousFuture(true);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _FailureScreen extends StatefulWidget {
