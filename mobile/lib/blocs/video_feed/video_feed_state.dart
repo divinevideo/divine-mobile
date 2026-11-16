@@ -567,8 +567,8 @@ final class VideoFeedCoordination extends Equatable {
   /// read was empty. Only meaningful while the source is New.
   final int? newVideosUntil;
 
-  /// Event IDs excluded during this session after an authoritative removal.
-  /// Filters stale network and cache reads after a deletion notification.
+  /// Event IDs announced on the removal bus during this session. Stale network
+  /// and cache reads drop the ones the repository knows are deleted.
   final Set<String> removedVideoIds;
 
   VideoFeedCoordination copyWith({

@@ -57,6 +57,8 @@ void main() {
     late _MockVideosRepository videos;
     late StreamController<String> removals;
 
+    setUpAll(() => registerFallbackValue(_video('0')));
+
     setUp(() {
       videos = _MockVideosRepository();
       removals = StreamController<String>.broadcast();
@@ -198,6 +200,7 @@ void main() {
           requested.complete();
           return page.future;
         });
+        when(() => videos.isVideoKnownDeleted(any())).thenReturn(true);
       });
 
       feedBlocTest(
@@ -279,6 +282,42 @@ void main() {
                 'refresh finished',
                 VideoFeedStatus.success,
               ),
+        ],
+      );
+
+      // Block and mute sweeps share the removal bus but are reversible: once
+      // the author is unblocked, a refresh must be able to show the video.
+      feedBlocTest(
+        'lets a refresh restore a video whose removal was not a deletion',
+        build: createBloc,
+        setUp: () =>
+            when(() => videos.isVideoKnownDeleted(any())).thenReturn(false),
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('1'), _video('2')],
+        ),
+        act: (bloc) async {
+          bloc.add(const VideoFeedRefreshRequested());
+          await requested.future;
+          final removed = bloc.stream.firstWhere(
+            (state) => state.coordination.removedVideoIds.contains('2' * 64),
+          );
+          removals.add('2' * 64);
+          await removed;
+          page.complete(HomeFeedResult(videos: [_video('1'), _video('2')]));
+        },
+        wait: Duration.zero,
+        expect: () => [
+          isA<VideoFeedBlocState>().having(
+            (state) => state.status,
+            'refresh started',
+            VideoFeedStatus.loading,
+          ),
+          isA<VideoFeedBlocState>().having(
+            (state) => state.videos,
+            'fresh videos',
+            [_video('1'), _video('2')],
+          ),
         ],
       );
     });

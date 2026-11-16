@@ -1607,11 +1607,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     }
   }
 
+  /// Drops late results for removals that were deletions. Block and mute
+  /// sweeps share the bus but are reversible, so an unblocked author's video
+  /// may come back on a later read.
   List<VideoEvent> _withoutRemovedVideos(Iterable<VideoEvent> videos) {
     final removed = state.coordination.removedVideoIds;
     return videos
         .where(
-          (video) => !removed.contains(video.id.toLowerCase()),
+          (video) =>
+              !removed.contains(video.id.toLowerCase()) ||
+              !_videosRepository.isVideoKnownDeleted(video),
         )
         .toList();
   }
