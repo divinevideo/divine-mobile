@@ -279,6 +279,82 @@ void main() {
       });
     });
 
+    group('shownIn', () {
+      /// A page holding one target per video, each laid out a page tall from
+      /// the top it is given, as a feed scrolled to that point does.
+      Future<RenderBox> pumpPages(
+        WidgetTester tester,
+        Map<String, double> tops,
+      ) async {
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox.fromSize(
+                key: pageKey,
+                size: _pageSize,
+                child: VideoTileTransitionScope(
+                  targets: targets,
+                  phase: phase,
+                  flight: flight,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      for (final MapEntry(key: videoId, value: top)
+                          in tops.entries)
+                        Positioned(
+                          left: 0,
+                          top: top,
+                          width: _pageSize.width,
+                          height: _pageSize.height,
+                          child: VideoTileTransitionTarget(
+                            videoId: videoId,
+                            aspectRatio: 1,
+                            coversViewport: false,
+                            child: const SizedBox.expand(),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        return pageKey.currentContext!.findRenderObject()! as RenderBox;
+      }
+
+      testWidgets('is the video on the page, not those built around it', (
+        tester,
+      ) async {
+        final page = await pumpPages(tester, {
+          'video1': -_pageSize.height,
+          'video2': 0,
+          'video3': _pageSize.height,
+        });
+
+        expect(targets.shownIn(page), equals('video2'));
+      });
+
+      testWidgets('is the video covering most of the page mid-scroll', (
+        tester,
+      ) async {
+        final page = await pumpPages(tester, {
+          'video1': -100,
+          'video2': _pageSize.height - 100,
+        });
+
+        expect(targets.shownIn(page), equals('video1'));
+      });
+
+      testWidgets('is null while no video is on the page', (tester) async {
+        final page = await pumpPages(tester, {'video1': -_pageSize.height});
+
+        expect(targets.shownIn(page), isNull);
+      });
+    });
+
     group('readPageOf', () {
       testWidgets('reads the page as drawn, backdrop and all', (tester) async {
         await pumpPage(tester, aspectRatio: 1, showsVideo: true);

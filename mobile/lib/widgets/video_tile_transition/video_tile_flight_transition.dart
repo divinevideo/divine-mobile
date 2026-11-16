@@ -48,6 +48,9 @@ import 'package:openvine/widgets/video_tile_transition/video_tile_transition_tar
 /// lands as the tile.
 /// Without a snapshot it flies the tile's picture throughout, the player-size
 /// decode when that has loaded, as it starts out at the player's size.
+/// Closing flies from the video the page shows when it begins, which is not
+/// the tile's once the feed has moved on to another: that video's frame
+/// shrinks into the tile all the same, and cross-fades into its picture.
 ///
 /// The page's controls fly with the picture, fading in as it grows: each
 /// [VideoTileFlightFrame] places them with the transform that places the
@@ -123,6 +126,12 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
 
   /// The page as the player was showing it when closing began.
   ui.Image? _frame;
+
+  /// The video the page showed when closing began, or `null` before then.
+  String? _closingVideoId;
+
+  /// The video the picture flies to or from.
+  String get _videoId => _closingVideoId ?? widget.origin.videoId;
 
   ImageStream? _playerSizeStream;
   ImageInfo? _playerSize;
@@ -211,17 +220,20 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
   };
 
   /// Takes the pictures closing flies: what the tile shows now, which is
-  /// where it lands, and, from the landed page, the page as it is shown.
+  /// where it lands, and, from the landed page, the video it shows and the
+  /// page as it is shown.
   void _takeClosingPictures() {
     _picture?.dispose();
     _picture = widget.origin.readImage();
-    if (_phase.value == VideoTileFlightPhase.landed && _framesReadable) {
-      _frame?.dispose();
-      _frame = _targets.readPageOf(
-        widget.origin.videoId,
-        pixelRatio: MediaQuery.devicePixelRatioOf(context),
-      );
-    }
+    if (_phase.value != VideoTileFlightPhase.landed) return;
+    final page = _pageKey.currentContext?.findRenderObject();
+    _closingVideoId = page is RenderBox ? _targets.shownIn(page) : null;
+    if (!_framesReadable) return;
+    _frame?.dispose();
+    _frame = _targets.readPageOf(
+      _videoId,
+      pixelRatio: MediaQuery.devicePixelRatioOf(context),
+    );
   }
 
   /// How far through opening the page starts playing.
@@ -269,6 +281,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     _picture = null;
     _frame?.dispose();
     _frame = null;
+    _closingVideoId = null;
   }
 
   @override
@@ -296,7 +309,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
   VideoTileLanding _landing(Rect screen) {
     final page = _pageKey.currentContext?.findRenderObject();
     if (page is RenderBox && page.attached) {
-      final landing = _targets.landingOf(widget.origin.videoId, page);
+      final landing = _targets.landingOf(_videoId, page);
       if (landing != null) {
         _lastLanding = landing.shift(page.localToGlobal(Offset.zero));
       }

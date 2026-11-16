@@ -204,6 +204,32 @@ class VideoTileTransitionTargets {
     return null;
   }
 
+  /// The video whose page covers the most of [ancestor], or `null` when no
+  /// page is laid out on it.
+  ///
+  /// A feed keeps the pages either side of the one it shows built, off
+  /// screen, so the video a feed shows is not always the one it opened on.
+  String? shownIn(RenderBox ancestor) {
+    if (!ancestor.attached || !ancestor.hasSize) return null;
+    final box = Offset.zero & ancestor.size;
+    String? shown;
+    var most = 0.0;
+    for (final MapEntry(key: videoId, value: targets) in _targets.entries) {
+      for (final target in targets) {
+        final page = target.landingIn(ancestor)?.page.outerRect;
+        if (page == null) continue;
+        final seen = page.intersect(box);
+        if (seen.isEmpty) continue;
+        final area = seen.width * seen.height;
+        if (area > most) {
+          most = area;
+          shown = videoId;
+        }
+      }
+    }
+    return shown;
+  }
+
   /// The page drawing [videoId] as it is drawn now, at [pixelRatio], or
   /// `null` while the page does not draw the video itself, such as while a
   /// poster stands in for it. The caller owns the image and must dispose it.
