@@ -1610,6 +1610,147 @@ void main() {
     });
 
     group('toVideoEvent', () {
+      test('preserves the first relay r-tag through REST conversion', () {
+        final stats = VideoStats.fromJson({
+          'event': {
+            'id': '1' * 64,
+            'pubkey': '2' * 64,
+            'created_at': 1700000100,
+            'kind': 34236,
+            'tags': const [
+              ['d', 'source-video'],
+              ['r', 'https://example.com/related-page'],
+              ['r', 'ws://localhost:47777'],
+              ['r', 'wss://another-relay.example'],
+              ['url', 'https://example.com/video.mp4'],
+            ],
+          },
+        });
+        expect(
+          stats.eventTags,
+          contains(equals(['r', 'ws://localhost:47777'])),
+        );
+        expect(stats.toVideoEvent().sourceRelay, 'ws://localhost:47777');
+      });
+
+      for (final nested in [false, true]) {
+        test(
+          'preserves relay and creator provenance in ${nested ? 'nested' : 'flat'} REST events',
+          () {
+            final publisher = 'a' * 64;
+            final clipAuthor = 'b' * 64;
+            final inspiredAuthor = 'c' * 64;
+            final tags = [
+              ['d', 'remix'],
+              ['url', 'https://example.com/video.mp4'],
+              ['r', 'wss://source.example'],
+              ['p', clipAuthor, 'wss://clip.example', 'clip-source'],
+              [
+                'a',
+                '34236:$clipAuthor:original',
+                'wss://clip.example',
+                'clip-source',
+              ],
+              [
+                'a',
+                '34236:$inspiredAuthor:inspiration',
+                'wss://inspiration.example',
+                'mention',
+              ],
+              ['p', inspiredAuthor, 'wss://inspiration.example', 'inspired-by'],
+              ['p', publisher, '', 'inspired-by'],
+            ];
+            final relayEvent = Event(
+              publisher,
+              34236,
+              tags,
+              '',
+              createdAt: 1700000100,
+            );
+            final json = relayEvent.toJson();
+            final stats = VideoStats.fromJson(nested ? {'event': json} : json);
+            final rest = stats.toVideoEvent();
+            final relay = VideoEvent.fromNostrEvent(relayEvent);
+
+            expect(rest.sourceRelay, relay.sourceRelay);
+            expect(
+              rest.inspiredByVideo?.toJson(),
+              relay.inspiredByVideo?.toJson(),
+            );
+            expect(rest.inspiredByPubkeys, [inspiredAuthor]);
+            expect(
+              rest.clipSourceCredits.map((credit) => credit.toJson()),
+              relay.clipSourceCredits.map((credit) => credit.toJson()),
+            );
+            expect(rest.clipSourceCredits, hasLength(1));
+            expect(rest.clipSourceCredits.single.authorPubkey, clipAuthor);
+            expect(
+              rest.clipSourceCredits.single.addressableId,
+              '34236:$clipAuthor:original',
+            );
+            expect(
+              rest.clipSourceCredits.single.relayUrl,
+              'wss://clip.example',
+            );
+            expect(rest.creditedInspiredByPubkeys, [
+              inspiredAuthor,
+              clipAuthor,
+            ]);
+            expect(
+              VideoEvent.fromJson(
+                rest.toJson(),
+              ).clipSourceCredits.single.toJson(),
+              rest.clipSourceCredits.single.toJson(),
+            );
+          },
+        );
+      }
+
+      test('does not infer a source relay from an HTTP reference', () {
+        final stats = VideoStats.fromJson({
+          'id': '1' * 64,
+          'pubkey': '2' * 64,
+          'created_at': 1700000100,
+          'kind': 34236,
+          'tags': const [
+            ['d', 'source-video'],
+            ['r', 'https://example.com/related-page'],
+            ['r', ''],
+            ['r'],
+            ['url', 'https://example.com/video.mp4'],
+          ],
+        });
+        expect(stats.toVideoEvent().sourceRelay, isNull);
+      });
+
+      test('credits one creator once across REST content and credit tags', () {
+        final creator = 'b' * 64;
+        final npub = Nip19.encodePubKey(creator);
+        final stats = VideoStats.fromJson({
+          'id': '1' * 64,
+          'pubkey': '2' * 64,
+          'created_at': 1700000100,
+          'kind': 34236,
+          'content': 'caption\n\nInspired by nostr:$npub',
+          'tags': [
+            ['d', 'remix'],
+            ['a', '34236:$creator:original', 'wss://source.example', 'mention'],
+            [
+              'a',
+              '34236:$creator:original',
+              'wss://source.example',
+              'clip-source',
+            ],
+            ['p', creator, 'wss://source.example', 'inspired-by'],
+          ],
+        });
+        expect(stats.toVideoEvent().creditedInspiredByPubkeys, [creator]);
+        expect(
+          stats.toVideoEvent().clipSourceCredits.single.authorPubkey,
+          creator,
+        );
+      });
+
       test('credits the trailing attribution line like a relay event', () {
         final npub = Nip19.encodePubKey('d' * 64);
         final stats = VideoStats.fromJson({
