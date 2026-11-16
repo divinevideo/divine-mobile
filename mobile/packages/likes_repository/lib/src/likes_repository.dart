@@ -2411,11 +2411,13 @@ class LikesRepository {
   /// Pass [addressableId] when the target is addressable: an edit mints a new
   /// event id under the same coordinate, so the coordinate is the only durable
   /// way to find the reaction afterwards. When the in-memory cache holds
-  /// nothing, the relay copy is consulted before giving up.
+  /// nothing, the startup snapshot and then the relays are consulted before
+  /// giving up.
   ///
-  /// Throws [NotDownvotedException] when neither the cache nor the relay has a
-  /// live downvote for the target.
-  /// Throws [UnlikeFailedException] if the deletion publish fails.
+  /// Throws [NotDownvotedException] when the cache, the snapshot and the
+  /// relays prove there is no live downvote for the target.
+  /// Throws [UnlikeFailedException] if the relays could not say whether there
+  /// is one (#10809), or if the deletion publish fails.
   Future<void> removeDownvote(String eventId, {String? addressableId}) async {
     await _ensureInitialized();
 
@@ -2423,13 +2425,22 @@ class LikesRepository {
     // empty while the kind-7 downvote is still live on relays. Falling back
     // to the relay copy keeps the deletion honest: without it this throws
     // [NotDownvotedException], the caller clears its UI, and the downvote
-    // survives untouched and reappears on the next fetch (#6124).
-    final record =
-        _lookupDownvoteRecord(eventId, addressableId) ??
-        await _resolveRemoteDownvoteRecord(
-          eventId,
-          addressableId: addressableId,
+    // survives untouched and reappears on the next fetch (#6124). A relay
+    // read that ended short is not that proof, so it fails instead (#10809).
+    var record = _lookupDownvoteRecord(eventId, addressableId);
+    if (record == null) {
+      final check = await _checkForLiveDownvote(
+        eventId,
+        addressableId: addressableId,
+      );
+      if (!check.isConclusive) {
+        throw const UnlikeFailedException(
+          'Relays did not confirm whether this account has a downvote to '
+          'remove',
         );
+      }
+      record = check.newest;
+    }
     if (record == null) {
       throw NotDownvotedException(eventId);
     }
@@ -4053,64 +4064,5 @@ class LikesRepository {
       createdAt: DateTime.fromMillisecondsSinceEpoch(newest.createdAt * 1000),
       addressableId: _extractAddressableId(newest) ?? addressableId,
     );
-  }
-
-  /// Resolves the current user's still-live downvote on [eventId] from relays.
-  ///
-  /// Returns the newest non-deleted kind-7 `-` reaction the user has published
-  /// against [eventId], or `null` when there is none. Used by
-  /// [removeDownvote] to recover from an empty in-memory cache after a cold
-  /// start, since downvotes are not persisted locally in v1.
-  Future<LikeRecord?> _resolveRemoteDownvoteRecord(
-    String eventId, {
-    String? addressableId,
-  }) async {
-    final pubkey = await _currentUserPubkey();
-    if (pubkey == null) return null;
-
-    // Includes the legacy 34236 key of a Kind 34235 video (#10776).
-    final coordinates = _voteTargetsByCoordinate(
-      [eventId],
-      {eventId: ?addressableId},
-    );
-    final reactions = await _queryVoteTargetReactions(
-      eventIds: [eventId],
-      eventIdByCoordinate: coordinates,
-      authors: [pubkey],
-    );
-
-    final candidatesById = <String, Event>{
-      for (final event in reactions)
-        if (event.pubkey == pubkey &&
-            event.content == _downvoteContent &&
-            _isReactionOn(event, eventId, addressableId))
-          event.id: event,
-    };
-    final candidates = candidatesById.values.toList();
-    if (candidates.isEmpty) return null;
-
-    final deletions = await _queryChunked(
-      candidates.map((event) => event.id).toList(),
-      (chunk) => Filter(
-        kinds: const [EventKind.eventDeletion],
-        authors: [pubkey],
-        e: chunk,
-      ),
-    );
-
-    final deletedIds = <String>{};
-    for (final deletion in deletions) {
-      for (final tag in deletion.tags) {
-        if (tag.isNotEmpty && tag[0] == 'e' && tag.length > 1) {
-          deletedIds.add(tag[1]);
-        }
-      }
-    }
-
-    final live = candidates
-        .where((event) => !deletedIds.contains(event.id))
-        .toList();
-    if (live.isEmpty) return null;
-    return _newestAsRecord(live, eventId, addressableId);
   }
 }

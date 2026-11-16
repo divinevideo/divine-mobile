@@ -343,5 +343,32 @@ void main() {
         expect(relay.downvotesBy(_me, _comment), equals(2));
       });
     });
+    group('removeDownvote', () {
+      test('fails instead of reporting no downvote when the relays did not '
+          'answer (#10809)', () async {
+        relay
+          ..vote(_me, _comment, content: '-')
+          ..answers = false;
+
+        await expectLater(
+          repository.removeDownvote(_comment),
+          throwsA(isA<UnlikeFailedException>()),
+        );
+
+        expect(relay.deletionCount, equals(0));
+      });
+
+      test(
+        'control: reports no downvote when the relays prove there is none',
+        () async {
+          relay.vote(_other, _comment, content: '-');
+
+          await expectLater(
+            repository.removeDownvote(_comment),
+            throwsA(isA<NotDownvotedException>()),
+          );
+        },
+      );
+    });
   });
 }

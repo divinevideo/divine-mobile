@@ -2437,7 +2437,7 @@ void main() {
         () async {
           repository = createRepository(withLocalStorage: false);
           // Relay reports no reaction and no deletion.
-          mockQueryEventsSequence([<Event>[], <Event>[]]);
+          mockReadEventsSequence([<Event>[], <Event>[]]);
 
           await expectLater(
             repository.removeDownvote(testEventId),
@@ -2453,7 +2453,7 @@ void main() {
           // empty while the kind-7 is still live. Without the relay fallback
           // this threw and the deletion was never published.
           repository = createRepository(withLocalStorage: false);
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [
               createMockReaction(
                 id: testReactionEventId,
@@ -2493,7 +2493,7 @@ void main() {
                 content: '-',
               ),
           ];
-          mockQueryEventsSequence([reactions, <Event>[], <Event>[]]);
+          mockReadEventsSequence([reactions, <Event>[], <Event>[]]);
           when(
             () => mockNostrClient.deleteEvent(any()),
           ).thenAnswer((_) async => MockEvent());
@@ -2501,7 +2501,15 @@ void main() {
           await repository.removeDownvote(testEventId);
 
           final deletionFilters =
-              verify(() => mockNostrClient.queryEvents(captureAny())).captured
+              verify(
+                    () => mockNostrClient.readEvents(
+                      captureAny(),
+                      requireAllRelaysSettled: any(
+                        named: 'requireAllRelaysSettled',
+                      ),
+                      timeout: any(named: 'timeout'),
+                    ),
+                  ).captured
                   .cast<List<Filter>>()
                   .map((filters) => filters.single)
                   .where(
@@ -2531,16 +2539,20 @@ void main() {
         'does not delete a relay downvote that was already deleted (#6124)',
         () async {
           repository = createRepository(withLocalStorage: false);
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [
               createMockReaction(
                 id: testReactionEventId,
                 targetEventId: testEventId,
+                authorPubkey: testUserPubkey,
                 content: '-',
               ),
             ],
             [
-              createMockDeletion([testReactionEventId]),
+              createMockDeletion(
+                [testReactionEventId],
+                authorPubkey: testUserPubkey,
+              ),
             ],
           ]);
 
@@ -7267,7 +7279,7 @@ void main() {
 
         test('removeDownvote deletes the downvote left under the legacy '
             'key', () async {
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             <Event>[],
             [legacyDownvote()],
             <Event>[],
