@@ -128,6 +128,9 @@ class VideoContentSaveFeedback extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.only(top: 12),
           child: Semantics(
+            // Without its own node the live region merges into the list
+            // item, making the whole action row one announcement.
+            container: true,
             liveRegion: true,
             child: DivineSnackbarContainer(label: message, error: isError),
           ),

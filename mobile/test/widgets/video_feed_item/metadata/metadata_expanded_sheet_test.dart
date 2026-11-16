@@ -3377,15 +3377,16 @@ void main() {
           expect(find.byType(MetadataActionsSection), findsOneWidget);
           expect(find.text(l10n.shareSheetRemoveFromSaved), findsOneWidget);
           expect(find.text(l10n.shareAddedToBookmarks), findsOneWidget);
+          // A leaf node: merged into its list item, the live region would
+          // carry the label and flag too, but also the whole action row.
+          final banner = tester.getSemantics(
+            find.text(l10n.shareAddedToBookmarks),
+          );
+          expect(banner.childrenCount, equals(0));
+          expect(banner.label, equals(l10n.shareAddedToBookmarks));
           expect(
-            find.ancestor(
-              of: find.text(l10n.shareAddedToBookmarks),
-              matching: find.byWidgetPredicate(
-                (widget) =>
-                    widget is Semantics && widget.properties.liveRegion == true,
-              ),
-            ),
-            findsOneWidget,
+            banner.getSemanticsData().flagsCollection.isLiveRegion,
+            isTrue,
           );
           expect(find.byType(SnackBar), findsNothing);
 
