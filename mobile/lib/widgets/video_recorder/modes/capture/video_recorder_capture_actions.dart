@@ -179,7 +179,7 @@ class _StabilizationButton extends StatelessWidget {
       ),
     );
     return _IconButton(
-      icon: .sparkle,
+      icon: .stabilization,
       label: context.l10n.videoRecorderStabilizationLabel,
       identifier: SemanticIds.cameraStabilizationButton,
       value: _stabilizationModeLabel(context.l10n, mode),
