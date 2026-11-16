@@ -118,6 +118,7 @@ void main() {
 
     for (final (removed, currentIndex, nextIndex) in [
       ('1', 0, 0),
+      ('1', 1, 0),
       ('1', 2, 1),
       ('3', 2, 1),
       ('3', 0, 0),
@@ -131,8 +132,9 @@ void main() {
           currentIndex: currentIndex,
           videoListSources: {
             removed * 64: const {'synthetic-list'},
+            '2' * 64: const {'synthetic-list'},
           },
-          listOnlyVideoIds: {removed * 64},
+          listOnlyVideoIds: {removed * 64, '2' * 64},
         ),
         act: (_) => removals.add(removed * 64),
         wait: Duration.zero,
@@ -150,12 +152,14 @@ void main() {
               .having(
                 (state) => state.videoListSources,
                 'list attribution',
-                isEmpty,
+                {
+                  '2' * 64: const {'synthetic-list'},
+                },
               )
               .having(
                 (state) => state.listOnlyVideoIds,
                 'list-only videos',
-                isEmpty,
+                {'2' * 64},
               ),
         ],
       );
