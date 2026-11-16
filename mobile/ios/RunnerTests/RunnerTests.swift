@@ -2384,8 +2384,8 @@ final class ShaderVideoEffectTests: XCTestCase {
       }
       let difference = compare(effect, seconds: 0, expected)
       // A stitch whose colour lies right between two thread colours can take
-      // either, on the GPU and here; a change to the strands, the cloth or
-      // the holes moves far more.
+      // either, on the GPU and here; a change to the strands or the cloth
+      // moves far more. The holes fall between pixel centres at this size.
       XCTAssertLessThan(difference.share, 0.002, "intensity \(intensity)")
     }
   }
