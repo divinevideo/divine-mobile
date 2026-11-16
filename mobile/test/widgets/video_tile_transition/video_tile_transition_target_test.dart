@@ -1,8 +1,30 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_transition_target.dart';
 
 const _pageSize = Size(400, 500);
+
+/// Where the page letterboxes a square video.
+const _squareBand = Rect.fromLTWH(0, 50, 400, 400);
+
+const _black = Color(0xFF000000);
+const _red = Color(0xFFFF0000);
+
+/// The color of [image]'s pixel at [x], [y].
+Future<Color> _pixel(WidgetTester tester, ui.Image image, int x, int y) async {
+  final bytes = (await tester.runAsync(
+    () => image.toByteData(),
+  ))!;
+  final offset = (y * image.width + x) * 4;
+  return Color.fromARGB(
+    bytes.getUint8(offset + 3),
+    bytes.getUint8(offset),
+    bytes.getUint8(offset + 1),
+    bytes.getUint8(offset + 2),
+  );
+}
 
 void main() {
   group(VideoTileTransitionTargets, () {
@@ -28,13 +50,25 @@ void main() {
       double? aspectRatio,
       bool coversViewport = false,
       bool showTarget = true,
+      bool showsVideo = false,
       BorderRadius? clipRadius,
     }) async {
       Widget target = VideoTileTransitionTarget(
         videoId: videoId,
         aspectRatio: aspectRatio,
         coversViewport: coversViewport,
-        child: const ColoredBox(color: Color(0xFF000000)),
+        showsVideo: showsVideo,
+        // A black backdrop with the video red in the square band.
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const ColoredBox(color: _black),
+            Positioned.fromRect(
+              rect: _squareBand,
+              child: const ColoredBox(color: _red),
+            ),
+          ],
+        ),
       );
       if (clipRadius != null) {
         target = ClipRRect(borderRadius: clipRadius, child: target);
@@ -240,6 +274,63 @@ void main() {
           mediaRect('video1', page),
           equals(const Rect.fromLTWH(0, 50, 400, 400)),
         );
+      });
+    });
+
+    group('readPageOf', () {
+      testWidgets('reads the page as drawn, backdrop and all', (tester) async {
+        await pumpPage(tester, aspectRatio: 1, showsVideo: true);
+
+        final page = targets.readPageOf('video1', pixelRatio: 2)!;
+        addTearDown(page.dispose);
+
+        expect(page.width, equals(800));
+        expect(page.height, equals(1000));
+        expect(await _pixel(tester, page, 0, 0), equals(_black));
+        expect(await _pixel(tester, page, 400, 500), equals(_red));
+      });
+
+      testWidgets('reads nothing from a page that does not draw the video', (
+        tester,
+      ) async {
+        await pumpPage(tester, aspectRatio: 1);
+
+        expect(targets.readPageOf('video1', pixelRatio: 1), isNull);
+      });
+
+      testWidgets('reads nothing while a poster stands in for the video', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: VideoTileTransitionScope(
+              targets: targets,
+              phase: phase,
+              flight: flight,
+              child: const Stack(
+                fit: StackFit.expand,
+                children: [
+                  VideoTileTransitionTarget(
+                    videoId: 'video1',
+                    aspectRatio: 1,
+                    coversViewport: false,
+                    child: ColoredBox(color: _black),
+                  ),
+                  VideoTileTransitionTarget(
+                    videoId: 'video1',
+                    aspectRatio: 1,
+                    coversViewport: false,
+                    showsVideo: true,
+                    child: ColoredBox(color: _red),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        expect(targets.readPageOf('video1', pixelRatio: 1), isNull);
       });
     });
 

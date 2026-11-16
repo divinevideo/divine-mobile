@@ -4,6 +4,8 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
@@ -29,8 +31,15 @@ import 'package:openvine/widgets/video_tile_transition/video_tile_transition_tar
 ///
 /// The picture starts as the tile's own decode and switches to
 /// [VideoTileOrigin.playerSizeImage] once that has loaded, while it is still
-/// small enough for the two to look alike. Closing flies the player-size one
-/// too, as it starts out at the player's size.
+/// small enough for the two to look alike.
+///
+/// Closing from the landed page flies a snapshot of the page as the player
+/// was showing it, where its frames can be read: the frame it was on, with
+/// whatever letterboxes it, placed like the controls and hiding the page
+/// beneath, which may go on playing. The tile's picture cross-fades in over
+/// it in the last [closeCrossFade] of the way, so it lands as the tile.
+/// Without a snapshot it flies the tile's picture throughout, the player-size
+/// decode when that has loaded, as it starts out at the player's size.
 ///
 /// The page's controls fly with the picture, fading in as it grows: each
 /// [VideoTileFlightFrame] places them with the transform that places the
@@ -45,12 +54,17 @@ import 'package:openvine/widgets/video_tile_transition/video_tile_transition_tar
 /// then, so they take over from their flying copy, and its playback until
 /// [playbackLead] before then, so the video is already moving from near
 /// where the picture shows it.
+///
+/// While [popGestureInProgress] is `true`, the animation is being dragged
+/// back by hand: the picture follows it linearly, so it tracks the finger,
+/// and the page keeps playing beneath it in case the drag is let go.
 class VideoTileFlightTransition extends StatefulWidget {
   /// Creates the transition for one route.
   const VideoTileFlightTransition({
     required this.animation,
     required this.origin,
     required this.child,
+    this.popGestureInProgress,
     super.key,
   });
 
@@ -63,6 +77,10 @@ class VideoTileFlightTransition extends StatefulWidget {
   /// The page.
   final Widget child;
 
+  /// Whether [animation] is being dragged back by hand, or settling from
+  /// such a drag.
+  final ValueListenable<bool>? popGestureInProgress;
+
   /// How long the picture takes to fly from the tile to the player.
   static const openDuration = Duration(milliseconds: 280);
 
@@ -73,6 +91,10 @@ class VideoTileFlightTransition extends StatefulWidget {
   /// about how long the player takes from being asked to play to showing
   /// the video moving.
   static const playbackLead = Duration(milliseconds: 100);
+
+  /// How much of the way back into the tile, at its end, the player's last
+  /// frame cross-fades into the tile's picture.
+  static const closeCrossFade = 0.25;
 
   @override
   State<VideoTileFlightTransition> createState() =>
@@ -90,6 +112,9 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
   final GlobalKey _pageKey = GlobalKey();
 
   ui.Image? _picture;
+
+  /// The page as the player was showing it when closing began.
+  ui.Image? _frame;
 
   ImageStream? _playerSizeStream;
   ImageInfo? _playerSize;
@@ -123,6 +148,70 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     widget.animation
       ..addStatusListener(_onStatus)
       ..addListener(_onProgress);
+    widget.popGestureInProgress?.addListener(_onPopGesture);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // A route the navigator adds already open, such as one rebuilt under
+    // another page, never runs forward: no picture flies, so it has landed.
+    if (!_hasOpened &&
+        widget.animation.status == AnimationStatus.completed &&
+        ModalRoute.of(context)?.offstage == false) {
+      _hasOpened = true;
+      _releasePicture();
+      _phase.value = VideoTileFlightPhase.landed;
+    }
+  }
+
+  @override
+  void didUpdateWidget(VideoTileFlightTransition oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.popGestureInProgress != widget.popGestureInProgress) {
+      oldWidget.popGestureInProgress?.removeListener(_onPopGesture);
+      widget.popGestureInProgress?.addListener(_onPopGesture);
+    }
+  }
+
+  bool get _dragged => widget.popGestureInProgress?.value ?? false;
+
+  void _onPopGesture() {
+    if (_dragged) {
+      if (_phase.value != VideoTileFlightPhase.landed) return;
+      // Dragging back from the landed page: fly what closing would.
+      setState(_takeClosingPictures);
+      _phase.value = VideoTileFlightPhase.arriving;
+    } else if (widget.animation.status == AnimationStatus.completed) {
+      // Let go and settled back open, which a drag that never moved does
+      // without the animation reporting it.
+      setState(_releasePicture);
+      _phase.value = VideoTileFlightPhase.landed;
+    } else {
+      // The picture goes back to following the animation's curves.
+      setState(() {});
+    }
+  }
+
+  /// Whether the player draws its frames where a snapshot can read them: a
+  /// texture can be, but Android's platform view cannot.
+  static bool get _framesReadable => switch (defaultTargetPlatform) {
+    TargetPlatform.iOS || TargetPlatform.macOS => true,
+    _ => false,
+  };
+
+  /// Takes the pictures closing flies: what the tile shows now, which is
+  /// where it lands, and, from the landed page, the page as it is shown.
+  void _takeClosingPictures() {
+    _picture?.dispose();
+    _picture = widget.origin.readImage();
+    if (_phase.value == VideoTileFlightPhase.landed && _framesReadable) {
+      _frame?.dispose();
+      _frame = _targets.readPageOf(
+        widget.origin.videoId,
+        pixelRatio: MediaQuery.devicePixelRatioOf(context),
+      );
+    }
   }
 
   /// How far through opening the page starts playing.
@@ -132,7 +221,8 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
           VideoTileFlightTransition.openDuration.inMicroseconds;
 
   void _onProgress() {
-    if (widget.animation.status == AnimationStatus.forward &&
+    if (!_dragged &&
+        widget.animation.status == AnimationStatus.forward &&
         widget.animation.value >= _arrivalProgress &&
         _phase.value == VideoTileFlightPhase.flying) {
       _phase.value = VideoTileFlightPhase.arriving;
@@ -143,17 +233,14 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     switch (status) {
       case AnimationStatus.forward:
         _hasOpened = true;
-      case AnimationStatus.completed when _hasOpened:
+      // A drag back that returns to where it started reaches completed too,
+      // and goes on: the picture keeps flying until the drag has let go.
+      case AnimationStatus.completed when _hasOpened && !_dragged:
         setState(_releasePicture);
         _phase.value = VideoTileFlightPhase.landed;
       case AnimationStatus.reverse:
+        setState(_takeClosingPictures);
         _phase.value = VideoTileFlightPhase.flying;
-        // Closing: fly what the tile shows now, which is where it lands,
-        // unless the player-size decode has loaded.
-        setState(() {
-          _picture?.dispose();
-          _picture = widget.origin.readImage();
-        });
       case AnimationStatus.completed:
       case AnimationStatus.dismissed:
         break;
@@ -170,6 +257,8 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
   void _releasePicture() {
     _picture?.dispose();
     _picture = null;
+    _frame?.dispose();
+    _frame = null;
   }
 
   @override
@@ -177,6 +266,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
     widget.animation
       ..removeStatusListener(_onStatus)
       ..removeListener(_onProgress);
+    widget.popGestureInProgress?.removeListener(_onPopGesture);
     _motion.dispose();
     _phase.dispose();
     _flight.dispose();
@@ -226,7 +316,7 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
       animation: _motion,
       child: page,
       builder: (context, page) {
-        final progress = _motion.value;
+        final progress = _dragged ? widget.animation.value : _motion.value;
         final screen = Offset.zero & MediaQuery.sizeOf(context);
         final from =
             widget.origin.rect ??
@@ -256,19 +346,31 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
         final picture = _picture == null
             ? null
             : _playerSize?.image ?? _picture;
+        final frame = _frame;
         final status = widget.animation.status;
+        // A drag back starts from the landed page, before the animation
+        // reports it is moving.
         final flying =
-            picture != null &&
-            (status == AnimationStatus.forward ||
+            (picture != null || frame != null) &&
+            (_dragged ||
+                status == AnimationStatus.forward ||
                 status == AnimationStatus.reverse);
+        // With the page's snapshot flying, the video in it is placed as
+        // drawn, covering the moving rect, and the controls with it.
         final transform = contentTransform(
-          content: picture == null
+          content: picture == null || frame != null
               ? media.size
               : Size(picture.width.toDouble(), picture.height.toDouble()),
           landing: media,
           rect: rect,
           alignment: alignment,
         );
+        final pictureOpacity = frame == null
+            ? 1.0
+            : (1 - progress / VideoTileFlightTransition.closeCrossFade).clamp(
+                0.0,
+                1.0,
+              );
         final clip = RRect.lerp(
           RRect.fromRectAndRadius(
             from,
@@ -293,25 +395,46 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
               opacity: progress,
               child: flying
                   ? ClipPath(
-                      clipper: _PageReveal(page: landing.page, flight: clip),
+                      clipper: _PageReveal(
+                        page: landing.page,
+                        // The snapshot stands in for the page under the clip.
+                        flight: frame == null ? clip : null,
+                      ),
                       child: page,
                     )
                   : page,
             ),
             if (flying) ...[
-              Positioned.fromRect(
-                rect: rect,
-                child: IgnorePointer(
-                  child: ClipRRect(
-                    borderRadius: borderRadius,
-                    child: RawImage(
-                      image: picture,
-                      fit: BoxFit.cover,
-                      alignment: alignment,
+              if (frame != null)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: VideoTilePageSnapshotPainter(
+                        image: frame,
+                        page: landing.page.outerRect,
+                        transform: transform,
+                        clip: clip,
+                      ),
                     ),
                   ),
                 ),
-              ),
+              if (picture != null && pictureOpacity > 0)
+                Positioned.fromRect(
+                  rect: rect,
+                  child: IgnorePointer(
+                    child: Opacity(
+                      opacity: pictureOpacity,
+                      child: ClipRRect(
+                        borderRadius: borderRadius,
+                        child: RawImage(
+                          image: picture,
+                          fit: BoxFit.cover,
+                          alignment: alignment,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               Positioned.fill(
                 child: IgnorePointer(
                   child: CustomPaint(
@@ -390,27 +513,81 @@ class _VideoTileFlightTransitionState extends State<VideoTileFlightTransition> {
 }
 
 /// Shows the page around [page], where the video is, and inside [flight],
-/// the clip growing from the tile to the page.
+/// the clip growing from the tile to the page, when there is one.
 class _PageReveal extends CustomClipper<Path> {
   const _PageReveal({required this.page, required this.flight});
 
   final RRect page;
-  final RRect flight;
+  final RRect? flight;
 
   @override
-  Path getClip(Size size) => Path.combine(
-    PathOperation.union,
-    Path.combine(
+  Path getClip(Size size) {
+    final around = Path.combine(
       PathOperation.difference,
       Path()..addRect(Offset.zero & size),
       Path()..addRRect(page),
-    ),
-    Path()..addRRect(flight),
-  );
+    );
+    final flight = this.flight;
+    if (flight == null) return around;
+    return Path.combine(
+      PathOperation.union,
+      around,
+      Path()..addRRect(flight),
+    );
+  }
 
   @override
   bool shouldReclip(_PageReveal oldClipper) =>
       page != oldClipper.page || flight != oldClipper.flight;
+}
+
+/// Paints [image], a snapshot of the page laid out at [page], moved by
+/// [transform] with the controls and clipped to [clip], over the player's
+/// background.
+@visibleForTesting
+class VideoTilePageSnapshotPainter extends CustomPainter {
+  /// Paints [image] where [transform] moves [page], inside [clip].
+  VideoTilePageSnapshotPainter({
+    required this.image,
+    required this.page,
+    required this.transform,
+    required this.clip,
+  });
+
+  /// The page as the player was showing it.
+  final ui.Image image;
+
+  /// Where the page is laid out, in global coordinates.
+  final Rect page;
+
+  /// Where the page's layout is drawn now, as for its controls.
+  final Matrix4 transform;
+
+  /// What of the page shows, as for the controls.
+  final RRect clip;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas
+      ..save()
+      ..clipRRect(clip)
+      ..drawColor(VineTheme.backgroundColor, BlendMode.srcOver)
+      ..transform(transform.storage)
+      ..drawImageRect(
+        image,
+        Offset.zero & Size(image.width.toDouble(), image.height.toDouble()),
+        page,
+        Paint()..filterQuality = FilterQuality.medium,
+      )
+      ..restore();
+  }
+
+  @override
+  bool shouldRepaint(VideoTilePageSnapshotPainter oldDelegate) =>
+      image != oldDelegate.image ||
+      page != oldDelegate.page ||
+      transform != oldDelegate.transform ||
+      clip != oldDelegate.clip;
 }
 
 /// The transform that moves what is drawn over [content] covering [landing],

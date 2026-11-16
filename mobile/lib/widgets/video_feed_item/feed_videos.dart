@@ -553,6 +553,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
               aspectRatio: aspectRatio,
               shouldPortraitExpand: fillsViewport,
             ),
+            showsVideo: true,
             child: Stack(
               fit: StackFit.expand,
               children: [

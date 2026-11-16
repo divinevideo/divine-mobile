@@ -1,5 +1,7 @@
 // ABOUTME: Marks where a fullscreen player shows a video, so a grid tile's
-// ABOUTME: picture can fly to exactly that frame when the player opens.
+// ABOUTME: picture can fly to exactly that frame, and back from it on close.
+
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
@@ -43,6 +45,9 @@ class VideoTileLanding {
 /// [aspectRatio], centered, the way the player letterboxes it. A corner of
 /// the frame that sits in the corner of a rounded clip around the page, such
 /// as the feed's rounded bottom, takes that clip's radius.
+///
+/// A target that [showsVideo] can also be read, so the picture flying back
+/// into the tile on close starts as the page the player was showing.
 class VideoTileTransitionTarget extends StatefulWidget {
   /// Marks [child] as the page showing [videoId].
   const VideoTileTransitionTarget({
@@ -50,6 +55,7 @@ class VideoTileTransitionTarget extends StatefulWidget {
     required this.aspectRatio,
     required this.coversViewport,
     required this.child,
+    this.showsVideo = false,
     super.key,
   });
 
@@ -65,6 +71,10 @@ class VideoTileTransitionTarget extends StatefulWidget {
 
   /// The page.
   final Widget child;
+
+  /// Whether [child] draws the video itself, rather than a poster standing in
+  /// for it while it loads.
+  final bool showsVideo;
 
   @override
   State<VideoTileTransitionTarget> createState() =>
@@ -172,8 +182,34 @@ class _VideoTileTransitionTargetState extends State<VideoTileTransitionTarget> {
     );
   }
 
+  /// The page as it is drawn now, at [pixelRatio], or `null` when it does
+  /// not draw the video or has not painted it. The caller owns the image and
+  /// must dispose it.
+  ui.Image? readPage({required double pixelRatio}) {
+    final page = context.findRenderObject();
+    if (!widget.showsVideo ||
+        page is! RenderRepaintBoundary ||
+        !page.attached ||
+        !page.hasSize) {
+      return null;
+    }
+    var painted = true;
+    assert(() {
+      painted = !page.debugNeedsPaint;
+      return true;
+    }(), 'debugNeedsPaint is only readable in debug builds');
+    if (!painted) return null;
+    try {
+      return page.toImageSync(pixelRatio: pixelRatio);
+    } on Object {
+      // The picture is decoration: without it the tile's own picture flies.
+      return null;
+    }
+  }
+
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) =>
+      widget.showsVideo ? RepaintBoundary(child: widget.child) : widget.child;
 }
 
 /// The [VideoTileTransitionTarget]s below a [VideoTileTransitionScope], so a
@@ -193,6 +229,21 @@ class VideoTileTransitionTargets {
         in _targets[videoId] ?? const <_VideoTileTransitionTargetState>{}) {
       final landing = target.landingIn(ancestor);
       if (landing != null) return landing;
+    }
+    return null;
+  }
+
+  /// The page drawing [videoId] as it is drawn now, at [pixelRatio], or
+  /// `null` while the page does not draw the video itself, such as while a
+  /// poster stands in for it. The caller owns the image and must dispose it.
+  ui.Image? readPageOf(String videoId, {required double pixelRatio}) {
+    final targets =
+        _targets[videoId] ?? const <_VideoTileTransitionTargetState>{};
+    // A poster standing in means the video has no frame to show yet.
+    if (targets.any((target) => !target.widget.showsVideo)) return null;
+    for (final target in targets) {
+      final page = target.readPage(pixelRatio: pixelRatio);
+      if (page != null) return page;
     }
     return null;
   }
@@ -237,9 +288,10 @@ enum VideoTileFlightPhase {
   /// The picture is on its way: the page holds its playback and controls.
   flying,
 
-  /// The picture is about to land: the page starts playing beneath it, so
-  /// the video is moving by the time the picture uncovers it, and still holds
-  /// its controls.
+  /// The picture covers the page while it plays beneath: the picture is
+  /// about to land, so the video is moving by the time it is uncovered, or is
+  /// being dragged back, so the video goes on if the drag is let go. The page
+  /// still holds its controls.
   arriving,
 
   /// The picture has handed over to the page, or no picture flies.

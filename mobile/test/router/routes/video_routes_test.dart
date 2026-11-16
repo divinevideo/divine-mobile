@@ -17,6 +17,7 @@ import 'package:openvine/router/recorder_sound_selection.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/router/video_tile_transition_page.dart';
 import 'package:openvine/router/widgets/sound_detail_loader.dart';
 import 'package:openvine/screens/creator_analytics_screen.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
@@ -34,7 +35,6 @@ import 'package:openvine/ui/adaptive_layout.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/profile/profile_video_feed_view.dart';
 import 'package:openvine/widgets/release_cached_images_on_dispose.dart';
-import 'package:openvine/widgets/video_tile_transition/video_tile_flight_transition.dart';
 import 'package:openvine/widgets/video_tile_transition/video_tile_origin.dart';
 
 import '../../helpers/l10n.dart';
@@ -1040,7 +1040,7 @@ void main() {
 
       test('keeps the default page without a tile to grow out of', () {
         // go_router's internal no-op page, which hands the route to `build`.
-        expect(pageFor(null), isNot(isA<CustomTransitionPage<void>>()));
+        expect(pageFor(null), isNot(isA<VideoTileTransitionPage>()));
       });
 
       testWidgets('grows out of the tile it was opened from', (tester) async {
@@ -1063,23 +1063,11 @@ void main() {
         );
         final origin = VideoTileOrigin.capture(tileContext, videoId: _hexId)!;
 
-        final page = pageFor(origin) as CustomTransitionPage<void>;
+        final page = pageFor(origin) as VideoTileTransitionPage;
 
         expect(page.name, equals(PooledFullscreenVideoFeedScreen.routeName));
         expect(page.child, isA<ProfileVideoFeedView>());
-        expect(
-          page.transitionsBuilder(
-            tileContext,
-            kAlwaysCompleteAnimation,
-            kAlwaysDismissedAnimation,
-            page.child,
-          ),
-          isA<VideoTileFlightTransition>().having(
-            (transform) => transform.origin,
-            'origin',
-            same(origin),
-          ),
-        );
+        expect(page.origin, same(origin));
       });
     });
 

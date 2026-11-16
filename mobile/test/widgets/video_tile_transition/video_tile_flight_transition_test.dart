@@ -21,14 +21,22 @@ const _landing = Rect.fromLTWH(0, 200, 400, 400);
 /// The page's rounded bottom corners, when it has them.
 const _pageCorners = BorderRadius.vertical(bottom: Radius.circular(24));
 
+/// The color the page draws the video in, where the video is drawn.
+const _videoColor = Color(0xFFFF0000);
+
 class _Page extends StatelessWidget {
   const _Page({
     this.showsVideo = true,
+    this.drawsVideo = false,
     this.roundedCover = false,
     this.bottomBar = false,
   });
 
   final bool showsVideo;
+
+  /// Whether the target draws the video itself, in [_videoColor], rather
+  /// than standing in for it.
+  final bool drawsVideo;
 
   /// Whether the video sits above a 100 px bar, as over a comment bar.
   final bool bottomBar;
@@ -53,11 +61,14 @@ class _Page extends StatelessWidget {
     final video = ColoredBox(
       color: const Color(0xFF000000),
       child: showsVideo
-          ? const VideoTileTransitionTarget(
+          ? VideoTileTransitionTarget(
               videoId: 'video1',
               aspectRatio: 1,
               coversViewport: false,
-              child: SizedBox.expand(),
+              showsVideo: drawsVideo,
+              child: drawsVideo
+                  ? const ColoredBox(color: _videoColor)
+                  : const SizedBox.expand(),
             )
           : null,
     );
@@ -80,6 +91,8 @@ class _Harness extends StatelessWidget {
     this.animation,
     this.origin,
     this.pageShowsVideo = true,
+    this.pageDrawsVideo = false,
+    this.popGestureInProgress,
     this.pageRoundedCover = false,
     this.pageBottomBar = false,
     this.disableAnimations = false,
@@ -96,6 +109,8 @@ class _Harness extends StatelessWidget {
   final Animation<double>? animation;
   final VideoTileOrigin? origin;
   final bool pageShowsVideo;
+  final bool pageDrawsVideo;
+  final ValueListenable<bool>? popGestureInProgress;
   final bool pageRoundedCover;
   final bool pageBottomBar;
   final bool disableAnimations;
@@ -163,8 +178,10 @@ class _Harness extends StatelessWidget {
                 child: VideoTileFlightTransition(
                   animation: animation,
                   origin: origin,
+                  popGestureInProgress: popGestureInProgress,
                   child: _Page(
                     showsVideo: pageShowsVideo,
+                    drawsVideo: pageDrawsVideo,
                     roundedCover: pageRoundedCover,
                     bottomBar: pageBottomBar,
                   ),
@@ -921,6 +938,200 @@ void main() {
         expect(_pageOpacity(tester), equals(0));
         await tester.pumpAndSettle();
       });
+    });
+
+    group('closing from the player', () {
+      /// Lands the page, drawing the video, over the tile.
+      Future<void> pumpLanded(
+        WidgetTester tester, {
+        ValueListenable<bool>? popGestureInProgress,
+      }) async {
+        final origin = await pumpTile(tester);
+        controller.forward();
+        await tester.pumpWidget(
+          _Harness(
+            image: image,
+            animation: controller,
+            origin: origin,
+            pageDrawsVideo: true,
+            popGestureInProgress: popGestureInProgress,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(_pageHasLanded(tester), isTrue);
+      }
+
+      final snapshot = find.byWidgetPredicate(
+        (widget) =>
+            widget is CustomPaint &&
+            widget.painter is VideoTilePageSnapshotPainter,
+      );
+
+      VideoTilePageSnapshotPainter snapshotPainter(WidgetTester tester) =>
+          tester.widget<CustomPaint>(snapshot).painter!
+              as VideoTilePageSnapshotPainter;
+
+      /// Whether the page itself shows at [point].
+      bool pageShowsAt(WidgetTester tester, Offset point) => tester
+          .widget<ClipPath>(
+            find.ancestor(
+              of: find.byType(_Page),
+              matching: find.byType(ClipPath),
+            ),
+          )
+          .clipper!
+          .getClip(_screenSize)
+          .contains(point);
+
+      double pictureOpacity(WidgetTester tester) => tester
+          .widget<Opacity>(
+            find.ancestor(of: _picture, matching: find.byType(Opacity)),
+          )
+          .opacity;
+
+      testWidgets(
+        'flies a snapshot of the page, hiding the page beneath',
+        (tester) async {
+          await pumpLanded(tester);
+
+          controller.reverse();
+          await tester.pump();
+
+          final painter = snapshotPainter(tester);
+          expect(painter.page, equals(Offset.zero & _screenSize));
+          expect(painter.image.width, equals(_screenSize.width));
+          expect(painter.image.height, equals(_screenSize.height));
+          final bytes = (await tester.runAsync(painter.image.toByteData))!;
+          final middle =
+              (_landing.center.dy.toInt() * painter.image.width +
+                  _landing.center.dx.toInt()) *
+              4;
+          expect(
+            Color.fromARGB(
+              bytes.getUint8(middle + 3),
+              bytes.getUint8(middle),
+              bytes.getUint8(middle + 1),
+              bytes.getUint8(middle + 2),
+            ),
+            equals(_videoColor),
+          );
+          // The tile's picture has not started fading in.
+          expect(_picture, findsNothing);
+          expect(pageShowsAt(tester, _landing.center), isFalse);
+
+          await tester.pump(VideoTileFlightTransition.closeDuration ~/ 2);
+          expect(pageShowsAt(tester, _landing.center), isFalse);
+          expect(snapshotPainter(tester).clip.outerRect, isNot(_landing));
+          await tester.pumpAndSettle();
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      );
+
+      testWidgets(
+        "cross-fades into the tile's picture over the last of the way",
+        (tester) async {
+          await pumpLanded(tester);
+          controller.reverse();
+          await tester.pump();
+
+          double progress() => Curves.easeInCubic.transform(controller.value);
+
+          // Not yet faded in a little before the last quarter.
+          while (progress() > VideoTileFlightTransition.closeCrossFade + 0.05) {
+            await tester.pump(const Duration(milliseconds: 10));
+          }
+          expect(_picture, findsNothing);
+
+          // Halfway faded in halfway through the last quarter.
+          while (progress() > VideoTileFlightTransition.closeCrossFade / 2) {
+            await tester.pump(const Duration(milliseconds: 10));
+          }
+          expect(
+            pictureOpacity(tester),
+            closeTo(
+              1 - progress() / VideoTileFlightTransition.closeCrossFade,
+              0.001,
+            ),
+          );
+          expect(
+            tester.widget<RawImage>(_picture).image!.width,
+            equals(image.width),
+          );
+          expect(snapshot, findsOneWidget);
+
+          // Fully faded in as it reaches the tile.
+          while (controller.value > 0.02) {
+            await tester.pump(const Duration(milliseconds: 2));
+          }
+          expect(controller.isAnimating, isTrue);
+          expect(pictureOpacity(tester), closeTo(1, 0.01));
+          await tester.pumpAndSettle();
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      );
+
+      testWidgets(
+        "flies the tile's picture where the player's frames cannot be read",
+        (tester) async {
+          await pumpLanded(tester);
+
+          controller.reverse();
+          await tester.pump();
+
+          expect(snapshot, findsNothing);
+          expect(pictureOpacity(tester), equals(1));
+          expect(
+            tester.widget<RawImage>(_picture).image!.width,
+            equals(image.width),
+          );
+          await tester.pumpAndSettle();
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.android),
+      );
+
+      testWidgets(
+        'covers the page from the start of a drag back',
+        (tester) async {
+          final dragging = ValueNotifier(false);
+          addTearDown(dragging.dispose);
+          await pumpLanded(tester, popGestureInProgress: dragging);
+
+          // The drag has started but not moved the animation yet.
+          dragging.value = true;
+          await tester.pump();
+
+          expect(controller.status, equals(AnimationStatus.completed));
+          expect(snapshot, findsOneWidget);
+          expect(
+            snapshotPainter(tester).clip.outerRect,
+            equals(Offset.zero & _screenSize),
+          );
+          expect(pageShowsAt(tester, _landing.center), isFalse);
+          expect(_flightFrame(tester), isNotNull);
+          expect(_pageHasLanded(tester), isFalse);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      );
+
+      testWidgets(
+        'hands back to the page when a drag is let go without moving',
+        (tester) async {
+          final dragging = ValueNotifier(false);
+          addTearDown(dragging.dispose);
+          await pumpLanded(tester, popGestureInProgress: dragging);
+          dragging.value = true;
+          await tester.pump();
+
+          dragging.value = false;
+          await tester.pump();
+
+          expect(snapshot, findsNothing);
+          expect(_picture, findsNothing);
+          expect(_flightFrame(tester), isNull);
+          expect(_pageHasLanded(tester), isTrue);
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+      );
     });
 
     group('reduced motion', () {
