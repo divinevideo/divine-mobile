@@ -32,7 +32,8 @@ class _VideoMetadataClassicPreviewThumbnailState
   Timer? _hideTimer;
   final _iconVisible = ValueNotifier<bool>(false);
 
-  /// Id of the finished video the player plays or is loading.
+  /// Id of the finished video the preview follows, kept even when its player
+  /// failed to load.
   String? _playerClipId;
 
   /// Bumped whenever the finished video changes or the widget goes away, so a
