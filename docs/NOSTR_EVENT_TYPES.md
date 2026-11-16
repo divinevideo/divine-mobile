@@ -39,7 +39,7 @@ save re-seeds from the freshest relay copy so they survive edits):
   profile.
 - `divine_allow_video_reuse` - Account-wide remix block. JSON `false` means
   nobody else may use this account's videos as clips ("Add to clips",
-  "Remix this video", and adding a clip received in a direct message that
+  the info sheet's "Remix", and adding a clip received in a direct message that
   credits the account all refuse, except a clip the account sent itself);
   absent or `true` means remixing follows each
   video's own `allow_video_reuse` tag. Only the creator's own

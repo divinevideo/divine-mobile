@@ -11,6 +11,16 @@ remixed theirs; a mean remix can be pulled down, through Trust & Safety for
 now. The Remix button label is "Remix this video" on every video (classic
 Vines included) — revision 2's "Remix this Vine" string is dropped.
 
+*As built (2026-11-16):* at Rabble's request the full-width Remix button
+became a Remix icon in the info sheet's action row ("ugly, bad UX and takes
+over"). It is the row's first circle, labelled "Remix" (film slate icon), so
+the row reads Remix, Save, then Edit and Delete on the viewer's own video,
+then Report this remix. It shows exactly when the button did and behaves the
+same: on the app it imports the video and opens the editor, with a spinner
+while the remix is prepared and the rest of the row held; on the web it
+closes the sheet and points to the app. The "Remix this video" string is
+gone. Wherever this spec says "the Remix button", read "the Remix action".
+
 ### Consent
 
 - **Default flips to allowed.** A video may be remixed unless its creator
@@ -100,7 +110,9 @@ five, and showed nothing on web.
 
 ### What changes
 
-1. **Remix button (the headline).** On a video the viewer may reuse
+1. **Remix button (the headline).** *As built:* now a Remix icon at the
+   front of the action row; see revision 3's "As built (2026-11-16)" note.
+   On a video the viewer may reuse
    (`canAddVideoToClips`: classic Vine, own video, or creator allows reuse),
    the info sheet shows one full-width primary `DivineButton` directly under
    the stats row: "Remix this Vine" on a classic Vine (`isOriginalVine`),
@@ -158,7 +170,7 @@ five, and showed nothing on web.
 ### New copy (ARB keys, translated into every locale per
 `mobile/docs/LOCALIZATION_STYLE_GUIDE.md`, flagged for fluent review)
 
-- Remix this video
+- Remix this video (*as built:* replaced by "Remix", the action row label)
 - Remixing happens in the Divine app. (web snackbar)
 - Get the app (web snackbar action)
 - From others (Library tab)
