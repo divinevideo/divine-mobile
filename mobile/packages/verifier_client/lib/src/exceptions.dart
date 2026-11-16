@@ -59,6 +59,12 @@ enum SignInRefusal {
   /// The confirmation wasn't a signed linked-accounts list.
   invalidEvent,
 
+  /// Divine Confirmation is required before this sign-in counts.
+  confirmationRequired,
+
+  /// The verifier could not check Divine Confirmation just now.
+  confirmationUnavailable,
+
   /// Anything else.
   other;
 
@@ -70,6 +76,8 @@ enum SignInRefusal {
     'signin_not_yours' => notYours,
     'signin_claim_mismatch' => claimMismatch,
     'invalid_event' => invalidEvent,
+    'confirmation_required' => confirmationRequired,
+    'confirmation_unavailable' => confirmationUnavailable,
     _ => other,
   };
 }

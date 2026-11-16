@@ -196,6 +196,14 @@ class VerifierClient {
     // Neither the code nor the secret goes into an exception message: they
     // are what the verifier redeems.
     if (res.statusCode >= 500) {
+      // Only this code is read on a server error: it says the Confirmation
+      // check could not run, which is not the verifier being unreachable.
+      if (json?['code'] == 'confirmation_unavailable') {
+        throw SignInConfirmException(
+          res.statusCode,
+          SignInRefusal.confirmationUnavailable,
+        );
+      }
       throw VerifierApiException(
         res.statusCode,
         'verifier returned ${res.statusCode}',

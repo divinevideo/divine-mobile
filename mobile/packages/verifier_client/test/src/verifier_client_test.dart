@@ -595,6 +595,67 @@ void main() {
         );
       }
 
+      for (final (status, code, refusal) in [
+        (403, 'confirmation_required', SignInRefusal.confirmationRequired),
+        (
+          503,
+          'confirmation_unavailable',
+          SignInRefusal.confirmationUnavailable,
+        ),
+      ]) {
+        test('$status $code is a SignInConfirmException', () async {
+          final client = VerifierClient(
+            baseUrl: 'https://verifier.example',
+            httpClient: MockClient(
+              (_) async => http.Response(
+                jsonEncode({'error': 'x', 'code': code}),
+                status,
+              ),
+            ),
+          );
+          await expectLater(
+            client.confirmSignIn(
+              code: 'C' * 43,
+              startSecret: 'S' * 43,
+              event: event,
+            ),
+            throwsA(
+              isA<SignInConfirmException>()
+                  .having((e) => e.statusCode, 'statusCode', status)
+                  .having((e) => e.refusal, 'refusal', refusal),
+            ),
+          );
+        });
+      }
+
+      for (final (status, body) in [
+        (503, '{}'),
+        (503, 'oops'),
+        (500, '{"code":"signin_not_found"}'),
+        (500, '{"code":"confirmation_required"}'),
+      ]) {
+        test('$status with body $body stays a VerifierApiException', () async {
+          final client = VerifierClient(
+            baseUrl: 'https://verifier.example',
+            httpClient: MockClient((_) async => http.Response(body, status)),
+          );
+          await expectLater(
+            client.confirmSignIn(
+              code: 'C' * 43,
+              startSecret: 'S' * 43,
+              event: event,
+            ),
+            throwsA(
+              isA<VerifierApiException>().having(
+                (e) => e.statusCode,
+                'statusCode',
+                status,
+              ),
+            ),
+          );
+        });
+      }
+
       test('does not count a 200 that does not say linked', () async {
         final client = VerifierClient(
           baseUrl: 'https://verifier.example',
