@@ -2143,11 +2143,15 @@ class LikesRepository {
     const unconfirmed = LikesRepositoryException(
       "Relays did not confirm this account's votes",
     );
+    // With no `limit`, a relay that publishes no `max_limit` counts as
+    // possibly capped as soon as it returns one vote, so nothing found would
+    // ever be proven.
     Filter votesOn({List<String>? e, List<String>? a}) => Filter(
       kinds: const [EventKind.reaction],
       authors: [pubkey],
       e: e,
       a: a,
+      limit: _defaultReactionFetchLimit,
     );
     final reads = await Future.wait([
       _readChunked(eventIds, (chunk) => votesOn(e: chunk)),

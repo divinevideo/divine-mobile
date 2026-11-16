@@ -53,6 +53,7 @@ class _Relay {
       return QueryResult(
         events: answer.events,
         endedBy: answer.complete ? QueryEnd.complete : QueryEnd.deadline,
+        possiblyCapped: answer.possiblyCapped,
       );
     });
     when(() => client.deleteEvent(any())).thenAnswer(
@@ -156,9 +157,18 @@ class _Relay {
     return deletion;
   }
 
-  ({List<Event> events, bool complete}) _answer(List<dynamic> filters) {
-    if (!answers) return (events: const <Event>[], complete: false);
+  /// What a relay with no NIP-11 `max_limit` sends for [filters]. It may have
+  /// stopped at its result-size limit when a filter's matches reached its
+  /// `limit`, or, with no `limit`, numbered at least one, as the pool's tally
+  /// reads it.
+  ({List<Event> events, bool complete, bool possiblyCapped}) _answer(
+    List<dynamic> filters,
+  ) {
+    if (!answers) {
+      return (events: const <Event>[], complete: false, possiblyCapped: false);
+    }
     var complete = true;
+    var possiblyCapped = false;
     final answered = <String, Event>{};
     for (final filter in filters.cast<Filter>()) {
       final asksForDeletions =
@@ -176,11 +186,21 @@ class _Relay {
         matches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         matches = matches.take(limit).toList();
       }
+      final filterLimit = filter.limit;
+      if (filterLimit == null
+          ? matches.isNotEmpty
+          : matches.length >= filterLimit) {
+        possiblyCapped = true;
+      }
       for (final event in matches) {
         answered[event.id] = event;
       }
     }
-    return (events: answered.values.toList(), complete: complete);
+    return (
+      events: answered.values.toList(),
+      complete: complete,
+      possiblyCapped: possiblyCapped,
+    );
   }
 
   static bool _matches(
