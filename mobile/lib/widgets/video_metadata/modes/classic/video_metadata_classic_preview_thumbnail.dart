@@ -40,9 +40,10 @@ class _VideoMetadataClassicPreviewThumbnailState
   int _loadGeneration = 0;
 
   /// How many players were released for a discarded video. Keys the thumbnail
-  /// that replaces each one: a release can land while the cross-fade to that
-  /// player still shows the previous thumbnail, and two children with one key
-  /// break the [AnimatedSwitcher].
+  /// that replaces each one: a release can land while the previous thumbnail
+  /// is still fading out under that player. With a shared key the
+  /// [AnimatedSwitcher] drops that thumbnail and fades the new one in from
+  /// transparent, so the preview blinks instead of staying covered.
   int _releasedPlayers = 0;
 
   @override
