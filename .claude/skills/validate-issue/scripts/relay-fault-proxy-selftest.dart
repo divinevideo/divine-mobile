@@ -35,11 +35,18 @@ class _FakeRelay {
         received.add(message);
         switch (message.first) {
           case 'REQ':
+            // A filter naming kinds gets one event of the first kind, with an
+            // id that says which: a vote read (kind 7) returns event "kind7".
+            final filter = message.length > 2 ? message[2] : null;
+            final kinds = filter is Map ? filter['kinds'] : null;
             socket.add(
               jsonEncode([
                 'EVENT',
                 message[1],
-                {'id': 'ev1'},
+                if (kinds is List && kinds.isNotEmpty)
+                  {'id': 'kind${kinds.first}', 'kind': kinds.first}
+                else
+                  {'id': 'ev1'},
               ]),
             );
             socket.add(jsonEncode(['EOSE', message[1]]));
@@ -308,6 +315,57 @@ Future<void> main() async {
       _expect(
         sent.elapsedMilliseconds < 1300,
         'three EOSEs took ${sent.elapsedMilliseconds} ms: the holds added up',
+      );
+    },
+  );
+
+  await scenario(
+    '--hold-retraction-eose holds only the EOSE of a read for delivered votes',
+    ['--hold-retraction-eose'],
+    (proxy) async {
+      final client = await proxy.connect();
+      client.send([
+        'REQ',
+        'votes',
+        {
+          'kinds': [7],
+        },
+      ]);
+      _expect(
+        await _within(() => client.of('EOSE').length == 1),
+        'the vote read should finish, got ${client.frames}',
+      );
+      client
+        ..send([
+          'REQ',
+          'retractions',
+          {
+            'kinds': [5],
+            '#e': ['kind7'],
+          },
+        ])
+        ..send([
+          'REQ',
+          'comment-deletions',
+          {
+            'kinds': [5],
+            '#e': ['a-comment'],
+          },
+        ]);
+      _expect(
+        await _within(
+          () => client.of('EOSE').any((f) => f[1] == 'comment-deletions'),
+        ),
+        'the other kind-5 read should finish, got ${client.frames}',
+      );
+      await _quiet();
+      _expect(
+        client.of('EOSE').every((f) => f[1] != 'retractions'),
+        'the retraction read should get no EOSE',
+      );
+      _expect(
+        client.of('EVENT').any((f) => f[1] == 'retractions'),
+        'the retraction read should still get its events',
       );
     },
   );
