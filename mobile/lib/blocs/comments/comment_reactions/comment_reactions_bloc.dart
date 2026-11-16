@@ -253,7 +253,9 @@ class CommentReactionsBloc
         viewerIds,
         addressableIds: event.addressableIdsByCommentId,
       );
-      if (emit.isDone) return;
+      // An unfinished read cannot tell a vote taken back from one it did
+      // not reach, so the arrows stay as they are (#10996).
+      if (emit.isDone || !votes.isComplete) return;
 
       final refreshed = viewerIds.where(canApply).toSet();
       emit(

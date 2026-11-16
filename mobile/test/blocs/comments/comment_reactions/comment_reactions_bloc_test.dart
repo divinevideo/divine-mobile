@@ -444,6 +444,52 @@ void main() {
         expect(bloc.state.upvotedCommentIds, isEmpty);
       });
 
+      test('keeps the viewer arrows when a viewer-vote read did not '
+          'finish (#10996)', () async {
+        final id = validId('c1');
+        var reads = 0;
+        when(() => mockLikesRepository.getUserVoteStatuses([id])).thenAnswer(
+          (_) async => ++reads == 1
+              ? (upvotedIds: {id}, downvotedIds: <String>{}, isComplete: true)
+              : (
+                  upvotedIds: <String>{},
+                  downvotedIds: <String>{},
+                  isComplete: false,
+                ),
+        );
+
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(CommentVoteCountsFetchRequested([id]));
+        await pumpEventQueue();
+        expect(bloc.state.upvotedCommentIds, {id});
+
+        bloc.add(CommentVoteCountsFetchRequested([id]));
+        await pumpEventQueue();
+
+        expect(reads, 2);
+        expect(bloc.state.upvotedCommentIds, {id});
+      });
+
+      test('leaves a total unknown when the repository could not settle '
+          'it (#10996)', () async {
+        final known = validId('c1');
+        final unknown = validId('c2');
+        when(
+          () => mockLikesRepository.getVoteCounts([known, unknown]),
+        ).thenAnswer((_) async => (upvotes: {known: 3}, downvotes: {known: 1}));
+
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(CommentVoteCountsFetchRequested([known, unknown]));
+        await pumpEventQueue();
+
+        expect(bloc.state.isLoadingVoteCounts, isFalse);
+        expect(bloc.state.commentUpvoteCounts[known], 3);
+        expect(bloc.state.commentUpvoteCounts, isNot(contains(unknown)));
+        expect(bloc.state.commentDownvoteCounts, isNot(contains(unknown)));
+      });
+
       blocTest<CommentReactionsBloc, CommentReactionsState>(
         'populates counts and statuses from likes repo',
         setUp: () {
