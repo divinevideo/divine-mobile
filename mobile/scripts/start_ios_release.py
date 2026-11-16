@@ -20,6 +20,7 @@ TEAM_ID = '692de5e382bd4a97332896df'
 INPUTS = {'DEFAULT_ENV': 'PRODUCTION', 'RELEASE_CHANNEL': 'BETA', 'PUBLISH_TO_GITHUB': 'NO'}
 ACTIVE = {'initializing', 'queued', 'waiting', 'preparing', 'fetching', 'testing',
           'building', 'publishing', 'finishing'}
+SOURCE_PENDING = {'initializing', 'queued', 'waiting', 'preparing', 'fetching'}
 TERMINAL = {'finished', 'failed', 'canceled', 'timeout', 'skipped'}
 ASC_PENDING = {'initiated', 'pending', 'processing'}
 ASC_TERMINAL = {'finished', 'timeout', 'failed'}
@@ -85,9 +86,14 @@ def record(env, message, outputs=None):
 
 
 def validate_build(build, expected_sha, *, require_main=True):
+    # Codemagic can expose an accepted build before it has fetched the branch.
+    # Only a pre-fetch build without a commit may defer the main-branch check.
+    source_pending = (isinstance(build, dict) and build.get('status') in SOURCE_PENDING
+                      and build.get('branch') is None and build.get('commit') is None)
     if (not isinstance(build, dict) or build.get('app_id') != APP_ID
             or (build.get('workflow') or {}).get('id') != 'ios-build'
-            or (require_main and (build.get('branch') != 'main' or build.get('tag')))):
+            or (require_main and ((build.get('branch') != 'main' and not source_pending)
+                                  or build.get('tag')))):
         raise ReleaseError('Codemagic build identity does not match the requested main iOS release.')
     build_id(build.get('id'))
     status = build.get('status')
