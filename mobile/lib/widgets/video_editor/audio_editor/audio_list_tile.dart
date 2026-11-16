@@ -13,7 +13,6 @@ class AudioListTile extends StatelessWidget {
     required this.onTap,
     this.displayTitle,
     this.cover,
-    this.isCoverPending = false,
     this.isPlaying = false,
     this.isUnavailable = false,
     this.videoCount,
@@ -37,9 +36,6 @@ class AudioListTile extends StatelessWidget {
 
   /// See [SoundListTile.cover].
   final SoundCover? cover;
-
-  /// See [SoundListTile.isCoverPending].
-  final bool isCoverPending;
 
   /// Whether this sound cannot be attached because its device-local audio
   /// file is gone.
@@ -75,7 +71,6 @@ class AudioListTile extends StatelessWidget {
           ?audio.source,
         ],
         cover: cover,
-        isCoverPending: isCoverPending,
         colorSeed: audio.id,
         isCommunitySound: audio.isCommunitySound,
         isActive: isSelected,

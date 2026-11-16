@@ -24,7 +24,6 @@ class SoundListTile extends StatelessWidget {
     this.details = const [],
     this.caption,
     this.cover,
-    this.isCoverPending = false,
     this.isCommunitySound = false,
     this.isActive = false,
     this.isPlaying = false,
@@ -49,10 +48,6 @@ class SoundListTile extends StatelessWidget {
 
   /// Artwork leading the row, or `null` for the colour tile.
   final SoundCover? cover;
-
-  /// Whether [cover] is still being looked up; the row then waits on a plain
-  /// tile instead of a colour it may not keep.
-  final bool isCoverPending;
 
   /// Whether someone on Divine published the sound, which a people mark on
   /// the cover says.
@@ -100,7 +95,6 @@ class SoundListTile extends StatelessWidget {
         isThreeLine: caption != null,
         leading: _Cover(
           cover: cover,
-          isPending: isCoverPending,
           colorSeed: colorSeed,
           isCommunitySound: isCommunitySound,
         ),
@@ -233,13 +227,11 @@ class _Details extends StatelessWidget {
 class _Cover extends StatelessWidget {
   const _Cover({
     required this.cover,
-    required this.isPending,
     required this.isCommunitySound,
     required this.colorSeed,
   });
 
   final SoundCover? cover;
-  final bool isPending;
   final bool isCommunitySound;
   final String colorSeed;
 
@@ -247,7 +239,6 @@ class _Cover extends StatelessWidget {
   Widget build(BuildContext context) {
     final image = SoundCoverImage(
       cover: cover,
-      isPending: isPending,
       size: _coverSize,
       colorSeed: colorSeed,
     );

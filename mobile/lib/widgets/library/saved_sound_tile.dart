@@ -29,7 +29,6 @@ class SavedSoundTile extends StatelessWidget {
     required this.onPreview,
     required this.onOpenMore,
     this.cover,
-    this.isCoverPending = false,
     this.isMissingFile = false,
     this.cannotBeReused = false,
     this.isPreviewing = false,
@@ -49,9 +48,6 @@ class SavedSoundTile extends StatelessWidget {
 
   /// Artwork leading the row, or `null` for the colour tile.
   final SoundCover? cover;
-
-  /// Whether [cover] is still being looked up.
-  final bool isCoverPending;
 
   /// Whether the device-local audio file behind this entry is gone.
   ///
@@ -105,7 +101,6 @@ class SavedSoundTile extends StatelessWidget {
             sound: sound,
             title: title,
             cover: cover,
-            isCoverPending: isCoverPending,
             isActive: isPreviewing,
             isPlaying: isPlaying,
             unavailableReason: unavailableReason,
@@ -252,7 +247,6 @@ class _SavedSoundListTile extends StatelessWidget {
     required this.title,
     required this.cover,
     required this.unavailableReason,
-    this.isCoverPending = false,
     this.isActive = false,
     this.isPlaying = false,
     this.trailing,
@@ -264,7 +258,6 @@ class _SavedSoundListTile extends StatelessWidget {
   final String title;
   final SoundCover? cover;
   final String? unavailableReason;
-  final bool isCoverPending;
   final bool isActive;
   final bool isPlaying;
   final Widget? trailing;
@@ -283,7 +276,6 @@ class _SavedSoundListTile extends StatelessWidget {
           ? null
           : _Hashtags(hashtags: sound.personalHashtags),
       cover: cover,
-      isCoverPending: isCoverPending,
       colorSeed: sound.id,
       isCommunitySound: audio.isCommunitySound,
       isActive: isActive,

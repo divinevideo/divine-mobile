@@ -12,15 +12,13 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 ///
 /// Shows [cover]'s image, its blurhash while the image loads or when there is
 /// no image, and a tile in one of the brand's accent colours with a note on
-/// it when the sound has no cover at all. While [isPending] it is a plain
-/// tile, so a cover that is still being looked up does not flash a colour it
-/// then replaces. Each change fades in. It is decorative: the row it sits in
+/// it when the sound has no cover at all, or while an image without a
+/// blurhash loads. Each change fades in. It is decorative: the row it sits in
 /// names the sound.
 class SoundCoverImage extends StatelessWidget {
   const SoundCoverImage({
     required this.size,
     this.cover,
-    this.isPending = false,
     this.borderRadius = 8,
     this.colorSeed = '',
     super.key,
@@ -32,9 +30,6 @@ class SoundCoverImage extends StatelessWidget {
   /// Picks the colour tile's colour, so a sound keeps the same one wherever
   /// it shows; pass its id.
   final String colorSeed;
-
-  /// Whether the cover is still being looked up.
-  final bool isPending;
 
   /// Edge length of the square.
   final double size;
@@ -51,9 +46,7 @@ class SoundCoverImage extends StatelessWidget {
     final hasBlurhash = blurhash != null && blurhash.isNotEmpty;
     final imageUrl = cover?.imageUrl;
     final Widget content;
-    if (isPending) {
-      content = const _SoundCoverPending(key: ValueKey('pending'));
-    } else if (imageUrl != null && imageUrl.isNotEmpty) {
+    if (imageUrl != null && imageUrl.isNotEmpty) {
       content = VineCachedImage(
         key: ValueKey(imageUrl),
         imageUrl: imageUrl,
@@ -67,7 +60,7 @@ class SoundCoverImage extends StatelessWidget {
         fadeOutDuration: fade,
         placeholder: (_, _) => hasBlurhash
             ? _SoundCoverBlurhash(blurhash: blurhash, size: size)
-            : const _SoundCoverPending(),
+            : _SoundCoverFallback(seed: colorSeed, size: size),
         errorWidget: (_, _, _) => hasBlurhash
             ? _SoundCoverBlurhash(blurhash: blurhash, size: size)
             : _SoundCoverFallback(seed: colorSeed, size: size),
@@ -122,19 +115,6 @@ class _SoundCoverBlurhash extends StatelessWidget {
       blurhash: blurhash,
       width: size,
       height: size,
-    );
-  }
-}
-
-/// A plain tile in the waveform's colour, without the waveform.
-class _SoundCoverPending extends StatelessWidget {
-  const _SoundCoverPending({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      key: const Key('sound_cover_pending'),
-      color: context.vineColors.surfaceContainer,
     );
   }
 }

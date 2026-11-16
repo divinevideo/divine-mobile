@@ -743,7 +743,8 @@ void main() {
         expect(find.text('Video deleted'), findsOneWidget);
       });
 
-      testWidgets('waits on a plain tile only for sounds with a video', (
+      // A row waiting on its cover used to show a blank grey tile.
+      testWidgets('shows the colour tile while a cover is looked up', (
         tester,
       ) async {
         await tester.pumpWidget(
@@ -753,7 +754,6 @@ void main() {
                 id: 'from-video',
                 title: 'From a video',
               ).copyWith(sourceVideoReference: sourceVideo),
-              _createTestAudioEvent(id: 'standalone', title: 'Standalone'),
             ]),
             coversPending: true,
           ),
@@ -764,19 +764,14 @@ void main() {
         await tester.tap(find.text(l10n.exploreTabNew));
         await tester.pumpAndSettle();
 
-        Finder inRow(String title, Key key) => find.descendant(
-          of: find.ancestor(
-            of: find.text(title),
-            matching: find.byType(AudioListTile),
+        expect(
+          find.descendant(
+            of: find.ancestor(
+              of: find.text('From a video'),
+              matching: find.byType(AudioListTile),
+            ),
+            matching: find.byKey(const Key('sound_cover_fallback')),
           ),
-          matching: find.byKey(key),
-        );
-        expect(
-          inRow('From a video', const Key('sound_cover_pending')),
-          findsOneWidget,
-        );
-        expect(
-          inRow('Standalone', const Key('sound_cover_fallback')),
           findsOneWidget,
         );
       });
