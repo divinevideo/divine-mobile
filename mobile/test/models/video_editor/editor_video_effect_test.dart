@@ -1062,7 +1062,7 @@ void main() {
         for (final type in EditorEffectType.values)
           if (type.customId != null) type,
       ];
-      expect(custom, hasLength(44));
+      expect(custom, hasLength(57));
       for (final type in custom) {
         final effect = EditorVideoEffect.of(
           id: 'x',
@@ -1235,8 +1235,8 @@ void main() {
       }
     });
 
-    test('lists the tape, film, screen and print looks under retro, the ones '
-        'Divine draws after the built-in ones', () {
+    test('lists the tape, film, screen, game and 3D looks under retro, the '
+        'ones Divine draws after the built-in ones', () {
       expect(EditorEffectCategory.retro.types, [
         const EditorEffectType.builtIn(VideoEffectType.vhs),
         const EditorEffectType.builtIn(VideoEffectType.tvStatic),
@@ -1244,11 +1244,74 @@ void main() {
         const EditorEffectType.builtIn(VideoEffectType.filmGrain),
         const EditorEffectType.builtIn(VideoEffectType.signalInterference),
         const EditorEffectType.builtIn(VideoEffectType.crt),
-        EditorEffectType.comic,
         EditorEffectType.eightBit,
         EditorEffectType.anaglyph,
-        EditorEffectType.riso,
       ]);
+    });
+
+    test('lists the paintings, drawing, prints, crafts, neon, characters and '
+        'camera views under art, right after retro', () {
+      expect(EditorEffectCategory.values.indexOf(EditorEffectCategory.art), 1);
+      expect(EditorEffectCategory.art.types, [
+        EditorEffectType.watercolor,
+        EditorEffectType.oilPaint,
+        EditorEffectType.pencilSketch,
+        EditorEffectType.comic,
+        EditorEffectType.riso,
+        EditorEffectType.popArt,
+        EditorEffectType.paperCut,
+        EditorEffectType.crossStitch,
+        EditorEffectType.bricks,
+        EditorEffectType.stainedGlass,
+        EditorEffectType.neonEdges,
+        EditorEffectType.ascii,
+        EditorEffectType.thermal,
+        EditorEffectType.nightVision,
+        EditorEffectType.xRay,
+      ]);
+      for (final type in EditorEffectCategory.art.types) {
+        expect(type.supportsOnBeat, isFalse, reason: type.name);
+        expect(type.isFlashing, isFalse, reason: type.name);
+        expect(EditorEffectType.byName(type.name), type, reason: type.name);
+      }
+    });
+
+    test('ships the ASCII glyphs as the 240x24 strip the renderers read, '
+        'each glyph inked more than the one before', () {
+      final bytes = File(asciiGlyphsAsset).readAsBytesSync();
+      // The PNG's IHDR: width and height, 8-bit RGB.
+      final header = ByteData.sublistView(bytes, 16, 26);
+      const width = 10 * 24;
+      expect(header.getUint32(0), width);
+      expect(header.getUint32(4), 24);
+      expect(header.getUint8(8), 8);
+      expect(header.getUint8(9), 2);
+
+      // The generator writes every row unfiltered, so the inflated data is
+      // each row's filter byte, 0, and its pixels.
+      final compressed = <int>[];
+      for (var at = 8; at < bytes.length;) {
+        final length = ByteData.sublistView(bytes, at, at + 4).getUint32(0);
+        final type = String.fromCharCodes(bytes, at + 4, at + 8);
+        if (type == 'IDAT') {
+          compressed.addAll(bytes.sublist(at + 8, at + 8 + length));
+        }
+        at += 12 + length;
+      }
+      final rows = ZLibDecoder().convert(compressed);
+      expect(rows, hasLength(24 * (1 + width * 3)));
+      final ink = List<int>.filled(10, 0);
+      for (var y = 0; y < 24; y++) {
+        final row = y * (1 + width * 3);
+        expect(rows[row], 0, reason: 'row $y filter');
+        for (var x = 0; x < width; x++) {
+          ink[x ~/ 24] += rows[row + 1 + x * 3];
+        }
+      }
+      expect(ink.first, 0);
+      for (var glyph = 1; glyph < 10; glyph++) {
+        expect(ink[glyph], greaterThan(ink[glyph - 1]), reason: '$glyph');
+      }
     });
   });
 }

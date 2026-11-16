@@ -62,6 +62,7 @@ void main() {
 
     final categoryLabels = {
       EditorEffectCategory.retro: l10n.videoEditorEffectCategoryRetro,
+      EditorEffectCategory.art: l10n.videoEditorEffectCategoryArt,
       EditorEffectCategory.glitch: l10n.videoEditorEffectCategoryGlitch,
       EditorEffectCategory.distort: l10n.videoEditorEffectCategoryDistort,
       EditorEffectCategory.light: l10n.videoEditorEffectCategoryLight,
@@ -430,6 +431,19 @@ void main() {
           l10n.videoEditorEffectEightBit,
           l10n.videoEditorEffectAnaglyph,
           l10n.videoEditorEffectRiso,
+          l10n.videoEditorEffectWatercolor,
+          l10n.videoEditorEffectOilPaint,
+          l10n.videoEditorEffectPencilSketch,
+          l10n.videoEditorEffectNeonEdges,
+          l10n.videoEditorEffectAscii,
+          l10n.videoEditorEffectStainedGlass,
+          l10n.videoEditorEffectThermal,
+          l10n.videoEditorEffectNightVision,
+          l10n.videoEditorEffectXRay,
+          l10n.videoEditorEffectPopArt,
+          l10n.videoEditorEffectPaperCut,
+          l10n.videoEditorEffectCrossStitch,
+          l10n.videoEditorEffectBricks,
           l10n.videoEditorEffectLightRays,
           l10n.videoEditorEffectAnamorphic,
           l10n.videoEditorEffectPrism,
@@ -474,6 +488,22 @@ void main() {
         ].map((type) => shaderTileOf(type)!.values.last),
         [for (var style = 0; style < 15; style++) style],
       );
+      // One shader paints watercolour and oil, told apart by its last value.
+      expect(
+        [
+          EditorEffectType.watercolor,
+          EditorEffectType.oilPaint,
+        ].map(shaderTileOf),
+        everyElement(
+          isA<ShaderTile>().having(
+            (tile) => tile.asset,
+            'asset',
+            'shaders/paint.frag',
+          ),
+        ),
+      );
+      expect(shaderTileOf(EditorEffectType.watercolor)!.values.last, 0);
+      expect(shaderTileOf(EditorEffectType.oilPaint)!.values.last, 1);
       // One shader draws every look, from the look's own table.
       for (final type in EditorEffectCategory.looks.types) {
         expect(
@@ -481,6 +511,21 @@ void main() {
           'shaders/look.frag',
           reason: type.name,
         );
+        expect(
+          shaderTileTextureOf(type),
+          lookTableAssets[type.customId],
+          reason: type.name,
+        );
+      }
+      // The ASCII tile reads the glyphs the native effect draws from; no
+      // other effect reads a second texture.
+      expect(shaderTileTextureOf(EditorEffectType.ascii), asciiGlyphsAsset);
+      for (final type in EditorEffectType.values) {
+        if (type == EditorEffectType.ascii ||
+            EditorEffectCategory.looks.types.contains(type)) {
+          continue;
+        }
+        expect(shaderTileTextureOf(type), isNull, reason: type.name);
       }
     });
 

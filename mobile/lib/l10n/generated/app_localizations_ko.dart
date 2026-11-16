@@ -9014,6 +9014,45 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectRiso => '리소 인쇄';
 
   @override
+  String get videoEditorEffectPopArt => '팝 아트';
+
+  @override
+  String get videoEditorEffectPaperCut => '페이퍼 컷';
+
+  @override
+  String get videoEditorEffectCrossStitch => '십자수';
+
+  @override
+  String get videoEditorEffectBricks => '블록';
+
+  @override
+  String get videoEditorEffectWatercolor => '수채화';
+
+  @override
+  String get videoEditorEffectOilPaint => '유화';
+
+  @override
+  String get videoEditorEffectPencilSketch => '연필 스케치';
+
+  @override
+  String get videoEditorEffectNeonEdges => '네온 엣지';
+
+  @override
+  String get videoEditorEffectAscii => 'ASCII';
+
+  @override
+  String get videoEditorEffectStainedGlass => '스테인드글라스';
+
+  @override
+  String get videoEditorEffectThermal => '열화상';
+
+  @override
+  String get videoEditorEffectNightVision => '야간 투시';
+
+  @override
+  String get videoEditorEffectXRay => '엑스레이';
+
+  @override
   String get videoEditorEffectTealOrange => '틸 & 오렌지';
 
   @override
@@ -9045,6 +9084,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryRetro => '레트로';
+
+  @override
+  String get videoEditorEffectCategoryArt => '아트';
 
   @override
   String get videoEditorEffectCategoryGlitch => '글리치';

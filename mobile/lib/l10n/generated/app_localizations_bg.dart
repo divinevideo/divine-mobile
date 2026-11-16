@@ -9543,6 +9543,45 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectRiso => 'Ризограф';
 
   @override
+  String get videoEditorEffectPopArt => 'Поп арт';
+
+  @override
+  String get videoEditorEffectPaperCut => 'Изрязана хартия';
+
+  @override
+  String get videoEditorEffectCrossStitch => 'Кръстат бод';
+
+  @override
+  String get videoEditorEffectBricks => 'Тухлички';
+
+  @override
+  String get videoEditorEffectWatercolor => 'Акварел';
+
+  @override
+  String get videoEditorEffectOilPaint => 'Маслени бои';
+
+  @override
+  String get videoEditorEffectPencilSketch => 'Скица с молив';
+
+  @override
+  String get videoEditorEffectNeonEdges => 'Неонови контури';
+
+  @override
+  String get videoEditorEffectAscii => 'ASCII';
+
+  @override
+  String get videoEditorEffectStainedGlass => 'Витраж';
+
+  @override
+  String get videoEditorEffectThermal => 'Термокамера';
+
+  @override
+  String get videoEditorEffectNightVision => 'Нощно виждане';
+
+  @override
+  String get videoEditorEffectXRay => 'Рентген';
+
+  @override
   String get videoEditorEffectTealOrange => 'Тюркоаз и оранжево';
 
   @override
@@ -9574,6 +9613,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryRetro => 'Ретро';
+
+  @override
+  String get videoEditorEffectCategoryArt => 'Изкуство';
 
   @override
   String get videoEditorEffectCategoryGlitch => 'Глич';

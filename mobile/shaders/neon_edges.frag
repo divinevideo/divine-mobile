@@ -1,0 +1,70 @@
+// The neon edges effect on a still, for its tile in the video editor's
+// effects picker.
+//
+// The renderers draw the effect natively, with `NeonEdgesVideoEffect` on
+// Android, iOS and macOS. This is the same shader: the picture's outlines
+// glow on black.
+//
+// An outline is where the brightness changes sharply, found from taps on
+// either side at three distances: the nearest draws a thin, white-hot core,
+// the further ones a glow fading out around it. Each outline glows in the
+// picture's own colour there; where the picture has little colour, in a
+// colour that turns with the outline's direction, so a grey picture glows in
+// every colour.
+//
+// Distances are in pixels with y up, from the bottom left, as natively;
+// Flutter counts y down, so it is flipped on the way in. `s` is the shorter
+// side, `e` the nearest taps' distance.
+
+#include <flutter/runtime_effect.glsl>
+
+// Engine-set: the size of the bound texture. Must be the first uniform.
+uniform vec2 uSize;
+
+// How far the picture turns into neon, 0 to 1.
+uniform float uIntensity;
+
+uniform sampler2D uTexture;
+
+out vec4 fragColor;
+
+vec3 tap(vec2 q) {
+  q = clamp(q, vec2(0.5), uSize - 0.5);
+  return texture(uTexture, vec2(q.x, uSize.y - q.y) / uSize).rgb;
+}
+
+float luma(vec3 c) {
+  return dot(c, vec3(0.299, 0.587, 0.114));
+}
+
+// How the brightness changes across `p`, from taps `d` pixels to each side.
+vec2 slope(vec2 p, float d) {
+  return vec2(
+    luma(tap(p + vec2(d, 0.0))) - luma(tap(p - vec2(d, 0.0))),
+    luma(tap(p + vec2(0.0, d))) - luma(tap(p - vec2(0.0, d))));
+}
+
+void main() {
+  vec2 fragCoord = FlutterFragCoord().xy;
+  vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
+  float s = min(uSize.x, uSize.y);
+  float e = max(1.0, s / 540.0);
+  vec3 color = tap(p);
+  vec2 near = slope(p, e);
+  vec2 mid = slope(p, 3.0 * e);
+  vec2 far = slope(p, 7.0 * e);
+  float core = smoothstep(0.08, 0.35, length(near));
+  float glow = 0.9 * core + 0.4 * smoothstep(0.08, 0.45, length(mid)) +
+    0.2 * smoothstep(0.08, 0.55, length(far));
+  vec2 direction = near + mid + far;
+  float size = length(direction);
+  vec2 axis = size > 0.0001 ? direction / size : vec2(1.0, 0.0);
+  float hue = atan(axis.y, axis.x) / 6.2831853 + 0.5;
+  vec3 turning = clamp(abs(fract(hue + vec3(0.0, 0.6666667, 0.3333333)) * 6.0 - 3.0) - 1.0, 0.0, 1.0);
+  float lo = min(min(color.r, color.g), color.b);
+  float hi = max(max(color.r, color.g), color.b);
+  vec3 own = (color - lo) / max(hi - lo, 0.001);
+  vec3 tint = mix(turning, own, smoothstep(0.08, 0.25, hi - lo));
+  vec3 neon = clamp(tint * glow + 0.6 * core * core, 0.0, 1.0);
+  fragColor = vec4(mix(color, neon, uIntensity), 1.0);
+}

@@ -9715,6 +9715,45 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectRiso => 'రిసో ప్రింట్';
 
   @override
+  String get videoEditorEffectPopArt => 'పాప్ ఆర్ట్';
+
+  @override
+  String get videoEditorEffectPaperCut => 'పేపర్ కట్';
+
+  @override
+  String get videoEditorEffectCrossStitch => 'క్రాస్ స్టిచ్';
+
+  @override
+  String get videoEditorEffectBricks => 'బ్లాక్స్';
+
+  @override
+  String get videoEditorEffectWatercolor => 'వాటర్‌కలర్';
+
+  @override
+  String get videoEditorEffectOilPaint => 'ఆయిల్ పెయింట్';
+
+  @override
+  String get videoEditorEffectPencilSketch => 'పెన్సిల్ స్కెచ్';
+
+  @override
+  String get videoEditorEffectNeonEdges => 'నియాన్ అంచులు';
+
+  @override
+  String get videoEditorEffectAscii => 'ASCII';
+
+  @override
+  String get videoEditorEffectStainedGlass => 'స్టెయిన్డ్ గ్లాస్';
+
+  @override
+  String get videoEditorEffectThermal => 'థర్మల్';
+
+  @override
+  String get videoEditorEffectNightVision => 'నైట్ విజన్';
+
+  @override
+  String get videoEditorEffectXRay => 'ఎక్స్-రే';
+
+  @override
   String get videoEditorEffectTealOrange => 'టీల్ & ఆరెంజ్';
 
   @override
@@ -9746,6 +9785,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryRetro => 'రెట్రో';
+
+  @override
+  String get videoEditorEffectCategoryArt => 'ఆర్ట్';
 
   @override
   String get videoEditorEffectCategoryGlitch => 'గ్లిచ్';

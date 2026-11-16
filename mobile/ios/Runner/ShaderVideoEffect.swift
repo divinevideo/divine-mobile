@@ -41,6 +41,10 @@ class ShaderVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
   /// it is.
   func values(effectTimeUs: Int64) -> [Double]? { nil }
 
+  /// Images the kernel reads besides the frame, each whole, bound as its
+  /// textures 2 and up; none by default.
+  func textures() -> [CIImage] { [] }
+
   func render(_ frame: CustomVideoEffectFrame) -> CIImage {
     draw(frame.image, effectTimeUs: frame.effectTimeUs)
   }
@@ -55,15 +59,17 @@ class ShaderVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
     let extent = image.extent
     guard !extent.isEmpty, !extent.isInfinite, let values = values(effectTimeUs: effectTimeUs)
     else { return image }
+    let textures = textures()
     do {
       return try ShaderVideoEffectKernel.apply(
         withExtent: extent,
-        inputs: [image],
+        inputs: [image] + textures,
         arguments: [
           ShaderVideoEffectKernel.extentKey: CIVector(cgRect: extent),
           ShaderVideoEffectKernel.functionKey: function,
           ShaderVideoEffectKernel.sourceKey: source,
           ShaderVideoEffectKernel.valuesKey: values,
+          ShaderVideoEffectKernel.texturesKey: textures.map { CIVector(cgRect: $0.extent) },
         ])
     } catch {
       // Only malformed arguments throw here, and these are always complete.
@@ -77,7 +83,9 @@ class ShaderVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
 ///
 /// The shader's buffer holds the frame's layout in its first three `float4`s,
 /// which ``prelude``'s `frameOf` and `pixelOf` read, and the effect's own
-/// values from the fourth on.
+/// values from the fourth on. The frame is texture 0 and the output texture
+/// 1; any further inputs, such as a glyph atlas, follow from texture 2, each
+/// whole and with its first row at the top.
 final class ShaderVideoEffectKernel: CIImageProcessorKernel {
   static let extentKey = "extent"
   /// The name of the kernel function to run.
@@ -86,6 +94,8 @@ final class ShaderVideoEffectKernel: CIImageProcessorKernel {
   static let sourceKey = "source"
   /// The effect's own values.
   static let valuesKey = "values"
+  /// The extents of the inputs after the frame, as `CIVector`s.
+  static let texturesKey = "textures"
 
   enum Failure: Error {
     /// The context rendering the frame does not run on Metal.
@@ -116,18 +126,24 @@ final class ShaderVideoEffectKernel: CIImageProcessorKernel {
 
   override class var outputFormat: CIFormat { .RGBAh }
 
-  /// The whole frame: the effects sample the picture around each pixel.
+  /// The whole frame, as the effects sample the picture around each pixel,
+  /// and the whole of each further input.
   override class func roi(forInput input: Int32, arguments: [String: Any]?, outputRect: CGRect)
     -> CGRect
   {
-    (arguments?[extentKey] as? CIVector)?.cgRectValue ?? outputRect
+    if input > 0, let textures = arguments?[texturesKey] as? [CIVector],
+      Int(input) <= textures.count
+    {
+      return textures[Int(input) - 1].cgRectValue
+    }
+    return (arguments?[extentKey] as? CIVector)?.cgRectValue ?? outputRect
   }
 
   override class func process(
     with inputs: [CIImageProcessorInput]?, arguments: [String: Any]?,
     output: CIImageProcessorOutput
   ) throws {
-    guard let input = inputs?.first,
+    guard let inputs, let input = inputs.first,
       let source = input.metalTexture,
       let target = output.metalTexture,
       let commandBuffer = output.metalCommandBuffer
@@ -137,6 +153,10 @@ final class ShaderVideoEffectKernel: CIImageProcessorKernel {
       let settings = arguments?[valuesKey] as? [Double]
     else { return }
     let extent = (arguments?[extentKey] as? CIVector)?.cgRectValue ?? input.region
+    let extras: [MTLTexture] = try inputs.dropFirst().map { extra in
+      guard let texture = extra.metalTexture else { throw Failure.noMetal }
+      return texture
+    }
 
     let pipeline = try pipeline(for: commandBuffer.device, function: function, source: code)
     guard let encoder = commandBuffer.makeComputeCommandEncoder() else { return }
@@ -151,6 +171,9 @@ final class ShaderVideoEffectKernel: CIImageProcessorKernel {
     encoder.setComputePipelineState(pipeline)
     encoder.setTexture(source, index: 0)
     encoder.setTexture(target, index: 1)
+    for (index, texture) in extras.enumerated() {
+      encoder.setTexture(texture, index: 2 + index)
+    }
     encoder.setBytes(&values, length: values.count * MemoryLayout<Float>.size, index: 0)
     let width = pipeline.threadExecutionWidth
     let height = max(1, pipeline.maxTotalThreadsPerThreadgroup / width)

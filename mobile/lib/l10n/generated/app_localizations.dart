@@ -15863,6 +15863,84 @@ abstract class AppLocalizations {
   /// **'Riso Print'**
   String get videoEditorEffectRiso;
 
+  /// Name of a video effect: the picture is shown four times in a grid, each copy printed in a few flat, bold colours, as in 1960s pop art screen prints.
+  ///
+  /// In en, this message translates to:
+  /// **'Pop Art'**
+  String get videoEditorEffectPopArt;
+
+  /// Name of a video effect: the picture looks made of layers of cut coloured paper stacked on each other, with soft shadows between the layers.
+  ///
+  /// In en, this message translates to:
+  /// **'Paper Cut'**
+  String get videoEditorEffectPaperCut;
+
+  /// Name of a video effect: the picture looks embroidered on cloth in cross stitches, small X-shaped stitches of coloured thread.
+  ///
+  /// In en, this message translates to:
+  /// **'Cross-Stitch'**
+  String get videoEditorEffectCrossStitch;
+
+  /// Name of a video effect: the picture looks built from small square toy building bricks with round studs. Use your language's generic word for toy building bricks, not a brand name.
+  ///
+  /// In en, this message translates to:
+  /// **'Bricks'**
+  String get videoEditorEffectBricks;
+
+  /// Name of a video effect: the picture looks painted in watercolour, in soft, light washes of paint on paper.
+  ///
+  /// In en, this message translates to:
+  /// **'Watercolor'**
+  String get videoEditorEffectWatercolor;
+
+  /// Name of a video effect: the picture looks painted in oil, in flat, hard-edged patches of thick paint.
+  ///
+  /// In en, this message translates to:
+  /// **'Oil Paint'**
+  String get videoEditorEffectOilPaint;
+
+  /// Name of a video effect: the picture looks drawn with a pencil on paper, with dark outlines and cross-hatched shadows.
+  ///
+  /// In en, this message translates to:
+  /// **'Pencil Sketch'**
+  String get videoEditorEffectPencilSketch;
+
+  /// Name of a video effect: only the outlines of the picture are shown, glowing like neon tubes on black.
+  ///
+  /// In en, this message translates to:
+  /// **'Neon Edges'**
+  String get videoEditorEffectNeonEdges;
+
+  /// Name of a video effect: the picture is redrawn in text characters such as . : + # and @, denser where it is brighter. Keep ASCII, the name of the character set.
+  ///
+  /// In en, this message translates to:
+  /// **'ASCII'**
+  String get videoEditorEffectAscii;
+
+  /// Name of a video effect: the picture looks like a stained glass window, made of coloured glass panes held together by dark lead.
+  ///
+  /// In en, this message translates to:
+  /// **'Stained Glass'**
+  String get videoEditorEffectStainedGlass;
+
+  /// Name of a video effect: the picture looks like it was filmed with a thermal (heat) camera, with warm things in yellow and white and cold things in purple and black.
+  ///
+  /// In en, this message translates to:
+  /// **'Thermal'**
+  String get videoEditorEffectThermal;
+
+  /// Name of a video effect: the picture looks like it is seen through night vision goggles, bright green with fine noise and darker corners.
+  ///
+  /// In en, this message translates to:
+  /// **'Night Vision'**
+  String get videoEditorEffectNightVision;
+
+  /// Name of a video effect: the picture looks like an X-ray image, its dark and bright parts swapped into blue-white on black.
+  ///
+  /// In en, this message translates to:
+  /// **'X-Ray'**
+  String get videoEditorEffectXRay;
+
   /// Name of a colour-graded look in the video effects picker: the blockbuster film grade, with teal (blue-green) shadows and greens, and warm orange skin and highlights. Keep the colour names short; "& " may become your language's "and".
   ///
   /// In en, this message translates to:
@@ -15928,6 +16006,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retro'**
   String get videoEditorEffectCategoryRetro;
+
+  /// Name of a group in the video effects picker: effects that redraw the picture in another medium, such as paint, pencil, print, paper, thread, toy bricks or stained glass, or show it as another kind of camera would, such as a thermal camera or night vision.
+  ///
+  /// In en, this message translates to:
+  /// **'Art'**
+  String get videoEditorEffectCategoryArt;
 
   /// Name of a group in the video effects picker: effects that make the picture break up digitally. Use the same word as the Glitch effect.
   ///

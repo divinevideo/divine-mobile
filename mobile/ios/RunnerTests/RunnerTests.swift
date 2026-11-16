@@ -1964,9 +1964,11 @@ final class DropsVideoEffectTests: XCTestCase {
 
 /// Light leak, light rays, anamorphic, prism, window light, spotlight,
 /// particles, tilt-shift, swirl, ripple, fluted glass, zoom blur, spin blur,
-/// comic, 8-bit, 3D glasses and riso print are drawn with Metal kernels on iOS
-/// and macOS (`ShaderVideoEffect`), and with the same shaders in GLSL on
-/// Android and in the effects picker (`shaders/*.frag`). These tests
+/// comic, 8-bit, 3D glasses, riso print, watercolour, oil paint, pencil
+/// sketch, neon edges, stained glass, ASCII, thermal camera, night vision,
+/// X-ray, pop art, bricks, cross-stitch and paper cut are drawn with Metal kernels on iOS and macOS (`ShaderVideoEffect`),
+/// and with the same shaders in GLSL on Android and in the effects picker
+/// (`shaders/*.frag`). These tests
 /// check every pixel each kernel draws against its shader's formulas computed
 /// here on the CPU, so a change to one copy that is not made to the others
 /// fails, and so does a kernel that reads its textures upside down.
@@ -2232,6 +2234,177 @@ final class ShaderVideoEffectTests: XCTestCase {
     }
   }
 
+  func testPaintDrawsWhatTheAndroidShaderDraws() {
+    // Each of the 49 taps is slow on the CPU, so each style runs once.
+    let cases: [(PaintVideoEffect.Style, Double)] = [(.watercolor, 1.0), (.oil, 0.45)]
+    for (style, intensity) in cases {
+      let effect = PaintVideoEffect(style: style, params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.paint(px, py, intensity: intensity, style: style.rawValue)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      // The paper's grain hashes each pixel, and a hash right on a whole
+      // number wraps to either end, on the GPU and here; a change to the
+      // quadrants, their weights, the washes or the light moves far more.
+      XCTAssertLessThan(difference.share, 0.002, "\(style), intensity \(intensity)")
+    }
+  }
+
+  func testPencilSketchDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = PencilSketchVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.pencilSketch(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity)")
+    }
+  }
+
+  func testNeonEdgesDrawWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = NeonEdgesVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.neonEdges(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity)")
+    }
+  }
+
+  func testStainedGlassDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = StainedGlassVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.stainedGlass(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity)")
+    }
+  }
+
+  func testAsciiDrawsWhatTheAndroidShaderDraws() throws {
+    // The atlas as the kernel reads it: the app's asset, rendered without a
+    // colour space, its first row the glyphs' top.
+    let atlas = try XCTUnwrap(AsciiVideoEffect.glyphs())
+    XCTAssertEqual(atlas.extent, CGRect(x: 0, y: 0, width: 240, height: 24))
+    let atlasWidth = Int(atlas.extent.width)
+    let atlasHeight = Int(atlas.extent.height)
+    var pixels = [Float](repeating: 0, count: atlasWidth * atlasHeight * 4)
+    pixels.withUnsafeMutableBytes {
+      context.render(
+        atlas, toBitmap: $0.baseAddress!, rowBytes: atlasWidth * 16,
+        bounds: atlas.extent, format: .RGBAf, colorSpace: nil)
+    }
+    let glyphs: [Double] = (0..<atlasWidth * atlasHeight).map { Double(pixels[$0 * 4]) }
+    for intensity in [1.0, 0.45] {
+      let effect = AsciiVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.ascii(px, py, intensity: intensity, glyphs: glyphs, glyphsWidth: atlasWidth)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      // A cell whose brightness lies right on the edge between two glyphs can
+      // take either, on the GPU and here; a change to the cells, the glyphs
+      // or the way the atlas is read moves far more.
+      XCTAssertLessThan(difference.share, 0.005, "intensity \(intensity)")
+    }
+  }
+
+  func testThermalDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = ThermalVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.thermal(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity)")
+    }
+  }
+
+  func testNightVisionDrawsWhatTheAndroidShaderDraws() {
+    // The noise steps through 64 patterns, 24 a second.
+    XCTAssertEqual(NightVisionVideoEffect.noiseFrame(effectTimeUs: 41_666), 0)
+    XCTAssertEqual(NightVisionVideoEffect.noiseFrame(effectTimeUs: 41_667), 1)
+    XCTAssertEqual(NightVisionVideoEffect.noiseFrame(effectTimeUs: 2_666_667), 0)
+    let cases: [(Double, Double, Double)] = [(1.0, 0, 0), (0.6, 2.5, 60)]
+    for (intensity, seconds, noiseFrame) in cases {
+      let effect = NightVisionVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.nightVision(px, py, intensity: intensity, noiseFrame: noiseFrame)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
+      // The noise hashes each pixel, and a hash right on a whole number
+      // wraps to either end, on the GPU and here; a change to the phosphor,
+      // the noise pattern, the scanlines or the corners moves far more.
+      XCTAssertLessThan(difference.share, 0.002, "intensity \(intensity), \(seconds) s")
+    }
+  }
+
+  func testXRayDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = XRayVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.xRay(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity)")
+    }
+  }
+
+  func testPopArtDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = PopArtVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.popArt(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity)")
+    }
+  }
+
+  func testBricksDrawWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = BricksVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.bricks(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      // A brick whose colour lies right between two levels can take either,
+      // on the GPU and here; a change to the bricks, the studs or the light
+      // moves far more.
+      XCTAssertLessThan(difference.share, 0.002, "intensity \(intensity)")
+    }
+  }
+
+  func testCrossStitchDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = CrossStitchVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.crossStitch(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      // A stitch whose colour lies right between two thread colours can take
+      // either, on the GPU and here; a change to the strands, the cloth or
+      // the holes moves far more.
+      XCTAssertLessThan(difference.share, 0.002, "intensity \(intensity)")
+    }
+  }
+
+  func testPaperCutDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = PaperCutVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.paperCut(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      // A pixel whose brightness lies right on the edge between two layers
+      // can land on either, on the GPU and here, and so can its shadow; a
+      // change to the layers, the sheets' colours or the shadow moves far
+      // more.
+      XCTAssertLessThan(difference.share, 0.002, "intensity \(intensity)")
+    }
+  }
+
   func testLeavesTheFrameAloneAtNoIntensity() {
     let effects: [ShaderVideoEffect] = [
       LightLeakVideoEffect(params: ["intensity": 0]),
@@ -2251,6 +2424,19 @@ final class ShaderVideoEffectTests: XCTestCase {
       EightBitVideoEffect(params: ["intensity": 0]),
       AnaglyphVideoEffect(params: ["intensity": 0]),
       RisoVideoEffect(params: ["intensity": 0]),
+      PaintVideoEffect(style: .watercolor, params: ["intensity": 0]),
+      PaintVideoEffect(style: .oil, params: ["intensity": 0]),
+      PencilSketchVideoEffect(params: ["intensity": 0]),
+      NeonEdgesVideoEffect(params: ["intensity": 0]),
+      StainedGlassVideoEffect(params: ["intensity": 0]),
+      AsciiVideoEffect(params: ["intensity": 0]),
+      ThermalVideoEffect(params: ["intensity": 0]),
+      NightVisionVideoEffect(params: ["intensity": 0]),
+      XRayVideoEffect(params: ["intensity": 0]),
+      PopArtVideoEffect(params: ["intensity": 0]),
+      BricksVideoEffect(params: ["intensity": 0]),
+      CrossStitchVideoEffect(params: ["intensity": 0]),
+      PaperCutVideoEffect(params: ["intensity": 0]),
     ]
     for effect in effects {
       let output = effect.render(frame, history: [], timeUs: 0, effectTimeUs: 1_000_000)
@@ -3263,6 +3449,532 @@ final class ShaderVideoEffectTests: XCTestCase {
       riso[k] = paper[k] * throughPink * throughBlue
     }
     return mix(color, riso, intensity)
+  }
+
+  /// Dave Hoskins' "hash without sine", one value from a 2D point, with 3.33
+  /// in place of its 33.33.
+  private func hash1(_ qx: Double, _ qy: Double) -> Double {
+    let rx: Double = fract(qx * 0.1031)
+    let ry: Double = fract(qy * 0.1031)
+    let rz: Double = fract(qx * 0.1031)
+    let dx: Double = rx * (ry + 3.33)
+    let dy: Double = ry * (rz + 3.33)
+    let dz: Double = rz * (rx + 3.33)
+    let d: Double = dx + dy + dz
+    let x: Double = rx + d
+    let y: Double = ry + d
+    let z: Double = rz + d
+    return fract((x + y) * z)
+  }
+
+  /// The same hash, two values from a 2D point.
+  private func hash2(_ qx: Double, _ qy: Double) -> (Double, Double) {
+    let rx: Double = fract(qx * 0.1031)
+    let ry: Double = fract(qy * 0.1030)
+    let rz: Double = fract(qx * 0.0973)
+    let dx: Double = rx * (ry + 3.33)
+    let dy: Double = ry * (rz + 3.33)
+    let dz: Double = rz * (rx + 3.33)
+    let d: Double = dx + dy + dz
+    let x: Double = rx + d
+    let y: Double = ry + d
+    let z: Double = rz + d
+    return (fract((x + y) * z), fract((x + z) * y))
+  }
+
+  /// Value noise: `hash1` on the grid, blended smoothly between its points.
+  private func valueNoise(_ qx: Double, _ qy: Double) -> Double {
+    let ix: Double = qx.rounded(.down)
+    let iy: Double = qy.rounded(.down)
+    let ux: Double = qx - ix
+    let uy: Double = qy - iy
+    let fx: Double = ux * ux * (3 - 2 * ux)
+    let fy: Double = uy * uy * (3 - 2 * uy)
+    let a: Double = hash1(ix, iy)
+    let b: Double = hash1(ix + 1, iy)
+    let c: Double = hash1(ix, iy + 1)
+    let d: Double = hash1(ix + 1, iy + 1)
+    let bottom: Double = a + (b - a) * fx
+    let top: Double = c + (d - c) * fx
+    return bottom + (top - bottom) * fy
+  }
+
+  /// `style` is 0 for watercolour, 1 for oil paint.
+  private func paint(_ px: Double, _ py: Double, intensity: Double, style: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let e: Double = max(1, s / 360)
+    var sums = [[Double]](repeating: [0, 0, 0], count: 4)
+    var lumas = [Double](repeating: 0, count: 4)
+    var squares = [Double](repeating: 0, count: 4)
+    for j in -3...3 {
+      for i in -3...3 {
+        let c: [Double] = tap(px + Double(i) * e, py + Double(j) * e)
+        let l: Double = luma(c)
+        let quadrants: [Bool] = [
+          i <= 0 && j <= 0, i >= 0 && j <= 0, i <= 0 && j >= 0, i >= 0 && j >= 0,
+        ]
+        for q in 0..<4 where quadrants[q] {
+          for k in 0..<3 { sums[q][k] += c[k] }
+          lumas[q] += l
+          squares[q] += l * l
+        }
+      }
+    }
+    let exponent: Double = 3 + 5 * style
+    var mean = [Double](repeating: 0, count: 4)
+    var weights = [Double](repeating: 0, count: 4)
+    for q in 0..<4 {
+      mean[q] = lumas[q] / 16
+      let variance: Double = max(squares[q] / 16 - mean[q] * mean[q], 0)
+      weights[q] = 1 / (1 + pow(variance.squareRoot() * 40, exponent))
+    }
+    let total: Double = weights[0] + weights[1] + weights[2] + weights[3]
+    var painted = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      var weighted: Double = 0
+      for q in 0..<4 { weighted += sums[q][k] * weights[q] }
+      painted[k] = weighted / (16 * total)
+    }
+    let lo: Double = mean.min()!
+    let hi: Double = mean.max()!
+    let pool: Double = smoothstep(0.06, 0.25, hi - lo)
+    let blot: Double = valueNoise(px / (0.12 * s), py / (0.12 * s))
+    let paper: Double = 0.93 + 0.07 * valueNoise(px / e, py / e)
+    let slopeX: Double = mean[1] + mean[3] - mean[0] - mean[2]
+    let slopeY: Double = mean[2] + mean[3] - mean[0] - mean[1]
+    let relief: Double = 1 + 0.8 * (slopeY - slopeX) * 0.70710678
+    let bristleX: Double = (0.8 * px + 0.6 * py) / e
+    let bristleY: Double = (0.8 * py - 0.6 * px) / (6 * e)
+    let bristle: Double = valueNoise(bristleX, bristleY)
+    let light: Double = min(max(relief * (0.96 + 0.08 * bristle), 0.85), 1.15)
+    let l: Double = luma(painted)
+    let color: [Double] = tap(px, py)
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let pigment: Double = clamp(l + (painted[k] - l) * 1.15)
+      let thinned: Double = 1 - (1 - pigment) * (0.8 + 0.15 * blot)
+      let wash: Double = thinned * (1 - 0.12 * pool) * paper
+      let oil: Double = clamp((l + (painted[k] - l) * 1.3) * light)
+      let art: Double = wash + (oil - wash) * style
+      out[k] = color[k] + (art - color[k]) * intensity
+    }
+    return out
+  }
+
+  /// How much of a pixel the pencil sketch's lines across `n` cover, `g`
+  /// apart and `w` wide.
+  private func hatch(
+    _ px: Double, _ py: Double, nx: Double, ny: Double, g: Double, w: Double
+  ) -> Double {
+    let along: Double = (py * nx - px * ny) / g
+    let wave: Double = 0.12 * sin(6.2831853 * fract(along * 0.07))
+    let across: Double = (px * nx + py * ny) / g + wave
+    let d: Double = abs(fract(across) - 0.5) * g
+    return clamp(0.5 * w - d + 0.5)
+  }
+
+  private func pencilSketch(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let e: Double = max(1, s / 540)
+    let color: [Double] = tap(px, py)
+    let tl: Double = luma(tap(px - e, py + e))
+    let tc: Double = luma(tap(px, py + e))
+    let tr: Double = luma(tap(px + e, py + e))
+    let ml: Double = luma(tap(px - e, py))
+    let mr: Double = luma(tap(px + e, py))
+    let bl: Double = luma(tap(px - e, py - e))
+    let bc: Double = luma(tap(px, py - e))
+    let br: Double = luma(tap(px + e, py - e))
+    let gx: Double = tr + 2 * mr + br - tl - 2 * ml - bl
+    let gy: Double = tl + 2 * tc + tr - bl - 2 * bc - br
+    let outline: Double = smoothstep(0.2, 0.7, hypot(gx, gy))
+    let around: Double = tl + tc + tr + ml + mr + bl + bc + br
+    let l: Double = (luma(color) + around) / 9
+    let g: Double = max(3, s / 160)
+    let w: Double = max(1, s / 900)
+    let a: Double =
+      hatch(px, py, nx: 0.70710678, ny: 0.70710678, g: g, w: w) * (1 - smoothstep(0.62, 0.82, l))
+    let b: Double =
+      hatch(px, py, nx: 0.70710678, ny: -0.70710678, g: g, w: w) * (1 - smoothstep(0.35, 0.55, l))
+    let c: Double =
+      hatch(px, py, nx: 0.25881905, ny: 0.96592583, g: g, w: w) * (1 - smoothstep(0.12, 0.3, l))
+    let shade: Double = 1 - (1 - a) * (1 - b) * (1 - c)
+    let tooth: Double = noise((px / e).rounded(.down), (py / e).rounded(.down))
+    let lead: Double = 1 - 0.7 * shade * (0.8 + 0.2 * tooth)
+    let mark: Double = 1 - lead * (1 - 0.85 * outline)
+    let paper: [Double] = [0.97, 0.95, 0.91]
+    let graphite: [Double] = [0.2, 0.2, 0.22]
+    var sketch = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let sheet: Double = paper[k] * (0.97 + 0.03 * tooth)
+      sketch[k] = sheet + (graphite[k] - sheet) * mark
+    }
+    return mix(color, sketch, intensity)
+  }
+
+  /// How the brightness changes across a point, from taps `d` pixels to each
+  /// side.
+  private func slope(_ px: Double, _ py: Double, _ d: Double) -> (Double, Double) {
+    let x: Double = luma(tap(px + d, py)) - luma(tap(px - d, py))
+    let y: Double = luma(tap(px, py + d)) - luma(tap(px, py - d))
+    return (x, y)
+  }
+
+  private func neonEdges(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let e: Double = max(1, s / 540)
+    let color: [Double] = tap(px, py)
+    let near: (Double, Double) = slope(px, py, e)
+    let mid: (Double, Double) = slope(px, py, 3 * e)
+    let far: (Double, Double) = slope(px, py, 7 * e)
+    let core: Double = smoothstep(0.08, 0.35, hypot(near.0, near.1))
+    let midGlow: Double = smoothstep(0.08, 0.45, hypot(mid.0, mid.1))
+    let farGlow: Double = smoothstep(0.08, 0.55, hypot(far.0, far.1))
+    let glow: Double = 0.9 * core + 0.4 * midGlow + 0.2 * farGlow
+    let dx: Double = near.0 + mid.0 + far.0
+    let dy: Double = near.1 + mid.1 + far.1
+    let size: Double = hypot(dx, dy)
+    let hue: Double = (size > 0.0001 ? atan2(dy, dx) : 0) / 6.2831853 + 0.5
+    let lo: Double = color.min()!
+    let hi: Double = color.max()!
+    let own: Double = smoothstep(0.08, 0.25, hi - lo)
+    let offsets: [Double] = [0, 0.6666667, 0.3333333]
+    var neon = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let turning: Double = clamp(abs(fract(hue + offsets[k]) * 6 - 3) - 1)
+      let picture: Double = (color[k] - lo) / max(hi - lo, 0.001)
+      let tint: Double = turning + (picture - turning) * own
+      neon[k] = clamp(tint * glow + 0.6 * core * core)
+    }
+    return mix(color, neon, intensity)
+  }
+
+  private func stainedGlass(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let g: Double = max(8, s / 16)
+    let cellX: Double = (px / g).rounded(.down)
+    let cellY: Double = (py / g).rounded(.down)
+    let inX: Double = px / g - cellX
+    let inY: Double = py / g - cellY
+    var best: (Double, Double) = (0, 0)
+    var toBest: (Double, Double) = (0, 0)
+    var nearest: Double = 8
+    for j in -1...1 {
+      for i in -1...1 {
+        let (hx, hy): (Double, Double) = hash2(cellX + Double(i), cellY + Double(j))
+        let rx: Double = Double(i) + 0.1 + 0.8 * hx - inX
+        let ry: Double = Double(j) + 0.1 + 0.8 * hy - inY
+        let d: Double = rx * rx + ry * ry
+        if d < nearest {
+          nearest = d
+          toBest = (rx, ry)
+          best = (Double(i), Double(j))
+        }
+      }
+    }
+    var border: Double = 8
+    for j in -1...1 {
+      for i in -1...1 {
+        let ox: Double = best.0 + Double(i)
+        let oy: Double = best.1 + Double(j)
+        let (hx, hy): (Double, Double) = hash2(cellX + ox, cellY + oy)
+        let rx: Double = ox + 0.1 + 0.8 * hx - inX
+        let ry: Double = oy + 0.1 + 0.8 * hy - inY
+        let bx: Double = rx - toBest.0
+        let by: Double = ry - toBest.1
+        let length: Double = hypot(bx, by)
+        if bx * bx + by * by > 0.00001 {
+          let along: Double = 0.5 * ((toBest.0 + rx) * bx + (toBest.1 + ry) * by) / length
+          border = min(border, along)
+        }
+      }
+    }
+    let color: [Double] = tap(px, py)
+    let pane: [Double] = tap(px + toBest.0 * g, py + toBest.1 * g)
+    let tint: Double = 0.9 + 0.2 * hash2(cellX + best.0 + 17, cellY + best.1 + 17).0
+    let shine: Double = 1.15 - 0.35 * nearest.squareRoot()
+    let lead: Double = max(1, s / 400)
+    let edge: Double = 1 - smoothstep(lead - 0.75, lead + 0.75, border * g)
+    let l: Double = luma(pane)
+    let leadColor: [Double] = [0.06, 0.06, 0.07]
+    var window = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let glass: Double = clamp((l + (pane[k] - l) * 1.4) * tint * shine)
+      window[k] = glass + (leadColor[k] - glass) * edge
+    }
+    return mix(color, window, intensity)
+  }
+
+  /// The ASCII effect, reading the glyph atlas `glyphs` as the kernel reads
+  /// it: red values row by row from the top, `glyphsWidth` wide.
+  private func ascii(
+    _ px: Double, _ py: Double, intensity: Double, glyphs: [Double], glyphsWidth: Int
+  ) -> [Double] {
+    let s = Double(min(width, height))
+    let c: Double = max(8, s / 60)
+    let cellX: Double = (px / c).rounded(.down)
+    let cellY: Double = (py / c).rounded(.down)
+    let middleX: Double = (cellX + 0.5) * c
+    let middleY: Double = (cellY + 0.5) * c
+    var ink = [Double](repeating: 0, count: 3)
+    for (dx, dy) in [(-0.25, -0.25), (0.25, -0.25), (-0.25, 0.25), (0.25, 0.25)] {
+      let corner: [Double] = tap(middleX + dx * c, middleY + dy * c)
+      for k in 0..<3 { ink[k] += 0.25 * corner[k] }
+    }
+    let level: Double = min((luma(ink) * 10).rounded(.down), 9)
+    let inX: Double = px / c - cellX
+    let inY: Double = py / c - cellY
+    let texelX: Double = min(max(inX * 24, 0.5), 23.5)
+    let texelY: Double = min(max((1 - inY) * 24, 0.5), 23.5)
+    let glyphsHeight: Int = glyphs.count / glyphsWidth
+    let ax: Double = level * 24 + texelX - 0.5
+    let ay: Double = texelY - 0.5
+    let x0 = Int(ax)
+    let y0 = Int(ay)
+    let x1: Int = min(x0 + 1, glyphsWidth - 1)
+    let y1: Int = min(y0 + 1, glyphsHeight - 1)
+    let fx: Double = ax - Double(x0)
+    let fy: Double = ay - Double(y0)
+    let top: Double = glyphs[y0 * glyphsWidth + x0] * (1 - fx) + glyphs[y0 * glyphsWidth + x1] * fx
+    let bottom: Double =
+      glyphs[y1 * glyphsWidth + x0] * (1 - fx) + glyphs[y1 * glyphsWidth + x1] * fx
+    let glyph: Double = top + (bottom - top) * fy
+    let hi: Double = ink.max()!
+    var drawn = [Double](repeating: 0, count: 3)
+    for k in 0..<3 { drawn[k] = clamp(ink[k] / max(hi, 0.25)) * glyph }
+    return mix(tap(px, py), drawn, intensity)
+  }
+
+  /// The thermal camera's warmth of a colour.
+  private func warmth(_ c: [Double]) -> Double {
+    let redness: Double = max(c[0] - 0.5 * (c[1] + c[2]), 0)
+    return 0.3 * luma(c) + 1.6 * redness
+  }
+
+  /// The thermal camera's ironbow palette, one stretch after another.
+  private func ironbow(_ t: Double) -> [Double] {
+    let stretches: [(Double, Double, [Double])] = [
+      (0.25, 0.25, [0.85, 0.1, 0.25]),
+      (0.5, 0.2, [1, 0.5, 0]),
+      (0.7, 0.15, [1, 0.85, 0.1]),
+      (0.85, 0.15, [1, 1, 0.9]),
+    ]
+    var color: [Double] = mix([0, 0, 0.12], [0.35, 0, 0.55], clamp(t / 0.25))
+    for (start, length, to) in stretches {
+      color = mix(color, to, clamp((t - start) / length))
+    }
+    return color
+  }
+
+  private func thermal(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let e: Double = max(1, s / 270)
+    let color: [Double] = tap(px, py)
+    let sides: Double =
+      warmth(tap(px + e, py)) + warmth(tap(px - e, py)) + warmth(tap(px, py + e))
+      + warmth(tap(px, py - e))
+    let heat: Double = (2 * warmth(color) + sides) / 6
+    return mix(color, ironbow(smoothstep(0.1, 0.75, heat)), intensity)
+  }
+
+  private func nightVision(
+    _ px: Double, _ py: Double, intensity: Double, noiseFrame: Double
+  ) -> [Double] {
+    let s = Double(min(width, height))
+    let e: Double = max(1, s / 540)
+    let color: [Double] = tap(px, py)
+    let level: Double = clamp(1.1 * pow(max(luma(color), 0), 0.75))
+    let grainX: Double = (px / e).rounded(.down) + noiseFrame * 37
+    let grainY: Double = (py / e).rounded(.down) + noiseFrame * 17
+    let grain: Double = noise(grainX, grainY) - 0.5
+    let scan: Double = 0.94 + 0.06 * (fract(py / (2 * e)) >= 0.5 ? 1 : 0)
+    let corner: Double = hypot(px / Double(width) - 0.5, py / Double(height) - 0.5)
+    let tube: Double = 1 - 0.65 * smoothstep(0.35, 0.75, corner)
+    let glow: Double = clamp((level + 0.12 * grain) * scan * tube)
+    let phosphor: [Double] = [
+      clamp((0.1 + 0.5 * glow) * glow),
+      clamp(glow + 0.03),
+      clamp((0.15 + 0.4 * glow) * glow + 0.01),
+    ]
+    return mix(color, phosphor, intensity)
+  }
+
+  private func xRay(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let e: Double = max(1, s / 540)
+    let color: [Double] = tap(px, py)
+    let tl: Double = luma(tap(px - e, py + e))
+    let tc: Double = luma(tap(px, py + e))
+    let tr: Double = luma(tap(px + e, py + e))
+    let ml: Double = luma(tap(px - e, py))
+    let mr: Double = luma(tap(px + e, py))
+    let bl: Double = luma(tap(px - e, py - e))
+    let bc: Double = luma(tap(px, py - e))
+    let br: Double = luma(tap(px + e, py - e))
+    let gx: Double = tr + 2 * mr + br - tl - 2 * ml - bl
+    let gy: Double = tl + 2 * tc + tr - bl - 2 * bc - br
+    let bone: Double = smoothstep(0.1, 0.6, hypot(gx, gy))
+    let darkness: Double = max(1 - luma(color), 0)
+    let density: Double = clamp(1.1 * pow(darkness, 1.6) + 0.5 * bone)
+    let film: [Double] = mix([0, 0.02, 0.06], [0.78, 0.9, 1], density)
+    return mix(color, film, intensity)
+  }
+
+  /// Pop art's colour for copy `i` among `a`, `b`, `c` and `d`.
+  private func pick(
+    _ i: Double, _ a: [Double], _ b: [Double], _ c: [Double], _ d: [Double]
+  ) -> [Double] {
+    let first: [Double] = mix(a, b, i >= 0.5 ? 1 : 0)
+    let second: [Double] = mix(c, d, i >= 2.5 ? 1 : 0)
+    return mix(first, second, i >= 1.5 ? 1 : 0)
+  }
+
+  private func popArt(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let halfX: Double = Double(width) / 2
+    let halfY: Double = Double(height) / 2
+    let qx: Double = px >= halfX ? 1 : 0
+    let qy: Double = py >= halfY ? 1 : 0
+    let grid: Double = intensity >= 0.0001 ? 1 : 0
+    let lx: Double = px + ((px - halfX * qx) * 2 - px) * grid
+    let ly: Double = py + ((py - halfY * qy) * 2 - py) * grid
+    let copy: [Double] = tap(lx, ly)
+    let l: Double = luma(copy)
+    let level: Double = smoothstep(0.28, 0.32, l) + smoothstep(0.58, 0.62, l)
+    let i: Double = qx + 2 * qy
+    let dark: [Double] = pick(i, [0.1, 0.1, 0.35], [0.3, 0.05, 0.4], [0.55, 0, 0.1], [0, 0.25, 0.3])
+    let mid: [Double] = pick(i, [1, 0.2, 0.6], [1, 0.5, 0.1], [0.45, 0.85, 0.2], [1, 0.85, 0])
+    let light: [Double] = pick(i, [1, 0.9, 0.2], [0.3, 0.9, 1], [1, 0.75, 0.85], [0.8, 0.7, 1])
+    let print: [Double] = mix(mix(dark, mid, clamp(level)), light, clamp(level - 1))
+    return mix(copy, print, intensity)
+  }
+
+  /// The mean colour of four taps inside the square cell `c` pixels wide
+  /// that holds a point, as the bricks and the cross stitches read it.
+  private func cellColor(_ px: Double, _ py: Double, c: Double) -> [Double] {
+    let middleX: Double = ((px / c).rounded(.down) + 0.5) * c
+    let middleY: Double = ((py / c).rounded(.down) + 0.5) * c
+    var ink = [Double](repeating: 0, count: 3)
+    for (dx, dy) in [(-0.25, -0.25), (0.25, -0.25), (-0.25, 0.25), (0.25, 0.25)] {
+      let corner: [Double] = tap(middleX + dx * c, middleY + dy * c)
+      for k in 0..<3 { ink[k] += 0.25 * corner[k] }
+    }
+    return ink
+  }
+
+  /// `color` a little more colourful, cut to `steps` + 1 levels a channel.
+  private func quantize(_ color: [Double], boost: Double, steps: Double) -> [Double] {
+    let l: Double = luma(color)
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let vivid: Double = clamp(l + (color[k] - l) * boost)
+      out[k] = (vivid * steps + 0.5).rounded(.down) / steps
+    }
+    return out
+  }
+
+  private func bricks(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let c: Double = max(6, s / 28)
+    let brick: [Double] = quantize(cellColor(px, py, c: c), boost: 1.2, steps: 4)
+    let dx: Double = px / c - (px / c).rounded(.down) - 0.5
+    let dy: Double = py / c - (py / c).rounded(.down) - 0.5
+    let aa: Double = 1 / c
+    let edge: Double = 0.5 - max(abs(dx), abs(dy))
+    let seam: Double = smoothstep(0, 1.5 * aa, edge)
+    let outward: (Double, Double) = abs(dx) > abs(dy) ? (sign(dx), 0) : (0, sign(dy))
+    let facing: Double = (outward.1 - outward.0) * 0.70710678
+    let bevel: Double = 1 + 0.3 * (1 - clamp(edge / 0.08)) * facing
+    let r: Double = hypot(dx, dy)
+    let stud: Double = 1 - smoothstep(0.3 - aa, 0.3 + aa, r)
+    let shadow: Double = 1 - smoothstep(0.3 - aa, 0.3 + aa, hypot(dx - 0.05, dy + 0.05))
+    let toward: Double = (dy - dx) / max(r, 0.0001) * 0.70710678
+    let rim: Double = 1.08 + 0.35 * smoothstep(0.22, 0.3, r) * toward
+    let flat: Double = bevel * (1 - 0.25 * shadow)
+    let shade: Double = flat + (rim - flat) * stud
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let lit: Double = brick[k] * shade + 0.12 * max(shade - 1, 0)
+      out[k] = clamp(lit * (0.35 + 0.65 * seam))
+    }
+    return mix(tap(px, py), out, intensity)
+  }
+
+  private func crossStitch(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let c: Double = max(6, s / 36)
+    let floss: [Double] = quantize(cellColor(px, py, c: c), boost: 1.15, steps: 6)
+    let inX: Double = px / c - (px / c).rounded(.down)
+    let inY: Double = py / c - (py / c).rounded(.down)
+    let aa: Double = 1 / c
+    let w: Double = 0.2
+    let under: Double = abs(inX - inY) * 0.70710678
+    let over: Double = abs(inX + inY - 1) * 0.70710678
+    let ends: Double = max(abs(inX - 0.5), abs(inY - 0.5))
+    let inside: Double = 1 - smoothstep(0.47 - aa, 0.47 + aa, ends)
+    let underMask: Double = (1 - smoothstep(w - aa, w + aa, under)) * inside
+    let overMask: Double = (1 - smoothstep(w - aa, w + aa, over)) * inside
+    let underTwist: Double = 0.9 + 0.1 * sin(6.2831853 * fract((inX + inY) * 2.5))
+    let overTwist: Double = 0.9 + 0.1 * sin(6.2831853 * fract((inX - inY) * 2.5))
+    let underRound: Double = 1 - 0.25 * min(under / w, 1) * min(under / w, 1)
+    let overRound: Double = 1 - 0.25 * min(over / w, 1) * min(over / w, 1)
+    let beside: Double = max(1 - smoothstep(w, w + 0.08, under), 1 - smoothstep(w, w + 0.08, over))
+    let holeX: Double = inX - (inX + 0.5).rounded(.down)
+    let holeY: Double = inY - (inY + 0.5).rounded(.down)
+    let holes: Double = smoothstep(0.04, 0.09, hypot(holeX, holeY))
+    let cloth: [Double] = [0.94, 0.92, 0.86]
+    var stitch = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let fabric: Double = cloth[k] * (0.7 + 0.3 * holes) * (1 - 0.25 * beside * inside)
+      let lower: Double = floss[k] * underTwist * underRound
+      let upper: Double = floss[k] * overTwist * overRound * 1.05
+      let withUnder: Double = fabric + (lower - fabric) * underMask
+      stitch[k] = clamp(withUnder + (upper - withUnder) * overMask)
+    }
+    return mix(tap(px, py), stitch, intensity)
+  }
+
+  /// The paper cut's picture at a point, softened over its centre and eight
+  /// taps on a ring `e` around it.
+  private func soft(_ qx: Double, _ qy: Double, e: Double) -> [Double] {
+    let d: Double = 0.70710678 * e
+    let offsets: [(Double, Double)] = [
+      (0, 0), (e, 0), (-e, 0), (0, e), (0, -e), (d, d), (-d, -d), (d, -d), (-d, d),
+    ]
+    var out = [Double](repeating: 0, count: 3)
+    for (dx, dy) in offsets {
+      let sample: [Double] = tap(qx + dx, qy + dy)
+      for k in 0..<3 { out[k] += sample[k] / 9 }
+    }
+    return out
+  }
+
+  /// Which of the paper cut's four layers a colour lies on, 0 the lowest.
+  private func layer(_ c: [Double]) -> Double {
+    min((clamp(luma(c)) * 4).rounded(.down), 3)
+  }
+
+  private func paperCut(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let e: Double = max(1.5, s / 180)
+    let stepX: Double = -0.70710678 * e
+    let stepY: Double = 0.70710678 * e
+    let here: [Double] = soft(px, py, e: e)
+    let h: Double = layer(here)
+    let near: Double = layer(soft(px + stepX, py + stepY, e: e))
+    let far: Double = layer(soft(px + 2 * stepX, py + 2 * stepY, e: e))
+    let shadow: Double = max(near > h ? 0.7 : 0, far > h ? 0.35 : 0)
+    let lit: Double = h > near ? 1 : 0
+    let l: Double = luma(here)
+    let sheetLuma: Double = 0.16 + 0.24 * h
+    let scale: Double = min(sheetLuma / max(l, 0.05), 1.5)
+    let g: Double = max(1, s / 540)
+    let fibre: Double = 0.97 + 0.03 * noise((px / g).rounded(.down), (py / g).rounded(.down))
+    var paper = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let sheet: Double = clamp(sheetLuma + (here[k] - l) * 0.8 * scale)
+      paper[k] = clamp(sheet * (1 - 0.4 * shadow) * (1 + 0.12 * lit) * fibre)
+    }
+    return mix(tap(px, py), paper, intensity)
   }
 }
 

@@ -544,6 +544,7 @@ flutter:
     - assets/reactions/
     - assets/info_stickers/
     - assets/looks/
+    - assets/effects/
     - assets/loading-brand-sprite.png
     - assets/seed_data/seed_events.json
     - assets/seed_data/classic_viner_profiles.json
@@ -575,8 +576,11 @@ flutter:
   shaders:
     - shaders/anaglyph.frag
     - shaders/anamorphic.frag
+    - shaders/ascii.frag
+    - shaders/bricks.frag
     - shaders/chroma_key.frag
     - shaders/comic.frag
+    - shaders/cross_stitch.frag
     - shaders/drops.frag
     - shaders/eight_bit.frag
     - shaders/fisheye.frag
@@ -585,15 +589,24 @@ flutter:
     - shaders/light_leak_transition.frag
     - shaders/light_rays.frag
     - shaders/look.frag
+    - shaders/neon_edges.frag
+    - shaders/night_vision.frag
+    - shaders/paint.frag
+    - shaders/paper_cut.frag
     - shaders/particles.frag
+    - shaders/pencil_sketch.frag
+    - shaders/pop_art.frag
     - shaders/prism.frag
     - shaders/ripple.frag
     - shaders/riso.frag
     - shaders/spin_blur.frag
     - shaders/spotlight.frag
+    - shaders/stained_glass.frag
     - shaders/swirl.frag
+    - shaders/thermal.frag
     - shaders/tilt_shift.frag
     - shaders/window_light.frag
+    - shaders/x_ray.frag
     - shaders/zoom_blur.frag
 
   # An image asset can refer to one or more resolution-specific "variants", see

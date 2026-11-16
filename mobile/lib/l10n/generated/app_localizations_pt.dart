@@ -9544,6 +9544,45 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorEffectRiso => 'Risografia';
 
   @override
+  String get videoEditorEffectPopArt => 'Pop art';
+
+  @override
+  String get videoEditorEffectPaperCut => 'Papel recortado';
+
+  @override
+  String get videoEditorEffectCrossStitch => 'Ponto cruz';
+
+  @override
+  String get videoEditorEffectBricks => 'Blocos';
+
+  @override
+  String get videoEditorEffectWatercolor => 'Aquarela';
+
+  @override
+  String get videoEditorEffectOilPaint => 'Pintura a óleo';
+
+  @override
+  String get videoEditorEffectPencilSketch => 'Esboço a lápis';
+
+  @override
+  String get videoEditorEffectNeonEdges => 'Contornos neon';
+
+  @override
+  String get videoEditorEffectAscii => 'ASCII';
+
+  @override
+  String get videoEditorEffectStainedGlass => 'Vitral';
+
+  @override
+  String get videoEditorEffectThermal => 'Térmica';
+
+  @override
+  String get videoEditorEffectNightVision => 'Visão noturna';
+
+  @override
+  String get videoEditorEffectXRay => 'Raio-X';
+
+  @override
   String get videoEditorEffectTealOrange => 'Teal & Orange';
 
   @override
@@ -9575,6 +9614,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryRetro => 'Retrô';
+
+  @override
+  String get videoEditorEffectCategoryArt => 'Arte';
 
   @override
   String get videoEditorEffectCategoryGlitch => 'Glitch';
