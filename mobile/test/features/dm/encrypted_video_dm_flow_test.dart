@@ -308,12 +308,26 @@ void main() {
           out: sent,
         );
 
-        final result = await createSendService().sendVideo(
-          recipientPubkey: _recipientPubkey,
-          videoFile: videoFile,
-          mimeType: _mimeType,
-        );
+        final encryption = _ObservedDmVideoEncryption();
+        addTearDown(() {
+          if (!encryption.deleteGate.isCompleted) {
+            encryption.deleteGate.complete();
+          }
+        });
+        final result = await createSendService(encryption: encryption)
+            .sendVideo(
+              recipientPubkey: _recipientPubkey,
+              videoFile: videoFile,
+              mimeType: _mimeType,
+            )
+            .timeout(const Duration(seconds: 10));
         expect(result.success, isTrue);
+        // Let the detached ciphertext delete finish before tearDown removes
+        // the temp directory it lives in.
+        expect(encryption.ciphertextFile.deleteStarted, isTrue);
+        encryption.deleteGate.complete();
+        await encryption.ciphertextFile.deleted.future;
+        expect(sent.ciphertextFile!.existsSync(), isFalse);
 
         // Flip one ciphertext byte before the receiver downloads it.
         final tampered = Uint8List.fromList(sent.ciphertext!);
