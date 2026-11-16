@@ -1600,8 +1600,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
                 survivors.length - 1,
               ),
         videoListSources: Map.of(state.videoListSources)
-          ..removeWhere((id, _) => removedIds.contains(id)),
-        listOnlyVideoIds: state.listOnlyVideoIds.difference(removedIds),
+          ..removeWhere((id, _) => removedIds.contains(id.toLowerCase())),
+        listOnlyVideoIds: {
+          for (final id in state.listOnlyVideoIds)
+            if (!removedIds.contains(id.toLowerCase())) id,
+        },
         coordination: state.coordination.copyWith(
           removedVideoIds: Set.unmodifiable({
             ...state.coordination.removedVideoIds,
