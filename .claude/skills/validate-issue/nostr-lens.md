@@ -7,8 +7,13 @@ block was re-read at `b587c61` (2026-11-07), after 98b57cf moved its prefix
 list to 01.md:185. Command behaviour is `nak`
 0.20.6 as run on 2026-10-10, and a reviewer re-checked the recipes on 0.20.7.
 Later releases exist (0.22.1 on 2026-10-31) and have not been re-run: re-check
-flags after upgrading. The bulk-read limits in §3 (COUNT, `--paginate`, many
-one-shot connections) were measured against `relay.divine.video` on 2026-11-06
+flags after upgrading. On 0.22.3 (2026-11-16) `nak req` through
+`scripts/relay-fault-proxy.dart` connected, but the proxy logged no frame from
+it and `nak` ended only on a `timeout`, with staging and with a local
+`nak serve` upstream; a direct `nak req` to that `nak serve` hung the same way.
+A `dart:io` WebSocket client got through the same proxy. Not diagnosed: until
+it is, self-test the proxy with a `dart:io` client. The bulk-read limits in §3
+(COUNT, `--paginate`, many one-shot connections) were measured against `relay.divine.video` on 2026-11-06
 with 0.20.6.
 
 ## 1. Name the authority the bug is against
@@ -214,6 +219,8 @@ production.
 
   `--delay-ok-ms` was run with the app on 2026-11-11 (#8441, iOS 27.2 simulator, `DEFAULT_ENV=LOCAL`, `nak serve` upstream, DM sends allowed through). As written it holds every `OK` and every frame behind it, so the app's kind 22236 every ~15 s keeps the socket stalled and delays unrelated `EOSE`s: a DM's inbox lookup then reads the recipient's inbox as unreadable and takes the held-send path instead. The run used a scratch copy that held only the `OK`s of kind 1059.
 
+  `--hold-retraction-eose` was run with the app on 2026-11-16 (#11104, iOS 27.2 simulator, debug, `DEFAULT_ENV=LOCAL`, staging upstream, the write guard on, a throwaway key imported as above), as a scratch copy with the same matching rule before the flag landed here. It holds only the read for the kind-5 retractions of votes the proxy has delivered, so a comment-vote read finishes while that read runs to the app's deadline: `getVoteCounts` left the comments that had votes out after 24 to 27 s, and without the flag returned their counts in 2 s. A comment's own deletion read (`#e` naming comments, not votes) was not held. The fallback relays the app names after the import (`relay.nos.social`, `nos.lol`, `relay.primal.net`) were refused in LOCAL (`Relay not allowed in this environment`), so the proxy stayed the only relay.
+
   **Run on a phone**, 2026-11-02: a Galaxy S23 (Android 17) on USB, debug, `DEFAULT_ENV=LOCAL`, staging upstream, the proxy on loopback with the write guard, `adb reverse tcp:47777 tcp:47777`, the scratch `localHost` change described below, and a throwaway key imported as above. The proxy never left loopback.
 
   - It looked like the simulator: four WebSockets within a second of launch, connection 3 carrying the traffic (190 of 199 frames), 1, 2 and 4 living under a second, the five kind 3083 and the kind 10002 writes rejected, REST reads answered 200, `…/bulk` 415 and an authenticated endpoint 401.
@@ -229,6 +236,7 @@ production.
   | `--duplicate-event N` | the relay delivering an EVENT twice: client-side dedup |
   | `--close-req auth-required` | a refused REQ (`CLOSED`), for the first `--close-req-count` requests |
   | `--delay-eose-ms MS`, `--never-eose` | a slow relay, and a REQ that never terminates |
+  | `--hold-retraction-eose` | a vote read that finishes while the read of those votes' retractions (kind 5) does not: only the comments that have votes come back unknown |
   | `--refuse-connects N` | the first N WebSocket handshakes fail (HTTP 503), then recover. The NIP-11 fetch is forwarded and not counted, so a client that reads NIP-11 first still meets the refusal |
   | `--close-after N` | the connection closed with a close frame (code 4000) after N relay frames, for the first connection (`--close-after-count`): the reconnect path |
   | `--stall-after N` | a half-open connection: socket open, nothing delivered either way after N relay frames, a close from the relay included |
