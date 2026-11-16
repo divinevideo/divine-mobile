@@ -169,6 +169,7 @@ void main() {
               BlocProvider<OwnerVideoActionsCubit>.value(value: ownerCubit),
           ],
           child: VideoContentActionsFeedbackListener(
+            keepBookmarkResultsOpen: true,
             child: MetadataActionsSection(
               video: video,
               isOwnVideo: ownerCubit != null,
@@ -502,6 +503,7 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.text(l10n.shareFailedToAddBookmark), findsOneWidget);
+        expect(find.byType(SnackBar), findsNothing);
       });
     });
     group('remix on the web', () {
