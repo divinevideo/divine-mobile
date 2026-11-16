@@ -907,11 +907,13 @@ class AnalyticsService implements BackgroundAwareService {
     String? sourceDetail,
     double? loopCount,
   }) async {
-    if (video.addressableId == null &&
-        (video.eventKind == NIP71VideoKinds.shortVideo ||
-            video.eventKind == NIP71VideoKinds.normalVideo)) {
+    // A view event names its video by `a` coordinate, so a video whose kind
+    // has no address cannot be counted. The kind is the model's best guess: a
+    // plain video comment opened from the comments sheet has no kind at all.
+    if (video.addressableId == null && !video.isAddressableShareKind) {
       Log.debug(
-        'Skipping pending view event for non-addressable video kind ${video.eventKind}',
+        'Skipping pending view event for non-addressable video kind '
+        '${video.eventKind ?? 'unknown'} (read as ${video.shareKind})',
         name: 'AnalyticsService',
         category: LogCategory.video,
       );

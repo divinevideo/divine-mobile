@@ -96,16 +96,18 @@ class ViewEventPublisher {
     return false;
   }
 
-  ViewEventDropReason _missingAddressableReason(VideoEvent video) {
-    return switch (video.eventKind) {
-      NIP71VideoKinds.shortVideo || NIP71VideoKinds.normalVideo =>
-        ViewEventDropReason.nonAddressableVideoKind,
-      NIP71VideoKinds.addressableShortVideo ||
-      NIP71VideoKinds.addressableNormalVideo =>
-        ViewEventDropReason.missingAddressableDTag,
-      _ => ViewEventDropReason.missingAddressableDTag,
-    };
-  }
+  /// Why [video] has no `a` tag: a lost `d` tag when its kind is addressable,
+  /// or a kind that has no address to count a view under.
+  ///
+  /// Reads the model's best-effort kind rather than [VideoEvent.eventKind]. A
+  /// video opened from the comments sheet is built from its comment, and a
+  /// plain Kind 1111 video comment carries neither a kind nor a `d` tag. Read
+  /// raw, the missing kind meant Divine's Kind 34236, so every such view was
+  /// reported as a video that had lost its `d` tag.
+  ViewEventDropReason _missingAddressableReason(VideoEvent video) =>
+      video.isAddressableShareKind
+      ? ViewEventDropReason.missingAddressableDTag
+      : ViewEventDropReason.nonAddressableVideoKind;
 
   /// Publish a video view event.
   ///

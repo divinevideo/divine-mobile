@@ -4,7 +4,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' show NIP71VideoKinds;
+import 'package:models/models.dart' show NIP71VideoKinds, VideoEvent;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/view_event_drop_reason.dart';
@@ -263,6 +263,40 @@ void main() {
               tags: any(named: 'tags'),
             ),
           );
+        },
+      );
+
+      test(
+        'classifies a video built without a kind or vine id, as the comments '
+        'sheet builds a plain video comment, as an expected skip',
+        () async {
+          final drops = <ViewEventDropReason>[];
+          publisher = ViewEventPublisher(
+            nostrService: mockNostr,
+            authService: mockAuth,
+            appVersion: appVersion,
+            onDrop: (
+              reason, {
+              required String videoId,
+              required String method,
+            }) => drops.add(reason),
+          );
+
+          final result = await publisher.publishViewEvent(
+            video: VideoEvent(
+              id: 'video_comment_id',
+              pubkey: creatorPubkey,
+              createdAt: 1700000000,
+              content: 'video comment',
+              timestamp: DateTime.utc(2023, 11, 14),
+            ),
+            startSeconds: 0,
+            endSeconds: 5,
+          );
+
+          expect(result, isFalse);
+          expect(drops, [ViewEventDropReason.nonAddressableVideoKind]);
+          expect(drops.single.isStructural, isFalse);
         },
       );
 

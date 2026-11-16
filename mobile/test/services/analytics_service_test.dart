@@ -1131,6 +1131,52 @@ void main() {
       },
     );
 
+    test(
+      'does not enqueue or directly publish a video with no kind and no vine '
+      'id, the shape the comments sheet builds for a plain video comment',
+      () async {
+        final publisher = _MockViewEventPublisher();
+        final dao = _MockPendingViewEventsDao();
+        analyticsService.dispose();
+        analyticsService = AnalyticsService(
+          backgroundActivityManager: BackgroundActivityManager(),
+          viewEventPublisher: publisher,
+          pendingViewEventsDao: dao,
+        );
+        await analyticsService.initialize();
+
+        final video = VideoEvent(
+          id: '22e73ca1faedb07dd3e24c1dca52d849aa75c6e4090eb60c532820b782c93da3',
+          pubkey:
+              'ae73ca1faedb07dd3e24c1dca52d849aa75c6e4090eb60c532820b782c93da3',
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+          content: 'video comment',
+          timestamp: DateTime.now(),
+        );
+
+        await analyticsService.trackDetailedVideoViewWithUser(
+          video,
+          userId: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+          source: 'mobile',
+          eventType: 'view_end',
+          watchDuration: const Duration(seconds: 2),
+        );
+        await pumpEventQueue();
+
+        verifyNever(() => dao.enqueue(any()));
+        verifyNever(
+          () => publisher.publishViewEvent(
+            video: any(named: 'video'),
+            startSeconds: any(named: 'startSeconds'),
+            endSeconds: any(named: 'endSeconds'),
+            source: any(named: 'source'),
+            sourceDetail: any(named: 'sourceDetail'),
+            loopCount: any(named: 'loopCount'),
+          ),
+        );
+      },
+    );
+
     test('view_start enqueues a start-phase row with zero watch', () async {
       final tempDir = Directory.systemTemp.createTempSync(
         'analytics_pending_start_test_',
