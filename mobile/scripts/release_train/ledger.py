@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import subprocess
+import time
 from typing import Protocol
 
 BOOTSTRAP_PATH = "allocations/bootstrap.json"
@@ -38,11 +39,16 @@ def provenance_path(platform, version, n) -> str:
 
 
 class GhLedgerStore:
-    def __init__(self, repository, branch="main", run=subprocess.run):
+    def __init__(self, repository, branch="main", run=subprocess.run, sleep=time.sleep):
         self._repository = repository
         self._branch = branch
         self._run = run
         self._paths = None
+        self._sleep = sleep
+
+    def refresh(self):
+        self._paths = None
+        return self.paths()
 
     def _gh(self, *args):
         return self._run(
@@ -101,6 +107,8 @@ class GhLedgerStore:
                 return True
             stderr = result.stderr.strip()
             if "(HTTP 409)" in stderr and attempt < _MAX_CONFLICT_RETRIES:
+                self._paths = None
+                self._sleep(min(0.05 * 2 ** attempt, 0.5))
                 continue
             if "(HTTP 422)" in stderr:
                 try:

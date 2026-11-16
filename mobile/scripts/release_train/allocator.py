@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
@@ -185,6 +186,62 @@ def _key_numbers(paths: frozenset[str], platform: str, key: str) -> list[int]:
     return found
 
 
+def _fresh_paths(ledger):
+    refresh = getattr(ledger, "refresh", None)
+    return refresh() if refresh else ledger.paths()
+
+
+def claim_builder(platform, *, ledger, source_sha, reservation_key,
+                  codemagic_build_id, owner_status, now, attempts=20,
+                  sleep=time.sleep):
+    """Create-only generations serialize builders sharing a scheduled source.
+
+    Ownership has no time-based expiry: an unreachable provider never grants a
+    second builder permission. Only a confirmed terminal owner can be replaced.
+    """
+    validate_reservation_key(reservation_key, platform, source_sha)
+    if not reservation_key.startswith("scheduled/"):
+        return None
+    if not isinstance(codemagic_build_id, str) or not re.fullmatch(r"[A-Za-z0-9-]+", codemagic_build_id):
+        raise AllocationError("invalid Codemagic builder identity")
+    prefix = f"allocations/owners/{platform}/{source_sha}/"
+    terminal = {"finished", "failed", "canceled", "timeout", "skipped"}
+    active = {"initializing", "queued", "waiting", "preparing", "fetching",
+              "testing", "building", "publishing", "finishing"}
+    for attempt in range(attempts):
+        paths = _fresh_paths(ledger)
+        generations = [int(path[len(prefix):-5]) for path in paths
+                       if path.startswith(prefix) and path.endswith(".json")
+                       and re.fullmatch(r"[0-9]+", path[len(prefix):-5])]
+        generation = max(generations, default=-1)
+        if generation >= 0:
+            path = prefix + str(generation) + ".json"
+            owner = ledger.read_json(path)
+            if (owner.get("source_sha") != source_sha or
+                    owner.get("reservation_key") != reservation_key):
+                raise AllocationError("scheduled builder ownership identity mismatch")
+            previous = owner.get("codemagic_build_id")
+            if previous == codemagic_build_id:
+                return path
+            if not isinstance(previous, str) or not previous:
+                raise AllocationError("scheduled builder ownership has no build ID")
+            status = owner_status(previous)
+            if status in active:
+                raise AllocationError(f"scheduled source already has active builder {previous}")
+            if status not in terminal:
+                raise AllocationError(f"unknown Codemagic state for builder {previous}")
+        path = prefix + str(generation + 1) + ".json"
+        if ledger.create_json(path, {
+            "schema": 1, "source_sha": source_sha,
+            "reservation_key": reservation_key,
+            "codemagic_build_id": codemagic_build_id,
+            "claimed_at": now.isoformat(),
+        }, f"claim {platform} scheduled builder"):
+            return path
+        sleep(min(0.05 * 2 ** attempt, 0.5))
+    raise AllocationError("scheduled builder ownership conflict retry limit reached")
+
+
 def reserve_build_number(
     platform: str,
     version: Version,
@@ -198,6 +255,7 @@ def reserve_build_number(
     shorebird_versions: frozenset[str],
     now: datetime,
     attempts: int = 20,
+    sleep=time.sleep,
 ) -> tuple[int, bool]:
     validate_reservation_key(reservation_key, platform, source_sha)
     paths = ledger.paths()
@@ -256,7 +314,9 @@ def reserve_build_number(
                     f"after reserving build {n}"
                 )
             return n, False
-        n += 1
+        paths = _fresh_paths(ledger)
+        n = max(n, max(_numbers(paths, platform), default=0)) + 1
+        sleep(min(0.05 * 2 ** _, 0.5))
     raise AllocationError(f"no free build number after {attempts} attempts")
 
 
