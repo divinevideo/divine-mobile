@@ -121,19 +121,11 @@ void main() {
     );
 
     /// Answers reaction reads with [reactions] and deletion reads with
-    /// [deletions], whatever order the repository issues them in. Likes read
-    /// through `readEvents`; the downvote lookup still uses `queryEvents`.
+    /// [deletions], whatever order the repository issues them in.
     void stubRelay({
       List<Event> reactions = const [],
       List<Event> deletions = const [],
     }) {
-      when(() => nostrClient.queryEvents(any())).thenAnswer((invocation) async {
-        final filters = invocation.positionalArguments.first as List<Filter>;
-        final kinds = filters.first.kinds ?? const <int>[];
-        if (kinds.contains(EventKind.reaction)) return reactions;
-        if (kinds.contains(EventKind.eventDeletion)) return deletions;
-        return const <Event>[];
-      });
       when(readEvents).thenAnswer((invocation) async {
         final filters = invocation.positionalArguments.first as List<Filter>;
         final kinds = filters.first.kinds ?? const <int>[];
