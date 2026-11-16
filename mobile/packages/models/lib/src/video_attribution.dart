@@ -259,8 +259,9 @@ class VideoEventAttribution {
         final pubkey = value.toLowerCase();
         if (pubkey.isEmpty || pubkey == author) continue;
         if (marker == inspiredByPTagMarker) {
-          if (!inspiredByPubkeys.contains(pubkey))
+          if (!inspiredByPubkeys.contains(pubkey)) {
             inspiredByPubkeys.add(pubkey);
+          }
         } else if (marker == clipSourceCreditTagMarker) {
           _addClipSourceCredit(
             clipSourceCredits,

@@ -1635,7 +1635,8 @@ void main() {
 
       for (final nested in [false, true]) {
         test(
-          'preserves relay and creator provenance in ${nested ? 'nested' : 'flat'} REST events',
+          'preserves relay and creator provenance in '
+          '${nested ? 'nested' : 'flat'} REST events',
           () {
             final publisher = 'a' * 64;
             final clipAuthor = 'b' * 64;
@@ -1733,7 +1734,7 @@ void main() {
           'kind': 34236,
           'content': 'caption\n\nInspired by nostr:$npub',
           'tags': [
-            ['d', 'remix'],
+            const ['d', 'remix'],
             ['a', '34236:$creator:original', 'wss://source.example', 'mention'],
             [
               'a',
