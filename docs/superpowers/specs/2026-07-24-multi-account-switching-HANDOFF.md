@@ -75,7 +75,7 @@ half-built container and the current account is untouched.
 | `mobile/lib/services/auth/account_scope.dart` | `AccountScope` (sealed `SignedOut`\|`SignedIn`) + immutable `AccountSession` (pubkey, `NostrIdentity`, source, relays). The account-boundary model. |
 | `mobile/lib/providers/device_scope.dart` | `DeviceScope` (shared DB + prefs + switch controller) + `deviceScopeProvider` + `buildAccountContainer(deviceScope)`. Only the DB truly needs sharing. |
 | `mobile/lib/providers/container_swap_host.dart` | `ContainerSwapHost` (owns the live container, swaps in place, disposes old post-frame) + `AccountSwitchController` (the UI handle; lives above the container). |
-| `mobile/lib/providers/swap_account.dart` | `swapAccount(...)` — build → sign in (real `signInForAccount`) → swap; rollback on failure. Also inits `EnvironmentService` on the new container (see gotcha). |
+| `mobile/lib/providers/swap_account.dart` | `swapAccount(...)` — build → sign in (real `signInForAccount`) → swap; rollback on failure. Also inits `EnvironmentService` on the new container before reading its auth service (see gotcha). |
 | `mobile/integration_test/account_swap_integration_test.dart` | On-device proof. Two real local-key accounts, real swap, asserted. |
 
 **Changed (wiring):**
@@ -193,9 +193,11 @@ Last result: `All tests passed!`
 
 6. **`EnvironmentService` is per-container and defaults to production.** It's
    NOT global. A swap container that skips startup would default to production
-   (fine for the team) but ignore a staging override. `swapAccount`'s default
-   sign-in now calls `environmentService.initialize()` before `signInForAccount`
-   to fix this — env parity with a cold launch.
+   (fine for the team) but ignore a staging override. `swapAccount` calls
+   `environmentService.initialize()` on the new container before it first reads
+   `authServiceProvider` — env parity with a cold launch. Initializing later
+   rebuilds the auth service in LOCAL (its `OAuthConfig` changes) and disposes
+   the instance the switch already fenced (#11046).
 
 7. **Stale local `origin/main` ref caused a fake "merge conflict with main"** in
    the pre-push hook (it uses `git merge-tree --write-tree origin/main HEAD`,

@@ -761,6 +761,76 @@ void main() {
     );
   });
 
+  group('default sign-in environment', () {
+    // The real authServiceProvider watches oauthConfigProvider, which returns
+    // a new OAuthConfig once a LOCAL container's environment initializes. The
+    // other swap tests override the provider with no dependencies, so they
+    // cannot see the incoming AuthService being rebuilt mid-switch (#11046).
+    Future<List<AuthService>> pumpHostWithEnvironment(
+      WidgetTester tester,
+      String environment,
+    ) async {
+      await deviceScope.sharedPreferences.setString(
+        'app_environment',
+        environment,
+      );
+      final built = <AuthService>[];
+      final outgoing = currentAuthService;
+      var authBuilds = 0;
+      deviceScope = DeviceScope(
+        database: database,
+        sharedPreferences: deviceScope.sharedPreferences,
+        announcementSessions: AnnouncementSessions(),
+        feedModePersistence: deviceScope.feedModePersistence,
+        switchController: controller,
+        appVersion: 'test',
+        crashReporting: deviceScope.crashReporting,
+        startupPerformance: deviceScope.startupPerformance,
+        documentsPath: '/documents',
+        logMessageBatcher: deviceScope.logMessageBatcher,
+        accountOverrides: [
+          secureKeyStorageProvider.overrideWithValue(keyStorage),
+          pushNotificationSyncProvider.overrideWithValue(null),
+          authServiceProvider.overrideWith((ref) {
+            ref.watch(oauthConfigProvider);
+            if (authBuilds++ == 0) return outgoing;
+            final auth = makeIncomingAuth();
+            built.add(auth);
+            ref.onDispose(() => unawaited(auth.dispose()));
+            return auth;
+          }),
+        ],
+      );
+      final initial = await pumpHost(tester);
+      expect(initial.read(authServiceProvider), same(outgoing));
+      return built;
+    }
+
+    for (final environment in ['production', 'staging', 'local']) {
+      testWidgets(
+        'commits the incoming account when it initializes to $environment',
+        (tester) async {
+          final built = await pumpHostWithEnvironment(tester, environment);
+
+          await driveSwap(
+            swapAccount(
+              deviceScope: deviceScope,
+              controller: controller,
+              currentAuthService: currentAuthService,
+              account: account,
+            ),
+          );
+
+          final live = controller.currentContainer!.read(authServiceProvider);
+          expect(built, hasLength(1));
+          expect(live, same(built.single));
+          expect(live.currentPublicKeyHex, targetHex);
+          expect(live.committedAccountOwnerPubkey, targetHex);
+        },
+      );
+    }
+  });
+
   /// Switches away from [from] and reports the location [swapAccount] seeded
   /// into the container it built for the target account.
   ///
