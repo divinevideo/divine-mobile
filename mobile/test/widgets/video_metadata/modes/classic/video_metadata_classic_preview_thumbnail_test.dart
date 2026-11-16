@@ -238,6 +238,7 @@ void main() {
         WidgetTester tester,
         List<String> methodCalls, {
         List<Map<Object?, Object?>>? setClipsArguments,
+        bool finishCrossFade = true,
       }) async {
         _registerMockPlayerChannel(
           methodCalls,
@@ -272,7 +273,7 @@ void main() {
           finder: find.byType(DivineVideoPlayer),
         );
         // Let the thumbnail finish fading out under the player.
-        await _finishCrossFade(tester);
+        if (finishCrossFade) await _finishCrossFade(tester);
         expect(DivineVideoPlayerController.liveControllerCount, equals(1));
         return notifier;
       }
@@ -326,6 +327,108 @@ void main() {
         final clips = setClipsArguments.last['clips']! as List<Object?>;
         final clip = clips.single! as Map<Object?, Object?>;
         expect(clip['uri'], contains('second-render.mp4'));
+      });
+
+      testWidgets(
+        'disposes a player still starting when its video is discarded',
+        (tester) async {
+          final methodCalls = <String>[];
+          final releasePlay = Completer<void>();
+          _registerMockPlayerChannel(methodCalls, holdPlay: releasePlay.future);
+          final notifier = _MutableVideoEditorNotifier(
+            VideoEditorProviderState(finalRenderedClip: firstRender),
+          );
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                clipManagerProvider.overrideWith(
+                  () => _MockClipManagerNotifier([testClip]),
+                ),
+                videoEditorProvider.overrideWith(() => notifier),
+              ],
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: VideoMetadataClassicPreviewThumbnail()),
+              ),
+            ),
+          );
+          await _waitForMethodCall(
+            tester: tester,
+            methodCalls: methodCalls,
+            method: 'play',
+          );
+          expect(DivineVideoPlayerController.liveControllerCount, equals(1));
+
+          // The discard lands while the native play() call is outstanding.
+          notifier.emit(VideoEditorProviderState(isProcessing: true));
+          releasePlay.complete();
+          await _settleRelease(tester);
+          await _finishCrossFade(tester);
+
+          expect(methodCalls, contains('dispose'));
+          expect(DivineVideoPlayerController.liveControllerCount, equals(0));
+          expect(find.byType(DivineVideoPlayer), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'releases a player whose video is discarded during the cross-fade',
+        (tester) async {
+          final methodCalls = <String>[];
+          final notifier = await pumpPlayingFirstRender(
+            tester,
+            methodCalls,
+            finishCrossFade: false,
+          );
+
+          notifier.emit(VideoEditorProviderState(isProcessing: true));
+          await _settleRelease(tester);
+          await _finishCrossFade(tester);
+
+          expect(tester.takeException(), isNull);
+          expect(DivineVideoPlayerController.liveControllerCount, equals(0));
+          expect(find.byType(DivineVideoPlayer), findsNothing);
+          // The thumbnail with the progress spinner is back, fully shown.
+          expect(find.byType(VideoEditorProcessingOverlay), findsOneWidget);
+          final fade = tester.widget<FadeTransition>(
+            find
+                .ancestor(
+                  of: find.byType(VideoEditorProcessingOverlay),
+                  matching: find.byType(FadeTransition),
+                )
+                .first,
+          );
+          expect(fade.opacity.value, equals(1));
+        },
+      );
+
+      testWidgets('keeps the player when a cover is picked on the same video', (
+        tester,
+      ) async {
+        final methodCalls = <String>[];
+        final setClipsArguments = <Map<Object?, Object?>>[];
+        final notifier = await pumpPlayingFirstRender(
+          tester,
+          methodCalls,
+          setClipsArguments: setClipsArguments,
+        );
+
+        notifier.emit(
+          VideoEditorProviderState(
+            finalRenderedClip: firstRender.copyWith(
+              thumbnailPath: '${tmpDir.path}/cover.jpg',
+              thumbnailTimestamp: const Duration(seconds: 2),
+            ),
+          ),
+        );
+        await _settleRelease(tester);
+        await _finishCrossFade(tester);
+
+        expect(methodCalls, isNot(contains('dispose')));
+        expect(setClipsArguments, hasLength(1));
+        expect(DivineVideoPlayerController.liveControllerCount, equals(1));
+        expect(find.byType(DivineVideoPlayer), findsOneWidget);
       });
     });
 
