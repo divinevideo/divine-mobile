@@ -1,5 +1,5 @@
 // ABOUTME: End-to-end test for the encrypted video DM round trip.
-// ABOUTME: Real AES-GCM encrypt + decrypt; only Blossom upload, transport, and
+// ABOUTME: Real AES-GCM encrypt + decrypt; Blossom upload, transport, and
 // ABOUTME: the DM repository are faked. Send pipeline output is fed, as a
 // ABOUTME: received kind 15 message, back through the receive pipeline.
 
