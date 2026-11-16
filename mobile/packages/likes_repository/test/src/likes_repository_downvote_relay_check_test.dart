@@ -48,8 +48,16 @@ class _Relay {
       ),
     ).thenAnswer((invocation) async {
       settledReads++;
+      final filters = invocation.positionalArguments.first as List;
+      if (filters.cast<Filter>().any(
+        (f) =>
+            (f.kinds ?? const []).contains(EventKind.reaction) &&
+            (f.e?.contains(_comment) ?? false),
+      )) {
+        commentReads++;
+      }
       await _held?.future;
-      final answer = _answer(invocation.positionalArguments.first as List);
+      final answer = _answer(filters);
       return QueryResult(
         events: answer.events,
         endedBy: answer.complete ? QueryEnd.complete : QueryEnd.deadline,
@@ -99,6 +107,9 @@ class _Relay {
 
   /// Reads that had to prove their answer, counted as they were asked.
   int settledReads = 0;
+
+  /// Reaction reads among [settledReads] that asked about [_comment].
+  int commentReads = 0;
 
   Completer<void>? _held;
   var _createdAt = 1700000000;
@@ -348,6 +359,9 @@ void main() {
         await startup;
         await tap.timeout(const Duration(seconds: 5));
         expect(relay.downvotesBy(_me, _comment), equals(1));
+        // The tap took its answer from the startup snapshot, not a read of
+        // its own.
+        expect(relay.commentReads, isZero);
       });
 
       test('does not adopt a downvote whose deletion it could not read '
