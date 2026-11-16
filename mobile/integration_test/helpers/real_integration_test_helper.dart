@@ -1,6 +1,8 @@
 // ABOUTME: Helper utilities for real integration tests without over-mocking
 // ABOUTME: Provides real Nostr relay connections and minimal platform channel mocking
 
+import 'dart:async';
+
 import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -116,15 +118,18 @@ class RealIntegrationTestHelper {
   }
 }
 
-/// Always online, and never asks the host: each listener hears the current
-/// state once, as the Linux implementation reports it once it has connected.
+/// Always online, and never asks the host. Like the Linux and method-channel
+/// implementations, it reports the current state when its listener count goes
+/// from zero to one; a listener that joins later hears only changes.
 class _AlwaysOnlineConnectivity extends ConnectivityPlatform {
   static const List<ConnectivityResult> _online = [ConnectivityResult.wifi];
+
+  late final StreamController<List<ConnectivityResult>> _reports =
+      StreamController.broadcast(onListen: () => _reports.add(_online));
 
   @override
   Future<List<ConnectivityResult>> checkConnectivity() async => _online;
 
   @override
-  Stream<List<ConnectivityResult>> get onConnectivityChanged =>
-      Stream.multi((listener) => listener.add(_online), isBroadcast: true);
+  Stream<List<ConnectivityResult>> get onConnectivityChanged => _reports.stream;
 }
