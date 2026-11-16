@@ -204,6 +204,34 @@ void main() {
     );
 
     test(
+      'a vanished account answered by relays stays hidden while vanished '
+      'policy loads',
+      () async {
+        setUpSearch(delayVanished: true);
+        final emissions = <ProgressiveSearchResult>[];
+        final done = Completer<void>();
+        repository
+            .searchUsersProgressive(
+              query: 'test person',
+              sortBy: profileSearchSortRelevance,
+            )
+            .listen(emissions.add, onDone: done.complete);
+        await pumpEventQueue();
+        relayResults.complete([_event('3')]);
+        await pumpEventQueue();
+        expect(emissions, isEmpty);
+        vanishedResults.complete([_id('3')]);
+        localResults.complete([]);
+        apiResults.complete([]);
+        await done.future;
+        expect(
+          emissions.expand((emission) => emission.profiles),
+          isNot(contains(predicate<UserProfile>((p) => p.pubkey == _id('3')))),
+        );
+      },
+    );
+
+    test(
       'late older local revision cannot restore server-cleared fields',
       () async {
         setUpSearch();
