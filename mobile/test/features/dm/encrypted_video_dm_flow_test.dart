@@ -3,6 +3,7 @@
 // ABOUTME: the DM repository are faked. Send pipeline output is fed, as a
 // ABOUTME: received kind 15 message, back through the receive pipeline.
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -26,6 +27,46 @@ class _MockDmRepository extends Mock implements DmRepository {}
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
 
 class _MockDio extends Mock implements Dio {}
+
+/// Keeps real encryption and observes its ciphertext file's detached cleanup.
+class _ObservedDmVideoEncryption extends DmVideoEncryption {
+  final deleteGate = Completer<void>();
+  late _ObservedCiphertextFile ciphertextFile;
+
+  @override
+  Future<EncryptedVideoFile> encryptFile(File plaintextFile) async {
+    final encrypted = await super.encryptFile(plaintextFile);
+    ciphertextFile = _ObservedCiphertextFile(
+      encrypted.ciphertextFile,
+      deleteGate: deleteGate.future,
+    );
+    return EncryptedVideoFile(
+      ciphertextFile: ciphertextFile,
+      key: encrypted.key,
+      nonce: encrypted.nonce,
+      ciphertextHash: encrypted.ciphertextHash,
+      plaintextHash: encrypted.plaintextHash,
+      ciphertextSize: encrypted.ciphertextSize,
+    );
+  }
+}
+
+class _ObservedCiphertextFile extends Mock implements File {
+  _ObservedCiphertextFile(File file, {required Future<void> deleteGate}) {
+    when(readAsBytes).thenAnswer((_) => file.readAsBytes());
+    when(existsSync).thenAnswer((_) => file.existsSync());
+    when(delete).thenAnswer((_) async {
+      deleteStarted = true;
+      await deleteGate;
+      final result = await file.delete();
+      deleted.complete();
+      return result;
+    });
+  }
+
+  bool deleteStarted = false;
+  final deleted = Completer<void>();
+}
 
 const _recipientPubkey =
     '1111111111111111111111111111111111111111111111111111111111111111';
@@ -157,12 +198,13 @@ void main() {
 
     // The preview reader decodes a frame through a platform plugin, which this
     // crypto round trip does not need.
-    DmVideoSendService createSendService() => DmVideoSendService(
-      dmRepository: dmRepository,
-      blossom: blossom,
-      encryption: DmVideoEncryption(),
-      readPreview: (_) async => (blurhash: null, dimensions: null),
-    );
+    DmVideoSendService createSendService({DmVideoEncryption? encryption}) =>
+        DmVideoSendService(
+          dmRepository: dmRepository,
+          blossom: blossom,
+          encryption: encryption ?? DmVideoEncryption(),
+          readPreview: (_) async => (blurhash: null, dimensions: null),
+        );
 
     test(
       'a sent video is decrypted to its original bytes by the receive path',
@@ -179,11 +221,18 @@ void main() {
         );
 
         // --- Send half: real encryption, fake upload/repository. ---
-        final result = await createSendService().sendVideo(
-          recipientPubkey: _recipientPubkey,
-          videoFile: videoFile,
-          mimeType: _mimeType,
-        );
+        final encryption = _ObservedDmVideoEncryption();
+        addTearDown(() {
+          if (!encryption.deleteGate.isCompleted) {
+            encryption.deleteGate.complete();
+          }
+        });
+        final result = await createSendService(encryption: encryption)
+            .sendVideo(
+              recipientPubkey: _recipientPubkey,
+              videoFile: videoFile,
+              mimeType: _mimeType,
+            );
 
         expect(result.success, isTrue);
         expect(sent.ciphertext, isNotNull);
@@ -198,7 +247,11 @@ void main() {
         expect(sent.metadata!.decryptionKey, hasLength(64));
         expect(sent.metadata!.decryptionNonce, hasLength(24));
         expect(sent.metadata!.thumbnailUrl, isNull);
-        // Send cleans up its ciphertext temp file.
+        // Send returns before cleanup completes; observe the actual deletion.
+        expect(encryption.ciphertextFile.deleteStarted, isTrue);
+        expect(sent.ciphertextFile!.existsSync(), isTrue);
+        encryption.deleteGate.complete();
+        await encryption.ciphertextFile.deleted.future;
         expect(sent.ciphertextFile!.existsSync(), isFalse);
 
         _stubDownload(dio, sent.fileUrl!, sent.ciphertext!.toList());
