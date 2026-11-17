@@ -144,6 +144,33 @@ class RuntimeBoundaryTest(unittest.TestCase):
 
 
 class AuditTest(unittest.TestCase):
+    def test_incomplete_android_observations_do_not_publish_null_deployment_refs(self):
+        from release_train.runner import Runtime
+
+        class GH:
+            def __init__(self):
+                self.calls = []
+            def pages(self, path):
+                return []
+            def call(self, method, path, payload=None):
+                self.calls.append((method, path, payload))
+                if path == '/deployments':
+                    if not payload.get('ref'):
+                        raise ProviderError('invalid null deployment ref')
+                    return {'id': len(self.calls)}
+                return {}
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.gh = GH()
+        complete = {'number': 10, 'version': '1.0.31', 'sha': 'a' * 40}
+        incomplete = complete | {'number': 11, 'sha': None, 'provenance_incomplete': True}
+        runtime.audit_observations({'android': {
+            'internal': [incomplete, complete], 'production': [incomplete, complete],
+        }}, {})
+        writes = [payload for _, path, payload in runtime.gh.calls if path == '/deployments']
+        self.assertEqual(len(writes), 2)
+        self.assertTrue(all(payload['ref'] == 'a' * 40 for payload in writes))
+
     def test_public_deployment_payload_is_allowlisted_and_existing_reused(self):
         from release_train.runner import Runtime
 

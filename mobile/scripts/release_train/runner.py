@@ -953,8 +953,11 @@ class Runtime:
                     "in review or pending availability",
                 )
         for build in snapshot.get("android", {}).get("internal", []):
-            self.deploy("android-play-internal", build, "success", state, "available")
+            if build.get("sha"):
+                self.deploy("android-play-internal", build, "success", state, "available")
         for build in snapshot.get("android", {}).get("production", []):
+            if not build.get("sha"):
+                continue
             self.deploy(
                 "android-play-production",
                 build,
