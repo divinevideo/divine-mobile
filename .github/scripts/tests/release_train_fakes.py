@@ -31,6 +31,22 @@ class MemoryLedgerStore:
         return True
 
 
+TRANSLATED_SEARCH_NOTES = {
+    'en-US': 'Search for a friend.', 'es-419': 'Busca a un amigo.',
+    'pt-BR': 'Procure por um amigo.', 'fr-FR': 'Recherchez un ami.',
+    'de-DE': 'Suche nach einem Freund.', 'it-IT': 'Cerca un amico.',
+    'nl-NL': 'Zoek een vriend.', 'pl-PL': 'Wyszukaj znajomego.',
+    'sv-SE': 'Sök efter en vän.', 'ro': 'Caută un prieten.',
+    'bg': 'Потърси приятел.', 'tr-TR': 'Bir arkadaşını ara.',
+    'ar': 'ابحث عن صديق.', 'ur': 'کسی دوست کو تلاش کریں۔',
+    'ja-JP': '友だちを検索してみてください。', 'ko-KR': '친구를 검색해 보세요.',
+    'zh-CN': '搜索一位朋友。', 'vi': 'Tìm một người bạn.',
+    'id': 'Cari seorang teman.', 'ms': 'Cari seorang rakan.',
+    'fil': 'Maghanap ng kaibigan.', 'am': 'ጓደኛዎን ይፈልጉ።',
+    'te-IN': 'ఒక స్నేహితుని కోసం వెతకండి.',
+}
+
+
 def release_notes_bundle(platform='ios', source='a' * 40):
     languages = ('en-US', 'es-419', 'pt-BR', 'fr-FR', 'de-DE', 'it-IT', 'nl-NL', 'pl-PL', 'sv-SE', 'ro', 'bg', 'tr-TR', 'ar', 'ur', 'ja-JP', 'ko-KR', 'zh-CN', 'vi', 'id', 'ms', 'fil', 'am', 'te-IN')
     return {
@@ -39,6 +55,6 @@ def release_notes_bundle(platform='ios', source='a' * 40):
         'locales': ['en-US'] if platform == 'ios' else [],
         'testflight': [{'language': 'en-US', 'text': 'Try recording a loop.'}] if platform == 'ios' else [],
         'app_store': [{'language': 'en-US', 'text': 'Videos load more smoothly.'}] if platform == 'ios' else [],
-        'google_play': [{'language': language, 'text': 'Videos load more smoothly.'} for language in languages] if platform == 'android' else [],
+        'google_play': [{'language': language, 'text': TRANSLATED_SEARCH_NOTES[language]} for language in languages] if platform == 'android' else [],
         'changes': [], 'policy_sha256': 'c' * 64,
     }

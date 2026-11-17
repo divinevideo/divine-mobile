@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import publish_play_bundle
 from release_train.providers import DeferredReview, ProviderError
-from release_train_fakes import MemoryLedgerStore
+from release_train_fakes import TRANSLATED_SEARCH_NOTES, MemoryLedgerStore
 
 SOURCE = 'a' * 40
 
@@ -19,7 +19,7 @@ def android_bundle():
     return {'schema': 1, 'platform': 'android', 'source_sha': SOURCE,
             'baseline': {'version': '1.0.0', 'sha': 'b' * 40}, 'locales': [],
             'testflight': [], 'app_store': [],
-            'google_play': [{'language': lang, 'text': 'A saved draft stays yours.'}
+            'google_play': [{'language': lang, 'text': TRANSLATED_SEARCH_NOTES[lang]}
                             for lang in PLAY_LOCALES],
             'changes': [], 'policy_sha256': 'c' * 64}
 

@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import release_train_fakes  # noqa: F401 - adds repository scripts to sys.path
+import release_train_fakes  # adds repository scripts to sys.path
 from release_train.providers import (
     Apple,
     DeferredReview,
@@ -109,7 +109,7 @@ PLAY_LANGUAGES = ('en-US', 'es-419', 'pt-BR', 'fr-FR', 'de-DE', 'it-IT', 'nl-NL'
 
 
 def play_notes():
-    return [{'language': language, 'text': 'Try your next video.'} for language in PLAY_LANGUAGES]
+    return [{'language': language, 'text': release_train_fakes.TRANSLATED_SEARCH_NOTES[language]} for language in PLAY_LANGUAGES]
 
 
 class LocalizedNotesTest(unittest.TestCase):

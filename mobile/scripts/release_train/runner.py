@@ -220,13 +220,15 @@ def execute_plan(plan, state, snapshot, store, provider):
             continue
         if state.get("holds", {}).get(action["platform"]) is not None:
             continue
-        if action["kind"] == "build" and hasattr(provider, "prepare_build"):
-            try:
+        try:
+            if hasattr(provider, "prepare_action"):
+                provider.prepare_action(action, snapshot)
+            elif action["kind"] == "build" and hasattr(provider, "prepare_build"):
                 provider.prepare_build(action, snapshot)
-            except ProviderError as error:
-                plan.setdefault("errors", []).append(action["platform"] + ": " + str(error))
-                plan["actions"].remove(raw)
-                continue
+        except ProviderError as error:
+            plan.setdefault("errors", []).append(action["platform"] + ": " + str(error))
+            plan["actions"].remove(raw)
+            continue
         state.setdefault("operations", {})[key] = {
             "action": action,
             "status": "started",
@@ -998,6 +1000,64 @@ class Runtime:
             platform, source, snapshot.get(platform), env=self.env, ledger=self.ledger
         ))
 
+    def refresh_store_authorization(self, platform):
+        """Renew snapshot credentials after slow generation or artifact downloads."""
+        if platform == "ios" and isinstance(self.apple, Apple):
+            self.apple.headers["Authorization"] = "Bearer " + apple_token(self.env)
+        elif platform == "android" and isinstance(self.play, Play):
+            self.play.headers["Authorization"] = "Bearer " + play_token(
+                self.env["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"]
+            )
+
+    def retry_artifact_record(self, action):
+        record = self.ledger.read_json(
+            "artifacts/android/" + str(action["number"]) + ".json"
+        )
+        for field in ["number", "version", "sha", "digest", "build_id", "artifact_name"]:
+            if record.get(field) != action.get(field):
+                raise ProviderError(
+                    "Deferred AAB identity conflicts with build-recorded signed artifact"
+                )
+        return record
+
+    def prepared_bundle(self, action):
+        from release_train.release_notes import bundle_from_env
+
+        if action.get("release_notes") is None:
+            raise ProviderError("Operation requires prepared source-bound release notes")
+        source = action.get("build", action)["sha"]
+        return bundle_from_env(
+            {"RELEASE_NOTES_BUNDLE": json.dumps(action["release_notes"])},
+            source, action["platform"],
+        )
+
+    def prepare_action(self, action, snapshot):
+        """Finish fallible note preparation before journaling a store mutation."""
+        from release_train.release_notes import bundle_for_native, notes_for
+
+        if action["kind"] == "build":
+            self.prepare_build(action, snapshot)
+            return
+        channel = {
+            "public-beta": "testflight",
+            "app-store": "app_store",
+            "play-production": "google_play",
+            "retry-android-upload": "google_play",
+        }.get(action["kind"])
+        if channel is None:
+            return
+        retained = action.get("release_notes")
+        if action["kind"] == "retry-android-upload":
+            record = self.retry_artifact_record(action)
+            retained = record.get("release_notes")
+        source = action.get("build", action)["sha"]
+        action["release_notes"] = self.release_bundle(
+            action["platform"], source, snapshot, retained
+        )
+        bundle = self.prepared_bundle(action)
+        notes_for(bundle, channel)
+        action["release_notes"] = bundle_for_native(bundle)
+
     def prepare_build(self, action, snapshot):
         from release_train.setup import configure_build_credentials
 
@@ -1005,6 +1065,7 @@ class Runtime:
         action["release_notes"] = self.release_bundle(
             action["platform"], action["sha"], snapshot
         )
+        self.prepared_bundle(action)
         configure_build_credentials(self.cm, self.env["PROVENANCE_TOKEN"],
                                     self.env["PUBLIC_PEOPLE_LIST_POLICY"])
 
@@ -1014,9 +1075,7 @@ class Runtime:
         build = action.get("build")
         if kind == "build":
             sha = action["sha"]
-            if action.get("release_notes") is None:
-                raise ProviderError("Native build requires prepared source-bound release notes")
-            bundle = self.release_bundle(platform, sha, snapshot, action["release_notes"])
+            bundle = self.prepared_bundle(action)
             tag = "release-candidate/" + sha
             try:
                 existing = self.tags.call("GET", "/git/ref/tags/" + tag)
@@ -1055,25 +1114,30 @@ class Runtime:
             )
             return {"build_id": result["data"]["id"]}
         if kind == "attach-beta-groups":
+            self.refresh_store_authorization(platform)
             self.apple.attach_groups(build)
             return {}
         if kind == "public-beta":
             from release_train.release_notes import notes_for
 
-            bundle = self.release_bundle(platform, build["sha"], snapshot)
-            self.apple.submit_beta(build, notes_for(bundle, "testflight"))
+            bundle = self.prepared_bundle(action)
+            notes = notes_for(bundle, "testflight")
+            self.refresh_store_authorization(platform)
+            self.apple.submit_beta(build, notes)
             self.deploy("ios-testflight-public", build, "in_progress", state)
             return {}
         if kind == "app-store":
             from release_train.release_notes import notes_for
 
-            bundle = self.release_bundle(platform, build["sha"], snapshot)
+            bundle = self.prepared_bundle(action)
+            notes = notes_for(bundle, "app_store")
+            self.refresh_store_authorization(platform)
             identifier = self.apple.submit_store(
                 build,
                 snapshot["ios"]["versions"],
                 state.get("acknowledged", []),
                 reviews=snapshot["ios"].get("review_submissions", []),
-                notes=notes_for(bundle, "app_store"),
+                notes=notes,
             )
             consume_version_acknowledgements(state, {identifier})
             self.claim(build, "app-store")
@@ -1083,33 +1147,17 @@ class Runtime:
         if kind == "play-production":
             from release_train.release_notes import notes_for
 
-            bundle = self.release_bundle(platform, build["sha"], snapshot)
-            self.play.promote(build["number"], notes=notes_for(bundle, "google_play"))
+            bundle = self.prepared_bundle(action)
+            notes = notes_for(bundle, "google_play")
+            self.refresh_store_authorization(platform)
+            self.play.promote(build["number"], notes=notes)
             self.claim(build, "play-production")
             state["last_play_promotion"] = snapshot["now"]
             self.deploy("android-play-production", build, "in_progress", state)
             return {}
         if kind == "retry-android-upload":
-            record = self.ledger.read_json(
-                "artifacts/android/" + str(action["number"]) + ".json"
-            )
-            for field in [
-                "number",
-                "version",
-                "sha",
-                "digest",
-                "build_id",
-                "artifact_name",
-            ]:
-                if record.get(field) != action.get(field):
-                    raise ProviderError(
-                        "Deferred AAB identity conflicts with build-recorded signed artifact"
-                    )
-            bundle = None
-            if record.get("release_notes") is not None:
-                bundle = self.release_bundle(
-                    platform, record["sha"], snapshot, record["release_notes"]
-                )
+            record = self.retry_artifact_record(action)
+            bundle = self.prepared_bundle(action)
             provider = self.cm("GET", "/builds/" + record["build_id"])["data"]
             if (provider.get("commit") or {}).get("hash") != record["sha"]:
                 raise ProviderError("Deferred Codemagic source differs")
@@ -1126,11 +1174,10 @@ class Runtime:
                 verify_bundle(path, record["digest"])
                 from release_train.release_notes import notes_for
 
-                if bundle is None:
-                    bundle = self.release_bundle(platform, record["sha"], snapshot)
+                notes = notes_for(bundle, "google_play")
+                self.refresh_store_authorization(platform)
                 self.play.upload(
-                    path, record["number"], record["digest"],
-                    notes=notes_for(bundle, "google_play"),
+                    path, record["number"], record["digest"], notes=notes,
                 )
             state.setdefault("resolved_android_uploads", []).append(record["number"])
             state.pop("deferred_android", None)

@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "mobile/scripts"))
 class ReleaseNotesTests(unittest.TestCase):
     def setUp(self):
         from release_train import release_notes as notes
+        from release_train_fakes import release_notes_bundle
 
         self.notes = notes
         self.bundle = {
@@ -21,13 +22,7 @@ class ReleaseNotesTests(unittest.TestCase):
             "locales": [],
             "testflight": [],
             "app_store": [],
-            "google_play": [
-                {
-                    "language": lang,
-                    "text": "Make something weird. Share it with your people.",
-                }
-                for lang in notes.PLAY_LOCALES
-            ],
+            "google_play": release_notes_bundle("android")["google_play"],
             "changes": [],
             "policy_sha256": notes.policy_digest(),
         }
@@ -220,7 +215,8 @@ class ReleaseNotesTests(unittest.TestCase):
                 [
                     {"facts": [{"path": "mobile/lib/a.dart", "include": True}]},
                     {"approved": False, "reason": "Invented behavior"},
-                ],
+                ]
+                * 3,
                 "verification",
             ),
         ]
@@ -347,6 +343,144 @@ class ReleaseNotesTests(unittest.TestCase):
             )
         self.assertEqual(request.call_count, 2)
         sleep.assert_called_once_with(1)
+
+    def test_original_baseline_survives_brand_policy_updates(self):
+        bundle = self.bundle
+
+        class Ledger:
+            def paths(inner):
+                return {
+                    "release-notes/android/"
+                    + "b" * 40
+                    + "/"
+                    + "a" * 40
+                    + "-"
+                    + "c" * 64
+                    + ".json"
+                }
+
+            def read_json(inner, path):
+                return bundle
+
+        with (
+            patch.object(self.notes, "policy_digest", return_value="d" * 64),
+            patch.object(
+                self.notes,
+                "_production_data",
+                side_effect=AssertionError("original baseline must survive"),
+            ),
+        ):
+            self.assertEqual(
+                self.notes.ensure_bundle("android", "b" * 40, env={}, ledger=Ledger()),
+                bundle,
+            )
+
+    def test_apple_rejects_extra_model_locale_before_any_store_mutation(self):
+        bundle = copy.deepcopy(self.bundle)
+        bundle.update(
+            platform="ios",
+            locales=["en-US"],
+            google_play=[],
+            testflight=[
+                {"language": "en-US", "text": "Search for a friend."},
+                {"language": "zz-ZZ", "text": "Invented locale."},
+            ],
+            app_store=[{"language": "en-US", "text": "Find your people."}],
+        )
+        with self.assertRaisesRegex(ValueError, "locale"):
+            self.notes.notes_for(bundle, "testflight")
+
+    def test_source_fact_feedback_is_corrected_and_independently_rechecked(self):
+        bad = {
+            "path": "mobile/lib/a.dart",
+            "include": True,
+            "summary": "Thirteen effects.",
+            "test": "Try an effect.",
+            "reason": "UI",
+        }
+        good = dict(bad, summary="Try new video effects.")
+        responses = [
+            {"facts": [bad]},
+            {"approved": False, "reason": "Count not proven; drop the count."},
+            {"facts": [good]},
+            {"approved": True, "reason": ""},
+            {"google_play": self.bundle["google_play"]},
+            {"approved": True, "reason": ""},
+        ]
+        with (
+            patch.object(
+                self.notes,
+                "source_batches",
+                return_value=[{"paths": [bad["path"]], "patch": "+ final source"}],
+            ),
+            patch.object(self.notes, "model_json", side_effect=responses),
+        ):
+            result = self.notes._generate(
+                "android",
+                "b" * 40,
+                self.bundle["baseline"],
+                [],
+                {"RELEASE_NOTES_LUNAROUTE_API_KEY": "lr_synthetic"},
+            )
+        self.assertEqual(result["changes"], [good])
+
+    def test_play_languages_cover_every_shipped_app_language(self):
+        app_languages = {
+            path.stem.removeprefix("app_")
+            for path in (self.notes.ROOT / "mobile/lib/l10n").glob("app_*.arb")
+        }
+        self.assertEqual(
+            {locale.split("-")[0] for locale in self.notes.PLAY_LOCALES}, app_languages
+        )
+
+    def test_translated_notes_cannot_repeat_english_copy(self):
+        self.bundle["google_play"][1]["text"] = self.bundle["google_play"][0]["text"]
+        with self.assertRaisesRegex(ValueError, "English"):
+            self.notes.notes_for(self.bundle, "google_play")
+
+    def test_unproven_claim_is_omitted_only_after_independent_reverification(self):
+        fact = {
+            "path": "mobile/lib/a.dart",
+            "include": True,
+            "summary": "Newest copy always wins.",
+            "test": "Sync a list.",
+            "reason": "Unproven recency",
+        }
+        rejection = {
+            "approved": False,
+            "reason": "This is an internal tie-break, not a recency comparison.",
+            "rejected_paths": [fact["path"]],
+        }
+        responses = [{"facts": [fact]}, rejection] * 3 + [
+            {
+                "approved": True,
+                "reason": "Unsupported claim is now excluded.",
+                "rejected_paths": [],
+            },
+            {"google_play": self.bundle["google_play"]},
+            {"approved": True, "reason": ""},
+        ]
+        with (
+            patch.object(
+                self.notes,
+                "source_batches",
+                return_value=[
+                    {"paths": [fact["path"]], "patch": "+ deterministic tie break"}
+                ],
+            ),
+            patch.object(self.notes, "model_json", side_effect=responses),
+        ):
+            result = self.notes._generate(
+                "android",
+                "b" * 40,
+                self.bundle["baseline"],
+                [],
+                {"RELEASE_NOTES_LUNAROUTE_API_KEY": "lr_synthetic"},
+            )
+        self.assertEqual(len(result["changes"]), 1)
+        self.assertFalse(result["changes"][0]["include"])
+        self.assertEqual(result["changes"][0]["summary"], "")
+        self.assertIn("Unverified", result["changes"][0]["reason"])
 
     def test_transport_error_never_contains_key_or_response_body(self):
         import urllib.error

@@ -337,9 +337,9 @@ class RecoveryIntegrationAuditTest(unittest.TestCase):
         runtime.apple = Client()
         runtime.claim = lambda *args: None
         runtime.deploy = lambda *args: None
-        runtime.execute(
-            {"kind": "app-store", "platform": "ios", "build": build()}, {}, s
-        )
+        action = {"kind": "app-store", "platform": "ios", "build": build()}
+        runtime.prepare_action(action, s)
+        runtime.execute(action, {}, s)
 
     def test_scoped_version_ack_is_audited_on_rejected_version(self):
         s = rejected_snapshot()
@@ -506,9 +506,9 @@ class RejectionEpisodeAuditTest(unittest.TestCase):
         runtime.apple = Client()
         runtime.claim = lambda *args: None
         runtime.deploy = lambda *args: None
-        runtime.execute(
-            {"kind": "app-store", "platform": "ios", "build": build()}, state, s
-        )
+        action = {"kind": "app-store", "platform": "ios", "build": build()}
+        runtime.prepare_action(action, s)
+        runtime.execute(action, state, s)
         self.assertNotIn(key, state["acknowledged"])
         self.assertEqual(state["acknowledgement_events"][0]["item"], key)
 
