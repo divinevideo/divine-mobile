@@ -109,10 +109,11 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
       String? cursor,
       bool skipCache = false,
     }) async {
-      final repository = ref.read(videosRepositoryProvider);
       final attempts = retryOnError ? _initialRequestAttempts : 1;
       for (var attempt = 1; attempt <= attempts; attempt++) {
         try {
+          // Read per attempt: a retry must not reuse a replaced repository.
+          final repository = ref.read(videosRepositoryProvider);
           final result = await repository.getClassicVideos(
             limit: _pageSize,
             cursor: cursor,

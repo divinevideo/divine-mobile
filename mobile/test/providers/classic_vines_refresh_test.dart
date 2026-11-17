@@ -94,14 +94,19 @@ void main() {
       ).thenReturn(false);
     });
 
-    ProviderContainer createContainer() {
+    ProviderContainer createContainer({
+      VideosRepository Function()? repository,
+    }) {
       return ProviderContainer(
         overrides: [
           appReadyProvider.overrideWithValue(true),
           analyticsServiceProvider.overrideWithValue(analytics),
           currentAuthStateProvider.overrideWith(_TestCurrentAuth.new),
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-          videosRepositoryProvider.overrideWithValue(mockVideosRepository),
+          if (repository == null)
+            videosRepositoryProvider.overrideWithValue(mockVideosRepository)
+          else
+            videosRepositoryProvider.overrideWith((_) => repository()),
           videoEventServiceProvider.overrideWithValue(mockVideoEventService),
           contentBlocklistRepositoryProvider.overrideWithValue(
             mockBlocklistRepository,
@@ -355,6 +360,44 @@ void main() {
         expect(cursors, [null, 'classic-offset:50']);
       },
     );
+
+    test('retries the first page on the current repository', () async {
+      final replacement = _MockVideosRepository();
+      when(
+        () => replacement.getClassicVideos(
+          limit: any(named: 'limit'),
+          cursor: any(named: 'cursor'),
+          skipCache: any(named: 'skipCache'),
+        ),
+      ).thenAnswer(
+        (_) async => HomeFeedResult(
+          videos: [_videoEvent('classic-current')],
+          paginationCursor: 'classic-offset:50',
+          hasMore: true,
+        ),
+      );
+      VideosRepository repository = mockVideosRepository;
+      late ProviderContainer container;
+      when(
+        () => mockVideosRepository.getClassicVideos(
+          limit: any(named: 'limit'),
+          cursor: any(named: 'cursor'),
+          skipCache: any(named: 'skipCache'),
+        ),
+      ).thenAnswer((_) async {
+        // The repository is replaced while its read is in flight.
+        repository = replacement;
+        container.invalidate(videosRepositoryProvider);
+        throw Exception('read superseded');
+      });
+      container = createContainer(repository: () => repository);
+      addTearDown(container.dispose);
+
+      await container.read(funnelcakeAvailableProvider.future);
+      final state = await container.read(classicVinesFeedProvider.future);
+
+      expect(state.videos.map((video) => video.id), ['classic-current']);
+    });
 
     test(
       'retries the first classics page after a transient API error',

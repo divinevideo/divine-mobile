@@ -1028,13 +1028,18 @@ VideosRepository videosRepository(Ref ref) {
     ),
     funnelcakeApiClient: funnelcakeClient,
     classicRecommendationsEnabled: adaptiveClassicsEnabled,
+    // These run per read, after this provider may have rebuilt. A replaced
+    // repository's Ref can no longer read providers, so it reports no viewer
+    // and a context that never matches: its reads end as superseded.
     classicViewerPubkey: () {
+      if (!ref.mounted) return null;
       final analytics = ref.read(analyticsServiceProvider);
       return analytics.initializedAnalyticsConsent
           ? authService.currentPublicKeyHex
           : null;
     },
     classicContextKey: () {
+      if (!ref.mounted) return Object();
       final analytics = ref.read(analyticsServiceProvider);
       return (analytics, analytics.privacyGeneration);
     },

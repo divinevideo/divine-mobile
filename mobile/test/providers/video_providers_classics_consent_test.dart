@@ -1,6 +1,8 @@
 // ABOUTME: Pins that the Classics browse read built by videosRepositoryProvider
 // ABOUTME: identifies the viewer only while analytics consent is initialized.
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -132,6 +134,30 @@ void main() {
       expect(viewers, hasLength(1));
       expect(viewers.single, isNull);
     });
+
+    test(
+      'a replaced repository ends its in-flight read as superseded',
+      () async {
+        final reply = Completer<RecommendationsResponse>();
+        when(
+          () => api.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+          ),
+        ).thenAnswer((_) => reply.future);
+        final retired = container.read(videosRepositoryProvider);
+        final read = retired.getClassicVideos();
+        await pumpEventQueue();
+
+        container.invalidate(videosRepositoryProvider);
+        expect(container.read(videosRepositoryProvider), isNot(same(retired)));
+        reply.complete(
+          const RecommendationsResponse(videos: [], source: 'mixed'),
+        );
+
+        await expectLater(read, throwsA(isA<FunnelcakeException>()));
+      },
+    );
 
     test('sends the viewer once analytics consent is on', () async {
       analytics.consent = true;
