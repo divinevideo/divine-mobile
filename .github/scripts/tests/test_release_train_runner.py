@@ -26,6 +26,22 @@ class Provider:
 
 
 class RunnerTest(unittest.TestCase):
+    def test_credential_refresh_failure_does_not_consume_attempt_or_hold_queue(self):
+        class PreparationFailure(Provider):
+            def prepare_build(self):
+                raise ProviderError('credential storage unavailable')
+        store = Store()
+        provider = PreparationFailure(store)
+        state = {}
+        plan = {'actions': [{'kind': 'build', 'platform': 'ios', 'sha': 'a' * 40, 'attempt': 1}]}
+        execute_plan(plan, state, {}, store, provider)
+        self.assertFalse(state.get('operations'))
+        self.assertFalse(state.get('attempts'))
+        self.assertFalse(state.get('holds'))
+        self.assertFalse(state.get('last_build_started'))
+        self.assertFalse(provider.calls)
+        self.assertIn('credential storage unavailable', plan['errors'][0])
+
     def test_intent_is_durable_before_call_and_ambiguous_is_not_retried(self):
         store = Store()
         provider = Provider(store)
@@ -97,15 +113,64 @@ class RuntimeBoundaryTest(unittest.TestCase):
         runtime = Runtime.__new__(Runtime)
         runtime.tags = GH()
         runtime.gh = GH()
-        runtime.cm = lambda *args: {"data": {"id": "123"}}
+        runtime.env = {"PROVENANCE_TOKEN": "private-ledger-token", "CANDIDATE_TAG_TOKEN": "mobile-release-token", "PUBLIC_PEOPLE_LIST_POLICY": "[]"}
+        cm_calls = []
+
+        def cm(method, path, payload=None):
+            cm_calls.append((method, path, payload))
+            if '/apps/' in path and '/variable-groups' in path:
+                return {"data": [{"id": "g", "name": "store_release_credentials"}]}
+            if '/variable-groups/' in path:
+                return {"data": [{"id": 'id-' + name, "name": name, "secure": True, "value": None}
+                                  for name in ['PROVENANCE_TOKEN', 'DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS']]} if method == 'GET' else {}
+            return {"data": {"id": "123"}}
+
+        runtime.cm = cm
+        runtime.prepare_build()
         runtime.execute(
             {"kind": "build", "platform": "ios", "sha": "a" * 40, "attempt": 1}, {}, {}
         )
         self.assertEqual(len(runtime.tags.calls), 2)
         self.assertFalse(runtime.gh.calls)
+        patches = [c for c in cm_calls if c[0] == 'PATCH']
+        self.assertEqual({c[1].rsplit('/', 1)[-1].removeprefix('id-'): c[2] for c in patches}, {
+            'PROVENANCE_TOKEN': {'value': 'private-ledger-token', 'secure': True},
+            'DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS': {'value': '[]', 'secure': True},
+        })
+        build_call = next(c for c in cm_calls if c[0] == 'POST')
+        self.assertLess(cm_calls.index(patches[-1]), cm_calls.index(build_call))
+        self.assertNotIn('private-ledger-token', str(build_call))
+        self.assertNotIn('mobile-release-token', str(cm_calls))
 
 
 class AuditTest(unittest.TestCase):
+    def test_incomplete_android_observations_do_not_publish_null_deployment_refs(self):
+        from release_train.runner import Runtime
+
+        class GH:
+            def __init__(self):
+                self.calls = []
+            def pages(self, path):
+                return []
+            def call(self, method, path, payload=None):
+                self.calls.append((method, path, payload))
+                if path == '/deployments':
+                    if not payload.get('ref'):
+                        raise ProviderError('invalid null deployment ref')
+                    return {'id': len(self.calls)}
+                return {}
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.gh = GH()
+        complete = {'number': 10, 'version': '1.0.31', 'sha': 'a' * 40}
+        incomplete = complete | {'number': 11, 'sha': None, 'provenance_incomplete': True}
+        runtime.audit_observations({'android': {
+            'internal': [incomplete, complete], 'production': [incomplete, complete],
+        }}, {})
+        writes = [payload for _, path, payload in runtime.gh.calls if path == '/deployments']
+        self.assertEqual(len(writes), 2)
+        self.assertTrue(all(payload['ref'] == 'a' * 40 for payload in writes))
+
     def test_public_deployment_payload_is_allowlisted_and_existing_reused(self):
         from release_train.runner import Runtime
 
@@ -194,6 +259,28 @@ if __name__ == "__main__":
 
 
 class HistoricalBuildTest(unittest.TestCase):
+    def test_allocated_build_without_completed_provenance_is_not_promotable(self):
+        from release_train.runner import Runtime
+        from release_train_fakes import MemoryLedgerStore
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.ledger = MemoryLedgerStore({'allocations/builds/ios/999.json': {
+            'version': '1.0.31', 'source_sha': 'a' * 40,
+            'reservation_key': 'manual/first',
+        }})
+        incomplete = runtime.identity('ios', 999, '1.0.31')
+        self.assertIsNone(incomplete['sha'])
+        self.assertTrue(incomplete['legacy'])
+        self.assertTrue(incomplete['provenance_incomplete'])
+        runtime.ledger.files['releases/ios/1.0.31+999.json'] = {
+            'platform': 'ios', 'release_version': '1.0.31+999',
+            'build_source_commit': 'a' * 40, 'patchable': True,
+        }
+        self.assertEqual(runtime.identity('ios', 999, '1.0.31')['sha'], 'a' * 40)
+        runtime.ledger.files['releases/ios/1.0.31+999.json']['build_source_commit'] = 'b' * 40
+        with self.assertRaisesRegex(ProviderError, 'completed provenance'):
+            runtime.identity('ios', 999, '1.0.31')
+
     def test_pre_provenance_ios_builds_are_observation_only(self):
         from release_train.runner import Runtime
 

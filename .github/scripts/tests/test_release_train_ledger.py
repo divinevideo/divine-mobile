@@ -1,16 +1,18 @@
 import base64
 import json
+import os
 import subprocess
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "mobile" / "scripts"))
 
-from release_train import ledger  # noqa: E402
-from release_train.versions import Version  # noqa: E402
-from release_train_fakes import MemoryLedgerStore  # noqa: E402
+from release_train import ledger
+from release_train.versions import Version
+from release_train_fakes import MemoryLedgerStore
 
 REPO = "divinevideo/divine-release-provenance"
 
@@ -53,6 +55,20 @@ class PathHelperTests(unittest.TestCase):
 
 
 class GhLedgerStoreTests(unittest.TestCase):
+    def test_private_ledger_token_overrides_stale_cli_token_without_changing_parent(self):
+        calls = []
+
+        def run(args, **kwargs):
+            calls.append((args, kwargs))
+            return done(stdout=json.dumps({"truncated": False, "tree": []}))
+
+        with patch.dict(os.environ, {"GH_TOKEN": "stale-mobile-token", "PROVENANCE_TOKEN": "private-ledger-token"}):
+            store = ledger.GhLedgerStore(REPO, run=run)
+            self.assertEqual(store.paths(), frozenset())
+            self.assertEqual(calls[0][1].get("env", {}).get("GH_TOKEN"), "private-ledger-token")
+            self.assertEqual(os.environ["GH_TOKEN"], "stale-mobile-token")
+            self.assertNotIn("private-ledger-token", calls[0][0])
+
     def store(self, *responses):
         run = FakeRun(*responses)
         return ledger.GhLedgerStore(REPO, run=run), run

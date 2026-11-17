@@ -35,38 +35,60 @@ def cm_pages(cm, path):
     raise ProviderError("Incomplete Codemagic configuration listing")
 
 
-def configure_codemagic(cm, token):
+def configure_secure_variables(cm, values, *, group_name="github_credentials", app_only=False, remove_names=()):
+    for name, value in values.items():
+        if not value:
+            raise ProviderError("Missing Codemagic variable " + name)
     groups = cm_pages(cm, "/apps/" + CM_APP_ID + "/variable-groups")
-    if not any(g["name"] == "github_credentials" for g in groups):
+    if not any(g["name"] == group_name for g in groups) and not app_only:
         groups += cm_pages(cm, "/teams/" + TEAM_ID + "/variable-groups")
-    matches = {g["id"]: g for g in groups if g["name"] == "github_credentials"}
+    matches = {g["id"]: g for g in groups if g["name"] == group_name}
+    if not matches and app_only:
+        cm("POST", "/apps/" + CM_APP_ID + "/variable-groups", {"name": group_name})
+        matches = {g["id"]: g for g in cm_pages(cm, "/apps/" + CM_APP_ID + "/variable-groups")
+                   if g["name"] == group_name}
     if len(matches) != 1:
         raise ProviderError(
-            "Expected one existing github_credentials Codemagic group; configure it before setup"
+            f"Expected exactly one Codemagic variable group {group_name}"
         )
     identifier = next(iter(matches))
     path = "/variable-groups/" + identifier + "/variables"
     variables = cm_pages(cm, path)
-    existing = [v for v in variables if v["name"] == "CODEMAGIC_API_TOKEN"]
-    if len(existing) > 1:
-        raise ProviderError(
-            "Duplicate Codemagic API variables require operator reconciliation"
-        )
-    if existing:
-        cm("PATCH", path + "/" + existing[0]["id"], {"value": token, "secure": True})
-    else:
-        cm(
-            "POST",
-            path,
-            {
-                "secure": True,
-                "variables": [{"name": "CODEMAGIC_API_TOKEN", "value": token}],
-            },
-        )
-    verified = [v for v in cm_pages(cm, path) if v["name"] == "CODEMAGIC_API_TOKEN"]
-    if len(verified) != 1 or verified[0].get("secure") is not True:
-        raise ProviderError("Codemagic variable encryption could not be verified")
+    for name in remove_names:
+        for variable in variables:
+            if variable["name"] == name:
+                cm("DELETE", path + "/" + variable["id"])
+    for name, value in values.items():
+        existing = [v for v in variables if v["name"] == name]
+        if len(existing) > 1:
+            raise ProviderError(f"Duplicate Codemagic variable {name} in {group_name}")
+        if existing:
+            cm("PATCH", path + "/" + existing[0]["id"], {"value": value, "secure": True})
+        else:
+            cm("POST", path, {"secure": True, "variables": [{"name": name, "value": value}]})
+    verified = cm_pages(cm, path)
+    if any(v["name"] in remove_names for v in verified):
+        raise ProviderError(f"Obsolete native publisher credentials remain in {group_name}")
+    for name in values:
+        matches = [v for v in verified if v["name"] == name]
+        if len(matches) != 1 or matches[0].get("secure") is not True:
+            raise ProviderError("Codemagic variable encryption could not be verified")
+
+
+def configure_codemagic(cm, token):
+    configure_secure_variables(cm, {"CODEMAGIC_API_TOKEN": token})
     return "Scheduled allocator credential configured and verified secure in existing github_credentials."
+
+
+def configure_build_credentials(cm, private_token, public_policy):
+    if not public_policy:
+        raise ProviderError("Missing PUBLIC_PEOPLE_LIST_POLICY repository configuration")
+    # API build overrides are plain strings; use the provider's secure storage.
+    configure_secure_variables(cm, {
+        "PROVENANCE_TOKEN": private_token,
+        "DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS": public_policy,
+    }, group_name="store_release_credentials", app_only=True,
+        remove_names=("GH_TOKEN", "GITHUB_TOKEN"))
 
 
 def bootstrap_live(runtime, dry_run):

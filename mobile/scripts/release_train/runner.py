@@ -211,16 +211,23 @@ def reconcile_operations(state, snapshot):
 
 
 def execute_plan(plan, state, snapshot, store, provider):
-    for raw in plan["actions"]:
+    for raw in list(plan["actions"]):
         action = dict(raw)
         key = operation_key(action)
         action["key"] = key
-        old = state.setdefault("operations", {}).get(key)
+        old = state.get("operations", {}).get(key)
         if old and old["status"] not in {"deferred", "acknowledged"}:
             continue
         if state.get("holds", {}).get(action["platform"]) is not None:
             continue
-        state["operations"][key] = {
+        if action["kind"] == "build" and hasattr(provider, "prepare_build"):
+            try:
+                provider.prepare_build()
+            except ProviderError as error:
+                plan.setdefault("errors", []).append(action["platform"] + ": " + str(error))
+                plan["actions"].remove(raw)
+                continue
+        state.setdefault("operations", {})[key] = {
             "action": action,
             "status": "started",
             "started_at": snapshot.get("now", int(time.time())),
@@ -373,6 +380,8 @@ class Runtime:
         self.gh = GitHub(env["GITHUB_REPOSITORY"], env["GH_TOKEN"])
         if not env.get("CANDIDATE_TAG_TOKEN"):
             raise ProviderError("Missing repository-scoped candidate tag App token")
+        if not env.get("PUBLIC_PEOPLE_LIST_POLICY"):
+            raise ProviderError("Missing PUBLIC_PEOPLE_LIST_POLICY repository configuration")
         self.tags = GitHub(env["GITHUB_REPOSITORY"], env["CANDIDATE_TAG_TOKEN"])
         private_token = env["PROVENANCE_TOKEN"]
         repository = env.get(
@@ -381,9 +390,7 @@ class Runtime:
         self.private = GitHub(repository, private_token)
         self.ledger = GhLedgerStore(
             repository,
-            run=lambda args, **kwargs: subprocess.run(  # noqa: PLW1510 - ledger supplies check=False
-                args, env=dict(os.environ, GH_TOKEN=private_token), **kwargs
-            ),
+            token=private_token,
         )
         self.store = StateStore(self.private)
         self.apple = None
@@ -585,6 +592,19 @@ class Runtime:
             )
         if not re.fullmatch("[0-9a-f]{40}", source or ""):
             raise ProviderError(f"{platform} build {number} has no verified source")
+        if record.get("reservation_key"):
+            # Allocation precedes the native build. It is not evidence that
+            # Shorebird registration and the provenance write both completed.
+            completed = f"releases/{platform}/{name or version}+{number}.json"
+            if completed not in self.ledger.paths():
+                return {"number": int(number), "version": name or version,
+                        "sha": None, "legacy": True, "provenance_incomplete": True}
+            provenance = self.ledger.read_json(completed)
+            if (provenance.get("platform") != platform
+                    or provenance.get("release_version") != f"{name or version}+{number}"
+                    or provenance.get("build_source_commit") != source
+                    or provenance.get("patchable") is not True):
+                raise ProviderError(f"{platform} build {number} has no matching completed provenance; reconcile the partial native release before promotion")
         return {"number": int(number), "version": name or version, "sha": source}
 
     def apple_snapshot(self):
@@ -933,8 +953,11 @@ class Runtime:
                     "in review or pending availability",
                 )
         for build in snapshot.get("android", {}).get("internal", []):
-            self.deploy("android-play-internal", build, "success", state, "available")
+            if build.get("sha"):
+                self.deploy("android-play-internal", build, "success", state, "available")
         for build in snapshot.get("android", {}).get("production", []):
+            if not build.get("sha"):
+                continue
             self.deploy(
                 "android-play-production",
                 build,
@@ -959,6 +982,12 @@ class Runtime:
                     self.deploy(
                         environment, action["build"], "inactive", state, "acknowledged"
                     )
+
+    def prepare_build(self):
+        from release_train.setup import configure_build_credentials
+
+        configure_build_credentials(self.cm, self.env["PROVENANCE_TOKEN"],
+                                    self.env["PUBLIC_PEOPLE_LIST_POLICY"])
 
     def execute(self, action, state, snapshot):
         kind = action["kind"]

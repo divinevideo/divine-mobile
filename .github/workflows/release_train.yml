@@ -57,6 +57,7 @@ jobs:
           owner: divinevideo
           repositories: divine-release-provenance
           permission-contents: write
+          skip-token-revoke: true
       - name: Scope immutable candidate tag installation token
         id: candidate
         uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
@@ -66,6 +67,7 @@ jobs:
           owner: divinevideo
           repositories: divine-mobile
           permission-contents: write
+          skip-token-revoke: false
       - name: Observe and coordinate both store queues
         env:
           GH_TOKEN: ${{ github.token }}
@@ -79,6 +81,7 @@ jobs:
           TESTFLIGHT_PUBLIC_GROUP_ID: ${{ vars.TESTFLIGHT_PUBLIC_GROUP_ID }}
           TESTFLIGHT_GROUP_IDS: ${{ vars.TESTFLIGHT_GROUP_IDS }}
           PLAY_MANAGED_PUBLISHING: ${{ vars.PLAY_MANAGED_PUBLISHING }}
+          PUBLIC_PEOPLE_LIST_POLICY: ${{ vars.DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS }}
           RELEASE_TRAIN_IOS: ${{ vars.RELEASE_TRAIN_IOS }}
           RELEASE_TRAIN_ANDROID: ${{ vars.RELEASE_TRAIN_ANDROID }}
           RELEASE_DRY_RUN: ${{ inputs.dry_run || false }}
