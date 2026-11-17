@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
+// ignore: avoid_relative_lib_imports, scripts are outside lib/ and not importable through package:openvine.
+import '../../scripts/lib/coordinator_route_probe.dart';
 import '../test_utils/coordinator_route_config_fixture.dart';
 
 void main() {
@@ -65,18 +67,25 @@ void main(List<String> args) {
       ]) {
         write(path, File(path).readAsStringSync());
       }
-      write(
-        'lib/models/environment_config.dart',
-        currentConfigFixture
-            .replaceFirst(
-              'https://api.divine.video',
-              'http://127.0.0.1:${server.port}',
-            )
-            .replaceFirst(
-              'poc, staging, production, local',
-              'production, local',
-            ),
+      final config = currentConfigFixture
+          .replaceFirst(
+            'https://api.divine.video',
+            'http://127.0.0.1:${server.port}',
+          )
+          .replaceFirst(
+            'poc, staging, production, local',
+            'production, local',
+          );
+      // These substitutions are all that keep the wrapper off real hosts. If a
+      // fixture edit defeats one, stop here, before any test can run it.
+      expect(
+        {
+          for (final target in extractCoordinatorTargets(config))
+            target.environment: target.apiBaseUrl,
+        },
+        {'PRODUCTION': 'http://127.0.0.1:${server.port}'},
       );
+      write('lib/models/environment_config.dart', config);
       final resolve = await Process.run('dart', [
         'pub',
         'get',
