@@ -38,6 +38,8 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: VineTheme.theme,
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: const MediaQuery(
             data: MediaQueryData(disableAnimations: true),
             child: FeaturedCampaignGate(
