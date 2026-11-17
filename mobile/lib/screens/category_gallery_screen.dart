@@ -97,6 +97,9 @@ class _CategoryGalleryScreenState extends ConsumerState<CategoryGalleryScreen> {
               );
             },
             onVideoTap: (videos, index) {
+              // The live first page can remove a cached tile. Do not open a
+              // fullscreen session that its pending refresh could swap out.
+              if (_bloc.state.isRefreshingVideos) return;
               runDetached(
                 PooledFullscreenVideoFeedRouteData(
                   video: videos[index].id,

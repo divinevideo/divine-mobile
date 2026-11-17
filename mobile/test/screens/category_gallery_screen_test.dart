@@ -481,6 +481,81 @@ void main() {
       );
     });
 
+    for (final refreshFails in [false, true]) {
+      testWidgets(
+        'cached tiles wait for refresh ${refreshFails ? 'failure' : 'success'} '
+        'before opening fullscreen',
+        (tester) async {
+          final results = StreamController<CacheResult<CategoryVideosPage>>();
+          addTearDown(results.close);
+          when(
+            () => categoriesRepository.watchVideosForCategoryCached(
+              category: 'animals',
+              viewerPubkey: _viewerPubkey,
+            ),
+          ).thenAnswer((_) => results.stream);
+          PooledFullscreenVideoFeedArgs? pushedArgs;
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => const Scaffold(
+                  body: CategoryGalleryScreen(category: category),
+                ),
+              ),
+              GoRoute(
+                path: PooledFullscreenVideoFeedScreen.path,
+                builder: (context, state) {
+                  pushedArgs = state.extra! as PooledFullscreenVideoFeedArgs;
+                  return const Scaffold(body: SizedBox());
+                },
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: MaterialApp.router(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                routerConfig: router,
+              ),
+            ),
+          );
+          await tester.pump();
+          results.add(
+            CacheResult.cached(
+              CategoryVideosPage(videos: [allowedVideo], hasMore: false),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Allowed Video'));
+          await tester.pumpAndSettle();
+          expect(pushedArgs, isNull);
+
+          if (refreshFails) {
+            results.addError(const FormatException('Refresh unavailable'));
+          } else {
+            results.add(
+              CacheResult.live(
+                CategoryVideosPage(videos: [blockedVideo], hasMore: false),
+              ),
+            );
+          }
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.text(refreshFails ? 'Allowed Video' : 'Blocked Video'),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            pushedArgs?.initialVideoId,
+            refreshFails ? 'allowed-id' : 'blocked-id',
+          );
+        },
+      );
+    }
+
     Future<({Uri uri, PooledFullscreenVideoFeedArgs args})> tapAllowedVideo(
       WidgetTester tester,
     ) async {
