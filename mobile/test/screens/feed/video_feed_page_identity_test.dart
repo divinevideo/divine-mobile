@@ -13,9 +13,11 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/startup_performance_service.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
@@ -27,6 +29,9 @@ class _VideosRepository extends Mock implements VideosRepository {
   _VideosRepository({Stream<String> removals = const Stream.empty()}) {
     when(() => removedVideoIds).thenAnswer((_) => removals);
   }
+
+  @override
+  bool isVideoKnownDeleted(VideoEvent video) => false;
 }
 
 class _CuratedListRepository extends Mock implements CuratedListRepository {}
@@ -53,6 +58,42 @@ PeopleListsRepository _emptyPeopleListsRepository() {
   ).thenAnswer((_) async {});
   return repository;
 }
+
+VideoEvent _removalVideo(String digit) => VideoEvent(
+  id: digit * 64,
+  pubkey: _policyViewer,
+  createdAt: 1700000000,
+  content: 'Synthetic removal fixture',
+  timestamp: DateTime.utc(2026),
+  videoUrl: 'https://example.com/$digit.mp4',
+);
+
+// Assert bloc transitions before pumping a frame: these wiring tests do not
+// need native media playback to observe a repository replacement.
+Future<void> _loadRemovalVideos(
+  WidgetTester tester,
+  _SafetyPolicyHome home,
+) async {
+  when(
+    () => home.videos.getRecommendedVideos(
+      userPubkey: any(named: 'userPubkey'),
+      until: any(named: 'until'),
+      skipCache: any(named: 'skipCache'),
+      revalidate: any(named: 'revalidate'),
+    ),
+  ).thenAnswer(
+    (_) async =>
+        HomeFeedResult(videos: [_removalVideo('1'), _removalVideo('2')]),
+  );
+  home.originalFeed.add(const VideoFeedRefreshRequested());
+  await tester.runAsync(pumpEventQueue);
+  expect(home.originalFeed.state.videos, [
+    _removalVideo('1'),
+    _removalVideo('2'),
+  ]);
+}
+
+class _StartupPerformance extends Mock implements StartupPerformanceService {}
 
 class _Nostr extends Mock implements NostrClient {}
 
@@ -84,6 +125,7 @@ class _SafetyPolicyHome {
 Future<_SafetyPolicyHome> _mountSafetyPolicyHome(
   WidgetTester tester, {
   Stream<String> removals = const Stream.empty(),
+  VideosRepository? Function()? currentRepository,
 }) async {
   await CacheSync.init(dao: _CacheDao());
   SharedPreferences.setMockInitialValues({
@@ -124,12 +166,18 @@ Future<_SafetyPolicyHome> _mountSafetyPolicyHome(
       mockProfileRepository: createMockProfileRepository(),
       additionalOverrides: [
         // Stable repository identities prove the Page owns safety invalidation.
-        videosRepositoryProvider.overrideWithValue(videos),
+        videosRepositoryProvider.overrideWith(
+          (_) => currentRepository?.call() ?? videos,
+        ),
         peopleListsRepositoryProvider.overrideWithValue(
           _emptyPeopleListsRepository(),
         ),
         curatedListRepositoryProvider.overrideWithValue(curated),
         ageVerificationServiceProvider.overrideWithValue(ageVerification),
+        // Home mounts directly here, without app bootstrap starting its timer.
+        startupPerformanceServiceProvider.overrideWithValue(
+          _StartupPerformance(),
+        ),
       ],
     ),
   );
@@ -229,20 +277,54 @@ void main() {
         tester,
         removals: removals.stream,
       );
-      final deletedId = '1' * 64;
-      expect(home.originalFeed.state.coordination.removedVideoIds, isEmpty);
+      await _loadRemovalVideos(tester, home);
+      final deletedId = '2' * 64;
       expect(removals.hasListener, isTrue);
       removals.add(deletedId);
       await tester.runAsync(pumpEventQueue);
-      await tester.pump();
-      expect(
-        home.originalFeed.state.coordination.removedVideoIds,
-        contains(deletedId),
-      );
+      expect(home.originalFeed.state.videos, [_removalVideo('1')]);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.runAsync(pumpEventQueue);
       expect(removals.hasListener, isFalse);
     });
+
+    testWidgets(
+      'same-account repository replacement keeps Home alive and follows removals',
+      (tester) async {
+        final oldRemovals = StreamController<String>.broadcast();
+        final newRemovals = StreamController<String>.broadcast();
+        addTearDown(oldRemovals.close);
+        addTearDown(newRemovals.close);
+        VideosRepository? currentRepository;
+        final home = await _mountSafetyPolicyHome(
+          tester,
+          removals: oldRemovals.stream,
+          currentRepository: () => currentRepository,
+        );
+        final replacement = _VideosRepository(removals: newRemovals.stream);
+        currentRepository = replacement;
+        home.container.invalidate(videosRepositoryProvider);
+        await tester.pumpAndSettle();
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+        final view = tester.element(find.byType(VideoFeedView));
+        expect(view.read<VideoFeedBloc>(), same(home.originalFeed));
+        expect(
+          view.read<VideoPlaybackStatusCubit>(),
+          same(home.originalPlayback),
+        );
+        expect(oldRemovals.hasListener, isFalse);
+        expect(newRemovals.hasListener, isTrue);
+        await _loadRemovalVideos(tester, home);
+        oldRemovals.add('1' * 64);
+        newRemovals.add('2' * 64);
+        await tester.runAsync(pumpEventQueue);
+        expect(home.originalFeed.state.videos, [_removalVideo('1')]);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
+        expect(newRemovals.hasListener, isFalse);
+      },
+    );
 
     testWidgets(
       'legacy false flags preserve people sources and saved selection',

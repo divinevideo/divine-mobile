@@ -17,7 +17,10 @@ import 'package:videos_repository/videos_repository.dart';
 
 import '../../helpers/feed_bloc_test_helper.dart';
 
-class _MockVideosRepository extends Mock implements VideosRepository {}
+class _MockVideosRepository extends Mock implements VideosRepository {
+  @override
+  bool isVideoKnownDeleted(VideoEvent video) => false;
+}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 

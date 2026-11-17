@@ -74,7 +74,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Future<Iterable<String>> Function()? badgeAuthors,
     Stream<void>? badgeSubscriptionChanges,
     Stream<String>? removedIdsStream,
+    // Rebind only deletion notifications/policy when a same-account service
+    // rebuild replaces the repository. Do not reset feed or playback state.
+    Stream<VideosRepository>? removalRepositoryStream,
   }) : _videosRepository = videosRepository,
+       _removalRepository = videosRepository,
        _followRepository = followRepository,
        _curatedListRepository = curatedListRepository,
        _hashtagSubscriptionRepository = hashtagSubscriptionRepository,
@@ -128,12 +132,48 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     on<VideoFeedTuningSwipeCommitted>(_onTuningSwipeCommitted);
     on<VideoFeedTuningUndoRequested>(_onTuningUndoRequested);
     on<VideoFeedVideoRemoved>(_onVideoRemoved, transformer: sequential());
-    _removedIdsSubscription = removedIdsStream?.listen((videoId) {
-      if (!_isClosing && !isClosed) add(VideoFeedVideoRemoved(videoId));
-    });
+    _watchRemovedVideoIds(
+      removedIdsStream ??
+          (removalRepositoryStream == null
+              ? null
+              : videosRepository.removedVideoIds),
+    );
+    _removalRepositorySubscription = removalRepositoryStream?.listen(
+      (repository) {
+        if (_isClosing ||
+            isClosed ||
+            identical(repository, _removalRepository)) {
+          return;
+        }
+        _removalRepository = repository;
+        _watchRemovedVideoIds(repository.removedVideoIds);
+        // Tombstones hydrate before the service is published, and broadcasts
+        // do not replay. Reconcile its snapshot as well as future removals.
+        for (final video in state.videos) {
+          if (!repository.isVideoKnownDeleted(video)) continue;
+          add(
+            VideoFeedVideoRemoved(
+              video.id,
+              removalGeneration: _removalGeneration,
+            ),
+          );
+          break; // One event rechecks all visible versions through this policy.
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (!_isClosing && !isClosed) addError(error, stackTrace);
+      },
+    );
   }
 
   final VideosRepository _videosRepository;
+
+  // Deletion policy follows the live service even while an older repository's
+  // page read is in flight. It must not retain the retired service's tombstones.
+  VideosRepository _removalRepository;
+  StreamSubscription<VideosRepository>? _removalRepositorySubscription;
+  int _removalGeneration = 0;
+  final _pendingRemovalCancellations = <Future<void>>{};
   final FollowRepository _followRepository;
   final CuratedListRepository _curatedListRepository;
   final HashtagSubscriptionRepository? _hashtagSubscriptionRepository;
@@ -720,6 +760,34 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     );
   }
 
+  void _watchRemovedVideoIds(Stream<String>? removals) {
+    final generation = ++_removalGeneration;
+    final previous = _removedIdsSubscription;
+    if (previous != null) {
+      final cancelled = previous.cancel();
+      _pendingRemovalCancellations.add(cancelled);
+      runDetached(
+        cancelled.whenComplete(
+          () => _pendingRemovalCancellations.remove(cancelled),
+        ),
+        'cancel the retired Home removal subscription',
+        logName: 'VideoFeedBloc',
+        category: LogCategory.video,
+      );
+    }
+    _removedIdsSubscription = removals?.listen(
+      (videoId) {
+        if (_isClosing || isClosed || generation != _removalGeneration) return;
+        add(VideoFeedVideoRemoved(videoId, removalGeneration: generation));
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (!_isClosing && !isClosed && generation == _removalGeneration) {
+          addError(error, stackTrace);
+        }
+      },
+    );
+  }
+
   @override
   Future<void> close() async {
     _isClosing = true;
@@ -727,6 +795,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     // Flush any swipe still inside the debounce window before tearing down, so
     // the last move isn't lost on dispose.
     _resumeManager.dispose();
+    final repositoryCancelled = _removalRepositorySubscription?.cancel();
+    _removalRepositorySubscription = null;
     final removedIdsCancelled = _removedIdsSubscription?.cancel();
     _removedIdsSubscription = null;
     await _hashtagsSubscription?.cancel();
@@ -739,7 +809,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     await _badgeSubscriptionsSubscription?.cancel();
     _badgeSubscriptionsSubscription = null;
     await super.close();
-    await removedIdsCancelled;
+    await Future.wait([
+      ?repositoryCancelled,
+      ?removedIdsCancelled,
+      ..._pendingRemovalCancellations,
+    ]);
   }
 
   Future<void> _onHashtagsChanged(
@@ -1575,10 +1649,15 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     VideoFeedVideoRemoved event,
     Emitter<VideoFeedBlocState> emit,
   ) {
+    if (_isClosing ||
+        (event.removalGeneration != null &&
+            event.removalGeneration != _removalGeneration)) {
+      return;
+    }
     final videoId = event.videoId.toLowerCase();
     bool isRemoved(VideoEvent video) =>
         video.id.toLowerCase() == videoId ||
-        _videosRepository.isVideoKnownDeleted(video);
+        _removalRepository.isVideoKnownDeleted(video);
     final removedBeforeCursor = state.videos
         .take(state.currentIndex)
         .where(isRemoved)
@@ -1604,12 +1683,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           for (final id in state.listOnlyVideoIds)
             if (!removedIds.contains(id.toLowerCase())) id,
         },
-        coordination: state.coordination.copyWith(
-          removedVideoIds: Set.unmodifiable({
-            ...state.coordination.removedVideoIds,
-            ...removedIds,
-          }),
-        ),
       ),
     );
     if (removedVisibleVideo && _usesHomeFeedCache(state.source)) {
@@ -1627,13 +1700,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   /// sweeps share the bus but are reversible, so an unblocked author's video
   /// may come back on a later read.
   List<VideoEvent> _withoutRemovedVideos(Iterable<VideoEvent> videos) {
-    final removed = state.coordination.removedVideoIds;
     return videos
-        .where(
-          (video) =>
-              !removed.contains(video.id.toLowerCase()) ||
-              !_videosRepository.isVideoKnownDeleted(video),
-        )
+        .where((video) => !_removalRepository.isVideoKnownDeleted(video))
         .toList();
   }
 

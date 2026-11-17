@@ -12,7 +12,10 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:videos_repository/videos_repository.dart';
 
-class _VideosRepository extends Mock implements VideosRepository {}
+class _VideosRepository extends Mock implements VideosRepository {
+  @override
+  bool isVideoKnownDeleted(VideoEvent video) => false;
+}
 
 class _ApiClient extends Mock implements FunnelcakeApiClient {}
 

@@ -259,11 +259,15 @@ final class VideoFeedHashtagsChanged extends VideoFeedEvent {
 /// A video id announced on [VideosRepository.removedVideoIds]: a deletion,
 /// or a block or mute sweep of its author.
 final class VideoFeedVideoRemoved extends VideoFeedEvent {
-  const VideoFeedVideoRemoved(this.videoId);
+  const VideoFeedVideoRemoved(this.videoId, {this.removalGeneration});
 
   /// Event id of the removed video.
   final String videoId;
 
+  /// Subscription epoch, so queued notifications from a retired service cannot
+  /// remove a video from the current feed. Omitted for directly dispatched ids.
+  final int? removalGeneration;
+
   @override
-  List<Object?> get props => [videoId];
+  List<Object?> get props => [videoId, removalGeneration];
 }

@@ -90,9 +90,11 @@ void main() {
       HomeFeedCache? cache,
       FeedPerformanceTracker? feedTracker,
       bool serveCachedHomeFeed = false,
+      Stream<VideosRepository>? removalRepositoryStream,
     }) => VideoFeedBloc(
       videosRepository: videos,
       removedIdsStream: videos.removedVideoIds,
+      removalRepositoryStream: removalRepositoryStream,
       followRepository: _MockFollowRepository(),
       curatedListRepository: _MockCuratedListRepository(),
       serveCachedHomeFeed: serveCachedHomeFeed,
@@ -192,15 +194,12 @@ void main() {
         ],
       );
 
-      // Block and mute sweeps share the bus and are reversible, so a removed id
-      // can belong to a video that came back on a refresh.
       feedBlocTest(
-        'removes a video again when its id is announced a second time',
+        'removes the announced video from a loaded pair',
         build: createBloc,
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
           videos: [_video('1'), _video('2')],
-          coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
         ),
         act: (_) => removals.add('2' * 64),
         wait: Duration.zero,
@@ -214,12 +213,11 @@ void main() {
       );
 
       feedBlocTest(
-        'keeps a video that came back when a different video is removed',
+        'keeps unrelated videos when a different video is removed',
         build: createBloc,
         seed: () => VideoFeedBlocState(
           status: VideoFeedStatus.success,
           videos: [_video('1'), _video('2'), _video('3')],
-          coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
         ),
         act: (_) => removals.add('3' * 64),
         wait: Duration.zero,
@@ -293,6 +291,103 @@ void main() {
       expect(removals.hasListener, isFalse);
     });
 
+    group('removal repository replacement', () {
+      late StreamController<VideosRepository> repositories;
+      late StreamController<String> retired;
+      late StreamController<String> current;
+      late _MockVideosRepository replacement;
+
+      setUp(() {
+        repositories = StreamController<VideosRepository>.broadcast(sync: true);
+        retired = StreamController<String>.broadcast(sync: true);
+        current = StreamController<String>.broadcast(sync: true);
+        replacement = _MockVideosRepository();
+        when(() => videos.removedVideoIds).thenAnswer((_) => retired.stream);
+        when(() => replacement.removedVideoIds)
+            .thenAnswer((_) => current.stream);
+        when(() => replacement.isVideoKnownDeleted(any())).thenReturn(false);
+      });
+
+      tearDown(() async {
+        await repositories.close();
+        await retired.close();
+        await current.close();
+      });
+
+      feedBlocTest(
+        'ignores a queued removal from the retired repository',
+        build: () => createBloc(removalRepositoryStream: repositories.stream),
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('1'), _video('2'), _video('3')],
+        ),
+        act: (_) {
+          retired.add('1' * 64);
+          repositories.add(replacement);
+          current.add('2' * 64);
+        },
+        wait: Duration.zero,
+        verify: (bloc) {
+          expect(bloc.state.videos, [_video('1'), _video('3')]);
+          expect(retired.hasListener, isFalse);
+        },
+      );
+
+      feedBlocTest(
+        'uses the replacement deletion predicate for unannounced versions',
+        build: () => createBloc(removalRepositoryStream: repositories.stream),
+        setUp: () => when(() => replacement.isVideoKnownDeleted(any()))
+            .thenAnswer(
+              (call) =>
+                  (call.positionalArguments.single as VideoEvent).id ==
+                  '1' * 64,
+            ),
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('1'), _video('2')],
+        ),
+        act: (_) {
+          repositories.add(replacement);
+          current.add('9' * 64);
+        },
+        wait: Duration.zero,
+        verify: (bloc) => expect(bloc.state.videos, [_video('2')]),
+      );
+
+      feedBlocTest(
+        'reconciles known deletions when the replacement already emitted them',
+        build: () => createBloc(removalRepositoryStream: repositories.stream),
+        setUp: () => when(() => replacement.isVideoKnownDeleted(any()))
+            .thenAnswer(
+              (call) =>
+                  (call.positionalArguments.single as VideoEvent).id ==
+                  '1' * 64,
+            ),
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('1'), _video('2')],
+        ),
+        act: (_) => repositories.add(replacement),
+        wait: Duration.zero,
+        verify: (bloc) => expect(bloc.state.videos, [_video('2')]),
+      );
+
+      test(
+        'close cancels both identity and current-removal subscriptions',
+        () async {
+          final bloc = createBloc(removalRepositoryStream: repositories.stream);
+          repositories.add(replacement);
+          await pumpEventQueue();
+          expect(repositories.hasListener, isTrue);
+          expect(current.hasListener, isTrue);
+          await bloc.close();
+          expect(repositories.hasListener, isFalse);
+          expect(current.hasListener, isFalse);
+          expect(retired.hasListener, isFalse);
+        },
+      );
+    });
+
     group('late async results', () {
       late Completer<HomeFeedResult> page;
       late Completer<void> requested;
@@ -317,6 +412,37 @@ void main() {
               (call.positionalArguments.single as VideoEvent).id == '2' * 64,
         );
       });
+
+      for (final refresh in [false, true]) {
+        feedBlocTest(
+          'filters unannounced deleted versions from ${refresh ? 'refresh' : 'pagination'}',
+          build: createBloc,
+          seed: () => VideoFeedBlocState(
+            status: VideoFeedStatus.success,
+            videos: [_video('1')],
+            paginationCursor: 'next-page',
+          ),
+          act: (bloc) async {
+            bloc.add(
+              refresh
+                  ? const VideoFeedRefreshRequested()
+                  : const VideoFeedLoadMoreRequested(),
+            );
+            await requested.future.timeout(const Duration(seconds: 10));
+            page.complete(
+              HomeFeedResult(
+                videos: [_video('2'), _video('4')],
+                hasMore: false,
+              ),
+            );
+          },
+          wait: Duration.zero,
+          verify: (bloc) => expect(
+            bloc.state.videos,
+            refresh ? [_video('4')] : [_video('1'), _video('4')],
+          ),
+        );
+      }
 
       feedBlocTest(
         'does not resurrect a removed item when pagination completes',
@@ -376,7 +502,6 @@ void main() {
           expect(requested.isCompleted, isTrue);
           removals.add('2' * 64);
           await pumpEventQueue();
-          expect(bloc.state.coordination.removedVideoIds, contains('2' * 64));
           page.complete(HomeFeedResult(videos: [_video('1'), _video('2')]));
         },
         wait: Duration.zero,
@@ -415,7 +540,6 @@ void main() {
           expect(requested.isCompleted, isTrue);
           removals.add('2' * 64);
           await pumpEventQueue();
-          expect(bloc.state.coordination.removedVideoIds, contains('2' * 64));
           page.complete(HomeFeedResult(videos: [_video('1'), _video('2')]));
         },
         wait: Duration.zero,
@@ -459,7 +583,6 @@ void main() {
           source: const VideoFeedSource.newVideos(),
           videos: [_newVideo('1')],
           paginationCursor: 'first-page',
-          coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
         ),
         act: (bloc) async {
           bloc.add(const VideoFeedLoadMoreRequested());
@@ -498,10 +621,9 @@ void main() {
 
       // The window was read before the deletion arrived, so the repository's
       // own read filter could not drop it.
-      VideoFeedBlocState removedAfterTheRead() => VideoFeedBlocState(
+      VideoFeedBlocState removedAfterTheRead() => const VideoFeedBlocState(
         status: VideoFeedStatus.success,
-        source: const VideoFeedSource.classic(),
-        coordination: VideoFeedCoordination(removedVideoIds: {'2' * 64}),
+        source: VideoFeedSource.classic(),
       );
 
       feedBlocTest(
