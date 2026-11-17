@@ -18,6 +18,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.equalizerSemanticLabel,
     this.onDuplicated,
     this.onSplit,
+    this.onSeparate,
     this.onFreezeFrame,
     this.isFreezingFrame = false,
     this.onDetach,
@@ -120,6 +121,10 @@ class VideoEditorTimelineControls extends StatelessWidget {
   final String? equalizerSemanticLabel;
   final VoidCallback? onDuplicated;
   final VoidCallback? onSplit;
+
+  /// Breaks the selected drawing into one layer per stroke. Drawings with
+  /// more than one stroke only; the inverse of Combine in multi-select.
+  final VoidCallback? onSeparate;
 
   /// Holds the frame under the playhead still for a beat.
   final VoidCallback? onFreezeFrame;
@@ -377,6 +382,13 @@ class VideoEditorTimelineControls extends StatelessWidget {
             semanticLabel:
                 context.l10n.videoEditorSplitSelectedClipSemanticLabel,
             onPressed: isSplitting ? null : onSplit,
+          ),
+        if (onSeparate != null)
+          TimelineActionButton(
+            icon: .separate,
+            label: context.l10n.videoEditorSeparateLabel,
+            semanticLabel: context.l10n.videoEditorSeparateDrawingSemanticLabel,
+            onPressed: onSeparate,
           ),
         if (onDetach != null)
           TimelineActionButton(

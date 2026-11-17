@@ -10757,6 +10757,13 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorCombineLabel => 'Gabungkan';
 
   @override
+  String get videoEditorSeparateLabel => 'Leraikan';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'Leraikan lukisan kepada strok-stroknya';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'Gabungkan lukisan dipilih menjadi satu lapisan';
 

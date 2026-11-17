@@ -2643,6 +2643,8 @@
   "videoEditorDuplicateLabel": "Duplikat",
   "videoEditorDuplicateSelectedItemSemanticLabel": "Duplikat item yang dipilih",
   "videoEditorCombineLabel": "Gabungkan",
+  "videoEditorSeparateLabel": "Pisahkan",
+  "videoEditorSeparateDrawingSemanticLabel": "Pisahkan gambar menjadi goresan-goresannya",
   "videoEditorCombineDrawLayersSemanticLabel": "Gabungkan gambar terpilih menjadi satu lapisan",
   "videoEditorLayerMultiSelectDoneSemanticLabel": "Selesai memilih gambar",
   "videoEditorDeleteSelectedDrawingsSemanticLabel": "Hapus gambar yang dipilih",

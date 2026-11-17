@@ -8060,6 +8060,14 @@
   "videoEditorDuplicateLabel": "Duplicate",
   "videoEditorDuplicateSelectedItemSemanticLabel": "Duplicate selected item",
   "videoEditorCombineLabel": "Combine",
+  "videoEditorSeparateLabel": "Separate",
+  "@videoEditorSeparateLabel": {
+    "description": "Layer action-bar button that breaks the selected drawing into one layer per stroke, each staying where it was. The inverse of Combine; distinct from Split, which cuts a layer in time."
+  },
+  "videoEditorSeparateDrawingSemanticLabel": "Separate the drawing into its strokes",
+  "@videoEditorSeparateDrawingSemanticLabel": {
+    "description": "Accessibility label for the button that breaks the selected drawing into one layer per stroke."
+  },
   "videoEditorCombineDrawLayersSemanticLabel": "Combine selected drawings into one layer",
   "videoEditorSplitLabel": "Split",
   "videoEditorSplitSelectedClipSemanticLabel": "Split selected clip",

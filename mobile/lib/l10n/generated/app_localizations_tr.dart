@@ -10667,6 +10667,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorCombineLabel => 'Birleştir';
 
   @override
+  String get videoEditorSeparateLabel => 'Parçala';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'Çizimi tek tek çizgilere parçala';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'Seçili çizimleri tek katmanda birleştir';
 

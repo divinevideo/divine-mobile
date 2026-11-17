@@ -3291,6 +3291,8 @@
   "videoEditorDuplicateLabel": "Дубликат",
   "videoEditorDuplicateSelectedItemSemanticLabel": "Дублиране на избрания елемент",
   "videoEditorCombineLabel": "Обединяване",
+  "videoEditorSeparateLabel": "Разделяне",
+  "videoEditorSeparateDrawingSemanticLabel": "Раздели рисунката на отделни щрихи",
   "videoEditorCombineDrawLayersSemanticLabel": "Обедини избраните рисунки в един слой",
   "videoEditorLayerMultiSelectDoneSemanticLabel": "Приключване на избора на рисунки",
   "videoEditorDeleteSelectedDrawingsSemanticLabel": "Изтриване на избраните рисунки",

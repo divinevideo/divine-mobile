@@ -5292,6 +5292,8 @@
   "videoEditorDuplicateLabel": "创建副本",
   "videoEditorDuplicateSelectedItemSemanticLabel": "复制选中项",
   "videoEditorCombineLabel": "合并",
+  "videoEditorSeparateLabel": "拆开",
+  "videoEditorSeparateDrawingSemanticLabel": "把涂鸦拆分为单独的笔画",
   "videoEditorCombineDrawLayersSemanticLabel": "把选中的涂鸦合并为一个图层",
   "videoEditorSplitLabel": "分割",
   "videoEditorSplitSelectedClipSemanticLabel": "分割选中片段",

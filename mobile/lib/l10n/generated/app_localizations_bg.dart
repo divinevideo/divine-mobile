@@ -10848,6 +10848,13 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorCombineLabel => 'Обединяване';
 
   @override
+  String get videoEditorSeparateLabel => 'Разделяне';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'Раздели рисунката на отделни щрихи';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'Обедини избраните рисунки в един слой';
 

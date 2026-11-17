@@ -2643,6 +2643,8 @@
   "videoEditorDuplicateLabel": "Çoğalt",
   "videoEditorDuplicateSelectedItemSemanticLabel": "Seçili öğeyi çoğalt",
   "videoEditorCombineLabel": "Birleştir",
+  "videoEditorSeparateLabel": "Parçala",
+  "videoEditorSeparateDrawingSemanticLabel": "Çizimi tek tek çizgilere parçala",
   "videoEditorCombineDrawLayersSemanticLabel": "Seçili çizimleri tek katmanda birleştir",
   "videoEditorLayerMultiSelectDoneSemanticLabel": "Çizim seçimini bitir",
   "videoEditorDeleteSelectedDrawingsSemanticLabel": "Seçili çizimleri sil",

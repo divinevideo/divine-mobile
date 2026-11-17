@@ -5292,6 +5292,8 @@
   "videoEditorDuplicateLabel": "Nhân bản",
   "videoEditorDuplicateSelectedItemSemanticLabel": "Nhân bản mục đã chọn",
   "videoEditorCombineLabel": "Kết hợp",
+  "videoEditorSeparateLabel": "Tách nét",
+  "videoEditorSeparateDrawingSemanticLabel": "Tách hình vẽ thành từng nét",
   "videoEditorCombineDrawLayersSemanticLabel": "Kết hợp các hình vẽ đã chọn thành một lớp",
   "videoEditorSplitLabel": "Tách",
   "videoEditorSplitSelectedClipSemanticLabel": "Tách clip đã chọn",

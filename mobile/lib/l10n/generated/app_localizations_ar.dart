@@ -10763,6 +10763,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorCombineLabel => 'دمج';
 
   @override
+  String get videoEditorSeparateLabel => 'تفكيك';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel => 'تفكيك الرسم إلى خطوطه';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'دمج الرسومات المحددة في طبقة واحدة';
 

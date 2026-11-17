@@ -10251,6 +10251,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorCombineLabel => '結合';
 
   @override
+  String get videoEditorSeparateLabel => '分解';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel => '描画をストロークごとに分解';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel => '選択した描画を1つのレイヤーに結合';
 
   @override

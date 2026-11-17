@@ -10705,6 +10705,13 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorCombineLabel => 'Kết hợp';
 
   @override
+  String get videoEditorSeparateLabel => 'Tách nét';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'Tách hình vẽ thành từng nét';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'Kết hợp các hình vẽ đã chọn thành một lớp';
 

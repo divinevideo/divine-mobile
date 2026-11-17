@@ -5292,6 +5292,8 @@
   "videoEditorDuplicateLabel": "Duplikasi",
   "videoEditorDuplicateSelectedItemSemanticLabel": "Duplikasi item dipilih",
   "videoEditorCombineLabel": "Gabungkan",
+  "videoEditorSeparateLabel": "Leraikan",
+  "videoEditorSeparateDrawingSemanticLabel": "Leraikan lukisan kepada strok-stroknya",
   "videoEditorCombineDrawLayersSemanticLabel": "Gabungkan lukisan dipilih menjadi satu lapisan",
   "videoEditorSplitLabel": "Pisahkan",
   "videoEditorSplitSelectedClipSemanticLabel": "Pisahkan klip dipilih",

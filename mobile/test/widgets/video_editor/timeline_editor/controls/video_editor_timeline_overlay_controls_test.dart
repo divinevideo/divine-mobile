@@ -1288,6 +1288,70 @@ void main() {
         });
       });
 
+      group('separating a drawing', () {
+        const item = TimelineOverlayItem(
+          id: 'drawing-1',
+          type: TimelineOverlayType.layer,
+          startTime: Duration.zero,
+          endTime: Duration(seconds: 3),
+        );
+
+        PaintLayer drawing({required int strokes}) => PaintLayer(
+          id: item.id,
+          rawSize: const Size(40, 40),
+          opacity: 1,
+          items: [
+            for (var i = 0; i < strokes; i++)
+              PaintedModel(
+                mode: PaintMode.freeStyle,
+                offsets: [Offset(i * 10, 0), Offset(i * 10 + 5, 20)],
+                erasedOffsets: const [],
+                color: const Color(0xFFFF0000),
+                strokeWidth: 4,
+                opacity: 1,
+              ),
+          ],
+        );
+
+        setUp(() {
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+        });
+
+        testWidgets('is offered for a drawing of several strokes only', (
+          tester,
+        ) async {
+          when(() => mockEditor.activeLayers).thenReturn([drawing(strokes: 1)]);
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+          expect(find.text(l10n.videoEditorSeparateLabel), findsNothing);
+
+          when(() => mockEditor.activeLayers).thenReturn([drawing(strokes: 3)]);
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+          expect(find.text(l10n.videoEditorSeparateLabel), findsOneWidget);
+        });
+
+        testWidgets('splits the drawing in the editor and selects nothing', (
+          tester,
+        ) async {
+          when(() => mockEditor.activeLayers).thenReturn([drawing(strokes: 2)]);
+          when(() => mockEditor.splitSelectedLayers()).thenReturn([]);
+
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+          await tester.tap(
+            find.bySemanticsLabel(l10n.videoEditorSeparateDrawingSemanticLabel),
+          );
+          await tester.pump();
+
+          verifyInOrder([
+            () => mockEditor.selectLayerById(item.id, enableMultiSelect: true),
+            () => mockEditor.splitSelectedLayers(),
+            () => mockEditor.clearLayerSelection(),
+          ]);
+          verify(
+            () => overlayBloc.add(const TimelineOverlayItemSelected(null)),
+          ).called(1);
+        });
+      });
+
       testWidgets('splitting a detached clip offsets the tail into the clip', (
         tester,
       ) async {

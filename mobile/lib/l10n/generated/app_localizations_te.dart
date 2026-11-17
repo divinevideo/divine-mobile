@@ -11035,6 +11035,13 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorCombineLabel => 'కలపండి';
 
   @override
+  String get videoEditorSeparateLabel => 'విడదీయండి';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'డ్రాయింగ్‌ను దాని గీతలుగా విడదీయండి';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'ఎంచుకున్న డ్రాయింగ్‌లను ఒక లేయర్‌గా కలపండి';
 

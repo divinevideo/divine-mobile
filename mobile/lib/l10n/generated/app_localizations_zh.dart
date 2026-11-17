@@ -10155,6 +10155,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorCombineLabel => '合并';
 
   @override
+  String get videoEditorSeparateLabel => '拆开';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel => '把涂鸦拆分为单独的笔画';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel => '把选中的涂鸦合并为一个图层';
 
   @override

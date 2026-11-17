@@ -3050,6 +3050,8 @@
   "videoEditorDuplicateLabel": "Dupliceren",
   "videoEditorDuplicateSelectedItemSemanticLabel": "Geselecteerd item dupliceren",
   "videoEditorCombineLabel": "Combineren",
+  "videoEditorSeparateLabel": "Scheiden",
+  "videoEditorSeparateDrawingSemanticLabel": "Tekening in losse streken scheiden",
   "videoEditorCombineDrawLayersSemanticLabel": "Geselecteerde tekeningen samenvoegen tot één laag",
   "videoEditorLayerMultiSelectDoneSemanticLabel": "Klaar met tekeningen selecteren",
   "videoEditorDeleteSelectedDrawingsSemanticLabel": "Geselecteerde tekeningen verwijderen",

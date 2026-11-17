@@ -10984,6 +10984,13 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorCombineLabel => 'Combină';
 
   @override
+  String get videoEditorSeparateLabel => 'Separă';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'Separă desenul în liniile sale';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'Combină desenele selectate într-un singur strat';
 

@@ -60,6 +60,7 @@ import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timel
 import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart';
 import 'package:pro_image_editor/core/models/layers/layer.dart';
 import 'package:pro_image_editor/features/filter_editor/types/filter_state.dart';
+import 'package:pro_image_editor/features/main_editor/services/paint_layer_split_manager.dart';
 import 'package:pro_image_editor/features/tune_editor/models/tune_adjustment_matrix.dart';
 
 /// Controls shown when an overlay item is selected.
@@ -177,6 +178,11 @@ class _LayerOverlayControls extends StatelessWidget {
         pasteStyleSemanticLabel:
             context.l10n.videoEditorPasteLayerStyleSemanticLabel,
         onSplit: isStickerCard ? null : () => _splitLayer(context: context),
+        // A drawing comes back from the draw editor as one layer; this breaks
+        // it into its strokes again, for a drawing Combine could rebuild.
+        onSeparate: layer != null && PaintLayerSplitManager.canSplit(layer)
+            ? () => _separateDrawing(context: context)
+            : null,
         // The way back from Detach, for a detached clip only.
         onReattach: isDetachedClip
             ? () => _reattachLayer(context: context)
@@ -444,6 +450,22 @@ class _LayerOverlayControls extends StatelessWidget {
     context.read<TimelineOverlayBloc>().add(
       TimelineOverlayItemSelected(copy.id),
     );
+  }
+
+  /// Breaks the drawing into one layer per stroke, each where it was, as a
+  /// single undo step. The drawing itself is gone afterwards, so nothing
+  /// stays selected.
+  void _separateDrawing({required BuildContext context}) {
+    final editor = VideoEditorScope.of(context).editor;
+    final layer = _liveLayer(context);
+    if (editor == null || layer == null) return;
+
+    editor
+      ..unselectAllLayers()
+      ..selectLayerById(layer.id, enableMultiSelect: true)
+      ..splitSelectedLayers()
+      ..clearLayerSelection();
+    TimelineOverlayControls._deselect(context);
   }
 
   void _splitLayer({required BuildContext context}) {

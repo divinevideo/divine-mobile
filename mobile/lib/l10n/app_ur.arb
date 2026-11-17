@@ -5292,6 +5292,8 @@
   "videoEditorDuplicateLabel": "نقل کریں",
   "videoEditorDuplicateSelectedItemSemanticLabel": "منتخب آئٹم کی نقل کریں",
   "videoEditorCombineLabel": "ملائیں",
+  "videoEditorSeparateLabel": "جدا کریں",
+  "videoEditorSeparateDrawingSemanticLabel": "ڈرائنگ کو اس کی لکیروں میں جدا کریں",
   "videoEditorCombineDrawLayersSemanticLabel": "منتخب ڈرائنگز کو ایک لیئر میں ملائیں",
   "videoEditorSplitLabel": "تقسیم کریں",
   "videoEditorSplitSelectedClipSemanticLabel": "منتخب کلپ تقسیم کریں",
