@@ -6,7 +6,7 @@ Badges help people discover a community, see its people and videos, and follow p
 
 This design updates Explore → Badges and its handoff to the existing badge detail page. It does not change who can issue a badge, how awards are accepted, or NIP-58 membership proof.
 
-## Current evidence
+## Evidence before this change
 
 - ExploreBadgesCubit restricts discovery to one official issuer. The view renders compact 56px-art rows.
 - A bounded public read of kind 30009 from the app's primary relay returned 203 distinct badge coordinates across 140 issuers, including 200 non-official definitions. This is discovery evidence, not a complete network census. No real account identifiers or badge names from that read are retained here.
@@ -48,7 +48,7 @@ The user has approved the community-discovery direction and Lists inspiration. T
 - Use existing Nostr kind 30009 definitions and the app's configured relay client, including its anonymous primary-relay read capability. No new backend endpoint, deployment, protocol kind, or new package is required.
 - Start with a bounded recent window of 300 definition events. Deduplicate by full issuer+d-tag coordinate, select the newest valid definition with deterministic ties, and order cards by definition recency. This is a discovery window, not a promise to enumerate the entire network.
 - Reveal 24 cards initially and another 24 through “Show more” until the loaded window is exhausted. Build card contents lazily. Do not add a search field that only pretends to search beyond the loaded window; global directory search is outside this change.
-- Reuse current event verification and deletion rules. Reject malformed/unsigned/spoofed definitions; honor issuer-signed deletions; never merge identical d-tags from different issuers. Full IDs stay intact in protocol data and logs.
+- Verify each event's hash and signature, reusing the relay pool's recorded check, and honor issuer-signed NIP-09 deletions by address or event ID. Reject malformed/unsigned/spoofed definitions; never merge identical d-tags from different issuers. Full IDs stay intact in protocol data and logs.
 - Respect blocked, muted and vanished issuers and people before exposing their cards or previews, using the existing policy boundaries. Refresh policy-dependent state after an account or block-list change. User-created badges never acquire an official endorsement merely by appearing.
 - The repository owns relay/API composition, filtering, sorting, deduplication and preview sourcing. Cubits own UI state and superseded-load/disposal behavior. Widgets only render and dispatch actions.
 - Reuse the existing indexed accepted-holder preview for visible cards, filtered through the same viewer policy as detail. At most three faces per card, at most four in-flight preview reads, and at most one read per coordinate per discovery generation. No per-card complete relay holder walk on the gallery. Preview errors leave artwork/title/description usable.
@@ -72,11 +72,11 @@ The accompanying SVG is a layout sketch with synthetic communities and placehold
 5. A card opens the right issuer-scoped detail; individual Follow affects only the selected person; the existing community subscription remains distinct and publicly disclosed.
 6. Refresh, account/policy changes, superseded requests and close/disposal cannot append stale or hidden results.
 7. Gallery/detail widget tests cover both appearances, large text, loading/error/empty states and accessible actions. Use synthetic content for real-app visual checks when available.
-8. Run affected package/app tests, required localization checks, full analysis and relevant guards; obtain fresh whole-diff independent review; publish a focused PR targeting main and inspect finished CI. Merge or deployment requires authorization for this new PR; the earlier 15-PR merge authorization does not extend to it.
+8. Run affected package/app tests, required localization checks, full analysis and relevant guards; obtain fresh whole-diff independent review; publish a focused PR targeting main and inspect finished CI.
 
 ## Scope boundaries
 
-No backend or infrastructure change; no global search/ranking service; no new social protocol, automatic bulk-follow, badge entitlement change or official badge-art republishing. No release, deployment, LiveKit or livestream work. The separate one-item symptom is not claimed reproduced on a device; broader public discovery must have regression coverage against silently reducing the catalogue to one badge.
+No backend or infrastructure change; no global search/ranking service; no new social protocol, automatic bulk-follow, badge entitlement change or official badge-art republishing. No release, deployment, LiveKit or livestream work. The reported symptom of Explore showing a single badge is not claimed reproduced on a device; broader public discovery must have regression coverage against silently reducing the catalogue to one badge.
 
 ## Design readiness
 

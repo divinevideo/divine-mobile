@@ -429,7 +429,8 @@ class BadgeRepository {
   /// repository wants — there is no blocklist to consult.
   final BadgeHiddenPubkeyReader? _isHiddenPubkey;
 
-  /// Relay added to every public definition read, including before sign-in.
+  /// Relay used by every public definition read, including before sign-in;
+  /// discovery reads query it alone.
   final String? _definitionRelayUrl;
 
   /// The profile badge list this repository last published, and whose it is.
@@ -546,11 +547,17 @@ class BadgeRepository {
   /// Most accepted holders one community preview shows.
   static const holderPreviewLimit = 3;
 
-  /// A recent public discovery window, independent of the viewer's account.
+  /// Recent public badge definitions from the environment relay, newest
+  /// first.
   ///
-  /// This is deliberately one bounded REQ rather than an exhaustive history
-  /// walk. Relay verification records the exact checked ID/signature on each
-  /// event; reuse it so browser discovery does not repeat 300 curve checks.
+  /// Needs no signer, but drops the viewer's hidden pubkeys. Makes one
+  /// bounded definition read and one deletion read rather than walking the
+  /// whole history. Relay verification records the exact checked
+  /// ID/signature on each event; reuse it so browser discovery does not
+  /// repeat a curve check per event.
+  ///
+  /// Throws [BadgeReadIncompleteException] when either read goes unanswered
+  /// or the deletion read fills its limit.
   Future<List<Nip58BadgeDefinition>> loadPublicDefinitions() async {
     final events = await _readDiscoveryWindow(
       [
@@ -652,8 +659,12 @@ class BadgeRepository {
   static bool _isVerifiedDiscoveryEvent(Event event) =>
       event.isValid && (event.hasVerifiedSignature || event.isSigned);
 
-  /// Up to three visible, indexed accepted holders. This is a preview only;
-  /// detail reconciles the complete membership proof with relays separately.
+  /// Up to [holderPreviewLimit] visible accepted holders from the indexed
+  /// API: a preview, never the complete membership.
+  ///
+  /// Returns an empty list when no API client is configured or the issuer is
+  /// hidden. Throws the [FunnelcakeException] from
+  /// [FunnelcakeApiClient.getBadgeHolderPreview].
   Future<List<String>> loadHolderPreview(BadgeCoordinate coordinate) async {
     final api = _funnelcakeApiClient;
     if (api == null || (_isHiddenPubkey?.call(coordinate.pubkey) ?? false)) {
@@ -668,7 +679,7 @@ class BadgeRepository {
     ).take(holderPreviewLimit).toList(growable: false);
   }
 
-  /// Definitions from the issuers selected for Explore.
+  /// Definitions published by [issuerPubkeys], sorted by name.
   ///
   /// Reads the API catalogue first, including every cursor page. Only an API
   /// failure triggers a relay walk; an empty HTTP success is authoritative.

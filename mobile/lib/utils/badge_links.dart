@@ -4,7 +4,8 @@ import 'dart:convert';
 
 import 'package:badge_repository/badge_repository.dart';
 
-/// Encoded path component accepted by the existing typed badge routes.
+/// Percent-encoded path segment for the badge routes: the naddr, or the raw
+/// coordinate when the identifier is too long for NIP-19.
 String badgeRouteReference(BadgeCoordinate coordinate) =>
     Uri.encodeComponent(_naddr(coordinate) ?? coordinate.value);
 

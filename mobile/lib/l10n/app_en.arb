@@ -10125,7 +10125,13 @@
     "description": "Disclosure next to the badge subscription button: subscribing publishes the selected badge coordinates publicly on Nostr."
   },
   "badgeSubscribeAction": "Follow community",
+  "@badgeSubscribeAction": {
+    "description": "Button on a badge page that adds the badge community's videos to the Following feed. It does not follow any person."
+  },
   "badgeSubscribedAction": "Following community",
+  "@badgeSubscribedAction": {
+    "description": "The Follow community button once the community's videos are in the Following feed; tapping it again stops."
+  },
   "badgeAcceptedHoldersTitle": "People in this community",
   "badgeSubscriptionLoadError": "Could not load your badge subscriptions. Try again.",
   "@badgeSubscriptionLoadError": {
@@ -10205,7 +10211,7 @@
   "badgeDetailShareAction": "Share",
   "badgeDetailShareMessage": "Check out this badge on Divine: {link}",
   "@badgeDetailShareMessage": {
-    "description": "Body of the share sheet when sharing a badge. The link is an naddr reference.",
+    "description": "Body of the share sheet when sharing a badge. The link is a badges.divine.video URL, or a raw badge coordinate when the badge identifier is too long for an naddr.",
     "placeholders": {
       "link": {
         "type": "String"
@@ -14042,5 +14048,8 @@
   "badgeDiscoveryBody": "Anyone can create and award badges. You choose which ones appear on your profile. Explore a badge to meet its community and follow its people.",
   "badgeDiscoveryMyBadges": "My badges",
   "badgeDiscoveryEmpty": "No communities found yet. Pull down to try again.",
-  "badgeCommunityFollowHint": "Adds community videos to your Following feed. Follow people individually."
+  "badgeCommunityFollowHint": "Adds community videos to your Following feed. Follow people individually.",
+  "@badgeCommunityFollowHint": {
+    "description": "Note under the Follow community button. 'Following' is the name of the Home feed of followed accounts; people in the community are followed one by one."
+  }
 }
