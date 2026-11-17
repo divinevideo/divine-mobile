@@ -15,6 +15,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/find_people_dismissal_store.dart';
+import 'package:openvine/services/find_people_request_auth.dart';
 import 'package:openvine/services/people_discovery_analytics.dart';
 import 'package:profile_repository/profile_repository.dart';
 
@@ -33,9 +34,17 @@ final findPeopleRepositoryProvider = Provider<FindPeopleRepository>((ref) {
   final engine = ref.watch(contentPolicyEngineProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
   final store = FindPeopleDismissalStore(prefs);
+  final requestAuth = owner == null
+      ? null
+      : FindPeopleRequestAuth(
+          owner: owner,
+          currentPubkey: () => auth.currentPublicKeyHex,
+          authService: ref.watch(nip98AuthServiceProvider),
+        );
   final repository = FindPeopleRepository(
     apiClient: ref.watch(funnelcakeApiClientProvider),
     accountPubkey: owner,
+    requestHeaders: requestAuth?.headersFor,
     currentPubkey: () => auth.currentPublicKeyHex,
     isFollowing: follows.isFollowing,
     isExcluded: (pubkey) =>
