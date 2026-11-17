@@ -289,6 +289,25 @@ void main() {
         );
       });
 
+      test(
+        'does not ask again on new connections when a read that does not '
+        'need every relay times out',
+        () async {
+          stubRelay(
+            events: [
+              bookmarkListEvent(['video-a']),
+            ],
+            timedOut: true,
+          );
+          final service = createService();
+
+          final synced = await service.syncGlobalBookmarks();
+
+          expect(synced, isFalse);
+          verifyNever(() => nostrClient.queryEventsOnFreshConnections(any()));
+        },
+      );
+
       test('keeps the newest event when the relay returns several', () async {
         final older = Event(
           pubkey,
