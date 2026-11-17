@@ -6444,9 +6444,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Suscrito",
-  "badgeSubscribeAction": "Suscribirse a la insignia",
-  "badgeAcceptedHoldersTitle": "Personas que aceptaron la insignia",
+  "badgeSubscribedAction": "Siguiendo comunidad",
+  "badgeSubscribeAction": "Seguir comunidad",
+  "badgeAcceptedHoldersTitle": "Personas de esta comunidad",
   "badgeSubscriptionLoadError": "No se pudieron cargar tus suscripciones a insignias. Inténtalo de nuevo.",
   "minorAccountReviewVideoSubmittedBody": "Tu video se envió para revisión.",
   "minorAccountReviewVideoSubmittedTitle": "Video enviado",
@@ -6543,5 +6543,10 @@
   "collabRoomCallCameraFailed": "No se pudo prender tu cámara.",
   "collabRoomCallMuted": "Silenciado",
   "collabRoomSwapSeatHint": "Tocá dos lugares del diseño para intercambiarlos.",
-  "collabRoomSwapSeatSemanticLabel": "Intercambiar este lugar"
+  "collabRoomSwapSeatSemanticLabel": "Intercambiar este lugar",
+  "badgeDiscoveryTitle": "Las insignias unen a las personas",
+  "badgeDiscoveryBody": "Cualquiera puede crear y otorgar insignias. Vos elegís cuáles aparecen en tu perfil. Explorá una insignia para conocer su comunidad y seguir a sus integrantes.",
+  "badgeDiscoveryMyBadges": "Mis insignias",
+  "badgeDiscoveryEmpty": "Todavía no encontramos comunidades. Deslizá hacia abajo para volver a intentar.",
+  "badgeCommunityFollowHint": "Agrega videos de la comunidad a tu feed Siguiendo. Seguí a las personas por separado."
 }

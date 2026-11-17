@@ -1,6 +1,5 @@
-// ABOUTME: Explore's curated badge definitions, linked to their holder pages.
+// ABOUTME: Public badge communities in an artwork-led discovery gallery.
 
-import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,23 +7,30 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/badges/explore_badges_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/router/routes/auth_routes.dart';
+import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/widgets/badges/awarded_badge_card.dart';
-import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/utils/external_link_launcher.dart';
+import 'package:openvine/widgets/badges/badge_community_card.dart';
+import 'package:badge_repository/badge_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Discover badge definitions from curated issuers.
+/// Discover community-issued badges without requiring an account.
 class ExploreBadgesTab extends ConsumerWidget {
-  /// Creates the Explore Badges tab.
   const ExploreBadgesTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(badgeRepositoryProvider);
+    final policyVersion = ref.watch(blocklistVersionProvider);
+    ref.watch(currentAuthStateProvider);
+    final viewer = ref.watch(authServiceProvider).currentPublicKeyHex;
     return BlocProvider(
-      key: ValueKey(repository),
+      key: ValueKey((repository, policyVersion, viewer)),
       create: (_) {
         final cubit = ExploreBadgesCubit(repository: repository);
         runDetached(
@@ -40,9 +46,8 @@ class ExploreBadgesTab extends ConsumerWidget {
   }
 }
 
-/// The curated badge list, driven by [ExploreBadgesCubit].
+/// Responsive gallery driven by [ExploreBadgesCubit].
 class ExploreBadgesView extends StatelessWidget {
-  /// Creates the view.
   @visibleForTesting
   const ExploreBadgesView({super.key});
 
@@ -59,83 +64,236 @@ class ExploreBadgesView extends StatelessWidget {
           error: true,
         ),
       ),
-      child: switch (state.status) {
-        ExploreBadgesStatus.initial || ExploreBadgesStatus.loading =>
-          const Center(child: BrandedLoadingIndicator(size: 60)),
-        ExploreBadgesStatus.failure => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            spacing: 16,
-            children: [
-              Text(
-                context.l10n.badgesLoadError,
-                textAlign: TextAlign.center,
-                style: VineTheme.titleSmallFont(
-                  color: context.vineColors.primaryText,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns =
+              constraints.maxWidth < 360 ||
+                  MediaQuery.textScalerOf(context).scale(14) > 20
+              ? 1
+              : 2;
+          final loading =
+              state.status == ExploreBadgesStatus.initial ||
+              state.status == ExploreBadgesStatus.loading;
+          final definitions = state.visibleDefinitions;
+          final rowCount = loading ? 3 : (definitions.length / columns).ceil();
+          return RefreshIndicator(
+            color: VineTheme.onPrimary,
+            backgroundColor: VineTheme.vineGreen,
+            onRefresh: cubit.refresh,
+            child: CustomScrollView(
+              cacheExtent: 0,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                const SliverToBoxAdapter(child: _BadgeDiscoveryHeader()),
+                if (state.status == ExploreBadgesStatus.failure)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        spacing: 16,
+                        children: [
+                          Text(
+                            context.l10n.badgesLoadError,
+                            style: VineTheme.bodyMediumFont(
+                              color: context.vineColors.onSurface,
+                            ),
+                          ),
+                          DivineButton(
+                            onPressed: cubit.load,
+                            label: context.l10n.commonRetry,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (!loading && definitions.isEmpty)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        context.l10n.badgeDiscoveryEmpty,
+                        textAlign: TextAlign.center,
+                        style: VineTheme.bodyMediumFont(
+                          color: context.vineColors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverList.separated(
+                      itemCount: rowCount,
+                      separatorBuilder: (_, _) => const SizedBox(height: 20),
+                      itemBuilder: (context, row) => Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 16,
+                        children: [
+                          for (var column = 0; column < columns; column++)
+                            Expanded(
+                              child: loading
+                                  ? const _BadgeCardSkeleton()
+                                  : row * columns + column < definitions.length
+                                  ? Builder(
+                                      builder: (context) {
+                                        final definition =
+                                            definitions[row * columns + column];
+                                        WidgetsBinding.instance
+                                            .addPostFrameCallback((_) {
+                                              if (context.mounted)
+                                                cubit.loadPreview(
+                                                  definition.coordinate,
+                                                );
+                                            });
+                                        return BadgeCommunityCard(
+                                          key: ValueKey(definition.coordinate),
+                                          definition: definition,
+                                          memberPubkeys:
+                                              state.previews[definition
+                                                  .coordinate] ??
+                                              const [],
+                                          onTap: () => context.push<void>(
+                                            BadgeDetailScreen.pathFor(
+                                              BadgeCoordinate.parse(
+                                                definition.coordinate,
+                                              )!,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: state.hasMore
+                        ? DivineButton(
+                            onPressed: cubit.showMore,
+                            label: context.l10n.profileShowMore,
+                            type: DivineButtonType.secondary,
+                          )
+                        : const SizedBox(height: 8),
+                  ),
                 ),
-              ),
-              DivineButton(
-                onPressed: cubit.load,
-                label: context.l10n.commonRetry,
-              ),
-            ],
-          ),
-        ),
-        ExploreBadgesStatus.loaded => RefreshIndicator(
-          color: VineTheme.onPrimary,
-          backgroundColor: VineTheme.vineGreen,
-          onRefresh: cubit.refresh,
-          child: ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: state.definitions.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, index) =>
-                _ExploreBadgeRow(definition: state.definitions[index]),
-          ),
-        ),
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
 
-class _ExploreBadgeRow extends StatelessWidget {
-  const _ExploreBadgeRow({required this.definition});
-
-  final Nip58BadgeDefinition definition;
+class _BadgeDiscoveryHeader extends ConsumerWidget {
+  const _BadgeDiscoveryHeader();
 
   @override
-  Widget build(BuildContext context) {
-    final coordinate = BadgeCoordinate.parse(definition.coordinate)!;
-    return BadgePanel(
-      onTap: () => context.push<void>(BadgeDetailScreen.pathFor(coordinate)),
-      child: Row(
-        spacing: 12,
-        children: [
-          BadgeMedallion(imageUrl: definition.imageUrl),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  definition.name ?? definition.dTag,
-                  style: VineTheme.titleSmallFont(
-                    color: context.vineColors.onSurface,
-                  ),
-                ),
-                if (definition.description case final description?)
-                  Text(
-                    description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: VineTheme.bodySmallFont(
-                      color: context.vineColors.onSurfaceVariant,
-                    ),
-                  ),
-              ],
+  Widget build(BuildContext context, WidgetRef ref) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 12,
+      children: [
+        Text(
+          context.l10n.badgeDiscoveryTitle,
+          style: VineTheme.headlineSmallFont(
+            color: context.vineColors.onSurface,
+          ),
+        ),
+        Text(
+          context.l10n.badgeDiscoveryBody,
+          style: VineTheme.bodyMediumFont(
+            color: context.vineColors.onSurfaceVariant,
+          ),
+        ),
+        TextButton(
+          onPressed: () =>
+              openExternalLink(context, 'https://badges.divine.video'),
+          child: Wrap(
+            spacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(context.l10n.profileLearnMore.trim()),
+              const Text('badges.divine.video'),
+              const DivineIcon(icon: DivineIconName.arrowUpRight, size: 16),
+            ],
+          ),
+        ),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            DivineButton(
+              label: context.l10n.badgesCreateAction,
+              leadingIcon: DivineIconName.plus,
+              maxLines: 2,
+              onPressed: () async {
+                if (!ref.read(authServiceProvider).isAuthenticated) {
+                  await const LoginOptionsRouteData().push<void>(context);
+                  return;
+                }
+                await const BadgeCreateRouteData().push<void>(context);
+              },
+            ),
+            DivineButton(
+              label: context.l10n.badgeDiscoveryMyBadges,
+              type: DivineButtonType.secondary,
+              maxLines: 2,
+              onPressed: () async {
+                if (!ref.read(authServiceProvider).isAuthenticated) {
+                  await const LoginOptionsRouteData().push<void>(context);
+                  return;
+                }
+                await const BadgesRouteData().push<void>(context);
+              },
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+class _BadgeCardSkeleton extends StatelessWidget {
+  const _BadgeCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: context.l10n.commonLoading,
+    excludeSemantics: true,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 8,
+      children: [
+        AspectRatio(
+          aspectRatio: 177 / 120,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: context.vineColors.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        FractionallySizedBox(
+          widthFactor: .8,
+          child: ColoredBox(
+            color: context.vineColors.surfaceContainerHigh,
+            child: const SizedBox(height: 20),
+          ),
+        ),
+        FractionallySizedBox(
+          widthFactor: .6,
+          child: ColoredBox(
+            color: context.vineColors.surfaceContainerHigh,
+            child: const SizedBox(height: 14),
+          ),
+        ),
+      ],
+    ),
+  );
 }

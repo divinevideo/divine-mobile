@@ -6444,9 +6444,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "مشترك",
-  "badgeSubscribeAction": "اشترك في الشارة",
-  "badgeAcceptedHoldersTitle": "حاملو الشارة الذين قبلوها",
+  "badgeSubscribedAction": "تتم متابعة المجتمع",
+  "badgeSubscribeAction": "متابعة المجتمع",
+  "badgeAcceptedHoldersTitle": "أشخاص في هذا المجتمع",
   "badgeSubscriptionLoadError": "تعذر تحميل اشتراكات الشارات الخاصة بك. حاول مرة أخرى.",
   "minorAccountReviewVideoSubmittedBody": "تم إرسال الفيديو للمراجعة.",
   "minorAccountReviewVideoSubmittedTitle": "تم إرسال الفيديو",
@@ -6543,5 +6543,10 @@
   "collabRoomCallCameraFailed": "تعذّر تشغيل الكاميرا.",
   "collabRoomCallMuted": "مكتوم",
   "collabRoomSwapSeatHint": "النقر على مكانين في التخطيط لتبديلهما.",
-  "collabRoomSwapSeatSemanticLabel": "تبديل هذا المكان"
+  "collabRoomSwapSeatSemanticLabel": "تبديل هذا المكان",
+  "badgeDiscoveryTitle": "الشارات تجمع الناس",
+  "badgeDiscoveryBody": "يمكن لأي شخص إنشاء شارات ومنحها. اختيار الشارات التي تظهر في الملف الشخصي متروك لك. استكشاف شارة يتيح التعرّف على مجتمعها ومتابعة أفراده.",
+  "badgeDiscoveryMyBadges": "شاراتي",
+  "badgeDiscoveryEmpty": "لم يتم العثور على مجتمعات بعد. السحب للأسفل للمحاولة مجددًا.",
+  "badgeCommunityFollowHint": "تُضاف فيديوهات المجتمع إلى موجز المتابَعين. متابعة الأشخاص تتم بشكل منفصل."
 }

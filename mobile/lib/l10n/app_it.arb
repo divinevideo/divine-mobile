@@ -6444,9 +6444,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Iscritto",
-  "badgeSubscribeAction": "Iscriviti al badge",
-  "badgeAcceptedHoldersTitle": "Persone che hanno accettato il badge",
+  "badgeSubscribedAction": "Segui questa comunità",
+  "badgeSubscribeAction": "Segui la comunità",
+  "badgeAcceptedHoldersTitle": "Persone in questa comunità",
   "badgeSubscriptionLoadError": "Impossibile caricare i tuoi abbonamenti ai badge. Riprova.",
   "minorAccountReviewVideoSubmittedBody": "Il tuo video è stato inviato per la revisione.",
   "minorAccountReviewVideoSubmittedTitle": "Video inviato",
@@ -6543,5 +6543,10 @@
   "collabRoomCallCameraFailed": "Impossibile accendere la fotocamera.",
   "collabRoomCallMuted": "Silenziato",
   "collabRoomSwapSeatHint": "Tocca due posti nel layout per scambiarli.",
-  "collabRoomSwapSeatSemanticLabel": "Scambia questo posto"
+  "collabRoomSwapSeatSemanticLabel": "Scambia questo posto",
+  "badgeDiscoveryTitle": "I badge uniscono le persone",
+  "badgeDiscoveryBody": "Chiunque può creare e assegnare badge. Scegli tu quali mostrare sul tuo profilo. Esplora un badge per conoscere la sua comunità e seguirne le persone.",
+  "badgeDiscoveryMyBadges": "I miei badge",
+  "badgeDiscoveryEmpty": "Nessuna comunità trovata per ora. Trascina verso il basso per riprovare.",
+  "badgeCommunityFollowHint": "Aggiunge i video della comunità al feed Seguiti. Segui le persone singolarmente."
 }

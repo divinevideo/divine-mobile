@@ -583,6 +583,13 @@ class _BadgeEngagementActions extends StatelessWidget {
         ),
         if (canSubscribe)
           Text(
+            context.l10n.badgeCommunityFollowHint,
+            style: VineTheme.bodySmallFont(
+              color: context.vineColors.onSurfaceVariant,
+            ),
+          ),
+        if (canSubscribe)
+          Text(
             context.l10n.badgeSubscriptionsPublicNotice,
             style: VineTheme.bodySmallFont(
               color: context.vineColors.onSurfaceVariant,

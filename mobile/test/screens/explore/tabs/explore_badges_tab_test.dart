@@ -13,8 +13,10 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/explore/tabs/explore_badges_tab.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
+import '../../../helpers/url_launcher_test_double.dart';
 
 class _MockExploreBadgesCubit extends MockCubit<ExploreBadgesState>
     implements ExploreBadgesCubit {}
@@ -22,12 +24,19 @@ class _MockExploreBadgesCubit extends MockCubit<ExploreBadgesState>
 class _MockBadgeRepository extends Mock implements BadgeRepository {}
 
 void main() {
+  setUpAll(
+    () => registerFallbackValue(
+      BadgeCoordinate(pubkey: _issuer, identifier: 'fallback'),
+    ),
+  );
   group(ExploreBadgesTab, () {
-    testWidgets('loads curated badges when the actual tab mounts', (
+    testWidgets('loads community badges when the actual tab mounts', (
       tester,
     ) async {
       final repository = _MockBadgeRepository();
-      when(() => repository.loadDefinitionsByIssuers(exploreBadgeIssuers))
+      when(() => repository.loadHolderPreview(any()))
+          .thenAnswer((_) async => []);
+      when(() => repository.loadPublicDefinitions())
           .thenAnswer((_) async => [_definition]);
       await tester.pumpWidget(
         testProviderScope(
@@ -42,9 +51,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      verify(() => repository.loadDefinitionsByIssuers(exploreBadgeIssuers))
-          .called(1);
-      expect(find.text('Diviner of the Day'), findsOneWidget);
+      verify(() => repository.loadPublicDefinitions()).called(1);
+      expect(find.text('Loop makers'), findsOneWidget);
     });
   });
   group(ExploreBadgesView, () {
@@ -64,8 +72,126 @@ void main() {
       ),
     );
 
+    testWidgets(
+      'explains badges and offers the badges website before any result',
+      (tester) async {
+        when(() => cubit.state).thenReturn(
+          const ExploreBadgesState(status: ExploreBadgesStatus.loaded),
+        );
+        await tester.pumpWidget(buildSubject());
+        expect(find.text('Badges bring people together'), findsOneWidget);
+        expect(find.text('badges.divine.video'), findsOneWidget);
+        expect(
+          find.textContaining('Anyone can create and award badges.'),
+          findsOneWidget,
+        );
+        expect(find.text('My badges'), findsOneWidget);
+      },
+    );
+
+    testWidgets('the explainer opens the exact external badges website', (
+      tester,
+    ) async {
+      final original = UrlLauncherPlatform.instance;
+      final launcher = UrlLauncherTestDouble();
+      UrlLauncherPlatform.instance = launcher;
+      addTearDown(() => UrlLauncherPlatform.instance = original);
+      when(() => cubit.state).thenReturn(
+        const ExploreBadgesState(status: ExploreBadgesStatus.loaded),
+      );
+      await tester.pumpWidget(buildSubject());
+      await tester.tap(find.text('badges.divine.video'));
+      await tester.pumpAndSettle();
+      expect(launcher.launched.single.url, 'https://badges.divine.video');
+      expect(launcher.launched.single.useExternalApplication, isTrue);
+    });
+
+    for (final action in ['New badge', 'My badges']) {
+      testWidgets('signed-out $action uses the existing sign-in route', (
+        tester,
+      ) async {
+        when(() => cubit.state).thenReturn(
+          const ExploreBadgesState(status: ExploreBadgesStatus.loaded),
+        );
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) => Scaffold(
+                body: BlocProvider<ExploreBadgesCubit>.value(
+                  value: cubit,
+                  child: const ExploreBadgesView(),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: '/welcome/login-options',
+              builder: (_, _) =>
+                  const Scaffold(body: Text('Sign-in destination')),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          testProviderScope(
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(action));
+        await tester.pumpAndSettle();
+        expect(find.text('Sign-in destination'), findsOneWidget);
+      });
+    }
+
+    for (final brightness in Brightness.values) {
+      testWidgets(
+        'large text and narrow ${brightness.name} layout remains usable without artwork or previews',
+        (tester) async {
+          tester.view.physicalSize = const Size(320, 900);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          when(() => cubit.state).thenReturn(
+            ExploreBadgesState(
+              status: ExploreBadgesStatus.loaded,
+              definitions: [_definition],
+            ),
+          );
+          await tester.pumpWidget(
+            testProviderScope(
+              child: MaterialApp(
+                theme: ThemeData(brightness: brightness),
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                builder: (context, child) => MediaQuery(
+                  data: MediaQuery.of(context)
+                      .copyWith(textScaler: TextScaler.linear(2)),
+                  child: child!,
+                ),
+                home: Scaffold(
+                  body: BlocProvider<ExploreBadgesCubit>.value(
+                    value: cubit,
+                    child: const ExploreBadgesView(),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.scrollUntilVisible(find.text('Loop makers'), 200);
+          expect(find.text('Loop makers'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+
     group('renders', () {
-      testWidgets('the curated badges', (tester) async {
+      testWidgets('the community badges', (tester) async {
         when(() => cubit.state).thenReturn(
           ExploreBadgesState(
             status: ExploreBadgesStatus.loaded,
@@ -76,13 +202,13 @@ void main() {
         await tester.pumpWidget(buildSubject());
         await tester.pump();
 
-        expect(find.text('Diviner of the Day'), findsOneWidget);
-        expect(find.text('One creator a day'), findsOneWidget);
+        expect(find.text('Loop makers'), findsOneWidget);
+        expect(find.text('Small films together'), findsOneWidget);
       });
     });
 
     group('interactions', () {
-      testWidgets('badge row opens its complete coordinate route', (
+      testWidgets('community card opens its complete coordinate route', (
         tester,
       ) async {
         when(() => cubit.state).thenReturn(
@@ -120,7 +246,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Diviner of the Day'));
+        await tester.tap(find.text('Loop makers'));
         await tester.pumpAndSettle();
         expect(
           find.text(BadgeCoordinate.parse(_definition.coordinate)!.toNaddr()),
@@ -167,7 +293,7 @@ void main() {
         );
         await tester.pumpWidget(buildSubject());
         await tester.pump();
-        expect(find.text('Diviner of the Day'), findsOneWidget);
+        expect(find.text('Loop makers'), findsOneWidget);
         expect(find.text(l10n.badgesLoadError), findsOneWidget);
         expect(find.text(l10n.commonRetry), findsNothing);
       });
@@ -190,8 +316,7 @@ void main() {
   });
 }
 
-const _issuer =
-    'e21369e63b98f58de8aa171ec9794006eb0118891ae70895106d44525b718d2b';
+final _issuer = '2'.padLeft(64, '0');
 
 final _definition = Nip58BadgeDefinition(
   event: Event.fromJson({
@@ -203,8 +328,8 @@ final _definition = Nip58BadgeDefinition(
     'content': '',
     'sig': '',
   }),
-  coordinate: '30009:$_issuer:daily-diviner',
-  dTag: 'daily-diviner',
-  name: 'Diviner of the Day',
-  description: 'One creator a day',
+  coordinate: '30009:$_issuer:loop-makers',
+  dTag: 'loop-makers',
+  name: 'Loop makers',
+  description: 'Small films together',
 );

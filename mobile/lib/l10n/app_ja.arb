@@ -6444,9 +6444,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "購読中",
-  "badgeSubscribeAction": "バッジを購読",
-  "badgeAcceptedHoldersTitle": "バッジを承認した人",
+  "badgeSubscribedAction": "コミュニティをフォロー中",
+  "badgeSubscribeAction": "コミュニティをフォロー",
+  "badgeAcceptedHoldersTitle": "このコミュニティの人たち",
   "badgeSubscriptionLoadError": "バッジの購読を読み込めませんでした。もう一度お試しください。",
   "minorAccountReviewVideoSubmittedBody": "動画を確認のために送信しました。",
   "minorAccountReviewVideoSubmittedTitle": "動画を送信しました",
@@ -6543,5 +6543,10 @@
   "collabRoomCallCameraFailed": "カメラをオンにできませんでした。",
   "collabRoomCallMuted": "ミュート中",
   "collabRoomSwapSeatHint": "レイアウトの2か所をタップすると入れ替わります。",
-  "collabRoomSwapSeatSemanticLabel": "この場所を入れ替える"
+  "collabRoomSwapSeatSemanticLabel": "この場所を入れ替える",
+  "badgeDiscoveryTitle": "バッジで人とつながる",
+  "badgeDiscoveryBody": "誰でもバッジを作成し、贈ることができます。プロフィールに表示するバッジは自分で選べます。バッジを開いてコミュニティを知り、気になる人をフォローしましょう。",
+  "badgeDiscoveryMyBadges": "自分のバッジ",
+  "badgeDiscoveryEmpty": "コミュニティがまだ見つかりません。下に引っ張って再試行してください。",
+  "badgeCommunityFollowHint": "コミュニティの動画をフォロー中のフィードに追加します。人のフォローは個別に行います。"
 }

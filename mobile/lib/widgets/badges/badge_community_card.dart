@@ -1,0 +1,204 @@
+// ABOUTME: A Lists-inspired community badge card with artwork and people previews.
+
+import 'package:badge_repository/badge_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/utils/dead_image_hosts.dart';
+import 'package:openvine/widgets/user_avatar.dart';
+import 'package:openvine/widgets/vine_cached_image.dart';
+import 'package:text_sanitizer/text_sanitizer.dart';
+
+/// A single accessible target opening the badge's people and videos.
+class BadgeCommunityCard extends ConsumerWidget {
+  const BadgeCommunityCard({
+    required this.definition,
+    required this.onTap,
+    this.memberPubkeys = const [],
+    super.key,
+  });
+
+  final Nip58BadgeDefinition definition;
+  final VoidCallback onTap;
+  final List<String> memberPubkeys;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final issuer = definition.event.pubkey;
+    if (ref.watch(profileVanishedProvider(issuer))) {
+      return const SizedBox.shrink();
+    }
+    final name = definition.name ?? sanitizeUtf16(definition.dTag);
+    final issuerProfile = ref.watch(userProfileReactiveProvider(issuer)).value;
+    final members = [
+      for (final pubkey in memberPubkeys.take(3))
+        if (!ref.watch(profileVanishedProvider(pubkey))) pubkey,
+    ];
+    final image = [
+      definition.imageUrl,
+      ...definition.thumbnails,
+    ].whereType<String>().where(isUsableNetworkImageUrl).firstOrNull;
+    final fallback = _BadgeMonogram(name: name);
+    return Semantics(
+      label: name,
+      hint: definition.description,
+      button: true,
+      container: true,
+      excludeSemantics: true,
+      onTap: onTap,
+      child: Material(
+        color: context.vineColors.background,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: AspectRatio(
+                  aspectRatio: 177 / 120,
+                  child: ColoredBox(
+                    color: context.vineColors.surfaceContainerHigh,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (image == null)
+                          fallback
+                        else
+                          LayoutBuilder(
+                            builder: (context, constraints) => VineCachedImage(
+                              imageUrl: image,
+                              fit: BoxFit.contain,
+                              memCacheWidth:
+                                  (constraints.maxWidth *
+                                          MediaQuery.devicePixelRatioOf(
+                                            context,
+                                          ))
+                                      .ceil()
+                                      .clamp(1, 1024),
+                              memCacheHeight:
+                                  (constraints.maxHeight *
+                                          MediaQuery.devicePixelRatioOf(
+                                            context,
+                                          ))
+                                      .ceil()
+                                      .clamp(1, 1024),
+                              placeholder: (_, _) => fallback,
+                              errorWidget: (_, _, _) => fallback,
+                              fadeInDuration: Duration.zero,
+                              fadeOutDuration: Duration.zero,
+                            ),
+                          ),
+                        if (members.isNotEmpty)
+                          PositionedDirectional(
+                            end: 8,
+                            bottom: 8,
+                            child: Row(
+                              spacing: 4,
+                              children: [
+                                for (final pubkey in members)
+                                  _MemberFace(pubkey: pubkey),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: VineTheme.titleSmallFont(
+                  color: context.vineColors.onSurface,
+                ),
+              ),
+              if (definition.description case final description?
+                  when description.trim().isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: VineTheme.bodySmallFont(
+                    color: context.vineColors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Row(
+                spacing: 6,
+                children: [
+                  UserAvatar(
+                    size: 20,
+                    imageUrl: issuerProfile?.picture,
+                    name: issuerProfile?.bestDisplayName,
+                    placeholderSeed: issuer,
+                  ),
+                  Expanded(
+                    child: Text(
+                      issuerProfile?.bestDisplayName ?? issuer,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: VineTheme.bodySmallFont(
+                        color: context.vineColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BadgeMonogram extends StatelessWidget {
+  const _BadgeMonogram({required this.name});
+  final String name;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: FractionallySizedBox(
+      widthFactor: .48,
+      heightFactor: .7,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: context.vineColors.surfaceContainer,
+          shape: BoxShape.circle,
+          border: Border.all(color: context.vineColors.outline),
+        ),
+        child: Center(
+          child: Text(
+            name.trim().characters.firstOrNull?.toUpperCase() ?? '',
+            style: VineTheme.headlineLargeFont(
+              color: context.vineColors.onSurface,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _MemberFace extends ConsumerWidget {
+  const _MemberFace({required this.pubkey});
+  final String pubkey;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(userProfileReactiveProvider(pubkey)).value;
+    return UserAvatar(
+      size: 28,
+      imageUrl: profile?.picture,
+      name: profile?.bestDisplayName,
+      placeholderSeed: pubkey,
+    );
+  }
+}

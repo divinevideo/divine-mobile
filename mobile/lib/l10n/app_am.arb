@@ -6497,9 +6497,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "ተከትለዋል",
-  "badgeSubscribeAction": "ባጁን ተከተል",
-  "badgeAcceptedHoldersTitle": "ባጁን የተቀበሉ",
+  "badgeSubscribedAction": "ማህበረሰቡን እየተከተሉ ነው",
+  "badgeSubscribeAction": "ማህበረሰቡን ይከተሉ",
+  "badgeAcceptedHoldersTitle": "በዚህ ማህበረሰብ ያሉ ሰዎች",
   "badgeSubscriptionLoadError": "የባጅ ምዝገባዎችዎን መጫን አልተቻለም። እንደገና ይሞክሩ።",
   "minorAccountReviewVideoSubmittedBody": "ቪዲዮዎ ለግምገማ ተልኳል።",
   "minorAccountReviewVideoSubmittedTitle": "ቪዲዮው ተልኳል",
@@ -6596,5 +6596,10 @@
   "collabRoomCallCameraFailed": "ካሜራዎን ማብራት አልተቻለም።",
   "collabRoomCallMuted": "ድምፅ ጠፍቷል",
   "collabRoomSwapSeatHint": "ቦታዎቹን ለመቀያየር በአቀማመጡ ላይ ሁለት ቦታዎችን ይንኩ።",
-  "collabRoomSwapSeatSemanticLabel": "ይህን ቦታ ይቀይሩ"
+  "collabRoomSwapSeatSemanticLabel": "ይህን ቦታ ይቀይሩ",
+  "badgeDiscoveryTitle": "ባጆች ሰዎችን ያገናኛሉ",
+  "badgeDiscoveryBody": "ማንኛውም ሰው ባጆችን መፍጠር እና መሸለም ይችላል። በመገለጫዎ ላይ የሚታዩትን እርስዎ ይመርጣሉ። ማህበረሰቡን ለማወቅ እና አባላቱን ለመከተል ባጅ ያስሱ።",
+  "badgeDiscoveryMyBadges": "የእኔ ባጆች",
+  "badgeDiscoveryEmpty": "እስካሁን ማህበረሰቦች አልተገኙም። እንደገና ለመሞከር ወደ ታች ይጎትቱ።",
+  "badgeCommunityFollowHint": "የማህበረሰቡን ቪዲዮዎች ወደሚከተሏቸው ዝርዝር ያክላል። ሰዎችን በተናጠል ይከተሉ።"
 }

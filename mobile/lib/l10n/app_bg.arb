@@ -6561,9 +6561,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Абониран",
-  "badgeSubscribeAction": "Абониране за значката",
-  "badgeAcceptedHoldersTitle": "Приели значката",
+  "badgeSubscribedAction": "Следваш общността",
+  "badgeSubscribeAction": "Следвай общността",
+  "badgeAcceptedHoldersTitle": "Хора в тази общност",
   "badgeSubscriptionLoadError": "Абонаментите ви за значки не можаха да се заредят. Опитайте отново.",
   "minorAccountReviewVideoSubmittedBody": "Видеото ти е изпратено за преглед.",
   "minorAccountReviewVideoSubmittedTitle": "Видеото е изпратено",
@@ -6660,5 +6660,10 @@
   "collabRoomCallCameraFailed": "Камерата не можа да се включи.",
   "collabRoomCallMuted": "Заглушен",
   "collabRoomSwapSeatHint": "Докосни две места в оформлението, за да ги размениш.",
-  "collabRoomSwapSeatSemanticLabel": "Размени това място"
+  "collabRoomSwapSeatSemanticLabel": "Размени това място",
+  "badgeDiscoveryTitle": "Значките събират хората",
+  "badgeDiscoveryBody": "Всеки може да създава и връчва значки. Ти избираш кои да се показват в профила ти. Разгледай значка, за да опознаеш общността ѝ и да последваш хората в нея.",
+  "badgeDiscoveryMyBadges": "Моите значки",
+  "badgeDiscoveryEmpty": "Все още няма намерени общности. Дръпни надолу, за да опиташ отново.",
+  "badgeCommunityFollowHint": "Добавя видеата на общността към потока „Следвани“. Следвай хората поотделно."
 }
