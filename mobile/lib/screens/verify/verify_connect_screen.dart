@@ -561,25 +561,25 @@ class _ConnectForm extends StatelessWidget {
           ],
         ],
         if (showProof) ...[
-          if (upsell) ...[
-            Text(
-              l10n.verifyProofAlwaysAvailable,
-              style: VineTheme.bodyMediumFont(
-                color: context.vineColors.primaryText,
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
+          // With the offer card in place of the sign-in button, the proof post
+          // is the only way in, so its heading says it is always available.
           _SectionLabel(
-            l10n.verifyConnectProofTitle,
+            upsell
+                ? l10n.verifyProofAlwaysAvailable
+                : l10n.verifyConnectProofTitle,
             key: proofSectionKey,
           ),
-          // Bluesky's note says a sign-in above is all it takes, which reads
-          // wrong while the card above still asks to link the account.
+          // Bluesky's note says a sign-in above is all it takes. That reads
+          // wrong while a sign-in is held (the card still asks to link the
+          // account), so the note is hidden then. It also reads wrong under
+          // the offer card, where there is no sign-in above, so that state
+          // gets the generic note.
           if (!(signedInAccount != null &&
               state.platform.key == 'bluesky')) ...[
             Text(
-              verifyProofExplainer(l10n, state.platform.key),
+              upsell && state.platform.key == 'bluesky'
+                  ? l10n.verifyConnectProofExplainer
+                  : verifyProofExplainer(l10n, state.platform.key),
               style: VineTheme.bodyMediumFont(
                 color: context.vineColors.mutedText,
               ),

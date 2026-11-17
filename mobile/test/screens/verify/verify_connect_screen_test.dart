@@ -2257,7 +2257,7 @@ void main() {
         expect(
           tester.getTopLeft(field).dy,
           greaterThan(
-            tester.getTopLeft(find.text(l10n.verifyConnectProofTitle)).dy,
+            tester.getTopLeft(find.text(l10n.verifyProofAlwaysAvailable)).dy,
           ),
         );
         expect(
@@ -2265,6 +2265,59 @@ void main() {
           greaterThan(
             tester.getTopLeft(find.text(l10n.verifyConfirmationCardTitle)).dy,
           ),
+        );
+      });
+
+      // With the card in place of the sign-in button there is no sign-in
+      // above, so the proof block gets one heading and the generic note.
+      testWidgets('Bluesky hasNot shows one proof heading and the generic '
+          'explainer', (tester) async {
+        await pump(
+          tester,
+          platform: blueskyGated,
+          readConfirmationAccess: answering([ConfirmationAccess.hasNot]),
+        );
+
+        expect(find.text(l10n.verifyProofAlwaysAvailable), findsOneWidget);
+        expect(find.text(l10n.verifyConnectProofTitle), findsNothing);
+        expect(
+          find.text(l10n.verifyConnectProofExplainerBluesky),
+          findsNothing,
+        );
+        expect(find.text(l10n.verifyConnectProofExplainer), findsOneWidget);
+      });
+
+      testWidgets('Bluesky with sign-in access keeps the proof title and the '
+          'Bluesky explainer', (tester) async {
+        await pump(
+          tester,
+          platform: blueskyGated,
+          readConfirmationAccess: answering([ConfirmationAccess.has]),
+        );
+
+        expect(find.text(l10n.verifyConnectProofTitle), findsOneWidget);
+        expect(find.text(l10n.verifyProofAlwaysAvailable), findsNothing);
+        expect(
+          find.text(l10n.verifyConnectProofExplainerBluesky),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.verifyConnectProofExplainer), findsNothing);
+      });
+
+      testWidgets('other platforms keep their own explainer under the card', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          platform: twitterGated,
+          readConfirmationAccess: answering([ConfirmationAccess.hasNot]),
+        );
+
+        expect(find.text(l10n.verifyProofAlwaysAvailable), findsOneWidget);
+        expect(find.text(l10n.verifyConnectProofTitle), findsNothing);
+        expect(
+          find.text(l10n.verifyConnectProofExplainerTwitter),
+          findsOneWidget,
         );
       });
 
