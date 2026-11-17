@@ -21,6 +21,72 @@ void main() {
       expect(suggestion.isClassic, isTrue);
     });
 
+    test('legacy responses keep the creator without a video preview', () {
+      final suggestion = FollowSuggestion.fromJson({'pubkey': 'a' * 64});
+      expect(suggestion.videoPreview, isNull);
+      expect(suggestion.pubkey, 'a' * 64);
+    });
+
+    test('preserves a genuine preview identity and canonical thumbnail', () {
+      final suggestion = FollowSuggestion.fromJson({
+        'pubkey': 'a' * 64,
+        'video_preview': {
+          'id': 'b' * 64,
+          'thumbnail_url': 'https://media.example.test/image.jpg?version=1',
+          'blurhash': 'LEHV6nWB2yk8pyo0adR*.7kCMdnj',
+        },
+      });
+      final preview = suggestion.videoPreview!;
+      expect(preview.id, 'b' * 64);
+      expect(
+        preview.thumbnailUrl,
+        'https://media.example.test/image.jpg?version=1',
+      );
+      expect(preview.blurhash, 'LEHV6nWB2yk8pyo0adR*.7kCMdnj');
+    });
+
+    test('malformed optional previews never discard a usable creator', () {
+      for (final preview in [
+        null,
+        'not a preview',
+        <Object>[],
+        <String, Object>{},
+        {'id': 'b' * 64, 'thumbnail_url': ''},
+        {'id': 'b' * 63, 'thumbnail_url': 'https://example.test/image.jpg'},
+        {'id': 'B' * 64, 'thumbnail_url': 'https://example.test/image.jpg'},
+        {'id': 'b' * 64, 'thumbnail_url': 12},
+        {'id': 'b' * 64, 'thumbnail_url': '/image.jpg'},
+        {'id': 'b' * 64, 'thumbnail_url': 'javascript:alert(1)'},
+        {'id': 'b' * 64, 'thumbnail_url': 'https://user:pass@example.test/x'},
+        {'id': 'b' * 64, 'thumbnail_url': ' https://example.test/image.jpg'},
+      ]) {
+        final suggestion = FollowSuggestion.fromJson({
+          'pubkey': 'a' * 64,
+          'video_preview': preview,
+        });
+        expect(suggestion.videoPreview, isNull);
+        expect(suggestion.pubkey, 'a' * 64);
+      }
+    });
+
+    test('empty or mistyped blurhash leaves the valid image usable', () {
+      for (final blurhash in ['', ' ', 42]) {
+        final suggestion = FollowSuggestion.fromJson({
+          'pubkey': 'a' * 64,
+          'video_preview': {
+            'id': 'b' * 64,
+            'thumbnail_url': 'http://127.0.0.1/image.jpg',
+            'blurhash': blurhash,
+          },
+        });
+        expect(
+          suggestion.videoPreview!.thumbnailUrl,
+          'http://127.0.0.1/image.jpg',
+        );
+        expect(suggestion.videoPreview!.blurhash, isNull);
+      }
+    });
+
     test('rejects incomplete and nonhex public keys', () {
       for (final key in ['a' * 63, 'g' * 64]) {
         expect(
