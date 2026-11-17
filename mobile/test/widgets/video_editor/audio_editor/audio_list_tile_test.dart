@@ -65,8 +65,8 @@ void main() {
     }
 
     group('semantics', () {
-      // The lip-sync E2E flow picks a sound by tapping the first tile of a
-      // search result (e2e/maestro/tests/lipSyncModeRecordClip.yaml). Every
+      // The capture sound E2E flow picks a sound by tapping the first tile of
+      // a search result (e2e/maestro/utils/pickCaptureSound.yaml). Every
       // other test here matches on rendered text and would stay green with the
       // anchor dropped.
       testWidgets('exposes the E2E identifier it is given', (tester) async {
