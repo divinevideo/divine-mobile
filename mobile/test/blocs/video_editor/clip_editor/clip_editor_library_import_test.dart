@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' show EqualizerSettings;
+import 'package:models/models.dart' show ClipSourceCredit, EqualizerSettings;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
@@ -409,6 +409,50 @@ void main() {
         expect(result.audioTracks.first.startTime, hold * 2);
         expect(result.audioTracks.last.startTime, hold * (2 + perClip + 3));
       });
+
+      test(
+        'credits the creators of the footage and sets it takes in',
+        () async {
+          stubAudio();
+          const remixCredit = ClipSourceCredit(
+            authorPubkey: 'remixed-author',
+            eventId: 'remixed-event',
+            addressableId: '34236:remixed-author:remixed-d-tag',
+          );
+          const setCredit = ClipSourceCredit(
+            authorPubkey: 'set-author',
+            eventId: 'set-event',
+          );
+          final bloc = await seeded(
+            [_stopMotionSet('session', dir: tempDir)],
+            sampleStopMotionFrames: (
+              clip, {
+              required framesPerImage,
+              taskId,
+              onProgress,
+            }) async => _sampledFor(clip, framesPerImage: framesPerImage),
+          );
+
+          bloc.add(
+            ClipEditorLibraryClipsImportRequested([
+              _videoClip(
+                'remix',
+              ).copyWith(sourceCredits: const [remixCredit]),
+              _stopMotionSet(
+                'set',
+                dir: tempDir,
+              ).copyWith(sourceCredits: const [setCredit]),
+            ]),
+          );
+          final landed = await bloc.stream.firstWhere(
+            (s) => s.lastLibraryImportResult != null,
+          );
+
+          // The stills are all the timeline publishes from, so the frames
+          // clip has to carry who they came from.
+          expect(landed.clips.single.sourceCredits, [remixCredit, setCredit]);
+        },
+      );
 
       test(
         'leaves the timeline alone and cleans up when sampling fails',

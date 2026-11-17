@@ -518,6 +518,22 @@ class DivineVideoClip {
   /// getters below are a back-compat view of the first credit.
   final List<model.ClipSourceCredit> sourceCredits;
 
+  /// The source credits of [clips], each source once, in clip order.
+  ///
+  /// What a clip made from [clips] credits, whether rendered (a merge, a
+  /// split-screen layout) or assembled from their stills (a stop-motion
+  /// frames clip), and what a timeline of them publishes.
+  static List<model.ClipSourceCredit> combinedSourceCredits(
+    Iterable<DivineVideoClip> clips,
+  ) {
+    final seen = <String>{};
+    return [
+      for (final clip in clips)
+        for (final credit in clip.sourceCredits)
+          if (seen.add(credit.identityKey)) credit,
+    ];
+  }
+
   model.ClipSourceCredit? get _firstSourceCredit =>
       sourceCredits.isEmpty ? null : sourceCredits.first;
 

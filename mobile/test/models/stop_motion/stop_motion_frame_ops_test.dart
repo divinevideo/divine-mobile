@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' as model show AspectRatio;
+import 'package:models/models.dart' as model show AspectRatio, ClipSourceCredit;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
@@ -865,6 +865,31 @@ void main() {
       // Per-frame holds survive the merge; duration is recomputed.
       expect(merged.stopMotionFrames![2].duration, hold(4));
       expect(merged.duration, hold(2) + hold(2) + hold(4));
+    });
+
+    test('credits the sources of every set, each once', () {
+      const creditA = model.ClipSourceCredit(
+        authorPubkey: 'author-a',
+        eventId: 'event-a',
+      );
+      const creditB = model.ClipSourceCredit(
+        authorPubkey: 'author-b',
+        eventId: 'event-b',
+      );
+
+      final merged = StopMotionFrameOps.mergeClips([
+        stopMotionClip('a', [2]),
+        stopMotionClip('b', [2]).copyWith(sourceCredits: const [creditA]),
+        stopMotionClip(
+          'c',
+          [2],
+        ).copyWith(sourceCredits: const [creditB, creditA]),
+      ]);
+
+      expect(merged!.sourceCredits.map((c) => c.authorPubkey), [
+        'author-a',
+        'author-b',
+      ]);
     });
 
     test('returns null for fewer than two clips', () {
