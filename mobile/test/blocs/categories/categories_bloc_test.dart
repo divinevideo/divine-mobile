@@ -425,11 +425,28 @@ void main() {
       });
 
       test(
-        'block event also filters a refresh that finishes afterward',
+        'a block made while a refresh is pending also filters its result',
         () async {
-          bloc.add(const CategorySelected(music));
+          final blocked = <String>{};
+          when(
+            () =>
+                mockBlocklistRepository.filterContent<VideoEvent>(any(), any()),
+          ).thenAnswer(
+            (invocation) =>
+                (invocation.positionalArguments.first as List<VideoEvent>)
+                    .where((video) => !blocked.contains(video.pubkey))
+                    .toList(),
+          );
+          final filteringBloc = CategoriesBloc(
+            categoriesRepository: mockRepository,
+            contentBlocklistRepository: mockBlocklistRepository,
+            currentUserPubkey: _viewerPubkey,
+          );
+          addTearDown(filteringBloc.close);
+          filteringBloc.add(const CategorySelected(music));
           await pumpEventQueue();
-          bloc.add(CategoriesBlocklistChanged(blockedPubkey: oldVideo.pubkey));
+          blocked.add(oldVideo.pubkey);
+          filteringBloc.add(const CategoriesBlocklistChanged());
           await pumpEventQueue();
           results.add(
             CacheResult.live(
@@ -437,7 +454,11 @@ void main() {
             ),
           );
           await pumpEventQueue();
-          expect(bloc.state.videos, isEmpty);
+          expect(
+            filteringBloc.state.videosStatus,
+            CategoriesVideosStatus.loaded,
+          );
+          expect(filteringBloc.state.videos, isEmpty);
         },
       );
     });

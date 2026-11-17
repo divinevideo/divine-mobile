@@ -37,7 +37,6 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
   final String? currentUserPubkey;
 
   int _selectionVersion = 0;
-  final _blockedPubkeys = <String>{};
 
   Future<void> _onLoadRequested(
     CategoriesLoadRequested event,
@@ -266,14 +265,11 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
   }
 
   List<VideoEvent> _filterCurrentBlocks(List<VideoEvent> videos) {
-    final filtered = videos
-        .where((video) => !_blockedPubkeys.contains(video.pubkey))
-        .toList();
     return _blocklistRepository?.filterContent<VideoEvent>(
-          filtered,
+          videos,
           (video) => video.pubkey,
         ) ??
-        filtered;
+        videos;
   }
 
   Future<List<VideoEvent>> _loadRecommendedVideos(
@@ -296,7 +292,6 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
   ) {
     final pubkey = event.blockedPubkey;
     if (pubkey != null) {
-      _blockedPubkeys.add(pubkey);
       final filtered = state.videos.where((v) => v.pubkey != pubkey).toList();
       if (filtered.length != state.videos.length) {
         emit(state.copyWith(videos: filtered));
@@ -306,7 +301,6 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
 
     final service = _blocklistRepository;
     if (service == null) return;
-    _blockedPubkeys.clear();
 
     final filtered = service.filterContent<VideoEvent>(
       state.videos,
