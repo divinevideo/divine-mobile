@@ -42,17 +42,17 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
   }
 
   StreamSubscription<void>? _preferenceSubscription;
-  bool? _lastObservedCampaignChoice;
 
   void _preferencesChanged() => unawaited(_reloadPreferences());
   Future<void> _reloadPreferences() async {
     final preferences = await _preferencesService.loadPreferences();
     if (isClosed) return;
-    final previous = _lastObservedCampaignChoice;
-    _lastObservedCampaignChoice = preferences.campaignsEnabled;
+    // Before load() completes there is no shown choice to have changed from.
+    final wasLoaded = state.status == NotificationSettingsStatus.ready;
+    final previous = state.preferences.campaignsEnabled;
     emitIfOpen(state.copyWith(preferences: preferences));
     final tracker = _notificationAnalytics;
-    if (previous != null &&
+    if (wasLoaded &&
         previous != preferences.campaignsEnabled &&
         tracker != null) {
       unawaited(
@@ -76,8 +76,6 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
   Future<void> load() async {
     emit(state.copyWith(status: NotificationSettingsStatus.loading));
     final preferences = await _preferencesService.loadPreferences();
-    if (isClosed) return;
-    _lastObservedCampaignChoice = preferences.campaignsEnabled;
     emitIfOpen(
       state.copyWith(
         status: NotificationSettingsStatus.ready,
