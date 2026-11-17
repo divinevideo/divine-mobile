@@ -116,32 +116,46 @@ void main() {
   });
 
   group('routeBackgroundPushTap', () {
-    test('campaign opens retain revision attribution and dedupe duplicate tap callbacks', () async {
-      final sink = _RecordingSink();
-      final tracker = NotificationAnalyticsTracker(
-        sink: sink,
-        collectionAllowed: () async => true,
-        privacyBoundary: () => 'test',
-      );
+    ProviderContainer revisionContainer(_RecordingSink sink) {
       final container = ProviderContainer(
         overrides: [
           goRouterProvider.overrideWithValue(routerA),
-          notificationAnalyticsTrackerProvider.overrideWithValue(tracker),
+          notificationAnalyticsTrackerProvider.overrideWithValue(
+            NotificationAnalyticsTracker(
+              sink: sink,
+              collectionAllowed: () async => true,
+              privacyBoundary: () => 'test',
+            ),
+          ),
         ],
       );
       addTearDown(container.dispose);
       containerA.dispose();
-      await routeBackgroundPushTap(
-        revisionCampaignTap,
-        liveContainer: () => container,
-      );
+      return container;
+    }
+
+    test('a campaign open carries its revision to analytics', () async {
+      final sink = _RecordingSink();
+      final container = revisionContainer(sink);
       await routeBackgroundPushTap(
         revisionCampaignTap,
         liveContainer: () => container,
       );
       await pumpEventQueue();
-      expect(sink.events, hasLength(1));
       expect(sink.events.single['campaign_revision_id'], revision);
+    });
+
+    test('duplicate callbacks for one revision record one open', () async {
+      final sink = _RecordingSink();
+      final container = revisionContainer(sink);
+      for (var tap = 0; tap < 2; tap++) {
+        await routeBackgroundPushTap(
+          revisionCampaignTap,
+          liveContainer: () => container,
+        );
+      }
+      await pumpEventQueue();
+      expect(sink.events, hasLength(1));
     });
 
     test('routes immediately while analytics waits for consent', () async {
