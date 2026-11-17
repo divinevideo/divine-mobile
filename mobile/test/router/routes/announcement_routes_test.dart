@@ -3,8 +3,10 @@
 
 import 'dart:async';
 
+import 'package:app_update_repository/app_update_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -15,6 +17,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/notifications/view/announcement_detail_screen.dart';
 import 'package:openvine/notifications/view/notifications_page.dart';
+import 'package:openvine/providers/app_version_provider.dart';
+import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/announcement_routes.dart';
 
@@ -38,11 +42,13 @@ void main() {
   Future<void> pump(
     WidgetTester tester,
     GoRouter router,
-    NotificationRepository? repository,
-  ) => tester.pumpWidget(
+    NotificationRepository? repository, {
+    List<Override> overrides = const [],
+  }) => tester.pumpWidget(
     ProviderScope(
       overrides: [
         notificationRepositoryProvider.overrideWithValue(repository),
+        ...overrides,
       ],
       child: MaterialApp.router(
         routerConfig: router,
@@ -177,6 +183,90 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Second announcement'), findsOneWidget);
       expect(find.text('First announcement'), findsNothing);
+    });
+  });
+
+  group('actions', () {
+    const id = 'with-action';
+    const updateToTwo = UpdateAppAnnouncementAction(
+      platform: 'android',
+      channel: 'google_play',
+      version: '2.0.0',
+    );
+
+    Future<void> pumpAction(
+      WidgetTester tester,
+      AnnouncementAction action, {
+      String installedVersion = '1.0.0',
+    }) async {
+      final announcements = _MockAnnouncementsRepository();
+      final repository = _MockNotificationRepository();
+      when(() => repository.announcementsRepository).thenReturn(announcements);
+      when(() => announcements.items).thenReturn([
+        AnnouncementNotification(
+          announcementId: id,
+          title: 'Announcement with an action',
+          body: 'A current message from the catalog.',
+          timestamp: DateTime.utc(2026, 10, 23),
+          expiresAt: DateTime.utc(2026, 11, 23),
+          action: action,
+        ),
+      ]);
+      when(announcements.refresh).thenAnswer((_) async {});
+      when(announcements.watchSnapshot).thenAnswer(
+        (_) => const Stream<List<AnnouncementNotification>>.empty(),
+      );
+      final router = GoRouter(
+        initialLocation: AnnouncementDetailScreen.pathForId(id),
+        routes: announcementRoutes(),
+      );
+      addTearDown(router.dispose);
+      await pump(
+        tester,
+        router,
+        repository,
+        overrides: [
+          installSourceProvider.overrideWithValue(InstallSource.playStore),
+          appVersionProvider.overrideWithValue(installedVersion),
+        ],
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a contest action offers to view the contest', (tester) async {
+      await pumpAction(
+        tester,
+        ContestAnnouncementAction(
+          url: Uri.parse('https://divine-challenges.pages.dev/contests/spring'),
+        ),
+      );
+
+      expect(
+        find.widgetWithText(DivineButton, l10n.announcementViewContest),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.updateAction), findsNothing);
+    });
+
+    testWidgets('an update action offers to update an older matching install', (
+      tester,
+    ) async {
+      await pumpAction(tester, updateToTwo);
+
+      expect(
+        find.widgetWithText(DivineButton, l10n.updateAction),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.announcementViewContest), findsNothing);
+    });
+
+    testWidgets('an update action is hidden from an install already on it', (
+      tester,
+    ) async {
+      await pumpAction(tester, updateToTwo, installedVersion: '2.0.0');
+
+      expect(find.text('Announcement with an action'), findsOneWidget);
+      expect(find.text(l10n.updateAction), findsNothing);
     });
   });
 }
