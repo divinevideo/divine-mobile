@@ -9,6 +9,35 @@ import '../../helpers/decoded_images.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 void main() {
+  for (final suppliedName in ['', ' \n ']) {
+    testWidgets(
+      'unnamed public badge stays visible and accessible (${suppliedName.length})',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        final issuer = '2'.padLeft(64, '0');
+        final definition = Nip58BadgeDefinition(
+          event: Event(issuer, EventKind.badgeDefinition, const [], ''),
+          coordinate: '30009:$issuer:loop-makers',
+          dTag: 'loop-makers',
+          name: suppliedName,
+        );
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 200,
+                child: BadgeCommunityCard(definition: definition, onTap: () {}),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('loop-makers'), findsOneWidget);
+        expect(find.bySemanticsLabel('loop-makers'), findsOneWidget);
+        semantics.dispose();
+      },
+    );
+  }
   for (final size in [const Size(600, 600), const Size(600, 900)]) {
     testWidgets(
       'preserves ${size.width}:${size.height} artwork through bounded decoding',
