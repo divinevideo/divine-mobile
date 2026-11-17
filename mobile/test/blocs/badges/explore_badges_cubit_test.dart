@@ -175,6 +175,76 @@ void main() {
         ],
         errors: () => List.filled(4, isA<Exception>()),
       );
+
+      test('requests each coordinate once per discovery', () async {
+        when(
+          repository.loadPublicDefinitions,
+        ).thenAnswer((_) async => [_definition]);
+        when(
+          () => repository.loadHolderPreview(any()),
+        ).thenAnswer((_) async => [holder]);
+        final cubit = ExploreBadgesCubit(repository: repository);
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        cubit.loadPreview(_definition.coordinate);
+        await pumpEventQueue();
+        cubit.loadPreview(_definition.coordinate);
+        await pumpEventQueue();
+
+        expect(cubit.state.previews[_definition.coordinate], [holder]);
+        verify(() => repository.loadHolderPreview(any())).called(1);
+      });
+
+      test('waits for an in-flight refresh before requesting', () async {
+        final refreshed = Completer<List<Nip58BadgeDefinition>>();
+        var loads = 0;
+        when(repository.loadPublicDefinitions).thenAnswer(
+          (_) => loads++ == 0 ? Future.value([_definition]) : refreshed.future,
+        );
+        when(
+          () => repository.loadHolderPreview(any()),
+        ).thenAnswer((_) async => [holder]);
+        final cubit = ExploreBadgesCubit(repository: repository);
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        final refresh = cubit.refresh();
+        cubit.loadPreview(_definition.coordinate);
+        await pumpEventQueue();
+        verifyNever(() => repository.loadHolderPreview(any()));
+
+        refreshed.complete([_definition]);
+        await refresh;
+        cubit.loadPreview(_definition.coordinate);
+        await pumpEventQueue();
+        expect(cubit.state.previews[_definition.coordinate], [holder]);
+        verify(() => repository.loadHolderPreview(any())).called(1);
+      });
+
+      test('ignores a coordinate outside the revealed page', () async {
+        final page = List.generate(
+          30,
+          (i) => Nip58BadgeDefinition(
+            event: _definition.event,
+            coordinate: '30009:$_issuer:page-$i',
+            dTag: 'page-$i',
+          ),
+        );
+        when(repository.loadPublicDefinitions).thenAnswer((_) async => page);
+        when(
+          () => repository.loadHolderPreview(any()),
+        ).thenAnswer((_) async => [holder]);
+        final cubit = ExploreBadgesCubit(repository: repository);
+        addTearDown(cubit.close);
+        await cubit.load();
+
+        cubit.loadPreview(page.last.coordinate);
+        await pumpEventQueue();
+
+        expect(cubit.state.previews, isEmpty);
+        verifyNever(() => repository.loadHolderPreview(any()));
+      });
     });
 
     group('load', () {
