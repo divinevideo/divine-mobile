@@ -45,5 +45,5 @@ bool skipCache, bool revalidate}) -> Future<HomeFeedResult>.
   loop for content-filtered or deduplicated pages and preserve its cursors.
 - [x] Run the updated suite, the full package with coverage, and flutter analyze
   lib test integration_test from mobile. Expect no failures or analyzer issues.
-- [ ] Commit, rebase onto fresh origin/main, obtain a fresh-context whole-diff
+- [x] Commit, rebase onto fresh origin/main, obtain a fresh-context whole-diff
   review, push, open a PR targeting main, request reviewers once, and inspect CI.
