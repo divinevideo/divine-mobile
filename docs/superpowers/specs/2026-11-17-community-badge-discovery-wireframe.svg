@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="1000" viewBox="0 0 920 1000">
+<rect width="920" height="1000" fill="#eef3f0"/>
+<style>text{font-family:Inter,sans-serif}.title{font-family:Bricolage Grotesque,Inter,sans-serif;font-weight:700}</style>
+<text x="40" y="38" font-size="23" fill="#06241b" class="title">Badges: find a community, then meet its people</text>
+<text x="40" y="62" font-size="13" fill="#466355">Layout sketch · synthetic communities and placeholder people · inspired by Lists</text>
+<rect x="35" y="90" width="402" height="850" rx="28" fill="#001b12"/>
+<rect x="483" y="90" width="402" height="850" rx="28" fill="#001b12"/>
+<text x="57" y="124" font-size="13" fill="#edf9f1" class="">9:41</text>
+<text x="505" y="124" font-size="13" fill="#edf9f1" class="">9:41</text>
+<text x="57" y="167" font-size="25" fill="#edf9f1" class="title">Explore</text>
+<text x="57" y="207" font-size="15" fill="#edf9f1" class="">Videos     Lists     Badges</text>
+<rect x="216" y="214" width="61" height="3" rx="1" fill="#27c58b"/>
+<text x="57" y="253" font-size="25" fill="#edf9f1" class="title">Find your people</text>
+<text x="57" y="278" font-size="12" fill="#adc4b6" class="">Communities through the badges people share.</text>
+<rect x="57" y="297" width="171" height="42" rx="22" fill="#27c58b"/>
+<text x="78" y="323" font-size="14" fill="#002d1c" class="title">+  Create a badge</text>
+<rect x="238" y="297" width="177" height="42" rx="22" fill="#123e2b"/>
+<text x="284" y="323" font-size="14" fill="#edf9f1" class="">My badges</text>
+<rect x="57" y="360" width="166" height="113" rx="16" fill="#24553d"/>
+<circle cx="140" cy="408" r="32" fill="#123e2b" stroke="#89e8b3" stroke-width="2"/>
+<text x="120" y="416" font-size="23" fill="#aaf0c9" class="title">LM</text>
+<circle cx="176" cy="456" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="171" y="461" font-size="12" fill="#edf9f1" class="">A</text>
+<circle cx="153" cy="456" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="148" y="461" font-size="12" fill="#edf9f1" class="">B</text>
+<circle cx="130" cy="456" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="125" y="461" font-size="12" fill="#edf9f1" class="">C</text>
+<text x="57" y="499" font-size="16" fill="#edf9f1" class="title">Loop Makers</text>
+<text x="57" y="520" font-size="12" fill="#adc4b6" class="">Small films, big ideas.</text>
+<rect x="249" y="360" width="166" height="113" rx="16" fill="#234b42"/>
+<circle cx="332" cy="408" r="32" fill="#123e2b" stroke="#89e8b3" stroke-width="2"/>
+<text x="312" y="416" font-size="23" fill="#aaf0c9" class="title">TG</text>
+<circle cx="368" cy="456" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="363" y="461" font-size="12" fill="#edf9f1" class="">A</text>
+<circle cx="345" cy="456" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="340" y="461" font-size="12" fill="#edf9f1" class="">B</text>
+<circle cx="322" cy="456" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="317" y="461" font-size="12" fill="#edf9f1" class="">C</text>
+<text x="249" y="499" font-size="16" fill="#edf9f1" class="title">Tiny Gardeners</text>
+<text x="249" y="520" font-size="12" fill="#adc4b6" class="">Growing things together.</text>
+<rect x="57" y="575" width="166" height="113" rx="16" fill="#335342"/>
+<circle cx="140" cy="603" r="32" fill="#123e2b" stroke="#89e8b3" stroke-width="2"/>
+<text x="120" y="611" font-size="23" fill="#aaf0c9" class="title">PP</text>
+<circle cx="176" cy="651" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="171" y="656" font-size="12" fill="#edf9f1" class="">A</text>
+<circle cx="153" cy="651" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="148" y="656" font-size="12" fill="#edf9f1" class="">B</text>
+<circle cx="130" cy="651" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="125" y="656" font-size="12" fill="#edf9f1" class="">C</text>
+<text x="57" y="694" font-size="16" fill="#edf9f1" class="title">Paper People</text>
+<text x="57" y="715" font-size="12" fill="#adc4b6" class="">Cut, fold, make, repeat.</text>
+<rect x="249" y="575" width="166" height="113" rx="16" fill="#1c4b3b"/>
+<circle cx="332" cy="603" r="32" fill="#123e2b" stroke="#89e8b3" stroke-width="2"/>
+<text x="312" y="611" font-size="23" fill="#aaf0c9" class="title">LE</text>
+<circle cx="368" cy="651" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="363" y="656" font-size="12" fill="#edf9f1" class="">A</text>
+<circle cx="345" cy="651" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="340" y="656" font-size="12" fill="#edf9f1" class="">B</text>
+<circle cx="322" cy="651" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="317" y="656" font-size="12" fill="#edf9f1" class="">C</text>
+<text x="249" y="694" font-size="16" fill="#edf9f1" class="title">Local Explorers</text>
+<text x="249" y="715" font-size="12" fill="#adc4b6" class="">Find the nearby weird.</text>
+<text x="57" y="791" font-size="13" fill="#adc4b6" class="">Every card opens the community’s people</text>
+<text x="57" y="813" font-size="13" fill="#adc4b6" class="">and videos. No badge required to explore.</text>
+<rect x="57" y="850" width="358" height="42" rx="22" fill="#123e2b"/>
+<text x="190" y="877" font-size="14" fill="#edf9f1" class="">Show more</text>
+<text x="505" y="169" font-size="30" fill="#edf9f1" class="">‹</text>
+<rect x="732" y="141" width="131" height="39" rx="20" fill="#27c58b"/>
+<text x="756" y="166" font-size="12" fill="#002d1c" class="title">Follow community</text>
+<rect x="505" y="192" width="358" height="138" rx="16" fill="#24553d"/>
+<circle cx="684" cy="260" r="46" fill="#123e2b" stroke="#89e8b3" stroke-width="2"/>
+<text x="654" y="270" font-size="33" fill="#aaf0c9" class="title">LM</text>
+<text x="505" y="368" font-size="29" fill="#edf9f1" class="title">Loop Makers</text>
+<text x="505" y="395" font-size="15" fill="#adc4b6" class="">Small films, big ideas.</text>
+<text x="505" y="421" font-size="13" fill="#adc4b6" class="">People making things, one loop at a time.</text>
+<text x="505" y="454" font-size="11" fill="#adc4b6" class="">Community subscriptions are public.</text>
+<text x="505" y="503" font-size="21" fill="#edf9f1" class="title">People in this community</text>
+<circle cx="523" cy="548" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="518" y="553" font-size="12" fill="#edf9f1" class="">A</text>
+<text x="551" y="553" font-size="15" fill="#edf9f1" class="">Person A</text>
+<rect x="755" y="531" width="108" height="34" rx="17" fill="#27c58b"/>
+<text x="773" y="553" font-size="12" fill="#002d1c" class="">+ Follow</text>
+<circle cx="523" cy="611" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="518" y="616" font-size="12" fill="#edf9f1" class="">B</text>
+<text x="551" y="616" font-size="15" fill="#edf9f1" class="">Person B</text>
+<rect x="755" y="594" width="108" height="34" rx="17" fill="#123e2b"/>
+<text x="773" y="616" font-size="12" fill="#edf9f1" class="">Following</text>
+<circle cx="523" cy="674" r="15" fill="#56876e" stroke="#042418" stroke-width="2"/>
+<text x="518" y="679" font-size="12" fill="#edf9f1" class="">C</text>
+<text x="551" y="679" font-size="15" fill="#edf9f1" class="">Person C</text>
+<rect x="755" y="657" width="108" height="34" rx="17" fill="#27c58b"/>
+<text x="773" y="679" font-size="12" fill="#002d1c" class="">+ Follow</text>
+<text x="505" y="750" font-size="21" fill="#edf9f1" class="title">Videos from these people</text>
+<rect x="505" y="771" width="174" height="110" rx="16" fill="#28543e"/>
+<rect x="689" y="771" width="174" height="110" rx="16" fill="#234b42"/>
+<text x="575" y="831" font-size="28" fill="#edf9f1" class="">▶</text>
+<text x="760" y="831" font-size="28" fill="#edf9f1" class="">▶</text>
+<text x="35" y="976" font-size="16" fill="#06241b" class="title">Discovery gallery</text>
+<text x="483" y="976" font-size="16" fill="#06241b" class="title">Community → people → individual follows</text>
+<text x="57" y="540" font-size="11" fill="#adc4b6" font-family="Inter,sans-serif">by Creator A</text>
+<text x="249" y="540" font-size="11" fill="#adc4b6" font-family="Inter,sans-serif">by Creator B</text>
+<text x="57" y="735" font-size="11" fill="#adc4b6" font-family="Inter,sans-serif">by Creator C</text>
+<text x="249" y="735" font-size="11" fill="#adc4b6" font-family="Inter,sans-serif">by Creator D</text>
+</svg>
