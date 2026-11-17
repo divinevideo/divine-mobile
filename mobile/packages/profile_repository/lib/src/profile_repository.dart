@@ -2794,11 +2794,11 @@ class ProfileRepository implements ProfileReader {
               .take(_searchProfileRecheckBatchSize)
               .toList();
           try {
-            final response = await _funnelcakeApiClient!.getBulkProfiles(batch);
+            final response = await getBulkProfilesFromApi(batch);
             if (isCancelled()) return;
             for (final pubkey in batch) {
               if (isCancelled()) return;
-              if (response.profiles[pubkey] is UserProfileVanished) {
+              if (response?.profiles[pubkey] is UserProfileVanished) {
                 await _applyVanish(pubkey);
                 resultMap.remove(pubkey);
               }
