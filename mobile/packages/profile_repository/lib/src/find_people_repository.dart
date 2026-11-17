@@ -13,7 +13,7 @@ class FindPeopleUnavailableException implements Exception {
   const FindPeopleUnavailableException();
 }
 
-/// Resolved recommendations, including an explicit expired-cursor restart.
+/// Resolved recommendations, including an explicit cursor-context restart.
 class FindPeopleResult {
   /// Creates a resolved page after exclusions and source recovery.
   const FindPeopleResult({
@@ -28,7 +28,7 @@ class FindPeopleResult {
   /// Opaque continuation token, or null after the final page.
   final String? nextCursor;
 
-  /// True when an expired continuation was replaced with a fresh first page.
+  /// True when an invalid continuation was replaced with a fresh first page.
   final bool restarted;
 }
 
@@ -44,8 +44,10 @@ class FindPeopleRepository {
     required Future<void> Function(List<String>) writeDismissed,
     bool Function(String)? isFollowing,
     this.contentSafety = 'default',
+    Future<Map<String, String>> Function(Uri)? requestHeaders,
   }) : _apiClient = apiClient,
        _currentPubkey = currentPubkey,
+       _requestHeaders = requestHeaders,
        _isExcluded = isExcluded,
        _isFollowing = isFollowing ?? ((_) => false),
        _writeDismissed = writeDismissed,
@@ -59,6 +61,7 @@ class FindPeopleRepository {
   /// Server audience policy; the default excludes adult-only recommendations.
   final String contentSafety;
   final String? Function() _currentPubkey;
+  final Future<Map<String, String>> Function(Uri)? _requestHeaders;
   final bool Function(String) _isExcluded;
   final bool Function(String) _isFollowing;
   final Future<void> Function(List<String>) _writeDismissed;
@@ -112,6 +115,8 @@ class FindPeopleRepository {
         limit: limit,
         cursor: cursor,
         contentSafety: contentSafety,
+        requestHeaders: _headersForRequest,
+        isCurrent: () => isCurrent,
       );
       if (!isCurrent) return const FindPeopleResult();
       // A response requested before a policy refusal cannot reopen discovery.
@@ -125,7 +130,10 @@ class FindPeopleRepository {
     } on FunnelcakeException catch (error) {
       if (!isCurrent) return const FindPeopleResult();
       if (error is FunnelcakeApiException) {
-        if (error.statusCode == 410 && cursor != null) {
+        // The server binds continuation to authenticated-self context. A
+        // missing signer can change that context (400); expiry uses 410.
+        if ((error.statusCode == 400 || error.statusCode == 410) &&
+            cursor != null) {
           final fresh = await load(limit: limit);
           return FindPeopleResult(
             suggestions: fresh.suggestions,
@@ -146,6 +154,25 @@ class FindPeopleRepository {
       suggestions: filter(page.suggestions),
       nextCursor: page.nextCursor == cursor ? null : page.nextCursor,
     );
+  }
+
+  // Signer unavailability is a safe public-ranking fallback. Retirement is
+  // different: no retry may sign or send this owner's request after a switch.
+  Future<Map<String, String>> _headersForRequest(Uri uri) async {
+    _requireCurrentAccount();
+    try {
+      return await _requestHeaders?.call(uri) ?? const {};
+    } on Object {
+      return const {};
+    } finally {
+      _requireCurrentAccount();
+    }
+  }
+
+  void _requireCurrentAccount() {
+    if (!isCurrent) {
+      throw StateError('People suggestions account retired');
+    }
   }
 
   /// Persists a dismissal for this account and updates other surfaces.

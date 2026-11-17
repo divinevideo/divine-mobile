@@ -54,6 +54,192 @@ void main() {
       },
     );
 
+    test(
+      'signer failure uses public recommendations without credentials',
+      () async {
+        final requests = <http.Request>[];
+        final repository = FindPeopleRepository(
+          apiClient: FunnelcakeApiClient(
+            baseUrl: 'https://example.test',
+            httpClient: MockClient((request) async {
+              requests.add(request);
+              return http.Response(
+                jsonEncode({
+                  'suggestions': [suggestion(candidate)],
+                }),
+                200,
+              );
+            }),
+          ),
+          accountPubkey: owner,
+          currentPubkey: () => owner,
+          isExcluded: (_) => false,
+          readDismissed: () => [],
+          writeDismissed: (_) async {},
+          requestHeaders: (_) async => throw StateError('signer unavailable'),
+        );
+        expect((await repository.load()).suggestions.single.pubkey, candidate);
+        expect(requests.single.headers.containsKey('Authorization'), isFalse);
+        await repository.dispose();
+      },
+    );
+
+    test(
+      'unavailable signer restarts an authenticated cursor in public context',
+      () async {
+        final requests = <http.Request>[];
+        final repository = FindPeopleRepository(
+          apiClient: FunnelcakeApiClient(
+            baseUrl: 'https://example.test',
+            httpClient: MockClient((request) async {
+              requests.add(request);
+              if (request.url.queryParameters.containsKey('cursor')) {
+                return http.Response(
+                  '{"error":"cursor context mismatch"}',
+                  400,
+                );
+              }
+              return http.Response(
+                jsonEncode({
+                  'suggestions': [suggestion(candidate)],
+                }),
+                200,
+              );
+            }),
+          ),
+          accountPubkey: owner,
+          currentPubkey: () => owner,
+          isExcluded: (_) => false,
+          readDismissed: () => [],
+          writeDismissed: (_) async {},
+          requestHeaders: (_) async => throw StateError('signer unavailable'),
+        );
+        final result = await repository.load(cursor: 'verified-self-cursor');
+        expect(result.restarted, isTrue);
+        expect(result.suggestions.single.pubkey, candidate);
+        expect(requests, hasLength(2));
+        expect(
+          requests.first.url.queryParameters['cursor'],
+          'verified-self-cursor',
+        );
+        expect(
+          requests.last.url.queryParameters.containsKey('cursor'),
+          isFalse,
+        );
+        expect(
+          requests.every(
+            (request) => !request.headers.containsKey('Authorization'),
+          ),
+          isTrue,
+        );
+        await repository.dispose();
+      },
+    );
+
+    test(
+      'bad fresh requests remain errors rather than infinite restarts',
+      () async {
+        var requests = 0;
+        final repository = FindPeopleRepository(
+          apiClient: FunnelcakeApiClient(
+            baseUrl: 'https://example.test',
+            httpClient: MockClient((_) async {
+              requests++;
+              return http.Response('{}', 400);
+            }),
+          ),
+          accountPubkey: owner,
+          currentPubkey: () => owner,
+          isExcluded: (_) => false,
+          readDismissed: () => [],
+          writeDismissed: (_) async {},
+        );
+        await expectLater(
+          repository.load(),
+          throwsA(
+            isA<FunnelcakeApiException>().having(
+              (error) => error.statusCode,
+              'statusCode',
+              400,
+            ),
+          ),
+        );
+        expect(requests, 1);
+        await repository.dispose();
+      },
+    );
+
+    test('account retirement during signing sends no stale request', () async {
+      for (final failSigning in [false, true]) {
+        var current = owner;
+        var requests = 0;
+        final signing = Completer<Map<String, String>>();
+        final started = Completer<void>();
+        final repository = FindPeopleRepository(
+          apiClient: FunnelcakeApiClient(
+            baseUrl: 'https://example.test',
+            httpClient: MockClient((_) async {
+              requests++;
+              return http.Response('{"suggestions": []}', 200);
+            }),
+          ),
+          accountPubkey: owner,
+          currentPubkey: () => current,
+          isExcluded: (_) => false,
+          readDismissed: () => [],
+          writeDismissed: (_) async {},
+          requestHeaders: (_) {
+            started.complete();
+            return signing.future;
+          },
+        );
+        final pending = repository.load();
+        await started.future;
+        current = 'e' * 64;
+        if (failSigning) {
+          signing.completeError(StateError('signer retired'));
+        } else {
+          signing.complete({'Authorization': 'Nostr obsolete-owner'});
+        }
+        expect((await pending).suggestions, isEmpty);
+        expect(requests, 0);
+        await repository.dispose();
+      }
+    });
+
+    test(
+      'account retirement between transport retries does not sign again',
+      () async {
+        var current = owner;
+        var signatures = 0;
+        var requests = 0;
+        final repository = FindPeopleRepository(
+          apiClient: FunnelcakeApiClient(
+            baseUrl: 'https://example.test',
+            retryBaseDelay: Duration.zero,
+            httpClient: MockClient((_) async {
+              requests++;
+              current = 'e' * 64;
+              throw http.ClientException('connection interrupted');
+            }),
+          ),
+          accountPubkey: owner,
+          currentPubkey: () => current,
+          isExcluded: (_) => false,
+          readDismissed: () => [],
+          writeDismissed: (_) async {},
+          requestHeaders: (_) async {
+            signatures++;
+            return {'Authorization': 'Nostr current-owner'};
+          },
+        );
+        expect((await repository.load()).suggestions, isEmpty);
+        expect(signatures, 1);
+        expect(requests, 1);
+        await repository.dispose();
+      },
+    );
+
     test('dismissal persists and disappears from another surface', () async {
       var stored = <String>[];
       final repository = FindPeopleRepository(
