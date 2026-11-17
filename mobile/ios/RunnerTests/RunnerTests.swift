@@ -2115,11 +2115,11 @@ final class ShaderVideoEffectTests: XCTestCase {
             px, py, style: style.rawValue, amount: amount, shape: shape, swing: swing)
         }
         let difference = compare(effect, seconds: seconds, expected)
-        // The circle's, the bars' and the curtains' edges are a pixel wide,
-        // the curtain's folds turn on sines, and the focus adds 48 filtered
-        // taps; the GPU's float and filtering move a few of them by more than
-        // 0.01, while a change to any look's shape, colour or timing moves far
-        // more.
+        // The bars' and the curtains' edges are a pixel wide, as is the
+        // circle's at the bottom of the slider, the curtain's folds turn on
+        // sines, and the focus adds 48 filtered taps; the GPU's float and
+        // filtering move a few of them by more than 0.01, while a change to
+        // any look's shape, colour or timing moves far more.
         XCTAssertLessThan(
           difference.share, 0.002, "\(style), ending \(ending), shape \(shape), \(seconds) s")
       }
