@@ -33,7 +33,13 @@ void main() {
     NotificationPayloadKeys.wireType: NotificationWireValues.campaign,
     NotificationPayloadKeys.tapTargetType: 'app_route',
     NotificationPayloadKeys.tapTargetValue: destination,
-    'campaignRevisionId': '12345678-1234-4234-8234-123456789abc',
+  };
+  const revision = '12345678-1234-4234-8234-123456789abc';
+  // Kept apart from [campaignTap]: a revision becomes the deduplication key,
+  // which would hide a dropped message ID from the message-ID tests.
+  const revisionCampaignTap = <String, dynamic>{
+    ...campaignTap,
+    NotificationPayloadKeys.campaignRevisionId: revision,
   };
 
   late _MockGoRouter routerA;
@@ -124,14 +130,17 @@ void main() {
       );
       addTearDown(container.dispose);
       containerA.dispose();
-      await routeBackgroundPushTap(campaignTap, liveContainer: () => container);
-      await routeBackgroundPushTap(campaignTap, liveContainer: () => container);
-      await pumpEventQueue();
-      expect(sink.events.length, 1);
-      expect(
-        sink.events.single['campaign_revision_id'],
-        '12345678-1234-4234-8234-123456789abc',
+      await routeBackgroundPushTap(
+        revisionCampaignTap,
+        liveContainer: () => container,
       );
+      await routeBackgroundPushTap(
+        revisionCampaignTap,
+        liveContainer: () => container,
+      );
+      await pumpEventQueue();
+      expect(sink.events, hasLength(1));
+      expect(sink.events.single['campaign_revision_id'], revision);
     });
 
     test('routes immediately while analytics waits for consent', () async {
@@ -163,7 +172,6 @@ void main() {
           'name': 'push_notification_opened',
           'notification_type': 'campaign',
           'open_source': 'os_background',
-          'campaign_revision_id': '12345678-1234-4234-8234-123456789abc',
         },
       ]);
     });
