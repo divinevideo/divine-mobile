@@ -355,6 +355,82 @@ void main() {
         );
       });
 
+      group('while the vote totals load', () {
+        const loading = CommentReactionsState(isLoadingVoteCounts: true);
+
+        testWidgets('shows the skeleton, then the comments ranked once the '
+            'totals land', (tester) async {
+          final updates = StreamController<CommentReactionsState>();
+          addTearDown(updates.close);
+          whenListen(mockReactionsBloc, updates.stream, initialState: loading);
+
+          await tester.pumpWidget(buildTestWidget(listState: listState()));
+          await tester.pump();
+          expect(find.byType(CommentsSkeletonLoader), findsOneWidget);
+          expect(find.byType(CommentItem), findsNothing);
+
+          updates.add(
+            CommentReactionsState(
+              commentUpvoteCounts: {highest.id: 6, runnerUp.id: 4},
+              commentDownvoteCounts: {runnerUp.id: 5},
+            ),
+          );
+          await tester.pump();
+
+          expect(find.byType(CommentsSkeletonLoader), findsNothing);
+          expect(displayedOrder(tester), [
+            highest.id,
+            unvoted.id,
+            runnerUp.id,
+          ]);
+        });
+
+        testWidgets('lists the comments once the wait runs out', (
+          tester,
+        ) async {
+          when(() => mockReactionsBloc.state).thenReturn(loading);
+
+          await tester.pumpWidget(buildTestWidget(listState: listState()));
+          await tester.pump();
+          expect(find.byType(CommentItem), findsNothing);
+
+          await tester.pump(const Duration(seconds: 3));
+
+          expect(find.byType(CommentsSkeletonLoader), findsNothing);
+          expect(find.byType(CommentItem), findsNWidgets(3));
+        });
+
+        testWidgets('lists the comments at once when opened on one of them', (
+          tester,
+        ) async {
+          when(() => mockReactionsBloc.state).thenReturn(loading);
+
+          await tester.pumpWidget(
+            buildTestWidget(
+              listState: listState().copyWith(scrollToCommentId: runnerUp.id),
+            ),
+          );
+          await tester.pump();
+
+          expect(find.byType(CommentItem), findsNWidgets(3));
+        });
+
+        testWidgets('lists the comments at once in Recent', (tester) async {
+          when(() => mockReactionsBloc.state).thenReturn(loading);
+
+          await tester.pumpWidget(
+            buildTestWidget(
+              listState: listState().copyWith(
+                sortMode: CommentsSortMode.newest,
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(find.byType(CommentItem), findsNWidgets(3));
+        });
+      });
+
       // Replaces "reorders when downvotes change" (#10921): once the order is
       // frozen, a change of votes must not move the rows.
       testWidgets('holds the frozen order when the votes change', (

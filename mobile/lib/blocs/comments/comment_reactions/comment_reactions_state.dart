@@ -106,6 +106,11 @@ final class CommentReactionsState extends Equatable {
   /// settled, whether it loaded the totals or failed.
   final bool isLoadingVoteCounts;
 
+  /// Whether the first vote totals are still loading, so no comment can be
+  /// ranked by its votes yet. The viewer's own votes can arrive later.
+  bool get isLoadingFirstVoteTotals =>
+      isLoadingVoteCounts && commentUpvoteCounts.isEmpty;
+
   CommentReactionsState copyWith({
     Map<String, int>? commentUpvoteCounts,
     Map<String, int>? commentDownvoteCounts,
