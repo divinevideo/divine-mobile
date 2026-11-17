@@ -258,6 +258,48 @@ void main() {
       },
     );
     test(
+      'browsing reuses the cached archive opening while the endpoint is off',
+      () async {
+        final nostr = _Nostr();
+        when(() => nostr.publicKey).thenReturn('');
+        final browser = VideosRepository(
+          nostrClient: nostr,
+          funnelcakeApiClient: api,
+          inMemoryFeedCache: InMemoryFeedCache(),
+          classicRecommendationsEnabled: true,
+        );
+        when(
+          () => api.getClassicRecommendations(request: any(named: 'request')),
+        ).thenThrow(
+          FunnelcakeNotFoundException(
+            resource: 'Classic recommendations',
+            url: 'https://api.example.com',
+          ),
+        );
+        var archiveReads = 0;
+        when(
+          () => api.getClassicVines(
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((_) async {
+          archiveReads++;
+          return [_stats(1)];
+        });
+
+        await browser.getClassicVideos();
+        final firstOpening = archiveReads;
+        expect(firstOpening, greaterThan(0));
+
+        await browser.getClassicVideos();
+        expect(archiveReads, firstOpening);
+
+        await browser.getClassicVideos(skipCache: true);
+        expect(archiveReads, greaterThan(firstOpening));
+      },
+    );
+
+    test(
       'browsing rejects an old reply and rotates seed across privacy toggles',
       () async {
         var generation = 0;

@@ -1302,6 +1302,20 @@ class VideosRepository {
     required ClassicRecommendationsRequest request,
     String? userPubkey,
     bool Function()? isCurrent,
+  }) => _readClassicRecommendations(
+    request: request,
+    userPubkey: userPubkey,
+    isCurrent: isCurrent,
+    skipArchiveCache: true,
+  );
+
+  /// [skipArchiveCache] decides whether an archive fallback may reuse the
+  /// archive's cached first page.
+  Future<HomeFeedResult> _readClassicRecommendations({
+    required ClassicRecommendationsRequest request,
+    required String? userPubkey,
+    required bool Function()? isCurrent,
+    required bool skipArchiveCache,
   }) async {
     void checkCurrent() {
       if (isCurrent != null && !isCurrent()) {
@@ -1318,7 +1332,10 @@ class VideosRepository {
     }
     final api = _funnelcakeApiClient;
     if (api == null || !api.isAvailable) {
-      return _getClassicArchiveVideos(limit: request.limit, skipCache: true);
+      return _getClassicArchiveVideos(
+        limit: request.limit,
+        skipCache: skipArchiveCache,
+      );
     }
     await _seenVideoLookup?.ensureInitialized();
     var pageRequest = request;
@@ -1337,7 +1354,10 @@ class VideosRepository {
       } on FunnelcakeException {
         checkCurrent();
         if (request.cursor != null) rethrow;
-        return _getClassicArchiveVideos(limit: request.limit, skipCache: true);
+        return _getClassicArchiveVideos(
+          limit: request.limit,
+          skipCache: skipArchiveCache,
+        );
       }
       checkCurrent();
       final videos = _withoutSeenVideos(
@@ -1399,7 +1419,7 @@ class VideosRepository {
     _classicBrowsingViewerInitialized = true;
     _classicBrowsingViewer = viewer;
     _classicBrowsingContext = contextKey;
-    final result = await getClassicRecommendations(
+    final result = await _readClassicRecommendations(
       request: ClassicRecommendationsRequest(
         seed: _classicBrowsingSeed,
         limit: limit,
@@ -1407,6 +1427,7 @@ class VideosRepository {
       ),
       userPubkey: viewer,
       isCurrent: isCurrent,
+      skipArchiveCache: skipCache,
     );
     if (!isCurrent()) {
       throw const FunnelcakeException('Classics viewer changed during request');
