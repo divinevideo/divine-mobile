@@ -213,18 +213,14 @@ class _BadgeDiscoveryHeader extends ConsumerWidget {
             color: context.vineColors.onSurfaceVariant,
           ),
         ),
-        TextButton(
+        DivineButton(
+          label: 'badges.divine.video',
+          semanticLabel: '${context.l10n.profileLearnMore} badges.divine.video',
+          type: DivineButtonType.link,
+          maxLines: 2,
+          trailingIcon: DivineIconName.arrowUpRight,
           onPressed: () =>
               openExternalLink(context, 'https://badges.divine.video'),
-          child: Wrap(
-            spacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(context.l10n.profileLearnMore.trim()),
-              const Text('badges.divine.video'),
-              const DivineIcon(icon: DivineIconName.arrowUpRight, size: 16),
-            ],
-          ),
         ),
         Wrap(
           spacing: 12,
