@@ -54,7 +54,6 @@ class ComposableVideoGrid extends ConsumerStatefulWidget {
     this.headerSlivers = const [],
     this.selectedVideoIds,
     this.topOuterRadius,
-    this.showSubscribedListBadge = true,
     this.backgroundColor,
   });
 
@@ -92,11 +91,6 @@ class ComposableVideoGrid extends ConsumerStatefulWidget {
   /// [onVideoTap] — the caller decides they toggle — and the own-video
   /// long-press menu is suppressed.
   final Set<String>? selectedVideoIds;
-
-  /// Whether tiles show the corner badge marking a video that is in one of
-  /// the viewer's subscribed lists. A list detail screen turns this off —
-  /// there the badge is true for every tile and says nothing.
-  final bool showSubscribedListBadge;
 
   /// Panel color painted behind the grid content — and behind the empty
   /// state — below any [headerSlivers], with its top corners rounded by
@@ -207,8 +201,9 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
       return _buildEmptyState(context);
     }
 
-    // Get subscribed list cache to check if videos are in lists
-    final subscribedListCache = ref.watch(subscribedListVideoCacheProvider);
+    // Starts the subscribed-list cache, which fetches subscribed lists'
+    // videos into VideoEventService. The grid never reads its value.
+    ref.watch(subscribedListVideoCacheProvider);
 
     // Responsive column count: 3 for tablets/desktop (width >= 600),
     // 2 for phones
@@ -246,11 +241,6 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
 
     Widget buildItem(BuildContext context, int index) {
       final video = videosToShow[index];
-      final listIds = widget.showSubscribedListBadge
-          ? subscribedListCache?.getListsForVideo(video.id)
-          : null;
-      final isInSubscribedList = listIds != null && listIds.isNotEmpty;
-
       final isOwnVideo = viewerPubkey != null && viewerPubkey == video.pubkey;
 
       final selectedIds = widget.selectedVideoIds;
@@ -265,7 +255,6 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
         onLongPress: isOwnVideo && selectedIds == null
             ? () => _showVideoContextMenu(context, video)
             : null,
-        isInSubscribedList: isInSubscribedList,
         isSelected: selectedIds?.contains(video.id),
       );
     }
@@ -407,7 +396,6 @@ class _VideoItem extends StatelessWidget {
     required this.index,
     required this.displayedVideos,
     this.onLongPress,
-    this.isInSubscribedList = false,
     this.isSelected,
     this.borderRadius = const BorderRadius.all(Radius.circular(4)),
   });
@@ -421,7 +409,6 @@ class _VideoItem extends StatelessWidget {
   final VoidCallback? onLongPress;
   final int index;
   final List<VideoEvent> displayedVideos;
-  final bool isInSubscribedList;
 
   /// Selection-mode state: `null` outside selection mode, otherwise whether
   /// this tile is currently selected.
@@ -467,25 +454,6 @@ class _VideoItem extends StatelessWidget {
                 bottom: 0,
                 child: _VideoInfoSection(video: video, index: index),
               ),
-              if (isInSubscribedList)
-                PositionedDirectional(
-                  top: 6,
-                  start: 6,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: VineTheme.vineGreen.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: ExcludeSemantics(
-                      child: DivineIcon(
-                        icon: DivineIconName.images,
-                        size: 14,
-                        color: context.vineColors.primaryText,
-                      ),
-                    ),
-                  ),
-                ),
               if (isSelected case final isSelected?)
                 PositionedDirectional(
                   top: 10,

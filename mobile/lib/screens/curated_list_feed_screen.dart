@@ -751,7 +751,6 @@ class _ListBody extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 4),
             topOuterRadius: VineTheme.shellInnerCornerRadius,
             backgroundColor: context.vineColors.surfaceContainerHigh,
-            showSubscribedListBadge: false,
             selectedVideoIds: selectedVideoIds,
             onVideoTap: (videoList, index) => cubit.togglePost(
               videoList[index].id,
@@ -773,7 +772,6 @@ class _ListBody extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: 4),
         topOuterRadius: VineTheme.shellInnerCornerRadius,
         backgroundColor: context.vineColors.surfaceContainerHigh,
-        showSubscribedListBadge: false,
         headerSlivers: [SliverToBoxAdapter(child: header)],
         onVideoTap: onVideoTap,
         onRefresh: () async => onRefresh(),

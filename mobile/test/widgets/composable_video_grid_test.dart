@@ -136,7 +136,7 @@ List<Override> _gridOverrides(
   MockNostrClient? nostrService,
   MockAuthService? authService,
   Future<broken_tracker.BrokenVideoTracker>? trackerFuture,
-  SubscribedListVideoCache? subscribedListCache,
+  Override? subscribedListCacheOverride,
   List<Override> extra = const [],
 }) => [
   sharedPreferencesProvider.overrideWithValue(createMockSharedPreferences()),
@@ -147,7 +147,8 @@ List<Override> _gridOverrides(
   brokenVideoTrackerProvider.overrideWith(
     (ref) => trackerFuture ?? Future.value(tracker),
   ),
-  subscribedListVideoCacheProvider.overrideWithValue(subscribedListCache),
+  subscribedListCacheOverride ??
+      subscribedListVideoCacheProvider.overrideWithValue(null),
   userProfileReactiveProvider.overrideWith((ref, pubkey) => Stream.value(null)),
   ...extra,
 ];
@@ -1029,24 +1030,76 @@ void main() {
       });
     });
 
-    group('subscribed-list badge', () {
+    group('screen reader', () {
+      Finder thumbnails() => find.descendant(
+        of: find.byType(VideoThumbnailWidget),
+        matching: find.byType(Image),
+      );
+
+      SemanticsData firstTile(WidgetTester tester) => tester
+          .getSemantics(find.bySemanticsIdentifier('video_thumbnail_0'))
+          .getSemanticsData();
+
+      testWidgets(
+        'announces a tile as a button, not an image, once its thumbnail '
+        'loads',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          try {
+            await pumpWithDecodedImages(
+              tester,
+              ProviderScope(
+                overrides: _gridOverrides(mockTracker),
+                child: MaterialApp(
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  home: Scaffold(
+                    body: ComposableVideoGrid(
+                      videos: testVideos.take(2).toList(),
+                      onVideoTap: (videos, index) {},
+                    ),
+                  ),
+                ),
+              ),
+              images: thumbnails(),
+            );
+
+            expect(firstTile(tester).flagsCollection.isButton, isTrue);
+            expect(firstTile(tester).flagsCollection.isImage, isFalse);
+          } finally {
+            semantics.dispose();
+          }
+        },
+      );
+    });
+
+    group('subscribed-list videos', () {
+      var cacheInitialized = false;
+
       Finder badgeFinder() => find.byWidgetPredicate(
         (widget) =>
             widget is DivineIcon && widget.icon == DivineIconName.images,
       );
 
-      Widget buildGrid({required bool showBadge}) {
+      Widget buildGrid() {
+        cacheInitialized = false;
         final cache = _MockSubscribedListVideoCache();
         when(() => cache.getListsForVideo(any())).thenReturn({'some-list'});
         return ProviderScope(
-          overrides: _gridOverrides(mockTracker, subscribedListCache: cache),
+          overrides: _gridOverrides(
+            mockTracker,
+            subscribedListCacheOverride: subscribedListVideoCacheProvider
+                .overrideWith((ref) {
+                  cacheInitialized = true;
+                  return cache;
+                }),
+          ),
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: ComposableVideoGrid(
                 videos: testVideos.take(2).toList(),
-                showSubscribedListBadge: showBadge,
                 onVideoTap: (videos, index) {},
               ),
             ),
@@ -1054,100 +1107,25 @@ void main() {
         );
       }
 
-      group('screen reader', () {
-        Finder thumbnails() => find.descendant(
-          of: find.byType(VideoThumbnailWidget),
-          matching: find.byType(Image),
-        );
-
-        SemanticsData firstTile(WidgetTester tester) => tester
-            .getSemantics(find.bySemanticsIdentifier('video_thumbnail_0'))
-            .getSemanticsData();
-
-        testWidgets(
-          'announces a tile as a button, not an image, once its thumbnail '
-          'loads',
-          (tester) async {
-            final semantics = tester.ensureSemantics();
-            try {
-              await pumpWithDecodedImages(
-                tester,
-                buildGrid(showBadge: false),
-                images: thumbnails(),
-              );
-
-              expect(firstTile(tester).flagsCollection.isButton, isTrue);
-              expect(firstTile(tester).flagsCollection.isImage, isFalse);
-            } finally {
-              semantics.dispose();
-            }
-          },
-        );
-
-        testWidgets(
-          'keeps the subscribed-list badge out of the tile button',
-          (tester) async {
-            final semantics = tester.ensureSemantics();
-            try {
-              await pumpWithDecodedImages(
-                tester,
-                buildGrid(showBadge: true),
-                images: thumbnails(),
-              );
-              expect(badgeFinder(), findsNWidgets(2));
-
-              expect(firstTile(tester).flagsCollection.isButton, isTrue);
-              expect(firstTile(tester).flagsCollection.isImage, isFalse);
-            } finally {
-              semantics.dispose();
-            }
-          },
-        );
-      });
-
-      testWidgets('marks tiles whose video is in a subscribed list', (
+      testWidgets('does not mark videos from subscribed lists with a badge', (
         tester,
       ) async {
-        await tester.pumpWidget(buildGrid(showBadge: true));
+        // A populated subscription cache must not add list icons to tiles.
+        await tester.pumpWidget(buildGrid());
         await tester.pump();
 
-        expect(badgeFinder(), findsNWidgets(2));
-      });
-
-      testWidgets('defaults to showing the badge when the flag is omitted', (
-        tester,
-      ) async {
-        // Pins the constructor default — the production path for every
-        // discovery surface, none of which pass the flag.
-        final cache = _MockSubscribedListVideoCache();
-        when(() => cache.getListsForVideo(any())).thenReturn({'some-list'});
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: _gridOverrides(mockTracker, subscribedListCache: cache),
-            child: MaterialApp(
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Scaffold(
-                body: ComposableVideoGrid(
-                  videos: testVideos.take(2).toList(),
-                  onVideoTap: (videos, index) {},
-                ),
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
-
-        expect(badgeFinder(), findsNWidgets(2));
-      });
-
-      testWidgets('shows no badge when the caller turns it off', (
-        tester,
-      ) async {
-        await tester.pumpWidget(buildGrid(showBadge: false));
-        await tester.pump();
-
+        expect(find.byType(VideoThumbnailWidget), findsNWidgets(2));
         expect(badgeFinder(), findsNothing);
+      });
+
+      testWidgets('initializes the subscribed-list video cache', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildGrid());
+        await tester.pump();
+
+        expect(find.byType(VideoThumbnailWidget), findsNWidgets(2));
+        expect(cacheInitialized, isTrue);
       });
     });
 
