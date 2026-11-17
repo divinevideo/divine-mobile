@@ -564,6 +564,63 @@ void main() {
       },
     );
 
+    test(
+      'a failed refresh does not strand a superseded page load',
+      () async {
+        final pending = Completer<HomeFeedResult>();
+        var reads = 0;
+        var firstPages = 0;
+        when(
+          () => mockVideosRepository.getClassicVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((invocation) async {
+          reads++;
+          if (invocation.namedArguments[#cursor] != null) {
+            return pending.future;
+          }
+          if (firstPages++ == 0) {
+            return HomeFeedResult(
+              videos: [_videoEvent('classic-initial')],
+              paginationCursor: 'classic-offset:50',
+              hasMore: true,
+            );
+          }
+          throw Exception('server unavailable');
+        });
+        final container = createContainer();
+        addTearDown(container.dispose);
+        await container.read(funnelcakeAvailableProvider.future);
+        await container.read(classicVinesFeedProvider.future);
+        final notifier = container.read(classicVinesFeedProvider.notifier);
+
+        final superseded = notifier.loadMore();
+        expect(
+          container.read(classicVinesFeedProvider).value!.isLoadingMore,
+          isTrue,
+        );
+        await notifier.refresh();
+        pending.complete(
+          HomeFeedResult(
+            videos: [_videoEvent('obsolete')],
+            paginationCursor: 'obsolete',
+            hasMore: true,
+          ),
+        );
+        await superseded;
+
+        final state = container.read(classicVinesFeedProvider).value!;
+        expect(state.error, contains('server unavailable'));
+        expect(state.isLoadingMore, isFalse);
+        final readsBefore = reads;
+        unawaited(notifier.loadMore());
+        await pumpEventQueue();
+        expect(reads, readsBefore + 1);
+      },
+    );
+
     test('stays loading while funnelcake availability is still resolving', () {
       _loadingAvailabilityCompleter = Completer<bool>();
 

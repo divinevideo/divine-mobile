@@ -289,7 +289,11 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
     );
 
     await staleWhileRevalidate(
-      getCurrentState: () => state,
+      // A refresh supersedes any page load in flight, whose result is then
+      // discarded; restoring its flag after a failed refresh would block
+      // every later load.
+      getCurrentState: () =>
+          state.whenData((current) => current.copyWith(isLoadingMore: false)),
       isMounted: () => ref.mounted && generation == _feedGeneration,
       setState: (s) {
         if (ref.mounted && generation == _feedGeneration) {
