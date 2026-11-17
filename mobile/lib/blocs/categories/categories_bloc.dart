@@ -242,10 +242,14 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
           );
           continue;
         }
+        final videos = _filterCurrentBlocks(result.data.videos);
+        // An empty snapshot has nothing to show; showing it would claim the
+        // category is empty, and a failed refresh would leave that claim up.
+        if (result.isStale && videos.isEmpty) continue;
         emit(
           state.copyWith(
             videosStatus: CategoriesVideosStatus.loaded,
-            videos: _filterCurrentBlocks(result.data.videos),
+            videos: videos,
             hasMoreVideos: result.data.hasMore,
             isRefreshingVideos: result.isStale,
           ),

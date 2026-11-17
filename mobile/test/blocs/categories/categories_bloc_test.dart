@@ -222,6 +222,24 @@ void main() {
         );
 
         test(
+          'keeps loading, then offers retry, when the snapshot is empty',
+          () async {
+            bloc.add(const CategorySelected(music));
+            await pumpEventQueue();
+            results.add(
+              const CacheResult.cached(
+                CategoryVideosPage(videos: [], hasMore: true),
+              ),
+            );
+            await pumpEventQueue();
+            expect(bloc.state.videosStatus, CategoriesVideosStatus.loading);
+            results.addError(const FunnelcakeException('Offline'));
+            await pumpEventQueue();
+            expect(bloc.state.videosStatus, CategoriesVideosStatus.error);
+          },
+        );
+
+        test(
           'late selection refresh cannot overwrite another category',
           () async {
             final next = StreamController<CacheResult<CategoryVideosPage>>();
