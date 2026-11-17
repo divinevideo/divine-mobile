@@ -1,6 +1,7 @@
 // ABOUTME: Tests for CategoriesRepository
 // ABOUTME: Verifies caching, filtering, and featured-first ordering
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cache_sync/cache_sync.dart';
@@ -222,6 +223,202 @@ void main() {
           const VideoCategory(name: 'music', videoCount: 250),
         ]);
         verify(() => apiClient.getCategories(limit: 100)).called(2);
+      });
+    });
+
+    group('watchVideosForCategoryCached', () {
+      const viewer =
+          '1111111111111111111111111111111111111111111111111111111111111111';
+      const author =
+          '2222222222222222222222222222222222222222222222222222222222222222';
+      const eventId =
+          '3333333333333333333333333333333333333333333333333333333333333333';
+      late FakeCacheDao cacheDao;
+
+      setUp(() async {
+        cacheDao = FakeCacheDao();
+        await CacheSync.init(dao: cacheDao);
+        when(
+          () => apiClient.getVideosByCategory(
+            category: any(named: 'category'),
+            sort: any(named: 'sort'),
+            platform: any(named: 'platform'),
+          ),
+        ).thenAnswer((_) async => [_videoStats(id: eventId, pubkey: author)]);
+      });
+
+      test(
+        'shows persisted first page while the live request is pending',
+        () async {
+          await repository
+              .watchVideosForCategoryCached(
+                category: 'music',
+                cacheScope: viewer,
+              )
+              .toList();
+          final pending = Completer<List<VideoStats>>();
+          when(
+            () => apiClient.getVideosByCategory(category: 'music'),
+          ).thenAnswer((_) => pending.future);
+          final restarted = CategoriesRepository(
+            funnelcakeApiClient: apiClient,
+          );
+          final iterator = StreamIterator(
+            restarted.watchVideosForCategoryCached(
+              category: ' Music ',
+              cacheScope: viewer,
+            ),
+          );
+          expect(await iterator.moveNext(), isTrue);
+          expect(iterator.current.isStale, isTrue);
+          expect(iterator.current.data.videos.single.id, eventId);
+          expect(iterator.current.data.hasMore, isFalse);
+          pending.complete([]);
+          expect(await iterator.moveNext(), isTrue);
+          expect(iterator.current.isLive, isTrue);
+          expect(iterator.current.data.videos, isEmpty);
+          await iterator.cancel();
+        },
+      );
+
+      test(
+        'reapplies current block filter to stored videos and live results',
+        () async {
+          var blocked = false;
+          final scoped = CategoriesRepository(
+            funnelcakeApiClient: apiClient,
+            blockFilter: (pubkey) => blocked && pubkey == author,
+          );
+          await scoped
+              .watchVideosForCategoryCached(
+                category: 'music',
+                cacheScope: viewer,
+              )
+              .toList();
+          blocked = true;
+          final results = await scoped
+              .watchVideosForCategoryCached(
+                category: 'music',
+                cacheScope: viewer,
+              )
+              .toList();
+          expect(results, hasLength(2));
+          expect(results.every((result) => result.data.videos.isEmpty), isTrue);
+        },
+      );
+
+      test('isolates category, sort, platform and account snapshots', () async {
+        await repository
+            .watchVideosForCategoryCached(category: 'music', cacheScope: viewer)
+            .toList();
+        for (final selection in [
+          (
+            category: 'animals',
+            sort: 'trending',
+            platform: null,
+            scope: viewer,
+          ),
+          (category: 'music', sort: 'timestamp', platform: null, scope: viewer),
+          (
+            category: 'music',
+            sort: 'trending',
+            platform: 'vine',
+            scope: viewer,
+          ),
+          (
+            category: 'music',
+            sort: 'trending',
+            platform: null,
+            scope: 'anonymous',
+          ),
+        ]) {
+          final results = await repository
+              .watchVideosForCategoryCached(
+                category: selection.category,
+                sort: selection.sort,
+                platform: selection.platform,
+                cacheScope: selection.scope,
+              )
+              .toList();
+          expect(results.single.isLive, isTrue);
+        }
+      });
+
+      test(
+        'drops snapshots older than 24 hours before serving content',
+        () async {
+          await repository
+              .watchVideosForCategoryCached(
+                category: 'music',
+                cacheScope: viewer,
+              )
+              .toList();
+          final key = cacheDao.keys.single;
+          final payload =
+              jsonDecode(cacheDao.rawRead(key)!) as Map<String, dynamic>;
+          payload['cachedAt'] = DateTime.now()
+              .subtract(const Duration(hours: 25))
+              .toIso8601String();
+          await cacheDao.write(key: key, payload: jsonEncode(payload));
+          final results = await repository
+              .watchVideosForCategoryCached(
+                category: 'music',
+                cacheScope: viewer,
+              )
+              .toList();
+          expect(results.single.isLive, isTrue);
+        },
+      );
+
+      test(
+        'preserves hasMore when current blocks empty a cached full page',
+        () async {
+          when(
+            () => apiClient.getVideosByCategory(category: 'music'),
+          ).thenAnswer(
+            (_) async => List.generate(
+              50,
+              (_) => _videoStats(id: eventId, pubkey: author),
+            ),
+          );
+          await repository
+              .watchVideosForCategoryCached(
+                category: 'music',
+                cacheScope: viewer,
+              )
+              .toList();
+          final blocked = CategoriesRepository(
+            funnelcakeApiClient: apiClient,
+            blockFilter: (_) => true,
+          );
+          final results = await blocked
+              .watchVideosForCategoryCached(
+                category: 'music',
+                cacheScope: viewer,
+              )
+              .toList();
+          expect(results.first.data.videos, isEmpty);
+          expect(results.first.data.hasMore, isTrue);
+        },
+      );
+
+      test('never serves or fetches denied discovery categories', () async {
+        final results = await repository
+            .watchVideosForCategoryCached(
+              category: ' ADULT ',
+              cacheScope: viewer,
+            )
+            .toList();
+        expect(results.single.data.videos, isEmpty);
+        expect(results.single.data.hasMore, isFalse);
+        expect(cacheDao.length, 0);
+        verifyNever(
+          () => apiClient.getVideosByCategory(
+            category: any(named: 'category'),
+            sort: any(named: 'sort'),
+            platform: any(named: 'platform'),
+          ),
+        );
       });
     });
 
