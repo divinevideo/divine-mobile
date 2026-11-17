@@ -1030,6 +1030,49 @@ void main() {
       });
     });
 
+    group('screen reader', () {
+      Finder thumbnails() => find.descendant(
+        of: find.byType(VideoThumbnailWidget),
+        matching: find.byType(Image),
+      );
+
+      SemanticsData firstTile(WidgetTester tester) => tester
+          .getSemantics(find.bySemanticsIdentifier('video_thumbnail_0'))
+          .getSemanticsData();
+
+      testWidgets(
+        'announces a tile as a button, not an image, once its thumbnail '
+        'loads',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          try {
+            await pumpWithDecodedImages(
+              tester,
+              ProviderScope(
+                overrides: _gridOverrides(mockTracker),
+                child: MaterialApp(
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  home: Scaffold(
+                    body: ComposableVideoGrid(
+                      videos: testVideos.take(2).toList(),
+                      onVideoTap: (videos, index) {},
+                    ),
+                  ),
+                ),
+              ),
+              images: thumbnails(),
+            );
+
+            expect(firstTile(tester).flagsCollection.isButton, isTrue);
+            expect(firstTile(tester).flagsCollection.isImage, isFalse);
+          } finally {
+            semantics.dispose();
+          }
+        },
+      );
+    });
+
     group('subscribed-list videos', () {
       var cacheInitialized = false;
 
@@ -1063,37 +1106,6 @@ void main() {
           ),
         );
       }
-
-      group('screen reader', () {
-        Finder thumbnails() => find.descendant(
-          of: find.byType(VideoThumbnailWidget),
-          matching: find.byType(Image),
-        );
-
-        SemanticsData firstTile(WidgetTester tester) => tester
-            .getSemantics(find.bySemanticsIdentifier('video_thumbnail_0'))
-            .getSemanticsData();
-
-        testWidgets(
-          'announces a tile as a button, not an image, once its thumbnail '
-          'loads',
-          (tester) async {
-            final semantics = tester.ensureSemantics();
-            try {
-              await pumpWithDecodedImages(
-                tester,
-                buildGrid(),
-                images: thumbnails(),
-              );
-
-              expect(firstTile(tester).flagsCollection.isButton, isTrue);
-              expect(firstTile(tester).flagsCollection.isImage, isFalse);
-            } finally {
-              semantics.dispose();
-            }
-          },
-        );
-      });
 
       testWidgets('does not mark videos from subscribed lists with a badge', (
         tester,
