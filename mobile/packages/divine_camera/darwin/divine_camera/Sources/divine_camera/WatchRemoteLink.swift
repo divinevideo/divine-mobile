@@ -20,15 +20,24 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
 
     private let session: WCSession?
     private let onToggleRecording: () -> Void
+    private let onWatchRemoteChanged: ([String: Any]?) -> Void
 
     /// What the Watch should show. Only touched on the main queue.
     private var payload: [String: Any] = [Wire.available: false]
 
-    /// - Parameter onToggleRecording: Called on the main queue when the
-    ///   Watch's shutter is tapped.
-    init(onToggleRecording: @escaping () -> Void) {
+    /// - Parameters:
+    ///   - onToggleRecording: Called on the main queue when the Watch's
+    ///     shutter is tapped.
+    ///   - onWatchRemoteChanged: Called on the main queue with the recorder
+    ///     state a Watch remote can show, or `nil` when the recorder is closed
+    ///     or no paired Watch has the app.
+    init(
+        onToggleRecording: @escaping () -> Void,
+        onWatchRemoteChanged: @escaping ([String: Any]?) -> Void
+    ) {
         self.session = WCSession.isSupported() ? WCSession.default : nil
         self.onToggleRecording = onToggleRecording
+        self.onWatchRemoteChanged = onWatchRemoteChanged
         super.init()
     }
 
@@ -53,6 +62,9 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
 
     private func send() {
         guard let session, session.activationState == .activated else { return }
+        let isRecorderOpen = payload[Wire.available] as? Bool == true
+        let hasWatchApp = session.isPaired && session.isWatchAppInstalled
+        onWatchRemoteChanged(isRecorderOpen && hasWatchApp ? payload : nil)
         do {
             try session.updateApplicationContext(payload)
         } catch {
@@ -82,6 +94,11 @@ final class WatchRemoteLink: NSObject, WCSessionDelegate {
     }
 
     func sessionReachabilityDidChange(_ session: WCSession) {
+        DispatchQueue.main.async { [weak self] in self?.send() }
+    }
+
+    func sessionWatchStateDidChange(_ session: WCSession) {
+        // The Watch app was installed or removed, or a Watch was paired.
         DispatchQueue.main.async { [weak self] in self?.send() }
     }
 
