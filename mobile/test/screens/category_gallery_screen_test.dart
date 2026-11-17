@@ -341,13 +341,25 @@ void main() {
           equals(const BorderRadius.vertical(top: Radius.circular(48))),
         );
 
-        // What shows through the cut corners is the page behind the clip,
-        // which must be the header's own colour.
-        final page = tester.widget<Material>(
-          find.ancestor(of: bodyClip, matching: find.byType(Material)).first,
-        );
-        final headerColor = tester.element(backButton).vineColors.nav;
-        expect(page.color, equals(headerColor));
+        // What shows through the cut corners is the nearest painted ancestor
+        // of the clip, which must match the header's own background.
+        Color? paintOf(Finder finder) => switch (tester.widget(finder)) {
+          Material(:final color) => color,
+          ColoredBox(:final color) => color,
+          _ => null,
+        };
+        final behindCorners = find
+            .ancestor(
+              of: bodyClip,
+              matching: find.byWidgetPredicate(
+                (widget) => widget is Material || widget is ColoredBox,
+              ),
+            )
+            .first;
+        final header = find
+            .ancestor(of: backButton, matching: find.byType(ColoredBox))
+            .first;
+        expect(paintOf(behindCorners), equals(paintOf(header)));
       });
     });
 
