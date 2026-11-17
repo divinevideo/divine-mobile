@@ -96,7 +96,10 @@ every operation in the old release byte-for-byte.
 
 The benchmark lives under the test tree for access to native test helpers but
 has no `_test.dart` suffix, so ordinary directory test discovery does not run
-the large fixture. Invoke it explicitly as shown.
+the large fixture. Invoke it explicitly as shown. Measurements are written to
+`divine-event-cache-benchmark.json` in the system temporary directory. Pass
+`--dart-define=CACHE_BENCHMARK_OUTPUT=/absolute/path/results.json` to keep a
+particular run; the file is replaced on each invocation.
 
 ## Verification limits
 

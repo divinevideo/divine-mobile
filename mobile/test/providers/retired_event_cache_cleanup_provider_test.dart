@@ -24,107 +24,109 @@ Future<void> _elapse(FakeAsync time, Duration duration) async {
 }
 
 void main() {
-  test(
-    'waits for startup and pauses between batches when backgrounded',
-    () async {
-      final time = FakeAsync();
-      late ProviderContainer container;
-      var deletedBatches = 0;
-      time.run((_) {
-        container = ProviderContainer(
-          overrides: [
-            retiredEventCacheProvider.overrideWithValue(
-              _RetiredCache(() async {
-                deletedBatches++;
-                container
-                    .read(appForegroundProvider.notifier)
-                    .setForeground(false);
-                return true;
-              }),
-            ),
-          ],
-        );
-        container.read(retiredEventCacheCleanupSchedulerProvider).start();
-      });
-      await _elapse(time, const Duration(seconds: 9));
-      expect(deletedBatches, 0);
-      await _elapse(time, const Duration(seconds: 1));
-      expect(deletedBatches, 1);
-      await _elapse(time, const Duration(seconds: 10));
-      expect(deletedBatches, 1);
-      container.read(appForegroundProvider.notifier).setForeground(true);
-      await _elapse(time, const Duration(seconds: 1));
-      expect(deletedBatches, 2);
-      container.dispose();
-      await _elapse(time, Duration.zero);
-    },
-  );
-
-  test(
-    'yields to feed activity then stops scheduling when cleanup is done',
-    () async {
-      final time = FakeAsync();
-      late ProviderContainer container;
-      var deletedBatches = 0;
-      time.run((_) {
-        container = ProviderContainer(
-          overrides: [
-            retiredEventCacheProvider.overrideWithValue(
-              _RetiredCache(() async {
-                deletedBatches++;
-                if (deletedBatches == 1) {
+  group('start', () {
+    test(
+      'waits for startup and pauses between batches when backgrounded',
+      () async {
+        final time = FakeAsync();
+        late ProviderContainer container;
+        var deletedBatches = 0;
+        time.run((_) {
+          container = ProviderContainer(
+            overrides: [
+              retiredEventCacheProvider.overrideWithValue(
+                _RetiredCache(() async {
+                  deletedBatches++;
                   container
-                      .read(foregroundFeedActivityGateProvider)
-                      .markActive();
+                      .read(appForegroundProvider.notifier)
+                      .setForeground(false);
                   return true;
-                }
-                return false;
-              }),
-            ),
-          ],
-        );
-        container.read(retiredEventCacheCleanupSchedulerProvider).start();
-      });
-      await _elapse(time, const Duration(seconds: 10));
-      expect(deletedBatches, 1);
-      await _elapse(time, const Duration(seconds: 9));
-      expect(deletedBatches, 1);
-      await _elapse(time, const Duration(seconds: 2));
-      expect(deletedBatches, 2);
-      await _elapse(time, const Duration(minutes: 1));
-      expect(deletedBatches, 2);
-      container.dispose();
-      await _elapse(time, Duration.zero);
-    },
-  );
+                }),
+              ),
+            ],
+          );
+          container.read(retiredEventCacheCleanupSchedulerProvider).start();
+        });
+        await _elapse(time, const Duration(seconds: 9));
+        expect(deletedBatches, 0);
+        await _elapse(time, const Duration(seconds: 1));
+        expect(deletedBatches, 1);
+        await _elapse(time, const Duration(seconds: 10));
+        expect(deletedBatches, 1);
+        container.read(appForegroundProvider.notifier).setForeground(true);
+        await _elapse(time, const Duration(seconds: 1));
+        expect(deletedBatches, 2);
+        container.dispose();
+        await _elapse(time, Duration.zero);
+      },
+    );
 
-  test(
-    'does not overlap batches or read disposed providers after an await',
-    () async {
-      final time = FakeAsync();
-      late Completer<bool> batch;
-      late ProviderContainer container;
-      var deletedBatches = 0;
-      time.run((_) {
-        batch = Completer<bool>();
-        container = ProviderContainer(
-          overrides: [
-            retiredEventCacheProvider.overrideWithValue(
-              _RetiredCache(() {
-                deletedBatches++;
-                return batch.future;
-              }),
-            ),
-          ],
-        );
-        container.read(retiredEventCacheCleanupSchedulerProvider).start();
-      });
-      await _elapse(time, const Duration(seconds: 15));
-      expect(deletedBatches, 1);
-      container.dispose();
-      batch.complete(true);
-      await _elapse(time, const Duration(minutes: 1));
-      expect(deletedBatches, 1);
-    },
-  );
+    test(
+      'yields to feed activity then stops scheduling when cleanup is done',
+      () async {
+        final time = FakeAsync();
+        late ProviderContainer container;
+        var deletedBatches = 0;
+        time.run((_) {
+          container = ProviderContainer(
+            overrides: [
+              retiredEventCacheProvider.overrideWithValue(
+                _RetiredCache(() async {
+                  deletedBatches++;
+                  if (deletedBatches == 1) {
+                    container
+                        .read(foregroundFeedActivityGateProvider)
+                        .markActive();
+                    return true;
+                  }
+                  return false;
+                }),
+              ),
+            ],
+          );
+          container.read(retiredEventCacheCleanupSchedulerProvider).start();
+        });
+        await _elapse(time, const Duration(seconds: 10));
+        expect(deletedBatches, 1);
+        await _elapse(time, const Duration(seconds: 9));
+        expect(deletedBatches, 1);
+        await _elapse(time, const Duration(seconds: 2));
+        expect(deletedBatches, 2);
+        await _elapse(time, const Duration(minutes: 1));
+        expect(deletedBatches, 2);
+        container.dispose();
+        await _elapse(time, Duration.zero);
+      },
+    );
+
+    test(
+      'does not overlap batches or read disposed providers after an await',
+      () async {
+        final time = FakeAsync();
+        late Completer<bool> batch;
+        late ProviderContainer container;
+        var deletedBatches = 0;
+        time.run((_) {
+          batch = Completer<bool>();
+          container = ProviderContainer(
+            overrides: [
+              retiredEventCacheProvider.overrideWithValue(
+                _RetiredCache(() {
+                  deletedBatches++;
+                  return batch.future;
+                }),
+              ),
+            ],
+          );
+          container.read(retiredEventCacheCleanupSchedulerProvider).start();
+        });
+        await _elapse(time, const Duration(seconds: 15));
+        expect(deletedBatches, 1);
+        container.dispose();
+        batch.complete(true);
+        await _elapse(time, const Duration(minutes: 1));
+        expect(deletedBatches, 1);
+      },
+    );
+  });
 }
