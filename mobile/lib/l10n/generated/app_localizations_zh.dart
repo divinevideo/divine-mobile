@@ -8528,6 +8528,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => '洋葱皮已关闭';
 
   @override
+  String get videoRecorderSoundLockedHint => '你的片段已与这个声音同步。删除片段即可选择其他声音。';
+
+  @override
   String get videoRecorderClipDeletedMessage => '片段已移入回收站';
 
   @override

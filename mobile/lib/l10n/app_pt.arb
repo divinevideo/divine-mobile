@@ -2615,6 +2615,7 @@
   "videoRecorderToggleGhostFrameLabel": "Alternar quadro fantasma",
   "videoRecorderGhostFrameEnabled": "Quadro fantasma ativado",
   "videoRecorderGhostFrameDisabled": "Quadro fantasma desativado",
+  "videoRecorderSoundLockedHint": "Seus clipes estão sincronizados com este som. Exclua-os para escolher outro.",
   "videoRecorderClipDeletedMessage": "Clipe movido para a lixeira",
   "videoRecorderClipUndoLabel": "Desfazer",
   "libraryTrashEmptyTitle": "A lixeira está vazia",

@@ -8,8 +8,6 @@ import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dar
 enum VideoRecorderMode {
   capture,
   stopMotion,
-  lipSync,
-  chromaKey,
   classic,
   upload;
 
@@ -21,30 +19,18 @@ enum VideoRecorderMode {
   static const persistenceKey = 'camera_last_used_recorder_mode';
 
   /// Parses a persisted mode [name], defaulting to [capture] for null/unknown.
+  ///
+  /// Lip Sync and Chroma Key were modes of their own before they became
+  /// capture's sound chip and color mask, so a recorder last left in one of
+  /// them reopens in [capture].
   static VideoRecorderMode fromName(String? name) =>
       values.firstWhere((m) => m.name == name, orElse: () => capture);
 
-  /// The modes this device can offer, in wheel order.
-  ///
-  /// [chromaKey] needs a live keyed viewfinder, which only a renderer with a
-  /// shader image filter can draw. The editor degrades to an unkeyed preview
-  /// and still exports the key, but at capture there is nothing to fall back
-  /// to — the keyed viewfinder *is* the mode — so it is left out instead.
-  static List<VideoRecorderMode> available({
-    required bool liveChromaKeySupported,
-  }) => [
-    for (final mode in values)
-      if (liveChromaKeySupported || !mode.needsLiveChromaKey) mode,
-  ];
-
-  /// English label for the mode wheel, which shows [chromaKey] under its
-  /// localized name instead.
+  /// English label for the mode wheel.
   String get label => switch (this) {
     .upload => 'Upload',
     .capture => 'Capture',
     .stopMotion => 'Stop Motion',
-    .lipSync => 'Lip Sync',
-    .chromaKey => 'Chroma Key',
     .classic => 'Classic',
   };
 
@@ -52,8 +38,6 @@ enum VideoRecorderMode {
     .upload => false,
     .capture => false,
     .stopMotion => false,
-    .lipSync => false,
-    .chromaKey => false,
     .classic => true,
   };
 
@@ -61,9 +45,6 @@ enum VideoRecorderMode {
     .upload => false,
     .capture => true,
     .stopMotion => true,
-    .lipSync => true,
-    // The camera records raw footage; the key is baked in afterwards.
-    .chromaKey => true,
     .classic => false,
   };
 
@@ -71,8 +52,6 @@ enum VideoRecorderMode {
     .upload => false,
     .capture => false,
     .stopMotion => true,
-    .lipSync => false,
-    .chromaKey => false,
     .classic => true,
   };
 
@@ -82,10 +61,6 @@ enum VideoRecorderMode {
     .upload => false,
     .capture => true,
     .stopMotion => true,
-    .lipSync => true,
-    // The ghost comes from the raw take, so it would lay the bare backdrop
-    // over the keyed viewfinder.
-    .chromaKey => false,
     .classic => true,
   };
 
@@ -99,9 +74,6 @@ enum VideoRecorderMode {
     .upload => const [],
     .capture => _delayedStartDurations,
     .stopMotion => const [.off, .three, .five, .ten],
-    .lipSync => _delayedStartDurations,
-    // Stepping into frame in front of the backdrop needs a hands-free start.
-    .chromaKey => _delayedStartDurations,
     .classic => const [],
   };
 
@@ -118,10 +90,6 @@ enum VideoRecorderMode {
     .upload => false,
     .capture => true,
     .stopMotion => false,
-    .lipSync => true,
-    // Look-ahead stabilization delays the preview behind the file, and the
-    // backdrop is composited live against that preview.
-    .chromaKey => false,
     .classic => false,
   };
 
@@ -129,8 +97,6 @@ enum VideoRecorderMode {
     .upload => .vertical,
     .capture => .vertical,
     .stopMotion => .vertical,
-    .lipSync => .vertical,
-    .chromaKey => .vertical,
     .classic => .square,
   };
 
@@ -138,9 +104,13 @@ enum VideoRecorderMode {
   /// recording video. Drives the shutter behavior and capture UI.
   bool get capturesStills => this == stopMotion;
 
-  /// Whether the viewfinder shows the chroma-key composite live.
+  /// Whether the mode offers the color mask, which keys the viewfinder live.
   ///
   /// The recording itself is the raw camera footage. The key is baked into
   /// the clip afterwards.
-  bool get needsLiveChromaKey => this == chromaKey;
+  bool get supportsChromaKey => this == capture;
+
+  /// Whether the mode offers a sound to record against, played while the take
+  /// runs.
+  bool get supportsSound => this == capture;
 }

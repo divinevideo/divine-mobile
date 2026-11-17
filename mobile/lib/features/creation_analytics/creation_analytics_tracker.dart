@@ -69,10 +69,17 @@ class CreationAnalyticsTracker {
     await _logEvent(name: 'recording_started', parameters: {'mode': mode.name});
   }
 
+  /// Logs that the creator continued from the recorder.
+  ///
+  /// [hasSound] says whether the takes were recorded against a sound, and
+  /// [hasColorMask] whether any take carries a color mask. Both were modes of
+  /// their own once, and are capture's sound chip and color mask now.
   Future<void> recordingCompleted({
     required VideoRecorderMode mode,
     required int clipCount,
     required Duration duration,
+    bool hasSound = false,
+    bool hasColorMask = false,
   }) async {
     _ensureSession(mode);
     if (_recordingCompleted || _terminal) return;
@@ -84,6 +91,9 @@ class CreationAnalyticsTracker {
         'mode': mode.name,
         'clip_count': clipCount,
         'duration_ms': duration.inMilliseconds,
+        // Firebase takes strings and numbers only, so the flags go as 1 or 0.
+        'has_sound': hasSound ? 1 : 0,
+        'has_color_mask': hasColorMask ? 1 : 0,
       },
     );
   }

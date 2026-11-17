@@ -9146,6 +9146,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Призрачната рамка е деактивирана';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Клиповете ти са синхронизирани с този звук. Изтрий ги, за да избереш друг.';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'Клипът е преместен в кошчето';
 
   @override

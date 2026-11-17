@@ -46,40 +46,19 @@ import 'package:unified_logger/unified_logger.dart';
 
 class AudioSelectionBottomSheet extends ConsumerStatefulWidget {
   const AudioSelectionBottomSheet({
-    this.scrollController,
+    required this.scrollController,
     this.localAudioImportService,
     this.pickAudioFile,
-    this.onSoundPicked,
-    this.categoryBarLeading,
     @visibleForTesting this.audioService,
     super.key,
-  }) : assert(
-         (scrollController == null) != (onSoundPicked == null),
-         'Pass the sheet its scrollController, or embed it with onSoundPicked',
-       ),
-       assert(
-         categoryBarLeading == null || onSoundPicked != null,
-         'categoryBarLeading only shows when the picker is embedded',
-       );
+  });
 
   /// The sheet's controller, which the lists drive so a drag on them closes
-  /// the sheet. Embedded, the picker scrolls on its own and takes none.
-  final ScrollController? scrollController;
+  /// the sheet.
+  final ScrollController scrollController;
   final LocalAudioImportService? localAudioImportService;
   final Future<XFile?> Function()? pickAudioFile;
   final AudioPlaybackService? audioService;
-
-  /// Receives the confirmed sound when the picker is embedded in a page,
-  /// where its search and import scroll away with the list below a pinned
-  /// category bar, and the search floats back in on scrolling up.
-  ///
-  /// Without it the picker is presented by [show], keeps that header pinned,
-  /// and pops its route with the sound instead.
-  final ValueChanged<AudioEvent>? onSoundPicked;
-
-  /// Pinned to the left of the category bar when the picker is embedded, such
-  /// as the button that leaves the page it fills.
-  final Widget? categoryBarLeading;
 
   /// Presents the picker as a full-height sheet, closed by dragging it down.
   /// It has no title row, so the lists get the room.
@@ -572,7 +551,7 @@ class _AudioSelectionBottomSheetState
     if (!mounted) return;
 
     if (_selectedItem == null) {
-      if (widget.onSoundPicked == null) context.pop();
+      context.pop();
       return;
     }
 
@@ -616,14 +595,7 @@ class _AudioSelectionBottomSheetState
     }
   }
 
-  void _complete(AudioEvent sound) {
-    final onSoundPicked = widget.onSoundPicked;
-    if (onSoundPicked != null) {
-      onSoundPicked(sound);
-    } else {
-      context.pop(sound);
-    }
-  }
+  void _complete(AudioEvent sound) => context.pop(sound);
 
   /// Resolves the audio duration in seconds via [ProVideoEditor.getMetadata].
   /// Returns `null` if no source is available or metadata extraction fails.
@@ -785,9 +757,6 @@ class _AudioSelectionBottomSheetState
       hasQuery: _searchQuery.isNotEmpty,
       onImport: _importAudio,
     );
-    final embedded = widget.onSoundPicked != null;
-    // Embedded, there is no controller, so each list picks up the inner
-    // controller of the NestedScrollView below as its primary one.
     final listScrollController = widget.scrollController;
 
     final categoryBar = AudioCategoryBar(
@@ -960,51 +929,15 @@ class _AudioSelectionBottomSheetState
 
     final picker = Stack(
       children: [
-        if (embedded)
-          // Embedded in a page, the categories stay put while the search
-          // scrolls away with the list and floats back in as soon as the list
-          // scrolls up again.
-          Column(
-            crossAxisAlignment: .stretch,
-            children: [
-              if (widget.categoryBarLeading case final leading?)
-                Row(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(start: 12),
-                      child: leading,
-                    ),
-                    Expanded(child: categoryBar),
-                  ],
-                )
-              else
-                categoryBar,
-              Expanded(
-                child: NestedScrollView(
-                  floatHeaderSlivers: true,
-                  headerSliverBuilder: (context, _) => [
-                    SliverFloatingHeader(
-                      animationStyle: context.reduceMotion
-                          ? AnimationStyle.noAnimation
-                          : null,
-                      child: searchInput,
-                    ),
-                  ],
-                  body: lists,
-                ),
-              ),
-            ],
-          )
-        else
-          // The search filters every list, so it sits above their tabs.
-          Column(
-            crossAxisAlignment: .stretch,
-            children: [
-              searchInput,
-              categoryBar,
-              Expanded(child: lists),
-            ],
-          ),
+        // The search filters every list, so it sits above their tabs.
+        Column(
+          crossAxisAlignment: .stretch,
+          children: [
+            searchInput,
+            categoryBar,
+            Expanded(child: lists),
+          ],
+        ),
 
         Align(
           alignment: .bottomCenter,
@@ -1067,8 +1000,8 @@ class _AudioSelectionBottomSheetState
 ///
 /// None of the picker's hosts resize for the keyboard, so without this the
 /// last rows, the empty state and the Done bar sit behind it while the user
-/// searches. Embedded in the recorder the picker ends above the mode wheel,
-/// so only the keyboard above its own bottom edge is taken off.
+/// searches. Only the keyboard above the picker's own bottom edge is taken
+/// off, for a host that ends above the bottom of the screen.
 class _KeyboardClearance extends StatefulWidget {
   const _KeyboardClearance({required this.child});
 

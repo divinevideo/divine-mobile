@@ -9147,6 +9147,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'Quadro fantasma desativado';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Seus clipes estão sincronizados com este som. Exclua-os para escolher outro.';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'Clipe movido para a lixeira';
 
   @override

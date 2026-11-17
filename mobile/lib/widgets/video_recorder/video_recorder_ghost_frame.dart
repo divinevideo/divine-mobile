@@ -26,7 +26,7 @@ class VideoRecorderGhostFrame extends ConsumerWidget {
     ) = context.select(
       (VideoRecorderBloc b) => (
         b.state.showLastClipOverlay,
-        b.state.recorderMode.supportsGhostFrame,
+        b.state.supportsGhostFrame,
         b.state.recorderMode.capturesStills,
         b.state.stopMotionLastFrame,
         b.state.isFrontCamera,

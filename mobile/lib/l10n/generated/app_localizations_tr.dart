@@ -8979,6 +8979,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'Hayalet kare devre dışı';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Kliplerin bu sesle senkronize. Başka bir ses seçmek için onları sil.';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'Klip çöp kutusuna taşındı';
 
   @override

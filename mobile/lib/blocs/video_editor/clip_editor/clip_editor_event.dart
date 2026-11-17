@@ -447,7 +447,7 @@ class ClipEditorChromaKeyRemoved extends ClipEditorEvent {
   List<Object?> get props => [clipId];
 }
 
-/// Bake the key into every clip recorded in chroma key mode that still
+/// Bake the key into every clip recorded with the color mask that still
 /// waits for it — see [DivineVideoClip.captureChromaKey].
 ///
 /// The recorder only previews the key and writes the raw camera footage, so

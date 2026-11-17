@@ -3433,6 +3433,7 @@
   "videoRecorderCycleTimerLabel": "تدوير المؤقت",
   "videoRecorderDeleteLastClipLabel": "حذف آخر مقطع",
   "videoRecorderGhostFrameDisabled": "الإطار الشبحي معطل",
+  "videoRecorderSoundLockedHint": "المقاطع متزامنة مع هذا الصوت. لاختيار صوت آخر، يجب حذفها أولًا.",
   "videoRecorderGhostFrameEnabled": "الإطار الشبحي مفعّل",
   "videoRecorderLibraryEmptyLabel": "مكتبة المقاطع، لا توجد مقاطع",
   "videoRecorderLibraryOpenLabel": "{clipCount, plural, one{فتح مكتبة المقاطع، مقطع واحد} other{فتح مكتبة المقاطع، {clipCount} مقاطع}}",

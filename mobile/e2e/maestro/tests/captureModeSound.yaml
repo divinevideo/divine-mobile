@@ -1,0 +1,42 @@
+appId: co.openvine.app.staging
+tags:
+  - recorder
+---
+#TC to record a capture clip against a sound,
+# given the recorder is open on an idle capture viewfinder with no clips and
+# no sound picked,
+# validate that a sound picked from the top-bar chip stays on the chip once a
+# clip is recorded against it, and delete the clip again.
+#
+# Takes recorded against a sound are synced to it, so after the first clip the
+# chip keeps naming the sound and no longer opens the picker: a tap only
+# explains how to change it. That hint is a snackbar, which this test leaves
+# alone; it pins that the sound survived the take.
+#
+# Needs real camera hardware, like every recording test, and tap-to-toggle
+# recording (see captureModeRecordClip).
+#Steps:
+# 1. Pick a bundled sound from the chip
+# 2. Record a clip against it
+# 3. Validate the chip still names the sound
+# 4. Delete the clip again
+
+# 1. Pick a sound.
+- runFlow: ../utils/pickCaptureSound.yaml
+
+# 2. Record. The sound plays under the recording but does not end it.
+- runFlow: ../utils/recordCaptureClip.yaml
+
+# 3. The chip still names the sound the clip was recorded against.
+- assertVisible:
+    id: audio_chip
+    text: ".*Bruh Sound Effect.*"
+
+# 4. Delete it again. This is teardown, not just symmetry: a clip left behind
+# is written to the clip library and survives the run, so the next one would
+# start with a non-empty session.
+#
+# The sound stays picked, which is fine — a relaunch clears the editor's
+# selection anyway.
+- runFlow: ../utils/deleteLastRecorderClip.yaml
+- runFlow: ../asserts/assertCaptureMode.yaml

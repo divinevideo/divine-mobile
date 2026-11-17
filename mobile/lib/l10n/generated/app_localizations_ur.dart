@@ -9063,6 +9063,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'گھوسٹ فریم غیر فعال';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'آپ کے کلپس اس آواز کے ساتھ ہم آہنگ ہیں۔ دوسری آواز چننے کے لیے انہیں حذف کریں۔';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'کلپ ٹریش میں منتقل ہو گئی';
 
   @override

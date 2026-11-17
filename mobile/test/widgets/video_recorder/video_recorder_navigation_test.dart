@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -73,8 +74,12 @@ class _FakeVideoEditorNotifier extends VideoEditorNotifier {
   /// into the clip manager.
   List<DivineVideoClip> clipsToRestore = const [];
 
+  /// The sound the recorder picked before the test navigates.
+  AudioEvent? initialSound;
+
   @override
-  VideoEditorProviderState build() => VideoEditorProviderState();
+  VideoEditorProviderState build() =>
+      VideoEditorProviderState(selectedSound: initialSound);
 
   @override
   Future<bool> restoreDraft([String? draftId]) async {
@@ -341,11 +346,13 @@ void main() {
         );
       });
 
-      testWidgets('openVideoEditorFromRecorder mutes clips in lip-sync mode', (
-        tester,
-      ) async {
-        when(() => recorderBloc.state).thenReturn(
-          const VideoRecorderBlocState(recorderMode: VideoRecorderMode.lipSync),
+      testWidgets('openVideoEditorFromRecorder mutes clips recorded against a '
+          'sound', (tester) async {
+        fakeEditor.initialSound = AudioEvent(
+          id: 'sound',
+          pubkey: 'a' * 64,
+          createdAt: 0,
+          url: 'https://example.com/audio.mp3',
         );
 
         await tester.pumpWidget(buildHarness());
@@ -359,8 +366,8 @@ void main() {
         verify(() => audioSessionService.configureForMixedPlayback()).called(1);
       });
 
-      testWidgets('openVideoEditorFromRecorder does not mute clips in '
-          'capture mode', (tester) async {
+      testWidgets('openVideoEditorFromRecorder does not mute clips recorded '
+          'without a sound', (tester) async {
         await tester.pumpWidget(buildHarness());
         await tester.pumpAndSettle();
 

@@ -2615,6 +2615,7 @@
   "videoRecorderToggleGhostFrameLabel": "Afficher/masquer le cadre fantôme",
   "videoRecorderGhostFrameEnabled": "Cadre fantôme activé",
   "videoRecorderGhostFrameDisabled": "Cadre fantôme désactivé",
+  "videoRecorderSoundLockedHint": "Tes clips sont synchronisés avec ce son. Supprime-les pour en choisir un autre.",
   "videoRecorderClipDeletedMessage": "Clip déplacé vers la corbeille",
   "videoRecorderClipUndoLabel": "Annuler",
   "libraryTrashEmptyTitle": "La corbeille est vide",

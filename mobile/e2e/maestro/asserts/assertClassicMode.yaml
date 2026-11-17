@@ -9,7 +9,7 @@ appId: co.openvine.app.staging
 
 # Mode wheel with Classic armed. `selected` is load-bearing: the wheel renders
 # an entry for every mode in every mode, so a bare id assertion here passes
-# just as happily on the Lip Sync tab.
+# just as happily on the Capture tab.
 - assertVisible:
     id: camera_mode_classic
     selected: true

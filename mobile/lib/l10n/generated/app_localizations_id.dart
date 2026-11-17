@@ -8970,6 +8970,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'Frame hantu dinonaktifkan';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Klip kamu sudah disinkronkan dengan suara ini. Hapus klipnya untuk memilih suara lain.';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'Klip dipindahkan ke sampah';
 
   @override

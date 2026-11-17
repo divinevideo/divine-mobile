@@ -9058,6 +9058,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'Spökram inaktiverad';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Dina klipp är synkade till det här ljudet. Radera dem för att välja ett annat.';
+
+  @override
   String get videoRecorderClipDeletedMessage =>
       'Klipp flyttat till papperskorgen';
 

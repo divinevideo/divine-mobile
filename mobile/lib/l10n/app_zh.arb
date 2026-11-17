@@ -4648,6 +4648,7 @@
   "videoRecorderToggleGhostFrameLabel": "切换洋葱皮",
   "videoRecorderGhostFrameEnabled": "洋葱皮已开启",
   "videoRecorderGhostFrameDisabled": "洋葱皮已关闭",
+  "videoRecorderSoundLockedHint": "你的片段已与这个声音同步。删除片段即可选择其他声音。",
   "videoRecorderClipDeletedMessage": "片段已移入回收站",
   "videoRecorderClipUndoLabel": "撤销",
   "@videoRecorderClipUndoLabel": {

@@ -9066,6 +9066,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'Bingkai hantu dilumpuhkan';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Klip anda diselaraskan dengan bunyi ini. Padam klip untuk memilih bunyi lain.';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'Klip dialihkan ke tong sampah';
 
   @override

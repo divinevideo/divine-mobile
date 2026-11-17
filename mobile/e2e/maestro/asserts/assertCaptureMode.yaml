@@ -1,6 +1,10 @@
 appId: co.openvine.app.staging
 ---
 # Capture mode, idle: the viewfinder chrome is up and no clip is recorded yet.
+#
+# The color mask button is left out on purpose: the rail offers it only where
+# the renderer can key the viewfinder live, so it is there on some test devices
+# and not on others.
 
 # Mode wheel with Capture armed. `selected` is load-bearing: the wheel renders
 # an entry for every mode in every mode, so a bare id assertion here passes
@@ -16,10 +20,10 @@ appId: co.openvine.app.staging
     id: camera_library_button
 
 # Control rail, top to bottom. Stabilization is rendered only by the modes
-# that declare `supportsVideoStabilization` (capture and lip-sync), and the
-# timer by those that declare `supportsCountdownTimer` (those two and
-# stop-motion), so this set is also what separates capture mode from classic
-# and stop-motion. The ghost-frame toggle is shared with both of them.
+# that declare `supportsVideoStabilization` (capture), and the timer by those
+# that declare `supportsCountdownTimer` (capture and stop-motion), so this set
+# is also what separates capture mode from classic and stop-motion. The
+# ghost-frame toggle is shared with both of them.
 - assertVisible:
     id: camera_flash_button
 - assertVisible:
@@ -33,10 +37,12 @@ appId: co.openvine.app.staging
 - assertVisible:
     id: camera_stabilization_button
 
-# Lip-sync renders this exact rail, and differs only by the sound picker it
-# puts in the top bar's center slot — which capture mode leaves empty. Without
-# this line every assertion in this file passes on the Lip Sync tab too.
-- assertNotVisible:
+# The sound chip, in the top bar's center slot. Stop-motion renders the same
+# stack and fills that slot with its shot budget instead, and
+# assertStopMotionMode pins the chip absent there. A session recorded without
+# a sound hides it, which is the other reason this file only holds with no
+# clip recorded.
+- assertVisible:
     id: audio_chip
 
 # What stop-motion adds and capture does not render: the grid toggle and the

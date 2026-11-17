@@ -19,6 +19,7 @@ class VideoEditorAudioChip extends StatelessWidget {
     required this.onSoundChanged,
     this.onSelectionStarted,
     this.onSelectionEnded,
+    this.onLockedTap,
     super.key,
   });
 
@@ -36,6 +37,10 @@ class VideoEditorAudioChip extends StatelessWidget {
 
   /// Called when audio selection ends (e.g. to resume playback).
   final VoidCallback? onSelectionEnded;
+
+  /// Called on a tap instead of opening the picker, for a host where the sound
+  /// cannot change right now and says why.
+  final VoidCallback? onLockedTap;
 
   @visibleForTesting
   static bool shouldOpenTimingScreen(AudioEvent? selectedSound) =>
@@ -104,7 +109,7 @@ class VideoEditorAudioChip extends StatelessWidget {
             // what already carries the sound's title.
             button: true,
             child: InkWell(
-              onTap: () => _selectAudio(context),
+              onTap: onLockedTap ?? () => _selectAudio(context),
               borderRadius: .circular(16),
               child: Container(
                 constraints: const BoxConstraints(minHeight: 40),

@@ -3245,6 +3245,7 @@
   "videoRecorderToggleGhostFrameLabel": "የGhost ፍሬም ሁኔታ ቀይር",
   "videoRecorderGhostFrameEnabled": "Ghost ፍሬም በርቷል",
   "videoRecorderGhostFrameDisabled": "Ghost ፍሬም ጠፍቷል",
+  "videoRecorderSoundLockedHint": "ክሊፖችዎ ከዚህ ድምፅ ጋር ተመሳስለዋል። ሌላ ድምፅ ለመምረጥ ክሊፖቹን ይሰርዙ።",
   "videoRecorderClipDeletedMessage": "ክሊፕ ወደ መጣያ ተንቀሳቅሷል።",
   "videoRecorderClipUndoLabel": "ቀልብስ",
   "libraryTrashEmptyTitle": "መጣያው ባዶ ነው።",

@@ -2623,6 +2623,7 @@
   "videoRecorderToggleGhostFrameLabel": "Mostrar u ocultar fotograma fantasma",
   "videoRecorderGhostFrameEnabled": "Fotograma fantasma activado",
   "videoRecorderGhostFrameDisabled": "Fotograma fantasma desactivado",
+  "videoRecorderSoundLockedHint": "Tus clips están sincronizados con este sonido. Borralos para elegir otro.",
   "videoRecorderClipDeletedMessage": "Clip movido a la papelera",
   "videoRecorderClipUndoLabel": "Deshacer",
   "libraryTrashEmptyTitle": "La papelera está vacía",

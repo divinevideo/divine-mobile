@@ -9018,6 +9018,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'Đã tắt khung ma';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Các clip của bạn đã được đồng bộ với âm thanh này. Hãy xóa chúng để chọn âm thanh khác.';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'Đã chuyển clip vào thùng rác';
 
   @override

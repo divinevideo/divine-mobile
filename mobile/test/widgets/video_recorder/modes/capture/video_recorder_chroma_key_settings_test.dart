@@ -9,8 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
-import 'package:openvine/widgets/video_recorder/modes/chroma_key/video_recorder_chroma_key_settings.dart';
+import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_chroma_key_settings.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show ChromaKey;
 
 import '../../../../helpers/image_picker_stub.dart';
@@ -23,7 +22,7 @@ class _MockVideoRecorderBloc
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
 
-  group(VideoRecorderChromaKeyChip, () {
+  group('showVideoRecorderChromaKeySettings', () {
     late _MockVideoRecorderBloc recorderBloc;
 
     setUp(() {
@@ -31,7 +30,9 @@ void main() {
       when(() => recorderBloc.isClosed).thenReturn(false);
     });
 
-    Future<void> pumpChip(
+    /// Pumps a host whose only button opens the settings, the way the color
+    /// mask button on the capture rail does.
+    Future<void> pumpHost(
       WidgetTester tester, {
       ChromaKeyMeasurementStatus status = ChromaKeyMeasurementStatus.idle,
     }) async {
@@ -43,7 +44,8 @@ void main() {
 
       when(() => recorderBloc.state).thenReturn(
         VideoRecorderBlocState(
-          recorderMode: VideoRecorderMode.chromaKey,
+          isLiveChromaKeySupported: true,
+          isChromaKeyEnabled: true,
           chromaKeyMeasurementStatus: status,
         ),
       );
@@ -53,33 +55,22 @@ void main() {
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: Center(
-                child: Row(children: [VideoRecorderChromaKeyChip()]),
-              ),
-            ),
+            home: Scaffold(body: Center(child: _OpenSettingsButton())),
           ),
         ),
       );
     }
 
     Future<void> openSettings(WidgetTester tester) async {
-      await tester.tap(find.text(l10n.videoEditorChromaKeyTitle));
+      await tester.tap(find.byType(_OpenSettingsButton));
       await tester.pumpAndSettle();
     }
 
     group('renders', () {
-      testWidgets('names the chroma-key settings', (tester) async {
-        await pumpChip(tester);
-
-        expect(find.text(l10n.videoEditorChromaKeyTitle), findsOneWidget);
-        expect(find.text(l10n.videoEditorChromaKeyAutoDetect), findsNothing);
-      });
-
       testWidgets('says inline when the wall could not be found', (
         tester,
       ) async {
-        await pumpChip(tester, status: ChromaKeyMeasurementStatus.failed);
+        await pumpHost(tester, status: ChromaKeyMeasurementStatus.failed);
         await openSettings(tester);
 
         expect(
@@ -93,7 +84,7 @@ void main() {
       testWidgets('opens the settings and holds remote record while open', (
         tester,
       ) async {
-        await pumpChip(tester);
+        await pumpHost(tester);
         await openSettings(tester);
 
         expect(find.text(l10n.videoEditorChromaKeyAutoDetect), findsOneWidget);
@@ -114,8 +105,25 @@ void main() {
         ).called(1);
       });
 
+      testWidgets('turns the mask off and closes on Remove color mask', (
+        tester,
+      ) async {
+        await pumpHost(tester);
+        await openSettings(tester);
+
+        await tester.tap(find.text(l10n.videoEditorChromaKeyRemove));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => recorderBloc.add(
+            const VideoRecorderChromaKeyEnabledSet(enabled: false),
+          ),
+        ).called(1);
+        expect(find.text(l10n.videoEditorChromaKeyAutoDetect), findsNothing);
+      });
+
       testWidgets('measures the wall on Auto-detect', (tester) async {
-        await pumpChip(tester);
+        await pumpHost(tester);
         await openSettings(tester);
 
         await tester.tap(find.text(l10n.videoEditorChromaKeyAutoDetect));
@@ -130,10 +138,10 @@ void main() {
       testWidgets('ignores Auto-detect while a written-off still is out', (
         tester,
       ) async {
-        await pumpChip(tester, status: ChromaKeyMeasurementStatus.superseded);
+        await pumpHost(tester, status: ChromaKeyMeasurementStatus.superseded);
         // The busy button's spinner never settles, so the sheet is pumped
         // through its opening rather than settled.
-        await tester.tap(find.text(l10n.videoEditorChromaKeyTitle));
+        await tester.tap(find.byType(_OpenSettingsButton));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
@@ -155,7 +163,7 @@ void main() {
       });
 
       testWidgets('switches to the blue-screen preset', (tester) async {
-        await pumpChip(tester);
+        await pumpHost(tester);
         await openSettings(tester);
 
         await tester.tap(find.text(l10n.videoEditorChromaKeyPresetBlue));
@@ -170,7 +178,7 @@ void main() {
       });
 
       testWidgets('clears the backdrop', (tester) async {
-        await pumpChip(tester);
+        await pumpHost(tester);
         await openSettings(tester);
 
         await tester.tap(find.text(l10n.videoEditorChromaKeyBackgroundNone));
@@ -188,7 +196,7 @@ void main() {
         overrideSharedChannel(imagePickerChannel, (call) async {
           throw PlatformException(code: 'no_available_camera');
         });
-        await pumpChip(tester);
+        await pumpHost(tester);
         await openSettings(tester);
 
         await tester.tap(find.text(l10n.videoEditorChromaKeyBackgroundImage));
@@ -236,12 +244,13 @@ void main() {
       ) async {
         final states = StreamController<VideoRecorderBlocState>();
         addTearDown(states.close);
-        await pumpChip(tester);
+        await pumpHost(tester);
         whenListen(
           recorderBloc,
           states.stream,
           initialState: const VideoRecorderBlocState(
-            recorderMode: VideoRecorderMode.chromaKey,
+            isLiveChromaKeySupported: true,
+            isChromaKeyEnabled: true,
           ),
         );
         await openSettings(tester);
@@ -250,7 +259,8 @@ void main() {
         for (final status in statuses) {
           states.add(
             VideoRecorderBlocState(
-              recorderMode: VideoRecorderMode.chromaKey,
+              isLiveChromaKeySupported: true,
+              isChromaKeyEnabled: true,
               chromaKeyMeasurementStatus: status,
             ),
           );
@@ -291,4 +301,14 @@ void main() {
       });
     });
   });
+}
+
+class _OpenSettingsButton extends StatelessWidget {
+  const _OpenSettingsButton();
+
+  @override
+  Widget build(BuildContext context) => TextButton(
+    onPressed: () => showVideoRecorderChromaKeySettings(context),
+    child: const Text('Open'),
+  );
 }

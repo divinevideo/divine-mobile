@@ -4648,6 +4648,7 @@
   "videoRecorderToggleGhostFrameLabel": "گھوسٹ فریم ٹوگل کریں",
   "videoRecorderGhostFrameEnabled": "گھوسٹ فریم فعال",
   "videoRecorderGhostFrameDisabled": "گھوسٹ فریم غیر فعال",
+  "videoRecorderSoundLockedHint": "آپ کے کلپس اس آواز کے ساتھ ہم آہنگ ہیں۔ دوسری آواز چننے کے لیے انہیں حذف کریں۔",
   "videoRecorderClipDeletedMessage": "کلپ ٹریش میں منتقل ہو گئی",
   "videoRecorderClipUndoLabel": "واپس کریں",
   "@videoRecorderClipUndoLabel": {

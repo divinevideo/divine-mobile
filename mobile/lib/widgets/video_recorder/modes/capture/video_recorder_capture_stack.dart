@@ -9,11 +9,14 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/widgets/video_recorder/clip_delete_snackbar.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_actions.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_top_bar.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_shutter_flash.dart';
+import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_sound_chip.dart';
 import 'package:openvine/widgets/video_recorder/preview/video_recorder_camera_preview.dart';
+import 'package:openvine/widgets/video_recorder/video_recorder_audio_progress_bar.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_countdown_overlay.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_navigation.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_record_button.dart';
@@ -24,11 +27,15 @@ import 'package:openvine/widgets/video_recorder/video_recorder_zoom_indicator.da
 const double _zoomIndicatorBottomInset = 24.0 + 96.0 + 12.0;
 
 /// Capture-mode stack with viewfinder, controls, and top bar.
+///
+/// Capture itself fills the top bar's center slot with the sound chip, and
+/// while a take runs against a sound, overlays the sound's waveform as its
+/// progress bar instead of the generic one. The editor-hosted recorder adds
+/// clips to a composition whose audio the editor owns, so it offers neither.
 class VideoRecorderCaptureStack extends ConsumerWidget {
   const VideoRecorderCaptureStack({
     required this.fromEditor,
     this.topBarCenter,
-    this.audioProgressBar,
     super.key,
   });
 
@@ -36,13 +43,9 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
   final bool fromEditor;
 
   /// Optional widget rendered in the top bar between the close and next
-  /// buttons. Lip-sync mode uses this slot for the audio-select chip.
+  /// buttons, in place of the sound chip. Stop-motion uses this slot for its
+  /// shot budget.
   final Widget? topBarCenter;
-
-  /// Optional waveform progress bar overlaid during recording. Lip-sync mode
-  /// supplies [VideoRecorderAudioProgressBar]; when set, the top bar's generic
-  /// recording-progress bar is suppressed so the two don't overlap.
-  final Widget? audioProgressBar;
 
   void _deleteLastClip(BuildContext context, WidgetRef ref) {
     unawaited(ref.read(clipManagerProvider.notifier).scheduleDeleteLastClip());
@@ -52,6 +55,9 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final hasClips = ref.watch(clipManagerProvider.select((p) => p.hasClips));
+    final hasSound = ref.watch(
+      videoEditorProvider.select((s) => s.selectedSound != null),
+    );
     final (
       isShutterActive,
       recorderMode,
@@ -75,6 +81,7 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
     // with IgnorePointer below — otherwise an invisible tap would silently
     // delete the last still/clip.
     final undoButtonVisible = canUndo && !isShutterActive && !fromEditor;
+    final offersSound = recorderMode.supportsSound && !fromEditor;
 
     return SafeArea(
       bottom: false,
@@ -165,16 +172,19 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
             ),
           ),
 
-          // Waveform progress bar overlaid during recording (lip-sync mode).
-          ?audioProgressBar,
+          // The sound's waveform, overlaid as the progress bar while a take
+          // runs against it.
+          if (offersSound) const VideoRecorderAudioProgressBar(),
 
           // Top bar with close-button and confirm-button
           Align(
             alignment: .topCenter,
             child: VideoRecorderCaptureTopBar(
               fromEditor: fromEditor,
-              center: topBarCenter,
-              showRecordingProgress: audioProgressBar == null,
+              center:
+                  topBarCenter ??
+                  (offersSound ? const VideoRecorderSoundChip() : null),
+              showRecordingProgress: !(offersSound && hasSound),
             ),
           ),
 

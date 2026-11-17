@@ -17,7 +17,6 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
-import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
@@ -131,14 +130,7 @@ void main() {
       when(() => clipManager.clips).thenReturn(const []);
       when(() => prefs.setString(any(), any())).thenAnswer((_) async => true);
       when(() => prefs.getBool(any())).thenReturn(null);
-      // The recorder was last left in chroma key mode.
-      when(() => prefs.getString(any())).thenAnswer(
-        (invocation) =>
-            invocation.positionalArguments.first ==
-                VideoRecorderMode.persistenceKey
-            ? VideoRecorderMode.chromaKey.name
-            : null,
-      );
+      when(() => prefs.getString(any())).thenReturn(null);
     }
 
     VideoRecorderBloc buildBloc({ChromaKeyStillDetector? detect}) {
@@ -162,7 +154,8 @@ void main() {
       );
       return bloc..emit(
         const VideoRecorderBlocState(
-          recorderMode: VideoRecorderMode.chromaKey,
+          isLiveChromaKeySupported: true,
+          isChromaKeyEnabled: true,
           isCameraInitialized: true,
         ),
       );
@@ -171,7 +164,7 @@ void main() {
     group('VideoRecorderCameraSwitched', () {
       setUp(stubLiveCamera);
 
-      test('keeps the chosen backdrop and key', () async {
+      test('keeps the mask on, with the chosen backdrop and key', () async {
         final bloc = buildBloc()
           ..add(
             const VideoRecorderChromaKeyBackdropSet.color(Color(0xFFFF0000)),
@@ -188,6 +181,11 @@ void main() {
         await pumpEventQueue();
 
         expect(bloc.state.isFrontCamera, isTrue);
+        expect(
+          bloc.state.isChromaKeyActive,
+          isTrue,
+          reason: 'a camera flip must not turn the mask off',
+        );
         expect(
           bloc.state.chromaKey.backgroundType,
           ClipChromaKeyBackgroundType.color,

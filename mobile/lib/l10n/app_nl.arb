@@ -2615,6 +2615,7 @@
   "videoRecorderToggleGhostFrameLabel": "Spookframe in-/uitschakelen",
   "videoRecorderGhostFrameEnabled": "Spookframe ingeschakeld",
   "videoRecorderGhostFrameDisabled": "Spookframe uitgeschakeld",
+  "videoRecorderSoundLockedHint": "Je clips lopen synchroon met deze sound. Verwijder ze om een andere te kiezen.",
   "videoRecorderClipDeletedMessage": "Clip naar prullenbak verplaatst",
   "videoRecorderClipUndoLabel": "Ongedaan maken",
   "libraryTrashEmptyTitle": "Prullenbak is leeg",

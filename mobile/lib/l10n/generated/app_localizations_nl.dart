@@ -9104,6 +9104,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'Spookframe uitgeschakeld';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Je clips lopen synchroon met deze sound. Verwijder ze om een andere te kiezen.';
+
+  @override
   String get videoRecorderClipDeletedMessage =>
       'Clip naar prullenbak verplaatst';
 

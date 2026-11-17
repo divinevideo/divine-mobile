@@ -15,7 +15,6 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_draft.dart';
-import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -136,13 +135,22 @@ Future<void> _openVideoEditorFromRecorder(
         mode: recorderMode,
         clipCount: clipManager.clips.length,
         duration: clipManager.totalDuration,
+        hasSound: ref.read(videoEditorProvider).selectedSound != null,
+        // A take's mask is baked in the background, which moves it from
+        // captureChromaKey to chromaKey.
+        hasColorMask: clipManager.clips.any(
+          (clip) => clip.captureChromaKey != null || clip.chromaKey != null,
+        ),
       );
   if (!context.mounted) return;
 
-  // Lip-sync records against a selected sound, so silence the clips before the
-  // editor: only the chosen audio should be heard, with the clips muted and
-  // the sound carried in as its own track (seeded on editor init).
-  if (recorderMode == VideoRecorderMode.lipSync) {
+  // Takes recorded against a sound are synced to it, so silence the clips
+  // before the editor: only the chosen audio should be heard, with the clips
+  // muted and the sound carried in as its own track (seeded on editor init).
+  // A sound can only be picked before the first take, so every clip here was
+  // recorded against it.
+  if (recorderMode.supportsSound &&
+      ref.read(videoEditorProvider).selectedSound != null) {
     ref.read(clipManagerProvider.notifier).muteAllClips();
   }
 

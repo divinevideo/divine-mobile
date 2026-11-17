@@ -12,7 +12,6 @@ import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/video_recorder/camera_initialization_error.dart';
-import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
 import 'package:openvine/widgets/video_recorder/preview/video_recorder_camera_preview.dart';
@@ -144,7 +143,8 @@ void main() {
       when(() => recorderBloc.state).thenReturn(
         const VideoRecorderBlocState(
           isCameraInitialized: true,
-          recorderMode: VideoRecorderMode.chromaKey,
+          isLiveChromaKeySupported: true,
+          isChromaKeyEnabled: true,
         ),
       );
 

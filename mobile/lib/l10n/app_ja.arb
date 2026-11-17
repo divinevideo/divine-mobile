@@ -3433,6 +3433,7 @@
   "videoRecorderCycleTimerLabel": "タイマーを切り替え",
   "videoRecorderDeleteLastClipLabel": "最後のクリップを削除",
   "videoRecorderGhostFrameDisabled": "ゴーストフレームを無効化",
+  "videoRecorderSoundLockedHint": "クリップはこのサウンドに合わせて撮影されています。別のサウンドを選ぶには、クリップを削除してください。",
   "videoRecorderGhostFrameEnabled": "ゴーストフレームを有効化",
   "videoRecorderLibraryEmptyLabel": "クリップライブラリ、クリップなし",
   "videoRecorderLibraryOpenLabel": "{clipCount, plural, other{クリップライブラリを開く、{clipCount}クリップ}}",

@@ -28,14 +28,14 @@ class VideoRecorderCaptureTopBar extends ConsumerWidget {
   final bool fromEditor;
 
   /// Optional widget rendered between the close and next buttons while not
-  /// recording. Lip-sync mode uses this slot for the audio-select chip,
-  /// stop-motion for its shot budget.
+  /// recording. Capture uses this slot for the sound chip, stop-motion for its
+  /// shot budget.
   final Widget? center;
 
   /// Whether the thin recording-progress bar is shown while recording.
   ///
-  /// Lip-sync mode sets this to `false` because its audio waveform already
-  /// conveys recording progress, and the two would overlap.
+  /// Off while a take runs against a sound, because the sound's waveform
+  /// already conveys recording progress, and the two would overlap.
   final bool showRecordingProgress;
 
   @override

@@ -2615,6 +2615,7 @@
   "videoRecorderToggleGhostFrameLabel": "Växla spökram",
   "videoRecorderGhostFrameEnabled": "Spökram aktiverad",
   "videoRecorderGhostFrameDisabled": "Spökram inaktiverad",
+  "videoRecorderSoundLockedHint": "Dina klipp är synkade till det här ljudet. Radera dem för att välja ett annat.",
   "videoRecorderClipDeletedMessage": "Klipp flyttat till papperskorgen",
   "videoRecorderClipUndoLabel": "Ångra",
   "libraryTrashEmptyTitle": "Papperskorgen är tom",

@@ -9157,6 +9157,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'Ghost frame disabled';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Your clips are synced to this sound. Delete them to pick another one.';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'Clip moved to trash';
 
   @override

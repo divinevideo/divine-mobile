@@ -3,8 +3,8 @@ appId: co.openvine.app.staging
 #Utility: given the recorder is on a mode that renders the capture stack with
 #tap-to-toggle recording enabled, record one clip and leave it in the session.
 #
-# Used by capture and lip-sync: the viewfinder chrome and recording transition
-# are the same once lip-sync has a sound selected.
+# Used by capture, with or without a sound: the viewfinder chrome and
+# recording transition are the same either way.
 
 # The record button looks near-identical in both states, so it is the close
 # button that reports the transition: while recording, the top bar swaps its

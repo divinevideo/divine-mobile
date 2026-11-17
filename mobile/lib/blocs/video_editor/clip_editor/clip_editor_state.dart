@@ -259,7 +259,7 @@ class ClipEditorState extends Equatable {
   /// outcome twice in a row still surfaces.
   final ChromaKeyResult? lastChromaKeyResult;
 
-  /// Whether clips recorded in chroma key mode are having the key they were
+  /// Whether clips recorded with the color mask are having the key they were
   /// recorded with baked in.
   ///
   /// Kept apart from [isChromaKeying], which belongs to the chroma-key
@@ -1013,7 +1013,8 @@ final class ChromaKeyFailure extends ChromaKeyResult {}
 /// one is "we couldn't take it off", not "we couldn't put it on".
 final class ChromaKeyRemoveFailure extends ChromaKeyResult {}
 
-/// One-shot signal describing a pass over clips recorded in chroma key mode.
+/// One-shot signal describing a pass over clips recorded with the color
+/// mask.
 sealed class CapturedChromaKeyBakeResult {}
 
 /// Every recorded clip that was waiting now has its key baked in.

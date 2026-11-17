@@ -2615,6 +2615,7 @@
   "videoRecorderToggleGhostFrameLabel": "Activează/dezactivează cadrul fantomă",
   "videoRecorderGhostFrameEnabled": "Cadru fantomă activat",
   "videoRecorderGhostFrameDisabled": "Cadru fantomă dezactivat",
+  "videoRecorderSoundLockedHint": "Clipurile tale sunt sincronizate cu acest sunet. Șterge-le ca să alegi altul.",
   "videoRecorderClipDeletedMessage": "Clipul a fost mutat în coș",
   "videoRecorderClipUndoLabel": "Anulează",
   "libraryTrashEmptyTitle": "Coșul de gunoi este gol",

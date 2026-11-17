@@ -10,10 +10,6 @@ void main() {
         expect(VideoRecorderMode.capture.label, equals('Capture'));
       });
 
-      test('lipSync has label "Lip Sync"', () {
-        expect(VideoRecorderMode.lipSync.label, equals('Lip Sync'));
-      });
-
       test('classic has label "Classic"', () {
         expect(VideoRecorderMode.classic.label, equals('Classic'));
       });
@@ -26,10 +22,6 @@ void main() {
     group('hasRecordingLimit', () {
       test('capture has no recording limit', () {
         expect(VideoRecorderMode.capture.hasRecordingLimit, isFalse);
-      });
-
-      test('lipSync has no recording limit', () {
-        expect(VideoRecorderMode.lipSync.hasRecordingLimit, isFalse);
       });
 
       test('classic has recording limit', () {
@@ -46,10 +38,6 @@ void main() {
         expect(VideoRecorderMode.capture.hasVideoEditor, isTrue);
       });
 
-      test('lipSync has video editor', () {
-        expect(VideoRecorderMode.lipSync.hasVideoEditor, isTrue);
-      });
-
       test('classic has no video editor', () {
         expect(VideoRecorderMode.classic.hasVideoEditor, isFalse);
       });
@@ -62,10 +50,6 @@ void main() {
     group('supportGridLines', () {
       test('capture does not support grid lines', () {
         expect(VideoRecorderMode.capture.supportGridLines, isFalse);
-      });
-
-      test('lipSync does not support grid lines', () {
-        expect(VideoRecorderMode.lipSync.supportGridLines, isFalse);
       });
 
       test('classic supports grid lines', () {
@@ -81,13 +65,6 @@ void main() {
       test('capture defaults to vertical', () {
         expect(
           VideoRecorderMode.capture.defaultAspectRatio,
-          equals(model.AspectRatio.vertical),
-        );
-      });
-
-      test('lipSync defaults to vertical', () {
-        expect(
-          VideoRecorderMode.lipSync.defaultAspectRatio,
           equals(model.AspectRatio.vertical),
         );
       });
@@ -151,41 +128,17 @@ void main() {
       test('is true only for stop-motion', () {
         expect(VideoRecorderMode.stopMotion.capturesStills, isTrue);
         expect(VideoRecorderMode.capture.capturesStills, isFalse);
-        expect(VideoRecorderMode.chromaKey.capturesStills, isFalse);
         expect(VideoRecorderMode.classic.capturesStills, isFalse);
         expect(VideoRecorderMode.upload.capturesStills, isFalse);
       });
     });
 
-    group('chromaKey', () {
-      test('has label "Chroma Key"', () {
-        expect(VideoRecorderMode.chromaKey.label, equals('Chroma Key'));
-      });
-
-      test('records without a limit and hands off to the editor', () {
-        expect(VideoRecorderMode.chromaKey.hasRecordingLimit, isFalse);
-        expect(VideoRecorderMode.chromaKey.hasVideoEditor, isTrue);
-      });
-
-      test('supports the countdown timer', () {
-        expect(VideoRecorderMode.chromaKey.supportsCountdownTimer, isTrue);
-      });
-
-      test('defaults to vertical aspect ratio', () {
-        expect(
-          VideoRecorderMode.chromaKey.defaultAspectRatio,
-          equals(model.AspectRatio.vertical),
-        );
-      });
-    });
-
     group('supportsGhostFrame', () {
-      test('is false only for chroma key and upload', () {
+      test('is false only for upload', () {
         for (final mode in VideoRecorderMode.values) {
           expect(
             mode.supportsGhostFrame,
-            mode != VideoRecorderMode.chromaKey &&
-                mode != VideoRecorderMode.upload,
+            mode != VideoRecorderMode.upload,
             reason: mode.name,
           );
         }
@@ -208,55 +161,58 @@ void main() {
         expect(VideoRecorderMode.upload.supportsCountdownTimer, isFalse);
       });
 
-      test('delays the take by 3 or 10 seconds in the video modes', () {
-        for (final mode in const [
-          VideoRecorderMode.capture,
-          VideoRecorderMode.lipSync,
-          VideoRecorderMode.chromaKey,
-        ]) {
-          expect(
-            mode.timerDurations,
-            equals(const [
-              TimerDuration.off,
-              TimerDuration.three,
-              TimerDuration.ten,
-            ]),
-            reason: mode.name,
-          );
-        }
+      test('delays the take by 3 or 10 seconds in capture', () {
+        expect(
+          VideoRecorderMode.capture.timerDurations,
+          equals(const [
+            TimerDuration.off,
+            TimerDuration.three,
+            TimerDuration.ten,
+          ]),
+        );
       });
     });
 
-    group('needsLiveChromaKey', () {
-      test('is true only for chroma key', () {
+    group('supportsChromaKey', () {
+      test('is true only for capture', () {
         for (final mode in VideoRecorderMode.values) {
           expect(
-            mode.needsLiveChromaKey,
-            mode == VideoRecorderMode.chromaKey,
+            mode.supportsChromaKey,
+            mode == VideoRecorderMode.capture,
             reason: mode.name,
           );
         }
       });
     });
 
-    group('available', () {
-      test('offers every mode when the live key can be drawn', () {
+    group('supportsSound', () {
+      test('is true only for capture', () {
+        for (final mode in VideoRecorderMode.values) {
+          expect(
+            mode.supportsSound,
+            mode == VideoRecorderMode.capture,
+            reason: mode.name,
+          );
+        }
+      });
+    });
+
+    group('fromName', () {
+      test('reopens the former lip sync and chroma key modes in capture', () {
         expect(
-          VideoRecorderMode.available(liveChromaKeySupported: true),
-          equals(VideoRecorderMode.values),
+          VideoRecorderMode.fromName('lipSync'),
+          equals(VideoRecorderMode.capture),
+        );
+        expect(
+          VideoRecorderMode.fromName('chromaKey'),
+          equals(VideoRecorderMode.capture),
         );
       });
 
-      test('leaves chroma key out when the live key cannot be drawn', () {
+      test('restores a mode that still exists', () {
         expect(
-          VideoRecorderMode.available(liveChromaKeySupported: false),
-          equals([
-            VideoRecorderMode.capture,
-            VideoRecorderMode.stopMotion,
-            VideoRecorderMode.lipSync,
-            VideoRecorderMode.classic,
-            VideoRecorderMode.upload,
-          ]),
+          VideoRecorderMode.fromName('classic'),
+          equals(VideoRecorderMode.classic),
         );
       });
     });

@@ -1,7 +1,7 @@
 appId: co.openvine.app.staging
 ---
 #Utility: given a ready viewfinder in a mode that renders the full capture
-#control rail (capture and lip-sync), drive every control and leave each one
+#control rail (capture), drive every control and leave each one
 #back on its default.
 #
 # Three of the six controls are unconditional and are shared with every other

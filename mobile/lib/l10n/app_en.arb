@@ -6553,6 +6553,10 @@
   "videoRecorderToggleGhostFrameLabel": "Toggle ghost frame",
   "videoRecorderGhostFrameEnabled": "Ghost frame enabled",
   "videoRecorderGhostFrameDisabled": "Ghost frame disabled",
+  "videoRecorderSoundLockedHint": "Your clips are synced to this sound. Delete them to pick another one.",
+  "@videoRecorderSoundLockedHint": {
+    "description": "Snackbar when the capture sound chip is tapped after the first clip. Clips are recorded in sync with the picked sound, so it can only change once they are deleted."
+  },
   "videoRecorderClipDeletedMessage": "Clip moved to trash",
   "videoRecorderClipUndoLabel": "Undo",
   "@videoRecorderClipUndoLabel": {

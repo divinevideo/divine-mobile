@@ -2615,6 +2615,7 @@
   "videoRecorderToggleGhostFrameLabel": "Geisterbild ein-/ausblenden",
   "videoRecorderGhostFrameEnabled": "Geisterbild aktiviert",
   "videoRecorderGhostFrameDisabled": "Geisterbild deaktiviert",
+  "videoRecorderSoundLockedHint": "Deine Clips laufen synchron zu diesem Sound. Lösch sie, um einen anderen auszuwählen.",
   "videoRecorderClipDeletedMessage": "Clip in den Papierkorb verschoben",
   "videoRecorderClipUndoLabel": "Rückgängig",
   "libraryTrashEmptyTitle": "Papierkorb ist leer",

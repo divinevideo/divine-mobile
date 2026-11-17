@@ -8851,6 +8851,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'Ghost ፍሬም ጠፍቷል';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'ክሊፖችዎ ከዚህ ድምፅ ጋር ተመሳስለዋል። ሌላ ድምፅ ለመምረጥ ክሊፖቹን ይሰርዙ።';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'ክሊፕ ወደ መጣያ ተንቀሳቅሷል።';
 
   @override

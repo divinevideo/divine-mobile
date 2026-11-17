@@ -37,9 +37,7 @@ import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_botto
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_stop_motion_budget.dart';
-import 'package:openvine/widgets/video_recorder/modes/chroma_key/video_recorder_chroma_key_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/classic/video_recorder_classic_stack.dart';
-import 'package:openvine/widgets/video_recorder/modes/lip_sync/video_recorder_lip_sync_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/upload/video_recorder_upload_stack.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_bottom_bar.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_library_button.dart';
@@ -351,7 +349,8 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
       recorderMode: _requestedRecorderMode,
       autoStartRecording: autoStartRecording,
     );
-    // Lip sync opens on the sound picker, and the editor offers it next.
+    // Capture's sound chip opens the sound picker, and the editor offers it
+    // next.
     AudioSelectionBottomSheet.preload(ref);
     await _maybeShowWhySixSeconds();
     // An auto-recording open already found nothing to offer.
@@ -561,7 +560,7 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
   Widget build(BuildContext context) {
     return BlocProvider<SoundWaveformBloc>(
       // Eager: the create factory installs the selected-sound listener that
-      // drives waveform extraction. The only consumer (the lip-sync audio
+      // drives waveform extraction. The only consumer (capture's audio
       // progress bar) mounts during recording, but extraction must already be
       // running when the user picks a sound beforehand so the waveform is
       // ready by the time recording starts.
@@ -678,14 +677,12 @@ class _VideoRecorderScaffold extends StatelessWidget {
                   // clip list as one frames-based clip, so the capture
                   // flow (clips, library, editor, ghost) applies
                   // unchanged. It only fills the top bar's center slot,
-                  // which capture mode leaves empty, with the session's
-                  // remaining-shots budget.
+                  // where capture mode shows its sound chip, with the
+                  // session's remaining-shots budget.
                   .stopMotion => VideoRecorderCaptureStack(
                     fromEditor: fromEditor,
                     topBarCenter: const VideoRecorderStopMotionBudget(),
                   ),
-                  .lipSync => const VideoRecorderLipSyncStack(),
-                  .chromaKey => const VideoRecorderChromaKeyStack(),
                   .classic => const VideoRecorderClassicStack(),
                 },
               ),

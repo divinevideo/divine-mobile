@@ -1,7 +1,8 @@
 appId: co.openvine.app.staging
 ---
 #Capture-mode journey: create an account, open the recorder, record a clip,
-#delete it again, and sign the device back out.
+#delete it again, record one against a sound and delete that too, and sign the
+#device back out.
 #
 # Account creation is a precondition, not part of what is under test. The
 # recorder route itself is public — appRouterRedirect exempts it — but the only
@@ -36,6 +37,8 @@ appId: co.openvine.app.staging
 - runFlow: ../tests/captureModeControls.yaml
 - runFlow: ../tests/captureModeRecordClip.yaml
 - runFlow: ../tests/captureModeDeleteClip.yaml
+# Last, because a picked sound stays on the chip until a relaunch.
+- runFlow: ../tests/captureModeSound.yaml
 
 # Leave the recorder before teardown: removeKeys drives Settings from the
 # profile tab, which the full-screen recorder covers.

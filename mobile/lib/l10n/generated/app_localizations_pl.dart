@@ -9277,6 +9277,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'Klatka odniesienia wyłączona';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Twoje klipy są zsynchronizowane z tym dźwiękiem. Usuń je, aby wybrać inny.';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'Klip przeniesiony do kosza';
 
   @override

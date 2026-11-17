@@ -374,8 +374,8 @@ class DivineVideoClip {
 
   /// Chroma-key settings the clip was *recorded* with, not yet baked.
   ///
-  /// Set by the recorder's chroma key mode, which keys the viewfinder live
-  /// but writes the raw camera footage. This is an intent, which is why it is
+  /// Set by the recorder's color mask, which keys the viewfinder live but
+  /// writes the raw camera footage. This is an intent, which is why it is
   /// not [chromaKey]: that one asserts the key is already burned into [video].
   /// It is baked in the background right after the take. If that has not
   /// happened yet, the editor bakes it when it opens. Either way it moves to
@@ -482,8 +482,8 @@ class DivineVideoClip {
     return [...footage, ...key.backdropSources];
   }
 
-  /// Whether this clip was recorded in chroma key mode and still waits for
-  /// its key to be baked.
+  /// Whether this clip was recorded with the recorder's color mask and still
+  /// waits for its key to be baked.
   bool get hasPendingCaptureChromaKey =>
       captureChromaKey != null && chromaKey == null && video != null;
 

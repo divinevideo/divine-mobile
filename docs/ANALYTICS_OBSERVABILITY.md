@@ -121,14 +121,16 @@ The comments sheet measures:
 ## Creator Funnel
 
 Every creator-funnel event includes `mode`, using the stable
-`VideoRecorderMode.name` values `capture`, `stopMotion`, `lipSync`, `classic`,
-or `upload`.
+`VideoRecorderMode.name` values `capture`, `stopMotion`, `classic`, or `upload`.
+Events logged before lip sync and the color mask moved into Capture can also
+carry `lipSync` or `chromaKey`; `recording_completed` now records both as
+`has_sound` and `has_color_mask` instead.
 
 | Event | Additional parameters | Boundary |
 | --- | --- | --- |
 | `camera_opened` | `entry_point` | Recorder session opens |
 | `recording_started` | — | Native recording succeeds, or the first stop-motion frame lands |
-| `recording_completed` | `clip_count`, `duration_ms` | Creator continues from the recorder |
+| `recording_completed` | `clip_count`, `duration_ms`, `has_sound`, `has_color_mask` (each `1` or `0`) | Creator continues from the recorder |
 | `editor_opened` | — | Editor or metadata route opens |
 | `publish_started` | `time_since_camera_open_ms` | Creator taps publish, before render/upload |
 | `publish_succeeded` | `time_since_camera_open_ms` | Publish service confirms success |

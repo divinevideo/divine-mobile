@@ -9174,6 +9174,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Fotogramma fantasma disattivato';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Le tue clip sono sincronizzate con questo suono. Eliminale per sceglierne un altro.';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'Clip spostato nel cestino';
 
   @override

@@ -11,7 +11,7 @@ tags:
 # This is the behaviour classic alone declares. `hasRecordingLimit` is true
 # only for this mode, and it is what makes the recorder hand the native camera
 # a `maxDuration` — the session's remaining share of the 6.3s total. Capture
-# and lip-sync pass none and record until the user stops them; the editor
+# passes none and records until the user stops it; the editor
 # trims afterwards.
 #
 # Deliberately does not assert *how long* the recording ran. The budget left

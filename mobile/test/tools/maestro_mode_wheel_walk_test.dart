@@ -10,10 +10,6 @@ import 'package:yaml/yaml.dart';
 
 const _maestroDir = 'e2e/maestro';
 
-/// A tap on a mode-wheel entry, and whether an enclosing `runFlow` runs it
-/// only while that entry is on screen.
-typedef _WheelTap = ({VideoRecorderMode mode, bool onlyWhenShown});
-
 /// The mode whose wheel entry carries [id], or null for any other control.
 VideoRecorderMode? _modeOf(Object? id) {
   for (final mode in VideoRecorderMode.values) {
@@ -22,26 +18,19 @@ VideoRecorderMode? _modeOf(Object? id) {
   return null;
 }
 
-/// The wheel taps under [node], in the order Maestro reaches them.
-///
-/// [shown] holds the ids an enclosing `runFlow` requires to be visible, so a
-/// tap nested under `when: visible` on its own entry reads as conditional.
-List<_WheelTap> _wheelTaps(Object? node, [Set<Object?> shown = const {}]) {
+/// The modes whose wheel entries are tapped under [node], in the order
+/// Maestro reaches them.
+List<VideoRecorderMode> _wheelTaps(Object? node) {
   if (node is List) {
-    return [for (final child in node) ..._wheelTaps(child, shown)];
+    return [for (final child in node) ..._wheelTaps(child)];
   }
   if (node is! YamlMap) return const [];
 
   final tap = node['tapOn'];
-  final id = tap is YamlMap ? tap['id'] : null;
-  final mode = _modeOf(id);
-  if (mode != null) return [(mode: mode, onlyWhenShown: shown.contains(id))];
+  final mode = _modeOf(tap is YamlMap ? tap['id'] : null);
+  if (mode != null) return [mode];
 
-  final flow = node['runFlow'];
-  final condition = flow is YamlMap ? flow['when'] : null;
-  final visible = condition is YamlMap ? condition['visible'] : null;
-  final scope = visible is YamlMap ? {...shown, visible['id']} : shown;
-  return [for (final child in node.values) ..._wheelTaps(child, scope)];
+  return [for (final child in node.values) ..._wheelTaps(child)];
 }
 
 /// The commands of [flow]: its last YAML document, after any config header.
@@ -71,9 +60,9 @@ void main() {
 
     test('each helper taps every entry between Capture and its mode', () {
       for (final MapEntry(key: path, value: taps) in walks.entries) {
-        final target = taps.last.mode;
+        final target = taps.last;
         expect(
-          taps.map((tap) => tap.mode),
+          taps,
           orderedEquals(
             VideoRecorderMode.values.sublist(
               VideoRecorderMode.capture.index + 1,
@@ -88,63 +77,6 @@ void main() {
               'entry in between, in the order VideoRecorderMode declares.',
         );
       }
-    });
-
-    test('taps an entry the wheel can leave out only while it shows', () {
-      final optional = VideoRecorderMode.values.toSet().difference(
-        VideoRecorderMode.available(liveChromaKeySupported: false).toSet(),
-      );
-      expect(optional, isNotEmpty);
-
-      for (final MapEntry(key: path, value: taps) in walks.entries) {
-        for (final tap in taps.where((tap) => optional.contains(tap.mode))) {
-          expect(
-            tap.onlyWhenShown,
-            isTrue,
-            reason:
-                '$path taps ${tap.mode.name}, which the wheel leaves out on '
-                'a renderer without shader image filters. Put the tap under '
-                'a runFlow with `when: visible` on the same id, or the flow '
-                'fails on those devices.',
-          );
-        }
-      }
-    });
-
-    group('detector', () {
-      test('reads a tap under `when: visible` on its own entry as '
-          'conditional', () {
-        final chromaKey = SemanticIds.cameraMode(
-          VideoRecorderMode.chromaKey.name,
-        );
-        final classic = SemanticIds.cameraMode(VideoRecorderMode.classic.name);
-
-        final taps = _wheelTaps(
-          loadYaml('''
-- runFlow:
-    when:
-      notVisible:
-        id: $classic
-    commands:
-      - tapOn:
-          id: $chromaKey
-      - assertVisible:
-          id: $classic
-- runFlow:
-    when:
-      visible:
-        id: $chromaKey
-    commands:
-      - tapOn:
-          id: $chromaKey
-'''),
-        );
-
-        expect(taps, [
-          (mode: VideoRecorderMode.chromaKey, onlyWhenShown: false),
-          (mode: VideoRecorderMode.chromaKey, onlyWhenShown: true),
-        ]);
-      });
     });
   });
 }

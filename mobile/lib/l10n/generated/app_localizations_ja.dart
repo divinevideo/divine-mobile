@@ -8609,6 +8609,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'ゴーストフレームを無効化';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'クリップはこのサウンドに合わせて撮影されています。別のサウンドを選ぶには、クリップを削除してください。';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'クリップをゴミ箱に移動しました';
 
   @override

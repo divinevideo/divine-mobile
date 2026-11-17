@@ -2979,6 +2979,7 @@
   "videoRecorderCycleTimerLabel": "타이머 전환",
   "videoRecorderDeleteLastClipLabel": "마지막 클립 삭제",
   "videoRecorderGhostFrameDisabled": "고스트 프레임 비활성화됨",
+  "videoRecorderSoundLockedHint": "클립이 이 사운드에 맞춰져 있어요. 다른 사운드를 고르려면 클립을 삭제하세요.",
   "videoRecorderGhostFrameEnabled": "고스트 프레임 활성화됨",
   "videoRecorderLibraryEmptyLabel": "클립 보관함, 클립 없음",
   "videoRecorderLibraryOpenLabel": "{clipCount, plural, other{클립 보관함 열기, {clipCount}개 클립}}",

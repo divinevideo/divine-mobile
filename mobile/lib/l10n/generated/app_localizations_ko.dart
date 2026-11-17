@@ -8628,6 +8628,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => '고스트 프레임 비활성화됨';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      '클립이 이 사운드에 맞춰져 있어요. 다른 사운드를 고르려면 클립을 삭제하세요.';
+
+  @override
   String get videoRecorderClipDeletedMessage => '클립이 휴지통으로 이동되었습니다';
 
   @override

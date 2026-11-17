@@ -1922,6 +1922,7 @@
   "videoRecorderToggleGhostFrameLabel": "I-toggle ang ghost frame",
   "videoRecorderGhostFrameEnabled": "Naka-enable ang ghost frame",
   "videoRecorderGhostFrameDisabled": "Naka-disable ang ghost frame",
+  "videoRecorderSoundLockedHint": "Naka-sync ang mga clip mo sa sound na ito. I-delete mo sila para pumili ng iba.",
   "videoRecorderClipDeletedMessage": "Inilipat ang clip sa basurahan",
   "videoRecorderClipUndoLabel": "I-undo",
   "libraryTrashEmptyTitle": "Walang laman ang basurahan",

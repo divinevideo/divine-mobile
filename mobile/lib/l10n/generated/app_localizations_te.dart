@@ -9320,6 +9320,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'ఘోస్ట్ ఫ్రేమ్ నిలిపివేయబడింది';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'మీ క్లిప్‌లు ఈ శబ్దంతో సింక్ అయ్యాయి. వేరే శబ్దాన్ని ఎంచుకోవడానికి వాటిని తొలగించండి.';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'క్లిప్ ట్రాష్‌కి తరలించబడింది';
 
   @override

@@ -3440,6 +3440,7 @@
   "videoRecorderCycleTimerLabel": "Zamanlayıcıyı değiştir",
   "videoRecorderDeleteLastClipLabel": "Son klibi sil",
   "videoRecorderGhostFrameDisabled": "Hayalet kare devre dışı",
+  "videoRecorderSoundLockedHint": "Kliplerin bu sesle senkronize. Başka bir ses seçmek için onları sil.",
   "videoRecorderGhostFrameEnabled": "Hayalet kare etkin",
   "videoRecorderLibraryEmptyLabel": "Klip kütüphanesi, klip yok",
   "videoRecorderLibraryOpenLabel": "{clipCount, plural, one{Klip kütüphanesini aç, 1 klip} other{Klip kütüphanesini aç, {clipCount} klip}}",

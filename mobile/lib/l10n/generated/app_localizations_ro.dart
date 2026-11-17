@@ -9272,6 +9272,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'Cadru fantomă dezactivat';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Clipurile tale sunt sincronizate cu acest sunet. Șterge-le ca să alegi altul.';
+
+  @override
   String get videoRecorderClipDeletedMessage => 'Clipul a fost mutat în coș';
 
   @override

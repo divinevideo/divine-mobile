@@ -3440,6 +3440,7 @@
   "videoRecorderCycleTimerLabel": "Timer siklus",
   "videoRecorderDeleteLastClipLabel": "Hapus klip terakhir",
   "videoRecorderGhostFrameDisabled": "Frame hantu dinonaktifkan",
+  "videoRecorderSoundLockedHint": "Klip kamu sudah disinkronkan dengan suara ini. Hapus klipnya untuk memilih suara lain.",
   "videoRecorderGhostFrameEnabled": "Frame hantu diaktifkan",
   "videoRecorderLibraryEmptyLabel": "Perpustakaan klip, tidak ada klip",
   "videoRecorderLibraryOpenLabel": "{clipCount, plural, one{Buka perpustakaan klip, 1 klip} other{Buka perpustakaan klip, {clipCount} klip}}",

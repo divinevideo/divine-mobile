@@ -9201,6 +9201,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoRecorderGhostFrameDisabled => 'Cadre fantôme désactivé';
 
   @override
+  String get videoRecorderSoundLockedHint =>
+      'Tes clips sont synchronisés avec ce son. Supprime-les pour en choisir un autre.';
+
+  @override
   String get videoRecorderClipDeletedMessage =>
       'Clip déplacé vers la corbeille';
 

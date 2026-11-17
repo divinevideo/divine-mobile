@@ -68,6 +68,22 @@ void main() {
       expect(tracker.activeMode, isNull);
     });
 
+    test('records a sound and a color mask on recording_completed as 1 or 0, '
+        'the numbers Firebase accepts', () async {
+      final sink = _RecordingSink();
+      final tracker = CreationAnalyticsTracker(analytics: sink);
+
+      await tracker.recordingCompleted(
+        mode: VideoRecorderMode.capture,
+        clipCount: 1,
+        duration: const Duration(seconds: 2),
+        hasSound: true,
+      );
+
+      expect(sink.events.single.parameters, containsPair('has_sound', 1));
+      expect(sink.events.single.parameters, containsPair('has_color_mask', 0));
+    });
+
     test('records abandonment at the deepest reached stage', () async {
       final sink = _RecordingSink();
       final tracker = CreationAnalyticsTracker(analytics: sink);
