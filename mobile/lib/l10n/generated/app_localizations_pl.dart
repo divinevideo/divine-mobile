@@ -15637,11 +15637,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String get updateAction => 'Aktualizuj';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'Zobacz konkurs';
 
   @override
   String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+      'Ten polecany kanał nie jest już dostępny.';
 
   @override
   String updateNewIn(String version) {

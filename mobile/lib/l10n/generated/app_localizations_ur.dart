@@ -15320,11 +15320,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get updateAction => 'اپ ڈیٹ کریں';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'مقابلہ دیکھیں';
 
   @override
-  String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+  String get featuredFeedUnavailable => 'یہ نمایاں فیڈ اب دستیاب نہیں ہے۔';
 
   @override
   String updateNewIn(String version) {

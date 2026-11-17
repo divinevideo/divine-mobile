@@ -15468,11 +15468,11 @@ class AppLocalizationsPt extends AppLocalizations {
   String get updateAction => 'Atualizar';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'Ver concurso';
 
   @override
   String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+      'Este feed em destaque não está mais disponível.';
 
   @override
   String updateNewIn(String version) {

@@ -15522,11 +15522,11 @@ class AppLocalizationsIt extends AppLocalizations {
   String get updateAction => 'Aggiorna';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'Vedi il concorso';
 
   @override
   String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+      'Questo feed in evidenza non è più disponibile.';
 
   @override
   String updateNewIn(String version) {

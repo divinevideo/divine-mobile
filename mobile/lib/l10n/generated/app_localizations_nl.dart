@@ -15403,11 +15403,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get updateAction => 'Bijwerken';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'Wedstrijd bekijken';
 
   @override
   String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+      'Deze uitgelichte feed is niet meer beschikbaar.';
 
   @override
   String updateNewIn(String version) {

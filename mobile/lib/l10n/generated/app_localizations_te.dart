@@ -15690,11 +15690,11 @@ class AppLocalizationsTe extends AppLocalizations {
   String get updateAction => 'అప్‌డేట్ చేయండి';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'పోటీని చూడండి';
 
   @override
   String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+      'ఈ ఫీచర్ చేసిన ఫీడ్ ఇక అందుబాటులో లేదు.';
 
   @override
   String updateNewIn(String version) {

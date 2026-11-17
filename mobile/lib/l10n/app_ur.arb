@@ -7257,6 +7257,8 @@
   "updateUrgentTitle": "آپ اہم اصلاحات سے محروم ہیں",
   "updateNotNow": "ابھی نہیں",
   "updateAction": "اپ ڈیٹ کریں",
+  "announcementViewContest": "مقابلہ دیکھیں",
+  "featuredFeedUnavailable": "یہ نمایاں فیڈ اب دستیاب نہیں ہے۔",
   "updateNewIn": "{version} میں نیا:",
   "settingsUpdateAvailable": "اپ ڈیٹ دستیاب ہے",
   "soundUploadChooseFile": "آڈیو فائل منتخب کریں",

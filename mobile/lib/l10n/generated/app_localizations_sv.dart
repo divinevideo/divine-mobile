@@ -15338,11 +15338,11 @@ class AppLocalizationsSv extends AppLocalizations {
   String get updateAction => 'Uppdatera';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'Visa tävlingen';
 
   @override
   String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+      'Det här utvalda flödet är inte längre tillgängligt.';
 
   @override
   String updateNewIn(String version) {

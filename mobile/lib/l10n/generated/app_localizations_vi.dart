@@ -15264,11 +15264,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get updateAction => 'Cập nhật';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'Xem cuộc thi';
 
   @override
   String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+      'Bảng tin nổi bật này không còn khả dụng.';
 
   @override
   String updateNewIn(String version) {

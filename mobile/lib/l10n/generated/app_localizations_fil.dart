@@ -15456,11 +15456,11 @@ class AppLocalizationsFil extends AppLocalizations {
   String get updateAction => 'I-update';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'Tingnan ang contest';
 
   @override
   String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+      'Hindi na available ang featured feed na ito.';
 
   @override
   String updateNewIn(String version) {

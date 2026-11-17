@@ -15631,11 +15631,11 @@ class AppLocalizationsRo extends AppLocalizations {
   String get updateAction => 'Actualizează';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'Vezi concursul';
 
   @override
   String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+      'Acest flux recomandat nu mai este disponibil.';
 
   @override
   String updateNewIn(String version) {

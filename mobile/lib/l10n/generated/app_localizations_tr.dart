@@ -15248,11 +15248,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get updateAction => 'Güncelle';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'Yarışmayı görüntüle';
 
   @override
   String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+      'Bu öne çıkan akış artık kullanılamıyor.';
 
   @override
   String updateNewIn(String version) {

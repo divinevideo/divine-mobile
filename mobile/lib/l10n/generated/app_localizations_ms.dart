@@ -15321,11 +15321,11 @@ class AppLocalizationsMs extends AppLocalizations {
   String get updateAction => 'Kemas kini';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'Lihat pertandingan';
 
   @override
   String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+      'Suapan pilihan ini tidak lagi tersedia.';
 
   @override
   String updateNewIn(String version) {

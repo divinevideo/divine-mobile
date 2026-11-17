@@ -14423,11 +14423,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updateAction => '更新';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => '查看比赛';
 
   @override
-  String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+  String get featuredFeedUnavailable => '此精选动态已不可用。';
 
   @override
   String updateNewIn(String version) {

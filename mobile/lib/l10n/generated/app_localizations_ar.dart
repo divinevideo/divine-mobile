@@ -15331,11 +15331,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get updateAction => 'تحديث';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'عرض المسابقة';
 
   @override
-  String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+  String get featuredFeedUnavailable => 'هذه الخلاصة المميزة لم تعد متاحة.';
 
   @override
   String updateNewIn(String version) {

@@ -14600,11 +14600,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get updateAction => 'アップデート';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'コンテストを見る';
 
   @override
-  String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+  String get featuredFeedUnavailable => 'このおすすめフィードは利用できなくなりました。';
 
   @override
   String updateNewIn(String version) {

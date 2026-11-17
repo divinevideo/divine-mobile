@@ -1,8 +1,8 @@
 # Marketing campaign push contract
 
 Campaigns use the existing encrypted push registration and preference protocols.
-Kind 3079 advertises `campaignTargetTypes` with `app_route`, `video_address` and
-`creator_profile`. The push backend must support this optional field before the
+Kind 3079 advertises `campaignTargetTypes` with `app_route`, `video_address`,
+`creator_profile`, `announcement` and `featured_feed`. The push backend must support this optional field before the
 app advertises it. A device capability never grants account marketing consent:
 `campaignsEnabled` remains an explicit, default-off kind-3083 preference.
 
@@ -12,8 +12,17 @@ nonempty d-tag (`video_address`), and a 64-character lowercase hex creator pubke
 (`creator_profile`). Registration advertises
 `NotificationWireValues.campaignTargetTypes`, and a test checks that every type
 in that list routes a valid value.
+Announcement and featured-feed targets carry their exact catalog UUID.
+Announcements resolve through the trusted catalog. Featured feeds preserve the
+requested identity through repository selection and caching, and show an
+unavailable state when the feed is ineligible or withdrawn.
 Campaigns reuse normal video/profile navigation. Malformed or unsupported targets
-open the inbox. HTTPS destinations remain unsupported.
+open the inbox. HTTPS push destinations remain unsupported. Validated
+announcement actions can open canonical store links or approved contest details.
+
+Encrypted registration also includes the known platform, install channel and
+canonical marketing version for release targeting. Unknown install channels or
+versions are omitted. Marketing consent remains independent of this metadata.
 
 The `campaignRevisionId` survives FCM, local notification normalization and
 foreground/background/cold-start tap handling. The existing

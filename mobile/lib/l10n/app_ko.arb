@@ -5493,6 +5493,8 @@
   "updateUrgentTitle": "중요한 수정 사항이 빠져 있어요",
   "updateNotNow": "나중에",
   "updateAction": "업데이트",
+  "announcementViewContest": "콘테스트 보기",
+  "featuredFeedUnavailable": "이 추천 피드는 더 이상 이용할 수 없어요.",
   "updateNewIn": "{version}의 새로운 기능:",
   "settingsUpdateAvailable": "업데이트 가능",
   "soundUploadChooseFile": "오디오 파일 선택",

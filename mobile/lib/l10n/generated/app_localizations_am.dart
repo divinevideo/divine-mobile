@@ -14955,11 +14955,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get updateAction => 'ያዘምኑ';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => 'ውድድሩን ይመልከቱ';
 
   @override
-  String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+  String get featuredFeedUnavailable => 'ይህ ተለይቶ የቀረበ ፊድ ከእንግዲህ አይገኝም።';
 
   @override
   String updateNewIn(String version) {

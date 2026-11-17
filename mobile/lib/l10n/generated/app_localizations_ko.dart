@@ -14619,11 +14619,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get updateAction => '업데이트';
 
   @override
-  String get announcementViewContest => 'View contest';
+  String get announcementViewContest => '콘테스트 보기';
 
   @override
-  String get featuredFeedUnavailable =>
-      'This featured feed is no longer available.';
+  String get featuredFeedUnavailable => '이 추천 피드는 더 이상 이용할 수 없어요.';
 
   @override
   String updateNewIn(String version) {

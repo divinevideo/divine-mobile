@@ -5947,6 +5947,8 @@
   "updateUrgentTitle": "Dir fehlen wichtige Fehlerbehebungen",
   "updateNotNow": "Nicht jetzt",
   "updateAction": "Aktualisieren",
+  "announcementViewContest": "Wettbewerb ansehen",
+  "featuredFeedUnavailable": "Dieser empfohlene Feed ist nicht mehr verfügbar.",
   "updateNewIn": "Neu in {version}:",
   "settingsUpdateAvailable": "Update verfügbar",
   "soundUploadChooseFile": "Audiodatei auswählen",
