@@ -1,7 +1,8 @@
 // TDD: client-side seen-video filtering across feeds
-// Covers: home (following) demotes, new stays chronological (including cache
-// hits, relay fallback, and page boundaries), classic drops + deep-fetch,
-// profile untouched, deep-fetch triggers when filtering removes most of page.
+// Covers: home (following) drops seen videos, New keeps watched videos
+// (including cache hits, relay fallback, refresh, and page boundaries),
+// classic drops + deep-fetch, profile untouched, deep-fetch triggers when
+// filtering removes most of page.
 
 import 'dart:math';
 
