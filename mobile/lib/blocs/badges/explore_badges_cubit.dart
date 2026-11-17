@@ -1,4 +1,7 @@
-// ABOUTME: Cubit for Explore's curated badge definitions.
+// ABOUTME: Public community discovery with bounded, nonblocking people previews.
+
+import 'dart:async';
+import 'dart:collection';
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:equatable/equatable.dart';
@@ -7,26 +10,21 @@ import 'package:openvine/blocs/close_guard.dart';
 
 part 'explore_badges_state.dart';
 
-/// Issuers whose badge definitions Divine curates in Explore.
-///
-/// The first key is the public issuer published by badges.divine.video.
-const exploreBadgeIssuers = <String>{
-  'e21369e63b98f58de8aa171ec9794006eb0118891ae70895106d44525b718d2b',
-};
-
-/// Loads the badge definitions published by [exploreBadgeIssuers].
+/// Discovers public badges without requiring a signer or an issuer allowlist.
 class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
     with CloseGuardedEmit<ExploreBadgesState> {
   /// Creates the cubit.
   ExploreBadgesCubit({
     required BadgeRepository repository,
-    Set<String> issuers = exploreBadgeIssuers,
   }) : _repository = repository,
-       _issuers = issuers,
        super(const ExploreBadgesState());
 
   final BadgeRepository _repository;
-  final Set<String> _issuers;
+  int _generation = 0;
+  int _activePreviews = 0;
+  bool _refreshing = false;
+  final _previewQueue = Queue<({String coordinate, int generation})>();
+  final _requestedPreviews = <String>{};
 
   /// Loads the definitions, showing the loading state.
   Future<void> load() async {
@@ -36,15 +34,23 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
 
   /// Reloads the definitions without clearing what is already on screen.
   Future<void> refresh() async {
+    final generation = ++_generation;
+    _refreshing = true;
+    _previewQueue.clear();
+    _requestedPreviews.clear();
     try {
-      final definitions = await _repository.loadDefinitionsByIssuers(_issuers);
+      final definitions = await _repository.loadPublicDefinitions();
+      if (isClosed || generation != _generation) return;
+      _refreshing = false;
       emitIfOpen(
         ExploreBadgesState(
           status: ExploreBadgesStatus.loaded,
-          definitions: definitions,
+          definitions: List.unmodifiable(definitions),
         ),
       );
     } catch (error, stackTrace) {
+      if (isClosed || generation != _generation) return;
+      _refreshing = false;
       addError(error, stackTrace);
       emitIfOpen(
         state.status == ExploreBadgesStatus.loaded
@@ -52,5 +58,65 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
             : state.copyWith(status: ExploreBadgesStatus.failure),
       );
     }
+  }
+
+  /// Reveals another finite page from the loaded discovery window.
+  void showMore() {
+    if (isClosed || !state.hasMore) return;
+    emit(state.copyWith(visibleCount: state.visibleCount + 24));
+  }
+
+  /// Called only for cards built by the lazy gallery. A preview failure never
+  /// removes a badge or starts the expensive complete holder reconciliation.
+  void loadPreview(String coordinate) {
+    if (isClosed ||
+        _refreshing ||
+        !state.visibleDefinitions.any((d) => d.coordinate == coordinate) ||
+        !_requestedPreviews.add(coordinate)) {
+      return;
+    }
+    _previewQueue.add((coordinate: coordinate, generation: _generation));
+    _drainPreviews();
+  }
+
+  void _drainPreviews() {
+    while (!isClosed && _activePreviews < 4 && _previewQueue.isNotEmpty) {
+      final request = _previewQueue.removeFirst();
+      if (request.generation != _generation) continue;
+      _activePreviews++;
+      // _loadPreview handles failures and owns this request's completion.
+      unawaited(_loadPreview(request));
+    }
+  }
+
+  Future<void> _loadPreview(
+    ({String coordinate, int generation}) request,
+  ) async {
+    try {
+      final coordinate = BadgeCoordinate.parse(request.coordinate);
+      if (coordinate == null) return;
+      final holders = await _repository.loadHolderPreview(coordinate);
+      if (isClosed || request.generation != _generation) return;
+      emit(
+        state.copyWith(
+          previews: Map.unmodifiable({
+            ...state.previews,
+            request.coordinate: List<String>.unmodifiable(holders.take(3)),
+          }),
+        ),
+      );
+    } on Exception {
+      // Artwork and community metadata remain usable without indexed people.
+    } finally {
+      _activePreviews--;
+      _drainPreviews();
+    }
+  }
+
+  @override
+  Future<void> close() {
+    _generation++;
+    _previewQueue.clear();
+    return super.close();
   }
 }
