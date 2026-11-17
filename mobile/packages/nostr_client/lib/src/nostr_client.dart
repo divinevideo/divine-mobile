@@ -1158,9 +1158,9 @@ class NostrClient {
   /// connection per relay, so it is not a first choice.
   ///
   /// The result reads like a [queryEventsDetailed] with
-  /// `requireAllRelaysSettled` and no cache: `timedOut` when any relay did not
-  /// settle within [timeout], which includes connecting, and `noRelays` when
-  /// no relay is connected or the client is disposed.
+  /// `requireAllRelaysSettled` and no cache: `timedOut` unless every relay
+  /// answered within [timeout], which includes connecting, and `noRelays` when
+  /// no relay is connected or the client has begun disposing.
   Future<({List<Event> events, bool timedOut, bool noRelays})>
   queryEventsOnFreshConnections(
     List<Filter> filters, {
