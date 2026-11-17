@@ -174,7 +174,9 @@ const _prismTileSeconds = 6.0;
 
 /// The tile of [type], or `null` for an effect whose tile is drawn otherwise.
 ///
-/// Each shows the effect at full strength. The fisheye's value is the
+/// Each shows the effect at full strength, except an intro or outro: its
+/// still is the one [IntroOutroTile] stands at with reduced motion, half
+/// covered at its look's starting structure. The fisheye's value is the
 /// `CIBumpDistortion` scale `FisheyeVideoEffect` uses at intensity 1; night
 /// vision shows its first noise pattern; the drops show the default settings at
 /// a moment where two of them flow into each other; the particles' last value
