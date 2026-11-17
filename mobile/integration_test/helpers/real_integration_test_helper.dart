@@ -1,6 +1,9 @@
 // ABOUTME: Helper utilities for real integration tests without over-mocking
 // ABOUTME: Provides real Nostr relay connections and minimal platform channel mocking
 
+import 'dart:async';
+
+import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -66,19 +69,10 @@ class RealIntegrationTestHelper {
           }
         });
 
-    // Mock connectivity
-    const MethodChannel connectivityChannel = MethodChannel(
-      'dev.fluttercommunity.plus/connectivity',
-    );
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(connectivityChannel, (
-          MethodCall methodCall,
-        ) async {
-          if (methodCall.method == 'check') {
-            return ['wifi']; // Always online for tests
-          }
-          return null;
-        });
+    // Replaced at the platform, not on its method channel: on Linux,
+    // connectivity_plus asks NetworkManager over D-Bus instead, and on a CI
+    // runner without it the failed listen lands in the test's zone (#11107).
+    ConnectivityPlatform.instance = _AlwaysOnlineConnectivity();
 
     // Mock secure storage
     const MethodChannel secureStorageChannel = MethodChannel(
@@ -122,4 +116,20 @@ class RealIntegrationTestHelper {
     // Reset static state if needed
     _isSetup = false;
   }
+}
+
+/// Always online, and never asks the host. Like the Linux and method-channel
+/// implementations, it reports the current state when its listener count goes
+/// from zero to one; a listener that joins later hears only changes.
+class _AlwaysOnlineConnectivity extends ConnectivityPlatform {
+  static const List<ConnectivityResult> _online = [ConnectivityResult.wifi];
+
+  late final StreamController<List<ConnectivityResult>> _reports =
+      StreamController.broadcast(onListen: () => _reports.add(_online));
+
+  @override
+  Future<List<ConnectivityResult>> checkConnectivity() async => _online;
+
+  @override
+  Stream<List<ConnectivityResult>> get onConnectivityChanged => _reports.stream;
 }
