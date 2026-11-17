@@ -122,6 +122,7 @@ void main() {
       final announcement = item('current', 'Current announcement');
       when(() => repository.announcementsRepository).thenReturn(announcements);
       when(() => announcements.items).thenReturn(const []);
+      when(announcements.refresh).thenAnswer((_) async {});
       when(announcements.watchSnapshot).thenAnswer((_) => snapshots.stream);
       final router = GoRouter(
         initialLocation: AnnouncementDetailScreen.pathForId('current'),
@@ -136,6 +137,7 @@ void main() {
         findsOneWidget,
       );
 
+      verify(announcements.refresh).called(1);
       snapshots.add([announcement]);
       await tester.pumpAndSettle();
       expect(find.text('Current announcement'), findsOneWidget);
@@ -158,6 +160,7 @@ void main() {
       final repository = _MockNotificationRepository();
       when(() => repository.announcementsRepository).thenReturn(announcements);
       when(() => announcements.items).thenReturn([first, second]);
+      when(announcements.refresh).thenAnswer((_) async {});
       when(announcements.watchSnapshot).thenAnswer(
         (_) => const Stream<List<AnnouncementNotification>>.empty(),
       );

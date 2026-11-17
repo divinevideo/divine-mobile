@@ -272,6 +272,7 @@ class ExploreTabRouteData extends GoRouteData with $ExploreTabRouteData {
     ExploreScreen(
       initialTabName: ExploreScreen.tabNameFromPathParameter(name),
       initialTabSlug: name,
+      requiredFeaturedFeedId: state.uri.queryParameters['campaignFeedId'],
     ),
   );
 }

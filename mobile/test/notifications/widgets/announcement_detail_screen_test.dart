@@ -44,6 +44,30 @@ void main() {
       expect(opened, Uri.parse('https://divine.video/updates'));
     });
 
+    testWidgets(
+      'action button follows the full native announcement description',
+      (tester) async {
+        var opened = false;
+        await pump(
+          tester,
+          AnnouncementDetailScreen(
+            announcement: announcement,
+            actionLabel: l10n.updateAction,
+            onAction: () async {
+              opened = true;
+            },
+          ),
+        );
+        expect(find.text(announcement.body), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text(l10n.updateAction)).dy,
+          greaterThan(tester.getTopLeft(find.text(announcement.body)).dy),
+        );
+        await tester.tap(find.text(l10n.updateAction));
+        expect(opened, isTrue);
+      },
+    );
+
     testWidgets('missing or withdrawn announcement has a safe empty state', (
       tester,
     ) async {

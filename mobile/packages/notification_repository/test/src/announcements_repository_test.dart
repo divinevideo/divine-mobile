@@ -6,6 +6,7 @@ import 'package:clock/clock.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:models/notification_item.dart';
 import 'package:notification_repository/announcements_repository.dart';
 import 'package:test/test.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -91,6 +92,104 @@ void main() {
     now = DateTime.utc(2026, 10, 23);
   });
   tearDown(() async => repository.close());
+
+  group('announcement actions', () {
+    test(
+      'parses update and contest actions while old announcements omit them',
+      () async {
+        final update = announcement()
+          ..['action'] = {
+            'type': 'update_app',
+            'platform': 'ios',
+            'channel': 'app_store',
+            'version': '1.3.0',
+          };
+        final contest = announcement(id: secondId)
+          ..['action'] = {
+            'type': 'contest',
+            'url': 'https://divine-challenges.pages.dev/contests/loop-2026',
+          };
+        create(
+          MockClient((_) async => jsonResponse(catalog([update, contest]))),
+        );
+        await repository.refresh();
+        final action = repository.items
+            .firstWhere((x) => x.announcementId == firstId)
+            .action;
+        expect(
+          action,
+          const UpdateAppAnnouncementAction(
+            platform: 'ios',
+            channel: 'app_store',
+            version: '1.3.0',
+          ),
+        );
+        expect(
+          repository.items
+              .firstWhere((x) => x.announcementId == secondId)
+              .action,
+          ContestAnnouncementAction(
+            url: Uri.parse(
+              'https://divine-challenges.pages.dev/contests/loop-2026',
+            ),
+          ),
+        );
+        await repository.markSeen([repository.items.first.id]);
+        expect(repository.items.first.action, isNotNull);
+      },
+    );
+
+    for (final action in [
+      {
+        'type': 'update_app',
+        'platform': 'android',
+        'channel': 'app_store',
+        'version': '1.3.0',
+      },
+      {
+        'type': 'update_app',
+        'platform': 'ios',
+        'channel': 'app_store',
+        'version': '01.3.0',
+      },
+      {
+        'type': 'update_app',
+        'platform': 'ios',
+        'channel': 'app_store',
+        'version': '1.3.0+4',
+      },
+      {
+        'type': 'update_app',
+        'platform': 'ios',
+        'channel': 'app_store',
+        'version': '1000000.3.0',
+      },
+      for (final url in [
+        'http://divine-challenges.pages.dev/contests/loop',
+        'https://evil.example/contests/loop',
+        'https://divine-challenges.pages.dev:443/contests/loop',
+        'https://user@divine-challenges.pages.dev/contests/loop',
+        'https://divine-challenges.pages.dev/contests/loop?next=evil',
+        'https://divine-challenges.pages.dev/contests/loop#x',
+        'https://divine-challenges.pages.dev/contests/%6coop',
+        'https://divine-challenges.pages.dev/contests/loop/more',
+      ])
+        {'type': 'contest', 'url': url},
+    ]) {
+      test(
+        'invalid action cannot replace the valid catalog: $action',
+        () async {
+          var body = catalog();
+          create(MockClient((_) async => jsonResponse(body)));
+          await repository.refresh();
+          expect(repository.items.single.action, isNull);
+          body = catalog([announcement(id: secondId)..['action'] = action]);
+          await repository.refresh();
+          expect(repository.items.single.announcementId, firstId);
+        },
+      );
+    }
+  });
 
   group('initialize, refresh, markSeen, and close', () {
     test('accepts the shared Worker catalog fixture', () async {

@@ -13,6 +13,8 @@ class AnnouncementDetailScreen extends StatelessWidget {
   const AnnouncementDetailScreen({
     this.announcement,
     this.onLearnMore,
+    this.actionLabel,
+    this.onAction,
     super.key,
   });
 
@@ -21,6 +23,8 @@ class AnnouncementDetailScreen extends StatelessWidget {
 
   final AnnouncementNotification? announcement;
   final Future<void> Function(Uri url)? onLearnMore;
+  final String? actionLabel;
+  final Future<void> Function()? onAction;
 
   static String pathForId(String id) => RoutePaths.announcementDetailForId(id);
 
@@ -64,6 +68,16 @@ class AnnouncementDetailScreen extends StatelessWidget {
                         item.body,
                         style: VineTheme.bodyLargeFont(color: colors.onSurface),
                       ),
+                      if (actionLabel != null && onAction != null) ...[
+                        const SizedBox(height: 24),
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: DivineButton(
+                            label: actionLabel!,
+                            onPressed: onAction,
+                          ),
+                        ),
+                      ],
                       if (item.learnMoreUrl case final Uri url) ...[
                         const SizedBox(height: 24),
                         Align(

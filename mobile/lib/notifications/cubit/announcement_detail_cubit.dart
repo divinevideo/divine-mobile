@@ -12,10 +12,20 @@ class AnnouncementDetailCubit extends Cubit<AnnouncementNotification?> {
     required String announcementId,
     required List<AnnouncementNotification> initialItems,
     required Stream<List<AnnouncementNotification>> snapshots,
+    Future<void> Function()? refresh,
   }) : super(_find(initialItems, announcementId)) {
     _subscription = snapshots.listen((items) {
       if (!isClosed) emit(_find(items, announcementId));
     });
+    if (refresh != null) unawaited(_refresh(refresh));
+  }
+
+  Future<void> _refresh(Future<void> Function() refresh) async {
+    try {
+      await refresh();
+    } on Exception {
+      // The repository retains its last trusted catalog while offline.
+    }
   }
 
   late final StreamSubscription<List<AnnouncementNotification>> _subscription;

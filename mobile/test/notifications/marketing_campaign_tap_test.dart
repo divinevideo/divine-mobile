@@ -63,6 +63,28 @@ void main() {
       }
     });
 
+    for (final type in ['announcement', 'featured_feed']) {
+      test('$type opens the exact UUID through the shared tap contract', () {
+        final result = pushNotificationTapTarget(
+          referencedAddress: null,
+          referencedEventId: null,
+          eventId: null,
+          notificationType: 'campaign',
+          senderPubkey: null,
+          tapTargetType: type,
+          tapTargetValue: revision,
+        );
+        expect(
+          result.target,
+          OpenAppRouteTarget(
+            type == 'announcement'
+                ? RoutePaths.announcementDetailForId(revision)
+                : '/explore/tab/featured?campaignFeedId=$revision',
+          ),
+        );
+      });
+    }
+
     for (final target in [
       ('video_address', '34236:short:clip'),
       ('video_address', '34236:$creator:'),
@@ -76,6 +98,8 @@ void main() {
       ('app_route', '34236:$creator:clip'),
       ('app_route', creator),
       ('https_url', 'https://example.com'),
+      ('announcement', '../other'),
+      ('featured_feed', 'short'),
     ]) {
       test('unsupported ${target.$1} target "${target.$2}" falls back to the '
           'inbox', () {

@@ -11,13 +11,19 @@ import 'package:openvine/providers/featured_tabs_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/explore/explore_view.dart';
+import 'package:openvine/screens/explore/widgets/featured_campaign_gate.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Explore screen: a thin tabs Page over [ExploreTabsCubit] + [ExploreView].
 class ExploreScreen extends ConsumerWidget {
   /// Creates the explore screen, optionally selecting [initialTabName].
-  const ExploreScreen({super.key, this.initialTabName, this.initialTabSlug});
+  const ExploreScreen({
+    super.key,
+    this.initialTabName,
+    this.initialTabSlug,
+    this.requiredFeaturedFeedId,
+  });
 
   static const _routeTabNames = <String>{
     exploreClassicsTabName,
@@ -78,6 +84,9 @@ class ExploreScreen extends ConsumerWidget {
   /// app, so a featured slug resolves to `null` there by design.
   final String? initialTabSlug;
 
+  /// Campaign configuration identity; never fall back to another tab.
+  final String? requiredFeaturedFeedId;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final featuredTabsRepository = ref.watch(featuredTabsRepositoryProvider);
@@ -96,7 +105,7 @@ class ExploreScreen extends ConsumerWidget {
           // against the new host instead of polling a stale one.
           // The shell keeps Explore mounted after the first visit; continuing
           // at the clamped cadence lets backend kill switches land off-tab.
-          key: ValueKey(featuredTabsRepository),
+          key: ValueKey((featuredTabsRepository, requiredFeaturedFeedId)),
           create: (_) {
             final cubit = FeaturedTabsCubit(
               repository: featuredTabsRepository,
@@ -113,10 +122,21 @@ class ExploreScreen extends ConsumerWidget {
           },
         ),
       ],
-      child: ExploreView(
-        initialTabName: initialTabName,
-        initialTabSlug: initialTabSlug,
-      ),
+      child: requiredFeaturedFeedId == null
+          ? ExploreView(
+              initialTabName: initialTabName,
+              initialTabSlug: initialTabSlug,
+            )
+          : BlocBuilder<FeaturedTabsCubit, FeaturedTabsState>(
+              builder: (context, state) => FeaturedCampaignGate(
+                feedId: requiredFeaturedFeedId!,
+                state: state,
+                child: ExploreView(
+                  key: ValueKey(requiredFeaturedFeedId),
+                  initialTabName: exploreFeaturedTabName,
+                ),
+              ),
+            ),
     );
   }
 }

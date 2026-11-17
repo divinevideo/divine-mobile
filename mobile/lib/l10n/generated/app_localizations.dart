@@ -25665,6 +25665,18 @@ abstract class AppLocalizations {
   /// **'Update'**
   String get updateAction;
 
+  /// Button opening an official contest after its native announcement description.
+  ///
+  /// In en, this message translates to:
+  /// **'View contest'**
+  String get announcementViewContest;
+
+  /// Safe destination when a campaign points to a missing, ended, or disabled featured feed.
+  ///
+  /// In en, this message translates to:
+  /// **'This featured feed is no longer available.'**
+  String get featuredFeedUnavailable;
+
   /// Heading before highlights for an available app update.
   ///
   /// In en, this message translates to:

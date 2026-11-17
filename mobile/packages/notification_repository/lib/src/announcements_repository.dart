@@ -426,10 +426,50 @@ class AnnouncementsRepository {
           platforms: platforms.cast<String>(),
           minimumAppVersion: minimumVersion as String?,
           learnMoreUrl: learnMore,
+          action: _action(value['action']),
         ),
       );
     }
     return List.unmodifiable(result);
+  }
+
+  static AnnouncementAction? _action(Object? value) {
+    if (value == null) return null;
+    final action = _object(value);
+    if (action['type'] == 'update_app') {
+      final platform = action['platform'];
+      final channel = action['channel'];
+      final version = action['version'];
+      if (platform is! String ||
+          channel is! String ||
+          !((platform == 'ios' && channel == 'app_store') ||
+              (platform == 'android' &&
+                  (channel == 'google_play' || channel == 'zapstore'))) ||
+          version is! String ||
+          version.length > 20 ||
+          !RegExp(
+            r'^(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})$',
+          ).hasMatch(version)) {
+        throw const FormatException('Invalid announcement update action');
+      }
+      return UpdateAppAnnouncementAction(
+        platform: platform,
+        channel: channel,
+        version: version,
+      );
+    }
+    if (action['type'] == 'contest') {
+      final url = action['url'];
+      if (url is! String ||
+          url.length > 2048 ||
+          !RegExp(
+            r'^https://divine-challenges\.pages\.dev/contests/[A-Za-z0-9-]+$',
+          ).hasMatch(url)) {
+        throw const FormatException('Invalid announcement contest action');
+      }
+      return ContestAnnouncementAction(url: Uri.parse(url));
+    }
+    throw const FormatException('Unsupported announcement action');
   }
 
   static Map<String, Object?> _object(Object? value) {

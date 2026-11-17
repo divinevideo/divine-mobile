@@ -144,6 +144,15 @@ NotificationKind? notificationKindFromPushType(String? type) {
 /// Returns the allowlisted in-app route of an `app_route` campaign target, or
 /// null otherwise.
 String? campaignAppRoute({required String? type, required String? value}) {
+  if ((type == 'announcement' || type == 'featured_feed') &&
+      value != null &&
+      RegExp(
+        r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+      ).hasMatch(value)) {
+    return type == 'announcement'
+        ? RoutePaths.announcementDetailForId(value)
+        : '/explore/tab/featured?campaignFeedId=$value';
+  }
   if (type != NotificationWireValues.appRoute) return null;
   return value == RoutePaths.followingNew ? value : null;
 }

@@ -18,6 +18,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/notification_helpers.dart'
     show NotificationWireValues, localNotificationTapPayload;
 import 'package:openvine/services/notification_service.dart';
+import 'package:openvine/services/push_device_metadata.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Describes whether a push-token registration should be retried.
@@ -72,6 +73,7 @@ class PushNotificationService {
     required EnvironmentConfig environmentConfig,
     required Future<String?> Function() getToken,
     FutureOr<bool> Function()? isCurrent,
+    PushDeviceMetadata? deviceMetadata,
     int Function()? timeZoneOffsetMinutes,
     Future<String?> Function()? timeZoneIdentifier,
   }) : _authService = authService,
@@ -80,6 +82,7 @@ class PushNotificationService {
        _environmentConfig = environmentConfig,
        _getToken = getToken,
        _isCurrent = isCurrent,
+       _deviceMetadata = deviceMetadata,
        _timeZoneOffsetMinutes =
            timeZoneOffsetMinutes ?? _deviceTimeZoneOffsetMinutes,
        _timeZoneIdentifier = timeZoneIdentifier ?? _deviceTimeZoneIdentifier;
@@ -90,6 +93,7 @@ class PushNotificationService {
   final EnvironmentConfig _environmentConfig;
   final Future<String?> Function() _getToken;
   final FutureOr<bool> Function()? _isCurrent;
+  final PushDeviceMetadata? _deviceMetadata;
   final int Function() _timeZoneOffsetMinutes;
   final Future<String?> Function() _timeZoneIdentifier;
   ({int offset, String? name})? _registeredTimezone;
@@ -447,7 +451,14 @@ class PushNotificationService {
     final plaintext = jsonEncode({
       'token': token,
       'timezoneOffsetMinutes': timezone.offset,
-      'campaignTargetTypes': NotificationWireValues.campaignTargetTypes,
+      'campaignTargetTypes': [
+        'app_route',
+        'video_address',
+        'creator_profile',
+        'announcement',
+        'featured_feed',
+      ],
+      ...?_deviceMetadata?.toJson(),
       if (timezone.name != null) 'timezone': timezone.name,
     });
 

@@ -29,6 +29,21 @@ void main() {
       expect(await hydrated, item);
     });
 
+    test('cold detail requests a refresh after subscribing, without visiting the inbox', () async {
+      final snapshots = StreamController<List<AnnouncementNotification>>(
+        sync: true,
+      );
+      final cubit = AnnouncementDetailCubit(
+        announcementId: item.announcementId,
+        initialItems: const [],
+        snapshots: snapshots.stream,
+        refresh: () async => snapshots.add([item]),
+      );
+      addTearDown(cubit.close);
+      addTearDown(snapshots.close);
+      expect(cubit.state, item);
+    });
+
     test('withdrawal clears a detail that is already open', () async {
       final snapshots = StreamController<List<AnnouncementNotification>>();
       final cubit = AnnouncementDetailCubit(
