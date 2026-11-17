@@ -4128,8 +4128,9 @@ void main() {
           ).thenAnswer((_) => resumed.future);
           clearInteractions(cameraService);
 
-          // The lip-sync stack resumes remote control as it disposes, in the
-          // frame that unmounts the screen and closes the bloc.
+          // The sound picker or the color mask settings resume remote control
+          // as they close, which can land in the frame that unmounts the
+          // screen and closes the bloc.
           bloc.add(const VideoRecorderRemoteRecordResumed());
           await pumpEventQueue();
           final closing = bloc.close();
