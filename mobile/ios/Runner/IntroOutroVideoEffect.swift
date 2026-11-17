@@ -195,9 +195,11 @@ enum IntroOutroProgress {
   }
 
   /// How far a moving curtain's bottom trails behind its top `effectTimeUs`
-  /// after the effect started, about -1 to 1: positive while an outro closes,
-  /// negative while an intro opens, 0 at both ends. It drags behind while the
-  /// curtain moves, and swings back as it speeds up and slows down.
+  /// after the effect started, 0 at both ends: for an outro it rises to about
+  /// 0.8 while the curtain closes, then turns negative about three quarters
+  /// of the way through and dips to about -0.2 as the cloth swings past; an
+  /// intro is the mirror image. It trails most while the curtain speeds up
+  /// and swings a little past as it stops.
   static func swing(ending: Bool, durationUs: Int64, effectTimeUs: Int64) -> Double {
     let p = progress(durationUs: durationUs, effectTimeUs: effectTimeUs)
     let speed: Double = 30 * p * p * (1 - p) * (1 - p) / 1.875

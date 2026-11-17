@@ -39,8 +39,9 @@ uniform float uShape;
 // The look: 0 fade, 1 circle, 2 cinema bars, 3 curtain, 4 focus.
 uniform float uStyle;
 
-// How far the bottom of a moving curtain trails behind its top, about -1 to
-// 1: positive while it closes, negative while it opens, 0 at rest.
+// How far the bottom of a moving curtain trails behind its top, 0 at rest:
+// up to about 0.8 while it closes and -0.8 while it opens, swinging a little
+// the other way near the end.
 uniform float uSwing;
 
 uniform sampler2D uTexture;

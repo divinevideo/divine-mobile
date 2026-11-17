@@ -1252,8 +1252,10 @@ double introOutroCoverage(double progress, {required bool ending}) {
 }
 
 /// How far the bottom of a moving curtain trails behind its top
-/// [progress] of the way through its window, about -1 to 1: positive while an
-/// outro closes, negative while an intro opens, 0 at both ends.
+/// [progress] of the way through its window, 0 at both ends: for an outro it
+/// rises to about 0.8 while the curtain closes, then turns negative about
+/// three quarters of the way through and dips to about -0.2 as the cloth
+/// swings past; an intro is the mirror image.
 ///
 /// The cloth drags behind while it moves, and swings back as the motion speeds
 /// up and slows down, so it trails most while the curtain speeds up and swings
