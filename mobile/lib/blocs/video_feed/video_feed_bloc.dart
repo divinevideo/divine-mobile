@@ -160,6 +160,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           return;
         }
         _removalRepository = repository;
+        _classicSession?.reapplyFilters(
+          keep: (video) => !repository.isVideoKnownDeleted(video),
+        );
         _watchRemovedVideoIds(repository.removedVideoIds);
         // Tombstones hydrate before the service is published, and broadcasts
         // do not replay. Reconcile its snapshot as well as future removals.
@@ -199,8 +202,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         state.status != VideoFeedStatus.success) {
       return;
     }
-    final snapshot = event.snapshot;
-    final videos = _videosRepository.applyContentPreferences(snapshot.videos);
+    final snapshot = _classicSession?.state ?? event.snapshot;
+    final videos = _withoutRemovedVideos(
+      _videosRepository.applyContentPreferences(snapshot.videos),
+    );
     final activeKey = state.videos.isEmpty
         ? null
         : state
@@ -1724,6 +1729,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     bool isRemoved(VideoEvent video) =>
         video.id.toLowerCase() == videoId ||
         _removalRepository.isVideoKnownDeleted(video);
+    _classicSession?.reapplyFilters(keep: (video) => !isRemoved(video));
     final removedBeforeCursor = state.videos
         .take(state.currentIndex)
         .where(isRemoved)
@@ -1808,12 +1814,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (state.source.type == VideoFeedSourceType.classic &&
         _classicSession != null) {
       _classicSession.reapplyFilters();
-      final snapshot = _classicSession.state;
-      emit(
-        state.copyWith(
-          videos: snapshot.videos,
-          currentIndex: snapshot.currentIndex,
-        ),
+      _onClassicsSessionChanged(
+        VideoFeedClassicsSessionChanged(_classicSession.state),
+        emit,
       );
       return;
     }
@@ -1927,7 +1930,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           : validVideos;
       final displayedVideos =
           source.type == VideoFeedSourceType.classic && _classicSession != null
-          ? _classicSession.state.videos
+          ? _withoutRemovedVideos(_classicSession.state.videos)
           : source.type == VideoFeedSourceType.newVideos
           ? filterNewFeedVideos(mergedVideos)
           : mergedVideos;
@@ -2153,7 +2156,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   ) {
     final index = event.index < 0 ? 0 : event.index;
     if (state.source.type == VideoFeedSourceType.classic) {
-      _classicSession?.activate(index);
+      if (index < state.videos.length) {
+        _classicSession?.activateVideo(state.videos[index]);
+      }
     }
     if (state.currentIndex == index) return;
     emit(state.copyWith(currentIndex: index));

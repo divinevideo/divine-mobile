@@ -148,6 +148,7 @@ class ClassicFeedSession {
   /// Reads the first page, or resumes the same independent queue.
   Future<HomeFeedResult> loadInitial({bool refresh = false}) async {
     if (_disposed) return const HomeFeedResult(videos: [], hasMore: false);
+    reapplyFilters();
     setActive(active: true);
     if (refresh) {
       _started = true;
@@ -224,7 +225,10 @@ class ClassicFeedSession {
   }
 
   /// Reapplies live content/block preferences while preserving active identity.
-  void reapplyFilters() {
+  ///
+  /// [keep] applies only to the current queue, so a reversible sweep does not
+  /// permanently exclude a video from a later read.
+  void reapplyFilters({bool Function(VideoEvent video)? keep}) {
     if (_disposed || state.videos.isEmpty) return;
     final previous = state.videos;
     final currentKey = previous[state.currentIndex].feedDedupKey;
@@ -232,7 +236,9 @@ class ClassicFeedSession {
         .take(_furthestIndex + 1)
         .map((v) => v.feedDedupKey)
         .toSet();
-    final videos = _filterVideos(previous);
+    final videos = _filterVideos(
+      previous,
+    ).where((video) => keep?.call(video) ?? true).toList();
     final current = videos.indexWhere((v) => v.feedDedupKey == currentKey);
     _furthestIndex = max(
       0,

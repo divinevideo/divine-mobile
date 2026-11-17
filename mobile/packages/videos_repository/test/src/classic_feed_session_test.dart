@@ -27,6 +27,54 @@ HomeFeedResult _page(List<int> ids, {String? cursor = 'next'}) =>
 void main() {
   group('ClassicFeedSession', () {
     test(
+      'one-shot sweep filters preserve identity and allow later recovery',
+      () async {
+        final session = ClassicFeedSession(
+          loadPage: (_) async => _page([1, 2, 3, 4]),
+        );
+        addTearDown(session.dispose);
+        await session.loadInitial();
+        session.activate(2);
+        await session.settled;
+        session.reapplyFilters(keep: (video) => video.id != _id(1));
+        expect(
+          session.state.videos.map((video) => video.id),
+          [2, 3, 4].map(_id),
+        );
+        expect(session.state.currentIndex, 1);
+        await session.loadInitial(refresh: true);
+        expect(
+          session.state.videos.map((video) => video.id),
+          [1, 2, 3, 4].map(_id),
+        );
+      },
+    );
+
+    test(
+      'resuming a retained queue reapplies the current live filter',
+      () async {
+        var hidden = false;
+        var reads = 0;
+        final session = ClassicFeedSession(
+          filter: (items) =>
+              items.where((v) => !hidden || v.id != _id(1)).toList(),
+          loadPage: (_) async {
+            reads++;
+            return _page([1, 2, 3]);
+          },
+        );
+        addTearDown(session.dispose);
+        await session.loadInitial();
+        session.setActive(active: false);
+        hidden = true;
+        final resumed = await session.loadInitial();
+        expect(resumed.videos.map((video) => video.id), [2, 3].map(_id));
+        expect(session.state.videos, resumed.videos);
+        expect(reads, 1);
+      },
+    );
+
+    test(
       'pagination appends and publishes loading without replacing the queue',
       () async {
         final requests = <ClassicRecommendationsRequest>[];

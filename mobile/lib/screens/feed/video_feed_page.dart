@@ -144,21 +144,34 @@ class VideoFeedPage extends ConsumerWidget {
                             final contextId = analytics.privacyGeneration;
                             final allowed =
                                 analytics.initializedAnalyticsConsent;
-                            return videosRepository.getClassicRecommendations(
-                              request: request,
-                              userPubkey: allowed ? viewerPubkey : null,
-                              isCurrent: () =>
-                                  contextId == analytics.privacyGeneration &&
-                                  allowed ==
-                                      analytics.initializedAnalyticsConsent,
-                            );
+                            return ref
+                                .read(videosRepositoryProvider)
+                                .getClassicRecommendations(
+                                  request: request,
+                                  userPubkey: allowed ? viewerPubkey : null,
+                                  isCurrent: () =>
+                                      contextId ==
+                                          analytics.privacyGeneration &&
+                                      allowed ==
+                                          analytics.initializedAnalyticsConsent,
+                                );
                           },
                           canPersonalize: () =>
                               analytics.initializedAnalyticsConsent,
                           feedback: analytics.recommendationFeedback,
                           privacyChanges: analytics.privacyChanges,
-                          removedVideoIds: videosRepository.removedVideoIds,
-                          filter: videosRepository.applyContentPreferences,
+                          filter: (videos) {
+                            final repository = ref.read(
+                              videosRepositoryProvider,
+                            );
+                            return repository
+                                .applyContentPreferences(videos)
+                                .where(
+                                  (video) =>
+                                      !repository.isVideoKnownDeleted(video),
+                                )
+                                .toList();
+                          },
                         )..setActive(active: false)),
                   followRepository: followRepository,
                   curatedListRepository: curatedListRepository,
