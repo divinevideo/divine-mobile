@@ -60,7 +60,9 @@ class FindPeopleView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               context.l10n.findPeopleDescription,
-              style: TextStyle(color: context.vineColors.secondaryText),
+              style: VineTheme.bodyMediumFont(
+                color: context.vineColors.secondaryText,
+              ),
             ),
           ),
           Expanded(
@@ -73,9 +75,10 @@ class FindPeopleView extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  TextButton(
+                  DivineButton(
+                    label: context.l10n.videoErrorSkip,
+                    type: DivineButtonType.quiet,
                     onPressed: onSkip,
-                    child: Text(context.l10n.videoErrorSkip),
                   ),
                   const SizedBox(width: 16),
                   Expanded(

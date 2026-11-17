@@ -137,7 +137,9 @@ class _FindPeopleSuggestionsListState
                 padding: const EdgeInsets.all(16),
                 child: Text(
                   context.l10n.commonSomethingWentWrong,
-                  style: TextStyle(color: context.vineColors.primaryText),
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
                 ),
               ),
             for (var index = 0; index < state.suggestions.length; index++)
@@ -179,7 +181,9 @@ class _FindPeopleSuggestionsListState
                 child: Text(
                   context.l10n.findPeopleEmpty,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: context.vineColors.secondaryText),
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
+                  ),
                 ),
               ),
           ],
@@ -319,7 +323,9 @@ class _SuggestionTileState extends State<_SuggestionTile> {
                   sanitizeForDisplay(about),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: context.vineColors.secondaryText),
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.secondaryText,
+                  ),
                 ),
               ),
             const SizedBox(height: 12),
