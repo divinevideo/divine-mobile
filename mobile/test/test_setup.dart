@@ -124,8 +124,15 @@ void _registerMocktailFallbacks() {
 /// In-memory backing store for the mocked flutter_secure_storage channel.
 /// Cleared on each full [setupTestEnvironment]/[restoreSharedChannelDefaults]
 /// so a fresh setup starts empty (the historical local-variable behavior),
-/// while the handler identity stays stable.
+/// while the handler identity stays stable. In the merged bundle most of
+/// those calls run before the first test, so the root `setUp` in
+/// `flutter_test_config.dart` also empties it through
+/// [clearSharedSecureStorageValues] before each test.
 final Map<String, String> _secureStorageStore = <String, String>{};
+
+/// Empties the values held by the canonical flutter_secure_storage handler,
+/// leaving the handler itself installed.
+void clearSharedSecureStorageValues() => _secureStorageStore.clear();
 
 Future<Object?>? _secureStorageHandler(MethodCall methodCall) async {
   switch (methodCall.method) {

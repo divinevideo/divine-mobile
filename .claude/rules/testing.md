@@ -902,6 +902,19 @@ rather than being healed into someone else's suite; a bare
 `check_shared_channel_overrides.sh` ratchet additionally freezes the set of
 files that raw-install a shared channel, so new ones must use the helper.
 
+The identity check does not cover the **values** behind the canonical
+`flutter_secure_storage` handler, which live in one process-global map.
+`setupTestEnvironment()` empties it before any test runs: `testExecutable`
+calls it once per isolate, and in the merged bundle so do the files that call
+it from `main()`. During the run only the few suites that call it, or
+`restoreSharedChannelDefaults()`, from a lifecycle callback empty it again, so
+a suite that writes through the real `FlutterSecureStorage` used to hand its
+values to the suites after it: a Keycast session left by one auth suite made an
+ownerless sign-out in another refuse to run. A root `setUp` now empties the map
+before every test (`clearSharedSecureStorageValues`), so each test starts with
+empty secure storage. Seed secure storage in `setUp` or the test body; a value
+written in `setUpAll` is gone before the first test reads it.
+
 ### Heal-and-blame harness (shared Hive boxes)
 
 Hive registers a box **process-globally by name**, so the box one suite leaves

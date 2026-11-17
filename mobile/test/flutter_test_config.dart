@@ -67,6 +67,14 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   // the perpetrating test. Compliant tests never trip it.
   tearDown(() => healAndBlameSharedChannels(strict: _strictChannels));
 
+  // The canonical flutter_secure_storage handler keeps its values in one
+  // process-global map. setupTestEnvironment() above empties it before any
+  // test runs, and in the merged bundle only a few suites empty it again, so a
+  // value one suite writes through the real FlutterSecureStorage reaches the
+  // suites after it. Start every test empty; setUp rather than tearDown also
+  // drops a write that lands after the previous test finished.
+  setUp(clearSharedSecureStorageValues);
+
   // Hive registers boxes process-globally by name, so a box one suite leaves
   // open is the same box the next suite gets back from openBox — rows and
   // backing directory included (#6748). The observer also starts app-owned
