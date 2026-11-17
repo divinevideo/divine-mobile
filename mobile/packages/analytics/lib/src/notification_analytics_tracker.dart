@@ -75,12 +75,26 @@ class NotificationAnalyticsTracker {
     String? campaignRevisionId,
   }) async {
     final reservation = Object();
+    final isCampaign = notificationType == 'campaign';
     final revision =
-        notificationType == 'campaign' &&
+        isCampaign &&
             campaignRevisionId != null &&
             _campaignRevisionPattern.hasMatch(campaignRevisionId)
         ? campaignRevisionId
         : null;
+    if (isCampaign && campaignRevisionId != null && revision == null) {
+      // The rejected value is unvalidated payload text, so only its shape is
+      // logged: enough to tell an uppercase UUID from anything else.
+      final uppercaseUuid = _campaignRevisionPattern.hasMatch(
+        campaignRevisionId.toLowerCase(),
+      );
+      Log.warning(
+        'Campaign open has no attribution: revision is not a lowercase UUID '
+        '(length=${campaignRevisionId.length}, uppercaseUuid=$uppercaseUuid)',
+        name: 'NotificationAnalyticsTracker',
+        category: LogCategory.system,
+      );
+    }
     final effectiveKey = revision == null
         ? deduplicationKey
         : 'campaign:$revision';

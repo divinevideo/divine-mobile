@@ -195,6 +195,23 @@ void main() {
         );
       });
 
+      test('logs the shape of a dropped revision, not its text', () async {
+        const rejected = '12345678-1234-4234-8234-123456789ABC';
+        final logs = LogCaptureService();
+        await logs.clearAllLogs();
+        await tracker.opened(
+          notificationType: 'campaign',
+          source: NotificationOpenSource.localTap,
+          campaignRevisionId: rejected,
+        );
+        final warning = logs
+            .getRecentLogs(minLevel: LogLevel.warning)
+            .map((entry) => entry.message)
+            .singleWhere((message) => message.contains('no attribution'));
+        expect(warning, contains('uppercaseUuid=true'));
+        expect(warning, isNot(contains(rejected)));
+      });
+
       test('counts one open per revision across deliveries', () async {
         for (final messageId in ['message-1', 'message-2']) {
           await tracker.opened(
