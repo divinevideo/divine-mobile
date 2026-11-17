@@ -190,6 +190,11 @@ void main() {
         ) as Map<String, dynamic>;
         expect(registrationJson['token'], testToken);
         expect(registrationJson['timezone'], 'Pacific/Auckland');
+        expect(registrationJson['campaignTargetTypes'], [
+          'app_route',
+          'video_address',
+          'creator_profile',
+        ]);
         expect(
           registrationJson['timezoneOffsetMinutes'],
           testTimeZoneOffsetMinutes,

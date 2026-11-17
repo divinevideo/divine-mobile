@@ -5,6 +5,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/blocs/close_guard.dart';
@@ -24,8 +25,10 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
   NotificationSettingsCubit({
     required NotificationPreferencesService preferencesService,
     NotificationRepository? notificationRepository,
+    NotificationAnalyticsTracker? notificationAnalytics,
   }) : _preferencesService = preferencesService,
        _notificationRepository = notificationRepository,
+       _notificationAnalytics = notificationAnalytics,
        super(
          NotificationSettingsState(
            markAllAsReadStatus: notificationRepository == null
@@ -54,6 +57,7 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
 
   final NotificationPreferencesService _preferencesService;
   final NotificationRepository? _notificationRepository;
+  final NotificationAnalyticsTracker? _notificationAnalytics;
 
   /// Loads the persisted preferences. `loadPreferences` is itself defensive
   /// (returns defaults on storage/decoding errors), so this does not throw.
@@ -94,13 +98,28 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
     NotificationPreference preference,
     bool enabled,
   ) async {
+    final wasEnabled = state.preferences.campaignsEnabled;
     await _preferencesService.updatePreference(preference, enabled);
     await _reloadPreferences();
+    _recordCampaignChoice(wasEnabled);
   }
 
   /// Resets preferences to their defaults and persists them.
   Future<void> resetToDefaults() async {
+    final wasEnabled = state.preferences.campaignsEnabled;
     await _preferencesService.resetToDefaults();
     await _reloadPreferences();
+    _recordCampaignChoice(wasEnabled);
+  }
+
+  void _recordCampaignChoice(bool wasEnabled) {
+    if (isClosed || wasEnabled == state.preferences.campaignsEnabled) return;
+    final tracker = _notificationAnalytics;
+    if (tracker != null)
+      unawaited(
+        tracker.campaignConsentChanged(
+          enabled: state.preferences.campaignsEnabled,
+        ),
+      );
   }
 }

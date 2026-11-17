@@ -56,6 +56,9 @@ abstract class NotificationPayloadKeys {
 
   /// Campaign destination value, such as an absolute in-app route.
   static const String tapTargetValue = 'tapTargetValue';
+
+  /// Immutable approved campaign revision used for consented attribution.
+  static const String campaignRevisionId = 'campaignRevisionId';
 }
 
 /// Wire values shared by the push service and this client.
@@ -132,6 +135,7 @@ bool isRoutableNotificationPayload({
   String? senderPubkey,
   String? tapTargetType,
   String? tapTargetValue,
+  String? campaignRevisionId,
 })?
 parseFcmPayload(Map<String, dynamic> data) {
   String? nonEmpty(String key) {
@@ -168,6 +172,7 @@ parseFcmPayload(Map<String, dynamic> data) {
     senderPubkey: senderPubkey,
     tapTargetType: tapTargetType,
     tapTargetValue: tapTargetValue,
+    campaignRevisionId: nonEmpty(NotificationPayloadKeys.campaignRevisionId),
   );
 }
 
@@ -194,5 +199,6 @@ Map<String, dynamic> localNotificationTapPayload(Map<String, dynamic> data) {
     NotificationPayloadKeys.senderPubkey: parsed?.senderPubkey,
     NotificationPayloadKeys.tapTargetType: ?parsed?.tapTargetType,
     NotificationPayloadKeys.tapTargetValue: ?parsed?.tapTargetValue,
+    NotificationPayloadKeys.campaignRevisionId: ?parsed?.campaignRevisionId,
   };
 }

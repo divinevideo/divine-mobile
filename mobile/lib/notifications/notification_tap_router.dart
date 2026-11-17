@@ -178,16 +178,31 @@ pushNotificationTapTarget({
     );
   }
   if (notificationType == NotificationWireValues.campaign) {
+    if (tapTargetType == 'video_address' &&
+        tapTargetValue != null &&
+        RegExp(r'^34236:[0-9a-f]{64}:.+$').hasMatch(tapTargetValue)) {
+      return (
+        target: const OpenVideoTarget(autoOpenComments: false),
+        targetEventId: null,
+        videoCoordinate: tapTargetValue,
+      );
+    }
+    if (tapTargetType == 'creator_profile' &&
+        tapTargetValue != null &&
+        RegExp(r'^[0-9a-f]{64}$').hasMatch(tapTargetValue)) {
+      return (
+        target: OpenProfileTarget(tapTargetValue),
+        targetEventId: null,
+        videoCoordinate: null,
+      );
+    }
     final location = campaignAppRoute(
       type: tapTargetType,
       value: tapTargetValue,
     );
     if (location == null) {
-      // Neither value is identity-linked, so logging both is how a
-      // misconfigured campaign is told apart from an untapped notification.
       Log.warning(
-        'Unsupported campaign tap target; opening inbox '
-        '(tapTargetType=$tapTargetType, tapTargetValue=$tapTargetValue)',
+        'Unsupported campaign tap target; opening inbox',
         name: 'main',
         category: LogCategory.system,
       );
@@ -256,6 +271,7 @@ Future<void> routeNotificationTap({
   required String? tapTargetValue,
   required NotificationOpenSource openSource,
   String? messageId,
+  String? campaignRevisionId,
 }) async {
   // Keep provider initialization and analytics off the navigation critical path.
   scheduleMicrotask(() {
@@ -267,6 +283,7 @@ Future<void> routeNotificationTap({
               notificationType: notificationType,
               source: openSource,
               deduplicationKey: messageId ?? eventId,
+              campaignRevisionId: campaignRevisionId,
             ),
       );
     } on Object catch (error) {
@@ -341,6 +358,7 @@ Future<void> routeBackgroundPushTap(
   );
   await routeNotificationTap(
     messageId: parsed.messageId,
+    campaignRevisionId: parsed.campaignRevisionId,
     openSource: NotificationOpenSource.osBackground,
     referencedAddress: parsed.referencedAddress,
     referencedEventId: parsed.referencedEventId,

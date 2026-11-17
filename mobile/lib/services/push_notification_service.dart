@@ -447,6 +447,7 @@ class PushNotificationService {
     final plaintext = jsonEncode({
       'token': token,
       'timezoneOffsetMinutes': timezone.offset,
+      'campaignTargetTypes': ['app_route', 'video_address', 'creator_profile'],
       if (timezone.name != null) 'timezone': timezone.name,
     });
 

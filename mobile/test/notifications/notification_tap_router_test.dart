@@ -33,6 +33,7 @@ void main() {
     NotificationPayloadKeys.wireType: NotificationWireValues.campaign,
     NotificationPayloadKeys.tapTargetType: 'app_route',
     NotificationPayloadKeys.tapTargetValue: destination,
+    'campaignRevisionId': '12345678-1234-4234-8234-123456789abc',
   };
 
   late _MockGoRouter routerA;
@@ -107,6 +108,31 @@ void main() {
     }
   });
 
+  test('campaign opens retain revision attribution and dedupe duplicate tap callbacks', () async {
+    final sink = _RecordingSink();
+    final tracker = NotificationAnalyticsTracker(
+      sink: sink,
+      collectionAllowed: () async => true,
+      privacyBoundary: () => 'test',
+    );
+    final container = ProviderContainer(
+      overrides: [
+        goRouterProvider.overrideWithValue(routerA),
+        notificationAnalyticsTrackerProvider.overrideWithValue(tracker),
+      ],
+    );
+    addTearDown(container.dispose);
+    containerA.dispose();
+    await routeBackgroundPushTap(campaignTap, liveContainer: () => container);
+    await routeBackgroundPushTap(campaignTap, liveContainer: () => container);
+    await pumpEventQueue();
+    expect(sink.events.length, 1);
+    expect(
+      sink.events.single['campaign_revision_id'],
+      '12345678-1234-4234-8234-123456789abc',
+    );
+  });
+
   group('routeBackgroundPushTap', () {
     test('routes immediately while analytics waits for consent', () async {
       final consent = Completer<bool>();
@@ -137,6 +163,7 @@ void main() {
           'name': 'push_notification_opened',
           'notification_type': 'campaign',
           'open_source': 'os_background',
+          'campaign_revision_id': '12345678-1234-4234-8234-123456789abc',
         },
       ]);
     });

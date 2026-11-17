@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -17,6 +18,17 @@ class _MockNotificationPreferencesService extends Mock
 
 class _MockNotificationRepository extends Mock
     implements NotificationRepository {}
+
+class _ConsentSink extends NoOpAnalyticsEventSink {
+  final changes = <Map<String, Object>>[];
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    if (name == 'campaign_consent_changed') changes.add(parameters);
+  }
+}
 
 void main() {
   setUpAll(() {
@@ -58,6 +70,38 @@ void main() {
           preferencesService: service,
           notificationRepository: repository,
         );
+
+    test(
+      'records only actual campaign preference changes, including reset',
+      () async {
+        final sink = _ConsentSink();
+        final cubit = NotificationSettingsCubit(
+          preferencesService: service,
+          notificationAnalytics: NotificationAnalyticsTracker(
+            sink: sink,
+            collectionAllowed: () async => true,
+            privacyBoundary: () => 'test',
+          ),
+        );
+        addTearDown(cubit.close);
+        await cubit.load();
+        await cubit.setPreference(
+          NotificationPreference.campaignsEnabled,
+          true,
+        );
+        await cubit.setPreference(
+          NotificationPreference.campaignsEnabled,
+          true,
+        );
+        await cubit.resetToDefaults();
+        await pumpEventQueue();
+        expect(sink.changes, [
+          {'enabled': 1},
+          {'enabled': 0},
+        ]);
+        expect(cubit.state.preferences.campaignsEnabled, false);
+      },
+    );
 
     blocTest<NotificationSettingsCubit, NotificationSettingsState>(
       'load emits loading then ready with the loaded preferences',

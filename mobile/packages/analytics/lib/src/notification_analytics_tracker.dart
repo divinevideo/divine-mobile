@@ -45,15 +45,45 @@ class NotificationAnalyticsTracker {
   final _seen = <String, Object>{};
   Object? _boundary;
 
+  /// Observes a persisted marketing choice using the same consent and identity fence.
+  Future<void> campaignConsentChanged({required bool enabled}) async {
+    try {
+      final boundary = _privacyBoundary();
+      if (!await _collectionAllowed() || _privacyBoundary() != boundary) return;
+      await _sink.logEvent(
+        name: 'campaign_consent_changed',
+        parameters: {'enabled': enabled ? 1 : 0},
+      );
+    } on Object catch (error) {
+      Log.warning(
+        'Campaign consent analytics failed: $error',
+        name: 'NotificationAnalyticsTracker',
+        category: LogCategory.system,
+      );
+    }
+  }
+
   /// [deduplicationKey] stays in memory, scoped to the current privacy/session
   /// boundary. Missing keys never collapse unrelated legacy notifications.
   Future<void> opened({
     required String? notificationType,
     required NotificationOpenSource source,
     String? deduplicationKey,
+    String? campaignRevisionId,
   }) async {
     final reservation = Object();
-    final key = deduplicationKey?.isNotEmpty ?? false ? deduplicationKey : null;
+    final revision =
+        notificationType == 'campaign' &&
+            campaignRevisionId != null &&
+            RegExp(
+              r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+            ).hasMatch(campaignRevisionId)
+        ? campaignRevisionId
+        : null;
+    final effectiveKey = revision == null
+        ? deduplicationKey
+        : 'campaign:$revision';
+    final key = effectiveKey?.isNotEmpty ?? false ? effectiveKey : null;
     var recorded = false;
     try {
       final boundary = _privacyBoundary();
@@ -84,6 +114,7 @@ class NotificationAnalyticsTracker {
               ? normalizedType!
               : 'unknown',
           'open_source': source.wireValue,
+          if (revision != null) 'campaign_revision_id': revision,
         },
       );
       recorded = true;
