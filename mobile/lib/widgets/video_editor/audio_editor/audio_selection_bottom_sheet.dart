@@ -661,12 +661,12 @@ class _AudioSelectionBottomSheetState
     // The owner exemption follows account changes just as the tap check does.
     ref.watch(currentAuthStateProvider);
     final bundledSoundsAsync = ref.watch(soundLibraryServiceProvider);
-    // Batched like the counts below and just as supplementary: a row waits on
-    // a plain tile while its list's covers load, then shows its cover, or its
-    // colour tile if it has none. Every list keeps its own covers, so a tab
-    // that swipes in shows the ones it already has. A failed lookup settles as
-    // no covers, so its rows fall back to their colour tiles instead of
-    // waiting.
+    // Batched like the counts below and just as supplementary: a row whose
+    // cover comes from its source video shows its colour tile until its
+    // list's covers load, then the video's cover if it has one. Every list
+    // keeps its own covers, so a tab that swipes in shows the ones it already
+    // has. A failed lookup settles as no covers, so the other lists still
+    // load after it.
     Map<String, SoundCover?>? settled(
       AsyncValue<Map<String, SoundCover?>> covers,
     ) => covers.hasError ? const {} : covers.value;
@@ -845,7 +845,6 @@ class _AudioSelectionBottomSheetState
               audioService: _audioService,
               onSelect: _selectSound,
               coversBySourceVideo: forYouCovers,
-              isLookingUpCovers: forYouLookup?.isLoading ?? false,
               paging: loadsMoreOnScroll ? forYouAsync.value : null,
               onLoadMore: ref.read(forYouSoundsProvider.notifier).loadMore,
               emptyState: emptyState,
@@ -866,7 +865,6 @@ class _AudioSelectionBottomSheetState
               onSelect: _selectSound,
               usageCounts: popular.usageCounts,
               coversBySourceVideo: popularCovers,
-              isLookingUpCovers: popularLookup?.isLoading ?? false,
               paging: loadsMoreOnScroll ? popular : null,
               onLoadMore: ref.read(popularSoundsProvider.notifier).loadMore,
               emptyState: emptyState,
@@ -904,9 +902,6 @@ class _AudioSelectionBottomSheetState
                 coversBySourceVideo: trendingCovers == null
                     ? null
                     : {...trendingCovers, ...?searchCovers},
-                isLookingUpCovers:
-                    (trendingLookup?.isLoading ?? false) ||
-                    searchLookup.isLoading,
                 paging: loadsMoreOnScroll ? newestList : null,
                 onLoadMore: ref.read(trendingSoundsProvider.notifier).loadMore,
                 emptyState: emptyState,
@@ -1226,7 +1221,6 @@ class _SoundsContent extends ConsumerWidget {
     this.displayTitles = const {},
     this.covers = const {},
     this.coversBySourceVideo = const {},
-    this.isLookingUpCovers = false,
     this.unavailableSoundIds = const {},
     this.usageCounts,
     this.paging,
@@ -1261,10 +1255,6 @@ class _SoundsContent extends ConsumerWidget {
   /// lookup runs.
   final Map<String, SoundCover?>? coversBySourceVideo;
 
-  /// Whether a lookup for [coversBySourceVideo] is running, so rows it has
-  /// not reached yet wait for it.
-  final bool isLookingUpCovers;
-
   /// Sounds listed here but not selectable, because their device-local audio
   /// file is gone.
   final Set<String> unavailableSoundIds;
@@ -1297,18 +1287,6 @@ class _SoundsContent extends ConsumerWidget {
     if (covers[audio.id] case final cover?) return cover;
     final reference = audio.sourceVideoReference;
     return reference == null ? null : coversBySourceVideo?[reference];
-  }
-
-  /// Whether [audio]'s cover is still being looked up, so its row waits on a
-  /// plain tile rather than showing a colour it may not keep.
-  bool _isCoverPending(AudioEvent audio) {
-    final reference = audio.sourceVideoReference;
-    if (reference == null || SoundCover.publishedWith(audio) != null) {
-      return false;
-    }
-    final covers = coversBySourceVideo;
-    return covers == null ||
-        (isLookingUpCovers && !covers.containsKey(reference));
   }
 
   @override
@@ -1352,7 +1330,6 @@ class _SoundsContent extends ConsumerWidget {
                 audio: audio,
                 displayTitle: displayTitles[audio.id],
                 cover: _coverFor(audio),
-                isCoverPending: _isCoverPending(audio),
                 isSelected: false,
                 isUnavailable: isUnavailable,
                 videoCount: _videoCountFor(audio),
@@ -1372,7 +1349,6 @@ class _SoundsContent extends ConsumerWidget {
                   audio: displayAudio,
                   displayTitle: displayTitles[displayAudio.id],
                   cover: _coverFor(displayAudio),
-                  isCoverPending: _isCoverPending(displayAudio),
                   isSelected: true,
                   isPlaying: snapshot.data ?? false,
                   videoCount: _videoCountFor(displayAudio),

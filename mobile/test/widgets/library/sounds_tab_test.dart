@@ -699,34 +699,6 @@ void main() {
       expect(find.text(_l10n.soundsAddSoundHint), findsOneWidget);
     });
 
-    testWidgets('waits on a plain cover only for a sound the lookup decides', (
-      tester,
-    ) async {
-      const video = '34236:creator:clip';
-      final service = SavedSoundsService(sharedPreferences);
-      await service.saveSound(
-        _sound(
-          id: 'clip',
-          title: 'Clip Sound',
-        ).copyWith(sourceVideoReference: video),
-      );
-      await service.saveSound(_sound(id: 'file', title: 'File Sound'));
-      final lookup = Completer<Map<String, SoundCover?>>();
-      addTearDown(() => lookup.complete(const {}));
-
-      await pumpSoundsTab(
-        tester,
-        overrides: [
-          savedSoundSourcesProvider.overrideWith(
-            (ref, sources) => lookup.future,
-          ),
-        ],
-      );
-
-      expect(_tile(tester, 'Clip Sound').isCoverPending, isTrue);
-      expect(_tile(tester, 'File Sound').isCoverPending, isFalse);
-    });
-
     testWidgets('repeats why a sound cannot be used above its actions', (
       tester,
     ) async {

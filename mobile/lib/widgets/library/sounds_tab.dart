@@ -843,7 +843,6 @@ class _SavedSoundsSection extends ConsumerWidget {
               sound,
               sourceCovers: sourceCovers,
             );
-            final reference = sound.audio.sourceVideoReference;
             final view = (
               cover: cover,
               isMissingFile: state.isMissingFile(sound),
@@ -856,13 +855,6 @@ class _SavedSoundsSection extends ConsumerWidget {
             return SavedSoundTile(
               sound: sound,
               cover: cover,
-              // Only a sound with nothing to show until the lookup answers
-              // waits for it.
-              isCoverPending:
-                  cover == null &&
-                  reference != null &&
-                  sourcesLookup.isLoading &&
-                  !(sourceCovers?.containsKey(reference) ?? false),
               isMissingFile: view.isMissingFile,
               cannotBeReused: view.cannotBeReused,
               isPreviewing: isPreviewing,

@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:media_cache/media_cache.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/widgets/audio/sound_cover_image.dart';
@@ -8,6 +13,8 @@ import 'package:openvine/widgets/blurhash_display.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 
 const _blurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
+
+class _MockMediaCacheManager extends Mock implements MediaCacheManager {}
 
 Widget _app(SoundCover? cover, {String colorSeed = ''}) => MaterialApp(
   localizationsDelegates: appLocalizationsDelegates,
@@ -50,21 +57,32 @@ void main() {
         expect(colors.length, greaterThan(1));
       });
 
-      testWidgets('a plain tile while the cover is looked up', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            theme: VineTheme.theme,
-            home: const Scaffold(
-              body: Center(child: SoundCoverImage(isPending: true, size: 48)),
-            ),
-          ),
-        );
+      // A slow cover without a blurhash showed a blank grey tile until it
+      // loaded or failed; on Android a stalled download has no timeout.
+      testWidgets(
+        'the colour tile while an image without a blurhash loads',
+        (tester) async {
+          final cache = _MockMediaCacheManager();
+          final neverLoads = Completer<FileInfo?>();
+          when(
+            () => cache.getFileFromCache(any()),
+          ).thenAnswer((_) => neverLoads.future);
+          debugImageCacheOverride = cache;
+          addTearDown(() => debugImageCacheOverride = null);
+          addTearDown(imageCache.clear);
 
-        expect(find.byKey(const Key('sound_cover_pending')), findsOneWidget);
-        expect(find.byKey(const Key('sound_cover_fallback')), findsNothing);
-      });
+          await tester.pumpWidget(
+            _app(const SoundCover(imageUrl: 'https://example.com/slow.jpg')),
+          );
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(find.byType(VineCachedImage), findsOneWidget);
+          expect(
+            find.byKey(const Key('sound_cover_fallback')),
+            findsOneWidget,
+          );
+        },
+      );
 
       testWidgets('the blurhash when the cover has no image', (tester) async {
         await tester.pumpWidget(_app(const SoundCover(blurhash: _blurhash)));
