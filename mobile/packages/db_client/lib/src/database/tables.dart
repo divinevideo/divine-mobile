@@ -9,7 +9,7 @@ import 'package:drift/drift.dart';
 /// Contains all Nostr events including video events (kind 34236), profiles
 /// (kind 0), reactions (kind 7), etc.
 @TableIndex.sql(
-  'CREATE INDEX IF NOT EXISTS idx_event_verified_created_at '
+  'CREATE INDEX IF NOT EXISTS idx_event_verified_created_at_v36 '
   'ON event (created_at DESC) WHERE signature_verified = 1',
 )
 @DataClassName('NostrEventRow')
@@ -55,16 +55,16 @@ class NostrEvents extends Table {
     // Feed queries (WHERE kind = ? ORDER BY created_at DESC); the kind
     // prefix also serves kind-only filters.
     Index(
-      'idx_event_kind_created_at',
-      'CREATE INDEX IF NOT EXISTS idx_event_kind_created_at '
+      'idx_event_kind_created_at_v36',
+      'CREATE INDEX IF NOT EXISTS idx_event_kind_created_at_v36 '
           'ON event (kind, created_at)',
     ),
 
     // Author timeline (WHERE pubkey = ? ORDER BY created_at DESC); the
     // pubkey prefix also serves author-only filters.
     Index(
-      'idx_event_pubkey_created_at',
-      'CREATE INDEX IF NOT EXISTS idx_event_pubkey_created_at '
+      'idx_event_pubkey_created_at_v36',
+      'CREATE INDEX IF NOT EXISTS idx_event_pubkey_created_at_v36 '
           'ON event (pubkey, created_at)',
     ),
 
@@ -72,27 +72,27 @@ class NostrEvents extends Table {
     // d_tag = ?); the (pubkey, kind) prefix serves standard replaceable
     // upserts and profile queries. The trailing created_at makes the
     // upsert's MAX(created_at) lookup a covering-index seek — without it
-    // SQLite's min/max optimization prefers idx_event_kind_created_at
+    // SQLite's min/max optimization prefers idx_event_kind_created_at_v36
     // (kind-only equality + residual filters), a reverse scan of the
     // whole kind partition (PR #5957 review).
     Index(
-      'idx_event_pubkey_kind_d_tag_created_at',
-      'CREATE INDEX IF NOT EXISTS idx_event_pubkey_kind_d_tag_created_at '
+      'idx_event_pubkey_kind_d_tag_created_at_v36',
+      'CREATE INDEX IF NOT EXISTS idx_event_pubkey_kind_d_tag_created_at_v36 '
           'ON event (pubkey, kind, d_tag, created_at)',
     ),
 
     // Global recency for queries that also include unchecked events. The
     // verified-signature seed uses the partial index declared above.
     Index(
-      'idx_event_created_at',
-      'CREATE INDEX IF NOT EXISTS idx_event_created_at '
+      'idx_event_created_at_v36',
+      'CREATE INDEX IF NOT EXISTS idx_event_created_at_v36 '
           'ON event (created_at)',
     ),
 
     // Cache eviction (WHERE expire_at IS NULL OR expire_at < ?)
     Index(
-      'idx_event_expire_at',
-      'CREATE INDEX IF NOT EXISTS idx_event_expire_at ON event (expire_at)',
+      'idx_event_expire_at_v36',
+      'CREATE INDEX IF NOT EXISTS idx_event_expire_at_v36 ON event (expire_at)',
     ),
   ];
 }
@@ -150,14 +150,14 @@ class UserProfiles extends Table {
 /// never fires on its own. Once orphans are swept, this table is bounded by
 /// whatever bounds `event` (its own TTL sweep), with no separate cap needed.
 @TableIndex.sql(
-  'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count '
+  'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count_v36 '
   'ON video_metrics (loop_count)',
 )
 @TableIndex.sql(
-  'CREATE INDEX IF NOT EXISTS idx_metrics_likes ON video_metrics (likes)',
+  'CREATE INDEX IF NOT EXISTS idx_metrics_likes_v36 ON video_metrics (likes)',
 )
 @TableIndex.sql(
-  'CREATE INDEX IF NOT EXISTS idx_metrics_views ON video_metrics (views)',
+  'CREATE INDEX IF NOT EXISTS idx_metrics_views_v36 ON video_metrics (views)',
 )
 @DataClassName('VideoMetricRow')
 class VideoMetrics extends Table {

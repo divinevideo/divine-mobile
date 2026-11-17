@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 35** (see `app_database.dart`).
+**Version: 36** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -606,3 +606,27 @@ dart run drift_dev make-migrations
 - [Drift Migrations Documentation](https://drift.simonbinder.eu/migrations/)
 - [Migration Tests](https://drift.simonbinder.eu/migrations/tests/)
 - [Step-by-Step Migrations](https://drift.simonbinder.eu/migrations/step_by_step/)
+
+## Version 36: replace disposable event caches without a payload scan
+
+The v35 verified-event index made a sparse verification seed fast, but creating
+it traversed the entire existing encrypted event cache before the first frame.
+Version 36 instead retires `video_metrics` and `event` with metadata-only table
+renames and creates empty replacements. It never copies their rows. Durable
+tables, including drafts, clips, personal events and pending queues, stay in
+place. Metrics retire with events so startup's orphan sweep stays small.
+
+The rotation precedes historical upgrade steps, and upgrades targeting v36 skip
+the v35 index build. Historical v35 targets retain their original migration.
+All active event/metrics indexes use a `_v36` suffix: the retired indexes keep
+their names and B-trees until idle cleanup empties them. Do not drop those large
+indexes during startup just to reuse their names. Renaming metrics before events
+keeps SQLite's FK rewrite confined to the retired pair.
+
+`RetiredEventCache.pruneBatch` reclaims at most 250 old rows per transaction,
+metrics first. The app starts its scheduler after the first frame; it waits for
+startup to settle, checks foreground/idle gates between batches, and yields
+between short passes. An interrupted cleanup resumes from the remaining rows on
+the next launch. Only empty retired tables and indexes are dropped; there is no
+startup VACUUM or whole-cache DELETE. Retired tables are optional raw migration
+artifacts rather than permanent Drift schema entities.

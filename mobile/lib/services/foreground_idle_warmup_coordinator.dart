@@ -107,6 +107,7 @@ enum ForegroundIdleWarmupTaskId {
   newVideos,
   popular,
   notifications,
+  retiredEventCache,
 }
 
 /// A lightweight data warmup task.

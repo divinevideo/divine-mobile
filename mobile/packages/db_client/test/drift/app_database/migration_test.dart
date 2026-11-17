@@ -349,8 +349,8 @@ void main() {
       },
     );
 
-    test('current schema version is 35', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 35);
+    test('current schema version is 36', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 36);
     });
 
     test('v34 gives a queued DM a place for an unconfirmed recipient wrap, '

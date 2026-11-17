@@ -715,48 +715,57 @@ void main() {
         expect(fetched.selfWrapStatus, OutgoingWrapStatus.pending);
       });
 
-      test('upgrade path — legacy v1 database migrates to v3', () async {
-        // The generated `migration_test.dart` cannot cover this: both
-        // `drift_schema_v1.json` and `drift_schema_v2.json` are dumps of the
-        // same declared table set, so `schemaAt(1)` already hands back a
-        // complete v2-shaped database. A real shipped v1 install is missing
-        // the tables, columns, and `notifications` primary key that startup
-        // repair used to add on every launch. Degrade a fresh database to
-        // that shape, then reopen and assert `onUpgrade` normalizes it.
-        await database.customStatement(
-          'INSERT INTO event (id, pubkey, created_at, kind, tags, content, '
-          "sig, expire_at) VALUES ('legacy-e1', 'p1', 100, 30023, "
-          "'[[\"d\",\"legacy-slug\"]]', 'c', 's', 99999999999)",
-        );
-        await database.customStatement(
-          'INSERT INTO notifications (id, type, from_pubkey, timestamp, '
-          "is_read, cached_at) VALUES ('legacy-n1', 'like', 'p1', 100, 0, "
-          "strftime('%s','now'))",
-        );
+      test(
+        'legacy v1 normalizes durable tables and replaces its cache',
+        () async {
+          // The generated `migration_test.dart` cannot cover this: both
+          // `drift_schema_v1.json` and `drift_schema_v2.json` are dumps of the
+          // same declared table set, so `schemaAt(1)` already hands back a
+          // complete v2-shaped database. A real shipped v1 install is missing
+          // the tables, columns, and `notifications` primary key that startup
+          // repair used to add on every launch. Degrade a fresh database to
+          // that shape, then reopen and assert `onUpgrade` normalizes it.
+          await database.customStatement(
+            'INSERT INTO event (id, pubkey, created_at, kind, tags, content, '
+            "sig, expire_at) VALUES ('legacy-e1', 'p1', 100, 30023, "
+            "'[[\"d\",\"legacy-slug\"]]', 'c', 's', 99999999999)",
+          );
+          await database.customStatement(
+            'INSERT INTO notifications (id, type, from_pubkey, timestamp, '
+            "is_read, cached_at) VALUES ('legacy-n1', 'like', 'p1', 100, 0, "
+            "strftime('%s','now'))",
+          );
 
-        for (final table in _v1NormalizationTables) {
-          await database.customStatement('DROP TABLE IF EXISTS $table');
-        }
-        for (final index in _v1NormalizationEventIndexes) {
-          await database.customStatement('DROP INDEX IF EXISTS $index');
-        }
-        await database.customStatement('ALTER TABLE event DROP COLUMN d_tag');
-        await database.customStatement(
-          'DROP INDEX IF EXISTS idx_personal_reactions_addressable_id',
-        );
-        await database.customStatement(
-          'ALTER TABLE personal_reactions DROP COLUMN addressable_id',
-        );
+          for (final table in _v1NormalizationTables) {
+            await database.customStatement('DROP TABLE IF EXISTS $table');
+          }
+          for (final index in [
+            ..._v1NormalizationEventIndexes,
+            'idx_event_verified_created_at_v36',
+            'idx_metrics_loop_count_v36',
+            'idx_metrics_likes_v36',
+            'idx_metrics_views_v36',
+          ]) {
+            // Shipped v1 caches never carried the v36 layout markers.
+            await database.customStatement('DROP INDEX IF EXISTS $index');
+          }
+          await database.customStatement('ALTER TABLE event DROP COLUMN d_tag');
+          await database.customStatement(
+            'DROP INDEX IF EXISTS idx_personal_reactions_addressable_id',
+          );
+          await database.customStatement(
+            'ALTER TABLE personal_reactions DROP COLUMN addressable_id',
+          );
 
-        // Rebuild `notifications` with the pre-owner_pubkey single-column
-        // primary key that shipped before the composite key landed.
-        await database.customStatement(
-          'DROP INDEX IF EXISTS idx_notification_owner_timestamp',
-        );
-        await database.customStatement(
-          'ALTER TABLE notifications RENAME TO notifications_legacy_src',
-        );
-        await database.customStatement('''
+          // Rebuild `notifications` with the pre-owner_pubkey single-column
+          // primary key that shipped before the composite key landed.
+          await database.customStatement(
+            'DROP INDEX IF EXISTS idx_notification_owner_timestamp',
+          );
+          await database.customStatement(
+            'ALTER TABLE notifications RENAME TO notifications_legacy_src',
+          );
+          await database.customStatement('''
           CREATE TABLE notifications (
             id TEXT NOT NULL PRIMARY KEY,
             type TEXT NOT NULL,
@@ -769,95 +778,109 @@ void main() {
             cached_at INTEGER NOT NULL
           )
         ''');
-        await database.customStatement('''
+          await database.customStatement('''
           INSERT INTO notifications (id, type, from_pubkey, target_event_id,
             target_pubkey, content, timestamp, is_read, cached_at)
           SELECT id, type, from_pubkey, target_event_id, target_pubkey,
             content, timestamp, is_read, cached_at
           FROM notifications_legacy_src
         ''');
-        await database.customStatement('DROP TABLE notifications_legacy_src');
+          await database.customStatement('DROP TABLE notifications_legacy_src');
 
-        await database.customStatement('PRAGMA user_version = 1');
-        await database.close();
+          await database.customStatement('PRAGMA user_version = 1');
+          await database.close();
 
-        // Reopen the degraded file. Drift sees user_version 1 and runs
-        // `onUpgrade`, which normalizes the legacy schema before any query.
-        database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+          // Reopen the degraded file. Drift sees user_version 1 and runs
+          // `onUpgrade`, which normalizes the legacy schema before any query.
+          database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
 
-        final version = await database
-            .customSelect('SELECT * FROM pragma_user_version()')
-            .getSingle();
-        expect(
-          version.read<int>('user_version'),
-          database.schemaVersion,
-          reason: 'onUpgrade must record the current schema version',
-        );
+          final version = await database
+              .customSelect('SELECT * FROM pragma_user_version()')
+              .getSingle();
+          expect(
+            version.read<int>('user_version'),
+            database.schemaVersion,
+            reason: 'onUpgrade must record the current schema version',
+          );
 
-        final categoryTable = await database
-            .customSelect(
-              "SELECT name FROM sqlite_master WHERE type='table' "
-              "AND name='clip_categories'",
-            )
-            .get();
-        expect(
-          categoryTable,
-          hasLength(1),
-          reason: 'the v3 step must run after legacy v1 normalization',
-        );
-        expect(await _columnNames(database, 'clips'), contains('category_id'));
-        expect(await _columnNames(database, 'clips'), contains('archived_at'));
-
-        for (final table in _v1NormalizationTables) {
-          final rows = await database
+          final categoryTable = await database
               .customSelect(
                 "SELECT name FROM sqlite_master WHERE type='table' "
-                'AND name = ?',
-                variables: [Variable.withString(table)],
+                "AND name='clip_categories'",
               )
               .get();
-          expect(rows, hasLength(1), reason: '$table must be re-created');
-        }
+          expect(
+            categoryTable,
+            hasLength(1),
+            reason: 'the v3 step must run after legacy v1 normalization',
+          );
+          expect(
+            await _columnNames(database, 'clips'),
+            contains('category_id'),
+          );
+          expect(
+            await _columnNames(database, 'clips'),
+            contains('archived_at'),
+          );
 
-        expect(
-          await _columnNames(database, 'event'),
-          contains('d_tag'),
-          reason: 'event.d_tag must be re-added',
-        );
+          for (final table in _v1NormalizationTables) {
+            final rows = await database
+                .customSelect(
+                  "SELECT name FROM sqlite_master WHERE type='table' "
+                  'AND name = ?',
+                  variables: [Variable.withString(table)],
+                )
+                .get();
+            expect(rows, hasLength(1), reason: '$table must be re-created');
+          }
 
-        final backfilled = await database
-            .customSelect("SELECT d_tag FROM event WHERE id = 'legacy-e1'")
-            .getSingle();
-        expect(
-          backfilled.read<String?>('d_tag'),
-          'legacy-slug',
-          reason: 'd_tag must be backfilled from the stored tags JSON',
-        );
+          expect(
+            await _columnNames(database, 'event'),
+            contains('d_tag'),
+            reason: 'event.d_tag must be re-added',
+          );
 
-        // `_collectTableInfo` rows are [name, type, notnull, dflt, pk].
-        final notificationColumns = await _collectTableInfo(
-          database,
-          'notifications',
-        );
-        final ownerColumn = notificationColumns.firstWhere(
-          (column) => column.first == 'owner_pubkey',
-          orElse: () => <Object?>[],
-        );
-        expect(
-          ownerColumn.isEmpty ? null : ownerColumn.last,
-          isNot(anyOf(isNull, 0)),
-          reason: 'notifications must be rebuilt with the composite key',
-        );
+          expect(await database.nostrEventsDao.getEventCount(), 0);
+          final retired = await database
+              .customSelect(
+                'SELECT tags FROM retired_event_cache_v36 '
+                "WHERE id = 'legacy-e1'",
+              )
+              .getSingle();
+          expect(
+            retired.read<String>('tags'),
+            '[["d","legacy-slug"]]',
+            reason:
+                'v36 leaves retired payloads untouched instead of backfilling',
+          );
 
-        final preserved = await database
-            .customSelect("SELECT id FROM notifications WHERE id = 'legacy-n1'")
-            .get();
-        expect(
-          preserved,
-          hasLength(1),
-          reason: 'the rebuild must not drop existing notification rows',
-        );
-      });
+          // `_collectTableInfo` rows are [name, type, notnull, dflt, pk].
+          final notificationColumns = await _collectTableInfo(
+            database,
+            'notifications',
+          );
+          final ownerColumn = notificationColumns.firstWhere(
+            (column) => column.first == 'owner_pubkey',
+            orElse: () => <Object?>[],
+          );
+          expect(
+            ownerColumn.isEmpty ? null : ownerColumn.last,
+            isNot(anyOf(isNull, 0)),
+            reason: 'notifications must be rebuilt with the composite key',
+          );
+
+          final preserved = await database
+              .customSelect(
+                "SELECT id FROM notifications WHERE id = 'legacy-n1'",
+              )
+              .get();
+          expect(
+            preserved,
+            hasLength(1),
+            reason: 'the rebuild must not drop existing notification rows',
+          );
+        },
+      );
 
       test('legacy normalization fixtures match recovery probe lists', () {
         expect(
@@ -2192,7 +2215,7 @@ void main() {
           // Simulate a legacy install that pre-dates the column: drop the
           // index that references it, then the column itself.
           await database.customStatement(
-            'DROP INDEX idx_event_pubkey_kind_d_tag_created_at',
+            'DROP INDEX idx_event_pubkey_kind_d_tag_created_at_v36',
           );
           await database.customStatement('ALTER TABLE event DROP COLUMN d_tag');
           await database.close();
@@ -2218,11 +2241,11 @@ void main() {
           expect(
             indexNames,
             containsAll(<String>[
-              'idx_event_kind_created_at',
-              'idx_event_pubkey_created_at',
-              'idx_event_pubkey_kind_d_tag_created_at',
-              'idx_event_created_at',
-              'idx_event_expire_at',
+              'idx_event_kind_created_at_v36',
+              'idx_event_pubkey_created_at_v36',
+              'idx_event_pubkey_kind_d_tag_created_at_v36',
+              'idx_event_created_at_v36',
+              'idx_event_expire_at_v36',
             ]),
           );
 
@@ -2502,11 +2525,11 @@ const _v1NormalizationTables = <String>[
 /// `m.createAll()`. Dropped alongside `event.d_tag` so the legacy-upgrade
 /// test starts from a database that never had them.
 const _v1NormalizationEventIndexes = <String>[
-  'idx_event_kind_created_at',
-  'idx_event_pubkey_created_at',
-  'idx_event_pubkey_kind_d_tag_created_at',
-  'idx_event_created_at',
-  'idx_event_expire_at',
+  'idx_event_kind_created_at_v36',
+  'idx_event_pubkey_created_at_v36',
+  'idx_event_pubkey_kind_d_tag_created_at_v36',
+  'idx_event_created_at_v36',
+  'idx_event_expire_at_v36',
 ];
 
 /// Recovery-critical indexes owned by normalization SQL.
