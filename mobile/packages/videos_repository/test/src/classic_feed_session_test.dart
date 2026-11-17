@@ -408,6 +408,48 @@ void main() {
     );
 
     test(
+      'feedback from before a withdrawal is not sent after consent returns',
+      () async {
+        final privacy = StreamController<void>.broadcast(sync: true);
+        addTearDown(privacy.close);
+        var allowed = true;
+        final requests = <ClassicRecommendationsRequest>[];
+        final session = ClassicFeedSession(
+          canPersonalize: () => allowed,
+          privacyChanges: privacy.stream,
+          loadPage: (request) async {
+            requests.add(request);
+            return _page([requests.length * 10, requests.length * 10 + 1]);
+          },
+        );
+        addTearDown(session.dispose);
+        await session.loadInitial();
+        session.recordInteraction(
+          ClassicFeedInteraction(
+            videoId: _id(10),
+            signal: ClassicFeedSignal.positive,
+          ),
+        );
+        await session.settled;
+        expect(requests.last.recentInteractions, isNotEmpty);
+
+        // Withdraw, then grant consent again: each boundary resets context.
+        allowed = false;
+        privacy.add(null);
+        await session.settled;
+        allowed = true;
+        final beforeRegrant = requests.length;
+        privacy.add(null);
+        await session.settled;
+
+        final afterRegrant = requests.sublist(beforeRegrant);
+        expect(afterRegrant, isNotEmpty);
+        expect(afterRegrant.first.recentInteractions, isEmpty);
+        expect(afterRegrant.first.recentVideoIds, isEmpty);
+      },
+    );
+
+    test(
       'separate sessions do not share queues, cursors or selected anchors',
       () async {
         final first = ClassicFeedSession(
