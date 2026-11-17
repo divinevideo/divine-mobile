@@ -42,6 +42,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - name: Scope private ledger build token
         id: provenance
@@ -58,6 +59,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
+          RELEASE_NOTES_LUNAROUTE_API_KEY: ${{ secrets.RELEASE_NOTES_LUNAROUTE_API_KEY }}
+          RELEASE_NOTES_MODEL: ${{ vars.RELEASE_NOTES_MODEL }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
           PROVENANCE_TOKEN: ${{ steps.provenance.outputs.token }}
           PUBLIC_PEOPLE_LIST_POLICY: ${{ vars.DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS }}
           RELEASE_PLATFORM: android

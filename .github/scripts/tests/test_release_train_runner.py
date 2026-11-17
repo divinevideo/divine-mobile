@@ -1,7 +1,8 @@
 import copy
+import json
 import unittest
 
-import release_train_fakes  # noqa: F401 - adds repository scripts to sys.path
+import release_train_fakes  # adds repository scripts to sys.path
 from release_train.providers import ProviderError
 from release_train.runner import execute_plan, reconcile_operations
 
@@ -28,7 +29,7 @@ class Provider:
 class RunnerTest(unittest.TestCase):
     def test_credential_refresh_failure_does_not_consume_attempt_or_hold_queue(self):
         class PreparationFailure(Provider):
-            def prepare_build(self):
+            def prepare_build(self, action, snapshot):
                 raise ProviderError('credential storage unavailable')
         store = Store()
         provider = PreparationFailure(store)
@@ -126,10 +127,15 @@ class RuntimeBoundaryTest(unittest.TestCase):
             return {"data": {"id": "123"}}
 
         runtime.cm = cm
-        runtime.prepare_build()
-        runtime.execute(
-            {"kind": "build", "platform": "ios", "sha": "a" * 40, "attempt": 1}, {}, {}
-        )
+        from unittest.mock import patch
+
+        from release_train_fakes import MemoryLedgerStore, release_notes_bundle
+        runtime.ledger = MemoryLedgerStore()
+        runtime.env['OPENAI_API_KEY'] = 'model-secret-must-stay-in-github'
+        action = {"kind": "build", "platform": "ios", "sha": "a" * 40, "attempt": 1}
+        with patch('release_train.release_notes.ensure_bundle', return_value=release_notes_bundle()):
+            runtime.prepare_build(action, {})
+        runtime.execute(action, {}, {})
         self.assertEqual(len(runtime.tags.calls), 2)
         self.assertFalse(runtime.gh.calls)
         patches = [c for c in cm_calls if c[0] == 'PATCH']
@@ -141,6 +147,11 @@ class RuntimeBoundaryTest(unittest.TestCase):
         self.assertLess(cm_calls.index(patches[-1]), cm_calls.index(build_call))
         self.assertNotIn('private-ledger-token', str(build_call))
         self.assertNotIn('mobile-release-token', str(cm_calls))
+        self.assertNotIn('model-secret-must-stay-in-github', str(cm_calls))
+        variables = build_call[2]['environment']['variables']
+        forwarded = json.loads(variables['RELEASE_NOTES_BUNDLE'])
+        self.assertEqual(forwarded['source_sha'], 'a' * 40)
+        self.assertEqual(forwarded['testflight'], [{'language': 'en-US', 'text': 'Try recording a loop.'}])
 
 
 class AuditTest(unittest.TestCase):
@@ -240,6 +251,7 @@ class RetryIdentityTest(unittest.TestCase):
             "digest": "a" * 64,
             "build_id": "123",
             "artifact_name": "app.aab",
+            "release_notes": release_train_fakes.release_notes_bundle('android'),
         }
         runtime.cm = lambda *args: {
             "data": {
@@ -308,6 +320,7 @@ class MissingRetainedArtifactTest(unittest.TestCase):
             "digest": "a" * 64,
             "build_id": "123",
             "artifact_name": "app.aab",
+            "release_notes": release_train_fakes.release_notes_bundle('android'),
         }
 
         class Ledger:
@@ -323,3 +336,560 @@ class MissingRetainedArtifactTest(unittest.TestCase):
             runtime.execute(
                 record | {"kind": "retry-android-upload", "platform": "android"}, {}, {}
             )
+
+
+class ReleaseNotesConsumerTest(unittest.TestCase):
+    def test_note_generation_failure_does_not_spend_build_attempt(self):
+        from unittest.mock import patch
+
+        from release_train.runner import Runtime
+        from release_train_fakes import MemoryLedgerStore
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {'PROVENANCE_TOKEN': 'private', 'PUBLIC_PEOPLE_LIST_POLICY': '[]'}
+        runtime.ledger = MemoryLedgerStore()
+        runtime.cm = lambda *args: (_ for _ in ()).throw(AssertionError('No Codemagic call before notes'))
+        state = {}
+        plan = {'actions': [{'kind': 'build', 'platform': 'ios', 'sha': 'a' * 40, 'attempt': 1}]}
+        with patch('release_train.release_notes.ensure_bundle', side_effect=ProviderError('Notes unavailable')):
+            execute_plan(plan, state, {}, Store(), runtime)
+        self.assertFalse(state.get('operations'))
+        self.assertFalse(state.get('attempts'))
+        self.assertFalse(state.get('holds'))
+        self.assertIn('Notes unavailable', plan['errors'][0])
+
+    def test_public_beta_uses_source_bundle_without_git_log_copy(self):
+        from unittest.mock import patch
+
+        from release_train.runner import Runtime
+        from release_train_fakes import MemoryLedgerStore, release_notes_bundle
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {}
+        runtime.ledger = MemoryLedgerStore()
+        submitted = []
+        class Apple:
+            def submit_beta(self, build, notes):
+                submitted.append((build, notes))
+        runtime.apple = Apple()
+        runtime.deploy = lambda *args: None
+        build = {'id': '10', 'sha': 'a' * 40, 'number': 10}
+        bundle = release_notes_bundle()
+        with patch('release_train.release_notes.ensure_bundle', return_value=bundle) as ensure, patch('release_train.runner.subprocess.check_output', side_effect=AssertionError('Raw git titles must not become release copy')):
+            action = {'kind': 'public-beta', 'platform': 'ios', 'build': build}
+            snapshot = {'ios': {'builds': []}}
+            runtime.prepare_action(action, snapshot)
+            runtime.execute(action, {}, snapshot)
+        self.assertEqual(submitted[0][1], [{'language': 'en-US', 'text': 'Try recording a loop.'}])
+        self.assertEqual(ensure.call_args.args[:2], ('ios', 'a' * 40))
+
+    def test_android_retry_keeps_retained_bundle_when_production_changes(self):
+        import hashlib
+        from unittest.mock import patch
+
+        from release_train.runner import Runtime
+        from release_train_fakes import MemoryLedgerStore, release_notes_bundle
+
+        bundle = release_notes_bundle('android')
+        record = {'number': 10, 'version': '1.0.31', 'sha': 'a' * 40,
+                  'digest': hashlib.sha256(b'original signed aab').hexdigest(),
+                  'build_id': '123', 'artifact_name': 'app.aab', 'release_notes': bundle}
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {}
+        runtime.ledger = MemoryLedgerStore({'artifacts/android/10.json': record})
+        runtime.cm = lambda *args: {'data': {'commit': {'hash': 'a' * 40}, 'artifacts': [{'name': 'app.aab', 'url': 'private'}]}}
+        runtime.download = lambda url, path: path.write_bytes(b'original signed aab')
+        uploaded = []
+        class Play:
+            def upload(self, path, number, digest, *, notes):
+                uploaded.append((number, notes))
+        runtime.play = Play()
+        with patch('release_train.release_notes.ensure_bundle', side_effect=AssertionError('Retained notes must not regenerate')):
+            runtime.execute(record | {'kind': 'retry-android-upload', 'platform': 'android'}, {}, {'android': {'production': [{'number': 11, 'sha': 'd' * 40}]}})
+        self.assertEqual(uploaded, [(10, bundle['google_play'])])
+
+    def test_android_retry_rejects_notes_from_other_source_before_upload(self):
+        import hashlib
+
+        from release_train.runner import Runtime
+        from release_train_fakes import MemoryLedgerStore, release_notes_bundle
+
+        record = {'number': 10, 'version': '1.0.31', 'sha': 'a' * 40,
+                  'digest': hashlib.sha256(b'original signed aab').hexdigest(),
+                  'build_id': '123', 'artifact_name': 'app.aab',
+                  'release_notes': release_notes_bundle('android', 'd' * 40)}
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {}
+        runtime.ledger = MemoryLedgerStore({'artifacts/android/10.json': record})
+        runtime.cm = lambda *args: {'data': {'commit': {'hash': 'a' * 40}, 'artifacts': [{'name': 'app.aab', 'url': 'private'}]}}
+        runtime.download = lambda url, path: (_ for _ in ()).throw(AssertionError('Wrong-source notes must fail first'))
+        with self.assertRaises(ProviderError):
+            runtime.execute(record | {'kind': 'retry-android-upload', 'platform': 'android'}, {}, {})
+
+    def test_promotion_reuses_source_notes_after_live_baseline_advances(self):
+        from unittest.mock import patch
+
+        from release_train.runner import Runtime
+        from release_train_fakes import MemoryLedgerStore, release_notes_bundle
+        bundle = release_notes_bundle('android')
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {}
+        from release_train.release_notes import policy_digest
+        bundle['policy_sha256'] = policy_digest()
+        runtime.ledger = MemoryLedgerStore({'release-notes/android/' + 'a' * 40 + '/' + 'b' * 40 + '-' + policy_digest() + '.json': bundle})
+        promoted = []
+        class Play:
+            def promote(self, number, *, notes):
+                promoted.append((number, notes))
+        runtime.play = Play()
+        runtime.claim = lambda *args: None
+        runtime.deploy = lambda *args: None
+        with patch('release_train.release_notes.production_baseline', side_effect=AssertionError('Original bundle must survive newer production')):
+            action = {'kind': 'play-production', 'platform': 'android', 'build': {'number': 10, 'sha': 'a' * 40}}
+            snapshot = {'now': 123, 'android': {'production': [{'number': 11, 'sha': 'd' * 40}]}}
+            runtime.prepare_action(action, snapshot)
+            runtime.execute(action, {}, snapshot)
+        self.assertEqual(promoted, [(10, bundle['google_play'])])
+
+class SnapshotChangesTest(unittest.TestCase):
+    def test_existing_build_baselines_still_detect_app_changes(self):
+        from unittest.mock import patch
+
+        from release_train.runner import Runtime
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.list_builds = list
+        runtime.candidate = lambda: 'b' * 40
+        state = {'last_built_source': {'ios': 'a' * 40, 'android': 'a' * 40}}
+        with patch('release_train.runner.subprocess.check_output', return_value='mobile/lib/main.dart\n'):
+            snapshot = runtime.snapshot(state, {'ios': 'off', 'android': 'off'})
+        self.assertEqual(snapshot['changes'], {'ios': True, 'android': True})
+
+
+class StoreAuthorizationRefreshTest(unittest.TestCase):
+    def test_apple_mutations_refresh_authorization_after_note_generation(self):
+        from unittest.mock import patch
+
+        from release_train.providers import Apple
+        from release_train.runner import Runtime
+        from release_train_fakes import release_notes_bundle
+
+        for kind in ['public-beta', 'app-store']:
+            with self.subTest(kind=kind):
+                clock = {'now': 0}
+                requests = []
+
+                def http(method, url, headers=None, body=None, *, clock=clock, requests=requests):
+                    # The snapshot token was minted at t=0 and expires at t=1190.
+                    if clock['now'] > 1190 and headers['Authorization'] != 'Bearer fresh-apple':
+                        raise ProviderError('Apple authorization expired before store mutation')
+                    requests.append((method, url, body))
+                    if url.endswith(('/betaBuildLocalizations', '/appStoreVersionLocalizations')):
+                        return {'data': [{'id': 'english', 'attributes': {'locale': 'en-US'}}]}
+                    return {'data': None if method == 'GET' else {'id': 'review'}}
+
+                runtime = Runtime.__new__(Runtime)
+                runtime.env = {}
+                runtime.apple = Apple('snapshot-apple', 'primary-group', request=http)
+                runtime.apple.groups = ['primary-group', 'secondary-group']
+                original_client = runtime.apple
+                runtime.claim = lambda *args: None
+                runtime.deploy = lambda *args: None
+                bundle = release_notes_bundle()
+
+                def generate(*args, clock=clock, bundle=bundle):
+                    clock['now'] = 1200
+                    return bundle
+
+                def fresh_token(env, clock=clock):
+                    self.assertEqual(clock['now'], 1200)
+                    return 'fresh-apple'
+
+                runtime.release_bundle = generate
+                build = {'id': '10', 'number': 10, 'version': '1.0.31', 'sha': 'a' * 40,
+                         'external': 'BETA_APPROVED', 'groups': ['primary-group']}
+                snapshot = {'now': 1200, 'ios': {'versions': [
+                    {'id': 'v', 'version': '1.0.31', 'state': 'PREPARE_FOR_SUBMISSION'}]}}
+                with patch('release_train.runner.apple_token', side_effect=fresh_token):
+                    action = {'kind': kind, 'platform': 'ios', 'build': build}
+                    runtime.prepare_action(action, snapshot)
+                    runtime.execute(action, {}, snapshot)
+                self.assertIs(runtime.apple, original_client)
+                self.assertIs(runtime.apple.request, http)
+                self.assertEqual(runtime.apple.groups, ['primary-group', 'secondary-group'])
+                self.assertTrue(any(method != 'GET' for method, _, _ in requests))
+                if kind == 'public-beta':
+                    self.assertTrue(any('/betaGroups/secondary-group/' in url for _, url, _ in requests))
+
+    def test_play_promotion_refreshes_authorization_after_note_generation(self):
+        from unittest.mock import patch
+
+        from release_train.providers import Play
+        from release_train.runner import Runtime
+        from release_train_fakes import release_notes_bundle
+
+        clock = {'now': 0}
+        requests = []
+
+        def http(method, url, headers=None, body=None):
+            if clock['now'] > 3500 and headers['Authorization'] != 'Bearer fresh-play':
+                raise ProviderError('Play authorization expired before store mutation')
+            requests.append((method, url, body))
+            return {'id': 'edit'}
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON': 'protected-credentials'}
+        runtime.play = Play('snapshot-play', request=http)
+        original_client = runtime.play
+        runtime.claim = lambda *args: None
+        runtime.deploy = lambda *args: None
+        bundle = release_notes_bundle('android')
+
+        def generate(*args):
+            clock['now'] = 3600
+            return bundle
+
+        def fresh_token(credentials):
+            self.assertEqual(credentials, 'protected-credentials')
+            self.assertEqual(clock['now'], 3600)
+            return 'fresh-play'
+
+        runtime.release_bundle = generate
+        with patch('release_train.runner.play_token', side_effect=fresh_token):
+            action = {'kind': 'play-production', 'platform': 'android',
+                      'build': {'number': 10, 'sha': 'a' * 40}}
+            runtime.prepare_action(action, {'now': 3600})
+            runtime.execute(action, {}, {'now': 3600})
+        self.assertIs(runtime.play, original_client)
+        self.assertIs(runtime.play.request, http)
+        self.assertEqual(next(body for method, _, body in requests if method == 'PUT')['releases'][0]['releaseNotes'], bundle['google_play'])
+
+    def test_android_retry_refreshes_authorization_after_slow_artifact_download(self):
+        import hashlib
+        from unittest.mock import patch
+
+        from release_train.providers import Play
+        from release_train.runner import Runtime
+        from release_train_fakes import MemoryLedgerStore, release_notes_bundle
+
+        clock = {'now': 0}
+        requests = []
+
+        def http(method, url, headers=None, body=None):
+            if clock['now'] > 3500 and headers['Authorization'] != 'Bearer fresh-play':
+                raise ProviderError('Play authorization expired during artifact download')
+            requests.append((method, url, body))
+            return {'versionCode': 10} if '/bundles?' in url else {'id': 'edit'}
+
+        bundle = release_notes_bundle('android')
+        record = {'number': 10, 'version': '1.0.31', 'sha': 'a' * 40,
+                  'digest': hashlib.sha256(b'signed original bytes').hexdigest(),
+                  'build_id': '123', 'artifact_name': 'app.aab', 'release_notes': bundle}
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON': 'protected-credentials'}
+        runtime.ledger = MemoryLedgerStore({'artifacts/android/10.json': record})
+        runtime.play = Play('snapshot-play', request=http)
+        runtime.cm = lambda *args: {'data': {'commit': {'hash': 'a' * 40}, 'artifacts': [{'name': 'app.aab', 'url': 'private'}]}}
+
+        def download(url, path):
+            path.write_bytes(b'signed original bytes')
+            clock['now'] = 3600
+
+        def fresh_token(credentials):
+            self.assertEqual(clock['now'], 3600)
+            return 'fresh-play'
+
+        runtime.download = download
+        state = {}
+        with patch('release_train.runner.play_token', side_effect=fresh_token):
+            runtime.execute(record | {'kind': 'retry-android-upload', 'platform': 'android'}, state, {})
+        self.assertEqual(state['resolved_android_uploads'], [10])
+        self.assertTrue(any('/bundles?' in url for _, url, _ in requests))
+
+
+class NotesPreparationJournalTest(unittest.TestCase):
+    def test_ledger_preparation_failure_leaves_other_actions_runnable(self):
+        from release_train.ledger import LedgerError
+        from release_train.runner import Runtime
+
+        class Ledger:
+            def paths(self):
+                raise LedgerError('Ledger unavailable')
+
+        class Apple:
+            def __init__(self):
+                self.attached = []
+
+            def attach_groups(self, build):
+                self.attached.append(build['id'])
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {}
+        runtime.ledger = Ledger()
+        runtime.apple = Apple()
+        state = {}
+        build = {'id': '10', 'number': 10, 'sha': 'a' * 40}
+        plan = {'actions': [{'kind': 'public-beta', 'platform': 'ios', 'build': build},
+                            {'kind': 'attach-beta-groups', 'platform': 'ios', 'build': build}]}
+        execute_plan(plan, state, {}, Store(), runtime)
+        self.assertIn('ledger', plan['errors'][0])
+        self.assertFalse(state.get('holds'))
+        self.assertFalse(state.get('attempts'))
+        self.assertEqual(runtime.apple.attached, ['10'])
+        self.assertEqual(list(state['operations']), ['attach-beta-groups:ios:10'])
+        self.assertEqual(state['operations']['attach-beta-groups:ios:10']['status'], 'done')
+
+    def test_journal_does_not_duplicate_retained_localized_copy(self):
+        from release_train_fakes import release_notes_bundle
+
+        bundle = release_notes_bundle('android')
+        state = {}
+        store = Store()
+        provider = Provider(store)
+        action = {'kind': 'play-production', 'platform': 'android',
+                  'build': {'number': 10, 'sha': 'a' * 40}, 'release_notes': bundle}
+        execute_plan({'actions': [action]}, state, {}, store, provider)
+        self.assertEqual(provider.calls[0]['release_notes'], bundle)
+        self.assertNotIn('release_notes', state['operations']['play-production:android:10']['action'])
+        self.assertTrue(all('release_notes' not in saved['operations']['play-production:android:10']['action']
+                            for saved in store.saves))
+
+    def test_generation_failure_for_every_store_action_does_not_create_operation_or_hold(self):
+        import hashlib
+        from unittest.mock import patch
+
+        from release_train.runner import Runtime
+        from release_train_fakes import MemoryLedgerStore
+
+        record = {'number': 10, 'version': '1.0.31', 'sha': 'a' * 40,
+                  'digest': hashlib.sha256(b'original signed aab').hexdigest(),
+                  'build_id': '123', 'artifact_name': 'app.aab'}
+        for kind, platform in [('public-beta', 'ios'), ('app-store', 'ios'),
+                               ('play-production', 'android'), ('retry-android-upload', 'android')]:
+            with self.subTest(kind=kind):
+                runtime = Runtime.__new__(Runtime)
+                runtime.env = {}
+                runtime.ledger = MemoryLedgerStore({'artifacts/android/10.json': record})
+                runtime.cm = lambda *args: {'data': {'commit': {'hash': 'a' * 40}, 'artifacts': [{'name': 'app.aab', 'url': 'private'}]}}
+                runtime.download = lambda url, path: path.write_bytes(b'original signed aab')
+                state = {}
+                action = {'kind': kind, 'platform': platform}
+                if kind == 'retry-android-upload':
+                    action.update(record)
+                else:
+                    action['build'] = {'id': '10', 'number': 10, 'version': '1.0.31', 'sha': 'a' * 40}
+                plan = {'actions': [action]}
+                with patch('release_train.release_notes.ensure_bundle', side_effect=ProviderError('Model timed out')):
+                    execute_plan(plan, state, {}, Store(), runtime)
+                self.assertFalse(state.get('operations'))
+                self.assertFalse(state.get('holds'))
+                self.assertFalse(state.get('attempts'))
+                self.assertIn('Model timed out', plan['errors'][0])
+
+    def test_wrong_source_notes_fail_before_store_journal(self):
+        from unittest.mock import patch
+
+        from release_train.runner import Runtime
+        from release_train_fakes import MemoryLedgerStore, release_notes_bundle
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {}
+        runtime.ledger = MemoryLedgerStore()
+        state = {}
+        action = {'kind': 'public-beta', 'platform': 'ios', 'build': {'id': '10', 'number': 10, 'sha': 'a' * 40}}
+        with patch('release_train.release_notes.ensure_bundle', return_value=release_notes_bundle(source='d' * 40)):
+            execute_plan({'actions': [action]}, state, {}, Store(), runtime)
+        self.assertFalse(state.get('operations'))
+        self.assertFalse(state.get('holds'))
+
+    def test_retry_artifact_identity_conflict_fails_before_store_journal(self):
+        from release_train.runner import Runtime
+        from release_train_fakes import MemoryLedgerStore, release_notes_bundle
+
+        record = {'number': 10, 'version': '1.0.31', 'sha': 'a' * 40, 'digest': 'b' * 64,
+                  'build_id': '123', 'artifact_name': 'app.aab', 'release_notes': release_notes_bundle('android')}
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {}
+        runtime.ledger = MemoryLedgerStore({'artifacts/android/10.json': record})
+        state = {}
+        action = record | {'kind': 'retry-android-upload', 'platform': 'android', 'digest': 'c' * 64}
+        plan = {'actions': [action]}
+        execute_plan(plan, state, {}, Store(), runtime)
+        self.assertFalse(state.get('operations'))
+        self.assertFalse(state.get('holds'))
+        self.assertIn('identity conflicts', plan['errors'][0])
+
+    def test_store_failure_still_holds_after_notes_are_prepared(self):
+        from unittest.mock import patch
+
+        from release_train.runner import Runtime, operation_key
+        from release_train_fakes import MemoryLedgerStore, release_notes_bundle
+
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {}
+        runtime.ledger = MemoryLedgerStore()
+        state = {}
+        store = Store()
+        action = {'kind': 'public-beta', 'platform': 'ios',
+                  'build': {'id': '10', 'number': 10, 'sha': 'a' * 40}}
+        key = operation_key(action)
+
+        class Apple:
+            def submit_beta(self, build, notes):
+                self_status = store.saves[-1]['operations'][key]
+                if self_status['status'] != 'started' or notes != release_notes_bundle()['testflight']:
+                    raise AssertionError('Store mutation must have durable intent and prepared notes')
+                raise ProviderError('Store response unavailable')
+
+        runtime.apple = Apple()
+
+        def generate(*args, **kwargs):
+            self.assertFalse(state.get('operations'))
+            return release_notes_bundle()
+
+        with patch('release_train.release_notes.ensure_bundle', side_effect=generate):
+            execute_plan({'actions': [action]}, state, {}, store, runtime)
+        self.assertEqual(state['operations'][key]['status'], 'ambiguous')
+        self.assertEqual(state['holds'], {'ios': key})
+        self.assertEqual(state['operations'][key]['action']['build']['sha'], 'a' * 40)
+
+
+class BeforeStoreMutationFailureTest(unittest.TestCase):
+    def test_oauth_transport_failure_reverts_intent_without_hold_or_budget(self):
+        import hashlib
+        from unittest.mock import patch
+
+        from release_train.providers import Play, play_token
+        from release_train.runner import Runtime, operation_key
+        from release_train_fakes import MemoryLedgerStore, release_notes_bundle
+
+        for kind in ['play-production', 'retry-android-upload']:
+            for prior_status in [None, 'deferred']:
+                with self.subTest(kind=kind, prior_status=prior_status):
+                    bundle = release_notes_bundle('android')
+                    record = {'number': 10, 'version': '1.0.31', 'sha': 'a' * 40,
+                              'digest': hashlib.sha256(b'original signed aab').hexdigest(),
+                              'build_id': '123', 'artifact_name': 'app.aab', 'release_notes': bundle}
+                    action = {'kind': kind, 'platform': 'android', 'release_notes': bundle}
+                    action.update(record if kind == 'retry-android-upload' else {'build': record})
+                    key = operation_key(action)
+                    previous = {'status': prior_status, 'action': copy.deepcopy(action), 'started_at': 1}
+                    state = {'last_play_promotion': 222, 'app_store_submissions': [111]}
+                    if prior_status:
+                        state['operations'] = {key: copy.deepcopy(previous)}
+                    store = Store()
+                    runtime = Runtime.__new__(Runtime)
+                    runtime.env = {'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON': json.dumps({
+                        'private_key': 'unused-in-test', 'client_email': 'test@example.invalid'})}
+                    runtime.ledger = MemoryLedgerStore({'artifacts/android/10.json': record})
+                    store_calls = []
+                    runtime.play = Play('snapshot-token', request=lambda *args, store_calls=store_calls: store_calls.append(args))
+                    runtime.cm = lambda *args: {'data': {'commit': {'hash': 'a' * 40}, 'artifacts': [{'name': 'app.aab', 'url': 'private'}]}}
+                    runtime.download = lambda url, path: path.write_bytes(b'original signed aab')
+                    oauth_calls = []
+
+                    def oauth_request(method, url, headers=None, body=None, *, oauth_calls=oauth_calls):
+                        oauth_calls.append((method, url))
+                        raise ProviderError('OAuth transport unavailable')
+
+                    def refresh(credentials):
+                        return play_token(credentials, request=oauth_request)
+
+                    plan = {'actions': [action]}
+                    with patch('release_train.providers.signed_jwt', return_value='test-assertion'), patch('release_train.runner.play_token', side_effect=refresh):
+                        execute_plan(plan, state, {'now': 3600}, store, runtime)
+                    self.assertEqual(oauth_calls, [('POST', 'https://oauth2.googleapis.com/token')])
+                    self.assertEqual(store_calls, [])
+                    self.assertFalse(state.get('holds'))
+                    self.assertFalse(state.get('attempts'))
+                    if prior_status:
+                        self.assertEqual(state['operations'][key], previous)
+                    else:
+                        self.assertFalse(state.get('operations'))
+                    self.assertEqual(state['last_play_promotion'], 222)
+                    self.assertEqual(state['app_store_submissions'], [111])
+                    self.assertIn('authorization', plan['errors'][0].lower())
+                    self.assertEqual(store.saves[-1], state)
+
+    def test_store_request_failure_after_authorization_still_holds(self):
+        from unittest.mock import patch
+
+        from release_train.providers import Play
+        from release_train.runner import Runtime, operation_key
+        from release_train_fakes import release_notes_bundle
+
+        action = {'kind': 'play-production', 'platform': 'android',
+                  'build': {'id': '10', 'number': 10, 'sha': 'a' * 40},
+                  'release_notes': release_notes_bundle('android')}
+        runtime = Runtime.__new__(Runtime)
+        runtime.env = {'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON': 'test-credentials'}
+        store_calls = []
+
+        def store_http(method, url, headers=None, body=None):
+            store_calls.append((method, url))
+            raise ProviderError('Provider request failed (HTTP 401)')
+
+        runtime.play = Play('snapshot-token', request=store_http)
+        state = {}
+        with patch('release_train.runner.play_token', return_value='fresh-token'):
+            execute_plan({'actions': [action]}, state, {'now': 3600}, Store(), runtime)
+        key = operation_key(action)
+        self.assertEqual(len(store_calls), 1)
+        self.assertEqual(state['operations'][key]['status'], 'ambiguous')
+        self.assertEqual(state['holds'], {'android': key})
+
+class AppleLocalePreflightJournalTest(unittest.TestCase):
+    def test_new_live_locale_does_not_create_a_hold_without_store_writes(self):
+        from release_train.providers import Apple
+        from release_train.runner import Runtime
+
+        for kind in ('app-store', 'public-beta'):
+            with self.subTest(kind=kind):
+                calls = []
+                def http(method, url, headers=None, body=None, *, calls=calls):
+                    calls.append((method, url))
+                    return {'data': [{'id': 'french', 'attributes': {'locale': 'fr-FR'}}]}
+                runtime = Runtime.__new__(Runtime)
+                runtime.apple = Apple('token', 'group', request=http)
+                runtime.release_bundle = lambda *args: release_train_fakes.release_notes_bundle('ios')
+                runtime.refresh_store_authorization = lambda platform: None
+                action = {'kind': kind, 'platform': 'ios', 'build': {
+                    'id': 'build', 'number': 917, 'version': '1.0.31', 'sha': 'a' * 40}}
+                snapshot = {'now': 100, 'ios': {'versions': [{
+                    'id': 'version', 'version': '1.0.31', 'state': 'PREPARE_FOR_SUBMISSION'}]}}
+                state = {}
+                plan = {'actions': [action], 'errors': []}
+                execute_plan(plan, state, snapshot, Store(), runtime)
+                self.assertTrue(calls)
+                self.assertTrue(all(method == 'GET' for method, _ in calls))
+                self.assertFalse(state.get('holds'))
+                self.assertFalse(state.get('operations'))
+                self.assertEqual(plan['actions'], [])
+                self.assertIn('fr-FR', plan['errors'][0])
+
+    def test_failure_after_an_apple_write_still_holds_for_reconciliation(self):
+        from release_train.providers import Apple
+        from release_train.runner import Runtime
+
+        for kind in ('app-store', 'public-beta'):
+            with self.subTest(kind=kind):
+                calls = []
+                def http(method, url, headers=None, body=None, *, calls=calls):
+                    calls.append((method, url))
+                    if method != 'GET':
+                        raise ProviderError('Store write response unavailable')
+                    return {'data': [{'id': 'english', 'attributes': {'locale': 'en-US'}}]}
+                runtime = Runtime.__new__(Runtime)
+                runtime.apple = Apple('token', 'group', request=http)
+                runtime.release_bundle = lambda *args: release_train_fakes.release_notes_bundle('ios')
+                runtime.refresh_store_authorization = lambda platform: None
+                action = {'kind': kind, 'platform': 'ios', 'build': {
+                    'id': 'build', 'number': 917, 'version': '1.0.31', 'sha': 'a' * 40}}
+                snapshot = {'now': 100, 'ios': {'versions': [{
+                    'id': 'version', 'version': '1.0.31', 'state': 'PREPARE_FOR_SUBMISSION'}]}}
+                state = {}
+                execute_plan({'actions': [action], 'errors': []}, state, snapshot, Store(), runtime)
+                self.assertTrue(any(method == 'PATCH' for method, _ in calls))
+                key = kind + ':ios:917'
+                self.assertEqual(state['holds'], {'ios': key})
+                self.assertEqual(state['operations'][key]['status'], 'ambiguous')

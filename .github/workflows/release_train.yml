@@ -74,6 +74,8 @@ jobs:
           CANDIDATE_TAG_TOKEN: ${{ steps.candidate.outputs.token }}
           PROVENANCE_TOKEN: ${{ steps.provenance.outputs.token }}
           CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
+          RELEASE_NOTES_LUNAROUTE_API_KEY: ${{ secrets.RELEASE_NOTES_LUNAROUTE_API_KEY }}
+          RELEASE_NOTES_MODEL: ${{ vars.RELEASE_NOTES_MODEL }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}

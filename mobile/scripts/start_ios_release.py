@@ -112,7 +112,7 @@ def validate_build(build, expected_sha, *, require_main=True, platform='ios'):
 
 
 def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.sleep,
-                monotonic=time.monotonic, timeout=4800):
+                monotonic=time.monotonic, timeout=4800, notes_generator=None, ledger=None):
     platform = env.get('RELEASE_PLATFORM', 'ios')
     if platform not in {'ios', 'android'}:
         raise ReleaseError('RELEASE_PLATFORM must be ios or android.')
@@ -248,15 +248,32 @@ def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.s
     else:
         if env.get('GITHUB_RUN_ATTEMPT', '1') != '1':
             raise ReleaseError('Retry has no discoverable matching build; reconcile the previous request in Codemagic before a new dispatch.')
+        from release_train.ledger import GhLedgerStore
         from release_train.providers import ProviderError
+        from release_train.release_notes import (
+            bundle_for_native,
+            bundle_from_env,
+            ensure_bundle,
+        )
         from release_train.setup import configure_build_credentials
-
+        if notes_generator is None:
+            notes_generator = ensure_bundle
+        ledger = ledger or GhLedgerStore(
+            env.get('SHOREBIRD_PROVENANCE_REPOSITORY', 'divinevideo/divine-release-provenance'),
+            token=env['PROVENANCE_TOKEN'])
+        try:
+            generated = notes_generator(platform, source, env=env, ledger=ledger)
+            bundle = bundle_for_native(bundle_from_env(
+                {"RELEASE_NOTES_BUNDLE": json.dumps(generated, ensure_ascii=False)}, source, platform))
+        except ProviderError as error:
+            raise ReleaseError(f'Could not prepare release notes: {error}. No build started.') from None
         try:
             configure_build_credentials(cm, env['PROVENANCE_TOKEN'], env['PUBLIC_PEOPLE_LIST_POLICY'])
         except (ProviderError, ReleaseError) as error:
             raise ReleaseError(f'Could not prepare secure build credentials: {error}. No build started.') from None
         payload = {'workflow_id': platform + '-build', 'branch': 'main', 'inputs': inputs,
-                   'environment': {'variables': {'RELEASE_EXPECTED_SHA': source}}, 'labels': [label]}
+                   'environment': {'variables': {'RELEASE_EXPECTED_SHA': source,
+                                                 'RELEASE_NOTES_BUNDLE': json.dumps(bundle, sort_keys=True, ensure_ascii=False)}}, 'labels': [label]}
         try:
             accepted = cm('POST', '/apps/' + APP_ID + '/builds', payload)
             selected = build_id(accepted.get('data', {}).get('id'))

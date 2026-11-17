@@ -11,12 +11,13 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 
-import release_train_fakes  # noqa: F401 - adds repository scripts to sys.path
+import release_train_fakes
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / 'mobile/scripts/start_ios_release.py'
 SHA = 'a' * 40
 OTHER = 'b' * 40
+BUNDLE = release_train_fakes.release_notes_bundle('ios', SHA)
 BUILD_ID = '0123456789abcdef01234567'
 APP_ID = '69370e59eac15e6c367b661b'
 LABEL = 'github:example/repo:123:ios-testflight:' + SHA
@@ -98,6 +99,42 @@ class FakeAPI:
 
 
 class IOSReleaseTest(unittest.TestCase):
+    def test_generates_source_bound_bundle_before_build_without_model_key(self):
+        self.env['RELEASE_NOTES_LUNAROUTE_API_KEY'] = 'private-model-key'
+        self.run_driver()
+        self.assertEqual([(platform, source) for platform, source, _ in self.notes_calls], [('ios', SHA)])
+        variables = self.api.posts[0][3]['environment']['variables']
+        self.assertEqual(json.loads(variables['RELEASE_NOTES_BUNDLE']), BUNDLE)
+        self.assertNotIn('private-model-key', json.dumps(self.api.posts[0][3]))
+        self.assertNotIn('internal-inventory-marker', json.dumps(self.api.posts[0][3]))
+        self.assertEqual(json.loads(variables['RELEASE_NOTES_BUNDLE'])['changes'], [])
+
+    def test_generator_source_or_platform_mismatch_starts_no_native_build(self):
+        for platform, source in [('ios', OTHER), ('android', SHA)]:
+            def mismatched(*args, platform=platform, source=source, **kwargs):
+                return release_train_fakes.release_notes_bundle(platform, source)
+            with self.subTest(platform=platform, source=source), self.assertRaises(self.driver.ReleaseError):
+                self.run_driver(notes_generator=mismatched)
+            self.assertFalse(self.api.posts)
+            self.assertFalse([c for c in self.api.calls if c[0] == 'PATCH'])
+
+    def test_native_environment_preserves_unicode_without_expanding_escapes(self):
+        bundle = release_train_fakes.release_notes_bundle('ios', SHA)
+        bundle['testflight'][0]['text'] = 'Essayez une boucle épatante.'
+        self.run_driver(notes_generator=lambda *args, **kwargs: bundle)
+        serialized = self.api.posts[0][3]['environment']['variables']['RELEASE_NOTES_BUNDLE']
+        self.assertIn('épatante', serialized)
+        self.assertEqual(json.loads(serialized), bundle)
+
+    def test_generation_failure_starts_no_build_or_credential_rotation(self):
+        from release_train.providers import ProviderError
+        def failed(*args, **kwargs):
+            raise ProviderError('Notes could not be validated')
+        with self.assertRaisesRegex(self.driver.ReleaseError, 'Notes could not be validated'):
+            self.run_driver(notes_generator=failed)
+        self.assertFalse(self.api.posts)
+        self.assertFalse([c for c in self.api.calls if c[0] == 'PATCH'])
+
     def test_manual_inputs_are_forwarded_and_validated(self):
         inputs = {'DEFAULT_ENV': 'STAGING', 'RELEASE_CHANNEL': 'BETA', 'PUBLISH_TO_GITHUB': 'YES'}
         self.env.update({'NATIVE_' + key: value for key, value in inputs.items()})
@@ -182,6 +219,13 @@ class IOSReleaseTest(unittest.TestCase):
         self.driver = load_driver()
         self.env = environment()
         self.api = FakeAPI()
+        self.notes_calls = []
+        def generate(platform, source, *, env, ledger):
+            self.notes_calls.append((platform, source, env))
+            bundle = release_train_fakes.release_notes_bundle(platform, source)
+            bundle["changes"] = [{"summary": "internal-inventory-marker"}]
+            return bundle
+        self.generate = generate
         self.output = io.StringIO()
         self.stdout = contextlib.redirect_stdout(self.output)
         self.stdout.__enter__()
@@ -189,7 +233,7 @@ class IOSReleaseTest(unittest.TestCase):
 
     def run_driver(self, **kwargs):
         return self.driver.run_release(self.env, request=self.api, checked_out_sha=SHA,
-                                       sleep=lambda _: None, **kwargs)
+                                       sleep=lambda _: None, notes_generator=kwargs.pop("notes_generator", self.generate), **kwargs)
 
     def test_missing_secret_rejects_before_network_or_mutation(self):
         del self.env['CODEMAGIC_API_TOKEN']
@@ -244,7 +288,7 @@ class IOSReleaseTest(unittest.TestCase):
             if '/actions/workflows/mobile_ci.yaml/runs?' in url:
                 data['workflow_runs'][0].update(event='merge_group', head_branch='gh-readonly-queue/main/pr-123')
             return data
-        self.driver.run_release(self.env, request=queue_run, checked_out_sha=SHA)
+        self.driver.run_release(self.env, request=queue_run, checked_out_sha=SHA, notes_generator=self.generate)
         self.assertEqual(1, len(self.api.posts))
 
     def test_feature_branch_push_or_wrong_check_app_id_is_rejected(self):
@@ -278,7 +322,8 @@ class IOSReleaseTest(unittest.TestCase):
         self.assertEqual('https://codemagic.io/api/v3/apps/' + APP_ID + '/builds', url)
         self.assertEqual({'workflow_id': 'ios-build', 'branch': 'main',
                           'inputs': {'DEFAULT_ENV': 'PRODUCTION', 'RELEASE_CHANNEL': 'BETA', 'PUBLISH_TO_GITHUB': 'NO'},
-                          'environment': {'variables': {'RELEASE_EXPECTED_SHA': SHA}},
+                          'environment': {'variables': {'RELEASE_EXPECTED_SHA': SHA,
+                                                       'RELEASE_NOTES_BUNDLE': json.dumps(BUNDLE, sort_keys=True)}},
                           'labels': [LABEL]}, payload)
 
     def test_active_manual_or_unknown_build_refuses_new_submission(self):
@@ -439,7 +484,7 @@ class IOSReleaseTest(unittest.TestCase):
                 raise self.driver.APIError(None)
             return self.api(method, url, token, payload)
         with self.assertRaisesRegex(self.driver.ReleaseError, 'reconcil') as error:
-            self.driver.run_release(self.env, request=failed, checked_out_sha=SHA)
+            self.driver.run_release(self.env, request=failed, checked_out_sha=SHA, notes_generator=self.generate)
         self.assertEqual(1, calls.count('POST'))
         self.assertNotIn(self.env['CODEMAGIC_API_TOKEN'], str(error.exception))
 
@@ -475,16 +520,25 @@ class IOSReleaseTest(unittest.TestCase):
         checkout = next(step for step in job['steps'] if step.get('uses', '').startswith('actions/checkout@'))
         self.assertEqual('${{ github.sha }}', checkout['with']['ref'])
         self.assertEqual(False, checkout['with']['persist-credentials'])
+        self.assertEqual(0, checkout['with']['fetch-depth'])
         self.assertIn('refs/heads/main', job['if'])
         inputs = trigger['workflow_dispatch']['inputs']
         step = job['steps'][-1]
         self.assertEqual(step['env']['PROVENANCE_TOKEN'], '${{ steps.' + tokens[0]['id'] + '.outputs.token }}')
         self.assertNotIn('RELEASE_GITHUB_TOKEN', step['env'])
+        self.assertEqual('${{ secrets.RELEASE_NOTES_LUNAROUTE_API_KEY }}', step['env']['RELEASE_NOTES_LUNAROUTE_API_KEY'])
+        self.assertEqual('${{ vars.RELEASE_NOTES_MODEL }}', step['env']['RELEASE_NOTES_MODEL'])
+        self.assertTrue(all('RELEASE_NOTES_LUNAROUTE_API_KEY' not in other.get('env', {})
+                            for other in job['steps'][:-1]))
         for name in ['default_env', 'release_channel', 'publish_to_github']:
             self.assertEqual('choice', inputs[name]['type'])
             self.assertEqual('${{ inputs.' + name + ' }}', step['env']['NATIVE_' + name.upper()])
         if workflow == 'android_store_release.yml':
             self.assertEqual('android', step['env']['RELEASE_PLATFORM'])
+            self.assertIn('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON', step['env'])
+        else:
+            for name in ['APP_STORE_CONNECT_ISSUER_ID', 'APP_STORE_CONNECT_KEY_ID', 'APP_STORE_CONNECT_PRIVATE_KEY']:
+                self.assertIn(name, step['env'])
 
 
 if __name__ == '__main__':

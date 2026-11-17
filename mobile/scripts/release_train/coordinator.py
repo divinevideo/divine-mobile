@@ -385,6 +385,7 @@ def plan_tick(snapshot, state, levels):
                     b
                     for b in builds
                     if b.get("public")
+                    and not (b.get("version") == "1.0.30" and str(b.get("number")) == "916")
                     and b.get("valid")
                     and b.get("ci_verified")
                     and b.get("public_complete", b.get("public"))

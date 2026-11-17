@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import release_train_fakes  # noqa: F401 - adds repository scripts to sys.path
+import release_train_fakes  # adds repository scripts to sys.path
 from release_train.providers import (
     Apple,
     DeferredReview,
@@ -43,7 +43,7 @@ class ProviderTest(unittest.TestCase):
     def test_production_promotes_exact_tested_code_full_rollout(self):
         http = FakeHTTP()
         play = Play("token", request=http)
-        play.promote(123)
+        play.promote(123, notes=play_notes())
         payload = next(c[3] for c in http.calls if c[0] == "PUT")
         self.assertEqual(payload["releases"][0]["versionCodes"], ["123"])
         self.assertEqual(payload["releases"][0]["status"], "completed")
@@ -69,7 +69,7 @@ class ProviderTest(unittest.TestCase):
             {"data": {}},
         ]
         apple = Apple("token", "group", request=http)
-        apple.submit_beta({"id": "10"}, "Changes")
+        apple.submit_beta({"id": "10"}, [{"language": "en-US", "text": "Changes"}])
         self.assertFalse(
             any("/betaGroups/group" in c[1] and c[0] == "PATCH" for c in http.calls)
         )
@@ -103,3 +103,121 @@ class ArtifactRedirectTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+PLAY_LANGUAGES = ('en-US', 'es-419', 'pt-BR', 'fr-FR', 'de-DE', 'it-IT', 'nl-NL', 'pl-PL', 'sv-SE', 'ro', 'bg', 'tr-TR', 'ar', 'ur', 'ja-JP', 'ko-KR', 'zh-CN', 'vi', 'id', 'ms', 'fil', 'am', 'te-IN')
+
+
+def play_notes():
+    return [{'language': language, 'text': release_train_fakes.TRANSLATED_SEARCH_NOTES[language]} for language in PLAY_LANGUAGES]
+
+
+class LocalizedNotesTest(unittest.TestCase):
+    def test_play_promotion_preserves_all_localized_text(self):
+        http = FakeHTTP()
+        notes = play_notes()
+        notes[3]['text'] = 'Retrouvez vos vidéos.'
+        Play('token', request=http).promote(123, notes=notes)
+        payload = next(c[3] for c in http.calls if c[0] == 'PUT')
+        self.assertEqual(payload['releases'][0]['releaseNotes'], notes)
+
+    def test_play_missing_or_oversized_notes_fail_before_edit_creation(self):
+        for notes in [[], play_notes()[:-1], play_notes() + [play_notes()[0]],
+                      [n | {'text': 'x' * 501} for n in play_notes()]]:
+            with self.subTest(notes=notes):
+                http = FakeHTTP()
+                with self.assertRaises(ProviderError):
+                    Play('token', request=http).promote(123, notes=notes)
+                self.assertEqual(http.calls, [])
+
+    def test_beta_note_update_matches_locale_and_never_changes_review_or_groups(self):
+        http = FakeHTTP()
+        http.responses = [{'data': [
+            {'id': 'english', 'attributes': {'locale': 'en-US'}},
+            {'id': 'french', 'attributes': {'locale': 'fr-FR'}},
+        ]}]
+        Apple('token', 'group', request=http).set_beta_notes({'id': '10'}, [
+            {'language': 'en-US', 'text': 'Try recording a loop.'},
+            {'language': 'fr-FR', 'text': 'Essayez une nouvelle vidéo.'},
+        ])
+        writes = [c for c in http.calls if c[0] != 'GET']
+        self.assertEqual([(c[0], c[1].rsplit('/', 1)[-1], c[3]['data']['attributes']) for c in writes], [
+            ('PATCH', 'english', {'whatsNew': 'Try recording a loop.'}),
+            ('PATCH', 'french', {'whatsNew': 'Essayez une nouvelle vidéo.'}),
+        ])
+
+    def test_beta_missing_locale_fails_before_auto_notify_or_other_mutation(self):
+        http = FakeHTTP()
+        http.responses = [{'data': [{'id': 'french', 'attributes': {'locale': 'fr-FR'}}]}]
+        with self.assertRaises(ProviderError):
+            Apple('token', 'group', request=http).submit_beta(
+                {'id': '10', 'beta_detail_id': 'detail'},
+                [{'language': 'en-US', 'text': 'Try a loop.'}],
+            )
+        self.assertTrue(all(c[0] == 'GET' for c in http.calls))
+
+    def test_store_missing_locale_fails_before_build_or_release_changes(self):
+        http = FakeHTTP()
+        http.responses = [{'data': [{'id': 'french', 'attributes': {'locale': 'fr-FR'}}]}]
+        with self.assertRaises(ProviderError):
+            Apple('token', 'group', request=http).submit_store(
+                {'id': '10', 'version': '1.0.31'},
+                [{'id': 'v', 'version': '1.0.31', 'state': 'PREPARE_FOR_SUBMISSION'}], [],
+                notes=[{'language': 'en-US', 'text': 'Videos load more smoothly.'}],
+            )
+        self.assertTrue(all(c[0] == 'GET' for c in http.calls))
+
+    def test_store_localizations_preserve_each_translation(self):
+        calls = []
+        def http(method, url, headers=None, body=None):
+            calls.append((method, url, body))
+            if url.endswith('/appStoreVersionLocalizations'):
+                return {'data': [{'id': 'english', 'attributes': {'locale': 'en-US'}},
+                                 {'id': 'french', 'attributes': {'locale': 'fr-FR'}}]}
+            return {'data': None if method == 'GET' else {'id': 'review'}}
+        Apple('token', 'group', request=http).submit_store(
+            {'id': '10', 'version': '1.0.31'},
+            [{'id': 'v', 'version': '1.0.31', 'state': 'PREPARE_FOR_SUBMISSION'}], [],
+            notes=[{'language': 'en-US', 'text': 'Videos load more smoothly.'},
+                   {'language': 'fr-FR', 'text': 'Les vidéos se chargent mieux.'}],
+        )
+        self.assertEqual({url.rsplit('/', 1)[-1]: body['data']['attributes']['whatsNew']
+                          for method, url, body in calls if method == 'PATCH' and '/appStoreVersionLocalizations/' in url},
+                         {'english': 'Videos load more smoothly.', 'french': 'Les vidéos se chargent mieux.'})
+
+    def test_new_store_version_missing_configured_locale_never_creates_version(self):
+        http = FakeHTTP()
+        http.responses = [{'data': [{'id': 'info'}]},
+                          {'data': [{'id': 'french', 'attributes': {'locale': 'fr-FR'}}]}]
+        with self.assertRaises(ProviderError):
+            Apple('token', 'group', request=http).submit_store(
+                {'id': '10', 'version': '1.0.31'}, [], [],
+                notes=[{'language': 'en-US', 'text': 'Videos load more smoothly.'}],
+            )
+        self.assertTrue(all(c[0] == 'GET' for c in http.calls))
+
+    def test_held_916_cannot_be_submitted_to_app_store(self):
+        http = FakeHTTP()
+        with self.assertRaises(ProviderError):
+            Apple('token', 'group', request=http).submit_store(
+                {'id': '916', 'number': 916, 'version': '1.0.30'}, [], [],
+                notes=[{'language': 'en-US', 'text': 'Videos load more smoothly.'}],
+            )
+        self.assertEqual(http.calls, [])
+
+    def test_play_upload_validates_notes_before_edit_or_artifact_access(self):
+        http = FakeHTTP()
+        with self.assertRaises(ProviderError):
+            Play('token', request=http).upload('not-an-artifact', 10, 'a' * 64, notes=[])
+        self.assertEqual(http.calls, [])
+
+    def test_empty_store_locale_inventory_stops_before_existing_version_mutation(self):
+        http = FakeHTTP()
+        http.responses = [{'data': []}]
+        with self.assertRaises(ProviderError):
+            Apple('token', 'group', request=http).submit_store(
+                {'id': '10', 'version': '1.0.31'},
+                [{'id': 'v', 'version': '1.0.31', 'state': 'PREPARE_FOR_SUBMISSION'}], [],
+                notes=[{'language': 'en-US', 'text': 'Videos load more smoothly.'}],
+            )
+        self.assertTrue(all(c[0] == 'GET' for c in http.calls))

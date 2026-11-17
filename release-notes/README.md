@@ -5,9 +5,45 @@ voice: direct, human, slightly playful. Follow the brand quick reference and ton
 of voice in `brand-guidelines`. Describe benefits, not commit subjects or internal
 implementation details.
 
-## Release record: 1.0.27
+## Automated native store notes
 
-As of October 31, 2026, **1.0.27 is the current documented release**. Start with
+Protected main-branch release drivers generate notes automatically before they
+start a native build. The baseline is the actual previous numbered production
+release in the owning store, mapped to its retained source provenance. A previous
+beta or an unverified GitHub tag is not a baseline.
+
+One LunaRoute request rewrites the complete app changelog into plain-language
+TestFlight instructions and store benefits in Divine's [brand voice](BRAND_VOICE.md).
+Code checks the build identity, exact language set, nonblank text, store limits
+and accidental copies of English before anything is published. Google Play gets
+all 23 shipped locales with at most 500 Unicode characters each; Apple gets its
+configured locales with at most 4000 each. Notes are never silently cut to fit.
+
+The protected `store-release` environment supplies
+`RELEASE_NOTES_LUNAROUTE_API_KEY`. `RELEASE_NOTES_MODEL` accepts `glm-5.3` (the default)
+or `deepseek-4.1-flash`. Use the existing managed Lunaroute credential in this protected environment. No model credential
+is sent to Codemagic. Generation uses `store:false`.
+
+The completed bundle is retained create-only in the private release ledger. A bundle is bound to platform, exact source, original
+production baseline and brand-policy digest. Build uploads and later promotion
+reuse it. Android retained-artifact retries preserve their original localized
+bundle. Native builds reject missing, malformed or mismatched bundles; there is
+no generic English or commit-title fallback. Generation errors stop before a new
+native attempt is consumed.
+
+The beta-note update helper changes copy without itself resubmitting Beta App Review;
+the public-beta flow calls it before handling review and group assignment.
+This does not lift any App Store hold. In particular, 1.0.30+916 is explicitly
+excluded from App Store submission after the reported database-startup failure.
+A later corrected build needs its own source verification and public exposure.
+
+API references: [Responses structured outputs](https://docs.lunaroute.com/api/responses/),
+[Play localized release notes](https://developers.google.com/android-publisher/api-ref/rest/v3/edits.tracks),
+[Play's 500-character limit](https://support.google.com/googleplay/android-developer/answer/9859348).
+
+## Historical release record: 1.0.27
+
+As of October 31, 2026, **1.0.27 was the documented release**. Start with
 the [1.0.27 release notes](1.0.27.md) or the
 [latest stable GitHub release](https://github.com/divinevideo/divine-mobile/releases/latest)
 for downloads. Keep the marketing version prominent in release titles; full
@@ -33,7 +69,7 @@ downloads, give the entries short version-first titles, and link their notes
 to the stable release rather than leaving generic "early build" copy as the
 only explanation.
 
-## Prepare the notes
+## Prepare manual GitHub release notes
 
 1. Find the **actual source commit** of the previous shipped build and the next
    candidate. Verify historical tags against build provenance: the original
