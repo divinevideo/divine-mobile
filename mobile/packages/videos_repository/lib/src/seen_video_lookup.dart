@@ -3,12 +3,12 @@
 
 import 'package:models/models.dart';
 
-/// How long a video the viewer has seen stays out of feeds.
+/// How long a video the viewer has seen stays out of feeds that hide seen
+/// videos.
 ///
-/// Matches how long the app keeps seen history, so a feed never shows a video
-/// the viewer has already seen while that history remembers it. Profiles and
-/// search do not apply it: a seen video is always findable there. Videos by the
-/// viewer are also kept, so creators can still find their own posts.
+/// Matches how long the app keeps seen history. New, profiles and search
+/// keep watched videos visible. Feeds that apply the exclusion also keep
+/// the viewer's own videos so creators can still find their posts.
 const Duration seenVideoExclusionWindow = Duration(days: 365);
 
 /// Consecutive pages a feed reads past when every video on them was seen.
