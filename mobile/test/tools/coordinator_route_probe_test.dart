@@ -10,7 +10,7 @@ import 'package:http/testing.dart';
 
 // ignore: avoid_relative_lib_imports, scripts are outside lib/ and not importable through package:openvine.
 import '../../scripts/lib/coordinator_route_probe.dart';
-import '../test_utils/coordinator_route_config_fixture.dart';
+import 'helpers/coordinator_route_config_fixture.dart';
 
 void main() {
   group('extractCoordinatorTargets', () {
