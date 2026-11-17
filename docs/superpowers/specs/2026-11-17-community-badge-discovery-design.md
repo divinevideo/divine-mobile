@@ -20,14 +20,14 @@ This design updates Explore → Badges and its handoff to the existing badge det
 2. **Expand the central catalogue first.** A global HTTP directory could offer server-side search/ranking, but the current issuer-scoped endpoint cannot supply it. This adds backend/query/rollout work without being necessary for the requested gallery.
 3. **Restyle the official-only directory.** Rejected: improving its artwork would still hide community-created badges and miss the product goal.
 
-The user has approved the community-discovery direction and Lists inspiration. The concrete design below is proposed for review before product implementation.
+The user has approved the community-discovery direction and Lists inspiration. The user approved the design with the explainer and website link below.
 
 ## Experience
 
 ### Explore → Badges
 
 - Keep the existing Badges tab and route.
-- Lead with “Find your people” and short explanatory copy: “Find communities through the badges people share.” Localize all new copy.
+- Lead with “Badges bring people together”. Explain: “Anyone can create and award badges. You choose which ones appear on your profile. Explore a badge to meet its community and follow its people.” Link to https://badges.divine.video. Localize all new copy.
 - Make “Create a badge” and “My badges” accessible using the existing native editor and dashboard. Signed-out creation uses the existing sign-in handling; discovery remains public.
 - Render a lazy two-column gallery with the Lists visual rhythm: 16dp outer gutters and column gap, 16dp media corners, 177:120 media ratio, and the existing title/description typography. Use one column where large text or available width makes two unreadable.
 - Give each badge a large artwork area, its name, a short description, its issuer’s display identity and a small accepted-member preview when available. The card must open the full issuer-scoped coordinate even when another issuer uses the same name or d-tag. Badge artwork remains the issuer's published artwork; missing/broken artwork gets a deliberate monogram treatment, not the AI sparkle.
@@ -80,4 +80,4 @@ No backend or infrastructure change; no global search/ranking service; no new so
 
 ## Design readiness
 
-A fresh read-only builder check found no important unanswered questions before implementation planning. The relay-discovery approach, finite browsing window, member-proof boundary and separate follow actions are explicit. Product implementation awaits review of this concrete design and layout sketch.
+A fresh read-only builder check found no important unanswered questions before implementation planning. The relay-discovery approach, finite browsing window, member-proof boundary and separate follow actions are explicit. The user approved the layout and requested the badge explainer and website link. Implementation may proceed.

@@ -10,12 +10,13 @@
 <text x="57" y="167" font-size="25" fill="#edf9f1" class="title">Explore</text>
 <text x="57" y="207" font-size="15" fill="#edf9f1" class="">Videos     Lists     Badges</text>
 <rect x="216" y="214" width="61" height="3" rx="1" fill="#27c58b" />
-<text x="57" y="253" font-size="25" fill="#edf9f1" class="title">Find your people</text>
-<text x="57" y="278" font-size="12" fill="#adc4b6" class="">Communities through the badges people share.</text>
-<rect x="57" y="297" width="171" height="42" rx="22" fill="#27c58b" />
-<text x="78" y="323" font-size="14" fill="#002d1c" class="title">+  Create a badge</text>
-<rect x="238" y="297" width="177" height="42" rx="22" fill="#123e2b" />
-<text x="284" y="323" font-size="14" fill="#edf9f1" class="">My badges</text>
+<text x="57" y="253" font-size="20" fill="#edf9f1" class="title">Badges bring people together</text>
+<text x="57" y="278" font-size="12" fill="#adc4b6" class="">Create, award, and display badges. Meet their people.</text>
+<text x="57" y="295" font-size="12" fill="#89e8b3">Learn how at badges.divine.video ↗</text>
+<rect x="57" y="307" width="171" height="42" rx="22" fill="#27c58b" />
+<text x="78" y="333" font-size="14" fill="#002d1c" class="title">+  Create a badge</text>
+<rect x="238" y="307" width="177" height="42" rx="22" fill="#123e2b" />
+<text x="284" y="333" font-size="14" fill="#edf9f1" class="">My badges</text>
 <rect x="57" y="360" width="166" height="113" rx="16" fill="#24553d" />
 <circle cx="140" cy="408" r="32" fill="#123e2b" stroke="#89e8b3" stroke-width="2" />
 <text x="120" y="416" font-size="23" fill="#aaf0c9" class="title">LM</text>
