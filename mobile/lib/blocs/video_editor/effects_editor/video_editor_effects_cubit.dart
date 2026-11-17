@@ -92,7 +92,8 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   }
 
   /// Opens the editor to add a new effect, or on the committed effect with
-  /// [effectId] to change it in place, keeping its window on the timeline.
+  /// [effectId] to change it in place, keeping its window on the timeline
+  /// while it stays the same kind of effect (see [confirm]).
   ///
   /// An unknown [effectId] adds a new effect. Pass [startedPlayback] when
   /// opening the editor started the video, so closing it can pause it again.
