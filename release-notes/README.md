@@ -20,8 +20,8 @@ all 23 shipped locales with at most 500 Unicode characters each; Apple gets its
 configured locales with at most 4000 each. Notes are never silently cut to fit.
 
 The protected `store-release` environment supplies
-`RELEASE_NOTES_LUNAROUTE_API_KEY`. `RELEASE_NOTES_MODEL` defaults to `glm-5.3` and can
-select a compatible managed LunaRoute model. Use the existing managed Lunaroute credential in this protected environment. No model credential
+`RELEASE_NOTES_LUNAROUTE_API_KEY`. `RELEASE_NOTES_MODEL` accepts `glm-5.3` (the default)
+or `deepseek-4.1-flash`. Use the existing managed Lunaroute credential in this protected environment. No model credential
 is sent to Codemagic. Generation uses `store:false`.
 
 The completed bundle is retained create-only in the private release ledger. A bundle is bound to platform, exact source, original
@@ -31,7 +31,8 @@ bundle. Native builds reject missing, malformed or mismatched bundles; there is
 no generic English or commit-title fallback. Generation errors stop before a new
 native attempt is consumed.
 
-A standalone beta-note update changes copy without resubmitting Beta App Review.
+The beta-note update helper changes copy without itself resubmitting Beta App Review;
+the public-beta flow calls it before handling review and group assignment.
 This does not lift any App Store hold. In particular, 1.0.30+916 is explicitly
 excluded from App Store submission after the reported database-startup failure.
 A later corrected build needs its own source verification and public exposure.
