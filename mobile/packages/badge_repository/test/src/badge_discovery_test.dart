@@ -128,6 +128,24 @@ void main() {
       expect(requests[2].e, [events[2].id, events[1].id]);
     },
   );
+  test(
+    'same-second revisions select the lowest event ID in either relay order',
+    () async {
+      final first = definition(key1, name: 'First');
+      final second = definition(key1, name: 'Second');
+      // Independently derived canonical event hashes start bca9 and e276;
+      // the First revision is the NIP-33 tie winner in both arrival orders.
+      for (final order in [
+        [second, first],
+        [first, second],
+      ]) {
+        events = order;
+        final result = await repository.loadPublicDefinitions();
+        expect(result.single.name, 'First');
+      }
+    },
+  );
+
   test('drops hidden, unsigned, hash-corrupt and forged definitions', () async {
     hidden.add(issuer2);
     final unsigned = Event(issuer1, EventKind.badgeDefinition, [
