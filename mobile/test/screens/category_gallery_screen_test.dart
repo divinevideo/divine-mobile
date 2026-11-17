@@ -245,6 +245,28 @@ void main() {
         );
       });
 
+      testWidgets('fits the whole title in the bar at the largest text', (
+        tester,
+      ) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 3;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpAtPhoneSize(tester);
+
+        // The title keeps growing after the icons stop at 1.3x, so only a
+        // bar that grows with it keeps the line from being squeezed.
+        final title = tester.renderObject<RenderBox>(
+          find.text(lookupAppLocalizations(const Locale('en')).categoryAnimals),
+        );
+        expect(
+          title.size.height,
+          greaterThanOrEqualTo(title.getMaxIntrinsicHeight(title.size.width)),
+        );
+        expect(
+          tester.getRect(mascotSlot).bottom,
+          equals(tester.getRect(bodyClip).top),
+        );
+      });
+
       testWidgets('centres the actions in the bar at small text', (
         tester,
       ) async {
