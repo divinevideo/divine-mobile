@@ -80,7 +80,7 @@ void main() {
     );
 
     test(
-      'route disposal cancels subscriptions and ignores its pending read',
+      'route disposal disposes its session so a pending read is ignored',
       () async {
         final pending = Completer<HomeFeedResult>();
         final session = ClassicFeedSession(
@@ -92,7 +92,9 @@ void main() {
         pending.complete(HomeFeedResult(videos: [_video(2)]));
         await session.settled;
         expect(cubit.isClosed, isTrue);
-        expect(cubit.state.videos, [_video(1)]);
+        // The cubit's own state is frozen by close(); the session's shows
+        // whether the late read still landed.
+        expect(session.state.videos, [_video(1)]);
       },
     );
   });
