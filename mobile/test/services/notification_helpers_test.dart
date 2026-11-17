@@ -113,6 +113,7 @@ void main() {
       expect(result!.notificationType, equals('campaign'));
       expect(result.tapTargetType, equals('app_route'));
       expect(result.tapTargetValue, equals('/following/new'));
+      expect(result.campaignRevisionId, equals('revision-1'));
       expect(result.eventId, isNull);
       expect(result.senderPubkey, isNull);
     });
