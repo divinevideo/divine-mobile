@@ -390,6 +390,28 @@ void main() {
       });
     });
 
+    testWidgets('names the back button for screen readers', (tester) async {
+      var backTapped = false;
+      await tester.pumpWidget(
+        buildSubject(
+          category: category,
+          state: const CategoriesState(
+            selectedCategory: category,
+            videosStatus: CategoriesVideosStatus.loaded,
+          ),
+          onBack: () => backTapped = true,
+        ),
+      );
+
+      await tester.tap(
+        find.bySemanticsLabel(
+          lookupAppLocalizations(const Locale('en')).commonBack,
+        ),
+      );
+
+      expect(backTapped, isTrue);
+    });
+
     testWidgets(
       'opens picker sheet and calls back when a different mode is tapped',
       (tester) async {

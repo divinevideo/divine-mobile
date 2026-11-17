@@ -331,6 +331,7 @@ class _CategoryGalleryHeader extends StatelessWidget {
                     _CategoryHeaderActionButton(
                       decorationKey: const Key('category-header-back-button'),
                       icon: DivineIconName.caretLeft,
+                      semanticLabel: context.l10n.commonBack,
                       onPressed: onBack,
                     ),
                     Expanded(
