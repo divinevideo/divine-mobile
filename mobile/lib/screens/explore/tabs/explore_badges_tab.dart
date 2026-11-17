@@ -1,6 +1,8 @@
 // ABOUTME: Public badge communities in an artwork-led discovery gallery.
 
+import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,7 +18,6 @@ import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
 import 'package:openvine/widgets/badges/badge_community_card.dart';
-import 'package:badge_repository/badge_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Discover community-issued badges without requiring an account.
@@ -81,7 +82,7 @@ class ExploreBadgesView extends StatelessWidget {
             backgroundColor: VineTheme.vineGreen,
             onRefresh: cubit.refresh,
             child: CustomScrollView(
-              cacheExtent: 0,
+              scrollCacheExtent: const ScrollCacheExtent.pixels(0),
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 const SliverToBoxAdapter(child: _BadgeDiscoveryHeader()),
@@ -140,10 +141,11 @@ class ExploreBadgesView extends StatelessWidget {
                                             definitions[row * columns + column];
                                         WidgetsBinding.instance
                                             .addPostFrameCallback((_) {
-                                              if (context.mounted)
+                                              if (context.mounted) {
                                                 cubit.loadPreview(
                                                   definition.coordinate,
                                                 );
+                                              }
                                             });
                                         return BadgeCommunityCard(
                                           key: ValueKey(definition.coordinate),

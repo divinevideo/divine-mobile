@@ -71,6 +71,7 @@ class BadgeCommunityCard extends ConsumerWidget {
                             builder: (context, constraints) => VineCachedImage(
                               imageUrl: image,
                               fit: BoxFit.contain,
+                              resizePolicy: ResizeImagePolicy.fit,
                               memCacheWidth:
                                   (constraints.maxWidth *
                                           MediaQuery.devicePixelRatioOf(

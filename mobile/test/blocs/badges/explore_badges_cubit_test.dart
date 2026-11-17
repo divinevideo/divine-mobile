@@ -34,7 +34,7 @@ void main() {
             name: 'Group $index',
           ),
         );
-        when(() => repository.loadPublicDefinitions())
+        when(repository.loadPublicDefinitions)
             .thenAnswer((_) async => definitions);
         final cubit = ExploreBadgesCubit(repository: repository);
         addTearDown(cubit.close);
@@ -45,14 +45,14 @@ void main() {
         cubit.showMore();
         expect(cubit.state.visibleDefinitions, hasLength(55));
         expect(cubit.state.hasMore, isFalse);
-        verify(() => repository.loadPublicDefinitions()).called(1);
+        verify(repository.loadPublicDefinitions).called(1);
       },
     );
 
     test('superseded discovery cannot overwrite a newer refresh', () async {
       final first = Completer<List<Nip58BadgeDefinition>>();
       var calls = 0;
-      when(() => repository.loadPublicDefinitions())
+      when(repository.loadPublicDefinitions)
           .thenAnswer((_) => calls++ == 0 ? first.future : Future.value([]));
       final cubit = ExploreBadgesCubit(repository: repository);
       addTearDown(cubit.close);
@@ -61,6 +61,28 @@ void main() {
       first.complete([_definition]);
       await old;
       expect(cubit.state.definitions, isEmpty);
+    });
+
+    test('a preview from before refresh cannot append people to the replacement snapshot', () async {
+      final old = Completer<List<String>>();
+      var previewCalls = 0;
+      when(repository.loadPublicDefinitions)
+          .thenAnswer((_) async => [_definition]);
+      when(
+        () => repository.loadHolderPreview(any()),
+      ).thenAnswer((_) => previewCalls++ == 0 ? old.future : Future.value([]));
+      final cubit = ExploreBadgesCubit(repository: repository);
+      addTearDown(cubit.close);
+      await cubit.load();
+      cubit.loadPreview(_definition.coordinate);
+      await cubit.refresh();
+      old.complete(['3'.padLeft(64, '0')]);
+      await pumpEventQueue();
+      expect(cubit.state.previews, isEmpty);
+      cubit.loadPreview(_definition.coordinate);
+      await pumpEventQueue();
+      expect(cubit.state.previews[_definition.coordinate], isEmpty);
+      verify(() => repository.loadHolderPreview(any())).called(2);
     });
 
     test(
@@ -74,7 +96,7 @@ void main() {
             dTag: 'group-$i',
           ),
         );
-        when(() => repository.loadPublicDefinitions())
+        when(repository.loadPublicDefinitions)
             .thenAnswer((_) async => definitions);
         final pending = <Completer<List<String>>>[];
         when(() => repository.loadHolderPreview(any())).thenAnswer((_) {
@@ -110,7 +132,7 @@ void main() {
         'discovers public community definitions',
         setUp: () {
           when(
-            () => repository.loadPublicDefinitions(),
+            repository.loadPublicDefinitions,
           ).thenAnswer((_) async => [_definition]);
         },
         build: () => ExploreBadgesCubit(repository: repository),
@@ -128,7 +150,7 @@ void main() {
         'fails on an incomplete definition walk',
         setUp: () {
           when(
-            () => repository.loadPublicDefinitions(),
+            repository.loadPublicDefinitions,
           ).thenThrow(
             const BadgeReadIncompleteException(
               'Badge definitions could not be fully loaded',
@@ -149,7 +171,7 @@ void main() {
       blocTest<ExploreBadgesCubit, ExploreBadgesState>(
         'failed refresh retains previously loaded definitions',
         setUp: () {
-          when(() => repository.loadPublicDefinitions())
+          when(repository.loadPublicDefinitions)
               .thenThrow(const BadgeReadIncompleteException('incomplete read'));
         },
         seed: () => ExploreBadgesState(
@@ -172,7 +194,7 @@ void main() {
         'keeps the list on screen while reloading',
         setUp: () {
           when(
-            () => repository.loadPublicDefinitions(),
+            repository.loadPublicDefinitions,
           ).thenAnswer((_) async => [_definition]);
         },
         seed: () => const ExploreBadgesState(
@@ -191,7 +213,7 @@ void main() {
   });
 }
 
-final _issuer = '2'.padLeft(64, '0');
+final String _issuer = '2'.padLeft(64, '0');
 
 final _definition = Nip58BadgeDefinition(
   event: Event.fromJson({
