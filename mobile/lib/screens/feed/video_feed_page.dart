@@ -127,6 +127,10 @@ class VideoFeedPage extends ConsumerWidget {
             create: (context) =>
                 VideoFeedBloc(
                   videosRepository: videosRepository,
+                  removedIdsStream: videosRepository.removedVideoIds,
+                  removalRepositoryStream: ref.read(
+                    videosRepositoryIdentityStreamProvider,
+                  ),
                   followRepository: followRepository,
                   curatedListRepository: curatedListRepository,
                   hashtagSubscriptionRepository: hashtagRepository,

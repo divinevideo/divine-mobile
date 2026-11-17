@@ -30,7 +30,10 @@ class _Api extends Mock implements FunnelcakeApiClient {}
 
 class _Follows extends Mock implements FollowRepository {}
 
-class _Videos extends Mock implements VideosRepository {}
+class _Videos extends Mock implements VideosRepository {
+  @override
+  bool isVideoKnownDeleted(VideoEvent video) => false;
+}
 
 class _Database extends Mock implements AppDatabase {}
 

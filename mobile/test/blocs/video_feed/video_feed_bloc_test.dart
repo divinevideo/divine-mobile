@@ -49,7 +49,10 @@ class _MockBadgeAuthService extends Mock implements AuthService {}
 
 class _MockBadgeBlocklist extends Mock implements ContentBlocklistRepository {}
 
-class _MockVideosRepository extends Mock implements VideosRepository {}
+class _MockVideosRepository extends Mock implements VideosRepository {
+  @override
+  bool isVideoKnownDeleted(VideoEvent video) => false;
+}
 
 class _MockBadgeVideoPager extends Mock implements BadgeVideoPager {}
 

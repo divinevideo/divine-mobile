@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:hashtag_subscription_repository/hashtag_subscription_repository.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -12,7 +13,10 @@ import 'package:videos_repository/videos_repository.dart';
 import '../../helpers/hashtag_subscription_store.dart';
 import '../../test_data/video_test_data.dart';
 
-class Videos extends Mock implements VideosRepository {}
+class Videos extends Mock implements VideosRepository {
+  @override
+  bool isVideoKnownDeleted(VideoEvent video) => false;
+}
 
 class Follows extends Mock implements FollowRepository {}
 

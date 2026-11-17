@@ -32,6 +32,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
+import 'package:openvine/providers/provider_identity_stream.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
@@ -1046,6 +1047,13 @@ VideosRepository videosRepository(Ref ref) {
 
   return repository;
 }
+
+/// Keeps Home's removal listener and deletion checks attached to the current
+/// service without rebuilding its feed or playback during a cold start.
+final Provider<Stream<VideosRepository>>
+videosRepositoryIdentityStreamProvider = identityStreamOf<VideosRepository>(
+  videosRepositoryProvider,
+);
 
 // =============================================================================
 // LIKES REPOSITORY
