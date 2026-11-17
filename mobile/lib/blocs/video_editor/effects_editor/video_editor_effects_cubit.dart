@@ -38,7 +38,8 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
        _beatResolver = beatResolver ?? VideoEditorBeatResolver(),
        super(const VideoEditorEffectsState());
 
-  /// The intensity an effect starts at when it is first picked.
+  /// The intensity an effect other than an intro or outro starts at when it
+  /// is first picked; see [startingIntensityOf].
   static const double defaultIntensity = 0.7;
 
   /// The intensity a newly picked effect of [type] starts at: an intro or
