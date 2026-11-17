@@ -10,14 +10,21 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart' show NostrClient;
+import 'package:nostr_sdk/nostr_sdk.dart' show Event, Filter;
 import 'package:openvine/blocs/profile_saved_videos/profile_saved_videos_bloc.dart';
 import 'package:openvine/blocs/profile_shared/profile_tab_page_size.dart';
 import 'package:openvine/blocs/profile_shared/profile_video_list_snapshot.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockBookmarkSigner extends Mock implements BookmarkSigner {}
 
 /// In-memory [CacheDao] so the bloc's [CacheSync] reads/writes are isolated
 /// per test without touching disk.
@@ -576,6 +583,251 @@ void main() {
 
         expect(settled.savedEventIds, equals(['video-1']));
         expect(settled.videos.map((video) => video.id), equals(['video-1']));
+      });
+
+      // #7634: syncGlobalBookmarks() returns false when the kind-10003 list
+      // could not be reconciled with the relay. An empty list the repository
+      // still holds then proves nothing.
+      group('when the bookmark list could not be read from the relay', () {
+        setUp(() {
+          when(
+            () => mockBookmarksRepository.syncGlobalBookmarks(),
+          ).thenAnswer((_) async => false);
+        });
+
+        Future<void> syncAndSettle(ProfileSavedVideosBloc bloc) async {
+          final sync = Completer<void>();
+          bloc.add(ProfileSavedVideosSyncRequested(completer: sync));
+          await sync.future.timeout(const Duration(seconds: 5));
+        }
+
+        test('reports a load failure, not an empty list', () async {
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(const []);
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+
+          await syncAndSettle(bloc);
+
+          expect(bloc.state.status, ProfileSavedVideosStatus.failure);
+          expect(bloc.state.error, ProfileSavedVideosError.loadFailed);
+          expect(
+            await cacheDao.readEntry(snapshotCacheKey),
+            isNull,
+            reason: 'an unanswered read is not the viewer list to cache',
+          );
+        });
+
+        test(
+          'keeps a settled empty list on a refresh it cannot read',
+          () async {
+            var synced = true;
+            when(
+              () => mockBookmarksRepository.syncGlobalBookmarks(),
+            ).thenAnswer((_) async => synced);
+            when(
+              () => mockBookmarksRepository.bookmarkedVideoReferences,
+            ).thenReturn(const []);
+            final bloc = createBloc();
+            addTearDown(bloc.close);
+            await syncAndSettle(bloc);
+            expect(bloc.state.status, ProfileSavedVideosStatus.success);
+
+            synced = false;
+            await syncAndSettle(bloc);
+
+            expect(bloc.state.status, ProfileSavedVideosStatus.success);
+            expect(bloc.state.error, isNull);
+            expect(bloc.state.isRefreshing, isFalse);
+          },
+        );
+
+        test('stops refreshing when a failed load fails again', () async {
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(const []);
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+          await syncAndSettle(bloc);
+          final emitted = <ProfileSavedVideosState>[];
+          final subscription = bloc.stream.listen(emitted.add);
+          addTearDown(subscription.cancel);
+
+          await syncAndSettle(bloc);
+          await pumpEventQueue();
+
+          expect(emitted.map((state) => state.isRefreshing), [true, false]);
+          expect(bloc.state.status, ProfileSavedVideosStatus.failure);
+        });
+
+        test(
+          'recovers when a later reconciled read finds no bookmarks',
+          () async {
+            final changes = StreamController<List<String>>.broadcast();
+            addTearDown(changes.close);
+            when(
+              () => mockBookmarksRepository.watchBookmarkedVideoReferences(),
+            ).thenAnswer((_) => changes.stream);
+            when(
+              () => mockBookmarksRepository.bookmarkedVideoReferences,
+            ).thenReturn(const []);
+            final bloc = createBloc();
+            addTearDown(bloc.close);
+            await syncAndSettle(bloc);
+            expect(bloc.state.status, ProfileSavedVideosStatus.failure);
+
+            // The share sheet's own sync reconciled and found no list.
+            changes.add(const []);
+            await pumpEventQueue();
+
+            expect(bloc.state.status, ProfileSavedVideosStatus.success);
+            expect(bloc.state.error, isNull);
+            expect(bloc.state.savedEventIds, isEmpty);
+          },
+        );
+
+        test('keeps the saved videos already on screen', () async {
+          await cacheDao.write(
+            key: snapshotCacheKey,
+            payload: ProfileVideoListSnapshot(
+              videos: [createTestVideo('video-1')],
+              itemIds: const ['video-1'],
+              nextPageOffset: 1,
+              hasMoreContent: false,
+            ).toJson(),
+          );
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(const []);
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+
+          await syncAndSettle(bloc);
+
+          expect(bloc.state.status, ProfileSavedVideosStatus.success);
+          expect(bloc.state.videos.map((video) => video.id), ['video-1']);
+          expect(bloc.state.savedEventIds, ['video-1']);
+          expect(bloc.state.isRefreshing, isFalse);
+          final persisted = await cacheDao.readEntry(snapshotCacheKey);
+          expect(
+            ProfileVideoListSnapshot.fromJson(persisted!.payload).itemIds,
+            ['video-1'],
+          );
+        });
+
+        test('shows the bookmarks this device already holds', () async {
+          // The documented #6966 fallback: a failed read still shows the
+          // list this device kept rather than nothing.
+          when(
+            () => mockBookmarksRepository.bookmarkedVideoReferences,
+          ).thenReturn(const ['video-1']);
+          when(
+            () => mockVideosRepository.getVideosByIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          ).thenAnswer((_) async => [createTestVideo('video-1')]);
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+
+          await syncAndSettle(bloc);
+
+          expect(bloc.state.status, ProfileSavedVideosStatus.success);
+          expect(bloc.state.savedEventIds, ['video-1']);
+          expect(bloc.state.videos.map((video) => video.id), ['video-1']);
+        });
+      });
+
+      // The same #7634 path through the real repository, so the test fails if
+      // the repository's own "inconclusive is false" contract drifts.
+      group('over a real $BookmarksRepository', () {
+        late _MockNostrClient nostrClient;
+        late BookmarksRepository repository;
+        final savedVideoId = 'b' * 64;
+
+        setUpAll(() => registerFallbackValue(<Filter>[]));
+
+        setUp(() async {
+          SharedPreferences.setMockInitialValues(<String, Object>{});
+          nostrClient = _MockNostrClient();
+          final signer = _MockBookmarkSigner();
+          when(() => signer.isAuthenticated).thenReturn(true);
+          when(() => signer.currentPublicKeyHex).thenReturn(currentUserPubkey);
+          repository = BookmarksRepository(
+            nostrClient: nostrClient,
+            signer: signer,
+            prefs: await SharedPreferences.getInstance(),
+          );
+          addTearDown(repository.dispose);
+          when(
+            () => mockVideosRepository.getVideosByIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          ).thenAnswer((_) async => [createTestVideo(savedVideoId)]);
+        });
+
+        /// The relay holds a kind-10003 saving [savedVideoId]; [timedOut]
+        /// says whether the read of it ran out of time.
+        void stubRelayHoldingTheList({required bool timedOut}) {
+          final list = Event(
+            currentUserPubkey,
+            BookmarksRepository.globalBookmarksKind,
+            [
+              ['e', savedVideoId],
+            ],
+            '',
+          );
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: [list], timedOut: timedOut, noRelays: false),
+          );
+        }
+
+        ProfileSavedVideosBloc createRealRepositoryBloc() =>
+            ProfileSavedVideosBloc(
+              bookmarksRepository: repository,
+              videosRepository: mockVideosRepository,
+              currentUserPubkey: currentUserPubkey,
+              removedVideoIds: const Stream<String>.empty(),
+              deletedVideoFilter: (_) => false,
+            );
+
+        test('shows the list when the relay finishes the read', () async {
+          stubRelayHoldingTheList(timedOut: false);
+          final bloc = createRealRepositoryBloc();
+          addTearDown(bloc.close);
+
+          final sync = Completer<void>();
+          bloc.add(ProfileSavedVideosSyncRequested(completer: sync));
+          await sync.future.timeout(const Duration(seconds: 5));
+
+          expect(bloc.state.status, ProfileSavedVideosStatus.success);
+          expect(bloc.state.savedEventIds, [savedVideoId]);
+          expect(bloc.state.videos.map((video) => video.id), [savedVideoId]);
+        });
+
+        test(
+          'reports a load failure when the read of that list times out',
+          () async {
+            stubRelayHoldingTheList(timedOut: true);
+            final bloc = createRealRepositoryBloc();
+            addTearDown(bloc.close);
+
+            final sync = Completer<void>();
+            bloc.add(ProfileSavedVideosSyncRequested(completer: sync));
+            await sync.future.timeout(const Duration(seconds: 5));
+
+            expect(bloc.state.status, ProfileSavedVideosStatus.failure);
+            expect(bloc.state.savedEventIds, isEmpty);
+          },
+        );
       });
 
       test('a sync arriving during the snapshot write still runs', () async {
