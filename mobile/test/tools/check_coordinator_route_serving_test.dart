@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
-import 'coordinator_route_probe_test.dart' show currentConfigFixture;
+import '../test_utils/coordinator_route_config_fixture.dart';
 
 void main() {
   group('check_coordinator_route_serving.sh', () {
