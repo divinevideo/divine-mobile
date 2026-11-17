@@ -108,164 +108,177 @@ void main() {
   });
   tearDown(() => repository.dispose());
 
-  test(
-    'discovers community issuers and keeps shared identifiers distinct',
-    () async {
-      events = [
-        definition(key1),
-        definition(key2, at: 200),
-        definition(key1, at: 300, name: 'Updated'),
-      ];
-      final result = await repository.loadPublicDefinitions();
-      expect(result.map((d) => d.coordinate), [
-        '30009:$issuer1:shared',
-        '30009:$issuer2:shared',
-      ]);
-      expect(result.first.name, 'Updated');
-      expect(requests.first.limit, 300);
-      expect(requests.first.authors, isNull);
-      expect(requests[1].a, ['30009:$issuer1:shared', '30009:$issuer2:shared']);
-      expect(requests[2].e, [events[2].id, events[1].id]);
-    },
-  );
-  test(
-    'same-second revisions select the lowest event ID in either relay order',
-    () async {
-      final first = definition(key1, name: 'First');
-      final second = definition(key1, name: 'Second');
-      // Independently derived canonical event hashes start bca9 and e276;
-      // the First revision is the NIP-33 tie winner in both arrival orders.
-      for (final order in [
-        [second, first],
-        [first, second],
-      ]) {
-        events = order;
+  group('loadPublicDefinitions', () {
+    test(
+      'discovers community issuers and keeps shared identifiers distinct',
+      () async {
+        events = [
+          definition(key1),
+          definition(key2, at: 200),
+          definition(key1, at: 300, name: 'Updated'),
+        ];
         final result = await repository.loadPublicDefinitions();
-        expect(result.single.name, 'First');
-      }
-    },
-  );
-
-  test('drops hidden, unsigned, hash-corrupt and forged definitions', () async {
-    hidden.add(issuer2);
-    final unsigned = Event(issuer1, EventKind.badgeDefinition, [
-      ['d', 'unsigned'],
-    ], '');
-    final corrupt = definition(key1)..content = 'changed';
-    final forged = definition(key1)..sig = '0' * 128;
-    events = [unsigned, corrupt, forged, definition(key2)];
-    expect(await repository.loadPublicDefinitions(), isEmpty);
-  });
-  test(
-    'honors issuer deletion, rejects foreign deletion and retains newer replacement',
-    () async {
-      final a = definition(key1);
-      final b = definition(key2);
-      events = [a, b];
-      deletions = [deletion(key1, a), deletion(key1, b)];
-      expect(
-        (await repository.loadPublicDefinitions()).map((d) => d.event.pubkey),
-        [issuer2],
-      );
-      events = [definition(key1, at: 101)];
-      expect(await repository.loadPublicDefinitions(), hasLength(1));
-    },
-  );
-  test('event-id deletion cannot resurrect an older revision', () async {
-    final old = definition(key1);
-    final latest = definition(key1, at: 200);
-    events = [old, latest];
-    deletions = [deletion(key1, latest, at: 201, address: false)];
-    expect(await repository.loadPublicDefinitions(), isEmpty);
-  });
-  test('unanswered discovery does not claim an empty catalogue', () async {
-    incomplete = true;
-    await expectLater(
-      repository.loadPublicDefinitions(),
-      throwsA(isA<BadgeReadIncompleteException>()),
+        expect(result.map((d) => d.coordinate), [
+          '30009:$issuer1:shared',
+          '30009:$issuer2:shared',
+        ]);
+        expect(result.first.name, 'Updated');
+        expect(requests.first.limit, 300);
+        expect(requests.first.authors, isNull);
+        expect(requests[1].a, [
+          '30009:$issuer1:shared',
+          '30009:$issuer2:shared',
+        ]);
+        expect(requests[2].e, [events[2].id, events[1].id]);
+      },
     );
-  });
-  test(
-    'unanswered deletion read does not expose possibly deleted badges',
-    () async {
-      events = [definition(key1)];
-      var calls = 0;
-      when(
-        () => client.queryEventsDetailed(
-          any(),
-          tempRelays: any(named: 'tempRelays'),
-          relayTypes: any(named: 'relayTypes'),
-          useCache: false,
-          timeout: any(named: 'timeout'),
-          requireAllRelaysSettled: true,
-        ),
-      ).thenAnswer(
-        (_) async => (
-          events: calls++ == 0 ? events : <Event>[],
-          timedOut: calls > 1,
-          noRelays: false,
-        ),
-      );
+    test(
+      'same-second revisions select the lowest event ID in either relay order',
+      () async {
+        final first = definition(key1, name: 'First');
+        final second = definition(key1, name: 'Second');
+        // Independently derived canonical event hashes start bca9 and e276;
+        // the First revision is the NIP-33 tie winner in both arrival orders.
+        for (final order in [
+          [second, first],
+          [first, second],
+        ]) {
+          events = order;
+          final result = await repository.loadPublicDefinitions();
+          expect(result.single.name, 'First');
+        }
+      },
+    );
+
+    test(
+      'drops hidden, unsigned, hash-corrupt and forged definitions',
+      () async {
+        hidden.add(issuer2);
+        final unsigned = Event(issuer1, EventKind.badgeDefinition, [
+          ['d', 'unsigned'],
+        ], '');
+        final corrupt = definition(key1)..content = 'changed';
+        final forged = definition(key1)..sig = '0' * 128;
+        events = [unsigned, corrupt, forged, definition(key2)];
+        expect(await repository.loadPublicDefinitions(), isEmpty);
+      },
+    );
+    test(
+      'honors issuer deletion, rejects foreign deletion and retains newer replacement',
+      () async {
+        final a = definition(key1);
+        final b = definition(key2);
+        events = [a, b];
+        deletions = [deletion(key1, a), deletion(key1, b)];
+        expect(
+          (await repository.loadPublicDefinitions()).map((d) => d.event.pubkey),
+          [issuer2],
+        );
+        events = [definition(key1, at: 101)];
+        expect(await repository.loadPublicDefinitions(), hasLength(1));
+      },
+    );
+    test('event-id deletion cannot resurrect an older revision', () async {
+      final old = definition(key1);
+      final latest = definition(key1, at: 200);
+      events = [old, latest];
+      deletions = [deletion(key1, latest, at: 201, address: false)];
+      expect(await repository.loadPublicDefinitions(), isEmpty);
+    });
+    test('unanswered discovery does not claim an empty catalogue', () async {
+      incomplete = true;
       await expectLater(
         repository.loadPublicDefinitions(),
         throwsA(isA<BadgeReadIncompleteException>()),
       );
-    },
-  );
-  test('slow successful preview stays within its owning client budget', () {
-    fakeAsync((clock) {
-      final response = Completer<List<String>>();
-      when(
-        () => api.getBadgeHolderPreview(creatorPubkey: issuer1, dTag: 'shared'),
-      ).thenAnswer((_) => response.future);
-      List<String>? result;
-      Object? failure;
-      unawaited(
-        repository
-            .loadHolderPreview(
-              BadgeCoordinate(pubkey: issuer1, identifier: 'shared'),
-            )
-            .then<void>(
-              (value) {
-                result = value;
-              },
-              onError: (Object error) {
-                failure = error;
-              },
-            ),
-      );
-      clock.elapse(const Duration(seconds: 11));
-      expect(
-        failure,
-        isNull,
-        reason: 'The API owns a 15-second whole-call deadline.',
-      );
-      expect(result, isNull);
-      response.complete([issuer2]);
-      clock.flushMicrotasks();
-      expect(result, [issuer2]);
     });
+    test(
+      'unanswered deletion read does not expose possibly deleted badges',
+      () async {
+        events = [definition(key1)];
+        var calls = 0;
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            useCache: false,
+            timeout: any(named: 'timeout'),
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: calls++ == 0 ? events : <Event>[],
+            timedOut: calls > 1,
+            noRelays: false,
+          ),
+        );
+        await expectLater(
+          repository.loadPublicDefinitions(),
+          throwsA(isA<BadgeReadIncompleteException>()),
+        );
+      },
+    );
   });
 
-  test(
-    'preview caps distinct valid visible people without a relay holder walk',
-    () async {
-      hidden.add(issuer2);
-      final members = [
-        for (var n = 3; n < 9; n++) n.toRadixString(16).padLeft(64, '0'),
-      ];
-      when(
-        () => api.getBadgeHolderPreview(creatorPubkey: issuer1, dTag: 'shared'),
-      ).thenAnswer(
-        (_) async => [issuer2, 'invalid', ...members, members.first],
-      );
-      expect(
-        await repository.loadHolderPreview(
-          BadgeCoordinate(pubkey: issuer1, identifier: 'shared'),
-        ),
-        members.take(3),
-      );
-      expect(requests, isEmpty);
-    },
-  );
+  group('loadHolderPreview', () {
+    test('slow successful preview stays within its owning client budget', () {
+      fakeAsync((clock) {
+        final response = Completer<List<String>>();
+        when(
+          () =>
+              api.getBadgeHolderPreview(creatorPubkey: issuer1, dTag: 'shared'),
+        ).thenAnswer((_) => response.future);
+        List<String>? result;
+        Object? failure;
+        unawaited(
+          repository
+              .loadHolderPreview(
+                BadgeCoordinate(pubkey: issuer1, identifier: 'shared'),
+              )
+              .then<void>(
+                (value) {
+                  result = value;
+                },
+                onError: (Object error) {
+                  failure = error;
+                },
+              ),
+        );
+        clock.elapse(const Duration(seconds: 11));
+        expect(
+          failure,
+          isNull,
+          reason: 'The API owns a 15-second whole-call deadline.',
+        );
+        expect(result, isNull);
+        response.complete([issuer2]);
+        clock.flushMicrotasks();
+        expect(result, [issuer2]);
+      });
+    });
+
+    test(
+      'preview caps distinct valid visible people without a relay holder walk',
+      () async {
+        hidden.add(issuer2);
+        final members = [
+          for (var n = 3; n < 9; n++) n.toRadixString(16).padLeft(64, '0'),
+        ];
+        when(
+          () =>
+              api.getBadgeHolderPreview(creatorPubkey: issuer1, dTag: 'shared'),
+        ).thenAnswer(
+          (_) async => [issuer2, 'invalid', ...members, members.first],
+        );
+        expect(
+          await repository.loadHolderPreview(
+            BadgeCoordinate(pubkey: issuer1, identifier: 'shared'),
+          ),
+          members.take(3),
+        );
+        expect(requests, isEmpty);
+      },
+    );
+  });
 }
