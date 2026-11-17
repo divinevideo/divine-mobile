@@ -796,18 +796,40 @@ class BookmarksRepository {
   /// regardless of settlement, so leaving it on would let a stale locally-held
   /// kind-10003 stand in for a relay answer — and the next publish would
   /// resurrect a list the user had already emptied.
+  ///
+  /// An authoritative read that a relay did not settle on the shared
+  /// connections asks every relay again on new ones, and still needs each of
+  /// them to settle there. Divine's relay serves one connection's requests in
+  /// order, so the shared connection can hold the read behind a slow request
+  /// for minutes while a new one answers in a second or two (#9335).
   Future<({List<Event>? events, BookmarkToggleFailure? failure})>
   _readRemoteGlobalBookmarks(
     String pubkey, {
     required bool requireAuthoritative,
   }) async {
-    final result = await _nostrClient.queryEventsDetailed(
-      [
-        Filter(kinds: [globalBookmarksKind], authors: [pubkey], limit: 1),
-      ],
+    final filters = [
+      Filter(kinds: [globalBookmarksKind], authors: [pubkey], limit: 1),
+    ];
+    var result = await _nostrClient.queryEventsDetailed(
+      filters,
       useCache: !requireAuthoritative,
       requireAllRelaysSettled: requireAuthoritative,
     );
+
+    if (requireAuthoritative && result.timedOut && !result.noRelays) {
+      Log.info(
+        'Authoritative bookmark read did not settle on the shared '
+        'connections - asking every relay again on new connections',
+        name: 'BookmarksRepository',
+        category: LogCategory.system,
+      );
+      final fresh = await _nostrClient.queryEventsOnFreshConnections(filters);
+      result = (
+        events: [...result.events, ...fresh.events],
+        timedOut: fresh.timedOut,
+        noRelays: fresh.noRelays,
+      );
+    }
 
     if (result.timedOut || result.noRelays) {
       Log.warning(

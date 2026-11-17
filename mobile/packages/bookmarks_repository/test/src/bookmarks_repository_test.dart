@@ -81,8 +81,22 @@ void main() {
       return Event(pubkey, 10003, tags, content, createdAt: createdAt);
     }
 
+    /// Answers a read asked again on new connections, which a full-settlement
+    /// read that timed out with relays connected makes (#9335).
+    void stubFreshConnections({
+      required List<Event> events,
+      bool timedOut = false,
+      bool noRelays = false,
+    }) {
+      when(
+        () => nostrClient.queryEventsOnFreshConnections(any()),
+      ).thenAnswer(
+        (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
+      );
+    }
+
     /// Makes the relay answer a kind-10003 query with [events], in both
-    /// reconcile modes.
+    /// reconcile modes, and on new connections too.
     void stubRelay({
       required List<Event> events,
       bool timedOut = false,
@@ -96,6 +110,11 @@ void main() {
         ),
       ).thenAnswer(
         (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
+      );
+      stubFreshConnections(
+        events: events,
+        timedOut: timedOut,
+        noRelays: noRelays,
       );
     }
 
@@ -117,6 +136,13 @@ void main() {
       ).thenAnswer(
         (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
       );
+      if (fullSettlement) {
+        stubFreshConnections(
+          events: events,
+          timedOut: timedOut,
+          noRelays: noRelays,
+        );
+      }
     }
 
     /// Puts [eventIds] in the SharedPreferences snapshot a service reads at
