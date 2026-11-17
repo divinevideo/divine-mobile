@@ -193,6 +193,13 @@ class _CommentsListState extends State<CommentsList> {
                 isLoading: s.isLoadingFirstVoteTotals,
               ),
               builder: (context, votes) {
+                // Focus and post reveals are one-shot signals. Once they
+                // expose the list, acknowledging the scroll must not hide
+                // it again while the initial vote read is still pending.
+                if (state.scrollToCommentId != null ||
+                    state.pendingFocusCommentId != null) {
+                  _topRankingWait.cancel();
+                }
                 if (_topRankingWait.isActive &&
                     state.awaitsTopRanking(
                       isLoadingVoteTotals: votes.isLoading,

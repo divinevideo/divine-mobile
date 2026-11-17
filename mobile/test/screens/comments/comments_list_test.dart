@@ -429,6 +429,55 @@ void main() {
 
           expect(find.byType(CommentItem), findsNWidgets(3));
         });
+
+        testWidgets('keeps a focused comment visible after the scroll is '
+            'acknowledged while totals still load', (tester) async {
+          when(() => mockReactionsBloc.state).thenReturn(loading);
+          final focused = listState().copyWith(
+            scrollToCommentId: runnerUp.id,
+          );
+          final widget = buildTestWidget(listState: focused);
+          final updates = StreamController<CommentsListState>();
+          addTearDown(updates.close);
+          whenListen(mockListBloc, updates.stream, initialState: focused);
+
+          await tester.pumpWidget(widget);
+          await tester.pump();
+          expect(find.byType(CommentItem), findsNWidgets(3));
+
+          updates.add(listState());
+          await tester.pump();
+          await tester.pump();
+
+          expect(find.byType(CommentsSkeletonLoader), findsNothing);
+          expect(find.byType(CommentItem), findsNWidgets(3));
+        });
+
+        testWidgets('keeps the list visible after a newly posted comment is '
+            'revealed and its scroll is acknowledged', (tester) async {
+          when(() => mockReactionsBloc.state).thenReturn(loading);
+          final initial = listState();
+          final widget = buildTestWidget(listState: initial);
+          final updates = StreamController<CommentsListState>();
+          addTearDown(updates.close);
+          whenListen(mockListBloc, updates.stream, initialState: initial);
+
+          await tester.pumpWidget(widget);
+          await tester.pump();
+          expect(find.byType(CommentsSkeletonLoader), findsOneWidget);
+
+          updates.add(initial.copyWith(scrollToCommentId: runnerUp.id));
+          await tester.pump();
+          await tester.pump();
+          expect(find.byType(CommentItem), findsNWidgets(3));
+
+          updates.add(initial);
+          await tester.pump();
+          await tester.pump();
+
+          expect(find.byType(CommentsSkeletonLoader), findsNothing);
+          expect(find.byType(CommentItem), findsNWidgets(3));
+        });
       });
 
       // Replaces "reorders when downvotes change" (#10921): once the order is
