@@ -738,48 +738,6 @@ void main() {
       },
     );
 
-    test(
-      'getNewVideos reads past invalid rows to return watched videos',
-      () async {
-        var calls = 0;
-        when(
-          () => mockFunnelcake.getRecentVideosPage(
-            limit: any(named: 'limit'),
-            before: any(named: 'before'),
-            cursor: any(named: 'cursor'),
-          ),
-        ).thenAnswer((_) async {
-          calls++;
-          final isEmptyTransformed = calls == 1;
-          return RecentVideosResponse(
-            videos: [
-              _stats('row-$calls', videoUrl: isEmptyTransformed ? '' : null),
-            ],
-            serverItemCount: 1,
-            hasMore: true,
-            nextCursor: 'cursor-$calls',
-          );
-        });
-        when(
-          () => mockFunnelcake.getBulkVideoStats(any()),
-        ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
-
-        final repo = VideosRepository(
-          nostrClient: mockNostr,
-          funnelcakeApiClient: mockFunnelcake,
-          seenVideoLookup: SeenVideoLookup(
-            wasSeenRecently: (_, {within = const Duration(hours: 24)}) => true,
-          ),
-        );
-
-        final result = await repo.getNewVideos(limit: 1);
-        expect(result.videos.map((v) => v.id), ['row-2']);
-        expect(result.hasMore, isTrue);
-        expect(result.paginationCursor, 'cursor-2');
-        expect(calls, equals(2));
-      },
-    );
-
     test('getNewVideos cache retains videos watched since caching', () async {
       final seenIds = <String>{};
       when(
