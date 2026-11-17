@@ -71,39 +71,10 @@ void main() {
           notificationRepository: repository,
         );
 
-    test('concurrent campaign choices and unrelated toggles emit one actual transition', () async {
-      final sink = _ConsentSink();
-      final cubit = NotificationSettingsCubit(
-        preferencesService: service,
-        notificationAnalytics: NotificationAnalyticsTracker(
-          sink: sink,
-          collectionAllowed: () async => true,
-          privacyBoundary: () => 'test',
-        ),
-      );
-      addTearDown(cubit.close);
-      await cubit.load();
-      await Future.wait([
-        cubit.setPreference(NotificationPreference.likesEnabled, false),
-        cubit.setPreference(NotificationPreference.campaignsEnabled, true),
-        cubit.setPreference(NotificationPreference.campaignsEnabled, true),
-      ]);
-      await pumpEventQueue();
-      expect(sink.changes, [
-        {'enabled': 1},
-      ]);
-      await Future.wait([cubit.resetToDefaults(), cubit.resetToDefaults()]);
-      await pumpEventQueue();
-      expect(sink.changes, [
-        {'enabled': 1},
-        {'enabled': 0},
-      ]);
-    });
+    group('campaign consent analytics', () {
+      late _ConsentSink sink;
 
-    test(
-      'records only actual campaign preference changes, including reset',
-      () async {
-        final sink = _ConsentSink();
+      NotificationSettingsCubit buildTrackedCubit() {
         final cubit = NotificationSettingsCubit(
           preferencesService: service,
           notificationAnalytics: NotificationAnalyticsTracker(
@@ -113,24 +84,78 @@ void main() {
           ),
         );
         addTearDown(cubit.close);
+        return cubit;
+      }
+
+      setUp(() => sink = _ConsentSink());
+
+      test(
+        'concurrent campaign choices and unrelated toggles emit one actual '
+        'transition',
+        () async {
+          final cubit = buildTrackedCubit();
+          await cubit.load();
+          await Future.wait([
+            cubit.setPreference(NotificationPreference.likesEnabled, false),
+            cubit.setPreference(NotificationPreference.campaignsEnabled, true),
+            cubit.setPreference(NotificationPreference.campaignsEnabled, true),
+          ]);
+          await pumpEventQueue();
+          expect(sink.changes, [
+            {'enabled': 1},
+          ]);
+          await Future.wait([cubit.resetToDefaults(), cubit.resetToDefaults()]);
+          await pumpEventQueue();
+          expect(sink.changes, [
+            {'enabled': 1},
+            {'enabled': 0},
+          ]);
+        },
+      );
+
+      test(
+        'records only actual campaign preference changes, including reset',
+        () async {
+          final cubit = buildTrackedCubit();
+          await cubit.load();
+          await cubit.setPreference(
+            NotificationPreference.campaignsEnabled,
+            true,
+          );
+          await cubit.setPreference(
+            NotificationPreference.campaignsEnabled,
+            true,
+          );
+          await cubit.resetToDefaults();
+          await pumpEventQueue();
+          expect(sink.changes, [
+            {'enabled': 1},
+            {'enabled': 0},
+          ]);
+          expect(cubit.state.preferences.campaignsEnabled, false);
+        },
+      );
+
+      test('an unrelated toggle on its own records nothing', () async {
+        final cubit = buildTrackedCubit();
         await cubit.load();
-        await cubit.setPreference(
-          NotificationPreference.campaignsEnabled,
-          true,
-        );
-        await cubit.setPreference(
-          NotificationPreference.campaignsEnabled,
-          true,
-        );
-        await cubit.resetToDefaults();
+        await cubit.setPreference(NotificationPreference.likesEnabled, false);
         await pumpEventQueue();
-        expect(sink.changes, [
-          {'enabled': 1},
-          {'enabled': 0},
-        ]);
-        expect(cubit.state.preferences.campaignsEnabled, false);
-      },
-    );
+        expect(cubit.state.preferences.likesEnabled, false);
+        expect(sink.changes, isEmpty);
+      });
+
+      test('a change that arrives before load records nothing', () async {
+        final changes = StreamController<void>.broadcast();
+        addTearDown(changes.close);
+        when(() => service.changes).thenAnswer((_) => changes.stream);
+        final cubit = buildTrackedCubit();
+        changes.add(null);
+        await pumpEventQueue();
+        expect(cubit.state.status, NotificationSettingsStatus.initial);
+        expect(sink.changes, isEmpty);
+      });
+    });
 
     blocTest<NotificationSettingsCubit, NotificationSettingsState>(
       'load emits loading then ready with the loaded preferences',
