@@ -198,64 +198,142 @@ void main() {
         await bloc.close();
       });
 
-      test(
-        'keeps cached videos visible during refresh and after a failed refresh',
-        () async {
-          bloc.add(const CategorySelected(music));
-          await pumpEventQueue();
-          results.add(
-            CacheResult.cached(
-              CategoryVideosPage(videos: [oldVideo], hasMore: true),
-            ),
-          );
-          await pumpEventQueue();
-          expect(bloc.state.videos, [oldVideo]);
-          expect(bloc.state.videosStatus, CategoriesVideosStatus.loaded);
-          expect(bloc.state.isRefreshingVideos, isTrue);
-          results.addError(const FunnelcakeException('Offline'));
-          await pumpEventQueue();
-          expect(bloc.state.videos, [oldVideo]);
-          expect(bloc.state.videosStatus, CategoriesVideosStatus.loaded);
-          expect(bloc.state.isRefreshingVideos, isFalse);
-        },
-      );
+      group(CategorySelected, () {
+        test(
+          'keeps cached videos visible during refresh and after a failed refresh',
+          () async {
+            bloc.add(const CategorySelected(music));
+            await pumpEventQueue();
+            results.add(
+              CacheResult.cached(
+                CategoryVideosPage(videos: [oldVideo], hasMore: true),
+              ),
+            );
+            await pumpEventQueue();
+            expect(bloc.state.videos, [oldVideo]);
+            expect(bloc.state.videosStatus, CategoriesVideosStatus.loaded);
+            expect(bloc.state.isRefreshingVideos, isTrue);
+            results.addError(const FunnelcakeException('Offline'));
+            await pumpEventQueue();
+            expect(bloc.state.videos, [oldVideo]);
+            expect(bloc.state.videosStatus, CategoriesVideosStatus.loaded);
+            expect(bloc.state.isRefreshingVideos, isFalse);
+          },
+        );
 
-      test(
-        'does not paginate cached content until fresh metadata arrives',
-        () async {
-          bloc.add(const CategorySelected(music));
-          await pumpEventQueue();
-          results.add(
-            CacheResult.cached(
-              CategoryVideosPage(videos: [oldVideo], hasMore: true),
-            ),
-          );
-          await pumpEventQueue();
-          bloc.add(const CategoryVideosLoadMore());
-          await pumpEventQueue();
-          verifyNever(
-            () => mockRepository.getVideosForCategory(
-              category: any(named: 'category'),
-              before: any(named: 'before'),
-              sort: any(named: 'sort'),
-              platform: any(named: 'platform'),
-            ),
-          );
-          results.add(
-            CacheResult.live(
-              CategoryVideosPage(videos: [newVideo], hasMore: false),
-            ),
-          );
-          await pumpEventQueue();
-          expect(bloc.state.videos, [newVideo]);
-          expect(bloc.state.hasMoreVideos, isFalse);
-          expect(bloc.state.isRefreshingVideos, isFalse);
-        },
-      );
+        test(
+          'late selection refresh cannot overwrite another category',
+          () async {
+            final next = StreamController<CacheResult<CategoryVideosPage>>();
+            when(
+              () => mockRepository.watchVideosForCategoryCached(
+                category: 'animals',
+                viewerPubkey: _viewerPubkey,
+              ),
+            ).thenAnswer((_) => next.stream);
+            bloc.add(const CategorySelected(music));
+            await pumpEventQueue();
+            bloc.add(const CategorySelected(animals));
+            await pumpEventQueue();
+            next.add(
+              CacheResult.live(
+                CategoryVideosPage(videos: [newVideo], hasMore: false),
+              ),
+            );
+            await pumpEventQueue();
+            results.add(
+              CacheResult.live(
+                CategoryVideosPage(videos: [oldVideo], hasMore: true),
+              ),
+            );
+            await pumpEventQueue();
+            expect(bloc.state.selectedCategory, animals);
+            expect(bloc.state.videos, [newVideo]);
+            await next.close();
+          },
+        );
 
-      test(
-        'late selection refresh cannot overwrite another category',
-        () async {
+        test(
+          'manual refresh keeps all loaded pages through cache and failure',
+          () async {
+            final next = StreamController<CacheResult<CategoryVideosPage>>();
+            bloc.add(const CategorySelected(music));
+            await pumpEventQueue();
+            results.add(
+              CacheResult.live(
+                CategoryVideosPage(videos: [oldVideo], hasMore: true),
+              ),
+            );
+            await pumpEventQueue();
+            when(
+              () => mockRepository.getVideosForCategory(
+                category: 'music',
+                before: oldVideo.createdAt,
+              ),
+            ).thenAnswer(
+              (_) async => CategoryVideosPage(
+                videos: [newVideo],
+                hasMore: false,
+              ),
+            );
+            bloc.add(const CategoryVideosLoadMore());
+            await pumpEventQueue();
+            expect(bloc.state.videos, [oldVideo, newVideo]);
+            expect(bloc.state.hasMoreVideos, isFalse);
+            when(
+              () => mockRepository.watchVideosForCategoryCached(
+                category: 'music',
+                viewerPubkey: _viewerPubkey,
+              ),
+            ).thenAnswer((_) => next.stream);
+            bloc.add(const CategorySelected(music));
+            await pumpEventQueue();
+            expect(bloc.state.videosStatus, CategoriesVideosStatus.loaded);
+            expect(bloc.state.videos, [oldVideo, newVideo]);
+            expect(bloc.state.isRefreshingVideos, isTrue);
+            next.add(
+              CacheResult.cached(
+                CategoryVideosPage(videos: [oldVideo], hasMore: true),
+              ),
+            );
+            await pumpEventQueue();
+            expect(bloc.state.videos, [oldVideo, newVideo]);
+            expect(bloc.state.hasMoreVideos, isFalse);
+            next.addError(const FunnelcakeException('Offline'));
+            await pumpEventQueue();
+            expect(bloc.state.videos, [oldVideo, newVideo]);
+            expect(bloc.state.hasMoreVideos, isFalse);
+            expect(bloc.state.isRefreshingVideos, isFalse);
+            await next.close();
+          },
+        );
+
+        blocTest<CategoriesBloc, CategoriesState>(
+          'reports a refresh failure that arrives after cached videos',
+          build: () => CategoriesBloc(
+            categoriesRepository: mockRepository,
+            currentUserPubkey: _viewerPubkey,
+          ),
+          act: (bloc) async {
+            bloc.add(const CategorySelected(music));
+            await pumpEventQueue();
+            results
+              ..add(
+                CacheResult.cached(
+                  CategoryVideosPage(videos: [oldVideo], hasMore: true),
+                ),
+              )
+              ..addError(const FunnelcakeException('Offline'));
+            await pumpEventQueue();
+          },
+          verify: (bloc) {
+            expect(bloc.state.videosStatus, CategoriesVideosStatus.loaded);
+            expect(bloc.state.videos, [oldVideo]);
+          },
+          errors: () => [isA<FunnelcakeException>()],
+        );
+
+        test('a late failure cannot fail a newer category', () async {
           final next = StreamController<CacheResult<CategoryVideosPage>>();
           when(
             () => mockRepository.watchVideosForCategoryCached(
@@ -267,246 +345,134 @@ void main() {
           await pumpEventQueue();
           bloc.add(const CategorySelected(animals));
           await pumpEventQueue();
+          results.addError(const FunnelcakeException('Old request failed'));
+          await pumpEventQueue();
+          expect(bloc.state.selectedCategory, animals);
+          expect(bloc.state.videosStatus, CategoriesVideosStatus.loading);
+          await next.close();
+        });
+      });
+
+      group(CategoryVideosLoadMore, () {
+        test(
+          'does not paginate cached content until fresh metadata arrives',
+          () async {
+            bloc.add(const CategorySelected(music));
+            await pumpEventQueue();
+            results.add(
+              CacheResult.cached(
+                CategoryVideosPage(videos: [oldVideo], hasMore: true),
+              ),
+            );
+            await pumpEventQueue();
+            bloc.add(const CategoryVideosLoadMore());
+            await pumpEventQueue();
+            verifyNever(
+              () => mockRepository.getVideosForCategory(
+                category: any(named: 'category'),
+                before: any(named: 'before'),
+                sort: any(named: 'sort'),
+                platform: any(named: 'platform'),
+              ),
+            );
+            results.add(
+              CacheResult.live(
+                CategoryVideosPage(videos: [newVideo], hasMore: false),
+              ),
+            );
+            await pumpEventQueue();
+            expect(bloc.state.videos, [newVideo]);
+            expect(bloc.state.hasMoreVideos, isFalse);
+            expect(bloc.state.isRefreshingVideos, isFalse);
+          },
+        );
+
+        test(
+          'late pagination cannot append to a different selection',
+          () async {
+            final pending = Completer<CategoryVideosPage>();
+            final next = StreamController<CacheResult<CategoryVideosPage>>();
+            when(
+              () => mockRepository.getVideosForCategory(
+                category: 'music',
+                before: any(named: 'before'),
+              ),
+            ).thenAnswer((_) => pending.future);
+            when(
+              () => mockRepository.watchVideosForCategoryCached(
+                category: 'animals',
+                viewerPubkey: _viewerPubkey,
+              ),
+            ).thenAnswer((_) => next.stream);
+            bloc.add(const CategorySelected(music));
+            await pumpEventQueue();
+            results.add(
+              CacheResult.live(
+                CategoryVideosPage(videos: [oldVideo], hasMore: true),
+              ),
+            );
+            await pumpEventQueue();
+            bloc.add(const CategoryVideosLoadMore());
+            await pumpEventQueue();
+            expect(bloc.state.isLoadingMore, isTrue);
+            bloc.add(const CategorySelected(animals));
+            await pumpEventQueue();
+            next.add(
+              CacheResult.live(
+                CategoryVideosPage(videos: [newVideo], hasMore: false),
+              ),
+            );
+            await pumpEventQueue();
+            pending.complete(
+              CategoryVideosPage(videos: [oldVideo], hasMore: true),
+            );
+            await pumpEventQueue();
+            expect(bloc.state.videos, [newVideo]);
+            expect(bloc.state.hasMoreVideos, isFalse);
+            expect(bloc.state.isLoadingMore, isFalse);
+            await next.close();
+          },
+        );
+      });
+
+      group(CategoryVideosSortChanged, () {
+        test('sort response wins over an older pending refresh', () async {
+          final next = StreamController<CacheResult<CategoryVideosPage>>();
+          when(
+            () => mockRepository.watchVideosForCategoryCached(
+              category: 'music',
+              sort: 'timestamp',
+              viewerPubkey: _viewerPubkey,
+            ),
+          ).thenAnswer((_) => next.stream);
+          bloc.add(const CategorySelected(music));
+          await pumpEventQueue();
+          bloc.add(const CategoryVideosSortChanged('timestamp'));
+          await pumpEventQueue();
+          results.addError(const FunnelcakeException('Old request failed'));
+          await pumpEventQueue();
+          expect(bloc.state.videosStatus, CategoriesVideosStatus.loading);
           next.add(
             CacheResult.live(
               CategoryVideosPage(videos: [newVideo], hasMore: false),
             ),
           );
           await pumpEventQueue();
-          results.add(
-            CacheResult.live(
-              CategoryVideosPage(videos: [oldVideo], hasMore: true),
-            ),
-          );
-          await pumpEventQueue();
-          expect(bloc.state.selectedCategory, animals);
+          expect(bloc.state.sortOrder, 'timestamp');
           expect(bloc.state.videos, [newVideo]);
+          expect(bloc.state.videosStatus, CategoriesVideosStatus.loaded);
           await next.close();
-        },
-      );
+        });
 
-      test('sort response wins over an older pending refresh', () async {
-        final next = StreamController<CacheResult<CategoryVideosPage>>();
-        when(
-          () => mockRepository.watchVideosForCategoryCached(
-            category: 'music',
-            sort: 'timestamp',
-            viewerPubkey: _viewerPubkey,
-          ),
-        ).thenAnswer((_) => next.stream);
-        bloc.add(const CategorySelected(music));
-        await pumpEventQueue();
-        bloc.add(const CategoryVideosSortChanged('timestamp'));
-        await pumpEventQueue();
-        results.addError(const FunnelcakeException('Old request failed'));
-        await pumpEventQueue();
-        expect(bloc.state.videosStatus, CategoriesVideosStatus.loading);
-        next.add(
-          CacheResult.live(
-            CategoryVideosPage(videos: [newVideo], hasMore: false),
-          ),
-        );
-        await pumpEventQueue();
-        expect(bloc.state.sortOrder, 'timestamp');
-        expect(bloc.state.videos, [newVideo]);
-        expect(bloc.state.videosStatus, CategoriesVideosStatus.loaded);
-        await next.close();
-      });
-
-      test('a sort change during load-more leaves paging usable', () async {
-        final pending = Completer<CategoryVideosPage>();
-        final next = StreamController<CacheResult<CategoryVideosPage>>();
-        when(
-          () => mockRepository.getVideosForCategory(
-            category: 'music',
-            before: any(named: 'before'),
-          ),
-        ).thenAnswer((_) => pending.future);
-        when(
-          () => mockRepository.watchVideosForCategoryCached(
-            category: 'music',
-            sort: 'timestamp',
-            viewerPubkey: _viewerPubkey,
-          ),
-        ).thenAnswer((_) => next.stream);
-        bloc.add(const CategorySelected(music));
-        await pumpEventQueue();
-        results.add(
-          CacheResult.live(
-            CategoryVideosPage(videos: [oldVideo], hasMore: true),
-          ),
-        );
-        await pumpEventQueue();
-        bloc.add(const CategoryVideosLoadMore());
-        await pumpEventQueue();
-        expect(bloc.state.isLoadingMore, isTrue);
-        bloc.add(const CategoryVideosSortChanged('timestamp'));
-        await pumpEventQueue();
-        next.add(
-          CacheResult.live(
-            CategoryVideosPage(videos: [newVideo], hasMore: true),
-          ),
-        );
-        await pumpEventQueue();
-        pending.complete(CategoryVideosPage(videos: [oldVideo], hasMore: true));
-        await pumpEventQueue();
-        expect(bloc.state.videos, [newVideo]);
-        expect(bloc.state.isLoadingMore, isFalse);
-        await next.close();
-      });
-
-      test(
-        'manual refresh keeps all loaded pages through cache and failure',
-        () async {
+        test('a sort change during load-more leaves paging usable', () async {
+          final pending = Completer<CategoryVideosPage>();
           final next = StreamController<CacheResult<CategoryVideosPage>>();
-          bloc.add(const CategorySelected(music));
-          await pumpEventQueue();
-          results.add(
-            CacheResult.live(
-              CategoryVideosPage(videos: [oldVideo], hasMore: true),
-            ),
-          );
-          await pumpEventQueue();
           when(
             () => mockRepository.getVideosForCategory(
               category: 'music',
-              before: oldVideo.createdAt,
+              before: any(named: 'before'),
             ),
-          ).thenAnswer(
-            (_) async => CategoryVideosPage(
-              videos: [newVideo],
-              hasMore: false,
-            ),
-          );
-          bloc.add(const CategoryVideosLoadMore());
-          await pumpEventQueue();
-          expect(bloc.state.videos, [oldVideo, newVideo]);
-          expect(bloc.state.hasMoreVideos, isFalse);
-          when(
-            () => mockRepository.watchVideosForCategoryCached(
-              category: 'music',
-              viewerPubkey: _viewerPubkey,
-            ),
-          ).thenAnswer((_) => next.stream);
-          bloc.add(const CategorySelected(music));
-          await pumpEventQueue();
-          expect(bloc.state.videosStatus, CategoriesVideosStatus.loaded);
-          expect(bloc.state.videos, [oldVideo, newVideo]);
-          expect(bloc.state.isRefreshingVideos, isTrue);
-          next.add(
-            CacheResult.cached(
-              CategoryVideosPage(videos: [oldVideo], hasMore: true),
-            ),
-          );
-          await pumpEventQueue();
-          expect(bloc.state.videos, [oldVideo, newVideo]);
-          expect(bloc.state.hasMoreVideos, isFalse);
-          next.addError(const FunnelcakeException('Offline'));
-          await pumpEventQueue();
-          expect(bloc.state.videos, [oldVideo, newVideo]);
-          expect(bloc.state.hasMoreVideos, isFalse);
-          expect(bloc.state.isRefreshingVideos, isFalse);
-          await next.close();
-        },
-      );
-
-      test('late pagination cannot append to a different selection', () async {
-        final pending = Completer<CategoryVideosPage>();
-        final next = StreamController<CacheResult<CategoryVideosPage>>();
-        when(
-          () => mockRepository.getVideosForCategory(
-            category: 'music',
-            before: any(named: 'before'),
-          ),
-        ).thenAnswer((_) => pending.future);
-        when(
-          () => mockRepository.watchVideosForCategoryCached(
-            category: 'animals',
-            viewerPubkey: _viewerPubkey,
-          ),
-        ).thenAnswer((_) => next.stream);
-        bloc.add(const CategorySelected(music));
-        await pumpEventQueue();
-        results.add(
-          CacheResult.live(
-            CategoryVideosPage(videos: [oldVideo], hasMore: true),
-          ),
-        );
-        await pumpEventQueue();
-        bloc.add(const CategoryVideosLoadMore());
-        await pumpEventQueue();
-        expect(bloc.state.isLoadingMore, isTrue);
-        bloc.add(const CategorySelected(animals));
-        await pumpEventQueue();
-        next.add(
-          CacheResult.live(
-            CategoryVideosPage(videos: [newVideo], hasMore: false),
-          ),
-        );
-        await pumpEventQueue();
-        pending.complete(CategoryVideosPage(videos: [oldVideo], hasMore: true));
-        await pumpEventQueue();
-        expect(bloc.state.videos, [newVideo]);
-        expect(bloc.state.hasMoreVideos, isFalse);
-        expect(bloc.state.isLoadingMore, isFalse);
-        await next.close();
-      });
-
-      blocTest<CategoriesBloc, CategoriesState>(
-        'reports a refresh failure that arrives after cached videos',
-        build: () => CategoriesBloc(
-          categoriesRepository: mockRepository,
-          currentUserPubkey: _viewerPubkey,
-        ),
-        act: (bloc) async {
-          bloc.add(const CategorySelected(music));
-          await pumpEventQueue();
-          results
-            ..add(
-              CacheResult.cached(
-                CategoryVideosPage(videos: [oldVideo], hasMore: true),
-              ),
-            )
-            ..addError(const FunnelcakeException('Offline'));
-          await pumpEventQueue();
-        },
-        verify: (bloc) {
-          expect(bloc.state.videosStatus, CategoriesVideosStatus.loaded);
-          expect(bloc.state.videos, [oldVideo]);
-        },
-        errors: () => [isA<FunnelcakeException>()],
-      );
-
-      test('a late failure cannot fail a newer category', () async {
-        final next = StreamController<CacheResult<CategoryVideosPage>>();
-        when(
-          () => mockRepository.watchVideosForCategoryCached(
-            category: 'animals',
-            viewerPubkey: _viewerPubkey,
-          ),
-        ).thenAnswer((_) => next.stream);
-        bloc.add(const CategorySelected(music));
-        await pumpEventQueue();
-        bloc.add(const CategorySelected(animals));
-        await pumpEventQueue();
-        results.addError(const FunnelcakeException('Old request failed'));
-        await pumpEventQueue();
-        expect(bloc.state.selectedCategory, animals);
-        expect(bloc.state.videosStatus, CategoriesVideosStatus.loading);
-        await next.close();
-      });
-
-      test(
-        'late For You recommendations cannot replace a newer sort',
-        () async {
-          final recommendations = Completer<List<VideoEvent>>();
-          final next = StreamController<CacheResult<CategoryVideosPage>>();
-          when(
-            () => mockRepository.getRecommendedVideos(
-              pubkey: _viewerPubkey,
-              category: 'music',
-            ),
-          ).thenAnswer((_) => recommendations.future);
+          ).thenAnswer((_) => pending.future);
           when(
             () => mockRepository.watchVideosForCategoryCached(
               category: 'music',
@@ -522,8 +488,9 @@ void main() {
             ),
           );
           await pumpEventQueue();
-          bloc.add(const CategoryVideosSortChanged('forYou'));
+          bloc.add(const CategoryVideosLoadMore());
           await pumpEventQueue();
+          expect(bloc.state.isLoadingMore, isTrue);
           bloc.add(const CategoryVideosSortChanged('timestamp'));
           await pumpEventQueue();
           next.add(
@@ -532,67 +499,119 @@ void main() {
             ),
           );
           await pumpEventQueue();
-          recommendations.complete([oldVideo]);
-          await pumpEventQueue();
-          expect(bloc.state.sortOrder, 'timestamp');
-          expect(bloc.state.videos, [newVideo]);
-          expect(bloc.state.hasMoreVideos, isTrue);
-          await next.close();
-        },
-      );
-
-      test('late refresh cannot restore videos after deselection', () async {
-        bloc.add(const CategorySelected(music));
-        await pumpEventQueue();
-        bloc.add(const CategoryDeselected());
-        await pumpEventQueue();
-        results.add(
-          CacheResult.live(
+          pending.complete(
             CategoryVideosPage(videos: [oldVideo], hasMore: true),
-          ),
+          );
+          await pumpEventQueue();
+          expect(bloc.state.videos, [newVideo]);
+          expect(bloc.state.isLoadingMore, isFalse);
+          await next.close();
+        });
+
+        test(
+          'late For You recommendations cannot replace a newer sort',
+          () async {
+            final recommendations = Completer<List<VideoEvent>>();
+            final next = StreamController<CacheResult<CategoryVideosPage>>();
+            when(
+              () => mockRepository.getRecommendedVideos(
+                pubkey: _viewerPubkey,
+                category: 'music',
+              ),
+            ).thenAnswer((_) => recommendations.future);
+            when(
+              () => mockRepository.watchVideosForCategoryCached(
+                category: 'music',
+                sort: 'timestamp',
+                viewerPubkey: _viewerPubkey,
+              ),
+            ).thenAnswer((_) => next.stream);
+            bloc.add(const CategorySelected(music));
+            await pumpEventQueue();
+            results.add(
+              CacheResult.live(
+                CategoryVideosPage(videos: [oldVideo], hasMore: true),
+              ),
+            );
+            await pumpEventQueue();
+            bloc.add(const CategoryVideosSortChanged('forYou'));
+            await pumpEventQueue();
+            bloc.add(const CategoryVideosSortChanged('timestamp'));
+            await pumpEventQueue();
+            next.add(
+              CacheResult.live(
+                CategoryVideosPage(videos: [newVideo], hasMore: true),
+              ),
+            );
+            await pumpEventQueue();
+            recommendations.complete([oldVideo]);
+            await pumpEventQueue();
+            expect(bloc.state.sortOrder, 'timestamp');
+            expect(bloc.state.videos, [newVideo]);
+            expect(bloc.state.hasMoreVideos, isTrue);
+            await next.close();
+          },
         );
-        await pumpEventQueue();
-        expect(bloc.state.selectedCategory, isNull);
-        expect(bloc.state.videos, isEmpty);
       });
 
-      test(
-        'a block made while a refresh is pending also filters its result',
-        () async {
-          final blocked = <String>{};
-          when(
-            () =>
-                mockBlocklistRepository.filterContent<VideoEvent>(any(), any()),
-          ).thenAnswer(
-            (invocation) =>
-                (invocation.positionalArguments.first as List<VideoEvent>)
-                    .where((video) => !blocked.contains(video.pubkey))
-                    .toList(),
-          );
-          final filteringBloc = CategoriesBloc(
-            categoriesRepository: mockRepository,
-            contentBlocklistRepository: mockBlocklistRepository,
-            currentUserPubkey: _viewerPubkey,
-          );
-          addTearDown(filteringBloc.close);
-          filteringBloc.add(const CategorySelected(music));
+      group(CategoryDeselected, () {
+        test('late refresh cannot restore videos after deselection', () async {
+          bloc.add(const CategorySelected(music));
           await pumpEventQueue();
-          blocked.add(oldVideo.pubkey);
-          filteringBloc.add(const CategoriesBlocklistChanged());
+          bloc.add(const CategoryDeselected());
           await pumpEventQueue();
           results.add(
             CacheResult.live(
-              CategoryVideosPage(videos: [oldVideo], hasMore: false),
+              CategoryVideosPage(videos: [oldVideo], hasMore: true),
             ),
           );
           await pumpEventQueue();
-          expect(
-            filteringBloc.state.videosStatus,
-            CategoriesVideosStatus.loaded,
-          );
-          expect(filteringBloc.state.videos, isEmpty);
-        },
-      );
+          expect(bloc.state.selectedCategory, isNull);
+          expect(bloc.state.videos, isEmpty);
+        });
+      });
+
+      group(CategoriesBlocklistChanged, () {
+        test(
+          'a block made while a refresh is pending also filters its result',
+          () async {
+            final blocked = <String>{};
+            when(
+              () => mockBlocklistRepository.filterContent<VideoEvent>(
+                any(),
+                any(),
+              ),
+            ).thenAnswer(
+              (invocation) =>
+                  (invocation.positionalArguments.first as List<VideoEvent>)
+                      .where((video) => !blocked.contains(video.pubkey))
+                      .toList(),
+            );
+            final filteringBloc = CategoriesBloc(
+              categoriesRepository: mockRepository,
+              contentBlocklistRepository: mockBlocklistRepository,
+              currentUserPubkey: _viewerPubkey,
+            );
+            addTearDown(filteringBloc.close);
+            filteringBloc.add(const CategorySelected(music));
+            await pumpEventQueue();
+            blocked.add(oldVideo.pubkey);
+            filteringBloc.add(const CategoriesBlocklistChanged());
+            await pumpEventQueue();
+            results.add(
+              CacheResult.live(
+                CategoryVideosPage(videos: [oldVideo], hasMore: false),
+              ),
+            );
+            await pumpEventQueue();
+            expect(
+              filteringBloc.state.videosStatus,
+              CategoriesVideosStatus.loaded,
+            );
+            expect(filteringBloc.state.videos, isEmpty);
+          },
+        );
+      });
     });
 
     group('CategorySelected', () {
