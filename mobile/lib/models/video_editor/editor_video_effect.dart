@@ -1092,13 +1092,12 @@ List<CustomVideoEffect> customVideoEffectsOnOutput(
 /// gets how long one step takes, under [EditorVideoEffect.periodParam] (see
 /// [tunnelPeriodUs]), and an intro or outro how long its window lasts, under
 /// [EditorVideoEffect.durationParam] (see [introOutroDurationUs]). One on the
-/// beat also gets the times it fires at, under
-/// [EditorVideoEffect.beatsParam]: the [beats] of the exported video that fall
-/// in its window, as microseconds after its start. It moves with the time
-/// since it started in the preview as in the export, so the beats are counted
-/// the same way. For a player whose timeline is not the exported video's,
-/// [toPlayer] maps a time on the editor timeline onto the player's, and the
-/// beats are counted on it.
+/// beat also gets the times it fires at, under [EditorVideoEffect.beatsParam]:
+/// the [beats] of the exported video that fall in its window, as microseconds
+/// after its start. It moves with the time since it started in the preview as
+/// in the export, so the beats are counted the same way. For a player whose
+/// timeline is not the exported video's, [toPlayer] maps a time on the editor
+/// timeline onto the player's, and the beats are counted on it.
 ///
 /// Returns `null` for an effect on the beat without a beat in its window,
 /// which is left out, as a built-in one is.

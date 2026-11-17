@@ -179,12 +179,11 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   /// keeps its place in the list, and its window while it stays the same kind
   /// of effect. An effect turned into an intro, an outro or one over the
   /// whole video is placed as a new one of that kind would be. A new effect
-  /// with nothing picked adds
-  /// nothing, and an edited one dialed down to no intensity is removed,
-  /// except an intro or outro, whose intensity shapes its look. A
-  /// flashing effect replaces other flashing effects in its window (see
-  /// [withoutFlashingOverlaps]); `replacedFlashing` says so, for the UI to
-  /// explain.
+  /// with nothing picked adds nothing, and an edited one dialed down to no
+  /// intensity is removed, except an intro or outro, whose intensity shapes
+  /// its look. A flashing effect replaces other flashing effects in its
+  /// window (see [withoutFlashingOverlaps]); `replacedFlashing` says so, for
+  /// the UI to explain.
   ({List<EditorVideoEffect> effects, bool replacedFlashing}) confirm() {
     final selection = state.selection;
     final picked =

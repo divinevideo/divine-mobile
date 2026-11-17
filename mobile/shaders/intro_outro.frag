@@ -21,9 +21,9 @@
 // `fold` how many folds of cloth lie between them, fanning out a little
 // towards the bottom and spaced unevenly. Each fold is lit from the middle of
 // the stage, with a velvet sheen and fine nap on the side facing it, and the
-// tops lie in the shadow of the stage opening. The blur's taps lie
-// on a golden-angle spiral, each turned from the one before by the golden
-// angle, whose cosine and sine are the constants.
+// tops lie in the shadow of the stage opening. The blur's taps lie on a
+// golden-angle spiral, each turned from the one before by the golden angle,
+// whose cosine and sine are the constants.
 
 #include <flutter/runtime_effect.glsl>
 
