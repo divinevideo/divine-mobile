@@ -4675,9 +4675,12 @@ void main() {
       stubAutosaveRow(autosave());
       stubSaveDraft();
 
-      await container.read(videoEditorProvider.notifier).keepAutosaveAsDraft();
+      final keptId = await container
+          .read(videoEditorProvider.notifier)
+          .keepAutosaveAsDraft();
 
       final kept = keptDrafts().single;
+      expect(keptId, kept.id);
       expect(kept.id, isNot(VideoEditorConstants.autoSaveId));
       expect(kept.clips.map((clip) => clip.id), [sessionClip.id]);
       expect(kept.title, 'Half-finished idea');
@@ -4710,7 +4713,11 @@ void main() {
     test('writes nothing when there is no autosave', () async {
       stubAutosaveRow(null);
 
-      await container.read(videoEditorProvider.notifier).keepAutosaveAsDraft();
+      final keptId = await container
+          .read(videoEditorProvider.notifier)
+          .keepAutosaveAsDraft();
+
+      expect(keptId, isNull);
 
       verifyNever(() => mockDraftStorage.getDraftById(any()));
       verifyNever(() => mockDraftStorage.saveDraft(any()));
@@ -4719,7 +4726,11 @@ void main() {
     test('writes nothing when the autosave holds no clips', () async {
       stubAutosaveRow(autosave(clips: const []));
 
-      await container.read(videoEditorProvider.notifier).keepAutosaveAsDraft();
+      final keptId = await container
+          .read(videoEditorProvider.notifier)
+          .keepAutosaveAsDraft();
+
+      expect(keptId, isNull);
 
       verifyNever(() => mockDraftStorage.saveDraft(any()));
     });
@@ -4727,7 +4738,11 @@ void main() {
     test('writes nothing when the session holds clips but no edits', () async {
       stubAutosaveRow(autosave(title: ''));
 
-      await container.read(videoEditorProvider.notifier).keepAutosaveAsDraft();
+      final keptId = await container
+          .read(videoEditorProvider.notifier)
+          .keepAutosaveAsDraft();
+
+      expect(keptId, isNull);
 
       verifyNever(() => mockDraftStorage.saveDraft(any()));
     });
@@ -4783,6 +4798,33 @@ void main() {
         ]);
       });
     });
+    test('discardKeptDraft deletes only the kept draft', () async {
+      when(() => mockDraftStorage.deleteDraft(any())).thenAnswer((_) async {});
+
+      await container
+          .read(videoEditorProvider.notifier)
+          .discardKeptDraft('kept_draft');
+
+      verify(() => mockDraftStorage.deleteDraft('kept_draft')).called(1);
+      verifyNever(
+        () => mockDraftStorage.deleteDraft(VideoEditorConstants.autoSaveId),
+      );
+    });
+
+    test('discardKeptDraft does not throw when the delete fails', () async {
+      when(
+        () => mockDraftStorage.deleteDraft(any()),
+      ).thenThrow(Exception('disk full'));
+
+      await expectLater(
+        container
+            .read(videoEditorProvider.notifier)
+            .discardKeptDraft('kept_draft'),
+        completes,
+      );
+      verify(() => mockDraftStorage.deleteDraft('kept_draft')).called(1);
+    });
+
     test('waits for an autosave in flight before it reads the row', () async {
       stubAutosaveRow(autosave());
       final write = Completer<void>();

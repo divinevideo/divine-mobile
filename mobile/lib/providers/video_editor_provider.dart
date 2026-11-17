@@ -1495,16 +1495,18 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   ///
   /// First persists a debounced autosave that has not fired yet and waits for
   /// autosaves in flight, so the copy is the session as last edited. Copies
-  /// only an edited autosave ([DivineVideoDraft.hasBeenEdited], the rule the
-  /// editor's close button asks by): an unedited one is the clips alone, and
-  /// copying it would add a draft each time the user backs out of the editor
-  /// and creates again. The copy gets a fresh id and shares the autosave's
-  /// files; it keeps the challenge and post time, because this is the same
-  /// session moving to the Drafts tab rather than a duplicate project.
+  /// only an edited autosave holding clips. The copy gets a fresh id and shares the
+  /// autosave's files; it keeps the challenge and post time, because this is
+  /// the same session moving to the Drafts tab rather than a duplicate
+  /// project.
+  ///
+  /// Returns the id of the draft it wrote, or `null` when there was nothing
+  /// to keep. A caller that then gives up before replacing the autosave
+  /// passes that id to [discardKeptDraft], or the session is listed twice.
   ///
   /// Throws when the draft store fails; nothing is deleted, so the autosave
   /// is still there.
-  Future<void> keepAutosaveAsDraft() async {
+  Future<String?> keepAutosaveAsDraft() async {
     // Their failures are logged where they happen; the copy below reads
     // whatever row is on disk either way.
     await flushPendingAutosave().then<void>(
@@ -1517,24 +1519,49 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     }
 
     if (!await _draftService.draftExists(VideoEditorConstants.autoSaveId)) {
-      return;
+      return null;
     }
     final autosave = await _draftService.getDraftById(
       VideoEditorConstants.autoSaveId,
     );
-    if (autosave == null || !autosave.hasBeenEdited) return;
-    await _draftService.saveDraft(
-      autosave.duplicate().copyWith(
-        challengeContext: autosave.challengeContext,
-        scheduledAt: autosave.scheduledAt,
-        skipUpdateLastModified: true,
-      ),
+    if (autosave == null || !autosave.hasBeenEdited) return null;
+    final kept = autosave.duplicate().copyWith(
+      challengeContext: autosave.challengeContext,
+      scheduledAt: autosave.scheduledAt,
+      skipUpdateLastModified: true,
     );
+    await _draftService.saveDraft(kept);
     Log.info(
-      'Kept the autosaved session as draft before it was replaced',
+      'Kept the autosaved session as draft ${kept.id} before it was replaced',
       name: 'VideoEditorNotifier',
       category: .video,
     );
+    return kept.id;
+  }
+
+  /// Deletes the draft [keepAutosaveAsDraft] wrote as [draftId], for a caller
+  /// that gave up while the autosave still holds the session.
+  ///
+  /// File-safe: the autosave still names every file the copy shares, so the
+  /// store's reference check keeps them. Logs a failure instead of throwing;
+  /// the worst case is the session listed twice, as before the cleanup.
+  Future<void> discardKeptDraft(String draftId) async {
+    try {
+      await _draftService.deleteDraft(draftId);
+      Log.info(
+        'Discarded kept draft $draftId: the session it copied stays autosaved',
+        name: 'VideoEditorNotifier',
+        category: .video,
+      );
+    } catch (e, stackTrace) {
+      Log.warning(
+        'Could not discard kept draft $draftId: $e',
+        name: 'VideoEditorNotifier',
+        category: .video,
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   /// Delete the autosaved draft from local storage.
