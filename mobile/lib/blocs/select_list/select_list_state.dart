@@ -42,6 +42,10 @@ enum SelectListSyncNotice {
   /// the row cannot change until it syncs.
   permissionRecovery,
 
+  /// The list differs from a revision on the relay. Syncing cannot settle that,
+  /// so the row sends the owner to the list's editor to pick a version.
+  conflict,
+
   /// Changes other than holding the video wait to sync, such as a deletion
   /// request.
   recovery,
@@ -127,6 +131,7 @@ class SelectListState extends Equatable {
     if (list.hasPendingPermissionRecovery) {
       return SelectListSyncNotice.permissionRecovery;
     }
+    if (list.hasRelayConflict) return SelectListSyncNotice.conflict;
     return list.pendingRepublish && memberListIds.contains(list.id)
         ? SelectListSyncNotice.videoPending
         : SelectListSyncNotice.recovery;
