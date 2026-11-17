@@ -100,6 +100,209 @@ void main() {
     registerFallbackValue(PopularVideosVariant.classic);
   });
 
+  group('Own videos stay visible after viewing', () {
+    final ownPubkey = 'a' * 64;
+    final otherPubkey = 'b' * 64;
+    final ownId = '1' * 64;
+    final otherId = '2' * 64;
+    final freshId = '3' * 64;
+    late VideosRepository repository;
+
+    setUp(() {
+      when(() => mockNostr.publicKey).thenReturn(ownPubkey);
+      final videos = [
+        _stats(ownId, pubkey: ownPubkey, createdAt: 1000, platform: 'vine'),
+        _stats(otherId, pubkey: otherPubkey, createdAt: 900, platform: 'vine'),
+        _stats(freshId, pubkey: otherPubkey, createdAt: 800, platform: 'vine'),
+      ];
+      when(
+        () => mockFunnelcake.getHomeFeed(
+          pubkey: any(named: 'pubkey'),
+          limit: any(named: 'limit'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer(
+        (_) async => HomeFeedResponse(videos: videos, rawBody: '{}'),
+      );
+      when(
+        () => mockFunnelcake.getRecentVideosPage(
+          limit: any(named: 'limit'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer(
+        (_) async => RecentVideosResponse(videos: videos, serverItemCount: 3),
+      );
+      when(
+        () => mockFunnelcake.getWatchingVideos(
+          limit: any(named: 'limit'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async => videos);
+      when(
+        () => mockFunnelcake.getClassicVines(
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+        ),
+      ).thenAnswer((_) async => videos);
+      when(
+        () => mockFunnelcake.getRecommendations(
+          pubkey: any(named: 'pubkey'),
+          limit: any(named: 'limit'),
+          seed: any(named: 'seed'),
+          preferredLanguages: any(named: 'preferredLanguages'),
+          viewerCountry: any(named: 'viewerCountry'),
+        ),
+      ).thenAnswer(
+        (_) async => RecommendationsResponse(
+          videos: videos,
+          source: 'personalized',
+        ),
+      );
+      when(
+        () => mockFunnelcake.getVideosByAuthors(
+          authors: any(named: 'authors'),
+          limit: any(named: 'limit'),
+          offset: any(named: 'offset'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer(
+        (_) async => RecentVideosResponse(
+          videos: videos,
+          serverItemCount: 3,
+          hasMore: false,
+        ),
+      );
+      when(
+        () => mockFunnelcake.getBulkVideoStats(any()),
+      ).thenAnswer((_) async => const BulkVideoStatsResponse(stats: {}));
+      repository = VideosRepository(
+        nostrClient: mockNostr,
+        funnelcakeApiClient: mockFunnelcake,
+        inMemoryFeedCache: InMemoryFeedCache(),
+        seenVideoLookup: SeenVideoLookup(
+          wasSeenRecently: (id, {within = seenVideoExclusionWindow}) =>
+              id == ownId || id == otherId,
+        ),
+        random: StubRandom(offsetPage: 0),
+      );
+    });
+
+    for (final feed in ['Following', 'New', 'Classics', 'For You']) {
+      test('$feed keeps watched own videos and hides watched others', () async {
+        final result = await switch (feed) {
+          'Following' => repository.getHomeFeedVideos(
+            authors: [ownPubkey, otherPubkey],
+            userPubkey: ownPubkey,
+          ),
+          'New' => repository.getNewVideos(),
+          'Classics' => repository.getClassicVideos(),
+          _ => repository.getRecommendedVideos(userPubkey: ownPubkey),
+        };
+        expect(
+          result.videos.map((video) => video.id),
+          containsAll([ownId, freshId]),
+        );
+        expect(
+          result.videos.map((video) => video.id),
+          isNot(contains(otherId)),
+        );
+      });
+    }
+
+    test(
+      'auth identity keeps own videos visible before the signer is ready',
+      () async {
+        when(() => mockNostr.publicKey).thenReturn('');
+        String? viewerPubkey = ownPubkey;
+        final authRepository = VideosRepository(
+          nostrClient: mockNostr,
+          funnelcakeApiClient: mockFunnelcake,
+          inMemoryFeedCache: InMemoryFeedCache(),
+          viewerPubkey: () => viewerPubkey,
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = seenVideoExclusionWindow}) =>
+                id == ownId || id == otherId,
+          ),
+        );
+        final initial = await authRepository.getNewVideos();
+        expect(initial.videos.map((video) => video.id), [ownId, freshId]);
+
+        // A stale signer key must not grant an exception after auth signs out.
+        when(() => mockNostr.publicKey).thenReturn(ownPubkey);
+        viewerPubkey = null;
+        final signedOut = await authRepository.getNewVideos();
+        expect(signedOut.videos.map((video) => video.id), [freshId]);
+      },
+    );
+
+    test(
+      'For You accepts an all-watched page containing an own video',
+      () async {
+        when(
+          () => mockFunnelcake.getRecommendations(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            seed: any(named: 'seed'),
+            preferredLanguages: any(named: 'preferredLanguages'),
+            viewerCountry: any(named: 'viewerCountry'),
+          ),
+        ).thenAnswer(
+          (_) async => RecommendationsResponse(
+            videos: [_stats(ownId, pubkey: ownPubkey)],
+            source: 'personalized',
+            hasMore: true,
+            nextCursor: 'next-page',
+          ),
+        );
+        final result = await repository.getRecommendedVideos(
+          userPubkey: ownPubkey,
+          limit: 1,
+        );
+        expect(result.videos.map((video) => video.id), [ownId]);
+        expect(result.paginationCursor, 'next-page');
+        expect(result.hasMore, isTrue);
+      },
+    );
+
+    test('New relay fallback keeps watched own videos', () async {
+      when(() => mockFunnelcake.isAvailable).thenReturn(false);
+      when(() => mockNostr.queryEvents(any())).thenAnswer(
+        (_) async => [
+          _event(ownId, pubkey: ownPubkey, createdAt: 1000),
+          _event(otherId, pubkey: otherPubkey, createdAt: 900),
+          _event(freshId, pubkey: otherPubkey, createdAt: 800),
+        ],
+      );
+      final result = await repository.getNewVideos();
+      expect(result.videos.map((video) => video.id), [ownId, freshId]);
+    });
+
+    test('Following badge pages also keep watched own videos', () async {
+      final pager = repository.createBadgeVideoPager(
+        [ownPubkey, otherPubkey],
+        hideSeen: true,
+      );
+      expect((await pager.loadMore()).map((video) => video.id), [
+        ownId,
+        freshId,
+      ]);
+    });
+
+    test(
+      'New cache stops exempting videos from the previous account',
+      () async {
+        final initial = await repository.getNewVideos();
+        expect(initial.videos.map((video) => video.id), [ownId, freshId]);
+        when(() => mockNostr.publicKey).thenReturn(otherPubkey);
+        final switched = await repository.getNewVideos();
+        expect(switched.videos.map((video) => video.id), [freshId]);
+        when(() => mockNostr.publicKey).thenReturn('');
+        final signedOut = await repository.getNewVideos();
+        expect(signedOut.videos.map((video) => video.id), [freshId]);
+      },
+    );
+  });
+
   group('Seen filtering per surface', () {
     test('getHomeFeedVideos drops videos the viewer has seen', () async {
       const seenId = 'seen-home';
