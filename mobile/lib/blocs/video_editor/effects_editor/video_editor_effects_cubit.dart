@@ -187,8 +187,6 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   /// explain.
   ({List<EditorVideoEffect> effects, bool replacedFlashing}) confirm() {
     final selection = state.selection;
-    // An intro or outro's intensity is the structure of its look, so it
-    // stays at any value.
     final picked =
         selection != null &&
             (selection.intensity > 0 || selection.type.isIntroOutro)
