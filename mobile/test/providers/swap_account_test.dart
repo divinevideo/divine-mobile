@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:account_state_repository/account_state_repository.dart';
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:dm_repository/dm_repository.dart';
@@ -26,6 +27,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/notifications/services/announcement_store.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/bookmark_signer_adapter.dart';
 import 'package:openvine/providers/container_swap_host.dart';
@@ -42,18 +44,21 @@ import 'package:openvine/providers/swap_account.dart' as switching;
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/dm_video_send_cancellation.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
+import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/push_notification_session_coordinator.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
@@ -81,6 +86,9 @@ class _MockDmRepository extends Mock implements DmRepository {}
 class _MockCuratedListService extends Mock implements CuratedListService {}
 
 class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
+
+class _MockAccountPreferenceStore extends Mock
+    implements AccountPreferenceStore {}
 
 class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
@@ -2551,6 +2559,221 @@ void main() {
         isNull,
       );
     });
+  });
+
+  // Each account container has its own preference store, which projects its
+  // account's values into the device-wide preference keys whenever its
+  // repository changes. The leaving container stays alive after the target is
+  // live, until its push cleanup settles, so a change that reaches the leaving
+  // repository then must not land in the keys the target now owns (#8313).
+  group('outgoing account preferences (#8313)', () {
+    late AccountStateRepository leavingPreferences;
+    late Completer<void> pushCleanup;
+
+    // Frames preference work to completion. A projection runs on the store's
+    // queue after the repository's own write settles, so even finished work
+    // gets a few frames for the projection it started.
+    Future<void> settle(WidgetTester tester, Future<void> work) async {
+      var done = false;
+      final watched = work.whenComplete(() => done = true);
+      for (var frame = 0; frame < 5 || (!done && frame < 50); frame += 1) {
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+      }
+      expect(done, isTrue, reason: 'Preference work must settle in frames');
+      await watched;
+    }
+
+    Future<void> changeLeavingLocale(String locale) => leavingPreferences
+        .setValues({LocalePreferenceService.prefsKey: locale});
+
+    Future<ProviderContainer> pumpBoundLeavingPreferences(
+      WidgetTester tester,
+    ) async {
+      pushCleanup = Completer<void>();
+      final pushCoordinator = _MockPushNotificationSessionCoordinator();
+      when(
+        pushCoordinator.deregisterLastReadyPubkeyAfterAccountSwitch,
+      ).thenAnswer((_) => pushCleanup.future);
+      overridePushSync(pushCoordinator);
+      // Never started, so a change reaches the store without a relay.
+      leavingPreferences = AccountStateRepository(
+        nostrClient: _MockNostrClient(),
+        sharedPreferences: deviceScope.sharedPreferences,
+        pubkey: leavingHex,
+        signer: () => throw StateError('never started'),
+        namespace: 'divine/preferences/v1',
+      );
+      final leaving = await pumpHost(
+        tester,
+        accountOverrides: [
+          accountPreferenceSyncProvider.overrideWithValue(leavingPreferences),
+        ],
+      );
+      leaving.read(pushNotificationSyncProvider);
+      await settle(
+        tester,
+        leaving.read(accountPreferenceStoreProvider).bind(leavingPreferences),
+      );
+      // The leaving store projects while it is bound.
+      await settle(tester, changeLeavingLocale('es'));
+      expect(
+        deviceScope.sharedPreferences.getString(
+          LocalePreferenceService.prefsKey,
+        ),
+        'es',
+      );
+      return leaving;
+    }
+
+    testWidgets(
+      'keeps a leaving preference change out of the keys the target owns',
+      (tester) async {
+        final prefs = deviceScope.sharedPreferences;
+        final leaving = await pumpBoundLeavingPreferences(tester);
+
+        await driveSwap(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            signIn: (_, _) async {},
+          ),
+        );
+        expect(_isDisposed(leaving), isFalse);
+        // Stands in for the target's own projection.
+        await prefs.setString(LocalePreferenceService.prefsKey, 'fr');
+
+        await settle(tester, changeLeavingLocale('de'));
+
+        expect(
+          leavingPreferences.value(LocalePreferenceService.prefsKey),
+          'de',
+        );
+        expect(prefs.getString(LocalePreferenceService.prefsKey), 'fr');
+        pushCleanup.complete();
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'restores the leaving preferences when the sign-in fails after the '
+      'cleanup',
+      (tester) async {
+        final prefs = deviceScope.sharedPreferences;
+        incomingAuthOverride = makeIncomingAuth(
+          userDataCleanupService: _IdentityCleanupThen(
+            prefs,
+            afterIdentityCleanup: () async => throw _FakeSignInException(),
+          ),
+        );
+        await pumpBoundLeavingPreferences(tester);
+        await settle(
+          tester,
+          leavingPreferences.setValues({'content_filter/violence': 'hide'}),
+        );
+        expect(
+          prefs.getString(ContentFilterService.filterPrefsStorageKey),
+          contains('"violence":"hide"'),
+        );
+
+        await driveSwap(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            signIn: (_, _) async {},
+          ),
+          expected: throwsA(isA<UserDataCleanupException>()),
+        );
+        await settle(tester, Future<void>.value());
+
+        expect(
+          prefs.getString(ContentFilterService.filterPrefsStorageKey),
+          contains('"violence":"hide"'),
+        );
+      },
+    );
+
+    testWidgets(
+      'signs the target in only after the leaving preferences have drained',
+      (tester) async {
+        final events = <String>[];
+        final drained = Completer<void>();
+        final store = _MockAccountPreferenceStore();
+        when(store.suspendProjection).thenAnswer((_) {
+          events.add('suspend');
+          return drained.future;
+        });
+        final leaving = await pumpHost(
+          tester,
+          accountOverrides: [
+            accountPreferenceStoreProvider.overrideWithValue(store),
+          ],
+        );
+        leaving.read(accountPreferenceStoreProvider);
+
+        final switching = swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => events.add('sign in target'),
+        );
+        for (
+          var frame = 0;
+          !events.contains('suspend') && frame < 250;
+          frame += 1
+        ) {
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+        }
+        // Further frames: the switch is still waiting for the drain.
+        await settle(tester, Future<void>.value());
+        expect(events, equals(['suspend']));
+
+        drained.complete();
+        await driveSwap(switching);
+
+        expect(events, equals(['suspend', 'sign in target']));
+      },
+    );
+
+    testWidgets(
+      'resumes the leaving preferences when the target sign-in fails',
+      (tester) async {
+        final events = <String>[];
+        final store = _MockAccountPreferenceStore();
+        when(store.suspendProjection).thenAnswer((_) async {
+          events.add('suspend');
+        });
+        when(store.resumeProjection).thenAnswer((_) => events.add('resume'));
+        final leaving = await pumpHost(
+          tester,
+          accountOverrides: [
+            accountPreferenceStoreProvider.overrideWithValue(store),
+          ],
+        );
+        leaving.read(accountPreferenceStoreProvider);
+
+        await driveSwap(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            signIn: (_, _) async => throw _FakeSignInException(),
+          ),
+          expected: throwsA(isA<_FakeSignInException>()),
+        );
+        await tester.pump();
+
+        // The leaving account stays signed in on a rollback.
+        expect(events, equals(['suspend', 'resume']));
+      },
+    );
   });
 }
 

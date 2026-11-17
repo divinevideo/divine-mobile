@@ -7,6 +7,7 @@ import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/models/known_account.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/device_scope.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/account_session_store.dart';
 import 'package:openvine/services/auth/account_storage_exception.dart';
@@ -143,6 +145,14 @@ BookmarksRepository? _suspendOutgoingBookmarks(ProviderContainer? outgoing) {
   final bookmarks = outgoing.read(bookmarksRepositoryProvider);
   return bookmarks..suspend();
 }
+
+/// The outgoing account's preference store, if its container built one. The
+/// switch suspends its projection before the incoming sign-in; see
+/// [AccountPreferenceStore.suspendProjection].
+AccountPreferenceStore? _outgoingPreferenceStore(ProviderContainer? outgoing) =>
+    outgoing != null && outgoing.exists(accountPreferenceStoreProvider)
+    ? outgoing.read(accountPreferenceStoreProvider)
+    : null;
 
 Future<void> _defaultSignIn(
   ProviderContainer container,
@@ -335,6 +345,7 @@ Future<void> swapAccount({
     final incomingAuth = container.read(authServiceProvider);
     CuratedListService? suspendedOutgoingLists;
     BookmarksRepository? suspendedOutgoingBookmarks;
+    AccountPreferenceStore? suspendedOutgoingPreferences;
     try {
       // Capture only while the original identity and rendered host still own
       // the device. A generated or imported account owns the primary slot, so
@@ -374,6 +385,9 @@ Future<void> swapAccount({
       ensureOutgoingCurrent();
       suspendedOutgoingLists = _suspendOutgoingCuratedLists(current);
       suspendedOutgoingBookmarks = _suspendOutgoingBookmarks(current);
+      suspendedOutgoingPreferences = _outgoingPreferenceStore(current);
+      await suspendedOutgoingPreferences?.suspendProjection();
+      ensureOutgoingCurrent();
       await CuratedListSessionCoordinator.forPreferences(
         deviceScope.sharedPreferences,
       ).retireAndDrain();
@@ -443,6 +457,7 @@ Future<void> swapAccount({
       }
       suspendedOutgoingLists?.resume();
       suspendedOutgoingBookmarks?.resume();
+      suspendedOutgoingPreferences?.resumeProjection();
       try {
         if (failedTicket == null) {
           throw const AccountActivationRetiredException();
