@@ -115,11 +115,12 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
   void _recordCampaignChoice(bool wasEnabled) {
     if (isClosed || wasEnabled == state.preferences.campaignsEnabled) return;
     final tracker = _notificationAnalytics;
-    if (tracker != null)
+    if (tracker != null) {
       unawaited(
         tracker.campaignConsentChanged(
           enabled: state.preferences.campaignsEnabled,
         ),
       );
+    }
   }
 }
