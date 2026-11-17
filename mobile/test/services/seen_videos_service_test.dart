@@ -2,12 +2,33 @@
 // ABOUTME: Validates video view history storage and retrieval
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _HeldHistoryRead extends QueryInterceptor {
+  final entered = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<List<Map<String, Object?>>> runSelect(
+    QueryExecutor executor,
+    String statement,
+    List<Object?> args,
+  ) async {
+    final rows = await executor.runSelect(statement, args);
+    if (!entered.isCompleted && statement.contains('"seen_videos"')) {
+      entered.complete();
+      await release.future;
+    }
+    return rows;
+  }
+}
 
 void main() {
   group('SeenVideosService', () {
@@ -292,6 +313,46 @@ void main() {
       await pumpEventQueue();
 
       expect(await storedIds(), {'after_resume'});
+    });
+  });
+
+  group('account switch during history initialization', () {
+    test('does not migrate outgoing metrics after incoming cleanup', () async {
+      SharedPreferences.setMockInitialValues({
+        SeenVideosService.seenVideosMetricsStorageKey: jsonEncode([
+          SeenVideoMetrics(
+            videoId: 'outgoing_view',
+            firstSeenAt: DateTime(2026),
+            lastSeenAt: DateTime(2026),
+          ).toJson(),
+        ]),
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final heldRead = _HeldHistoryRead();
+      final db = AppDatabase.test(
+        NativeDatabase.memory().interceptWith(heldRead),
+      );
+      final outgoing = SeenVideosService(database: db, prefsOverride: prefs);
+      addTearDown(() async {
+        if (!heldRead.release.isCompleted) heldRead.release.complete();
+        await outgoing.dispose();
+        await db.close();
+      });
+      final initializing = outgoing.initialize();
+      await heldRead.entered.future;
+      expect(outgoing.hasSeenVideo('outgoing_view'), isTrue);
+
+      outgoing.suspend();
+      await db.seenVideosDao.clearAll();
+      await prefs.remove(SeenVideosService.seenVideosMetricsStorageKey);
+      heldRead.release.complete();
+      await initializing;
+
+      expect(await db.seenVideosDao.getAll(), isEmpty);
+      expect(
+        prefs.getBool(SeenVideosService.seenVideosMigratedStorageKey),
+        isNull,
+      );
     });
   });
 }

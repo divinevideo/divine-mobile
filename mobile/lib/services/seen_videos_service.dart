@@ -179,7 +179,7 @@ class SeenVideosService {
       _prefs = _prefsOverride ?? await SharedPreferences.getInstance();
       await _loadSeenVideos(trace, phases);
       phases.finishPhase();
-      if (_effectiveDb != null) {
+      if (_effectiveDb != null && !_suspended) {
         unawaited(
           _effectiveDb!.seenVideosDao.pruneExpired().then<void>(
             (_) {},
@@ -261,6 +261,7 @@ class SeenVideosService {
             initializationTrace: trace,
             initializationPhases: phases,
           );
+          if (_suspended) return;
           await _prefs!.remove(legacySeenVideosStorageKey);
         }
       }
@@ -268,6 +269,9 @@ class SeenVideosService {
         try {
           phases.startPhase('database_read_ms');
           final dbRows = await _effectiveDb!.seenVideosDao.getAll();
+          // Initialization can outlive the outgoing account's suspension too.
+          // Do not migrate its cached metrics into the incoming account's table.
+          if (_suspended) return;
           phases.startPhase('database_merge_ms');
           trace.setMetric('database_rows', dbRows.length);
           for (final row in dbRows) {
@@ -284,6 +288,7 @@ class SeenVideosService {
           if (!migrated && dbRows.isEmpty && _seenVideos.isNotEmpty) {
             phases.startPhase('database_migration_ms');
             await _migrateMetricsToDb(trace, phases);
+            if (_suspended) return;
             await _prefs!.setBool(seenVideosMigratedStorageKey, true);
           } else if (dbRows.isNotEmpty && !migrated) {
             phases.startPhase('migration_marker_ms');
