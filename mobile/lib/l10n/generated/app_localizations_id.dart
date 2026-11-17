@@ -8953,6 +8953,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoRecorderSwitchCameraLabel => 'Ganti kamera';
 
   @override
+  String get videoRecorderToggleDualCameraLabel => 'Rekam dengan kedua kamera';
+
+  @override
+  String get videoRecorderDualCameraSwapLabel => 'Tukar kamera';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'Zoom ke $zoom×';
   }

@@ -34,7 +34,7 @@ appId: co.openvine.app.staging
           id: camera_mode_stopMotion
 
 # Tapping the armed entry is a no-op in the bloc, so this is also safe on the
-# rerun path that skipped the hops above.
+# rerun path that skipped the hop above.
 - tapOn:
     id: camera_mode_classic
 

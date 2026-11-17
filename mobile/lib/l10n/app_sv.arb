@@ -2610,6 +2610,8 @@
   "videoRecorderTapToStartLabel": "Tryck var som helst för att starta inspelningen",
   "videoRecorderDeleteLastClipLabel": "Ta bort senaste klippet",
   "videoRecorderSwitchCameraLabel": "Byt kamera",
+  "videoRecorderToggleDualCameraLabel": "Spela in med båda kamerorna",
+  "videoRecorderDualCameraSwapLabel": "Byt plats på kamerorna",
   "videoRecorderZoomLevelLabel": "Zooma till {zoom}×",
   "videoRecorderToggleGridLabel": "Växla rutnät",
   "videoRecorderToggleGhostFrameLabel": "Växla spökram",

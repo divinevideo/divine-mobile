@@ -726,26 +726,4 @@ class DetachedClipLayerData {
 
   static Map<String, dynamic>? _asMap(Object? value) =>
       value is Map ? Map<String, dynamic>.from(value) : null;
-
-  /// Whether serialized editor state contains at least one detached clip.
-  static bool historyContainsDetachedClip(Map<String, dynamic> history) {
-    var found = false;
-
-    void visit(Object? value) {
-      if (found) return;
-      if (value is Map) {
-        final map = Map<String, dynamic>.from(value);
-        if (isDetachedClipMeta(map)) {
-          found = true;
-          return;
-        }
-        map.values.forEach(visit);
-      } else if (value is Iterable) {
-        value.forEach(visit);
-      }
-    }
-
-    visit(history);
-    return found;
-  }
 }

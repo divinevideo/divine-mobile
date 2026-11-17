@@ -84,7 +84,7 @@ class _VideoRecorderLibraryButtonState
       _libraryVideoThumbnailPath = libraryClips
           .where((clip) => !clip.isStopMotion)
           .firstOrNull
-          ?.thumbnailPath;
+          ?.galleryThumbnailPath;
       _libraryStopMotionThumbnailPath = libraryClips
           .where((clip) => clip.isStopMotion)
           .firstOrNull
@@ -117,7 +117,7 @@ class _VideoRecorderLibraryButtonState
       if (next < (previous ?? next + 1)) _loadLibraryThumbnailDetached();
     });
 
-    final currentPath = clips.lastOrNull?.thumbnailPath;
+    final currentPath = clips.lastOrNull?.galleryThumbnailPath;
     if (currentPath != null) {
       _lastKnownThumbnailPath = currentPath;
     } else if (clips.isEmpty) {

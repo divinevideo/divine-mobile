@@ -138,11 +138,13 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
   /// itself superseded instead of installing into a dead state.
   int _loadGeneration = 0;
 
-  /// Whether this state picked up an already-playing player.
+  /// Whether the player's texture already holds a frame: it was picked up
+  /// already playing, or has drawn its first frame since it opened.
   ///
   /// Suppresses the poster: `DivineVideoPlayer` restarts its thumbnail fade
-  /// whenever it is mounted, and on a resumed player that is a 120ms flash of
-  /// the still over live video — once per remount.
+  /// whenever it is mounted, and the surface is mounted again each time the
+  /// playhead enters the layer's window. Over live video that is a 120ms
+  /// flash of the still, at every cut between two dual-camera takes.
   bool _resumed = false;
 
   /// The editor's word that an export holds the decoders, or `null` outside
@@ -439,6 +441,14 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     // lint cannot see through the closure.
     if (!mounted) return;
     _follow();
+    if (player != null) unawaited(_resumeOnFirstFrame(player));
+  }
+
+  /// Drops the poster fade once [player] has drawn into its texture.
+  Future<void> _resumeOnFirstFrame(DetachedClipPlayer player) async {
+    await player.controller.firstFrameRendered;
+    if (!mounted || _resumed || !identical(_player, player)) return;
+    setState(() => _resumed = true);
   }
 
   @override

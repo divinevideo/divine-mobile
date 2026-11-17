@@ -4635,6 +4635,8 @@
   "videoRecorderTapToStartLabel": "Chạm bất cứ đâu để bắt đầu quay",
   "videoRecorderDeleteLastClipLabel": "Xóa clip cuối",
   "videoRecorderSwitchCameraLabel": "Đổi camera",
+  "videoRecorderToggleDualCameraLabel": "Quay bằng cả hai camera",
+  "videoRecorderDualCameraSwapLabel": "Hoán đổi camera",
   "videoRecorderZoomLevelLabel": "Thu phóng tới {zoom}×",
   "@videoRecorderZoomLevelLabel": {
     "description": "Accessibility label for the transient camera zoom ruler shown while pinch-zooming. {zoom} is a zoom factor like 0.5, 1, or 2.",

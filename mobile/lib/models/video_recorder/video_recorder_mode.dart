@@ -93,6 +93,18 @@ enum VideoRecorderMode {
     .classic => false,
   };
 
+  /// Whether the mode offers dual-camera capture: every take records the
+  /// front and the back camera, and the second one becomes a
+  /// picture-in-picture layer in the editor.
+  bool get supportsDualCamera => switch (this) {
+    .upload => false,
+    .capture => true,
+    // Stills come from the photo output, which dual capture does not run.
+    .stopMotion => false,
+    // Classic renders straight to a post and never opens the editor.
+    .classic => false,
+  };
+
   model.AspectRatio get defaultAspectRatio => switch (this) {
     .upload => .vertical,
     .capture => .vertical,

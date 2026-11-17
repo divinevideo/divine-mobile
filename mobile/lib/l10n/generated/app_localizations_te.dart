@@ -9302,6 +9302,13 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoRecorderSwitchCameraLabel => 'కెమెరాను మార్చండి';
 
   @override
+  String get videoRecorderToggleDualCameraLabel =>
+      'రెండు కెమెరాలతో రికార్డ్ చేయండి';
+
+  @override
+  String get videoRecorderDualCameraSwapLabel => 'కెమెరాలను మార్చుకోండి';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'దీనికి జూమ్ చేయండి $zoom×';
   }

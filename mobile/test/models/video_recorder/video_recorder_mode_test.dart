@@ -33,6 +33,18 @@ void main() {
       });
     });
 
+    group('supportsDualCamera', () {
+      test('offers dual-camera capture in Capture only', () {
+        expect(
+          [
+            for (final mode in VideoRecorderMode.values)
+              if (mode.supportsDualCamera) mode,
+          ],
+          equals([VideoRecorderMode.capture]),
+        );
+      });
+    });
+
     group('hasVideoEditor', () {
       test('capture has video editor', () {
         expect(VideoRecorderMode.capture.hasVideoEditor, isTrue);

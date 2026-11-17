@@ -2,8 +2,10 @@
 // ABOUTME: Validates state updates and provider lifecycle
 
 import 'dart:async';
-import 'dart:ui' show Color;
+import 'dart:ui' show Color, Offset;
 
+import 'package:divine_camera/divine_camera.dart'
+    show DivineCameraLens, VideoRecordingResult;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -937,6 +939,307 @@ void main() {
             '/docs/cover.jpg',
           );
         });
+      });
+    });
+
+    group('addClip with a second camera take', () {
+      const second = VideoRecordingResult(
+        filePath: '/documents/VID_1_second.mp4',
+        durationMs: 1500,
+        width: 720,
+        height: 1280,
+        lens: DivineCameraLens.front,
+      );
+
+      tearDown(() => NativeProofModeService.proofFileOverride = null);
+
+      test('carries the second file as a silent clip of its own', () {
+        NativeProofModeService.proofFileOverride = (
+          _, {
+          required enableAdvancedCawgEmbedding,
+          creatorBindingAssertion,
+          cawgIdentityAssertion,
+          verifiedIdentityBundle,
+          clips,
+          editorStateHistory,
+          derivedFrom,
+        }) async => null;
+        final notifier = container.read(clipManagerProvider.notifier);
+
+        final clip = notifier.addClip(
+          limitClipDuration: false,
+          video: EditorVideo.file('/documents/VID_1.mp4'),
+          duration: const Duration(seconds: 2),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+          secondaryRecording: second,
+          secondaryPipCenter: const Offset(0.2, 0.3),
+        );
+
+        final take = clip.secondaryCamera;
+        expect(take, isNotNull);
+        expect(take!.pipCenter, const Offset(0.2, 0.3));
+        expect(take.clip.id, '${clip.id}_second');
+        expect(take.clip.video?.file?.path, '/documents/VID_1_second.mp4');
+        expect(take.clip.volume, 0);
+        expect(take.clip.duration, const Duration(milliseconds: 1500));
+        expect(take.clip.originalAspectRatio, closeTo(720 / 1280, 1e-9));
+        expect(take.clip.isFrontCameraLens, isTrue);
+        expect(
+          container.read(clipManagerProvider).clips.single.secondaryCamera,
+          isNotNull,
+        );
+      });
+
+      test('stays portrait when the platform reports a landscape size', () {
+        // Android reports the encoded size and keeps the turn as rotation
+        // metadata; a landscape ratio squeezed the take in the editor.
+        NativeProofModeService.proofFileOverride = (
+          _, {
+          required enableAdvancedCawgEmbedding,
+          creatorBindingAssertion,
+          cawgIdentityAssertion,
+          verifiedIdentityBundle,
+          clips,
+          editorStateHistory,
+          derivedFrom,
+        }) async => null;
+
+        final clip = container
+            .read(clipManagerProvider.notifier)
+            .addClip(
+              limitClipDuration: false,
+              video: EditorVideo.file('/documents/VID_1.mp4'),
+              duration: const Duration(seconds: 2),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+              secondaryRecording: const VideoRecordingResult(
+                filePath: '/documents/VID_1_second.mp4',
+                width: 1920,
+                height: 1080,
+              ),
+            );
+
+        expect(
+          clip.secondaryCamera?.clip.originalAspectRatio,
+          closeTo(1080 / 1920, 1e-9),
+        );
+      });
+
+      test('keeps the whole second file and skips its lead-in', () {
+        NativeProofModeService.proofFileOverride = (
+          _, {
+          required enableAdvancedCawgEmbedding,
+          creatorBindingAssertion,
+          cawgIdentityAssertion,
+          verifiedIdentityBundle,
+          clips,
+          editorStateHistory,
+          derivedFrom,
+        }) async => null;
+
+        final clip = container
+            .read(clipManagerProvider.notifier)
+            .addClip(
+              limitClipDuration: false,
+              video: EditorVideo.file('/documents/VID_1.mp4'),
+              duration: const Duration(seconds: 1),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+              secondaryRecording: const VideoRecordingResult(
+                filePath: '/documents/VID_1_second.mp4',
+                durationMs: 1300,
+                startOffsetMs: 120,
+              ),
+            );
+
+        final second = clip.secondaryCamera!.clip;
+        expect(second.duration, const Duration(milliseconds: 1300));
+        expect(second.trimStart, const Duration(milliseconds: 120));
+      });
+
+      test('proves the second file and saves it to the library', () async {
+        const recordingHash = 'second-hash';
+        final proven = <String>[];
+        NativeProofModeService.proofFileOverride =
+            (
+              file, {
+              required enableAdvancedCawgEmbedding,
+              creatorBindingAssertion,
+              cawgIdentityAssertion,
+              verifiedIdentityBundle,
+              clips,
+              editorStateHistory,
+              derivedFrom,
+            }) async {
+              proven.add(file.path);
+              return const NativeProofData(videoHash: recordingHash);
+            };
+        when(
+          () => mockClipLibraryService.rememberRecordingHash(
+            clipId: any(named: 'clipId'),
+            fileName: any(named: 'fileName'),
+            sha256: any(named: 'sha256'),
+          ),
+        ).thenAnswer((_) async => true);
+        final saved = <DivineVideoClip>[];
+        when(() => mockClipLibraryService.saveClip(any())).thenAnswer((
+          invocation,
+        ) async {
+          saved.add(invocation.positionalArguments.single as DivineVideoClip);
+        });
+        final backgroundWork = container.read(editorBackgroundWorkProvider);
+        final notifier = container.read(clipManagerProvider.notifier);
+
+        final clip = notifier.addClip(
+          limitClipDuration: false,
+          video: EditorVideo.file('/documents/VID_1.mp4'),
+          duration: const Duration(seconds: 2),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+          secondaryRecording: second,
+        );
+        await backgroundWork.settle();
+        await pumpEventQueue();
+
+        expect(
+          proven,
+          containsAll(['/documents/VID_1.mp4', '/documents/VID_1_second.mp4']),
+        );
+        final take = notifier.getClipById(clip.id)!.secondaryCamera!;
+        expect(take.clip.recordingSha256, recordingHash);
+        expect(take.clip.proofManifestJson, isNotNull);
+        verify(
+          () => mockClipLibraryService.rememberRecordingHash(
+            clipId: '${clip.id}_second',
+            fileName: 'VID_1_second.mp4',
+            sha256: recordingHash,
+          ),
+        ).called(1);
+        expect(
+          saved
+              .where((c) => c.id == '${clip.id}_second')
+              .single
+              .proofManifestJson,
+          isNotNull,
+        );
+      });
+
+      test('waits for the take proof and the work tracked for it', () async {
+        final secondProof = Completer<NativeProofData?>();
+        NativeProofModeService.proofFileOverride =
+            (
+              file, {
+              required enableAdvancedCawgEmbedding,
+              creatorBindingAssertion,
+              cawgIdentityAssertion,
+              verifiedIdentityBundle,
+              clips,
+              editorStateHistory,
+              derivedFrom,
+            }) => file.path == second.filePath
+            ? secondProof.future
+            : Future.value();
+        when(
+          () => mockClipLibraryService.rememberRecordingHash(
+            clipId: any(named: 'clipId'),
+            fileName: any(named: 'fileName'),
+            sha256: any(named: 'sha256'),
+          ),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockClipLibraryService.saveClip(any()),
+        ).thenAnswer((_) async {});
+        final notifier = container.read(clipManagerProvider.notifier);
+        final clip = notifier.addClip(
+          limitClipDuration: false,
+          video: EditorVideo.file('/documents/VID_1.mp4'),
+          duration: const Duration(seconds: 2),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+          secondaryRecording: second,
+        );
+        final poster = Completer<void>();
+        notifier.trackClipEnrichment('${clip.id}_second', poster.future);
+
+        var settled = false;
+        unawaited(
+          notifier.waitForSecondaryCameraTakes().then((_) => settled = true),
+        );
+        await pumpEventQueue();
+        expect(settled, isFalse);
+
+        poster.complete();
+        await pumpEventQueue();
+        expect(settled, isFalse, reason: 'the proof is still on its way');
+
+        secondProof.complete(const NativeProofData(videoHash: 'second-hash'));
+        await pumpEventQueue();
+        expect(settled, isTrue);
+        expect(
+          notifier
+              .getClipById(clip.id)!
+              .secondaryCamera!
+              .clip
+              .proofManifestJson,
+          isNotNull,
+        );
+      });
+
+      test('gives the take its composite thumbnail, and only that take', () {
+        NativeProofModeService.proofFileOverride = (
+          _, {
+          required enableAdvancedCawgEmbedding,
+          creatorBindingAssertion,
+          cawgIdentityAssertion,
+          verifiedIdentityBundle,
+          clips,
+          editorStateHistory,
+          derivedFrom,
+        }) async => null;
+        final notifier = container.read(clipManagerProvider.notifier);
+        final clip = notifier.addClip(
+          limitClipDuration: false,
+          video: EditorVideo.file('/documents/VID_1.mp4'),
+          duration: const Duration(seconds: 2),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+          secondaryRecording: second,
+        );
+
+        expect(
+          notifier.setSecondaryCameraThumbnail(
+            clip.id,
+            takeId: 'another_take',
+            path: '/documents/other_dual.jpg',
+          ),
+          isFalse,
+        );
+        expect(
+          notifier.setSecondaryCameraThumbnail(
+            'gone',
+            takeId: '${clip.id}_second',
+            path: '/documents/other_dual.jpg',
+          ),
+          isFalse,
+        );
+        expect(
+          notifier.setSecondaryCameraThumbnail(
+            clip.id,
+            takeId: '${clip.id}_second',
+            path: '/documents/VID_1_dual.jpg',
+          ),
+          isTrue,
+        );
+        expect(
+          container
+              .read(clipManagerProvider)
+              .clips
+              .single
+              .secondaryCamera
+              ?.compositeThumbnailPath,
+          '/documents/VID_1_dual.jpg',
+        );
       });
     });
 

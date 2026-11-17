@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:clock/clock.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/foundation.dart';
 import 'package:openvine/extensions/equalizer_settings_mapping.dart';
@@ -77,11 +78,14 @@ class DetachedClipPlayer {
 
     final controller = DivineVideoPlayerController(
       useTexture: true,
-      // Legacy surface, matching the canvas player. Two texture-backed players
-      // run side by side here, and the SurfaceProducer backend shares an
-      // ImageReader pool between them — which is how this player's frames
-      // reached the canvas player's area. The legacy SurfaceTexture has no
-      // shared pool.
+      // Legacy surface, unlike the canvas player. Texture-backed players on
+      // the SurfaceProducer share an ImageReader pool, which is how this
+      // player's frames once reached the canvas player's area; with this one
+      // on the legacy SurfaceTexture, the canvas player has the pool to
+      // itself. A single clip never switches decoders at a cut, which is
+      // where the legacy surface goes black. The legacy surface also shows
+      // frames later; the plugin releases them early to keep the layer level
+      // with the timeline.
       useLegacySurface: true,
       // A layer of the composition, not a video of its own: it has to run
       // alongside the timeline player instead of stopping it.
@@ -128,6 +132,13 @@ class DetachedClipPlayer {
   /// sitting ended while the composition loops around again.
   static const Duration _driftTolerance = Duration(milliseconds: 500);
 
+  /// How far a companion that is not playing may sit from the playhead: less
+  /// than half a frame, so it shows the playhead's own frame.
+  ///
+  /// Paused, nothing hides a frame of difference — the camera swap of a dual
+  /// take shows the same camera twice — and a seek costs nothing visible.
+  static const Duration _pausedTolerance = Duration(milliseconds: 10);
+
   /// Minimum gap between two seeks.
   ///
   /// A seek shows up in the reported position a frame or two later, so without
@@ -144,6 +155,21 @@ class DetachedClipPlayer {
   Duration? _windowEnd;
   Duration? _lastPlayTime;
   DateTime? _lastSeekAt;
+
+  /// Checks a just-paused companion against the playhead once the timeline
+  /// player has reported where it paused, in case that left the playhead in
+  /// place and no tick follows.
+  Timer? _pausedSyncTimer;
+
+  /// Where the last seek made while not playing landed, until the companion
+  /// plays again. Exact, where the reported position trails a seek.
+  Duration? _pausedAt;
+
+  /// Whether a seek made while not playing is still running.
+  bool _pausedSeekRunning = false;
+
+  /// The newest paused target that arrived while a seek was running.
+  Duration? _pausedSeekNext;
   bool _isPlaying = false;
   bool _muted = false;
 
@@ -255,6 +281,8 @@ class DetachedClipPlayer {
 
   /// Stops following the playhead. The player itself stays open.
   void detach() {
+    _pausedSyncTimer?.cancel();
+    _pausedSyncTimer = null;
     _playhead?.removeListener(_onTick);
     _playhead = null;
     _advancing?.removeListener(_onAdvancingChanged);
@@ -274,12 +302,19 @@ class DetachedClipPlayer {
     final previous = _lastPlayTime;
     _lastPlayTime = now;
 
-    // Outside its window the clip has nothing to show. Parking it at its first
-    // frame means the next entry starts clean instead of resuming wherever the
-    // last pass stopped.
+    // Outside its window the clip has nothing to show. Parking it exactly on
+    // its first frame means the next entry starts clean: parked two frames in,
+    // the next dual-camera take opened that far ahead of the timeline.
     if (!isWithinWindow(now)) {
       _setPlaying(playing: false);
-      if (now < _windowStart) _syncTo(_windowStart, tolerance: _seekTolerance);
+      if (now < _windowStart) _syncPaused(now);
+      return;
+    }
+
+    // Paused or scrubbing: the companion shows the playhead's own frame.
+    if (!_isAdvancing) {
+      _setPlaying(playing: false);
+      _syncPaused(now);
       return;
     }
 
@@ -304,8 +339,57 @@ class DetachedClipPlayer {
       return;
     }
 
-    _setPlaying(playing: _advancing?.value ?? true);
+    _setPlaying(playing: true);
     _syncTo(now, tolerance: _driftTolerance);
+  }
+
+  /// Whether the editor is playing. Without an [_advancing] notifier to say,
+  /// ticks arriving are taken to mean it is.
+  bool get _isAdvancing => _advancing?.value ?? true;
+
+  /// Puts a companion that is not playing on the playhead's frame.
+  ///
+  /// One seek at a time, then on to the newest target, as the timeline player
+  /// scrubs. A clock-based throttle let a slow scrub leave the companion a
+  /// quarter of a second behind the picture.
+  void _syncPaused(Duration now) {
+    final target = detachedClipPlayerPosition(
+      now,
+      _clip,
+      layerStart: _windowStart,
+      sourceOffset: _sourceOffset,
+    );
+    if (_pausedSeekRunning) {
+      _pausedSeekNext = target;
+      return;
+    }
+    // Only a seek that landed says which frame shows. A paused player whose
+    // reported position is a few ms off the target can still show the next
+    // frame: AVPlayer did, one pause in three on the simulator.
+    final at = _pausedAt;
+    if (at != null && _absDiff(at, target) < _pausedTolerance) return;
+    unawaited(_runPausedSeeks(target));
+  }
+
+  Future<void> _runPausedSeeks(Duration target) async {
+    _pausedSeekRunning = true;
+    var next = target;
+    try {
+      while (true) {
+        _lastSeekAt = clock.now();
+        await _controller.seekTo(next);
+        if (_disposed || _isPlaying) return;
+        _pausedAt = next;
+        final pending = _pausedSeekNext;
+        _pausedSeekNext = null;
+        if (pending == null || _absDiff(pending, next) < _pausedTolerance) {
+          return;
+        }
+        next = pending;
+      }
+    } finally {
+      _pausedSeekRunning = false;
+    }
   }
 
   /// Mirrors the editor's play/pause onto the companion.
@@ -316,19 +400,19 @@ class DetachedClipPlayer {
   /// apart, which playback would then keep.
   void _onAdvancingChanged() {
     final advancing = _advancing?.value ?? false;
-    if (advancing) {
-      final now = _playhead?.value;
-      if (now != null && isWithinWindow(now)) {
-        _syncTo(now, tolerance: _seekTolerance);
-      }
-    }
-    _setPlaying(playing: advancing && _isWithinCurrentWindow);
-  }
-
-  /// Whether the playhead currently sits inside the layer's window.
-  bool get _isWithinCurrentWindow {
     final now = _playhead?.value;
-    return now != null && isWithinWindow(now);
+    final inWindow = now != null && isWithinWindow(now);
+    if (advancing) {
+      _pausedSyncTimer?.cancel();
+      _pausedSyncTimer = null;
+      if (inWindow) _syncTo(now, tolerance: _seekTolerance);
+    }
+    _setPlaying(playing: advancing && inWindow);
+    // Paused where it stopped, the companion is usually a frame or two off
+    // the timeline's picture, and would resume from there. The playhead lands
+    // on the timeline player's paused position with its next report, which
+    // syncs at once; this catches a report that leaves the playhead in place.
+    if (!advancing && inWindow) _retryPausedSync(after: _seekThrottle);
   }
 
   /// Points the companion at the frame [now] calls for, unless it is close
@@ -341,7 +425,7 @@ class DetachedClipPlayer {
   /// decided by ticks arriving, not by where they land.
   void _syncTo(Duration now, {required Duration tolerance}) {
     final since = _lastSeekAt;
-    if (since != null && DateTime.now().difference(since) < _seekThrottle) {
+    if (since != null && clock.now().difference(since) < _seekThrottle) {
       return;
     }
 
@@ -358,10 +442,22 @@ class DetachedClipPlayer {
     // composition's next pass showed a frozen still instead of the clip.
     if (_absDiff(_controller.state.position, target) < tolerance) return;
 
-    _lastSeekAt = DateTime.now();
+    _lastSeekAt = clock.now();
     unawaited(
       _seekTo(target, restart: _controller.state.status.isCompleted),
     );
+  }
+
+  void _retryPausedSync({required Duration after}) {
+    _pausedSyncTimer?.cancel();
+    _pausedSyncTimer = Timer(after, () {
+      _pausedSyncTimer = null;
+      final now = _playhead?.value;
+      if (_disposed || _isAdvancing || now == null || !isWithinWindow(now)) {
+        return;
+      }
+      _syncPaused(now);
+    });
   }
 
   /// Seeks the companion, and plays it again if it was sitting finished.
@@ -371,6 +467,7 @@ class DetachedClipPlayer {
   /// again, a clip that once reached its end froze on each later pass of the
   /// composition, since playback is only requested when it changes.
   Future<void> _seekTo(Duration target, {required bool restart}) async {
+    _pausedAt = null;
     await _controller.seekTo(target);
     if (restart && _isPlaying && !_disposed) await _controller.play();
   }
@@ -385,6 +482,8 @@ class DetachedClipPlayer {
 
   Future<void> _play() async {
     _isPlaying = true;
+    _pausedAt = null;
+    _pausedSeekNext = null;
     await _controller.play();
   }
 }

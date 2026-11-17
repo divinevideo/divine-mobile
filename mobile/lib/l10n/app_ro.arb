@@ -2610,6 +2610,8 @@
   "videoRecorderTapToStartLabel": "Atinge oriunde pentru a începe înregistrarea",
   "videoRecorderDeleteLastClipLabel": "Șterge ultimul clip",
   "videoRecorderSwitchCameraLabel": "Schimbă camera",
+  "videoRecorderToggleDualCameraLabel": "Filmează cu ambele camere",
+  "videoRecorderDualCameraSwapLabel": "Inversează camerele",
   "videoRecorderZoomLevelLabel": "Zoom la {zoom}×",
   "videoRecorderToggleGridLabel": "Activează/dezactivează grila",
   "videoRecorderToggleGhostFrameLabel": "Activează/dezactivează cadrul fantomă",

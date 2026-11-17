@@ -664,6 +664,17 @@ extension VideoEditorExtensions on ProImageEditorState {
     setState(() {});
   }
 
+  /// Places [layers], the picture-in-picture layers of the dual-camera takes
+  /// [takeIds], in the session's starting state and shows them; see
+  /// [VideoEditorHistoryExtensions.adoptSecondaryCameraLayers].
+  void placeSecondaryCameraLayers(
+    List<Layer> layers,
+    Iterable<String> takeIds,
+  ) {
+    stateManager.adoptSecondaryCameraLayers(layers, takeIds);
+    setState(() {});
+  }
+
   /// Removes the layer [layerId] and persists a clip-list change as **one**
   /// history entry — the reverse of [setClipStateWithNewLayer], for putting a
   /// detached clip back onto the timeline.

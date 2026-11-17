@@ -8592,6 +8592,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoRecorderSwitchCameraLabel => 'カメラを切り替え';
 
   @override
+  String get videoRecorderToggleDualCameraLabel => '両方のカメラで撮影';
+
+  @override
+  String get videoRecorderDualCameraSwapLabel => 'カメラを入れ替え';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return '$zoom× にズーム';
   }

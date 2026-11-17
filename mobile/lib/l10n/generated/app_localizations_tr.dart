@@ -8962,6 +8962,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoRecorderSwitchCameraLabel => 'Kamerayı değiştir';
 
   @override
+  String get videoRecorderToggleDualCameraLabel =>
+      'İki kamerayla birden kaydet';
+
+  @override
+  String get videoRecorderDualCameraSwapLabel => 'Kameraların yerini değiştir';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return '$zoom× yakınlaştır';
   }

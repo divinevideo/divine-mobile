@@ -69,6 +69,11 @@ class VideoEditorConstants {
   /// Unique history key for audio items.
   static const String audioStateHistoryKey = 'audio';
 
+  /// Unique history key for the ids of the dual-camera takes whose
+  /// picture-in-picture layer the session placed.
+  static const String placedSecondaryCameraTakesStateHistoryKey =
+      'placedSecondaryCameraTakes';
+
   /// Unique history key for timeline marker positions.
   static const String timelineMarkersStateHistoryKey = 'timelineMarkers';
 

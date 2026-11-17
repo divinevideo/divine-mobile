@@ -3004,6 +3004,8 @@
   "videoRecorderStartRecordingTooltip": "녹화 시작",
   "videoRecorderStopRecordingTooltip": "녹화 중지",
   "videoRecorderSwitchCameraLabel": "카메라 전환",
+  "videoRecorderToggleDualCameraLabel": "두 카메라로 동시에 촬영",
+  "videoRecorderDualCameraSwapLabel": "카메라 위치 바꾸기",
   "videoRecorderZoomLevelLabel": "{zoom}×로 확대",
   "videoRecorderTapToStartLabel": "아무 곳이나 탭하여 녹화 시작",
   "videoRecorderToggleAspectRatioLabel": "화면 비율 전환",

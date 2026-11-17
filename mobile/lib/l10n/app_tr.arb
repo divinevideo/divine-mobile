@@ -3465,6 +3465,8 @@
   "videoRecorderStartRecordingTooltip": "Kaydı başlat",
   "videoRecorderStopRecordingTooltip": "Kaydı durdur",
   "videoRecorderSwitchCameraLabel": "Kamerayı değiştir",
+  "videoRecorderToggleDualCameraLabel": "İki kamerayla birden kaydet",
+  "videoRecorderDualCameraSwapLabel": "Kameraların yerini değiştir",
   "videoRecorderZoomLevelLabel": "{zoom}× yakınlaştır",
   "videoRecorderTapToStartLabel": "Kaydı başlatmak için herhangi bir yere dokunun",
   "videoRecorderToggleAspectRatioLabel": "En-boy oranını değiştir",

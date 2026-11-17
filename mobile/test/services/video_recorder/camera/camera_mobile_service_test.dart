@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:divine_camera/divine_camera.dart';
 import 'package:divine_camera/divine_camera_platform_interface.dart';
 import 'package:flutter/foundation.dart' show ValueChanged;
@@ -22,6 +24,15 @@ class _FakeCameraPlatform extends DivineCameraPlatform {
 
   /// Whether the last [initializeCamera] asked for mirrored front output.
   bool? lastMirrorFrontCameraOutput;
+
+  /// Whether the opened camera reports dual-camera support.
+  bool dualCameraSupported = false;
+
+  /// When set, [setDualCameraEnabled] throws.
+  bool failDualCamera = false;
+
+  /// What [stopRecording] returns.
+  VideoRecordingResult? stopResult;
 
   @override
   void Function(VideoRecordingResult? result)? onRecordingAutoStopped;
@@ -51,8 +62,32 @@ class _FakeCameraPlatform extends DivineCameraPlatform {
       textureId: 1,
       hasFrontCamera: hasBothCameras,
       hasBackCamera: hasBothCameras,
+      isDualCameraSupported: dualCameraSupported,
     );
   }
+
+  @override
+  Future<CameraState> setDualCameraEnabled({required bool enabled}) async {
+    if (failDualCamera) throw StateError('session rebuild failed');
+    return CameraState(
+      isInitialized: true,
+      textureId: 1,
+      isDualCameraSupported: dualCameraSupported,
+      secondaryCamera: enabled
+          ? const SecondaryCameraState(lens: DivineCameraLens.front)
+          : null,
+    );
+  }
+
+  @override
+  Future<bool> startRecording({
+    Duration? maxDuration,
+    bool useCache = true,
+    String? outputDirectory,
+  }) async => true;
+
+  @override
+  Future<VideoRecordingResult?> stopRecording() async => stopResult;
 
   @override
   Future<CameraState> switchCamera(DivineCameraLens lens) async {
@@ -234,6 +269,102 @@ void main() {
 
         expect(autoStopped, hasLength(1));
         expect(autoStopped.single?.file?.path, '/clips/auto.mp4');
+      });
+    });
+
+    group('dual camera', () {
+      setUp(() {
+        platform
+          ..shouldFail = false
+          ..dualCameraSupported = true;
+      });
+
+      test('reports no dual camera before initialize', () {
+        expect(service.isDualCameraSupported, isFalse);
+        expect(service.isDualCameraEnabled, isFalse);
+        expect(service.secondaryCamera, isNull);
+      });
+
+      test('turns dual-camera capture on and rebuilds the preview', () async {
+        await service.initialize();
+        rebuildRequests.clear();
+
+        expect(await service.setDualCameraEnabled(enabled: true), isTrue);
+
+        expect(service.isDualCameraSupported, isTrue);
+        expect(service.isDualCameraEnabled, isTrue);
+        expect(service.secondaryCamera?.lens, DivineCameraLens.front);
+        expect(rebuildRequests, [isTrue]);
+      });
+
+      test('refuses before initialize', () async {
+        expect(await service.setDualCameraEnabled(enabled: true), isFalse);
+      });
+
+      test('reports a failed rebuild as not applied', () async {
+        await service.initialize();
+        platform.failDualCamera = true;
+        rebuildRequests.clear();
+
+        expect(await service.setDualCameraEnabled(enabled: true), isFalse);
+        expect(rebuildRequests, [isTrue]);
+      });
+    });
+
+    group('takeSecondaryRecording', () {
+      late Directory dir;
+
+      setUp(() async {
+        dir = await Directory.systemTemp.createTemp('second_camera_test');
+        platform.shouldFail = false;
+        await service.initialize();
+      });
+
+      tearDown(() async {
+        if (dir.existsSync()) await dir.delete(recursive: true);
+      });
+
+      test('hands over the second file of a stopped take once', () async {
+        const second = VideoRecordingResult(filePath: '/clips/second.mp4');
+        platform.stopResult = const VideoRecordingResult(
+          filePath: '/clips/main.mp4',
+          secondary: second,
+        );
+        await DivineCamera.instance.startRecording();
+
+        final video = await service.stopRecording();
+
+        expect(video?.file?.path, '/clips/main.mp4');
+        expect(service.takeSecondaryRecording(), equals(second));
+        expect(service.takeSecondaryRecording(), isNull);
+      });
+
+      test('hands over the second file of an auto-stopped take', () {
+        const second = VideoRecordingResult(filePath: '/clips/auto2.mp4');
+        platform.onRecordingAutoStopped!(
+          const VideoRecordingResult(
+            filePath: '/clips/auto.mp4',
+            secondary: second,
+          ),
+        );
+
+        expect(service.takeSecondaryRecording(), equals(second));
+      });
+
+      test('deletes a second file nobody took before the next take', () {
+        final stale = File('${dir.path}/stale.mp4')..writeAsStringSync('x');
+        platform.onRecordingAutoStopped!(
+          VideoRecordingResult(
+            filePath: '/clips/a.mp4',
+            secondary: VideoRecordingResult(filePath: stale.path),
+          ),
+        );
+        platform.onRecordingAutoStopped!(
+          const VideoRecordingResult(filePath: '/clips/b.mp4'),
+        );
+
+        expect(stale.existsSync(), isFalse);
+        expect(service.takeSecondaryRecording(), isNull);
       });
     });
 

@@ -20,6 +20,7 @@ import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_loop_alignment.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
+import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_image_editor/pro_image_editor.dart' show LayerMask;
@@ -78,6 +79,7 @@ class DivineVideoClip {
     this.assetRecoveryAttempts = 0,
     this.stickerRegions = const [],
     this.importedSource = false,
+    this.secondaryCamera,
     String? sourceAuthorPubkey,
     String? sourceEventId,
     String? sourceAddressableId,
@@ -444,6 +446,13 @@ class DivineVideoClip {
   /// set only on a final render, from the layers it was rendered with.
   final List<model.VideoStickerRegion> stickerRegions;
 
+  /// The second camera's recording of a dual-camera take, waiting to become
+  /// a picture-in-picture layer over this clip when the editor opens.
+  ///
+  /// A take, not a look: a split or duplicate is another clip and drops it,
+  /// and the editor clears it once the layer exists.
+  final SecondaryCameraTake? secondaryCamera;
+
   /// The files to name as this clip's sources when an edit of it is signed:
   /// [derivedFrom], or else the clip's own video file.
   ///
@@ -802,7 +811,15 @@ class DivineVideoClip {
     yield* (derivedFrom ?? const <C2paEditSource>[]).map(
       (source) => source.path,
     );
+    // The second camera's file, until the editor lifts it into a layer.
+    yield* secondaryCamera?.ownedFilePaths ?? const <String?>[];
   }
+
+  /// The picture that stands for this take in the clip library, the drafts
+  /// and the recorder's library button: for a dual-camera take, its frame
+  /// with the second camera's window over it, as the viewfinder showed it.
+  String? get galleryThumbnailPath =>
+      secondaryCamera?.compositeThumbnailPath ?? thumbnailPath;
 
   /// Whether this clip was recorded with a front-facing camera.
   bool get isFrontCameraLens =>
@@ -920,6 +937,7 @@ class DivineVideoClip {
     List<model.ClipSourceCredit>? sourceCredits,
     bool clearSourceCredits = false,
     bool? importedSource,
+    SecondaryCameraTake? secondaryCamera,
   }) {
     final isNewLogicalClip = id != null && id != this.id;
     final nextSourceCredits = clearSourceCredits
@@ -1022,6 +1040,9 @@ class DivineVideoClip {
           : (assetRecoveryAttempts ?? this.assetRecoveryAttempts),
       stickerRegions: stickerRegions ?? this.stickerRegions,
       importedSource: importedSource ?? this.importedSource,
+      secondaryCamera: isNewLogicalClip
+          ? null
+          : (secondaryCamera ?? this.secondaryCamera),
       sourceCredits: nextSourceCredits,
     );
   }
@@ -1099,6 +1120,7 @@ class DivineVideoClip {
       if (stickerRegions.isNotEmpty)
         'stickerRegions': [for (final region in stickerRegions) region.toTag()],
       if (importedSource) 'importedSource': true,
+      if (secondaryCamera case final take?) 'secondaryCamera': take.toJson(),
       if (sourceAuthorPubkey != null) 'sourceAuthorPubkey': sourceAuthorPubkey,
       if (sourceEventId != null) 'sourceEventId': sourceEventId,
       if (sourceAddressableId != null)
@@ -1308,6 +1330,11 @@ class DivineVideoClip {
       ),
       assetRecoveryAttempts: json['assetRecoveryAttempts'] as int? ?? 0,
       importedSource: json['importedSource'] == true,
+      secondaryCamera: SecondaryCameraTake.fromJson(
+        json['secondaryCamera'],
+        documentsPath,
+        useOriginalPath: useOriginalPath,
+      ),
       sourceAuthorPubkey: json['sourceAuthorPubkey'] as String?,
       sourceEventId: json['sourceEventId'] as String?,
       sourceAddressableId: json['sourceAddressableId'] as String?,

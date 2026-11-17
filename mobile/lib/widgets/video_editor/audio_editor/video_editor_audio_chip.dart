@@ -38,8 +38,8 @@ class VideoEditorAudioChip extends StatelessWidget {
   /// Called when audio selection ends (e.g. to resume playback).
   final VoidCallback? onSelectionEnded;
 
-  /// Called on a tap instead of opening the picker, for a host where the sound
-  /// cannot change right now and says why.
+  /// Called on a tap instead of opening the picker or the timing screen, for a
+  /// host where the sound cannot change right now and says why.
   final VoidCallback? onLockedTap;
 
   @visibleForTesting

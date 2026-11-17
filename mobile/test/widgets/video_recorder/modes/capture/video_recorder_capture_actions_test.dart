@@ -64,6 +64,8 @@ void main() {
       List<DivineVideoStabilizationMode> availableVideoStabilizationModes =
           const [DivineVideoStabilizationMode.off],
       List<DivineVideoClip>? clips,
+      bool isDualCameraSupported = false,
+      bool isDualCameraEnabled = false,
     }) {
       when(() => recorderBloc.state).thenReturn(
         VideoRecorderBlocState(
@@ -87,6 +89,8 @@ void main() {
           availableVideoStabilizationModes: availableVideoStabilizationModes,
           isCameraInitialized: true,
           canRecord: true,
+          isDualCameraSupported: isDualCameraSupported,
+          isDualCameraEnabled: isDualCameraEnabled,
         ),
       );
 
@@ -286,6 +290,102 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(switchButton(tester).onTap, isNull);
+      });
+    });
+
+    group('dual camera button', () {
+      Finder dualButton() => findByTooltip(
+        l10n.videoRecorderToggleDualCameraLabel,
+      );
+
+      testWidgets('is hidden on a device that cannot run both cameras', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+
+        expect(dualButton(), findsNothing);
+      });
+
+      testWidgets('is hidden in a mode without dual-camera capture', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            isDualCameraSupported: true,
+            recorderMode: VideoRecorderMode.stopMotion,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(dualButton(), findsNothing);
+      });
+
+      testWidgets('is hidden while the color mask keys the viewfinder', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            isDualCameraSupported: true,
+            isLiveChromaKeySupported: true,
+            isChromaKeyEnabled: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(dualButton(), findsNothing);
+      });
+
+      testWidgets('toggles dual-camera capture', (tester) async {
+        await tester.pumpWidget(buildWidget(isDualCameraSupported: true));
+        await tester.pumpAndSettle();
+
+        await tester.tap(dualButton());
+
+        verify(
+          () => recorderBloc.add(const VideoRecorderDualCameraToggled()),
+        ).called(1);
+      });
+
+      testWidgets('announces whether dual-camera capture is on', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(
+          buildWidget(isDualCameraSupported: true, isDualCameraEnabled: true),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getSemantics(
+            find.bySemanticsIdentifier(SemanticIds.cameraDualCameraButton),
+          ),
+          matchesSemantics(
+            identifier: SemanticIds.cameraDualCameraButton,
+            label: l10n.videoRecorderToggleDualCameraLabel,
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: true,
+            hasToggledState: true,
+            isToggled: true,
+            hasTapAction: true,
+            hasFocusAction: true,
+            isFocusable: true,
+          ),
+        );
+        semantics.dispose();
+      });
+
+      testWidgets('is disabled while a take is starting', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(isDualCameraSupported: true, isStartingRecording: true),
+        );
+        await tester.pumpAndSettle();
+
+        final inkWell = tester.widget<InkWell>(
+          find.descendant(of: dualButton(), matching: find.byType(InkWell)),
+        );
+        expect(inkWell.onTap, isNull);
       });
     });
 

@@ -88,10 +88,10 @@ void main() {
     });
 
     group('semantics', () {
-      // The chip is the only thing separating the lip-sync viewfinder from
-      // capture mode's, so e2e/maestro/asserts/assertLipSyncMode.yaml asserts
-      // it by identifier and assertCaptureMode asserts its absence. Every
-      // other test here matches on rendered text and would stay green with the
+      // Capture puts the chip in the slot stop-motion fills with its shot
+      // budget, so e2e/maestro/asserts/assertCaptureMode.yaml asserts it by
+      // identifier and assertStopMotionMode asserts its absence. Every other
+      // test here matches on rendered text and would stay green with the
       // anchor dropped.
       testWidgets('exposes the E2E identifier as a button', (tester) async {
         final handle = tester.ensureSemantics();

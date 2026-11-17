@@ -4,6 +4,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:path/path.dart' as p;
+import 'package:pro_image_editor/features/main_editor/services/layer_copy_manager.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show CustomVideoEffect, VideoEffect;
@@ -137,6 +138,57 @@ extension VideoEditorHistoryExtensions on StateManager {
     }
     if (changed) updateActiveItems();
     return changed;
+  }
+
+  /// The ids of the dual-camera takes whose picture-in-picture layer any
+  /// history entry records as placed.
+  Set<String> get placedSecondaryCameraTakeIds => {
+    for (final entry in stateHistory) ..._placedTakeIdsOf(entry.meta),
+  };
+
+  /// Adds [layers], the picture-in-picture layers of the dual-camera takes
+  /// [takeIds], to every history entry, and records those takes as placed in
+  /// each entry's metadata.
+  ///
+  /// Like [adoptCapturedChromaKeyBakes], this makes them part of the session's
+  /// starting state rather than an edit: undo never takes the second camera
+  /// away, and a session the creator has not touched is not treated as edited.
+  /// Later entries inherit the record, so a layer the creator removed stays
+  /// removed when the editor opens again.
+  void adoptSecondaryCameraLayers(
+    List<Layer> layers,
+    Iterable<String> takeIds,
+  ) {
+    final copier = LayerCopyManager();
+    for (var index = 0; index < stateHistory.length; index++) {
+      final entry = stateHistory[index];
+      replaceHistory(
+        entry.copyWith(
+          // Each entry gets copies of its own: the editor moves the active
+          // entry's layers in place, which must not move them in the others.
+          layers: [
+            ...entry.layers,
+            for (final layer in layers) copier.copyLayer(layer),
+          ],
+          meta: {
+            ...entry.meta,
+            VideoEditorConstants.placedSecondaryCameraTakesStateHistoryKey: {
+              ..._placedTakeIdsOf(entry.meta),
+              ...takeIds,
+            }.toList(),
+          },
+        ),
+        index: index,
+        skipUpdateActiveItems: true,
+      );
+    }
+    updateActiveItems();
+  }
+
+  static Iterable<String> _placedTakeIdsOf(Map<String, dynamic> meta) {
+    final raw =
+        meta[VideoEditorConstants.placedSecondaryCameraTakesStateHistoryKey];
+    return raw is List ? raw.whereType<String>() : const [];
   }
 }
 

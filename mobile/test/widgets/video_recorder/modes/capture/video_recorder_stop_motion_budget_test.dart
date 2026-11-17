@@ -305,7 +305,7 @@ void main() {
       );
       expect(lineCountOf(tester, labelFinder), 1);
       final label = tester.renderObject<RenderParagraph>(labelFinder);
-      // No larger than the audio chip lip-sync puts in the same slot.
+      // No larger than the sound chip capture puts in the same slot.
       expect(
         label.textScaler.scale(14),
         lessThanOrEqualTo(14 * chipLabelTextScaleLimit),

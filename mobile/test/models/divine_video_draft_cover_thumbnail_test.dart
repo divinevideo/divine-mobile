@@ -4,6 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 DivineVideoClip _clip({required String id, String? thumbnailPath}) =>
@@ -70,6 +71,21 @@ void main() {
         );
 
         expect(draft.coverThumbnailPath, '/docs/source.jpg');
+      });
+
+      test("shows a dual-camera take's first clip with both cameras", () {
+        final draft = _draft(
+          clips: [
+            _clip(id: 'source', thumbnailPath: '/docs/source.jpg').copyWith(
+              secondaryCamera: SecondaryCameraTake(
+                clip: _clip(id: 'source_second'),
+                compositeThumbnailPath: '/docs/source_dual.jpg',
+              ),
+            ),
+          ],
+        );
+
+        expect(draft.coverThumbnailPath, '/docs/source_dual.jpg');
       });
 
       test('returns null when there is no thumbnail anywhere', () {

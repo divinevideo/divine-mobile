@@ -9127,6 +9127,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoRecorderSwitchCameraLabel => 'Смени камерата';
 
   @override
+  String get videoRecorderToggleDualCameraLabel => 'Запис с двете камери';
+
+  @override
+  String get videoRecorderDualCameraSwapLabel => 'Размени камерите';
+
+  @override
   String videoRecorderZoomLevelLabel(String zoom) {
     return 'Мащабиране до $zoom×';
   }

@@ -14,7 +14,8 @@ import 'package:divine_camera/divine_camera.dart'
         DivineCameraLens,
         DivineVideoQuality,
         DivineVideoStabilizationMode,
-        PhotoCaptureResult;
+        PhotoCaptureResult,
+        VideoRecordingResult;
 import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController, VideoClip;
 import 'package:equatable/equatable.dart';
@@ -28,6 +29,7 @@ import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/camera_initialization_error.dart';
+import 'package:openvine/models/video_recorder/secondary_camera_take.dart';
 import 'package:openvine/models/video_recorder/video_recorder_flash_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
@@ -41,10 +43,12 @@ import 'package:openvine/services/music_mode_preference_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/video_editor/clip_media_duration.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
+import 'package:openvine/services/video_recorder/dual_camera_thumbnail_composer.dart';
 import 'package:openvine/services/video_recorder/stop_motion_session_store.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/utils/chroma_key_still_detection.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sound_service/sound_service.dart';
@@ -299,6 +303,13 @@ class VideoRecorderBloc
     on<VideoRecorderResetRequested>(_onResetRequested);
     on<VideoRecorderShowLastClipOverlayToggled>(_onShowLastClipOverlayToggled);
     on<VideoRecorderGridLinesToggled>(_onGridLinesToggled);
+    on<VideoRecorderDualCameraToggled>(
+      _onDualCameraToggled,
+      // Each toggle rebuilds the native capture session; a tap that lands
+      // while one runs would only undo it.
+      transformer: droppable(),
+    );
+    on<VideoRecorderDualCameraPipMoved>(_onDualCameraPipMoved);
     on<VideoRecorderStopMotionFrameCaptured>(
       _onStopMotionFrameCaptured,
       transformer: droppable(),
@@ -340,6 +351,7 @@ class VideoRecorderBloc
   }
 
   final ReadClipManager _readClipManager;
+
   final ReadVideoEditor _readVideoEditor;
   final ReadVideoEditorState _readVideoEditorState;
   final ReadSharedPreferences _readSharedPreferences;
@@ -1239,6 +1251,7 @@ class VideoRecorderBloc
     unawaited(HapticService.recordingFeedback());
 
     final EditorVideo? videoResult;
+    VideoRecordingResult? secondaryRecording;
     final ClipManagerNotifier clipManager;
     final Duration remainingDuration;
     try {
@@ -1249,6 +1262,7 @@ class VideoRecorderBloc
       _readClipManager().stopRecording();
       await _stopSoundPlayback();
       videoResult = event.result ?? await _cameraService.stopRecording();
+      secondaryRecording = _dualCamera?.takeSecondaryRecording();
       // Best-effort: a wakelock teardown failure must not abort the stop and
       // discard an already-captured clip (videoResult is assigned above), so
       // it is swallowed rather than thrown into the recovery catch.
@@ -1295,6 +1309,10 @@ class VideoRecorderBloc
       ),
     );
     if (videoResult == null) {
+      // A second camera file alone is no clip.
+      if (secondaryRecording case final second?) {
+        _deleteFileQuietly(second.filePath);
+      }
       Log.warning(
         '⚠️ Recording stopped but no video file returned from '
         'camera service',
@@ -1319,6 +1337,8 @@ class VideoRecorderBloc
       lensMetadata: _cameraService.currentLensMetadata,
       limitClipDuration: state.recorderMode.hasRecordingLimit,
       captureChromaKey: captureChromaKey,
+      secondaryRecording: secondaryRecording,
+      secondaryPipCenter: state.dualCameraPipCenter,
     );
     // The clip owns the backdrop image from here; the recorder no longer
     // deletes it when the backdrop changes or the recorder closes.
@@ -1337,6 +1357,40 @@ class VideoRecorderBloc
         }
       }),
     );
+    // The second camera's take is a recording of its own: the library lists
+    // it, and its proof is looked up there.
+    Future<void>? secondaryThumbnail;
+    if (clip.secondaryCamera case final second?) {
+      // Tracked so the editor waits for the poster before it turns the take
+      // into a layer; the library save after it is not worth waiting for.
+      secondaryThumbnail =
+          _addSecondaryCameraThumbnail(
+                clipId: clip.id,
+                take: second,
+                clipManager: clipManager,
+              )
+              .then((enriched) {
+                if (enriched == null) return;
+                runDetached(
+                  _saveSecondaryCameraTake(clip.id, enriched, clipManager),
+                  'save the second camera take of ${clip.id}',
+                  logName: 'VideoRecorderBloc',
+                  category: LogCategory.video,
+                );
+              })
+              .catchError((Object error, StackTrace stackTrace) {
+                // A failure only costs the take's poster; the take itself is
+                // already on its clip.
+                Log.error(
+                  '⚠️ Second camera thumbnail failed for ${clip.id}',
+                  name: 'VideoRecorderBloc',
+                  category: LogCategory.video,
+                  error: error,
+                  stackTrace: stackTrace,
+                );
+              });
+      clipManager.trackClipEnrichment(second.clip.id, secondaryThumbnail);
+    }
 
     Log.debug(
       '📷 Lens metadata: ${_cameraService.currentLensMetadata?.toMap()}',
@@ -1361,42 +1415,159 @@ class VideoRecorderBloc
     // bare clip was already persisted by the unawaited save above. The clip
     // manager tracks completion so a layout can await it before taking the
     // clip off the timeline, without holding this sequential stop handler.
+    final enrichment =
+        _enrichAndSaveClip(
+          videoResult: videoResult,
+          clip: clip,
+          clipManager: clipManager,
+          remainingDuration: remainingDuration,
+        ).catchError((Object error, StackTrace stackTrace) {
+          // Detached work must not escape as an unhandled async error. The bare
+          // clip is already saved, so a failure here only loses the enriched
+          // metadata, not the recording.
+          Log.error(
+            '⚠️ Clip post-processing failed for ${clip.id}',
+            name: 'VideoRecorderBloc',
+            category: LogCategory.video,
+            error: error,
+            stackTrace: stackTrace,
+          );
+        });
     clipManager.trackClipEnrichment(
       clip.id,
-      _enrichAndSaveClip(
-            videoResult: videoResult,
-            clip: clip,
-            clipManager: clipManager,
-            remainingDuration: remainingDuration,
-          )
-          .catchError((Object error, StackTrace stackTrace) {
-            // Detached work must not escape as an unhandled async error. The bare
-            // clip is already saved, so a failure here only loses the enriched
-            // metadata, not the recording.
-            Log.error(
-              '⚠️ Clip post-processing failed for ${clip.id}',
-              name: 'VideoRecorderBloc',
-              category: LogCategory.video,
-              error: error,
-              stackTrace: stackTrace,
-            );
-          })
-          // Bakes the take into the composite the viewfinder showed, so the
-          // clip and its library copy hold that and not the raw footage. Only
-          // once post-processing is done: that pass ends by saving the raw
-          // take to the library, and a raw save landing after the keyed one
-          // would put the wall back. A failed bake leaves the take raw with its
-          // key, and the editor tries again when it opens on the clip.
-          .then((_) {
-            if (clip.captureChromaKey == null) return;
-            runDetached(
-              clipManager.bakeRecordedTake(clip.id),
-              'bake the chroma key of take ${clip.id}',
-              logName: 'VideoRecorderBloc',
-              category: LogCategory.video,
-            );
-          }),
+      enrichment
+      // Bakes the take into the composite the viewfinder showed, so the
+      // clip and its library copy hold that and not the raw footage. Only
+      // once post-processing is done: that pass ends by saving the raw
+      // take to the library, and a raw save landing after the keyed one
+      // would put the wall back. A failed bake leaves the take raw with its
+      // key, and the editor tries again when it opens on the clip.
+      .then((_) {
+        if (clip.captureChromaKey == null) return;
+        runDetached(
+          clipManager.bakeRecordedTake(clip.id),
+          'bake the chroma key of take ${clip.id}',
+          logName: 'VideoRecorderBloc',
+          category: LogCategory.video,
+        );
+      }),
     );
+    if (secondaryThumbnail != null) {
+      // Galleries show a dual-camera take as one picture, as the viewfinder
+      // showed it; drawn once both cameras' thumbnails exist.
+      clipManager.trackClipEnrichment(
+        clip.id,
+        Future.wait([enrichment, secondaryThumbnail])
+            .then((_) => _composeDualCameraThumbnail(clip.id, clipManager))
+            .catchError((Object error, StackTrace stackTrace) {
+              Log.error(
+                '⚠️ Dual-camera thumbnail failed for ${clip.id}',
+                name: 'VideoRecorderBloc',
+                category: LogCategory.video,
+                error: error,
+                stackTrace: stackTrace,
+              );
+            }),
+      );
+    }
+  }
+
+  /// Draws the second camera's window over the dual-camera clip [clipId]'s
+  /// thumbnail, gives the take that picture and saves the clip to the library
+  /// again, so the library lists it with both cameras.
+  ///
+  /// The save waits for the take's proof: a take placed from the library
+  /// carries what the library copy holds.
+  Future<void> _composeDualCameraThumbnail(
+    String clipId,
+    ClipManagerNotifier clipManager,
+  ) async {
+    final clip = clipManager.getClipById(clipId);
+    final take = clip?.secondaryCamera;
+    final mainThumbnail = clip?.thumbnailPath;
+    final secondThumbnail = take?.clip.thumbnailPath;
+    if (take == null || mainThumbnail == null || secondThumbnail == null) {
+      return;
+    }
+    final composed = await composeDualCameraThumbnail(
+      mainThumbnailPath: mainThumbnail,
+      secondaryThumbnailPath: secondThumbnail,
+      pipCenter: take.pipCenter,
+      outputPath: p.join(
+        p.dirname(mainThumbnail),
+        '${p.basenameWithoutExtension(mainThumbnail)}_dual.jpg',
+      ),
+    );
+    if (composed == null) return;
+    if (!clipManager.setSecondaryCameraThumbnail(
+      clipId,
+      takeId: take.clip.id,
+      path: composed,
+    )) {
+      _deleteFileQuietly(composed);
+      return;
+    }
+    await clipManager.waitForSecondaryCameraTakes();
+    final current = clipManager.getClipById(clipId);
+    if (current == null) return;
+    final saved = await clipManager.saveClipToLibrary(current);
+    if (!saved) {
+      Log.warning(
+        '⚠️ Dual-camera clip save to library failed for $clipId',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+    }
+  }
+
+  /// Gives the second camera's take of the dual-camera clip [clipId] a
+  /// thumbnail, and returns the take's clip with it, or null when the take
+  /// left its clip in the meantime.
+  Future<DivineVideoClip?> _addSecondaryCameraThumbnail({
+    required String clipId,
+    required SecondaryCameraTake take,
+    required ClipManagerNotifier clipManager,
+  }) async {
+    final videoPath = take.clip.video?.file?.path;
+    if (videoPath == null) return null;
+    final halfDuration = take.clip.duration ~/ 2;
+    final thumbnail = await VideoThumbnailService.extractThumbnail(
+      videoPath: videoPath,
+      targetTimestamp:
+          halfDuration < VideoEditorConstants.defaultThumbnailExtractTime
+          ? halfDuration
+          : VideoEditorConstants.defaultThumbnailExtractTime,
+    );
+    final current = clipManager.getClipById(clipId)?.secondaryCamera;
+    if (current == null || current.clip.id != take.clip.id) {
+      if (thumbnail != null) _deleteFileQuietly(thumbnail.path);
+      return null;
+    }
+    final enriched = thumbnail == null
+        ? current.clip
+        : current.clip.copyWith(
+            thumbnailPath: thumbnail.path,
+            thumbnailTimestamp: thumbnail.timestamp,
+          );
+    clipManager.updateSecondaryCameraClip(clipId, enriched);
+    return enriched;
+  }
+
+  /// Saves the second camera's take of the clip [clipId] to the library as a
+  /// clip of its own.
+  Future<void> _saveSecondaryCameraTake(
+    String clipId,
+    DivineVideoClip take,
+    ClipManagerNotifier clipManager,
+  ) async {
+    final saved = await clipManager.saveClipToLibrary(take);
+    if (!saved) {
+      Log.warning(
+        '⚠️ Second camera take save to library failed for $clipId',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+    }
   }
 
   /// Enriches a freshly recorded [clip] with its real duration, thumbnail and
@@ -1985,6 +2156,54 @@ class VideoRecorderBloc
     Emitter<VideoRecorderBlocState> emit,
   ) {
     emit(state.copyWith(showLastClipOverlay: !state.showLastClipOverlay));
+  }
+
+  Future<void> _onDualCameraToggled(
+    VideoRecorderDualCameraToggled event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) async {
+    final dualCamera = _dualCamera;
+    if (dualCamera == null) return;
+    if (_refusesRebindMidTake('Dual camera toggle')) return;
+    if (!state.recorderMode.supportsDualCamera) return;
+    final enable = !dualCamera.isDualCameraEnabled;
+    if (enable && !dualCamera.isDualCameraSupported) return;
+
+    // The session is rebuilt; the preview holds its last frame meanwhile,
+    // blurred like during a lens switch.
+    emit(state.copyWith(isSwitchingCamera: true));
+    try {
+      final applied = await dualCamera.setDualCameraEnabled(enabled: enable);
+      if (!applied) {
+        Log.warning(
+          '⚠️ Dual camera ${enable ? 'on' : 'off'} did not take effect',
+          name: 'VideoRecorderBloc',
+          category: LogCategory.video,
+        );
+      }
+      if (!emit.isDone) {
+        emit(state.copyWith(zoomLevel: 1, baseZoomLevel: 1));
+        _emitCameraSync(emit);
+      }
+    } finally {
+      if (!emit.isDone) {
+        emit(state.copyWith(isSwitchingCamera: false));
+      }
+    }
+  }
+
+  void _onDualCameraPipMoved(
+    VideoRecorderDualCameraPipMoved event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        dualCameraPipCenter: Offset(
+          event.center.dx.clamp(0.0, 1.0),
+          event.center.dy.clamp(0.0, 1.0),
+        ),
+      ),
+    );
   }
 
   Future<void> _onGridLinesToggled(
@@ -2627,6 +2846,12 @@ class VideoRecorderBloc
         canSwitchCamera: _cameraService.canSwitchCamera,
         isFrontCamera: isFrontCamera,
         previewTextureId: _cameraService.textureId,
+        isDualCameraSupported: _dualCamera?.isDualCameraSupported ?? false,
+        isDualCameraEnabled: _dualCamera?.isDualCameraEnabled ?? false,
+        secondaryPreviewTextureId: _dualCamera?.secondaryCamera?.textureId,
+        // Where the user dragged the window outlives a re-sync, a swap
+        // included.
+        dualCameraPipCenter: state.dualCameraPipCenter,
         videoStabilizationMode: _cameraService.videoStabilizationMode,
         availableVideoStabilizationModes:
             _cameraService.availableVideoStabilizationModes,
@@ -2718,6 +2943,12 @@ class VideoRecorderBloc
   }
 
   // === Private helpers ===
+
+  /// The camera's dual-camera capture, or null when it has none.
+  DualCameraCapture? get _dualCamera => switch (_cameraService) {
+    final DualCameraCapture dualCamera => dualCamera,
+    _ => null,
+  };
 
   /// Whether [change] must be refused because it rebinds the camera while a
   /// take is in flight. A rebind mid-take ends it without a clip on Android,
@@ -2834,6 +3065,9 @@ class VideoRecorderBloc
   /// Points the live camera at [_stabilizationModeFor] the current mode and
   /// color mask.
   ///
+  /// Where dual-camera capture is not offered it is turned off first, so the
+  /// stabilization lands on the single-camera session.
+  ///
   /// A saved mode the current lens cannot take is left alone: the camera
   /// already opened with off for it, and requesting it again would rebind the
   /// camera for nothing on Android. Explicit mode switches clear any retained
@@ -2845,6 +3079,14 @@ class VideoRecorderBloc
     // Upload pauses the camera and records nothing.
     if (mode == VideoRecorderMode.upload || !_cameraService.isInitialized) {
       return;
+    }
+    // Where dual capture is not offered — another mode, or the color mask,
+    // which keys one camera's footage — one camera runs, and the rebuild
+    // below applies the stabilization to that session.
+    final dualCamera = _dualCamera;
+    if (!state.supportsDualCamera &&
+        (dualCamera?.isDualCameraEnabled ?? false)) {
+      await dualCamera!.setDualCameraEnabled(enabled: false);
     }
     final target = _stabilizationModeFor(
       stabilizes: state.supportsVideoStabilization,

@@ -2618,6 +2618,8 @@
   "videoRecorderTapToStartLabel": "Toca en cualquier lugar para iniciar la grabación",
   "videoRecorderDeleteLastClipLabel": "Eliminar último clip",
   "videoRecorderSwitchCameraLabel": "Cambiar cámara",
+  "videoRecorderToggleDualCameraLabel": "Grabar con las dos cámaras",
+  "videoRecorderDualCameraSwapLabel": "Intercambiar cámaras",
   "videoRecorderZoomLevelLabel": "Zoom a {zoom}×",
   "videoRecorderToggleGridLabel": "Mostrar u ocultar cuadrícula",
   "videoRecorderToggleGhostFrameLabel": "Mostrar u ocultar fotograma fantasma",
