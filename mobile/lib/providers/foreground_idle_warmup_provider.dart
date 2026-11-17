@@ -162,13 +162,20 @@ final retiredEventCacheCleanupSchedulerProvider =
             run: () async {
               final budget = Stopwatch()..start();
               var hasMore = true;
-              do {
-                hasMore = await cache.pruneBatch();
-              } while (hasMore &&
-                  ref.mounted &&
-                  ref.read(appForegroundProvider) &&
-                  activityGate.isIdle &&
-                  budget.elapsed < _retiredCacheWorkBudget);
+              try {
+                do {
+                  hasMore = await cache.pruneBatch();
+                } while (hasMore &&
+                    ref.mounted &&
+                    ref.read(appForegroundProvider) &&
+                    activityGate.isIdle &&
+                    budget.elapsed < _retiredCacheWorkBudget);
+              } catch (_) {
+                // Full storage or damaged retired pages may persist. Retry on
+                // the next launch, not every second for this entire session.
+                scheduler.stop();
+                rethrow; // The coordinator reports the failure once.
+              }
               if (!hasMore) scheduler.stop();
             },
           ),

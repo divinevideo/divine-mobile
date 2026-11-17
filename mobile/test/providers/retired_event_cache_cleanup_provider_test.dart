@@ -25,6 +25,31 @@ Future<void> _elapse(FakeAsync time, Duration duration) async {
 
 void main() {
   group('start', () {
+    test('stops for this session when a cleanup batch fails', () async {
+      final time = FakeAsync();
+      late ProviderContainer container;
+      var attemptedBatches = 0;
+      time.run((_) {
+        container = ProviderContainer(
+          overrides: [
+            retiredEventCacheProvider.overrideWithValue(
+              _RetiredCache(() async {
+                attemptedBatches++;
+                throw StateError('retired cache unavailable');
+              }),
+            ),
+          ],
+        );
+        container.read(retiredEventCacheCleanupSchedulerProvider).start();
+      });
+      await _elapse(time, const Duration(seconds: 10));
+      expect(attemptedBatches, 1);
+      await _elapse(time, const Duration(minutes: 1));
+      expect(attemptedBatches, 1);
+      container.dispose();
+      await _elapse(time, Duration.zero);
+    });
+
     test(
       'waits for startup and pauses between batches when backgrounded',
       () async {
