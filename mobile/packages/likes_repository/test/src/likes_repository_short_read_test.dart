@@ -1223,6 +1223,38 @@ void main() {
         expect(statuses.upvotedIds, equals({_otherTarget}));
       });
 
+      test('waits for a relay that answers after the settle window '
+          '(#10809)', () async {
+        final fast = _ScriptedRelay('wss://fast.example');
+        final h = await _harness(otherRelays: [fast]);
+        // The fast relay holds nothing and answers at once; the relay that
+        // holds the vote answers a moment later.
+        h.relay
+          ..store.add(await h.reaction(_target, createdAt: _now - 60))
+          ..replies = {_Read.targetedReactions: _Reply.late};
+
+        final statuses = await h.repo.getUserVoteStatuses([_target]);
+
+        expect(statuses.unknownIds, isEmpty);
+        expect(statuses.upvotedIds, equals({_target}));
+      });
+
+      test('leaves the viewer vote unknown when one relay refused the read '
+          'beside another relay answering (#10809)', () async {
+        // The totals count this read (see getVoteCounts above); the viewer's
+        // arrow needs every relay to have answered.
+        final refusing = _ScriptedRelay('wss://refusing.example')
+          ..replies = {_Read.targetedReactions: _Reply.closed};
+        final h = await _harness(otherRelays: [refusing]);
+        h.relay.store.add(await h.reaction(_target, createdAt: _now - 60));
+
+        final statuses = await h.repo.getUserVoteStatuses([_target]);
+
+        expect(refusing.reads, contains(_Read.targetedReactions));
+        expect(statuses.unknownIds, equals({_target}));
+        expect(statuses.upvotedIds, isEmpty);
+      });
+
       test('reads only the retractions of the viewer votes it '
           'found', () async {
         final h = await _harness();

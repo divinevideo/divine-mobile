@@ -126,11 +126,16 @@ void main() {
     }
 
     /// Stubs the comment vote reads (#10996) with [responses] in call order,
-    /// each a read a relay finished answering.
+    /// each a read every relay finished answering. The viewer's own vote
+    /// reads wait for every relay (#10809), the totals' reads do not.
     void mockVoteReadsSequence(List<List<Event>> responses) {
       var callCount = 0;
       when(
-        () => mockNostrClient.readEvents(any(), timeout: any(named: 'timeout')),
+        () => mockNostrClient.readEvents(
+          any(),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          timeout: any(named: 'timeout'),
+        ),
       ).thenAnswer(
         (_) async => QueryResult(
           events: responses[callCount++ % responses.length],
@@ -144,6 +149,7 @@ void main() {
     List<List<Filter>> capturedVoteReads() => verify(
       () => mockNostrClient.readEvents(
         captureAny(),
+        requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
         timeout: any(named: 'timeout'),
       ),
     ).captured.cast<List<Filter>>();
@@ -7765,6 +7771,83 @@ void main() {
         final counts = await repository.getVoteCounts([targetId]);
 
         expect(counts.upvotes, isNot(contains(targetId)));
+      });
+
+      group("the viewer's own votes need a proven answer (#10809)", () {
+        void stubViewerVoteReads({
+          QueryEnd endedBy = QueryEnd.complete,
+          int answeredNetworkRelayCount = 1,
+          bool possiblyCapped = false,
+        }) {
+          final vote = createMockReaction(
+            id: 'own_reaction',
+            targetEventId: targetId,
+            authorPubkey: testUserPubkey,
+          );
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (invocation) async => QueryResult(
+              events: [
+                if ((invocation.positionalArguments.first as List<Filter>).any(
+                  (f) => f.kinds?.contains(EventKind.reaction) ?? false,
+                ))
+                  vote,
+              ],
+              endedBy: endedBy,
+              answeredNetworkRelayCount: answeredNetworkRelayCount,
+              possiblyCapped: possiblyCapped,
+            ),
+          );
+        }
+
+        test('control: reports the vote when every relay proved its '
+            'answer', () async {
+          stubViewerVoteReads();
+          repository = createRepository(withLocalStorage: false);
+
+          final votes = await repository.getUserVoteStatuses([targetId]);
+
+          expect(votes.unknownIds, isEmpty);
+          expect(votes.upvotedIds, equals({targetId}));
+        });
+
+        test('leaves the vote unknown when the read settled after the first '
+            'relay answered', () async {
+          stubViewerVoteReads(endedBy: QueryEnd.settledEarly);
+          repository = createRepository(withLocalStorage: false);
+
+          final votes = await repository.getUserVoteStatuses([targetId]);
+
+          expect(votes.unknownIds, equals({targetId}));
+          expect(votes.upvotedIds, isEmpty);
+        });
+
+        test('leaves the vote unknown when a relay may have stopped at its '
+            'result limit', () async {
+          stubViewerVoteReads(possiblyCapped: true);
+          repository = createRepository(withLocalStorage: false);
+
+          final votes = await repository.getUserVoteStatuses([targetId]);
+
+          expect(votes.unknownIds, equals({targetId}));
+          expect(votes.upvotedIds, isEmpty);
+        });
+
+        test('leaves the vote unknown when only the local cache '
+            'answered', () async {
+          stubViewerVoteReads(answeredNetworkRelayCount: 0);
+          repository = createRepository(withLocalStorage: false);
+
+          final votes = await repository.getUserVoteStatuses([targetId]);
+
+          expect(votes.unknownIds, equals({targetId}));
+          expect(votes.upvotedIds, isEmpty);
+        });
       });
     });
 

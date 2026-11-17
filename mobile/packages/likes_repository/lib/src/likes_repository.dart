@@ -2108,7 +2108,9 @@ class LikesRepository {
   /// Returns the sets of event IDs the user has upvoted or downvoted.
   /// `unknownIds` names the targets whose votes could not be settled, even
   /// when read again with a longer budget: the sets say nothing about those
-  /// targets, and stay right for the rest (#10996).
+  /// targets, and stay right for the rest (#10996). Only a proven answer
+  /// settles a target, since a short one would clear the arrow of a vote that
+  /// is still live or keep the arrow of one already taken back (#10809).
   Future<
     ({Set<String> upvotedIds, Set<String> downvotedIds, Set<String> unknownIds})
   >
@@ -2145,7 +2147,7 @@ class LikesRepository {
     final snapshot = await _readVotes(
       eventIds,
       eventIdByCoordinate,
-      authors: [pubkey],
+      voter: pubkey,
     );
 
     final upvotedIds = <String>{};
@@ -2178,17 +2180,18 @@ class LikesRepository {
   /// Reads the live votes on [eventIds], and reads once more, with a longer
   /// budget, the targets whose first read did not finish (#10996).
   ///
-  /// [authors] narrows both the votes and their retractions to those
-  /// accounts.
+  /// With [voter], only that account's votes and deletions are read, and a
+  /// target settles only on a proven answer (#10809). Without it, every
+  /// account's votes are read, and a relay's answer settles a target.
   Future<_VoteSnapshot> _readVotes(
     List<String> eventIds,
     Map<String, String> eventIdByCoordinate, {
-    List<String>? authors,
+    String? voter,
   }) async {
     final first = await _readVotesOnce(
       eventIds,
       eventIdByCoordinate,
-      authors: authors,
+      voter: voter,
       timeout: _voteReadTimeout,
     );
     final unknown = first.unknownTargets;
@@ -2197,7 +2200,7 @@ class LikesRepository {
     final again = await _readVotesOnce(
       eventIds,
       eventIdByCoordinate,
-      authors: authors,
+      voter: voter,
       timeout: _voteRereadTimeout,
       targetsToRead: unknown,
     );
@@ -2216,7 +2219,7 @@ class LikesRepository {
     List<String> eventIds,
     Map<String, String> eventIdByCoordinate, {
     required Duration timeout,
-    List<String>? authors,
+    String? voter,
     Set<String>? targetsToRead,
   }) async {
     // Narrow the queries, not target resolution: a reaction returned for a
@@ -2230,24 +2233,27 @@ class LikesRepository {
         if (targetsToRead == null || targetsToRead.contains(eventId))
           coordinate,
     ];
+    // A proof needs a `limit`: without one, a relay that publishes no
+    // `max_limit` counts as possibly capped once it returns a single vote.
+    Filter votesOn({List<String>? e, List<String>? a}) => Filter(
+      kinds: const [EventKind.reaction],
+      authors: voter == null ? null : [voter],
+      e: e,
+      a: a,
+      limit: voter == null ? null : _defaultReactionFetchLimit,
+    );
     final reads = await Future.wait([
       _readVoteChunks(
         readIds,
-        (chunk) => Filter(
-          kinds: const [EventKind.reaction],
-          authors: authors,
-          e: chunk,
-        ),
+        (chunk) => votesOn(e: chunk),
         timeout: timeout,
+        requireProof: voter != null,
       ),
       _readVoteChunks(
         readCoordinates,
-        (chunk) => Filter(
-          kinds: const [EventKind.reaction],
-          authors: authors,
-          a: chunk,
-        ),
+        (chunk) => votesOn(a: chunk),
         timeout: timeout,
+        requireProof: voter != null,
       ),
     ]);
     final unknownTargets = <String>{
@@ -2260,14 +2266,17 @@ class LikesRepository {
     // reactions cast against every earlier revision of the target, including
     // ones their author has since deleted — switching an upvote to a downvote
     // on an edited reply publishes exactly that pair (#6124). Emoji reactions
-    // are dropped first, since a retracted emoji can't change a vote.
+    // are dropped first, since a retracted emoji can't change a vote. A relay
+    // that ignores `authors`, or a merged cache hit, must not give [voter]
+    // someone else's vote.
     final votesById = {
       for (final event in [...reads[0].events, ...reads[1].events])
-        if (_isVoteReaction(event)) event.id: event,
+        if (_isVoteReaction(event) && (voter == null || event.pubkey == voter))
+          event.id: event,
     };
     final retractions = await _readVoteRetractions(
       votesById,
-      authors: authors,
+      voter: voter,
       timeout: timeout,
     );
 
@@ -2301,20 +2310,23 @@ class LikesRepository {
 
   /// Reads the retractions of [votesById]: a vote is retracted when a
   /// deletion its own author signed names it, and undecided when the read
-  /// asking for it ended without a relay's answer.
+  /// asking for it ended without a relay's answer, or without proof of it
+  /// when the votes are [voter]'s.
   Future<_Retractions> _readVoteRetractions(
     Map<String, Event> votesById, {
     required Duration timeout,
-    List<String>? authors,
+    String? voter,
   }) async {
     final read = await _readVoteChunks(
       votesById.keys.toList(),
       (chunk) => Filter(
         kinds: const [EventKind.eventDeletion],
-        authors: authors,
+        authors: voter == null ? null : [voter],
         e: chunk,
+        limit: voter == null ? null : _defaultReactionFetchLimit,
       ),
       timeout: timeout,
+      requireProof: voter != null,
     );
     final retracted = <String>{};
     for (final deletion in read.events) {
@@ -2336,21 +2348,28 @@ class LikesRepository {
   /// Runs [buildFilter] over [values] in chunks, as [_queryChunked] does, and
   /// names the values whose chunk ended without a relay's answer.
   ///
-  /// A chunk settles shortly after the first relays answer, so a silent extra
-  /// relay does not hold it to its deadline.
+  /// Without [requireProof] a chunk settles shortly after the first relays
+  /// answer, so a silent extra relay does not hold it to its deadline. With
+  /// it, a chunk waits for every relay and needs [_provesAbsence] too.
   Future<_ChunkedVoteRead> _readVoteChunks(
     List<String> values,
     Filter Function(List<String> chunk) buildFilter, {
     required Duration timeout,
+    required bool requireProof,
   }) async {
     if (values.isEmpty) {
       return (events: const <Event>[], unfinished: const <String>{});
     }
 
     final chunks = _chunkStrings(values, _reqEidChunkSize);
+    final filters = [for (final chunk in chunks) buildFilter(chunk)];
     final results = await Future.wait([
-      for (final chunk in chunks)
-        _nostrClient.readEvents([buildFilter(chunk)], timeout: timeout),
+      for (final filter in filters)
+        _nostrClient.readEvents(
+          [filter],
+          requireAllRelaysSettled: requireProof,
+          timeout: timeout,
+        ),
     ]);
     return (
       events: {
@@ -2359,7 +2378,9 @@ class LikesRepository {
       }.values.toList(),
       unfinished: {
         for (var i = 0; i < chunks.length; i++)
-          if (!_aRelayAnswered(results[i])) ...chunks[i],
+          if (!_aRelayAnswered(results[i]) ||
+              (requireProof && !_provesAbsence(results[i], filters[i])))
+            ...chunks[i],
       },
     );
   }
