@@ -60,9 +60,11 @@ class _Relay {
         timeout: any(named: 'timeout'),
       ),
     ).thenAnswer((invocation) async {
+      // getUserVoteStatuses reads through readEvents, so failViewerReads and
+      // holdViewerRead apply here as they do to queryEvents.
       final filters = invocation.positionalArguments.first as List;
       return QueryResult(
-        events: _matching(filters.cast<Filter>()),
+        events: await _query(filters),
         endedBy: check == _Check.conclusive
             ? QueryEnd.complete
             : QueryEnd.deadline,
