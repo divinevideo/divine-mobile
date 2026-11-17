@@ -178,7 +178,7 @@ pushNotificationTapTarget({
     );
   }
   if (notificationType == NotificationWireValues.campaign) {
-    if (tapTargetType == 'video_address' &&
+    if (tapTargetType == NotificationWireValues.videoAddress &&
         tapTargetValue != null &&
         RegExp(r'^34236:[0-9a-f]{64}:.+$').hasMatch(tapTargetValue)) {
       return (
@@ -187,7 +187,7 @@ pushNotificationTapTarget({
         videoCoordinate: tapTargetValue,
       );
     }
-    if (tapTargetType == 'creator_profile' &&
+    if (tapTargetType == NotificationWireValues.creatorProfile &&
         tapTargetValue != null &&
         RegExp(r'^[0-9a-f]{64}$').hasMatch(tapTargetValue)) {
       return (

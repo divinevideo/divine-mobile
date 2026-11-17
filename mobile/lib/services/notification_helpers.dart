@@ -76,6 +76,20 @@ abstract class NotificationWireValues {
 
   /// Campaign `tapTargetType` value for an absolute in-app route.
   static const String appRoute = 'app_route';
+
+  /// Campaign `tapTargetType` value for a kind-34236 video coordinate.
+  static const String videoAddress = 'video_address';
+
+  /// Campaign `tapTargetType` value for a creator's hex pubkey.
+  static const String creatorProfile = 'creator_profile';
+
+  /// Campaign target types this client can open, advertised at push
+  /// registration so the push service sends only campaigns the app can route.
+  static const List<String> campaignTargetTypes = [
+    appRoute,
+    videoAddress,
+    creatorProfile,
+  ];
 }
 
 /// Returns an FCM message's [data] with its transport [messageId] added under
