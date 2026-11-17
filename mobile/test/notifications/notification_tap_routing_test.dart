@@ -124,7 +124,6 @@ void main() {
 
       await app.routeNotificationTap(
         openSource: NotificationOpenSource.localTap,
-        campaignRevisionId: null,
         referencedAddress: null,
         referencedEventId: null,
         eventId: null,

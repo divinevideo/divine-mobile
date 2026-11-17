@@ -97,7 +97,6 @@ void main() {
         containerA.dispose();
         await routeNotificationTap(
           messageId: 'transport-message-1',
-          campaignRevisionId: null,
           openSource: source,
           referencedAddress: null,
           referencedEventId: null,
