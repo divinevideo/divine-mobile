@@ -120,6 +120,7 @@ class _StagedFeaturedTabsRepository implements FeaturedTabsRepository {
   @override
   Future<FeaturedTabsSnapshot> refresh({
     required bool gateAgeRestrictedContent,
+    String? requiredFeaturedFeedId,
   }) async {
     refreshCount++;
     return refreshCount == 1

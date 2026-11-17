@@ -24,12 +24,16 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
   FeaturedTabsCubit({
     required FeaturedTabsRepository repository,
     required bool Function() gateAgeRestrictedContent,
+    this.requiredFeaturedFeedId,
   }) : _repository = repository,
        _gateAgeRestrictedContent = gateAgeRestrictedContent,
        super(const FeaturedTabsState());
 
   final FeaturedTabsRepository _repository;
   final bool Function() _gateAgeRestrictedContent;
+
+  /// Feed required by a campaign destination, or null for normal Explore.
+  final String? requiredFeaturedFeedId;
 
   Timer? _pollTimer;
 
@@ -56,6 +60,7 @@ class FeaturedTabsCubit extends Cubit<FeaturedTabsState> {
 
     final snapshot = await _repository.refresh(
       gateAgeRestrictedContent: _gateAgeRestrictedContent(),
+      requiredFeaturedFeedId: requiredFeaturedFeedId,
     );
     if (isClosed || generation != _refreshGeneration) return;
 

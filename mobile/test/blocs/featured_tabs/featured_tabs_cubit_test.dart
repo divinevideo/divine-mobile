@@ -98,6 +98,29 @@ void main() {
       ).called(1);
     });
 
+    test('passes the required campaign feed on every refresh', () async {
+      when(
+        () => repository.refresh(
+          gateAgeRestrictedContent: false,
+          requiredFeaturedFeedId: 'ft_b',
+        ),
+      ).thenAnswer((_) async => const FeaturedTabsSnapshot());
+      final cubit = FeaturedTabsCubit(
+        repository: repository,
+        gateAgeRestrictedContent: () => false,
+        requiredFeaturedFeedId: 'ft_b',
+      );
+      addTearDown(cubit.close);
+      await cubit.refresh();
+      await cubit.refresh();
+      verify(
+        () => repository.refresh(
+          gateAgeRestrictedContent: false,
+          requiredFeaturedFeedId: 'ft_b',
+        ),
+      ).called(2);
+    });
+
     test('surfaces the server poll interval on the state', () async {
       stubSnapshot(
         const FeaturedTabsSnapshot(

@@ -59,7 +59,7 @@ class FeaturedTabVideosPage {
 /// * **Eligibility.** A tab renders only when it is enabled, inside its
 ///   window, has server-side content, and passes the viewer audience rule.
 /// * **Selection.** The payload is a list; v1 renders at most one tab, so the
-///   first eligible entry wins.
+///   first eligible entry wins unless a campaign requires a specific feed.
 class FeaturedTabsRepository {
   /// Creates a repository over [apiClient].
   ///
@@ -99,8 +99,11 @@ class FeaturedTabsRepository {
   /// not allow viewers under 18. The public config endpoint is shared-cacheable
   /// and therefore not personalized, so this gate is the client's
   /// responsibility.
+  /// [requiredFeaturedFeedId] selects only that feed, retaining all eligibility
+  /// gates and returning no tab if it is absent or ineligible.
   Future<FeaturedTabsSnapshot> refresh({
     required bool gateAgeRestrictedContent,
+    String? requiredFeaturedFeedId,
   }) async {
     final sequence = ++_refreshSequence;
     try {
@@ -117,9 +120,13 @@ class FeaturedTabsRepository {
       return _resolve(
         response,
         gateAgeRestrictedContent: gateAgeRestrictedContent,
+        requiredFeaturedFeedId: requiredFeaturedFeedId,
       );
     } on FunnelcakeException {
-      return _fromCache(gateAgeRestrictedContent: gateAgeRestrictedContent);
+      return _fromCache(
+        gateAgeRestrictedContent: gateAgeRestrictedContent,
+        requiredFeaturedFeedId: requiredFeaturedFeedId,
+      );
     }
   }
 
@@ -182,7 +189,10 @@ class FeaturedTabsRepository {
     _cachedAt = null;
   }
 
-  FeaturedTabsSnapshot _fromCache({required bool gateAgeRestrictedContent}) {
+  FeaturedTabsSnapshot _fromCache({
+    required bool gateAgeRestrictedContent,
+    String? requiredFeaturedFeedId,
+  }) {
     final cached = _cached;
     final cachedAt = _cachedAt;
     if (cached == null || cachedAt == null) {
@@ -192,16 +202,24 @@ class FeaturedTabsRepository {
       clearCache();
       return const FeaturedTabsSnapshot();
     }
-    return _resolve(cached, gateAgeRestrictedContent: gateAgeRestrictedContent);
+    return _resolve(
+      cached,
+      gateAgeRestrictedContent: gateAgeRestrictedContent,
+      requiredFeaturedFeedId: requiredFeaturedFeedId,
+    );
   }
 
   FeaturedTabsSnapshot _resolve(
     FeaturedTabsResponse response, {
     required bool gateAgeRestrictedContent,
+    String? requiredFeaturedFeedId,
   }) {
     final now = _now();
     FeaturedTabConfig? eligible;
     for (final tab in response.tabs) {
+      if (requiredFeaturedFeedId != null && tab.id != requiredFeaturedFeedId) {
+        continue;
+      }
       if (_isEligible(
         tab,
         now: now,

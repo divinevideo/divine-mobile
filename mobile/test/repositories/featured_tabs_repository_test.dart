@@ -63,6 +63,73 @@ void main() {
       );
     }
 
+    test(
+      'campaign selects the second active feed and clears it when removed',
+      () async {
+        final repository = buildRepository();
+        stubTabs([_tab(id: 'ft_a'), _tab(id: 'ft_b')]);
+        final selected = await repository.refresh(
+          gateAgeRestrictedContent: false,
+          requiredFeaturedFeedId: 'ft_b',
+        );
+        expect(selected.tab?.id, 'ft_b');
+        stubTabs([_tab(id: 'ft_a')]);
+        final removed = await repository.refresh(
+          gateAgeRestrictedContent: false,
+          requiredFeaturedFeedId: 'ft_b',
+        );
+        expect(removed.tab, isNull);
+      },
+    );
+
+    test(
+      'campaign cache retains selection and never falls back after removal',
+      () async {
+        final repository = buildRepository();
+        stubTabs([_tab(id: 'ft_a'), _tab(id: 'ft_b')]);
+        await repository.refresh(gateAgeRestrictedContent: false);
+        stubFailure();
+        expect(
+          (await repository.refresh(
+            gateAgeRestrictedContent: false,
+            requiredFeaturedFeedId: 'ft_b',
+          )).tab?.id,
+          'ft_b',
+        );
+        stubTabs([_tab(id: 'ft_a')]);
+        await repository.refresh(gateAgeRestrictedContent: false);
+        stubFailure();
+        expect(
+          (await repository.refresh(
+            gateAgeRestrictedContent: false,
+            requiredFeaturedFeedId: 'ft_b',
+          )).tab,
+          isNull,
+        );
+      },
+    );
+
+    test('required campaign feed still passes age and expiry gates', () async {
+      final repository = buildRepository();
+      stubTabs([_tab(id: 'ft_a', visibleToMinors: true), _tab(id: 'ft_b')]);
+      expect(
+        (await repository.refresh(
+          gateAgeRestrictedContent: true,
+          requiredFeaturedFeedId: 'ft_b',
+        )).tab,
+        isNull,
+      );
+      stubFailure();
+      clock = clock.add(FeaturedTabsRepository.defaultCacheTtl);
+      expect(
+        (await repository.refresh(
+          gateAgeRestrictedContent: false,
+          requiredFeaturedFeedId: 'ft_b',
+        )).tab,
+        isNull,
+      );
+    });
+
     group('eligibility', () {
       test('returns the tab when every gate passes', () async {
         stubTabs([_tab()]);

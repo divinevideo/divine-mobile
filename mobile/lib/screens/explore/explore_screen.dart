@@ -109,6 +109,7 @@ class ExploreScreen extends ConsumerWidget {
           create: (_) {
             final cubit = FeaturedTabsCubit(
               repository: featuredTabsRepository,
+              requiredFeaturedFeedId: requiredFeaturedFeedId,
               gateAgeRestrictedContent: () =>
                   ref.read(featuredTabAgeGateProvider),
             );
