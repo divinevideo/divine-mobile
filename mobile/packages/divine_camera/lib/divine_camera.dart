@@ -8,6 +8,7 @@ import 'package:divine_camera/src/models/camera_state.dart';
 import 'package:divine_camera/src/models/flash_mode.dart';
 import 'package:divine_camera/src/models/photo_capture_result.dart';
 import 'package:divine_camera/src/models/remote_record_trigger.dart';
+import 'package:divine_camera/src/models/secondary_camera_state.dart';
 import 'package:divine_camera/src/models/video_quality.dart';
 import 'package:divine_camera/src/models/video_recording_result.dart';
 import 'package:divine_camera/src/models/video_stabilization_mode.dart';
@@ -22,6 +23,7 @@ export 'src/models/camera_zoom_state.dart';
 export 'src/models/flash_mode.dart';
 export 'src/models/photo_capture_result.dart';
 export 'src/models/remote_record_trigger.dart';
+export 'src/models/secondary_camera_state.dart';
 export 'src/models/video_quality.dart';
 export 'src/models/video_recording_result.dart';
 export 'src/models/video_stabilization_mode.dart';
@@ -349,6 +351,42 @@ class DivineCamera {
     }
   }
 
+  /// Turns dual-camera capture on or off.
+  ///
+  /// While on, the front and the back camera run at once. [lens] keeps
+  /// filling the main preview and recording with sound; the opposite camera
+  /// feeds [secondaryCamera] and records a second, silent file of every take,
+  /// returned as [VideoRecordingResult.secondary]. [switchCamera] swaps the
+  /// two cameras' roles.
+  ///
+  /// The session is rebuilt, so the preview holds its last frame meanwhile,
+  /// like during a lens switch.
+  ///
+  /// Returns true when the requested state is in effect. Returns false on a
+  /// device without [isDualCameraSupported], while recording, and while a
+  /// lens switch is in flight.
+  Future<bool> setDualCameraEnabled({required bool enabled}) async {
+    if (enabled == _state.isDualCameraEnabled) return true;
+    if (!_state.isDualCameraSupported ||
+        _state.isRecording ||
+        _state.isSwitchingCamera) {
+      return false;
+    }
+
+    _state = _state.copyWith(isSwitchingCamera: true);
+    _notifyStateChanged();
+
+    // Reset the flag in `finally` for the same reason as [switchCamera]: a
+    // thrown rebuild must not strand `isSwitchingCamera` true.
+    try {
+      _state = await _platform.setDualCameraEnabled(enabled: enabled);
+      return _state.isDualCameraEnabled == enabled;
+    } finally {
+      _state = _state.copyWith(isSwitchingCamera: false);
+      _notifyStateChanged();
+    }
+  }
+
   /// Starts video recording.
   ///
   /// [maxDuration] optionally limits the recording duration.
@@ -537,6 +575,15 @@ class DivineCamera {
 
   /// The texture ID for the camera preview.
   int? get textureId => _state.textureId;
+
+  /// Whether the device can run its front and back camera at the same time.
+  bool get isDualCameraSupported => _state.isDualCameraSupported;
+
+  /// Whether dual-camera capture is on.
+  bool get isDualCameraEnabled => _state.isDualCameraEnabled;
+
+  /// The second camera while dual-camera capture is on, null otherwise.
+  SecondaryCameraState? get secondaryCamera => _state.secondaryCamera;
 
   /// The currently active camera lens (front or back).
   DivineCameraLens get lens => _state.lens;
