@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -78,7 +79,9 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.text('Loop makers'), findsNothing);
           expect(
-            find.text('No communities found yet. Pull down to try again.'),
+            find.text(
+              lookupAppLocalizations(const Locale('en')).badgeDiscoveryEmpty,
+            ),
             findsOneWidget,
           );
           verify(repository.loadPublicDefinitions).called(2);
@@ -135,13 +138,10 @@ void main() {
           const ExploreBadgesState(status: ExploreBadgesStatus.loaded),
         );
         await tester.pumpWidget(buildSubject());
-        expect(find.text('Badges bring people together'), findsOneWidget);
+        expect(find.text(l10n.badgeDiscoveryTitle), findsOneWidget);
         expect(find.text('badges.divine.video'), findsOneWidget);
-        expect(
-          find.textContaining('Anyone can create and award badges.'),
-          findsOneWidget,
-        );
-        expect(find.text('My badges'), findsOneWidget);
+        expect(find.text(l10n.badgeDiscoveryBody), findsOneWidget);
+        expect(find.text(l10n.badgeDiscoveryMyBadges), findsOneWidget);
       },
     );
 
@@ -162,7 +162,10 @@ void main() {
       expect(launcher.launched.single.useExternalApplication, isTrue);
     });
 
-    for (final action in ['New badge', 'My badges']) {
+    for (final action in [
+      l10n.badgesCreateAction,
+      l10n.badgeDiscoveryMyBadges,
+    ]) {
       testWidgets('signed-out $action uses the existing sign-in route', (
         tester,
       ) async {
@@ -212,16 +215,25 @@ void main() {
           tester.view.devicePixelRatio = 1;
           addTearDown(tester.view.resetPhysicalSize);
           addTearDown(tester.view.resetDevicePixelRatio);
+          final second = Nip58BadgeDefinition(
+            event: _definition.event,
+            coordinate: '30009:$_issuer:second-group',
+            dTag: 'second-group',
+            name: 'Second group',
+          );
           when(() => cubit.state).thenReturn(
             ExploreBadgesState(
               status: ExploreBadgesStatus.loaded,
-              definitions: [_definition],
+              definitions: [_definition, second],
             ),
           );
+          final fallbacks = VineThemeColors.debugFallbackCount;
           await tester.pumpWidget(
             testProviderScope(
               child: MaterialApp(
-                theme: ThemeData(brightness: brightness),
+                theme: brightness == Brightness.light
+                    ? VineTheme.lightTheme
+                    : VineTheme.theme,
                 localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 builder: (context, child) => MediaQuery(
@@ -240,7 +252,18 @@ void main() {
           );
           await tester.pumpAndSettle();
           await tester.scrollUntilVisible(find.text('Loop makers'), 200);
+          await tester.pump();
           expect(find.text('Loop makers'), findsOneWidget);
+          expect(
+            tester.getTopLeft(find.byType(BadgeCommunityCard).first).dx,
+            tester
+                .getTopLeft(
+                  find.byType(BadgeCommunityCard, skipOffstage: false).last,
+                )
+                .dx,
+            reason: 'narrow width and large text stack cards in one column',
+          );
+          expect(VineThemeColors.debugFallbackCount, fallbacks);
           expect(tester.takeException(), isNull);
         },
       );
