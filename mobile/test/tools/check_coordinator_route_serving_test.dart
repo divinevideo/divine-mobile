@@ -1,5 +1,5 @@
-// ABOUTME: Exercises the release route wrapper without unrelated native hooks.
-// ABOUTME: Verifies live HTTP checks and failure exits in a package with a failing hook.
+// ABOUTME: Runs check_coordinator_route_serving.sh against loopback servers.
+// ABOUTME: Proves it skips dependency build hooks and forwards exit codes.
 
 import 'dart:convert';
 import 'dart:io';
