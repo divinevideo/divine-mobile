@@ -30,6 +30,23 @@ class _HeldHistoryRead extends QueryInterceptor {
   }
 }
 
+class _HeldHistoryWrite extends QueryInterceptor {
+  final entered = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<void> runBatched(
+    QueryExecutor executor,
+    BatchedStatements statements,
+  ) async {
+    await executor.runBatched(statements);
+    if (!entered.isCompleted) {
+      entered.complete();
+      await release.future;
+    }
+  }
+}
+
 void main() {
   group('SeenVideosService', () {
     late SeenVideosService service;
@@ -354,5 +371,108 @@ void main() {
         isNull,
       );
     });
+
+    test(
+      'does not mark migration done when a switch starts mid-migration',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          SeenVideosService.seenVideosMetricsStorageKey: jsonEncode([
+            SeenVideoMetrics(
+              videoId: 'outgoing_view',
+              firstSeenAt: DateTime(2026),
+              lastSeenAt: DateTime(2026),
+            ).toJson(),
+          ]),
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final heldWrite = _HeldHistoryWrite();
+        final db = AppDatabase.test(
+          NativeDatabase.memory().interceptWith(heldWrite),
+        );
+        final service = SeenVideosService(database: db, prefsOverride: prefs);
+        addTearDown(() async {
+          if (!heldWrite.release.isCompleted) heldWrite.release.complete();
+          await service.dispose();
+          await db.close();
+        });
+        final initializing = service.initialize();
+        await heldWrite.entered.future;
+
+        service.suspend();
+        heldWrite.release.complete();
+        await initializing;
+
+        expect(
+          prefs.getBool(SeenVideosService.seenVideosMigratedStorageKey),
+          isNull,
+        );
+      },
+    );
+
+    test(
+      'keeps history read during a switch that rolls back',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final heldRead = _HeldHistoryRead();
+        final db = AppDatabase.test(
+          NativeDatabase.memory().interceptWith(heldRead),
+        );
+        final now = DateTime.now().millisecondsSinceEpoch;
+        await db.seenVideosDao.markSeen(
+          'database_view',
+          firstSeenAt: now,
+          lastSeenAt: now,
+        );
+        final service = SeenVideosService(database: db, prefsOverride: prefs);
+        addTearDown(() async {
+          if (!heldRead.release.isCompleted) heldRead.release.complete();
+          await service.dispose();
+          await db.close();
+        });
+        final initializing = service.initialize();
+        await heldRead.entered.future;
+
+        service.suspend();
+        heldRead.release.complete();
+        await initializing;
+        service.resume();
+
+        expect(service.wasSeenRecently('database_view'), isTrue);
+      },
+    );
+
+    test(
+      'keeps database history when a legacy list loads during a switch',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          SeenVideosService.legacySeenVideosStorageKey: ['legacy_view'],
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final db = AppDatabase.test(NativeDatabase.memory());
+        final now = DateTime.now().millisecondsSinceEpoch;
+        await db.seenVideosDao.markSeen(
+          'database_view',
+          firstSeenAt: now,
+          lastSeenAt: now,
+        );
+        final service = SeenVideosService(database: db, prefsOverride: prefs);
+        addTearDown(() async {
+          await service.dispose();
+          await db.close();
+        });
+
+        service.suspend();
+        await service.initialize();
+        service.resume();
+
+        expect(service.hasSeenVideo('legacy_view'), isTrue);
+        expect(service.wasSeenRecently('database_view'), isTrue);
+        expect(
+          prefs.getStringList(SeenVideosService.legacySeenVideosStorageKey),
+          ['legacy_view'],
+        );
+      },
+    );
   });
 }

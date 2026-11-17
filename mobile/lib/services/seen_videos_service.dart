@@ -261,17 +261,15 @@ class SeenVideosService {
             initializationTrace: trace,
             initializationPhases: phases,
           );
-          if (_suspended) return;
-          await _prefs!.remove(legacySeenVideosStorageKey);
+          if (!_suspended) {
+            await _prefs!.remove(legacySeenVideosStorageKey);
+          }
         }
       }
       if (_effectiveDb != null) {
         try {
           phases.startPhase('database_read_ms');
           final dbRows = await _effectiveDb!.seenVideosDao.getAll();
-          // Initialization can outlive the outgoing account's suspension too.
-          // Do not migrate its cached metrics into the incoming account's table.
-          if (_suspended) return;
           phases.startPhase('database_merge_ms');
           trace.setMetric('database_rows', dbRows.length);
           for (final row in dbRows) {
@@ -283,6 +281,9 @@ class SeenVideosService {
               _seenLastSeen[row.videoId] = lastSeen;
             }
           }
+          // Keep what was read, so a switch that rolls back keeps it, but do
+          // not migrate into the table the incoming account now owns.
+          if (_suspended) return;
           final migrated =
               _prefs!.getBool(seenVideosMigratedStorageKey) ?? false;
           if (!migrated && dbRows.isEmpty && _seenVideos.isNotEmpty) {
@@ -642,7 +643,8 @@ class SeenVideosService {
   /// the incoming sign-in clears the device-wide history. The outgoing feed
   /// records its last view as it is torn down, after that cleanup, and the
   /// next account would load it as its own (#8313). A save still waiting on
-  /// its debounce is not written; the history in memory is kept.
+  /// its debounce is not written; the history in memory is kept, and an
+  /// initialization still running keeps loading history but writes nothing.
   void suspend() => _suspended = true;
 
   /// Undoes [suspend], for a switch that rolled back and left this account
