@@ -20,6 +20,7 @@ import 'package:openvine/router/deep_link_coordinator.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/services/firebase_initialization.dart';
@@ -32,6 +33,7 @@ import 'package:openvine/services/notification_helpers.dart'
         parseFcmPayload;
 import 'package:openvine/services/notification_target_resolver.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/utils/npub_hex.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Whether the background isolate should render a local notification for
@@ -422,11 +424,22 @@ void _pushVideoDeepLink(
 
 /// Opens the actor's profile. Used for follow taps and as the fallback when a
 /// video target cannot be resolved.
+///
+/// An actor who is the signed-in account, such as on a notification left in
+/// the tray from before an account switch, opens the Profile tab: a push of
+/// your own viewer route stacks a second shell page (#11097).
 void _navigateToNotificationProfile(
   ProviderContainer container,
   String actorPubkeyHex,
 ) {
   final npub = NostrKeyUtils.encodePubKey(actorPubkeyHex);
+  final currentUserHex = container
+      .read(authServiceProvider)
+      .currentPublicKeyHex;
+  if (routeIdentifiesUser(npub, currentUserHex)) {
+    container.read(goRouterProvider).go(ProfileScreenRouter.pathForNpub(npub));
+    return;
+  }
   _pushRoute(container, OtherProfileScreen.pathForNpub(npub));
 }
 

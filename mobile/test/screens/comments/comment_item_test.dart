@@ -36,6 +36,7 @@ import 'package:openvine/widgets/user_avatar.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../builders/comment_builder.dart';
+import '../../helpers/test_provider_overrides.dart';
 
 class _FakeNostrClient implements NostrClient {
   const _FakeNostrClient();
@@ -964,6 +965,8 @@ void main() {
         ProviderScope(
           overrides: [
             _signedOutSession,
+            // Opening a profile asks who is signed in (#11097).
+            authServiceProvider.overrideWithValue(createMockAuthService()),
             userProfileReactiveProvider(
               _testHexPubkey,
             ).overrideWith((ref) => Stream.value(profile)),

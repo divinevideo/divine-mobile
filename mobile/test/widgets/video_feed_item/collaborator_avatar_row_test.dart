@@ -5,12 +5,15 @@ import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/widgets/video_feed_item/collaborator_avatar_row.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -572,6 +575,75 @@ void main() {
       expect(find.text('Alice'), findsOneWidget);
       expect(find.text('Bob'), findsOneWidget);
       expect(find.text('Casey'), findsOneWidget);
+    });
+
+    // Pushing your own viewer route from above the tab shell stacks a second
+    // shell page (#11097), so the picker row naming you goes to your tab.
+    testWidgets('picker row naming you opens your Profile tab', (tester) async {
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const Scaffold(
+              body: CollaboratorAvatarRowBody(
+                visibility: CollaboratorVisibility(
+                  taggedPubkeys: [_collab1, _collab2, _collab3],
+                  statusByPubkey: {
+                    _collab1: CollaboratorStatus.confirmed,
+                    _collab2: CollaboratorStatus.confirmed,
+                    _collab3: CollaboratorStatus.confirmed,
+                  },
+                  currentUserPubkey: _collab2,
+                  creatorPubkey: _creatorPubkey,
+                  isResolved: true,
+                ),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: ProfileScreenRouter.pathWithNpub,
+            builder: (_, _) => const Scaffold(body: Text('profile tab')),
+          ),
+          GoRoute(
+            path: OtherProfileScreen.pathWithNpub,
+            builder: (_, _) => const Scaffold(body: Text('profile viewer')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authServiceProvider.overrideWithValue(
+              createMockAuthService(currentPublicKeyHex: _collab2),
+            ),
+            fetchUserProfileProvider(
+              _collab1,
+            ).overrideWith((ref) async => _makeProfile(_collab1, 'Alice')),
+            fetchUserProfileProvider(
+              _collab2,
+            ).overrideWith((ref) async => _makeProfile(_collab2, 'Bob')),
+            fetchUserProfileProvider(
+              _collab3,
+            ).overrideWith((ref) async => _makeProfile(_collab3, 'Casey')),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(_l10n.videoCollaboratorWithMore('Alice', 2)));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Bob'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('profile tab'), findsOneWidget);
+      expect(find.text('profile viewer'), findsNothing);
     });
 
     testWidgets('picker sizes to its rows instead of a fixed fraction', (

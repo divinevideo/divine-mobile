@@ -10,8 +10,14 @@ import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/notifications/notification_tap_router.dart';
 import 'package:openvine/providers/analytics_providers.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/services/notification_helpers.dart';
+
+import '../helpers/test_provider_overrides.dart';
+import '../helpers/test_pubkeys.dart';
 
 class _MockGoRouter extends Mock implements GoRouter {}
 
@@ -105,6 +111,60 @@ void main() {
         verify(() => routerA.go(destination)).called(1);
       });
     }
+
+    group('follow tap', () {
+      Future<void> tapFollowFrom(String actorHex) async {
+        final container = ProviderContainer(
+          overrides: [
+            goRouterProvider.overrideWithValue(routerA),
+            notificationAnalyticsTrackerProvider.overrideWithValue(
+              disabledTracker(),
+            ),
+            authServiceProvider.overrideWithValue(
+              createMockAuthService(currentPublicKeyHex: syntheticTestPubkey),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        containerA.dispose();
+        when(() => routerA.push<void>(any())).thenAnswer((_) async {});
+
+        await routeNotificationTap(
+          openSource: NotificationOpenSource.osBackground,
+          referencedAddress: null,
+          referencedEventId: null,
+          eventId: null,
+          notificationType: 'follow',
+          senderPubkey: actorHex,
+          container: container,
+          tapTargetType: null,
+          tapTargetValue: null,
+        );
+      }
+
+      // A notification left in the tray from before an account switch can
+      // name the account now signed in; pushing your own viewer route stacks
+      // a second tab shell (#11097).
+      test('opens your own Profile tab when you are the actor', () async {
+        await tapFollowFrom(syntheticTestPubkey);
+
+        verify(
+          () => routerA.go(ProfileScreenRouter.pathForNpub(syntheticTestNpub)),
+        ).called(1);
+        verifyNever(() => routerA.push<void>(any()));
+      });
+
+      test("pushes another actor's profile viewer", () async {
+        await tapFollowFrom(syntheticOtherTestPubkey);
+
+        verify(
+          () => routerA.push<void>(
+            OtherProfileScreen.pathForNpub(syntheticOtherTestNpub),
+          ),
+        ).called(1);
+        verifyNever(() => routerA.go(any()));
+      });
+    });
   });
 
   group('routeBackgroundPushTap', () {

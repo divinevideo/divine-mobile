@@ -701,15 +701,18 @@ class _TappableUserChip extends ConsumerWidget {
     // sheet (the router is not in the modal's widget tree).
     final hostContext = Navigator.of(context, rootNavigator: true).context;
     Navigator.of(context).pop();
+    final route = OtherProfileRouteData(npub: npub);
     // Defer to the next frame so the modal route's pop has settled in the
     // route stack before we push the destination route from the root
     // navigator's context.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!hostContext.mounted) return;
+      if (route.namesSignedInAccount(hostContext)) {
+        route.ownProfileTab.go(hostContext);
+        return;
+      }
       runDetached(
-        hostContext.pushWithVideoPause(
-          OtherProfileRouteData(npub: npub).location,
-        ),
+        hostContext.pushWithVideoPause(route.location),
         'open user profile',
         logName: 'MetadataUserChips',
         category: LogCategory.ui,

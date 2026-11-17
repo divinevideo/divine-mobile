@@ -31,6 +31,8 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/repositories/remix_consent_repository.dart';
 import 'package:openvine/router/routes/video_routes.dart';
+import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
@@ -2245,6 +2247,92 @@ void main() {
 
         expect(find.text('open sheet'), findsOneWidget);
         expect(find.text(_l10n(tester).metadataRepostedByLabel), findsNothing);
+      },
+    );
+
+    // Pushing your own viewer route from above the tab shell stacks a second
+    // shell page (#11097), so a chip naming you goes to your Profile tab.
+    testWidgetsWithSurfaceSize(
+      'a chip naming you opens your Profile tab, not the viewer route',
+      (tester) async {
+        when(() => mockRepostersCubit.state).thenReturn(
+          const VideoRepostersState(
+            pubkeys: [_reposterPubkey],
+            isLoading: false,
+          ),
+        );
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(
+              createMockSharedPreferences(),
+            ),
+            videosRepositoryProvider.overrideWithValue(mockVideosRepository),
+            authServiceProvider.overrideWithValue(
+              createMockAuthService(currentPublicKeyHex: _reposterPubkey),
+            ),
+            fetchUserProfileProvider(
+              _reposterPubkey,
+            ).overrideWith((ref) async => _makeProfile(_reposterPubkey, 'Me')),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, state) => Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    onPressed: () => showModalBottomSheet<void>(
+                      context: context,
+                      builder: (_) => MultiBlocProvider(
+                        providers: [
+                          BlocProvider<VideoInteractionsBloc>.value(
+                            value: mockInteractionsBloc,
+                          ),
+                          BlocProvider<VideoRepostersCubit>.value(
+                            value: mockRepostersCubit,
+                          ),
+                        ],
+                        child: MetadataRepostedBySection(video: _makeVideo()),
+                      ),
+                    ),
+                    child: const Text('open sheet'),
+                  ),
+                ),
+              ),
+            ),
+            GoRoute(
+              path: ProfileScreenRouter.pathWithNpub,
+              builder: (_, _) => const Scaffold(body: Text('profile tab')),
+            ),
+            GoRoute(
+              path: OtherProfileScreen.pathWithNpub,
+              builder: (_, _) => const Scaffold(body: Text('profile viewer')),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+        await tester.tap(find.text('open sheet'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Me'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('profile tab'), findsOneWidget);
+        expect(find.text('profile viewer'), findsNothing);
       },
     );
 

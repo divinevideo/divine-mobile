@@ -22,7 +22,9 @@ import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
@@ -359,6 +361,12 @@ void main() {
         builder: (_, state) =>
             OtherProfileScreenRouter(npub: state.pathParameters['npub']!),
       ),
+      // A root route above the shell, standing in for the fullscreen video
+      // feed a profile is opened from (#11097).
+      GoRoute(
+        path: RoutePaths.pooledFullscreenVideoFeed,
+        builder: (_, _) => const Scaffold(body: Text('fullscreen video')),
+      ),
     ],
   );
 
@@ -637,4 +645,73 @@ void main() {
       );
     },
   );
+
+  // Your own profile lives in the Profile tab. A push of your own viewer
+  // route from a root route above the shell was redirected into the shell,
+  // and go_router stacked a second copy of the shell page under the same
+  // key: a duplicate-key assertion in debug, your profile twice in release.
+  group('$OtherProfileRouteData.push from above the tab shell (#11097)', () {
+    Future<GoRouter> pumpFullscreenAboveShell(WidgetTester tester) async {
+      final router = buildShellRouter(VideoFeedPage.pathForIndex(0));
+      await pumpRouter(tester, router);
+      unawaited(router.push<void>(RoutePaths.pooledFullscreenVideoFeed));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('fullscreen video'), findsOneWidget);
+      return router;
+    }
+
+    int shellCopies(GoRouter router) => router
+        .routerDelegate
+        .currentConfiguration
+        .matches
+        .whereType<ShellRouteMatch>()
+        .length;
+
+    testWidgets('opens your own Profile tab instead of a second shell', (
+      tester,
+    ) async {
+      final router = await pumpFullscreenAboveShell(tester);
+
+      unawaited(
+        OtherProfileRouteData(
+          npub: meNpub,
+        ).push<void>(tester.element(find.text('fullscreen video'))),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(tester.takeException(), isNull);
+      expect(shellCopies(router), equals(1));
+      expect(find.text('fullscreen video'), findsNothing);
+      expect(find.byType(ProfileViewSwitcher), findsOneWidget);
+    });
+
+    testWidgets("still opens another user's viewer above the video", (
+      tester,
+    ) async {
+      final router = await pumpFullscreenAboveShell(tester);
+
+      unawaited(
+        OtherProfileRouteData(
+          npub: otherNpub,
+        ).push<void>(tester.element(find.text('fullscreen video'))),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(tester.takeException(), isNull);
+      expect(shellCopies(router), equals(1));
+      expect(find.byType(OtherProfileView), findsOneWidget);
+
+      router.pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byType(OtherProfileView), findsNothing);
+      expect(find.text('fullscreen video'), findsOneWidget);
+    });
+  });
 }
