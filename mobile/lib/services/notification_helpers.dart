@@ -85,8 +85,9 @@ abstract class NotificationWireValues {
   /// Campaign `tapTargetType` value for a creator's hex pubkey.
   static const String creatorProfile = 'creator_profile';
 
-  /// Campaign target types this client can open, advertised at push
-  /// registration so the push service sends only campaigns the app can route.
+  /// Campaign target types advertised at push registration. Each needs a branch
+  /// in the router (an `app_route` opens only allowlisted paths), and a test
+  /// fails when a listed type routes nowhere.
   static const List<String> campaignTargetTypes = [
     appRoute,
     videoAddress,

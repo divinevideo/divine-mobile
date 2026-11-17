@@ -9,8 +9,9 @@ app advertises it. A device capability never grants account marketing consent:
 Supported targets are Following (`app_route` with `/following/new`), a canonical
 kind-34236 coordinate with a 64-character lowercase hex creator pubkey and a
 nonempty d-tag (`video_address`), and a 64-character lowercase hex creator pubkey
-(`creator_profile`). The app advertises and routes the same list,
-`NotificationWireValues.campaignTargetTypes`.
+(`creator_profile`). Registration advertises
+`NotificationWireValues.campaignTargetTypes`, and a test checks that every type
+in that list routes a valid value.
 Campaigns reuse normal video/profile navigation. Malformed or unsupported targets
 open the inbox. HTTPS destinations remain unsupported.
 

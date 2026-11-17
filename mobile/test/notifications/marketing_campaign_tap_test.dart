@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/notifications/notification_tap_router.dart';
 import 'package:openvine/notifications/routing/notification_tap_target.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/services/notification_helpers.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -40,6 +41,26 @@ void main() {
       );
       expect(result.target, OpenProfileTarget(creator));
       expect(result.videoCoordinate, isNull);
+    });
+
+    test('every advertised target type routes a valid value', () {
+      final validValues = {
+        NotificationWireValues.appRoute: RoutePaths.followingNew,
+        NotificationWireValues.videoAddress: '34236:$creator:clip',
+        NotificationWireValues.creatorProfile: creator,
+      };
+      for (final type in NotificationWireValues.campaignTargetTypes) {
+        final result = pushNotificationTapTarget(
+          referencedAddress: null,
+          referencedEventId: null,
+          eventId: null,
+          notificationType: 'campaign',
+          senderPubkey: null,
+          tapTargetType: type,
+          tapTargetValue: validValues[type],
+        );
+        expect(result.target, isNot(const OpenInboxTarget()), reason: type);
+      }
     });
 
     for (final target in [
