@@ -408,6 +408,18 @@ void main() {
         expect(find.text(l10n.videoEditorLayerAnimationDrawOn), findsNothing);
       });
 
+      testWidgets('comes first, right after None', (tester) async {
+        await openPicker(tester, viewWidth: 800, allowDrawOn: true);
+
+        double left(String label) => tester.getTopLeft(find.text(label)).dx;
+        final none = left(l10n.videoEditorTransitionNone);
+        final drawOn = left(l10n.videoEditorLayerAnimationDrawOn);
+        final fade = left(l10n.videoEditorLayerAnimationFade);
+
+        expect(none, lessThan(drawOn));
+        expect(drawOn, lessThan(fade));
+      });
+
       testWidgets('draws a drawing at an even pace', (tester) async {
         await openPicker(tester, viewWidth: 800, allowDrawOn: true);
 
