@@ -195,6 +195,18 @@ void main() {
         );
       });
 
+      test('counts one open per revision across deliveries', () async {
+        for (final messageId in ['message-1', 'message-2']) {
+          await tracker.opened(
+            notificationType: 'campaign',
+            source: NotificationOpenSource.osBackground,
+            deduplicationKey: messageId,
+            campaignRevisionId: revision,
+          );
+        }
+        expect(sink.events, hasLength(1));
+      });
+
       test('is ignored on a non-campaign open', () async {
         await tracker.opened(
           notificationType: 'like',
