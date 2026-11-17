@@ -1,5 +1,5 @@
 // ABOUTME: Tests for AuthHeroSection widget
-// ABOUTME: Verifies hero text, sticker images, and the Divine wordmark logo
+// ABOUTME: Verifies hero text, stickers, and the Divine wordmark logo
 
 import 'dart:io';
 
@@ -71,11 +71,26 @@ void main() {
         expect(text.style?.color, equals(VineTheme.whiteText));
       });
 
-      testWidgets('displays logo and sticker SVGs', (tester) async {
+      testWidgets('displays the four hero stickers', (tester) async {
         await tester.pumpWidget(createTestWidget());
 
-        // 4 sticker SVGs + 1 logo SVG = 5 total
-        expect(find.byType(SvgPicture), findsNWidgets(5));
+        expect(
+          tester
+              .widgetList<DivineSticker>(find.byType(DivineSticker))
+              .map((sticker) => sticker.sticker),
+          unorderedEquals([
+            DivineStickerName.videoCamera,
+            DivineStickerName.teeth,
+            DivineStickerName.balloonDog,
+            DivineStickerName.discoBall,
+          ]),
+        );
+      });
+
+      testWidgets('draws the logo as its only SVG', (tester) async {
+        await tester.pumpWidget(createTestWidget());
+
+        expect(_svgAssetNames(tester), equals([_logoAssetPath]));
       });
     });
 

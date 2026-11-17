@@ -3,6 +3,7 @@
 
 import 'dart:io';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show VideoCategory;
 import 'package:openvine/widgets/categories/category_visuals.dart';
@@ -49,6 +50,55 @@ void main() {
         // A missing asset must not cost the category its fallback colors.
         expect(visuals.backgroundColor, isNotNull);
         expect(visuals.foregroundColor, isNotNull);
+      });
+    });
+
+    group('forCategory sticker', () {
+      CategorySticker? stickerFor(String slug, {int index = 0}) {
+        return CategoryVisuals.forCategory(
+          VideoCategory(name: slug, videoCount: 1),
+          index,
+        ).sticker;
+      }
+
+      test('gives every category with a designed sticker its sticker', () {
+        const illustrated = {
+          'animals': DivineStickerName.horse,
+          'food': DivineStickerName.pizzaSlice,
+          'sports': DivineStickerName.foamFinger,
+          'fashion': DivineStickerName.sunglasses,
+          'music': DivineStickerName.djController,
+          'art': DivineStickerName.ceramicHands,
+          'entertainment': DivineStickerName.psychedelicTv,
+          'family': DivineStickerName.toaster,
+          'comedy': DivineStickerName.chatteringTeeth,
+          'dance': DivineStickerName.discoBall,
+          'travel': DivineStickerName.luggage,
+          'education': DivineStickerName.schoolBackpack,
+          'gaming': DivineStickerName.gameController,
+          'news': DivineStickerName.newsCamera,
+          'nature': DivineStickerName.rainforest,
+          'fitness': DivineStickerName.pinkDumbbells,
+        };
+
+        for (final MapEntry(key: slug, value: sticker) in illustrated.entries) {
+          expect(stickerFor(slug)?.name, equals(sticker), reason: slug);
+        }
+      });
+
+      test('is case-insensitive on the slug', () {
+        expect(stickerFor('Animals')?.name, equals(DivineStickerName.horse));
+      });
+
+      test('does not depend on the fallback colour index', () {
+        expect(
+          stickerFor('comedy', index: 3)?.name,
+          equals(DivineStickerName.chatteringTeeth),
+        );
+      });
+
+      test('is null for a category the backend invents', () {
+        expect(stickerFor('fighting'), isNull);
       });
     });
 

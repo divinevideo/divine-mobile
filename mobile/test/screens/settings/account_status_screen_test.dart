@@ -447,6 +447,10 @@ void main() {
       await _pumpWith(tester, AccountEnforcementKind.noRestrictionReported);
 
       expect(find.text(l10n.accountStatusAllClearHeading), findsOneWidget);
+      expect(
+        tester.widget<DivineSticker>(find.byType(DivineSticker)).sticker,
+        equals(DivineStickerName.hangLoose),
+      );
       expect(find.text(l10n.supportContactSupport), findsNothing);
       expect(find.text(l10n.accountStatusMoveAccount), findsNothing);
     });

@@ -6,7 +6,6 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
@@ -204,11 +203,14 @@ void main() {
         );
       });
 
-      testWidgets('displays dog sticker', (tester) async {
+      testWidgets('displays the samoyed sticker', (tester) async {
         await tester.pumpWidget(createTestWidget());
         await tester.pumpAndSettle();
 
-        expect(find.byType(SvgPicture), findsAtLeast(1));
+        expect(
+          tester.widget<DivineSticker>(find.byType(DivineSticker)).sticker,
+          equals(DivineStickerName.samoyedDog),
+        );
       });
     });
 
@@ -229,6 +231,12 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('One last thing...'), findsOneWidget);
+        expect(
+          tester
+              .widgetList<DivineSticker>(find.byType(DivineSticker))
+              .map((sticker) => sticker.sticker),
+          contains(DivineStickerName.fingerPointing),
+        );
         expect(
           find.widgetWithText(DivineButton, 'Add email & password'),
           findsOneWidget,

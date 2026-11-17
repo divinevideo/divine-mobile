@@ -439,6 +439,7 @@ class _CategoryHeaderMascotSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sticker = visuals.sticker;
     return SizedBox(
       key: const Key('category-header-mascot-slot'),
       width: 149,
@@ -451,14 +452,35 @@ class _CategoryHeaderMascotSlot extends StatelessWidget {
           offset: const Offset(0, -12),
           child: Transform.rotate(
             angle: 8 * math.pi / 180,
-            child: CategoryGlyph(
-              assetPath: visuals.assetPath,
-              emoji: emoji,
-              height: 104,
-              width: 132,
-            ),
+            child: sticker != null
+                ? _CategoryHeaderSticker(sticker: sticker.name)
+                : CategoryGlyph(
+                    assetPath: visuals.assetPath,
+                    emoji: emoji,
+                    height: 104,
+                    width: 132,
+                  ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The category's sticker in the glyph's 132 × 104 box, as tall as the glyph
+/// it replaces. Decorative: the header already names the category.
+class _CategoryHeaderSticker extends StatelessWidget {
+  const _CategoryHeaderSticker({required this.sticker});
+
+  final DivineStickerName sticker;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: SizedBox(
+        width: 132,
+        height: 104,
+        child: Center(child: DivineSticker(sticker: sticker, size: 104)),
       ),
     );
   }

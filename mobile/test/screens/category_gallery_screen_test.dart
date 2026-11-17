@@ -3,6 +3,7 @@
 
 import 'package:categories_repository/categories_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +17,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/screens/category_gallery_screen.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/widgets/categories/category_glyph.dart';
 
 import '../helpers/test_provider_overrides.dart';
 
@@ -54,6 +56,47 @@ void main() {
 
   group('CategoryGalleryView', () {
     const category = VideoCategory(name: 'animals', videoCount: 1500);
+
+    group('header mascot', () {
+      Future<void> pumpHeader(WidgetTester tester, VideoCategory shown) {
+        return tester.pumpWidget(
+          buildSubject(
+            category: shown,
+            state: CategoriesState(
+              selectedCategory: shown,
+              videosStatus: CategoriesVideosStatus.loaded,
+            ),
+          ),
+        );
+      }
+
+      final mascot = find.descendant(
+        of: find.byKey(const Key('category-header-mascot-slot')),
+        matching: find.byType(DivineSticker),
+      );
+
+      testWidgets('draws the category sticker', (tester) async {
+        await pumpHeader(tester, category);
+
+        expect(
+          tester.widget<DivineSticker>(mascot).sticker,
+          equals(DivineStickerName.horse),
+        );
+        expect(find.byType(CategoryGlyph), findsNothing);
+      });
+
+      testWidgets('keeps the glyph for a category without a sticker', (
+        tester,
+      ) async {
+        await pumpHeader(
+          tester,
+          const VideoCategory(name: 'technology', videoCount: 12),
+        );
+
+        expect(mascot, findsNothing);
+        expect(find.byType(CategoryGlyph), findsOneWidget);
+      });
+    });
 
     testWidgets(
       'shows category title and picker trigger without inline sort labels',

@@ -1,6 +1,8 @@
 // ABOUTME: Categories discovery tab for the Explore screen.
 // ABOUTME: Renders the redesigned pinned-first category list and navigates to category detail.
 
+import 'dart:math' as math;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +19,20 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/categories/category_glyph.dart';
 import 'package:openvine/widgets/categories/category_visuals.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+/// Category tile metrics from the Figma category list.
+const _tileHeight = 96.0;
+const _tileRadius = 24.0;
+const _tileStartPadding = 24.0;
+const _tileVerticalPadding = 16.0;
+
+/// The square slot a sticker is centred on, and its inset from the tile's end.
+const _stickerSlotSize = 64.0;
+const _stickerSlotEndInset = 32.0;
+
+/// Text stops short of the sticker slot by the same gap the slot keeps from
+/// the tile's edge.
+const double _textEndPadding = _stickerSlotEndInset * 2 + _stickerSlotSize;
 
 class CategoriesTab extends ConsumerWidget {
   const CategoriesTab({super.key});
@@ -162,6 +178,9 @@ class _CategoryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localizedName = localizedCategoryName(context.l10n, category.name);
+    final sticker = visuals.sticker;
+    final borderRadius = BorderRadius.circular(_tileRadius);
+
     return Semantics(
       button: true,
       label: localizedName,
@@ -170,62 +189,117 @@ class _CategoryTile extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: borderRadius,
           child: Ink(
-            height: 96,
+            height: _tileHeight,
             decoration: BoxDecoration(
               color: visuals.backgroundColor,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: borderRadius,
             ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  child: MediaQuery.withClampedTextScaling(
-                    maxScaleFactor: fixedRowTextScaleLimit,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      spacing: 4,
-                      children: [
-                        Text(
-                          localizedName,
-                          style: VineTheme.headlineSmallFont(
-                            color: visuals.foregroundColor,
-                          ),
-                        ),
-                        Text(
-                          context.l10n.categoryVideoCount(
-                            category.videoCount,
-                            _formatCount(category.videoCount),
-                          ),
-                          style: VineTheme.labelMediumFont(
-                            color: visuals.foregroundColor.withValues(
-                              alpha: 0.9,
+            // Stickers are larger than the tile and bleed past it, so the
+            // tile's rounded edge is what cuts them.
+            child: ClipRRect(
+              borderRadius: borderRadius,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: _tileStartPadding,
+                      end: _textEndPadding,
+                      top: _tileVerticalPadding,
+                      bottom: _tileVerticalPadding,
+                    ),
+                    child: MediaQuery.withClampedTextScaling(
+                      maxScaleFactor: fixedRowTextScaleLimit,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        spacing: 4,
+                        children: [
+                          Text(
+                            localizedName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: VineTheme.headlineSmallFont(
+                              color: visuals.foregroundColor,
                             ),
                           ),
+                          Text(
+                            context.l10n.categoryVideoCount(
+                              category.videoCount,
+                              _formatCount(category.videoCount),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: VineTheme.labelMediumFont(
+                              color: visuals.foregroundColor.withValues(
+                                alpha: 0.9,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (sticker != null)
+                    _CategoryStickerSlot(sticker: sticker)
+                  else
+                    PositionedDirectional(
+                      end: 18,
+                      top: 0,
+                      bottom: 0,
+                      child: IgnorePointer(
+                        child: CategoryGlyph(
+                          assetPath: visuals.assetPath,
+                          emoji: category.emoji,
+                          height: 88,
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-                PositionedDirectional(
-                  end: 18,
-                  top: 0,
-                  bottom: 0,
-                  child: IgnorePointer(
-                    child: CategoryGlyph(
-                      assetPath: visuals.assetPath,
-                      emoji: category.emoji,
-                      height: 88,
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Places a category's sticker where design put it: centred on the slot at the
+/// tile's end, then moved, turned and allowed to overflow.
+class _CategoryStickerSlot extends StatelessWidget {
+  const _CategoryStickerSlot({required this.sticker});
+
+  final CategorySticker sticker;
+
+  @override
+  Widget build(BuildContext context) {
+    // The slot follows the reading direction, so the sideways nudge that
+    // pushes a sticker toward the tile's edge has to follow it too.
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final offset = isRtl
+        ? Offset(-sticker.offset.dx, sticker.offset.dy)
+        : sticker.offset;
+
+    return PositionedDirectional(
+      end: _stickerSlotEndInset,
+      top: (_tileHeight - _stickerSlotSize) / 2,
+      width: _stickerSlotSize,
+      height: _stickerSlotSize,
+      // Decorative: the tile already carries the category's label and tap.
+      child: IgnorePointer(
+        child: ExcludeSemantics(
+          child: OverflowBox(
+            maxWidth: sticker.size,
+            maxHeight: sticker.size,
+            child: Transform.translate(
+              offset: offset,
+              child: Transform.rotate(
+                angle: sticker.rotationDegrees * math.pi / 180,
+                child: DivineSticker(sticker: sticker.name, size: sticker.size),
+              ),
             ),
           ),
         ),

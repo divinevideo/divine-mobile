@@ -6,7 +6,6 @@
 import 'dart:math';
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/auth_back_button.dart';
@@ -226,17 +225,18 @@ class AuthFormScaffold extends StatelessWidget {
 
                           const SizedBox(height: 16),
 
-                          // Dog sticker
+                          // Dog sticker. Decorative: the form carries the screen.
                           Align(
                             alignment: AlignmentDirectional.centerEnd,
                             child: Transform.translate(
                               offset: const Offset(20, 0),
                               child: Transform.rotate(
                                 angle: 12 * pi / 180,
-                                child: SvgPicture.asset(
-                                  'assets/stickers/samoyed_dog.svg',
-                                  width: 174,
-                                  height: 174,
+                                child: const ExcludeSemantics(
+                                  child: DivineSticker(
+                                    sticker: DivineStickerName.samoyedDog,
+                                    size: 174,
+                                  ),
                                 ),
                               ),
                             ),
