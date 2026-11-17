@@ -7,11 +7,11 @@ tags:
 # validate each control actually changes recorder state, and leave every one
 # of them back on its default.
 #
-# Classic renders three controls where capture renders six and stop-motion
-# five: a lens switch, the grid toggle and the ghost toggle. There is no flash
-# control (classic has no rail at all), no aspect ratio (classic is square by
-# definition — the only mode whose `defaultAspectRatio` returns square), and
-# neither of the declared-only pair.
+# Classic renders three controls where capture renders six (seven with the
+# color mask) and stop-motion five: a lens switch, the grid toggle and the
+# ghost toggle. There is no flash control (classic has no rail at all), no
+# aspect ratio (classic is square by definition — the only mode whose
+# `defaultAspectRatio` returns square), and neither of the declared-only pair.
 #
 # All three are shared per-control utils: the lens switch with every mode that
 # renders a rail, the ghost toggle with capture and stop-motion, and
