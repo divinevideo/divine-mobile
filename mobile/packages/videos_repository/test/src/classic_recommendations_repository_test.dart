@@ -347,5 +347,81 @@ void main() {
         expect(requests.last.seed, isNot(requests.first.seed));
       },
     );
+
+    group('getClassicRecommendations', () {
+      test(
+        'discards a playable reply when the context changes in flight',
+        () async {
+          var current = true;
+          when(
+            () => api.getClassicRecommendations(request: request),
+          ).thenAnswer((_) async {
+            current = false;
+            return RecommendationsResponse(
+              videos: [_stats(1)],
+              source: 'mixed',
+              hasMore: true,
+              nextCursor: 'stale-next',
+            );
+          });
+
+          await expectLater(
+            repository.getClassicRecommendations(
+              request: request,
+              isCurrent: () => current,
+            ),
+            throwsA(isA<FunnelcakeException>()),
+          );
+          verify(
+            () => api.getClassicRecommendations(request: request),
+          ).called(1);
+        },
+      );
+    });
+
+    group('getClassicVideos', () {
+      test(
+        'rejects an archive fallback page when the context changes in flight',
+        () async {
+          var generation = 0;
+          final nostr = _Nostr();
+          when(() => nostr.publicKey).thenReturn('');
+          final browser = VideosRepository(
+            nostrClient: nostr,
+            funnelcakeApiClient: api,
+            classicRecommendationsEnabled: true,
+            classicViewerPubkey: () => _id(1000),
+            classicContextKey: () => generation,
+          );
+          when(
+            () => api.getClassicRecommendations(
+              request: any(named: 'request'),
+              userPubkey: _id(1000),
+            ),
+          ).thenThrow(
+            FunnelcakeNotFoundException(
+              resource: 'Classic recommendations',
+              url: 'https://api.example.com',
+            ),
+          );
+          var archiveReads = 0;
+          when(
+            () => api.getClassicVines(
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+            ),
+          ).thenAnswer((_) async {
+            if (archiveReads++ == 0) generation++;
+            return [_stats(1)];
+          });
+
+          await expectLater(
+            browser.getClassicVideos(),
+            throwsA(isA<FunnelcakeException>()),
+          );
+          expect(archiveReads, greaterThan(0));
+        },
+      );
+    });
   });
 }

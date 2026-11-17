@@ -556,5 +556,68 @@ void main() {
         );
       },
     );
+
+    group('resetContext', () {
+      test('does not send the previous context continuation cursor', () async {
+        final requests = <ClassicRecommendationsRequest>[];
+        final session = ClassicFeedSession(
+          loadPage: (request) async {
+            requests.add(request);
+            return _page([1, 2, 3], cursor: 'old-context-next');
+          },
+        );
+        addTearDown(session.dispose);
+        await session.loadInitial();
+        expect(session.state.cursor, 'old-context-next');
+
+        session.resetContext();
+        await session.settled;
+
+        expect(requests, hasLength(2));
+        expect(requests.last.cursor, isNull);
+      });
+    });
+
+    group('recordInteraction', () {
+      test(
+        'ignores an interaction recorded without personalization consent',
+        () async {
+          var allowed = false;
+          final requests = <ClassicRecommendationsRequest>[];
+          final session = ClassicFeedSession(
+            canPersonalize: () => allowed,
+            loadPage: (request) async {
+              requests.add(request);
+              return _page([1, 2, 3]);
+            },
+          );
+          addTearDown(session.dispose);
+          await session.loadInitial();
+
+          session.recordInteraction(
+            ClassicFeedInteraction(
+              videoId: _id(1),
+              signal: ClassicFeedSignal.positive,
+            ),
+          );
+          await session.settled;
+          expect(requests, hasLength(1));
+
+          allowed = true;
+          session.recordInteraction(
+            ClassicFeedInteraction(
+              videoId: _id(2),
+              signal: ClassicFeedSignal.completed,
+            ),
+          );
+          await session.settled;
+          expect(requests, hasLength(2));
+          expect(
+            requests.last.recentInteractions.map((i) => i.videoId),
+            [_id(2)],
+          );
+        },
+      );
+    });
   });
 }
