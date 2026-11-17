@@ -80,6 +80,44 @@ _fixture(
 void main() {
   group('ProfileRepository OG Diviner eligibility', () {
     test(
+      'notifies read-only consumers when hydration changes eligibility',
+      () async {
+        var user = _user();
+        final fixture = _fixture((_) => _response(user));
+        final ProfileReader reader = fixture.repository;
+        final changes = <String>[];
+        final subscription = reader.ogDivinerEligibilityChanges.listen(
+          changes.add,
+        );
+        addTearDown(subscription.cancel);
+
+        await fixture.repository.getUserProfileFromApi(pubkey: _pubkey);
+        await pumpEventQueue();
+        expect(changes, [_pubkey]);
+        expect(await reader.isOgDiviner(_pubkey), isTrue);
+
+        await fixture.repository.getUserProfileFromApi(pubkey: _pubkey);
+        await pumpEventQueue();
+        expect(changes, [
+          _pubkey,
+        ], reason: 'An unchanged answer must not refresh consumers.');
+
+        user = _user()..remove('is_og_diviner');
+        await fixture.repository.getUserProfileFromApi(pubkey: _pubkey);
+        await pumpEventQueue();
+        expect(changes, [_pubkey, _pubkey]);
+        expect(await reader.isOgDiviner(_pubkey), isFalse);
+
+        user = _user(eligible: false);
+        await fixture.repository.getUserProfileFromApi(pubkey: _pubkey);
+        await pumpEventQueue();
+        expect(changes, [_pubkey, _pubkey, _pubkey]);
+        expect(await reader.isOgDiviner(_pubkey), isFalse);
+        expect(fixture.requests, hasLength(4));
+      },
+    );
+
+    test(
       'shares answers across read-only and signing profile handles',
       () async {
         final fixture = _fixture((_) => _response(_user()));
