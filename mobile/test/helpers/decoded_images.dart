@@ -25,9 +25,10 @@ Future<void> pumpWithDecodedImages(
   WidgetTester tester,
   Widget app, {
   required Finder images,
+  Size imageSize = const Size(8, 12),
 }) async {
   await tester.runAsync(() async {
-    final pngPath = await _writePng();
+    final pngPath = await _writePng(imageSize);
     final cache = createMockMediaCacheManager();
     when(() => cache.getFileFromCache(any())).thenAnswer(
       (invocation) async => FileInfo(
@@ -56,13 +57,16 @@ Future<void> pumpWithDecodedImages(
   await tester.pumpAndSettle();
 }
 
-Future<String> _writePng() async {
+Future<String> _writePng(Size size) async {
   final recorder = ui.PictureRecorder();
   ui.Canvas(recorder).drawRect(
-    const Rect.fromLTWH(0, 0, 8, 12),
+    Rect.fromLTWH(0, 0, size.width, size.height),
     ui.Paint()..color = const Color(0xFF27C58B),
   );
-  final image = await recorder.endRecording().toImage(8, 12);
+  final image = await recorder.endRecording().toImage(
+    size.width.round(),
+    size.height.round(),
+  );
   final png = await image.toByteData(format: ui.ImageByteFormat.png);
   image.dispose();
   final dir = Directory.systemTemp.createTempSync('decoded_images_');

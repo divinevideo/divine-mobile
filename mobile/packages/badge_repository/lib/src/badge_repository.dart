@@ -647,12 +647,10 @@ class BadgeRepository {
     if (api == null || (_isHiddenPubkey?.call(coordinate.pubkey) ?? false)) {
       return const [];
     }
-    final holders = await api
-        .getBadgeHolderPreview(
-          creatorPubkey: coordinate.pubkey,
-          dTag: coordinate.identifier,
-        )
-        .timeout(const Duration(seconds: 10));
+    final holders = await api.getBadgeHolderPreview(
+      creatorPubkey: coordinate.pubkey,
+      dTag: coordinate.identifier,
+    );
     return withoutHiddenPubkeys(
       holders.where(isBadgePubkey).toSet(),
     ).take(3).toList(growable: false);

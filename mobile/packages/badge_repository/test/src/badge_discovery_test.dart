@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:badge_repository/badge_repository.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
@@ -191,6 +194,41 @@ void main() {
       );
     },
   );
+  test('slow successful preview stays within its owning client budget', () {
+    fakeAsync((clock) {
+      final response = Completer<List<String>>();
+      when(
+        () => api.getBadgeHolderPreview(creatorPubkey: issuer1, dTag: 'shared'),
+      ).thenAnswer((_) => response.future);
+      List<String>? result;
+      Object? failure;
+      unawaited(
+        repository
+            .loadHolderPreview(
+              BadgeCoordinate(pubkey: issuer1, identifier: 'shared'),
+            )
+            .then<void>(
+              (value) {
+                result = value;
+              },
+              onError: (Object error) {
+                failure = error;
+              },
+            ),
+      );
+      clock.elapse(const Duration(seconds: 11));
+      expect(
+        failure,
+        isNull,
+        reason: 'The API owns a 15-second whole-call deadline.',
+      );
+      expect(result, isNull);
+      response.complete([issuer2]);
+      clock.flushMicrotasks();
+      expect(result, [issuer2]);
+    });
+  });
+
   test(
     'preview caps distinct valid visible people without a relay holder walk',
     () async {

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -10,9 +11,12 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/blocs/badges/explore_badges_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/explore/tabs/explore_badges_tab.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -30,13 +34,64 @@ void main() {
     ),
   );
   group(ExploreBadgesTab, () {
+    for (final changeAccount in [false, true]) {
+      testWidgets(
+        '${changeAccount ? 'account' : 'policy'} change discards an outstanding old discovery',
+        (tester) async {
+          final repository = _MockBadgeRepository();
+          final auth = createMockAuthService();
+          final authChanges = StreamController<AuthState>();
+          addTearDown(authChanges.close);
+          when(() => auth.authStateStream)
+              .thenAnswer((_) => authChanges.stream);
+          final old = Completer<List<Nip58BadgeDefinition>>();
+          var loads = 0;
+          when(repository.loadPublicDefinitions)
+              .thenAnswer((_) => loads++ == 0 ? old.future : Future.value([]));
+          await tester.pumpWidget(
+            testProviderScope(
+              additionalOverrides: [
+                badgeRepositoryProvider.overrideWithValue(repository),
+                authServiceProvider.overrideWithValue(auth),
+              ],
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(body: ExploreBadgesTab()),
+              ),
+            ),
+          );
+          await tester.pump();
+          if (changeAccount) {
+            when(() => auth.currentPublicKeyHex)
+                .thenReturn('3'.padLeft(64, '0'));
+            authChanges.add(AuthState.authenticated);
+          } else {
+            final container = ProviderScope.containerOf(
+              tester.element(find.byType(ExploreBadgesTab)),
+            );
+            container.read(blocklistVersionProvider.notifier).increment();
+          }
+          await tester.pumpAndSettle();
+          old.complete([_definition]);
+          await tester.pumpAndSettle();
+          expect(find.text('Loop makers'), findsNothing);
+          expect(
+            find.text('No communities found yet. Pull down to try again.'),
+            findsOneWidget,
+          );
+          verify(repository.loadPublicDefinitions).called(2);
+        },
+      );
+    }
+
     testWidgets('loads community badges when the actual tab mounts', (
       tester,
     ) async {
       final repository = _MockBadgeRepository();
       when(() => repository.loadHolderPreview(any()))
           .thenAnswer((_) async => []);
-      when(() => repository.loadPublicDefinitions())
+      when(repository.loadPublicDefinitions)
           .thenAnswer((_) async => [_definition]);
       await tester.pumpWidget(
         testProviderScope(
@@ -51,7 +106,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      verify(() => repository.loadPublicDefinitions()).called(1);
+      verify(repository.loadPublicDefinitions).called(1);
       expect(find.text('Loop makers'), findsOneWidget);
     });
   });
@@ -170,7 +225,7 @@ void main() {
                 supportedLocales: AppLocalizations.supportedLocales,
                 builder: (context, child) => MediaQuery(
                   data: MediaQuery.of(context)
-                      .copyWith(textScaler: TextScaler.linear(2)),
+                      .copyWith(textScaler: const TextScaler.linear(2)),
                   child: child!,
                 ),
                 home: Scaffold(
@@ -316,7 +371,7 @@ void main() {
   });
 }
 
-final _issuer = '2'.padLeft(64, '0');
+final String _issuer = '2'.padLeft(64, '0');
 
 final _definition = Nip58BadgeDefinition(
   event: Event.fromJson({

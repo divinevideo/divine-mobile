@@ -32,6 +32,7 @@ import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/badges/widgets/badge_recipient_row.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/utils/badge_links.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/share_sheet.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -51,7 +52,7 @@ class BadgeDetailScreen extends ConsumerWidget {
 
   /// Path that opens the detail page for [coordinate].
   static String pathFor(BadgeCoordinate coordinate) =>
-      '/badges/b/${coordinate.toNaddr()}';
+      '/badges/b/${badgeRouteReference(coordinate)}';
 
   /// Creates the badge detail screen.
   const BadgeDetailScreen({required this.coordinate, super.key});
@@ -188,7 +189,7 @@ class BadgeDetailView extends StatelessWidget {
     BadgeCoordinate coordinate,
   ) async {
     final message = context.l10n.badgeDetailShareMessage(
-      'https://badges.divine.video/b/${coordinate.toNaddr()}',
+      badgeShareReference(coordinate),
     );
     await showShareSheet(context, ShareParams(text: message));
   }
