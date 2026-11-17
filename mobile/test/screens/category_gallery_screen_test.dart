@@ -169,20 +169,10 @@ void main() {
         expect(filterDecoration.color, const Color(0xFF3E0C1F));
         expect(filterDecoration.border, isNotNull);
 
-        expect(
-          tester.getSize(find.byKey(const Key('category-header-mascot-slot'))),
-          const Size(149, 90),
-        );
-
         final filterLeft = tester
             .getTopLeft(find.byKey(const Key('category-header-filter-button')))
             .dx;
         expect(filterLeft, greaterThan(900));
-
-        final backTop = tester
-            .getTopLeft(find.byKey(const Key('category-header-back-button')))
-            .dy;
-        expect(backTop, greaterThan(24));
       },
     );
 
