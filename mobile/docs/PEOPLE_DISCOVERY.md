@@ -3,8 +3,13 @@
 Find people recommends both active Divine accounts and classic Viners. The
 full-screen page is available from Explore and empty Following feeds. Profile
 setup can offer it as an optional step; Skip and Continue require no follows.
-Existing search and profile pages remain the way to look up a particular person
-or inspect their videos.
+Existing search and profile pages remain the way to look up a particular person.
+The permanent page uses a responsive two-column creator grid, collapsing to
+one column on narrow screens or with larger text. Shared cards lead with one
+eligible video thumbnail, followed by the creator identity, archive distinction,
+Follow and Dismiss. Tapping a thumbnail opens the existing video detail route
+with its full video id and creator public key; tapping the identity opens the
+profile.
 
 ## Release switches
 
@@ -36,6 +41,13 @@ local dismissals on every read. Dismissals stay on the device and are keyed to
 the signed-in account. Server policy exclusions still apply. Account changes
 retire in-flight requests and replace the visible discovery state.
 
+The optional `video_preview` response field carries `id`, `thumbnail_url` and an
+optional `blurhash` from the same eligible candidate. The mobile model ignores
+malformed optional previews while preserving a usable creator. Missing preview
+metadata shows a neutral profile fallback. Rendering uses the existing passive
+image-auth and blurhash widgets: no per-creator video fetch, fabricated video
+event, decoder or autoplay is started by a discovery card.
+
 ## Feed card
 
 When recommendations are ready before the viewer reaches the eleventh video,
@@ -45,9 +57,9 @@ new insertion opportunity; pagination preserves the current one. Returning to
 the same position may show the same card again.
 
 The native player keeps logical video indices unchanged, pauses playback on
-the card and emits no video activation for it. The card uses the same follow and
-dismiss operations as the permanent page. Keep watching advances to the next
-video; scrolling in either direction remains available. The slot stays stable
+the card and emits no video activation for it. A horizontal carousel uses the
+same creator cards, follow and dismiss operations as the permanent page.
+Keep watching advances to the next video; scrolling in either direction remains available. The slot stays stable
 when its suggestions are exhausted, so it cannot shift the visible feed.
 
 ## Measurements and next steps
@@ -55,8 +67,10 @@ when its suggestions are exhausted, so it cannot shift the visible feed.
 `people_suggestion_recorded` measures actual visible suggestion rows, confirmed
 follows (only after the held identity/release gate is approved) and successful
 dismissals with source and position only. Suggested
-pubkeys and imported identities are not sent. Onboarding skips use the existing
-onboarding event; Following-feed entries are a navigation proxy for subsequent
+pubkeys and imported identities are not sent. A creator card is exposed only
+when at least half of it is visible on an active, foreground surface; carousel
+peeks and thumbnail prefetch do not count. Image rendering emits no video views.
+Onboarding skips use the existing onboarding event; Following-feed entries are a navigation proxy for subsequent
 use, not proof of playback.
 
 The sourced comparison of contact and external-follow imports is maintained at

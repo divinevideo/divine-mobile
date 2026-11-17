@@ -24,6 +24,10 @@ void main() {
                     'profile': {'display_name': 'Creator'},
                     'reason': 'personalized',
                     'is_classic': false,
+                    'video_preview': {
+                      'id': 'd' * 64,
+                      'thumbnail_url': 'https://media.example.test/thumb.jpg',
+                    },
                   },
                   {
                     'pubkey': 'c' * 64,
@@ -48,6 +52,11 @@ void main() {
         expect(requested!.queryParameters['limit'], '3');
         expect(requested!.queryParameters['content_safety'], 'default');
         expect(result.suggestions.first.profile.displayName, 'Creator');
+        expect(result.suggestions.first.videoPreview!.id, 'd' * 64);
+        expect(
+          result.suggestions.first.videoPreview!.thumbnailUrl,
+          'https://media.example.test/thumb.jpg',
+        );
         expect(result.suggestions.last.isClassic, isTrue);
         expect(result.nextCursor, 'second');
       },
