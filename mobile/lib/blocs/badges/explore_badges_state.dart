@@ -22,9 +22,12 @@ class ExploreBadgesState extends Equatable {
     this.status = ExploreBadgesStatus.initial,
     this.definitions = const [],
     this.refreshFailures = 0,
-    this.visibleCount = 24,
+    this.visibleCount = pageSize,
     this.previews = const {},
   });
+
+  /// Cards revealed per page of the discovery window.
+  static const pageSize = 24;
 
   /// Loading status of [definitions].
   final ExploreBadgesStatus status;

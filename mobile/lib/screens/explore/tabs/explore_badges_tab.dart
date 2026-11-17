@@ -267,7 +267,7 @@ class _BadgeCardSkeleton extends StatelessWidget {
       spacing: 8,
       children: [
         AspectRatio(
-          aspectRatio: 177 / 120,
+          aspectRatio: badgeArtworkAspectRatio,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: context.vineColors.surfaceContainerHigh,

@@ -534,6 +534,18 @@ class BadgeRepository {
 
   static const _subscriptionsIdentifier = 'divine.badge_subscriptions';
 
+  /// Most recent badge definitions one discovery read asks for.
+  static const _discoveryWindowSize = 300;
+
+  /// Per-filter deletion limit; a read that fills it is incomplete.
+  static const _discoveryDeletionLimit = 1000;
+
+  /// Budget for each discovery read to settle on every relay.
+  static const _discoveryReadTimeout = Duration(seconds: 10);
+
+  /// Most accepted holders one community preview shows.
+  static const holderPreviewLimit = 3;
+
   /// A recent public discovery window, independent of the viewer's account.
   ///
   /// This is deliberately one bounded REQ rather than an exhaustive history
@@ -542,11 +554,11 @@ class BadgeRepository {
   Future<List<Nip58BadgeDefinition>> loadPublicDefinitions() async {
     final events = await _readDiscoveryWindow(
       [
-        Filter(kinds: [EventKind.badgeDefinition], limit: 300),
+        Filter(kinds: [EventKind.badgeDefinition], limit: _discoveryWindowSize),
       ],
     );
     final definitions = <String, Nip58BadgeDefinition>{};
-    for (final event in events.take(300)) {
+    for (final event in events.take(_discoveryWindowSize)) {
       if (!_isVerifiedDiscoveryEvent(event) ||
           (_isHiddenPubkey?.call(event.pubkey) ?? false)) {
         continue;
@@ -578,16 +590,16 @@ class BadgeRepository {
         kinds: [EventKind.eventDeletion],
         authors: issuers,
         a: definitions.keys.toList(),
-        limit: 1000,
+        limit: _discoveryDeletionLimit,
       ),
       Filter(
         kinds: [EventKind.eventDeletion],
         authors: issuers,
         e: definitions.values.map((d) => d.event.id).toList(),
-        limit: 1000,
+        limit: _discoveryDeletionLimit,
       ),
     ]);
-    if (deletions.length >= 1000) {
+    if (deletions.length >= _discoveryDeletionLimit) {
       throw const BadgeReadIncompleteException(
         'Badge discovery deletion window is incomplete',
       );
@@ -626,7 +638,7 @@ class BadgeRepository {
       tempRelays: relay == null ? null : [relay],
       relayTypes: relay == null ? RelayType.all : [RelayType.temp],
       useCache: false,
-      timeout: const Duration(seconds: 10),
+      timeout: _discoveryReadTimeout,
       requireAllRelaysSettled: true,
     );
     if (result.timedOut || result.noRelays) {
@@ -653,7 +665,7 @@ class BadgeRepository {
     );
     return withoutHiddenPubkeys(
       holders.where(isBadgePubkey).toSet(),
-    ).take(3).toList(growable: false);
+    ).take(holderPreviewLimit).toList(growable: false);
   }
 
   /// Definitions from the issuers selected for Explore.
