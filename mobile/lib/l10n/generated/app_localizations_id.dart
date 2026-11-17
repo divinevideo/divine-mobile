@@ -10659,6 +10659,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorCombineLabel => 'Gabungkan';
 
   @override
+  String get videoEditorSeparateLabel => 'Pisahkan';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'Pisahkan gambar menjadi goresan-goresannya';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'Gabungkan gambar terpilih menjadi satu lapisan';
 

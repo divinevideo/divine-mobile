@@ -3050,6 +3050,8 @@
   "videoEditorDuplicateLabel": "Duplizieren",
   "videoEditorDuplicateSelectedItemSemanticLabel": "Ausgewähltes Element duplizieren",
   "videoEditorCombineLabel": "Zusammenführen",
+  "videoEditorSeparateLabel": "Trennen",
+  "videoEditorSeparateDrawingSemanticLabel": "Zeichnung in einzelne Striche trennen",
   "videoEditorCombineDrawLayersSemanticLabel": "Ausgewählte Zeichnungen zu einer Ebene zusammenführen",
   "videoEditorLayerMultiSelectDoneSemanticLabel": "Auswahl der Zeichnungen abschließen",
   "videoEditorDeleteSelectedDrawingsSemanticLabel": "Ausgewählte Zeichnungen löschen",

@@ -18239,6 +18239,18 @@ abstract class AppLocalizations {
   /// **'Combine'**
   String get videoEditorCombineLabel;
 
+  /// Layer action-bar button that breaks the selected drawing into one layer per stroke, each staying where it was. The inverse of Combine; distinct from Split, which cuts a layer in time.
+  ///
+  /// In en, this message translates to:
+  /// **'Separate'**
+  String get videoEditorSeparateLabel;
+
+  /// Accessibility label for the button that breaks the selected drawing into one layer per stroke.
+  ///
+  /// In en, this message translates to:
+  /// **'Separate the drawing into its strokes'**
+  String get videoEditorSeparateDrawingSemanticLabel;
+
   /// No description provided for @videoEditorCombineDrawLayersSemanticLabel.
   ///
   /// In en, this message translates to:

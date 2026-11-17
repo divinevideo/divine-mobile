@@ -10798,6 +10798,13 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorCombineLabel => 'Combineren';
 
   @override
+  String get videoEditorSeparateLabel => 'Scheiden';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'Tekening in losse streken scheiden';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'Geselecteerde tekeningen samenvoegen tot één laag';
 

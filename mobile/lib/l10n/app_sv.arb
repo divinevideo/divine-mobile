@@ -3050,6 +3050,8 @@
   "videoEditorDuplicateLabel": "Duplicera",
   "videoEditorDuplicateSelectedItemSemanticLabel": "Duplicera valt objekt",
   "videoEditorCombineLabel": "Kombinera",
+  "videoEditorSeparateLabel": "Separera",
+  "videoEditorSeparateDrawingSemanticLabel": "Separera teckningen i enskilda drag",
   "videoEditorCombineDrawLayersSemanticLabel": "Kombinera valda teckningar till ett lager",
   "videoEditorLayerMultiSelectDoneSemanticLabel": "Klar med att välja teckningar",
   "videoEditorDeleteSelectedDrawingsSemanticLabel": "Ta bort valda teckningar",

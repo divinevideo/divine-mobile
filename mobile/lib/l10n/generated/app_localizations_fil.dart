@@ -10832,6 +10832,13 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorCombineLabel => 'Pagsamahin';
 
   @override
+  String get videoEditorSeparateLabel => 'Paghiwalayin';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'Paghiwalayin ang drawing sa bawat stroke nito';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'Pagsamahin ang mga napiling drawing sa isang layer';
 

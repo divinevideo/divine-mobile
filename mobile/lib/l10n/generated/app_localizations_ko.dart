@@ -10268,6 +10268,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorCombineLabel => '합치기';
 
   @override
+  String get videoEditorSeparateLabel => '획 나누기';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel => '그림을 획 단위로 나누기';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       '선택한 그림을 하나의 레이어로 합치기';
 

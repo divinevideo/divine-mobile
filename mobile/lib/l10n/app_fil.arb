@@ -2336,6 +2336,8 @@
   "videoEditorDuplicateLabel": "I-duplicate",
   "videoEditorDuplicateSelectedItemSemanticLabel": "I-duplicate ang napiling item",
   "videoEditorCombineLabel": "Pagsamahin",
+  "videoEditorSeparateLabel": "Paghiwalayin",
+  "videoEditorSeparateDrawingSemanticLabel": "Paghiwalayin ang drawing sa bawat stroke nito",
   "videoEditorCombineDrawLayersSemanticLabel": "Pagsamahin ang mga napiling drawing sa isang layer",
   "videoEditorLayerMultiSelectDoneSemanticLabel": "Tapos nang pumili ng mga drawing",
   "videoEditorDeleteSelectedDrawingsSemanticLabel": "Burahin ang mga napiling drawing",

@@ -208,6 +208,9 @@ enum DivineIconName {
   search('search'),
   selection('selection'),
   selectionFill('selection_fill'),
+
+  /// Two layers lying apart: separate a drawing into its strokes.
+  separate('separate'),
   share('share'),
   shareFat('share_fat'),
   shareFatDuo('share_fat_duo'),

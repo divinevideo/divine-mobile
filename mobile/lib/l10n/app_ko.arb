@@ -2182,6 +2182,8 @@
   "videoEditorDuplicateLabel": "복제",
   "videoEditorDuplicateSelectedItemSemanticLabel": "선택한 항목 복제",
   "videoEditorCombineLabel": "합치기",
+  "videoEditorSeparateLabel": "획 나누기",
+  "videoEditorSeparateDrawingSemanticLabel": "그림을 획 단위로 나누기",
   "videoEditorCombineDrawLayersSemanticLabel": "선택한 그림을 하나의 레이어로 합치기",
   "videoEditorLayerMultiSelectDoneSemanticLabel": "그림 선택 완료",
   "videoEditorDeleteSelectedDrawingsSemanticLabel": "선택한 그림 삭제",

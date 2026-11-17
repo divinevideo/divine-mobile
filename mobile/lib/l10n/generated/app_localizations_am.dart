@@ -10510,6 +10510,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorCombineLabel => 'አዋህድ';
 
   @override
+  String get videoEditorSeparateLabel => 'ለያይ';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel => 'ስዕሉን ወደ መስመሮቹ ለያይ';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'የተመረጡ ስዕሎችን ወደ አንድ ንብርብር አዋህድ';
 

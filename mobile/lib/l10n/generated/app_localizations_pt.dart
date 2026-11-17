@@ -10847,6 +10847,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorCombineLabel => 'Combinar';
 
   @override
+  String get videoEditorSeparateLabel => 'Desagrupar';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'Desagrupar o desenho nos seus traços';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'Combinar os desenhos selecionados numa camada';
 

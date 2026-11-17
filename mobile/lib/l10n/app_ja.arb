@@ -2636,6 +2636,8 @@
   "videoEditorDuplicateLabel": "複製",
   "videoEditorDuplicateSelectedItemSemanticLabel": "選択したアイテムを複製",
   "videoEditorCombineLabel": "結合",
+  "videoEditorSeparateLabel": "分解",
+  "videoEditorSeparateDrawingSemanticLabel": "描画をストロークごとに分解",
   "videoEditorCombineDrawLayersSemanticLabel": "選択した描画を1つのレイヤーに結合",
   "videoEditorLayerMultiSelectDoneSemanticLabel": "描画の選択を完了",
   "videoEditorDeleteSelectedDrawingsSemanticLabel": "選択した描画を削除",

@@ -14,13 +14,12 @@ import 'package:pro_video_editor/pro_video_editor.dart' show VideoSpeedRamp;
 
 /// Whether [layer] is a draw layer that can take part in a merge.
 ///
-/// Mirrors `pro_image_editor`'s `PaintLayerMergeManager.isMergeable`: a censor
-/// layer, a layer scheduled to a video-timeline window ([Layer.startTime] /
-/// [Layer.endTime]), or one carrying enter/leave animations, keyframes, a
-/// shape mask or a blend mode cannot be baked into a single static merged
-/// layer.
+/// See [PaintLayerMergeManager.isMergeable]: a censor layer, a layer scheduled
+/// to a video-timeline window ([Layer.startTime] / [Layer.endTime]), or one
+/// carrying enter/leave animations, keyframes, a shape mask or a blend mode
+/// cannot be baked into a single static merged layer.
 bool isMergeableDrawLayer(Layer? layer) =>
-    layer is PaintLayer && !layer.isCensor && _isStatic(layer);
+    layer is PaintLayer && PaintLayerMergeManager.isMergeable(layer);
 
 /// Whether [layer] is a sticker that can take part in a combine.
 ///

@@ -10885,6 +10885,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorCombineLabel => 'Zusammenführen';
 
   @override
+  String get videoEditorSeparateLabel => 'Trennen';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'Zeichnung in einzelne Striche trennen';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'Ausgewählte Zeichnungen zu einer Ebene zusammenführen';
 

@@ -2636,6 +2636,8 @@
   "videoEditorDuplicateLabel": "تكرار",
   "videoEditorDuplicateSelectedItemSemanticLabel": "تكرار العنصر المحدد",
   "videoEditorCombineLabel": "دمج",
+  "videoEditorSeparateLabel": "تفكيك",
+  "videoEditorSeparateDrawingSemanticLabel": "تفكيك الرسم إلى خطوطه",
   "videoEditorCombineDrawLayersSemanticLabel": "دمج الرسومات المحددة في طبقة واحدة",
   "videoEditorLayerMultiSelectDoneSemanticLabel": "إنهاء تحديد الرسومات",
   "videoEditorDeleteSelectedDrawingsSemanticLabel": "حذف الرسومات المحددة",

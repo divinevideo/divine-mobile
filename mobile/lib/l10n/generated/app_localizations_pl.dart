@@ -10978,6 +10978,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorCombineLabel => 'Połącz';
 
   @override
+  String get videoEditorSeparateLabel => 'Rozdziel';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'Rozdziel rysunek na pojedyncze pociągnięcia';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'Połącz wybrane rysunki w jedną warstwę';
 

@@ -3680,6 +3680,8 @@
   "videoEditorDuplicateLabel": "ማባዛት።",
   "videoEditorDuplicateSelectedItemSemanticLabel": "የተመረጠውን ንጥል ያባዛ",
   "videoEditorCombineLabel": "አዋህድ",
+  "videoEditorSeparateLabel": "ለያይ",
+  "videoEditorSeparateDrawingSemanticLabel": "ስዕሉን ወደ መስመሮቹ ለያይ",
   "videoEditorCombineDrawLayersSemanticLabel": "የተመረጡ ስዕሎችን ወደ አንድ ንብርብር አዋህድ",
   "videoEditorLayerMultiSelectDoneSemanticLabel": "ስዕሎችን መምረጥ ጨርስ",
   "videoEditorDeleteSelectedDrawingsSemanticLabel": "የተመረጡ ስዕሎችን ሰርዝ",

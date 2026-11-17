@@ -6088,6 +6088,8 @@
   "videoEditorDuplicateLabel": "నకిలీ",
   "videoEditorDuplicateSelectedItemSemanticLabel": "ఎంచుకున్న అంశం నకిలీ",
   "videoEditorCombineLabel": "కలపండి",
+  "videoEditorSeparateLabel": "విడదీయండి",
+  "videoEditorSeparateDrawingSemanticLabel": "డ్రాయింగ్‌ను దాని గీతలుగా విడదీయండి",
   "videoEditorCombineDrawLayersSemanticLabel": "ఎంచుకున్న డ్రాయింగ్‌లను ఒక లేయర్‌గా కలపండి",
   "videoEditorSplitLabel": "స్ప్లిట్",
   "videoEditorSplitSelectedClipSemanticLabel": "ఎంచుకున్న క్లిప్‌ని విభజించండి",

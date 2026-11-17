@@ -10750,6 +10750,13 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorCombineLabel => 'ملائیں';
 
   @override
+  String get videoEditorSeparateLabel => 'جدا کریں';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'ڈرائنگ کو اس کی لکیروں میں جدا کریں';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'منتخب ڈرائنگز کو ایک لیئر میں ملائیں';
 

@@ -3050,6 +3050,8 @@
   "videoEditorDuplicateLabel": "Duplichează",
   "videoEditorDuplicateSelectedItemSemanticLabel": "Duplichează elementul selectat",
   "videoEditorCombineLabel": "Combină",
+  "videoEditorSeparateLabel": "Separă",
+  "videoEditorSeparateDrawingSemanticLabel": "Separă desenul în liniile sale",
   "videoEditorCombineDrawLayersSemanticLabel": "Combină desenele selectate într-un singur strat",
   "videoEditorLayerMultiSelectDoneSemanticLabel": "Termină selectarea desenelor",
   "videoEditorDeleteSelectedDrawingsSemanticLabel": "Șterge desenele selectate",

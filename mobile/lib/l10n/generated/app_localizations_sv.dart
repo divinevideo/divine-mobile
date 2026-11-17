@@ -10753,6 +10753,13 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorCombineLabel => 'Kombinera';
 
   @override
+  String get videoEditorSeparateLabel => 'Separera';
+
+  @override
+  String get videoEditorSeparateDrawingSemanticLabel =>
+      'Separera teckningen i enskilda drag';
+
+  @override
   String get videoEditorCombineDrawLayersSemanticLabel =>
       'Kombinera valda teckningar till ett lager';
 

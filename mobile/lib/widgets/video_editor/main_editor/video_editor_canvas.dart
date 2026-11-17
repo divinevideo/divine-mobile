@@ -3653,6 +3653,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               ),
             ),
             paintEditor: PaintEditorConfigs(
+              // Everything drawn in one visit comes back as one drawing, to
+              // move, time and animate as a whole; Separate on the timeline
+              // breaks it into its strokes again.
+              mergeNewLayersOnDone: true,
               eraserSize:
                   DrawToolType.eraser.config.strokeWidth /
                   scope.fittedBoxScale /
