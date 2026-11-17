@@ -920,6 +920,129 @@ void main() {
           ).called(1);
         },
       );
+
+      late List<ClassicRecommendationsRequest> classicsRequests;
+      late ClassicFeedSession classicsSession;
+
+      /// Starts Home on adaptive Classics with [tunedVideo] as its only
+      /// classic, recording every request the session sends.
+      Future<VideoFeedBloc> startAdaptiveClassics() async {
+        tuningRepository = _MockFeedTuningRepository();
+        tunedVideo = createTestVideo('c' * 64);
+        classicsRequests = [];
+        when(
+          () => mockVideosRepository.applyContentPreferences(any()),
+        ).thenAnswer((i) => i.positionalArguments.single as List<VideoEvent>);
+        classicsSession = ClassicFeedSession(
+          loadPage: (request) async {
+            classicsRequests.add(request);
+            return HomeFeedResult(
+              videos: [tunedVideo],
+              hasMore: false,
+              recommendationPageCount: 1,
+            );
+          },
+        );
+        final bloc = createBloc(
+          feedTuningRepository: tuningRepository,
+          classicSession: classicsSession,
+        );
+        addTearDown(bloc.close);
+        final loaded = bloc.stream.firstWhere(
+          (s) =>
+              s.status == VideoFeedStatus.success && s.mode == FeedMode.classic,
+        );
+        bloc.add(
+          const VideoFeedStarted(mode: FeedMode.classic, forceMode: true),
+        );
+        await loaded;
+        await classicsSession.settled;
+        return bloc;
+      }
+
+      Future<void> swipeClassic(
+        VideoFeedBloc bloc,
+        FeedTuningDirection direction,
+      ) async {
+        when(
+          () => tuningRepository.tune(video: tunedVideo, direction: direction),
+        ).thenAnswer((_) async => 'published-tuning-event-id');
+        final recorded = bloc.stream.firstWhere(
+          (s) => s.lastTuningAction?.videoId == tunedVideo.id,
+        );
+        bloc.add(
+          VideoFeedTuningSwipeCommitted(
+            videoId: tunedVideo.id,
+            direction: direction,
+          ),
+        );
+        await recorded;
+        await classicsSession.settled;
+      }
+
+      group(VideoFeedTuningSwipeCommitted, () {
+        test(
+          'sends a "more" swipe on a classic as positive Classics feedback',
+          () async {
+            final bloc = await startAdaptiveClassics();
+
+            await swipeClassic(bloc, FeedTuningDirection.more);
+
+            expect(
+              classicsRequests.last.recentInteractions,
+              equals([
+                ClassicFeedInteraction(
+                  videoId: tunedVideo.id,
+                  signal: ClassicFeedSignal.positive,
+                ),
+              ]),
+            );
+          },
+        );
+
+        test(
+          'sends a "less" swipe on a classic as less Classics feedback',
+          () async {
+            final bloc = await startAdaptiveClassics();
+
+            await swipeClassic(bloc, FeedTuningDirection.less);
+
+            expect(
+              classicsRequests.last.recentInteractions,
+              equals([
+                ClassicFeedInteraction(
+                  videoId: tunedVideo.id,
+                  signal: ClassicFeedSignal.less,
+                ),
+              ]),
+            );
+          },
+        );
+      });
+
+      group(VideoFeedTuningUndoRequested, () {
+        test(
+          'drops the undone classic from the next adaptive request',
+          () async {
+            final bloc = await startAdaptiveClassics();
+            await swipeClassic(bloc, FeedTuningDirection.more);
+            expect(classicsRequests.last.recentInteractions, hasLength(1));
+            final requestsBeforeUndo = classicsRequests.length;
+            when(
+              () => tuningRepository.undo('published-tuning-event-id'),
+            ).thenAnswer((_) async {});
+
+            bloc.add(
+              const VideoFeedTuningUndoRequested('published-tuning-event-id'),
+            );
+            await pumpEventQueue();
+            await classicsSession.settled;
+
+            expect(classicsRequests.last.recentInteractions, isEmpty);
+            expect(classicsRequests, hasLength(requestsBeforeUndo + 1));
+          },
+        );
+      });
     });
 
     group('VideoFeedBlocState', () {
