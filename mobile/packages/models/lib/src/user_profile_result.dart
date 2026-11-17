@@ -36,6 +36,12 @@ sealed class UserProfileResult {
 
   /// Engagement totals returned by the API, or `null` if absent.
   ProfileEngagementData? get engagement;
+
+  /// OG Diviner eligibility reported by the API, or `null` when unknown.
+  ///
+  /// Only an explicit `true` grants eligibility; absent fields on other
+  /// endpoints are not an authoritative negative verdict.
+  bool? get isOgDiviner;
 }
 
 /// The user exists and has published a Kind 0 profile event.
@@ -46,6 +52,7 @@ final class UserProfileFound extends UserProfileResult {
     this.social,
     this.stats,
     this.engagement,
+    this.isOgDiviner,
   });
 
   /// Core profile metadata (name, picture, etc.).
@@ -61,22 +68,27 @@ final class UserProfileFound extends UserProfileResult {
   final ProfileEngagementData? engagement;
 
   @override
+  final bool? isOgDiviner;
+
+  @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is UserProfileFound &&
         other.profile == profile &&
         other.social == social &&
         other.stats == stats &&
-        other.engagement == engagement;
+        other.engagement == engagement &&
+        other.isOgDiviner == isOgDiviner;
   }
 
   @override
-  int get hashCode => Object.hash(profile, social, stats, engagement);
+  int get hashCode =>
+      Object.hash(profile, social, stats, engagement, isOgDiviner);
 
   @override
   String toString() =>
       'UserProfileFound(profile: $profile, social: $social, '
-      'stats: $stats, engagement: $engagement)';
+      'stats: $stats, engagement: $engagement, isOgDiviner: $isOgDiviner)';
 }
 
 /// The user is known to Funnelcake but has never published a Kind 0 event.
@@ -91,6 +103,7 @@ final class UserProfileNotPublished extends UserProfileResult {
     this.social,
     this.stats,
     this.engagement,
+    this.isOgDiviner,
   });
 
   /// The user's public key (hex format).
@@ -106,22 +119,27 @@ final class UserProfileNotPublished extends UserProfileResult {
   final ProfileEngagementData? engagement;
 
   @override
+  final bool? isOgDiviner;
+
+  @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is UserProfileNotPublished &&
         other.pubkey == pubkey &&
         other.social == social &&
         other.stats == stats &&
-        other.engagement == engagement;
+        other.engagement == engagement &&
+        other.isOgDiviner == isOgDiviner;
   }
 
   @override
-  int get hashCode => Object.hash(pubkey, social, stats, engagement);
+  int get hashCode =>
+      Object.hash(pubkey, social, stats, engagement, isOgDiviner);
 
   @override
   String toString() =>
       'UserProfileNotPublished(pubkey: $pubkey, social: $social, '
-      'stats: $stats, engagement: $engagement)';
+      'stats: $stats, engagement: $engagement, isOgDiviner: $isOgDiviner)';
 }
 
 /// The account has a NIP-62 request to vanish on record **and** the server is
@@ -151,6 +169,9 @@ final class UserProfileVanished extends UserProfileResult {
 
   @override
   ProfileEngagementData? get engagement => null;
+
+  @override
+  bool get isOgDiviner => false;
 
   @override
   bool operator ==(Object other) {

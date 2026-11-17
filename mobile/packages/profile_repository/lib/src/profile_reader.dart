@@ -42,6 +42,17 @@ typedef FreshProfileRead = ({UserProfile? profile, bool conclusive});
 /// `mobile/scripts/check_profile_read_write_split.sh` guards the indirect
 /// route a type cannot see.
 abstract interface class ProfileReader {
+  /// Reads the server-owned beta eligibility from the shared Funnelcake
+  /// profile response. This unauthenticated read never signs or publishes.
+  /// Reuses single/bulk profile hydration and coalesces concurrent lookups.
+  ///
+  /// Throws `FunnelcakeException` subtypes when the profile read fails.
+  Future<bool> isOgDiviner(String pubkey);
+
+  /// Pubkeys whose server-owned eligibility changed during profile hydration.
+  /// Observes the session cache without signing, publishing or requesting data.
+  Stream<String> get ogDivinerEligibilityChanges;
+
   /// Returns the cached profile from local storage (SQLite) only.
   ///
   /// Returns `null` if no cached profile exists for the given pubkey.

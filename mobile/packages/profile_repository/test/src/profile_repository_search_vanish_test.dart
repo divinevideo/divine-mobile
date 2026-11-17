@@ -111,6 +111,30 @@ void main() {
     );
 
     test(
+      'search rechecks hydrate eligibility without a second lookup',
+      () async {
+        when(() => api.getBulkProfiles(any())).thenAnswer(
+          (_) async => const BulkProfilesResponse(
+            profiles: {
+              live: UserProfileNotPublished(pubkey: live, isOgDiviner: true),
+            },
+          ),
+        );
+        when(() => api.getUserProfile(live)).thenAnswer(
+          (_) async => const UserProfileNotPublished(
+            pubkey: live,
+            isOgDiviner: false,
+          ),
+        );
+
+        await repo.searchUsersProgressive(query: 'test account').last;
+
+        expect(await repo.isOgDiviner(live), isTrue);
+        verifyNever(() => api.getUserProfile(live));
+      },
+    );
+
+    test(
       'known vanished profiles never appear in local identity results',
       () async {
         await db.vanishedProfilesDao.markVanished(deleted);

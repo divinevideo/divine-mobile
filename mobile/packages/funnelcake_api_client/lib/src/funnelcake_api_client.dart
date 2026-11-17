@@ -2556,6 +2556,8 @@ class FunnelcakeApiClient {
         final statsJson = data['stats'] as Map<String, dynamic>?;
         final engagementJson = data['engagement'] as Map<String, dynamic>?;
         final hasVanishRequest = data['has_vanish_request'] == true;
+        final ogDivinerValue = data['is_og_diviner'];
+        final isOgDiviner = ogDivinerValue is bool ? ogDivinerValue : null;
 
         // `has_vanish_request` is historical, not a tombstone by itself. A
         // completed vanish can later publish post-boundary Kind 0 metadata and
@@ -2584,6 +2586,7 @@ class FunnelcakeApiClient {
             social: social,
             stats: stats,
             engagement: engagement,
+            isOgDiviner: isOgDiviner,
           );
         }
 
@@ -2593,6 +2596,7 @@ class FunnelcakeApiClient {
           social: social,
           stats: stats,
           engagement: engagement,
+          isOgDiviner: isOgDiviner,
         );
       } else if (response.statusCode == 404) {
         return null;
@@ -3091,6 +3095,8 @@ class FunnelcakeApiClient {
             final statsJson = user['stats'] as Map<String, dynamic>?;
             final engagementJson = user['engagement'] as Map<String, dynamic>?;
             final hasVanishRequest = user['has_vanish_request'] == true;
+            final ogDivinerValue = user['is_og_diviner'];
+            final isOgDiviner = ogDivinerValue is bool ? ogDivinerValue : null;
 
             // Same contract as getUserProfile: the flag alone is historical,
             // while flag + null profile is the suppressed/deleted-account shape.
@@ -3117,6 +3123,7 @@ class FunnelcakeApiClient {
                 social: social,
                 stats: stats,
                 engagement: engagement,
+                isOgDiviner: isOgDiviner,
               );
             } else {
               // User exists in Funnelcake but has no Kind 0 profile event.
@@ -3125,6 +3132,7 @@ class FunnelcakeApiClient {
                 social: social,
                 stats: stats,
                 engagement: engagement,
+                isOgDiviner: isOgDiviner,
               );
             }
           }

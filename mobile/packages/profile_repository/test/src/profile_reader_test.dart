@@ -28,6 +28,14 @@ const _pubkey =
 /// failed to compile, confirm the new member is signer-free before adding it
 /// below.
 class _ExhaustiveReader implements ProfileReader {
+  // Public unauthenticated Funnelcake read; no signing or publish capability.
+  @override
+  Future<bool> isOgDiviner(String pubkey) async => false;
+
+  // Session-cache observation only; no signing or network capability.
+  @override
+  Stream<String> get ogDivinerEligibilityChanges => const Stream.empty();
+
   @override
   Future<UserProfile?> getCachedProfile({required String pubkey}) async => null;
 
