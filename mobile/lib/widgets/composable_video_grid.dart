@@ -201,8 +201,8 @@ class _ComposableVideoGridState extends ConsumerState<ComposableVideoGrid>
       return _buildEmptyState(context);
     }
 
-    // Preserve followed-list cache hydration for list playback, even though
-    // thumbnails no longer display list membership.
+    // Starts the subscribed-list cache, which fetches subscribed lists'
+    // videos into VideoEventService. The grid never reads its value.
     ref.watch(subscribedListVideoCacheProvider);
 
     // Responsive column count: 3 for tablets/desktop (width >= 600),
