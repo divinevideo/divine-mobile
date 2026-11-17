@@ -222,7 +222,7 @@ void main() {
         );
 
         test(
-          'keeps loading, then offers retry, when the snapshot is empty',
+          'keeps loading, then fails, when the snapshot is empty',
           () async {
             bloc.add(const CategorySelected(music));
             await pumpEventQueue();
@@ -523,6 +523,24 @@ void main() {
           await pumpEventQueue();
           expect(bloc.state.videos, [newVideo]);
           expect(bloc.state.isLoadingMore, isFalse);
+          when(
+            () => mockRepository.getVideosForCategory(
+              category: 'music',
+              before: any(named: 'before'),
+              sort: 'timestamp',
+            ),
+          ).thenAnswer(
+            (_) async => const CategoryVideosPage(videos: [], hasMore: false),
+          );
+          bloc.add(const CategoryVideosLoadMore());
+          await pumpEventQueue();
+          verify(
+            () => mockRepository.getVideosForCategory(
+              category: 'music',
+              before: any(named: 'before'),
+              sort: 'timestamp',
+            ),
+          ).called(1);
           await next.close();
         });
 
