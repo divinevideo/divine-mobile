@@ -3,6 +3,7 @@
 
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:openvine/router/go_router_page_name.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
@@ -68,6 +69,22 @@ class MinorAccountReviewLoadingRouteData extends GoRouteData
   @override
   Widget build(BuildContext context, GoRouterState state) =>
       const MinorAccountReviewLoadingScreen();
+
+  // Transition-free, like the shell it replaces: a fast-failing status fetch
+  // can send the redirect back to the shell while a sliding page still keeps
+  // the leaving shell alive, and two shells would share its GlobalKey.
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      NoTransitionPage<void>(
+        key: state.pageKey,
+        name: goRouterPageName(state),
+        arguments: <String, String>{
+          ...state.pathParameters,
+          ...state.uri.queryParameters,
+        },
+        restorationId: state.pageKey.value,
+        child: build(context, state),
+      );
 }
 
 /// The teen path's parent consent options.

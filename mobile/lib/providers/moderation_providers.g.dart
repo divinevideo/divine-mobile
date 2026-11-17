@@ -653,7 +653,7 @@ final class BlocklistSyncBridgeProvider
 }
 
 String _$blocklistSyncBridgeHash() =>
-    r'8dab15bbb574ddc0ed97e28a4898b37d7149719f';
+    r'd3a6eab4d241d541b9ebdbedf4cd48d94f7465c6';
 
 /// Republishes the contact list when a block contradicts the published
 /// follow list.
