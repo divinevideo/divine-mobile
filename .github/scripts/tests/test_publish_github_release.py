@@ -269,20 +269,23 @@ class CommandInputTest(unittest.TestCase):
         valid = ('SHOREBIRD_BUILD_NAME=1.2.3\nSHOREBIRD_BUILD_NUMBER=855\n'
                  'SHOREBIRD_RELEASE_VERSION=1.2.3+855\nRELEASE_SOURCE_SHA=' + SHA + '\n')
         for content in ('', valid.replace('BUILD_NAME=1.2.3', 'BUILD_NAME=1.2'),
-                        valid + 'SHOREBIRD_BUILD_NAME=1.2.4\n',
+                        valid + 'SHOREBIRD_BUILD_NAME=1.2.3\n',
                         valid.replace('BUILD_NAME=1.2.3', 'BUILD_NAME=$(touch unwanted)'),
                         valid.replace('RELEASE_VERSION=1.2.3+855', 'RELEASE_VERSION=1.2.3+856'),
                         valid.replace('RELEASE_SOURCE_SHA=' + SHA, 'RELEASE_SOURCE_SHA=' + 'b' * 40)):
             with self.subTest(content=content), tempfile.TemporaryDirectory() as directory:
                 env = Path(directory) / 'release.env'
                 env.write_text(content)
+                diagnostic = io.StringIO()
                 with patch('sys.argv', ['publisher', '--repo', 'owner/repo', '--release-env', str(env)]), \
                      patch.object(release, 'GitHub') as gh, \
                      patch.object(release, 'run', return_value=SHA), \
                      patch.object(release, 'stable_ledger') as ledger, \
-                     contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
+                     contextlib.redirect_stderr(diagnostic), self.assertRaises(SystemExit) as error:
                     release.main()
                 self.assertEqual(error.exception.code, 2)
+                if content == valid + 'SHOREBIRD_BUILD_NAME=1.2.3\n':
+                    self.assertIn('Duplicate effective release identity field', diagnostic.getvalue())
                 gh.assert_not_called()
                 ledger.assert_not_called()
 
