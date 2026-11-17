@@ -4,6 +4,7 @@ import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show UserProfile;
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/utils/dead_image_hosts.dart';
@@ -38,6 +39,9 @@ class BadgeCommunityCard extends ConsumerWidget {
         ? identifier
         : context.l10n.profileBadgeFallbackSemanticLabel;
     final issuerProfile = ref.watch(userProfileReactiveProvider(issuer)).value;
+    final issuerName =
+        issuerProfile?.bestDisplayName ??
+        UserProfile.defaultDisplayNameFor(issuer);
     final members = [
       for (final pubkey in memberPubkeys.take(3))
         if (!ref.watch(profileVanishedProvider(pubkey))) pubkey,
@@ -144,12 +148,12 @@ class BadgeCommunityCard extends ConsumerWidget {
                   UserAvatar(
                     size: 20,
                     imageUrl: issuerProfile?.picture,
-                    name: issuerProfile?.bestDisplayName,
+                    name: issuerName,
                     placeholderSeed: issuer,
                   ),
                   Expanded(
                     child: Text(
-                      issuerProfile?.bestDisplayName ?? issuer,
+                      issuerName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: VineTheme.bodySmallFont(
