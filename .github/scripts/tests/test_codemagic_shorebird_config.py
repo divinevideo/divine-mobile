@@ -293,7 +293,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn('build/shorebird/android_upload.json', workflow['artifacts'])
         provider = (CODEMAGIC_PATH.parent / 'mobile/scripts/release_train/providers.py').read_text()
         self.assertIn('changesInReviewBehavior=ERROR_IF_IN_REVIEW', provider)
-        self.assertRegex(provider, r"self\.track\(edit,\s*['\"]internal['\"],\s*number\)")
+        self.assertRegex(provider, r"self\.track\(edit,\s*['\"]internal['\"],\s*number,\s*notes=notes\)")
         self.assertNotIn('CANCEL_IN_REVIEW_AND_SUBMIT', provider)
 
     def test_android_build_publishes_to_zapstore_after_github_release(self) -> None:
@@ -1227,7 +1227,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertEqual(scheduled['environment'], workflows['ios-build']['environment'])
         self.assertEqual(scheduled['triggering']['events'], [])
 
-    def test_ios_testflight_notes_follow_the_effective_version(self) -> None:
+    def test_ios_testflight_notes_require_the_exact_source_bundle(self) -> None:
         steps = self._resolved_config()["workflows"]["ios-build"]["scripts"]
         matching = [step for step in steps if step["name"] == "Prepare TestFlight notes"]
         self.assertEqual(len(matching), 1)
@@ -1237,25 +1237,28 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             root = Path(directory)
             mobile = root / "mobile"
             (mobile / 'build/shorebird').mkdir(parents=True)
-            notes = root / "release-notes"
-            notes.mkdir()
-            (mobile / "pubspec.yaml").write_text("version: 1.0.0+123\n")
             subprocess.run(['git', 'init', '--quiet', str(root)], check=True)
             subprocess.run(['git', '-C', str(root), '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', 'commit', '--quiet', '--allow-empty', '-m', 'fixture'], check=True)
             sha = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
             identity = 'SHOREBIRD_BUILD_NAME=9.8.7\nSHOREBIRD_BUILD_NUMBER=123\nSHOREBIRD_RELEASE_VERSION=9.8.7+123\nRELEASE_SOURCE_SHA=' + sha + '\n'
             (mobile / 'build/shorebird/ios_release.env').write_text(identity)
             expected = [{"language": "en-US", "text": "Try saving your list offline."}]
-            reviewed = notes / "9.8.7-testflight.json"
-            reviewed.write_text(json.dumps(expected))
-            result = subprocess.run(["bash", "-c", script], cwd=mobile, capture_output=True, text=True)
+            bundle = {
+                "schema": 1, "platform": "ios", "source_sha": sha,
+                "baseline": {"version": "9.8.6", "sha": "b" * 40},
+                "locales": ["en-US"], "testflight": expected,
+                "app_store": [{"language": "en-US", "text": "Save your lists offline."}],
+                "google_play": [], "changes": [], "policy_sha256": "c" * 64,
+            }
+            env = dict(os.environ, RELEASE_NOTES_BUNDLE=json.dumps(bundle))
+            result = subprocess.run(["bash", "-c", script], cwd=mobile, env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads((mobile / "release_notes.json").read_text()), expected)
-            reviewed.unlink()
-            result = subprocess.run(["bash", "-c", script], cwd=mobile, capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            fallback = json.loads((mobile / "release_notes.json").read_text())
-            self.assertEqual(fallback, [{'language': 'en-US', 'text': 'This build includes the latest changes to Divine.'}])
+            (mobile / "release_notes.json").unlink()
+            del env["RELEASE_NOTES_BUNDLE"]
+            result = subprocess.run(["bash", "-c", script], cwd=mobile, env=env, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse((mobile / "release_notes.json").exists())
 
     def test_release_jobs_never_materialize_patch_private_key(self) -> None:
         self.assertIn("*write_shorebird_public_key", self._workflow_block("ios-build"))

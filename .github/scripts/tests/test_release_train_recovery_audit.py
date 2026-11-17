@@ -79,7 +79,7 @@ class RecoveryAuditTest(unittest.TestCase):
                         return {
                             "data": None
                             if url.endswith("/appStoreVersionPhasedRelease")
-                            else [{"id": "loc"}]
+                            else [{"id": "loc", "attributes": {"locale": "en-US"}}]
                         }
                     return {"data": {"id": "unexpected-new-resource"}}
 
@@ -89,6 +89,7 @@ class RecoveryAuditTest(unittest.TestCase):
                     s["ios"]["versions"],
                     ["ios-version:v:1.0.30"],
                     reviews=s["ios"]["review_submissions"],
+                    notes=[{"language": "en-US", "text": "Videos load more smoothly."}],
                 )
                 self.assertTrue(
                     any(
@@ -236,12 +237,13 @@ class DraftRecoveryAuditTest(unittest.TestCase):
                 return {
                     "data": None
                     if url.endswith("/appStoreVersionPhasedRelease")
-                    else [{"id": "loc"}]
+                    else [{"id": "loc", "attributes": {"locale": "en-US"}}]
                 }
             return {"data": {"id": "unexpected-new-resource"}}
 
         Apple("token", "g", request=http).submit_store(
-            build(), versions, [], reviews=reviews
+            build(), versions, [], reviews=reviews,
+            notes=[{"language": "en-US", "text": "Videos load more smoothly."}]
         )
         return calls
 
@@ -326,11 +328,12 @@ class RecoveryIntegrationAuditTest(unittest.TestCase):
         runtime = runner.Runtime.__new__(runner.Runtime)
 
         class Client:
-            def submit_store(self, build, versions, acknowledged, *, reviews):
+            def submit_store(self, build, versions, acknowledged, *, notes, reviews):
                 if reviews != s["ios"]["review_submissions"]:
                     raise AssertionError("review snapshot missing")
                 return "v"
 
+        runtime.release_bundle = lambda *args: release_train_fakes.release_notes_bundle()
         runtime.apple = Client()
         runtime.claim = lambda *args: None
         runtime.deploy = lambda *args: None
@@ -494,11 +497,12 @@ class RejectionEpisodeAuditTest(unittest.TestCase):
         runtime = runner.Runtime.__new__(runner.Runtime)
 
         class Client:
-            def submit_store(self, build, versions, acknowledged, *, reviews):
+            def submit_store(self, build, versions, acknowledged, *, notes, reviews):
                 if key not in acknowledged:
                     raise AssertionError("original rejected item was not authorized")
                 return "v"
 
+        runtime.release_bundle = lambda *args: release_train_fakes.release_notes_bundle()
         runtime.apple = Client()
         runtime.claim = lambda *args: None
         runtime.deploy = lambda *args: None

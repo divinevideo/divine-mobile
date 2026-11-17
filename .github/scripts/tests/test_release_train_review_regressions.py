@@ -103,7 +103,7 @@ class ReviewRegressionTest(unittest.TestCase):
             return {"data": [] if method == "GET" else {"id": "r"}}
 
         apple = Apple("token", "one", request=http)
-        apple.submit_beta(build() | {"external": "BETA_APPROVED"}, "Changes")
+        apple.submit_beta(build() | {"external": "BETA_APPROVED"}, [{"language": "en-US", "text": "Changes"}])
         self.assertFalse(any("/betaAppReviewSubmissions" in url for _, url in calls))
 
     def test_newest_baseline_survives_sorted_restart(self):
@@ -249,7 +249,7 @@ class ProviderBatchTest(unittest.TestCase):
 
         apple = Apple("token", "g", request=http)
         apple.submit_beta(
-            build() | {"external": "BETA_APPROVED", "beta_detail_id": "d"}, "Notes"
+            build() | {"external": "BETA_APPROVED", "beta_detail_id": "d"}, [{"language": "en-US", "text": "Notes"}]
         )
         self.assertTrue(
             any(

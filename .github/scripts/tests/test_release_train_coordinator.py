@@ -299,3 +299,17 @@ class UploadedSourceTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HeldStoreBuildTest(unittest.TestCase):
+    def test_916_never_becomes_app_store_candidate(self):
+        s = snapshot()
+        s['changes'] = {'ios': False, 'android': False}
+        s['ios']['builds'] = [build() | {'id': '916', 'number': 916, 'version': '1.0.30'}]
+        state = {'public_available': {'916': NOW - 7 * 3600}}
+        result = plan_tick(s, state, {'ios': 'app-store', 'android': 'off'})
+        self.assertFalse([a for a in result['actions'] if a['kind'] == 'app-store'])
+        s['ios']['builds'].append(build() | {'id': '917', 'number': 917, 'version': '1.0.31'})
+        state['public_available']['917'] = NOW - 7 * 3600
+        result = plan_tick(s, state, {'ios': 'app-store', 'android': 'off'})
+        self.assertEqual([a['build']['number'] for a in result['actions'] if a['kind'] == 'app-store'], [917])

@@ -12,6 +12,7 @@ from pathlib import Path
 from publish_github_release import effective_version
 from release_train.ledger import GhLedgerStore
 from release_train.providers import DeferredReview, Play, ProviderError, play_token
+from release_train.release_notes import bundle_from_env, notes_for
 
 
 def publish_bundle(env=os.environ, *, ledger=None, play=None):
@@ -45,19 +46,31 @@ def publish_bundle(env=os.environ, *, ledger=None, play=None):
         "recorded_at": datetime.now(UTC).isoformat(),
     }
     remote = f"artifacts/android/{number}.json"
-    if not ledger.create_json(
-        remote, record, f"Record signed Android artifact {number}"
-    ):
-        prior = ledger.read_json(remote)
+
+    def retained_record(prior):
         if any(
             prior.get(k) != record[k]
             for k in ["number", "version", "sha", "digest", "build_id", "artifact_name"]
         ):
             raise ProviderError("Artifact identity is already spent; do not rebuild it")
-        record = prior
+        if not prior.get("release_notes"):
+            raise ProviderError("Retained Android artifact has no release notes bundle; reconcile before retrying")
+        bundle_from_env(
+            {"RELEASE_NOTES_BUNDLE": json.dumps(prior["release_notes"])}, source, "android"
+        )
+        return prior
+
+    if remote in ledger.paths():
+        # A later production release cannot change notes on the retained AAB.
+        record = retained_record(ledger.read_json(remote))
+    else:
+        record["release_notes"] = bundle_from_env(env, source, "android")
+        if not ledger.create_json(remote, record, f"Record signed Android artifact {number}"):
+            record = retained_record(ledger.read_json(remote))
+    notes = notes_for(record["release_notes"], "google_play")
     play = play or Play(play_token(env["GCLOUD_SERVICE_ACCOUNT_CREDENTIALS"]))
     try:
-        play.upload(path, number, digest)
+        play.upload(path, number, digest, notes=notes)
         result = "uploaded"
     except DeferredReview:
         result = "deferred"

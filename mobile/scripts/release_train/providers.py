@@ -16,7 +16,6 @@ from pathlib import Path
 
 from release_train.coordinator import unresolved_review_is_acknowledged, version_ack_key
 
-NOTES = "This update includes the latest tested changes to Divine."
 APP_ID = "6747959501"
 PACKAGE = "co.openvine.app"
 
@@ -216,7 +215,10 @@ class Play:
         finally:
             self.call("DELETE", f"/edits/{edit}")
 
-    def track(self, edit, track, number):
+    def track(self, edit, track, number, *, notes):
+        from release_train.release_notes import PLAY_LOCALES, validate_localizations
+
+        notes = validate_localizations(notes, limit=500, required=PLAY_LOCALES)
         return self.call(
             "PUT",
             f"/edits/{edit}/tracks/{track}",
@@ -226,18 +228,24 @@ class Play:
                     {
                         "status": "completed",
                         "versionCodes": [str(number)],
-                        "releaseNotes": [{"language": "en-US", "text": NOTES}],
+                        "releaseNotes": notes,
                     }
                 ],
             },
         )
 
-    def promote(self, number):
+    def promote(self, number, *, notes):
+        from release_train.release_notes import PLAY_LOCALES, validate_localizations
+
+        notes = validate_localizations(notes, limit=500, required=PLAY_LOCALES)
         edit = self.edit()
-        self.track(edit, "production", number)
+        self.track(edit, "production", number, notes=notes)
         return self.commit(edit)
 
-    def upload(self, path, number, digest):
+    def upload(self, path, number, digest, *, notes):
+        from release_train.release_notes import PLAY_LOCALES, validate_localizations
+
+        notes = validate_localizations(notes, limit=500, required=PLAY_LOCALES)
         verify_bundle(path, digest)
         edit = self.edit()
         url = (
@@ -257,7 +265,7 @@ class Play:
             raise ProviderError(
                 "Uploaded AAB versionCode differs from authenticated release identity"
             )
-        self.track(edit, "internal", number)
+        self.track(edit, "internal", number, notes=notes)
         return self.commit(edit)
 
 
@@ -311,35 +319,48 @@ class Apple:
     def relationship(self, kind, identifier):
         return {"data": {"type": kind, "id": identifier}}
 
+    def set_beta_notes(self, build, notes):
+        """Update translated beta copy without submitting review or changing groups."""
+        from release_train.release_notes import validate_localizations
+
+        notes = validate_localizations(notes, limit=4000)
+        localizations = self.pages("/builds/" + build["id"] + "/betaBuildLocalizations")
+        required = self.localization_languages(localizations)
+        notes = validate_localizations(notes, limit=4000, required=required)
+        by_language = {note["language"]: note["text"] for note in notes}
+        existing = {loc["attributes"]["locale"]: loc for loc in localizations}
+        for language, text in by_language.items():
+            if language in existing:
+                identifier = existing[language]["id"]
+                self.call(
+                    "PATCH", "/betaBuildLocalizations/" + identifier,
+                    self.resource("betaBuildLocalizations", identifier, {"whatsNew": text}),
+                )
+            else:
+                self.call(
+                    "POST", "/betaBuildLocalizations",
+                    self.resource(
+                        "betaBuildLocalizations",
+                        attributes={"locale": language, "whatsNew": text},
+                        relationships={"build": self.relationship("builds", build["id"])},
+                    ),
+                )
+
+    def localization_languages(self, localizations):
+        languages = [loc.get("attributes", {}).get("locale") for loc in localizations]
+        if any(not isinstance(locale, str) or not locale for locale in languages):
+            raise ProviderError("Apple localization inventory has no verifiable locale")
+        if len(languages) != len(set(languages)):
+            raise ProviderError("Apple localization inventory has duplicate locales")
+        return languages
+
     def submit_beta(self, build, notes):
+        self.set_beta_notes(build, notes)
         if build.get("beta_detail_id"):
             identifier = build["beta_detail_id"]
             self.call(
-                "PATCH",
-                "/buildBetaDetails/" + identifier,
-                self.resource(
-                    "buildBetaDetails", identifier, {"autoNotifyEnabled": True}
-                ),
-            )
-        localizations = self.pages("/builds/" + build["id"] + "/betaBuildLocalizations")
-        if localizations:
-            for loc in localizations:
-                self.call(
-                    "PATCH",
-                    "/betaBuildLocalizations/" + loc["id"],
-                    self.resource(
-                        "betaBuildLocalizations", loc["id"], {"whatsNew": notes[:4000]}
-                    ),
-                )
-        else:
-            self.call(
-                "POST",
-                "/betaBuildLocalizations",
-                self.resource(
-                    "betaBuildLocalizations",
-                    attributes={"locale": "en-US", "whatsNew": notes[:4000]},
-                    relationships={"build": self.relationship("builds", build["id"])},
-                ),
+                "PATCH", "/buildBetaDetails/" + identifier,
+                self.resource("buildBetaDetails", identifier, {"autoNotifyEnabled": True}),
             )
         if build.get("external") not in {
             "BETA_APPROVED",
@@ -368,7 +389,12 @@ class Apple:
                 {"data": [{"type": "builds", "id": build["id"]}]},
             )
 
-    def submit_store(self, build, versions, acknowledged, *, reviews=None):
+    def submit_store(self, build, versions, acknowledged, *, notes, reviews=None):
+        from release_train.release_notes import validate_localizations
+
+        if build.get("version") == "1.0.30" and str(build.get("number")) == "916":
+            raise ProviderError("iOS 1.0.30+916 is prohibited from App Store submission")
+        notes = validate_localizations(notes, limit=4000)
         editable = [
             v
             for v in versions
@@ -436,6 +462,26 @@ class Apple:
                     "Unrelated draft review items require App Store Connect reconciliation"
                 )
             existing_review = draft
+        # Read every existing locale before any version, build or rollout mutation.
+        if editable:
+            localizations = self.pages(
+                f"/appStoreVersions/{editable[0]['id']}/appStoreVersionLocalizations"
+            )
+            required = self.localization_languages(localizations)
+            if not required:
+                raise ProviderError("Apple storefront locale inventory is empty")
+        else:
+            localizations = None
+            infos = self.pages(f"/apps/{APP_ID}/appInfos")
+            required = set()
+            for info in infos:
+                required.update(self.localization_languages(self.pages(
+                    f"/appInfos/{info['id']}/appInfoLocalizations"
+                )))
+            if not required:
+                raise ProviderError("Apple configured storefront locale inventory is empty")
+        notes = validate_localizations(notes, limit=4000, required=required)
+        by_language = {note["language"]: note["text"] for note in notes}
         attrs = {"versionString": build["version"], "releaseType": "AFTER_APPROVAL"}
         if editable:
             identifier = editable[0]["id"]
@@ -455,6 +501,15 @@ class Apple:
                 ),
             )
             identifier = result["data"]["id"]
+        if localizations is None:
+            localizations = self.pages(
+                f"/appStoreVersions/{identifier}/appStoreVersionLocalizations"
+            )
+            if not localizations:
+                raise ProviderError("New Apple version has no storefront localizations")
+            validate_localizations(
+                notes, limit=4000, required=self.localization_languages(localizations)
+            )
         self.call(
             "PATCH",
             f"/appStoreVersions/{identifier}/relationships/build",
@@ -476,14 +531,12 @@ class Apple:
                     {"phasedReleaseState": "INACTIVE"},
                 ),
             )
-        for loc in self.pages(
-            f"/appStoreVersions/{identifier}/appStoreVersionLocalizations"
-        ):
+        for loc in localizations:
             self.call(
                 "PATCH",
                 "/appStoreVersionLocalizations/" + loc["id"],
                 self.resource(
-                    "appStoreVersionLocalizations", loc["id"], {"whatsNew": NOTES}
+                    "appStoreVersionLocalizations", loc["id"], {"whatsNew": by_language[loc["attributes"]["locale"]]}
                 ),
             )
         if existing_review:
