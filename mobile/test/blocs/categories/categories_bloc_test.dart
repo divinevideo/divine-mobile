@@ -328,7 +328,6 @@ void main() {
             () => mockRepository.getVideosForCategory(
               category: 'music',
               before: oldVideo.createdAt,
-              sort: 'trending',
             ),
           ).thenAnswer(
             (_) async => CategoryVideosPage(
