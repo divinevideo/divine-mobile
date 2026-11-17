@@ -146,6 +146,10 @@ void main() {
       });
 
       test('a change that arrives before load records nothing', () async {
+        // Opted in, so the first read differs from the unloaded state.
+        when(service.loadPreferences).thenAnswer(
+          (_) async => const NotificationPreferences(campaignsEnabled: true),
+        );
         final changes = StreamController<void>.broadcast();
         addTearDown(changes.close);
         when(() => service.changes).thenAnswer((_) => changes.stream);
