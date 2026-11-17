@@ -163,8 +163,7 @@ class VideoEditorEffectsState extends Equatable {
   ///
   /// While editing, the selection takes the edited effect's place, or joins
   /// the others as a new one. It shows over the whole video, so the pick is
-  /// visible wherever the playhead is, except for an intro or outro, which
-  /// shows where it goes (see [selection]). A flashing pick hides the other
+  /// visible wherever the playhead is. A flashing pick hides the other
   /// flashing effects, which would otherwise flash along with it while the
   /// video plays; confirming replaces them where they overlap anyway.
   ///
@@ -190,7 +189,8 @@ class VideoEditorEffectsState extends Equatable {
   }
 
   /// The effects Divine renders itself that the preview shows, placed like
-  /// [previewEffects]: the native player draws these.
+  /// [previewEffects], except a picked intro or outro, which shows over its
+  /// own window (see [selection]): the native player draws these.
   List<CustomVideoEffect> get previewCustomEffects {
     final picked = isEditing ? selection?.custom : null;
     final effects = <CustomVideoEffect>[];
