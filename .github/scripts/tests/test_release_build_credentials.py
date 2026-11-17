@@ -11,6 +11,24 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class ProvenanceCredentialsTest(unittest.TestCase):
+    def test_forwarded_policy_does_not_require_actions_variables_permission(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            gh = root / 'gh'
+            gh.write_text('#!/bin/sh\necho "Variables API forbidden" >&2\nexit 1\n')
+            gh.chmod(0o755)
+            output = root / 'defines.json'
+            env = dict(os.environ, PATH=str(root) + os.pathsep + os.environ['PATH'],
+                       GH_TOKEN='contents-only-mobile-token',
+                       DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS='["synthetic-list"]')
+            result = subprocess.run([
+                'python3', str(ROOT / 'mobile/scripts/write_public_people_list_defines.py'),
+                '--output', str(output), '--github-repository', 'owner/repo',
+            ], env=env, capture_output=True, text=True, check=False)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(output.read_text())['DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS'],
+                             '["synthetic-list"]')
+
     def test_fetch_uses_private_token_instead_of_public_token(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

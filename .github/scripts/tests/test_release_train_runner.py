@@ -97,16 +97,16 @@ class RuntimeBoundaryTest(unittest.TestCase):
         runtime = Runtime.__new__(Runtime)
         runtime.tags = GH()
         runtime.gh = GH()
-        runtime.env = {"PROVENANCE_TOKEN": "private-ledger-token", "CANDIDATE_TAG_TOKEN": "mobile-release-token"}
+        runtime.env = {"PROVENANCE_TOKEN": "private-ledger-token", "CANDIDATE_TAG_TOKEN": "mobile-release-token", "PUBLIC_PEOPLE_LIST_POLICY": "[]"}
         cm_calls = []
 
         def cm(method, path, payload=None):
             cm_calls.append((method, path, payload))
             if '/apps/' in path and '/variable-groups' in path:
-                return {"data": [{"id": "g", "name": "github_credentials"}]}
+                return {"data": [{"id": "g", "name": "store_release_credentials"}]}
             if '/variable-groups/' in path:
                 return {"data": [{"id": name, "name": name, "secure": True, "value": None}
-                                  for name in ['GH_TOKEN', 'GITHUB_TOKEN', 'PROVENANCE_TOKEN']]} if method == 'GET' else {}
+                                  for name in ['GH_TOKEN', 'GITHUB_TOKEN', 'PROVENANCE_TOKEN', 'DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS']]} if method == 'GET' else {}
             return {"data": {"id": "123"}}
 
         runtime.cm = cm
@@ -120,6 +120,7 @@ class RuntimeBoundaryTest(unittest.TestCase):
             'GH_TOKEN': {'value': 'mobile-release-token', 'secure': True},
             'GITHUB_TOKEN': {'value': 'mobile-release-token', 'secure': True},
             'PROVENANCE_TOKEN': {'value': 'private-ledger-token', 'secure': True},
+            'DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS': {'value': '[]', 'secure': True},
         })
         build_call = next(c for c in cm_calls if c[0] == 'POST')
         self.assertLess(cm_calls.index(patches[-1]), cm_calls.index(build_call))

@@ -29,11 +29,14 @@ workflow receives release credentials. It holds:
   environment. Signing and Shorebird secrets remain in Codemagic.
 
 Before starting each store build, the GitHub driver refreshes the existing
-Codemagic `github_credentials` group with secure, repository-scoped App tokens.
+application-scoped Codemagic `store_release_credentials` group with secure,
+repository-scoped App tokens. Only native store workflows import this group;
+shared credentials used by other manual workflows remain unchanged.
 `GH_TOKEN` and `GITHUB_TOKEN` can publish only to the mobile repository;
 `PROVENANCE_TOKEN` can access only the private release ledger. Ledger operations
 select that private token without changing the public publisher's environment.
-Token values are not placed in build request variables or printed in summaries.
+The repository public-list policy is forwarded into the same secure group,
+so native builds do not need Actions-variable access. Token values are not placed in build request variables or printed in summaries.
 The App private key remains in the main-only GitHub Environment and Secret Manager.
 
 Delegated tokens are not revoked when the dispatch job exits, because Codemagic

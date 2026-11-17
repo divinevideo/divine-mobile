@@ -35,16 +35,20 @@ def cm_pages(cm, path):
     raise ProviderError("Incomplete Codemagic configuration listing")
 
 
-def configure_secure_variables(cm, values):
+def configure_secure_variables(cm, values, *, group_name="github_credentials", app_only=False):
     if any(not value for value in values.values()):
         raise ProviderError("Missing scoped GitHub build credential")
     groups = cm_pages(cm, "/apps/" + CM_APP_ID + "/variable-groups")
-    if not any(g["name"] == "github_credentials" for g in groups):
+    if not any(g["name"] == group_name for g in groups) and not app_only:
         groups += cm_pages(cm, "/teams/" + TEAM_ID + "/variable-groups")
-    matches = {g["id"]: g for g in groups if g["name"] == "github_credentials"}
+    matches = {g["id"]: g for g in groups if g["name"] == group_name}
+    if not matches and app_only:
+        cm("POST", "/apps/" + CM_APP_ID + "/variable-groups", {"name": group_name})
+        matches = {g["id"]: g for g in cm_pages(cm, "/apps/" + CM_APP_ID + "/variable-groups")
+                   if g["name"] == group_name}
     if len(matches) != 1:
         raise ProviderError(
-            "Expected one existing github_credentials Codemagic group; configure it before setup"
+            "Expected one Codemagic credential group; configure it before setup"
         )
     identifier = next(iter(matches))
     path = "/variable-groups/" + identifier + "/variables"
@@ -69,13 +73,14 @@ def configure_codemagic(cm, token):
     return "Scheduled allocator credential configured and verified secure in existing github_credentials."
 
 
-def configure_build_credentials(cm, private_token, mobile_token):
+def configure_build_credentials(cm, private_token, mobile_token, public_policy):
     # API build overrides are plain strings; use the provider's secure storage.
     configure_secure_variables(cm, {
         "PROVENANCE_TOKEN": private_token,
         "GH_TOKEN": mobile_token,
         "GITHUB_TOKEN": mobile_token,
-    })
+        "DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS": public_policy,
+    }, group_name="store_release_credentials", app_only=True)
 
 
 def bootstrap_live(runtime, dry_run):

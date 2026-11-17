@@ -31,7 +31,7 @@ def load_driver():
 
 def environment():
     return {'CODEMAGIC_API_TOKEN': 'private-codemagic-token', 'GH_TOKEN': 'private-gh-token',
-            'PROVENANCE_TOKEN': 'private-ledger-token', 'RELEASE_GITHUB_TOKEN': 'mobile-release-token',
+            'PROVENANCE_TOKEN': 'private-ledger-token', 'RELEASE_GITHUB_TOKEN': 'mobile-release-token', 'PUBLIC_PEOPLE_LIST_POLICY': '[]',
             'GITHUB_REPOSITORY': 'example/repo', 'GITHUB_RUN_ID': '123',
             'GITHUB_RUN_ATTEMPT': '1', 'GITHUB_REF': 'refs/heads/main',
             'GITHUB_SHA': SHA, 'GITHUB_WORKFLOW_SHA': SHA,
@@ -56,7 +56,7 @@ class FakeAPI:
         self.calls = []
         self.pages = []
         self.variables = [{'id': name, 'name': name, 'secure': True, 'value': None}
-                          for name in ['GH_TOKEN', 'GITHUB_TOKEN', 'PROVENANCE_TOKEN']]
+                          for name in ['GH_TOKEN', 'GITHUB_TOKEN', 'PROVENANCE_TOKEN', 'DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS']]
         self.source_config = (
             'workflows:\n  ios-build:\n    publishing:\n'
             '      app_store_connect:\n'
@@ -67,7 +67,7 @@ class FakeAPI:
     def __call__(self, method, url, token, payload=None):
         self.calls.append((method, url, token, payload))
         if '/apps/' in url and '/variable-groups' in url:
-            return {'data': [{'id': 'g', 'name': 'github_credentials'}]}
+            return {'data': [{'id': 'g', 'name': 'store_release_credentials'}]}
         if '/variable-groups/' in url:
             return {'data': self.variables} if method == 'GET' else {}
         if '/git/ref/heads/main' in url:
@@ -105,6 +105,7 @@ class IOSReleaseTest(unittest.TestCase):
             'GH_TOKEN': {'value': 'mobile-release-token', 'secure': True},
             'GITHUB_TOKEN': {'value': 'mobile-release-token', 'secure': True},
             'PROVENANCE_TOKEN': {'value': 'private-ledger-token', 'secure': True},
+            'DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS': {'value': '[]', 'secure': True},
         })
         self.assertLess(self.api.calls.index(patches[-1]), self.api.calls.index(self.api.posts[0]))
         for token in ['mobile-release-token', 'private-ledger-token']:
@@ -112,7 +113,7 @@ class IOSReleaseTest(unittest.TestCase):
             self.assertNotIn(token, self.output.getvalue())
 
     def test_missing_scoped_credentials_prevents_network_or_build(self):
-        for name in ['PROVENANCE_TOKEN', 'RELEASE_GITHUB_TOKEN']:
+        for name in ['PROVENANCE_TOKEN', 'RELEASE_GITHUB_TOKEN', 'PUBLIC_PEOPLE_LIST_POLICY']:
             env = self.env.copy()
             del env[name]
             with self.subTest(name=name), self.assertRaisesRegex(self.driver.ReleaseError, name):
@@ -120,7 +121,7 @@ class IOSReleaseTest(unittest.TestCase):
         self.assertFalse(self.api.calls)
 
     def test_secure_variable_transport_accepts_created_and_empty_update_responses(self):
-        for method, status, body, expected in [('POST', 201, b'{"data": []}', {'data': []}),
+        for method, status, body, expected in [('POST', 201, b'', {}),
                                                ('PATCH', 204, b'', {})]:
             response = io.BytesIO(body)
             response.status = status

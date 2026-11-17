@@ -55,6 +55,10 @@
 #     when PUBLISH_TO_GITHUB=YES and RELEASE_CHANNEL=PRODUCTION. It signs with
 #     this key to reach public relays without a manual `zsp publish`. Never log
 #     or echo this value.
+# 12 - Create environment variable group "store_release_credentials" with:
+#   - Secure GH_TOKEN, GITHUB_TOKEN and PROVENANCE_TOKEN, refreshed by GitHub store drivers
+#   - Secure DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS forwarded from the repository policy
+#   - Application-scoped; native store workflows import it last. Other workflows keep github_credentials.
 #
 # Public people-list discovery exclusions come from the GitHub repository
 # variable DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS (JSON array). Release builds
@@ -979,6 +983,7 @@ workflows:
         - proofmode_credentials
         - github_credentials
         - shorebird_credentials
+        - store_release_credentials
       vars:
         # Must match `flutter:` above. Shorebird ships its own Flutter, so the
         # release is only reproducible if we pin it to the same version
@@ -1140,6 +1145,7 @@ workflows:
         - github_credentials
         - shorebird_credentials
         - zapstore_credentials
+        - store_release_credentials
       vars:
         # Must match `flutter:` above — see the iOS workflow for why.
         FLUTTER_VERSION: 3.47.9

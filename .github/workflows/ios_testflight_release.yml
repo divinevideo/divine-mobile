@@ -55,5 +55,6 @@ jobs:
           CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
           PROVENANCE_TOKEN: ${{ steps.provenance.outputs.token }}
           RELEASE_GITHUB_TOKEN: ${{ steps.publisher.outputs.token }}
+          PUBLIC_PEOPLE_LIST_POLICY: ${{ vars.DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS }}
           SOURCE_SHA: ${{ inputs.source_sha }}
         run: python3 mobile/scripts/start_ios_release.py

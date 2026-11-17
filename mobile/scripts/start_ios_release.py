@@ -51,11 +51,11 @@ def request_json(method, url, token, payload=None):
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             expected = 202 if method == 'POST' else 200
-            if url.startswith('https://codemagic.io/api/v3/variable-groups/'):
+            if '/variable-groups' in url and url.startswith('https://codemagic.io/api/v3/'):
                 expected = {'POST': 201, 'PATCH': 204}.get(method, 200)
             if response.status != expected:
                 raise APIError(response.status)
-            if response.status == 204:
+            if response.status in {201, 204}:
                 return {}
             result = json.load(response)
             if not isinstance(result, dict):
@@ -113,7 +113,7 @@ def validate_build(build, expected_sha, *, require_main=True):
 def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.sleep,
                 monotonic=time.monotonic, timeout=4800):
     for name in ['CODEMAGIC_API_TOKEN', 'GH_TOKEN', 'GITHUB_REPOSITORY', 'GITHUB_RUN_ID',
-                 'PROVENANCE_TOKEN', 'RELEASE_GITHUB_TOKEN']:
+                 'PROVENANCE_TOKEN', 'RELEASE_GITHUB_TOKEN', 'PUBLIC_PEOPLE_LIST_POLICY']:
         if not env.get(name):
             raise ReleaseError(f'Missing {name}; configure the GitHub Actions secret/environment before dispatching. No build started.')
     repo = env['GITHUB_REPOSITORY']
@@ -231,7 +231,8 @@ def run_release(env, *, request=request_json, checked_out_sha=None, sleep=time.s
         from release_train.setup import configure_build_credentials
 
         try:
-            configure_build_credentials(cm, env['PROVENANCE_TOKEN'], env['RELEASE_GITHUB_TOKEN'])
+            configure_build_credentials(cm, env['PROVENANCE_TOKEN'], env['RELEASE_GITHUB_TOKEN'],
+                                        env['PUBLIC_PEOPLE_LIST_POLICY'])
         except (ProviderError, ReleaseError) as error:
             raise ReleaseError(f'Could not prepare secure build credentials: {error}. No build started.') from None
         payload = {'workflow_id': 'ios-build', 'branch': 'main', 'inputs': INPUTS,

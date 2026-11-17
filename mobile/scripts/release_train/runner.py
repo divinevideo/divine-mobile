@@ -966,7 +966,8 @@ class Runtime:
             from release_train.setup import configure_build_credentials
 
             configure_build_credentials(
-                self.cm, self.env["PROVENANCE_TOKEN"], self.env["CANDIDATE_TAG_TOKEN"]
+                self.cm, self.env["PROVENANCE_TOKEN"], self.env["CANDIDATE_TAG_TOKEN"],
+                self.env["PUBLIC_PEOPLE_LIST_POLICY"],
             )
             sha = action["sha"]
             tag = "release-candidate/" + sha
