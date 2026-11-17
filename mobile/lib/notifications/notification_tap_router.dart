@@ -205,8 +205,12 @@ pushNotificationTapTarget({
       value: tapTargetValue,
     );
     if (location == null) {
+      // The type is a wire value that identifies no one; the value can be a
+      // creator pubkey, so only its presence is logged.
       Log.warning(
-        'Unsupported campaign tap target; opening inbox',
+        'Unsupported campaign tap target; opening inbox '
+        '(tapTargetType=$tapTargetType, '
+        'hasTapTargetValue=${tapTargetValue?.isNotEmpty ?? false})',
         name: 'main',
         category: LogCategory.system,
       );

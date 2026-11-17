@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/notifications/notification_tap_router.dart';
 import 'package:openvine/notifications/routing/notification_tap_target.dart';
 import 'package:openvine/services/notification_helpers.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 void main() {
   final creator = 'a' * 64;
@@ -70,6 +71,29 @@ void main() {
         expect(result.videoCoordinate, isNull);
       });
     }
+
+    test(
+      'logs the unsupported target type without the target value',
+      () async {
+        final logs = LogCaptureService();
+        await logs.clearAllLogs();
+        pushNotificationTapTarget(
+          referencedAddress: null,
+          referencedEventId: null,
+          eventId: null,
+          notificationType: 'campaign',
+          senderPubkey: null,
+          tapTargetType: 'video_address',
+          tapTargetValue: creator,
+        );
+        final warning = logs
+            .getRecentLogs(minLevel: LogLevel.warning)
+            .map((entry) => entry.message)
+            .singleWhere((message) => message.contains('Unsupported campaign'));
+        expect(warning, contains('tapTargetType=video_address'));
+        expect(warning, isNot(contains(creator)));
+      },
+    );
 
     test(
       'local notification normalization preserves the campaign revision',
