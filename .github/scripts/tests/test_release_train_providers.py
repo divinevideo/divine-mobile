@@ -1,7 +1,11 @@
 import hashlib
+import io
+import json
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
+from unittest.mock import patch
 
 import release_train_fakes  # adds repository scripts to sys.path
 from release_train.providers import (
@@ -221,3 +225,63 @@ class LocalizedNotesTest(unittest.TestCase):
                 notes=[{'language': 'en-US', 'text': 'Videos load more smoothly.'}],
             )
         self.assertTrue(all(c[0] == 'GET' for c in http.calls))
+
+
+class PlayUploadTransportTest(unittest.TestCase):
+    def test_slow_bundle_upload_can_finish_after_one_minute(self):
+        calls = []
+
+        class GoogleTransport:
+            def open(self, request, timeout):
+                url = request.full_url
+                calls.append((request.method, url, timeout, request.data))
+                if '/bundles?' in url:
+                    # Simulate a successful upload taking 90 seconds. No real wait.
+                    if timeout < 90:
+                        raise TimeoutError('upload response exceeded socket timeout')
+                    response = {'versionCode': 123}
+                else:
+                    response = {'id': 'edit'}
+                return io.BytesIO(json.dumps(response).encode())
+
+        with tempfile.TemporaryDirectory() as directory:
+            artifact = Path(directory) / 'signed.aab'
+            artifact.write_bytes(b'original signed artifact')
+            digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+            with patch('release_train.providers.urllib.request.build_opener',
+                       return_value=GoogleTransport()):
+                Play('token').upload(artifact, 123, digest, notes=play_notes())
+        self.assertEqual([c[0] for c in calls], ['POST', 'POST', 'PUT', 'POST'])
+        self.assertTrue(calls[-1][1].endswith(
+            ':commit?changesInReviewBehavior=ERROR_IF_IN_REVIEW'))
+        self.assertTrue(all(c[2] == 60 for c in calls if '/bundles?' not in c[1]))
+
+    def test_upload_timeout_keeps_mutation_ambiguous_and_does_not_commit(self):
+        # urllib wraps a timeout while sending the bundle in URLError; a timeout
+        # while waiting for Google to process the uploaded bundle is not wrapped.
+        for failure in (
+            urllib.error.URLError(TimeoutError('secret transport details must not be logged')),
+            TimeoutError('secret transport details must not be logged'),
+        ):
+            with self.subTest(failure=type(failure).__name__):
+                calls = []
+
+                class UnavailableGoogleTransport:
+                    def open(self, request, timeout):
+                        calls.append(request.full_url)
+                        if '/bundles?' in request.full_url:
+                            raise failure
+                        return io.BytesIO(b'{"id":"edit"}')
+
+                with tempfile.TemporaryDirectory() as directory:
+                    artifact = Path(directory) / 'signed.aab'
+                    artifact.write_bytes(b'original signed artifact')
+                    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+                    with (
+                        patch('release_train.providers.urllib.request.build_opener',
+                              return_value=UnavailableGoogleTransport()),
+                        self.assertRaisesRegex(ProviderError, 'Google Play bundle upload.*timed out') as error,
+                    ):
+                        Play('token').upload(artifact, 123, digest, notes=play_notes())
+                self.assertNotIn('secret transport details', str(error.exception))
+                self.assertEqual(len(calls), 2)

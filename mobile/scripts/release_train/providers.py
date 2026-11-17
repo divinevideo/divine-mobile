@@ -51,7 +51,7 @@ class ArtifactRedirect(urllib.request.HTTPRedirectHandler):
         return urllib.request.Request(newurl, method="GET")
 
 
-def request_json(method, url, headers=None, body=None):
+def request_json(method, url, headers=None, body=None, *, timeout=60):
     headers = dict(headers or {})
     if isinstance(body, bytes):
         data = body
@@ -63,7 +63,7 @@ def request_json(method, url, headers=None, body=None):
     request = urllib.request.Request(url, headers=headers, data=data, method=method)
     try:
         with urllib.request.build_opener(NoRedirect).open(
-            request, timeout=60
+            request, timeout=timeout
         ) as response:
             raw = response.read()
             return json.loads(raw) if raw else {}
@@ -85,9 +85,13 @@ def request_json(method, url, headers=None, body=None):
         raise ProviderError(
             f"Provider request failed (HTTP {status}); inspect credentials, agreements, metadata or rate limits"
         ) from None
-    except (OSError, ValueError, TimeoutError, urllib.error.URLError):
+    except (OSError, ValueError, urllib.error.URLError) as error:
+        timed_out = isinstance(error, TimeoutError) or isinstance(
+            getattr(error, "reason", None), TimeoutError
+        )
+        detail = "Provider request timed out" if timed_out else "Provider response unavailable"
         raise ProviderError(
-            "Provider response unavailable; reconcile any mutation before retrying"
+            detail + "; reconcile any mutation before retrying"
         ) from None
 
 
@@ -259,12 +263,18 @@ class Play:
         )
         with open(path, "rb") as stream:
             raw = stream.read()
-        bundle = self.request(
-            "POST",
-            url,
-            self.headers | {"Content-Type": "application/octet-stream"},
-            raw,
-        )
+        try:
+            # Large AAB uploads need more time than small metadata requests.
+            # Google recommends at least two minutes for edits.bundles.upload.
+            bundle = self.request(
+                "POST",
+                url,
+                self.headers | {"Content-Type": "application/octet-stream"},
+                raw,
+                timeout=300,
+            )
+        except ProviderError as error:
+            raise ProviderError("Google Play bundle upload failed: " + str(error)) from None
         if str(bundle.get("versionCode")) != str(number):
             raise ProviderError(
                 "Uploaded AAB versionCode differs from authenticated release identity"
