@@ -1663,6 +1663,64 @@ void main() {
         );
 
         test(
+          'saves no video coordinates when suspended while the revision is '
+          'being written (#8313)',
+          () async {
+            stubRelay(
+              events: [
+                bookmarkListEvent([originalId]),
+              ],
+            );
+            final suspendedPrefs = _MockPrefs();
+            final revisionWrite = Completer<bool>();
+            when(() => suspendedPrefs.getString(any())).thenReturn(null);
+            when(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksStorageKey,
+                any(),
+              ),
+            ).thenAnswer((_) async => true);
+            when(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksRevisionStorageKey,
+                any(),
+              ),
+            ).thenAnswer((_) => revisionWrite.future);
+            when(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksVideoAddressesStorageKey,
+                any(),
+              ),
+            ).thenAnswer((_) async => true);
+            final service = BookmarksRepository(
+              nostrClient: nostrClient,
+              signer: signer,
+              prefs: suspendedPrefs,
+              resolveVideoAddresses: (ids) async => {originalId: coordinate},
+            );
+
+            final sync = service.syncGlobalBookmarks();
+            await pumpEventQueue();
+            service.suspend();
+            revisionWrite.complete(true);
+            await sync;
+
+            verify(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksRevisionStorageKey,
+                any(),
+              ),
+            ).called(1);
+            verifyNever(
+              () => suspendedPrefs.setString(
+                BookmarksRepository.globalBookmarksVideoAddressesStorageKey,
+                any(),
+              ),
+            );
+          },
+        );
+
+        test(
           'saves no revision record when disposed between the two writes',
           () async {
             stubRelay(
