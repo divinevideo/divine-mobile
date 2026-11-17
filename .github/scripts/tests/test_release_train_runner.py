@@ -575,7 +575,7 @@ class StoreAuthorizationRefreshTest(unittest.TestCase):
         clock = {'now': 0}
         requests = []
 
-        def http(method, url, headers=None, body=None):
+        def http(method, url, headers=None, body=None, *, timeout=60):
             if clock['now'] > 3500 and headers['Authorization'] != 'Bearer fresh-play':
                 raise ProviderError('Play authorization expired during artifact download')
             requests.append((method, url, body))
