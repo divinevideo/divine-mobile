@@ -299,9 +299,11 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
     // capturing it once in `create:` stays correct across auth changes (no
     // ValueKey guard needed — see feedTuningRepositoryProvider).
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
-    final recommendationFeedback = ref
+    // Resolved per call: the analytics service is replaced at Nostr-ready for
+    // the same account, and a tear-off would keep feeding the disposed one.
+    void recommendationFeedback(ClassicFeedFeedback feedback) => ref
         .read(analyticsServiceProvider)
-        .recordRecommendationInteraction;
+        .recordRecommendationInteraction(feedback);
 
     return MultiBlocProvider(
       providers: [

@@ -31,6 +31,7 @@ import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/personal_event_cache_clear_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
+import 'package:openvine/providers/provider_identity_stream.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
@@ -692,6 +693,16 @@ AnalyticsService analyticsService(Ref ref) {
 
   return service;
 }
+
+/// Keeps Home's Classics session on the current analytics service.
+///
+/// [analyticsServiceProvider] rebuilds, and disposes the old service, when the
+/// view retry service appears at Nostr-ready for the same account. Home must
+/// follow that replacement without rebuilding its feed.
+final Provider<Stream<AnalyticsService>>
+analyticsServiceIdentityStreamProvider = identityStreamOf<AnalyticsService>(
+  analyticsServiceProvider,
+);
 
 /// Draft storage service for persisting vine drafts
 @riverpod

@@ -4,6 +4,7 @@ import 'package:cache_sync/cache_sync.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:material_ui/material_ui.dart';
@@ -16,6 +17,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/services/age_verification_service.dart';
+import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
@@ -95,6 +97,20 @@ Future<void> _loadRemovalVideos(
 
 class _StartupPerformance extends Mock implements StartupPerformanceService {}
 
+/// Consents until disposed, as a live service does after initialization.
+class _ConsentingAnalytics extends TestAnalyticsService {
+  bool _retired = false;
+
+  @override
+  bool get initializedAnalyticsConsent => !_retired;
+
+  @override
+  void dispose() {
+    _retired = true;
+    super.dispose();
+  }
+}
+
 class _Nostr extends Mock implements NostrClient {}
 
 class _Api extends Mock implements FunnelcakeApiClient {}
@@ -126,6 +142,7 @@ Future<_SafetyPolicyHome> _mountSafetyPolicyHome(
   WidgetTester tester, {
   Stream<String> removals = const Stream.empty(),
   VideosRepository? Function()? currentRepository,
+  List<Override> overrides = const [],
 }) async {
   await CacheSync.init(dao: _CacheDao());
   SharedPreferences.setMockInitialValues({
@@ -178,6 +195,7 @@ Future<_SafetyPolicyHome> _mountSafetyPolicyHome(
         startupPerformanceServiceProvider.overrideWithValue(
           _StartupPerformance(),
         ),
+        ...overrides,
       ],
     ),
   );
@@ -323,6 +341,88 @@ void main() {
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.runAsync(pumpEventQueue);
         expect(newRemovals.hasListener, isFalse);
+      },
+    );
+
+    testWidgets(
+      'Classics follows a same-account analytics rebuild without rebuilding '
+      'Home',
+      (tester) async {
+        AnalyticsService analytics = _ConsentingAnalytics();
+        final home = await _mountSafetyPolicyHome(
+          tester,
+          overrides: [
+            analyticsServiceProvider.overrideWith((ref) {
+              final current = analytics;
+              ref.onDispose(current.dispose);
+              return current;
+            }),
+          ],
+        );
+        registerFallbackValue(
+          const ClassicRecommendationsRequest(seed: 'fallback'),
+        );
+        registerFallbackValue(<VideoEvent>[]);
+        final requests = <(ClassicRecommendationsRequest, String?)>[];
+        when(() => home.videos.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.single as List<VideoEvent>,
+        );
+        when(
+          () => home.videos.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+            isCurrent: any(named: 'isCurrent'),
+          ),
+        ).thenAnswer((call) async {
+          requests.add((
+            call.namedArguments[#request] as ClassicRecommendationsRequest,
+            call.namedArguments[#userPubkey] as String?,
+          ));
+          return HomeFeedResult(
+            videos: [_removalVideo('1'), _removalVideo('2')],
+            paginationCursor: 'next',
+            hasMore: true,
+            recommendationPageCount: 1,
+          );
+        });
+        final retired = analytics;
+        final replacement = _ConsentingAnalytics();
+        analytics = replacement;
+        home.container.invalidate(analyticsServiceProvider);
+        await tester.pumpAndSettle();
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+        expect(
+          tester.element(find.byType(VideoFeedView)).read<VideoFeedBloc>(),
+          same(home.originalFeed),
+        );
+        expect(retired.initializedAnalyticsConsent, isFalse);
+
+        // Assert bloc transitions without pumping frames, as the removal
+        // tests do: Classics playback needs no native media here.
+        home.originalFeed.add(
+          const VideoFeedSourceChanged(VideoFeedSource.classic()),
+        );
+        await tester.runAsync(pumpEventQueue);
+        expect(requests, isNotEmpty);
+        expect(requests.last.$2, _policyViewer);
+
+        requests.clear();
+        replacement.recordRecommendationInteraction(
+          ClassicFeedInteraction(
+            videoId: _removalVideo('2').id,
+            signal: ClassicFeedSignal.positive,
+          ),
+        );
+        await tester.runAsync(pumpEventQueue);
+        expect(requests, isNotEmpty);
+        expect(requests.last.$2, _policyViewer);
+        expect(
+          requests.last.$1.recentInteractions.map((i) => i.videoId),
+          contains(_removalVideo('2').id),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(pumpEventQueue);
       },
     );
 

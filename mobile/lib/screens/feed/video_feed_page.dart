@@ -39,6 +39,7 @@ import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/nav_rounded_shell.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 class VideoFeedPage extends ConsumerWidget {
@@ -103,7 +104,6 @@ class VideoFeedPage extends ConsumerWidget {
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
     final badgeRepository = ref.watch(badgeRepositoryProvider);
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
-    final analytics = ref.watch(analyticsServiceProvider);
 
     final persistence = ref
         .watch(feedModePersistenceRegistryProvider)
@@ -139,40 +139,7 @@ class VideoFeedPage extends ConsumerWidget {
                         defaultValue: true,
                       )
                       ? null
-                      : (ClassicFeedSession(
-                          loadPage: (request) {
-                            final contextId = analytics.privacyGeneration;
-                            final allowed =
-                                analytics.initializedAnalyticsConsent;
-                            return ref
-                                .read(videosRepositoryProvider)
-                                .getClassicRecommendations(
-                                  request: request,
-                                  userPubkey: allowed ? viewerPubkey : null,
-                                  isCurrent: () =>
-                                      contextId ==
-                                          analytics.privacyGeneration &&
-                                      allowed ==
-                                          analytics.initializedAnalyticsConsent,
-                                );
-                          },
-                          canPersonalize: () =>
-                              analytics.initializedAnalyticsConsent,
-                          feedback: analytics.recommendationFeedback,
-                          privacyChanges: analytics.privacyChanges,
-                          filter: (videos) {
-                            final repository = ref.read(
-                              videosRepositoryProvider,
-                            );
-                            return repository
-                                .applyContentPreferences(videos)
-                                .where(
-                                  (video) =>
-                                      !repository.isVideoKnownDeleted(video),
-                                )
-                                .toList();
-                          },
-                        )..setActive(active: false)),
+                      : _homeClassicSession(ref, viewerPubkey),
                   followRepository: followRepository,
                   curatedListRepository: curatedListRepository,
                   hashtagSubscriptionRepository: hashtagRepository,
@@ -807,4 +774,49 @@ class _KeyboardStableBottomInsetState
       child: widget.child,
     );
   }
+}
+
+/// Builds Home's Classics session against the current analytics service.
+///
+/// [analyticsServiceProvider] rebuilds, disposing the old service, at
+/// Nostr-ready for the same account, and Home keeps its feed across that. The
+/// session therefore follows [analyticsServiceIdentityStreamProvider] rather
+/// than the instance built with the page. The old service's disposal is itself
+/// a privacy change, so it is never re-read while Riverpod disposes it.
+ClassicFeedSession _homeClassicSession(WidgetRef ref, String? viewerPubkey) {
+  var analytics = ref.read(analyticsServiceProvider);
+  return ClassicFeedSession(
+    loadPage: (request) {
+      final requestAnalytics = analytics;
+      final contextId = requestAnalytics.privacyGeneration;
+      final allowed = requestAnalytics.initializedAnalyticsConsent;
+      return ref
+          .read(videosRepositoryProvider)
+          .getClassicRecommendations(
+            request: request,
+            userPubkey: allowed ? viewerPubkey : null,
+            isCurrent: () =>
+                contextId == requestAnalytics.privacyGeneration &&
+                allowed == requestAnalytics.initializedAnalyticsConsent,
+          );
+    },
+    canPersonalize: () => analytics.initializedAnalyticsConsent,
+    // Each listener tracks the current service; transforms of the identity
+    // stream are single-subscription, so one chain per listener.
+    feedback: ref
+        .read(analyticsServiceIdentityStreamProvider)
+        .doOnData((current) => analytics = current)
+        .switchMap((current) => current.recommendationFeedback),
+    privacyChanges: ref
+        .read(analyticsServiceIdentityStreamProvider)
+        .doOnData((current) => analytics = current)
+        .switchMap((current) => current.privacyChanges),
+    filter: (videos) {
+      final repository = ref.read(videosRepositoryProvider);
+      return repository
+          .applyContentPreferences(videos)
+          .where((video) => !repository.isVideoKnownDeleted(video))
+          .toList();
+    },
+  )..setActive(active: false);
 }
