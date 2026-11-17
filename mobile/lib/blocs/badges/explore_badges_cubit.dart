@@ -35,7 +35,9 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
     await refresh();
   }
 
-  /// Reloads the definitions without clearing what is already on screen.
+  /// Reloads without a loading state, keeping the current cards until the
+  /// read ends; a successful read starts again from the first page with no
+  /// member previews.
   Future<void> refresh() async {
     final generation = ++_generation;
     _refreshing = true;

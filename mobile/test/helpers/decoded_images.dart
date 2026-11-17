@@ -13,8 +13,9 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 
 import 'test_provider_overrides.dart';
 
-/// Pumps [app] with every [VineCachedImage] served from a small PNG on disk,
-/// then waits until each [Image] matched by [images] has decoded a frame.
+/// Pumps [app] with every [VineCachedImage] served from an [imageSize] PNG on
+/// disk (8×12 unless given), then waits until each [Image] matched by
+/// [images] has decoded a frame.
 ///
 /// The app's network images fade in from zero opacity, and a zero-opacity
 /// child is left out of the semantics tree, so an image only reaches

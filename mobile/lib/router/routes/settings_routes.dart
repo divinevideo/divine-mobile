@@ -286,7 +286,8 @@ class BadgeAwardRouteData extends GoRouteData with $BadgeAwardRouteData {
   );
 }
 
-/// Builds a badge route's screen from its `naddr` path parameter.
+/// Builds a badge route's screen from its `naddr` path parameter, which holds
+/// an naddr or, for an identifier too long for NIP-19, a raw coordinate.
 ///
 /// A reference that does not decode to a badge definition coordinate — a
 /// truncated share link, or an `naddr` for another kind — falls back to the
