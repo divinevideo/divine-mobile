@@ -557,6 +557,26 @@ void main() {
       },
     );
 
+    group('loadMore', () {
+      test('concurrent calls share one request for the next page', () async {
+        final requests = <ClassicRecommendationsRequest>[];
+        final session = ClassicFeedSession(
+          loadPage: (request) async {
+            requests.add(request);
+            final page = requests.length;
+            return _page([page * 10 + 1, page * 10 + 2], cursor: 'page-$page');
+          },
+        );
+        addTearDown(session.dispose);
+        await session.loadInitial();
+
+        await Future.wait([session.loadMore(), session.loadMore()]);
+
+        expect(requests.map((request) => request.cursor), [null, 'page-1']);
+        expect(session.state.isLoading, isFalse);
+      });
+    });
+
     group('resetContext', () {
       test('does not send the previous context continuation cursor', () async {
         final requests = <ClassicRecommendationsRequest>[];

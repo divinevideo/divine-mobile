@@ -184,7 +184,8 @@ class ClassicFeedSession {
     if (_disposed || !_active || !state.hasMore) {
       return _result(const []);
     }
-    return _start();
+    // Another caller may have started this page while this one waited.
+    return _pending ?? _start();
   }
 
   /// Records navigation immediately; no network request delays playback.
@@ -323,21 +324,23 @@ class ClassicFeedSession {
     );
     _emit(isLoading: true);
     final completion = Completer<HomeFeedResult>();
-    _pending = completion.future;
+    final pending = _pending = completion.future;
     unawaited(
       _read(
         request,
         generation,
+        pending: pending,
         replaceTail: replaceTail,
         replaceAll: replaceAll,
       ).then(completion.complete),
     );
-    return completion.future;
+    return pending;
   }
 
   Future<HomeFeedResult> _read(
     ClassicRecommendationsRequest request,
     int generation, {
+    required Future<HomeFeedResult> pending,
     required bool replaceTail,
     required bool replaceAll,
   }) async {
@@ -389,9 +392,10 @@ class ClassicFeedSession {
       }
       return _result(const []);
     } finally {
-      _pending = null;
+      // A refresh can start its own read while this one is in flight.
+      if (identical(_pending, pending)) _pending = null;
       if (!_disposed) {
-        _emit(isLoading: false);
+        _emit(isLoading: _pending != null);
         if (_refreshRequested && _active) {
           _refreshRequested = false;
           _requestAdaptation();
