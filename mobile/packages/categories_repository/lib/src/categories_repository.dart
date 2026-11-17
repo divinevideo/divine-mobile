@@ -49,6 +49,9 @@ class CategoriesRepository {
 
   static const _categoriesCacheKey = 'global:categories:v1';
 
+  /// The oldest category video snapshot that may still be shown.
+  static const _videoSnapshotMaxAge = Duration(hours: 24);
+
   bool get _isCacheValid =>
       _cache != null &&
       _cachedAt != null &&
@@ -164,7 +167,10 @@ class CategoriesRepository {
   static CategoryVideosPage _videosPageFromJson(String payload) {
     final decoded = jsonDecode(payload) as Map<String, dynamic>;
     final cachedAt = DateTime.parse(decoded['cachedAt'] as String);
-    if (DateTime.now().difference(cachedAt) > const Duration(hours: 24)) {
+    final age = DateTime.now().difference(cachedAt);
+    // A negative age means the device clock moved back since the write, so
+    // the snapshot's real age is unknown.
+    if (age.isNegative || age > _videoSnapshotMaxAge) {
       // CacheSync removes rejected snapshots and continues with the live fetch.
       throw const FormatException('Category video snapshot expired');
     }

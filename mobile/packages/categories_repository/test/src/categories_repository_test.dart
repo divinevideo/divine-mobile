@@ -370,6 +370,24 @@ void main() {
         },
       );
 
+      test('drops snapshots dated after the current time', () async {
+        await repository
+            .watchVideosForCategoryCached(category: 'music', cacheScope: viewer)
+            .toList();
+        final key = cacheDao.keys.single;
+        final payload =
+            jsonDecode(cacheDao.rawRead(key)!) as Map<String, dynamic>;
+        payload['cachedAt'] = DateTime.now()
+            .toUtc()
+            .add(const Duration(days: 2))
+            .toIso8601String();
+        await cacheDao.write(key: key, payload: jsonEncode(payload));
+        final results = await repository
+            .watchVideosForCategoryCached(category: 'music', cacheScope: viewer)
+            .toList();
+        expect(results.single.isLive, isTrue);
+      });
+
       test('drops videos that expired after the snapshot was saved', () async {
         const expiredId =
             '4444444444444444444444444444444444444444444444444444444444444444';
