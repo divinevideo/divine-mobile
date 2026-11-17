@@ -98,6 +98,23 @@ void main() {
         expect(mascot, findsNothing);
         expect(find.byType(CategoryGlyph), findsOneWidget);
       });
+
+      // The slot is 90 px tall and clips what it holds, so a mascot laid out
+      // any taller would lose real artwork, not just its tilted corners.
+      testWidgets('fits the sticker to the slot height', (tester) async {
+        await pumpHeader(tester, category);
+
+        expect(tester.getSize(mascot), equals(const Size.square(90)));
+      });
+
+      testWidgets('fits the glyph to the slot height', (tester) async {
+        await pumpHeader(
+          tester,
+          const VideoCategory(name: 'technology', videoCount: 12),
+        );
+
+        expect(tester.getSize(find.byType(CategoryGlyph)).height, equals(90));
+      });
     });
 
     testWidgets(
