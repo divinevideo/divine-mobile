@@ -457,6 +457,28 @@ class AnalyticsService implements BackgroundAwareService {
     ),
   );
 
+  /// Records recommendation outcomes without a suggested account identifier.
+  Future<String?> peopleSuggestionRecorded({
+    required ProductAnalyticsV2PeopleDiscoverySource discoverySource,
+    required ProductAnalyticsV2PeopleSuggestionAction action,
+    required int position,
+  }) {
+    if (position < productAnalyticsV2PeopleSuggestionRecordedPositionMinimum ||
+        position > productAnalyticsV2PeopleSuggestionRecordedPositionMaximum) {
+      return Future.value();
+    }
+    return _trackProductEvent(
+      (envelope) => ProductAnalyticsV2PeopleSuggestionRecordedEvent(
+        envelope: envelope,
+        properties: ProductAnalyticsV2PeopleSuggestionRecordedProperties(
+          discoverySource: discoverySource,
+          action: action,
+          position: position,
+        ),
+      ),
+    );
+  }
+
   Future<String?> recordPlaybackSession({
     required String playbackSessionId,
     required String contentId,

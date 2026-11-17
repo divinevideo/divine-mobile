@@ -1,8 +1,8 @@
 // @generated from analytics/event-contract.yaml.
-// Source contract commit: 68380fb9b9f7cbb2d8f952a119ea460eb906342e
+// Source contract commit: d58dedc82695a6873c87f225111b5b6f2e732663
 // DO NOT EDIT. Update the contract and run analytics/codegen/generate.py.
 const String productAnalyticsV2ContractCommit =
-    '68380fb9b9f7cbb2d8f952a119ea460eb906342e';
+    'd58dedc82695a6873c87f225111b5b6f2e732663';
 const int productAnalyticsV2SchemaVersion = 2;
 const String productAnalyticsV2EventIdAlgorithm = 'sha256-rfc8785-v1';
 const bool? productAnalyticsV2ConsentDefaultEnabled = null;
@@ -19,6 +19,8 @@ const int productAnalyticsV2PlaybackSessionRecordedLoopCountMinimum = 0;
 const int productAnalyticsV2PlaybackSessionRecordedLoopCountMaximum = 1000;
 const int productAnalyticsV2FeedDepthRecordedDepthMinimum = 2;
 const int productAnalyticsV2FeedDepthRecordedDepthMaximum = 1000000;
+const int productAnalyticsV2PeopleSuggestionRecordedPositionMinimum = 0;
+const int productAnalyticsV2PeopleSuggestionRecordedPositionMaximum = 10000;
 
 enum ProductAnalyticsV2Source {
   mobile('mobile'),
@@ -194,6 +196,24 @@ enum ProductAnalyticsV2FeedType {
   unknown('unknown');
 
   const ProductAnalyticsV2FeedType(this.wireName);
+  final String wireName;
+}
+
+enum ProductAnalyticsV2PeopleDiscoverySource {
+  findPeople('find_people'),
+  onboarding('onboarding'),
+  feedCard('feed_card');
+
+  const ProductAnalyticsV2PeopleDiscoverySource(this.wireName);
+  final String wireName;
+}
+
+enum ProductAnalyticsV2PeopleSuggestionAction {
+  exposed('exposed'),
+  followed('followed'),
+  dismissed('dismissed');
+
+  const ProductAnalyticsV2PeopleSuggestionAction(this.wireName);
   final String wireName;
 }
 
@@ -449,6 +469,25 @@ class ProductAnalyticsV2FeedDepthRecordedProperties {
   };
 }
 
+/// Wire event name: `people_suggestion_recorded`.
+class ProductAnalyticsV2PeopleSuggestionRecordedProperties {
+  const ProductAnalyticsV2PeopleSuggestionRecordedProperties({
+    required this.discoverySource,
+    required this.action,
+    required this.position,
+  });
+
+  final ProductAnalyticsV2PeopleDiscoverySource discoverySource;
+  final ProductAnalyticsV2PeopleSuggestionAction action;
+  final int position;
+
+  Map<String, Object?> toJson() => {
+    'discovery_source': discoverySource.wireName,
+    'action': action.wireName,
+    'position': position,
+  };
+}
+
 sealed class ProductAnalyticsV2Event {
   const ProductAnalyticsV2Event({required this.envelope});
 
@@ -602,6 +641,22 @@ final class ProductAnalyticsV2FeedDepthRecordedEvent
 
   @override
   String get eventName => 'feed_depth_recorded';
+
+  @override
+  Map<String, Object?> get propertiesJson => properties.toJson();
+}
+
+final class ProductAnalyticsV2PeopleSuggestionRecordedEvent
+    extends ProductAnalyticsV2Event {
+  const ProductAnalyticsV2PeopleSuggestionRecordedEvent({
+    required super.envelope,
+    required this.properties,
+  });
+
+  final ProductAnalyticsV2PeopleSuggestionRecordedProperties properties;
+
+  @override
+  String get eventName => 'people_suggestion_recorded';
 
   @override
   Map<String, Object?> get propertiesJson => properties.toJson();
