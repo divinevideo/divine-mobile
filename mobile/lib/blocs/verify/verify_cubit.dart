@@ -96,6 +96,11 @@ class VerifyCubit extends Cubit<VerifyState> {
 
   bool _refreshingQuietly = false;
 
+  /// Bumped whenever the list is changed locally ([claimLinked], an unlink),
+  /// so a quiet refresh that began before the change can tell its read is
+  /// older than the list and must not replace it.
+  int _listGeneration = 0;
+
   /// Re-reads the verdicts and Divine Confirmation access without leaving the
   /// list, for the return from the Confirmation screen.
   ///
@@ -111,17 +116,23 @@ class VerifyCubit extends Cubit<VerifyState> {
     }
     if (_refreshingQuietly) return;
     _refreshingQuietly = true;
+    final generation = _listGeneration;
     try {
       final claims = await _repository.claimsWithVerdicts(_pubkey);
       if (isClosed) return;
-      emit(
-        state.copyWith(
-          claims: claims.claims,
-          verifiedKeys: claims.verifiedKeys,
-          verifierReachable: claims.verifierReachable,
-          signInCodes: claims.signInCodes,
-        ),
-      );
+      // A link or unlink landed while the read was out. The read may predate
+      // it, or come from a relay that hasn't caught up, and would put back a
+      // row the user just removed. The next load reconciles.
+      if (generation == _listGeneration) {
+        emit(
+          state.copyWith(
+            claims: claims.claims,
+            verifiedKeys: claims.verifiedKeys,
+            verifierReachable: claims.verifierReachable,
+            signInCodes: claims.signInCodes,
+          ),
+        );
+      }
       await _loadConfirmationAccess(state.platforms, refresh: true);
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
@@ -178,6 +189,7 @@ class VerifyCubit extends Cubit<VerifyState> {
   void claimLinked(IdentityClaim claim, {IdentityClaim? replacing}) {
     final key = VerifyState.keyOf(claim);
     final dropped = {key, if (replacing != null) VerifyState.keyOf(replacing)};
+    _listGeneration++;
     emit(
       state.copyWith(
         status: VerifyStatus.ready,
@@ -206,6 +218,7 @@ class VerifyCubit extends Cubit<VerifyState> {
     try {
       await _repository.removeClaim(claim);
       if (isClosed) return;
+      _listGeneration++;
       emit(
         state.copyWith(
           claims: [

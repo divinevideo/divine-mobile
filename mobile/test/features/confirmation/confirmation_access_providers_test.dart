@@ -8,6 +8,7 @@ import 'package:openvine/features/confirmation/confirmation_access_providers.dar
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/auth_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,6 +26,15 @@ class _DeveloperMode extends IsDeveloperModeEnabledNotifier {
   bool build() => _initial;
 
   void turnOff() => state = false;
+}
+
+/// Auth state a test can move while the container lives, as a sign-out and
+/// the next sign-in do.
+class _AuthState extends CurrentAuthState {
+  @override
+  AuthState build() => AuthState.authenticated;
+
+  void moveTo(AuthState value) => state = value;
 }
 
 void main() {
@@ -54,6 +64,7 @@ void main() {
         ),
         confirmationAccessDebugBuildProvider.overrideWithValue(debugBuild),
         identityClaimsRepositoryProvider.overrideWithValue(repository),
+        currentAuthStateProvider.overrideWith(_AuthState.new),
       ],
     );
     addTearDown(container.dispose);
@@ -112,6 +123,35 @@ void main() {
         container.read(confirmationAccessOverrideProvider),
         equals(ConfirmationAccess.hasNot),
       );
+    });
+
+    test('a sign-out then a sign-in drops the forced answer', () async {
+      final container = await containerWith(
+        storedOverride: 'hasNot',
+        developerMode: true,
+      );
+      expect(
+        await container.read(confirmationAccessReaderProvider)(),
+        equals(ConfirmationAccess.hasNot),
+      );
+      final auth =
+          container.read(currentAuthStateProvider.notifier) as _AuthState;
+
+      // The sign-out sweeps the stored key before the auth state flips.
+      await container
+          .read(sharedPreferencesProvider)
+          .remove(
+            confirmationAccessOverrideKey,
+          );
+      auth.moveTo(AuthState.unauthenticated);
+      auth.moveTo(AuthState.authenticated);
+
+      expect(container.read(confirmationAccessOverrideProvider), isNull);
+      expect(
+        await container.read(confirmationAccessReaderProvider)(),
+        equals(ConfirmationAccess.has),
+      );
+      verify(() => repository.confirmationAccess()).called(1);
     });
 
     test('with no override the reader is the repository', () async {

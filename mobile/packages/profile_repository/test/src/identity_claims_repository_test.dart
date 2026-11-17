@@ -4699,6 +4699,25 @@ void main() {
       expect(signed, hasLength(2));
     });
 
+    test('an unknown answer is returned but not remembered', () async {
+      stubVerifier(
+        () async => throw const VerifierNetworkException('offline'),
+      );
+      final repo = buildRepo();
+
+      expect(
+        await repo.confirmationAccess(),
+        equals(ConfirmationAccess.unknown),
+      );
+      verifyFetchCalled(1);
+
+      // The blip passed: the next plain call asks again, not the old unknown.
+      stubFetch(() async => true);
+      expect(await repo.confirmationAccess(), equals(ConfirmationAccess.has));
+      verifyFetchCalled(1);
+      expect(signed, hasLength(2));
+    });
+
     test('callers arriving while a check is in flight share it', () async {
       final answer = Completer<bool?>();
       stubVerifier(() => answer.future);

@@ -39,6 +39,11 @@ final confirmationAccessOverrideProvider =
 class ConfirmationAccessOverrideNotifier extends Notifier<ConfirmationAccess?> {
   @override
   ConfirmationAccess? build() {
+    // Re-read on every auth change. A sign-out keeps this container, so
+    // without it the in-memory answer would outlive the key the sign-out
+    // swept and carry onto the next account. The sweep runs before the auth
+    // state flips, so the re-read finds the key gone.
+    ref.watch(currentAuthStateProvider);
     final stored = ref
         .watch(sharedPreferencesProvider)
         .getString(confirmationAccessOverrideKey);

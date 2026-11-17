@@ -82,7 +82,12 @@ enum SignInRefusal {
   };
 }
 
-/// The verifier refused to confirm a sign-in.
+/// The verifier refused to confirm a sign-in, or couldn't check it.
+///
+/// A refusal carries its own code. A 5xx carrying `confirmation_unavailable`
+/// is reported here too ([SignInRefusal.confirmationUnavailable]): that is
+/// not a refusal but a check that couldn't run, so the same sign-in may be
+/// retried. Every other 5xx stays a [VerifierApiException].
 final class SignInConfirmException extends VerifierClientException {
   /// Creates a [SignInConfirmException]. The message never carries the code
   /// or secret sent.

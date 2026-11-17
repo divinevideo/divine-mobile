@@ -793,8 +793,11 @@ class IdentityClaimsRepository {
   /// Whether the signed-in user holds Divine Confirmation, as the verifier
   /// answers a NIP-98 request signed by this repository's signer.
   ///
-  /// Remembers the last answer and shares a check already in flight;
+  /// Remembers the last definite answer ([ConfirmationAccess.has] or
+  /// [ConfirmationAccess.hasNot]) and shares a check already in flight;
   /// [refresh] asks again, for a re-check after a purchase or a refusal.
+  /// An [ConfirmationAccess.unknown] answer is a blip, not a fact, so it is
+  /// returned but not remembered: the next call asks again.
   /// Callers of a check a refresh overtook get the refresh's answer.
   ///
   /// Signs only through the passive signer, so it never prompts the user.
@@ -818,7 +821,9 @@ class IdentityClaimsRepository {
         return _confirmationAccessInFlight ??
             Future.value(_lastConfirmationAccess ?? access);
       }
-      _lastConfirmationAccess = access;
+      _lastConfirmationAccess = access == ConfirmationAccess.unknown
+          ? null
+          : access;
       _confirmationAccessInFlight = null;
       return access;
     });

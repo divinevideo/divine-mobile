@@ -179,6 +179,32 @@ void main() {
         ],
       );
 
+      test('an unlink made while it runs stays unlinked', () async {
+        final cubit = build(confirmationSignIn: true)..emit(readyState());
+        addTearDown(cubit.close);
+        final read = Completer<IdentityClaimStatus>();
+        when(
+          () => repository.claimsWithVerdicts(any()),
+        ).thenAnswer((_) => read.future);
+
+        final refresh = cubit.refreshQuietly();
+        await cubit.removeClaim(_twitter);
+        // The slow read started before the unlink and still has the row.
+        read.complete(
+          const IdentityClaimStatus(
+            claims: [_github, _twitter],
+            verifiedKeys: {'github:octocat', 'twitter:jack'},
+            verifierReachable: true,
+          ),
+        );
+        await refresh;
+
+        expect(cubit.state.claims, equals([_github]));
+        expect(cubit.state.verifiedKeys, isNot(contains('twitter:jack')));
+        // The access answer is still taken afresh.
+        expect(accessReads, equals([true]));
+      });
+
       blocTest<VerifyCubit, VerifyState>(
         'loads in full when the list is not showing yet',
         build: () => build(confirmationSignIn: true),

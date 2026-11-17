@@ -24,6 +24,7 @@ import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/verify/verify_confirmation_screen.dart';
 import 'package:openvine/screens/verify/verify_connect_screen.dart';
@@ -33,6 +34,7 @@ import 'package:openvine/screens/verify/widgets/verify_platform_row.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:verifier_client/verifier_client.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -1356,6 +1358,85 @@ void main() {
         expect(firstReads, equals([false]));
         expect(find.text(l10n.verifyOneTapBadge), findsOneWidget);
         expect(find.text(l10n.verifyOneTapWithConfirmationBadge), findsNothing);
+      });
+
+      testWidgets('a changed developer override starts a new read', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final reads = <bool>[];
+        when(repository.supportedPlatforms).thenAnswer(
+          (_) async => const [
+            VerifierPlatform(
+              key: 'bluesky',
+              label: 'Bluesky',
+              supported: true,
+              oauth: true,
+              signinRequires: SigninRequirement.confirmation,
+            ),
+          ],
+        );
+        when(() => repository.claimsWithVerdicts(any())).thenAnswer(
+          (_) async => const IdentityClaimStatus(
+            claims: [],
+            verifiedKeys: {},
+            verifierReachable: true,
+          ),
+        );
+        when(
+          () => repository.confirmationAccess(refresh: any(named: 'refresh')),
+        ).thenAnswer((invocation) async {
+          reads.add(invocation.namedArguments[#refresh]! as bool);
+          return ConfirmationAccess.has;
+        });
+
+        // The real reader, so the override's notifier is what swaps it.
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              identityClaimsRepositoryProvider.overrideWithValue(repository),
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              confirmationAccessDebugBuildProvider.overrideWithValue(true),
+              supporterStoreBillingAvailableProvider.overrideWithValue(true),
+              isFeatureEnabledProvider(
+                FeatureFlag.confirmationSignIn,
+              ).overrideWithValue(true),
+              authServiceProvider.overrideWithValue(
+                createMockAuthService(
+                  authState: AuthState.authenticated,
+                  currentPublicKeyHex: _pubkey,
+                ),
+              ),
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.authenticated,
+              ),
+              appOAuthSupportProvider.overrideWith((ref) async => true),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: VineTheme.theme,
+              home: const VerifyPage(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.verifyOneTapBadge), findsOneWidget);
+        expect(reads, equals([false]));
+
+        await ProviderScope.containerOf(tester.element(find.byType(VerifyPage)))
+            .read(confirmationAccessOverrideProvider.notifier)
+            .set(ConfirmationAccess.hasNot);
+        await tester.pumpAndSettle();
+
+        // A new cubit, not the old one with a stale answer: the forced answer
+        // shows, and the repository wasn't asked again.
+        expect(
+          find.text(l10n.verifyOneTapWithConfirmationBadge),
+          findsOneWidget,
+        );
+        expect(reads, equals([false]));
       });
     });
 

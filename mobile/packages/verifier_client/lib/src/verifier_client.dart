@@ -178,9 +178,11 @@ class VerifierClient {
   /// whose new claim carries [SignInSecrets.confirmBindingFor]. Send the same
   /// [event] again after a lost answer; a re-signed one is refused as used.
   ///
-  /// Throws [SignInConfirmException] for a refusal, [VerifierApiException]
-  /// for a server error or a success that doesn't name the linked account,
-  /// and the timeout and network exceptions as [verifyBatch].
+  /// Throws [SignInConfirmException] for a refusal, and for a 5xx carrying
+  /// `confirmation_unavailable` (the check couldn't run; not a refusal),
+  /// [VerifierApiException] for any other server error or a success that
+  /// doesn't name the linked account, and the timeout and network exceptions
+  /// as [verifyBatch].
   Future<SignInConfirmation> confirmSignIn({
     required String code,
     required String startSecret,
