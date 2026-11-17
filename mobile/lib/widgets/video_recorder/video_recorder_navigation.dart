@@ -147,10 +147,12 @@ Future<void> _openVideoEditorFromRecorder(
   // Takes recorded against a sound are synced to it, so silence the clips
   // before the editor: only the chosen audio should be heard, with the clips
   // muted and the sound carried in as its own track (seeded on editor init).
-  // A sound can only be picked before the first take, so every clip here was
-  // recorded against it.
+  // Only a recorder-backed sound opts into this handoff. A restored draft's
+  // selected sound alone must not overwrite the clips' saved volumes.
+  final editorState = ref.read(videoEditorProvider);
   if (recorderMode.supportsSound &&
-      ref.read(videoEditorProvider).selectedSound != null) {
+      editorState.selectedSound != null &&
+      editorState.seedSelectedSoundAsAudioTrack) {
     ref.read(clipManagerProvider.notifier).muteAllClips();
   }
 

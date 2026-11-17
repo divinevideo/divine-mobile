@@ -134,7 +134,9 @@ class VideoRecorderRoute extends ConsumerWidget {
             value.ownerPubkey) {
           throw StateError('Recorder sound account changed');
         }
-        ref.read(videoEditorProvider.notifier).selectSound(value.sound);
+        ref
+            .read(videoEditorProvider.notifier)
+            .selectRecorderAudioTrack(value.sound);
       },
       child: recorder,
     );

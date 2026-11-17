@@ -76,10 +76,13 @@ class _FakeVideoEditorNotifier extends VideoEditorNotifier {
 
   /// The sound the recorder picked before the test navigates.
   AudioEvent? initialSound;
+  bool seedSelectedSoundAsAudioTrack = true;
 
   @override
-  VideoEditorProviderState build() =>
-      VideoEditorProviderState(selectedSound: initialSound);
+  VideoEditorProviderState build() => VideoEditorProviderState(
+    selectedSound: initialSound,
+    seedSelectedSoundAsAudioTrack: seedSelectedSoundAsAudioTrack,
+  );
 
   @override
   Future<bool> restoreDraft([String? draftId]) async {
@@ -377,6 +380,27 @@ void main() {
         expect(fakeClipManager.muteAllClipsCalled, isFalse);
         expect(find.text('editor'), findsOneWidget);
         verify(() => audioSessionService.configureForMixedPlayback()).called(1);
+      });
+
+      testWidgets('openVideoEditorFromRecorder preserves clip audio for a '
+          'restored sound that is not a recorder track', (tester) async {
+        fakeEditor
+          ..initialSound = AudioEvent(
+            id: 'sound',
+            pubkey: 'a' * 64,
+            createdAt: 0,
+            url: 'https://example.com/audio.mp3',
+          )
+          ..seedSelectedSoundAsAudioTrack = false;
+
+        await tester.pumpWidget(buildHarness());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('open-editor')));
+        await tester.pumpAndSettle();
+
+        expect(fakeClipManager.muteAllClipsCalled, isFalse);
+        expect(find.text('editor'), findsOneWidget);
       });
 
       testWidgets('openVideoEditorFromRecorder finalizes a pending clip '
