@@ -31,70 +31,75 @@ void main() {
           ),
         ),
       );
-  testWidgets(
-    'cold lookup waits for config; exact config opens and withdrawal clears content',
-    (tester) async {
-      await pump(tester, const FeaturedTabsState());
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      expect(find.text('Requested feed content'), findsNothing);
-      await pump(
-        tester,
-        FeaturedTabsState(status: FeaturedTabsStatus.resolved, tab: tab(id)),
-      );
-      expect(find.text('Requested feed content'), findsOneWidget);
-      await pump(
-        tester,
-        const FeaturedTabsState(status: FeaturedTabsStatus.resolved),
-      );
-      expect(find.text('Requested feed content'), findsNothing);
-      expect(find.text(l10n.featuredFeedUnavailable), findsOneWidget);
-      await pump(
-        tester,
-        FeaturedTabsState(
-          status: FeaturedTabsStatus.resolved,
-          tab: tab('other-id'),
-        ),
-      );
-      expect(find.text('Requested feed content'), findsNothing);
-      expect(find.text(l10n.featuredFeedUnavailable), findsOneWidget);
-    },
-  );
-  testWidgets('an exact feed is unavailable when disabled or its window ends', (
-    tester,
-  ) async {
-    var now = DateTime.utc(2026, 11, 17, 12);
-    FeaturedTabConfig config({bool enabled = true}) => FeaturedTabConfig(
-      id: id,
-      slug: 'featured-slug',
-      label: const {'default': 'Featured'},
-      startsAt: now.subtract(const Duration(hours: 1)),
-      endsAt: DateTime.utc(2026, 11, 17, 12, 0, 1),
-      enabled: enabled,
-      hasContent: true,
-    );
-    Future<void> show(FeaturedTabConfig config) => tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: FeaturedCampaignGate(
-          feedId: id,
-          state: FeaturedTabsState(
+  group('navigation', () {
+    testWidgets(
+      'cold lookup waits for config; exact config opens and withdrawal clears content',
+      (tester) async {
+        await pump(tester, const FeaturedTabsState());
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.text('Requested feed content'), findsNothing);
+        await pump(
+          tester,
+          FeaturedTabsState(status: FeaturedTabsStatus.resolved, tab: tab(id)),
+        );
+        expect(find.text('Requested feed content'), findsOneWidget);
+        await pump(
+          tester,
+          const FeaturedTabsState(status: FeaturedTabsStatus.resolved),
+        );
+        expect(find.text('Requested feed content'), findsNothing);
+        expect(find.text(l10n.featuredFeedUnavailable), findsOneWidget);
+        await pump(
+          tester,
+          FeaturedTabsState(
             status: FeaturedTabsStatus.resolved,
-            tab: config,
+            tab: tab('other-id'),
           ),
-          now: () => now,
-          child: const Text('Exact feed'),
-        ),
-      ),
+        );
+        expect(find.text('Requested feed content'), findsNothing);
+        expect(find.text(l10n.featuredFeedUnavailable), findsOneWidget);
+      },
     );
-    await show(config(enabled: false));
-    expect(find.text('Exact feed'), findsNothing);
-    expect(find.text(l10n.featuredFeedUnavailable), findsOneWidget);
-    await show(config());
-    expect(find.text('Exact feed'), findsOneWidget);
-    now = now.add(const Duration(seconds: 1));
-    await tester.pump(const Duration(seconds: 1));
-    expect(find.text('Exact feed'), findsNothing);
-    expect(find.text(l10n.featuredFeedUnavailable), findsOneWidget);
+    testWidgets(
+      'an exact feed is unavailable when disabled or its window ends',
+      (
+        tester,
+      ) async {
+        var now = DateTime.utc(2026, 11, 17, 12);
+        FeaturedTabConfig config({bool enabled = true}) => FeaturedTabConfig(
+          id: id,
+          slug: 'featured-slug',
+          label: const {'default': 'Featured'},
+          startsAt: now.subtract(const Duration(hours: 1)),
+          endsAt: DateTime.utc(2026, 11, 17, 12, 0, 1),
+          enabled: enabled,
+          hasContent: true,
+        );
+        Future<void> show(FeaturedTabConfig config) => tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: FeaturedCampaignGate(
+              feedId: id,
+              state: FeaturedTabsState(
+                status: FeaturedTabsStatus.resolved,
+                tab: config,
+              ),
+              now: () => now,
+              child: const Text('Exact feed'),
+            ),
+          ),
+        );
+        await show(config(enabled: false));
+        expect(find.text('Exact feed'), findsNothing);
+        expect(find.text(l10n.featuredFeedUnavailable), findsOneWidget);
+        await show(config());
+        expect(find.text('Exact feed'), findsOneWidget);
+        now = now.add(const Duration(seconds: 1));
+        await tester.pump(const Duration(seconds: 1));
+        expect(find.text('Exact feed'), findsNothing);
+        expect(find.text(l10n.featuredFeedUnavailable), findsOneWidget);
+      },
+    );
   });
 }
