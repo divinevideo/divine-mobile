@@ -661,11 +661,12 @@ class _AudioSelectionBottomSheetState
     // The owner exemption follows account changes just as the tap check does.
     ref.watch(currentAuthStateProvider);
     final bundledSoundsAsync = ref.watch(soundLibraryServiceProvider);
-    // Batched like the counts below and just as supplementary: a row shows
-    // its colour tile until its list's covers load, then its cover if it has
-    // one. Every list keeps its own covers, so a tab that swipes in shows the
-    // ones it already has. A failed lookup settles as no covers, so the other
-    // lists still load after it.
+    // Batched like the counts below and just as supplementary: a row whose
+    // cover comes from its source video shows its colour tile until its
+    // list's covers load, then the video's cover if it has one. Every list
+    // keeps its own covers, so a tab that swipes in shows the ones it already
+    // has. A failed lookup settles as no covers, so the other lists still
+    // load after it.
     Map<String, SoundCover?>? settled(
       AsyncValue<Map<String, SoundCover?>> covers,
     ) => covers.hasError ? const {} : covers.value;
