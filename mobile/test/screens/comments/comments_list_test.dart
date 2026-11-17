@@ -364,7 +364,23 @@ void main() {
           addTearDown(updates.close);
           whenListen(mockReactionsBloc, updates.stream, initialState: loading);
 
-          await tester.pumpWidget(buildTestWidget(listState: listState()));
+          // Rank roots here: an upvoted reply stays under its parent, so
+          // the shared reply fixture would not distinguish Top from dates.
+          final highestRoot = CommentBuilder()
+              .withId(highest.id)
+              .withCreatedAt(highest.createdAt)
+              .build();
+          await tester.pumpWidget(
+            buildTestWidget(
+              listState: listState().copyWith(
+                commentsById: {
+                  highestRoot.id: highestRoot,
+                  runnerUp.id: runnerUp,
+                  unvoted.id: unvoted,
+                },
+              ),
+            ),
+          );
           await tester.pump();
           expect(find.byType(CommentsSkeletonLoader), findsOneWidget);
           expect(find.byType(CommentItem), findsNothing);
