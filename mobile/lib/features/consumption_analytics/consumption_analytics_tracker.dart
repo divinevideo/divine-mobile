@@ -84,8 +84,16 @@ class ConsumptionAnalyticsTracker {
     ProductAnalyticsV2EngagementAction action,
     String? contentId,
   ) {
-    if (contentId != null &&
-        action != ProductAnalyticsV2EngagementAction.shareTapped) {
+    // Exhaustive, so a newly generated action must choose a side here rather
+    // than counting as positive feedback by default.
+    final confirmsInterest = switch (action) {
+      ProductAnalyticsV2EngagementAction.reactionSent ||
+      ProductAnalyticsV2EngagementAction.commentSent ||
+      ProductAnalyticsV2EngagementAction.followAdded => true,
+      // A tap records intent; the share may never happen.
+      ProductAnalyticsV2EngagementAction.shareTapped => false,
+    };
+    if (contentId != null && confirmsInterest) {
       _analytics().recordRecommendationInteraction(
         ClassicFeedInteraction(
           videoId: contentId,
