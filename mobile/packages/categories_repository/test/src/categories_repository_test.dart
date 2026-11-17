@@ -360,6 +360,7 @@ void main() {
           final payload =
               jsonDecode(cacheDao.rawRead(key)!) as Map<String, dynamic>;
           payload['cachedAt'] = DateTime.now()
+              .toUtc()
               .subtract(const Duration(hours: 25))
               .toIso8601String();
           await cacheDao.write(key: key, payload: jsonEncode(payload));
@@ -372,6 +373,31 @@ void main() {
           expect(results.single.isLive, isTrue);
         },
       );
+
+      test('serves snapshots younger than 24 hours', () async {
+        await repository
+            .watchVideosForCategoryCached(
+              category: 'music',
+              viewerPubkey: viewer,
+            )
+            .toList();
+        final key = cacheDao.keys.single;
+        final payload =
+            jsonDecode(cacheDao.rawRead(key)!) as Map<String, dynamic>;
+        payload['cachedAt'] = DateTime.now()
+            .toUtc()
+            .subtract(const Duration(hours: 23))
+            .toIso8601String();
+        await cacheDao.write(key: key, payload: jsonEncode(payload));
+        final results = await repository
+            .watchVideosForCategoryCached(
+              category: 'music',
+              viewerPubkey: viewer,
+            )
+            .toList();
+        expect(results.map((result) => result.isStale), [true, false]);
+        expect(results.first.data.videos.single.id, eventId);
+      });
 
       test('drops snapshots dated after the current time', () async {
         await repository
