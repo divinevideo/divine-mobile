@@ -16795,4 +16795,28 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get emailConfirmationCapReached =>
       'ለአዲስ መለያዎች የሰዓት ገደቡ ይህ ነው። ገደቡን ለማንሳት ኢሜይልዎን ያረጋግጡ።';
+
+  @override
+  String get findPeopleTitle => 'ሰዎችን ፈልግ';
+
+  @override
+  String get findPeopleDescription => 'ንቁ ፈጣሪዎችን እና የተመለሱ የVine ማህደሮችን ተከተል።';
+
+  @override
+  String get findPeopleSuggested => 'ለእርስዎ የተጠቆመ';
+
+  @override
+  String get findPeopleArchive => 'የተመለሰ የVine ማህደር';
+
+  @override
+  String get findPeopleEmpty => 'አሁን ተጨማሪ ጥቆማዎች የሉም። አንድ ሰው ለመፈለግ ይሞክሩ።';
+
+  @override
+  String get findPeopleDismiss => 'ጥቆማውን አስወግድ';
+
+  @override
+  String get findPeopleLoadMore => 'ተጨማሪ ጫን';
+
+  @override
+  String get findPeopleContinueWatching => 'መመልከትዎን ይቀጥሉ';
 }

@@ -17232,4 +17232,30 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get emailConfirmationCapReached =>
       'Det är timgränsen för nya konton. Bekräfta din e-post för att ta bort den.';
+
+  @override
+  String get findPeopleTitle => 'Hitta personer';
+
+  @override
+  String get findPeopleDescription =>
+      'Följ aktiva kreatörer och återställda Vine-arkiv.';
+
+  @override
+  String get findPeopleSuggested => 'Föreslaget för dig';
+
+  @override
+  String get findPeopleArchive => 'Återställt Vine-arkiv';
+
+  @override
+  String get findPeopleEmpty =>
+      'Inga fler förslag just nu. Prova att söka efter någon.';
+
+  @override
+  String get findPeopleDismiss => 'Dölj förslaget';
+
+  @override
+  String get findPeopleLoadMore => 'Ladda fler';
+
+  @override
+  String get findPeopleContinueWatching => 'Fortsätt titta';
 }

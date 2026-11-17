@@ -6646,5 +6646,13 @@
   "emailConfirmationAddEmailSubtitle": "Contul tău nu are acum niciun email. Adaugă unul ca să te poți întoarce mereu în cont.",
   "emailConfirmationAddEmailButton": "Adaugă email",
   "emailConfirmationSendBlocked": "Confirmă-ți emailul ca să trimiți mesaje.",
-  "emailConfirmationCapReached": "Asta e limita pe oră pentru conturile noi. Confirmă-ți emailul ca s-o ridici."
+  "emailConfirmationCapReached": "Asta e limita pe oră pentru conturile noi. Confirmă-ți emailul ca s-o ridici.",
+  "findPeopleTitle": "Găsește oameni",
+  "findPeopleDescription": "Urmărește creatori activi și arhive Vine restaurate.",
+  "findPeopleSuggested": "Sugestie pentru tine",
+  "findPeopleArchive": "Arhivă Vine restaurată",
+  "findPeopleEmpty": "Nu mai sunt sugestii acum. Încearcă să cauți pe cineva.",
+  "findPeopleDismiss": "Ascunde sugestia",
+  "findPeopleLoadMore": "Încarcă mai mult",
+  "findPeopleContinueWatching": "Continuă vizionarea"
 }

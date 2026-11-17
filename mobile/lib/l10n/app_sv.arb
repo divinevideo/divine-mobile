@@ -6646,5 +6646,13 @@
   "emailConfirmationAddEmailSubtitle": "Ditt konto har ingen e-post just nu. Lägg till en e-postadress så att du alltid kan ta dig tillbaka in.",
   "emailConfirmationAddEmailButton": "Lägg till e-post",
   "emailConfirmationSendBlocked": "Bekräfta din e-post för att skicka meddelanden.",
-  "emailConfirmationCapReached": "Det är timgränsen för nya konton. Bekräfta din e-post för att ta bort den."
+  "emailConfirmationCapReached": "Det är timgränsen för nya konton. Bekräfta din e-post för att ta bort den.",
+  "findPeopleTitle": "Hitta personer",
+  "findPeopleDescription": "Följ aktiva kreatörer och återställda Vine-arkiv.",
+  "findPeopleSuggested": "Föreslaget för dig",
+  "findPeopleArchive": "Återställt Vine-arkiv",
+  "findPeopleEmpty": "Inga fler förslag just nu. Prova att söka efter någon.",
+  "findPeopleDismiss": "Dölj förslaget",
+  "findPeopleLoadMore": "Ladda fler",
+  "findPeopleContinueWatching": "Fortsätt titta"
 }

@@ -41,6 +41,7 @@ import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/dm_video_blur_preference_service.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
+import 'package:openvine/services/find_people_dismissal_store.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/messages_preference_service.dart';
@@ -326,6 +327,7 @@ class UserDataCleanupService {
   /// families during identity changes because their scope prevents cross-user
   /// leakage. Targeted destructive removal uses each owner's key helper.
   static const List<String> identityChangePrefixes = [
+    FindPeopleDismissalStore.storagePrefix,
     SharedPreferencesAnnouncementStore.storagePrefix,
     FunnelcakeCreatorHighlightsRepository.presentationPrefix,
     FunnelcakeCreatorHighlightsRepository.invitePrefix,
@@ -522,6 +524,7 @@ class UserDataCleanupService {
     for (final key in AgeVerificationService.accountKeys(userPubkey)) {
       await remove(key);
     }
+    await remove(FindPeopleDismissalStore.storageKey(userPubkey));
     await remove(FollowingCacheRecord.storageKey(userPubkey));
     await remove(followingPrefetchMarkerKey(userPubkey));
     await remove(MinorAccountReviewStatusStore.storageKey(userPubkey));
@@ -851,6 +854,7 @@ class UserDataCleanupService {
       }
       for (final key in [
         SharedPreferencesHashtagSubscriptionStore.storageKey(userPubkey),
+        FindPeopleDismissalStore.storageKey(userPubkey),
         FollowingCacheRecord.storageKey(userPubkey),
         followingPrefetchMarkerKey(userPubkey),
         MinorAccountReviewStatusStore.storageKey(userPubkey),

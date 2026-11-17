@@ -6646,5 +6646,13 @@
   "emailConfirmationAddEmailSubtitle": "Sua conta está sem e-mail no momento. Adicione um para sempre conseguir voltar.",
   "emailConfirmationAddEmailButton": "Adicionar e-mail",
   "emailConfirmationSendBlocked": "Confirme seu e-mail para mandar mensagens.",
-  "emailConfirmationCapReached": "Esse é o limite por hora para contas novas. Confirme seu e-mail para liberar."
+  "emailConfirmationCapReached": "Esse é o limite por hora para contas novas. Confirme seu e-mail para liberar.",
+  "findPeopleTitle": "Encontrar pessoas",
+  "findPeopleDescription": "Segue criadores ativos e arquivos restaurados do Vine.",
+  "findPeopleSuggested": "Sugestão para ti",
+  "findPeopleArchive": "Arquivo restaurado do Vine",
+  "findPeopleEmpty": "Não há mais sugestões por agora. Experimenta procurar alguém.",
+  "findPeopleDismiss": "Dispensar sugestão",
+  "findPeopleLoadMore": "Carregar mais",
+  "findPeopleContinueWatching": "Continuar a ver"
 }

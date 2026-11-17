@@ -7939,5 +7939,13 @@
   "emailConfirmationAddEmailSubtitle": "آپ کے اکاؤنٹ میں ابھی کوئی ای میل نہیں ہے۔ ایک ای میل شامل کریں تاکہ آپ ہمیشہ واپس آ سکیں۔",
   "emailConfirmationAddEmailButton": "ای میل شامل کریں",
   "emailConfirmationSendBlocked": "پیغامات بھیجنے کے لیے اپنی ای میل کی تصدیق کریں۔",
-  "emailConfirmationCapReached": "نئے اکاؤنٹس کے لیے فی گھنٹہ کی حد یہی ہے۔ یہ حد ختم کرنے کے لیے اپنی ای میل کی تصدیق کریں۔"
+  "emailConfirmationCapReached": "نئے اکاؤنٹس کے لیے فی گھنٹہ کی حد یہی ہے۔ یہ حد ختم کرنے کے لیے اپنی ای میل کی تصدیق کریں۔",
+  "findPeopleTitle": "لوگوں کو تلاش کریں",
+  "findPeopleDescription": "فعال تخلیق کاروں اور بحال شدہ Vine آرکائیوز کو فالو کریں۔",
+  "findPeopleSuggested": "آپ کے لیے تجویز کردہ",
+  "findPeopleArchive": "بحال شدہ Vine آرکائیو",
+  "findPeopleEmpty": "فی الحال مزید تجاویز نہیں ہیں۔ کسی کو تلاش کر کے دیکھیں۔",
+  "findPeopleDismiss": "تجویز ہٹائیں",
+  "findPeopleLoadMore": "مزید لوڈ کریں",
+  "findPeopleContinueWatching": "دیکھنا جاری رکھیں"
 }

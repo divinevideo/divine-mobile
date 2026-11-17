@@ -95,6 +95,8 @@ abstract final class RoutePaths {
   /// The router's redirect and route normalizer decide where this lands.
   static const root = '/';
 
+  static const findPeople = '/find-people';
+
   static const safetySettings = '/safety-settings';
   static const secureAccount = '/secure-account';
   static const settings = '/settings';

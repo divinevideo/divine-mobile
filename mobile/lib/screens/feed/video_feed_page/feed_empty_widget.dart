@@ -5,7 +5,10 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/widgets/feature_flag_widget.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/routes/find_people_routes.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 
 /// Empty state for the home video feed.
@@ -31,6 +34,7 @@ class FeedEmptyWidget extends StatelessWidget {
         // viewer's follows: "people you follow" would be the wrong people.
         // "Nothing new" also covers a viewer who has seen every video from
         // the people they follow, since Following leaves seen videos out.
+        showFindPeople: state.source.type != VideoFeedSourceType.peopleList,
         message: switch (state) {
           _ when state.source.type == VideoFeedSourceType.peopleList =>
             context.l10n.peopleListsNoVideosSubtitle,
@@ -102,9 +106,13 @@ class FeedEmptyWidget extends StatelessWidget {
 }
 
 class _FollowingFeedEmptyState extends StatelessWidget {
-  const _FollowingFeedEmptyState({required this.message});
+  const _FollowingFeedEmptyState({
+    required this.message,
+    required this.showFindPeople,
+  });
 
   final String message;
+  final bool showFindPeople;
 
   @override
   Widget build(BuildContext context) {
@@ -128,6 +136,19 @@ class _FollowingFeedEmptyState extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 28),
+            if (showFindPeople)
+              FeatureFlagWidget(
+                flag: FeatureFlag.findPeople,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: DivineButton(
+                    label: context.l10n.findPeopleTitle,
+                    leadingIcon: DivineIconName.userPlus,
+                    onPressed: () =>
+                        const FindPeopleRouteData().push<void>(context),
+                  ),
+                ),
+              ),
             DivineButton(
               label: context.l10n.feedExploreVideos,
               trailingIcon: DivineIconName.arrowRight,

@@ -6646,5 +6646,13 @@
   "emailConfirmationAddEmailSubtitle": "لا يوجد بريد إلكتروني في هذا الحساب حاليًا. بإضافة بريد تبقى العودة إلى الحساب ممكنة دائمًا.",
   "emailConfirmationAddEmailButton": "إضافة بريد إلكتروني",
   "emailConfirmationSendBlocked": "تأكيد البريد الإلكتروني مطلوب لإرسال الرسائل.",
-  "emailConfirmationCapReached": "هذا هو الحد المسموح به في الساعة للحسابات الجديدة. تأكيد البريد الإلكتروني يرفع هذا الحد."
+  "emailConfirmationCapReached": "هذا هو الحد المسموح به في الساعة للحسابات الجديدة. تأكيد البريد الإلكتروني يرفع هذا الحد.",
+  "findPeopleTitle": "العثور على أشخاص",
+  "findPeopleDescription": "تابع المبدعين النشطين وأرشيفات Vine المستعادة.",
+  "findPeopleSuggested": "مقترح لك",
+  "findPeopleArchive": "أرشيف Vine مستعاد",
+  "findPeopleEmpty": "لا توجد اقتراحات أخرى الآن. جرّب البحث عن شخص.",
+  "findPeopleDismiss": "إخفاء الاقتراح",
+  "findPeopleLoadMore": "تحميل المزيد",
+  "findPeopleContinueWatching": "متابعة المشاهدة"
 }

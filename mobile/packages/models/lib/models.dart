@@ -27,6 +27,7 @@ export 'src/dm_shared_video_ref.dart';
 export 'src/enqueue_send_result.dart';
 export 'src/equalizer_settings.dart';
 export 'src/feed_type.dart';
+export 'src/follow_suggestions.dart';
 export 'src/hashtag_search_result.dart';
 export 'src/home_feed_response.dart';
 export 'src/live_engagement_counts.dart';

@@ -6646,5 +6646,13 @@
   "emailConfirmationAddEmailSubtitle": "Saat ini akunmu tidak punya email. Tambahkan email supaya kamu selalu bisa masuk lagi.",
   "emailConfirmationAddEmailButton": "Tambah email",
   "emailConfirmationSendBlocked": "Konfirmasi emailmu untuk mengirim pesan.",
-  "emailConfirmationCapReached": "Itu batas per jam untuk akun baru. Konfirmasi emailmu untuk menghapus batas ini."
+  "emailConfirmationCapReached": "Itu batas per jam untuk akun baru. Konfirmasi emailmu untuk menghapus batas ini.",
+  "findPeopleTitle": "Temukan orang",
+  "findPeopleDescription": "Ikuti kreator aktif dan arsip Vine yang dipulihkan.",
+  "findPeopleSuggested": "Disarankan untukmu",
+  "findPeopleArchive": "Arsip Vine yang dipulihkan",
+  "findPeopleEmpty": "Belum ada saran lain. Coba cari seseorang.",
+  "findPeopleDismiss": "Abaikan saran",
+  "findPeopleLoadMore": "Muat lagi",
+  "findPeopleContinueWatching": "Terus menonton"
 }

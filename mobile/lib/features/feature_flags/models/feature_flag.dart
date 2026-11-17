@@ -4,6 +4,16 @@
 enum FeatureFlagAudience { user, internal }
 
 enum FeatureFlag {
+  findPeople(
+    'Find People',
+    'Discover active creators and restored Vine archives.',
+    audience: FeatureFlagAudience.internal,
+  ),
+  feedPeopleSuggestions(
+    'Feed People Suggestions',
+    'Show an optional people discovery card while watching the home feed.',
+    audience: FeatureFlagAudience.internal,
+  ),
   publishingIdeas(
     'Publishing Ideas',
     'Inline title, description, and hashtag ideas.',

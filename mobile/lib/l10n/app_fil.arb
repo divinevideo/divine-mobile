@@ -5683,5 +5683,13 @@
   "emailConfirmationAddEmailSubtitle": "Walang email ang account mo ngayon. Magdagdag ka ng isa para lagi kang makakabalik.",
   "emailConfirmationAddEmailButton": "Magdagdag ng email",
   "emailConfirmationSendBlocked": "I-confirm ang email mo para makapagpadala ng mga mensahe.",
-  "emailConfirmationCapReached": "Iyan na ang limit kada oras para sa mga bagong account. I-confirm ang email mo para matanggal ito."
+  "emailConfirmationCapReached": "Iyan na ang limit kada oras para sa mga bagong account. I-confirm ang email mo para matanggal ito.",
+  "findPeopleTitle": "Maghanap ng mga tao",
+  "findPeopleDescription": "Sundan ang mga aktibong creator at naibalik na archive ng Vine.",
+  "findPeopleSuggested": "Iminungkahi para sa iyo",
+  "findPeopleArchive": "Naibalik na archive ng Vine",
+  "findPeopleEmpty": "Wala nang mungkahi ngayon. Subukang maghanap ng isang tao.",
+  "findPeopleDismiss": "Alisin ang mungkahi",
+  "findPeopleLoadMore": "Mag-load pa",
+  "findPeopleContinueWatching": "Magpatuloy sa panonood"
 }

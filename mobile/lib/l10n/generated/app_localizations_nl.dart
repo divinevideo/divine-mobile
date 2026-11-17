@@ -17305,4 +17305,30 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get emailConfirmationCapReached =>
       'Dat is de limiet per uur voor nieuwe accounts. Bevestig je e-mail om die op te heffen.';
+
+  @override
+  String get findPeopleTitle => 'Mensen vinden';
+
+  @override
+  String get findPeopleDescription =>
+      'Volg actieve makers en herstelde Vine-archieven.';
+
+  @override
+  String get findPeopleSuggested => 'Voorgesteld voor jou';
+
+  @override
+  String get findPeopleArchive => 'Hersteld Vine-archief';
+
+  @override
+  String get findPeopleEmpty =>
+      'Momenteel geen verdere suggesties. Zoek eens naar iemand.';
+
+  @override
+  String get findPeopleDismiss => 'Suggestie verbergen';
+
+  @override
+  String get findPeopleLoadMore => 'Meer laden';
+
+  @override
+  String get findPeopleContinueWatching => 'Verder kijken';
 }

@@ -17544,4 +17544,30 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get emailConfirmationCapReached =>
       'Asta e limita pe oră pentru conturile noi. Confirmă-ți emailul ca s-o ridici.';
+
+  @override
+  String get findPeopleTitle => 'Găsește oameni';
+
+  @override
+  String get findPeopleDescription =>
+      'Urmărește creatori activi și arhive Vine restaurate.';
+
+  @override
+  String get findPeopleSuggested => 'Sugestie pentru tine';
+
+  @override
+  String get findPeopleArchive => 'Arhivă Vine restaurată';
+
+  @override
+  String get findPeopleEmpty =>
+      'Nu mai sunt sugestii acum. Încearcă să cauți pe cineva.';
+
+  @override
+  String get findPeopleDismiss => 'Ascunde sugestia';
+
+  @override
+  String get findPeopleLoadMore => 'Încarcă mai mult';
+
+  @override
+  String get findPeopleContinueWatching => 'Continuă vizionarea';
 }

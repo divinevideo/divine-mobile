@@ -17135,4 +17135,30 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get emailConfirmationCapReached =>
       'Yeni hesaplar için saatlik sınır bu kadar. Sınırı kaldırmak için e-postanı doğrula.';
+
+  @override
+  String get findPeopleTitle => 'Kişileri bul';
+
+  @override
+  String get findPeopleDescription =>
+      'Aktif içerik üreticilerini ve geri yüklenen Vine arşivlerini takip et.';
+
+  @override
+  String get findPeopleSuggested => 'Senin için önerildi';
+
+  @override
+  String get findPeopleArchive => 'Geri yüklenen Vine arşivi';
+
+  @override
+  String get findPeopleEmpty =>
+      'Şimdilik başka öneri yok. Birini aramayı dene.';
+
+  @override
+  String get findPeopleDismiss => 'Öneriyi gizle';
+
+  @override
+  String get findPeopleLoadMore => 'Daha fazla yükle';
+
+  @override
+  String get findPeopleContinueWatching => 'İzlemeye devam et';
 }

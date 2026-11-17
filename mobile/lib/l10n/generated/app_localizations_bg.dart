@@ -17367,4 +17367,30 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get emailConfirmationCapReached =>
       'Това е лимитът на час за нови акаунти. Потвърди имейла си, за да го махнеш.';
+
+  @override
+  String get findPeopleTitle => 'Намери хора';
+
+  @override
+  String get findPeopleDescription =>
+      'Следвай активни творци и възстановени архиви от Vine.';
+
+  @override
+  String get findPeopleSuggested => 'Предложено за теб';
+
+  @override
+  String get findPeopleArchive => 'Възстановен архив от Vine';
+
+  @override
+  String get findPeopleEmpty =>
+      'Засега няма повече предложения. Потърси някого.';
+
+  @override
+  String get findPeopleDismiss => 'Скрий предложението';
+
+  @override
+  String get findPeopleLoadMore => 'Зареди още';
+
+  @override
+  String get findPeopleContinueWatching => 'Продължи да гледаш';
 }
