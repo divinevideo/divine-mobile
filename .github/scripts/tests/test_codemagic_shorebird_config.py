@@ -389,6 +389,59 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
                                         text=True, env={'CM_BRANCH': branch})
                 self.assertEqual(result.returncode == 0, allowed, result.stderr)
 
+    def test_publish_step_forwards_original_platform_version_record(self) -> None:
+        config = self._resolved_config()
+        for platform in ('ios', 'android'):
+            with self.subTest(platform=platform), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                tool = root / 'python3'
+                tool.write_text('#!/bin/sh\nprintf \'%s\\n\' "$@" > "$CAPTURE"\n')
+                tool.chmod(0o755)
+                workflow = config['workflows'][platform + '-build']
+                script = next(step['script'] for step in workflow['scripts']
+                              if step['name'] == 'Publish to GitHub Release')
+                for name, value in dict(PUBLISH_TO_GITHUB='YES', RELEASE_CHANNEL='BETA',
+                                        DEFAULT_ENV='PRODUCTION').items():
+                    script = script.replace('${{ inputs.' + name + ' }}', value)
+                env = dict(PATH=str(root) + ':/usr/bin:/bin', CAPTURE=str(root / 'args'),
+                           CM_REPO_SLUG='owner/repo')
+                env['SHOREBIRD_PLATFORM'] = platform
+                result = subprocess.run(['bash', '-c', script], cwd=root, env=env,
+                                        capture_output=True, text=True)
+                self.assertEqual(0, result.returncode, result.stderr)
+                args = (root / 'args').read_text().splitlines()
+                self.assertEqual(args.count('--release-env'), 1)
+                self.assertEqual('build/shorebird/' + platform + '_release.env',
+                                 args[args.index('--release-env') + 1])
+                record = Path('build/shorebird/' + platform + '_release.env')
+                self.assertTrue(any(record.match(pattern) for pattern in workflow['artifacts']))
+
+    def test_apk_build_uses_allocated_name_and_existing_direct_build_number(self) -> None:
+        scripts = self._resolved_config()['workflows']['android-build']['scripts']
+        script = next(step['script'] for step in scripts if step['name'] == 'Build Android APK')
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'build/shorebird').mkdir(parents=True)
+            record = root / 'build/shorebird/android_release.env'
+            record.write_text('SHOREBIRD_BUILD_NAME=1.2.3\nSHOREBIRD_BUILD_NUMBER=999\n')
+            tool = root / 'flutter'
+            tool.write_text('#!/bin/sh\nprintf \'%s\\n\' "$@" > "$CAPTURE"\n')
+            tool.chmod(0o755)
+            env = dict(PATH=str(root) + ':/usr/bin:/bin', CAPTURE=str(root / 'args'),
+                       PROJECT_BUILD_NUMBER='855', SHOREBIRD_BUILD_NAME='1.0.28')
+            result = subprocess.run(['bash', '-c', script], cwd=root, env=env,
+                                    capture_output=True, text=True)
+            self.assertEqual(0, result.returncode, result.stderr)
+            args = (root / 'args').read_text().splitlines()
+            self.assertIn('--build-name=1.2.3', args)
+            self.assertIn('--build-number=855', args)
+            (root / 'args').unlink()
+            record.unlink()
+            result = subprocess.run(['bash', '-c', script], cwd=root, env=env,
+                                    capture_output=True, text=True)
+            self.assertNotEqual(0, result.returncode)
+            self.assertFalse((root / 'args').exists())
+
     def test_zapstore_docs_require_production_and_manual_command_excludes_betas(self) -> None:
         root = CODEMAGIC_PATH.parent
         agents = (root / 'AGENTS.md').read_text()
