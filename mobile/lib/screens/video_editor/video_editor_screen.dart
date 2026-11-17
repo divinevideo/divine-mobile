@@ -65,7 +65,6 @@ import 'package:openvine/repositories/sticker_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/video_editor/video_editor_split_screen_layout_screen.dart';
-import 'package:openvine/screens/video_editor/video_text_editor_screen.dart';
 import 'package:openvine/screens/video_editor/voice_over_recorder_screen.dart';
 import 'package:openvine/screens/video_editor/voice_over_take_commit.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
@@ -88,6 +87,7 @@ import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_laye
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_sheet.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_sheet.dart';
+import 'package:openvine/widgets/video_editor/text_editor/open_video_text_editor.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_captions_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/utils/cancel_live_volume_preview.dart';
 import 'package:openvine/widgets/video_editor/video_editor_scaffold.dart';
@@ -549,6 +549,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         ),
       ),
     );
+    // A navigation back to a page below the editor disposes it before the
+    // push resolves; `ref` and the clip editor bloc are gone then.
+    if (!mounted) return;
 
     final notifier = ref.read(clipManagerProvider.notifier);
     if (result != true) {
@@ -654,6 +657,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         scrollController: scrollController,
       ),
     );
+    // A navigation back to a page below the editor disposes it, closing its
+    // blocs, before the sheet's future resolves.
+    if (!mounted) return;
 
     mainBloc.add(const VideoEditorMainSubEditorClosed());
 
@@ -1158,29 +1164,17 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       name: 'VideoEditorScreen',
       category: LogCategory.video,
     );
-    mainBloc.add(const VideoEditorMainOpenSubEditor(.text));
-
-    final result = await Navigator.push<TextLayer>(
+    final result = await openVideoTextEditor(
       context,
-      PageRouteBuilder<TextLayer>(
-        settings: const RouteSettings(name: 'video_text_editor'),
-        opaque: false,
-        barrierDismissible: true,
-        barrierColor: VineTheme.transparent,
-        pageBuilder: (_, _, _) => BlocProvider.value(
-          value: textBloc,
-          child: VideoTextEditorScreen(layer: layer),
-        ),
-        transitionsBuilder: (_, animation, _, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-      ),
+      mainBloc: mainBloc,
+      textBloc: textBloc,
+      layer: layer,
     );
 
-    textBloc.add(const VideoEditorTextClosePanels());
-    mainBloc.add(const VideoEditorMainSubEditorClosed());
-
     if (result == null || layer != null) return result;
+    // The scale reads the clip through `ref`, which throws once the editor
+    // is gone.
+    if (!mounted) return null;
 
     return result.copyWith(scale: 1 / _fittedBoxScale);
   }
@@ -1232,6 +1226,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       canDeleteTrack: hasSession,
       blossomUploadService: ref.read(blossomUploadServiceProvider),
     );
+    // A navigation back to a page below the editor disposes it, closing its
+    // blocs, before the sheet's future resolves.
+    if (!mounted) return;
 
     mainBloc.add(const VideoEditorMainSubEditorClosed());
     if (result == null) return;
