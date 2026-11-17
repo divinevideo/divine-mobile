@@ -1,4 +1,5 @@
-// ABOUTME: Measures notification opens through the existing consented event sink.
+// ABOUTME: Measures notification opens and campaign consent changes through the
+// ABOUTME: existing consented event sink.
 // ABOUTME: Deduplicates callbacks locally without exporting delivery identifiers.
 
 import 'package:analytics/src/analytics_event_sink.dart';
@@ -48,7 +49,9 @@ class NotificationAnalyticsTracker {
   final _seen = <String, Object>{};
   Object? _boundary;
 
-  /// Observes a persisted marketing choice using the same consent and identity fence.
+  /// Records a change to the persisted campaign opt-in, behind the same consent
+  /// and privacy-boundary check as [opened]. Callers pass only real transitions;
+  /// nothing here deduplicates.
   Future<void> campaignConsentChanged({required bool enabled}) async {
     try {
       final boundary = _privacyBoundary();
@@ -68,8 +71,13 @@ class NotificationAnalyticsTracker {
     }
   }
 
-  /// [deduplicationKey] stays in memory, scoped to the current privacy/session
-  /// boundary. Missing keys never collapse unrelated legacy notifications.
+  /// Records an open once per key within the current privacy/session boundary,
+  /// while the key is among the last 256 remembered in memory; a missing key is
+  /// never deduplicated.
+  ///
+  /// For a `campaign` open, a lowercase-UUID [campaignRevisionId] replaces
+  /// [deduplicationKey] as the key and is exported as `campaign_revision_id`;
+  /// any other value is dropped with a warning.
   Future<void> opened({
     required String? notificationType,
     required NotificationOpenSource source,

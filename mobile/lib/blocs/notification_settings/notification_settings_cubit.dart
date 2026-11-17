@@ -1,7 +1,7 @@
 // ABOUTME: Screen-scoped Cubit for the notification settings screen.
 // ABOUTME: Owns the notification preferences, persisting changes via
-// ABOUTME: NotificationPreferencesService, and runs the mark-all-as-read
-// ABOUTME: action against NotificationRepository.
+// ABOUTME: NotificationPreferencesService, records campaign opt-in changes it
+// ABOUTME: observes, and runs mark-all-as-read against NotificationRepository.
 
 import 'dart:async';
 
@@ -19,7 +19,8 @@ import 'package:openvine/services/notification_preferences_service.dart';
 /// mutations through [NotificationPreferencesService]. A null
 /// [NotificationRepository] — the signed-out case — leaves the
 /// mark-all-as-read action permanently
-/// [MarkAllAsReadStatus.unavailable].
+/// [MarkAllAsReadStatus.unavailable]. While open, it reports each change of
+/// the campaign opt-in it observes to [NotificationAnalyticsTracker].
 class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
     with CloseGuardedEmit<NotificationSettingsState> {
   NotificationSettingsCubit({

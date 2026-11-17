@@ -74,13 +74,16 @@ class NotificationTapEvent {
   /// to a profile.
   final String? senderPubkey;
 
-  /// Campaign destination type, currently `app_route`.
+  /// Campaign destination type: `app_route`, `video_address` or
+  /// `creator_profile`.
   final String? tapTargetType;
 
-  /// Campaign destination value, such as an absolute in-app route.
+  /// Campaign destination value: an absolute in-app route, a kind-34236
+  /// coordinate, or a creator's hex pubkey.
   final String? tapTargetValue;
 
-  /// Approved campaign revision retained through local and cold-start taps.
+  /// Campaign revision from the local-notification payload, for live and
+  /// cold-start local taps.
   final String? campaignRevisionId;
 
   @override

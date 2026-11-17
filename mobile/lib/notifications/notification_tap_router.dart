@@ -157,6 +157,10 @@ Future<void> _renderBackgroundLocalPush({
 /// coordinate-over-walk precedence in the returned value keeps it out of the
 /// executor's branch order.
 ///
+/// Campaign payloads skip this: an `app_route`, `video_address` or
+/// `creator_profile` target is validated by the campaign helpers beside
+/// [campaignAppRoute], is not preloaded, and anything else opens the inbox.
+///
 /// Extracted and `@visibleForTesting` so the push-side per-kind routing can be
 /// asserted without a navigator — mirrors [resolveVideoDeepLinkNavAction].
 @visibleForTesting
@@ -327,9 +331,9 @@ Future<void> routeNotificationTap({
       _navigateToNotificationInbox(container);
     case OpenVideoTarget(:final autoOpenComments):
       if (videoCoordinate != null) {
-        // Authoritative path: the signed NIP-33 coordinate is stable across
-        // metadata replacements and resolves without a relay round-trip, so
-        // push it straight to the video route.
+        // Coordinate path: a signed NIP-33 coordinate, or a validated campaign
+        // `video_address`, is stable across metadata replacements and resolves
+        // without a relay round-trip, so push it straight to the video route.
         _pushVideoDeepLink(
           container,
           videoRef: videoCoordinate,

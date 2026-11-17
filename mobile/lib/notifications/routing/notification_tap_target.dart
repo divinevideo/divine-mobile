@@ -43,12 +43,12 @@ class OpenVideoTarget extends NotificationTapTarget {
   List<Object?> get props => [autoOpenComments];
 }
 
-/// Open the actor's profile (e.g. a follow notification, or a tap whose video
-/// target could not be determined).
+/// Open a profile: the actor's (e.g. a follow notification, or a tap whose
+/// video target could not be determined) or a campaign's creator.
 class OpenProfileTarget extends NotificationTapTarget {
   const OpenProfileTarget(this.actorPubkey);
 
-  /// Hex pubkey of the actor whose profile to open.
+  /// Hex pubkey of the profile to open.
   final String actorPubkey;
 
   @override
@@ -141,7 +141,8 @@ NotificationKind? notificationKindFromPushType(String? type) {
   }
 }
 
-/// Returns a safe in-app route for a campaign target, or null when unsupported.
+/// Returns the allowlisted in-app route of an `app_route` campaign target, or
+/// null otherwise.
 String? campaignAppRoute({required String? type, required String? value}) {
   if (type != NotificationWireValues.appRoute) return null;
   return value == RoutePaths.followingNew ? value : null;

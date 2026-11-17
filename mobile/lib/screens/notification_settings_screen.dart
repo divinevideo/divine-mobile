@@ -45,6 +45,8 @@ class NotificationSettingsScreen extends ConsumerWidget {
         final cubit = NotificationSettingsCubit(
           preferencesService: preferencesService,
           notificationRepository: repository,
+          // Stable for the container's lifetime: it watches only the
+          // dependency-free analytics sink provider.
           notificationAnalytics: ref.read(notificationAnalyticsTrackerProvider),
         );
         runDetached(

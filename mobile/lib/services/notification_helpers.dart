@@ -27,7 +27,8 @@ abstract class NotificationPayloadKeys {
   /// locally-emitted payload under [notificationType].
   static const String wireType = 'type';
 
-  /// FCM transport ID, used locally to coalesce duplicate tap callbacks.
+  /// FCM transport ID, used locally to coalesce duplicate tap callbacks. A
+  /// campaign open with a valid [campaignRevisionId] coalesces on that instead.
   static const String messageId = 'messageId';
 
   /// The event acted upon (present for like/comment/repost; absent for
@@ -50,11 +51,12 @@ abstract class NotificationPayloadKeys {
   /// Hex pubkey of the actor — used to route follows and unresolved taps.
   static const String senderPubkey = 'senderPubkey';
 
-  /// Campaign destination type. The campaign service currently emits
-  /// `app_route`.
+  /// Campaign destination type: `app_route`, `video_address` or
+  /// `creator_profile` (see [NotificationWireValues]).
   static const String tapTargetType = 'tapTargetType';
 
-  /// Campaign destination value, such as an absolute in-app route.
+  /// Campaign destination value: an absolute in-app route, a kind-34236
+  /// coordinate, or a creator's hex pubkey.
   static const String tapTargetValue = 'tapTargetValue';
 
   /// Immutable approved campaign revision used for consented attribution.
@@ -96,7 +98,8 @@ abstract class NotificationWireValues {
 /// [NotificationPayloadKeys.messageId].
 ///
 /// Every `RemoteMessage` entry point goes through this so none of them drops
-/// the key that tap analytics deduplicates on.
+/// the key that tap analytics deduplicates on, unless a campaign revision
+/// takes its place.
 Map<String, dynamic> fcmPayloadWithMessageId(
   Map<String, dynamic> data,
   String? messageId,
