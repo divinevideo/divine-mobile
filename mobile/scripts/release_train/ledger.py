@@ -52,8 +52,10 @@ class GhLedgerStore:
         self._paths = None
         return self.paths()
 
-    def _gh(self, *args):
+    def _gh(self, *args, input=None):
         kwargs = {}
+        if input is not None:
+            kwargs['input'] = input
         if self._token:
             kwargs["env"] = dict(os.environ, GH_TOKEN=self._token)
         return self._run(
@@ -99,13 +101,12 @@ class GhLedgerStore:
     def create_json(self, path: str, record: dict, message: str) -> bool:
         body = json.dumps(record, sort_keys=True, indent=2) + "\n"
         encoded = base64.b64encode(body.encode("utf-8")).decode("ascii")
+        payload = json.dumps({'message': message, 'content': encoded, 'branch': self._branch})
         for attempt in range(_MAX_CONFLICT_RETRIES + 1):
             result = self._gh(
                 "--method", "PUT",
                 f"repos/{self._repository}/contents/{path}",
-                "-f", f"message={message}",
-                "-f", f"content={encoded}",
-                "-f", f"branch={self._branch}",
+                "--input", "-", input=payload,
             )
             if result.returncode == 0:
                 self._paths = None

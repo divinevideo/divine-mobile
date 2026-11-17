@@ -94,17 +94,31 @@ class GhLedgerStoreTests(unittest.TestCase):
     def test_create_returns_true_on_success(self):
         store, run = self.store(done())
         self.assertTrue(store.create_json("p/x.json", {"b": 1, "a": 2}, "msg"))
-        content = b64('{\n  "a": 2,\n  "b": 1\n}\n')
         self.assertEqual(
             run.calls,
             [[
                 "gh", "api", "--method", "PUT",
                 f"repos/{REPO}/contents/p/x.json",
-                "-f", "message=msg",
-                "-f", f"content={content}",
-                "-f", "branch=main",
+                "--input", "-",
             ]],
         )
+
+    def test_large_release_note_bundle_uses_stdin_not_an_argument(self):
+        record = {'changes': [{'sha': 'a' * 40, 'subject': 'change ' * 50}] * 1000}
+        calls = []
+
+        def run(args, **kwargs):
+            calls.append((args, kwargs))
+            self.assertLess(max(map(len, args)), 131072)
+            payload = json.loads(kwargs['input'])
+            self.assertEqual(json.loads(base64.b64decode(payload['content'])), record)
+            self.assertEqual(payload['message'], 'Record notes')
+            self.assertEqual(payload['branch'], 'main')
+            return done()
+
+        self.assertTrue(ledger.GhLedgerStore(REPO, run=run).create_json(
+            'release-notes/ios/notes.json', record, 'Record notes'))
+        self.assertEqual(calls[0][0][-2:], ['--input', '-'])
 
     def test_create_invalidates_paths_cache(self):
         tree = json.dumps({"truncated": False, "tree": []})
