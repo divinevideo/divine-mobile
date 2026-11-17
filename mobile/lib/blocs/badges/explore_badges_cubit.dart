@@ -19,6 +19,9 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
   }) : _repository = repository,
        super(const ExploreBadgesState());
 
+  /// Preview reads allowed in flight at once.
+  static const _maxConcurrentPreviews = 4;
+
   final BadgeRepository _repository;
   int _generation = 0;
   int _activePreviews = 0;
@@ -64,7 +67,11 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
   /// Reveals another finite page from the loaded discovery window.
   void showMore() {
     if (isClosed || !state.hasMore) return;
-    emit(state.copyWith(visibleCount: state.visibleCount + 24));
+    emit(
+      state.copyWith(
+        visibleCount: state.visibleCount + ExploreBadgesState.pageSize,
+      ),
+    );
   }
 
   /// Called only for cards built by the lazy gallery. A preview failure never
@@ -81,7 +88,9 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
   }
 
   void _drainPreviews() {
-    while (!isClosed && _activePreviews < 4 && _previewQueue.isNotEmpty) {
+    while (!isClosed &&
+        _activePreviews < _maxConcurrentPreviews &&
+        _previewQueue.isNotEmpty) {
       final request = _previewQueue.removeFirst();
       if (request.generation != _generation) continue;
       _activePreviews++;
@@ -102,7 +111,9 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
         state.copyWith(
           previews: Map.unmodifiable({
             ...state.previews,
-            request.coordinate: List<String>.unmodifiable(holders.take(3)),
+            request.coordinate: List<String>.unmodifiable(
+              holders.take(BadgeRepository.holderPreviewLimit),
+            ),
           }),
         ),
       );

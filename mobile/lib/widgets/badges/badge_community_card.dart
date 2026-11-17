@@ -12,6 +12,9 @@ import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:text_sanitizer/text_sanitizer.dart';
 
+/// Width-to-height ratio of badge artwork in the community gallery.
+const double badgeArtworkAspectRatio = 177 / 120;
+
 /// A single accessible target opening the badge's people and videos.
 class BadgeCommunityCard extends ConsumerWidget {
   const BadgeCommunityCard({
@@ -43,7 +46,9 @@ class BadgeCommunityCard extends ConsumerWidget {
         issuerProfile?.bestDisplayName ??
         UserProfile.defaultDisplayNameFor(issuer);
     final members = [
-      for (final pubkey in memberPubkeys.take(3))
+      for (final pubkey in memberPubkeys.take(
+        BadgeRepository.holderPreviewLimit,
+      ))
         if (!ref.watch(profileVanishedProvider(pubkey))) pubkey,
     ];
     final image = [
@@ -69,7 +74,7 @@ class BadgeCommunityCard extends ConsumerWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: AspectRatio(
-                  aspectRatio: 177 / 120,
+                  aspectRatio: badgeArtworkAspectRatio,
                   child: ColoredBox(
                     color: context.vineColors.surfaceContainerHigh,
                     child: Stack(
