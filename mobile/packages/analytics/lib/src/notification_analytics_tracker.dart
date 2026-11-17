@@ -114,7 +114,7 @@ class NotificationAnalyticsTracker {
               ? normalizedType!
               : 'unknown',
           'open_source': source.wireValue,
-          if (revision != null) 'campaign_revision_id': revision,
+          'campaign_revision_id': ?revision,
         },
       );
       recorded = true;
