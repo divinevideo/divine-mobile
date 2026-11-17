@@ -1,7 +1,8 @@
 // ABOUTME: End-to-end test for the encrypted video DM round trip.
-// ABOUTME: Real AES-GCM encrypt + decrypt; Blossom upload, transport, and
-// ABOUTME: the DM repository are faked. Send pipeline output is fed, as a
-// ABOUTME: received kind 15 message, back through the receive pipeline.
+// ABOUTME: Real AES-GCM encrypt + decrypt and a real ciphertext file; the
+// ABOUTME: Blossom upload, DM repository, Dio download and both preview
+// ABOUTME: readers are faked. Send pipeline output is fed, as a received
+// ABOUTME: kind 15 message, back through the receive pipeline.
 
 import 'dart:async';
 import 'dart:io';
@@ -204,11 +205,11 @@ void main() {
 
     // The preview reader decodes a frame through a platform plugin, which this
     // crypto round trip does not need.
-    DmVideoSendService createSendService({DmVideoEncryption? encryption}) =>
+    DmVideoSendService createSendService(DmVideoEncryption encryption) =>
         DmVideoSendService(
           dmRepository: dmRepository,
           blossom: blossom,
-          encryption: encryption ?? DmVideoEncryption(),
+          encryption: encryption,
           readPreview: (_) async => (blurhash: null, dimensions: null),
         );
 
@@ -233,7 +234,7 @@ void main() {
             encryption.deleteGate.complete();
           }
         });
-        final result = await createSendService(encryption: encryption)
+        final result = await createSendService(encryption)
             .sendVideo(
               recipientPubkey: _recipientPubkey,
               videoFile: videoFile,
@@ -309,12 +310,17 @@ void main() {
           out: sent,
         );
 
-        final result = await createSendService().sendVideo(
+        // The gate starts open: this test only lets the detached ciphertext
+        // delete finish before tearDown removes the temp directory it lives in.
+        final encryption = _ObservedDmVideoEncryption()..deleteGate.complete();
+        final result = await createSendService(encryption).sendVideo(
           recipientPubkey: _recipientPubkey,
           videoFile: videoFile,
           mimeType: _mimeType,
         );
         expect(result.success, isTrue);
+        expect(encryption.ciphertextFile.deleteStarted, isTrue);
+        await encryption.ciphertextFile.deleted.future;
 
         // Flip one ciphertext byte before the receiver downloads it.
         final tampered = Uint8List.fromList(sent.ciphertext!);
