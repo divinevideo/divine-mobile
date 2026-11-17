@@ -21,6 +21,13 @@
 //   --delay-eose-ms MS      hold every ["EOSE", ...] frame for MS
 //   --delay-ms MS           hold every relay-to-client frame for MS
 //   --never-eose            swallow every EOSE (a REQ that never terminates)
+//   --hold-retraction-eose  swallow only the EOSE of a vote-retraction read: a
+//                           REQ whose every filter is kinds [5] with an #e
+//                           naming a kind-7 event this proxy has delivered.
+//                           Its events still flow, so the read runs to the
+//                           client's deadline, while other kind-5 reads (a
+//                           comment's deletions) finish. Vote ids are kept
+//                           across connections
 //   --close-req PREFIX      answer REQs with ["CLOSED", sub, "PREFIX: injected"]
 //   --close-req-count N     how many REQs to refuse that way (default 1)
 //   --drop-event N          swallow the first N client EVENTs: the relay never
@@ -72,6 +79,7 @@ const _knownOptions = {
   'delay-eose-ms',
   'delay-ms',
   'never-eose',
+  'hold-retraction-eose',
   'close-req',
   'close-req-count',
   'drop-event',
@@ -131,6 +139,39 @@ String? _eventId(String frame) {
   if (event is! Map) return null;
   final id = event['id'];
   return id is String ? id : null;
+}
+
+// The second field of a relay frame: the subscription id of an EOSE.
+Object? _secondField(Object? data) {
+  if (data is! String) return null;
+  final decoded = jsonDecode(data);
+  return decoded is List && decoded.length > 1 ? decoded[1] : null;
+}
+
+// Remembers the id of a kind-7 event in a relay ["EVENT", sub, {...}] frame.
+void _rememberVote(Object? data, Set<String> voteIds) {
+  if (data is! String) return;
+  final decoded = jsonDecode(data);
+  if (decoded is! List || decoded.length < 3) return;
+  final event = decoded[2];
+  if (event is Map && event['kind'] == 7 && event['id'] is String) {
+    voteIds.add(event['id'] as String);
+  }
+}
+
+// Whether a client REQ reads the retractions of votes in [voteIds]: every
+// filter is kinds [5] and names at least one of them in #e.
+bool _isRetractionRead(String frame, Set<String> voteIds) {
+  final decoded = jsonDecode(frame);
+  if (decoded is! List || decoded.length < 3) return false;
+  for (final filter in decoded.skip(2)) {
+    if (filter is! Map) return false;
+    final kinds = filter['kinds'];
+    if (kinds is! List || kinds.length != 1 || kinds.first != 5) return false;
+    final e = filter['#e'];
+    if (e is! List || !e.any(voteIds.contains)) return false;
+  }
+  return true;
 }
 
 String _frame(Object? data) =>
@@ -193,6 +234,8 @@ Future<void> main(List<String> args) async {
       ? 0
       : _count(options, 'stall-after-count', 1);
   final maxSeconds = _count(options, 'max-seconds', 1800);
+  final holdRetractionEose = options.containsKey('hold-retraction-eose');
+  final voteIds = <String>{};
 
   final server = await HttpServer.bind(
     options.containsKey('bind-all')
@@ -258,6 +301,7 @@ Future<void> main(List<String> args) async {
       });
     }
     final clock = Stopwatch()..start();
+    final heldSubscriptions = <Object>{};
 
     // Set when the relay leg ends so client->relay frames stop. The client
     // close is scheduled after the relay->client queue drains, so the last
@@ -322,6 +366,13 @@ Future<void> main(List<String> args) async {
           return;
         }
         relay.add(data);
+        if (sub != null &&
+            holdRetractionEose &&
+            _isRetractionRead(data as String, voteIds)) {
+          heldSubscriptions.add(sub);
+          logClientFrame(data, type, 'forwarded, EOSE to be held');
+          return;
+        }
         logClientFrame(data, type, 'forwarded');
       },
       onDone: () {
@@ -343,6 +394,9 @@ Future<void> main(List<String> args) async {
         queue = queue.then((_) async {
           final type = _frameType(data);
           relayFrames++;
+          if (holdRetractionEose && type == 'EVENT') {
+            _rememberVote(data, voteIds);
+          }
           var action = 'forwarded';
           var copies = 1;
           if (stalled) {
@@ -351,6 +405,11 @@ Future<void> main(List<String> args) async {
           } else if (type == 'OK' && dropOk > 0) {
             dropOk--;
             action = 'dropped';
+            copies = 0;
+          } else if (type == 'EOSE' &&
+              holdRetractionEose &&
+              heldSubscriptions.contains(_secondField(data))) {
+            action = 'dropped: retraction read held';
             copies = 0;
           } else if (type == 'EOSE' && neverEose) {
             action = 'dropped';
