@@ -10,29 +10,7 @@ import 'package:http/testing.dart';
 
 // ignore: avoid_relative_lib_imports, scripts are outside lib/ and not importable through package:openvine.
 import '../../scripts/lib/coordinator_route_probe.dart';
-
-const currentConfigFixture = r'''
-const productionApiBaseUrl = 'https://api.divine.video';
-enum AppEnvironment { poc, staging, production, local }
-class EnvironmentConfig {
-  String get relayUrl {
-    switch (environment) {
-      case AppEnvironment.poc: return 'wss://relay.poc.dvines.org';
-      case AppEnvironment.staging: return 'wss://relay.staging.divine.video';
-      case AppEnvironment.local: return 'ws://$localHost:47777';
-      case AppEnvironment.production: return 'wss://relay.divine.video';
-    }
-  }
-  String get apiBaseUrl {
-    if (environment == AppEnvironment.local) return 'http://$localHost:47777';
-    if (environment == AppEnvironment.production) return productionApiBaseUrl;
-    final url = relayUrl;
-    if (url.startsWith('wss://')) return url.replaceFirst('wss://', 'https://');
-    if (url.startsWith('ws://')) return url.replaceFirst('ws://', 'http://');
-    return url;
-  }
-}
-''';
+import '../test_utils/coordinator_route_config_fixture.dart';
 
 void main() {
   group('extractCoordinatorTargets', () {

@@ -9,8 +9,11 @@ MOBILE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$MOBILE_ROOT"
 
+# This pure Dart HTTP/config probe needs no app native assets. Execute the
+# script directly: `dart run` builds the workspace's unrelated native hooks
+# (including sqlite3mc downloads) before it reaches the probe.
 if [ -n "${DEFAULT_ENV:-}" ]; then
-  dart run scripts/lib/coordinator_route_probe.dart "--environment=$DEFAULT_ENV"
+  dart scripts/lib/coordinator_route_probe.dart "--environment=$DEFAULT_ENV"
 else
-  dart run scripts/lib/coordinator_route_probe.dart
+  dart scripts/lib/coordinator_route_probe.dart
 fi
