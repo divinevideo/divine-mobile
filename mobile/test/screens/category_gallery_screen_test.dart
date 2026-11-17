@@ -214,6 +214,26 @@ void main() {
         expect(tester.getSize(backButton), equals(const Size(40, 40)));
       });
 
+      testWidgets('grows the bar with large text and keeps actions square', (
+        tester,
+      ) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpAtPhoneSize(tester);
+
+        final back = tester.getSize(backButton);
+        expect(back.width, greaterThan(40));
+        expect(back.height, equals(back.width));
+        expect(
+          tester.getRect(mascotSlot).right,
+          closeTo(tester.getRect(filterButton).left, 0.001),
+        );
+        expect(
+          tester.getRect(mascotSlot).bottom,
+          equals(tester.getRect(bodyClip).top),
+        );
+      });
+
       testWidgets('starts the gallery right below the bar, edge to edge', (
         tester,
       ) async {

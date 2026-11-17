@@ -296,20 +296,30 @@ class _CategoryGalleryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The mascot ends where the trailing button's visible edge begins, and
+    // that button grows with the text scale through its icon.
+    final mascotEndInset =
+        _headerBarPadding +
+        _headerActionMargin +
+        _headerActionPadding * 2 +
+        DivineIcon.scaleSize(context, _headerActionIconSize);
+
     return ColoredBox(
       color: context.vineColors.nav,
       child: SafeArea(
         bottom: false,
         minimum: const EdgeInsets.only(top: 24),
-        child: SizedBox(
-          height: _headerBarHeight,
+        // A minimum, not a fixed height: at large text the actions and title
+        // need more than the design's 72 px.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: _headerBarHeight),
           // The mascot is painted first so the actions stay on top where the
           // two overlap, and it may rise above the bar into the status area.
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               PositionedDirectional(
-                end: _mascotSlotEndInset,
+                end: mascotEndInset,
                 bottom: 0,
                 child: _CategoryHeaderMascotSlot(
                   visuals: visuals,
@@ -407,28 +417,26 @@ const _headerBarPadding = 12.0;
 const _headerBarGap = 8.0;
 const _titleHorizontalPadding = 4.0;
 
-/// Each action is a 40 px button inside a 4 px margin, a 48 px slot.
+// Each action is a 24 px icon (DivineIcon's default size) padded to a 40 px
+// button inside a 4 px margin, Figma's 48 px slot. The icon, and so the
+// button, grows with the text scale.
 const _headerActionMargin = 4.0;
-const _headerActionSlot = 48.0;
+const _headerActionPadding = 8.0;
+const _headerActionIconSize = 24.0;
 
-/// The mascot's slot. Its end edge sits 56 px from the screen's end, where
-/// the trailing button begins, and its bottom rests on the bar's bottom edge,
-/// so it rises 18 px above the bar into the status area.
+// The mascot's slot rests on the bar's bottom edge and rises above it into
+// the status area.
 const _mascotSlotWidth = 149.0;
 const _mascotSlotHeight = 90.0;
-const _mascotSlotEndInset = 56.0;
 
 /// The mascot's box inside the slot, narrow enough that its 8° tilt stays
 /// within the slot's width.
 const _mascotWidth = 132.0;
 
-/// The title stops where the mascot starts instead of running under it.
+/// Stops the title where the mascot starts. The mascot ends where the
+/// trailing button begins, so the button's width cancels out.
 const double _titleEndPadding =
-    _mascotSlotEndInset +
-    _mascotSlotWidth -
-    _headerBarPadding -
-    _headerActionSlot -
-    _headerBarGap;
+    _mascotSlotWidth - _headerActionMargin - _headerBarGap;
 
 /// The gallery's top corner radius: Figma's `radius 96` corner pair, 48 px
 /// on each side.
@@ -488,7 +496,7 @@ class _CategoryHeaderActionButton extends StatelessWidget {
                 boxShadow: _categoryActionShadows,
               ),
               child: Padding(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(_headerActionPadding),
                 child: DivineIcon(icon: icon, color: VineTheme.whiteText),
               ),
             ),
