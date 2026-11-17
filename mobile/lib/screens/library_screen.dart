@@ -551,13 +551,18 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
     if (selectedClips.isEmpty) return;
 
     if (!widget.selectionMode) {
-      // The new session takes the autosave's slot, so an unfinished session
-      // there moves to Drafts first instead of being deleted. Read up front:
-      // clearing must follow the copy even if the library closes meanwhile,
-      // or Drafts lists the session twice.
+      // Keep the unfinished session before replacing it with selected clips.
       final videoEditor = ref.read(videoEditorProvider.notifier);
       final videoPublish = ref.read(videoPublishProvider.notifier);
-      await videoEditor.keepAutosaveAsDraft();
+      final keptDraftId = await videoEditor.keepAutosaveAsDraft();
+      if (!mounted ||
+          !context.mounted ||
+          ModalRoute.of(context)?.isCurrent == false) {
+        if (keptDraftId != null) {
+          await videoEditor.discardKeptDraft(keptDraftId);
+        }
+        return;
+      }
       await videoPublish.clearAll();
       if (!mounted) return;
 

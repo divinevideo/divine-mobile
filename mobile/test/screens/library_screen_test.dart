@@ -32,6 +32,7 @@ import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/clip_provenance_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
+import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/clip_gallery_save/clip_gallery_save_warning_page.dart';
 import 'package:openvine/screens/gallery_clip_import/gallery_clip_import_page.dart';
@@ -283,6 +284,117 @@ void main() {
               ),
       );
     }
+
+    testWidgets(
+      'Create preserves recording made after leaving during draft save',
+      (tester) async {
+        final clip = DivineVideoClip(
+          id: 'selected',
+          video: EditorVideo.file('/test/selected.mp4'),
+          duration: const Duration(seconds: 2),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: models.AspectRatio.vertical,
+          originalAspectRatio: 9 / 16,
+          thumbnailPath: '/test/selected.jpg',
+          ghostFramePath: '/test/selected_ghost.jpg',
+        );
+        final resumedRecording = clip.copyWith(id: 'recorded_after_leaving');
+        when(() => mockClipLibraryService.getAllClips())
+            .thenAnswer((_) async => [clip]);
+        when(
+          () => mockDraftStorageService.draftExists(
+            VideoEditorConstants.autoSaveId,
+          ),
+        ).thenAnswer((_) async => true);
+        when(
+          () => mockDraftStorageService.getDraftById(
+            VideoEditorConstants.autoSaveId,
+          ),
+        ).thenAnswer(
+          (_) async =>
+              _createTestDraft().copyWith(id: VideoEditorConstants.autoSaveId),
+        );
+        when(() => mockDraftStorageService.deleteDraft(any()))
+            .thenAnswer((_) async {});
+        final saved = Completer<void>();
+        final keptDrafts = <DivineVideoDraft>[];
+        when(() => mockDraftStorageService.saveDraft(any()))
+            .thenAnswer((invocation) {
+              keptDrafts.add(
+                invocation.positionalArguments.first as DivineVideoDraft,
+              );
+              return saved.future;
+            });
+        final visible = ValueNotifier<bool>(true);
+        addTearDown(visible.dispose);
+        await tester.pumpWidget(
+          buildWidget(
+            initialTabIndex: 1,
+            tabsMode: LibraryTabsMode.withoutSounds,
+            libraryVisible: visible,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(LibraryScreen)),
+        );
+        BlocProvider.of<ClipsLibraryBloc>(tester.element(find.byType(ClipsTab)))
+          ..add(const ClipsLibraryEnterSelectionMode())
+          ..add(ClipsLibraryToggleSelection(clip));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(en.libraryCreateVideo(1)));
+        await tester.pump();
+        expect(keptDrafts, hasLength(1));
+        expect(keptDrafts.single.title, 'Test Draft');
+        // Back returns to the recorder sharing these providers. Its record and
+        // metadata actions update them after the preservation snapshot was taken.
+        visible.value = false;
+        await tester.pumpAndSettle();
+        expect(find.byType(LibraryScreen), findsNothing);
+        container
+            .read(clipManagerProvider.notifier)
+            .insertClip(0, resumedRecording);
+        container
+            .read(videoEditorProvider.notifier)
+            .updateMetadata(title: 'Edited after returning to recorder');
+        expect(container.read(clipManagerProvider).clips.map((c) => c.id), [
+          'recorded_after_leaving',
+        ]);
+        expect(
+          container.read(videoEditorProvider).title,
+          'Edited after returning to recorder',
+        );
+        saved.complete();
+        await tester.pump();
+        await tester.pump();
+        // These are absent from the copy the stale Create saved.
+        expect(
+          keptDrafts.single.clips.map((c) => c.id),
+          isNot(contains('recorded_after_leaving')),
+        );
+        expect(
+          keptDrafts.single.title,
+          isNot('Edited after returning to recorder'),
+        );
+        expect(
+          container.read(clipManagerProvider).clips.map((c) => c.id),
+          ['recorded_after_leaving'],
+          reason: 'A stale Create must not erase recording made after leaving the library.',
+        );
+        expect(
+          container.read(videoEditorProvider).title,
+          'Edited after returning to recorder',
+        );
+        verify(
+          () => mockDraftStorageService.deleteDraft(keptDrafts.single.id),
+        ).called(1);
+        verifyNever(
+          () => mockDraftStorageService.deleteDraft(
+            VideoEditorConstants.autoSaveId,
+          ),
+        );
+      },
+    );
 
     group('scheduled section (#3538)', () {
       testWidgets('is off in the recorder library', (tester) async {
