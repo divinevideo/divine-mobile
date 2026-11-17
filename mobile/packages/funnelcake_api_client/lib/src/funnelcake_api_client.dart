@@ -1280,7 +1280,9 @@ class FunnelcakeApiClient {
       }
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final holders = data['holders'] as List<dynamic>;
-      return holders.cast<String>();
+      // Copy eagerly: a lazy cast would throw a malformed holder at the
+      // caller's iteration, outside this method's error translation.
+      return List<String>.from(holders);
     } on TimeoutException {
       throw FunnelcakeTimeoutException(uri.toString());
     } on FunnelcakeException {
