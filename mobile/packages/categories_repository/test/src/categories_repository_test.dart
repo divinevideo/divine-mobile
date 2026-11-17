@@ -370,6 +370,50 @@ void main() {
         },
       );
 
+      test('drops videos that expired after the snapshot was saved', () async {
+        const expiredId =
+            '4444444444444444444444444444444444444444444444444444444444444444';
+        when(
+          () => apiClient.getVideosByCategory(category: 'music'),
+        ).thenAnswer(
+          (_) async => [
+            _videoStats(id: expiredId, pubkey: author),
+            _videoStats(id: eventId, pubkey: author),
+          ],
+        );
+        await repository
+            .watchVideosForCategoryCached(category: 'music', cacheScope: viewer)
+            .toList();
+        final key = cacheDao.keys.single;
+        final payload =
+            jsonDecode(cacheDao.rawRead(key)!) as Map<String, dynamic>;
+        final expired = (payload['videos'] as List<dynamic>)
+            .cast<Map<String, dynamic>>()
+            .firstWhere((video) => video['id'] == expiredId);
+        expired['expirationTimestamp'] =
+            DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60;
+        await cacheDao.write(key: key, payload: jsonEncode(payload));
+        final pending = Completer<List<VideoStats>>();
+        when(
+          () => apiClient.getVideosByCategory(category: 'music'),
+        ).thenAnswer((_) => pending.future);
+        final iterator = StreamIterator(
+          repository.watchVideosForCategoryCached(
+            category: 'music',
+            cacheScope: viewer,
+          ),
+        );
+        expect(await iterator.moveNext(), isTrue);
+        expect(iterator.current.isStale, isTrue);
+        expect(
+          iterator.current.data.videos.map((video) => video.id),
+          [eventId],
+        );
+        pending.complete([]);
+        expect(await iterator.moveNext(), isTrue);
+        await iterator.cancel();
+      });
+
       test(
         'preserves hasMore when current blocks empty a cached full page',
         () async {

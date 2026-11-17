@@ -120,8 +120,9 @@ class CategoriesRepository {
   /// opening still fetches live data. Personalized recommendations deliberately
   /// use [getRecommendedVideos] instead of this cache.
   ///
-  /// The current block filter runs again on every cached and live emission.
-  /// [CategoryVideosPage.hasMore] reflects the unfiltered API page size.
+  /// The current block filter and NIP-40 expiry run again on every cached and
+  /// live emission. [CategoryVideosPage.hasMore] reflects the unfiltered API
+  /// page size.
   Stream<CacheResult<CategoryVideosPage>> watchVideosForCategoryCached({
     required String category,
     String cacheScope = 'anonymous',
@@ -148,8 +149,12 @@ class CategoriesRepository {
       fromJson: _videosPageFromJson,
       toJson: _videosPageToJson,
     ).map((result) {
+      // A snapshot can outlive a video's NIP-40 expiration.
+      final unexpired = result.data.videos
+          .where((video) => !video.isExpired)
+          .toList();
       final page = CategoryVideosPage(
-        videos: _filterVideos(result.data.videos),
+        videos: _filterVideos(unexpired),
         hasMore: result.data.hasMore,
       );
       return result.isLive ? CacheResult.live(page) : CacheResult.cached(page);
