@@ -1411,7 +1411,12 @@ Future<ReportRetryService?> reportRetryService(Ref ref) async {
 }
 
 /// Content deletion service for NIP-09 delete events
-@riverpod
+///
+/// Kept alive so an account switch can reach the instance a delete is still
+/// running on. Every caller reads it without listening, so under
+/// `autoDispose` each delete ran on an instance the leaving container no
+/// longer held, which the switch could not suspend (#8313).
+@Riverpod(keepAlive: true)
 Future<ContentDeletionService> contentDeletionService(Ref ref) async {
   final nostrService = ref.watch(nostrServiceProvider);
   final authService = ref.watch(authServiceProvider);

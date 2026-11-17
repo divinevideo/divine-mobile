@@ -53,6 +53,7 @@ import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
+import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
@@ -102,6 +103,9 @@ class _MockModerationLabelService extends Mock
 
 class _MockContentReportingService extends Mock
     implements ContentReportingService {}
+
+class _MockContentDeletionService extends Mock
+    implements ContentDeletionService {}
 
 class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
@@ -2791,8 +2795,8 @@ void main() {
 
   // The leaving container also holds services that write device-wide keys
   // after a delayed step: the feed's last view, a moderation-key refresh, a
-  // report still being delivered. The switch pauses them before the target
-  // signs in (#8313).
+  // report still being delivered, a delete still waiting on its relay. The
+  // switch pauses them before the target signs in (#8313).
   group('outgoing history, labelers and reports (#8313)', () {
     late List<String> events;
 
@@ -2807,12 +2811,19 @@ void main() {
       when(labels.resume).thenAnswer((_) => events.add('resume labels'));
       when(reports.suspend).thenAnswer((_) => events.add('suspend reports'));
       when(reports.resume).thenAnswer((_) => events.add('resume reports'));
+      final deletions = _MockContentDeletionService();
+      when(deletions.suspend)
+          .thenAnswer((_) => events.add('suspend deletions'));
+      when(deletions.resume).thenAnswer((_) => events.add('resume deletions'));
       final leaving = await pumpHost(
         tester,
         accountOverrides: [
           seenVideosServiceProvider.overrideWithValue(seen),
           moderationLabelServiceProvider.overrideWithValue(labels),
           contentReportingServiceProvider.overrideWith((ref) async => reports),
+          contentDeletionServiceProvider.overrideWith(
+            (ref) async => deletions,
+          ),
         ],
       );
       leaving
@@ -2822,6 +2833,9 @@ void main() {
         ..listen(contentReportingServiceProvider, (_, _) {});
       await tester.runAsync(
         () => leaving.read(contentReportingServiceProvider.future),
+      );
+      await tester.runAsync(
+        () => leaving.read(contentDeletionServiceProvider.future),
       );
     }
 
@@ -2845,6 +2859,7 @@ void main() {
           'suspend seen',
           'suspend labels',
           'suspend reports',
+          'suspend deletions',
           'sign in target',
         ]),
       );
@@ -2871,9 +2886,11 @@ void main() {
           'suspend seen',
           'suspend labels',
           'suspend reports',
+          'suspend deletions',
           'resume seen',
           'resume labels',
           'resume reports',
+          'resume deletions',
         ]),
       );
     });

@@ -24,6 +24,7 @@ import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/account_session_store.dart';
 import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
@@ -181,6 +182,18 @@ ContentReportingService? _suspendOutgoingReports(ProviderContainer? outgoing) {
   }
   final reports = outgoing.read(contentReportingServiceProvider).value;
   return reports?..suspend();
+}
+
+/// Stops the outgoing account's deletion history from saving; see
+/// [ContentDeletionService.suspend].
+ContentDeletionService? _suspendOutgoingDeletions(
+  ProviderContainer? outgoing,
+) {
+  if (outgoing == null || !outgoing.exists(contentDeletionServiceProvider)) {
+    return null;
+  }
+  final deletions = outgoing.read(contentDeletionServiceProvider).value;
+  return deletions?..suspend();
 }
 
 /// The outgoing account's preference store, if its container built one. The
@@ -385,6 +398,7 @@ Future<void> swapAccount({
     SeenVideosService? suspendedOutgoingSeenVideos;
     ModerationLabelService? suspendedOutgoingLabels;
     ContentReportingService? suspendedOutgoingReports;
+    ContentDeletionService? suspendedOutgoingDeletions;
     AccountPreferenceStore? suspendedOutgoingPreferences;
     try {
       // Capture only while the original identity and rendered host still own
@@ -428,6 +442,7 @@ Future<void> swapAccount({
       suspendedOutgoingSeenVideos = _suspendOutgoingSeenVideos(current);
       suspendedOutgoingLabels = _suspendOutgoingModerationLabels(current);
       suspendedOutgoingReports = _suspendOutgoingReports(current);
+      suspendedOutgoingDeletions = _suspendOutgoingDeletions(current);
       suspendedOutgoingPreferences = _outgoingPreferenceStore(current);
       await suspendedOutgoingPreferences?.suspendProjection();
       ensureOutgoingCurrent();
@@ -503,6 +518,7 @@ Future<void> swapAccount({
       suspendedOutgoingSeenVideos?.resume();
       suspendedOutgoingLabels?.resume();
       suspendedOutgoingReports?.resume();
+      suspendedOutgoingDeletions?.resume();
       suspendedOutgoingPreferences?.resumeProjection();
       try {
         if (failedTicket == null) {

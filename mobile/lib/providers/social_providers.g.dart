@@ -711,11 +711,21 @@ String _$reportRetryServiceHash() =>
     r'580e5f54ac229632f4b5712952c1a2126660befb';
 
 /// Content deletion service for NIP-09 delete events
+///
+/// Kept alive so an account switch can reach the instance a delete is still
+/// running on. Every caller reads it without listening, so under
+/// `autoDispose` each delete ran on an instance the leaving container no
+/// longer held, which the switch could not suspend (#8313).
 
 @ProviderFor(contentDeletionService)
 final contentDeletionServiceProvider = ContentDeletionServiceProvider._();
 
 /// Content deletion service for NIP-09 delete events
+///
+/// Kept alive so an account switch can reach the instance a delete is still
+/// running on. Every caller reads it without listening, so under
+/// `autoDispose` each delete ran on an instance the leaving container no
+/// longer held, which the switch could not suspend (#8313).
 
 final class ContentDeletionServiceProvider
     extends
@@ -728,13 +738,18 @@ final class ContentDeletionServiceProvider
         $FutureModifier<ContentDeletionService>,
         $FutureProvider<ContentDeletionService> {
   /// Content deletion service for NIP-09 delete events
+  ///
+  /// Kept alive so an account switch can reach the instance a delete is still
+  /// running on. Every caller reads it without listening, so under
+  /// `autoDispose` each delete ran on an instance the leaving container no
+  /// longer held, which the switch could not suspend (#8313).
   ContentDeletionServiceProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'contentDeletionServiceProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -755,4 +770,4 @@ final class ContentDeletionServiceProvider
 }
 
 String _$contentDeletionServiceHash() =>
-    r'de8df8e0106036b306b61ef2970e6b43ce1be68f';
+    r'7260309555cfbc0eb6c94e46e358d3d801c7e7ba';
