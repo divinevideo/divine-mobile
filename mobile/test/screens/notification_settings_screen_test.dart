@@ -1,10 +1,12 @@
 // ABOUTME: Widget tests for NotificationSettingsScreen — verifies the
 // ABOUTME: mark-all-as-read action card's success snackbar, failure
-// ABOUTME: snackbar, disabled-when-repo-null behaviour, and that toggling a
-// ABOUTME: notification-type switch persists the flipped preference.
+// ABOUTME: snackbar, disabled-when-repo-null behaviour, that toggling a
+// ABOUTME: notification-type switch persists the flipped preference, and that
+// ABOUTME: a campaign opt-in reaches the notification analytics tracker.
 
 import 'dart:async';
 
+import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -15,6 +17,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/notification_settings_screen.dart';
 import 'package:openvine/services/notification_preferences_service.dart';
@@ -27,6 +30,18 @@ class _MockNotificationRepository extends Mock
 
 class _MockNotificationPreferencesService extends Mock
     implements NotificationPreferencesService {}
+
+class _ConsentSink extends NoOpAnalyticsEventSink {
+  final changes = <Map<String, Object>>[];
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    if (name == 'campaign_consent_changed') changes.add(parameters);
+  }
+}
 
 void main() {
   setUpAll(() {
@@ -50,6 +65,7 @@ void main() {
     Widget buildSubject({
       NotificationRepository? repo,
       bool newPostNotifications = true,
+      NotificationAnalyticsTracker? notificationAnalytics,
     }) {
       return testMaterialApp(
         additionalOverrides: [
@@ -60,6 +76,10 @@ void main() {
           // Ships default-off, so the new-posts row has to be asked for.
           isFeatureEnabledProvider(FeatureFlag.newPostNotifications)
               .overrideWithValue(newPostNotifications),
+          if (notificationAnalytics != null)
+            notificationAnalyticsTrackerProvider.overrideWithValue(
+              notificationAnalytics,
+            ),
         ],
         home: const NotificationSettingsScreen(),
       );
@@ -348,6 +368,54 @@ void main() {
           true,
         ),
       ).called(1);
+    });
+
+    testWidgets('records a campaign opt-in through the analytics tracker', (
+      tester,
+    ) async {
+      var stored = const NotificationPreferences();
+      when(mockPrefsService.loadPreferences).thenAnswer((_) async => stored);
+      when(
+        () => mockPrefsService.updatePreference(
+          NotificationPreference.campaignsEnabled,
+          any(),
+        ),
+      ).thenAnswer((call) async {
+        stored = stored.copyWith(
+          campaignsEnabled: call.positionalArguments[1] as bool,
+        );
+      });
+      final sink = _ConsentSink();
+      await tester.pumpWidget(
+        buildSubject(
+          repo: mockRepo,
+          notificationAnalytics: NotificationAnalyticsTracker(
+            sink: sink,
+            collectionAllowed: () async => true,
+            privacyBoundary: () => 'test',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(NotificationSettingsScreen)),
+      );
+      final campaignSwitch = find.descendant(
+        of: find.ancestor(
+          of: find.text(l10n.notificationSettingsCampaigns),
+          matching: find.byType(Card),
+        ),
+        matching: find.byType(Switch),
+      );
+      await scrollUntilTappable(tester, campaignSwitch, 100);
+      await tester.tap(campaignSwitch);
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<Switch>(campaignSwitch).value, isTrue);
+      expect(sink.changes, [
+        {'enabled': 1},
+      ]);
     });
   });
 }
