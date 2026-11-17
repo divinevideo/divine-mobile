@@ -1,5 +1,6 @@
 // dart format width=80
 import 'package:db_client/src/database/app_database.dart';
+import 'package:db_client/src/database/daos/nostr_events_dao.dart';
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';
@@ -306,8 +307,50 @@ void main() {
       });
     }
 
-    test('current schema version is 34', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 34);
+    test(
+      'v35 indexes verified cached events without changing their trust',
+      () async {
+        final schema = await verifier.schemaAt(34);
+        for (final checked in [0, 1]) {
+          schema.rawDatabase.execute(
+            'INSERT INTO event (id, pubkey, created_at, kind, tags, content, sig, '
+            'expire_at, signature_verified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+              checked == 0 ? 'a' * 64 : 'b' * 64,
+              'c' * 64,
+              100 + checked,
+              1,
+              '[]',
+              'cached',
+              'd' * 128,
+              4102444800,
+              checked,
+            ],
+          );
+        }
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+        await verifier.migrateAndValidate(db, 35);
+        expect(await db.nostrEventsDao.getEventCount(), 2);
+        expect(await db.nostrEventsDao.getRecentVerifiedEventIdSigs(), [
+          (id: 'b' * 64, sig: 'd' * 128),
+        ]);
+        final plan = await db
+            .customSelect(
+              'EXPLAIN QUERY PLAN '
+              '${NostrEventsDao.recentVerifiedEventIdSigsSql}',
+              variables: [Variable.withInt(50000)],
+            )
+            .get();
+        expect(
+          plan.map((row) => row.read<String>('detail')).join(' '),
+          contains('idx_event_verified_created_at'),
+        );
+      },
+    );
+
+    test('current schema version is 35', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 35);
     });
 
     test('v34 gives a queued DM a place for an unconfirmed recipient wrap, '

@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:drift/drift.dart';
+import 'package:meta/meta.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
 part 'nostr_events_dao.g.dart';
@@ -740,6 +741,16 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     return result.read<int>('count');
   }
 
+  /// The query behind [getRecentVerifiedEventIdSigs]. Its
+  /// `signature_verified = 1` predicate must match the partial index
+  /// `idx_event_verified_created_at` word for word, or SQLite falls back to
+  /// scanning every cached event; the query-plan tests read this constant so
+  /// they check the query that actually runs.
+  @visibleForTesting
+  static const recentVerifiedEventIdSigsSql =
+      'SELECT id, sig FROM event WHERE signature_verified = 1 '
+      'ORDER BY created_at DESC LIMIT ?';
+
   /// Returns locally verified `(id, sig)` pairs, newest first, capped at
   /// [limit]. Cached events without a recorded check are excluded.
   /// The signature is part of the key because an event ID commits only to
@@ -756,8 +767,7 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
     int limit = 50000,
   }) async {
     final rows = await customSelect(
-      'SELECT id, sig FROM event WHERE signature_verified = 1 '
-      'ORDER BY created_at DESC LIMIT ?',
+      recentVerifiedEventIdSigsSql,
       variables: [Variable.withInt(limit)],
       readsFrom: {nostrEvents},
     ).get();

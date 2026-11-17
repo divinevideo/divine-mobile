@@ -29,6 +29,7 @@ import 'package:openvine/startup/timed_startup_task.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/library_audio_migration.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
+import 'package:openvine/utils/startup_timing.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -65,7 +66,10 @@ Future<void> initializeCoreServices(ProviderContainer container) async {
   // Initialize auth service
   // NOTE: NostrService (relay connections) is initialized lazily in AuthService
   // when user actually authenticates, to avoid blocking startup for unauthenticated users
-  await container.read(authServiceProvider).initialize();
+  await traceStartupStage(
+    StartupStage.accountRestore,
+    () => container.read(authServiceProvider).initialize(),
+  );
   Log.info(
     '[INIT] ✅ AuthService initialized',
     name: 'Main',

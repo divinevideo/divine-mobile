@@ -225,8 +225,11 @@ extension _AccountSessionSetup on AuthService {
       // is safe on a restore or a refresh too.
       await coordinator.runGuardedStorage(
         activation,
-        () => _userDataCleanupService.retryUnfinishedSignOutCleanup(
-          incomingPubkey: pubkeyHex,
+        () => traceStartupStage(
+          StartupStage.accountCleanup,
+          () => _userDataCleanupService.retryUnfinishedSignOutCleanup(
+            incomingPubkey: pubkeyHex,
+          ),
         ),
       );
       ensureCurrent();
@@ -244,7 +247,10 @@ extension _AccountSessionSetup on AuthService {
       if (claimLegacyRows) {
         await coordinator.runGuardedStorage(
           activation,
-          claimLegacyRowsForCurrentUser,
+          () => traceStartupStage(
+            StartupStage.legacyRowClaim,
+            claimLegacyRowsForCurrentUser,
+          ),
         );
         ensureCurrent();
       }

@@ -2,10 +2,12 @@
 // ABOUTME: Database auto-closes when provider container is disposed
 // ABOUTME: Also hosts the durable vanished-profile pubkey stream read off Drift
 import 'package:db_client/db_client.dart';
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/database_corruption_provider.dart';
 import 'package:openvine/providers/db_cipher_key_provider.dart';
 import 'package:openvine/services/database_corruption_service.dart';
+import 'package:openvine/utils/startup_timing.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'database_provider.g.dart';
@@ -42,12 +44,13 @@ AppDatabase createAppDatabase({
   required String? cipherKey,
   required DatabaseCorruptionService? corruptionService,
 }) {
-  if (cipherKey == null) {
-    return AppDatabase(openConnection());
-  }
-  final executor = openEncryptedConnection(rawKeyHex: cipherKey);
+  final executor =
+      (cipherKey == null
+              ? openConnection()
+              : openEncryptedConnection(rawKeyHex: cipherKey))
+          .interceptWith(_StartupDatabaseTiming());
   return AppDatabase(
-    corruptionService == null
+    cipherKey == null || corruptionService == null
         ? executor
         : reportCorruptionFrom(executor, corruptionService.report),
   );
@@ -76,3 +79,18 @@ final vanishedProfilePubkeysProvider = StreamProvider<Set<String>>((ref) {
       .watchAllPubkeys()
       .map((pubkeys) => pubkeys.toSet());
 });
+
+/// Times the lazy open (including Drift migrations and cleanup), once per DB.
+class _StartupDatabaseTiming extends QueryInterceptor {
+  bool _started = false;
+
+  @override
+  Future<bool> ensureOpen(QueryExecutor executor, QueryExecutorUser user) {
+    if (_started) return executor.ensureOpen(user);
+    _started = true;
+    return traceStartupStage(
+      StartupStage.databaseOpen,
+      () => executor.ensureOpen(user),
+    );
+  }
+}

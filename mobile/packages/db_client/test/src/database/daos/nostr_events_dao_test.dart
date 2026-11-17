@@ -4,6 +4,7 @@
 import 'dart:io';
 
 import 'package:db_client/db_client.dart' hide Filter;
+import 'package:drift/drift.dart' show Variable;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -2181,6 +2182,31 @@ void main() {
     });
 
     group('getRecentVerifiedEventIdSigs', () {
+      test(
+        'uses the partial recency index for a sparse verified cache',
+        () async {
+          await dao.upsertEvent(createEvent(content: 'unchecked'));
+          final verified = createEvent(content: 'checked')
+            ..markSignatureVerified();
+          await dao.upsertEvent(verified);
+          final plan = await database
+              .customSelect(
+                'EXPLAIN QUERY PLAN '
+                '${NostrEventsDao.recentVerifiedEventIdSigsSql}',
+                variables: [Variable.withInt(50000)],
+              )
+              .get();
+          final details = plan
+              .map((row) => row.read<String>('detail'))
+              .join(' ');
+          expect(details, contains('idx_event_verified_created_at'));
+          expect(details, isNot(contains('USE TEMP B-TREE')));
+          expect(await dao.getRecentVerifiedEventIdSigs(), [
+            (id: verified.id, sig: verified.sig),
+          ]);
+        },
+      );
+
       test('excludes cached events without a local signature check', () async {
         final unchecked = createEvent();
         await dao.upsertEvent(unchecked);

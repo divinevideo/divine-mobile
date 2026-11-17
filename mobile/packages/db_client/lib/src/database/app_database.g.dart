@@ -24873,6 +24873,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ChallengeRecordsTable challengeRecords = $ChallengeRecordsTable(
     this,
   );
+  late final Index idxEventVerifiedCreatedAt = Index(
+    'idx_event_verified_created_at',
+    'CREATE INDEX IF NOT EXISTS idx_event_verified_created_at ON event (created_at DESC) WHERE signature_verified = 1',
+  );
   late final Index idxMetricsLoopCount = Index(
     'idx_metrics_loop_count',
     'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count ON video_metrics (loop_count)',
@@ -25097,6 +25101,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     notificationReadMembers,
     challengeOwners,
     challengeRecords,
+    idxEventVerifiedCreatedAt,
     idxMetricsLoopCount,
     idxMetricsLikes,
     idxMetricsViews,

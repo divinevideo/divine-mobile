@@ -9,6 +9,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:openvine/database/sqlcipher_runtime.dart';
 import 'package:openvine/services/database_recovery_store.dart';
 import 'package:openvine/services/secure_storage_options.dart';
+import 'package:openvine/utils/startup_timing.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Secure-storage key for the at-rest DB cipher key.
@@ -225,13 +226,19 @@ class DatabaseEncryptionBootstrap {
     // and nothing that could have set the flag.
     if (kIsWeb) return (null, true);
 
-    await _ensureRuntime();
+    await traceStartupStage(StartupStage.databaseRuntime, _ensureRuntime);
     if (!_isCipherAvailable()) {
       throw DatabaseCipherUnavailableError();
     }
 
-    final (key, wasGenerated) = await _readOrCreateKey();
-    final outcome = await _migrate(key);
+    final (key, wasGenerated) = await traceStartupStage(
+      StartupStage.databaseKey,
+      _readOrCreateKey,
+    );
+    final outcome = await traceStartupStage(
+      StartupStage.databaseMigration,
+      () => _migrate(key),
+    );
 
     switch (outcome) {
       case CipherMigrationOutcome.noDatabase:
@@ -251,7 +258,10 @@ class DatabaseEncryptionBootstrap {
         // corruption once, so asking it again would just clear the database and
         // strand the user on it for another session.
         if (!await _hasPendingCorruptionRecovery() &&
-            await _canOpenEncryptedDatabase(key)) {
+            await traceStartupStage(
+              StartupStage.databaseProbe,
+              () => _canOpenEncryptedDatabase(key),
+            )) {
           // A replayed journal that failed quick_check is kept like any
           // database whose damage the probe cannot see: salvage keeps only the
           // local-only tables, so it would lose more than the damage does.

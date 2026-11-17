@@ -39,6 +39,69 @@ void main() {
       );
     });
 
+    test(
+      'retains verification and its index across consecutive encrypted opens',
+      () async {
+        await _seedRealSchemaDatabase(dbPath, validKey, eventCount: 0);
+        final raw = sqlite3.open(dbPath);
+        try {
+          applyCipherKey(raw, validKey);
+          for (final checked in [0, 1]) {
+            final id = checked == 0 ? 'a' * 64 : 'b' * 64;
+            raw.execute(
+              'INSERT INTO event (id,pubkey,created_at,kind,tags,content, '
+              'sig,expire_at,signature_verified) '
+              'VALUES (?,?,?,?,?,?,?,?,?)',
+              [
+                id,
+                'c' * 64,
+                100 + checked,
+                1,
+                '[]',
+                'cached',
+                'd' * 128,
+                4102444800,
+                checked,
+              ],
+            );
+          }
+        } finally {
+          raw.close();
+        }
+        for (var launch = 0; launch < 2; launch++) {
+          expect(
+            await encryptedDatabaseOpensCleanly(
+              rawKeyHex: validKey,
+              databasePath: dbPath,
+            ),
+            isTrue,
+          );
+          final db = AppDatabase(
+            openEncryptedConnection(rawKeyHex: validKey, databasePath: dbPath),
+          );
+          try {
+            expect(await db.nostrEventsDao.getEventCount(), 2);
+            expect(await db.nostrEventsDao.getRecentVerifiedEventIdSigs(), [
+              (id: 'b' * 64, sig: 'd' * 128),
+            ]);
+            final plan = await db
+                .customSelect(
+                  'EXPLAIN QUERY PLAN SELECT id,sig FROM event '
+                  'WHERE signature_verified=1 '
+                  'ORDER BY created_at DESC LIMIT 50000',
+                )
+                .get();
+            expect(
+              plan.map((row) => row.read<String>('detail')).join(' '),
+              contains('idx_event_verified_created_at'),
+            );
+          } finally {
+            await db.close();
+          }
+        }
+      },
+    );
+
     test('returns false when the key cannot decrypt the database', () async {
       await _seedRealSchemaDatabase(dbPath, validKey, eventCount: 10);
 
@@ -99,6 +162,7 @@ Future<void> _seedRealSchemaDatabase(
       'VALUES (?, ?, ?, ?, ?, ?, ?)',
     );
     try {
+      raw.execute('BEGIN');
       for (var i = 0; i < eventCount; i += 1) {
         final suffix = i.toString().padLeft(6, '0');
         insert.execute([
@@ -111,6 +175,7 @@ Future<void> _seedRealSchemaDatabase(
           'sig_$suffix',
         ]);
       }
+      raw.execute('COMMIT');
     } finally {
       insert.close();
     }
