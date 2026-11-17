@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:app_update_repository/app_update_repository.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/services.dart';
@@ -15,7 +16,9 @@ import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
@@ -492,6 +495,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -1805,6 +1811,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -1896,6 +1905,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -1998,6 +2010,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -2147,6 +2162,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
@@ -2280,6 +2298,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            // Match bootstrap metadata required by the real push service.
+            installSourceProvider.overrideWithValue(InstallSource.sideload),
+            appVersionProvider.overrideWithValue('1.2.3'),
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
