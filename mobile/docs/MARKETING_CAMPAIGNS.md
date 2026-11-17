@@ -20,9 +20,11 @@ Campaign callbacks deduplicate within the current privacy/session boundary;
 identifiers and consent are rechecked across an asynchronous identity change.
 No target pubkey, video coordinate or message content is added to analytics.
 
-Persisted marketing preference changes record `campaign_consent_changed` with
+Observed effective marketing preference changes record `campaign_consent_changed` with
 numeric `enabled` (0/1) through that same consented sink. Resetting settings can
-record a withdrawal, and choosing an already selected value records nothing.
+record a withdrawal, and choosing an already selected value records nothing. Concurrent preference
+callbacks compare one cached observation, so unrelated or duplicate writes do not
+produce duplicate marketing changes; persistence ordering remains unchanged.
 Analytics failures do not delay navigation or preference persistence.
 
 Existing consented playback and session events supply engagement measurement.

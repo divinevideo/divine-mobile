@@ -71,6 +71,35 @@ void main() {
           notificationRepository: repository,
         );
 
+    test('concurrent campaign choices and unrelated toggles emit one actual transition', () async {
+      final sink = _ConsentSink();
+      final cubit = NotificationSettingsCubit(
+        preferencesService: service,
+        notificationAnalytics: NotificationAnalyticsTracker(
+          sink: sink,
+          collectionAllowed: () async => true,
+          privacyBoundary: () => 'test',
+        ),
+      );
+      addTearDown(cubit.close);
+      await cubit.load();
+      await Future.wait([
+        cubit.setPreference(NotificationPreference.likesEnabled, false),
+        cubit.setPreference(NotificationPreference.campaignsEnabled, true),
+        cubit.setPreference(NotificationPreference.campaignsEnabled, true),
+      ]);
+      await pumpEventQueue();
+      expect(sink.changes, [
+        {'enabled': 1},
+      ]);
+      await Future.wait([cubit.resetToDefaults(), cubit.resetToDefaults()]);
+      await pumpEventQueue();
+      expect(sink.changes, [
+        {'enabled': 1},
+        {'enabled': 0},
+      ]);
+    });
+
     test(
       'records only actual campaign preference changes, including reset',
       () async {

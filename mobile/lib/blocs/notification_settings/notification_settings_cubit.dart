@@ -42,11 +42,23 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
   }
 
   StreamSubscription<void>? _preferenceSubscription;
+  bool? _lastObservedCampaignChoice;
 
   void _preferencesChanged() => unawaited(_reloadPreferences());
   Future<void> _reloadPreferences() async {
     final preferences = await _preferencesService.loadPreferences();
+    if (isClosed) return;
+    final previous = _lastObservedCampaignChoice;
+    _lastObservedCampaignChoice = preferences.campaignsEnabled;
     emitIfOpen(state.copyWith(preferences: preferences));
+    final tracker = _notificationAnalytics;
+    if (previous != null &&
+        previous != preferences.campaignsEnabled &&
+        tracker != null) {
+      unawaited(
+        tracker.campaignConsentChanged(enabled: preferences.campaignsEnabled),
+      );
+    }
   }
 
   @override
@@ -64,6 +76,8 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
   Future<void> load() async {
     emit(state.copyWith(status: NotificationSettingsStatus.loading));
     final preferences = await _preferencesService.loadPreferences();
+    if (isClosed) return;
+    _lastObservedCampaignChoice = preferences.campaignsEnabled;
     emitIfOpen(
       state.copyWith(
         status: NotificationSettingsStatus.ready,
@@ -98,29 +112,13 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
     NotificationPreference preference,
     bool enabled,
   ) async {
-    final wasEnabled = state.preferences.campaignsEnabled;
     await _preferencesService.updatePreference(preference, enabled);
     await _reloadPreferences();
-    _recordCampaignChoice(wasEnabled);
   }
 
   /// Resets preferences to their defaults and persists them.
   Future<void> resetToDefaults() async {
-    final wasEnabled = state.preferences.campaignsEnabled;
     await _preferencesService.resetToDefaults();
     await _reloadPreferences();
-    _recordCampaignChoice(wasEnabled);
-  }
-
-  void _recordCampaignChoice(bool wasEnabled) {
-    if (isClosed || wasEnabled == state.preferences.campaignsEnabled) return;
-    final tracker = _notificationAnalytics;
-    if (tracker != null) {
-      unawaited(
-        tracker.campaignConsentChanged(
-          enabled: state.preferences.campaignsEnabled,
-        ),
-      );
-    }
   }
 }
