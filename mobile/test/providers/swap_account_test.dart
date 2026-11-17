@@ -34,10 +34,12 @@ import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/live_account_container.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/swap_account.dart'
     show accountSwitchInitialLocation;
 import 'package:openvine/providers/swap_account.dart' as switching;
@@ -52,6 +54,7 @@ import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/content_filter_service.dart';
+import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/dm_video_send_cancellation.dart';
@@ -59,8 +62,10 @@ import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/locale_preference_service.dart';
+import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/push_notification_session_coordinator.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
+import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/video_dm_outbox.dart';
@@ -89,6 +94,14 @@ class _MockBookmarksRepository extends Mock implements BookmarksRepository {}
 
 class _MockAccountPreferenceStore extends Mock
     implements AccountPreferenceStore {}
+
+class _MockSeenVideosService extends Mock implements SeenVideosService {}
+
+class _MockModerationLabelService extends Mock
+    implements ModerationLabelService {}
+
+class _MockContentReportingService extends Mock
+    implements ContentReportingService {}
 
 class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
@@ -2774,6 +2787,96 @@ void main() {
         expect(events, equals(['suspend', 'resume']));
       },
     );
+  });
+
+  // The leaving container also holds services that write device-wide keys
+  // after a delayed step: the feed's last view, a moderation-key refresh, a
+  // report still being delivered. The switch pauses them before the target
+  // signs in (#8313).
+  group('outgoing history, labelers and reports (#8313)', () {
+    late List<String> events;
+
+    Future<void> pumpPausableLeaving(WidgetTester tester) async {
+      events = <String>[];
+      final seen = _MockSeenVideosService();
+      final labels = _MockModerationLabelService();
+      final reports = _MockContentReportingService();
+      when(seen.suspend).thenAnswer((_) => events.add('suspend seen'));
+      when(seen.resume).thenAnswer((_) => events.add('resume seen'));
+      when(labels.suspend).thenAnswer((_) => events.add('suspend labels'));
+      when(labels.resume).thenAnswer((_) => events.add('resume labels'));
+      when(reports.suspend).thenAnswer((_) => events.add('suspend reports'));
+      when(reports.resume).thenAnswer((_) => events.add('resume reports'));
+      final leaving = await pumpHost(
+        tester,
+        accountOverrides: [
+          seenVideosServiceProvider.overrideWithValue(seen),
+          moderationLabelServiceProvider.overrideWithValue(labels),
+          contentReportingServiceProvider.overrideWith((ref) async => reports),
+        ],
+      );
+      leaving
+        ..read(seenVideosServiceProvider)
+        ..read(moderationLabelServiceProvider)
+        // The app's report retry worker keeps this provider alive.
+        ..listen(contentReportingServiceProvider, (_, _) {});
+      await tester.runAsync(
+        () => leaving.read(contentReportingServiceProvider.future),
+      );
+    }
+
+    testWidgets('suspends them before signing the target in', (tester) async {
+      await pumpPausableLeaving(tester);
+
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => events.add('sign in target'),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        events,
+        equals([
+          'suspend seen',
+          'suspend labels',
+          'suspend reports',
+          'sign in target',
+        ]),
+      );
+    });
+
+    testWidgets('resumes them when the target sign-in fails', (tester) async {
+      await pumpPausableLeaving(tester);
+
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => throw _FakeSignInException(),
+        ),
+        expected: throwsA(isA<_FakeSignInException>()),
+      );
+      await tester.pump();
+
+      expect(
+        events,
+        equals([
+          'suspend seen',
+          'suspend labels',
+          'suspend reports',
+          'resume seen',
+          'resume labels',
+          'resume reports',
+        ]),
+      );
+    });
   });
 }
 

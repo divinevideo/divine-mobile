@@ -12,6 +12,7 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -23,8 +24,11 @@ import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/account_session_store.dart';
 import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
+import 'package:openvine/services/moderation_label_service.dart';
+import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
@@ -144,6 +148,39 @@ BookmarksRepository? _suspendOutgoingBookmarks(ProviderContainer? outgoing) {
   }
   final bookmarks = outgoing.read(bookmarksRepositoryProvider);
   return bookmarks..suspend();
+}
+
+/// Stops the outgoing account's seen-video history from writing the shared
+/// history before the incoming sign-in clears it; see
+/// [SeenVideosService.suspend].
+SeenVideosService? _suspendOutgoingSeenVideos(ProviderContainer? outgoing) {
+  if (outgoing == null || !outgoing.exists(seenVideosServiceProvider)) {
+    return null;
+  }
+  final seenVideos = outgoing.read(seenVideosServiceProvider);
+  return seenVideos..suspend();
+}
+
+/// Stops the outgoing account's moderation service from saving its labeler
+/// subscriptions; see [ModerationLabelService.suspend].
+ModerationLabelService? _suspendOutgoingModerationLabels(
+  ProviderContainer? outgoing,
+) {
+  if (outgoing == null || !outgoing.exists(moderationLabelServiceProvider)) {
+    return null;
+  }
+  final labels = outgoing.read(moderationLabelServiceProvider);
+  return labels..suspend();
+}
+
+/// Stops the outgoing account's report history from saving; see
+/// [ContentReportingService.suspend].
+ContentReportingService? _suspendOutgoingReports(ProviderContainer? outgoing) {
+  if (outgoing == null || !outgoing.exists(contentReportingServiceProvider)) {
+    return null;
+  }
+  final reports = outgoing.read(contentReportingServiceProvider).value;
+  return reports?..suspend();
 }
 
 /// The outgoing account's preference store, if its container built one. The
@@ -345,6 +382,9 @@ Future<void> swapAccount({
     final incomingAuth = container.read(authServiceProvider);
     CuratedListService? suspendedOutgoingLists;
     BookmarksRepository? suspendedOutgoingBookmarks;
+    SeenVideosService? suspendedOutgoingSeenVideos;
+    ModerationLabelService? suspendedOutgoingLabels;
+    ContentReportingService? suspendedOutgoingReports;
     AccountPreferenceStore? suspendedOutgoingPreferences;
     try {
       // Capture only while the original identity and rendered host still own
@@ -385,6 +425,9 @@ Future<void> swapAccount({
       ensureOutgoingCurrent();
       suspendedOutgoingLists = _suspendOutgoingCuratedLists(current);
       suspendedOutgoingBookmarks = _suspendOutgoingBookmarks(current);
+      suspendedOutgoingSeenVideos = _suspendOutgoingSeenVideos(current);
+      suspendedOutgoingLabels = _suspendOutgoingModerationLabels(current);
+      suspendedOutgoingReports = _suspendOutgoingReports(current);
       suspendedOutgoingPreferences = _outgoingPreferenceStore(current);
       await suspendedOutgoingPreferences?.suspendProjection();
       ensureOutgoingCurrent();
@@ -457,6 +500,9 @@ Future<void> swapAccount({
       }
       suspendedOutgoingLists?.resume();
       suspendedOutgoingBookmarks?.resume();
+      suspendedOutgoingSeenVideos?.resume();
+      suspendedOutgoingLabels?.resume();
+      suspendedOutgoingReports?.resume();
       suspendedOutgoingPreferences?.resumeProjection();
       try {
         if (failedTicket == null) {

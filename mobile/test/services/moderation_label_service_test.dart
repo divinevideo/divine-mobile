@@ -2985,4 +2985,50 @@ void main() {
       },
     );
   });
+
+  // The outgoing account's service outlives an account switch. A
+  // moderation-key refresh still waiting on its lookup saves the labeler
+  // subscriptions directly, and must not write the next account's keys.
+  group('account switch (#8313)', () {
+    ModerationLabelService outgoingWithLookup(Nip05PubkeyLookup lookup) =>
+        ModerationLabelService(
+          nostrClient: mockNostrClient,
+          authService: mockAuthService,
+          sharedPreferences: mockPrefs,
+          canQueryRelays: () => true,
+          pubkeyResolver: ModerationPubkeyResolver(lookupPubkey: lookup),
+        );
+
+    List<String>? savedLabelers() => mockPrefs.getStringList(
+      ModerationLabelService.subscribedLabelersStorageKey,
+    );
+
+    test(
+      'a suspended service keeps a moderation-key refresh out of the device '
+      'keys',
+      () async {
+        final lookup = Completer<String?>();
+        final outgoing = outgoingWithLookup((_) => lookup.future);
+        final initializing = outgoing.initialize();
+        await pumpEventQueue();
+
+        outgoing.suspend();
+        lookup.complete(syntheticTestPubkey);
+        await initializing;
+
+        expect(outgoing.divineModerationPubkeyHex, syntheticTestPubkey);
+        expect(savedLabelers(), isNull);
+      },
+    );
+
+    test('a resumed service saves a moderation-key refresh again', () async {
+      final outgoing = outgoingWithLookup((_) async => syntheticTestPubkey)
+        ..suspend()
+        ..resume();
+
+      await outgoing.initialize();
+
+      expect(savedLabelers(), contains(syntheticTestPubkey));
+    });
+  });
 }

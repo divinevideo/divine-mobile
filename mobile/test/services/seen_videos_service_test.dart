@@ -1,6 +1,10 @@
 // ABOUTME: Tests for SeenVideosService persistence and metrics tracking
 // ABOUTME: Validates video view history storage and retrieval
 
+import 'dart:async';
+
+import 'package:db_client/db_client.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -219,6 +223,75 @@ void main() {
       expect(newService.hasSeenVideo('dispose_video'), isTrue);
 
       await newService.dispose();
+    });
+  });
+
+  // The outgoing account's service outlives an account switch: its feed
+  // records a last view as it is torn down, after the incoming cleanup. Those
+  // writes must not reach the device-wide history the next account loads.
+  group('account switch (#8313)', () {
+    late AppDatabase db;
+    late SeenVideosService outgoing;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      db = AppDatabase.test(NativeDatabase.memory());
+      outgoing = SeenVideosService(
+        database: db,
+        saveDebounceDuration: const Duration(days: 1),
+      );
+      await outgoing.initialize();
+    });
+
+    tearDown(() async {
+      await outgoing.dispose();
+      await db.close();
+    });
+
+    Future<Set<String>> storedIds() async => {
+      for (final row in await db.seenVideosDao.getAll()) row.videoId,
+    };
+
+    test('a suspended service keeps views out of the device history', () async {
+      unawaited(outgoing.markVideoAsSeen('own_view'));
+      await pumpEventQueue();
+      expect(await storedIds(), {'own_view'});
+
+      outgoing.suspend();
+      unawaited(outgoing.markVideoAsSeen('late_view'));
+      unawaited(outgoing.markVideosAsSeen(['late_batch_view']));
+      unawaited(outgoing.markVideoAsUnseen('own_view'));
+      await pumpEventQueue();
+
+      expect(await storedIds(), {'own_view'});
+      expect(outgoing.hasSeenVideo('late_view'), isTrue);
+    });
+
+    test(
+      'a save still waiting on its debounce is not written once suspended',
+      () async {
+        unawaited(outgoing.markVideoAsSeen('own_view'));
+        await pumpEventQueue();
+
+        outgoing.suspend();
+        await outgoing.dispose();
+
+        final prefs = await SharedPreferences.getInstance();
+        expect(
+          prefs.getString(SeenVideosService.seenVideosMetricsStorageKey),
+          isNull,
+        );
+      },
+    );
+
+    test('resuming writes views to the device history again', () async {
+      outgoing
+        ..suspend()
+        ..resume();
+      unawaited(outgoing.markVideoAsSeen('after_resume'));
+      await pumpEventQueue();
+
+      expect(await storedIds(), {'after_resume'});
     });
   });
 }

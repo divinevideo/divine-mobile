@@ -128,6 +128,9 @@ class ModerationLabelService {
   }
 
   final AccountPreferenceStore? _accountPreferences;
+
+  /// Set by [suspend] for the length of an account switch.
+  bool _suspended = false;
   ModerationAccountPreferences? _accountBinding;
   Stream<void>? get changes => _accountPreferences?.changes;
   Set<String> _lastFollowedPubkeys = {};
@@ -1260,8 +1263,17 @@ class ModerationLabelService {
     }
   }
 
+  /// Stops saving labeler subscriptions to the device until [resume]. An
+  /// account switch calls this on the outgoing account, whose key refresh
+  /// could otherwise save into the keys the next account reads (#8313).
+  void suspend() => _suspended = true;
+
+  /// Undoes [suspend] after a switch that rolled back.
+  void resume() => _suspended = false;
+
   /// Persist subscribed labeler pubkeys.
   Future<void> _saveSubscribedLabelers() async {
+    if (_suspended) return;
     try {
       await _prefs.setStringList(
         subscribedLabelersStorageKey,
