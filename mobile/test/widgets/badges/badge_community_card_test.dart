@@ -41,7 +41,12 @@ void main() {
             );
             await tester.pumpAndSettle();
             expect(find.text('loop-makers'), findsOneWidget);
-            expect(find.bySemanticsLabel('loop-makers'), findsOneWidget);
+            expect(
+              find.bySemanticsLabel(
+                'loop-makers, ${UserProfile.defaultDisplayNameFor(issuer)}',
+              ),
+              findsOneWidget,
+            );
             semantics.dispose();
           },
         );
@@ -75,6 +80,38 @@ void main() {
           find.text(UserProfile.defaultDisplayNameFor(issuer)),
           findsOneWidget,
         );
+      });
+
+      testWidgets('announces the issuer with the badge name', (tester) async {
+        final semantics = tester.ensureSemantics();
+        final issuer = '2'.padLeft(64, '0');
+        final definition = Nip58BadgeDefinition(
+          event: Event(issuer, EventKind.badgeDefinition, const [], ''),
+          coordinate: '30009:$issuer:loop-makers',
+          dTag: 'loop-makers',
+          name: 'Loop makers',
+        );
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 200,
+                child: BadgeCommunityCard(
+                  definition: definition,
+                  onTap: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(
+          find.bySemanticsLabel(
+            'Loop makers, ${UserProfile.defaultDisplayNameFor(issuer)}',
+          ),
+          findsOneWidget,
+        );
+        semantics.dispose();
       });
 
       testWidgets('renders nothing for a vanished issuer', (tester) async {
