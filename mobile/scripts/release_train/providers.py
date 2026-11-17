@@ -24,6 +24,10 @@ class ProviderError(RuntimeError):
     pass
 
 
+class BeforeStoreMutationError(ProviderError):
+    """Preparation failed before any store write was attempted."""
+
+
 class DeferredReview(ProviderError):
     pass
 
@@ -323,10 +327,13 @@ class Apple:
         """Update translated beta copy without submitting review or changing groups."""
         from release_train.release_notes import validate_localizations
 
-        notes = validate_localizations(notes, limit=4000)
-        localizations = self.pages("/builds/" + build["id"] + "/betaBuildLocalizations")
-        required = self.localization_languages(localizations)
-        notes = validate_localizations(notes, limit=4000, required=required)
+        try:
+            notes = validate_localizations(notes, limit=4000)
+            localizations = self.pages("/builds/" + build["id"] + "/betaBuildLocalizations")
+            required = self.localization_languages(localizations)
+            notes = validate_localizations(notes, limit=4000, required=required)
+        except ProviderError as error:
+            raise BeforeStoreMutationError(str(error)) from None
         by_language = {note["language"]: note["text"] for note in notes}
         existing = {loc["attributes"]["locale"]: loc for loc in localizations}
         for language, text in by_language.items():
@@ -392,96 +399,101 @@ class Apple:
     def submit_store(self, build, versions, acknowledged, *, notes, reviews=None):
         from release_train.release_notes import validate_localizations
 
-        if build.get("version") == "1.0.30" and str(build.get("number")) == "916":
-            raise ProviderError("iOS 1.0.30+916 is prohibited from App Store submission")
-        notes = validate_localizations(notes, limit=4000)
-        editable = [
-            v
-            for v in versions
-            if v["state"] == "PREPARE_FOR_SUBMISSION"
-            or (
-                v["state"] == "READY_FOR_REVIEW"
-                and v.get("build_id") == build["id"]
-                and v["version"] == build["version"]
-            )
-            or (
-                v["state"]
-                in {
-                    "REJECTED",
-                    "METADATA_REJECTED",
-                    "INVALID_BINARY",
-                    "DEVELOPER_REJECTED",
-                }
-                and version_ack_key(v) in acknowledged
-            )
-        ]
-        if len(editable) > 1:
-            raise ProviderError(
-                "Multiple editable App Store versions; reconcile in console"
-            )
-        reviews = reviews or []
-        unresolved = [
-            r for r in reviews if r["attributes"]["state"] == "UNRESOLVED_ISSUES"
-        ]
-        if len(unresolved) > 1 or any(
-            not unresolved_review_is_acknowledged(r, versions, acknowledged)
-            for r in unresolved
-        ):
-            raise ProviderError(
-                "Resolve unrelated or unacknowledged review items in App Store Connect before resubmitting"
-            )
-        existing_review = unresolved[0] if unresolved else None
-        if existing_review and (
-            not editable
-            or existing_review["items"][0].get("version_id") != editable[0]["id"]
-        ):
-            raise ProviderError(
-                "Rejected review ownership does not match the editable App Store version"
-            )
-        drafts = [r for r in reviews if r["attributes"]["state"] == "READY_FOR_REVIEW"]
-        if len(drafts) + len(unresolved) > 1:
-            raise ProviderError(
-                "Multiple unfinished App Store submissions; reconcile their ownership in console"
-            )
-        if drafts:
-            draft = drafts[0]
-            items = draft.get("items")
-            if (
-                items is None
-                or len(items) > 1
+        # These checks only read provider state. Failure cannot imply an
+        # ambiguous submission; writes start below, outside this classification.
+        try:
+            if build.get("version") == "1.0.30" and str(build.get("number")) == "916":
+                raise ProviderError("iOS 1.0.30+916 is prohibited from App Store submission")
+            notes = validate_localizations(notes, limit=4000)
+            editable = [
+                v
+                for v in versions
+                if v["state"] == "PREPARE_FOR_SUBMISSION"
                 or (
-                    items
-                    and (
-                        not editable
-                        or items[0].get("version_id") != editable[0]["id"]
-                        or items[0].get("state") != "READY_FOR_REVIEW"
-                    )
+                    v["state"] == "READY_FOR_REVIEW"
+                    and v.get("build_id") == build["id"]
+                    and v["version"] == build["version"]
                 )
+                or (
+                    v["state"]
+                    in {
+                        "REJECTED",
+                        "METADATA_REJECTED",
+                        "INVALID_BINARY",
+                        "DEVELOPER_REJECTED",
+                    }
+                    and version_ack_key(v) in acknowledged
+                )
+            ]
+            if len(editable) > 1:
+                raise ProviderError(
+                    "Multiple editable App Store versions; reconcile in console"
+                )
+            reviews = reviews or []
+            unresolved = [
+                r for r in reviews if r["attributes"]["state"] == "UNRESOLVED_ISSUES"
+            ]
+            if len(unresolved) > 1 or any(
+                not unresolved_review_is_acknowledged(r, versions, acknowledged)
+                for r in unresolved
             ):
                 raise ProviderError(
-                    "Unrelated draft review items require App Store Connect reconciliation"
+                    "Resolve unrelated or unacknowledged review items in App Store Connect before resubmitting"
                 )
-            existing_review = draft
-        # Read every existing locale before any version, build or rollout mutation.
-        if editable:
-            localizations = self.pages(
-                f"/appStoreVersions/{editable[0]['id']}/appStoreVersionLocalizations"
-            )
-            required = self.localization_languages(localizations)
-            if not required:
-                raise ProviderError("Apple storefront locale inventory is empty")
-        else:
-            localizations = None
-            infos = self.pages(f"/apps/{APP_ID}/appInfos")
-            required = set()
-            for info in infos:
-                required.update(self.localization_languages(self.pages(
-                    f"/appInfos/{info['id']}/appInfoLocalizations"
-                )))
-            if not required:
-                raise ProviderError("Apple configured storefront locale inventory is empty")
-        notes = validate_localizations(notes, limit=4000, required=required)
-        by_language = {note["language"]: note["text"] for note in notes}
+            existing_review = unresolved[0] if unresolved else None
+            if existing_review and (
+                not editable
+                or existing_review["items"][0].get("version_id") != editable[0]["id"]
+            ):
+                raise ProviderError(
+                    "Rejected review ownership does not match the editable App Store version"
+                )
+            drafts = [r for r in reviews if r["attributes"]["state"] == "READY_FOR_REVIEW"]
+            if len(drafts) + len(unresolved) > 1:
+                raise ProviderError(
+                    "Multiple unfinished App Store submissions; reconcile their ownership in console"
+                )
+            if drafts:
+                draft = drafts[0]
+                items = draft.get("items")
+                if (
+                    items is None
+                    or len(items) > 1
+                    or (
+                        items
+                        and (
+                            not editable
+                            or items[0].get("version_id") != editable[0]["id"]
+                            or items[0].get("state") != "READY_FOR_REVIEW"
+                        )
+                    )
+                ):
+                    raise ProviderError(
+                        "Unrelated draft review items require App Store Connect reconciliation"
+                    )
+                existing_review = draft
+            # Read every existing locale before any version, build or rollout mutation.
+            if editable:
+                localizations = self.pages(
+                    f"/appStoreVersions/{editable[0]['id']}/appStoreVersionLocalizations"
+                )
+                required = self.localization_languages(localizations)
+                if not required:
+                    raise ProviderError("Apple storefront locale inventory is empty")
+            else:
+                localizations = None
+                infos = self.pages(f"/apps/{APP_ID}/appInfos")
+                required = set()
+                for info in infos:
+                    required.update(self.localization_languages(self.pages(
+                        f"/appInfos/{info['id']}/appInfoLocalizations"
+                    )))
+                if not required:
+                    raise ProviderError("Apple configured storefront locale inventory is empty")
+            notes = validate_localizations(notes, limit=4000, required=required)
+            by_language = {note["language"]: note["text"] for note in notes}
+        except ProviderError as error:
+            raise BeforeStoreMutationError(str(error)) from None
         attrs = {"versionString": build["version"], "releaseType": "AFTER_APPROVAL"}
         if editable:
             identifier = editable[0]["id"]

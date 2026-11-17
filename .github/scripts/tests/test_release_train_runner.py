@@ -792,3 +792,59 @@ class BeforeStoreMutationFailureTest(unittest.TestCase):
         self.assertEqual(len(store_calls), 1)
         self.assertEqual(state['operations'][key]['status'], 'ambiguous')
         self.assertEqual(state['holds'], {'android': key})
+
+class AppleLocalePreflightJournalTest(unittest.TestCase):
+    def test_new_live_locale_does_not_create_a_hold_without_store_writes(self):
+        from release_train.providers import Apple
+        from release_train.runner import Runtime
+
+        for kind in ('app-store', 'public-beta'):
+            with self.subTest(kind=kind):
+                calls = []
+                def http(method, url, headers=None, body=None, *, calls=calls):
+                    calls.append((method, url))
+                    return {'data': [{'id': 'french', 'attributes': {'locale': 'fr-FR'}}]}
+                runtime = Runtime.__new__(Runtime)
+                runtime.apple = Apple('token', 'group', request=http)
+                runtime.release_bundle = lambda *args: release_train_fakes.release_notes_bundle('ios')
+                runtime.refresh_store_authorization = lambda platform: None
+                action = {'kind': kind, 'platform': 'ios', 'build': {
+                    'id': 'build', 'number': 917, 'version': '1.0.31', 'sha': 'a' * 40}}
+                snapshot = {'now': 100, 'ios': {'versions': [{
+                    'id': 'version', 'version': '1.0.31', 'state': 'PREPARE_FOR_SUBMISSION'}]}}
+                state = {}
+                plan = {'actions': [action], 'errors': []}
+                execute_plan(plan, state, snapshot, Store(), runtime)
+                self.assertTrue(calls)
+                self.assertTrue(all(method == 'GET' for method, _ in calls))
+                self.assertFalse(state.get('holds'))
+                self.assertFalse(state.get('operations'))
+                self.assertEqual(plan['actions'], [])
+                self.assertIn('fr-FR', plan['errors'][0])
+
+    def test_failure_after_an_apple_write_still_holds_for_reconciliation(self):
+        from release_train.providers import Apple
+        from release_train.runner import Runtime
+
+        for kind in ('app-store', 'public-beta'):
+            with self.subTest(kind=kind):
+                calls = []
+                def http(method, url, headers=None, body=None, *, calls=calls):
+                    calls.append((method, url))
+                    if method != 'GET':
+                        raise ProviderError('Store write response unavailable')
+                    return {'data': [{'id': 'english', 'attributes': {'locale': 'en-US'}}]}
+                runtime = Runtime.__new__(Runtime)
+                runtime.apple = Apple('token', 'group', request=http)
+                runtime.release_bundle = lambda *args: release_train_fakes.release_notes_bundle('ios')
+                runtime.refresh_store_authorization = lambda platform: None
+                action = {'kind': kind, 'platform': 'ios', 'build': {
+                    'id': 'build', 'number': 917, 'version': '1.0.31', 'sha': 'a' * 40}}
+                snapshot = {'now': 100, 'ios': {'versions': [{
+                    'id': 'version', 'version': '1.0.31', 'state': 'PREPARE_FOR_SUBMISSION'}]}}
+                state = {}
+                execute_plan({'actions': [action], 'errors': []}, state, snapshot, Store(), runtime)
+                self.assertTrue(any(method == 'PATCH' for method, _ in calls))
+                key = kind + ':ios:917'
+                self.assertEqual(state['holds'], {'ios': key})
+                self.assertEqual(state['operations'][key]['status'], 'ambiguous')

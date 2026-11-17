@@ -2,10 +2,13 @@
 import copy
 import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "mobile" / "scripts"))
 
 import publish_play_bundle
 from release_train.providers import DeferredReview, ProviderError

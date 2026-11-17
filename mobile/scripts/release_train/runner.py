@@ -33,6 +33,7 @@ from release_train.providers import (
     APP_ID,
     Apple,
     ArtifactRedirect,
+    BeforeStoreMutationError,
     DeferredReview,
     NotFound,
     Play,
@@ -52,10 +53,6 @@ DEFAULT_GROUPS = [
     "245e738b-b2d3-478e-9786-98511d085990",
 ]
 WORKFLOWS = {"ios": "ios-scheduled-build", "android": "android-build"}
-
-
-class BeforeStoreMutationError(ProviderError):
-    """A known local/authentication failure before any store write was attempted."""
 
 
 def beta_attributes(attributes, detail, legacy):
