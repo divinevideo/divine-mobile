@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:models/models.dart';
+import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
@@ -41,10 +42,7 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
   Future<VideoFeedState> build() async {
     _feedGeneration++;
     _paginationCursor = null;
-    if (const bool.fromEnvironment(
-      'ADAPTIVE_CLASSICS_ENABLED',
-      defaultValue: true,
-    )) {
+    if (adaptiveClassicsEnabled) {
       final analytics = ref.watch(analyticsServiceProvider);
       final privacy = analytics.privacyChanges.listen((_) {
         _feedGeneration++;

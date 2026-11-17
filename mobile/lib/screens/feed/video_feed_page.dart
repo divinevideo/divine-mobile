@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
+import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -133,11 +134,7 @@ class VideoFeedPage extends ConsumerWidget {
                   removalRepositoryStream: ref.read(
                     videosRepositoryIdentityStreamProvider,
                   ),
-                  classicSession:
-                      !const bool.fromEnvironment(
-                        'ADAPTIVE_CLASSICS_ENABLED',
-                        defaultValue: true,
-                      )
+                  classicSession: !adaptiveClassicsEnabled
                       ? null
                       : _homeClassicSession(ref, viewerPubkey),
                   followRepository: followRepository,

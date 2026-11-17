@@ -18,6 +18,7 @@ import 'package:openvine/blocs/fullscreen_feed/fullscreen_feed_bloc.dart';
 import 'package:openvine/blocs/inline_comment_composer/inline_comment_composer_cubit.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_state.dart';
+import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
@@ -247,10 +248,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (const bool.fromEnvironment(
-      'ADAPTIVE_CLASSICS_ENABLED',
-      defaultValue: true,
-    )) {
+    if (adaptiveClassicsEnabled) {
       if (source case ClassicVinesViewSource(anchor: final anchor?)) {
         return ClassicsPlaybackPage(anchor: anchor, screen: this);
       }

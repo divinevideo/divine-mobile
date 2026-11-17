@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart'
 import 'package:image_picker/image_picker.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:openvine/blocs/gallery_clip_import/gallery_clip_import_cubit.dart';
+import 'package:openvine/config/adaptive_classics.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
@@ -1026,10 +1027,7 @@ VideosRepository videosRepository(Ref ref) {
           authService.currentPublicKeyHex ?? nostrClient.publicKey,
     ),
     funnelcakeApiClient: funnelcakeClient,
-    classicRecommendationsEnabled: const bool.fromEnvironment(
-      'ADAPTIVE_CLASSICS_ENABLED',
-      defaultValue: true,
-    ),
+    classicRecommendationsEnabled: adaptiveClassicsEnabled,
     classicViewerPubkey: () {
       final analytics = ref.read(analyticsServiceProvider);
       return analytics.initializedAnalyticsConsent
