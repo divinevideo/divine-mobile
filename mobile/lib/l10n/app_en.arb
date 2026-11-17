@@ -7167,7 +7167,7 @@
   },
   "videoEditorEffectFocusIn": "Focus In",
   "@videoEditorEffectFocusIn": {
-    "description": "Name of an intro effect in the video effects picker: the picture starts heavily blurred and comes into focus."
+    "description": "Name of an intro effect in the video effects picker: the picture starts blurred and comes into focus."
   },
   "videoEditorEffectFocusOut": "Focus Out",
   "@videoEditorEffectFocusOut": {

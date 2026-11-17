@@ -16157,7 +16157,7 @@ abstract class AppLocalizations {
   /// **'Curtain Close'**
   String get videoEditorEffectCurtainClose;
 
-  /// Name of an intro effect in the video effects picker: the picture starts heavily blurred and comes into focus.
+  /// Name of an intro effect in the video effects picker: the picture starts blurred and comes into focus.
   ///
   /// In en, this message translates to:
   /// **'Focus In'**

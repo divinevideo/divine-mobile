@@ -9688,7 +9688,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorEffectCategoryOutro => 'Outro';
 
   @override
-  String get videoEditorEffectShapeFadeColor => 'Blendfarbe, Schwarz bis Weiss';
+  String get videoEditorEffectShapeFadeColor => 'Blendfarbe, Schwarz bis Weiß';
 
   @override
   String get videoEditorEffectShapeCircleSoftness => 'Kantenweichheit';

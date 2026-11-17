@@ -26,9 +26,9 @@ import co.openvine.app.videoeffects.EchoVideoEffect
 import co.openvine.app.videoeffects.EightBitVideoEffect
 import co.openvine.app.videoeffects.FisheyeVideoEffect
 import co.openvine.app.videoeffects.FlutedGlassVideoEffect
+import co.openvine.app.videoeffects.IntroOutroVideoEffect
 import co.openvine.app.videoeffects.LightLeakVideoEffect
 import co.openvine.app.videoeffects.LightRaysVideoEffect
-import co.openvine.app.videoeffects.IntroOutroVideoEffect
 import co.openvine.app.videoeffects.LookVideoEffect
 import co.openvine.app.videoeffects.NeonEdgesVideoEffect
 import co.openvine.app.videoeffects.NightVisionVideoEffect

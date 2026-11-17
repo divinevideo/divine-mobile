@@ -583,7 +583,7 @@ class EditorEffectType {
     outroCurtainVideoEffectId,
   );
 
-  /// Focus in: the picture comes into focus out of a heavy blur.
+  /// Focus in: the picture comes into focus out of a blur.
   static const introFocus = EditorEffectType.custom(introFocusVideoEffectId);
 
   /// Focus out: the picture blurs away.
