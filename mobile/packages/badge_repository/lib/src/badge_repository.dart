@@ -552,9 +552,9 @@ class BadgeRepository {
   ///
   /// Needs no signer, but drops the viewer's hidden pubkeys. Makes one
   /// bounded definition read and one deletion read rather than walking the
-  /// whole history. Relay verification records the exact checked
-  /// ID/signature on each event; reuse it so browser discovery does not
-  /// repeat a curve check per event.
+  /// whole history. An event the relay pool already verified is not checked
+  /// again; any other event, including every Divine-relay event under the
+  /// web default policy, is verified here on the calling isolate.
   ///
   /// Throws [BadgeReadIncompleteException] when either read goes unanswered
   /// or the deletion read fills its limit.
