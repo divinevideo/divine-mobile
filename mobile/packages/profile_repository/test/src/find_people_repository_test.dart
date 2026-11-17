@@ -196,5 +196,149 @@ void main() {
         await repo.dispose();
       },
     );
+    test(
+      'policy refusal invalidates observers until a fresh safe read recovers',
+      () async {
+        var unavailable = false;
+        final olderResponse = Completer<http.Response>();
+        final olderRequested = Completer<void>();
+        String payload() => jsonEncode({
+          'suggestions': [suggestion(candidate)],
+        });
+        final repo = FindPeopleRepository(
+          apiClient: FunnelcakeApiClient(
+            baseUrl: 'https://example.test',
+            httpClient: MockClient((request) async {
+              if (request.url.queryParameters['cursor'] == 'older') {
+                olderRequested.complete();
+                return olderResponse.future;
+              }
+              return unavailable
+                  ? http.Response('{}', 503)
+                  : http.Response(payload(), 200);
+            }),
+          ),
+          accountPubkey: owner,
+          currentPubkey: () => owner,
+          isExcluded: (_) => false,
+          readDismissed: () => [],
+          writeDismissed: (_) async {},
+        );
+        final availability = <bool>[];
+        final subscription = repo.changes.listen((_) {
+          availability.add(repo.isEligibilityAvailable);
+        });
+        final first = await repo.load();
+        expect(first.suggestions.single.pubkey, candidate);
+        final older = repo.load(cursor: 'older');
+        await olderRequested.future;
+        unavailable = true;
+        await expectLater(
+          repo.load(),
+          throwsA(isA<FindPeopleUnavailableException>()),
+        );
+        expect(repo.filter(first.suggestions), isEmpty);
+        expect(availability, [false]);
+        olderResponse.complete(http.Response(payload(), 200));
+        await expectLater(
+          older,
+          throwsA(isA<FindPeopleUnavailableException>()),
+        );
+        expect(repo.filter(first.suggestions), isEmpty);
+        expect(availability, [false]);
+        unavailable = false;
+        final recovered = await repo.load();
+        expect(recovered.suggestions.single.pubkey, candidate);
+        expect(repo.filter(first.suggestions).single.pubkey, candidate);
+        expect(availability, [false, true]);
+        await subscription.cancel();
+        await repo.dispose();
+      },
+    );
+
+    test('an expired cursor replaces the page with fresh ranking', () async {
+      final cursors = <String?>[];
+      var firstPage = true;
+      final repo = FindPeopleRepository(
+        apiClient: FunnelcakeApiClient(
+          baseUrl: 'https://example.test',
+          httpClient: MockClient((request) async {
+            final cursor = request.url.queryParameters['cursor'];
+            cursors.add(cursor);
+            if (cursor != null) {
+              return http.Response('{}', 410);
+            }
+            final key = firstPage ? candidate : 'c' * 64;
+            final next = firstPage ? 'expired +/?=' : 'fresh';
+            firstPage = false;
+            return http.Response(
+              jsonEncode({
+                'suggestions': [suggestion(key)],
+                'next_cursor': next,
+              }),
+              200,
+            );
+          }),
+        ),
+        accountPubkey: owner,
+        currentPubkey: () => owner,
+        isExcluded: (_) => false,
+        readDismissed: () => [],
+        writeDismissed: (_) async {},
+      );
+      final initial = await repo.load(limit: 3);
+      expect(initial.suggestions.single.pubkey, candidate);
+      final restarted = await repo.load(limit: 3, cursor: initial.nextCursor);
+      expect(restarted.restarted, isTrue);
+      expect(restarted.suggestions.single.pubkey, 'c' * 64);
+      expect(restarted.nextCursor, 'fresh');
+      expect(cursors, [null, 'expired +/?=', null]);
+      await repo.dispose();
+    });
+
+    test(
+      'failed dismissal stays retryable without poisoning queued writes',
+      () async {
+        var writes = 0;
+        var stored = <String>[];
+        final otherCandidate = 'c' * 64;
+        final repo = FindPeopleRepository(
+          apiClient: FunnelcakeApiClient(
+            baseUrl: 'https://example.test',
+            httpClient: MockClient(
+              (_) async => http.Response(
+                jsonEncode({
+                  'suggestions': [
+                    suggestion(candidate),
+                    suggestion(otherCandidate),
+                  ],
+                }),
+                200,
+              ),
+            ),
+          ),
+          accountPubkey: owner,
+          currentPubkey: () => owner,
+          isExcluded: (_) => false,
+          readDismissed: () => [],
+          writeDismissed: (keys) async {
+            if (++writes == 1) {
+              throw StateError('storage unavailable');
+            }
+            stored = keys;
+          },
+        );
+        final page = await repo.load();
+        final failed = expectLater(repo.dismiss(candidate), throwsStateError);
+        final queued = repo.dismiss(otherCandidate);
+        await Future.wait([failed, queued]);
+        expect(stored, [otherCandidate]);
+        expect(repo.filter(page.suggestions).single.pubkey, candidate);
+        await repo.dismiss(candidate);
+        expect(stored.toSet(), {candidate, otherCandidate});
+        expect(repo.filter(page.suggestions), isEmpty);
+        await repo.dispose();
+      },
+    );
   });
 }
