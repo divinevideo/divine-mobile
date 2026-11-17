@@ -1336,7 +1336,7 @@ class VideosRepository {
         );
       } on FunnelcakeException {
         checkCurrent();
-        if (pageRequest.cursor != null) rethrow;
+        if (request.cursor != null) rethrow;
         return _getClassicArchiveVideos(limit: request.limit, skipCache: true);
       }
       checkCurrent();

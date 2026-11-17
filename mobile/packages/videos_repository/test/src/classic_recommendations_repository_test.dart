@@ -170,6 +170,40 @@ void main() {
     );
 
     test(
+      'a first page whose filtered top-up fails still falls back to archive',
+      () async {
+        when(
+          () => api.getClassicRecommendations(request: request),
+        ).thenAnswer(
+          (_) async => RecommendationsResponse(
+            videos: [_stats(1, classic: false)],
+            source: 'mixed',
+            hasMore: true,
+            nextCursor: 'top-up',
+          ),
+        );
+        when(
+          () => api.getClassicRecommendations(
+            request: request.withCursor('top-up'),
+          ),
+        ).thenThrow(const FunnelcakeException('offline'));
+        when(
+          () => api.getClassicVines(
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((_) async => [_stats(5)]);
+
+        final result = await repository.getClassicRecommendations(
+          request: request,
+        );
+
+        expect(result.videos.map((v) => v.id), [_id(5)]);
+        expect(result.recommendationPageCount, 0);
+      },
+    );
+
+    test(
       'does not replace a failed adaptive continuation '
       'with an unrelated archive page',
       () async {
