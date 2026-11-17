@@ -185,6 +185,21 @@ void main() {
       deletions = [deletion(key1, latest, at: 201, address: false)];
       expect(await repository.loadPublicDefinitions(), isEmpty);
     });
+    test('ignores a deletion whose signature does not verify', () async {
+      events = [definition(key1)];
+      deletions = [deletion(key1, events.first, at: 101)..sig = '0' * 128];
+      final result = await repository.loadPublicDefinitions();
+      expect(result.map((d) => d.coordinate), ['30009:$issuer1:shared']);
+    });
+    test('treats a saturated deletion window as incomplete', () async {
+      events = [definition(key1)];
+      // Backdated, so none of them deletes the badge on its own.
+      deletions = List.filled(1000, deletion(key1, events.first, at: 50));
+      await expectLater(
+        repository.loadPublicDefinitions(),
+        throwsA(isA<BadgeReadIncompleteException>()),
+      );
+    });
     test('unanswered discovery does not claim an empty catalogue', () async {
       incomplete = true;
       await expectLater(
