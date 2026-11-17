@@ -1,13 +1,16 @@
 // ABOUTME: App-shell providers for foreground-idle data warmups.
-// ABOUTME: Warms existing feed and notification caches without prefetching media bytes.
+// ABOUTME: Warms adjacent surfaces and retires disposable caches while idle.
 
 import 'dart:async';
 
+import 'package:clock/clock.dart';
+import 'package:db_client/db_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
+import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/for_you_provider.dart';
 import 'package:openvine/providers/new_videos_feed_provider.dart';
 import 'package:openvine/providers/popular_videos_feed_provider.dart';
@@ -127,6 +130,62 @@ final foregroundIdleWarmupSchedulerProvider =
       final scheduler = ForegroundIdleWarmupScheduler(
         requestWarmup: (trigger) => coordinator.requestWarmup(trigger: trigger),
       );
+      ref.onDispose(scheduler.stop);
+      return scheduler;
+    });
+
+const _retiredCacheStartupDelay = Duration(seconds: 10);
+const _retiredCacheCleanupInterval = Duration(seconds: 1);
+const _retiredCacheWorkBudget = Duration(milliseconds: 50);
+
+/// The package-owned, resumable retired-cache cleanup operation.
+final retiredEventCacheProvider = Provider<RetiredEventCache>(
+  (ref) => RetiredEventCache(ref.watch(databaseProvider)),
+);
+
+/// Reclaims old event caches after startup, yielding between tiny SQL batches.
+final retiredEventCacheCleanupSchedulerProvider =
+    Provider<ForegroundIdleWarmupScheduler>((ref) {
+      final activityGate = ref.watch(foregroundFeedActivityGateProvider);
+      final cache = ref.watch(retiredEventCacheProvider);
+      final notBefore = clock.now().add(_retiredCacheStartupDelay);
+      late final ForegroundIdleWarmupScheduler scheduler;
+      final coordinator = ForegroundIdleWarmupCoordinator(
+        isForeground: () => ref.read(appForegroundProvider),
+        isIdle: () => activityGate.isIdle,
+        gateChanges: activityGate.changes,
+        tasks: [
+          ForegroundIdleWarmupTask(
+            id: ForegroundIdleWarmupTaskId.retiredEventCache,
+            cooldown: Duration.zero,
+            shouldRun: () => !clock.now().isBefore(notBefore),
+            run: () async {
+              final budget = Stopwatch()..start();
+              var hasMore = true;
+              try {
+                do {
+                  hasMore = await cache.pruneBatch();
+                } while (hasMore &&
+                    ref.mounted &&
+                    ref.read(appForegroundProvider) &&
+                    activityGate.isIdle &&
+                    budget.elapsed < _retiredCacheWorkBudget);
+              } catch (_) {
+                // Full storage or damaged retired pages may persist. Retry on
+                // the next launch, not every second for this entire session.
+                scheduler.stop();
+                rethrow; // The coordinator reports the failure once.
+              }
+              if (!hasMore) scheduler.stop();
+            },
+          ),
+        ],
+      );
+      scheduler = ForegroundIdleWarmupScheduler(
+        requestWarmup: (trigger) => coordinator.requestWarmup(trigger: trigger),
+        interval: _retiredCacheCleanupInterval,
+      );
+      ref.onDispose(coordinator.dispose);
       ref.onDispose(scheduler.stop);
       return scheduler;
     });

@@ -250,6 +250,18 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
   /// not data loss. Called from [AppDatabase.runStartupCleanup]. Returns
   /// the number of rows deleted.
   Future<int> enforceRowCap({int maxRows = 5000}) async {
+    // SQLite treats a negative LIMIT as unlimited, matching the previous
+    // eviction query. Do not turn a disabled cap into an overflow scan.
+    if (maxRows < 0) return 0;
+    // SELECT 1 can use the narrow primary-key index and stops after maxRows+1
+    // keys. Most opens are already at the cap: avoid reading/sorting every
+    // profile payload and announcing a write when there is nothing to evict.
+    final overflow = await customSelect(
+      'SELECT 1 FROM user_profiles LIMIT 1 OFFSET ?',
+      variables: [Variable.withInt(maxRows)],
+      readsFrom: {userProfiles},
+    ).get();
+    if (overflow.isEmpty) return 0;
     return customUpdate(
       '''
         DELETE FROM user_profiles

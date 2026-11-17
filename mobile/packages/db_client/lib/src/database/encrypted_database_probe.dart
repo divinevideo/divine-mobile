@@ -18,6 +18,10 @@ import 'package:db_client/db_client.dart';
 /// this probe's isolate open — bounded work, deliberately not the whole-DB
 /// `PRAGMA quick_check` scan a pre-scan gate would add.
 ///
+/// On a v36 upgrade, the old event/metrics caches are retired before cleanup.
+/// Their payload pages are not read by this gate; only the active database is
+/// exercised. Idle maintenance later reclaims the disposable retired rows.
+///
 /// Returns `false` when the open fails with SQLITE_CORRUPT (structural
 /// corruption past the schema page) or SQLITE_NOTADB (the key cannot decrypt
 /// the file); the caller then salvages or recreates. Any other error

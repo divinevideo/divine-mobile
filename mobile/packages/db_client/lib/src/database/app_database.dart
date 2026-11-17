@@ -51,11 +51,11 @@ const legacyV1NormalizationRepairTables = <String>[
 /// checks.
 @visibleForTesting
 const legacyV1NormalizationRepairIndexes = <String>[
-  'idx_event_kind_created_at',
-  'idx_event_pubkey_created_at',
-  'idx_event_pubkey_kind_d_tag_created_at',
-  'idx_event_created_at',
-  'idx_event_expire_at',
+  'idx_event_kind_created_at_v36',
+  'idx_event_pubkey_created_at_v36',
+  'idx_event_pubkey_kind_d_tag_created_at_v36',
+  'idx_event_created_at_v36',
+  'idx_event_expire_at_v36',
   'idx_dm_reactions_unique_live',
   'idx_pending_product_events_owner',
   'idx_personal_reactions_addressable_id',
@@ -180,7 +180,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 35;
+  int get schemaVersion => 36;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -190,8 +190,11 @@ class AppDatabase extends _$AppDatabase {
       await _createClipCategoryIndexes();
     },
     onUpgrade: (m, from, to) async {
+      if (from < 36 && to >= 36) {
+        await _replaceEventCacheV36(m);
+      }
       if (from < 2) {
-        await _normalizeLegacyV1Schema();
+        await _normalizeLegacyV1Schema(useV36CacheIndexes: to >= 36);
       }
       if (from < 3) {
         // Rebuilds the table from the current definition, so it lands on the
@@ -230,7 +233,7 @@ class AppDatabase extends _$AppDatabase {
         await _repairSchemaV6();
       }
       if (from < 7) {
-        await _createConsolidatedIndexes();
+        await _createConsolidatedIndexes(useV36CacheIndexes: to >= 36);
       }
       if (from < 8) {
         // hadUpgrade suppresses the beforeOpen repair on this open, so the
@@ -241,7 +244,7 @@ class AppDatabase extends _$AppDatabase {
         await _repairSchemaV3();
         await _repairSchemaV5();
         await _repairSchemaV6();
-        await _createConsolidatedIndexes();
+        await _createConsolidatedIndexes(useV36CacheIndexes: to >= 36);
         await _repairSchemaV8();
       }
       if (from < 9) {
@@ -440,8 +443,13 @@ class AppDatabase extends _$AppDatabase {
           'TEXT NULL',
         );
       }
-      if (from < 35 && to >= 35) {
-        await m.createIndex(idxEventVerifiedCreatedAt);
+      if (from < 35 && to == 35) {
+        // Only historical v35 targets index the old cache. Upgrades to v36
+        // have already replaced it and must never scan the retired payloads.
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_event_verified_created_at '
+          'ON event (created_at DESC) WHERE signature_verified = 1',
+        );
       }
       await _withholdV31Columns(to);
       await _withholdV34Columns(to);
@@ -467,12 +475,18 @@ class AppDatabase extends _$AppDatabase {
       // only as recovery for damaged or manually-mutated databases.
       if (!details.wasCreated &&
           !details.hadUpgrade &&
-          await _needsSchemaRepair()) {
-        await _normalizeLegacyV1Schema();
+          await _needsSchemaRepair(
+            useV36CacheIndexes: details.versionNow >= 36,
+          )) {
+        await _normalizeLegacyV1Schema(
+          useV36CacheIndexes: details.versionNow >= 36,
+        );
         await _repairSchemaV3();
         await _repairSchemaV5();
         await _repairSchemaV6();
-        await _createConsolidatedIndexes();
+        await _createConsolidatedIndexes(
+          useV36CacheIndexes: details.versionNow >= 36,
+        );
         await _repairSchemaV8();
         await _repairSchemaV10();
         await _repairSchemaV11();
@@ -492,6 +506,44 @@ class AppDatabase extends _$AppDatabase {
       await runStartupCleanup();
     },
   );
+
+  Future<void> _replaceEventCacheV36(Migrator m) => transaction(() async {
+    // An older build can lower user_version after this cache has already
+    // been replaced and retired storage cleaned up. Index ownership survives
+    // that rollback and prevents retiring the current index names again.
+    final currentCache = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type='index' AND tbl_name='event' "
+      "AND name='idx_event_verified_created_at_v36'",
+    ).get();
+    final alreadyRetired =
+        currentCache.isNotEmpty ||
+        await _tableExists(retiredEventCacheTable) ||
+        await _tableExists(retiredVideoMetricsTable);
+    if (!alreadyRetired) {
+      // Rename metrics first so SQLite's FK rewrite stays with the retired
+      // tables. Keep their indexes intact: freeing large B-trees is idle work.
+      if (await _tableExists('video_metrics')) {
+        await customStatement(
+          'ALTER TABLE video_metrics RENAME TO $retiredVideoMetricsTable',
+        );
+      }
+      if (await _tableExists('event')) {
+        await customStatement(
+          'ALTER TABLE event RENAME TO $retiredEventCacheTable',
+        );
+      }
+    }
+    if (!await _tableExists('event')) await m.createTable(nostrEvents);
+    if (!await _tableExists('video_metrics')) await m.createTable(videoMetrics);
+    for (final index in nostrEvents.indexes) {
+      await m.createIndex(index);
+    }
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_event_verified_created_at_v36 '
+      'ON event (created_at DESC) WHERE signature_verified = 1',
+    );
+    await _createVideoMetricIndexes(useV36CacheIndexes: true);
+  });
 
   Future<void> _repairSchemaV33(Migrator m) async {
     if (!(await _columnNames('event')).contains('signature_verified')) {
@@ -949,18 +1001,28 @@ class AppDatabase extends _$AppDatabase {
   /// v7 moves the definitions into `@TableIndex.sql()` annotations, which
   /// `createAll` honours; this backfills them for every database that already
   /// exists.
-  Future<void> _createConsolidatedIndexes() async {
-    // VideoMetrics indices
+  Future<void> _createVideoMetricIndexes({
+    required bool useV36CacheIndexes,
+  }) async {
+    final suffix = useV36CacheIndexes ? '_v36' : '';
     await customStatement(
-      'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count '
+      'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count$suffix '
       'ON video_metrics (loop_count)',
     );
     await customStatement(
-      'CREATE INDEX IF NOT EXISTS idx_metrics_likes ON video_metrics (likes)',
+      'CREATE INDEX IF NOT EXISTS idx_metrics_likes$suffix '
+      'ON video_metrics (likes)',
     );
     await customStatement(
-      'CREATE INDEX IF NOT EXISTS idx_metrics_views ON video_metrics (views)',
+      'CREATE INDEX IF NOT EXISTS idx_metrics_views$suffix '
+      'ON video_metrics (views)',
     );
+  }
+
+  Future<void> _createConsolidatedIndexes({
+    bool useV36CacheIndexes = true,
+  }) async {
+    await _createVideoMetricIndexes(useV36CacheIndexes: useV36CacheIndexes);
 
     // HashtagStats indices. Table dropped at v19 (#9582); guarded because
     // this backfill also re-runs from beforeOpen's damaged-database recovery
@@ -1032,7 +1094,10 @@ class AppDatabase extends _$AppDatabase {
   /// shipped legacy databases therefore report version 1 regardless of which
   /// subset of this schema they already have. This idempotent migration brings
   /// those databases to the current schema before Drift records version 2.
-  Future<void> _normalizeLegacyV1Schema() async {
+  Future<void> _normalizeLegacyV1Schema({
+    bool useV36CacheIndexes = true,
+  }) async {
+    final eventIndexSuffix = useV36CacheIndexes ? '_v36' : '';
     // Check if personal_reposts table exists, create if missing
     final repostsResult = await customSelect(
       "SELECT name FROM sqlite_master WHERE type='table' "
@@ -1882,11 +1947,11 @@ class AppDatabase extends _$AppDatabase {
     // this runtime path is the source of truth for the index set (same
     // pattern as outgoing_dms above; keep in sync with tables.dart).
     await customStatement('''
-      CREATE INDEX IF NOT EXISTS idx_event_kind_created_at
+      CREATE INDEX IF NOT EXISTS idx_event_kind_created_at$eventIndexSuffix
       ON event (kind, created_at)
     ''');
     await customStatement('''
-      CREATE INDEX IF NOT EXISTS idx_event_pubkey_created_at
+      CREATE INDEX IF NOT EXISTS idx_event_pubkey_created_at$eventIndexSuffix
       ON event (pubkey, created_at)
     ''');
     // The trailing created_at makes the replaceable-upsert MAX(created_at)
@@ -1894,17 +1959,24 @@ class AppDatabase extends _$AppDatabase {
     // optimization picks idx_event_kind_created_at and reverse-scans the
     // kind partition (PR #5957 review). The DROP cleans up the narrower
     // predecessor index from pre-release builds of this change.
-    await customStatement('DROP INDEX IF EXISTS idx_event_pubkey_kind_d_tag');
+    final predecessor = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type='index' AND tbl_name='event' "
+      "AND name='idx_event_pubkey_kind_d_tag'",
+    ).get();
+    if (predecessor.isNotEmpty) {
+      await customStatement('DROP INDEX idx_event_pubkey_kind_d_tag');
+    }
     await customStatement('''
-      CREATE INDEX IF NOT EXISTS idx_event_pubkey_kind_d_tag_created_at
+      CREATE INDEX IF NOT EXISTS
+      idx_event_pubkey_kind_d_tag_created_at$eventIndexSuffix
       ON event (pubkey, kind, d_tag, created_at)
     ''');
     await customStatement('''
-      CREATE INDEX IF NOT EXISTS idx_event_created_at
+      CREATE INDEX IF NOT EXISTS idx_event_created_at$eventIndexSuffix
       ON event (created_at)
     ''');
     await customStatement('''
-      CREATE INDEX IF NOT EXISTS idx_event_expire_at
+      CREATE INDEX IF NOT EXISTS idx_event_expire_at$eventIndexSuffix
       ON event (expire_at)
     ''');
 
@@ -1916,7 +1988,9 @@ class AppDatabase extends _$AppDatabase {
   /// Returns true when a v2 database is missing schema that v1 normalization
   /// would have supplied. This is deliberately a recovery probe, not the
   /// primary migration mechanism for future schema changes.
-  Future<bool> _needsSchemaRepair() async {
+  Future<bool> _needsSchemaRepair({
+    bool useV36CacheIndexes = true,
+  }) async {
     for (final table in legacyV1NormalizationRepairTables) {
       if (!await _tableExists(table)) {
         return true;
@@ -2005,7 +2079,10 @@ class AppDatabase extends _$AppDatabase {
     }
 
     for (final index in legacyV1NormalizationRepairIndexes) {
-      if (!await _indexExists(index)) {
+      final expected = useV36CacheIndexes
+          ? index
+          : index.replaceFirst(RegExp(r'_v36$'), '');
+      if (!await _indexExists(expected)) {
         return true;
       }
     }

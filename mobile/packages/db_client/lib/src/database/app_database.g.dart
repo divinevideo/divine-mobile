@@ -24873,21 +24873,21 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ChallengeRecordsTable challengeRecords = $ChallengeRecordsTable(
     this,
   );
-  late final Index idxEventVerifiedCreatedAt = Index(
-    'idx_event_verified_created_at',
-    'CREATE INDEX IF NOT EXISTS idx_event_verified_created_at ON event (created_at DESC) WHERE signature_verified = 1',
+  late final Index idxEventVerifiedCreatedAtV36 = Index(
+    'idx_event_verified_created_at_v36',
+    'CREATE INDEX IF NOT EXISTS idx_event_verified_created_at_v36 ON event (created_at DESC) WHERE signature_verified = 1',
   );
-  late final Index idxMetricsLoopCount = Index(
-    'idx_metrics_loop_count',
-    'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count ON video_metrics (loop_count)',
+  late final Index idxMetricsLoopCountV36 = Index(
+    'idx_metrics_loop_count_v36',
+    'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count_v36 ON video_metrics (loop_count)',
   );
-  late final Index idxMetricsLikes = Index(
-    'idx_metrics_likes',
-    'CREATE INDEX IF NOT EXISTS idx_metrics_likes ON video_metrics (likes)',
+  late final Index idxMetricsLikesV36 = Index(
+    'idx_metrics_likes_v36',
+    'CREATE INDEX IF NOT EXISTS idx_metrics_likes_v36 ON video_metrics (likes)',
   );
-  late final Index idxMetricsViews = Index(
-    'idx_metrics_views',
-    'CREATE INDEX IF NOT EXISTS idx_metrics_views ON video_metrics (views)',
+  late final Index idxMetricsViewsV36 = Index(
+    'idx_metrics_views_v36',
+    'CREATE INDEX IF NOT EXISTS idx_metrics_views_v36 ON video_metrics (views)',
   );
   late final Index idxNotificationTimestamp = Index(
     'idx_notification_timestamp',
@@ -25101,10 +25101,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     notificationReadMembers,
     challengeOwners,
     challengeRecords,
-    idxEventVerifiedCreatedAt,
-    idxMetricsLoopCount,
-    idxMetricsLikes,
-    idxMetricsViews,
+    idxEventVerifiedCreatedAtV36,
+    idxMetricsLoopCountV36,
+    idxMetricsLikesV36,
+    idxMetricsViewsV36,
     idxNotificationTimestamp,
     idxNotificationIsRead,
     idxNotificationOwnerTimestamp,

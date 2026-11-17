@@ -743,7 +743,7 @@ class NostrEventsDao extends DatabaseAccessor<AppDatabase>
 
   /// The query behind [getRecentVerifiedEventIdSigs]. Its
   /// `signature_verified = 1` predicate must match the partial index
-  /// `idx_event_verified_created_at` word for word, or SQLite falls back to
+  /// `idx_event_verified_created_at_v36` word for word, or SQLite falls back to
   /// scanning every cached event; the query-plan tests read this constant so
   /// they check the query that actually runs.
   @visibleForTesting

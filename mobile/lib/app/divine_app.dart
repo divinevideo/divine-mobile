@@ -556,6 +556,7 @@ class _DivineAppState extends ConsumerState<DivineApp>
   /// Initialize opportunistic foreground-idle warmups owned by the app shell.
   void _initializeBackgroundServices() {
     ref.read(foregroundIdleWarmupSchedulerProvider).start();
+    ref.read(retiredEventCacheCleanupSchedulerProvider).start();
 
     // Block/mute list sync is handled by blocklistSyncBridgeProvider
     // (watched in AppShell) which reacts to auth state changes and
