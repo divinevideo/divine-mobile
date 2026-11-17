@@ -19,6 +19,7 @@ import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/explore/tabs/explore_badges_tab.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/widgets/badges/badge_community_card.dart';
+import 'package:openvine/widgets/user_avatar.dart';
 import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../../../helpers/test_provider_overrides.dart';
@@ -283,6 +284,68 @@ void main() {
 
         expect(find.text('Loop makers'), findsOneWidget);
         expect(find.text('Small films together'), findsOneWidget);
+      });
+
+      testWidgets('requests previews for built cards and shows their faces', (
+        tester,
+      ) async {
+        final holder = '3'.padLeft(64, '0');
+        when(() => cubit.state).thenReturn(
+          ExploreBadgesState(
+            status: ExploreBadgesStatus.loaded,
+            definitions: [_definition],
+            previews: {
+              _definition.coordinate: [holder],
+            },
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+
+        verify(
+          () => cubit.loadPreview(_definition.coordinate),
+        ).called(greaterThanOrEqualTo(1));
+        expect(
+          tester
+              .widgetList<UserAvatar>(
+                find.byWidgetPredicate((w) => w is UserAvatar && w.size == 28),
+              )
+              .map((face) => face.placeholderSeed),
+          [holder],
+        );
+      });
+
+      testWidgets('does not request previews for cards that are not built', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final definitions = [
+          for (var i = 0; i < 24; i++)
+            Nip58BadgeDefinition(
+              event: _definition.event,
+              coordinate: '30009:$_issuer:group-$i',
+              dTag: 'group-$i',
+              name: 'Group $i',
+            ),
+        ];
+        when(() => cubit.state).thenReturn(
+          ExploreBadgesState(
+            status: ExploreBadgesStatus.loaded,
+            definitions: definitions,
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+
+        verify(
+          () => cubit.loadPreview(definitions.first.coordinate),
+        ).called(greaterThanOrEqualTo(1));
+        verifyNever(() => cubit.loadPreview(definitions.last.coordinate));
       });
 
       testWidgets(
