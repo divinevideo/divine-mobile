@@ -978,13 +978,10 @@ class VideosRepository {
   /// their original publication time. Editing an older video does not move it
   /// back to the front of the feed.
   ///
-  /// Videos the viewer has already seen are dropped, never reordered. This
-  /// feed is surfaced as "New", and that label is a chronological promise, so
-  /// what remains keeps its position. Reordering after pagination would
-  /// partition each page on its own: timestamps would descend, jump backwards
-  /// at the page's seen block, then descend again from the next page's top,
-  /// and the feed would read as unsorted. A page that loses videos this way
-  /// is topped up from the following pages.
+  /// Watched videos remain visible in their chronological position. New is a
+  /// timeline of recent posts, so viewing a post must not hide it on refresh
+  /// or when returning to a cached page. Pages shortened by content filtering
+  /// or deduplication are topped up from the following pages.
   ///
   /// Strategy:
   /// 1. If Funnelcake API is available, tries the REST API first (faster)
@@ -1022,23 +1019,10 @@ class VideosRepository {
     bool skipCache = false,
     bool revalidate = false,
   }) async {
-    await _seenVideoLookup?.ensureInitialized();
-
-    // Return in-memory cached result when available (initial page only),
-    // without videos seen since it was cached. Once all of them have been
-    // seen, fetch rather than replay it.
+    // Return the cached first page regardless of what has since been watched.
     if (!skipCache && !revalidate && until == null && cursor == null) {
       final cached = _inMemoryFeedCache?.get('latest');
-      final unseen = cached == null
-          ? const <VideoEvent>[]
-          : _withoutSeenVideos(cached.videos);
-      if (cached != null && unseen.isNotEmpty) {
-        return HomeFeedResult(
-          videos: unseen,
-          hasMore: cached.hasMore,
-          paginationCursor: cached.paginationCursor,
-        );
-      }
+      if (cached != null && cached.videos.isNotEmpty) return cached;
     }
 
     // A relay continuation uses raw revision time, not publication time.
@@ -1122,9 +1106,7 @@ class VideosRepository {
     bool cacheResult = false,
   }) {
     final result = HomeFeedResult(
-      // Relay pages are not topped up, so seen videos are dropped here; the
-      // fallback `hasMore` still reads the page as the source returned it.
-      videos: _withoutSeenVideos(videos),
+      videos: videos,
       hasMore: serverHasMore ?? videos.length >= limit,
       paginationCursor: paginationCursor,
     );
@@ -1146,8 +1128,6 @@ class VideosRepository {
     final seenVideoKeys = <String>{};
     bool? serverHasMore;
     String? nextPageCursor;
-    var seenOnlyPages = 0;
-
     while (visible.length < limit) {
       final page = pageCursor == null
           ? await _funnelcakeApiClient!.getRecentVideosPage(
@@ -1162,28 +1142,12 @@ class VideosRepository {
       nextPageCursor = page.nextCursor;
 
       final videos = _transformVideoStats(page.videos);
-      final unseenVideos = _withoutSeenVideos(videos);
-      if (unseenVideos.isNotEmpty) {
-        seenOnlyPages = 0;
-      } else if (videos.isNotEmpty) {
-        seenOnlyPages++;
-      }
-      _appendUniqueVideos(visible, unseenVideos, seenVideoKeys: seenVideoKeys);
+      _appendUniqueVideos(visible, videos, seenVideoKeys: seenVideoKeys);
 
       // Compare the server's row count, not the surviving videos: dropping one
       // malformed row would otherwise read as the source running out and pin a
       // premature `hasMore: false` into the feed cache.
       if (page.hasMore == false || page.serverItemCount < limit) break;
-      // A long run of pages the viewer has entirely seen ends this read; the
-      // cursor still resumes after the last of them when unseen videos remain.
-      if (seenOnlyPages >= maxSeenOnlyFeedPages) {
-        if (visible.isEmpty) {
-          serverHasMore = false;
-          nextPageCursor = null;
-        }
-        break;
-      }
-
       if (nextPageCursor != null) {
         if (nextPageCursor == pageCursor) break;
         pageCursor = nextPageCursor;
