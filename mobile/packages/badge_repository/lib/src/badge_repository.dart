@@ -617,14 +617,14 @@ class BadgeRepository {
         continue;
       }
       definitions.removeWhere((coordinate, definition) {
-        if (deletion.pubkey != definition.event.pubkey ||
-            deletion.createdAt < definition.event.createdAt) {
-          return false;
-        }
+        if (deletion.pubkey != definition.event.pubkey) return false;
+        // NIP-09 bounds an address deletion by time; an event-ID deletion
+        // names one exact event, whatever either clock said.
+        final coversRevision = deletion.createdAt >= definition.event.createdAt;
         return deletion.tags.any(
           (tag) =>
               tag.length > 1 &&
-              ((tag[0] == 'a' && tag[1] == coordinate) ||
+              ((coversRevision && tag[0] == 'a' && tag[1] == coordinate) ||
                   (tag[0] == 'e' && tag[1] == definition.event.id)),
         );
       });
