@@ -11,6 +11,19 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 class ProvenanceCredentialsTest(unittest.TestCase):
+    def test_expiring_group_is_last_and_only_imported_by_native_store_workflows(self):
+        groups = json.loads(subprocess.check_output([
+            'ruby', '-ryaml', '-rjson', '-e',
+            ('data=YAML.safe_load_file(ARGV[0], aliases: true); '
+             'print JSON.generate(data.fetch("workflows").transform_values { |w| w.fetch("environment", {}).fetch("groups", []) })'),
+            str(ROOT / 'codemagic.yaml'),
+        ], text=True))
+        selected = {name: values[-1] for name, values in groups.items()
+                    if 'store_release_credentials' in values}
+        self.assertEqual(selected, {'ios-build': 'store_release_credentials',
+                                    'ios-scheduled-build': 'store_release_credentials',
+                                    'android-build': 'store_release_credentials'})
+
     def test_forwarded_policy_does_not_require_actions_variables_permission(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
