@@ -185,6 +185,14 @@ void main() {
       deletions = [deletion(key1, latest, at: 201, address: false)];
       expect(await repository.loadPublicDefinitions(), isEmpty);
     });
+    test(
+      'an event-ID deletion applies even when its clock is behind',
+      () async {
+        events = [definition(key1, at: 200)];
+        deletions = [deletion(key1, events.first, at: 150, address: false)];
+        expect(await repository.loadPublicDefinitions(), isEmpty);
+      },
+    );
     test('ignores a deletion whose signature does not verify', () async {
       events = [definition(key1)];
       deletions = [deletion(key1, events.first, at: 101)..sig = '0' * 128];
