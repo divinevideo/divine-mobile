@@ -38,6 +38,9 @@ class NotificationAnalyticsTracker {
     'list_add',
   };
   static const _maxRememberedOpens = 256;
+  static final _campaignRevisionPattern = RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+  );
 
   final AnalyticsEventSink _sink;
   final Future<bool> Function() _collectionAllowed;
@@ -75,9 +78,7 @@ class NotificationAnalyticsTracker {
     final revision =
         notificationType == 'campaign' &&
             campaignRevisionId != null &&
-            RegExp(
-              r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-            ).hasMatch(campaignRevisionId)
+            _campaignRevisionPattern.hasMatch(campaignRevisionId)
         ? campaignRevisionId
         : null;
     final effectiveKey = revision == null
