@@ -308,6 +308,9 @@ void main() {
         when(() => replacement.removedVideoIds)
             .thenAnswer((_) => current.stream);
         when(() => replacement.isVideoKnownDeleted(any())).thenReturn(false);
+        when(() => replacement.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.single as List<VideoEvent>,
+        );
       });
 
       tearDown(() async {
@@ -488,6 +491,17 @@ void main() {
           await adaptiveSession.loadInitial(refresh: true);
           await pumpEventQueue();
           expect(bloc.state.videos, [_video('2'), _video('3')]);
+          // The retired service's tombstones must not hide candidates allowed
+          // by the replacement on later updates.
+          when(() => videos.applyContentPreferences(any())).thenAnswer(
+            (call) => (call.positionalArguments.single as List<VideoEvent>)
+                .where((video) => video.id != _video('1').id)
+                .toList(),
+          );
+          when(() => replacement.isVideoKnownDeleted(any())).thenReturn(false);
+          await adaptiveSession.loadInitial(refresh: true);
+          await pumpEventQueue();
+          expect(bloc.state.videos, [_video('1'), _video('2'), _video('3')]);
         },
       );
 

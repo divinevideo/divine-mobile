@@ -204,7 +204,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     }
     final snapshot = _classicSession?.state ?? event.snapshot;
     final videos = _withoutRemovedVideos(
-      _videosRepository.applyContentPreferences(snapshot.videos),
+      _removalRepository.applyContentPreferences(snapshot.videos),
     );
     final activeKey = state.videos.isEmpty
         ? null
