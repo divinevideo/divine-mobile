@@ -147,6 +147,33 @@ String? campaignAppRoute({required String? type, required String? value}) {
   return value == RoutePaths.followingNew ? value : null;
 }
 
+final _campaignVideoCoordinate = RegExp(
+  '^${NIP71VideoKinds.addressableShortVideo}:[0-9a-f]{64}:.+\$',
+);
+final _lowercaseHexPubkey = RegExp(r'^[0-9a-f]{64}$');
+
+/// Returns the coordinate of a `video_address` campaign target: kind 34236, a
+/// lowercase hex creator pubkey and a non-empty d-tag. Null otherwise.
+String? campaignVideoCoordinate({
+  required String? type,
+  required String? value,
+}) {
+  if (type != NotificationWireValues.videoAddress || value == null) return null;
+  return _campaignVideoCoordinate.hasMatch(value) ? value : null;
+}
+
+/// Returns the lowercase hex pubkey of a `creator_profile` campaign target,
+/// or null otherwise.
+String? campaignCreatorPubkey({
+  required String? type,
+  required String? value,
+}) {
+  if (type != NotificationWireValues.creatorProfile || value == null) {
+    return null;
+  }
+  return _lowercaseHexPubkey.hasMatch(value) ? value : null;
+}
+
 /// Parses a public curated-list coordinate into an in-app route target.
 OpenListTarget? listTargetFromCoordinate(String? listCoordinate) {
   if (listCoordinate == null || listCoordinate.isEmpty) return null;

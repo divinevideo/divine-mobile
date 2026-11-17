@@ -178,20 +178,24 @@ pushNotificationTapTarget({
     );
   }
   if (notificationType == NotificationWireValues.campaign) {
-    if (tapTargetType == NotificationWireValues.videoAddress &&
-        tapTargetValue != null &&
-        RegExp(r'^34236:[0-9a-f]{64}:.+$').hasMatch(tapTargetValue)) {
+    final videoCoordinate = campaignVideoCoordinate(
+      type: tapTargetType,
+      value: tapTargetValue,
+    );
+    if (videoCoordinate != null) {
       return (
         target: const OpenVideoTarget(autoOpenComments: false),
         targetEventId: null,
-        videoCoordinate: tapTargetValue,
+        videoCoordinate: videoCoordinate,
       );
     }
-    if (tapTargetType == NotificationWireValues.creatorProfile &&
-        tapTargetValue != null &&
-        RegExp(r'^[0-9a-f]{64}$').hasMatch(tapTargetValue)) {
+    final creatorPubkey = campaignCreatorPubkey(
+      type: tapTargetType,
+      value: tapTargetValue,
+    );
+    if (creatorPubkey != null) {
       return (
-        target: OpenProfileTarget(tapTargetValue),
+        target: OpenProfileTarget(creatorPubkey),
         targetEventId: null,
         videoCoordinate: null,
       );
