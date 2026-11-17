@@ -133,7 +133,9 @@ class DatabaseBootstrapFailureApp extends StatelessWidget {
   /// Receives the diagnosis so the caller can pick the file disposition: a
   /// reset backs the database up by default, but a plaintext-shaped
   /// [DatabaseBootstrapDiagnosis.databaseUnreadable] file is deleted outright
-  /// rather than preserved as plaintext at rest.
+  /// rather than preserved as plaintext at rest. It also decides whether the
+  /// cipher key goes too — see
+  /// [DatabaseBootstrapDiagnosis.resetDeletesCipherKey].
   ///
   /// `null` hides the affordance. Even when provided it is only offered for
   /// diagnoses where the database is already unusable — see
@@ -534,6 +536,11 @@ enum DatabaseBootstrapDiagnosis {
   /// before the device's first unlock.
   secureStorage('db-secure-storage'),
 
+  /// Android secure storage still holds the cipher key but can never decrypt
+  /// it again, so no launch can open the database. See
+  /// [DatabaseCipherKeyUnrecoverableException].
+  cipherKeyUnrecoverable('db-key-unrecoverable'),
+
   /// The key no longer opens the database file.
   cipherMismatch('db-cipher-mismatch'),
 
@@ -561,10 +568,11 @@ enum DatabaseBootstrapDiagnosis {
   ///
   /// [cipherMismatch] is provably unusable — the key no longer opens the file.
   /// [databaseUnreadable] is too: the file is structurally corrupt, and no key
-  /// or retry changes that. [bootstrapFailed] is only presumed unusable:
-  /// the cause is unknown, though startup did fail on it. The reset keeps the
-  /// cipher key for exactly that reason, so the backup it leaves behind stays
-  /// readable if the presumption was wrong.
+  /// or retry changes that. So is [cipherKeyUnrecoverable]: the only key that
+  /// opens the file can never be read again. [bootstrapFailed] is only
+  /// presumed unusable: the cause is unknown, though startup did fail on it.
+  /// The reset keeps the cipher key for exactly that reason, so the backup it
+  /// leaves behind stays readable if the presumption was wrong.
   ///
   /// [secureStorage] must never reach it: the database is intact and only its
   /// keystore was unreachable, so clearing it would trade a restart-and-retry
@@ -575,11 +583,35 @@ enum DatabaseBootstrapDiagnosis {
   /// Switched exhaustively on purpose: a future diagnosis has to make this
   /// choice deliberately instead of defaulting into a destructive offer.
   bool get allowsLocalDatabaseReset => switch (this) {
-    cipherMismatch || databaseUnreadable || bootstrapFailed => true,
+    cipherMismatch ||
+    cipherKeyUnrecoverable ||
+    databaseUnreadable ||
+    bootstrapFailed => true,
     cipherUnavailable ||
     secureStorage ||
     classificationUnavailable ||
     hotJournalUnrecovered => false,
+  };
+
+  /// Whether the reset for this diagnosis also deletes the stored cipher key,
+  /// so the next launch generates a new one.
+  ///
+  /// Only for [cipherKeyUnrecoverable]. A kept key would be read on the next
+  /// launch exactly as it was on this one and fail the same way, so the reset
+  /// would not get the user out. Every other diagnosis keeps the key, because
+  /// nothing proves it stale and the backup the reset leaves behind is
+  /// encrypted under it.
+  ///
+  /// Switched exhaustively for the same reason as [allowsLocalDatabaseReset].
+  bool get resetDeletesCipherKey => switch (this) {
+    cipherKeyUnrecoverable => true,
+    cipherUnavailable ||
+    secureStorage ||
+    cipherMismatch ||
+    databaseUnreadable ||
+    classificationUnavailable ||
+    hotJournalUnrecovered ||
+    bootstrapFailed => false,
   };
 }
 
@@ -598,6 +630,9 @@ DatabaseBootstrapDiagnosis databaseBootstrapDiagnosis(Object error) {
   }
   if (error is DatabaseCipherStorageUnavailableException) {
     return DatabaseBootstrapDiagnosis.secureStorage;
+  }
+  if (error is DatabaseCipherKeyUnrecoverableException) {
+    return DatabaseBootstrapDiagnosis.cipherKeyUnrecoverable;
   }
   if (error is DatabaseUnreadableError) {
     return DatabaseBootstrapDiagnosis.databaseUnreadable;

@@ -41,6 +41,21 @@ class DatabaseRecoveryStore {
        _now = now ?? DateTime.now;
 
   static const _key = 'db.recovery.latest.v1';
+
+  /// Set once this install has reported that secure storage can no longer
+  /// decrypt its database cipher key. See
+  /// [claimUnrecoverableCipherKeyReport].
+  static const unrecoverableCipherKeyReportedKey =
+      'db.cipher_key_unrecoverable.reported.v1';
+
+  /// Device-scoped, not account data: both describe this install's local
+  /// database, which every account on the device shares. Declared beside the
+  /// keys so the preference-key guard can classify them.
+  static const List<String> deviceScopedPrefsKeys = [
+    _key,
+    unrecoverableCipherKeyReportedKey,
+  ];
+
   static const _logName = 'DatabaseRecoveryStore';
 
   final SharedPreferences _preferences;
@@ -55,6 +70,21 @@ class DatabaseRecoveryStore {
     if (!stored) {
       throw StateError('SharedPreferences rejected the recovery record');
     }
+  }
+
+  /// Returns `true` the first time it is called on this install, and `false`
+  /// after that.
+  ///
+  /// Gates the crash report for an undecryptable database cipher key, which
+  /// repeats on every launch until the user resets. A write that does not
+  /// persist still returns `true`, so the next launch reports again rather
+  /// than never.
+  Future<bool> claimUnrecoverableCipherKeyReport() async {
+    if (_preferences.getBool(unrecoverableCipherKeyReportedKey) ?? false) {
+      return false;
+    }
+    await _preferences.setBool(unrecoverableCipherKeyReportedKey, true);
+    return true;
   }
 
   DatabaseRecoveryRecord? read() {

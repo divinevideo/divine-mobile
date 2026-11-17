@@ -340,6 +340,13 @@ void main() {
       );
     });
 
+    test('classifies a stored key that can never be decrypted again', () {
+      expect(
+        databaseBootstrapDiagnosticCode(_undecryptableKeyFailure()),
+        equals('db-key-unrecoverable'),
+      );
+    });
+
     test('classifies a key that no longer opens the database', () {
       expect(
         databaseBootstrapDiagnosticCode(
@@ -442,6 +449,38 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(l10n.dbFailureResetAction), findsNothing);
+    });
+
+    testWidgets('offers the reset for a key that can never be decrypted', (
+      tester,
+    ) async {
+      // Restarting reads the same undecryptable key again, so the reset is
+      // the only way out short of clearing the app's data.
+      DatabaseBootstrapDiagnosis? resetDiagnosis;
+
+      await tester.pumpWidget(
+        DatabaseBootstrapFailureApp(
+          error: _undecryptableKeyFailure(),
+          stack: StackTrace.current,
+          onCloseApp: () {},
+          onResetLocalDatabase: (diagnosis) async => resetDiagnosis = diagnosis,
+        ),
+      );
+
+      expect(
+        find.text(l10n.dbFailureDiagnostic('db-key-unrecoverable')),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.dbFailureAdviceResettable), findsOneWidget);
+      expect(find.text(l10n.dbFailureAdviceRestart), findsNothing);
+
+      await tester.tap(find.text(l10n.dbFailureResetAction));
+      await tester.pump();
+      expect(resetDiagnosis, isNull, reason: 'confirmation must gate the wipe');
+      await tester.tap(find.text(l10n.dbFailureResetConfirm));
+      await tester.pump();
+
+      expect(resetDiagnosis, DatabaseBootstrapDiagnosis.cipherKeyUnrecoverable);
     });
 
     testWidgets('shows journal-specific advice without offering reset', (
@@ -712,9 +751,21 @@ void main() {
             .toSet(),
         equals({
           DatabaseBootstrapDiagnosis.cipherMismatch,
+          DatabaseBootstrapDiagnosis.cipherKeyUnrecoverable,
           DatabaseBootstrapDiagnosis.databaseUnreadable,
           DatabaseBootstrapDiagnosis.bootstrapFailed,
         }),
+      );
+    });
+
+    test('deletes the cipher key only when it can never be read again', () {
+      // Any other diagnosis keeps the key: nothing proves it stale, and the
+      // backup the reset leaves is encrypted under it.
+      expect(
+        DatabaseBootstrapDiagnosis.values
+            .where((d) => d.resetDeletesCipherKey)
+            .toSet(),
+        equals({DatabaseBootstrapDiagnosis.cipherKeyUnrecoverable}),
       );
     });
   });
@@ -754,6 +805,14 @@ void main() {
       expect(
         shouldRepairLocalDatabaseCacheAfterBootstrapError(
           DatabaseCipherStorageUnavailableException(_lockedKeychainFailure()),
+        ),
+        isFalse,
+      );
+      // Permanent, but deleting local-only data stays the user's choice on
+      // the failure screen rather than a wipe on a launch that looked normal.
+      expect(
+        shouldRepairLocalDatabaseCacheAfterBootstrapError(
+          _undecryptableKeyFailure(),
         ),
         isFalse,
       );
@@ -934,3 +993,16 @@ PlatformException _lockedKeychainFailure() => PlatformException(
   code: 'Unexpected security result code',
   message: 'Code: -25308, Message: User interaction is not allowed.',
 );
+
+/// What the bootstrap raises when `flutter_secure_storage` on Android can no
+/// longer decrypt the stored cipher key.
+DatabaseCipherKeyUnrecoverableException _undecryptableKeyFailure() =>
+    DatabaseCipherKeyUnrecoverableException(
+      PlatformException(
+        code: 'Exception encountered',
+        message: 'read',
+        details:
+            'javax.crypto.BadPaddingException: error:1e000065:Cipher '
+            'functions:OPENSSL_internal:BAD_DECRYPT',
+      ),
+    );

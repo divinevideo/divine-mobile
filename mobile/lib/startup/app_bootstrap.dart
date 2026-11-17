@@ -560,6 +560,9 @@ Future<void> startOpenVineApp({
     iOptions: legacyDbCipherKeyIosSecureStorageOptions(),
     mOptions: appMacOsSecureStorageOptions(),
   );
+  final databaseRecoveryStore = DatabaseRecoveryStore(
+    preferences: sharedPreferences,
+  );
   var didRecordDatabaseBootstrapFailure = false;
   Future<void> recordDatabaseBootstrapFailure(
     Object error,
@@ -594,9 +597,6 @@ Future<void> startOpenVineApp({
   crashReporting.suppressWhen(
     name: 'reported database corruption echo',
     isSuppressed: databaseCorruptionService.echoesReportedCorruption,
-  );
-  final databaseRecoveryStore = DatabaseRecoveryStore(
-    preferences: sharedPreferences,
   );
 
   // A reset or salvage empties Drift tables while SharedPreferences survives,
@@ -667,6 +667,10 @@ Future<void> startOpenVineApp({
       // failures must fail closed after reporting. Continuing with a null key
       // would open an existing encrypted DB as plaintext and spam SQLITE_NOTADB.
       recordError: recordDatabaseBootstrapFailure,
+      // An undecryptable cipher key repeats on every launch until the user
+      // resets, so it is reported once per install and only logged after.
+      claimUnrecoverableCipherKeyReport:
+          databaseRecoveryStore.claimUnrecoverableCipherKeyReport,
     ),
     repairLocalDatabaseCache: (error, stack) =>
         resetLocalDatabaseCache(deleteCipherKey: true),
@@ -678,10 +682,12 @@ Future<void> startOpenVineApp({
     // alternative a stuck user is left with — takes the whole Android keystore
     // and the account with it.
     //
-    // The cipher key stays: the diagnoses that reach this button cannot prove
-    // it is stale, and encrypted reset backups remain readable under it. For
-    // db-unreadable, the damaged file is plaintext-shaped, so the reset deletes
-    // it instead of preserving a plaintext backup.
+    // The cipher key stays unless the diagnosis proves it can never be read
+    // again: the others cannot prove it is stale, and encrypted reset backups
+    // remain readable under it. For db-key-unrecoverable a kept key would fail
+    // the next launch the same way, so it goes and the next launch generates
+    // a new one. For db-unreadable, the damaged file is plaintext-shaped, so
+    // the reset deletes it instead of preserving a plaintext backup.
     resetLocalDatabase: (diagnosis) async {
       try {
         if (diagnosis == DatabaseBootstrapDiagnosis.databaseUnreadable) {
@@ -692,7 +698,9 @@ Future<void> startOpenVineApp({
             persistRecoveryOutcome: databaseRecoveryStore.record,
           );
         } else {
-          await resetLocalDatabaseCache(deleteCipherKey: false);
+          await resetLocalDatabaseCache(
+            deleteCipherKey: diagnosis.resetDeletesCipherKey,
+          );
         }
       } catch (error, stack) {
         // The screen keeps the user on it and says the reset failed; without

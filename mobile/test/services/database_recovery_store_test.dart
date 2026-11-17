@@ -50,5 +50,20 @@ void main() {
         isNull,
       );
     });
+
+    group('claimUnrecoverableCipherKeyReport', () {
+      test('grants the report once per install', () async {
+        final first = await DatabaseRecoveryStore(
+          preferences: preferences,
+        ).claimUnrecoverableCipherKeyReport();
+        // A later launch builds a new store over the same preferences.
+        final second = await DatabaseRecoveryStore(
+          preferences: preferences,
+        ).claimUnrecoverableCipherKeyReport();
+
+        expect(first, isTrue);
+        expect(second, isFalse);
+      });
+    });
   });
 }

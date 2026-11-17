@@ -28,7 +28,6 @@ configured_relays
 corrupted_video_repair_v1_completed # ambiguous: device flag gating a PER-ACCOUNT repair; left set, the next account never gets repaired
 current_user_pubkey_hex # the marker the sweep itself compares against; clearing it would defeat identity-change detection
 db.corruption.pendingRecovery.v1
-db.recovery.latest.v1
 deleted_curated_list_coordinates # device-wide tombstones whose VALUES embed a pubkey; documented as deliberately cross-account
 developer_mode_enabled
 divine_moderation_resolved_at
