@@ -4,6 +4,7 @@ import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/utils/dead_image_hosts.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -29,7 +30,13 @@ class BadgeCommunityCard extends ConsumerWidget {
     if (ref.watch(profileVanishedProvider(issuer))) {
       return const SizedBox.shrink();
     }
-    final name = definition.name ?? sanitizeUtf16(definition.dTag);
+    final suppliedName = definition.name;
+    final identifier = sanitizeUtf16(definition.dTag);
+    final name = suppliedName != null && suppliedName.trim().isNotEmpty
+        ? suppliedName
+        : identifier.trim().isNotEmpty
+        ? identifier
+        : context.l10n.profileBadgeFallbackSemanticLabel;
     final issuerProfile = ref.watch(userProfileReactiveProvider(issuer)).value;
     final members = [
       for (final pubkey in memberPubkeys.take(3))
