@@ -57,6 +57,11 @@ class UploadProgressReporter {
        _platformName = platformName,
        _isWeb = isWeb;
 
+  /// Category for a thumbnail the device could not make from a video that
+  /// had just uploaded. Unlike a failed thumbnail transfer it is reported.
+  static const thumbnailExtractionFailedCategory =
+      'THUMBNAIL_EXTRACTION_FAILED';
+
   final PendingUploadStore _store;
   final VideoCircuitBreaker _circuitBreaker;
   final UploadRetryConfig _retryConfig;
@@ -164,6 +169,12 @@ class UploadProgressReporter {
       return 'UPLOAD_SESSION_EXPIRED';
     }
 
+    // Making the thumbnail is local work, so being offline cannot explain it.
+    if (error is ThumbnailUploadException &&
+        error.stage == ThumbnailUploadFailureStage.extraction) {
+      return thumbnailExtractionFailedCategory;
+    }
+
     final connectivity = await checkNetworkConnectivity();
 
     if (connectivity == UploadConnectivity.none) {
@@ -181,21 +192,8 @@ class UploadProgressReporter {
       return 'NETWORK_ERROR';
     }
 
-    if (resumableStatusCode != null) {
-      if (resumableStatusCode == 408) return 'TIMEOUT';
-      if (resumableStatusCode == 413) return 'FILE_TOO_LARGE';
-      if (resumableStatusCode == 429) return 'RATE_LIMITED';
-      if (resumableStatusCode == 401 || resumableStatusCode == 403) {
-        return 'AUTHENTICATION';
-      }
-      if (resumableStatusCode == 502 ||
-          resumableStatusCode == 503 ||
-          resumableStatusCode == 504) {
-        return 'SERVER_UNAVAILABLE';
-      }
-      if (resumableStatusCode >= 500) return 'SERVER_ERROR';
-      if (resumableStatusCode >= 400) return 'CLIENT_ERROR';
-    }
+    final resumableCategory = _categoryForStatusCode(resumableStatusCode);
+    if (resumableCategory != null) return resumableCategory;
 
     if (error is BlossomUploadFailureException) {
       // A failure to *produce* the signed auth header (the signer was briefly
@@ -206,18 +204,13 @@ class UploadProgressReporter {
         return 'NETWORK_ERROR';
       }
 
-      final code = error.statusCode;
-      if (code != null) {
-        if (code == 408) return 'TIMEOUT';
-        if (code == 413) return 'FILE_TOO_LARGE';
-        if (code == 429) return 'RATE_LIMITED';
-        if (code == 401 || code == 403) return 'AUTHENTICATION';
-        if (code == 502 || code == 503 || code == 504) {
-          return 'SERVER_UNAVAILABLE';
-        }
-        if (code >= 500) return 'SERVER_ERROR';
-        if (code >= 400) return 'CLIENT_ERROR';
-      }
+      final category = _categoryForStatusCode(error.statusCode);
+      if (category != null) return category;
+    }
+
+    if (error is ThumbnailUploadException) {
+      final category = _categoryForThumbnailUpload(error);
+      if (category != null) return category;
     }
 
     final errorStr = error.toString().toLowerCase();
@@ -244,6 +237,42 @@ class UploadProgressReporter {
     if (errorStr.contains('permission')) return 'PERMISSION_DENIED';
 
     return 'UNKNOWN';
+  }
+
+  /// The category for an upload rejected with HTTP [statusCode], or null
+  /// when there is no failing status to go by.
+  static String? _categoryForStatusCode(int? statusCode) {
+    if (statusCode == null) return null;
+    if (statusCode == 408) return 'TIMEOUT';
+    if (statusCode == 413) return 'FILE_TOO_LARGE';
+    if (statusCode == 429) return 'RATE_LIMITED';
+    if (statusCode == 401 || statusCode == 403) return 'AUTHENTICATION';
+    if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
+      return 'SERVER_UNAVAILABLE';
+    }
+    if (statusCode >= 500) return 'SERVER_ERROR';
+    if (statusCode >= 400) return 'CLIENT_ERROR';
+    return null;
+  }
+
+  /// The category for a thumbnail the Blossom service could not take, from
+  /// the typed reason and status it reported. Null leaves an unclassified
+  /// failure to the message checks, which end in the reported UNKNOWN.
+  static String? _categoryForThumbnailUpload(ThumbnailUploadException error) {
+    final reason = error.failureReason;
+    if (error.isTransientNetworkFailure ||
+        reason == BlossomUploadFailureReason.network ||
+        reason == BlossomUploadFailureReason.authUnavailable) {
+      return 'NETWORK_ERROR';
+    }
+    final byStatus = _categoryForStatusCode(error.statusCode);
+    if (byStatus != null) return byStatus;
+    return switch (reason) {
+      BlossomUploadFailureReason.auth => 'AUTHENTICATION',
+      BlossomUploadFailureReason.fileTooLarge => 'FILE_TOO_LARGE',
+      BlossomUploadFailureReason.server => 'SERVER_ERROR',
+      _ => null,
+    };
   }
 
   /// Return a user-friendly error message for the given [category].
@@ -298,6 +327,10 @@ class UploadProgressReporter {
 
       case 'CLIENT_ERROR':
         return 'Upload request failed. Please try again.';
+
+      case thumbnailExtractionFailedCategory:
+        return 'Thumbnail upload failed: the video uploaded, but no '
+            'thumbnail could be made from it. Please try again.';
 
       default:
         return 'Upload failed. Please check your connection and try again.';
@@ -508,7 +541,7 @@ ${metrics != null ? '- File Size: ${metrics.fileSizeMB} MB\n- Duration: ${metric
 
   bool _isReportableUploadFailure(String errorCategory) {
     return switch (errorCategory) {
-      'OUT_OF_MEMORY' || 'UNKNOWN' => true,
+      'OUT_OF_MEMORY' || 'UNKNOWN' || thumbnailExtractionFailedCategory => true,
       _ => false,
     };
   }

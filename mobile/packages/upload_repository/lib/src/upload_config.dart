@@ -26,3 +26,13 @@ class UploadRetryConfig {
 /// `UploadRetryPolicy` persists its resumable checkpoint on the same scale, so
 /// the two writers of `uploadProgress` cannot disagree on the ceiling.
 const double videoProgressShare = 0.95;
+
+/// Names of the publish-timeline phases the upload pipeline reports.
+abstract final class UploadPhases {
+  static const uploadTransfer = 'upload.transfer';
+  static const uploadThumbnail = 'upload.thumbnail';
+  static const uploadThumbnailExtract = 'upload.thumbnail.extract';
+  static const uploadThumbnailBlurhash = 'upload.thumbnail.blurhash';
+  static const uploadThumbnailPut = 'upload.thumbnail.put';
+  static const reusedDetail = 'reused';
+}

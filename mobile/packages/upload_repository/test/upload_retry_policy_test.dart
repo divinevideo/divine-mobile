@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:upload_repository/upload_repository.dart';
@@ -272,12 +273,98 @@ void main() {
         expect(policy.isRetriableError(Exception('upload cancelled')), isFalse);
       });
 
-      test('"thumbnail upload failed" → false', () {
-        expect(
-          policy.isRetriableError(Exception('thumbnail upload failed')),
-          isFalse,
+      test(
+        'a thumbnail failure → false, even one the server would take later',
+        () {
+          // The repository retried the thumbnail alone already; a whole new
+          // attempt would upload the full video again.
+          expect(
+            policy.isRetriableError(
+              const ThumbnailUploadException(
+                ThumbnailUploadFailureStage.upload,
+                'Upload failed: 503',
+                statusCode: 503,
+                failureReason: BlossomUploadFailureReason.server,
+              ),
+            ),
+            isFalse,
+          );
+        },
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  group('backoffDelay', () {
+    test('doubles from the initial delay up to the cap', () {
+      expect(policy.backoffDelay(1), equals(const Duration(seconds: 2)));
+      expect(policy.backoffDelay(3), equals(const Duration(seconds: 8)));
+      expect(policy.backoffDelay(20), equals(const Duration(minutes: 5)));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  group('waitBeforeRetry', () {
+    test('returns true once the delay has passed', () {
+      fakeAsync((async) {
+        bool? canRetry;
+        unawaited(
+          policy
+              .waitBeforeRetry('upload-1', const Duration(seconds: 2))
+              .then((value) => canRetry = value),
         );
+
+        async.elapse(const Duration(seconds: 1));
+        expect(canRetry, isNull);
+        expect(policy.isWaitingForBackoff('upload-1'), isTrue);
+
+        async.elapse(const Duration(seconds: 1));
+        expect(canRetry, isTrue);
+        expect(policy.isWaitingForBackoff('upload-1'), isFalse);
       });
+    });
+
+    test('a wake ends the wait early', () {
+      fakeAsync((async) {
+        bool? canRetry;
+        unawaited(
+          policy
+              .waitBeforeRetry('upload-1', const Duration(hours: 1))
+              .then((value) => canRetry = value),
+        );
+        async.flushMicrotasks();
+
+        expect(policy.wakeBackoff('upload-1'), isTrue);
+        async.flushMicrotasks();
+
+        expect(canRetry, isTrue);
+      });
+    });
+
+    test('a discarded upload ends the wait and may not retry', () {
+      fakeAsync((async) {
+        bool? canRetry;
+        unawaited(
+          policy
+              .waitBeforeRetry('upload-1', const Duration(hours: 1))
+              .then((value) => canRetry = value),
+        );
+        async.flushMicrotasks();
+
+        policy.discardUploads(['upload-1']);
+        async.flushMicrotasks();
+
+        expect(canRetry, isFalse);
+      });
+    });
+
+    test('a disposed policy does not wait', () async {
+      policy.dispose();
+
+      expect(
+        await policy.waitBeforeRetry('upload-1', const Duration(hours: 1)),
+        isFalse,
+      );
     });
   });
 

@@ -14,25 +14,13 @@ import 'package:unified_logger/unified_logger.dart';
 
 import 'package:upload_repository/src/pending_upload.dart';
 import 'package:upload_repository/src/pending_upload_store.dart';
+import 'package:upload_repository/src/thumbnail_leg_uploader.dart';
 import 'package:upload_repository/src/upload_config.dart';
 import 'package:upload_repository/src/upload_ports.dart';
 import 'package:upload_repository/src/upload_progress_reporter.dart';
 import 'package:upload_repository/src/upload_retry_policy.dart';
 import 'package:upload_repository/src/upload_session_errors.dart';
 import 'package:upload_repository/src/video_circuit_breaker.dart';
-
-abstract final class UploadPhases {
-  static const uploadTransfer = 'upload.transfer';
-  static const uploadThumbnail = 'upload.thumbnail';
-  static const uploadThumbnailExtract = 'upload.thumbnail.extract';
-  static const uploadThumbnailBlurhash = 'upload.thumbnail.blurhash';
-  static const uploadThumbnailPut = 'upload.thumbnail.put';
-  static const reusedDetail = 'reused';
-}
-
-/// What the thumbnail leg produces: the CDN URL of the uploaded frame, and the
-/// blurhash derived from that same frame.
-typedef ThumbnailLegResult = ({String? cdnUrl, String? blurhash});
 
 /// Manages video uploads and their persistent state with enhanced reliability
 class UploadRepository {
@@ -56,8 +44,13 @@ class UploadRepository {
     UploadRetryConfig? retryConfig,
     this.useBackgroundUpload = false,
   }) : _blossomService = blossomService,
-       _extractThumbnail = thumbnailExtractor,
-       _blurhashGenerator = blurhashGenerator,
+       _thumbnailLeg = ThumbnailLegUploader(
+         blossomService: blossomService,
+         thumbnailExtractor: thumbnailExtractor,
+         blurhashGenerator: blurhashGenerator,
+         telemetry: telemetry ?? _ignoreTelemetry,
+         defaultThumbnailTimestamp: defaultThumbnailTimestamp,
+       ),
        _transientRenderCleaner = transientRenderCleaner,
        _debugStateProvider = debugStateProvider,
        _isWeb = isWeb,
@@ -107,11 +100,8 @@ class UploadRepository {
   final PendingUploadStore _store;
   final BlossomUploadService _blossomService;
 
-  /// Pulls the thumbnail frame out of the local video. Injectable so the
-  /// thumbnail leg can be exercised without a decodable video and the native
-  /// plugin behind [VideoThumbnailService].
-  final ThumbnailExtractor _extractThumbnail;
-  final UploadBlurhashGenerator _blurhashGenerator;
+  /// Makes and uploads the thumbnail, beside the video transfer.
+  final ThumbnailLegUploader _thumbnailLeg;
   final Map<String, Object?> Function() _debugStateProvider;
   final UploadTelemetry _telemetry;
   final bool _isWeb;
@@ -900,7 +890,20 @@ class UploadRepository {
 
       // Join the parallel leg before any early return below, so it can never
       // outlive this call.
-      final thumbnailResult = await thumbnailFuture;
+      var thumbnailResult = await thumbnailFuture;
+
+      if (result.success &&
+          !_hasHttpThumbnailUrl(
+            result: result,
+            generatedThumbnailUrl: thumbnailResult.cdnUrl,
+            existingThumbnailUrl: upload.thumbnailPath,
+          )) {
+        thumbnailResult = await _retryThumbnailAlone(
+          upload: upload,
+          videoFile: videoFile,
+          failedLeg: thumbnailResult,
+        );
+      }
       final thumbnailCdnUrl = thumbnailResult.cdnUrl;
 
       if (_userStoppedUploadIds.contains(upload.id)) {
@@ -928,7 +931,8 @@ class UploadRepository {
           );
         } else {
           Log.error(
-            '❌ Failed to upload required thumbnail to CDN',
+            '❌ Failed to upload required thumbnail to CDN: '
+            '${thumbnailResult.failure}',
             name: 'UploadManager',
             category: LogCategory.video,
           );
@@ -941,7 +945,11 @@ class UploadRepository {
             generatedThumbnailUrl: thumbnailCdnUrl,
             existingThumbnailUrl: upload.thumbnailPath,
           )) {
-        throw StateError('Thumbnail upload failed');
+        throw thumbnailResult.failure ??
+            const ThumbnailUploadException(
+              ThumbnailUploadFailureStage.upload,
+              'the thumbnail leg returned no URL',
+            );
       }
 
       if (result.success) {
@@ -1511,10 +1519,10 @@ class UploadRepository {
   /// Runs the thumbnail leg for [upload], or short-circuits when a previous
   /// attempt already landed one on the CDN.
   ///
-  /// Never throws: [_generateAndUploadThumbnail] reports failure as `null` and
-  /// the persist swallows its own errors, so the caller turns a missing
-  /// thumbnail into the publish-level error. That matters here because this
-  /// future is started before the video transfer and awaited after it — an
+  /// Never throws: [ThumbnailLegUploader.run] returns its failure in the
+  /// result and the persist swallows its own errors, so the caller turns a
+  /// missing thumbnail into the publish-level error. That matters here because
+  /// this future is started before the video transfer and awaited after it — an
   /// escaping error would spend the whole transfer with no listener, and would
   /// then replace the transfer's own failure at the join.
   Future<ThumbnailLegResult> _startThumbnailUpload({
@@ -1532,12 +1540,12 @@ class UploadRepository {
         Duration.zero,
         detail: UploadPhases.reusedDetail,
       );
-      return (cdnUrl: existing, blurhash: upload.blurhash);
+      return (cdnUrl: existing, blurhash: upload.blurhash, failure: null);
     }
 
     final watch = Stopwatch()..start();
     try {
-      final result = await _generateAndUploadThumbnail(
+      final result = await _thumbnailLeg.run(
         videoFile: videoFile,
         nostrPubkey: upload.nostrPubkey,
         upload: upload,
@@ -1579,118 +1587,44 @@ class UploadRepository {
     }
   }
 
-  /// Extracts a thumbnail from [videoFile], uploads it to Blossom, and derives
-  /// the blurhash from the same decoded frame.
+  /// Uploads the thumbnail again on its own after [failedLeg] failed in a way
+  /// another try can fix, while the video already sits on the CDN.
   ///
-  /// Reports no progress: it runs in parallel with the video transfer, which
-  /// owns the bar alone. See [videoProgressShare].
-  Future<ThumbnailLegResult> _generateAndUploadThumbnail({
-    required File videoFile,
-    required String nostrPubkey,
+  /// The image upload retries for a few seconds by itself; a server that is
+  /// down for longer used to fail the whole publish here, and the user's
+  /// retry then sent the full video again. This waits on the retry policy's
+  /// backoff instead, so a wake on app resume retries at once, and stops when
+  /// the user stops the upload. Returns the last leg result either way.
+  Future<ThumbnailLegResult> _retryThumbnailAlone({
     required PendingUpload upload,
+    required File videoFile,
+    required ThumbnailLegResult failedLeg,
   }) async {
-    try {
-      Log.info(
-        '📸 Extracting thumbnail from video: ${videoFile.path}',
+    var leg = failedLeg;
+    for (var retry = 1; retry <= _retryConfig.maxRetries; retry++) {
+      final failure = leg.failure;
+      if (leg.cdnUrl != null || failure == null || !failure.isTransient) {
+        break;
+      }
+      Log.warning(
+        'Thumbnail for ${upload.id} failed after the video uploaded '
+        '($failure); retrying the thumbnail alone, '
+        '$retry/${_retryConfig.maxRetries}',
         name: 'UploadManager',
         category: LogCategory.video,
       );
-
-      // Generate thumbnail at optimal timestamp
-      final extractWatch = Stopwatch()..start();
-      final thumbnailExtraction = await _extractThumbnail(
-        videoPath: videoFile.path,
-        quality: 85,
-        targetTimestamp:
-            upload.thumbnailTimestamp ?? _defaultThumbnailTimestamp,
+      final canRetry = await _retryPolicy.waitBeforeRetry(
+        upload.id,
+        _retryPolicy.backoffDelay(retry),
       );
-      extractWatch.stop();
-      _telemetry(UploadPhases.uploadThumbnailExtract, extractWatch.elapsed);
-
-      if (thumbnailExtraction == null) {
-        Log.warning(
-          '❌ Failed to extract thumbnail from video',
-          name: 'UploadManager',
-          category: LogCategory.video,
-        );
-        return (cdnUrl: null, blurhash: null);
+      if (!canRetry ||
+          _userStoppedUploadIds.contains(upload.id) ||
+          _isPurgedOwnerUpload(upload)) {
+        break;
       }
-
-      final thumbnailFile = File(thumbnailExtraction.path);
-      if (!thumbnailFile.existsSync()) {
-        Log.warning(
-          '❌ Thumbnail file not found after extraction',
-          name: 'UploadManager',
-          category: LogCategory.video,
-        );
-        return (cdnUrl: null, blurhash: null);
-      }
-
-      Log.info(
-        '✅ Thumbnail extracted, uploading to Blossom server',
-        name: 'UploadManager',
-        category: LogCategory.video,
-      );
-
-      // Derive the blurhash from the frame we just decoded. Publishing used to
-      // decode the video a second time for this, on the critical path.
-      final blurhashWatch = Stopwatch()..start();
-      final blurhash = await _blurhashGenerator(
-        thumbnailFile.readAsBytesSync(),
-      );
-      blurhashWatch.stop();
-      _telemetry(UploadPhases.uploadThumbnailBlurhash, blurhashWatch.elapsed);
-
-      // Upload thumbnail to Blossom server. Divine relay publishing requires
-      // a CDN thumbnail, so keep the image upload's own retry enabled here.
-      // If no HTTP thumbnail URL is available after that, the outer video
-      // pipeline treats it as terminal to avoid re-uploading the whole video.
-      final thumbnailBytes = thumbnailFile.lengthSync();
-      final putWatch = Stopwatch()..start();
-      final uploadResult = await _blossomService.uploadImage(
-        imageFile: thumbnailFile,
-        nostrPubkey: nostrPubkey,
-        // A thumbnail is a few KB — a single PUT avoids the resumable
-        // init/chunk/complete handshake (two extra round-trips plus extra auth
-        // signings) that otherwise dominated short-clip publish time.
-        allowResumable: false,
-      );
-      putWatch.stop();
-      _telemetry(
-        UploadPhases.uploadThumbnailPut,
-        putWatch.elapsed,
-        bytes: thumbnailBytes,
-      );
-
-      // Clean up local thumbnail file
-      try {
-        await thumbnailFile.delete();
-        Log.debug(
-          '🧹 Cleaned up local thumbnail file',
-          name: 'UploadManager',
-          category: LogCategory.video,
-        );
-      } catch (e) {
-        Log.warning(
-          'Failed to clean up thumbnail file: $e',
-          name: 'UploadManager',
-          category: LogCategory.video,
-        );
-      }
-
-      if (uploadResult.success && uploadResult.cdnUrl != null) {
-        return (cdnUrl: uploadResult.cdnUrl, blurhash: blurhash);
-      }
-
-      return (cdnUrl: null, blurhash: blurhash);
-    } catch (e) {
-      Log.error(
-        'Error generating/uploading thumbnail: $e',
-        name: 'UploadManager',
-        category: LogCategory.video,
-      );
-      return (cdnUrl: null, blurhash: null);
+      leg = await _startThumbnailUpload(videoFile: videoFile, upload: upload);
     }
+    return leg;
   }
 
   void dispose() {

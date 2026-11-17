@@ -3,6 +3,7 @@ library;
 
 export 'src/pending_upload.dart';
 export 'src/pending_upload_store.dart';
+export 'src/thumbnail_leg_uploader.dart';
 export 'src/upload_config.dart';
 export 'src/upload_ports.dart';
 export 'src/upload_progress_reporter.dart';
