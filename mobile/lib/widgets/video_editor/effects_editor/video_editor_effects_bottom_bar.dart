@@ -25,7 +25,9 @@ import 'package:unified_logger/unified_logger.dart';
 /// the timeline, the grid starts at that effect's section.
 ///
 /// Each tile shows its effect on the first clip's thumbnail, at full strength
-/// and at the start of the effect, where the glitch always bursts.
+/// and at the start of the effect, where the glitch always bursts. An intro or
+/// outro tile plays it over and over instead, so an intro and the outro of the
+/// same look can be told apart; see [IntroOutroTile].
 class VideoEditorEffectsBottomBar extends ConsumerWidget {
   const VideoEditorEffectsBottomBar({super.key});
 
@@ -86,6 +88,8 @@ class _EffectItem extends StatelessWidget {
           ? const SizedBox.expand()
           : type == EditorEffectType.echo
           ? _EchoThumbnail(path: path)
+          : type.isIntroOutro
+          ? IntroOutroTile(path: path, type: type)
           : switch (shaderTileOf(type)) {
               final tile? => _ShaderThumbnail(
                 path: path,
@@ -346,8 +350,122 @@ ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
     asset: 'shaders/look.frag',
     values: const [1.0],
   ),
+  _ when type.introOutroLook != null => (
+    asset: _introOutroShader,
+    values: introOutroTileValues(type, amount: _introOutroStillAmount),
+  ),
   _ => null,
 };
+
+/// The shader every intro and outro tile draws with, the one the native
+/// `IntroOutroVideoEffect` runs.
+const _introOutroShader = 'shaders/intro_outro.frag';
+
+/// How far a still intro or outro tile is covered: halfway, as where reduced
+/// motion stops it from playing.
+const _introOutroStillAmount = 0.5;
+
+/// The uniforms of the intro or outro [type]'s tile, covered by [amount]:
+/// how far it is covered, the structure of its look at the look's starting
+/// intensity, the look, which the shader branches on, and how far a moving
+/// curtain's bottom trails behind, [swing] (see [introOutroSwing]).
+@visibleForTesting
+List<double> introOutroTileValues(
+  EditorEffectType type, {
+  required double amount,
+  double swing = 0,
+}) {
+  final look = type.introOutroLook!;
+  return [amount, look.startingIntensity, look.index.toDouble(), swing];
+}
+
+/// How far through its effect an intro or outro tile is, [loopValue] of the
+/// way through its loop: it holds where the effect starts for a moment, plays
+/// it, as the native effect does over its window, and holds where it ends.
+@visibleForTesting
+double introOutroTileProgress(double loopValue) {
+  final seconds = loopValue * IntroOutroTile.loop.inMicroseconds / 1e6;
+  return ((seconds - _introOutroTileHold) / _introOutroTilePlay).clamp(
+    0.0,
+    1.0,
+  );
+}
+
+/// Seconds an intro or outro tile holds where the effect starts, then plays
+/// it for; it holds where it ends for the rest of [IntroOutroTile.loop].
+const _introOutroTileHold = 0.3;
+const _introOutroTilePlay = 1.2;
+
+/// The tile of an intro or outro: the thumbnail revealed or covered over and
+/// over, so an intro and the outro of the same look, which would be the same
+/// still, can be told apart.
+///
+/// With reduced motion it stands still, halfway covered.
+@visibleForTesting
+class IntroOutroTile extends StatefulWidget {
+  const IntroOutroTile({required this.path, required this.type, super.key});
+
+  /// How long one round of the tile takes.
+  static const loop = Duration(milliseconds: 2400);
+
+  final String path;
+  final EditorEffectType type;
+
+  @override
+  State<IntroOutroTile> createState() => _IntroOutroTileState();
+}
+
+class _IntroOutroTileState extends State<IntroOutroTile>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: IntroOutroTile.loop,
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+      return;
+    }
+    if (!_controller.isAnimating) _controller.repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final still = MediaQuery.disableAnimationsOf(context);
+    final ending = widget.type.placement == EditorEffectPlacement.ending;
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final progress = introOutroTileProgress(_controller.value);
+        return _ShaderThumbnail(
+          path: widget.path,
+          tile: (
+            asset: _introOutroShader,
+            values: still
+                ? introOutroTileValues(
+                    widget.type,
+                    amount: _introOutroStillAmount,
+                  )
+                : introOutroTileValues(
+                    widget.type,
+                    amount: introOutroCoverage(progress, ending: ending),
+                    swing: introOutroSwing(progress, ending: ending),
+                  ),
+          ),
+        );
+      },
+    );
+  }
+}
 
 /// The asset [type]'s tile shader reads as its second texture, after the
 /// thumbnail: a look's table or the ASCII glyphs. `null` for the others.
@@ -567,6 +685,16 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
     goldenHourLookId => context.l10n.videoEditorEffectGoldenHour,
     moonlightLookId => context.l10n.videoEditorEffectMoonlight,
     silverLookId => context.l10n.videoEditorEffectSilver,
+    introFadeVideoEffectId => context.l10n.videoEditorEffectFadeIn,
+    outroFadeVideoEffectId => context.l10n.videoEditorEffectFadeOut,
+    introCircleVideoEffectId => context.l10n.videoEditorEffectCircleOpen,
+    outroCircleVideoEffectId => context.l10n.videoEditorEffectCircleClose,
+    introCinemaVideoEffectId => context.l10n.videoEditorEffectCinemaOpen,
+    outroCinemaVideoEffectId => context.l10n.videoEditorEffectCinemaClose,
+    introCurtainVideoEffectId => context.l10n.videoEditorEffectCurtainOpen,
+    outroCurtainVideoEffectId => context.l10n.videoEditorEffectCurtainClose,
+    introFocusVideoEffectId => context.l10n.videoEditorEffectFocusIn,
+    outroFocusVideoEffectId => context.l10n.videoEditorEffectFocusOut,
     _ => context.l10n.videoEditorEffectEcho,
   };
 }
@@ -585,6 +713,8 @@ String _categoryLabel(
   EditorEffectCategory.particles =>
     context.l10n.videoEditorEffectCategoryParticles,
   EditorEffectCategory.looks => context.l10n.videoEditorEffectCategoryLooks,
+  EditorEffectCategory.intro => context.l10n.videoEditorEffectCategoryIntro,
+  EditorEffectCategory.outro => context.l10n.videoEditorEffectCategoryOutro,
 };
 
 /// The localized name of the built-in effect [type].

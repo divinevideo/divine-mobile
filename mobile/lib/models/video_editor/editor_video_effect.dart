@@ -176,6 +176,28 @@ const crossStitchVideoEffectId = 'divine.crossStitch';
 /// macOS.
 const bricksVideoEffectId = 'divine.bricks';
 
+/// The ids Divine's intros and outros are registered under with
+/// pro_video_editor, an intro and an outro for each look, all drawn by the
+/// native `IntroOutroVideoEffect` on Android, iOS and macOS.
+///
+/// An intro reveals the picture over its window and an outro covers it, so a
+/// new one is placed at the start or the end of the video; see
+/// [EditorEffectType.placement]. Each always opens or closes all the way: its
+/// intensity changes the structure of its look instead; see [IntroOutroLook].
+const introFadeVideoEffectId = 'divine.introFade';
+const outroFadeVideoEffectId = 'divine.outroFade';
+const introCircleVideoEffectId = 'divine.introCircle';
+const outroCircleVideoEffectId = 'divine.outroCircle';
+const introCinemaVideoEffectId = 'divine.introCinema';
+const outroCinemaVideoEffectId = 'divine.outroCinema';
+const introCurtainVideoEffectId = 'divine.introCurtain';
+const outroCurtainVideoEffectId = 'divine.outroCurtain';
+const introFocusVideoEffectId = 'divine.introFocus';
+const outroFocusVideoEffectId = 'divine.outroFocus';
+
+/// How long a new intro or outro lasts; the timeline can trim it.
+const introOutroEffectDuration = Duration(seconds: 1);
+
 /// The ids Divine's colour-graded looks are registered under with
 /// pro_video_editor, one per look, all drawn by the native `LookVideoEffect`
 /// on Android, iOS and macOS from the look's table in [lookTableAssets].
@@ -235,13 +257,69 @@ enum EditorEffectCategory {
   particles,
 
   /// The colours are graded, as by a film stock or a colourist.
-  looks;
+  looks,
+
+  /// The picture is revealed at the start of the video: an intro.
+  intro,
+
+  /// The picture is covered at the end of the video: an outro.
+  outro;
 
   /// The types listed under this category, in picker order.
   List<EditorEffectType> get types => [
     for (final type in EditorEffectType.values)
       if (type.category == this) type,
   ];
+}
+
+/// Where a new effect goes on the editor timeline; see
+/// [EditorEffectType.placement] and [defaultVideoEffectWindow].
+enum EditorEffectPlacement {
+  /// Over the whole video.
+  wholeVideo,
+
+  /// At the start of the video, for [introOutroEffectDuration]: an intro.
+  opening,
+
+  /// At the end of the video, for [introOutroEffectDuration]: an outro.
+  ending,
+}
+
+/// The look of an intro or outro, which an intro shares with the outro of the
+/// same look; see [EditorEffectType.introOutroLook]. In picker order; the
+/// index is what the shader branches on, in the native `IntroOutroVideoEffect`
+/// and in the picker tile.
+///
+/// An intro or outro always opens or closes all the way. Its intensity, 0 to
+/// 1, changes the structure of its look instead of how strong it is.
+enum IntroOutroLook {
+  /// To and from a colour: black at 0, through grey, to white at 1.
+  fade,
+
+  /// A circle around the middle, with a hard edge at 0 and a soft one at 1.
+  circle,
+
+  /// Black bars closing from the edges of bands: one band at 0, the classic
+  /// bars at the top and bottom, up to eight like a blind at 1.
+  cinema,
+
+  /// Red stage curtains drawn in from the sides, with three broad folds per
+  /// curtain at 0 up to twelve fine ones at 1.
+  curtain,
+
+  /// A blur, slight at 0 and heavy at 1.
+  focus;
+
+  /// The intensity a newly picked intro or outro of this look starts at:
+  /// black, a slightly soft circle, the classic two bars, medium folds and a
+  /// medium blur.
+  double get startingIntensity => switch (this) {
+    fade => 0,
+    circle => 0.15,
+    cinema => 0,
+    curtain => 0.4,
+    focus => 0.5,
+  };
 }
 
 /// What an editor effect looks like: one of pro_video_editor's built-in
@@ -472,6 +550,45 @@ class EditorEffectType {
   /// Silver: black-and-white film with deep blacks and darker skies.
   static const silver = EditorEffectType.custom(silverLookId);
 
+  /// Fade in: the picture comes up out of black.
+  static const introFade = EditorEffectType.custom(introFadeVideoEffectId);
+
+  /// Fade out: the picture goes down to black.
+  static const outroFade = EditorEffectType.custom(outroFadeVideoEffectId);
+
+  /// Circle open: a circle grows from the middle of a black frame until it
+  /// shows the whole picture.
+  static const introCircle = EditorEffectType.custom(introCircleVideoEffectId);
+
+  /// Circle close: black closes in on the picture as a shrinking circle,
+  /// until only black is left.
+  static const outroCircle = EditorEffectType.custom(outroCircleVideoEffectId);
+
+  /// Cinema open: black bars at the top and bottom draw apart from the
+  /// middle, like eyes opening.
+  static const introCinema = EditorEffectType.custom(introCinemaVideoEffectId);
+
+  /// Cinema close: black bars slide in from the top and bottom until they
+  /// meet in the middle.
+  static const outroCinema = EditorEffectType.custom(outroCinemaVideoEffectId);
+
+  /// Curtain open: red stage curtains part to the sides.
+  static const introCurtain = EditorEffectType.custom(
+    introCurtainVideoEffectId,
+  );
+
+  /// Curtain close: red stage curtains draw in from the sides until they
+  /// meet.
+  static const outroCurtain = EditorEffectType.custom(
+    outroCurtainVideoEffectId,
+  );
+
+  /// Focus in: the picture comes into focus out of a heavy blur.
+  static const introFocus = EditorEffectType.custom(introFocusVideoEffectId);
+
+  /// Focus out: the picture blurs away.
+  static const outroFocus = EditorEffectType.custom(outroFocusVideoEffectId);
+
   /// Every type the effects editor offers, in picker order.
   static final List<EditorEffectType> values = List.unmodifiable([
     for (final type in VideoEffectType.values) EditorEffectType.builtIn(type),
@@ -534,6 +651,16 @@ class EditorEffectType {
     goldenHour,
     moonlight,
     silver,
+    introFade,
+    outroFade,
+    introCircle,
+    outroCircle,
+    introCinema,
+    outroCinema,
+    introCurtain,
+    outroCurtain,
+    introFocus,
+    outroFocus,
   ]);
 
   /// The built-in effect, or `null` for a custom one.
@@ -618,8 +745,45 @@ class EditorEffectType {
       embersVideoEffectId => EditorEffectCategory.particles,
       final id? when lookTableAssets.containsKey(id) =>
         EditorEffectCategory.looks,
+      _ when placement == EditorEffectPlacement.opening =>
+        EditorEffectCategory.intro,
+      _ when placement == EditorEffectPlacement.ending =>
+        EditorEffectCategory.outro,
       _ => throw StateError('$this has no picker category'),
     },
+  };
+
+  /// Where a new effect of this type goes on the timeline: an intro at the
+  /// start of the video, an outro at its end, any other over all of it.
+  EditorEffectPlacement get placement => switch (customId) {
+    introFadeVideoEffectId ||
+    introCircleVideoEffectId ||
+    introCinemaVideoEffectId ||
+    introCurtainVideoEffectId ||
+    introFocusVideoEffectId => EditorEffectPlacement.opening,
+    outroFadeVideoEffectId ||
+    outroCircleVideoEffectId ||
+    outroCinemaVideoEffectId ||
+    outroCurtainVideoEffectId ||
+    outroFocusVideoEffectId => EditorEffectPlacement.ending,
+    _ => EditorEffectPlacement.wholeVideo,
+  };
+
+  /// Whether this type is an intro or an outro: it plays once over its
+  /// window, revealing or covering the picture, rather than all through it.
+  bool get isIntroOutro => placement != EditorEffectPlacement.wholeVideo;
+
+  /// The look of this intro or outro, or `null` for any other type.
+  IntroOutroLook? get introOutroLook => switch (customId) {
+    introFadeVideoEffectId || outroFadeVideoEffectId => IntroOutroLook.fade,
+    introCircleVideoEffectId ||
+    outroCircleVideoEffectId => IntroOutroLook.circle,
+    introCinemaVideoEffectId ||
+    outroCinemaVideoEffectId => IntroOutroLook.cinema,
+    introCurtainVideoEffectId ||
+    outroCurtainVideoEffectId => IntroOutroLook.curtain,
+    introFocusVideoEffectId || outroFocusVideoEffectId => IntroOutroLook.focus,
+    _ => null,
   };
 
   @override
@@ -756,6 +920,11 @@ class EditorVideoEffect extends Equatable {
   /// [tunnelPeriodUs].
   static const periodParam = 'periodUs';
 
+  /// The param an intro or outro reads how long its window lasts from, when
+  /// it is rendered, in microseconds, so it is fully revealed or covered
+  /// right where the window ends. See [customVideoEffectRenderParams].
+  static const durationParam = 'durationUs';
+
   /// Identifies the effect on the timeline and across undo steps.
   final String id;
 
@@ -782,7 +951,8 @@ class EditorVideoEffect extends Equatable {
       ? EditorEffectType.builtIn(effect!.type)
       : EditorEffectType.custom(custom!.id);
 
-  /// How strong the effect is, from 0 to 1.
+  /// How strong the effect is, from 0 to 1; for an intro or outro, the
+  /// structure of its look (see [IntroOutroLook]).
   double get intensity =>
       effect?.intensity ??
       ((custom!.params[intensityParam] as num?)?.toDouble() ?? 1).clamp(
@@ -920,7 +1090,9 @@ List<CustomVideoEffect> customVideoEffectsOnOutput(
 ///
 /// An effect that plays all through its window keeps its own; a tunnel also
 /// gets how long one step takes, under [EditorVideoEffect.periodParam] (see
-/// [tunnelPeriodUs]). One on the beat also gets the times it fires at, under
+/// [tunnelPeriodUs]), and an intro or outro how long its window lasts, under
+/// [EditorVideoEffect.durationParam] (see [introOutroDurationUs]). One on the
+/// beat also gets the times it fires at, under
 /// [EditorVideoEffect.beatsParam]: the [beats] of the exported video that fall
 /// in its window, as microseconds after its start. It moves with the time
 /// since it started in the preview as in the export, so the beats are counted
@@ -937,6 +1109,16 @@ Map<String, Object?>? customVideoEffectRenderParams(
   Duration Function(Duration editorTime)? toPlayer,
 }) {
   if (effect.params[EditorVideoEffect.onBeatParam] != true) {
+    if (EditorEffectType.custom(effect.id).isIntroOutro) {
+      return {
+        ...effect.params,
+        EditorVideoEffect.durationParam: introOutroDurationUs(
+          effect,
+          timelineMap,
+          toPlayer: toPlayer,
+        ),
+      };
+    }
     if (effect.id != tunnelVideoEffectId &&
         effect.id != spiralTunnelVideoEffectId) {
       return effect.params;
@@ -998,6 +1180,48 @@ int tunnelPeriodUs(
       (effect.params[EditorVideoEffect.intensityParam] as num?)?.toDouble() ??
       1;
   final step = tunnelStepDuration(intensity);
+  final (:output, :rendered) = _renderedWindow(
+    effect,
+    timelineMap,
+    toPlayer: toPlayer,
+  );
+  if (output < step ~/ 2) return step.inMicroseconds;
+  final steps = math.max(
+    1,
+    (output.inMicroseconds / step.inMicroseconds).round(),
+  );
+  return math.max(1, rendered.inMicroseconds ~/ steps);
+}
+
+/// How long the window of the intro or outro [effect] lasts, in
+/// microseconds, on the time its renderer counts in: the exported video, or
+/// the player's timeline when [toPlayer] maps onto one.
+///
+/// The window ends where the video loops at the latest, so an outro over the
+/// end of the video has covered the picture by its last frame. An intro or
+/// outro reveals or covers the picture over exactly this long.
+int introOutroDurationUs(
+  CustomVideoEffect effect,
+  TransitionTimelineMap timelineMap, {
+  Duration Function(Duration editorTime)? toPlayer,
+}) => math.max(
+  1,
+  _renderedWindow(
+    effect,
+    timelineMap,
+    toPlayer: toPlayer,
+  ).rendered.inMicroseconds,
+);
+
+/// The window of [effect] on the exported video, ending where the video loops
+/// at the latest, as `output`, and the same stretch on the time its renderer
+/// counts in as `rendered`: the player's timeline when [toPlayer] maps onto
+/// one, and otherwise the exported video's.
+({Duration output, Duration rendered}) _renderedWindow(
+  CustomVideoEffect effect,
+  TransitionTimelineMap timelineMap, {
+  Duration Function(Duration editorTime)? toPlayer,
+}) {
   final editorStart = effect.startTime ?? Duration.zero;
   final start = timelineMap.editorToOutput(editorStart);
   final loopPoint = timelineMap.loopPoint;
@@ -1005,16 +1229,76 @@ int tunnelPeriodUs(
   final end = requestedEnd == null || requestedEnd > loopPoint
       ? loopPoint
       : requestedEnd;
-  final window = end - start;
-  if (window < step ~/ 2) return step.inMicroseconds;
-  final steps = math.max(
-    1,
-    (window.inMicroseconds / step.inMicroseconds).round(),
+  final output = end - start;
+  return (
+    output: output,
+    rendered: toPlayer == null
+        ? output
+        : toPlayer(timelineMap.outputToEditor(end)) - toPlayer(editorStart),
   );
-  final span = toPlayer == null
-      ? window
-      : toPlayer(timelineMap.outputToEditor(end)) - toPlayer(editorStart);
-  return math.max(1, span.inMicroseconds ~/ steps);
+}
+
+/// How far an intro or outro covers the picture [progress] of the way
+/// through its window, 0 to 1: from covered to open for an intro, the other
+/// way round for an outro.
+///
+/// It eases in and out with no jolt at either end (smootherstep), so a
+/// curtain's swing, [introOutroSwing], also starts and ends at rest. Mirrors
+/// the native `IntroOutroProgress.amount`.
+double introOutroCoverage(double progress, {required bool ending}) {
+  final p = progress.clamp(0.0, 1.0);
+  final eased = p * p * p * (p * (6 * p - 15) + 10);
+  return ending ? eased : 1 - eased;
+}
+
+/// How far the bottom of a moving curtain trails behind its top
+/// [progress] of the way through its window, about -1 to 1: positive while an
+/// outro closes, negative while an intro opens, 0 at both ends.
+///
+/// The cloth drags behind while it moves, and swings back as the motion speeds
+/// up and slows down, so it trails most while the curtain speeds up and swings
+/// a little past as it stops. Mirrors the native `IntroOutroProgress.swing`.
+double introOutroSwing(double progress, {required bool ending}) {
+  final p = progress.clamp(0.0, 1.0);
+  final speed = 30 * p * p * (1 - p) * (1 - p) / 1.875;
+  final pull = 60 * p * (1 - p) * (1 - 2 * p) / 5.7735027;
+  final trail = 0.6 * speed + 0.4 * pull;
+  return ending ? trail : -trail;
+}
+
+/// Where a new effect of [type] goes on the editor timeline, for a video that
+/// ends at [timelineEnd] on it.
+///
+/// An effect over the whole video has neither a start nor an end. An intro
+/// lasts [introOutroEffectDuration] from the start of the video, an outro as
+/// long up to its end; neither is longer than the video. An outro stays open
+/// at its end, so it reaches the end of the video; without a [timelineEnd],
+/// it is placed over the whole video.
+({Duration? startTime, Duration? endTime}) defaultVideoEffectWindow(
+  EditorEffectType type, {
+  Duration? timelineEnd,
+}) {
+  final videoEnd = timelineEnd != null && timelineEnd > Duration.zero
+      ? timelineEnd
+      : null;
+  switch (type.placement) {
+    case EditorEffectPlacement.wholeVideo:
+      return (startTime: null, endTime: null);
+    case EditorEffectPlacement.opening:
+      return (
+        startTime: Duration.zero,
+        endTime: videoEnd == null || videoEnd > introOutroEffectDuration
+            ? introOutroEffectDuration
+            : videoEnd,
+      );
+    case EditorEffectPlacement.ending:
+      if (videoEnd == null) return (startTime: null, endTime: null);
+      final start = videoEnd - introOutroEffectDuration;
+      return (
+        startTime: start.isNegative ? Duration.zero : start,
+        endTime: null,
+      );
+  }
 }
 
 /// [effects] with their windows moved from the editor timeline onto the

@@ -586,6 +586,7 @@ flutter:
     - shaders/eight_bit.frag
     - shaders/fisheye.frag
     - shaders/fluted_glass.frag
+    - shaders/intro_outro.frag
     - shaders/light_leak.frag
     - shaders/light_leak_transition.frag
     - shaders/light_rays.frag

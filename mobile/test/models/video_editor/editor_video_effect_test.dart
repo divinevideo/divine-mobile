@@ -1055,6 +1055,110 @@ void main() {
       });
     });
 
+    group('introOutroDurationUs', () {
+      CustomVideoEffect introOutro(
+        EditorEffectType type, {
+        Duration? startTime,
+        Duration? endTime,
+      }) => EditorVideoEffect.of(
+        id: type.name,
+        type: type,
+        intensity: 1,
+        startTime: startTime,
+        endTime: endTime,
+      ).custom!;
+
+      test('is the length of an intro over its own window', () {
+        expect(
+          introOutroDurationUs(
+            introOutro(
+              EditorEffectType.introFade,
+              startTime: Duration.zero,
+              endTime: ms(1000),
+            ),
+            plain,
+          ),
+          1000000,
+        );
+      });
+
+      test('runs an outro left open at its end to where the exported '
+          'video loops', () {
+        // 5 s on the editor timeline is 4.6 s on the exported video, which
+        // ends at 5.6 s.
+        expect(
+          introOutroDurationUs(
+            introOutro(EditorEffectType.outroCircle, startTime: ms(5000)),
+            compressed,
+          ),
+          1000000,
+        );
+      });
+
+      test('stops at the loop point of a timeline longer than the export', () {
+        final long = TransitionTimelineMap.fromClips([
+          clip('a', duration: ms(6800)),
+        ]);
+
+        expect(
+          introOutroDurationUs(
+            introOutro(
+              EditorEffectType.outroCurtain,
+              startTime: ms(5800),
+              endTime: ms(6800),
+            ),
+            long,
+          ),
+          500000,
+        );
+      });
+
+      test('counts on the player when one maps the timeline', () {
+        Duration slowed(Duration editorTime) => editorTime * 2;
+
+        final params = customVideoEffectRenderParams(
+          introOutro(
+            EditorEffectType.introFocus,
+            startTime: Duration.zero,
+            endTime: ms(1000),
+          ),
+          plain,
+          const [],
+          toPlayer: slowed,
+        );
+
+        expect(params?[EditorVideoEffect.durationParam], 2000000);
+      });
+
+      test('is what every intro and outro is rendered with, next to its '
+          'intensity', () {
+        for (final type in EditorEffectType.values.where(
+          (type) => type.isIntroOutro,
+        )) {
+          final rendered = customVideoEffectsOnOutput([
+            introOutro(type, startTime: ms(2000), endTime: ms(3500)),
+          ], plain).single;
+
+          expect(rendered.params, {
+            EditorVideoEffect.intensityParam: 1.0,
+            EditorVideoEffect.durationParam: 1500000,
+          }, reason: type.name);
+        }
+      });
+
+      test('is not added to an effect that plays all through its window', () {
+        final snow = EditorVideoEffect.of(
+          id: 'snow',
+          type: EditorEffectType.snow,
+          intensity: 0.7,
+        ).custom!;
+
+        expect(customVideoEffectsOnOutput([snow], plain).single.params, {
+          EditorVideoEffect.intensityParam: 0.7,
+        });
+      });
+    });
+
     group('looksLast', () {
       CustomVideoEffect effect(String id) => CustomVideoEffect(id: id);
 
@@ -1180,7 +1284,7 @@ void main() {
         for (final type in EditorEffectType.values)
           if (type.customId != null) type,
       ];
-      expect(custom, hasLength(59));
+      expect(custom, hasLength(69));
       for (final type in custom) {
         final effect = EditorVideoEffect.of(
           id: 'x',
@@ -1371,6 +1475,43 @@ void main() {
       ]);
     });
 
+    test('lists the intros under intro and the outros under outro, last, '
+        'each look in the same order', () {
+      expect(EditorEffectCategory.values.sublist(8), [
+        EditorEffectCategory.intro,
+        EditorEffectCategory.outro,
+      ]);
+      expect(EditorEffectCategory.intro.types, [
+        EditorEffectType.introFade,
+        EditorEffectType.introCircle,
+        EditorEffectType.introCinema,
+        EditorEffectType.introCurtain,
+        EditorEffectType.introFocus,
+      ]);
+      expect(EditorEffectCategory.outro.types, [
+        EditorEffectType.outroFade,
+        EditorEffectType.outroCircle,
+        EditorEffectType.outroCinema,
+        EditorEffectType.outroCurtain,
+        EditorEffectType.outroFocus,
+      ]);
+      for (final category in [
+        EditorEffectCategory.intro,
+        EditorEffectCategory.outro,
+      ]) {
+        expect(
+          category.types.map((type) => type.introOutroLook),
+          IntroOutroLook.values,
+          reason: category.name,
+        );
+        for (final type in category.types) {
+          expect(type.supportsOnBeat, isFalse, reason: type.name);
+          expect(type.isFlashing, isFalse, reason: type.name);
+          expect(EditorEffectType.byName(type.name), type, reason: type.name);
+        }
+      }
+    });
+
     test('lists the paintings, drawing, prints, crafts, neon, characters and '
         'camera views under art, right after retro', () {
       expect(EditorEffectCategory.values.indexOf(EditorEffectCategory.art), 1);
@@ -1434,6 +1575,154 @@ void main() {
       for (var glyph = 1; glyph < 10; glyph++) {
         expect(ink[glyph], greaterThan(ink[glyph - 1]), reason: '$glyph');
       }
+    });
+  });
+
+  group(EditorEffectPlacement, () {
+    test('places the intros at the start and the outros at the end, and '
+        'every other effect over the whole video', () {
+      final intros = [
+        EditorEffectType.introFade,
+        EditorEffectType.introCircle,
+        EditorEffectType.introCinema,
+        EditorEffectType.introCurtain,
+        EditorEffectType.introFocus,
+      ];
+      final outros = [
+        EditorEffectType.outroFade,
+        EditorEffectType.outroCircle,
+        EditorEffectType.outroCinema,
+        EditorEffectType.outroCurtain,
+        EditorEffectType.outroFocus,
+      ];
+      for (final type in EditorEffectType.values) {
+        expect(
+          type.placement,
+          intros.contains(type)
+              ? EditorEffectPlacement.opening
+              : outros.contains(type)
+              ? EditorEffectPlacement.ending
+              : EditorEffectPlacement.wholeVideo,
+          reason: type.name,
+        );
+        expect(
+          type.isIntroOutro,
+          type.category == EditorEffectCategory.intro ||
+              type.category == EditorEffectCategory.outro,
+          reason: type.name,
+        );
+        expect(
+          type.introOutroLook != null,
+          type.isIntroOutro,
+          reason: type.name,
+        );
+      }
+    });
+  });
+
+  group('introOutroCoverage', () {
+    test('covers an intro at its start and an outro at its end, halfway in '
+        'the middle', () {
+      for (final (ending, start, end) in [
+        (false, 1.0, 0.0),
+        (true, 0.0, 1.0),
+      ]) {
+        expect(introOutroCoverage(0, ending: ending), start);
+        expect(introOutroCoverage(0.5, ending: ending), 0.5);
+        expect(introOutroCoverage(1, ending: ending), end);
+        expect(introOutroCoverage(1.4, ending: ending), end);
+      }
+    });
+
+    test('eases out of and into rest without a jolt', () {
+      // Smootherstep: the first step moves less than smoothstep's 3 p².
+      const step = 0.01;
+      expect(introOutroCoverage(step, ending: true), lessThan(3 * step * step));
+      expect(
+        1 - introOutroCoverage(1 - step, ending: true),
+        lessThan(3 * step * step),
+      );
+    });
+  });
+
+  group('introOutroSwing', () {
+    test('rests at both ends of the window', () {
+      for (final ending in [false, true]) {
+        expect(introOutroSwing(0, ending: ending), 0);
+        expect(introOutroSwing(1, ending: ending), 0);
+      }
+    });
+
+    test("trails behind a closing outro's motion and ahead of an opening "
+        "intro's", () {
+      expect(introOutroSwing(0.4, ending: true), greaterThan(0.5));
+      expect(
+        introOutroSwing(0.4, ending: false),
+        -introOutroSwing(0.4, ending: true),
+      );
+    });
+
+    test('swings a little past as the curtain stops', () {
+      final late = introOutroSwing(0.85, ending: true);
+
+      expect(late, lessThan(0));
+      expect(late, greaterThan(-0.3));
+    });
+  });
+
+  group('defaultVideoEffectWindow', () {
+    const end = Duration(milliseconds: 6300);
+
+    test('leaves an effect over the whole video open at both ends', () {
+      expect(
+        defaultVideoEffectWindow(EditorEffectType.snow, timelineEnd: end),
+        (startTime: null, endTime: null),
+      );
+    });
+
+    test('places an intro over the first second', () {
+      expect(
+        defaultVideoEffectWindow(EditorEffectType.introFade, timelineEnd: end),
+        (startTime: Duration.zero, endTime: introOutroEffectDuration),
+      );
+    });
+
+    test('places an outro over the last second, open to the end', () {
+      expect(
+        defaultVideoEffectWindow(EditorEffectType.outroFade, timelineEnd: end),
+        (startTime: const Duration(milliseconds: 5300), endTime: null),
+      );
+    });
+
+    test('keeps an intro or outro within a video shorter than a second', () {
+      const short = Duration(milliseconds: 600);
+
+      expect(
+        defaultVideoEffectWindow(
+          EditorEffectType.introCircle,
+          timelineEnd: short,
+        ),
+        (startTime: Duration.zero, endTime: short),
+      );
+      expect(
+        defaultVideoEffectWindow(
+          EditorEffectType.outroCircle,
+          timelineEnd: short,
+        ),
+        (startTime: Duration.zero, endTime: null),
+      );
+    });
+
+    test('places an intro over the first second and an outro over the '
+        'whole video while the end of the video is unknown', () {
+      expect(
+        defaultVideoEffectWindow(EditorEffectType.introCurtain),
+        (startTime: Duration.zero, endTime: introOutroEffectDuration),
+      );
+      expect(
+        defaultVideoEffectWindow(EditorEffectType.outroCurtain),
+        (startTime: null, endTime: null),
+      );
     });
   });
 }

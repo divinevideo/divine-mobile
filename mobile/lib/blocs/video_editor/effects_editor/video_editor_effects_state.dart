@@ -51,6 +51,7 @@ class VideoEditorEffectsState extends Equatable {
     this.beatInput,
     this.beats = const [],
     this.beatStatus = VideoEditorBeatStatus.idle,
+    this.timelineEnd,
   });
 
   /// The effects committed to the editor history, in the order they combine,
@@ -90,21 +91,64 @@ class VideoEditorEffectsState extends Equatable {
   /// Where finding [beats] stands.
   final VideoEditorBeatStatus beatStatus;
 
+  /// Where the video ends and loops, on the editor timeline, which an outro
+  /// is placed against; `null` before the editor said.
+  final Duration? timelineEnd;
+
   /// Whether the picked effect fires on the beat.
   bool get selectionOnBeat =>
       onBeat && selectedType != null && selectedType!.supportsOnBeat;
 
-  /// The effect the open editor would commit, over the whole video, or `null`
-  /// for none.
-  EditorVideoEffect? get selection => selectedType == null
-      ? null
-      : EditorVideoEffect.of(
-          id: editingId ?? _pickedId,
-          type: selectedType!,
-          intensity: intensity,
-          onBeat: selectionOnBeat,
-          settings: settingsFor(selectedType!),
-        );
+  /// The effect the open editor would commit, or `null` for none.
+  ///
+  /// It lies over the whole video, except for an intro or an outro, which
+  /// only plays out right over its own window: that is the edited effect's
+  /// while it was an intro or an outro of the same kind, and otherwise where
+  /// a new one goes (see [defaultVideoEffectWindow]).
+  EditorVideoEffect? get selection {
+    final type = selectedType;
+    if (type == null) return null;
+    final window = _selectionWindow(type);
+    return EditorVideoEffect.of(
+      id: editingId ?? _pickedId,
+      type: type,
+      intensity: intensity,
+      startTime: window.startTime,
+      endTime: window.endTime,
+      onBeat: selectionOnBeat,
+      settings: settingsFor(type),
+    );
+  }
+
+  ({Duration? startTime, Duration? endTime}) _selectionWindow(
+    EditorEffectType type,
+  ) {
+    if (!type.isIntroOutro) return (startTime: null, endTime: null);
+    final edited = applied.where((e) => e.id == editingId).firstOrNull;
+    if (edited != null && edited.type.placement == type.placement) {
+      return (startTime: edited.startTime, endTime: edited.endTime);
+    }
+    return defaultVideoEffectWindow(type, timelineEnd: timelineEnd);
+  }
+
+  /// Where the preview jumps to when an intro or outro is picked, so it
+  /// shows right away, or `null` for an effect over the whole video.
+  ///
+  /// A [playing] video jumps to the start of an intro, and a second before an
+  /// outro, so the outro is seen closing over the video. A paused one jumps
+  /// to the middle of its window, the one frame that shows what it does.
+  Duration? introOutroPreviewPosition({required bool playing}) {
+    final picked = isEditing ? selection : null;
+    if (picked == null || !picked.type.isIntroOutro) return null;
+    final start = picked.startTime ?? Duration.zero;
+    if (!playing) {
+      final end = picked.endTime ?? timelineEnd ?? start;
+      return end > start ? start + (end - start) ~/ 2 : start;
+    }
+    if (picked.type.placement == EditorEffectPlacement.opening) return start;
+    final leadIn = start - introOutroEffectDuration;
+    return leadIn.isNegative ? Duration.zero : leadIn;
+  }
 
   /// The settings a picked effect of [type] stores next to its intensity.
   Map<String, Object> settingsFor(EditorEffectType type) =>
@@ -119,7 +163,8 @@ class VideoEditorEffectsState extends Equatable {
   ///
   /// While editing, the selection takes the edited effect's place, or joins
   /// the others as a new one. It shows over the whole video, so the pick is
-  /// visible wherever the playhead is. A flashing pick hides the other
+  /// visible wherever the playhead is, except for an intro or outro, which
+  /// shows where it goes (see [selection]). A flashing pick hides the other
   /// flashing effects, which would otherwise flash along with it while the
   /// video plays; confirming replaces them where they overlap anyway.
   ///
@@ -179,6 +224,7 @@ class VideoEditorEffectsState extends Equatable {
     VideoEditorBeatInput? beatInput,
     List<Duration>? beats,
     VideoEditorBeatStatus? beatStatus,
+    Duration? timelineEnd,
   }) {
     return VideoEditorEffectsState(
       applied: applied ?? this.applied,
@@ -194,6 +240,7 @@ class VideoEditorEffectsState extends Equatable {
       beatInput: beatInput ?? this.beatInput,
       beats: beats ?? this.beats,
       beatStatus: beatStatus ?? this.beatStatus,
+      timelineEnd: timelineEnd ?? this.timelineEnd,
     );
   }
 
@@ -210,5 +257,6 @@ class VideoEditorEffectsState extends Equatable {
     beatInput,
     beats,
     beatStatus,
+    timelineEnd,
   ];
 }

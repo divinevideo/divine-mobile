@@ -9117,6 +9117,57 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => '룩';
 
   @override
+  String get videoEditorEffectCategoryIntro => '인트로';
+
+  @override
+  String get videoEditorEffectCategoryOutro => '아웃트로';
+
+  @override
+  String get videoEditorEffectShapeFadeColor => '페이드 색상, 검정에서 흰색';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => '가장자리 부드러움';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => '막대 개수';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => '주름 개수';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => '흐림 강도';
+
+  @override
+  String get videoEditorEffectFadeIn => '페이드 인';
+
+  @override
+  String get videoEditorEffectFadeOut => '페이드 아웃';
+
+  @override
+  String get videoEditorEffectCircleOpen => '원형 열기';
+
+  @override
+  String get videoEditorEffectCircleClose => '원형 닫기';
+
+  @override
+  String get videoEditorEffectCinemaOpen => '시네마 열기';
+
+  @override
+  String get videoEditorEffectCinemaClose => '시네마 닫기';
+
+  @override
+  String get videoEditorEffectCurtainOpen => '커튼 열기';
+
+  @override
+  String get videoEditorEffectCurtainClose => '커튼 닫기';
+
+  @override
+  String get videoEditorEffectFocusIn => '포커스 인';
+
+  @override
+  String get videoEditorEffectFocusOut => '포커스 아웃';
+
+  @override
   String get videoEditorFilterCategoryNatural => '내추럴';
 
   @override

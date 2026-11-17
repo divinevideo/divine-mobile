@@ -51,6 +51,7 @@ extension FlutterError: @retroactive Error {}
     PaperCutVideoEffect.register()
     CrossStitchVideoEffect.register()
     BricksVideoEffect.register()
+    IntroOutroVideoEffect.register()
     LookVideoEffect.register()
     AdjustVideoEffect.register()
     #if DEBUG

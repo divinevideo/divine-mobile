@@ -9515,6 +9515,57 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'Tông màu';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'Mở đầu';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'Kết thúc';
+
+  @override
+  String get videoEditorEffectShapeFadeColor => 'Màu chuyển, từ đen sang trắng';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'Độ mềm của viền';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'Số thanh';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'Số nếp gấp';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'Độ mờ';
+
+  @override
+  String get videoEditorEffectFadeIn => 'Hiện dần';
+
+  @override
+  String get videoEditorEffectFadeOut => 'Mờ dần';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'Mở vòng tròn';
+
+  @override
+  String get videoEditorEffectCircleClose => 'Đóng vòng tròn';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'Mở điện ảnh';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'Đóng điện ảnh';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'Mở rèm';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'Đóng rèm';
+
+  @override
+  String get videoEditorEffectFocusIn => 'Lấy nét';
+
+  @override
+  String get videoEditorEffectFocusOut => 'Mất nét';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'Tự nhiên';
 
   @override

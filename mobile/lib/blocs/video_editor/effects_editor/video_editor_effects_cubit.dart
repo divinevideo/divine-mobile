@@ -41,6 +41,11 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   /// The intensity an effect starts at when it is first picked.
   static const double defaultIntensity = 0.7;
 
+  /// The intensity a newly picked effect of [type] starts at: an intro or
+  /// outro's look's own (see [IntroOutroLook.startingIntensity]).
+  static double startingIntensityOf(EditorEffectType type) =>
+      type.introOutroLook?.startingIntensity ?? defaultIntensity;
+
   final String Function() _createId;
   final int Function() _createSeed;
   final VideoEditorBeatResolver _beatResolver;
@@ -80,6 +85,7 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
           ),
           videoEnd: videoEnd,
         ),
+        timelineEnd: timelineMap.outputToEditor(videoEnd),
       ),
     );
     unawaited(_refreshBeats());
@@ -112,9 +118,21 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
 
   /// Picks [type].
   ///
-  /// Switching to another effect keeps the intensity the user dialed in.
+  /// Switching to another effect keeps the intensity the user dialed in,
+  /// unless its intensity means something else: an intro or outro's changes
+  /// the structure of its look, so it is kept only between the intro and the
+  /// outro of the same look. Otherwise, as for the first pick, it starts at
+  /// [startingIntensityOf] the new type.
   void selectType(EditorEffectType type) {
-    emit(state.copyWith(selectedType: type));
+    final previous = state.selectedType;
+    final keepsIntensity =
+        previous != null && previous.introOutroLook == type.introOutroLook;
+    emit(
+      state.copyWith(
+        selectedType: type,
+        intensity: keepsIntensity ? null : startingIntensityOf(type),
+      ),
+    );
     unawaited(_refreshBeats());
   }
 
@@ -154,15 +172,24 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
 
   /// Closes the editor and returns the effects to commit to the history.
   ///
-  /// A new effect is added over the whole video; an edited one keeps its
-  /// window and place in the list. A new effect with nothing picked adds
-  /// nothing, and an edited one dialed down to no intensity is removed. A
+  /// A new effect is added over the whole video, an intro at the start of it
+  /// and an outro at its end (see [defaultVideoEffectWindow]); an edited one
+  /// keeps its place in the list, and its window while it stays the same kind
+  /// of effect. An effect turned into an intro, an outro or one over the
+  /// whole video is placed as a new one of that kind would be. A new effect
+  /// with nothing picked adds
+  /// nothing, and an edited one dialed down to no intensity is removed,
+  /// except an intro or outro, whose intensity shapes its look. A
   /// flashing effect replaces other flashing effects in its window (see
   /// [withoutFlashingOverlaps]); `replacedFlashing` says so, for the UI to
   /// explain.
   ({List<EditorVideoEffect> effects, bool replacedFlashing}) confirm() {
     final selection = state.selection;
-    final picked = selection != null && selection.intensity > 0
+    // An intro or outro's intensity is the structure of its look, so it
+    // stays at any value.
+    final picked =
+        selection != null &&
+            (selection.intensity > 0 || selection.type.isIntroOutro)
         ? selection
         : null;
     var effects = <EditorVideoEffect>[];
@@ -174,13 +201,14 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
       }
       committedId = entry.id;
       if (picked == null) continue;
+      final keepsWindow = entry.type.placement == picked.type.placement;
       effects.add(
         EditorVideoEffect.of(
           id: entry.id,
           type: picked.type,
           intensity: picked.intensity,
-          startTime: entry.startTime,
-          endTime: entry.endTime,
+          startTime: keepsWindow ? entry.startTime : picked.startTime,
+          endTime: keepsWindow ? entry.endTime : picked.endTime,
           onBeat: picked.onBeat,
           settings: state.settingsFor(picked.type),
         ),

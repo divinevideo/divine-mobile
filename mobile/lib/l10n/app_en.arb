@@ -7105,6 +7105,74 @@
   "@videoEditorEffectCategoryLooks": {
     "description": "Name of a group in the video effects picker: colour-graded looks that change the colours of the picture the way a film stock or a colourist would, such as Teal & Orange or Warm Film."
   },
+  "videoEditorEffectCategoryIntro": "Intro",
+  "@videoEditorEffectCategoryIntro": {
+    "description": "Name of a group in the video effects picker: intros, effects that reveal the picture at the start of the video, such as a fade in from black or curtains opening."
+  },
+  "videoEditorEffectCategoryOutro": "Outro",
+  "@videoEditorEffectCategoryOutro": {
+    "description": "Name of a group in the video effects picker: outros, effects that cover the picture at the end of the video, such as a fade out to black or curtains closing."
+  },
+  "videoEditorEffectShapeFadeColor": "Fade color, black to white",
+  "@videoEditorEffectShapeFadeColor": {
+    "description": "Screen reader label of the slider while a fade intro or outro is picked: it sets the colour the picture fades from or to, black at the bottom of the slider, grey in between, white at the top."
+  },
+  "videoEditorEffectShapeCircleSoftness": "Edge softness",
+  "@videoEditorEffectShapeCircleSoftness": {
+    "description": "Screen reader label of the slider while a circle intro or outro is picked: it sets how soft the edge of the opening or closing circle is."
+  },
+  "videoEditorEffectShapeCinemaBars": "Number of bars",
+  "@videoEditorEffectShapeCinemaBars": {
+    "description": "Screen reader label of the slider while a cinema-bars intro or outro is picked: it sets how many black bars close over the picture, from the classic top and bottom bars to many like a blind."
+  },
+  "videoEditorEffectShapeCurtainFolds": "Number of folds",
+  "@videoEditorEffectShapeCurtainFolds": {
+    "description": "Screen reader label of the slider while a curtain intro or outro is picked: it sets how many folds the stage curtains have, from a few broad ones to many fine ones."
+  },
+  "videoEditorEffectShapeFocusBlur": "Blur strength",
+  "@videoEditorEffectShapeFocusBlur": {
+    "description": "Screen reader label of the slider while a focus intro or outro is picked: it sets how blurred the picture gets."
+  },
+  "videoEditorEffectFadeIn": "Fade In",
+  "@videoEditorEffectFadeIn": {
+    "description": "Name of an intro effect in the video effects picker: the picture fades up from black at the start of the video."
+  },
+  "videoEditorEffectFadeOut": "Fade Out",
+  "@videoEditorEffectFadeOut": {
+    "description": "Name of an outro effect in the video effects picker: the picture fades down to black at the end of the video."
+  },
+  "videoEditorEffectCircleOpen": "Circle Open",
+  "@videoEditorEffectCircleOpen": {
+    "description": "Name of an intro effect in the video effects picker: a circle grows from the middle of a black screen until the whole picture shows, like an iris opening."
+  },
+  "videoEditorEffectCircleClose": "Circle Close",
+  "@videoEditorEffectCircleClose": {
+    "description": "Name of an outro effect in the video effects picker: black closes in on the picture as a shrinking circle until the screen is black, like an iris closing."
+  },
+  "videoEditorEffectCinemaOpen": "Cinema Open",
+  "@videoEditorEffectCinemaOpen": {
+    "description": "Name of an intro effect in the video effects picker: black bars at the top and bottom of the screen draw apart from the middle, like the opening of a film."
+  },
+  "videoEditorEffectCinemaClose": "Cinema Close",
+  "@videoEditorEffectCinemaClose": {
+    "description": "Name of an outro effect in the video effects picker: black bars slide in from the top and bottom of the screen until they meet in the middle."
+  },
+  "videoEditorEffectCurtainOpen": "Curtain Open",
+  "@videoEditorEffectCurtainOpen": {
+    "description": "Name of an intro effect in the video effects picker: red stage curtains part to the sides to reveal the picture."
+  },
+  "videoEditorEffectCurtainClose": "Curtain Close",
+  "@videoEditorEffectCurtainClose": {
+    "description": "Name of an outro effect in the video effects picker: red stage curtains draw in from the sides until they cover the picture."
+  },
+  "videoEditorEffectFocusIn": "Focus In",
+  "@videoEditorEffectFocusIn": {
+    "description": "Name of an intro effect in the video effects picker: the picture starts heavily blurred and comes into focus."
+  },
+  "videoEditorEffectFocusOut": "Focus Out",
+  "@videoEditorEffectFocusOut": {
+    "description": "Name of an outro effect in the video effects picker: the picture goes out of focus and blurs away at the end of the video."
+  },
   "videoEditorFilterCategoryNatural": "Natural",
   "@videoEditorFilterCategoryNatural": {
     "description": "Name of a group in the colour filter picker of the video editor: filters that lift the picture subtly and keep its colours true to life."

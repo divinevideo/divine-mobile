@@ -9578,6 +9578,58 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'إطلالات';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'مقدمة';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'خاتمة';
+
+  @override
+  String get videoEditorEffectShapeFadeColor =>
+      'لون التلاشي، من الأسود إلى الأبيض';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'نعومة الحافة';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'عدد الأشرطة';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'عدد الطيات';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'قوة التمويه';
+
+  @override
+  String get videoEditorEffectFadeIn => 'ظهور تدريجي';
+
+  @override
+  String get videoEditorEffectFadeOut => 'اختفاء تدريجي';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'فتح دائري';
+
+  @override
+  String get videoEditorEffectCircleClose => 'إغلاق دائري';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'فتح سينمائي';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'إغلاق سينمائي';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'فتح الستارة';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'إغلاق الستارة';
+
+  @override
+  String get videoEditorEffectFocusIn => 'وضوح تدريجي';
+
+  @override
+  String get videoEditorEffectFocusOut => 'تمويه تدريجي';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'طبيعي';
 
   @override

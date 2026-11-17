@@ -9098,6 +9098,57 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectCategoryLooks => 'ルック';
 
   @override
+  String get videoEditorEffectCategoryIntro => 'イントロ';
+
+  @override
+  String get videoEditorEffectCategoryOutro => 'アウトロ';
+
+  @override
+  String get videoEditorEffectShapeFadeColor => 'フェードの色（黒から白）';
+
+  @override
+  String get videoEditorEffectShapeCircleSoftness => 'エッジのやわらかさ';
+
+  @override
+  String get videoEditorEffectShapeCinemaBars => 'バーの数';
+
+  @override
+  String get videoEditorEffectShapeCurtainFolds => 'ひだの数';
+
+  @override
+  String get videoEditorEffectShapeFocusBlur => 'ぼかしの強さ';
+
+  @override
+  String get videoEditorEffectFadeIn => 'フェードイン';
+
+  @override
+  String get videoEditorEffectFadeOut => 'フェードアウト';
+
+  @override
+  String get videoEditorEffectCircleOpen => 'サークルオープン';
+
+  @override
+  String get videoEditorEffectCircleClose => 'サークルクローズ';
+
+  @override
+  String get videoEditorEffectCinemaOpen => 'シネマオープン';
+
+  @override
+  String get videoEditorEffectCinemaClose => 'シネマクローズ';
+
+  @override
+  String get videoEditorEffectCurtainOpen => 'カーテンオープン';
+
+  @override
+  String get videoEditorEffectCurtainClose => 'カーテンクローズ';
+
+  @override
+  String get videoEditorEffectFocusIn => 'フォーカスイン';
+
+  @override
+  String get videoEditorEffectFocusOut => 'フォーカスアウト';
+
+  @override
   String get videoEditorFilterCategoryNatural => 'ナチュラル';
 
   @override

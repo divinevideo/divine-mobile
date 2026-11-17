@@ -626,5 +626,255 @@ void main() {
         await cubit.close();
       });
     });
+
+    group('intros and outros', () {
+      const videoEnd = Duration(seconds: 6);
+      const editorState = VideoEditorEffectsState(timelineEnd: videoEnd);
+
+      VideoEditorEffectsCubit editing({
+        List<EditorVideoEffect> applied = const [],
+        String? effectId,
+      }) {
+        final cubit = VideoEditorEffectsCubit(createId: () => 'new')
+          ..emit(editorState.copyWith(applied: applied))
+          ..startEditing(effectId: effectId);
+        addTearDown(cubit.close);
+        return cubit;
+      }
+
+      EditorVideoEffect introOutro(
+        String id,
+        EditorEffectType type, {
+        double? intensity,
+        Duration? startTime,
+        Duration? endTime,
+      }) => EditorVideoEffect.of(
+        id: id,
+        type: type,
+        intensity: intensity ?? type.introOutroLook!.startingIntensity,
+        startTime: startTime,
+        endTime: endTime,
+      );
+
+      test('learns where the video ends from its clips', () {
+        final cubit = buildCubit()
+          ..syncBeatSource(
+            sounds: const [],
+            clips: [
+              DivineVideoClip(
+                id: 'clip',
+                video: EditorVideo.file(
+                  '${Directory.systemTemp.path}/clip.mp4',
+                ),
+                duration: const Duration(milliseconds: 4500),
+                recordedAt: DateTime(2026),
+                targetAspectRatio: model.AspectRatio.vertical,
+                originalAspectRatio: 9 / 16,
+              ),
+            ],
+          );
+        addTearDown(cubit.close);
+
+        expect(cubit.state.timelineEnd, const Duration(milliseconds: 4500));
+      });
+
+      test("adds a new intro over the first second, at its look's starting "
+          'structure', () {
+        final cubit = editing()..selectType(EditorEffectType.introCircle);
+
+        expect(
+          cubit.state.intensity,
+          IntroOutroLook.circle.startingIntensity,
+        );
+        expect(cubit.confirm().effects, [
+          introOutro(
+            'new',
+            EditorEffectType.introCircle,
+            startTime: Duration.zero,
+            endTime: const Duration(seconds: 1),
+          ),
+        ]);
+      });
+
+      test('adds a new outro over the last second, open to the end', () {
+        final cubit = editing(applied: const [vignette])
+          ..selectType(EditorEffectType.outroFade);
+
+        expect(cubit.confirm().effects, [
+          vignette,
+          introOutro(
+            'new',
+            EditorEffectType.outroFade,
+            startTime: const Duration(seconds: 5),
+          ),
+        ]);
+      });
+
+      test('previews a picked intro where it goes, not over the whole '
+          'video', () {
+        final cubit = editing(applied: const [echo])
+          ..selectType(EditorEffectType.introFocus);
+
+        expect(cubit.state.previewCustomEffects, [
+          echo.custom,
+          introOutro(
+            'picked',
+            EditorEffectType.introFocus,
+            startTime: Duration.zero,
+            endTime: const Duration(seconds: 1),
+          ).custom,
+        ]);
+      });
+
+      test('keeps the structure switching between the intro and the outro '
+          'of a look, and starts over at any other look or effect', () {
+        final cubit = editing()
+          ..selectType(EditorEffectType.introCurtain)
+          ..setIntensity(0.9)
+          ..selectType(EditorEffectType.outroCurtain);
+        expect(cubit.state.intensity, 0.9);
+
+        cubit.selectType(EditorEffectType.outroFocus);
+        expect(cubit.state.intensity, IntroOutroLook.focus.startingIntensity);
+
+        cubit.selectType(EditorEffectType.snow);
+        expect(cubit.state.intensity, VideoEditorEffectsCubit.defaultIntensity);
+
+        cubit
+          ..setIntensity(0.2)
+          ..selectType(EditorEffectType.outroCinema);
+        expect(cubit.state.intensity, IntroOutroLook.cinema.startingIntensity);
+      });
+
+      test('adds an intro at no intensity, which is a structure of its '
+          'look, and keeps an edited one dialed down to it', () {
+        final added = editing()
+          ..selectType(EditorEffectType.introFade)
+          ..setIntensity(0);
+        expect(added.confirm().effects.single.intensity, 0);
+
+        final edited = editing(
+          applied: [
+            introOutro(
+              'outro',
+              EditorEffectType.outroCircle,
+              intensity: 0.8,
+              startTime: const Duration(seconds: 5),
+            ),
+          ],
+          effectId: 'outro',
+        )..setIntensity(0);
+        expect(edited.confirm().effects, [
+          introOutro(
+            'outro',
+            EditorEffectType.outroCircle,
+            intensity: 0,
+            startTime: const Duration(seconds: 5),
+          ),
+        ]);
+      });
+
+      test('keeps the trimmed window of an intro switched to another '
+          'intro', () {
+        final trimmed = introOutro(
+          'intro',
+          EditorEffectType.introFade,
+          startTime: Duration.zero,
+          endTime: const Duration(milliseconds: 2500),
+        );
+        final cubit = editing(applied: [trimmed], effectId: 'intro')
+          ..selectType(EditorEffectType.introCinema);
+
+        expect(cubit.confirm().effects, [
+          introOutro(
+            'intro',
+            EditorEffectType.introCinema,
+            startTime: Duration.zero,
+            endTime: const Duration(milliseconds: 2500),
+          ),
+        ]);
+      });
+
+      test('moves an intro switched to an outro to the end of the '
+          'video', () {
+        final intro = introOutro(
+          'intro',
+          EditorEffectType.introFade,
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 1),
+        );
+        final cubit = editing(applied: [intro], effectId: 'intro')
+          ..selectType(EditorEffectType.outroFade);
+
+        expect(cubit.confirm().effects, [
+          introOutro(
+            'intro',
+            EditorEffectType.outroFade,
+            startTime: const Duration(seconds: 5),
+          ),
+        ]);
+      });
+
+      test('places an effect over the whole video switched to an intro as '
+          'a new intro, and an intro switched back over the whole video', () {
+        final toIntro = editing(applied: const [echo], effectId: 'echo')
+          ..selectType(EditorEffectType.introCurtain);
+        expect(toIntro.confirm().effects.single.startTime, Duration.zero);
+        expect(
+          toIntro.state.applied.single.endTime,
+          const Duration(seconds: 1),
+        );
+
+        final intro = introOutro(
+          'intro',
+          EditorEffectType.introCurtain,
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 1),
+        );
+        final toWhole = editing(applied: [intro], effectId: 'intro')
+          ..selectType(EditorEffectType.snow);
+        final whole = toWhole.confirm().effects.single;
+        expect(whole.type, EditorEffectType.snow);
+        expect(whole.startTime, isNull);
+        expect(whole.endTime, isNull);
+      });
+
+      group('introOutroPreviewPosition', () {
+        test('is the start of a picked intro while the video plays', () {
+          final cubit = editing()..selectType(EditorEffectType.introFade);
+
+          expect(
+            cubit.state.introOutroPreviewPosition(playing: true),
+            Duration.zero,
+          );
+        });
+
+        test('is a second before a picked outro while the video plays', () {
+          final cubit = editing()..selectType(EditorEffectType.outroFade);
+
+          expect(
+            cubit.state.introOutroPreviewPosition(playing: true),
+            const Duration(seconds: 4),
+          );
+        });
+
+        test('is the middle of its window while the video is paused', () {
+          final cubit = editing()..selectType(EditorEffectType.outroCircle);
+
+          expect(
+            cubit.state.introOutroPreviewPosition(playing: false),
+            const Duration(milliseconds: 5500),
+          );
+        });
+
+        test('is null for an effect over the whole video, or none', () {
+          final cubit = editing();
+          expect(cubit.state.introOutroPreviewPosition(playing: true), isNull);
+
+          cubit.selectType(EditorEffectType.snow);
+          expect(cubit.state.introOutroPreviewPosition(playing: true), isNull);
+        });
+      });
+    });
   });
 }

@@ -69,6 +69,8 @@ void main() {
       EditorEffectCategory.motion: l10n.videoEditorEffectCategoryMotion,
       EditorEffectCategory.particles: l10n.videoEditorEffectCategoryParticles,
       EditorEffectCategory.looks: l10n.videoEditorEffectCategoryLooks,
+      EditorEffectCategory.intro: l10n.videoEditorEffectCategoryIntro,
+      EditorEffectCategory.outro: l10n.videoEditorEffectCategoryOutro,
     };
 
     Finder grid() => find.byType(CustomScrollView);
@@ -452,6 +454,16 @@ void main() {
           l10n.videoEditorEffectTealOrange,
           l10n.videoEditorEffectBleachBypass,
           l10n.videoEditorEffectSilver,
+          l10n.videoEditorEffectFadeIn,
+          l10n.videoEditorEffectFadeOut,
+          l10n.videoEditorEffectCircleOpen,
+          l10n.videoEditorEffectCircleClose,
+          l10n.videoEditorEffectCinemaOpen,
+          l10n.videoEditorEffectCinemaClose,
+          l10n.videoEditorEffectCurtainOpen,
+          l10n.videoEditorEffectCurtainClose,
+          l10n.videoEditorEffectFocusIn,
+          l10n.videoEditorEffectFocusOut,
         ]),
       );
     });
@@ -538,7 +550,59 @@ void main() {
         0.0,
         1.0,
       ]);
+      // One shader draws every intro and outro: halfway covered, at its
+      // look's starting structure, the look told apart by its last value,
+      // which an intro shares with the outro of the same look.
+      for (final type in EditorEffectType.values.where((t) => t.isIntroOutro)) {
+        final look = type.introOutroLook!;
+        final tile = shaderTileOf(type)!;
+        expect(tile.asset, 'shaders/intro_outro.frag', reason: type.name);
+        expect(tile.values, [
+          0.5,
+          look.startingIntensity,
+          look.index.toDouble(),
+          0.0,
+        ], reason: type.name);
+      }
+      expect(
+        introOutroTileValues(
+          EditorEffectType.outroCurtain,
+          amount: 0.8,
+          swing: 0.3,
+        ),
+        [0.8, IntroOutroLook.curtain.startingIntensity, 3.0, 0.3],
+      );
     });
+
+    test('holds a tile where its effect starts, plays it, and holds it '
+        'where it ends', () {
+      expect(introOutroTileProgress(0), 0);
+      expect(introOutroTileProgress(0.1), 0);
+      expect(introOutroTileProgress(0.375), closeTo(0.5, 1e-9));
+      expect(introOutroTileProgress(0.7), 1);
+      expect(introOutroTileProgress(0.99), 1);
+    });
+
+    for (final reduceMotion in [false, true]) {
+      testWidgets(
+        'plays an intro or outro tile over and over unless motion is '
+        'reduced (reduceMotion: $reduceMotion)',
+        (tester) async {
+          await tester.pumpWidget(
+            MediaQuery(
+              data: MediaQueryData(disableAnimations: reduceMotion),
+              child: const IntroOutroTile(
+                path: 'missing.jpg',
+                type: EditorEffectType.outroFade,
+              ),
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 100));
+
+          expect(tester.hasRunningAnimations, !reduceMotion);
+        },
+      );
+    }
 
     testWidgets('marks the picked effect and the shown category as selected '
         'for screen readers, and titles each section', (tester) async {
