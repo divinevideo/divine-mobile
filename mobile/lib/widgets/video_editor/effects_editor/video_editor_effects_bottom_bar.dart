@@ -450,19 +450,16 @@ class _IntroOutroTileState extends State<IntroOutroTile>
         final progress = introOutroTileProgress(_controller.value);
         return _ShaderThumbnail(
           path: widget.path,
-          tile: (
-            asset: _introOutroShader,
-            values: still
-                ? introOutroTileValues(
-                    widget.type,
-                    amount: _introOutroStillAmount,
-                  )
-                : introOutroTileValues(
+          tile: still
+              ? shaderTileOf(widget.type)!
+              : (
+                  asset: _introOutroShader,
+                  values: introOutroTileValues(
                     widget.type,
                     amount: introOutroCoverage(progress, ending: ending),
                     swing: introOutroSwing(progress, ending: ending),
                   ),
-          ),
+                ),
         );
       },
     );
