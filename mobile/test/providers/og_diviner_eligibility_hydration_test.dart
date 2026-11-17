@@ -21,42 +21,45 @@ class _Nostr extends Mock implements NostrClient {}
 void main() {
   const key =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-  for (final firstAnswer in <bool?>[null, true]) {
-    test('mounted eligibility follows hydration from $firstAnswer', () async {
-      final api = _Api();
-      bool? answer = firstAnswer;
-      when(() => api.isAvailable).thenReturn(true);
-      when(() => api.getUserProfile(key)).thenAnswer(
-        (_) async => UserProfileNotPublished(pubkey: key, isOgDiviner: answer),
-      );
-      final db = AppDatabase.test(NativeDatabase.memory());
-      addTearDown(db.close);
-      final http = MockClient((_) => throw StateError('unused'));
-      addTearDown(http.close);
-      final repo = ProfileRepository(
-        nostrClient: _Nostr(),
-        userProfilesDao: db.userProfilesDao,
-        httpClient: http,
-        funnelcakeApiClient: api,
-      );
-      final container = ProviderContainer(
-        overrides: [profileReadRepositoryProvider.overrideWithValue(repo)],
-      );
-      addTearDown(container.dispose);
-      final provider = ogDivinerEligibilityProvider(key);
-      final sub = container.listen(provider, (_, _) {});
-      addTearDown(sub.close);
-      expect(await container.read(provider.future), firstAnswer == true);
-      answer = firstAnswer == null ? true : null;
-      await repo.getUserProfileFromApi(pubkey: key);
-      final repositoryAnswer = await repo.isOgDiviner(key);
-      expect(repositoryAnswer, answer == true);
-      await container.pump();
-      expect(
-        await container.read(provider.future),
-        repositoryAnswer,
-        reason: 'Mounted badge must reflect the hydrated eligibility answer',
-      );
-    });
-  }
+  group('ogDivinerEligibilityProvider hydration', () {
+    for (final firstAnswer in <bool?>[null, true]) {
+      test('mounted eligibility follows hydration from $firstAnswer', () async {
+        final api = _Api();
+        bool? answer = firstAnswer;
+        when(() => api.isAvailable).thenReturn(true);
+        when(() => api.getUserProfile(key)).thenAnswer(
+          (_) async =>
+              UserProfileNotPublished(pubkey: key, isOgDiviner: answer),
+        );
+        final db = AppDatabase.test(NativeDatabase.memory());
+        addTearDown(db.close);
+        final http = MockClient((_) => throw StateError('unused'));
+        addTearDown(http.close);
+        final repo = ProfileRepository(
+          nostrClient: _Nostr(),
+          userProfilesDao: db.userProfilesDao,
+          httpClient: http,
+          funnelcakeApiClient: api,
+        );
+        final container = ProviderContainer(
+          overrides: [profileReadRepositoryProvider.overrideWithValue(repo)],
+        );
+        addTearDown(container.dispose);
+        final provider = ogDivinerEligibilityProvider(key);
+        final sub = container.listen(provider, (_, _) {});
+        addTearDown(sub.close);
+        expect(await container.read(provider.future), firstAnswer == true);
+        answer = firstAnswer == null ? true : null;
+        await repo.getUserProfileFromApi(pubkey: key);
+        final repositoryAnswer = await repo.isOgDiviner(key);
+        expect(repositoryAnswer, answer == true);
+        await container.pump();
+        expect(
+          await container.read(provider.future),
+          repositoryAnswer,
+          reason: 'Mounted badge must reflect the hydrated eligibility answer',
+        );
+      });
+    }
+  });
 }
