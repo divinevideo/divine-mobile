@@ -14,9 +14,10 @@ relay results share the same policy. Other feed filtering remains unchanged.
 ## Global constraints
 
 - Preserve moderation, deduplication, hydration and cursor semantics.
-- Leave PR #11152 and the Funnelcake checkpoint untouched.
+- Leave PR #11152 untouched.
 - No production settings or deployment changes.
-- Treat the original report's cause as unconfirmed.
+- Implement the product choice; do not claim a diagnosis of any individual
+  report.
 
 ## Review focus
 

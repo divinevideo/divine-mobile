@@ -1,6 +1,6 @@
 # New feed repeats
 
-Approved by the maintainer in the active session on November 17, 2026.
+Product decision by the maintainer, November 17, 2026 (PR #11158).
 
 New must show eligible videos newest first by original publication time,
 including watched videos and the viewer's own videos. Returning to New,
@@ -18,12 +18,10 @@ hydration, and cursor pagination.
   chronological feed and allows repeats, as requested by the maintainer.
 
 Other feeds retain seen filtering. Keeping the viewer's own watched videos in
-those feeds is separate work in PR #11152, owned by another agent. This change
-does not inject uploads into unrelated candidate pools or bypass moderation.
+those feeds is separate work in PR #11152. This change does not inject uploads
+into unrelated candidate pools or bypass moderation.
 
-The original report's cause remains unconfirmed. Latest TestFlight is the
-working assumption, not verified installation evidence. This implements an
-explicit product choice without claiming reporter-specific diagnosis.
+This implements a product choice; it does not diagnose any individual report.
 
 ## Verification
 
