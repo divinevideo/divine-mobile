@@ -372,6 +372,62 @@ void main() {
         verify: (bloc) => expect(bloc.state.videos, [_video('2')]),
       );
 
+      // The tombstone lands after the switch, so only the handler's deletion
+      // check can find video 1: the bus names a different id.
+      feedBlocTest(
+        'removes a version the replacement learns about after it binds',
+        build: () => createBloc(removalRepositoryStream: repositories.stream),
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('1'), _video('2')],
+        ),
+        act: (_) async {
+          repositories.add(replacement);
+          await pumpEventQueue();
+          when(() => replacement.isVideoKnownDeleted(any())).thenAnswer(
+            (call) =>
+                (call.positionalArguments.single as VideoEvent).id == '1' * 64,
+          );
+          current.add('9' * 64);
+          await pumpEventQueue();
+        },
+        verify: (bloc) => expect(bloc.state.videos, [_video('2')]),
+      );
+
+      // Video 2 was never on screen, so the switch has nothing to reconcile;
+      // only the late-read filter can keep the refreshed copy out.
+      feedBlocTest(
+        'filters a refresh after the switch through the replacement',
+        build: () => createBloc(removalRepositoryStream: repositories.stream),
+        setUp: () {
+          when(() => replacement.isVideoKnownDeleted(any())).thenAnswer(
+            (call) =>
+                (call.positionalArguments.single as VideoEvent).id == '2' * 64,
+          );
+          when(
+            () => videos.getRecommendedVideos(
+              userPubkey: any(named: 'userPubkey'),
+              until: any(named: 'until'),
+              skipCache: any(named: 'skipCache'),
+              revalidate: any(named: 'revalidate'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(videos: [_video('1'), _video('2')]),
+          );
+        },
+        seed: () => VideoFeedBlocState(
+          status: VideoFeedStatus.success,
+          videos: [_video('3')],
+        ),
+        act: (bloc) async {
+          repositories.add(replacement);
+          await pumpEventQueue();
+          bloc.add(const VideoFeedRefreshRequested());
+          await pumpEventQueue();
+        },
+        verify: (bloc) => expect(bloc.state.videos, [_video('1')]),
+      );
+
       test(
         'close cancels both identity and current-removal subscriptions',
         () async {
