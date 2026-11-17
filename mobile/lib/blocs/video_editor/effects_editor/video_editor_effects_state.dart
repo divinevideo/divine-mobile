@@ -45,6 +45,7 @@ class VideoEditorEffectsState extends Equatable {
     this.editingId,
     this.selectedType,
     this.intensity = VideoEditorEffectsCubit.defaultIntensity,
+    this.leftIntensities = const {},
     this.dropsSettings = const DropsEffectSettings(),
     this.onBeat = false,
     this.startedPlayback = false,
@@ -70,6 +71,12 @@ class VideoEditorEffectsState extends Equatable {
 
   /// The intensity of [selectedType], from 0 to 1.
   final double intensity;
+
+  /// The intensity each kind of effect was left at in the open editor when
+  /// another kind was picked, so coming back to it restores it: an intro or
+  /// outro's by its look, whose structure it sets, and the other effects'
+  /// under `null`, whose strength it sets.
+  final Map<IntroOutroLook?, double> leftIntensities;
 
   /// How the drops look when [selectedType] is [EditorEffectType.drops].
   final DropsEffectSettings dropsSettings;
@@ -218,6 +225,7 @@ class VideoEditorEffectsState extends Equatable {
     EditorEffectType? selectedType,
     bool clearSelectedType = false,
     double? intensity,
+    Map<IntroOutroLook?, double>? leftIntensities,
     DropsEffectSettings? dropsSettings,
     bool? onBeat,
     bool? startedPlayback,
@@ -234,6 +242,7 @@ class VideoEditorEffectsState extends Equatable {
           ? null
           : (selectedType ?? this.selectedType),
       intensity: intensity ?? this.intensity,
+      leftIntensities: leftIntensities ?? this.leftIntensities,
       dropsSettings: dropsSettings ?? this.dropsSettings,
       onBeat: onBeat ?? this.onBeat,
       startedPlayback: startedPlayback ?? this.startedPlayback,
@@ -251,6 +260,7 @@ class VideoEditorEffectsState extends Equatable {
     editingId,
     selectedType,
     intensity,
+    leftIntensities,
     dropsSettings,
     onBeat,
     startedPlayback,

@@ -108,6 +108,7 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
         selectedType: current?.type,
         clearSelectedType: current == null,
         intensity: current?.intensity ?? defaultIntensity,
+        leftIntensities: const {},
         dropsSettings: current?.type == EditorEffectType.drops
             ? DropsEffectSettings.fromParams(current!.custom!.params)
             : const DropsEffectSettings(),
@@ -123,18 +124,28 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   /// Switching to another effect keeps the intensity the user dialed in,
   /// unless its intensity means something else: an intro or outro's changes
   /// the structure of its look, so it is kept only between the intro and the
-  /// outro of the same look. Otherwise, as for the first pick, it starts at
-  /// [startingIntensityOf] the new type.
+  /// outro of the same look. Otherwise the new type gets the intensity its
+  /// kind was left at earlier in this editor (see
+  /// [VideoEditorEffectsState.leftIntensities]), or, as for the first pick,
+  /// starts at [startingIntensityOf] it.
   void selectType(EditorEffectType type) {
     final previous = state.selectedType;
-    final keepsIntensity =
-        previous != null && previous.introOutroLook == type.introOutroLook;
-    emit(
-      state.copyWith(
-        selectedType: type,
-        intensity: keepsIntensity ? null : startingIntensityOf(type),
-      ),
-    );
+    final look = type.introOutroLook;
+    if (previous != null && previous.introOutroLook == look) {
+      emit(state.copyWith(selectedType: type));
+    } else {
+      final left = {
+        ...state.leftIntensities,
+        if (previous != null) previous.introOutroLook: state.intensity,
+      };
+      emit(
+        state.copyWith(
+          selectedType: type,
+          intensity: left[look] ?? startingIntensityOf(type),
+          leftIntensities: Map.unmodifiable(left),
+        ),
+      );
+    }
     unawaited(_refreshBeats());
   }
 

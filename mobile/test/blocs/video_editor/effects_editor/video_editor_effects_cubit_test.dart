@@ -737,7 +737,8 @@ void main() {
       });
 
       test('keeps the structure switching between the intro and the outro '
-          'of a look, and starts over at any other look or effect', () {
+          'of a look, starts any other look or effect fresh, and restores '
+          'what one was left at', () {
         final cubit = editing()
           ..selectType(EditorEffectType.introCurtain)
           ..setIntensity(0.9)
@@ -754,6 +755,32 @@ void main() {
           ..setIntensity(0.2)
           ..selectType(EditorEffectType.outroCinema);
         expect(cubit.state.intensity, IntroOutroLook.cinema.startingIntensity);
+
+        cubit.selectType(const EditorEffectType.builtIn(VideoEffectType.vhs));
+        expect(cubit.state.intensity, 0.2);
+
+        cubit.selectType(EditorEffectType.introCurtain);
+        expect(cubit.state.intensity, 0.9);
+      });
+
+      test('brings an edited intro or outro back to its own structure after '
+          'trying other effects', () {
+        final cubit =
+            editing(
+                applied: [
+                  introOutro(
+                    'outro',
+                    EditorEffectType.outroFade,
+                    intensity: 1,
+                    startTime: const Duration(seconds: 5),
+                  ),
+                ],
+                effectId: 'outro',
+              )
+              ..selectType(EditorEffectType.outroCircle)
+              ..selectType(EditorEffectType.outroFade);
+
+        expect(cubit.state.intensity, 1);
       });
 
       test('adds an intro at no intensity, which is a structure of its '
