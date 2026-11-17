@@ -127,6 +127,56 @@ void main() {
       },
     );
 
+    group('loadPreview', () {
+      final definitions = List.generate(
+        5,
+        (i) => Nip58BadgeDefinition(
+          event: _definition.event,
+          coordinate: '30009:$_issuer:group-$i',
+          dTag: 'group-$i',
+        ),
+      );
+      final holder = '3'.padLeft(64, '0');
+
+      blocTest<ExploreBadgesCubit, ExploreBadgesState>(
+        'a failed preview keeps the badge, reports the failure and frees '
+        'its slot',
+        setUp: () {
+          when(
+            repository.loadPublicDefinitions,
+          ).thenAnswer((_) async => definitions);
+          when(() => repository.loadHolderPreview(any())).thenAnswer((
+            invocation,
+          ) async {
+            final coordinate =
+                invocation.positionalArguments.single as BadgeCoordinate;
+            if (coordinate.identifier != 'group-4') {
+              throw Exception('holder index unavailable');
+            }
+            return [holder];
+          });
+        },
+        build: () => ExploreBadgesCubit(repository: repository),
+        act: (cubit) async {
+          await cubit.load();
+          for (final definition in definitions) {
+            cubit.loadPreview(definition.coordinate);
+          }
+          await pumpEventQueue();
+        },
+        skip: 2,
+        expect: () => [
+          isA<ExploreBadgesState>()
+              .having((s) => s.status, 'status', ExploreBadgesStatus.loaded)
+              .having((s) => s.definitions, 'definitions', hasLength(5))
+              .having((s) => s.previews, 'previews', {
+                definitions.last.coordinate: [holder],
+              }),
+        ],
+        errors: () => List.filled(4, isA<Exception>()),
+      );
+    });
+
     group('load', () {
       blocTest<ExploreBadgesCubit, ExploreBadgesState>(
         'discovers public community definitions',

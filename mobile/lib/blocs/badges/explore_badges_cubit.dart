@@ -49,9 +49,10 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
         ),
       );
     } catch (error, stackTrace) {
+      // Log even a superseded read: its failure is still a relay symptom.
+      addError(error, stackTrace);
       if (isClosed || generation != _generation) return;
       _refreshing = false;
-      addError(error, stackTrace);
       emitIfOpen(
         state.status == ExploreBadgesStatus.loaded
             ? state.copyWith(refreshFailures: state.refreshFailures + 1)
@@ -105,8 +106,9 @@ class ExploreBadgesCubit extends Cubit<ExploreBadgesState>
           }),
         ),
       );
-    } on Exception {
-      // Artwork and community metadata remain usable without indexed people.
+    } catch (error, stackTrace) {
+      // The card stays usable without indexed people; log why it has none.
+      addError(error, stackTrace);
     } finally {
       _activePreviews--;
       _drainPreviews();
