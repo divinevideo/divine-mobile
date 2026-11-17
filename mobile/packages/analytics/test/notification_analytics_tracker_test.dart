@@ -260,5 +260,22 @@ void main() {
       await tracker.campaignConsentChanged(enabled: true);
       expect(sink.events, isEmpty);
     });
+
+    test(
+      'drops the change if the privacy boundary changes while consent loads',
+      () async {
+        final consent = Completer<bool>();
+        tracker = NotificationAnalyticsTracker(
+          sink: sink,
+          collectionAllowed: () => consent.future,
+          privacyBoundary: () => boundary,
+        );
+        final pending = tracker.campaignConsentChanged(enabled: true);
+        boundary = 'another-account-session';
+        consent.complete(true);
+        await pending;
+        expect(sink.events, isEmpty);
+      },
+    );
   });
 }
