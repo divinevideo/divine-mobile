@@ -1,6 +1,8 @@
 // ABOUTME: Explore view — owns the tab bar/controller and delegates tab
 // ABOUTME: configuration to ExploreTabsCubit and content to tab widgets.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +22,7 @@ import 'package:openvine/providers/for_you_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/find_people_routes.dart';
 import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/explore/widgets/explore_feed_content.dart';
@@ -354,6 +357,16 @@ class _ExploreViewState extends ConsumerState<ExploreView>
               ),
             ),
           ),
+          if (ref.watch(isFeatureEnabledProvider(FeatureFlag.findPeople)))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: DivineButton(
+                label: context.l10n.findPeopleTitle,
+                leadingIcon: DivineIconName.userPlus,
+                onPressed: () =>
+                    unawaited(const FindPeopleRouteData().push<void>(context)),
+              ),
+            ),
           // Inner top radius is 2 px larger than the outer shell corners (30)
           // so the tabs container visibly sits inside the nav-rounded shell.
           Expanded(

@@ -1290,6 +1290,47 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Fetches active and archived creators with server-side safety rules.
+  /// [cursor] is opaque; the client never interprets or increments it.
+  Future<FollowSuggestionsPage> getFollowSuggestions({
+    required String pubkey,
+    int limit = 20,
+    String? cursor,
+    String contentSafety = 'default',
+  }) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(pubkey)) {
+      throw ArgumentError.value(pubkey, 'pubkey', 'Expected a full hex key');
+    }
+    final uri = Uri.parse('$_baseUrl/api/users/$pubkey/follow-suggestions')
+        .replace(
+          queryParameters: {
+            'limit': limit.clamp(1, 50).toString(),
+            'content_safety': contentSafety,
+            'cursor': ?cursor,
+          },
+        );
+    try {
+      final response = await _get(uri);
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Failed to load follow suggestions',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+      return FollowSuggestionsPage.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error) {
+      throw FunnelcakeException('Failed to load follow suggestions: $error');
+    }
+  }
+
   /// Searches for user profiles by query string.
   ///
   /// [query] is the search term to look for in profile names, display names,

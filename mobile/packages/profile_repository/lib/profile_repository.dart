@@ -5,6 +5,7 @@ export 'src/blocked_profile_filter.dart';
 export 'src/divine_username_lookup.dart';
 export 'src/divine_username_policy.dart';
 export 'src/exceptions.dart';
+export 'src/find_people_repository.dart';
 export 'src/identity_claim.dart';
 export 'src/identity_claims_repository.dart';
 export 'src/pending_profile_save.dart';

@@ -30,6 +30,7 @@ import 'package:openvine/router/routes/apps_routes.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/challenge_routes.dart';
 import 'package:openvine/router/routes/chat_routes.dart';
+import 'package:openvine/router/routes/find_people_routes.dart';
 import 'package:openvine/router/routes/interactive_sticker_routes.dart';
 import 'package:openvine/router/routes/library_routes.dart';
 import 'package:openvine/router/routes/lists_routes.dart';
@@ -107,6 +108,7 @@ List<RouteBase> appRoutes(Ref ref) => [
   ...announcementRoutes(),
   ...shellRoutes(),
   ...searchRoutes(),
+  ...findPeopleRoutes(),
   ...messagingRoutes(),
   ...chatRoutes(ref),
   ...accountDeletionRecoveryRoutes(),

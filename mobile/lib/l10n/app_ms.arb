@@ -7726,5 +7726,13 @@
   "dmPendingVideoRemove": "Alih keluar",
   "dmPendingVideoSemantics": "Menghantar video, {percent}",
   "dmPendingVideoFailedSemantics": "Video gagal dihantar",
-  "dmVideoOutcomeInChat": "{chat}: {outcome}"
+  "dmVideoOutcomeInChat": "{chat}: {outcome}",
+  "findPeopleTitle": "Cari orang",
+  "findPeopleDescription": "Ikuti pencipta aktif dan arkib Vine yang dipulihkan.",
+  "findPeopleSuggested": "Dicadangkan untuk anda",
+  "findPeopleArchive": "Arkib Vine yang dipulihkan",
+  "findPeopleEmpty": "Tiada lagi cadangan buat masa ini. Cuba cari seseorang.",
+  "findPeopleDismiss": "Abaikan cadangan",
+  "findPeopleLoadMore": "Muat lagi",
+  "findPeopleContinueWatching": "Teruskan menonton"
 }

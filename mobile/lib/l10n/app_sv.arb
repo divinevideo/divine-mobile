@@ -6425,5 +6425,13 @@
   "dmPendingVideoRemove": "Ta bort",
   "dmPendingVideoSemantics": "Skickar video, {percent}",
   "dmPendingVideoFailedSemantics": "Videon kunde inte skickas",
-  "dmVideoOutcomeInChat": "{chat}: {outcome}"
+  "dmVideoOutcomeInChat": "{chat}: {outcome}",
+  "findPeopleTitle": "Hitta personer",
+  "findPeopleDescription": "Följ aktiva kreatörer och återställda Vine-arkiv.",
+  "findPeopleSuggested": "Föreslaget för dig",
+  "findPeopleArchive": "Återställt Vine-arkiv",
+  "findPeopleEmpty": "Inga fler förslag just nu. Prova att söka efter någon.",
+  "findPeopleDismiss": "Dölj förslaget",
+  "findPeopleLoadMore": "Ladda fler",
+  "findPeopleContinueWatching": "Fortsätt titta"
 }

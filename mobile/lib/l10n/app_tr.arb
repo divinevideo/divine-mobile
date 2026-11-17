@@ -6425,5 +6425,13 @@
   "dmPendingVideoRemove": "Kaldır",
   "dmPendingVideoSemantics": "Video gönderiliyor, {percent}",
   "dmPendingVideoFailedSemantics": "Video gönderilemedi",
-  "dmVideoOutcomeInChat": "{chat}: {outcome}"
+  "dmVideoOutcomeInChat": "{chat}: {outcome}",
+  "findPeopleTitle": "Kişileri bul",
+  "findPeopleDescription": "Aktif içerik üreticilerini ve geri yüklenen Vine arşivlerini takip et.",
+  "findPeopleSuggested": "Senin için önerildi",
+  "findPeopleArchive": "Geri yüklenen Vine arşivi",
+  "findPeopleEmpty": "Şimdilik başka öneri yok. Birini aramayı dene.",
+  "findPeopleDismiss": "Öneriyi gizle",
+  "findPeopleLoadMore": "Daha fazla yükle",
+  "findPeopleContinueWatching": "İzlemeye devam et"
 }

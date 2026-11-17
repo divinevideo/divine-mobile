@@ -6425,5 +6425,13 @@
   "dmPendingVideoRemove": "Retirer",
   "dmPendingVideoSemantics": "Envoi de la vidéo, {percent}",
   "dmPendingVideoFailedSemantics": "La vidéo n’a pas pu être envoyée",
-  "dmVideoOutcomeInChat": "{chat} : {outcome}"
+  "dmVideoOutcomeInChat": "{chat} : {outcome}",
+  "findPeopleTitle": "Trouver des personnes",
+  "findPeopleDescription": "Suis des créateurs actifs et des archives Vine restaurées.",
+  "findPeopleSuggested": "Suggestion pour toi",
+  "findPeopleArchive": "Archive Vine restaurée",
+  "findPeopleEmpty": "Plus de suggestions pour le moment. Essaie de rechercher quelqu’un.",
+  "findPeopleDismiss": "Masquer la suggestion",
+  "findPeopleLoadMore": "Afficher plus",
+  "findPeopleContinueWatching": "Continuer à regarder"
 }

@@ -16462,4 +16462,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String dmVideoOutcomeInChat(String chat, String outcome) {
     return '$chat: $outcome';
   }
+
+  @override
+  String get findPeopleTitle => 'Find people';
+
+  @override
+  String get findPeopleDescription =>
+      'Follow active creators and restored Vine archives.';
+
+  @override
+  String get findPeopleSuggested => 'Suggested for you';
+
+  @override
+  String get findPeopleArchive => 'Restored Vine archive';
+
+  @override
+  String get findPeopleEmpty =>
+      'No more suggestions right now. Try searching for someone.';
+
+  @override
+  String get findPeopleDismiss => 'Dismiss suggestion';
+
+  @override
+  String get findPeopleLoadMore => 'Load more';
+
+  @override
+  String get findPeopleContinueWatching => 'Keep watching';
 }

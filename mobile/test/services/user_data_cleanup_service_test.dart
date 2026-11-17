@@ -72,6 +72,27 @@ void main() {
       service = UserDataCleanupService(prefs);
     });
 
+    test(
+      'account removal clears only its own people suggestion dismissals',
+      () async {
+        final removed = 'a' * 64;
+        final kept = 'b' * 64;
+        await prefs.setStringList('find_people_dismissed_v1:$removed', [
+          'c' * 64,
+        ]);
+        await prefs.setStringList('find_people_dismissed_v1:$kept', ['d' * 64]);
+        await service.deleteAccountData(
+          removed,
+          userNpub: NostrKeyUtils.encodePubKey(removed),
+          preserveActiveSession: true,
+        );
+        expect(prefs.containsKey('find_people_dismissed_v1:$removed'), isFalse);
+        expect(prefs.getStringList('find_people_dismissed_v1:$kept'), [
+          'd' * 64,
+        ]);
+      },
+    );
+
     group('unbound account projections', () {
       const choices = <String, Object>{
         'content_filter/spoiler': 'hide',

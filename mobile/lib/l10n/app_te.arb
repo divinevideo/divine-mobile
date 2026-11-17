@@ -9349,5 +9349,13 @@
   "dmPendingVideoRemove": "తొలగించు",
   "dmPendingVideoSemantics": "వీడియో పంపుతోంది, {percent}",
   "dmPendingVideoFailedSemantics": "వీడియో పంపడం విఫలమైంది",
-  "dmVideoOutcomeInChat": "{chat}: {outcome}"
+  "dmVideoOutcomeInChat": "{chat}: {outcome}",
+  "findPeopleTitle": "వ్యక్తులను కనుగొనండి",
+  "findPeopleDescription": "చురుకైన సృష్టికర్తలను, పునరుద్ధరించిన Vine ఆర్కైవ్‌లను అనుసరించండి.",
+  "findPeopleSuggested": "మీ కోసం సూచించబడింది",
+  "findPeopleArchive": "పునరుద్ధరించిన Vine ఆర్కైవ్",
+  "findPeopleEmpty": "ప్రస్తుతానికి మరిన్ని సూచనలు లేవు. ఎవరినైనా వెతకండి.",
+  "findPeopleDismiss": "సూచనను తీసివేయండి",
+  "findPeopleLoadMore": "మరిన్ని లోడ్ చేయండి",
+  "findPeopleContinueWatching": "చూడటం కొనసాగించండి"
 }

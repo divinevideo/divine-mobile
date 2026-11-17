@@ -6478,5 +6478,13 @@
   "dmPendingVideoRemove": "ማስወገድ",
   "dmPendingVideoSemantics": "ቪዲዮ በመላክ ላይ፣ {percent}",
   "dmPendingVideoFailedSemantics": "ቪዲዮው አልተላከም",
-  "dmVideoOutcomeInChat": "{chat}፦ {outcome}"
+  "dmVideoOutcomeInChat": "{chat}፦ {outcome}",
+  "findPeopleTitle": "ሰዎችን ፈልግ",
+  "findPeopleDescription": "ንቁ ፈጣሪዎችን እና የተመለሱ የVine ማህደሮችን ተከተል።",
+  "findPeopleSuggested": "ለእርስዎ የተጠቆመ",
+  "findPeopleArchive": "የተመለሰ የVine ማህደር",
+  "findPeopleEmpty": "አሁን ተጨማሪ ጥቆማዎች የሉም። አንድ ሰው ለመፈለግ ይሞክሩ።",
+  "findPeopleDismiss": "ጥቆማውን አስወግድ",
+  "findPeopleLoadMore": "ተጨማሪ ጫን",
+  "findPeopleContinueWatching": "መመልከትዎን ይቀጥሉ"
 }

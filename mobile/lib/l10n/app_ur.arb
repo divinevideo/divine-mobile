@@ -7726,5 +7726,13 @@
   "dmPendingVideoRemove": "ہٹائیں",
   "dmPendingVideoSemantics": "ویڈیو بھیجی جا رہی ہے، {percent}",
   "dmPendingVideoFailedSemantics": "ویڈیو نہیں بھیجی جا سکی",
-  "dmVideoOutcomeInChat": "{chat}: {outcome}"
+  "dmVideoOutcomeInChat": "{chat}: {outcome}",
+  "findPeopleTitle": "لوگوں کو تلاش کریں",
+  "findPeopleDescription": "فعال تخلیق کاروں اور بحال شدہ Vine آرکائیوز کو فالو کریں۔",
+  "findPeopleSuggested": "آپ کے لیے تجویز کردہ",
+  "findPeopleArchive": "بحال شدہ Vine آرکائیو",
+  "findPeopleEmpty": "فی الحال مزید تجاویز نہیں ہیں۔ کسی کو تلاش کر کے دیکھیں۔",
+  "findPeopleDismiss": "تجویز ہٹائیں",
+  "findPeopleLoadMore": "مزید لوڈ کریں",
+  "findPeopleContinueWatching": "دیکھنا جاری رکھیں"
 }

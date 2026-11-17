@@ -7726,5 +7726,13 @@
   "dmPendingVideoRemove": "Gỡ bỏ",
   "dmPendingVideoSemantics": "Đang gửi video, {percent}",
   "dmPendingVideoFailedSemantics": "Không gửi được video",
-  "dmVideoOutcomeInChat": "{chat}: {outcome}"
+  "dmVideoOutcomeInChat": "{chat}: {outcome}",
+  "findPeopleTitle": "Tìm người",
+  "findPeopleDescription": "Theo dõi các nhà sáng tạo đang hoạt động và kho Vine được khôi phục.",
+  "findPeopleSuggested": "Gợi ý cho bạn",
+  "findPeopleArchive": "Kho Vine được khôi phục",
+  "findPeopleEmpty": "Hiện chưa có thêm gợi ý. Hãy thử tìm kiếm ai đó.",
+  "findPeopleDismiss": "Ẩn gợi ý",
+  "findPeopleLoadMore": "Tải thêm",
+  "findPeopleContinueWatching": "Tiếp tục xem"
 }
