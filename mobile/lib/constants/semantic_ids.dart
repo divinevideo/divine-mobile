@@ -52,10 +52,11 @@ abstract class SemanticIds {
   /// Capture-mode control rail, top to bottom. Flash, aspect ratio and the
   /// lens switch are unconditional, so every mode that renders the rail drives
   /// them with the same three E2E utils. Timer, stabilization and the color
-  /// mask are rendered only by the modes that declare them — capture, which
-  /// drives the first five with `driveCaptureRail`. The color mask also needs
-  /// a renderer that keys the viewfinder live, and hides stabilization while
-  /// it is on.
+  /// mask are rendered only by the modes that declare them: capture renders
+  /// all three, stop-motion the timer. Capture drives the first five with
+  /// `driveCaptureRail`. The color mask also needs a renderer that keys the
+  /// viewfinder live, and hides stabilization and the ghost frame while it is
+  /// on.
   static const String cameraFlashButton = 'camera_flash_button';
   static const String cameraTimerButton = 'camera_timer_button';
   static const String cameraAspectRatioButton = 'camera_aspect_ratio_button';
