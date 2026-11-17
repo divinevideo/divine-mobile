@@ -141,22 +141,30 @@ NotificationKind? notificationKindFromPushType(String? type) {
   }
 }
 
-/// Returns the allowlisted in-app route of an `app_route` campaign target, or
-/// null otherwise.
+/// Returns a safe in-app route for a campaign target, or null when unsupported.
+///
+/// Announcement ids are catalog UUIDs. Featured-feed ids are Funnelcake
+/// featured-tab ids, the only shape that can match a featured tab's id.
 String? campaignAppRoute({required String? type, required String? value}) {
-  if ((type == NotificationWireValues.announcement ||
-          type == NotificationWireValues.featuredFeed) &&
-      value != null &&
-      RegExp(
-        r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
-      ).hasMatch(value)) {
-    return type == NotificationWireValues.announcement
-        ? RoutePaths.announcementDetailForId(value)
-        : RoutePaths.exploreFeaturedCampaign(value);
+  if (value == null) return null;
+  if (type == NotificationWireValues.announcement &&
+      _announcementId.hasMatch(value)) {
+    return RoutePaths.announcementDetailForId(value);
+  }
+  if (type == NotificationWireValues.featuredFeed &&
+      _featuredFeedId.hasMatch(value)) {
+    return RoutePaths.exploreFeaturedCampaign(value);
   }
   if (type != NotificationWireValues.appRoute) return null;
   return value == RoutePaths.followingNew ? value : null;
 }
+
+final _announcementId = RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+);
+
+/// Funnelcake issues and accepts featured-tab ids only in this shape.
+final _featuredFeedId = RegExp(r'^ft_[a-z0-9]{8}$');
 
 final _campaignVideoCoordinate = RegExp(
   '^${NIP71VideoKinds.addressableShortVideo}:[0-9a-f]{64}:.+\$',

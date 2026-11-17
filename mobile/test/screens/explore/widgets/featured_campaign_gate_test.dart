@@ -7,7 +7,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/explore/widgets/featured_campaign_gate.dart';
 
 void main() {
-  const id = '12345678-1234-4234-8234-123456789abc';
+  const id = 'ft_a1b2c3d4';
   final l10n = lookupAppLocalizations(const Locale('en'));
   FeaturedTabConfig tab(String id) => FeaturedTabConfig(
     id: id,

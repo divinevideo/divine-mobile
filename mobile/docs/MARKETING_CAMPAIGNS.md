@@ -12,7 +12,9 @@ nonempty d-tag (`video_address`), and a 64-character lowercase hex creator pubke
 (`creator_profile`). Registration advertises
 `NotificationWireValues.campaignTargetTypes`, and a test checks that every type
 in that list routes a valid value.
-Announcement and featured-feed targets carry their exact catalog UUID.
+Announcement targets carry the announcement's catalog UUID. Featured-feed
+targets carry the Funnelcake featured-tab id (`ft_` followed by eight lowercase
+letters or digits).
 Announcements resolve through the trusted catalog. Featured feeds preserve the
 requested identity through repository selection and caching, and show an
 unavailable state when the feed is ineligible or withdrawn.
