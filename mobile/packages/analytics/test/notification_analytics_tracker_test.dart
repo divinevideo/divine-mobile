@@ -34,13 +34,15 @@ void main() {
   late bool allowed;
   late String boundary;
 
-  test('campaign opt-out measurement honors analytics consent', () async {
-    await tracker.campaignConsentChanged(enabled: false);
-    expect(sink.events.single.name, 'campaign_consent_changed');
-    expect(sink.events.single.parameters, {'enabled': 0});
-    allowed = false;
-    await tracker.campaignConsentChanged(enabled: true);
-    expect(sink.events.length, 1);
+  group('campaignConsentChanged', () {
+    test('campaign opt-out measurement honors analytics consent', () async {
+      await tracker.campaignConsentChanged(enabled: false);
+      expect(sink.events.single.name, 'campaign_consent_changed');
+      expect(sink.events.single.parameters, {'enabled': 0});
+      allowed = false;
+      await tracker.campaignConsentChanged(enabled: true);
+      expect(sink.events.length, 1);
+    });
   });
 
   setUp(() {
