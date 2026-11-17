@@ -193,7 +193,8 @@ abstract final class RoutePaths {
   /// The featured Explore tab bound to the campaign feed [feedId], which shows
   /// that feed or an unavailable state and never another featured feed.
   ///
-  /// `featured` is the tab's URL slug, `exploreFeaturedTabName`.
+  /// `featured` is the internal tab name, not a server slug; Explore ignores
+  /// that segment while `campaignFeedId` is set.
   static String exploreFeaturedCampaign(String feedId) => Uri(
     path: '$explore/tab/featured',
     queryParameters: {ExploreQueryParameters.campaignFeedId: feedId},

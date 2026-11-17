@@ -8,8 +8,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/featured_tabs/featured_tabs_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 
-/// Shows [child] only while [feedId] is the resolved, enabled, in-window tab:
-/// a spinner before the first answer, and an unavailable message otherwise.
+/// Shows [child] only while [feedId] is the resolved tab and is enabled, has
+/// content and is inside its window; a spinner while a fetch is in flight with
+/// no tab held, and an unavailable message otherwise.
 class FeaturedCampaignGate extends StatefulWidget {
   const FeaturedCampaignGate({
     required this.feedId,
