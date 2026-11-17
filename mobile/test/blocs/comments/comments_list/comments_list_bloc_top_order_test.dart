@@ -203,6 +203,33 @@ void main() {
       );
 
       blocTest<CommentsListBloc, CommentsListState>(
+        'puts a live reply on top of its thread, under its parent',
+        build: createBloc,
+        seed: () => loaded([oldest, middle]),
+        act: (bloc) async {
+          bloc.add(frozenWith({middle.id: 1}));
+          await pumpEventQueue();
+          bloc.add(
+            NewCommentsBatchReceived([
+              comment('4', 4).copyWith(
+                replyToEventId: oldest.id,
+                replyToAuthorPubkey: oldest.authorPubkey,
+              ),
+            ]),
+          );
+        },
+        verify: (bloc) => expect(
+          [
+            for (final node in bloc.state.displayCommentsWith(
+              upvoteCounts: {middle.id: 1},
+            ))
+              (node.comment.id, node.depth),
+          ],
+          [(middle.id, 0), (oldest.id, 0), ('4' * 64, 1)],
+        ),
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
         'ranks comments the relay backfill brings below the placed rows',
         build: createBloc,
         seed: () => loaded([middle, newest], isBackfillComplete: false),

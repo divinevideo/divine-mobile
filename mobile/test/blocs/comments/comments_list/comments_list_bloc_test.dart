@@ -1155,6 +1155,61 @@ void main() {
         expect(threaded.first.comment.id, validId('c2'));
       });
 
+      test('Top ranks threads by their top-level comment and nests replies '
+          'under their parent', () {
+        final parent = makeComment(validId('p1'));
+        final popularReply = makeComment(
+          validId('r1'),
+          replyToEventId: parent.id,
+          replyToAuthorPubkey: parent.authorPubkey,
+        );
+        final other = makeComment(validId('o1'));
+        final state = CommentsListState(
+          commentsById: {
+            parent.id: parent,
+            popularReply.id: popularReply,
+            other.id: other,
+          },
+        );
+        final threaded = state.displayCommentsWith(
+          upvoteCounts: {parent.id: 1, popularReply.id: 10, other.id: 5},
+        );
+        expect(
+          [for (final node in threaded) (node.comment.id, node.depth)],
+          [(other.id, 0), (parent.id, 0), (popularReply.id, 1)],
+        );
+      });
+
+      test('Top ranks the replies to a comment by net votes', () {
+        final parent = makeComment(validId('p1'));
+        final newerReply = makeComment(
+          validId('r1'),
+          createdAt: DateTime.fromMillisecondsSinceEpoch(2000),
+          replyToEventId: parent.id,
+          replyToAuthorPubkey: parent.authorPubkey,
+        );
+        final upvotedReply = makeComment(
+          validId('r2'),
+          createdAt: DateTime.fromMillisecondsSinceEpoch(1000),
+          replyToEventId: parent.id,
+          replyToAuthorPubkey: parent.authorPubkey,
+        );
+        final state = CommentsListState(
+          commentsById: {
+            parent.id: parent,
+            newerReply.id: newerReply,
+            upvotedReply.id: upvotedReply,
+          },
+        );
+        final threaded = state.displayCommentsWith(
+          upvoteCounts: {upvotedReply.id: 3},
+        );
+        expect(
+          [for (final node in threaded) node.comment.id],
+          [parent.id, upvotedReply.id, newerReply.id],
+        );
+      });
+
       test('threads replies under parents', () {
         final parent = makeComment(validId('p1'), createdAt: DateTime.now());
         final reply = makeComment(
