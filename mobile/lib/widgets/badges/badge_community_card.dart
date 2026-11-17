@@ -57,7 +57,8 @@ class BadgeCommunityCard extends ConsumerWidget {
     ].whereType<String>().where(isUsableNetworkImageUrl).firstOrNull;
     final fallback = _BadgeMonogram(name: name);
     return Semantics(
-      label: name,
+      // The issuer goes in the label: Android reads a value before the label.
+      label: '$name, $issuerName',
       hint: definition.description,
       button: true,
       container: true,
