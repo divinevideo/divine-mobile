@@ -37,6 +37,7 @@ import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/models/viewer_auth_result.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/comments/comments_screen.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
@@ -69,6 +70,16 @@ import '../../helpers/test_provider_overrides.dart';
 import '../../test_data/video_test_data.dart';
 
 class _MockDiscoveryVideosRepository extends Mock implements VideosRepository {}
+
+const _classicsViewer =
+    'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+
+/// A signed-in identity, so Classics has a viewer it could send.
+class _KnownViewerSession extends NostrSession {
+  @override
+  NostrSessionReadiness build() =>
+      const NostrSessionReadiness.identityKnown(pubkey: _classicsViewer);
+}
 
 class MockFullscreenFeedBloc
     extends MockBloc<FullscreenFeedEvent, FullscreenFeedState>
@@ -575,6 +586,69 @@ void main() {
               .parameters['feed_type'],
           'classics',
         );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'selected Classics send no viewer while analytics consent is off',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final videos = createTestVideos(count: 2);
+        final viewers = <String?>[];
+        final repository = _MockDiscoveryVideosRepository();
+        when(
+          () => repository.getClassicRecommendations(
+            request: any(named: 'request'),
+            userPubkey: any(named: 'userPubkey'),
+            isCurrent: any(named: 'isCurrent'),
+          ),
+        ).thenAnswer((call) async {
+          viewers.add(call.namedArguments[#userPubkey] as String?);
+          return const HomeFeedResult(videos: [], hasMore: false);
+        });
+        when(
+          () => repository.removedVideoIds,
+        ).thenAnswer((_) => const Stream.empty());
+        when(() => repository.applyContentPreferences(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        final videoService = createMockVideoEventService();
+        when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+        when(() => videoService.filterVideoList(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        await tester.pumpWidget(
+          BlocProvider<VideoVolumeCubit>.value(
+            value: videoVolumeCubit,
+            child: testMaterialApp(
+              mockProfileRepository: mockProfileRepository,
+              mockNip05VerificationService: mockNip05VerificationService,
+              additionalOverrides: [
+                pendingActionServiceProvider.overrideWithValue(null),
+                videosRepositoryProvider.overrideWithValue(repository),
+                videoEventServiceProvider.overrideWithValue(videoService),
+                nostrSessionProvider.overrideWith(_KnownViewerSession.new),
+              ],
+              home: PooledFullscreenVideoFeedScreen(
+                source: ClassicVinesViewSource(anchor: videos.first),
+                feedRepository: StaticFeedRepository(),
+                initialIndex: 0,
+                trafficSource: ViewTrafficSource.discoveryClassic,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(FullscreenFeedContent)),
+        );
+        expect(container.read(nostrSessionProvider).pubkey, _classicsViewer);
+        expect(viewers, isNotEmpty);
+        expect(viewers, everyElement(isNull));
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
       },

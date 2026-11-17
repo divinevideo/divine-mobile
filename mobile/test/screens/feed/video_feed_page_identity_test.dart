@@ -95,6 +95,37 @@ Future<void> _loadRemovalVideos(
   ]);
 }
 
+/// Records each Classics read Home's session sends, with its viewer.
+List<(ClassicRecommendationsRequest, String?)> _stubClassicRecommendations(
+  _VideosRepository videos,
+) {
+  registerFallbackValue(const ClassicRecommendationsRequest(seed: 'fallback'));
+  registerFallbackValue(<VideoEvent>[]);
+  final requests = <(ClassicRecommendationsRequest, String?)>[];
+  when(() => videos.applyContentPreferences(any())).thenAnswer(
+    (call) => call.positionalArguments.single as List<VideoEvent>,
+  );
+  when(
+    () => videos.getClassicRecommendations(
+      request: any(named: 'request'),
+      userPubkey: any(named: 'userPubkey'),
+      isCurrent: any(named: 'isCurrent'),
+    ),
+  ).thenAnswer((call) async {
+    requests.add((
+      call.namedArguments[#request] as ClassicRecommendationsRequest,
+      call.namedArguments[#userPubkey] as String?,
+    ));
+    return HomeFeedResult(
+      videos: [_removalVideo('1'), _removalVideo('2')],
+      paginationCursor: 'next',
+      hasMore: true,
+      recommendationPageCount: 1,
+    );
+  });
+  return requests;
+}
+
 class _StartupPerformance extends Mock implements StartupPerformanceService {}
 
 /// Consents until disposed, as a live service does after initialization.
@@ -344,6 +375,22 @@ void main() {
       },
     );
 
+    testWidgets('Classics sends no viewer while analytics consent is off', (
+      tester,
+    ) async {
+      // The shared fixture never initializes, so consent stays off.
+      final home = await _mountSafetyPolicyHome(tester);
+      final requests = _stubClassicRecommendations(home.videos);
+      home.originalFeed.add(
+        const VideoFeedSourceChanged(VideoFeedSource.classic()),
+      );
+      await tester.runAsync(pumpEventQueue);
+      expect(requests, isNotEmpty);
+      expect(requests.map((request) => request.$2), everyElement(isNull));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.runAsync(pumpEventQueue);
+    });
+
     testWidgets(
       'Classics follows a same-account analytics rebuild without rebuilding '
       'Home',
@@ -359,32 +406,7 @@ void main() {
             }),
           ],
         );
-        registerFallbackValue(
-          const ClassicRecommendationsRequest(seed: 'fallback'),
-        );
-        registerFallbackValue(<VideoEvent>[]);
-        final requests = <(ClassicRecommendationsRequest, String?)>[];
-        when(() => home.videos.applyContentPreferences(any())).thenAnswer(
-          (call) => call.positionalArguments.single as List<VideoEvent>,
-        );
-        when(
-          () => home.videos.getClassicRecommendations(
-            request: any(named: 'request'),
-            userPubkey: any(named: 'userPubkey'),
-            isCurrent: any(named: 'isCurrent'),
-          ),
-        ).thenAnswer((call) async {
-          requests.add((
-            call.namedArguments[#request] as ClassicRecommendationsRequest,
-            call.namedArguments[#userPubkey] as String?,
-          ));
-          return HomeFeedResult(
-            videos: [_removalVideo('1'), _removalVideo('2')],
-            paginationCursor: 'next',
-            hasMore: true,
-            recommendationPageCount: 1,
-          );
-        });
+        final requests = _stubClassicRecommendations(home.videos);
         final retired = analytics;
         final replacement = _ConsentingAnalytics();
         analytics = replacement;
