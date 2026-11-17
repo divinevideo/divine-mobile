@@ -272,7 +272,7 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
     );
   }
 
-  /// Refresh with a new random slice of classic vines.
+  /// Refreshes with a new Classics selection.
   Future<void> refresh() async {
     final generation = ++_feedGeneration;
     final funnelcakeAvailable =
@@ -306,7 +306,7 @@ class ClassicVinesFeed extends _$ClassicVinesFeed {
     );
   }
 
-  /// Load more videos (append next sequential page from current offset)
+  /// Appends the next page from the repository's pagination cursor.
   Future<void> loadMore() async {
     final generation = _feedGeneration;
     if (!state.hasValue || state.value == null) {

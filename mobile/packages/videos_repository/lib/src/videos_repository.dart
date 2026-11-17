@@ -1295,9 +1295,13 @@ class VideosRepository {
 
   /// Reads a ranked, independent Classics session with request-only context.
   ///
-  /// Legacy archive cursors stay on their original source. An unavailable new
-  /// endpoint can fall back on the first page; a failed adaptive continuation
-  /// is retried with its cursor instead of mixing unrelated pagination modes.
+  /// Legacy archive cursors stay on their original source. Any failure of the
+  /// first page falls back to the archive; a failed adaptive continuation is
+  /// retried with its cursor instead of mixing unrelated pagination modes.
+  ///
+  /// Throws:
+  /// - [FunnelcakeException] when [isCurrent] reports the request superseded.
+  /// - [FunnelcakeException] when an adaptive continuation fails.
   Future<HomeFeedResult> getClassicRecommendations({
     required ClassicRecommendationsRequest request,
     String? userPubkey,
@@ -1392,6 +1396,9 @@ class VideosRepository {
   /// Its viewer callback must respect consent.
   /// A refresh rotates the browsing seed; cursor pages retain server order.
   /// Older/disabled servers use the bounded, shuffled archive reader below.
+  ///
+  /// Throws [FunnelcakeException] when the viewer or privacy context changes
+  /// while the page is read, or when an adaptive continuation fails.
   Future<HomeFeedResult> getClassicVideos({
     int limit = _defaultLimit,
     String? cursor,
@@ -1435,7 +1442,8 @@ class VideosRepository {
     return result;
   }
 
-  /// Fetches classic Vine archive videos for the home feed's Classics mode.
+  /// Fetches classic Vine archive videos: the Classics source when adaptive
+  /// recommendations are off, and their fallback when the endpoint fails.
   ///
   /// Reads the same offset-paginated archive as the standalone Explore →
   /// Classics tab — not Explore → Popular's "Classic" toggle, which is

@@ -21,8 +21,8 @@ Both consent and account changes invalidate in-flight results and clear context.
 Private POST bodies are not automatically retried by transport after their owner
 might have changed. Filtered-page top-ups check ownership before continuing.
 
-A missing or disabled endpoint falls back to the existing archive reader on the
-first page. Its cursor then stays on the archive path and per-swipe adaptation is
+Any failure of the first page falls back to the existing archive reader: a
+missing or disabled endpoint, a server error or a timeout. Its cursor then stays on the archive path and per-swipe adaptation is
 disabled for that session. An adaptive continuation failure preserves playback
 and its cursor for retry. Manual refresh starts a new session. Confirmed-invalid
 archive claims are excluded in both paths; an explicitly popular backend response

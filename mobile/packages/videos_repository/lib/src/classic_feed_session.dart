@@ -156,6 +156,8 @@ class ClassicFeedSession {
   }
 
   /// Reads the first page, or resumes the same independent queue.
+  ///
+  /// Never throws: a failed read is logged and resolves to an empty page.
   Future<HomeFeedResult> loadInitial({bool refresh = false}) async {
     if (_disposed) return const HomeFeedResult(videos: [], hasMore: false);
     reapplyFilters();
@@ -178,6 +180,8 @@ class ClassicFeedSession {
   }
 
   /// Appends a page; serializes behind any in-flight tail adaptation.
+  ///
+  /// Never throws: a failed read is logged and resolves to an empty page.
   Future<HomeFeedResult> loadMore() async {
     if (!_started) return loadInitial();
     await settled;
@@ -387,6 +391,7 @@ class ClassicFeedSession {
           'Could not update Classics recommendations: $error',
           name: 'ClassicFeedSession',
           category: LogCategory.video,
+          error: error,
           stackTrace: stackTrace,
         );
       }

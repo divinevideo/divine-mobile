@@ -327,8 +327,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
 
   /// Whether [source] participates in the cross-restart [HomeFeedCache].
   ///
-  /// All four home modes (For You, Following, New, Classics) are served from
-  /// and written to the cache so cold start shows the last feed instantly. The
+  /// For You, Following, New and archive-only Classics are served from and
+  /// written to the cache so cold start shows the last feed instantly.
+  /// Adaptive Classics (a [ClassicFeedSession] is attached) is not: the session
+  /// owns that queue. The
   /// `forYou` staleness concern from #3861 is handled differently now: the
   /// cached feed is positioned at the user's last index and everything past
   /// the active video is replaced with fresh server data on every load
@@ -2211,8 +2213,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   /// [revalidate] bypasses the in-memory cache read only, for session-start
   /// revalidation: it does not reseed For You recommendations and does not
   /// trigger the New feed's pull-to-refresh relay merge. Classics ignores
-  /// it — that source keeps its deliberate 15-minute cache so re-entry
-  /// resumes the same stable opening.
+  /// it: the adaptive session keeps its own queue, and the archive-only path
+  /// keeps its deliberate 15-minute cache so re-entry resumes the same
+  /// opening.
   Future<HomeFeedResult> _fetchVideosForSource(
     VideoFeedSource source, {
     int? until,
@@ -2269,10 +2272,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
               skipCache: skipCache,
               revalidate: revalidate,
             ),
-    // Classics is offset-paginated behind an opaque cursor and has no
-    // time-window pagination, so `until` does not apply. `revalidate` does
-    // not apply either: the source's 15-minute first-page cache exists so
-    // re-entry resumes the same opening, and bypassing it would re-shuffle.
+    // Classics paginates by an opaque cursor, so `until` does not apply.
+    // `revalidate` does not either: the adaptive session keeps its own queue,
+    // and the archive-only path's 15-minute first-page cache exists so
+    // re-entry resumes the same opening.
     VideoFeedSourceType.classic =>
       _classicSession == null
           ? _videosRepository.getClassicVideos(
