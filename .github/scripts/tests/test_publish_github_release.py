@@ -231,45 +231,60 @@ class PublicationTest(unittest.TestCase):
 
 class CommandInputTest(unittest.TestCase):
     def test_release_env_selects_effective_version_and_matching_notes(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            mobile = root / 'mobile'
-            (mobile / 'scripts').mkdir(parents=True)
-            (mobile / 'pubspec.yaml').write_text('version: 1.0.28+820\n')
-            notes = root / 'release-notes'
-            notes.mkdir()
-            (notes / '1.0.28.md').write_text('Old train notes')
-            (notes / '1.2.3.md').write_text('Effective train notes')
-            artifacts = mobile / 'build/app/outputs/apk/release'
-            artifacts.mkdir(parents=True)
-            (artifacts / 'app-arm64-v8a-release.apk').write_bytes(b'original')
-            env = root / 'android_release.env'
-            env.write_text('SHOREBIRD_BUILD_NAME=1.2.3\nSHOREBIRD_BUILD_NUMBER=855\n')
-            gh = FakeGitHub()
-            with patch('sys.argv', ['publisher', '--repo', 'owner/repo',
-                                   '--release-env', str(env), '--channel', 'PRODUCTION']), \
-                 patch.object(release, '__file__', str(mobile / 'scripts/publisher.py')), \
-                 patch.object(release, 'run', return_value=SHA), \
-                 patch.object(release, 'GitHub', return_value=gh), \
-                 contextlib.redirect_stdout(io.StringIO()):
-                release.main()
-            self.assertEqual(gh.calls[0], ('create', '1.2.3', SHA, False))
-            self.assertIn('Effective train notes', gh.record['body'])
-            self.assertNotIn('Old train notes', gh.record['body'])
+        for recovered in (False, True):
+            with self.subTest(recovered=recovered), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                mobile = root / 'mobile'
+                (mobile / 'scripts').mkdir(parents=True)
+                (mobile / 'pubspec.yaml').write_text('version: 1.0.28+820\n')
+                notes = root / 'release-notes'
+                notes.mkdir()
+                (notes / '1.0.28.md').write_text('Old train notes')
+                (notes / '1.2.3.md').write_text('Effective train notes')
+                artifacts = (root / 'downloads' if recovered else
+                             mobile / 'build/app/outputs/apk/release')
+                artifacts.mkdir(parents=True)
+                (artifacts / 'app-arm64-v8a-release.apk').write_bytes(b'original')
+                env = root / 'android_release.env'
+                env.write_text('SHOREBIRD_BUILD_NAME=1.2.3\nSHOREBIRD_BUILD_NUMBER=855\n'
+                               'SHOREBIRD_RELEASE_VERSION=1.2.3+855\nRELEASE_SOURCE_SHA=' + SHA + '\n')
+                gh = FakeGitHub()
+                recovery_args = ['--artifacts-dir', str(artifacts)] if recovered else []
+                with patch('sys.argv', ['publisher', '--repo', 'owner/repo',
+                                       '--release-env', str(env), '--channel', 'PRODUCTION'] + recovery_args), \
+                     patch.object(release, '__file__', str(mobile / 'scripts/publisher.py')), \
+                     patch.object(release, 'run', return_value=SHA), \
+                     patch.object(release, 'GitHub', return_value=gh), \
+                     patch.object(release, 'record_stable_claim') as claim, \
+                     patch.object(release, 'stable_ledger') as ledger, \
+                     contextlib.redirect_stdout(io.StringIO()):
+                    release.main()
+                self.assertEqual(gh.calls[0], ('create', '1.2.3', SHA, False))
+                claim.assert_called_once_with(ledger.return_value, '1.2.3', SHA)
+                self.assertIn('Effective train notes', gh.record['body'])
+                self.assertNotIn('Old train notes', gh.record['body'])
+
 
     def test_invalid_release_env_is_rejected_before_github(self):
-        for content in ('', 'SHOREBIRD_BUILD_NAME=1.2\n',
-                        'SHOREBIRD_BUILD_NAME=1.2.3\nSHOREBIRD_BUILD_NAME=1.2.4\n',
-                        'SHOREBIRD_BUILD_NAME=$(touch unwanted)\n'):
+        valid = ('SHOREBIRD_BUILD_NAME=1.2.3\nSHOREBIRD_BUILD_NUMBER=855\n'
+                 'SHOREBIRD_RELEASE_VERSION=1.2.3+855\nRELEASE_SOURCE_SHA=' + SHA + '\n')
+        for content in ('', valid.replace('BUILD_NAME=1.2.3', 'BUILD_NAME=1.2'),
+                        valid + 'SHOREBIRD_BUILD_NAME=1.2.4\n',
+                        valid.replace('BUILD_NAME=1.2.3', 'BUILD_NAME=$(touch unwanted)'),
+                        valid.replace('RELEASE_VERSION=1.2.3+855', 'RELEASE_VERSION=1.2.3+856'),
+                        valid.replace('RELEASE_SOURCE_SHA=' + SHA, 'RELEASE_SOURCE_SHA=' + 'b' * 40)):
             with self.subTest(content=content), tempfile.TemporaryDirectory() as directory:
                 env = Path(directory) / 'release.env'
                 env.write_text(content)
                 with patch('sys.argv', ['publisher', '--repo', 'owner/repo', '--release-env', str(env)]), \
                      patch.object(release, 'GitHub') as gh, \
+                     patch.object(release, 'run', return_value=SHA), \
+                     patch.object(release, 'stable_ledger') as ledger, \
                      contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
                     release.main()
                 self.assertEqual(error.exception.code, 2)
                 gh.assert_not_called()
+                ledger.assert_not_called()
 
     def test_artifacts_retry_requires_original_release_env(self):
         with patch('sys.argv', ['publisher', '--repo', 'owner/repo', '--artifacts-dir', '/unused']), \
@@ -300,9 +315,12 @@ class CommandInputTest(unittest.TestCase):
             with patch('sys.argv', ['publisher', '--repo', 'owner/repo', '--promote-from', beta_tag]), \
                  patch.object(release, '__file__', str(mobile / 'scripts/publisher.py')), \
                  patch.object(release, 'GitHub', return_value=gh), \
+                 patch.object(release, 'record_stable_claim') as claim, \
+                 patch.object(release, 'stable_ledger') as ledger, \
                  contextlib.redirect_stdout(io.StringIO()):
                 release.main()
             self.assertEqual(gh.calls[0], ('create', '1.2.3', SHA, False))
+            claim.assert_called_once_with(ledger.return_value, '1.2.3', SHA)
             self.assertIn('Historical notes', gh.record['body'])
 
     def test_version_accepts_optional_build_and_rejects_invalid_input(self):

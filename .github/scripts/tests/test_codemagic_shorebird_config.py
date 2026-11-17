@@ -391,7 +391,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
 
     def test_publish_step_forwards_original_platform_version_record(self) -> None:
         config = self._resolved_config()
-        for platform in ('ios', 'android', 'macos'):
+        for platform in ('ios', 'android'):
             with self.subTest(platform=platform), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 tool = root / 'python3'
@@ -405,20 +405,16 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
                     script = script.replace('${{ inputs.' + name + ' }}', value)
                 env = dict(PATH=str(root) + ':/usr/bin:/bin', CAPTURE=str(root / 'args'),
                            CM_REPO_SLUG='owner/repo')
-                if platform != 'macos':
-                    env['SHOREBIRD_PLATFORM'] = platform
+                env['SHOREBIRD_PLATFORM'] = platform
                 result = subprocess.run(['bash', '-c', script], cwd=root, env=env,
                                         capture_output=True, text=True)
                 self.assertEqual(0, result.returncode, result.stderr)
                 args = (root / 'args').read_text().splitlines()
-                if platform == 'macos':
-                    self.assertNotIn('--release-env', args)
-                else:
-                    self.assertIn('--release-env', args)
-                    self.assertEqual('build/shorebird/' + platform + '_release.env',
-                                     args[args.index('--release-env') + 1])
-                    record = Path('build/shorebird/' + platform + '_release.env')
-                    self.assertTrue(any(record.match(pattern) for pattern in workflow['artifacts']))
+                self.assertEqual(args.count('--release-env'), 1)
+                self.assertEqual('build/shorebird/' + platform + '_release.env',
+                                 args[args.index('--release-env') + 1])
+                record = Path('build/shorebird/' + platform + '_release.env')
+                self.assertTrue(any(record.match(pattern) for pattern in workflow['artifacts']))
 
     def test_apk_build_uses_allocated_name_and_existing_direct_build_number(self) -> None:
         scripts = self._resolved_config()['workflows']['android-build']['scripts']
