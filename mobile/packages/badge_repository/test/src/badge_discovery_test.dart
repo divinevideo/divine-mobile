@@ -77,8 +77,9 @@ void main() {
         requireAllRelaysSettled: true,
       ),
     ).thenAnswer((call) async {
-      final filter = (call.positionalArguments.single as List<Filter>).single;
-      requests.add(filter);
+      final filters = call.positionalArguments.single as List<Filter>;
+      final filter = filters.first;
+      requests.addAll(filters);
       expect(call.namedArguments[#tempRelays], ['wss://relay.example']);
       expect(call.namedArguments[#relayTypes], [RelayType.temp]);
       return (
@@ -120,6 +121,8 @@ void main() {
       expect(result.first.name, 'Updated');
       expect(requests.first.limit, 300);
       expect(requests.first.authors, isNull);
+      expect(requests[1].a, ['30009:$issuer1:shared', '30009:$issuer2:shared']);
+      expect(requests[2].e, [events[2].id, events[1].id]);
     },
   );
   test('drops hidden, unsigned, hash-corrupt and forged definitions', () async {

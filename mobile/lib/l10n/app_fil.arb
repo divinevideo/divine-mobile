@@ -5483,9 +5483,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Naka-subscribe",
-  "badgeSubscribeAction": "Mag-subscribe sa badge",
-  "badgeAcceptedHoldersTitle": "Mga tumanggap ng badge",
+  "badgeSubscribedAction": "Fina-follow ang community",
+  "badgeSubscribeAction": "I-follow ang community",
+  "badgeAcceptedHoldersTitle": "Mga tao sa community na ito",
   "badgeSubscriptionLoadError": "Hindi ma-load ang iyong mga subscription sa badge. Subukan muli.",
   "minorAccountReviewVideoSubmittedBody": "Naipasa na ang video mo para sa pagsusuri.",
   "minorAccountReviewVideoSubmittedTitle": "Naipasa na ang video",
@@ -5588,5 +5588,10 @@
   "collabRoomPartLengthLabel": "Bawat part",
   "collabRoomSwapOrderHint": "I-tap ang dalawang part para pagpalitin ang pagkakasunod nila.",
   "collabRoomFilmSeriesHint": "Bawat isa ay nagfi-film ng sariling part, hanggang {seconds}s. Sunud-sunod silang ipe-play.",
-  "collabRoomSeriesReadyHint": "Nandito na lahat ng part. Pagsamahin na!"
+  "collabRoomSeriesReadyHint": "Nandito na lahat ng part. Pagsamahin na!",
+  "badgeDiscoveryTitle": "Pinagsasama ng mga badge ang mga tao",
+  "badgeDiscoveryBody": "Kahit sino ay puwedeng gumawa at magbigay ng mga badge. Ikaw ang pipili kung alin ang lalabas sa profile mo. Tingnan ang isang badge para makilala ang community nito at i-follow ang mga tao rito.",
+  "badgeDiscoveryMyBadges": "Mga badge ko",
+  "badgeDiscoveryEmpty": "Wala pang nakitang community. Hilahin pababa para subukan ulit.",
+  "badgeCommunityFollowHint": "Idinadagdag ang mga video ng community sa Following feed mo. I-follow ang mga tao nang paisa-isa."
 }

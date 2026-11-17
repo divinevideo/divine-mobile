@@ -6453,9 +6453,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Abonné",
-  "badgeSubscribeAction": "S’abonner au badge",
-  "badgeAcceptedHoldersTitle": "Titulaires ayant accepté le badge",
+  "badgeSubscribedAction": "Communauté suivie",
+  "badgeSubscribeAction": "Suivre la communauté",
+  "badgeAcceptedHoldersTitle": "Les membres de cette communauté",
   "badgeSubscriptionLoadError": "Impossible de charger tes abonnements aux badges. Réessaie.",
   "minorAccountReviewVideoSubmittedBody": "Ta vidéo a été envoyée pour examen.",
   "minorAccountReviewVideoSubmittedTitle": "Vidéo envoyée",
@@ -6558,5 +6558,10 @@
   "collabRoomPartLengthLabel": "Chaque partie",
   "collabRoomSwapOrderHint": "Touche deux parties pour changer leur ordre.",
   "collabRoomFilmSeriesHint": "Chacun filme sa propre partie, jusqu'à {seconds} s. Elles passent l'une après l'autre.",
-  "collabRoomSeriesReadyHint": "Toutes les parties sont là. Assemble-les !"
+  "collabRoomSeriesReadyHint": "Toutes les parties sont là. Assemble-les !",
+  "badgeDiscoveryTitle": "Les badges rassemblent",
+  "badgeDiscoveryBody": "Tout le monde peut créer et décerner des badges. Tu choisis ceux qui apparaissent sur ton profil. Explore un badge pour découvrir sa communauté et suivre ses membres.",
+  "badgeDiscoveryMyBadges": "Mes badges",
+  "badgeDiscoveryEmpty": "Aucune communauté trouvée pour le moment. Tire vers le bas pour réessayer.",
+  "badgeCommunityFollowHint": "Ajoute les vidéos de la communauté à ton fil Abonnements. Suis les personnes individuellement."
 }

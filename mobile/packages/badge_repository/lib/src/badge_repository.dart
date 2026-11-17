@@ -541,7 +541,9 @@ class BadgeRepository {
   /// event; reuse it so browser discovery does not repeat 300 curve checks.
   Future<List<Nip58BadgeDefinition>> loadPublicDefinitions() async {
     final events = await _readDiscoveryWindow(
-      Filter(kinds: [EventKind.badgeDefinition], limit: 300),
+      [
+        Filter(kinds: [EventKind.badgeDefinition], limit: 300),
+      ],
     );
     final definitions = <String, Nip58BadgeDefinition>{};
     for (final event in events.take(300)) {
@@ -565,15 +567,26 @@ class BadgeRepository {
     if (definitions.isEmpty) return const [];
 
     // A deletion can name either an event ID or an address. Read the issuers'
-    // deletion history together, then enforce ownership locally. A saturated
+    // relevant deletions together, then enforce ownership locally. A saturated
     // window is inconclusive rather than permission to revive deleted badges.
-    final deletions = await _readDiscoveryWindow(
+    final issuers = definitions.values
+        .map((d) => d.event.pubkey)
+        .toSet()
+        .toList();
+    final deletions = await _readDiscoveryWindow([
       Filter(
         kinds: [EventKind.eventDeletion],
-        authors: definitions.values.map((d) => d.event.pubkey).toSet().toList(),
+        authors: issuers,
+        a: definitions.keys.toList(),
         limit: 1000,
       ),
-    );
+      Filter(
+        kinds: [EventKind.eventDeletion],
+        authors: issuers,
+        e: definitions.values.map((d) => d.event.id).toList(),
+        limit: 1000,
+      ),
+    ]);
     if (deletions.length >= 1000) {
       throw const BadgeReadIncompleteException(
         'Badge discovery deletion window is incomplete',
@@ -606,10 +619,10 @@ class BadgeRepository {
       });
   }
 
-  Future<List<Event>> _readDiscoveryWindow(Filter filter) async {
+  Future<List<Event>> _readDiscoveryWindow(List<Filter> filters) async {
     final relay = _definitionRelayUrl;
     final result = await _nostrClient.queryEventsDetailed(
-      [filter],
+      filters,
       tempRelays: relay == null ? null : [relay],
       relayTypes: relay == null ? RelayType.all : [RelayType.temp],
       useCache: false,

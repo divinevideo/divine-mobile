@@ -6453,9 +6453,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Subskrybujesz",
-  "badgeSubscribeAction": "Subskrybuj odznakę",
-  "badgeAcceptedHoldersTitle": "Osoby, które przyjęły odznakę",
+  "badgeSubscribedAction": "Obserwujesz społeczność",
+  "badgeSubscribeAction": "Obserwuj społeczność",
+  "badgeAcceptedHoldersTitle": "Osoby w tej społeczności",
   "badgeSubscriptionLoadError": "Nie udało się wczytać twoich subskrypcji odznak. Spróbuj ponownie.",
   "minorAccountReviewVideoSubmittedBody": "Twój film został przesłany do sprawdzenia.",
   "minorAccountReviewVideoSubmittedTitle": "Film przesłany",
@@ -6558,5 +6558,10 @@
   "collabRoomPartLengthLabel": "Każda część",
   "collabRoomSwapOrderHint": "Dotknij dwóch części, aby zamienić ich kolejność.",
   "collabRoomFilmSeriesHint": "Każdy nagrywa swoją część, do {seconds} s. Części lecą jedna po drugiej.",
-  "collabRoomSeriesReadyHint": "Wszystkie części są. Złóż je w całość!"
+  "collabRoomSeriesReadyHint": "Wszystkie części są. Złóż je w całość!",
+  "badgeDiscoveryTitle": "Odznaki łączą ludzi",
+  "badgeDiscoveryBody": "Każdy może tworzyć i przyznawać odznaki. Ty wybierasz, które pojawią się na twoim profilu. Odkryj odznakę, poznaj jej społeczność i obserwuj jej członków.",
+  "badgeDiscoveryMyBadges": "Moje odznaki",
+  "badgeDiscoveryEmpty": "Nie znaleziono jeszcze społeczności. Przeciągnij w dół, aby spróbować ponownie.",
+  "badgeCommunityFollowHint": "Dodaje filmy społeczności do aktualności Obserwowani. Osoby obserwujesz osobno."
 }

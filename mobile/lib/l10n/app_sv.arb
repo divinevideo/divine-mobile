@@ -6453,9 +6453,9 @@
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "badgeSubscribedAction": "Prenumererar",
-  "badgeSubscribeAction": "Prenumerera på märket",
-  "badgeAcceptedHoldersTitle": "Personer som godkänt märket",
+  "badgeSubscribedAction": "Följer gemenskapen",
+  "badgeSubscribeAction": "Följ gemenskapen",
+  "badgeAcceptedHoldersTitle": "Personer i den här gemenskapen",
   "badgeSubscriptionLoadError": "Det gick inte att läsa in dina märkprenumerationer. Försök igen.",
   "minorAccountReviewVideoSubmittedBody": "Din video har skickats för granskning.",
   "minorAccountReviewVideoSubmittedTitle": "Videon har skickats",
@@ -6558,5 +6558,10 @@
   "collabRoomPartLengthLabel": "Varje del",
   "collabRoomSwapOrderHint": "Tryck på två delar för att byta ordning på dem.",
   "collabRoomFilmSeriesHint": "Alla filmar sin egen del, upp till {seconds} s. Delarna spelas efter varandra.",
-  "collabRoomSeriesReadyHint": "Alla delar är klara. Sätt ihop dem!"
+  "collabRoomSeriesReadyHint": "Alla delar är klara. Sätt ihop dem!",
+  "badgeDiscoveryTitle": "Märken för människor samman",
+  "badgeDiscoveryBody": "Alla kan skapa och dela ut märken. Du väljer vilka som visas på din profil. Utforska ett märke för att lära känna gemenskapen och följa människorna där.",
+  "badgeDiscoveryMyBadges": "Mina märken",
+  "badgeDiscoveryEmpty": "Inga gemenskaper hittades än. Dra nedåt för att försöka igen.",
+  "badgeCommunityFollowHint": "Lägger till gemenskapens videor i ditt Följer-flöde. Följ personer var för sig."
 }
