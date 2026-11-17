@@ -585,6 +585,9 @@ class NostrClient {
   /// Tracks whether dispose() has been called
   bool _isDisposed = false;
 
+  /// Set as [dispose] starts; [_isDisposed] only once it has finished.
+  bool _isClosing = false;
+
   /// Adds Divine's NIP-89 `client` tag before publishing, unless [event]
   /// already carries a signature.
   ///
@@ -1141,6 +1144,66 @@ class NostrClient {
       timedOut: needsDeferredConfirmation,
       noRelays: first.noRelays,
     );
+  }
+
+  /// Reads [filters] from every connected relay over connections opened for
+  /// this read alone, waiting for each relay to settle, and closes them when
+  /// the read ends.
+  ///
+  /// A relay may serve one connection's requests in order — Divine's relay
+  /// does — so a read queued on the shared connection behind a slow request
+  /// waits for that request, however long it takes, while the same read on a
+  /// new connection is answered at once (#9335). Use this to ask again after
+  /// a full-settlement [queryEventsDetailed] timed out; it costs one new
+  /// connection per relay, so it is not a first choice.
+  ///
+  /// The result reads like a [queryEventsDetailed] with
+  /// `requireAllRelaysSettled` and no cache: `timedOut` when any relay did not
+  /// settle within [timeout], which includes connecting, and `noRelays` when
+  /// no relay is connected or the client is disposed.
+  Future<({List<Event> events, bool timedOut, bool noRelays})>
+  queryEventsOnFreshConnections(
+    List<Filter> filters, {
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
+    final relayUrls = _isClosing ? const <String>[] : connectedRelays;
+    if (relayUrls.isEmpty) {
+      return (events: const <Event>[], timedOut: false, noRelays: true);
+    }
+    final pool = _nostr.relayPool;
+    // A pool of its own: one sharing [_nostr]'s pool would reuse the pooled
+    // socket for every url it already holds.
+    final isolated = Nostr(
+      _nostr.nostrSigner,
+      pool.eventFilters,
+      _nostr.tempRelayGener,
+      onNotice: pool.onNotice,
+      diagnosticsSink: pool.diagnosticsSink,
+      signatureVerificationPolicy: pool.signatureVerificationPolicy,
+    );
+    try {
+      final result = await isolated.readEvents(
+        filters.map((filter) => filter.toJson()).toList(),
+        tempRelays: relayUrls,
+        relayTypes: const [RelayType.temp],
+        timeout: timeout,
+        requireAllRelaysSettled: true,
+      );
+      return (
+        events: result.events,
+        // A connection that never took the REQ is left out of the pool's
+        // settlement, so the read can complete on the others: count answers.
+        timedOut:
+            !result.isComplete ||
+            result.answeredNetworkRelayCount < relayUrls.length,
+        noRelays: result.endedBy == QueryEnd.noRelay,
+      );
+    } finally {
+      // Not [Nostr.close]: that closes the signer, which is the client's own.
+      isolated
+        ..beginClose()
+        ..relayPool.removeAll();
+    }
   }
 
   /// `CLOSED` categories [queryEventsDetailed] never settles on: `error` and
@@ -2805,6 +2868,7 @@ class NostrClient {
     // relay repair can fire and open a socket that the teardown at the end has
     // already walked past, leaving a live WebSocket and heartbeat timer nothing
     // can reach (#7367).
+    _isClosing = true;
     _nostr.beginClose();
     await closeAllSubscriptions();
     await _relayManager.dispose();
