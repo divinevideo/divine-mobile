@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -114,5 +115,41 @@ void main() {
         );
       },
     );
+
+    test('a timed-out request surfaces as a typed timeout', () async {
+      final client = FunnelcakeApiClient(
+        baseUrl: 'https://api.example.com',
+        httpClient: MockClient((_) async => throw TimeoutException('slow')),
+      );
+      addTearDown(client.dispose);
+      await expectLater(
+        client.getClassicRecommendations(
+          request: const ClassicRecommendationsRequest(seed: 'session'),
+        ),
+        throwsA(isA<FunnelcakeTimeoutException>()),
+      );
+    });
+
+    test('a transport failure surfaces as a typed client error', () async {
+      final client = FunnelcakeApiClient(
+        baseUrl: 'https://api.example.com',
+        httpClient: MockClient(
+          (_) async => throw http.ClientException('offline'),
+        ),
+      );
+      addTearDown(client.dispose);
+      await expectLater(
+        client.getClassicRecommendations(
+          request: const ClassicRecommendationsRequest(seed: 'session'),
+        ),
+        throwsA(
+          isA<FunnelcakeException>().having(
+            (error) => error.cause,
+            'cause',
+            isA<http.ClientException>(),
+          ),
+        ),
+      );
+    });
   });
 }

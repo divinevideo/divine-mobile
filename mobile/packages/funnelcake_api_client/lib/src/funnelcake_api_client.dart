@@ -2935,6 +2935,14 @@ class FunnelcakeApiClient {
   ///
   /// The endpoint is additive: 404 means the rollout is disabled or the server
   /// predates it. Repositories own the archive fallback in that case.
+  ///
+  /// Throws:
+  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeNotFoundException] if the endpoint is disabled or absent.
+  /// - [FunnelcakeApiException] for any other non-200 response.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] if the client is disposed, the transport fails,
+  ///   or the response is malformed.
   Future<RecommendationsResponse> getClassicRecommendations({
     required ClassicRecommendationsRequest request,
     String? userPubkey,
@@ -2951,20 +2959,30 @@ class FunnelcakeApiClient {
     // Retry belongs to the owning session, which can re-read consent and
     // identity. A transport backoff must not replay prior private context after
     // that context has been withdrawn.
-    final response = await _httpClient
-        .post(
-          uri,
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-store',
-            ...buildDivineClientHeaders(appVersion: _appVersion),
-            if (userPubkey != null && userPubkey.isNotEmpty)
-              'X-Pubkey': userPubkey,
-          },
-          body: jsonEncode(request.toJson()),
-        )
-        .timeout(_timeout);
+    final http.Response response;
+    try {
+      response = await _httpClient
+          .post(
+            uri,
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-store',
+              ...buildDivineClientHeaders(appVersion: _appVersion),
+              if (userPubkey != null && userPubkey.isNotEmpty)
+                'X-Pubkey': userPubkey,
+            },
+            body: jsonEncode(request.toJson()),
+          )
+          .timeout(_timeout);
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on Exception catch (error) {
+      throw FunnelcakeException(
+        'Failed to fetch classic recommendations: $error',
+        cause: error,
+      );
+    }
     if (response.statusCode == 404) {
       throw FunnelcakeNotFoundException(
         resource: 'Classic recommendations',
