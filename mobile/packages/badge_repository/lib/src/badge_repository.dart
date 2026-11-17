@@ -534,6 +534,117 @@ class BadgeRepository {
 
   static const _subscriptionsIdentifier = 'divine.badge_subscriptions';
 
+  /// A recent public discovery window, independent of the viewer's account.
+  ///
+  /// This is deliberately one bounded REQ rather than an exhaustive history
+  /// walk. Relay verification records the exact checked ID/signature on each
+  /// event; reuse it so browser discovery does not repeat 300 curve checks.
+  Future<List<Nip58BadgeDefinition>> loadPublicDefinitions() async {
+    final events = await _readDiscoveryWindow(
+      Filter(kinds: [EventKind.badgeDefinition], limit: 300),
+    );
+    final definitions = <String, Nip58BadgeDefinition>{};
+    for (final event in events.take(300)) {
+      if (!_isVerifiedDiscoveryEvent(event) ||
+          (_isHiddenPubkey?.call(event.pubkey) ?? false)) {
+        continue;
+      }
+      final definition = Nip58BadgeParser.parseDefinition(event);
+      if (definition == null ||
+          BadgeCoordinate.parse(definition.coordinate) == null) {
+        continue;
+      }
+      final previous = definitions[definition.coordinate];
+      if (previous == null ||
+          event.createdAt > previous.event.createdAt ||
+          (event.createdAt == previous.event.createdAt &&
+              event.id.compareTo(previous.event.id) < 0)) {
+        definitions[definition.coordinate] = definition;
+      }
+    }
+    if (definitions.isEmpty) return const [];
+
+    // A deletion can name either an event ID or an address. Read the issuers'
+    // deletion history together, then enforce ownership locally. A saturated
+    // window is inconclusive rather than permission to revive deleted badges.
+    final deletions = await _readDiscoveryWindow(
+      Filter(
+        kinds: [EventKind.eventDeletion],
+        authors: definitions.values.map((d) => d.event.pubkey).toSet().toList(),
+        limit: 1000,
+      ),
+    );
+    if (deletions.length >= 1000) {
+      throw const BadgeReadIncompleteException(
+        'Badge discovery deletion window is incomplete',
+      );
+    }
+    for (final deletion in deletions) {
+      if (deletion.kind != EventKind.eventDeletion ||
+          !_isVerifiedDiscoveryEvent(deletion)) {
+        continue;
+      }
+      definitions.removeWhere((coordinate, definition) {
+        if (deletion.pubkey != definition.event.pubkey ||
+            deletion.createdAt < definition.event.createdAt) {
+          return false;
+        }
+        return deletion.tags.any(
+          (tag) =>
+              tag.length > 1 &&
+              ((tag[0] == 'a' && tag[1] == coordinate) ||
+                  (tag[0] == 'e' && tag[1] == definition.event.id)),
+        );
+      });
+    }
+    return definitions.values
+        .where((d) => !(_isHiddenPubkey?.call(d.event.pubkey) ?? false))
+        .toList(growable: false)
+      ..sort((a, b) {
+        final recency = b.event.createdAt.compareTo(a.event.createdAt);
+        return recency != 0 ? recency : a.coordinate.compareTo(b.coordinate);
+      });
+  }
+
+  Future<List<Event>> _readDiscoveryWindow(Filter filter) async {
+    final relay = _definitionRelayUrl;
+    final result = await _nostrClient.queryEventsDetailed(
+      [filter],
+      tempRelays: relay == null ? null : [relay],
+      relayTypes: relay == null ? RelayType.all : [RelayType.temp],
+      useCache: false,
+      timeout: const Duration(seconds: 10),
+      requireAllRelaysSettled: true,
+    );
+    if (result.timedOut || result.noRelays) {
+      throw const BadgeReadIncompleteException(
+        'Public badges could not be completely loaded',
+      );
+    }
+    return result.events;
+  }
+
+  static bool _isVerifiedDiscoveryEvent(Event event) =>
+      event.isValid && (event.hasVerifiedSignature || event.isSigned);
+
+  /// Up to three visible, indexed accepted holders. This is a preview only;
+  /// detail reconciles the complete membership proof with relays separately.
+  Future<List<String>> loadHolderPreview(BadgeCoordinate coordinate) async {
+    final api = _funnelcakeApiClient;
+    if (api == null || (_isHiddenPubkey?.call(coordinate.pubkey) ?? false)) {
+      return const [];
+    }
+    final holders = await api
+        .getBadgeHolderPreview(
+          creatorPubkey: coordinate.pubkey,
+          dTag: coordinate.identifier,
+        )
+        .timeout(const Duration(seconds: 10));
+    return withoutHiddenPubkeys(
+      holders.where(isBadgePubkey).toSet(),
+    ).take(3).toList(growable: false);
+  }
+
   /// Definitions from the issuers selected for Explore.
   ///
   /// Reads the API catalogue first, including every cursor page. Only an API
