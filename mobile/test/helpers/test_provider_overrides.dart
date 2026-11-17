@@ -374,8 +374,8 @@ MockNip05VerificationService createMockNip05VerificationService() {
 /// Creates a properly stubbed MockFollowRepository for testing
 ///
 /// Stubs all getters and the [watchMyFollowingCached] stream so widgets that
-/// embed [VideoFollowButton] do not crash with [LateInitializationError] from
-/// the real [CacheSync] DAO.
+/// embed [VideoFollowButton] never reach [CacheSync], which starts each test
+/// with no store.
 MockFollowRepository createMockFollowRepository({
   List<String> followingPubkeys = const [],
 }) {
@@ -529,9 +529,9 @@ List<Override> getStandardTestOverrides({
       _IneligibleOgDivinerService(),
     ),
 
-    // Always override FollowRepository to prevent LateInitializationError from
-    // CacheSync._dao (uninitialized Drift DAO) when VideoFollowButton calls
-    // MyFollowingBloc which calls watchMyFollowingCached().
+    // Always override FollowRepository: VideoFollowButton's MyFollowingBloc
+    // calls watchMyFollowingCached(), which would otherwise reach CacheSync,
+    // and every test starts with no CacheSync store.
     followRepositoryProvider.overrideWithValue(mockFollow),
 
     // Always override the NIP-62 vanish lookup. It reads the Drift database,

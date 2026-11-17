@@ -12,6 +12,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:openvine/services/hive_box_opener.dart';
 import 'package:openvine/widgets/avatar_failure_cache.dart';
 
+import 'helpers/cache_sync_isolation.dart';
 import 'helpers/shared_channel_override.dart';
 import 'helpers/shared_hive_box_guard.dart';
 import 'test_setup.dart';
@@ -74,6 +75,13 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   // suites after it. Start every test empty; setUp rather than tearDown also
   // drops a write that lands after the previous test finished.
   setUp(clearSharedSecureStorageValues);
+
+  // CacheSync keeps its store in a static field, so the store one suite
+  // installs stays installed for every later suite in the merged bundle, and a
+  // later test reads that suite's cached entries back (#11186). Start every
+  // test with no store, as a fresh isolate does; a suite that needs one
+  // installs it in its own setUp, which runs after this one.
+  setUp(resetCacheSyncStore);
 
   // Hive registers boxes process-globally by name, so a box one suite leaves
   // open is the same box the next suite gets back from openBox — rows and
